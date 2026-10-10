@@ -2808,85 +2808,85 @@ measured the grain with the real browser at **21.5-23.1** Mbit/s, **half** of th
 ⭐ And two scenes that had been chosen as hard were **unmasked by the bench itself**
 (§1.30): the flag and **the scrolling text**.
 
-### 6.15 ⭐⭐⭐⭐⭐ IL MECCANISMO DEL DIRUPO — **non cade sul numero di sessioni: cade sul carico di composizione**
+### 6.15 ⭐⭐⭐⭐⭐ THE MECHANISM OF THE CLIFF — **it does not fall on the number of sessions: it falls on the compositing load**
 
 `banchi/10-b9d-dirupo.py` (+ `10-b9d-chi-tiene-la-gpu.py`, `10-b9d-conti.py`,
-`10-b9d-dove-sono-fermi.py`), `[M]` 25 agosto 2026, scena satura 1080p, gradini da 40 s, sotto
-lucchetto.
+`10-b9d-dove-sono-fermi.py`), `[M]` 25 Aug 2026, saturated scene 1080p, steps of 40 s, under the
+lock.
 
-#### ⭐⭐⭐ La prova: **stessa popolazione, cambia solo quante scene disegnano**
+#### ⭐⭐⭐ The proof: **same population, only how many scenes are drawing changes**
 
-Otto sessioni, otto desktop, otto figli — **sempre gli stessi**:
+Eight sessions, eight desktops, eight children — **always the same ones**:
 
-| gradino | scene che **disegnano** | disegni/s | GPU render | GPU **video-enhance** | fot/s a testa |
+| step | scenes **drawing** | draws/s | GPU render | GPU **video-enhance** | fps each |
 |---|---|---|---|---|---|
-| 7S | 7 | 420 | 99,3 % | 48,7 % | **33,6** |
-| ⛔ **8S** | **8** | **459,8** | 99,6 % | ⛔ **0,4 %** | ⛔ **1,6** |
-| ⭐⭐ **7S+1F** | **7** | 421 | 99,4 % | **46,7 %** | ⭐ **33,4** |
-| 6S+2F | 6 | 360 | 81,9 % | 18,5 % | 39,2 |
-| **8S** (àncora, rifatto in coda) | 8 | — | — | — | ⛔ **1,6** |
+| 7S | 7 | 420 | 99.3 % | 48.7 % | **33.6** |
+| ⛔ **8S** | **8** | **459.8** | 99.6 % | ⛔ **0.4 %** | ⛔ **1.6** |
+| ⭐⭐ **7S+1F** | **7** | 421 | 99.4 % | **46.7 %** | ⭐ **33.4** |
+| 6S+2F | 6 | 360 | 81.9 % | 18.5 % | 39.2 |
+| **8S** (anchor, redone at the end) | 8 | — | — | — | ⛔ **1.6** |
 
-⭐⭐⭐ **`7S+1F` è la prova**: si **spegne una scena** e il ritmo torna **da 1,6 a 33,4 fot/s**, senza
-toccare **né sessioni, né desktop, né figli**. E rimettendo le scene sature il dirupo **si
-riproduce**: ⭐ **reversibile e ripetibile.**
+⭐⭐⭐ **`7S+1F` is the proof**: **one scene is switched off** and the rate comes back **from 1.6 to 33.4 fps**, without
+touching **sessions, desktops or children**. And putting the saturated scenes back the cliff
+**reproduces**: ⭐ **reversible and repeatable.**
 
-⇒ ⭐⭐ **Il confine cade fra 873 e 953 Mpixel/s composti** — e **combacia col soffitto della
-composizione misurato per un'altra strada in §6.11: 0,97 Gpixel/s.**
-⇒ ⭐⭐⭐ **La grandezza è CONTINUA, e il prodotto la sa calcolare.** Il dirupo non è un numero di
-sessioni: è una **soglia su quanto si sta componendo**.
+⇒ ⭐⭐ **The border falls between 873 and 953 composited Mpixel/s** — and **it matches the compositing
+ceiling measured by another route in §6.11: 0.97 Gpixel/s.**
+⇒ ⭐⭐⭐ **The quantity is CONTINUOUS, and the product can compute it.** The cliff is not a number of
+sessions: it is a **threshold on how much is being composited**.
 
-> ##### ⭐⭐⭐ E la grandezza giusta sono i **PIXEL**, non i fotogrammi — la refutazione interna
+> ##### ⭐⭐⭐ And the right quantity is the **PIXELS**, not the frames — the internal refutation
 >
-> `[M]` Il braccio **`6S+2W`** (due scene ridotte a 960×540) fa **480 disegni al secondo** — cioè
-> **più** dei 460 del gradino che crolla — ⭐ **e non crolla**, perché quei disegni sono più piccoli:
-> **808 Mpixel/s** contro 954.
-> ⛔ **Né serve l'occupazione**: `render` è al **99,2 %** nel braccio **sano** e al **99,5 %** in
-> quello **crollato**. ⇒ ⭐⭐ **L'occupazione satura e SMETTE DI INFORMARE; a discriminare è la
-> DOMANDA.** È `LEZIONI.md` §1.34 un'altra volta: la colonna che avvisa non è quella dell'altra volta.
-> ⚠ **Senza quel braccio sarebbe stato riferito il numero sbagliato** — una soglia in fotogrammi
-> invece che in pixel.
+> `[M]` The arm **`6S+2W`** (two scenes reduced to 960×540) makes **480 draws per second** — that is
+> **more** than the 460 of the step that collapses — ⭐ **and it does not collapse**, because those draws are smaller:
+> **808 Mpixel/s** against 954.
+> ⛔ **Nor is the occupancy any use**: `render` is at **99.2 %** in the **healthy** arm and at **99.5 %** in
+> the **collapsed** one. ⇒ ⭐⭐ **The occupancy saturates and STOPS INFORMING; what discriminates is the
+> DEMAND.** It is `LEZIONI.md` §1.34 once more: the column that warns is not the one of last time.
+> ⚠ **Without that arm the wrong number would have been reported** — a threshold in frames
+> instead of in pixels.
 
-#### ⭐⭐ Perché è un dirupo e non una discesa — **la colonna che lo dice è `video-enhance`**
+#### ⭐⭐ Why it is a cliff and not a slope — **the column that says it is `video-enhance`**
 
-`[M]` `remotix` sul motore **render**: **0,00 %**. Il render è **tutto di `gnome-shell`** — **99,52 %**
-al gradino 8. ⭐ (Conferma §6.11: **la nostra conversione sta sul VEBOX**.)
+`[M]` `remotix` on the **render** engine: **0.00 %**. The render is **all `gnome-shell`'s** — **99.52 %**
+at step 8. ⭐ (It confirms §6.11: **our conversion is on the VEBOX**.)
 
-⇒ Quando i compositori prendono il **100 %** di `rcs0`, **la cattura non riceve più fotogrammi**:
-`video-enhance` crolla da **48,7 % a 0,4 %**, cioè ⛔ **il codificatore non ha più niente da fare. Non
-rallenta: si ferma.**
-`[M]` Le consegne del palco al padre passano da **39 a 2 fot/s** — ⭐ **letti dal padre**, non
-ipotizzati.
+⇒ When the compositors take **100 %** of `rcs0`, **capture no longer receives frames**:
+`video-enhance` collapses from **48.7 % to 0.4 %**, that is ⛔ **the encoder has nothing left to do. It does not
+slow down: it stops.**
+`[M]` The stage's deliveries to the parent go from **39 to 2 fps** — ⭐ **read by the parent**, not
+hypothesised.
 
-⇒ ⛔⛔ **Il collo non è nel padre e non è nel codificatore: è A MONTE, nella composizione.**
+⇒ ⛔⛔ **The bottleneck is not in the parent and not in the encoder: it is UPSTREAM, in the compositing.**
 
-#### ⛔ Cinque piste su sei sono **FALSE** — e dirlo vale quanto trovare la vera
+#### ⛔ Five leads out of six are **FALSE** — and saying so is worth as much as finding the true one
 
-| pista | verdetto al gradino del dirupo |
+| lead | verdict at the cliff step |
 |---|---|
-| **ripiego in software** | ⛔ **falsa** — `[M]` **zero** ripieghi, tutti su `renderD128` |
-| **un'attesa che diventa il ritardo di tutti** | ⛔ **falsa** — zero chiamate lente, e la CPU del padre è **0,0 nuclei** |
-| **la soglia della coda** (`--sgombra-soglia-ms`) | ⛔ **falsa** — `[M]` coda sopra **0**, sotto **0**, abbandoni **0** |
-| **il regolatore del ritmo** | ⛔ **falsa al gradino 8** — `[M]` scende **0**, risale **0** |
-| **il ciclo del padre / logind** | ⛔ **falsa** |
-| ⭐⭐ **l'aritmetica dei buffer** — *la pista che sembrava la migliore* | ⛔⛔ **FALSA, e refutata da chi l'aveva proposta**: `[M]` il produttore ne dà **8**, non 6 ⇒ soglia **100 ms**, e ne teniamo **30,4** — **×0,30**. ⭐ **Non restiamo mai senza buffer** |
+| **software fallback** | ⛔ **false** — `[M]` **zero** fallbacks, all on `renderD128` |
+| **a wait that becomes everyone's latency** | ⛔ **false** — zero slow calls, and the parent's CPU is **0.0 cores** |
+| **the queue threshold** (`--sgombra-soglia-ms`) | ⛔ **false** — `[M]` queue above **0**, below **0**, abandonments **0** |
+| **the rate regulator** | ⛔ **false at step 8** — `[M]` goes down **0**, goes back up **0** |
+| **the parent's loop / logind** | ⛔ **false** |
+| ⭐⭐ **the buffer arithmetic** — *the lead that looked the best* | ⛔⛔ **FALSE, and refuted by the one who had proposed it**: `[M]` the producer gives **8**, not 6 ⇒ threshold **100 ms**, and we hold **30.4** — **×0.30**. ⭐ **We are never left without buffers** |
 
-⭐⭐ **E i due bracci di controllo chiudono le due piste che restavano**: `[M]` con
-`--sgombra-soglia-ms 0` il dirupo è **identico** (1,46-2,08 fot/s); con `--niente-ritmo-adattivo`
-**identico** (1,48-2,76), e al gradino 8 `non_partiti = 0`, discese **0**, abbandoni **0**.
-⇒ ⛔ **Nessuna delle due cure della fase 9 causa il dirupo.**
+⭐⭐ **And the two control arms close the two leads that remained**: `[M]` with
+`--sgombra-soglia-ms 0` the cliff is **identical** (1.46-2.08 fps); with `--niente-ritmo-adattivo`
+**identical** (1.48-2.76), and at step 8 `non_partiti = 0`, descents **0**, abandonments **0**.
+⇒ ⛔ **Neither of the two phase 9 cures causes the cliff.**
 
-⭐ **E il testimone dice dove stanno fermi i figli**: al gradino del dirupo, `ioctl` su `/dev/dri` al
-**100 %** dei campioni, ⛔ **`sendto` allo 0 %** ⇒ **nessuna contropressione del padre**. E cresce col
-carico: `[M]` **0 % (5S) → 10 % (6S) → 28 % (7S) → 38 % (8S)**, e **22 % appena si spegne una scena**.
+⭐ **And the witness says where the children are stuck**: at the cliff step, `ioctl` on `/dev/dri` in
+**100 %** of the samples, ⛔ **`sendto` at 0 %** ⇒ **no back-pressure from the parent**. And it grows with the
+load: `[M]` **0 % (5S) → 10 % (6S) → 28 % (7S) → 38 % (8S)**, and **22 % as soon as one scene is switched off**.
 
-⇒ ⭐⭐ **La catena, per intero**: otto compositori saturano `rcs0` → il `vaSyncSurface` del VPP
-(`codificatore.c` · `converti_sulla_gpu()`) non torna → il figlio resta dentro l'`ioctl` DRM → la cattura non consegna →
-⛔ **il codificatore non riceve più niente**. ⭐ E *«`GPU video` che crolla»* era **il sintomo giusto,
-letto al contrario**.
+⇒ ⭐⭐ **The chain, in full**: eight compositors saturate `rcs0` → the VPP's `vaSyncSurface`
+(`codificatore.c` · `converti_sulla_gpu()`) does not return → the child stays inside the DRM `ioctl` → capture does not deliver →
+⛔ **the encoder receives nothing more**. ⭐ And *«`GPU video` che crolla»* was **the right symptom,
+read backwards**.
 
-#### ⛔⛔⛔ E un difetto di prodotto trovato per strada, che **non era il bersaglio**
+#### ⛔⛔⛔ And a product defect found along the way, which **was not the target**
 
-`[M]` A **cinque** sessioni, **cinque client sono stati sfrattati in 1,3 s**:
+`[M]` At **five** sessions, **five clients were evicted in 1.3 s**:
 
 ```
 ritmo …: arretrato LETTO 40 volte, massimo 2, ultimo 2, posti 2
@@ -2895,421 +2895,421 @@ linea-morta … causa=silenzio usciti_byte=0 coda_video=10443
   silenzio_ms=10997 persi=0
 ```
 
-⇒ ⛔ **`arretrato` resta incollato al tetto dei posti del regolatore**, che blocca **OGNI** fotogramma;
-`usciti_byte=0`; il client **non ha più niente da riscontrare**, tace; e **la linea morta lo sfratta
-con `persi=0`**.
+⇒ ⛔ **`arretrato` stays glued to the regulator's slot cap**, which blocks **EVERY** frame;
+`usciti_byte=0`; the client **has nothing left to acknowledge**, goes silent; and **the dead line evicts it
+with `persi=0`**.
 
-⭐⭐ **È un ANELLO CHIUSO fra due cure della fase 9** — la stessa famiglia di S.4, ⛔ **ma qui su una
-coda mordente, cioè su utenti che stanno lavorando.**
-⭐⭐⭐ **E i due bracci lo confermano da due strade indipendenti**: `[M]` spegnendo **l'una O l'altra**
-cura, **8 sessioni su 8 sopravvivono** e i fotogrammi non partiti vanno a **zero**. ⇒ **Non è una
-coincidenza: è un anello, e si apre togliendo un anello qualsiasi dei due.**
+⭐⭐ **It is a CLOSED LOOP between two phase 9 cures** — the same family as S.4, ⛔ **but here on a
+biting queue, that is on users who are working.**
+⭐⭐⭐ **And the two arms confirm it by two independent routes**: `[M]` switching off **one OR the other**
+cure, **8 sessions out of 8 survive** and the frames not sent go to **zero**. ⇒ **It is not a
+coincidence: it is a loop, and it opens by removing either one of its two links.**
 
-⚠ **E lo sfratto ha rotto metà del giro**: al gradino 8 ricevevano **3 client su 8**. ⭐ **Il che
-rafforza la conclusione**: il dirupo è arrivato lo stesso, con **tre** client e **otto** compositori
-— cioè **non dipende da quanti guardano, ma da quanti disegnano**.
+⚠ **And the eviction broke half the round**: at step 8 **3 clients out of 8** were receiving. ⭐ **Which
+strengthens the conclusion**: the cliff arrived all the same, with **three** clients and **eight** compositors
+— that is **it does not depend on how many are watching, but on how many are drawing**.
 
-#### I due difetti del banco, trovati e curati
+#### The two bench defects, found and cured
 
-1. ⛔ `aggregato()` tornava `None` appena una sessione mancava — *«un totale con un buco non è un
-   totale»*, giusto in astratto — ⛔ ma con cinque sessioni sfrattate **ogni** gradino aveva un buco,
-   il verdetto «DIRUPO» **non è mai uscito**, e **il pilota ha saltato i due bracci di controllo**
-   dicendo *«non ho ritrovato il dirupo»* **mentre il dirupo era sotto gli occhi**. ⇒ Ora il confronto
-   è **appaiato**: le stesse sessioni prima e dopo, col loro numero **dichiarato**.
-2. Il conto delle serie pretendeva un figlio per sessione **dichiarata**, non per sessione **viva** ⇒
-   ⭐ si è rifiutato di dichiarare (`None`, mai un numero plausibile).
+1. ⛔ `aggregato()` returned `None` as soon as one session was missing — *«un totale con un buco non è un
+   totale»*, right in the abstract — ⛔ but with five sessions evicted **every** step had a gap,
+   the «DIRUPO» verdict **never came out**, and **the pilot skipped the two control arms**
+   saying *«non ho ritrovato il dirupo»* **while the cliff was right before its eyes**. ⇒ Now the comparison
+   is **paired**: the same sessions before and after, with their number **declared**.
+2. The series count required one child per **declared** session, not per **live** session ⇒
+   ⭐ it refused to declare (`None`, never a plausible number).
 
-`--certifica`: **71 casi su 71**.
+`--certifica`: **71 cases out of 71**.
 
-### 6.16 ⭐⭐⭐⭐⭐ LA SCENA MISTA — **il tetto è una FUNZIONE, e i costi si sommano**
+### 6.16 ⭐⭐⭐⭐⭐ THE MIXED SCENE — **the cap is a FUNCTION, and the costs add up**
 
-`banchi/10-b98-mista.py` (2 527 righe; importa `10-b92-dieci.py` e ⭐ **non ne modifica una riga —
-diff vuoto**), `[M]` 25 agosto 2026, 1080p H.264, gradini da 30 s a regime, undici utenti veri, sotto
-lucchetto, ⭐ **palchi orfani verificati PRIMA di sgomberare** (zero su tutti e undici).
+`banchi/10-b98-mista.py` (2 527 lines; imports `10-b92-dieci.py` and ⭐ **does not modify one line of it —
+empty diff**), `[M]` 25 Aug 2026, 1080p H.264, steps of 30 s at steady state, eleven real users, under the
+lock, ⭐ **orphan stages verified BEFORE clearing** (zero on all eleven).
 
-#### ⭐⭐⭐ Il costo di una sessione sul motore che fa da collo — e **si sommano**
+#### ⭐⭐⭐ The cost of a session on the engine that is the bottleneck — and **they add up**
 
-| ruolo | GPU `render` | byte/fotogramma |
+| role | GPU `render` | bytes/frame |
 |---|---|---|
-| **satura** (schermo intero) | **14,4 %** | 5 600 |
-| **desktop vero** (finestra + due finestre vere) | **10,7 %** | 4 650 |
-| **ferma** | ⭐ **0,01 %** | 266 |
+| **saturated** (full screen) | **14.4 %** | 5 600 |
+| **real desktop** (window + two real windows) | **10.7 %** | 4 650 |
+| **still** | ⭐ **0.01 %** | 266 |
 
-⭐⭐ **E i costi si SOMMANO, anche fra ruoli diversi**: `[M]` 1S **14,4** · 2S **28,8** · 3S **43,4** —
-lineari, **non si ostacolano**. E tre sature più tre desktop veri: **75,3 % previsto contro 75,6 %
-misurato — scarto 0,4 %.**
+⭐⭐ **And the costs ADD UP, even across different roles**: `[M]` 1S **14.4** · 2S **28.8** · 3S **43.4** —
+linear, **they do not hinder each other**. And three saturated plus three real desktops: **75.3 % predicted against 75.6 %
+measured — deviation 0.4 %.**
 
-⇒ ⛔ **L'ammissione non deve contare sessioni: deve SOMMARE LAVORO.** E 100 / 14,4 = **6,9** sature —
-⭐⭐ **mentre §6.5, misurata da un altro banco e per un'altra strada, dice «fino a sei nessun graffio,
-la settima rompe»**. Due banchi indipendenti, stessa conclusione (`LEZIONI.md` §1.28).
+⇒ ⛔ **Admission must not count sessions: it must ADD UP WORK.** And 100 / 14.4 = **6.9** saturated —
+⭐⭐ **while §6.5, measured by another bench and by another route, says «fino a sei nessun graffio,
+la settima rompe»**. Two independent benches, same conclusion (`LEZIONI.md` §1.28).
 
-#### `[M]` Dieci ferme accanto a una che lavora: **non se ne accorge**
+#### `[M]` Ten still ones next to one that works: **it does not notice**
 
-| | 1 satura sola | + 10 ferme | doppia durata (60 s) |
+| | 1 saturated alone | + 10 still | double duration (60 s) |
 |---|---|---|---|
-| fot/s di chi lavora | 39,50 | ⭐ **39,59 (+0,2 %)** | 39,65 |
-| ritardo mediano | 9,9 ms | ⭐ **9,7 ms** | 9,7 ms |
-| chiavi | 0 | **0** | 0 |
-| GPU `render` macchina | 14,5 % | ⭐ **14,5 %** | — |
-| CPU (20 nuclei) | 6,1 % | 7,7 % | — |
-| PSS totale | 295,7 MiB | ⛔ **2 044,8 MiB** | — |
+| fps of the one working | 39.50 | ⭐ **39.59 (+0.2 %)** | 39.65 |
+| median latency | 9.9 ms | ⭐ **9.7 ms** | 9.7 ms |
+| keyframes | 0 | **0** | 0 |
+| machine GPU `render` | 14.5 % | ⭐ **14.5 %** | — |
+| CPU (20 cores) | 6.1 % | 7.7 % | — |
+| total PSS | 295.7 MiB | ⛔ **2 044.8 MiB** | — |
 
-⇒ ⭐ **Di GPU, zero.** ⛔ **La sola risorsa che un inquilino fermo consuma è la MEMORIA** — ed è quella
-a porre il vero tetto sulle ferme (31 GB ⇒ `[?]` ~170), non la scheda.
-⭐ E `LEZIONI.md` §1.32 regge: a durata doppia **39,65** contro 39,59 — **il giro corto non
-sottostimava**.
+⇒ ⭐ **Of GPU, zero.** ⛔ **The only resource a still tenant consumes is MEMORY** — and it is that
+which sets the real cap on the still ones (31 GB ⇒ `[?]` ~170), not the card.
+⭐ And `LEZIONI.md` §1.32 holds: at double duration **39.65** against 39.59 — **the short round did not
+underestimate**.
 
-#### ⭐ E la scena realistica ne fa stare **PIÙ** di quella uniforme
+#### ⭐ And the realistic scene fits **MORE** than the uniform one
 
-`[M]` **Tre sature + tre desktop veri + due ferme = otto sessioni, sei delle quali lavorano davvero**:
-tutte a **36,4-38,1 fot/s**, ritardo **9,5-13,8 ms**, zero chiavi, `render` **75,6 %**. Le due ferme
-aggiunte sopra: 75,6 → **75,8 %**.
-⇒ Il desktop vero costa **il 26 % in meno** di una satura ⇒ **la scena vera regge dove quella uniforme
-cedeva alla settima**.
+`[M]` **Three saturated + three real desktops + two still = eight sessions, six of which really work**:
+all at **36.4-38.1 fps**, latency **9.5-13.8 ms**, zero keyframes, `render` **75.6 %**. The two still ones
+added on top: 75.6 → **75.8 %**.
+⇒ The real desktop costs **26 % less** than a saturated one ⇒ **the real scene holds where the uniform one
+gave way at the seventh**.
 
-#### ⛔⛔⛔ Il colpo di scena: **IL RISVEGLIO SIMULTANEO**, e un budget preso all'ingresso non lo vede
+#### ⛔⛔⛔ The twist: **THE SIMULTANEOUS WAKE-UP**, and a budget taken at the entrance does not see it
 
-`[M]` Una satura + **otto ferme**, le otto scene accese **in 19 ms**:
+`[M]` One saturated + **eight still**, the eight scenes switched on **in 19 ms**:
 
-| | prima | dopo |
+| | before | after |
 |---|---|---|
-| chi lavorava già | **39,36 fot/s** · ritardo **9,7 ms** | ⛔ **1,60 fot/s** · ritardo **756 ms** (p95 997) |
-| `render` della macchina | 14,3 % | **88,2 %** |
-| GT / RC6 | 0 MHz / 66,7 % | 1550 MHz / 8,9 % |
+| whoever was already working | **39.36 fps** · latency **9.7 ms** | ⛔ **1.60 fps** · latency **756 ms** (p95 997) |
+| machine `render` | 14.3 % | **88.2 %** |
+| GT / RC6 | 0 MHz / 66.7 % | 1550 MHz / 8.9 % |
 
-⇒ ⛔ **Chi lavorava perde il 95,9 % del ritmo, e il ritardo fa ×78.** Otto sessioni ammesse quando
-costavano `[M]` **0,01 % l'una** si svegliano insieme e ne chiedono **8 × 14,4 = 115 %**, più il
-titolare: ⛔⛔ **il 130 % di un motore che ne ha 100.**
+⇒ ⛔ **Whoever was working loses 95.9 % of the rate, and the latency goes ×78.** Eight sessions admitted when
+they cost `[M]` **0.01 % each** wake up together and ask for **8 × 14.4 = 115 %**, plus the
+incumbent: ⛔⛔ **130 % of an engine that has 100.**
 
-⭐⭐ **E le due colonne raccontano cose diverse** (`LEZIONI.md` §1.34): il **RITMO** (sintomo) crolla
-**dentro il primo intervallo del metro — cioè entro 2 s, sotto la sua risoluzione**; il **RITARDO**
-(meccanismo) sale **gradualmente**: 154 → 420 → 606 → 805 → **1 004 ms**, e si assesta dopo **8-10 s**.
+⭐⭐ **And the two columns tell different things** (`LEZIONI.md` §1.34): the **RATE** (symptom) collapses
+**within the first interval of the meter — that is within 2 s, below its resolution**; the **LATENCY**
+(mechanism) rises **gradually**: 154 → 420 → 606 → 805 → **1 004 ms**, and settles after **8-10 s**.
 
-⭐ `[M]` **L'apertura di una sessione non peggiora mai col numero**: 2 054-2 223 ms, e l'undicesima si
-apre come la prima.
+⭐ `[M]` **Opening a session never gets worse with the number**: 2 054-2 223 ms, and the eleventh
+opens like the first.
 
-⭐ **E lo sfratto di §6.3 NON è scattato**: `[M]` dieci ferme sono **sopravvissute a tutta la salita**.
-⇒ Quell'eviction **non è incondizionata**, e il banco sa distinguere **un cliente morto da uno fermo**
-— che sul filo danno lo stesso zero.
+⭐ **And the eviction of §6.3 did NOT trigger**: `[M]` ten still ones **survived the whole climb**.
+⇒ That eviction **is not unconditional**, and the bench can tell **a dead client from a still one**
+— which on the wire give the same zero.
 
-#### I guasti innestati — **50 casi, 0 rossi**, ciascuno girato
+#### The injected faults — **50 cases, 0 reds**, each one run
 
-Ferma che si muove (orologio ⇒ smascherata dal **ritmo**; salvaschermo ⇒ dalla **seconda** colonna) ·
-scena a nome di una ferma ⇒ rosso **anche col filo muto** · satura che non satura · ⭐ **satura
-AFFAMATA a 1,5 fot/s che NON è «non satura»** · conto letto dal gradino prima · risveglio che non
-avviene / parziale / con le ferme già sveglie / **col cliente morto** · ⭐ **risveglio affamato che è
-comunque un risveglio** · metro del «quanto ci mette» **tarato su un crollo iniettato a 6,0 s** più
-due controlli negativi · delta GPU su platea che cambia · comando del risveglio validato con `bash -n`
-**prima**, dove non costa niente.
-⛔ **E la suite di `10-b92` rifatta girare alla fine: uscita 0.**
+Still one that moves (clock ⇒ unmasked by the **rate**; screensaver ⇒ by the **second** column) ·
+scene in the name of a still one ⇒ red **even with the wire mute** · saturated that does not saturate · ⭐ **saturated
+STARVED at 1.5 fps that is NOT «not saturated»** · count read from the step before · wake-up that does not
+happen / partial / with the still ones already awake / **with the client dead** · ⭐ **starved wake-up that is
+still a wake-up** · meter of «how long it takes» **calibrated on a collapse injected at 6.0 s** plus
+two negative controls · GPU delta on a changing population · wake-up command validated with `bash -n`
+**beforehand**, where it costs nothing.
+⛔ **And the `10-b92` suite run again at the end: exit 0.**
 
-⭐ **E i «non giudicati» sono quasi tutti il banco che si rifiuta dove una sessione ferma non può
-produrre una mediana del ritardo — quel rifiuto *è* la misura della quiete.**
+⭐ **And the «not judged» are almost all the bench refusing where a still session cannot
+produce a latency median — that refusal *is* the measurement of the quiet.**
 
-#### ⛔ I tre difetti del banco, e uno **è passato a un pelo**
+#### ⛔ The three bench defects, and one **was a close shave**
 
-1. ⛔⛔ **il `pkill` globale ereditato**: `[M]` a fine giro trovava **24 clienti vivi di un altro
-   banco** — quello che aveva appena preso il lucchetto. **Non li ha uccisi solo perché aveva
-   sgomberato prima che nascessero**, e ⛔ **la cura era già scritta in §6.3**;
-2. ⛔ **una chiave di riduzione copriva il «misurato»** di un banco importato ⇒ `ha_misurato()`
-   sempre falso e **quattro predicati muti INSIEME**, senza un rosso né un giallo. ⭐ Trovato
-   **rileggendo**, non da un rosso;
-3. ⛔⛔ **«svegliata» giudicata sul RITMO invece che sulla sollecitazione**: le otto si erano svegliate
-   benissimo (fotogrammi da ~5 kB, **18 volte** i 266 B di una ferma) ma consegnavano 1,5 fot/s,
-   **sotto la soglia delle ferme** ⇒ il banco si è rifiutato di misurare **proprio la scena che
-   esiste per misurare**. ⭐ Ha detto *«non ho misurato»* e non *«nessun effetto»* — ⚠ **ma il ritmo
-   basso non era il contrario del risveglio: era il suo RISULTATO.**
+1. ⛔⛔ **the inherited global `pkill`**: `[M]` at the end of the round it found **24 live clients of another
+   bench** — the one that had just taken the lock. **It did not kill them only because it had
+   cleared before they were born**, and ⛔ **the cure was already written in §6.3**;
+2. ⛔ **a reduction key covered the «measured»** of an imported bench ⇒ `ha_misurato()`
+   always false and **four predicates mute TOGETHER**, without a red or a yellow. ⭐ Found
+   **by re-reading**, not from a red;
+3. ⛔⛔ **«woken» judged on the RATE instead of on the stress**: the eight had woken up
+   perfectly well (frames of ~5 kB, **18 times** the 266 B of a still one) but delivered 1.5 fps,
+   **below the threshold of the still ones** ⇒ the bench refused to measure **precisely the scene that
+   exists to be measured**. ⭐ It said *«non ho misurato»* and not *«nessun effetto»* — ⚠ **but the low
+   rate was not the opposite of the wake-up: it was its RESULT.**
 
-#### Le `[?]`
+#### The `[?]`
 
-⛔⛔ **A quante ferme svegliate insieme comincia il crollo**: misurato **otto** (crolla); fra una e
-otto **non si sa dov'è il ginocchio** — ⭐ **ed è il numero che servirebbe a tarare un budget contro
-il risveglio** · ⛔ **due sature + N ferme**: solo N=0, la scala non è stata fatta — **i turni di
-lucchetto sono finiti prima** · ⚠ *«a strappi»* qui è **una finestra, non un'intermittenza**, e il
-motivo è dichiarato in testa al banco: un ciclo acceso/spento farebbe vedere la scena «ferma» mentre
-lavora, **cioè proprio l'errore che il banco esiste per chiudere** · ⚠ le occupazioni sono **tempo
-occupato**, e la GT si muove da 0 a 1550 MHz ⇒ **l'88,2 % del risveglio non è il 130 % della domanda**.
+⛔⛔ **At how many still ones woken together the collapse begins**: measured **eight** (collapses); between one and
+eight **nobody knows where the knee is** — ⭐ **and it is the number that would be needed to calibrate a budget against
+the wake-up** · ⛔ **two saturated + N still**: only N=0, the scale was not done — **the lock turns
+ran out first** · ⚠ *«a strappi»* here is **a window, not an intermittence**, and the
+reason is declared at the head of the bench: an on/off cycle would make the scene look «still» while it
+works, **that is precisely the error the bench exists to close** · ⚠ the occupancies are **busy
+time**, and the GT moves from 0 to 1550 MHz ⇒ **the 88.2 % of the wake-up is not the 130 % of the demand**.
 
 ---
 
-## §7 · ⛔ Che cosa NON ha funzionato
+## §7 · ⛔ What did NOT work
 
-### 7.1 Il conto degli errori di banco — **ventidue**, e la forma è sempre la stessa
+### 7.1 The count of bench errors — **twenty-two**, and the shape is always the same
 
-⛔ In un giro solo, i dieci banchi hanno prodotto **ventidue difetti di banco**, e ⛔⛔ **quasi tutti
-tacevano invece di dare rosso** — la forma che `LEZIONI.md` §1.29 aveva chiamato per nome due giorni
-prima, e che si ripresenta identica.
+⛔ In one single round, the ten benches produced **twenty-two bench defects**, and ⛔⛔ **almost all
+were silent instead of giving red** — the shape `LEZIONI.md` §1.29 had called by name two days
+earlier, and which comes back identical.
 
-| banco | i difetti pagati |
+| bench | the defects paid for |
 |---|---|
-| **i dieci** (§6.5) | ⛔ **nove, e otto su nove tacevano**: `pgrep -f` che trova sé stesso (ogni sessione sarebbe risultata «viva» per sempre) · percorso di fuori invece che di dentro il contenitore · il contatore di `lo` **che non era il suo** (22× più grande) · la scena che **non mordeva** · `drm-engine-capacity-video: 2` letto **come nanosecondi**, tetto 100 invece di 200 · il delta GPU su una platea di contesti **che cambia** (−76 %) · `misura()` che sovrastimava di 1/(N−1) · i processi di `enable-linger` scambiati per **palco orfano** |
-| **il filo** (§6.3) | `wc -l < file` in coda a `sudo -S` ⇒ `None` silenzioso · `$1` di `awk` espanso da `bash -c` ⇒ campo vuoto · graffe di `nft` prese da bash · `ss -uanp` che **non vede** le porte del cliente di prova · l'ICMP che senza contatore proprio finiva sotto **«vicini»** |
-| **la tabella piena** (§6.4) | il `tail` che **perdeva** la riga sotto migliaia di righe · la scena spenta **prima** dei clienti (àncora spostata di **42 s**) · `pgrep -f` che contava **7** figli dove ce n'erano 3, poi **0** · ⛔ **`pkill -f` che uccide la shell che lo sta eseguendo** ⇒ la prova dopo partiva **contro dei fantasmi** |
-| **il terreno** (§1.4) | ⛔ il predicato più importante che diventava **IGNOTO** invece di guardare la scheda nominata (forma E8) · `bash -c "…; sleep N # segno"` che **perde il segno** ⇒ il guasto restava innestato e chi l'aveva messo **credeva di non averlo messo** |
-| **il costo** (§6.4-bis) | ⛔ la soglia sui **byte per fotogramma**, che ordinava i due estremi **al contrario** (forma E15) |
+| **the ten** (§6.5) | ⛔ **nine, and eight out of nine were silent**: `pgrep -f` finding itself (every session would have resulted «alive» forever) · path from outside instead of from inside the container · the `lo` counter **that was not its own** (22× bigger) · the scene that **did not bite** · `drm-engine-capacity-video: 2` read **as nanoseconds**, ceiling 100 instead of 200 · the GPU delta over a **changing** population of contexts (−76 %) · `misura()` overestimating by 1/(N−1) · the `enable-linger` processes mistaken for an **orphan stage** |
+| **the wire** (§6.3) | `wc -l < file` at the end of `sudo -S` ⇒ silent `None` · `awk`'s `$1` expanded by `bash -c` ⇒ empty field · `nft` braces taken by bash · `ss -uanp` that **does not see** the test client's ports · the ICMP that without its own counter ended up under **«vicini»** |
+| **the full table** (§6.4) | the `tail` that **lost** the line under thousands of lines · the scene switched off **before** the clients (anchor shifted by **42 s**) · `pgrep -f` counting **7** children where there were 3, then **0** · ⛔ **`pkill -f` killing the shell that is running it** ⇒ the next test started **against ghosts** |
+| **the ground** (§1.4) | ⛔ the most important predicate becoming **UNKNOWN** instead of looking at the named card (shape E8) · `bash -c "…; sleep N # segno"` that **loses the mark** ⇒ the fault stayed injected and whoever had put it in **believed they had not** |
+| **the cost** (§6.4-bis) | ⛔ the threshold on **bytes per frame**, which ordered the two extremes **backwards** (shape E15) |
 
-⭐ **E due li ha evitati un banco d'altri**: la capacità **2** e il §CLOCK, che il metro tarato di §6.1
-portava già scritti. ⇒ **Un metro tarato non serve solo a chi lo scrive.**
+⭐ **And two were avoided by someone else's bench**: the capacity **2** and the §CLOCK, which the calibrated meter of §6.1
+already carried written down. ⇒ **A calibrated meter is not only useful to whoever writes it.**
 
-### 7.2 ⛔ Le prove che non si sono potute fare, e perché
+### 7.2 ⛔ The tests that could not be done, and why
 
 | | |
 |---|---|
-| **HEVC nel saturatore** | misurato **solo H.264** (§6.2). Il banco lo fa; le due colonne resterebbero **separate, non mediate** |
-| **la rete vera nella salita a dieci** | i clienti giravano sulla **stessa macchina**, su `lo` (MTU 65536) ⇒ il budget di rete della salita è **contato, non provato** (§6.5) |
-| **tre sessioni video insieme** sul filo stretto | ⛔ **la linea morta le sfratta prima che il riproduttore dipinga** (§6.3) |
-| **il modo QVBR**, che è quello che il prodotto usa | misurati CQP e CBR, i due estremi verificabili senza ambiguità (§6.6) |
-| **l'immagine** | nessun banco dice *«si vede peggio»*: ⭐ **quello lo dice l'utente**, ed è §10 |
+| **HEVC in the saturator** | **only H.264** measured (§6.2). The bench can do it; the two columns would stay **separate, not averaged** |
+| **the real network in the climb to ten** | the clients ran on the **same machine**, on `lo` (MTU 65536) ⇒ the climb's network budget is **counted, not tested** (§6.5) |
+| **three video sessions together** on the narrow wire | ⛔ **the dead line evicts them before the player paints** (§6.3) |
+| **the QVBR mode**, which is the one the product uses | CQP and CBR measured, the two extremes verifiable without ambiguity (§6.6) |
+| **the image** | no bench says *«si vede peggio»*: ⭐ **that is said by the user**, and it is §10 |
 
-### 7.3 ⛔⛔⭐ IL DIFETTO ERA NELLO STRATO CHE CI COORDINA — *«silenzio invece di rosso», un piano più su*
+### 7.3 ⛔⛔⭐ THE DEFECT WAS IN THE LAYER THAT COORDINATES US — *«silence instead of red», one floor up*
 
-*Secondo giro, 24 agosto 2026.* Il lucchetto della GPU di §1.1 ha retto il suo mestiere — ⭐ nessuna
-misura è stata falsata da un vicino, e i banchi lo dichiarano invece di dedurlo. ⛔ **Ma il modo in
-cui si aspetta il turno era rotto, e rotto nella forma che questa fase ha imparato a riconoscere.**
+*Second round, 24 Aug 2026.* The GPU lock of §1.1 did its job — ⭐ no
+measurement was distorted by a neighbour, and the benches declare it instead of deducing it. ⛔ **But the way
+the turn is awaited was broken, and broken in the shape this phase has learnt to recognise.**
 
-#### ⛔ `prendi()` non è una coda: è una **corsa**
+#### ⛔ `prendi()` is not a queue: it is a **race**
 
-`[M]` Il `mkdir` si ritenta ogni 5 s e vince **chi arriva per primo dopo un `molla`**: nessuna
-prenotazione, nessuna anzianità. Con **cinque** incarichi sulla stessa scheda e turni da ~90 minuti,
-un banco che aspettava da **due ore** ha **perso due passaggi di mano consecutivi** senza mai toccare
-la GPU.
+`[M]` The `mkdir` is retried every 5 s and the winner is **whoever arrives first after a `molla`**: no
+booking, no seniority. With **five** assignments on the same card and turns of ~90 minutes,
+a bench that had been waiting for **two hours** **lost two consecutive hand-overs** without ever touching
+the GPU.
 
-⛔⛔ **E il danno non è il ritardo: è che il giro veniva SALTATO sotto un codice d'uscita che
-somigliava a un problema di terreno.** ⇒ La domanda **non veniva mai posta**, e chi leggeva l'esito
-vedeva un guasto invece di un buco. È esattamente la forma di `LEZIONI.md` §1.29 — *silenzio invece
-di rosso* — **un piano più su**: non nel banco, in quel che coordina i banchi.
+⛔⛔ **And the damage is not the delay: it is that the round was SKIPPED under an exit code that
+looked like a ground problem.** ⇒ The question **was never asked**, and whoever read the outcome
+saw a fault instead of a hole. It is exactly the shape of `LEZIONI.md` §1.29 — *silence instead
+of red* — **one floor up**: not in the bench, in what coordinates the benches.
 
-#### ⭐⭐ La cura: **«il turno non è arrivato» è un esito suo**, e solo lui si rimette in coda
+#### ⭐⭐ The cure: **«the turn did not come» is an outcome of its own**, and only it is put back in the queue
 
-| uscita | vuol dire | si rifà? |
+| exit | means | redone? |
 |---|---|---|
-| 0 / 1 | ⭐ **un giudizio** — regge / non regge | ⛔ **mai** |
-| 3 | *«non giudico»* — ha misurato, e qualche predicato non ha potuto parlare | ⛔ **mai** |
-| 2 | il terreno non regge, o l'uso è sbagliato | ⛔ mai — **un terreno cattivo si GUARDA**, non si ritenta finché per caso passa |
-| **4** | ⭐ **il turno non è mai arrivato** — la domanda non è stata posta | ✅ **sì, fino a quattro volte** |
+| 0 / 1 | ⭐ **a judgement** — holds / does not hold | ⛔ **never** |
+| 3 | *«non giudico»* — it measured, and some predicate could not speak | ⛔ **never** |
+| 2 | the ground does not hold, or the use is wrong | ⛔ never — **a bad ground is LOOKED AT**, not retried until by chance it passes |
+| **4** | ⭐ **the turn never came** — the question was not asked | ✅ **yes, up to four times** |
 
-⛔⛔ **E il `3` NON si rimette in coda, di proposito.** È il più tentante — *«qualche casella non ha
-giudicato, riprova»* — ed è ⭐ **la strada esatta per misurare due volte finché esce il numero che
-piace**. In un progetto che ha ritirato due conclusioni per questa ragione, la tentazione si chiude
-con una regola, non con la buona volontà.
+⛔⛔ **And the `3` is NOT put back in the queue, on purpose.** It is the most tempting — *«some box did not
+judge, try again»* — and it is ⭐ **the exact route to measuring twice until the number one
+likes comes out**. In a project that has withdrawn two conclusions for this reason, the temptation is closed
+with a rule, not with good will.
 
-⭐ **E la logica è stata provata contro un banco finto** che esce coi codici scelti apposta — perché
-*un pilota che sembra giusto e non è mai stato visto rimettere in coda ha lo stesso difetto che sta
-curando*: `4,4,4,0` ⇒ quattro chiamate, esce 0 · `1` ⇒ una chiamata · `0` ⇒ una · `3` ⇒ una · `2` ⇒
-una · sempre `4` ⇒ si ferma dopo quattro **e lo dice**.
+⭐ **And the logic was tested against a fake bench** that exits with codes chosen on purpose — because
+*a pilot that looks right and has never been seen putting back in the queue has the same defect it is
+curing*: `4,4,4,0` ⇒ four calls, exits 0 · `1` ⇒ one call · `0` ⇒ one · `3` ⇒ one · `2` ⇒
+one · always `4` ⇒ it stops after four **and says so**.
 
-#### ⛔ E tre trappole del mestiere, tutte pagate da più di un banco
+#### ⛔ And three traps of the trade, all paid for by more than one bench
 
-1. ⛔⛔ **In bash i `trap` sono RIMANDATI finché un figlio in primo piano non finisce.** ⇒ Un SIGTERM
-   al pilota sarebbe restato **in sospeso per tutta la durata del giro**: lucchetto occupato, campo
-   sporco, **e nessuna riga rossa** — si vedeva solo un pilota che *«non risponde»*. ⚠ La forma nota
-   era *«SIGTERM ammazza senza far girare il `finally`»*; **qui era peggio: non ammazzava,
-   addormentava la cura**. Il figlio va messo in fondo e atteso con `wait`.
-2. ⛔ **Una trappola che chiama una funzione definita più avanti «sembra armata»**: `molla: comando
-   non trovato`, e la pulizia non avviene. ⇒ **Peggio di nessuna trappola.**
-3. ⛔⛔ **`pgrep -f` / `pkill -f` acchiappano la riga di comando che li esegue.** `[M]` **Due**
-   incarichi si sono **uccisi il proprio pilota** credendo di controllarlo, e uno se n'è accorto solo
-   perché il PID restituito era quello della shell che lanciava. ⇒ Il PID dev'essere **quello che il
-   pilota ha scritto di sé**, e i modelli si scrivono `campagn[a].sh`. ⚠ **La cura era già scritta in
-   questo progetto** (`10-b92-dieci.py`, `cerca_giornale`) e non era stata applicata.
+1. ⛔⛔ **In bash `trap`s are DEFERRED until a foreground child finishes.** ⇒ A SIGTERM
+   to the pilot would have stayed **pending for the whole duration of the round**: lock taken, field
+   dirty, **and no red line** — all one saw was a pilot that *«does not answer»*. ⚠ The known shape
+   was *«SIGTERM kills without running the `finally`»*; **here it was worse: it did not kill,
+   it put the cure to sleep**. The child must be put in the background and awaited with `wait`.
+2. ⛔ **A trap that calls a function defined further on «looks armed»**: `molla: comando
+   non trovato`, and the cleanup does not happen. ⇒ **Worse than no trap.**
+3. ⛔⛔ **`pgrep -f` / `pkill -f` catch the command line that runs them.** `[M]` **Two**
+   assignments **killed their own pilot** believing they were checking it, and one noticed only
+   because the PID returned was that of the launching shell. ⇒ The PID must be **the one the
+   pilot wrote about itself**, and the patterns are written `campagn[a].sh`. ⚠ **The cure was already written in
+   this project** (`10-b92-dieci.py`, `cerca_giornale`) and had not been applied.
 
-⭐ **E una cosa fatta bene, che vale la pena tenere**: un pilota ucciso a metà ha **scritto i numeri
-prima di sgombrare**, chiuso i palchi dei suoi sette utenti, e poi — *«il lucchetto adesso è di
-`10-b5`: non lo tocco»* — **si è rifiutato di rilasciare un lucchetto che nel frattempo era diventato
-di un altro**.
+⭐ **And one thing done well, worth keeping**: a pilot killed halfway **wrote the numbers
+before clearing**, closed the stages of its seven users, and then — *«il lucchetto adesso è di
+`10-b5`: non lo tocco»* — **refused to release a lock that in the meantime had become
+someone else's**.
 
-#### ⛔⛔⛔ E il difetto peggiore del lucchetto: **si può aspettare SÉ STESSI**
+#### ⛔⛔⛔ And the worst defect of the lock: **one can wait for ONESELF**
 
-`[M]` Un banco ha trovato il campo intestato al **proprio** nome con 4 801 s residui, mentre il suo
-pilota ne chiedeva 2 120: ⇒ non era lui, era **un'istanza morta prima che la trappola di pulizia
-esistesse**.
+`[M]` A bench found the field in its **own** name with 4 801 s remaining, while its
+pilot asked for 2 120: ⇒ it was not itself, it was **an instance that died before the cleanup trap
+existed**.
 
-> ⛔⛔ **`prendi()` non ha nessun ramo per «il lucchetto è GIÀ MIO»**: se il nome dentro combacia col
-> proprio, aspetta esattamente come se fosse di un altro.
+> ⛔⛔ **`prendi()` has no branch for «the lock is ALREADY MINE»**: if the name inside matches its
+> own, it waits exactly as if it belonged to someone else.
 
-⇒ **Un pilota morto male lascia il lucchetto col proprio nome, e il pilota successivo aspetta sé
-stesso fino alla scadenza.** `[M]` **Ottanta minuti di GPU bloccati per tutti e cinque**, e ⛔ **nessuna
-riga rossa da nessuna parte** — solo un pilota che *«sta aspettando il suo turno»*.
-⚠ È la stessa famiglia della corsa, **e peggiore**: là si perde un passaggio, qui **si blocca la fila**.
+⇒ **A pilot that died badly leaves the lock with its own name, and the next pilot waits for itself
+until the expiry.** `[M]` **Eighty minutes of GPU blocked for all five**, and ⛔ **no
+red line anywhere** — only a pilot that *«is waiting for its turn»*.
+⚠ It is the same family as the race, **and worse**: there one loses a hand-over, here **the queue is blocked**.
 
-⭐ La cura sta **nel pilota**, non in `09-lucchetto.py`, che è di tutti: se il nome è il proprio **e**
-nessun processo proprio è vivo sulla macchina, **adotta** e rimette la scadenza — ⛔ **dichiarandolo**.
-*Adottare in silenzio sarebbe peggio del blocco.*
+⭐ The cure is **in the pilot**, not in `09-lucchetto.py`, which belongs to everyone: if the name is its own **and**
+no process of its own is alive on the machine, it **adopts** and resets the expiry — ⛔ **declaring it**.
+*Adopting silently would be worse than the block.*
 
-#### ⛔ E la terza: **una scadenza sottostimata regala la GPU a metà misura**
+#### ⛔ And the third: **an underestimated expiry gives away the GPU mid-measurement**
 
-Il lucchetto ha una scadenza apposta — chi la trova passata **scassina dichiarandolo**, ed è giusto:
-altrimenti un pilota morto bloccherebbe tutti fino a domani. ⛔ **Ma il rovescio non era stato
-pensato**: un giro che dura **più** di quanto ha dichiarato si vede togliere la GPU **a metà
-misura**, e chi la prende misura **su sette palchi vivi credendo la macchina sgombra**.
-⇒ ⛔⛔ **Nessuno dei due vede rosso, e tutt'e due leggono numeri plausibili.**
+The lock has an expiry on purpose — whoever finds it past **breaks in, declaring it**, and that is right:
+otherwise a dead pilot would block everyone until tomorrow. ⛔ **But the reverse had not been
+thought of**: a round that lasts **longer** than it declared has the GPU taken away **mid-
+measurement**, and whoever takes it measures **on seven live stages believing the machine clear**.
+⇒ ⛔⛔ **Neither of the two sees red, and both read plausible numbers.**
 
-⭐ La cura è la regola dell'asimmetria di `LEZIONI.md` §1.33, applicata alla durata: il tempo di
-possesso si **somma dalle parti vere** del giro e si moltiplica per un margine **dichiarato** — `[M]`
-63 minuti stimati, **101 dichiarati**, con tutt'e due stampati — perché *sbagliare in alto costa al
-prossimo qualche minuto, sbagliare in basso costa a tutti e due la misura*.
+⭐ The cure is the asymmetry rule of `LEZIONI.md` §1.33, applied to the duration: the holding
+time is **added up from the real parts** of the round and multiplied by a **declared** margin — `[M]`
+63 minutes estimated, **101 declared**, with both printed — because *erring high costs the
+next one a few minutes, erring low costs both of them the measurement*.
 
-#### ⛔⛔ E la quarta, trovata **provando la cura**: **i corridori orfani**
+#### ⛔⛔ And the fourth, found **while testing the cure**: **the orphan racers**
 
-Nel mettere a posto il modo di correre, un banco ha trovato `[M]` **due `python3` vivi da 2h05m e da
-50m**: erano gli **aspettanti** di pilota che lui stesso aveva ucciso, ⛔ **e stavano ancora correndo
-per il lucchetto vero a nome suo**.
+While fixing the way of racing, a bench found `[M]` **two `python3`s alive for 2h05m and for
+50m**: they were the **waiters** of pilots it had itself killed, ⛔ **and they were still racing
+for the real lock in its name**.
 
-⇒ Se uno avesse vinto, avrebbe tenuto la GPU per **3 640 s con nessuno a mollarla**; e per tutti gli
-altri sarebbe stato **un lucchetto occupato da un nome VIVO**: ⛔ **nessun rosso, nessuno scassino,
-solo attesa.**
+⇒ If one had won, it would have held the GPU for **3 640 s with nobody to release it**; and for all the
+others it would have been **a lock held by a LIVE name**: ⛔ **no red, no break-in,
+only waiting.**
 
-⭐ **La causa**: la trappola di pulizia si armava **dopo** aver preso il lucchetto ⇒ chi veniva ucciso
-**mentre aspettava** lasciava in piedi il proprio aspettante. Le tre cure — trappole armate **prima**
-della corsa, il corridore che gira come figlio così la trappola lo raggiunge, e la pulizia che chiude
-anche il corridore **remoto** — ⭐ **sono state provate sul caso che prima non era stato provato: il
-segnale ricevuto IN ATTESA**, non durante la misura.
+⭐ **The cause**: the cleanup trap was armed **after** taking the lock ⇒ whoever was killed
+**while waiting** left its own waiter standing. The three cures — traps armed **before**
+the race, the racer running as a child so that the trap reaches it, and the cleanup that also closes
+the **remote** racer — ⭐ **were tested on the case that had not been tested before: the
+signal received WHILE WAITING**, not during the measurement.
 
-⭐ **E la corsa infittita paga**: `[M]` un ciclo `mkdir` a **0,5 s che gira sulla macchina di prova**
-(dentro **una sola** connessione: ritentare da fuori costerebbe 100-200 ms di rete a tentativo e
-lascerebbe **comunque** una finestra più larga del passo dichiarato) prende il lucchetto **47 ms**
-dopo il rilascio, contro i fino-a-5 000 di prima.
+⭐ **And the tighter race pays off**: `[M]` a `mkdir` loop at **0.5 s running on the test machine**
+(inside **one single** connection: retrying from outside would cost 100-200 ms of network per attempt and
+would **still** leave a window wider than the declared step) takes the lock **47 ms**
+after the release, against the up-to-5 000 of before.
 
-#### ⛔⛔ E la quinta, che è **passata a un pelo**: una pulizia globale ereditata
+#### ⛔⛔ And the fifth, which **was a close shave**: an inherited global cleanup
 
-Un banco aveva ereditato dal suo predecessore la riga di sgombero `pkill -f '…cliente… --cliente'`,
-con un modello **globale**. ⛔ Ma quel nome di cliente è quello che usa **ogni** banco della fase, e in
-questo giro **anche gli utenti sono condivisi**.
-`[M]` **A fine giro quel modello combaciava con 24 clienti VIVI, tutti di un altro banco** — quello
-che aveva appena preso il lucchetto e **stava misurando**.
-⭐ Non li ha uccisi **solo perché aveva sgomberato prima che nascessero**.
+A bench had inherited from its predecessor the clearing line `pkill -f '…cliente… --cliente'`,
+with a **global** pattern. ⛔ But that client name is the one **every** bench of the phase uses, and in
+this round **the users are shared too**.
+`[M]` **At the end of the round that pattern matched 24 LIVE clients, all of another bench** — the one
+that had just taken the lock and **was measuring**.
+⭐ It did not kill them **only because it had cleared before they were born**.
 
-⇒ ⛔ La cura era **già scritta in questa stessa fase** (§6.3: *«chiude SOLO le proprie sessioni»*) e
-non era stata applicata. Adesso lo sgombero combacia solo con la **propria cartella di lavoro**.
-⚠ **È la seconda volta in questo giro che una cura già scritta nel progetto non viene applicata da
-chi ne aveva bisogno** — l'altra è la trappola di `pgrep -f`. ⭐ Il difetto non è la disattenzione: è
-che **quelle cure vivono nei commenti dei banchi, e chi copia una riga non copia il riquadro**.
+⇒ ⛔ The cure was **already written in this same phase** (§6.3: *«chiude SOLO le proprie sessioni»*) and
+had not been applied. Now the clearing matches only its **own working folder**.
+⚠ **It is the second time in this round that a cure already written in the project is not applied by
+whoever needed it** — the other is the `pgrep -f` trap. ⭐ The defect is not inattention: it is
+that **those cures live in the benches' comments, and whoever copies a line does not copy the box**.
 
-⚠ **E `setsid` non basta**: un pilota è stato ucciso a metà verdetto perché **la scadenza di una
-chiamata si è portata via l'intero gruppo di processi**. La misura era già finita e il lucchetto già
-mollato, ⭐ ma la forma che regge è **un'unità vera** (`systemd-run --user`), con il suo cgroup,
-interrogabile — non un `nohup`.
+⚠ **And `setsid` is not enough**: a pilot was killed mid-verdict because **the timeout of a
+call took away the whole process group**. The measurement had already finished and the lock already
+released, ⭐ but the shape that holds is **a real unit** (`systemd-run --user`), with its own cgroup,
+queryable — not a `nohup`.
 
-#### ⛔⛔ E la sesta: **la cura dell'adozione può rubare il lucchetto a sé stessi**
+#### ⛔⛔ And the sixth: **the adoption cure can steal the lock from oneself**
 
-⚠ Va letta insieme alla cura del riquadro precedente, perché **è il suo rovescio**. Un banco si è
-trovato **due copie del proprio pilota vive** (il pilota di ritenta non faceva più `exec`, quindi il
-file del pid teneva **la shell** e il figlio Python restava orfano). Tutt'e due si chiamavano allo
-stesso modo, tutt'e due correvano per lo stesso lucchetto — ⛔⛔ **e la regola «rilascia se il nome
-combacia» avrebbe fatto sì che la copia IN ATTESA, ricevendo un SIGTERM, rilasciasse il lucchetto
-della copia CHE STAVA MISURANDO e le sgomberasse i palchi, a metà misura, senza che nessuna delle due
-vedesse rosso.**
+⚠ It must be read together with the cure of the previous box, because **it is its reverse**. A bench
+found **two copies of its own pilot alive** (the retry pilot no longer did `exec`, so the
+pid file held **the shell** and the Python child stayed orphaned). Both had the same
+name, both were racing for the same lock — ⛔⛔ **and the rule «release if the name
+matches» would have made the WAITING copy, on receiving a SIGTERM, release the lock
+of the copy THAT WAS MEASURING and clear its stages, mid-measurement, without either of the two
+seeing red.**
 
-⭐ Tre cure, tutte provate: una guardia di **istanza unica** con `flock` (provata in tre stati); la
-regola di rilascio che si fida **solo** di «l'ho preso io», non del nome; e il pilota che scrive il
-pid **del Python** e gli inoltra i segnali — ⭐ verificato: TERM alla sola shell, **e il misuratore è
-uscito con lei, senza orfani**.
+⭐ Three cures, all tested: a **single-instance** guard with `flock` (tested in three states); the
+release rule that trusts **only** «I took it», not the name; and the pilot that writes the
+pid **of the Python** and forwards the signals to it — ⭐ verified: TERM to the shell alone, **and the measurer
+exited with it, without orphans**.
 
-⛔ **E un terzo difetto della stessa famiglia**: un giro interrotto **ha scritto il suo file senza i
-numeri** — il `finally` salvava i risultati, ma la voce delle celle veniva assegnata **solo se la
-funzione tornava** ⇒ cinque celle misurate hanno prodotto un file che diceva *«nessuna cella»*.
-⭐ **Un file che esiste e non porta niente è peggio di un file che manca: sembra un risultato.**
+⛔ **And a third defect of the same family**: an interrupted round **wrote its file without the
+numbers** — the `finally` saved the results, but the cells entry was assigned **only if the
+function returned** ⇒ five measured cells produced a file that said *«nessuna cella»*.
+⭐ **A file that exists and carries nothing is worse than a missing file: it looks like a result.**
 
-#### ⚠ E due cose che il terreno ha insegnato in questo giro
+#### ⚠ And two things the ground taught in this round
 
-1. ⛔ **Un `tail -40` sul verdetto del controllo del terreno taglia le righe che dicono PERCHÉ.** `[M]`
-   Il terreno dava due guai e il pilota ne stampava solo la coda: **le due righe rosse stavano in
-   cima**. ⇒ Su rosso si stampano **tutte** le righe rosse — un verdetto troncato è un verdetto muto.
-2. ⭐ **E la guardia giusta per una misura di GPU non è «nessun `remotix` altrui»**, che con cinque
-   banchi accesi non si avvera mai: è **nessun `remotix-figlio` altrui vivo**. `[M]` Un server **senza
-   figli costa GPU zero** (§6.4-bis, RC6 al 100 %), quindi i vicini fermi non disturbano; ⛔ **un solo
-   figlio altrui vivo sì**, e quello codificherebbe sulla stessa scheda, lucchetto o no.
+1. ⛔ **A `tail -40` on the ground check's verdict cuts the lines that say WHY.** `[M]`
+   The ground gave two troubles and the pilot printed only the tail: **the two red lines were at the
+   top**. ⇒ On red **all** the red lines are printed — a truncated verdict is a mute verdict.
+2. ⭐ **And the right guard for a GPU measurement is not «no other `remotix`»**, which with five
+   benches on never comes true: it is **no other live `remotix-figlio`**. `[M]` A server **without
+   children costs zero GPU** (§6.4-bis, RC6 at 100 %), so still neighbours do not disturb; ⛔ **one single
+   live child of someone else does**, and it would encode on the same card, lock or no lock.
 
 ---
 
-### 5.8 ⭐⭐⭐⭐⭐ IL TESTIMONE CHE FA VEDERE — **e la prima immagine del desktop remoto**
+### 5.8 ⭐⭐⭐⭐⭐ THE WITNESS THAT SHOWS — **and the first image of the remote desktop**
 
-*25 agosto 2026, dopo che il regista aveva smesso di provare.* ⛔ **È il pezzo che teneva chiusa la
-fase**, e non era codice del prodotto: era **non saper guardare**.
+*25 Aug 2026, after the director had stopped testing.* ⛔ **It is the piece that kept the phase
+from closing**, and it was not product code: it was **not knowing how to look**.
 
-`[M]` Quattro strade provate e **nessuna dava il quadro** — lo scatto interno del figlio
-(`cattura.bgrx` **0 byte**), la fotografia dello schermo (⛔ GNOME non espone
-`wlr-screencopy`), la tela della pagina via Marionette (⛔ **ogni riattacco buttava giù la sessione
-RCP**), il conteggio dei fotogrammi (⛔ dice **quanti**, non **che cosa**).
+`[M]` Four routes tried and **none gave the picture** — the child's internal snapshot
+(`cattura.bgrx` **0 bytes**), the screen photograph (⛔ GNOME does not expose
+`wlr-screencopy`), the page's canvas via Marionette (⛔ **every re-attach brought down the RCP
+session**), the frame count (⛔ it says **how many**, not **what**).
 
-⭐ **La quinta ha funzionato al primo colpo**: `banchi/10-f1-testimone.py` — il **cliente di prova**
-prende i fotogrammi **dal filo** (`--video-scrivi`), `ffmpeg -update 1` decodifica **l'ultimo**, e
-ne esce un PNG. ⚠ Si dichiara **dove guarda**: **dopo il filo, prima del decodificatore del
-browser** — non sostituisce la tela, la **precede**.
+⭐ **The fifth worked at the first shot**: `banchi/10-f1-testimone.py` — the **test client**
+takes the frames **from the wire** (`--video-scrivi`), `ffmpeg -update 1` decodes **the last one**, and
+a PNG comes out. ⚠ It is declared **where it looks**: **after the wire, before the browser's
+decoder** — it does not replace the canvas, it **precedes** it.
 
-#### ⛔ Tarato, perché un PNG nero e il desktop hanno la stessa faccia dal lato del codice
+#### ⛔ Calibrated, because a black PNG and the desktop have the same face from the code's side
 
-| controllo | `[M]` |
+| check | `[M]` |
 |---|---|
-| ⭐ **positivo** | la marca di `04-b30-scena` ritrovata dal lettore certificato: giro **«f1-taratura»**, disegno **3783**, contrasto **0,997** ⇒ guarda **quel** desktop, in **quell'istante** |
-| ⛔ **negativo, sul vero** | fondo a `#000000` ⇒ **quasi-nero**, accesi **0,00121**; e **sotto la barra di GNOME il fotogramma è nero byte per byte** (accesi 0,00000000, luma massima 1). ⭐ Il metro sente **un pixel su ottocento**, e il desktop vero sta **800 volte** più su |
-| ⛔⛔ **il terzo esito** | sessione appena nata, palco che non ha ancora consegnato ⇒ ⭐ **«NON HO GUARDATO», uscita 3** — **non** «era nero» |
-| ⭐ **non rompe chi guarda** | con uno spettatore già attaccato il testimone è stato **RESPINTO** (`congedo 0x0f`, *«lo sfratto NON è scattato»*), e ⭐ **lo spettatore è rimasto attaccato** |
+| ⭐ **positive** | the mark of `04-b30-scena` found again by the certified reader: round **«f1-taratura»**, draw **3783**, contrast **0.997** ⇒ it looks at **that** desktop, at **that instant** |
+| ⛔ **negative, on the real one** | background at `#000000` ⇒ **almost black**, lit **0.00121**; and **under the GNOME bar the frame is black byte for byte** (lit 0.00000000, max luma 1). ⭐ The meter senses **one pixel in eight hundred**, and the real desktop sits **800 times** higher |
+| ⛔⛔ **the third outcome** | session just born, stage that has not delivered yet ⇒ ⭐ **«NON HO GUARDATO», exit 3** — **not** «it was black» |
+| ⭐ **it does not break whoever is watching** | with a viewer already attached the witness was **REJECTED** (`congedo 0x0f`, *«lo sfratto NON è scattato»*), and ⭐ **the viewer stayed attached** |
 
-⭐ **`--certifica`: 4 predicati, sano 4 → guasto 12 → risanato 4.** ⚠ E **due guasti hanno morso su
-codice del banco stesso**: G8 dichiarava «tinta unita» uno schermo nero **con la marca sopra**
-(contava i colori invece della frazione diversa dal fondo); G12 aveva la barra finta **troppo
-grossa** e passava per il motivo sbagliato. ⇒ ⭐ *Il metro è stato corretto dalla sua stessa
-taratura, prima di misurare qualsiasi cosa.*
+⭐ **`--certifica`: 4 predicates, healthy 4 → fault 12 → healed 4.** ⚠ And **two faults bit on
+the bench's own code**: G8 declared «solid colour» a black screen **with the mark on it**
+(it counted the colours instead of the fraction different from the background); G12 had the fake bar **too
+big** and passed for the wrong reason. ⇒ ⭐ *The meter was corrected by its own
+calibration, before measuring anything.*
 
-### 5.9 ⭐⭐⭐⭐⭐ E QUEL CHE SI VEDE — **il desktop remoto è perfetto, e Firefox si ferma su un dialogo**
+### 5.9 ⭐⭐⭐⭐⭐ AND WHAT ONE SEES — **the remote desktop is perfect, and Firefox stops on a dialog**
 
-#### ⭐⭐ Il desktop: ![il desktop remoto con Nautilus aperto](scatti/10-desktop-remoto-nautilus.png)
+#### ⭐⭐ The desktop: ![the remote desktop with Nautilus open](scatti/10-desktop-remoto-nautilus.png)
 
-⭐ **GNOME completo, sfondo Debian, barra in alto, e Nautilus con una finestra vera, nitida** —
-`[M]` media da **75,2 a 114,0** quando la finestra si apre. ⇒ ⛔ **compositore, GTK, `wl_output`,
-mappatura, cattura, codifica, filo: tutta la catena regge.** Il prodotto fa quel che promette.
+⭐ **Complete GNOME, Debian background, top bar, and Nautilus with a real, sharp window** —
+`[M]` mean from **75.2 to 114.0** when the window opens. ⇒ ⛔ **compositor, GTK, `wl_output`,
+mapping, capture, encoding, wire: the whole chain holds.** The product does what it promises.
 
-#### ⛔ E Firefox: ![Firefox fermo sul dialogo «Profile Missing»](scatti/10-firefox-profile-missing.png)
+#### ⛔ And Firefox: ![Firefox stuck on the «Profile Missing» dialog](scatti/10-firefox-profile-missing.png)
 
 > **Profile Missing** — *«Your Firefox profile cannot be loaded. It may be missing or
 > inaccessible.»* **[OK]**
 
-`[M]` Riprodotto **tre volte**, anche con `~/.mozilla` **spazzato via** e ripartendo da zero.
-Premendo OK, Firefox **esce**. ⛔ **`profiles.ini` non viene mai creato**: in `~/.mozilla/firefox/`
-restano solo `Crash Reports` e `Pending Pings`. E il primo crash è **datato e nominato**:
+`[M]` Reproduced **three times**, even with `~/.mozilla` **swept away** and starting from zero.
+Pressing OK, Firefox **exits**. ⛔ **`profiles.ini` is never created**: in `~/.mozilla/firefox/`
+only `Crash Reports` and `Pending Pings` remain. And the first crash is **dated and named**:
 `MozCrashReason: "Compositor crashed ()"`, **`SIGSEGV / SEGV_MAPERR`**.
 
-> ### ⛔⛔ E LA TRAPPOLA CHE TENEVA NASCOSTO TUTTO ERA DEL BANCO
+> ### ⛔⛔ AND THE TRAP THAT KEPT EVERYTHING HIDDEN BELONGED TO THE BENCH
 >
-> L'**ESC** che si manda per uscire dalla vista d'insieme di GNOME è ⛔ **lo stesso tasto che chiude
-> un dialogo modale**. Con ESC prima dello scatto → **desktop vuoto**. Senza ESC → **il dialogo**.
+> The **ESC** sent to leave the GNOME overview is ⛔ **the same key that closes
+> a modal dialog**. With ESC before the snapshot → **empty desktop**. Without ESC → **the dialog**.
 >
-> ⇒ ⭐⭐ *«Firefox è vivo e disegna ma non ha nessuna finestra»* — la diagnosi su cui il
-> coordinamento aveva girato per ore — **era il dialogo, chiuso dal nostro stesso ESC.**
+> ⇒ ⭐⭐ *«Firefox è vivo e disegna ma non ha nessuna finestra»* — the diagnosis around which the
+> coordination had been turning for hours — **was the dialog, closed by our own ESC.**
 
-⚠ **E una seconda causa reale, trovata per strada, che riguarda i banchi**: l'ambiente composto da
-`giu()` (`env -i` con otto variabili) ⛔ **manca `XDG_SESSION_TYPE`** — Nautilus rifiutava con
-*«Unsupported or missing session type ''»*. Servono anche `XDG_CURRENT_DESKTOP=GNOME` e
-`GTK_A11Y=none`.
+⚠ **And a second real cause, found along the way, which concerns the benches**: the environment composed by
+`giu()` (`env -i` with eight variables) ⛔ **lacks `XDG_SESSION_TYPE`** — Nautilus refused with
+*«Unsupported or missing session type ''»*. `XDG_CURRENT_DESKTOP=GNOME` and
+`GTK_A11Y=none` are needed too.
 
-⛔ **Che cosa resta `[?]`**: **perché** Firefox non riesce a creare il profilo. `HOME` è scrivibile,
-ci sono **28 GB** liberi, il portale è attivo, e `gdb` mostra un ciclo `g_main_context_iteration`
-**annidato** — cioè il dialogo. ⭐ La pista che pesa è il **compositore di Firefox che muore**: se il
-processo GPU se ne va all'avvio, *«Profile Missing»* è **il sintomo, non la causa**.
+⛔ **What stays `[?]`**: **why** Firefox cannot create the profile. `HOME` is writable,
+there are **28 GB** free, the portal is active, and `gdb` shows a **nested** `g_main_context_iteration` loop
+— that is, the dialog. ⭐ The lead that weighs is **Firefox's compositor dying**: if the
+GPU process goes away at startup, *«Profile Missing»* is **the symptom, not the cause**.
 
-### 5.10 ⭐⭐⭐⭐⭐ **«FIREFOX NON FUNZIONA» — ed era il profilo del browser che non nasceva**
+### 5.10 ⭐⭐⭐⭐⭐ **«FIREFOX NON FUNZIONA» — and it was the browser profile that was not being born**
 
-*25 agosto 2026.* ⛔ **Il difetto è di REMOTIX** — ed è per questo che sta in questa fase e non
-altrove.
+*25 Aug 2026.* ⛔ **The defect belongs to REMOTIX** — and that is why it sits in this phase and not
+elsewhere.
 
-> #### ⭐⭐⭐ CORREZIONE DELL'UTENTE — *25 agosto 2026, sera*
+> #### ⭐⭐⭐ THE USER'S CORRECTION — *25 Aug 2026, evening*
 >
-> ⚠ *Questa sezione si intitolava «**ed era `~/.cache` che punta a `/tmp`**» e diceva «**il difetto
-> non era di REMOTIX**». ⛔ Tutt'e due sbagliate, e la seconda nel verso peggiore.*
+> ⚠ *This section was titled «**ed era `~/.cache` che punta a `/tmp`**» and said «**il difetto
+> non era di REMOTIX**». ⛔ Both wrong, and the second in the worst direction.*
 >
-> > *«`.cache` che punta a `/tmp` è una mia scelta voluta»* — l'utente. È una decisione su come deve
-> > funzionare **il sistema operativo della sua macchina**, e **non c'entra niente con REMOTIX**.
+> > *«`.cache` che punta a `/tmp` è una mia scelta voluta»* — the user. It is a decision about how
+> > **the operating system of his machine** must work, and **it has nothing to do with REMOTIX**.
 >
-> ⇒ ⛔ **Quel collegamento non è un difetto, e non c'è niente da riparare nel sistema.** Su una
-> macchina a un utente solo non fa nessun danno.
-> ⭐⭐ **Il difetto è nostro**: è **il nostro `useradd -m`** a creare dieci utenti che nascono tutti a
-> scrivere nello stesso posto. ⇒ *Una scelta innocua diventa un blocco per nove **perché ci mettiamo
-> noi i dieci inquilini**.*
-> ⇒ `DECISIONI.md` **§4.6-undecies**, e il bersaglio della fase 11 cambia di conseguenza:
-> **«il secondo utente apre il browser?»**, non «le cartelle sono al posto canonico?».
+> ⇒ ⛔ **That link is not a defect, and there is nothing to repair in the system.** On a
+> single-user machine it does no harm.
+> ⭐⭐ **The defect is ours**: it is **our `useradd -m`** that creates ten users who are all born
+> writing in the same place. ⇒ *A harmless choice becomes a block for nine **because it is we who put in
+> the ten tenants**.*
+> ⇒ `DECISIONI.md` **§4.6-undecies**, and the target of phase 11 changes accordingly:
+> **«il secondo utente apre il browser?»**, not «le cartelle sono al posto canonico?».
 
-#### Il meccanismo, nudo — **senza browser, senza compositore, senza GPU**
+#### The mechanism, bare — **without browser, without compositor, without GPU**
 
 ```
 $ mkdir -p ~/.cache/mozilla                    # da «provanic3»
@@ -3321,202 +3321,202 @@ $ ls -ld /tmp/mozilla
 drwx------  prova2 prova2  /tmp/mozilla                   ← creata il 23 agosto 08:03
 ```
 
-⇒ `/etc/skel/.cache` è un **collegamento a `/tmp`** — ⭐ **per scelta dell'utente**, vedi il riquadro
-in testa alla sezione — e `src/provisiona.sh` · `useradd -m` crea gli utenti con `useradd -m`, che **copia lo
-scheletro** ⇒ ⛔ **ogni utente che facciamo noi eredita `~/.cache -> /tmp`**. Firefox tiene il
-profilo *locale* sotto `$HOME/.cache/mozilla`, cioè sotto **`/tmp/mozilla`**.
+⇒ `/etc/skel/.cache` is a **link to `/tmp`** — ⭐ **by the user's choice**, see the box
+at the head of the section — and `src/provisiona.sh` · `useradd -m` creates the users with `useradd -m`, which **copies the
+skeleton** ⇒ ⛔ **every user we make inherits `~/.cache -> /tmp`**. Firefox keeps the
+*local* profile under `$HOME/.cache/mozilla`, that is under **`/tmp/mozilla`**.
 
-⛔⛔ **Il PRIMO utente che apre il browser crea `/tmp/mozilla` a nome suo e a modo `0700`.** Da quel
-momento nessun altro ci può scrivere, `profiles.ini` **non nasce mai**, e il browser apre una
-finestra che dice *«Your Firefox profile cannot be loaded»*.
+⛔⛔ **The FIRST user who opens the browser creates `/tmp/mozilla` in their name and with mode `0700`.** From that
+moment nobody else can write there, `profiles.ini` **is never born**, and the browser opens a
+window that says *«Your Firefox profile cannot be loaded»*.
 
-> ### ⭐⭐⭐ E QUESTO È ESATTAMENTE IL TEMA DELLA FASE
+> ### ⭐⭐⭐ AND THIS IS EXACTLY THE THEME OF THE PHASE
 >
-> ⛔ **È un difetto che su una macchina a UN utente non si vede mai, e che su dieci ne blocca nove.**
-> Il multi-tenant non lo ha creato: **lo ha reso certo**. ⇒ *Un prodotto che passa da un inquilino a
-> dieci non eredita solo i suoi difetti: ne sveglia di dormienti.*
+> ⛔ **It is a defect that on a machine with ONE user is never seen, and that on ten blocks nine.**
+> Multi-tenant did not create it: **it made it certain**. ⇒ *A product that goes from one tenant to
+> ten does not only inherit its defects: it wakes up dormant ones.*
 
-#### ⭐ E il colpevole ha un nome e una data — **ed è il caso del regista**
+#### ⭐ And the culprit has a name and a date — **and it is the director's case**
 
-`[M]` `/tmp/mozilla` appartiene a **`prova2`**, creata il **23 agosto alle 08:03**. E **`prova`** —
-⭐ **l'utente con cui il regista entra** — aveva `~/.cache -> /tmp`.
-⇒ ⛔ **Ecco perché per lui non funzionava.** Non un caso, non una configurazione strana: **il turno**.
+`[M]` `/tmp/mozilla` belongs to **`prova2`**, created on **23 Aug at 08:03**. And **`prova`** —
+⭐ **the user with which the director logs in** — had `~/.cache -> /tmp`.
+⇒ ⛔ **That is why it did not work for him.** Not chance, not a strange configuration: **the turn**.
 
-#### Il rosso, il verde e il controllo negativo
+#### The red, the green and the negative control
 
 | | `[M]` |
 |---|---|
-| **ROSSO** — `~/.cache -> /tmp` | finestra vera che dice **«Profile Missing»**; `profiles.ini` **non nasce mai** |
-| ⭐ **VERDE** — `~/.cache` cartella vera | ![Firefox curato, con tre schede e una pagina resa](scatti/10-firefox-curato.png) barra, **tre schede**, campo indirizzo, **pagina resa** |
-| ⛔ **CONTROLLO NEGATIVO** — rimesso il collegamento | **torna rosso**: 30 s, nessun `profiles.ini` |
-| ⭐ **e su un secondo utente** (`provanic3`, `.mozilla` spazzata, **sotto lucchetto**) | verde uguale ⇒ **regge nel multi-tenant** |
+| **RED** — `~/.cache -> /tmp` | real window saying **«Profile Missing»**; `profiles.ini` **is never born** |
+| ⭐ **GREEN** — `~/.cache` a real folder | ![Firefox cured, with three tabs and a rendered page](scatti/10-firefox-curato.png) bar, **three tabs**, address field, **rendered page** |
+| ⛔ **NEGATIVE CONTROL** — link put back | **red again**: 30 s, no `profiles.ini` |
+| ⭐ **and on a second user** (`provanic3`, `.mozilla` swept, **under the lock**) | same green ⇒ **holds in multi-tenant** |
 
-#### ⛔ La pista del compositore è REFUTATA, e con tre prove
+#### ⛔ The compositor lead is REFUTED, and with three proofs
 
-⚠ Sembrava buona: `MozCrashReason: "Compositor crashed ()"`, `SIGSEGV / SEGV_MAPERR`. ⛔ **E non
-era la causa:**
+⚠ It looked good: `MozCrashReason: "Compositor crashed ()"`, `SIGSEGV / SEGV_MAPERR`. ⛔ **And it was
+not the cause:**
 
-1. il guasto si riproduce **headless, senza compositore, senza sessione, senza REMOTIX**;
-2. con la cura Firefox rende una pagina **coi predefiniti** — nessun `MOZ_DISABLE_GPU_PROCESS`,
-   nessun `LIBGL_ALWAYS_SOFTWARE`;
-3. nel profilo curato **zero dump di crash**.
+1. the fault reproduces **headless, without compositor, without session, without REMOTIX**;
+2. with the cure Firefox renders a page **with the defaults** — no `MOZ_DISABLE_GPU_PROCESS`,
+   no `LIBGL_ALWAYS_SOFTWARE`;
+3. in the cured profile **zero crash dumps**.
 
-⇒ ⭐ *Un crash che c'è davvero non è per questo la causa di quel che si sta guardando* — è
-`LEZIONI.md` §1.35 dall'altro capo.
+⇒ ⭐ *A crash that really happens is not for that reason the cause of what one is looking at* — it is
+`LEZIONI.md` §1.35 from the other end.
 
-#### La cura, e **dove** sta
+#### The cure, and **where** it sits
 
-⭐ In **`src/provisiona.sh`** — cioè **nella macchina, non nel prodotto** (`SPECIFICHE.md` §5.9,
-parte A): **agli utenti che creiamo noi** una `~/.cache` **vera** se è un collegamento o manca.
-⚠ **Non si tocca `/tmp/mozilla` di chi ce l'ha già**: non è nostro e non si sa chi lo usa.
-⭐⭐ **E non si tocca né `/etc/skel` né la home dell'utente**: la sua scelta resta in piedi, e la cura
-vale **solo per i nostri inquilini**. ⇒ *È il modo giusto anche a correzione avvenuta.*
+⭐ In **`src/provisiona.sh`** — that is **in the machine, not in the product** (`SPECIFICHE.md` §5.9,
+part A): **for the users we create** a **real** `~/.cache` if it is a link or missing.
+⚠ **`/tmp/mozilla` of whoever already has it is not touched**: it is not ours and nobody knows who uses it.
+⭐⭐ **And neither `/etc/skel` nor the user's home is touched**: his choice stays standing, and the cure
+applies **only to our tenants**. ⇒ *It is the right way even after the correction.*
 
-⛔ **E il predicato di verifica non guarda il collegamento: PROVA A SCRIVERE** — perché *«scritto non
-è in vigore»* (**E1**). `[M]` collegamento ⇒ rosso · cartella non scrivibile ⇒ rosso · curato ⇒
-verde, **4 su 4**.
+⛔ **And the verification predicate does not look at the link: IT TRIES TO WRITE** — because *«scritto non
+è in vigore»* (**E1**). `[M]` link ⇒ red · non-writable folder ⇒ red · cured ⇒
+green, **4 out of 4**.
 
-⚠ **E va rilanciato dopo ogni riavvio**: il rootfs della macchina di prova sta **in RAM**.
+⚠ **And it must be re-run after every reboot**: the test machine's rootfs is **in RAM**.
 
-### 5.11 ⚠ E UNA COSA CHE NESSUNO SI ASPETTAVA: **il desktop nasce dentro la PANORAMICA**
+### 5.11 ⚠ AND SOMETHING NOBODY EXPECTED: **the desktop is born inside the OVERVIEW**
 
-![quel che si vede appena entrati: la panoramica delle Attività](scatti/10-appena-entrato-panoramica.png)
+![what one sees right after getting in: the Activities overview](scatti/10-appena-entrato-panoramica.png)
 
-⭐ **Questo è quel che l'utente vede nell'istante in cui entra**, guardato col testimone su una
-sessione appena nata: ⛔ **non un desktop, ma la panoramica delle Attività** — *«Type to search»*, il
-molo con Firefox e File, e lo spazio di lavoro in anteprima.
+⭐ **This is what the user sees the instant they get in**, looked at with the witness on a
+newborn session: ⛔ **not a desktop, but the Activities overview** — *«Type to search»*, the
+dock with Firefox and Files, and the workspace in preview.
 
-⚠ È il comportamento **normale** di GNOME su una sessione senza finestre, e ⭐ **una strada usabile
-c'è** — si preme `Esc`, oppure si clicca un'icona nel molo. ⛔ **Ma per chi guarda, *«una finestra che
-non riesco a raggiungere»* e *«non funziona»* hanno la stessa faccia** — e in tutta la documentazione
-del progetto la parola **panoramica** non compare mai.
+⚠ It is GNOME's **normal** behaviour on a session without windows, and ⭐ **there is a usable
+route** — one presses `Esc`, or clicks an icon in the dock. ⛔ **But for whoever is looking, *«a window I
+cannot reach»* and *«it does not work»* have the same face** — and in all the project's
+documentation the word **overview** never appears.
 
-⛔ **E qui la panoramica ha morso davvero due volte:**
+⛔ **And here the overview really bit twice:**
 
-1. il coordinamento premeva `Esc` per uscirne prima di scattare — ⛔ **e `Esc` è lo stesso tasto che
-   chiude un dialogo modale.** ⇒ *«Firefox è vivo e disegna ma non ha nessuna finestra»* **era il
-   dialogo, chiuso dal nostro stesso `Esc`**;
-2. ⚠ e il regista, che di `Esc` non sapeva niente, ha visto **la panoramica** e un browser che non
-   parte.
+1. the coordination pressed `Esc` to leave it before taking the snapshot — ⛔ **and `Esc` is the same key that
+   closes a modal dialog.** ⇒ *«Firefox è vivo e disegna ma non ha nessuna finestra»* **was the
+   dialog, closed by our own `Esc`**;
+2. ⚠ and the director, who knew nothing about `Esc`, saw **the overview** and a browser that would not
+   start.
 
-⇒ `[?]` **Se la sessione debba nascere sul desktop invece che nella panoramica è una decisione sua**,
-perché cambia **quel che l'utente vede** (**I6**, **I8**). ⛔ E la cura, qualunque sia, non può essere
-un trucco che vale **solo per GNOME**: le fasi 11 e 12 portano KDE, XFCE e LXQt
+⇒ `[?]` **Whether the session should be born on the desktop instead of in the overview is his decision**,
+because it changes **what the user sees** (**I6**, **I8**). ⛔ And the cure, whatever it is, cannot be
+a trick that works **only for GNOME**: phases 11 and 12 bring KDE, XFCE and LXQt
 (`DECISIONI.md` §4.6-sexies).
 
-### 5.12 ⭐⭐⭐ I SEI DIFETTI RIMASTI — **sei curati, zero rimandati**
+### 5.12 ⭐⭐⭐ THE SIX REMAINING DEFECTS — **six cured, zero postponed**
 
-*25 agosto 2026, la coda della fase.* ⭐ `banchi/10-f3-cure.py`, **`--certifica` 42 su 42**.
+*25 Aug 2026, the tail of the phase.* ⭐ `banchi/10-f3-cure.py`, **`--certifica` 42 out of 42**.
 
-| # | il difetto | ⭐ il rosso e il verde |
+| # | the defect | ⭐ the red and the green |
 |---|---|---|
-| **1** | ⛔⛔ **le righe nuove erano MUTE**, ⛔ **la riga dello SFRATTO compresa** — quella che dice **chi** è stato buttato fuori | `wt_chi()` e **87 punti di stampa** passati a `registro_dice_di()`. `[M]` area `wt`: **0,0 % → 79,2 %** e **0,0 % → 77,3 %** su due scene; col classificatore certificato di `10-b96` (31/31) le righe di diagnosi vanno da **98,8 % a 100 %**. ⭐ **Non previsto**: ha alzato anche l'area `rcp` da **35,6 % a 89,8 %** — molte righe `REG_RCP` le scrive `webtransport.c`, non `rcp.c` |
-| **2** | ⛔⛔ **`fermo_ms=` MENTIVA**: il commento diceva «per sessione», il codice leggeva un contatore **globale** | `[M]` `SIGSTOP` di **6,0 s** al ciclo del padre con **nessuna sessione viva**, poi si apre la sessione: **`fermo_ms=6143` → `0`**. ⭐ **E il controllo negativo**: sessione **viva durante** lo stallo, **5800 → 5647** ⇒ *il testimone è stato **corretto**, non spento* |
-| **3** | ⚠ due **commenti bugiardi**, e la **quinta copia a mano** del tetto | curati. ⛔ **E `WT_RIPASSO_INSIEME 32` NON si unifica** — vedi il riquadro |
-| **4** | ⚠ il **`pkill` globale** in due banchi | ristretto a quel che il banco ha acceso lui. ⛔ In `10-b97` erano sbagliati **tutt'e due nel verso peggiore**: uno aveva la cartella di **un altro banco scritta a mano** — uccideva i clienti del vicino e lasciava vivi i propri |
-| **5** | ⚠ il **`sed` che ricompilava** il tetto in tre terreni | tolto. ⛔ **E il rosso è che oggi non morde più**: il modello combacia con **0 righe** ⇒ `10-b2`, `10-b93` e `10-c3` **non partivano affatto**. ⭐ La guardia **cambia posto**: si legge il tetto **dal server acceso**, non dal testo da cui nascerà |
-| **6** | ⚠ l'**ambiente incompleto** dei banchi (`XDG_SESSION_TYPE` e altre due) | curato, e ⭐ **le copie erano quattro, non tre**: adesso in un posto solo, `banchi/10-ambiente-sessione.sh` |
+| **1** | ⛔⛔ **the new lines were MUTE**, ⛔ **the EVICTION line included** — the one that says **who** was thrown out | `wt_chi()` and **87 print points** moved to `registro_dice_di()`. `[M]` area `wt`: **0.0 % → 79.2 %** and **0.0 % → 77.3 %** on two scenes; with the certified classifier of `10-b96` (31/31) the diagnostic lines go from **98.8 % to 100 %**. ⭐ **Not foreseen**: it also raised the `rcp` area from **35.6 % to 89.8 %** — many `REG_RCP` lines are written by `webtransport.c`, not `rcp.c` |
+| **2** | ⛔⛔ **`fermo_ms=` LIED**: the comment said «per session», the code read a **global** counter | `[M]` `SIGSTOP` of **6.0 s** to the parent's loop with **no live session**, then the session opens: **`fermo_ms=6143` → `0`**. ⭐ **And the negative control**: session **alive during** the stall, **5800 → 5647** ⇒ *the witness was **corrected**, not switched off* |
+| **3** | ⚠ two **lying comments**, and the **fifth hand copy** of the cap | cured. ⛔ **And `WT_RIPASSO_INSIEME 32` is NOT unified** — see the box |
+| **4** | ⚠ the **global `pkill`** in two benches | narrowed to what the bench itself switched on. ⛔ In `10-b97` **both were wrong in the worst direction**: one had the folder of **another bench written by hand** — it killed the neighbour's clients and left its own alive |
+| **5** | ⚠ the **`sed` that recompiled** the cap in three grounds | removed. ⛔ **And the red is that today it no longer bites**: the pattern matches **0 lines** ⇒ `10-b2`, `10-b93` and `10-c3` **did not start at all**. ⭐ The guard **changes place**: the cap is read **from the running server**, not from the text it will be born from |
+| **6** | ⚠ the benches' **incomplete environment** (`XDG_SESSION_TYPE` and two others) | cured, and ⭐ **the copies were four, not three**: now in one place only, `banchi/10-ambiente-sessione.sh` |
 
-> ### ⛔ PERCHÉ LA QUINTA COPIA **NON** SI UNIFICA — e la ragione è scritta accanto al codice
+> ### ⛔ WHY THE FIFTH COPY IS **NOT** UNIFIED — and the reason is written next to the code
 >
-> ⭐ `WT_RIPASSO_INSIEME 32` **non è la stessa quantità** di `RCP_TETTO_SESSIONI`, per due motivi
-> indipendenti:
+> ⭐ `WT_RIPASSO_INSIEME 32` **is not the same quantity** as `RCP_TETTO_SESSIONI`, for two independent
+> reasons:
 >
-> 1. è la misura di **un lotto**, non di una **capienza**: chi non ci sta **entra nel giro dopo**, e
->    la proprietà difesa è *«un numero **fisso** di chiamate invece di `N`»* — non *«una»*;
-> 2. ⛔ dev'essere una **costante di compilazione**: dimensiona **quattro array sullo stack**
->    (`quali[32][160]` = 5 KiB) mentre il tetto ormai **si muove a caldo**. ⇒ Legarli darebbe un
->    **VLA scelto dalla riga di comando dentro il ciclo che consegna i fotogrammi**.
+> 1. it is the size of **a batch**, not of a **capacity**: whoever does not fit **enters the next round**, and
+>    the property defended is *«un numero **fisso** di chiamate invece di `N`»* — not *«una»*;
+> 2. ⛔ it must be a **compile-time constant**: it sizes **four arrays on the stack**
+>    (`quali[32][160]` = 5 KiB) while the cap now **moves at runtime**. ⇒ Tying them would give a
+>    **VLA chosen by the command line inside the loop that delivers the frames**.
 >
-> ⚠ **Ma il commento mentiva davvero** — diceva *«32 sta sopra i **sedici** posti»*, un letterale e
-> per giunta invecchiato. ⭐ Sostituito col legame vero, **una disuguaglianza in un verso solo**,
-> messa dove **il compilatore la fa valere**: `_Static_assert(WT_RIPASSO_INSIEME >= RCP_TETTO_SESSIONI)`.
+> ⚠ **But the comment really lied** — it said *«32 sta sopra i **sedici** posti»*, a literal and
+> an aged one at that. ⭐ Replaced with the real link, **an inequality in one direction only**,
+> placed where **the compiler enforces it**: `_Static_assert(WT_RIPASSO_INSIEME >= RCP_TETTO_SESSIONI)`.
 >
-> ⇒ ⭐⭐ *Unificare per simmetria quel che non è la stessa quantità è un difetto nuovo, non una cura.*
-> È la stessa ragione per cui `MAX_IN_VOLO` era già stato lasciato fuori.
+> ⇒ ⭐⭐ *Unifying for symmetry what is not the same quantity is a new defect, not a cure.*
+> It is the same reason `MAX_IN_VOLO` had already been left out.
 
-> ### ⛔⭐ E LA SCOPERTA CHE VALE PIÙ DELLA CURA: **il metro che i banchi usavano è CIECO**
+> ### ⛔⭐ AND THE DISCOVERY WORTH MORE THAN THE CURE: **the meter the benches used is BLIND**
 >
-> `[M]` Il conto dei processi vivi — *«si **conta** chi è vivo»*, in `10-b89-scena.sh` e
-> `10-b92-dieci.py` — ha detto **1 in tutt'e tre i casi**: ambiente rotto, ambiente curato, ambiente
-> rotto di nuovo.
+> `[M]` The count of live processes — *«si **conta** chi è vivo»*, in `10-b89-scena.sh` and
+> `10-b92-dieci.py` — said **1 in all three cases**: environment broken, environment cured, environment
+> broken again.
 >
-> ⇒ ⛔⛔ **Il processo SOPRAVVIVE al proprio fallimento.** Quel metro direbbe *«due finestre vive»* su
-> un desktop **senza nessuna finestra** — ed è esattamente il buco in cui il coordinamento era
-> caduto per ore (§5.9). ⭐ Il predicato nuovo giudica **la riga che il programma scrive**, non il
-> processo, e tiene il conto accanto **come testimone di sé stesso**.
+> ⇒ ⛔⛔ **The process SURVIVES its own failure.** That meter would say *«two live windows»* on
+> a desktop **without any window** — and it is exactly the hole the coordination had
+> fallen into for hours (§5.9). ⭐ The new predicate judges **the line the program writes**, not the
+> process, and keeps the count next to it **as a witness of itself**.
 
-### 5.13 ⭐⭐⭐⭐⭐ **IL PRODOTTO CUCITO GIRA — e Firefox apre una finestra vera**
+### 5.13 ⭐⭐⭐⭐⭐ **THE STITCHED PRODUCT RUNS — and Firefox opens a real window**
 
-![Firefox nel desktop remoto, sul prodotto finale della fase](scatti/10-firefox-nel-prodotto-cucito.png)
+![Firefox in the remote desktop, on the phase's final product](scatti/10-firefox-nel-prodotto-cucito.png)
 
-⭐ **Albero cucito, compilato pulito** (le gemelle R12.3 allineate, il controllo positivo del
-costruttore verde), acceso sulla **8400** con `--budget-mpixel-s 480 --riserva 0.5
---tetto-sessioni 10`. `[M]` Le righe d'avvio dichiarano i tre valori in vigore, e ⭐ la riga del
-guardiano porta il **denominatore** che prima non c'era: `inquilini=0`.
+⭐ **Stitched tree, compiled clean** (the R12.3 twins aligned, the builder's positive check
+green), started on **8400** with `--budget-mpixel-s 480 --riserva 0.5
+--tetto-sessioni 10`. `[M]` The startup lines declare the three values in force, and ⭐ the guardian's line
+carries the **denominator** that was not there before: `inquilini=0`.
 
-⇒ ⭐⭐⭐ **E questo è il desktop remoto del prodotto finale**, guardato col testimone: **Firefox con
-due schede, la barra degli indirizzi, e una pagina resa**. ⛔ **Nessun dialogo, nessun profilo
-mancante, nessun accorgimento**: l'ambiente giusto e una `~/.cache` che è sua.
+⇒ ⭐⭐⭐ **And this is the remote desktop of the final product**, looked at with the witness: **Firefox with
+two tabs, the address bar, and a rendered page**. ⛔ **No dialog, no missing
+profile, no workaround**: the right environment and a `~/.cache` of its own.
 
-### 7.4 ✅⭐⭐⭐ **LA SESSIONE CHE NASCE CIECA — CHIUSA il 27 agosto 2026: erano i GRUPPI dell'inquilino**
+### 7.4 ✅⭐⭐⭐ **THE SESSION THAT IS BORN BLIND — CLOSED on 27 Aug 2026: it was the tenant's GROUPS**
 
-> ## ⭐⭐⭐ LA RISPOSTA, prima del racconto
+> ## ⭐⭐⭐ THE ANSWER, before the story
 >
-> `[M]` **L'inquilino non era nei gruppi `video` e `render`.** Tutto qui.
+> `[M]` **The tenant was not in the `video` and `render` groups.** That is all.
 >
 > | | |
 > |---|---|
-> | inquilini **con** i due gruppi | `[M]` **17 sessioni su 17** vedono: 9 nuove e mai usate in **1,92–2,10 s**, 8 riattacchi in **1,03 s** |
-> | inquilini **senza** (creati come li creava `terreno10.sh`) | `[M]` **0 su 4** — mai in 90 s, zero fotogrammi, e la sessione gira in tondo fra *«ZERO MONITOR»* e *«monitor virtuale montato»* per **82 s** |
-> | ⭐ **la controprova** | dati i due gruppi **allo stesso inquilino** e fatto rinascere il gestore d'utente ⇒ **2,04 s**, 14 fotogrammi. ⭐⭐ **Una variabile sola, esito ribaltato** |
+> | tenants **with** the two groups | `[M]` **17 sessions out of 17** see: 9 new and never used in **1.92–2.10 s**, 8 re-attaches in **1.03 s** |
+> | tenants **without** (created the way `terreno10.sh` created them) | `[M]` **0 out of 4** — never in 90 s, zero frames, and the session goes round in circles between *«ZERO MONITOR»* and *«monitor virtuale montato»* for **82 s** |
+> | ⭐ **the counter-test** | given the two groups **to the same tenant** and the user manager reborn ⇒ **2.04 s**, 14 frames. ⭐⭐ **One single variable, outcome overturned** |
 >
-> ⭐⭐ **E la tabella qui sotto si spiega da sola**: `provanic4/5/6` — quelli che non videro **mai**, su
-> **98 · 55 · 50** tentativi — oggi **non hanno** né `video` né `render`. `prova` e `provanic1`, che
-> videro **sempre**, **li hanno**. ⇒ ⛔ Non era intermittente: erano **due popolazioni di inquilini**.
+> ⭐⭐ **And the table below explains itself**: `provanic4/5/6` — those that **never** saw, over
+> **98 · 55 · 50** attempts — today **have** neither `video` nor `render`. `prova` and `provanic1`, which
+> **always** saw, **have them**. ⇒ ⛔ It was not intermittent: they were **two populations of tenants**.
 >
-> ⚠ **E quel che ha reso il difetto così caro non è il difetto: è che non diceva niente.** Un
-> inquilino senza quei gruppi non produce nessun errore — produce una sessione che *sembra* nata e
-> non si vede. ⇒ La cura è in due pezzi:
-> · `src/provisiona.sh` legge adesso il gruppo **dal nodo** (`stat -c %g` sui `cardN`/`renderDN`),
->   ⛔ non da un nome inchiodato — e la verifica confronta i **gid**, non la parola «render»;
-> · ⭐⭐ `src/figlio.c` controlla alla nascita di **ogni** sessione e, se il gruppo manca, scrive nel
->   registro *«NON È NEL GRUPPO DELLA SCHEDA … QUESTA SESSIONE NASCERÀ E NON VEDRÀ NIENTE»* **con la
->   cura completa dentro la riga**. ⛔ Dichiara, non rifiuta.
+> ⚠ **And what made the defect so costly is not the defect: it is that it said nothing.** A
+> tenant without those groups produces no error — it produces a session that *looks* born and
+> cannot be seen. ⇒ The cure is in two pieces:
+> · `src/provisiona.sh` now reads the group **from the node** (`stat -c %g` on the `cardN`/`renderDN`),
+>   ⛔ not from a hard-coded name — and the verification compares the **gids**, not the word «render»;
+> · ⭐⭐ `src/figlio.c` checks at the birth of **every** session and, if the group is missing, writes in the
+>   log *«NON È NEL GRUPPO DELLA SCHEDA … QUESTA SESSIONE NASCERÀ E NON VEDRÀ NIENTE»* **with the
+>   complete cure inside the line**. ⛔ It declares, it does not refuse.
 >
-> ⛔ **E c'è una coda che tocca le misure del passato**: i **banchi** creavano inquilini per conto
-> loro — `banchi/attrezzi-utenti.sh` e nove terreni delle fasi 02, 04, 06, 07, 09 — ⛔ **senza quei
-> gruppi**. ⇒ Ogni banco che ha misurato su un inquilino così ha misurato **una sessione che non
-> vedeva, senza saperlo**.
+> ⛔ **And there is a tail that touches past measurements**: the **benches** created tenants on their
+> own — `banchi/attrezzi-utenti.sh` and nine grounds of phases 02, 04, 06, 07, 09 — ⛔ **without those
+> groups**. ⇒ Every bench that measured on such a tenant measured **a session that could not
+> see, without knowing it**.
 >
-> ⚠ **Due rilievi misurati che valgono per chiunque legga questo registro:**
-> · ⛔ **`ZERO MONITOR` è TRANSITORIO su ogni sessione sana** — `[M]` compare **173 ms** prima che il
->   monitor esista. Chi lo legge come prova di cecità dà **falso rosso su tutte**;
-> · ⚠ al **riattacco** `formato negoziato` **non si ripete** se il formato non cambia. Non è cecità.
+> ⚠ **Two measured findings that hold for anyone reading this log:**
+> · ⛔ **`ZERO MONITOR` is TRANSIENT on every healthy session** — `[M]` it appears **173 ms** before the
+>   monitor exists. Whoever reads it as proof of blindness gives **a false red on all of them**;
+> · ⚠ at **re-attach** `formato negoziato` **is not repeated** if the format does not change. It is not blindness.
 >
-> ⛔ **E il «terzo stato» di questa sezione — la riga `(0 prima, 2 dopo)` — non esiste**: era
-> **memoria non inizializzata** (`src/figlio.c` · `codifica_e_manda()` spediva la struttura prima del `memset` di
-> `:5311`). ⇒ `LEZIONI.md` §1.55. Curato.
+> ⛔ **And the «third state» of this section — the line `(0 prima, 2 dopo)` — does not exist**: it was
+> **uninitialised memory** (`src/figlio.c` · `codifica_e_manda()` sent the structure before the `memset` of
+> `:5311`). ⇒ `LEZIONI.md` §1.55. Cured.
 >
-> ⇒ Il racconto che segue resta **come fu scritto**, perché è la storia di una caccia e le quattro
-> ipotesi refutate valgono ancora. ⛔ Ma il difetto **è chiuso**, e la fase 11 §7-bis.19 ha i numeri.
+> ⇒ The story that follows stays **as it was written**, because it is the story of a hunt and the four
+> refuted hypotheses still count. ⛔ But the defect **is closed**, and phase 11 §7-bis.19 has the numbers.
 
-#### Il racconto originale, com'era scritto
+#### The original story, as it was written
 
-*Trovato il **25 agosto 2026, sera**, dalla prova che ha proposto il regista: «dieci subagenti che
-usano il desktop in modi diversi».* ⭐ **Il difetto è emerso PRIMA che la prova partisse**, perché la
-prova costringeva ad aprire **sessioni nuove** — ⛔ e nessuno l'aveva mai fatto.
+*Found on **25 Aug 2026, evening**, by the test the director proposed: «dieci subagenti che
+usano il desktop in modi diversi».* ⭐ **The defect emerged BEFORE the test started**, because the
+test forced us to open **new sessions** — ⛔ and nobody had ever done that.
 
-⛔⛔ **Su una sessione appena nata, Mutter non annuncia nessun `wl_output`.** ⇒ **Nessuna applicazione
-Wayland può aprire una finestra:**
+⛔⛔ **On a newborn session, Mutter announces no `wl_output`.** ⇒ **No Wayland
+application can open a window:**
 
 | | `[M]` |
 |---|---|
-| **Firefox** | resta vivo — **un processo solo**, mai quello di contenuto — e sputa **in continuo** `gdk_monitor_get_workarea: assertion 'GDK_IS_MONITOR (monitor)' failed` |
-| **mpv** | esce: *«No outputs found or compositor doesn't support wl_output (ver. 2)»*, **4 uscite video su 4** |
-| il compositore | ⭐ **0,0 %** del motore di disegno · il palco consegna **zero fotogrammi** |
+| **Firefox** | stays alive — **one single process**, never the content one — and spits out **continuously** `gdk_monitor_get_workarea: assertion 'GDK_IS_MONITOR (monitor)' failed` |
+| **mpv** | exits: *«No outputs found or compositor doesn't support wl_output (ver. 2)»*, **4 video outputs out of 4** |
+| the compositor | ⭐ **0.0 %** of the drawing engine · the stage delivers **zero frames** |
 
-#### ⭐ Il prodotto SE NE ACCORGE e lo dichiara — non consegna nero in silenzio
+#### ⭐ The product NOTICES and declares it — it does not deliver black silently
 
 ```
 sessione [provanic9] ⛔ ZERO MONITOR, e la sessione e' viva: e' la sessione
@@ -3524,301 +3524,301 @@ sessione [provanic9] ⛔ ZERO MONITOR, e la sessione e' viva: e' la sessione
 figlio   il palco di «provanic9»: monitor «» (0 prima, 0 dopo), 0x0 stride 0 a 0 bit
 ```
 
-#### ⛔ Che cosa NON è — quattro ipotesi refutate, una per una
+#### ⛔ What it is NOT — four hypotheses refuted, one by one
 
-| ipotesi | ⛔ refutata da |
+| hypothesis | ⛔ refuted by |
 |---|---|
-| *«è una corsa persa all'avvio»* | a **+73 s** mpv ancora non trova l'uscita (provato a +5, +11, +23, +43, +73) |
-| *«il cliente non dichiara la vista»* | `--adatta 1920x1080@1.0` **non cambia niente**: `provanic7` (senza) e `provanic8` (con) **identici** |
-| *«è il multi-tenant»* | con **tutte le sessioni chiuse**, una sessione **da sola** ha lo stesso `wl_output = 0` |
-| *«è degli utenti nuovi»* | ⭐⭐ **`provanic3` ha avuto il monitor 2 volte e poi 6 volte NO** — lo stesso utente |
+| *«it is a race lost at startup»* | at **+73 s** mpv still does not find the output (tried at +5, +11, +23, +43, +73) |
+| *«the client does not declare the view»* | `--adatta 1920x1080@1.0` **changes nothing**: `provanic7` (without) and `provanic8` (with) **identical** |
+| *«it is multi-tenant»* | with **all sessions closed**, a session **on its own** has the same `wl_output = 0` |
+| *«it belongs to new users»* | ⭐⭐ **`provanic3` got the monitor 2 times and then 6 times NOT** — the same user |
 
-⇒ ⛔ **È intermittente**, e da un certo momento in poi non riesce più:
+⇒ ⛔ **It is intermittent**, and from a certain moment on it no longer succeeds:
 
-| utente | riuscito | fallito |
+| user | succeeded | failed |
 |---|---|---|
 | `prova`, `provanic1` | 1 | 0 |
 | ⭐ `provanic3` | **2** | ⛔ **6** |
 | `provanic4` · `provanic5` · `provanic6` | 0 | ⛔ **98** · **55** · **50** |
 
-⚠ E c'è un **terzo stato**: `monitor «» (0 prima, **2** dopo)` — una volta per utente ne nascono
-**due**, senza nome.
+⚠ And there is a **third state**: `monitor «» (0 prima, **2** dopo)` — once per user
+**two** are born, without a name.
 
-#### ⭐ La pista che pesa, e sta nel nostro codice
+#### ⭐ The lead that weighs, and it is in our code
 
-`src/sessione.c` · la nota «`--virtual-monitor` non c'e' piu'», e il commento è del **14 agosto 2026**:
+`src/sessione.c` · the note «`--virtual-monitor` non c'e' piu'», and the comment is from **14 Aug 2026**:
 
 > ⛔⛔ *E `--virtual-monitor` NON C'È PIÙ.* Fino a stamattina questa riga lo chiedeva, e **la sessione
 > nasceva con un monitor suo**. ⇒ Poi… *«il nostro `RecordVirtual` ne crea uno»*.
 
-⇒ Da allora il monitor **non lo chiediamo più**: si conta che lo crei `RecordVirtual`. ⛔ **E adesso
-non lo crea, o lo crea solo a volte.**
+⇒ Since then we **no longer ask for** the monitor: we count on `RecordVirtual` creating it. ⛔ **And now
+it does not create it, or creates it only sometimes.**
 
-⚠ **E c'è una guardia che rifiuta di rimetterlo** (`sessione.c` · `scrivi_dropin()`). ⇒ ⛔ *Chi curerà deve leggere le
-righe 740-840 per intero: è stato tolto per una ragione misurata, e rimetterlo alla cieca rifà il
-difetto che quella riga aveva curato.*
+⚠ **And there is a guard that refuses to put it back** (`sessione.c` · `scrivi_dropin()`). ⇒ ⛔ *Whoever cures it must read
+lines 740-840 in full: it was removed for a measured reason, and putting it back blindly redoes the
+defect that line had cured.*
 
-#### ⛔⛔ E L'ERRORE DI METODO CHE L'HA NASCOSTO — **è il più grave della fase**
+#### ⛔⛔ AND THE METHOD ERROR THAT HID IT — **it is the most serious of the phase**
 
-⛔ **Nessuno ha mai aperto una sessione NUOVA e l'ha guardata.** Tutte le prove — quelle della fase
-comprese — hanno riusato sessioni **già aperte, che il monitor ce l'avevano**.
+⛔ **Nobody ever opened a NEW session and looked at it.** All the tests — those of the phase
+included — reused sessions **already open, which did have the monitor**.
 
-⇒ ⭐⭐ **È `LEZIONI.md` §1.37 un piano più giù**: là il difetto era *«non si sapeva guardare»*; qui è
-*«si guardava sempre lo stesso pezzo di scena»*. ⚠ E il conto dei processi diceva **1** in tutt'e due
-i casi — ⛔ **finestra o non finestra, lo stesso numero.**
+⇒ ⭐⭐ **It is `LEZIONI.md` §1.37 one floor down**: there the defect was *«non si sapeva guardare»*; here it is
+*«si guardava sempre lo stesso pezzo di scena»*. ⚠ And the process count said **1** in both
+cases — ⛔ **window or no window, the same number.**
 
-⚠ **Che cosa NON tocca**: i numeri di capacità di §6 e §10 sono presi su sessioni che **disegnavano
-davvero** — fotogrammi contati e GPU letta. ⇒ ⭐ **Il «da sei a undici» resta valido.**
-⛔ **Che cosa tocca**: la consegna. *Oggi una sessione nuova su tre-quattro nasce cieca*, e chi la
-prende non vede aprirsi nessuna finestra.
+⚠ **What it does NOT touch**: the capacity numbers of §6 and §10 are taken on sessions that **really
+drew** — frames counted and GPU read. ⇒ ⭐ **The «from six to eleven» stays valid.**
+⛔ **What it touches**: the delivery. *Today one new session out of three or four is born blind*, and whoever
+takes it sees no window open.
 
-### 7.5 ⛔⛔ **FERMARE IL SERVER PORTA VIA TUTTE LE SESSIONI** — anche per aggiornarlo
+### 7.5 ⛔⛔ **STOPPING THE SERVER TAKES AWAY ALL THE SESSIONS** — even to update it
 
-*Trovato il **25 agosto 2026 alle 18:14**, aggiornando la 7730 su richiesta del regista.*
+*Found on **25 Aug 2026 at 18:14**, updating 7730 at the director's request.*
 
-`[M]` **La sequenza, dal giornale di sistema:**
+`[M]` **The sequence, from the system journal:**
 
 ```
 18:14:29  Stopping remotix-7730.service …   Deactivated successfully.   Started …
 18:14:44  New session c686 of user prova    ← una sessione NUOVA E VUOTA
 ```
 
-⇒ ⛔ **La sessione dell'utente è morta con l'unità**, con dentro il terminale e il browser che aveva
-aperto. Il palco vive **nell'albero di processi del server**, e l'unità ha `KillMode=mixed`.
+⇒ ⛔ **The user's session died with the unit**, with the terminal and the browser he had
+opened inside it. The stage lives **in the server's process tree**, and the unit has `KillMode=mixed`.
 
-⭐ **`SPECIFICHE.md` §5.2 dice «la sessione sopravvive al CLIENT», ed è vero e misurato.**
-⛔ *«Sopravvive al server»* **non era mai stato promesso, e non è vero.**
+⭐ **`SPECIFICHE.md` §5.2 says «la sessione sopravvive al CLIENT», and it is true and measured.**
+⛔ *«Sopravvive al server»* **had never been promised, and it is not true.**
 
-⇒ ⛔⛔ **Oggi aggiornare il server vuol dire buttare fuori tutti** — lo stesso danno che
-`DECISIONI.md` §4.7 vieta a chiunque di provocare spegnendo la macchina, ⚠ **fatto però da chi
-amministra, e senza che nessuno l'avesse dichiarato.**
+⇒ ⛔⛔ **Today updating the server means throwing everyone out** — the same damage that
+`DECISIONI.md` §4.7 forbids anyone to cause by switching off the machine, ⚠ **but done by whoever
+administers, and without anyone having declared it.**
 
-⚠ **Il confine è ora scritto** in `SPECIFICHE.md` §5.2, e il posto dove si cura è la **fase 14, il
-servizio**: aggiornare senza fermare nessuno.
+⚠ **The border is now written** in `SPECIFICHE.md` §5.2, and the place where it is cured is **phase 14, the
+service**: updating without stopping anyone.
 
-⭐ **E per intanto la regola pratica**: prima di riavviare il server **si guarda chi c'è**, come §4.7
-già impone a chi vorrebbe spegnere la macchina.
+⭐ **And meanwhile the practical rule**: before restarting the server **one looks at who is in**, as §4.7
+already requires of whoever would like to switch off the machine.
 
-⚠ **E oggi non costa niente, e va detto**: *«nessuno sta lavorando sul server, REMOTIX è
-ancora in sviluppo»* — l'utente, 25 agosto 2026. ⇒ ⭐ **Il rilievo non è un'emergenza: è un
-confine scritto adesso perché il giorno in cui ci sarà qualcuno dentro, si sappia già.**
+⚠ **And today it costs nothing, and it must be said**: *«nessuno sta lavorando sul server, REMOTIX è
+ancora in sviluppo»* — the user, 25 Aug 2026. ⇒ ⭐ **The finding is not an emergency: it is a
+border written now so that the day someone is inside, it is already known.**
 
 ---
 
-## §8 · Le decisioni prodotte
+## §8 · The decisions produced
 
-> ⛔ *Scritto dopo i due giri di misure, quando il prodotto non era ancora stato toccato: «nessuna di
+> ⛔ *Written after the two rounds of measurements, when the product had not yet been touched: «nessuna di
 > queste è presa… `src/` è intatto, nessun commit».*
 >
-> ### ⭐⭐ E POI IL REGISTA HA DATO L'ORDINE — *24 agosto 2026*
+> ### ⭐⭐ AND THEN THE DIRECTOR GAVE THE ORDER — *24 Aug 2026*
 >
 > > *«Prima applica le patch, poi scrivi il prodotto e dopo rifai i test.»*
 >
-> ⇒ ⭐ **Le decisioni di §8.1 sono state prese e SCRITTE nel prodotto**, e i difetti di §8.2 curati o
-> rinviati con la ragione. **Quel che è stato fatto sta in §5**; qui sotto restano le decisioni
-> **come sono maturate**, perché è da lì che vengono, ⭐ **con lo stato di ciascuna in fondo alla
-> riga**.
+> ⇒ ⭐ **The decisions of §8.1 were taken and WRITTEN into the product**, and the defects of §8.2 cured or
+> postponed with the reason. **What was done is in §5**; below remain the decisions
+> **as they matured**, because that is where they come from, ⭐ **with the state of each at the end of the
+> row**.
 >
-> ⚠ **E due sono ancora del regista, e solo sue**: sono in fondo a §8.2.
+> ⚠ **And two still belong to the director, and to him alone**: they are at the end of §8.2.
 
-### 8.1 ⭐ Le decisioni di disegno — che cosa diventa il budget
+### 8.1 ⭐ The design decisions — what the budget becomes
 
-| # | la decisione | il numero che adesso c'è |
+| # | the decision | the number that now exists |
 |---|---|---|
-| **D1** | ⛔⛔ **Il budget non è di codifica: è di COMPOSIZIONE.** `DECISIONI.md` §4.6 va **corretta**, non integrata | `[M]` soffitto della composizione **0,97 Gpixel/s** contro **1,86** (H.264) e **2,33** (HEVC) del codificatore — §6.11, §6.2, §6.10. E `[M]` a saturare `rcs0` è **`gnome-shell` al 99,5 %**, mentre `remotix` sta a **0,00 %** (§6.15) |
-| **D2** | ⭐⭐ **Il tetto è un conto di LAVORO, non di sessioni** | `[M]` dieci inquilini **fermi** accanto a uno che lavora costano **+0,2 %** (§6.16); l'**ottavo saturo** porta tutti a **1,5 fot/s** (§6.5). ⇒ ⛔ Un tetto che conta le teste **sbaglia in tutt'e due i versi** |
-| **D3** | ⭐⭐⭐ **Il budget si può calcolare PRIMA**, e la moneta è il **pixel** | `[M]` ai cedimenti i Mpixel/s coincidono entro lo **0,6 %** fra 1080p e 4K, mentre i fot/s differiscono del **74,9 %** (§6.9). ⛔ **Ma prima dei pixel si guarda il RITARDO**, o il conto dice *«c'è posto»* mentre tutti stanno a 1,5 fot/s |
-| **D4** | ⭐ **La regola proposta è «riserva 50 %»**, con la manopola in mano al regista | `[M]` 0 falsi sì, 0 falsi no, tetto **6 sature / 10 ferme** — ⭐ **il dieci di `SPECIFICHE.md` §5.5 ritrovato per misura invece che per promessa** (§6.9) |
-| **D5** | ⭐ **`BUDGET_PIENO 0x06` si AGGIUNGE a `0x0E`**, non lo sostituisce: due limiti diversi, **due gesti diversi** per l'utente | §6.4 · e ⛔ `0x0E` **è stato visto scattare per la prima volta**, 10 su 10 |
-| **D6** | ⛔ **Il no va detto PRIMA di far nascere il figlio**, in `consegna_verdetto()` | `[M]` un utente **mai ammesso** aveva **42 processi e un `gnome-shell`** (§6.4) |
-| **D7** | **I quattro `#define` a 16 diventano uno**, più il tetto configurabile — ⛔ e `WT_PALCHI 8` va con loro, perché **morde a nove** | §3.3, §4.2 |
-| **D8** | ⚠ **`--budget-mpixel-s` NON si auto-tara**: prima che la macchina abbia ceduto una volta, la capacità è **un limite inferiore, non un soffitto** | §6.9 |
+| **D1** | ⛔⛔ **The budget is not an encoding one: it is a COMPOSITING one.** `DECISIONI.md` §4.6 must be **corrected**, not supplemented | `[M]` compositing ceiling **0.97 Gpixel/s** against **1.86** (H.264) and **2.33** (HEVC) of the encoder — §6.11, §6.2, §6.10. And `[M]` what saturates `rcs0` is **`gnome-shell` at 99.5 %**, while `remotix` sits at **0.00 %** (§6.15) |
+| **D2** | ⭐⭐ **The cap is a count of WORK, not of sessions** | `[M]` ten **still** tenants next to one that works cost **+0.2 %** (§6.16); the **eighth saturated** brings everyone to **1.5 fps** (§6.5). ⇒ ⛔ A cap that counts heads **is wrong in both directions** |
+| **D3** | ⭐⭐⭐ **The budget can be computed IN ADVANCE**, and the currency is the **pixel** | `[M]` at the give-ways the Mpixel/s match within **0.6 %** between 1080p and 4K, while the fps differ by **74.9 %** (§6.9). ⛔ **But before the pixels one looks at the LATENCY**, or the count says *«c'è posto»* while everyone sits at 1.5 fps |
+| **D4** | ⭐ **The proposed rule is «reserve 50 %»**, with the knob in the director's hand | `[M]` 0 false yeses, 0 false nos, cap **6 saturated / 10 still** — ⭐ **the ten of `SPECIFICHE.md` §5.5 found again by measurement instead of by promise** (§6.9) |
+| **D5** | ⭐ **`BUDGET_PIENO 0x06` ADDS TO `0x0E`**, it does not replace it: two different limits, **two different gestures** for the user | §6.4 · and ⛔ `0x0E` **was seen triggering for the first time**, 10 out of 10 |
+| **D6** | ⛔ **The no must be said BEFORE the child is born**, in `consegna_verdetto()` | `[M]` a user **never admitted** had **42 processes and a `gnome-shell`** (§6.4) |
+| **D7** | **The four `#define`s at 16 become one**, plus the configurable cap — ⛔ and `WT_PALCHI 8` goes with them, because **it bites at nine** | §3.3, §4.2 |
+| **D8** | ⚠ **`--budget-mpixel-s` does NOT self-calibrate**: before the machine has given way once, the capacity is **a lower bound, not a ceiling** | §6.9 |
 
-### 8.2 ⛔ I difetti di prodotto che aspettano una decisione — **e cinque su sette non c'entrano col multi-tenant**
+### 8.2 ⛔ The product defects waiting for a decision — **and five out of seven have nothing to do with multi-tenant**
 
-| # | il difetto | quanto è grosso |
+| # | the defect | how big it is |
 |---|---|---|
-| **P1** | ⛔⛔⛔ **Il figlio muore di SIGSEGV su una larghezza di finestra qualsiasi**: passo del DMA-BUF non multiplo di 64 ⇒ *«rimonto sulla memoria»* e **2 ms dopo è morto**. `[M]` **3 su 3** a 1268 (quella che Firefox apre di suo), **0 su 3** a 1280 | ⛔⛔ **rompe il prodotto per un utente solo.** ⭐ Ed è lo stesso codice che rifiuta la **tela minima** dichiarata in §5.5 (§6.8, §6.2) |
-| **P2** | ⛔⛔⛔ **Regolatore + linea morta formano un ANELLO CHIUSO che sfratta chi lavora**: `[M]` cinque client sfrattati in **1,3 s** a cinque sessioni. ⭐ **Spegnendo l'una O l'altra, 8 su 8 sopravvivono** | ⛔⛔ viola *«mai staccare»*, ed è **provato da due strade** (§6.15) |
-| **P3** | ⛔⛔ **L'undicesimo è AMMESSO e non vede un pixel**, e sul filo **non esce niente** | ⛔ i due `16` si liberano su **eventi diversi** (§4.1) |
-| **P4** | ⛔⛔ **Il guardiano di logind è sincrono nel ciclo che consegna**: `[M]` la frontiera si restringe **come 1/N** e taglia **i 300 ms che il codice si concede** a ~4 inquilini. A N=7 con D=286 ms **ogni desktop crolla a 1,3 fot/s e non si scrive una riga** | ⛔ degrado **silenzioso**; ⚠ **lo sfratto NON è l'esito ordinario** — il rilievo va corretto lì (§6.13) |
-| **P5** | ⛔ **La linea morta stacca su un buco di 10 s fra due scene**, non solo su un desktop fermo — `[M]` su una sessione che un attimo prima faceva 60 commit/s | ⛔ e `[M]` **un `SIGSTOP` di 5 s a un figlio uccide TUTTE le sessioni**: un figlio fermo lascia byte fermi **nella coda del padre** (§6.11, §6.7) |
-| **P6** | ⚠ **Il registro non dice di chi è**: `[M]` solo il **4,2 %** delle righe di diagnosi è attribuibile, e la prova cieca dà **0 nomi su 4** | ⭐ **la cura è di tre righe** e costa **+7,8 %** di byte, e la diagnosi cieca torna il nome giusto (§6.7) |
-| **P7** | ⛔ **QVBR — la cura di banda della fase 9 — esiste, funziona, e nessuno la accende**: il predefinito è a qualità fissa, e il tetto **non è fra le cinque cure** | ⭐ `[M]` obbedisce entro il 5 %, e la manopola copre **8,8×** di banda (§6.10) |
+| **P1** | ⛔⛔⛔ **The child dies of SIGSEGV on an arbitrary window width**: DMA-BUF stride not a multiple of 64 ⇒ *«rimonto sulla memoria»* and **2 ms later it is dead**. `[M]` **3 out of 3** at 1268 (the one Firefox opens on its own), **0 out of 3** at 1280 | ⛔⛔ **it breaks the product for one single user.** ⭐ And it is the same code that refuses the **minimum canvas** declared in §5.5 (§6.8, §6.2) |
+| **P2** | ⛔⛔⛔ **Regulator + dead line form a CLOSED LOOP that evicts whoever is working**: `[M]` five clients evicted in **1.3 s** at five sessions. ⭐ **Switching off one OR the other, 8 out of 8 survive** | ⛔⛔ it violates *«mai staccare»*, and it is **proved by two routes** (§6.15) |
+| **P3** | ⛔⛔ **The eleventh is ADMITTED and does not see a pixel**, and **nothing goes out** on the wire | ⛔ the two `16`s are freed on **different events** (§4.1) |
+| **P4** | ⛔⛔ **The logind guardian is synchronous in the loop that delivers**: `[M]` the frontier narrows **as 1/N** and cuts **the 300 ms the code allows itself** at ~4 tenants. At N=7 with D=286 ms **every desktop collapses to 1.3 fps and not one line is written** | ⛔ **silent** degradation; ⚠ **eviction is NOT the ordinary outcome** — the finding must be corrected there (§6.13) |
+| **P5** | ⛔ **The dead line detaches on a gap of 10 s between two scenes**, not only on a still desktop — `[M]` on a session that a moment earlier was doing 60 commits/s | ⛔ and `[M]` **a `SIGSTOP` of 5 s to one child kills ALL the sessions**: a stopped child leaves bytes stopped **in the parent's queue** (§6.11, §6.7) |
+| **P6** | ⚠ **The log does not say whose it is**: `[M]` only **4.2 %** of the diagnostic lines is attributable, and the blind test gives **0 names out of 4** | ⭐ **the cure is three lines** and costs **+7.8 %** bytes, and the blind diagnosis returns the right name (§6.7) |
+| **P7** | ⛔ **QVBR — the bandwidth cure of phase 9 — exists, works, and nobody switches it on**: the default is fixed quality, and the cap **is not among the five cures** | ⭐ `[M]` it obeys within 5 %, and the knob covers **8.8×** of bandwidth (§6.10) |
 
-> ### ✅⏳ **IL BAN PER INDIRIZZO È DECISO: si RINVIA, con un nome** — *25 agosto 2026*
+> ### ✅⏳ **THE BAN BY ADDRESS IS DECIDED: it is POSTPONED, with a name** — *25 Aug 2026*
 >
 > *«Il discorso del ban rientrerà in un discorso più generale sulla sicurezza, che farà parte di un
-> capitolo evolutivo»* — l'utente. ⇒ **`DECISIONI.md` §4.6-octies**.
+> capitolo evolutivo»* — the user. ⇒ **`DECISIONI.md` §4.6-octies**.
 >
-> ⛔ **Il rilievo R10-A2 resta vero e non si chiude: si rinvia.** ⭐ Ed è la scelta giusta, perché la
-> cura **tocca una difesa, non una comodità**: non si smonta dentro una fase che sta misurando la
-> capacità.
-> ⚠ **Il prezzo, dichiarato**: fino a quel capitolo, **un ufficio dietro un NAT è una configurazione
-> in cui il prodotto può chiudersi da solo per dodici ore** — ⭐ e non è un difetto nascosto, è un
-> difetto **misurato, nominato e datato**.
+> ⛔ **Finding R10-A2 stays true and is not closed: it is postponed.** ⭐ And it is the right choice, because the
+> cure **touches a defence, not a convenience**: it is not dismantled inside a phase that is measuring
+> capacity.
+> ⚠ **The price, declared**: until that chapter, **an office behind a NAT is a configuration
+> in which the product can lock itself out for twelve hours** — ⭐ and it is not a hidden defect, it is a
+> defect **measured, named and dated**.
 
-> ### ⛔⛔ E QUESTE DUE SONO DEL REGISTA, E SOLO SUE
+> ### ⛔⛔ AND THESE TWO BELONG TO THE DIRECTOR, AND TO HIM ALONE
 >
-> ⭐ *Nessuno le può prendere al posto suo, perché tutt'e due cambiano **quel che l'utente vede**, ed
-> è l'invariante **I8**: il metro è quel che l'utente vede.*
+> ⭐ *Nobody can take them in his place, because both change **what the user sees**, and
+> it is invariant **I8**: the meter is what the user sees.*
 >
-> | | la domanda | quel che la misura ha già messo sul tavolo |
+> | | the question | what the measurement has already put on the table |
 > |---|---|---|
-> | **QVBR** — cioè **P7** | ⭐ **si accende il tetto di banda della fase 9, oppure no?** | `[M]` La cura **esiste, funziona e obbedisce entro il 5 %**, e la manopola copre **8,8×** di banda. ⛔ **Ma oggi è spenta**, e il predefinito è a **qualità fissa**. ⚠ E il caso in cui v1 si fece male — QVBR **con un desktop vero dietro** — è ancora `[?]` (§9): il banco c'è, manca il giro |
-> | **i numeri di fabbrica** | ⭐ **tetto 10 e riserva 0,5 restano così?** | `[M]` Con riserva **0,5**: **0 falsi sì, 0 falsi no**, e il tetto ritrovato è **6 sature / 10 ferme** — ⭐ cioè **il dieci di `SPECIFICHE.md` §5.5 riconquistato per MISURA invece che per promessa**. ⚠ Ma sono i numeri di **questo ferro**: un'altra macchina vuole un altro `--budget-mpixel-s` |
+> | **QVBR** — that is **P7** | ⭐ **is the phase 9 bandwidth cap switched on, or not?** | `[M]` The cure **exists, works and obeys within 5 %**, and the knob covers **8.8×** of bandwidth. ⛔ **But today it is off**, and the default is **fixed quality**. ⚠ And the case in which v1 got hurt — QVBR **with a real desktop behind** — is still `[?]` (§9): the bench exists, the round is missing |
+> | **the factory numbers** | ⭐ **do cap 10 and reserve 0.5 stay as they are?** | `[M]` With reserve **0.5**: **0 false yeses, 0 false nos**, and the cap found again is **6 saturated / 10 still** — ⭐ that is **the ten of `SPECIFICHE.md` §5.5 regained by MEASUREMENT instead of by promise**. ⚠ But they are the numbers of **this hardware**: another machine wants another `--budget-mpixel-s` |
 >
-> ⛔ **E il budget nasce SPENTO** (`--budget-mpixel-s 0`) per l'invariante **I6**: quel che cambia
-> ciò che l'utente vede **non si accende da solo**. ⇒ ⭐ **Accenderlo è la prima delle due
-> decisioni.**
+> ⛔ **And the budget is born OFF** (`--budget-mpixel-s 0`) because of invariant **I6**: what changes
+> what the user sees **does not switch itself on**. ⇒ ⭐ **Switching it on is the first of the two
+> decisions.**
 
 ---
 
-## §9 · Che cosa resta `[?]`
+## §9 · What stays `[?]`
 
-| `[?]` | come si chiude |
+| `[?]` | how it is closed |
 |---|---|
-| ⛔ **Il soffitto del DESKTOP VERO**: `[M]` a undici sessioni si sta al **22-24 %** della GPU, e **sono finiti gli utenti, non la macchina** | più utenti, o tele più grandi. ⚠ L'estrapolazione direbbe ~46 ed è **quattro volte fuori dal misurato**: non si riferisce |
-| ⛔ **Il dirupo sulla scena vera**: dentro undici **non esiste**; a che numero ci sia, non si sa | la stessa salita, più in là |
-| ⛔ **Perché la transizione è NETTA** invece che proporzionale dentro `i915`/mutter | c'è il correlato (pixel composti) e il punto d'attesa (`ioctl` DRM), **non la regola dello scheduler** |
-| ⛔ **La verifica in avanti ALLA CIECA del predittore**: le quattro previsioni restano **sigillate** con l'impronta | `bash banchi/10-b99-lancia.sh avanti` + `confronta`, da chiunque vinca un turno |
-| ⛔ **Chrome**: `DECISIONI.md` §7.20 dichiara due motori, ne è girato **uno** | rifare §6.8 sull'altro |
-| ⛔ **QVBR con un desktop VERO dietro** — ⚠ *ed è proprio la scena su cui la fase 10 di v1 fu azzerata* | il banco c'è, manca il giro |
-| ⛔ **La rete VERA**: i clienti girano sulla stessa macchina, su `lo` ⇒ il filo è **contato, non provato** | `wondershaper` sul percorso vero |
-| ⚠ **Il numero di §6.3 sulla scena dura**, che §6.14 misura **due volte più grande** | rifare quella cella col metro di §6.14 |
-| `[?]` **Un danno che sopravvive alla sua causa**: due sessioni restano a 7-9 fot/s **col guardiano a zero e le scene che disegnano** | meccanismo ignoto, riferito come **osservazione** |
-| ⛔ **Perché Firefox non crea il profilo NEMMENO da solo**, cioè il crash `Compositor crashed ()` che resta nel registro anche col profilo curato | ⚠ È **un secondo difetto**, dichiarato e lasciato stare: la cura di §5.10 fa partire il browser, e questo non morde più |
-| ⛔ **«Si può cliccare e scrivere dentro»** | ⚠ `[M]` provato come *«si apre, disegna, rende una pagina»* — **non** come *«ci clicco dentro»*: il cliente di prova manda **solo `PUNTATORE`**, non ha bottoni né tasti (§7.3). ⇒ Va esteso il cliente |
-| ⚠ **La sessione nasce nella PANORAMICA** invece che sul desktop (§5.11) | ⛔ **è una decisione del regista**, non un `[?]` da misurare: cambia quel che l'utente vede |
-| ⚠ **Undici `segfault` di `remotix` in `libei.so.1.3.901`** (`segfault at 50`, cioè NULL+0x50) — ⭐ **ma sono tutti PRIMA della cura** | ⭐ `[M]` **L'ultimo è delle 07:06 del 25 agosto**; la cura di `src/input.c` (§5, `stacca_il_contesto()`) è stata cucita **alle 14:47**, e da allora **nessuno** — attraverso un pomeriggio di tre incarichi, decine di sessioni aperte e chiuse. ⚠ **È un indizio forte, non una prova controllata**: il rosso non è stato riprodotto di proposito sull'albero curato |
-| ⛔⛔ **L'IMMAGINE** | ⭐ **Il testimone adesso c'è** (§5.8) e il desktop remoto **si è visto**: è perfetto. ⚠ Ma *«si vede peggio»* nessun banco lo dice — quello lo dice il regista, ed è §10 |
+| ⛔ **The ceiling of the REAL DESKTOP**: `[M]` at eleven sessions one is at **22-24 %** of the GPU, and **the users ran out, not the machine** | more users, or bigger canvases. ⚠ Extrapolation would say ~46 and it is **four times outside what was measured**: it is not reported |
+| ⛔ **The cliff on the real scene**: within eleven **it does not exist**; at what number it is, nobody knows | the same climb, further on |
+| ⛔ **Why the transition is SHARP** instead of proportional inside `i915`/mutter | there is the correlate (composited pixels) and the waiting point (DRM `ioctl`), **not the scheduler's rule** |
+| ⛔ **The BLIND forward verification of the predictor**: the four predictions stay **sealed** with the fingerprint | `bash banchi/10-b99-lancia.sh avanti` + `confronta`, by whoever wins a turn |
+| ⛔ **Chrome**: `DECISIONI.md` §7.20 declares two engines, **one** was run | redo §6.8 on the other |
+| ⛔ **QVBR with a REAL desktop behind** — ⚠ *and it is precisely the scene on which phase 10 of v1 was reset* | the bench exists, the round is missing |
+| ⛔ **The REAL network**: the clients run on the same machine, on `lo` ⇒ the wire is **counted, not tested** | `wondershaper` on the real path |
+| ⚠ **The number of §6.3 on the hard scene**, which §6.14 measures **twice as big** | redo that cell with the meter of §6.14 |
+| `[?]` **Damage that survives its cause**: two sessions stay at 7-9 fps **with the guardian at zero and the scenes drawing** | mechanism unknown, reported as an **observation** |
+| ⛔ **Why Firefox does not create the profile EVEN on its own**, that is the `Compositor crashed ()` crash that stays in the log even with the cured profile | ⚠ It is **a second defect**, declared and left alone: the cure of §5.10 makes the browser start, and this no longer bites |
+| ⛔ **«Si può cliccare e scrivere dentro»** | ⚠ `[M]` tested as *«it opens, draws, renders a page»* — **not** as *«I click inside it»*: the test client sends **only `PUNTATORE`**, it has no buttons or keys (§7.3). ⇒ The client must be extended |
+| ⚠ **The session is born in the OVERVIEW** instead of on the desktop (§5.11) | ⛔ **it is a decision for the director**, not a `[?]` to measure: it changes what the user sees |
+| ⚠ **Eleven `segfault`s of `remotix` in `libei.so.1.3.901`** (`segfault at 50`, that is NULL+0x50) — ⭐ **but they are all BEFORE the cure** | ⭐ `[M]` **The last is from 07:06 on 25 Aug**; the cure of `src/input.c` (§5, `stacca_il_contesto()`) was stitched in **at 14:47**, and since then **none** — across an afternoon of three assignments, dozens of sessions opened and closed. ⚠ **It is a strong clue, not a controlled proof**: the red was not reproduced on purpose on the cured tree |
+| ⛔⛔ **THE IMAGE** | ⭐ **The witness now exists** (§5.8) and the remote desktop **has been seen**: it is perfect. ⚠ But *«si vede peggio»* no bench says — that is said by the director, and it is §10 |
 
 ---
 
-## §10 · Il giudizio dell'utente
+## §10 · The user's judgement
 
-### ⭐⭐⭐⭐⭐ 25 agosto 2026, sera — **il prodotto vero, un video 4K, e un filo a 10 Mbit/s**
+### ⭐⭐⭐⭐⭐ 25 Aug 2026, evening — **the real product, a 4K video, and a wire at 10 Mbit/s**
 
 > *«Sono dentro. Sto riproducendo un video di YouTube a 4K. **Perfetto**.»*
 >
-> *E poi, dopo aver strozzato lui stesso la banda del tablet:*
+> *And then, after throttling the tablet's bandwidth himself:*
 >
 > *«Il video mostra degli artefatti, ma è normale: **siamo sotto le specifiche**. Però **audio e
 > video fluidi e in sync**.»*
 
-⭐ **La prova se l'è disegnata lui.** Alla proposta di strozzare a 30 Mbit/s è stato messo davanti il
-numero — `[M]` quel video viaggiava a **6,0 Mbit/s**, cioè trenta sono **cinque volte** quel che
-serve — e ha risposto **scendendo a 10** e strozzando ⭐ **il tablet**, non il server: cioè
-**il percorso vero**, dal lato del client, che è la scena che un utente vero produce.
+⭐ **He designed the test himself.** When it was proposed to throttle at 30 Mbit/s he was put in front of the
+number — `[M]` that video travelled at **6.0 Mbit/s**, that is thirty is **five times** what is
+needed — and he answered by **going down to 10** and throttling ⭐ **the tablet**, not the server: that is
+**the real path**, on the client side, which is the scene a real user produces.
 
-#### `[M]` Le due misure, prese dal registro **senza toccare la sua sessione**
+#### `[M]` The two measurements, taken from the log **without touching his session**
 
-| | filo libero | ⭐ tablet a 10 Mbit/s |
+| | free wire | ⭐ tablet at 10 Mbit/s |
 |---|---|---|
-| **fotogrammi consegnati** | 38,5/s | ⭐ **37,4/s** — *praticamente uguali* |
-| **byte a fotogramma** | 19 377 | ⭐ **10 680** — **la metà** |
-| **banda** | 6,0 Mbit/s | ⭐ **3,20 Mbit/s** — **la metà** |
-| **la coda sul filo** | vuota | ⭐ **vuota** — `arretrato massimo 0, posti 2` |
-| **il motore che COMPONE** (`rcs0`) | 41,3 % | **45,6 %** — *la scena si muove come prima* |
+| **frames delivered** | 38.5/s | ⭐ **37.4/s** — *practically the same* |
+| **bytes per frame** | 19 377 | ⭐ **10 680** — **half** |
+| **bandwidth** | 6.0 Mbit/s | ⭐ **3.20 Mbit/s** — **half** |
+| **the queue on the wire** | empty | ⭐ **empty** — `arretrato massimo 0, posti 2` |
+| **the engine that COMPOSITES** (`rcs0`) | 41.3 % | **45.6 %** — *the scene moves as before* |
 
-⇒ ⭐⭐⭐ **Non ha rallentato: ha compresso di più.** Ha **dimezzato la banda senza perdere un
-fotogramma** e senza mettere niente in coda — ed è alla lettera il secondo principio di
+⇒ ⭐⭐⭐ **It did not slow down: it compressed more.** It **halved the bandwidth without losing a
+frame** and without putting anything in the queue — and it is literally the second principle of
 `SPECIFICHE.md`: ⭐ *«degradare, non fallire»*.
 
-⚠ E il margine che gli restava: **3,2 su 10 Mbit/s**, cioè il **32 %** del filo concesso.
+⚠ And the margin it had left: **3.2 out of 10 Mbit/s**, that is **32 %** of the wire granted.
 
-> ### ⛔ E UN NUMERO CHE STAVA PER DIVENTARE UN DIFETTO CHE NON C'È
+> ### ⛔ AND A NUMBER THAT WAS ABOUT TO BECOME A DEFECT THAT DOES NOT EXIST
 >
-> Il primo colpo d'occhio, **mentre il video si stava rimettendo in moto**, diceva **14,0 fot/s e
-> 0,17 Mbit/s**: sembrava un crollo, e con la coda vuota sembrava pure *«il prodotto si trattiene
+> The first glance, **while the video was starting up again**, said **14.0 fps and
+> 0.17 Mbit/s**: it looked like a collapse, and with the queue empty it even looked like *«il prodotto si trattiene
 > da solo»*.
 >
-> ⛔ **Non lo era: era il transitorio.** ⭐ **Il testimone che l'ha smascherato è il motore di
-> disegno** — a **45,6 %**, cioè **la scena si stava muovendo eccome**. ⇒ Il calo non poteva essere
-> «non c'è niente da mandare».
+> ⛔ **It was not: it was the transient.** ⭐ **The witness that unmasked it is the drawing
+> engine** — at **45.6 %**, that is **the scene was moving all right**. ⇒ The drop could not be
+> «there is nothing to send».
 >
-> ⭐⭐ **La regola**: prima di attribuire un calo al prodotto, si guarda **quanta sollecitazione sta
-> arrivando** (`LEZIONI.md` §1.30). Qui la sollecitazione c'era, e la spiegazione era **un'altra
-> ancora**: il video non aveva ancora ripreso a scorrere.
+> ⭐⭐ **The rule**: before attributing a drop to the product, one looks at **how much stress is
+> arriving** (`LEZIONI.md` §1.30). Here the stress was there, and the explanation was **yet
+> another one**: the video had not yet started flowing again.
 
-#### ⭐⭐ E questo giudizio chiude un `[?]` della FASE 9
+#### ⭐⭐ And this judgement closes a `[?]` of PHASE 9
 
-`fasi/09-la-qualita-e-la-degradazione.md` lasciava aperta la metà **AV** del sincronismo — *«non è
-rimisurata: vuole quel browser»* — ⛔ **e quel browser non partiva** (§20.1-ter, ora refutata).
+`fasi/09-la-qualita-e-la-degradazione.md` left open the **AV** half of synchronisation — *«non è
+rimisurata: vuole quel browser»* — ⛔ **and that browser would not start** (§20.1-ter, now refuted).
 
-⇒ ⭐ **Adesso è stata giudicata**, sulla scena più dura che ci sia — **un video 4K su un filo sotto
-le specifiche** — e il verdetto è dell'utente: **«audio e video fluidi e in sync»**.
+⇒ ⭐ **Now it has been judged**, on the hardest scene there is — **a 4K video on a wire below
+the specifications** — and the verdict is the user's: **«audio e video fluidi e in sync»**.
 
-⚠ **E la parola che conta è la sua**: *«artefatti, ma è normale: siamo sotto le specifiche»*.
-⇒ ⭐ **Non è indulgenza: è il metro giusto.** Il prodotto non ha promesso 4K a 10 Mbit/s; ha promesso
-di **non mentire e non sbriciolarsi**, e sotto il pavimento dichiarato ha consegnato **artefatti
-visibili con la fluidità e il sincronismo intatti** — cioè ha speso il poco che aveva **dove
-l'utente se ne accorge di meno**.
+⚠ **And the word that counts is his**: *«artefatti, ma è normale: siamo sotto le specifiche»*.
+⇒ ⭐ **It is not indulgence: it is the right meter.** The product did not promise 4K at 10 Mbit/s; it promised
+**not to lie and not to crumble**, and below the declared floor it delivered **visible artefacts
+with fluidity and synchronisation intact** — that is, it spent the little it had **where
+the user notices least**.
 
-### ✅⭐⭐⭐⭐⭐ **LO SCOPO È RAGGIUNTO — il multi-tenant**
+### ✅⭐⭐⭐⭐⭐ **THE PURPOSE IS REACHED — multi-tenant**
 
 > *«Allora la sessione ha raggiunto il suo scopo: il multitenant. **10 utenti contemporaneamente
 > presenti su una GPU integrata è un risultato di assoluta eccellenza**.»*
 
-⭐ **È il giudizio che chiude la fase**, e cade esattamente sul suo scopo dichiarato — *«più utenti
-insieme, il budget, il rifiuto motivato»* (`PIANO.md`, fase 10).
+⭐ **It is the judgement that closes the phase**, and it falls exactly on its declared purpose — *«più utenti
+insieme, il budget, il rifiuto motivato»* (`PIANO.md`, phase 10).
 
-`[M]` **I numeri su cui è stato dato**, e sono tutti misurati su sessioni che **disegnavano davvero**
-— fotogrammi contati e GPU letta:
+`[M]` **The numbers on which it was given**, and they are all measured on sessions that **really drew**
+— frames counted and GPU read:
 
-| | undici desktop veri insieme |
+| | eleven real desktops together |
 |---|---|
-| quanto peggiora **chi già lavorava** | ⭐ **−7,7 %**, sotto la tolleranza |
-| il **ritardo** | ⭐ **non si muove**: 8,4 → 8,0 ms |
-| violazioni di **I1** (*«mai peggiorare chi c'è già»*) | ⭐ **zero su undici** — contro **37** sulla scena satura |
-| quanto costano alla GPU | ⭐ **22-24 %**: poco meno di **un quarto** della macchina |
+| how much **whoever was already working** gets worse | ⭐ **−7.7 %**, under the tolerance |
+| the **latency** | ⭐ **does not move**: 8.4 → 8.0 ms |
+| violations of **I1** (*«mai peggiorare chi c'è già»*) | ⭐ **zero out of eleven** — against **37** on the saturated scene |
+| how much they cost the GPU | ⭐ **22-24 %**: a little less than **a quarter** of the machine |
 
-⇒ ⛔ **Il soffitto non è stato trovato: sono finiti gli utenti, non la macchina.**
+⇒ ⛔ **The ceiling was not found: the users ran out, not the machine.**
 
-⚠ **E l'aritmetica accanto, dichiarata come aritmetica e non come scena provata**: dieci che lavorano
-≈ **23 %**; più **uno** che guarda un 4K a schermo intero ≈ **64 %** (ci sta); più **due** ≈ **105 %**
-(il bordo). ⇒ ⭐ *Dieci normali più uno o due video reggono; tre video a schermo intero no.*
+⚠ **And the arithmetic next to it, declared as arithmetic and not as a tested scene**: ten working
+≈ **23 %**; plus **one** watching a full-screen 4K ≈ **64 %** (it fits); plus **two** ≈ **105 %**
+(the edge). ⇒ ⭐ *Ten normal ones plus one or two videos hold; three full-screen videos do not.*
 
-### ✅⭐⭐⭐⭐⭐ **E IL PRODOTTO È STATO GIUDICATO ANCHE SOTTO LE SPECIFICHE — 25 agosto 2026**
+### ✅⭐⭐⭐⭐⭐ **AND THE PRODUCT WAS JUDGED BELOW THE SPECIFICATIONS TOO — 25 Aug 2026**
 
 > *«Sono soddisfatto. Riprodotto audio e video su una connessione del 1990. **Non credo che si possa
 > chiedere di più**.»*
 
-⭐⭐ **«Una connessione del 1990» è una sua parola, e torna da lontano**: alla fase 9 aveva corretto il
-bersaglio dicendo *«30 mbps sono una connessione da metà anni 90»* (`DECISIONI.md` §3.1-ter) — ⇒ e
-oggi ha portato il prodotto **a un terzo di quella**, con un **video 4K** dentro, e l'ha giudicato
-**sufficiente**.
+⭐⭐ **«Una connessione del 1990» is his word, and it comes from far back**: in phase 9 he had corrected the
+target saying *«30 mbps sono una connessione da metà anni 90»* (`DECISIONI.md` §3.1-ter) — ⇒ and
+today he took the product **to a third of that**, with a **4K video** inside, and judged it
+**sufficient**.
 
-⛔ **Ed è il metro giusto, non un abbuono.** *«Non credo che si possa chiedere di più»* non dice *«è
-perfetto»*: dice ⭐ **«ha speso bene quel poco che aveva»** — che è esattamente quel che
-`SPECIFICHE.md` §2 promette e quel che §4.6-decies ha appena messo per iscritto.
+⛔ **And it is the right meter, not a discount.** *«Non credo che si possa chiedere di più»* does not say *«è
+perfetto»*: it says ⭐ **«it spent well the little it had»** — which is exactly what
+`SPECIFICHE.md` §2 promises and what §4.6-decies has just put in writing.
 
 ---
 
-## §10-bis · Le due decisioni NON prese — **e restano aperte, con i predefiniti in vigore**
+## §10-bis · The two decisions NOT taken — **and they stay open, with the defaults in force**
 
-⛔ **La fase si è chiusa senza che venissero decise, e questo si scrive invece di arrotondarlo.**
-⭐ Non sono state dimenticate: gli sono state messe davanti **tre volte**, e ha chiuso prima.
-⇒ ⚠ **Quel che vale oggi è il predefinito**, e chi riaprirà la questione parte da qui.
+⛔ **The phase closed without them being decided, and this is written down instead of being rounded off.**
+⭐ They were not forgotten: they were put in front of him **three times**, and he closed first.
+⇒ ⚠ **What holds today is the default**, and whoever reopens the question starts from here.
 
-| | che cos'è | ⚠ che cosa vale **oggi** |
+| | what it is | ⚠ what holds **today** |
 |---|---|---|
-| **QVBR** — il tetto di banda per sessione (§8.2, **P7**) | la cura della fase 9: `[M]` **esiste, funziona, obbedisce entro il 5 %**, e copre **8,8×** di banda | ⛔ **SPENTA.** Il predefinito è a qualità fissa |
-| **i numeri di fabbrica** | `--tetto-sessioni` e `--riserva` | **10** e **0,5** — `[M]` a 0,5: **0 falsi sì, 0 falsi no** |
+| **QVBR** — the per-session bandwidth cap (§8.2, **P7**) | the phase 9 cure: `[M]` **it exists, works, obeys within 5 %**, and covers **8.8×** of bandwidth | ⛔ **OFF.** The default is fixed quality |
+| **the factory numbers** | `--tetto-sessioni` and `--riserva` | **10** and **0.5** — `[M]` at 0.5: **0 false yeses, 0 false nos** |
 
-> ### ⭐ E la fase ha portato un argomento NUOVO su QVBR, che prima non c'era
+> ### ⭐ And the phase brought a NEW argument on QVBR, which was not there before
 >
-> `[M]` **Il prodotto ha dimezzato la banda da solo** — 6,0 → **3,20 Mbit/s**, senza perdere un
-> fotogramma. ⇒ ⭐ **QVBR non serve a un utente solo**: il regolatore fa già il suo mestiere.
+> `[M]` **The product halved the bandwidth by itself** — 6.0 → **3.20 Mbit/s**, without losing a
+> frame. ⇒ ⭐ **QVBR is not needed for a single user**: the regulator already does its job.
 >
-> ⛔ **Serve quando gli utenti sono dieci** — un tetto **per sessione** è quel che impedisce che
-> dieci si prendano il filo del server tutte insieme. ⇒ È la domanda che `DECISIONI.md` §3.1-bis
-> punto 2 aveva lasciato aperta — *«dieci sessioni × 30 Mbit/s sono 300 Mbit/s sul filo del
-> server»* — ⛔ **e che questa fase NON ha misurato**: i clienti giravano sulla stessa macchina, su
-> `lo`. Il filo è **contato, non provato** (§9).
+> ⛔ **It is needed when there are ten users** — a cap **per session** is what prevents
+> ten from taking the server's wire all together. ⇒ It is the question `DECISIONI.md` §3.1-bis
+> point 2 had left open — *«dieci sessioni × 30 Mbit/s sono 300 Mbit/s sul filo del
+> server»* — ⛔ **and which this phase did NOT measure**: the clients ran on the same machine, on
+> `lo`. The wire is **counted, not tested** (§9).
 
 ---
 
-## §10-ter · *(il posto del giudizio, come era stato preparato)*
+## §10-ter · *(the place of the judgement, as it had been prepared)*
 
-*(la fase si chiude qui, e non prima)*
+*(the phase closes here, and not before)*
