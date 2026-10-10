@@ -497,11 +497,10 @@ S11 = p("The server runs as a systemd system service, as <b>root</b> and outside
          "in between would stay " + c("unconfined_service_t") + "."],
         ["Options", c("--indirizzo 0.0.0.0 --nome %H --porta … --certificati /var/lib/remotix/certificati --pagina "
                       "/usr/share/remotix/pagina.html --ban-file /var/lib/remotix/ban --journal") + " + "
-         + c("REMOTIX_OPZIONI"), "Same", "Same <b>without</b> " + c("--journal") + "; " + c("--nome")
-         + " from " + c("REMOTIX_NOME"), "No bench option (" + c("--rilievo") + " (frame dump), " + c("--comando-socket") + ", "
+         + c("REMOTIX_OPZIONI"), "Same", "Same", "No bench option (" + c("--rilievo") + " (frame dump), " + c("--comando-socket") + ", "
          + c("--audio-prova") + " (test tone), " + c("--parlantina") + " (verbose)): R13."],
         [c("EnvironmentFile"), c("/usr/share/remotix/remotix.conf") + " then " + c("/etc/remotix/remotix.conf.d/*.conf"),
-         "Same", "None: " + c("Environment=") + " lines, drop-in via " + c("systemctl edit"), "Defaults in "
+         "Same", "Same", "Defaults in "
          + c("/usr") + ", choices in " + c("/etc") + "."],
         [c("KillMode"), c("mixed"), c("mixed"), c("mixed"), "SIGTERM to the parent only, then SIGKILL to what is left "
          "of the unit. Desktops are started with " + c("setsid --fork") + " outside the unit and survive a stop "
@@ -514,10 +513,10 @@ S11 = p("The server runs as a systemd system service, as <b>root</b> and outside
         ["Enabled by the package", "No (" + c("--no-enable --no-start") + ")", "No", "No (" + c("disable *")
          + " preset)", "Enabling is a step of the installer the administrator confirms (§10.12)."],
     ], "«TAB» — The unit in the three package families") + \
-    warn("the Arch unit reads no " + c("EnvironmentFile") + ": the " + c("REMOTIX_PORTA") + " that the installer writes "
-         "to " + c("/etc/remotix/remotix.conf.d/porta.conf") + " for a non-default port is not seen there, and the "
-         "unit lacks " + c("--journal") + ". The deb and rpm units are the reference. Not settled yet.",
-         "The Arch unit differs.") + \
+    p(c("packaging/arch/costruisci.sh") + " checks, before building, that the three units and the three defaults "
+      "files are equivalent apart from the differences in this table (binary folder, " + c("sh -c") + ", "
+      + c("RestartPreventExitStatus") + "); until 0.18.0-1 the Arch unit read no " + c("EnvironmentFile") + " and a "
+      "non-default port rolled the installation back.") + \
     p("On SELinux distributions the " + c("remotix-selinux") + " sub-package (" + c("packaging/rpm/selinux/")
       + ") confines the server in " + c("remotix_t") + " with its own types for the executable, the port (7447 TCP "
       "and UDP, declared in CIL because " + c("portcon") + " cannot be written in a " + c(".te") + " module), "

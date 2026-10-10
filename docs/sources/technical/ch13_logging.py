@@ -453,14 +453,11 @@ S10 = p("REMOTIX reads almost nothing from the environment, on purpose: a cure t
         lead=True) + \
     table(["Name", "Kind", "Read by", "Effect"], [
         [c("REMOTIX_PORTA") + " (port)", "Unit environment", c("remotix.service") + " (all three families)", "Expanded into "
-         + c("--porta") + ". Default 7447 in " + c("/usr/share/remotix/remotix.conf") + " (deb, rpm) or in the unit "
-         "(Arch). The installer writes " + c("REMOTIX_PORTA=N") + " to " + c("/etc/remotix/remotix.conf.d/porta.conf")
+         + c("--porta") + ". Default 7447 in " + c("/usr/share/remotix/remotix.conf") + ". The installer writes " + c("REMOTIX_PORTA=N") + " to " + c("/etc/remotix/remotix.conf.d/porta.conf")
          + " only when the port is not 7447."],
-        [c("REMOTIX_OPZIONI") + " (options)", "Unit environment", "deb and rpm units", "Extra options appended to the command line, "
+        [c("REMOTIX_OPZIONI") + " (options)", "Unit environment", c("remotix.service") + " (all three families)", "Extra options appended to the command line, "
          "e.g. " + c("--nome 192.168.1.10") + " for users who connect by address (the last " + c("--nome") + " wins). "
          "Empty by default."],
-        [c("REMOTIX_NOME") + " (name)", "Unit environment", "Arch unit only", "Expanded into " + c("--nome") + "; default " + c("%H") + " (host name), changed with "
-         + c("systemctl edit remotix") + "."],
         [c("REMOTIX_VULKAN_CONVERSIONE") + " (conversion)", "Process environment, bench only", c("vulkanvideo.c"),
          "Value " + c("copia") + " (copy) forces the copy path of the RGB→NV12 conversion even where the card accepts the shader "
          "writing the encoder input directly; used to measure it and to exercise the branch other cards take."],

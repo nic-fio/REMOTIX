@@ -361,22 +361,20 @@ S_ARCH = p(c("packaging/arch/PKGBUILD") + " is built by " + c("packaging/arch/co
         ["Reproducible", c("SOURCE_DATE_EPOCH") + " = commit time (without it, same binary but different packages "
          "for " + c("builddate") + " and mtree dates, measured 29 Sep)"],
     ], "«TAB» — The Arch recipe") + \
-    warn("the Arch unit has no " + c("EnvironmentFile") + " for " + c("/etc/remotix/remotix.conf.d/*.conf") + " (it sets "
-         + c("REMOTIX_PORTA=7447") + " and " + c("REMOTIX_NOME=%H") + " with " + c("Environment=") + ") and no "
-         + c("--journal") + ", and the package ships neither " + c("/usr/share/remotix/remotix.conf") + " nor the "
-         + c("remotix.conf.d") + " folder. The installer's port step writes " + c("/etc/remotix/remotix.conf.d/porta.conf") + ": on Arch a "
-         "non-default port is not applied, " + c("start-service") + " waits for a port nobody opens, and the "
-         "installation rolls back.", "Code finding.")
+    p("Before " + c("makepkg") + ", " + c("costruisci.sh") + " compares the Arch unit and " + c("remotix.conf")
+      + " with the deb and rpm ones (from the same commit) and stops if they differ beyond the documented "
+      "differences. Until 0.18.0-1 the Arch unit set the port with " + c("Environment=") + " and read no "
+      + c("EnvironmentFile") + ": a non-default port was never applied and the installation rolled back.")
 
 INSTALLED = [
     ["the server", c("/usr/libexec/remotix/remotix"), c("/usr/libexec/remotix/remotix"), c("/usr/lib/remotix/remotix")],
     ["the page", c("/usr/share/remotix/pagina.html"), "same", "same"],
     ["defaults", c("/usr/share/remotix/remotix.conf") + " (" + c("REMOTIX_PORTA") + ", " + c("REMOTIX_OPZIONI") + ")",
-     "same", "— (in the unit)"],
-    ["administrator's choices", c("/etc/remotix/remotix.conf.d/") + " (empty)", "same", "—"],
+     "same", "same"],
+    ["administrator's choices", c("/etc/remotix/remotix.conf.d/") + " (empty)", "same", "same"],
     ["linked versions", c("/usr/share/remotix/incorporate.json"), "same", "same"],
     ["unit", c("remotix.service") + " (via " + c("sh -c") + ")", c("remotix.service") + " (direct exec)",
-     c("remotix.service") + " (direct, no " + c("--journal") + ")"],
+     c("remotix.service") + " (direct exec)"],
     ["tmpfiles", c("/var/lib/remotix") + " 0700, " + c("/run/remotix") + " 0700", "same", c("/var/lib/remotix")
      + " only"],
     ["PAM", c("/etc/pam.d/remotix") + " (" + c("src/remotix.pam") + ", conffile)", c("/etc/pam.d/remotix")

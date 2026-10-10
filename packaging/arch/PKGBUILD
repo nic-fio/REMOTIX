@@ -191,6 +191,10 @@ package() {
 		"$(PKG_CONFIG_PATH="$srcdir/$_quic/lib/pkgconfig" pkg-config --modversion libnghttp3)" \
 		>"$pkgdir/usr/share/remotix/incorporate.json"
 	install -Dm644 "$a/remotix.service"  "$pkgdir/usr/lib/systemd/system/remotix.service"
+	# ⭐ Defaults in /usr, choices in /etc (§6.5 point 7), as in the .deb and the
+	#    .rpm: the engine writes the chosen port in remotix.conf.d/porta.conf.
+	install -Dm644 "$a/remotix.conf"     "$pkgdir/usr/share/remotix/remotix.conf"
+	install -dm755                       "$pkgdir/etc/remotix/remotix.conf.d"
 	install -Dm644 "$a/remotix.tmpfiles" "$pkgdir/usr/lib/tmpfiles.d/remotix.conf"
 	# ⭐ D3 closed (DECISIONI §10.18): the file is Arch's /etc/pam.d/sshd (system-remote-login)
 	#   plus root excluded; pambase's pam_faillock applies as for ssh (§4.3).

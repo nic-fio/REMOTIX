@@ -738,8 +738,8 @@ S_PLAN = p(c("PianoInstallazione()") + " is the whole installation policy in one
          + ", or every person of the machine (uid between " + c("UID_MIN") + " and 60000, a real shell), times every "
          "non-root group of the card nodes; declared in the plan"],
         ["3", c("port") + " — " + c("write-file"), "port ≠ 7447", c("/etc/remotix/remotix.conf.d/porta.conf")
-         + " with " + c("REMOTIX_PORTA=N") + " (read by the deb and rpm " + c("remotix.service") + " as an "
-         "EnvironmentFile; the Arch unit reads no such file)"],
+         + " with " + c("REMOTIX_PORTA=N") + " (read by " + c("remotix.service") + " as an "
+         "EnvironmentFile, in all three families)"],
         ["4", c("service") + " — " + c("start-service"), "not an upgrade", c("remotix.service") + ", enabled and started as "
          "an ordinary step, before verification (" + rif("Verification and the certificate") + ")"],
         ["—", "firewall notice (WARNING)", "a firewall is on, not an upgrade", "opening port N TCP and UDP is the "
