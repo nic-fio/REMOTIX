@@ -294,7 +294,7 @@ They come from the five lessons paid for in phase 9 (`LEZIONI.md` §1.29-§1.33)
 5. ⭐ **The mechanism goes next to the symptom**: in phase 9 there was a factor of **five** between the two;
 6. ⚠ **Short rounds underestimate**: the user's sessions last hours, the benches twenty-five seconds.
 
-### 1.4 ⭐ THE GROUND CHECK — `10-b0`, and **30 faults out of 30 make it bite**
+### 1.4 ⭐ THE TERRAIN CHECK — `10-b0`, and **30 faults out of 30 make it bite**
 
 `banchi/10-b0-terreno.sh` (+ `10-b0-certifica.sh`, `10-b0-innesta.sh`). It is called like this:
 
@@ -334,7 +334,7 @@ unmask badly written checks — **ssh not answering**, **ssh with exit 0 and zer
 >    line becomes `sleep N`, `pgrep` does not find it and `pkill` does not kill it. ⇒ The fault **stayed
 >    injected for 40 s and whoever had put it in believed they had not**. Now the mark sits in
 >    `argv[0]` with `exec -a`.
-> 4. ⚠ **A ground check must not load the machine it declares idle**: counting the fds
+> 4. ⚠ **A terrain check must not load the machine it declares idle**: counting the fds
 >    on the discrete card with one `readlink` per file would have been **~14 000 forks**. It is done with
 >    `find -lname`, a single process, and the denominator is declared (`[M]` 1133 processes sifted).
 >
@@ -567,7 +567,7 @@ a reason*, that is exactly the defect for which `posto_prendi()` had already bee
 | ⛔ **R10-A5** | **The bandwidth cap is PER TENANT, and nobody adds up**: `--tetto-banda-mbit 30` with ten tenants is not a cap of 30, it is a cap of **300**. In the whole of `src/` **there is no aggregate counter of the bytes sent out** | `main.c` · `consegna_verdetto()` → `:1544` → `figlio.c:1215-1217` | ⚠ today it does not break; it is **point 5 of the phase**, confirmed by the code |
 | ⚠ **R10-A6** | **`WT_PALCHI` is EIGHT and the phase aims at ten**: the ninth and the tenth do not enter the table and at re-attach they receive the canvas **as the client asks for it** instead of as the stage has it. ⛔ And the fallback is declared **only once** (`palchi_pieni_detto`): the ninth and the tenth lose it **silently** | `webtransport.c` · `rete_ciclo()`, `palco_misura_segna()` `:5238` | ⚠ **9** — ugly, does not detach |
 | ⚠ **R10-A7** | **`MAX_IN_VOLO` is 16 by copy, not by construction**, and the comment declares a link that does not exist. The day the cap goes up, the seventeenth who authenticates **at the same moment** receives `CREDENZIALI_ERRATE` — **indistinguishable from a wrong password** | `aiutante.c` · `rcp_autentica()` | ⚠ not today, ⛔ **on the day of the budget** |
-| ⚠ **R10-A8** | **The findings folder is a single one and the file names are FIXED**, and the benches' grounds create it `1777` (one even `777` **without sticky**). ⇒ (a) tenant B can **read A's `cattura.bgrx`** — a raw frame of their desktop; (b) the second child fails the write and ⛔ **whoever diagnoses looks at the wrong desktop believing it is theirs** | `figlio.c` · `dichiara_priorita_audio()`, `:5595`, `:5051`; `banchi/07-b64-terreno.sh` | ⚠ **defect of the BENCHES**, not of the product — ⛔ but phase 10 runs ten users right there |
+| ⚠ **R10-A8** | **The findings folder is a single one and the file names are FIXED**, and the benches' terrains create it `1777` (one even `777` **without sticky**). ⇒ (a) tenant B can **read A's `cattura.bgrx`** — a raw frame of their desktop; (b) the second child fails the write and ⛔ **whoever diagnoses looks at the wrong desktop believing it is theirs** | `figlio.c` · `dichiara_priorita_audio()`, `:5595`, `:5051`; `banchi/07-b64-terreno.sh` | ⚠ **defect of the BENCHES**, not of the product — ⛔ but phase 10 runs ten users right there |
 | ⚠ **R10-A9** | **A hostile tenant prevents another from opening the session with a `touch`**: the session log is `/tmp/remotix-sessione-<uid>.log`, `/tmp` is writable by everyone and the uid can be read from `/etc/passwd`. If the file exists and belongs to someone else, the redirection fails and the shell **exits before running the compositor** — ⛔ and the failure is **mute**, because `setsid --fork` exits `0` anyway | `sessione.c` · `avvia()` | ⚠ requires hostility, ⛔ cost of the attack: **one command**, effect **permanent and without symptom** |
 | ⚠ **R10-A10** | **No cap on the number of QUIC connections**: `t->quante++` exists **only for the log line**. Thousands of connections that never send `CREDENZIALI` live 60 s each, **the ban never triggers** (no authentication fails), and the cost of the eleven scans of the list is paid by **everyone else's frames** | `trasporto.c` · `accetta()`, `webtransport.c` | ⚠ robustness |
 
@@ -715,7 +715,7 @@ consumer — `[M]` on Mutter **13 times out of 13**, even in ping-pong among thr
 compositor it might not hold (that is why the full fallback stayed) · and on the route change
 **no keyframe is forced**: correct, measured, ⚠ **but it is a new behaviour** compared with before.
 
-⚠ **And a declaration of honesty about the ground**: `[M]` the servers of three other assignments were alive
+⚠ **And a declaration of honesty about the terrain**: `[M]` the servers of three other assignments were alive
 during the campaign. ⭐ The quantities reported are **counts** (deaths, frames, bytes) and a latency
 of 2 ms, not GPU rates; and the red ↔ green flipped **with the binary, not with the load** — the
 negative control ran with **more** neighbours than the green, not fewer.
@@ -788,7 +788,7 @@ corpo» keeps working, whoever anchors on the body must tolerate `[nome] ` at th
    stopped**. With the green: **4 out of 4**.
 2. ⭐ The classifier that **guesses** goes from **96.5 %** wrong to **3.3 %** — not because
    it guesses better, ⭐ **but because it has almost no mute lines left to guess on**.
-3. ⛔⛔ **The first round fell on the ground check, and the check was right**: it saw that the tree
+3. ⛔⛔ **The first round fell on the terrain check, and the check was right**: it saw that the tree
    shipped **was not the one the bench was reading**. ⚠ **Without that predicate one would have
    measured the right binary while reading the wrong source.**
 4. ⛔ The very first attempt started **in the second in which the previous bench was letting go of the lock and
@@ -807,7 +807,7 @@ corpo» keeps working, whoever anchors on the body must tolerate `[nome] ` at th
 
 ### 5.3 ⭐⭐⭐ THE GUARDIAN CURED AT THE ROOT — and ⛔ **two evictions out of three did not reproduce**
 
-`[M]` 25 Aug 2026, under the lock, ground **21 out of 21**. ⭐ **Two binaries built from the SAME
+`[M]` 25 Aug 2026, under the lock, terrain **21 out of 21**. ⭐ **Two binaries built from the SAME
 sources minus the cure**, swapped **without recompiling**, each with its declared `md5`.
 
 #### ⭐⭐ P4 · The logind guardian — **from N calls to ONE**
@@ -967,8 +967,8 @@ correttamente»*.
 
 #### ⛔⛔ And three consequences that concern everyone
 
-1. ⛔⛔ **The cure BREAKS the ground of `10-b93`**, and **in the worst way**: that script runs `sed` on a
-   `#define` that **no longer exists**, the `sed` exits **0 without substituting**, the ground **declares
+1. ⛔⛔ **The cure BREAKS the terrain of `10-b93`**, and **in the worst way**: that script runs `sed` on a
+   `#define` that **no longer exists**, the `sed` exits **0 without substituting**, the terrain **declares
    success**, the cap stays 16, and the bench ends in *«non ho misurato»*. ⭐ **The cure is one line**,
    and it must be done before redoing the tests.
 2. ⛔ **`POSTO_NIENTE_PIU_POSTI` is no longer reachable by a new user**: slots full ⇒ children
@@ -1035,10 +1035,10 @@ names **as a check**.
 **R4**, **R5**, **R7**, **R8** stay **open and assigned**: they are product cures, and this round
 **tests, it does not cure**.
 
-#### ⛔ And two defects of the shared grounds, found while measuring
+#### ⛔ And two defects of the shared terrains, found while measuring
 
 1. ⛔⛔ **`accendi` exited ZERO on a DEAD server**: `[M]` with an option the binary does not know,
-   the server prints its own help and exits, and the ground said *«OK server 1265806 sulla porta
+   the server prints its own help and exits, and the terrain said *«OK server 1265806 sulla porta
    8260»* **exiting 0**, with the unit already `inactive` and **no listener**. ⇒ A bench that
    trusted it would say «on», then «the table does not fill», and ⛔ **would end up accusing the
    product of a defect that was a non-existent option**. ⭐ Cured: *«acceso»* now means
@@ -1060,7 +1060,7 @@ names **as a check**.
 ### 5.6 ⭐⭐⭐⭐ THE ELEVEN REAL DESKTOPS ON THE STITCHED TREE — **the four cures cost nothing**
 
 `[M]` 25 Aug 2026, tree with the **four cures stitched**, eleven real users, steps of 45 s at
-steady state, ⭐ **ground 21 out of 21 before EVERY scene**.
+steady state, ⭐ **terrain 21 out of 21 before EVERY scene**.
 
 #### ⭐⭐ The anchor finds the SIX again — so the numbers can be compared
 
@@ -1146,7 +1146,7 @@ It matched nobody **only because we always ran with the lock in hand**.
 ### 5.7 ⭐⭐⭐⭐⭐ THE BUDGET — **the product stops accepting everyone and starving everyone together**
 
 `[M]` 25 Aug 2026, **saturated** scene 1920×1080 H.264, steps of 30 s, eleven real users, under the
-lock, ⭐ **ground 21 out of 21 at every arm**.
+lock, ⭐ **terrain 21 out of 21 at every arm**.
 
 | step | ⛔ **RED** — budget off | ⭐ **GREEN** — `--budget-mpixel-s 480 --riserva 0.5` |
 |---|---|---|
@@ -1216,7 +1216,7 @@ here there is only the measurement.
 ⛔ **Four bench defects, three not its own**: ⛔ an `exec` on a **non-executable** script killed
 the first campaign **after** it had already taken and released the lock (**an hour lost**; `[M]` 146
 bench scripts were without `+x`, all cured) · a division by zero in the summary of a **still**
-scene · three grounds that run `sed` on a `#define` that is now 10 — ⭐ **and the cure is not
+scene · three terrains that run `sed` on a `#define` that is now 10 — ⭐ **and the cure is not
 fixing the `sed`, it is REMOVING it**: `--tetto-sessioni N` does **at runtime** what they did by
 recompiling · ⛔ **and one is its own, declared**: the summary prints «uscita 1» for all five
 arms, and the five `1`s **mean different things** — useless as a judgement, and the real numbers
@@ -1322,7 +1322,7 @@ occupied the video engine: the lock held.
 
 **The scene of every row**: i5-13500T (20 threads) · Intel UHD 730 `renderD128` (`i915`, iHD 25.2.3),
 the Radeon closed off by udev · `h264_vaapi` · ⭐ **`EncSliceLP` verified on the driver**, not just requested ·
-QP 26 · bframes 0 · zero copy (DMA-BUF from GBM) · ground `10-b0` **21 out of 21 green** · ⚠ scene
+QP 26 · bframes 0 · zero copy (DMA-BUF from GBM) · terrain `10-b0` **21 out of 21 green** · ⚠ scene
 `testsrc2`, ⛔ **not a real desktop: the rate counts, the Mbit/s do not**.
 ⚠⚠ **And the codec premise was corrected by §6.10**: this ramp is in **H.264**, which the first
 round believed to be *«quel che il prodotto negozia davvero»* — ⛔ **the product negotiates HEVC first**
@@ -2382,7 +2382,7 @@ from the **re-read** context, ⭐ **never from the command given**.
    `0,0200` because the stream was **at the bottom**. ⇒ The bench was about to **declare a product
    defect that was a choice of scene**; now it has the **third outcome** (`None`, with written **which**
    redo is needed) and redone on a middle scene it gives **8.8×**;
-2. `rampa` called the ground check with `LUCCHETTO_MIO=1` **before** taking the lock
+2. `rampa` called the terrain check with `LUCCHETTO_MIO=1` **before** taking the lock
    ⇒ **guaranteed red on something true but wrong**;
 3. ⚠ **On the lock, five seconds lose against one**: `prendi()` retries every **5 s** while
    other pilots retry every second ⇒ a 45-minute window lost. It is the **race** of §7.3, with
@@ -2397,15 +2397,15 @@ a desktop** — ⚠ *and it is precisely the scene on which phase 10 of v1 was r
 calibrated on `ffmpeg` in CBR, because **the product cannot do CBR** and cannot give itself a known target ·
 synthetic scene ⇒ the Mbit/s **are not those of the product** · no long duration on this column.
 
-⚠⚠ **And a declaration of honesty about the ground**: the **HEVC Main10 ramp ran with the ground RED**
+⚠⚠ **And a declaration of honesty about the terrain**: the **HEVC Main10 ramp ran with the terrain RED**
 (servers of other benches on, plus the order defect on the lock) — ⭐ the strangers on the video
 engine were `0,0 %` in every row, **but the machine was not idle**. ⭐ **The QVBR study and the HEVC
-Main ramp ran with the ground 21 out of 21 GREEN.**
+Main ramp ran with the terrain 21 out of 21 GREEN.**
 
 ### 6.11 ⭐⭐⭐⭐⭐ THE COMPOSITING CEILING — **0.97 Gpixel/s**, and the number the phase was looking for
 
 `banchi/10-b95-composizione.py`, `[M]` 25 Aug 2026, i5-13500T · **integrated Intel UHD 730**,
-ground `10-b0` **21 out of 21**, lock in hand, a scene that **damages the whole surface at every
+terrain `10-b0` **21 out of 21**, lock in hand, a scene that **damages the whole surface at every
 frame**.
 
 | N | `rcs0` | composited Mpixel/s | GT | RC6 |
@@ -3045,7 +3045,7 @@ earlier, and which comes back identical.
 | **the ten** (§6.5) | ⛔ **nine, and eight out of nine were silent**: `pgrep -f` finding itself (every session would have resulted «alive» forever) · path from outside instead of from inside the container · the `lo` counter **that was not its own** (22× bigger) · the scene that **did not bite** · `drm-engine-capacity-video: 2` read **as nanoseconds**, ceiling 100 instead of 200 · the GPU delta over a **changing** population of contexts (−76 %) · `misura()` overestimating by 1/(N−1) · the `enable-linger` processes mistaken for an **orphan stage** |
 | **the wire** (§6.3) | `wc -l < file` at the end of `sudo -S` ⇒ silent `None` · `awk`'s `$1` expanded by `bash -c` ⇒ empty field · `nft` braces taken by bash · `ss -uanp` that **does not see** the test client's ports · the ICMP that without its own counter ended up under **«vicini»** |
 | **the full table** (§6.4) | the `tail` that **lost** the line under thousands of lines · the scene switched off **before** the clients (anchor shifted by **42 s**) · `pgrep -f` counting **7** children where there were 3, then **0** · ⛔ **`pkill -f` killing the shell that is running it** ⇒ the next test started **against ghosts** |
-| **the ground** (§1.4) | ⛔ the most important predicate becoming **UNKNOWN** instead of looking at the named card (shape E8) · `bash -c "…; sleep N # segno"` that **loses the mark** ⇒ the fault stayed injected and whoever had put it in **believed they had not** |
+| **the terrain** (§1.4) | ⛔ the most important predicate becoming **UNKNOWN** instead of looking at the named card (shape E8) · `bash -c "…; sleep N # segno"` that **loses the mark** ⇒ the fault stayed injected and whoever had put it in **believed they had not** |
 | **the cost** (§6.4-bis) | ⛔ the threshold on **bytes per frame**, which ordered the two extremes **backwards** (shape E15) |
 
 ⭐ **And two were avoided by someone else's bench**: the capacity **2** and the §CLOCK, which the calibrated meter of §6.1
@@ -3075,7 +3075,7 @@ a bench that had been waiting for **two hours** **lost two consecutive hand-over
 the GPU.
 
 ⛔⛔ **And the damage is not the delay: it is that the round was SKIPPED under an exit code that
-looked like a ground problem.** ⇒ The question **was never asked**, and whoever read the outcome
+looked like a terrain problem.** ⇒ The question **was never asked**, and whoever read the outcome
 saw a fault instead of a hole. It is exactly the shape of `LEZIONI.md` §1.29 — *silence instead
 of red* — **one floor up**: not in the bench, in what coordinates the benches.
 
@@ -3085,7 +3085,7 @@ of red* — **one floor up**: not in the bench, in what coordinates the benches.
 |---|---|---|
 | 0 / 1 | ⭐ **a judgement** — holds / does not hold | ⛔ **never** |
 | 3 | *«non giudico»* — it measured, and some predicate could not speak | ⛔ **never** |
-| 2 | the ground does not hold, or the use is wrong | ⛔ never — **a bad ground is LOOKED AT**, not retried until by chance it passes |
+| 2 | the terrain does not hold, or the use is wrong | ⛔ never — **a bad terrain is LOOKED AT**, not retried until by chance it passes |
 | **4** | ⭐ **the turn never came** — the question was not asked | ✅ **yes, up to four times** |
 
 ⛔⛔ **And the `3` is NOT put back in the queue, on purpose.** It is the most tempting — *«some box did not
@@ -3210,10 +3210,10 @@ numbers** — the `finally` saved the results, but the cells entry was assigned 
 function returned** ⇒ five measured cells produced a file that said *«nessuna cella»*.
 ⭐ **A file that exists and carries nothing is worse than a missing file: it looks like a result.**
 
-#### ⚠ And two things the ground taught in this round
+#### ⚠ And two things the terrain taught in this round
 
-1. ⛔ **A `tail -40` on the ground check's verdict cuts the lines that say WHY.** `[M]`
-   The ground gave two troubles and the pilot printed only the tail: **the two red lines were at the
+1. ⛔ **A `tail -40` on the terrain check's verdict cuts the lines that say WHY.** `[M]`
+   The terrain gave two troubles and the pilot printed only the tail: **the two red lines were at the
    top**. ⇒ On red **all** the red lines are printed — a truncated verdict is a mute verdict.
 2. ⭐ **And the right guard for a GPU measurement is not «no other `remotix`»**, which with five
    benches on never comes true: it is **no other live `remotix-figlio`**. `[M]` A server **without
@@ -3414,7 +3414,7 @@ a trick that works **only for GNOME**: phases 11 and 12 bring KDE, XFCE and LXQt
 | **2** | ⛔⛔ **`fermo_ms=` LIED**: the comment said «per session», the code read a **global** counter | `[M]` `SIGSTOP` of **6.0 s** to the parent's loop with **no live session**, then the session opens: **`fermo_ms=6143` → `0`**. ⭐ **And the negative control**: session **alive during** the stall, **5800 → 5647** ⇒ *the witness was **corrected**, not switched off* |
 | **3** | ⚠ two **lying comments**, and the **fifth hand copy** of the cap | cured. ⛔ **And `WT_RIPASSO_INSIEME 32` is NOT unified** — see the box |
 | **4** | ⚠ the **global `pkill`** in two benches | narrowed to what the bench itself switched on. ⛔ In `10-b97` **both were wrong in the worst direction**: one had the folder of **another bench written by hand** — it killed the neighbour's clients and left its own alive |
-| **5** | ⚠ the **`sed` that recompiled** the cap in three grounds | removed. ⛔ **And the red is that today it no longer bites**: the pattern matches **0 lines** ⇒ `10-b2`, `10-b93` and `10-c3` **did not start at all**. ⭐ The guard **changes place**: the cap is read **from the running server**, not from the text it will be born from |
+| **5** | ⚠ the **`sed` that recompiled** the cap in three terrains | removed. ⛔ **And the red is that today it no longer bites**: the pattern matches **0 lines** ⇒ `10-b2`, `10-b93` and `10-c3` **did not start at all**. ⭐ The guard **changes place**: the cap is read **from the running server**, not from the text it will be born from |
 | **6** | ⚠ the benches' **incomplete environment** (`XDG_SESSION_TYPE` and two others) | cured, and ⭐ **the copies were four, not three**: now in one place only, `banchi/10-ambiente-sessione.sh` |
 
 > ### ⛔ WHY THE FIFTH COPY IS **NOT** UNIFIED — and the reason is written next to the code
@@ -3485,7 +3485,7 @@ profile, no workaround**: the right environment and a `~/.cache` of its own.
 >   complete cure inside the line**. ⛔ It declares, it does not refuse.
 >
 > ⛔ **And there is a tail that touches past measurements**: the **benches** created tenants on their
-> own — `banchi/attrezzi-utenti.sh` and nine grounds of phases 02, 04, 06, 07, 09 — ⛔ **without those
+> own — `banchi/attrezzi-utenti.sh` and nine terrains of phases 02, 04, 06, 07, 09 — ⛔ **without those
 > groups**. ⇒ Every bench that measured on such a tenant measured **a session that could not
 > see, without knowing it**.
 >
