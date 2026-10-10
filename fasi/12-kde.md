@@ -341,7 +341,7 @@ splash screen): curing it means moving the moment of injection, and it is a step
 | **GOAL** | copy and paste of text in both directions, browser ↔ Plasma desktop, as on GNOME (the user's decision, 19 Sep) |
 | **INVARIANT** | on GNOME the clipboard stays `appunti.c` as it was: the shell hands over to KDE with one line at the top of every public function, only if `kde` is there |
 | **MODULES** | ⭐ `src/appunti_kde.c` and `src/appunti_kde.h` (from v1's `fondamenta/remotix-c/src/appunti_wlr.c`: `zwlr_data_control_manager_v1`, **no** permission to ask) · `src/appunti.c` and `src/appunti.h` (`appunti_apri_kde()` and the hand-overs) · `src/kwin.c` and `src/kwin.h` (`kwin_display_apri()` exported) · `src/figlio.c` (which one to open) · `src/Makefile` + `src/protocolli/wlr-data-control-unstable-v1.xml` · the bench: R3 `wl-clipboard` in the gnome and kde recipes, `07-b54-appunti-due-versi.py --scatola` |
-| **SHAPE** | the same as GNOME: TEXT ONLY (`DECISIONI.md` §5-ter.1), the same row of types, the same cap, the same memory of the last text, and if the client has nothing the session gets ITS own text back. v1's traps carried over: the echo (state criterion), the full round before reading, `POLLHUP` = ready, the minimal step towards klipper, never `x-kde-onlyReplaceEmpty` |
+| **SHAPE** | the same as GNOME: TEXT ONLY (`DECISIONI.md` §5-ter.1), the same row of types, the same cap, the same memory of the last text, and if the client has nothing the session gets ITS own text back. v1's traps carried over: the echo (state criterion), the full roundtrip before reading, `POLLHUP` = ready, the minimal step towards klipper, never `x-kde-onlyReplaceEmpty` |
 
 | `[M]` 19 Sep 2026, binary `954a208c` | outcome |
 |---|---|
@@ -622,7 +622,7 @@ It stays as an open point, with the measurement.
 | GNOME | ⭐ **all green**: step 0, C1×10, C2, C3 (+ still scene), C4, C5, C6, C7, C8, C8b, C9 |
 | kde · xfce · lxqt | step 0, C5, C7, C8, C9 green · ⛔ **C1×10 RED** on all three (the mandate) · C2 C3 C4 C6 C8b **skipped** by the "gnome only" gate (outcome 3) |
 | net, on the server | C11 green (14 entries aligned, **same md5 in the four**) · C13 green · C14 green (786 s) |
-| net, on the laptop | C10, C12, C15, C16 green, C10 with the fault seen — ⚠ **these four want the git repository**: launched on the server they give 2/3 "the ground does not hold", and it is not a red. They are run **here**, in the same certification round |
+| net, on the laptop | C10, C12, C15, C16 green, C10 with the fault seen — ⚠ **these four want the git repository**: launched on the server they give 2/3 "the terrain does not hold", and it is not a red. They are run **here**, in the same certification round |
 | ⭐ **injected faults** | **25 out of 25 seen** (24 on the boxes, 1 on the laptop) |
 | bench reds | none |
 
