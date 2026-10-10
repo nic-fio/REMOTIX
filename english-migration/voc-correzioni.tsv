@@ -1,3 +1,46 @@
 # parola	inglese («=» toglie la parola dal vocabolario)
 va	=
 sei	=
+# ── document reviewers' rulings, 10 Oct 2026 (en-40) ───────────────────────
+# difetto → defect, guasto → fault: never the same word (the glossary already agrees)
+difetto	defect
+difetti	defects
+guasto	fault
+guasti	faults
+# innesto/innestare → graft/grafted, never inject (inject only for iniettare)
+innesto	graft
+innesti	grafts
+innesta	graft
+innestare	graft
+innestato	grafted
+innestata	grafted
+innestati	grafted
+innestate	grafted
+innestabili	graftable
+innestarci	graft_into
+innestatori	grafters
+inietta	inject
+iniettare	inject
+iniettati	injected
+iniettato	injected
+# anello: link (chain) / loop (delay loop, closed loop) / ring only for the audio ring buffer.
+# In identifiers anello is the ring buffer (AUDIO_ANELLO_*, dgram_anello); the chain link is per name in interi.tsv
+anello	ring
+anelli	links
+# posto (RCP attach slot) → slot; logind/Mutter seat stays seat
+posto	slot
+posti	slots
+# rinvio/rimando of the pacer → postponement (resend only for QUIC retransmission).
+# rimanda (the canvas/stage asked for again) keeps resend
+rinvio	postponement
+rinvii	postponements
+rimando	postponement
+rimandi	postponements
+rimandati	postponed
+rimandato	postponed
+terreno	terrain
+giro	round
+giri	rounds
+metro	yardstick
+cucitura	seam
+colpa	fault

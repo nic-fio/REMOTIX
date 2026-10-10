@@ -1,0 +1,124 @@
+# interi.tsv — whole-name renames decided by hand; they win over the vocabulary and over collisions.
+# old	new	why (one line, always)
+# ── reviewers' rulings, 10 Oct 2026 ──
+FONDO_SCALA	FULL_SCALE	fondo della scala: full scale of a 16-bit sample (32767), not background
+APPUNTI_FONDO	CLIPBOARD_BACKSTOP	fondo as a time limit → backstop (8000 ms for a clipboard pull)
+JS_ANELLO	JS_LINK	anello here is the input link of the chain (12-client-veri.py), not a ring
+RIMANDO	DEFERRED	01-b7-lancia.sh counts the DEFERRED closing in the source
+DOVE_RIMANDO	DEFERRED_WHERE	the file where the DEFERRED closing is looked for
+# ── RCP message names on weak words (ciao, vista): the vocabulary does not translate them alone ──
+CIAO	HELLO	RCP message name (contratti/rcp-contratto.tsv)
+T_CIAO	T_HELLO	RCP message name (contratti/rcp-contratto.tsv)
+VISTA	VIEW	RCP message name (contratti/rcp-contratto.tsv)
+T_VISTA	T_VIEW	RCP message name (contratti/rcp-contratto.tsv)
+# ── options and variables put in English word order by the contract analysis (contratti/opzioni-contratto.tsv) ──
+figlio-interno	internal-child	c-option: English word order
+linea-morta	dead-line	c-option: English word order
+linea-morta-silenzio-s	dead-line-silence-s	c-option: English word order
+linea-morta-stallo-ms	dead-line-stall-ms	c-option: English word order
+niente-audio-silenzio	no-audio-silence	c-option: English word order
+niente-linea-morta	no-dead-line	c-option: English word order
+niente-ritmo-adattivo	no-adaptive-rate	c-option: English word order
+prova-codifica	encoding-test	c-option: English word order
+ritmo-adattivo	adaptive-rate	c-option: English word order
+tetto-banda-mbit	bandwidth-cap-mbit	c-option: English word order
+tetto-sessioni	session-cap	c-option: English word order
+B_SORG_PIU_RECENTE	B_NEWEST_SRC	env-var: English word order
+DENTRO_LAV	INSIDE_WORK	env-var: English word order
+GRUPPI_SCHEDA	CARD_GROUPS	env-var: English word order
+GRUPPI_SCHEDA_PREFISSO	CARD_GROUPS_PREFIX	env-var: English word order
+GRUPPI_SCHEDA_SH	CARD_GROUPS_SH	env-var: English word order
+LAV_COSTRUZIONE	WORK_BUILD	env-var: English word order
+NODO_INTEL	INTEL_NODE	env-var: English word order
+NODO_RADEON	RADEON_NODE	env-var: English word order
+OPZIONI_SERVER	SERVER_OPTIONS	env-var: English word order
+ORDINE_PRODOTTO	PRODUCT_ORDER	env-var: English word order
+PAROLA_SUDO	SUDO_WORD	env-var: English word order
+PAROLA_UTENTE	USER_WORD	env-var: English word order
+PAROLA_UTENTE2	USER2_WORD	env-var: English word order
+PIANO_OPZ	PLAN_OPTS	env-var: English word order
+PORTA_LUCCHETTO	LOCK_PORT	env-var: English word order
+PORTA_SSH	SSH_PORT	env-var: English word order
+PORTE_DA_NON_TOCCARE	PORTS_NOT_TO_TOUCH	env-var: English word order
+PORTE_SONDA	PROBE_PORTS	env-var: English word order
+REMOTIX_16_CHROME_IN_PIU	REMOTIX_16_CHROME_EXTRA	env-var: English word order
+REMOTIX_16_IN_PIU	REMOTIX_16_EXTRA	env-var: English word order
+REMOTIX_ATTESA_CHIAMATA_S	REMOTIX_CALL_WAIT_S	env-var: English word order
+REMOTIX_BANCHI_VERI	REMOTIX_REAL_BENCHES	env-var: English word order
+REMOTIX_PAROLA_PROVA	REMOTIX_TEST_WORD	env-var: English word order
+REMOTIX_PAROLA_SUDO	REMOTIX_SUDO_WORD	env-var: English word order
+REMOTIX_SCATOLE_TENUTE	REMOTIX_KEPT_BOXES	env-var: English word order
+REMOTIX_SCHERMO_ANNIDATO	REMOTIX_NESTED_SCREEN	env-var: English word order
+REMOTIX_TELEFONO_A_SECCO	REMOTIX_PHONE_DRY_RUN	env-var: English word order
+REMOTIX_TETTO_SESSIONI	REMOTIX_SESSION_CAP	env-var: English word order
+REMOTIX_UTENTE_VERI	REMOTIX_REAL_USER	env-var: English word order
+REMOTIX_WAYLAND_VERI	REMOTIX_REAL_WAYLAND	env-var: English word order
+STATO_SESSIONE	SESSION_STATE	env-var: English word order
+TELA_MINIMA	MINIMUM_CANVAS	env-var: English word order
+VERI	REAL	env-var: English word order
+MINIMI	MINIMUMS	make-var: English word order
+anche-lo-sporco	dirty-too	py-option: English word order
+anche-se-non-vuoto	even-if-not-empty	py-option: English word order
+anche-se-qualcuno-e-dentro	even-if-someone-is-inside	py-option: English word order
+anticipo-foto-s	photo-lead-s	py-option: English word order
+bozze-attese	expected-drafts	py-option: English word order
+chiavi-attese	expected-keys	py-option: English word order
+codificatore-fermo	stopped-encoder	py-option: English word order
+cpu-tutti	all-cpus	py-option: English word order
+credito-atteso	expected-credit	py-option: English word order
+finestra-che-non-si-apre	window-that-does-not-open	py-option: English word order
+forma-sbagliata	wrong-shape	py-option: English word order
+fotogramma-ripetuto	repeated-frame	py-option: English word order
+frazione-coppie	pair-fraction	py-option: English word order
+frazione-minima	minimum-fraction	py-option: English word order
+gid-atteso	expected-gid	py-option: English word order
+gira	run	py-option: English word order
+guasto-innestato	grafted-fault	py-option: English word order
+idle-atteso	expected-idle	py-option: English word order
+idr-attesi	expected-idr	py-option: English word order
+lascia-un-inquilino	leave-a-tenant	py-option: English word order
+lascia-un-processo	leave-a-process	py-option: English word order
+lascia-una-casa	leave-a-home	py-option: English word order
+margine-filo	wire-margin	py-option: English word order
+margine-soglia	threshold-margin	py-option: English word order
+nome-figlio	child-name	py-option: English word order
+parola-cattiva	bad-word	py-option: English word order
+pausa-staccato	detached-pause	py-option: English word order
+porte-base	base-ports	py-option: English word order
+puntatore-vecchia	old-pointer	py-option: English word order
+purezza-minima	minimum-purity	py-option: English word order
+ritmo-minimo	minimum-rate	py-option: English word order
+scarto-massimo	maximum-gap	py-option: English word order
+scena-che-lampeggia	flashing-scene	py-option: English word order
+scena-ferma	still-scene	py-option: English word order
+scena-guasta	broken-scene	py-option: English word order
+scena-soglia-stretta-ms	scene-tight-threshold-ms	py-option: English word order
+scena-sorda	deaf-scene	py-option: English word order
+seme-base	base-seed	py-option: English word order
+soglia-coppia	pair-threshold	py-option: English word order
+soglia-cpu	cpu-threshold	py-option: English word order
+solo-strato-tecnico	technical-layer-only	py-option: English word order
+stato-iniziale	initial-state	py-option: English word order
+strato-tecnico	technical-layer	py-option: English word order
+tetti-codice	code-caps	py-option: English word order
+tetto-controllo-s	check-cap-s	py-option: English word order
+tetto-foto-s	photo-cap-s	py-option: English word order
+tetto-prova	test-cap	py-option: English word order
+uccidi-la-sessione	kill-the-session	py-option: English word order
+uid-atteso	expected-uid	py-option: English word order
+utente-base	base-user	py-option: English word order
+utente-cattivo	bad-user	py-option: English word order
+a-secco	dry-run	subcommand: English word order
+ammazza-aiutante	kill-helper	subcommand: English word order
+come-al-riavvio	as-after-reboot	subcommand: English word order
+deb-firma	deb-sign	subcommand: English word order
+desktop-nuovo	new-desktop	subcommand: English word order
+fuori-linea	offline	subcommand: English word order
+pacchetto-byte	package-bytes	subcommand: English word order
+pacman-firma	pacman-sign	subcommand: English word order
+registro-byte	log-bytes	subcommand: English word order
+rete-intera	whole-network	subcommand: English word order
+ritira-esiti	fetch-outcomes	subcommand: English word order
+rpm-firma	rpm-sign	subcommand: English word order
+un-verso	one-way	subcommand: English word order
+VersioneMotore	EngineVersion	Go: -X remotix/installatore/motore.VersioneMotore in costruisci.sh; English word order
