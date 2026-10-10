@@ -2022,229 +2022,229 @@ yardstick is what is seen.
 
 ---
 
-## 7. Le lezioni sulla direzione
+## 7. The lessons on direction
 
-### 7.1 I numeri li pone l'utente, e la tecnica li serve
+### 7.1 The numbers are set by the user, and technique serves them
 
-Fino al 7 agosto si sceglieva una strada tecnica e poi si misurava che cosa ne usciva. Da quel giorno
-l'ordine è rovesciato: **una scelta tecnica si giustifica mostrando che avvicina uno dei numeri
-dichiarati**; se non li muove, non si fa, per quanto sia elegante il guadagno che porta altrove.
+Until 7 Aug a technical path was chosen and then what came out of it was measured. From that day
+the order is reversed: **a technical choice is justified by showing that it brings one of the declared
+numbers closer**; if it does not move them, it is not done, however elegant the gain it brings elsewhere.
 
-### 7.2 Ottimizzare nella direzione sbagliata è peggio che non ottimizzare
+### 7.2 Optimising in the wrong direction is worse than not optimising
 
-Metà delle misure della fase 10 erano corrette e rispondevano alla domanda sbagliata: «spendere meno
-banda» era considerato un guadagno, mentre per questo prodotto la banda dichiarata è un **pavimento,
-non un budget**. Prima di ottimizzare una grandezza, **farsi dire se quella grandezza va minimizzata
-o spesa**.
+Half the measurements of phase 10 were correct and answered the wrong question: «spending less
+bandwidth» was considered a gain, while for this product the declared bandwidth is a **floor,
+not a budget**. Before optimising a quantity, **have someone tell you whether that quantity is to be minimised
+or spent**.
 
-### 7.3 Il metro è quel che si vede
+### 7.3 The yardstick is what is seen
 
-Un numero di prestazione che nessuno percepisce non giustifica il tempo dell'utente. E, all'opposto:
-quando l'utente dice che va bene, **va bene** — la fase 10 è stata chiusa così, senza essere rifatta.
+A performance number nobody perceives does not justify the user's time. And, conversely:
+when the user says it is fine, **it is fine** — phase 10 was closed like that, without being redone.
 
-### 7.4 Le previsioni non contano, le misure sì — e vale anche per le nostre
+### 7.4 Predictions do not count, measurements do — and that holds for ours too
 
-Il 7 agosto era stato previsto che il client Android non avrebbe guadagnato niente dalla cadenza
-nuova, con un ragionamento corretto e documentato: riceve un codec che si decodifica in software, e
-che al server costa due volte e mezzo l'H.264. Il giudizio dell'utente è stato *«performance
+On 7 Aug it had been predicted that the Android client would gain nothing from the new
+cadence, with a correct and documented reasoning: it receives a codec decoded in software, and
+which costs the server two and a half times H.264. The user's judgement was *«performance
 eccellenti»*.
 
-Il ragionamento era giusto e la conclusione no, perché partiva da un presupposto mai verificato — che
-qualcuno dei due lati fosse al limite. Non lo era nessuno dei due: **lo era il numero che
-dichiaravamo.**
+The reasoning was right and the conclusion was not, because it started from an assumption never verified — that
+one of the two sides was at its limit. Neither was: **the number we
+declared was.**
 
-> ⚠ **E in V2 il presupposto va rifatto da capo** *(8 agosto 2026)*. Il lato che qui non era stato
-> verificato — «qualcuno dei due lati e' al limite» — cambia del tutto: `aFreeRDP` decodificava in
-> software un codec che nessuno avrebbe scelto, mentre il client di V2 e' nostro e chiama MediaCodec
-> su HEVC. **Il numero di v1 non era un tetto di Android: era il tetto di quel client.** Vale sia per
-> la previsione sbagliata sia per il giudizio che l'ha smentita — nessuno dei due si eredita.
+> ⚠ **And in V2 the assumption must be redone from scratch** *(8 Aug 2026)*. The side that here had not been
+> verified — «one of the two sides is at its limit» — changes completely: `aFreeRDP` decoded in
+> software a codec nobody would have chosen, while the V2 client is ours and calls MediaCodec
+> on HEVC. **The v1 number was not a ceiling of Android: it was the ceiling of that client.** It holds both for
+> the wrong prediction and for the judgement that disproved it — neither of the two is inherited.
 
-### 7.5 ⭐⭐ Una deduzione al posto di un messaggio è un difetto che aspetta
+### 7.5 ⭐⭐ A deduction in place of a message is a defect that is waiting
 
-*15 agosto 2026, notte. Trovata refutando la cura appena scritta, e vale per l'architettura, non
-per una riga.*
+*15 Aug 2026, night. Found by refuting the cure just written, and it holds for the architecture, not
+for one line.*
 
-La catena che porta la misura della finestra fino al compositore era scritta e funzionava. Il
-padre chiedeva al figlio di ridimensionare, e poi **deduceva l'esito dai fotogrammi**: *«se ne
-arriva uno di misura diversa, il palco ha obbedito»*. Era fedele a una regola giusta di questo
-progetto — *«la verità la dice il fotogramma, non l'esito della richiesta»* — e passava tutti i casi
-che avevo in mente.
+The chain that carries the window's size up to the compositor was written and worked. The
+parent asked the child to resize, and then **deduced the outcome from the frames**: *«if one of a
+different size arrives, the stage has obeyed»*. It was faithful to a right rule of this
+project — *«the truth is told by the frame, not by the outcome of the request»* — and it passed all the cases
+I had in mind.
 
-⛔ **Tre agenti mandati a smentirla hanno trovato tre casi che non avevo in mente**, e sono tutti
-comuni:
+⛔ **Three agents sent to disprove it found three cases I did not have in mind**, and they are all
+common:
 
-| il caso | che cosa deduceva il padre |
+| the case | what the parent deduced |
 |---|---|
-| il palco ha **già** quella misura | «non ha ancora obbedito» ⇒ tre secondi di attesa per una cosa già fatta |
-| il palco **non c'è** o non ce l'ha fatta | «sta ancora provando» ⇒ tre secondi per una notizia che c'era subito |
-| **due richieste incatenate** (l'utente trascina il bordo) | il fotogramma della PRIMA preso per la risposta della SECONDA ⇒ desktop della misura sbagliata, **coi conti dei messaggi in ordine** |
+| the stage **already** has that size | «it has not obeyed yet» ⇒ three seconds of waiting for something already done |
+| the stage **is not there** or did not make it | «it is still trying» ⇒ three seconds for news that was there at once |
+| **two chained requests** (the user drags the edge) | the frame of the FIRST taken for the answer to the SECOND ⇒ desktop of the wrong size, **with the message counts in order** |
 
-⇒ La cura non è stata «più controlli», ed è la parte che conta: è stata **un messaggio in più**, dal
-processo che sapeva al processo che decideva — con dentro *a quale domanda risponde* e *che cosa è
-successo davvero*.
+⇒ The cure was not «more checks», and it is the part that counts: it was **one more message**, from the
+process that knew to the process that decided — carrying *which question it answers* and *what really
+happened*.
 
-> **Quando un pezzo deve dedurre qualcosa che un altro pezzo sa già, la deduzione non è un
-> risparmio: è un difetto che aspetta il caso a cui non hai pensato.**
+> **When one piece must deduce something another piece already knows, the deduction is not a
+> saving: it is a defect waiting for the case you did not think of.**
 
-⚠ E il segnale che la distingue da una deduzione legittima è **sempre lo stesso**: la deduzione
-regge finché gli eventi sono uno per volta, e cade appena se ne accavallano due. Se il caso «due
-richieste in volo» non ha una risposta ovvia, la deduzione va sostituita da un messaggio.
+⚠ And the signal that tells it apart from a legitimate deduction is **always the same**: the deduction
+holds as long as events come one at a time, and falls as soon as two overlap. If the case «two
+requests in flight» has no obvious answer, the deduction must be replaced by a message.
 
 ---
 
-## 8. I vicoli ciechi già percorsi — da non rifare
+## 8. The dead ends already walked — not to be redone
 
-| Che cosa | Esito |
+| What | Outcome |
 |---|---|
-| Limitare il server a una versione EGFX più bassa per confronto con mstsc | vicolo cieco: su quella versione mstsc spegne l'H.264 |
-| Dare più thread alla conversione di colore in CPU | rumore: 13,8 ms contro 12,5. Quel tempo non è di calcolo, è di memoria |
-| Aspettare la *fence* implicita del DMA-BUF | non cambia niente: è quella sbagliata. La esplicita viaggia in un metadato che non chiedevamo. ⚠ **Corretta il 9 agosto**: questa riga copre metà del contratto — l'*acquire*. Quel che manca è il **release**, e sta dall'altra parte (vedi il riquadro qui sotto) |
-| Adattare la **risoluzione** alla banda | non realizzabile: lo scaled output lo rende un client su tre, e ridimensionare il monitor virtuale ridispone le finestre dell'utente |
-| Dichiarare alla cattura una cadenza **fissa** invece di «quando cambia» | Mutter la rifiuta: nessun formato negoziato, zero fotogrammi |
-| Alzare la cadenza dichiarata **oltre 60** | non dà niente: 120 dichiarati, 37 consegnati come con 60. ⚠ **Non chiude la strada della cadenza**: alzare il numero *una volta sola* alza tutt'e due gli orologi insieme, ed è il battimento a mangiare il guadagno. Il candidato di §3 è un'altra mossa — **rinegoziare la sola cadenza, a monitor fermo** |
-| Cercare il collo di bottiglia dei fotogrammi nel codificatore, nel protocollo o nella rete | era nella nostra costante |
+| Limiting the server to a lower EGFX version for comparison with mstsc | dead end: on that version mstsc switches off H.264 |
+| Giving more threads to colour conversion on the CPU | noise: 13.8 ms against 12.5. That time is not computation, it is memory |
+| Waiting for the implicit *fence* of the DMA-BUF | changes nothing: it is the wrong one. The explicit one travels in a metadata item we were not asking for. ⚠ **Corrected on 9 Aug**: this row covers half the contract — the *acquire*. What is missing is the **release**, and it is on the other side (see the box below) |
+| Adapting the **resolution** to the bandwidth | not feasible: scaled output is rendered by one client out of three, and resizing the virtual monitor rearranges the user's windows |
+| Declaring to the capture a **fixed** cadence instead of «when it changes» | Mutter refuses it: no negotiated format, zero frames |
+| Raising the declared cadence **above 60** | gives nothing: 120 declared, 37 delivered as with 60. ⚠ **It does not close the cadence path**: raising the number *only once* raises both clocks together, and it is the beat that eats the gain. The candidate of §3 is another move — **renegotiating the cadence alone, with the monitor still** |
+| Looking for the frames bottleneck in the encoder, in the protocol or in the network | it was in our constant |
 
-⚠ **Due di queste righe erano di RDP, non del problema** *(8 agosto 2026)*, e vanno lette con
-attenzione perche' le altre cinque valgono ancora per intero.
+⚠ **Two of these rows belonged to RDP, not to the problem** *(8 Aug 2026)*, and they must be read with
+care because the other five still hold in full.
 
-| Riga | In V2 |
+| Row | In V2 |
 |---|---|
-| la versione EGFX abbassata per mstsc | **decade**: non esiste ne' EGFX ne' mstsc |
-| adattare la **risoluzione** alla banda | **decade a meta'**. Il primo motivo era che lo *scaled output* lo rendeva un client su tre — e i client ora sono nostri, quindi la scalatura lato client si puo' avere. Il **secondo motivo resta intero**: ridimensionare il monitor virtuale ridispone le finestre dell'utente, e quello non lo cambia nessun protocollo |
-| le altre cinque | **restano**: parlano di thread, di *fence*, di Mutter e della nostra costante — nessuna di loro nominava RDP |
+| the EGFX version lowered for mstsc | **lapses**: neither EGFX nor mstsc exist |
+| adapting the **resolution** to the bandwidth | **lapses by half**. The first reason was that *scaled output* was rendered by one client out of three — and the clients are now ours, so client-side scaling can be had. The **second reason stays whole**: resizing the virtual monitor rearranges the user's windows, and no protocol changes that |
+| the other five | **stay**: they speak of threads, of *fences*, of Mutter and of our constant — none of them named RDP |
 
-⛔ **E nessuna riga si cancella.** Un vicolo cieco documentato costa meno di uno riscoperto: il
-giorno in cui qualcuno riproporra' «adattiamo la risoluzione alla banda», questa tabella dira' che
-in v1 non si poteva e **obblighera' a dimostrare che in V2 si puo'** — che e' esattamente il lavoro
-che la riga deve far fare.
+⛔ **And no row is deleted.** A documented dead end costs less than a rediscovered one: the
+day someone proposes again «let's adapt the resolution to the bandwidth», this table will say that
+in v1 it could not be done and **will oblige them to prove that in V2 it can** — which is exactly the work
+the row must make them do.
 
-> ## ⭐ Un vicolo cieco che non era un vicolo cieco: la caccia della fase 9, nel posto sbagliato
+> ## ⭐ A dead end that was not a dead end: the phase 9 hunt, in the wrong place
 >
-> *Scritto il 9 agosto 2026 da `STUDI.md` §gnome §1.3 e §8.1. `[R]`, e riapre una caccia chiusa male.*
+> *Written on 9 Aug 2026 from `STUDI.md` §gnome §1.3 and §8.1. `[R]`, and it reopens a hunt closed badly.*
 >
-> Le due schermate che si alternavano sono state inseguite per due fasi come un problema di
-> **acquire**: il buffer arriva col disegno in corso, quindi si aspetta la fence. La lettura del
-> codice dice che il difetto è dall'altra parte, ed è un **release**: `can_reuse_pw_buffer` —
-> l'unico punto in cui Mutter aspetta noi — **si arrende alla prima riga** se manca
-> `SPA_META_SyncTimeline`, e riusa il buffer **mentre VA-API lo sta ancora leggendo**.
+> The two alternating screens were chased for two phases as an **acquire**
+> problem: the buffer arrives with drawing in progress, so you wait for the fence. The code
+> reading says the defect is on the other side, and it is a **release**: `can_reuse_pw_buffer` —
+> the only point where Mutter waits for us — **gives up at the first line** if
+> `SPA_META_SyncTimeline` is missing, and reuses the buffer **while VA-API is still reading it**.
 >
-> ⛔ **E spiega perché la cura peggiorava le cose**: la superficie di accumulo copiava i soli
-> rettangoli danneggiati da un buffer che conteneva **già il fotogramma intero** (domanda 8).
+> ⛔ **And it explains why the cure made things worse**: the accumulation surface copied only the
+> damaged rectangles from a buffer that **already contained the whole frame** (question 8).
 >
-> **Due cure candidate, entrambe piccole**: chiedere `SPA_META_SyncTimeline` — che Mutter
-> **offre**, e che oggi non chiediamo — oppure **trattenere** il `pw_buffer` fino a lettura
-> finita, che è quel che fa il riferimento, cioè il contrario di quel che avevamo concluso.
+> **Two candidate cures, both small**: asking for `SPA_META_SyncTimeline` — which Mutter
+> **offers**, and which today we do not ask for — or **holding** the `pw_buffer` until reading is
+> finished, which is what the reference does, that is the opposite of what we had concluded.
 >
-> ⚠ **È una lettura, non una misura**, ed è la lezione 4 di `STUDI.md` §gnome §14: *una misura giusta
-> con una spiegazione inventata è più pericolosa di una misura sbagliata*, perché nessuno la
-> rimette in discussione. R29 è rimasta in piedi due fasi per questo.
+> ⚠ **It is a reading, not a measurement**, and it is lesson 4 of `STUDI.md` §gnome §14: *a right measurement
+> with an invented explanation is more dangerous than a wrong measurement*, because nobody
+> questions it again. R29 stayed standing for two phases because of this.
 
 ---
 
-## 9. La ricetta, per aprire il supporto a un desktop nuovo
+## 9. The recipe, for opening support for a new desktop
 
-Nell'ordine, e ogni passo è una lezione delle sezioni precedenti messa in fila.
+In order, and each step is a lesson of the previous sections put in a row.
 
-0. **Cercare chi l'ha già fatto — fuori da quel che si è già clonato.** *Aggiunta il 7 agosto 2026,
-   e pagata lo stesso giorno*: lo studio di KDE ha concluso «in KDE non c'è traccia di RDP» dopo aver
-   cercato **dentro gli otto repository che avevo scelto io**. Il riferimento principale — `KRdp`, il
-   server RDP di KDE, stessa libreria, stesso compositore, 4 200 righe — stava in un nono repository,
-   e a trovarlo è stata una domanda dell'utente. **La domanda giusta non è «c'è nei repo che ho?» ma
-   «chi, al mondo, fa questa cosa su questo desktop?»** — e si fa prima di leggere, non dopo.
-1. **Rispondere alle quindici domande della sezione 3**, con gli strumenti che ci sono già. Un
-   pomeriggio, prima di scrivere una riga di prodotto. Le domande 4 e 6 per prime, e la 3 insieme
-   alla 15 — *«c'è un permesso?»* e *«può essere ritirato a caldo?»* sono la stessa indagine.
-   *(Diceva «undici»: erano quelle del 7 agosto, prima che gli studi ne aggiungessero quattro —
-   9 agosto 2026.)*
-2. **Accertare come disegna senza monitor** (GPU o software): decide se i suoi numeri sono
-   confrontabili con quelli di GNOME, e se quel desktop è servibile su una macchina da server.
-3. **Trovare la strada diretta al compositore**, senza portale — e scoprire subito se è dietro un
-   permesso, perché il sintomo è «questo compositore non ha il protocollo» e fa perdere un
-   pomeriggio a chi non se l'aspetta. ⭐ **E quando nega, la prima mossa non è provare varianti: è
-   accendere il registro del componente che nega e farsi dire la causa** (§1.10). Su KWin sono tre
-   secondi, e le due righe possibili hanno cure opposte.
-4. **Misurare la sola cattura**, con la scena dichiarata e il conteggio di quanto disegna il client.
-   Solo dopo rimettere dentro il codificatore e il filo.
-5. **Riusare i banchi delle fasi che attraversano lo stesso percorso**: una fase che tocca un
-   percorso condiviso si chiude rieseguendo i banchi di chi quel percorso lo attraversava già.
-6. **Provare sui tre client**, e su almeno due connessioni di fila.
-7. **Far giudicare l'utente**, su quel che si vede, prima di dichiarare chiuso qualunque cosa.
-8. **Aggiornare i documenti nello stesso momento** in cui una misura li smentisce, con data e fonte.
-   Un riferimento che invecchia in silenzio è peggio di nessun riferimento.
+0. **Look for whoever has already done it — outside what has already been cloned.** *Added on 7 Aug 2026,
+   and paid for the same day*: the KDE study concluded «in KDE there is no trace of RDP» after having
+   searched **inside the eight repositories I had chosen myself**. The main reference — `KRdp`, KDE's RDP
+   server, same library, same compositor, 4 200 lines — was in a ninth repository,
+   and what found it was a question from the user. **The right question is not «is it in the repos I have?» but
+   «who, in the world, does this thing on this desktop?»** — and it is asked before reading, not after.
+1. **Answer the fifteen questions of section 3**, with the instruments that already exist. An
+   afternoon, before writing a line of product. Questions 4 and 6 first, and 3 together
+   with 15 — *«is there a permission?»* and *«can it be withdrawn live?»* are the same investigation.
+   *(It said «eleven»: they were those of 7 Aug, before the studies added four —
+   9 Aug 2026.)*
+2. **Establish how it draws without a monitor** (GPU or software): it decides whether its numbers are
+   comparable with GNOME's, and whether that desktop can be served on a server machine.
+3. **Find the direct path to the compositor**, without the portal — and find out at once whether it is behind a
+   permission, because the symptom is «this compositor does not have the protocol» and it wastes an
+   afternoon for whoever does not expect it. ⭐ **And when it denies, the first move is not trying variants: it is
+   turning on the log of the component that denies and having it tell you the cause** (§1.10). On KWin it takes three
+   seconds, and the two possible lines have opposite cures.
+4. **Measure capture alone**, with the declared scene and the count of how much the client draws.
+   Only afterwards put the encoder and the wire back in.
+5. **Reuse the benches of the phases that cross the same path**: a phase that touches a
+   shared path is closed by re-running the benches of whoever already crossed that path.
+6. **Test on the three clients**, and on at least two connections in a row.
+7. **Have the user judge**, on what is seen, before declaring anything closed.
+8. **Update the documents at the same moment** a measurement disproves them, with date and source.
+   A reference that ages silently is worse than no reference.
 
-### 9-bis ⭐⭐⭐ Quel che NON è del desktop, e ti aspetta lo stesso
+### 9-bis ⭐⭐⭐ What does NOT belong to the desktop, and waits for you all the same
 
-*Scritta il 15 agosto 2026, alla fine di una notte in cui il desktop remoto è sparito tre volte.
-⛔ **Di tutto quel che è costato, quasi niente era di GNOME**: era del sistema sotto — logind, PAM,
-udev, Mesa, PipeWire. ⇒ Su KDE, XFCE, LXQt e Cinnamon queste righe **si ripagano tali e quali**, e
-questa sezione esiste perché non si ripaghino due volte.*
+*Written on 15 Aug 2026, at the end of a night in which the remote desktop disappeared three times.
+⛔ **Of everything it cost, almost nothing was GNOME's**: it was the system underneath — logind, PAM,
+udev, Mesa, PipeWire. ⇒ On KDE, XFCE, LXQt and Cinnamon these rows **are paid again exactly as they are**, and
+this section exists so that they are not paid twice.*
 
-| il fatto | quanto è portabile | dove sta scritto |
+| the fact | how portable it is | where it is written |
 |---|---|---|
-| ⛔ **Il compositore vuole una SESSIONE logind di classe `user`** — non basta `/run/user/<uid>`, non basta il bus, **non basta il linger** (che dà uno scope di classe `manager`). Mutter chiede `sd_pid_get_session()`, si sente rispondere **ENXIO** e muore | ⭐⭐⭐ **totale**: quella chiamata la fa **ogni** compositore Wayland, non Mutter. È la prima cosa da verificare su un desktop nuovo, e il sintomo — *«non parte e non dice perché»* — è identico ovunque | `DECISIONI.md` §1.10-ter |
-| ⛔ **Il server non deve girare dentro una sessione utente**: `pam_systemd`, se chi chiama sta già in una sessione, **non ne crea una seconda e non lo dice**. Un server avviato a mano da `ssh` mette i figli nella sessione di chi l'ha avviato | ⭐⭐⭐ **totale**, ed è insidiosa perché in produzione (unità di sistema) non si vede mai: morde **solo in prova**, cioè dove si studia il desktop nuovo | `DECISIONI.md` §1.10-ter |
-| ⛔ **Senza seat non ci sono le ACL di `uaccess`** ⇒ l'utente **non può aprire la GPU** e Mesa ripiega su llvmpipe **senza un errore**. Su un desktop normale l'accesso lo dà logind con un'ACL a chi è seduto al seat; noi il seat non ce l'abbiamo **di proposito** | ⭐⭐⭐ **totale**, ed è il **prezzo dell'headless**: vale per qualunque compositore si faccia girare senza seat. ⚠ Il sintomo è «lento», non «rotto» | `FASI.md` §05-la-sessione, `DECISIONI.md` §4.6-quinquies |
-| ⛔ **Con due schede, quale usa il compositore lo decide il caso** se non c'è la regola udev | ⭐⭐ **totale** — e su KWin era già noto (`STUDI.md` §kde §5.6: `findRenderDevice()` prende la prima che si apre). ⇒ Non era una stranezza di KDE: **era la regola generale, vista da una parte sola** | `DECISIONI.md` §4.6-ter e §4.6-quinquies |
-| ⛔ **Le variabili `XDG_*` non si inventano: le mette `pam_systemd` e si leggono.** Comporle a mano vuol dire dichiarare un valore al posto di averlo — e `XDG_RUNTIME_DIR` asserito è il difetto che non si vede finché la directory c'è | ⭐⭐⭐ **totale** | `DECISIONI.md` §1.10-ter |
-| ⛔ **La coda della raffica**: il fotogramma scartato «tanto ne arriva un altro» è **l'ultimo**, e dopo l'ultimo non arriva niente | ⭐⭐⭐ **totale**: sta in `cattura.c`, che è **lo stesso codice per tutti e quattro** i desktop | §6.5 |
+| ⛔ **The compositor wants a logind SESSION of class `user`** — `/run/user/<uid>` is not enough, the bus is not enough, **linger is not enough** (it gives a scope of class `manager`). Mutter asks `sd_pid_get_session()`, gets the answer **ENXIO** and dies | ⭐⭐⭐ **total**: that call is made by **every** Wayland compositor, not by Mutter. It is the first thing to verify on a new desktop, and the symptom — *«it does not start and does not say why»* — is identical everywhere | `DECISIONI.md` §1.10-ter |
+| ⛔ **The server must not run inside a user session**: `pam_systemd`, if the caller is already in a session, **does not create a second one and does not say so**. A server started by hand from `ssh` puts the children in the session of whoever started it | ⭐⭐⭐ **total**, and it is insidious because in production (system unit) it is never seen: it bites **only in testing**, that is where the new desktop is studied | `DECISIONI.md` §1.10-ter |
+| ⛔ **Without a seat there are no `uaccess` ACLs** ⇒ the user **cannot open the GPU** and Mesa falls back to llvmpipe **without an error**. On a normal desktop access is given by logind with an ACL to whoever sits at the seat; we do not have the seat **on purpose** | ⭐⭐⭐ **total**, and it is the **price of headless**: it holds for any compositor run without a seat. ⚠ The symptom is «slow», not «broken» | `FASI.md` §05-la-sessione, `DECISIONI.md` §4.6-quinquies |
+| ⛔ **With two cards, which one the compositor uses is decided by chance** if there is no udev rule | ⭐⭐ **total** — and on KWin it was already known (`STUDI.md` §kde §5.6: `findRenderDevice()` takes the first one that opens). ⇒ It was not a quirk of KDE: **it was the general rule, seen from one side only** | `DECISIONI.md` §4.6-ter and §4.6-quinquies |
+| ⛔ **The `XDG_*` variables are not invented: `pam_systemd` sets them and they are read.** Composing them by hand means declaring a value instead of having it — and an asserted `XDG_RUNTIME_DIR` is the defect that does not show as long as the directory exists | ⭐⭐⭐ **total** | `DECISIONI.md` §1.10-ter |
+| ⛔ **The tail of the burst**: the frame discarded «another one will arrive anyway» is **the last**, and after the last nothing arrives | ⭐⭐⭐ **total**: it is in `cattura.c`, which is **the same code for all four** desktops | §6.5 |
 
-⭐ **E la conseguenza di metodo, che vale più dell'elenco**: quando su un desktop nuovo qualcosa non
-parte o va lento, ⛔ **la prima domanda non è «che cosa fa di strano questo compositore»** — è
-*«l'ambiente sotto è quello che il compositore si aspetta?»*: sessione, seat, gruppi, scheda,
-variabili. `[M]` Su GNOME, la notte del 15 agosto, la risposta è stata **quattro volte su cinque
-l'ambiente** e una volta il nostro codice — e ogni volta il sintomo puntava altrove.
+⭐ **And the consequence for method, which is worth more than the list**: when on a new desktop something does not
+start or is slow, ⛔ **the first question is not «what is this compositor doing that is strange»** — it is
+*«is the environment underneath the one the compositor expects?»*: session, seat, groups, card,
+variables. `[M]` On GNOME, on the night of 15 Aug, the answer was **four times out of five
+the environment** and once our code — and every time the symptom pointed elsewhere.
 
-⚠ **E il rovescio, per onestà**: quel che invece **è** di GNOME e non si trasporta — `--headless
---no-x11`, il drop-in dell'unità della Shell, `is_headless()`, le chiavi di lockdown,
-`always-show-log-out`, le dodici `switch-to-session-*` — va cercato di nuovo su ciascun desktop, e
-per quello servono le quindici domande della sezione 3.
+⚠ **And the reverse, for honesty**: what instead **is** GNOME's and does not carry over — `--headless
+--no-x11`, the drop-in of the Shell's unit, `is_headless()`, the lockdown keys,
+`always-show-log-out`, the twelve `switch-to-session-*` — must be looked for again on each desktop, and
+for that the fifteen questions of section 3 are needed.
 
 ---
 
-## 9-bis. ⛔⛔⭐ §1.18 — Quattro banchi verdi che misuravano **la stessa strada**
+## 9-bis. ⛔⛔⭐ §1.18 — Four green benches that measured **the same path**
 
-⛔ Il 20 agosto quattro banchi dichiaravano verde la clipboard nei due versi, su tutti e due i
-motori. Il 21 agosto l'utente ha scritto: *«funziona l'incolla con ctrl+v, ma non con il mouse e
-scegliendo dal menu la voce "incolla"»*. ⇒ Tutti e quattro battevano **`Ctrl+V`**.
+⛔ On 20 Aug four benches declared the clipboard green in both directions, on both
+engines. On 21 Aug the user wrote: *«funziona l'incolla con ctrl+v, ma non con il mouse e
+scegliendo dal menu la voce "incolla"»*. ⇒ All four pressed **`Ctrl+V`**.
 
-⚠ Non erano banchi sbagliati: erano **quattro copie dello stesso banco**, con quattro nomi diversi.
-La ridondanza dava l'impressione della copertura e non ne aggiungeva un millimetro.
+⚠ They were not wrong benches: they were **four copies of the same bench**, with four different names.
+The redundancy gave the impression of coverage and did not add a millimetre of it.
 
-⭐ **La domanda che li avrebbe smascherati in un minuto**: *«qual è il GESTO che fa partire questa
-strada, e ce n'è più d'uno?»* Per gli appunti i gesti sono due — un tasto sul browser e una voce di
-menu **dentro il video** — e sono due strade **che non si incontrano mai**: la prima nasce nel
-browser, la seconda nasce dall'altra parte del filo e torna indietro come una domanda del server.
+⭐ **The question that would have unmasked them in a minute**: *«what is the GESTURE that starts this
+path, and is there more than one?»* For the clipboard the gestures are two — a key on the browser and a menu
+item **inside the video** — and they are two paths **that never meet**: the first is born in the
+browser, the second is born on the other side of the wire and comes back as a question from the server.
 
-⇒ Un banco per **strada d'ingresso**, non un banco per funzione. E quando un banco nuovo diventa
-verde al primo colpo, il sospetto giusto non è «bravi noi»: è *«sto rifacendo un banco che c'è
-già?»*.
+⇒ One bench per **entry path**, not one bench per function. And when a new bench turns
+green at the first try, the right suspicion is not «well done us»: it is *«am I redoing a bench that already
+exists?»*.
 
-⚠ E lo stesso giorno, sullo stesso difetto, **due difetti del banco avrebbero dichiarato rotto un
-prodotto sano**: Chrome che si attacca alla sessione grafica vera invece che allo schermo del banco
-(`--ozone-platform=x11`), e un clic dato secondi prima della misura, quando l'attivazione
-transitoria del browser era già scaduta. ⇒ §1.2 di nuovo, e non è un caso: il banco che scopre una
-strada nuova è **giovane**, e va certificato prima di credergli — in tutt'e due i versi.
+⚠ And the same day, on the same defect, **two defects of the bench would have declared broken a
+healthy product**: Chrome attaching to the real graphical session instead of to the bench's screen
+(`--ozone-platform=x11`), and a click given seconds before the measurement, when the browser's transient
+activation had already expired. ⇒ §1.2 again, and it is no accident: the bench that discovers a
+new path is **young**, and must be certified before believing it — in both directions.
 
-## 9-ter. ⛔ §1.19 — **Chi apre, chiude**: i banchi lavorano sul desktop di una persona
+## 9-ter. ⛔ §1.19 — **Whoever opens, closes**: the benches work on a person's desktop
 
-*21 agosto 2026, dall'utente, guardando il suo schermo: «Che diavolo succede? È come se si
+*21 Aug 2026, from the user, looking at their screen: «Che diavolo succede? È come se si
 aprissero terminali infiniti».*
 
-⛔ Erano i banchi. Un desktop fermo non manda fotogrammi, quindi per misurare il video serve
-qualcosa che si muova: un terminale che scorre. ⚠ Lo accendevo **a mano** a ogni giro, e nessuno lo
-spegneva — dopo dieci giri, **dieci terminali e dieci cicli infiniti sul desktop di qualcuno**.
+⛔ It was the benches. A still desktop sends no frames, so to measure the video you need
+something that moves: a scrolling terminal. ⚠ I turned it on **by hand** at every round, and nobody
+turned it off — after ten rounds, **ten terminals and ten infinite loops on someone's desktop**.
 
-⇒ La regola, e vale per ogni banco che tocchi la sessione di prova:
+⇒ The rule, and it holds for every bench that touches the test session:
 
 | | |
 |---|---|
-| **chi apre chiude** | la scena la accende il banco e la spegne il banco, in un `finally` — anche se il banco è caduto |
-| **si spegne quel che si VEDE, non solo quel che gira** | ⛔ `pkill` sul processo che scriveva lasciava in piedi la finestra che lo mostrava |
-| **il posto si libera** | la sessione del banco tiene occupato l'unico posto, e il banco dopo misurerebbe una pagina che non si è potuta collegare |
+| **whoever opens closes** | the scene is turned on by the bench and turned off by the bench, in a `finally` — even if the bench has fallen |
+| **turn off what is SEEN, not only what runs** | ⛔ `pkill` on the process that was writing left standing the window that showed it |
+| **the slot is freed** | the bench's session keeps the only slot busy, and the next bench would measure a page that could not connect |
 
-⚠ E c'è una ragione in più perché questa non è pignoleria: la sessione di prova è **la stessa** che
-l'utente guarda. Un banco che lascia rifiuti lì dentro non sporca un ambiente di prova — sporca il
-posto di lavoro di una persona, e le fa perdere tempo a capire che cosa sia stato.
+⚠ And there is one more reason why this is not pedantry: the test session is **the same** one
+the user looks at. A bench that leaves rubbish in there does not dirty a test environment — it dirties a
+person's workplace, and makes them waste time figuring out what it was.
 
 ## 10. E una lezione sola su tutto il resto
 
