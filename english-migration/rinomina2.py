@@ -90,6 +90,8 @@ INTOCCABILI_RX = re.compile(r"^(prova\d*|provanic\w*|provadec\w*|provanr\w*|prov
 INTOCCABILI = {l.strip() for l in open(os.path.join(HERE, "intoccabili.txt"), encoding="utf-8")
                if l.strip() and not l.startswith("#")} if os.path.exists(os.path.join(HERE, "intoccabili.txt")) else set()
 INTERI = {a: b for a, b, *_ in read_tsv("interi.tsv", 3) if a and b}
+# a row whose new name is the old one means «do not rename» (AltLeft, altKey, aria-pressed)
+INTERI_WHY = {a: w for a, b, w, *_ in read_tsv("interi.tsv", 3) if a and a == b}
 SINONIMI = collections.defaultdict(list)          # italian word → alternative English words, in order
 for it, alts, *_ in read_tsv("sinonimi.tsv", 3):
     SINONIMI[it] = [a for a in alts.split(",") if a]
@@ -362,7 +364,8 @@ def load_externals():
 # ═══ the scan ════════════════════════════════════════════════════════════════
 class FileInfo:
     __slots__ = ("path", "lang", "regs", "code", "code_global", "data", "defs", "includes", "imports",
-                 "sources", "text", "funcs", "member", "massign", "gopkg")
+                 "sources", "text", "funcs", "member", "massign", "gopkg", "datalit", "cssown", "attrdefs",
+                 "webplat", "envs", "opts", "pynames")
 
     def __init__(self, path, lang):
         self.path, self.lang = path, lang
@@ -375,6 +378,12 @@ class FileInfo:
         self.member = collections.Counter()    # tokens after . or -> (a separate namespace)
         self.massign = set()                   # members assigned here (self.x = …, obj.x = …): defined
         self.gopkg = None
+        self.datalit = collections.Counter()   # whole data-like string literals ("cert.stato", "MANCA")
+        self.cssown = set()                    # CSS names of ours: classes, ids, custom properties, keyframes
+        self.attrdefs = set()                  # HTML: values of id/class/for/name/data-* attributes
+        self.webplat = set()                   # names this file shows to be the Web platform's
+        self.envs, self.opts = set(), set()    # REMOTIX_*/RX_* variables, options a parser of ours defines
+        self.pynames = None                    # Python: the names of the syntax tree (None: not parsed)
 
 
 def git_files(root):
@@ -409,6 +418,168 @@ def option_defs(text, lang):
     return out
 
 
+def py_names(text):
+    """Every name a Python module binds or reads: variables, functions, classes, parameters, imports,
+    global/nonlocal, and the keywords of calls to its own functions.  None if it does not parse."""
+    import ast
+    try:
+        tree = ast.parse(text)
+    except (SyntaxError, ValueError):
+        return None
+    out, defs_args, kw = set(), set(), set()
+    for n in ast.walk(tree):
+        if isinstance(n, ast.Name):
+            out.add(n.id)
+        elif isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            out.add(n.name)
+        elif isinstance(n, ast.arg):
+            out.add(n.arg)
+            defs_args.add(n.arg)
+        elif isinstance(n, ast.alias):
+            out.add((n.asname or n.name).split(".")[0])
+        elif isinstance(n, (ast.Global, ast.Nonlocal)):
+            out.update(n.names)
+        elif isinstance(n, ast.keyword) and n.arg:
+            kw.add(n.arg)
+        elif isinstance(n, ast.ExceptHandler) and n.name:
+            out.add(n.name)
+        elif isinstance(n, (ast.MatchAs, ast.MatchStar)) and getattr(n, "name", None):
+            out.add(n.name)
+    return out | (kw & defs_args)
+
+
+SH_CMD = re.compile(r"(?:^|[;&|(`{]|\$\(|\b(?:then|do|else|elif|if|while|until|!)\s)\s*(?:\w+=\S*\s+)*([A-Za-z_][\w.-]*)", re.M)
+
+
+def sh_commands(fi):
+    """Words in command position of a shell file: a function of ours may not take one of these names."""
+    return set(SH_CMD.findall(code_only(fi)))
+
+
+def code_only(fi):
+    """The file's text with every non-code region blanked (same length): for regexes over code."""
+    t = fi.text
+    out = []
+    for a, b, k in fi.regs:
+        out.append(t[a:b] if k == "code" else re.sub(r"[^\n]", " ", t[a:b]))
+    return "".join(out)
+
+
+# ═══ the Web platform's names: never ours, never renamed ══════════════════════
+def load_web_externals():
+    """esterni-web.txt: KeyboardEvent code/key values, event and DOM/WebCodecs/WebTransport/WebAudio
+    members, protocol parameters.  Plus a prefix rule: aria-* attributes and their ariaX reflections."""
+    p = os.path.join(HERE, "esterni-web.txt")
+    out = set()
+    if os.path.exists(p):
+        for line in open(p, encoding="utf-8"):
+            out.update(line.split("#")[0].split())
+    return out
+
+
+WEB_PREFIX = re.compile(r"^(aria-[a-z]+|aria[A-Z]\w*)$")
+EVENT_PARAM = re.compile(r"""addEventListener\(\s*["'][\w:-]+["']\s*,\s*(?:async\s+)?(?:function\s*\w*\s*\(\s*(\w+)|\(\s*(\w+)\s*[,)]|(\w+)\s*=>)"""
+                         r"""|\bon[a-z]+\s*=\s*(?:async\s+)?(?:function\s*\w*\s*\(\s*(\w+)|\(\s*(\w+)\s*\)\s*=>|(\w+)\s*=>)""")
+
+
+def web_platform_names(fi):
+    """Names a page shows, mechanically, to be the platform's:
+      - every member of an event object (the parameter of an event listener, or ev/evt/event);
+      - every string compared with .code / .key, or a case label of a switch on .code / .key;
+      - every attribute name passed to set/get/has/remove/toggleAttribute (data-* excluded: ours)."""
+    code = code_only(fi)
+    out = set()
+    params = {"ev", "evt", "event"}
+    for m in EVENT_PARAM.finditer(code):
+        params |= {g for g in m.groups() if g}
+    if params:
+        rx = re.compile(r"(?<![\w$.])(?:%s)\s*\.\s*([A-Za-z_]\w*)" % "|".join(sorted(map(re.escape, params))))
+        out |= set(rx.findall(code))
+    t = fi.text
+    out |= set(re.findall(r"""\.(?:code|key)\s*[!=]==?\s*["']([\w-]+)["']""", t))
+    out |= set(re.findall(r"""["']([\w-]+)["']\s*[!=]==?\s*[\w.$]+\.(?:code|key)\b""", t))
+    for m in re.finditer(r"switch\s*\([^)]*\.(?:code|key)\s*\)\s*\{", t):
+        depth, i = 1, m.end()
+        while i < len(t) and depth:
+            depth += {"{": 1, "}": -1}.get(t[i], 0)
+            i += 1
+        out |= set(re.findall(r"""\bcase\s+["']([\w-]+)["']\s*:""", t[m.end():i]))
+    for m in re.finditer(r"""\b(?:set|get|has|remove|toggle)Attribute(?:NS|Node)?\(\s*(?:[^,()"']+,\s*)?["']([\w:-]+)["']""", t):
+        if not m.group(1).startswith("data-"):
+            out.add(m.group(1))
+    return out
+
+
+# a method of ours renamed onto one of these would change which interfaces the type satisfies
+GO_IFACE_METHODS = set("""String Error GoString Format Write Read Close Seek Len Less Swap Unwrap Is As
+MarshalJSON UnmarshalJSON MarshalText UnmarshalText MarshalBinary UnmarshalBinary ReadFrom WriteTo
+WriteString ReadByte WriteByte ReadRune Scan Value Init Update View ServeHTTP Lock Unlock RLock RUnlock
+Wait Done Err Deadline Next Reset Size Sum BlockSize Get Set""".split())
+
+
+def go_types(fis):
+    """The structs of one Go package: their fields and methods, the embedding between them, and the
+    names that are ONLY fields or methods (their plain occurrences are declarations or composite-literal
+    keys; everything else is after a dot)."""
+    fields, methods = collections.defaultdict(set), collections.defaultdict(set)
+    embeds, ext_embed = collections.defaultdict(set), set()
+    decl, keyuse, plain = collections.Counter(), collections.Counter(), collections.Counter()
+    for fi in fis:
+        code = code_only(fi)
+        for x, n in fi.code.items():
+            plain[x] += n
+        spans = []
+        for m in re.finditer(r"\b([A-Za-z_]\w*)(?:\[[^\]\n]*\])?\s+struct\s*\{", code):
+            if any(x <= m.start() < y for x, y in spans):
+                continue                       # a struct nested in a struct: its fields go to the outer one
+            T = m.group(1)
+            depth, i = 1, m.end()
+            while i < len(code) and depth:
+                depth += {"{": 1, "}": -1}.get(code[i], 0)
+                i += 1
+            spans.append((m.start(), i))
+            body = code[m.end():i - 1]
+            for line in body.split("\n"):
+                line = line.strip().rstrip(";")
+                if not line or line in ("}",):
+                    continue
+                e = re.match(r"^\*?([A-Za-z_][\w.]*)(?:\[[^\]]*\])?$", line)
+                if e:
+                    (ext_embed.add(T) if "." in e.group(1) else embeds[T].add(e.group(1)))
+                    continue
+                f = re.match(r"^([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)\s+\S", line)
+                if f:
+                    for x in re.split(r"\s*,\s*", f.group(1)):
+                        fields[T].add(x)
+                        decl[x] += 1
+        for m in re.finditer(r"\bfunc\s*\(\s*(?:\w+\s+)?\*?\s*([A-Za-z_]\w*)(?:\[[^\]]*\])?\s*\)\s*([A-Za-z_]\w*)", code):
+            methods[m.group(1)].add(m.group(2))
+            decl[m.group(2)] += 1
+        for line in code.split("\n"):
+            if re.match(r"^\s*(case|default)\b", line):
+                continue
+            for m in re.finditer(r"(?<![\w.])([A-Za-z_]\w*)\s*:(?!=)", line):
+                keyuse[m.group(1)] += 1
+    field_only = {x for x in decl if plain[x] - decl[x] - keyuse[x] <= 0}
+    # embedding joins structs: a field of one is reachable through the other
+    types = sorted(set(fields) | set(methods))
+    parent = {T: T for T in types}
+
+    def find(x):
+        while parent[x] != x:
+            x = parent[x]
+        return x
+    for T in types:
+        for E in embeds.get(T, ()):
+            if E in parent:
+                parent[find(E)] = find(T)
+    comps = collections.defaultdict(set)
+    for T in types:
+        comps[find(T)].add(T)
+    return {"fields": fields, "methods": methods, "ext_embed": ext_embed, "field_only": field_only,
+            "components": [comps[k] for k in sorted(comps)]}
+
+
 def is_member(seg, start):
     pre = seg[max(0, start - 4):start]
     return bool(re.search(r"(\.|->)\s*$", pre)) and not re.search(r"\.\.\.\s*$", pre) \
@@ -421,7 +592,7 @@ def strip_quotes(s):
 
 
 SH_DEF = [re.compile(r"(?m)^\s*(?:function\s+)?([A-Za-z_][A-Za-z0-9_-]*)\s*\(\)\s*\{?"),
-          re.compile(r"(?<![A-Za-z0-9_$])([A-Za-z_][A-Za-z0-9_]*)(?:\[[^\]]*\])?\+?="),
+          re.compile(r"(?<![A-Za-z0-9_$./-])([A-Za-z_][A-Za-z0-9_]*)(?:\[[^\]]*\])?\+?="),   # not --x=
           re.compile(r"\b(?:local|declare|typeset|export|readonly|read|unset)\s+(?:-[A-Za-z]+\s+)*([A-Za-z_][A-Za-z0-9_ ]*)"),
           re.compile(r"\bfor\s+([A-Za-z_][A-Za-z0-9_]*)\s+in\b"),
           re.compile(r"\$\{?#?!?([A-Za-z_][A-Za-z0-9_]*)"),
@@ -460,18 +631,20 @@ def scan(root, files, skips):
                 if k == "string":
                     s = strip_quotes(text[a:b])
                     if DATA_LIKE.match(s):
+                        fi.datalit[s] += 1
                         for m in WORD.finditer(s):
                             fi.data[m.group(0)] += 1
             continue
         depth = 0
         pdepth = 0
+        css_text = []
         for a, b, k in fi.regs:
             seg = text[a:b]
             if k == "code-css" or (k == "code" and lang == "css"):
-                for m in WORD.finditer(seg):
-                    fi.code[m.group(0)] += 1
-                    fi.defs.add(m.group(0))
+                css_text.append(seg)        # property names and values are the platform's: see css_names
                 continue
+            if lang in ("css", "html"):
+                css_text.append(" ")
             if k == "code":
                 rx = WORD if lang in ("sh", "make") else IDENT
                 if lang in ("py", "js", "html"):
@@ -510,6 +683,7 @@ def scan(root, files, skips):
             elif k == "string":
                 s = strip_quotes(seg)
                 if DATA_LIKE.match(s) and not f.startswith("docs/"):     # the manual's strings are text
+                    fi.datalit[s] += 1
                     for m in WORD.finditer(s):
                         fi.data[m.group(0)] += 1
                 if lang == "sh":
@@ -526,6 +700,7 @@ def scan(root, files, skips):
             # (event.altKey, tea.WithAltScreen, st.st_mtime): it is not a name of ours
             fi.defs |= set(fi.code) | fi.massign
         if lang == "py":
+            fi.pynames = py_names(text)
             # argparse: --x-y gives args.x_y, a member nobody assigns by hand
             fi.massign |= {o.replace("-", "_") for o in option_defs(text, lang)}
             fi.massign |= set(re.findall(r"dest\s*=\s*[\"']([A-Za-z_][A-Za-z0-9_]*)[\"']", text))
@@ -537,13 +712,22 @@ def scan(root, files, skips):
             # ids and classes of the page are names the page defines
             for m in re.finditer(r"""\b(?:id|class|for|name|data-[a-z-]+)\s*=\s*["']([^"']+)["']""", text):
                 for w in m.group(1).split():
-                    if re.match(r"^[A-Za-z_][A-Za-z0-9_-]*$", w):
+                    if re.match(r"^%s$" % lessico.CSS_IDENT, w):
                         fi.defs.add(w)
-        if lang == "css" or lang == "html":
-            for a, b, k in fi.regs:
-                if k == "code":
-                    for m in re.finditer(r"[#.]([A-Za-z_][A-Za-z0-9_-]*)", text[a:b]):
-                        fi.defs.add(m.group(1))
+                        fi.attrdefs.add(w)
+            for m in re.finditer(r"<[A-Za-z][^>]*>", text):
+                for d in re.findall(r"\s(data-%s)\s*=" % lessico.CSS_IDENT, m.group(0)):
+                    fi.defs.add(d)
+                    fi.attrdefs.add(d)
+        if lang in ("css", "html"):
+            # only the CSS names that are ours (selectors, custom properties, keyframes): a property, a
+            # value, a pseudo-class or [aria-pressed] is the platform's.  The token never ends with '-':
+            # `a.mancati--` in the page's JavaScript is a name and an operator, not a class
+            fi.cssown, plat = lessico.css_names("".join(css_text))
+            fi.defs |= fi.cssown
+            fi.webplat |= plat
+        if lang in ("html", "js"):
+            fi.webplat |= web_platform_names(fi)
         if lang == "py":
             for m in re.finditer(r"(?m)^\s*(?:from\s+([A-Za-z_][A-Za-z0-9_.]*)\s+import|import\s+([A-Za-z_][A-Za-z0-9_., ]*))", text):
                 mods = (m.group(1) or m.group(2) or "")
@@ -558,8 +742,10 @@ def scan(root, files, skips):
         # options: only those a parser of ours defines or compares (--non-interactive is zypper's)
         for o in option_defs(text, lang):
             fi.defs.add(o)
+            fi.opts.add(o)
         for m in ENVVAR.finditer(text):
             fi.defs.add(m.group(1))
+            fi.envs.add(m.group(1))
     return infos, skipped_files
 
 
@@ -715,7 +901,11 @@ def plan(root):
     for fi in infos.values():
         L = "js" if fi.lang == "html" else fi.lang
         lang_own[L] |= set(fi.code) | fi.massign
+        lang_own["css"] |= fi.cssown
     scopes = build_scopes(infos)
+    web_ext = load_web_externals()
+    for fi in infos.values():
+        web_ext |= fi.webplat
 
     # 1. the candidates: names defined in code
     origin = collections.defaultdict(set)        # name → languages that define it
@@ -725,13 +915,22 @@ def plan(root):
             origin[t].add(fi.lang)
             files_of[t].add(f)
     excluded = {}
+    go_field_only, go_methods = set(), set()
     M = {}
     for name in sorted(origin):
         langs = origin[name]
         if name in INTOCCABILI:
             continue
+        if INTERI.get(name) == name:
+            if traduci(name) != name:
+                excluded[name] = "interi.tsv: kept as it is (%s)" % INTERI_WHY.get(name, "decided by hand")
+            continue
         new = INTERI.get(name) or (dati[name][0] if name in dati and dati[name][0] else None) or traduci(name)
         if new == name:
+            continue
+        if (name in web_ext or WEB_PREFIX.match(name)) and name not in INTERI:
+            excluded[name] = "a Web platform name (esterni-web.txt, or shown by a page: event member, " \
+                             ".code/.key value, attribute)"
             continue
         if "c" in langs and (name in c_macro or name in c_ident) and name not in INTERI:
             excluded[name] = "defined outside the project (C headers)"
@@ -747,42 +946,103 @@ def plan(root):
             continue
         M[name] = new
 
-    # 2. occurrences per scope (code tokens + data-like string tokens)
-    scope_tokens = {}       # every name met in the scope, any role (for two-into-one collisions)
-    scope_roles = {}        # role → names: plain identifiers, members (after . ->), data strings
+    # 2. where names meet: every scope, by role (RINOMINA.md §3).  A role is a namespace: a new name
+    # collides only with a name of the same role in the same scope.
+    #   plain   identifiers (C: the translation unit, Go: the package, Python: the module and its local
+    #           imports, page: the file; shell/make: the variables, functions and labels DEFINED)
+    #   member  a member of ours after . or -> (C, Python, page); someone else's member never collides
+    #   sel     the page's ids, classes, custom properties, keyframes, data-* attributes
+    #   field   Go: the fields and methods of one struct, with the structs embedding it or embedded
+    # plus the data literals ("cert.stato"): two literals of one file (or of one product program)
+    # may not become one literal, compared whole, not word by word.
+    roles = {}
     for s, fs in scopes.items():
-        plain, member, data = set(), set(), set()
-        for f in fs:
-            fi = infos[f]
-            plain |= set(fi.code)
-            member |= set(fi.member)
-            data |= set(fi.data)
-            if fi.lang in ("sh", "make", "html", "css"):
-                plain |= fi.defs
-        scope_roles[s] = (plain, member, data)
-        scope_tokens[s] = plain | member | data
-    c_prog_global = {}
-    for s, fs in scopes.items():
-        if s.startswith("c-program:"):
-            g = set()
+        kind = s.split(":", 1)[0]
+        L = infos[fs[0]].lang
+        r = collections.defaultdict(set)
+        if kind == "c-program":
             for f in fs:
-                g |= infos[f].code_global
-            c_prog_global[s] = g
-    # global data scope: data-like string tokens of every program
-    # the product's data words, all files together: wire names, keys and values the server, the page
-    # and the installer exchange.  Two of them may never become one.
-    data_all = set()
+                r["plain"] |= infos[f].code_global
+        elif kind == "go-package":
+            # the package: every identifier of its files (fields and methods only: see go-struct below)
+            for f in fs:
+                r["plain"] |= set(infos[f].code)
+        elif L in ("sh", "make") or (kind == "file" and L == "conf"):
+            for f in fs:
+                r["plain"] |= {d for d in infos[f].defs if d not in infos[f].opts and d not in infos[f].envs}
+                r["cmd"] |= sh_commands(infos[f])
+                r["funcs"] |= infos[f].funcs
+        elif L in ("c", "py", "js", "html", "css"):
+            own = set()
+            for f in fs:
+                fi = infos[f]
+                # Python: the names the parser binds or reads (a keyword argument of someone else's
+                # function, env= of subprocess.run, is not a variable of ours)
+                r["plain"] |= fi.pynames if fi.pynames is not None else set(fi.code)
+                r["member"] |= set(fi.member)
+                own |= set(fi.code) | fi.massign
+                r["sel"] |= fi.cssown | fi.attrdefs
+            r["member"] &= own
+        roles[s] = {k: v for k, v in r.items() if v}
+    # Go: a name that is only a field or a method (declared in a struct or as a method, used as a
+    # composite-literal key, else always after a dot) lives in its struct, not in the package
+    for d, gfs in sorted({(os.path.dirname(f)): [g for g in infos if infos[g].lang == "go" and
+                                                os.path.dirname(g) == os.path.dirname(f)]
+                          for f in infos if infos[f].lang == "go"}.items()):
+        types = go_types([infos[f] for f in sorted(gfs)])
+        pkg = "go-package:" + d
+        if pkg in roles:
+            roles[pkg]["plain"] = roles[pkg].get("plain", set()) - types["field_only"]
+        members_pkg = set()
+        for f in gfs:
+            members_pkg |= set(infos[f].member)
+        for i, comp in enumerate(types["components"]):
+            names = set()
+            for T in comp:
+                names |= types["fields"].get(T, set()) | types["methods"].get(T, set())
+            if any(T in types["ext_embed"] for T in comp):
+                names |= members_pkg        # an embedded type of another package: its members are unknown
+            roles["go-struct:%s:%s" % (d, "+".join(sorted(comp)[:3]))] = {"field": names}
+        go_field_only.update(types["field_only"])
+        for ms in types["methods"].values():
+            go_methods.update(ms)
+    # global namespaces: environment variables and options are read by name across programs
+    # environment variables are read by name anywhere: one namespace; options belong to the parser that
+    # defines them (the file), and a caller passes them to that program only
+    envs = set()
+    for f, fi in sorted(infos.items()):
+        envs |= fi.envs
+        if fi.opts:
+            roles["options:" + f] = {"plain": set(fi.opts)}
+    roles["env:all"] = {"plain": envs}
+    # data literals: per file, and per product program (the programs that exchange them)
+    lit_scopes = {}
     for f, fi in infos.items():
-        if f.startswith(("src/", "installatore/", "banchi/rcp/", "packaging/")):
-            data_all |= set(fi.data)
-    scope_tokens["data:all"] = data_all
-    scope_roles["data:all"] = (set(), set(), data_all)
-    scope_of_name = collections.defaultdict(list)
-    for s, toks in scope_tokens.items():
-        for t in toks:
-            if t in M or True:
-                scope_of_name[t].append(s)
-    lang_of_scope = {s: (infos[scopes[s][0]].lang if s in scopes else "data") for s in scope_tokens}
+        if fi.datalit:
+            lit_scopes["lit:" + f] = set(fi.datalit)
+    for name, pre in (("lit:server", ("src/", "banchi/rcp/", "packaging/")),
+                      ("lit:installer", ("installatore/", "packaging/"))):
+        lit_scopes[name] = set()
+        for f, fi in infos.items():
+            if f.startswith(pre):
+                lit_scopes[name] |= set(fi.datalit)
+    lit_toks = {}
+    for lits in lit_scopes.values():
+        for L in lits:
+            if L not in lit_toks:
+                lit_toks[L] = [m.group(0) for m in WORD.finditer(L)]
+    where = collections.defaultdict(list)          # name → [(scope, role)]
+    for s in sorted(roles):
+        for role, R in sorted(roles[s].items()):
+            if role in ("cmd", "funcs"):
+                continue
+            for x in R:
+                where[x].append((s, role))
+    lit_where = collections.defaultdict(set)       # name → {(scope, literal)}
+    for s, lits in lit_scopes.items():
+        for L in lits:
+            for x in set(lit_toks[L]):
+                lit_where[x].add((s, L))
 
     occ = collections.Counter()
     for fi in infos.values():
@@ -807,11 +1067,13 @@ def plan(root):
         if "c" in langs:
             if new in C_KEYWORDS or new in c_macro:
                 return "C keyword or system macro"
-            glob = any(name in g for g in c_prog_global.values())
+            glob = any(name in (roles[s].get("plain", ())) for s in roles if s.startswith("c-program:"))
             if glob and new in c_ident:
                 return "C global onto a libc/glib/system symbol"
         if "go" in langs and new in GO_KEYWORDS:
             return "Go keyword or predeclared name"
+        if name in go_methods and new in GO_IFACE_METHODS:
+            return "Go method onto a well-known interface method (String, Error, Write…)"
         if "py" in langs and new in PY_KEYWORDS:
             return "Python keyword or builtin"
         if ("js" in langs or "html" in langs) and new in JS_KEYWORDS:
@@ -824,6 +1086,8 @@ def plan(root):
             return "shell function onto a builtin"
         if (langs & {"sh", "make", "conf"}) and new in SPECIAL_ENV:
             return "well-known environment variable"
+        if WEB_PREFIX.match(new):
+            return "an ARIA name of the platform"
         return None
 
     def try_alternatives(name):
@@ -837,32 +1101,91 @@ def plan(root):
                 if cand != name:
                     yield cand, "sinonimi.tsv: %s → %s" % (w, alt)
 
-    def find_conflicts(final):
-        inv_scopes = {}
-        for s, toks in scope_tokens.items():
-            if s.startswith("c-program:"):
-                toks = c_prog_global[s]
-            olds = [t for t in toks if t in final]
-            by_new = collections.defaultdict(list)
-            for t in olds:
-                by_new[final[t]].append(t)
-            for new, group in by_new.items():
-                if len(group) > 1:
-                    inv_scopes.setdefault((new, tuple(sorted(group))), []).append(s)
-            # clash with a name that stays, in the same role (a member never clashes with a variable)
-            roles = scope_roles.get(s)
-            for t in (olds if s != "data:all" else []):
-                new = final[t]
-                if new in final:
-                    continue
-                if s.startswith("c-program:"):
-                    hit = new in toks
-                else:
-                    hit = any(t in r and new in r for r in roles)
-                if hit:
-                    inv_scopes.setdefault((new, (t,), "clash"), []).append(s)
-        return inv_scopes
+    def ren_lit(L, final, extra=None):
+        out = []
+        for x in lit_toks[L]:
+            out.append((extra or {}).get(x) or final.get(x, x))
+        return out
 
+    def free(n, cand, final):
+        """May n become cand?  cand must be absent from every scope and role where n is."""
+        for s, role in where.get(n, ()):
+            R = roles[s][role]
+            if cand in R:
+                return False
+            if any(final.get(x) == cand for x in R if x != n and x in final):
+                return False
+        for s, L in lit_where.get(n, ()):
+            r = WORD.sub(lambda m: cand if m.group(0) == n else final.get(m.group(0), m.group(0)), L)
+            if r != L and r in lit_scopes[s]:
+                return False
+        if n in sh_funcs:
+            for s in scopes:
+                if s.startswith("sh:") and n in roles.get(s, {}).get("funcs", ()) and cand in roles[s].get("cmd", ()):
+                    return False
+        return True
+
+    def find_conflicts(final):
+        inv = {}
+        for s in sorted(roles):
+            for role, R in sorted(roles[s].items()):
+                if role in ("cmd", "funcs"):
+                    continue
+                olds = sorted(x for x in R if x in final)
+                by_new = collections.defaultdict(list)
+                for x in olds:
+                    by_new[final[x]].append(x)
+                for new, group in by_new.items():
+                    if len(group) > 1:
+                        inv.setdefault((new, tuple(group)), []).append(s)
+                for x in olds:
+                    new = final[x]
+                    if new not in final and new in R:
+                        inv.setdefault((new, (x,), "clash"), []).append(s)
+            # a shell function may not take the name of a command the file runs
+            for x in sorted(roles[s].get("funcs", set()) & set(final)):
+                new = final[x]
+                if new not in final and new in roles[s].get("cmd", ()):
+                    inv.setdefault((new, (x,), "clash"), []).append(s)
+        for s in sorted(lit_scopes):
+            lits = lit_scopes[s]
+            groups = collections.defaultdict(list)
+            for L in lits:
+                toks = lit_toks[L]
+                if any(x in final for x in toks):
+                    groups[WORD.sub(lambda m: final.get(m.group(0), m.group(0)), L)].append(L)
+            for r, ch in groups.items():
+                same = sorted(set(ch) | ({r} if r in lits and r not in ch else set()))
+                if len(same) < 2:
+                    continue
+                for i in range(len(same)):
+                    for j in range(i + 1, len(same)):
+                        A, B = lit_toks[same[i]], lit_toks[same[j]]
+                        pairs = list(zip(A, B)) if len(A) == len(B) else []
+                        for x, y in pairs:
+                            if x == y:
+                                continue
+                            if x in final and y in final and final[x] == final[y]:
+                                inv.setdefault((final[x], tuple(sorted((x, y)))), []).append(s)
+                            elif x in final and y not in final:
+                                inv.setdefault((final[x], (x,), "clash"), []).append(s)
+                            elif y in final and x not in final:
+                                inv.setdefault((final[y], (y,), "clash"), []).append(s)
+                        if not pairs:
+                            for x in sorted(set(A) | set(B)):
+                                if x in final:
+                                    inv.setdefault((final[x], (x,), "clash"), []).append(s)
+        return inv
+
+    dataset_pairs = set()
+    for fi in infos.values():
+        if fi.lang in ("html", "js"):
+            for c in set(re.findall(r"\bdataset\s*\.\s*([A-Za-z_]\w*)", fi.text)) | \
+                    set(re.findall(r"""\bdataset\s*\[\s*["']([A-Za-z_]\w*)["']\s*\]""", fi.text)):
+                a = "data-" + re.sub(r"[A-Z]", lambda m: "-" + m.group(0).lower(), c)
+                if c in origin or a in origin or a in dati:
+                    dataset_pairs.add((c, a))
+    dataset_pairs = sorted(dataset_pairs)
     pinned = set()        # names whose English a twin decided: never moved by a collision
     collisions_log = []
     for it in range(50):
@@ -895,8 +1218,8 @@ def plan(root):
                 if n in INTERI and final.get(n) != INTERI[n]:
                     pass
                 alt = next((a for a in try_alternatives(n)
-                            if not forbidden(n, a[0]) and a[0] not in final.values()
-                            and not any(a[0] in scope_tokens[s] for s in scope_of_name[n])), None)
+                            if not forbidden(n, a[0]) and a[0] not in final.values() and free(n, a[0], final)),
+                           None)
                 if alt and n not in pinned:
                     M[n], resolved_by[n] = alt[0], alt[1] + " (target %s already exists)" % new
                 else:
@@ -917,8 +1240,8 @@ def plan(root):
                 if g == winner:
                     continue
                 alt = next((a for a in try_alternatives(g)
-                            if not forbidden(g, a[0]) and a[0] not in final.values()
-                            and not any(a[0] in scope_tokens[s] for s in scope_of_name[g])), None)
+                            if not forbidden(g, a[0]) and a[0] not in final.values() and free(g, a[0], final)),
+                           None)
                 if alt and g not in INTERI and g not in pinned:
                     M[g], resolved_by[g] = alt[0], alt[1] + " (lost %s to %s)" % (new, winner)
                     entry["losers"][g] = alt[0]
@@ -973,6 +1296,32 @@ def plan(root):
                     M[low], resolved_by[low] = M[n][0].lower() + M[n][1:], "case twin of %s" % n
                     pinned.add(low)
                 changed = True
+        # a twin decided «as it is» in interi.tsv keeps the other spelling as it is too
+        for n in sorted(M):
+            if n in kept:
+                continue
+            for tw in (twin(n), n[0].lower() + n[1:] if n[0].isupper() and not n.isupper() and n in go_untagged
+                       else None, n[0].upper() + n[1:] if n[0].islower() and n[0].upper() + n[1:] in go_untagged
+                       else None):
+                if tw and tw in INTERI_WHY:
+                    kept[n] = "twin %s is kept as it is (interi.tsv)" % tw
+                    changed = True
+                    break
+        # the browser ties el.dataset.fooBar to the attribute data-foo-bar: the two follow each other,
+        # and the dataset member (code) decides
+        for c, a in dataset_pairs:
+            c_new = M[c] if c in M and c not in kept else c
+            a_new = M[a] if a in M and a not in kept else a
+            want = "data-" + re.sub(r"[A-Z]", lambda m: "-" + m.group(0).lower(), c_new)
+            if a_new == want:
+                continue
+            if want == a:
+                kept[a] = "dataset twin %s is not renamed" % c
+            else:
+                M[a], resolved_by[a] = want, "dataset twin of %s" % c
+                kept.pop(a, None)
+                pinned.add(a)
+            changed = True
         if not changed:
             break
     iterations = it + 1
@@ -996,8 +1345,13 @@ def plan(root):
                         bad[g] = "loses %s to %s (%s)" % (key[0], winner, ", ".join(sorted(sc)[:3]))
         for n in list(final):
             for tw in (twin(n), n[0].lower() + n[1:] if n[0].isupper() and not n.isupper() else None):
-                if tw and tw in M and tw in kept:
+                if tw and ((tw in M and tw in kept) or tw in INTERI_WHY):
                     bad[n] = "twin %s is not renamed" % tw
+        for c, a in dataset_pairs:
+            if final.get(a, a) != "data-" + re.sub(r"[A-Z]", lambda m: "-" + m.group(0).lower(), final.get(c, c)):
+                for x in (c, a):
+                    if x in final:
+                        bad[x] = "dataset twin %s / %s cannot follow" % (c, a)
         new_bad = {n: w for n, w in bad.items() if n not in kept}
         if not new_bad:
             break
@@ -1019,6 +1373,16 @@ def plan(root):
 
 
 # ═══ application ═════════════════════════════════════════════════════════════
+TAG_ATTR = re.compile(r"""(?P<name>[^\s=/>"'<]+)(?:\s*=\s*(?P<val>"[^"]*"|'[^']*'|[^\s>"']+))?""")
+# attributes whose values the platform enumerates (type="checkbox", rel="icon", role="button")
+PLATFORM_VALUES = set("""type rel autocomplete inputmode enterkeyhint autocapitalize role dir loading decoding
+fetchpriority crossorigin referrerpolicy method enctype target wrap spellcheck draggable translate
+contenteditable preload sandbox allow http-equiv charset lang media sizes shape kind scope align valign accept
+capture popover popovertargetaction content xmlns version viewbox preserveaspectratio""".split())
+ARIA_IDREFS = {"aria-controls", "aria-labelledby", "aria-describedby", "aria-owns", "aria-activedescendant",
+               "aria-errormessage", "aria-details", "aria-flowto"}
+
+
 def rewrite(text, lang, regs, M, keep_lines, path, frozen=None, lang_own=None):
     lang_own = lang_own or {}
     """Return (new_text, count, changes)."""
@@ -1062,19 +1426,109 @@ def rewrite(text, lang, regs, M, keep_lines, path, frozen=None, lang_own=None):
     dyn_stems = {s for s, e in re.findall(r"\b([A-Za-z_][A-Za-z0-9_-]*)\.(%s)\b" % EXT, text) if e in dyn_ext} \
         if dyn_ext else set()
 
+    css_own = lang_own.get("css", set())
+
+    def css_sub(seg):
+        # CSS: only our names (selectors, custom properties, keyframes, data-*): a property, a value or
+        # a pseudo-class is the platform's even when a name of ours has its spelling
+        def subc(m):
+            t = m.group(0)
+            if t in M and t in css_own:
+                changes[(t, M[t])] += 1
+                return M[t]
+            return t
+        return WORD.sub(subc, seg)
+
+    def literal(seg, a, k):
+        """Strings, comments, shell words, documents: whole tokens of the table only.  None = untouched."""
+        if k == "comment" and italian_prose(seg):
+            return None
+        # in a literal, only the Italian sentence is protected, not the data around it:
+        # {"formato":"remotix-gruppi/1",…,"da":"REMOTIX alla prima connessione"} keeps the
+        # sentence and renames the keys like the struct that reads them
+        prose = prose_pieces(seg) if k in ("string", "code-doc") else []
+        if k in ("span",) and ("«" in seg or "»" in seg or italian_prose(seg) or LOGLIKE.match(seg)):
+            return None
+        if k in ("string", "comment") and kept_line(a):
+            return None
+        seg_frozen = bool(k == "string" and frozen and any(m.group(0) in frozen for m in WORD.finditer(seg)))
+
+        def sub2(m):
+            if m.group("dol"):
+                # a shell variable: $nome, ${nome…} — never a path, never kebab
+                v = m.group("v")
+                if v in M and not (seg_frozen and v in frozen):      # «$x» is still the variable x
+                    changes[(v, M[v])] += 1
+                    return m.group("dol") + M[v]
+                return m.group(0)
+            t = m.group("w")
+            s = m.start()
+            if t not in M and k == "string":
+                # "memoria_" + rc builds memoria_sessioni: the compound follows its renamed tail
+                for pre in sorted(prefixes):
+                    if t.startswith(pre) and t[len(pre):] in M and not is_path(seg, s, m.end()):
+                        changes[(t, pre + M[t[len(pre):]])] += 1
+                        return pre + M[t[len(pre):]]
+            if t not in M:
+                return t
+            if s > 0 and seg[s - 1] == "%" and not seg[max(0, s - 2):s] == "%%":
+                return t              # "%dx%d": the first letter is a format verb, not a name
+            if k == "string" and seg[m.end():m.end() + 1] == "=" and not t.startswith("data-") and \
+                    re.search(r"<[A-Za-z][\w:-]*\s[^<>]*$", text[max(0, a + s - 400):a + s]):
+                return t              # f'<img src="…" alt="…">': an HTML attribute name in a string
+            if seg_frozen and t in frozen:
+                return t
+            if (k != "string" and in_guil(a + s)) or any(x <= s < y for x, y in prose):
+                return t              # «…» protects prose; in a literal it is log punctuation
+            if k == "string" and t in dyn_stems:
+                return t              # n + ".html" builds testo.html: the bare stem is a file name
+            if is_path(seg, s, m.end()):
+                return t           # a path: renamed with the files (step 2)
+            if k == "code" and lang in ("sh", "make", "conf") and t in REPO_NAMES:
+                return t           # a bare file or directory name in a command (gofmt -l motore)
+            changes[(t, M[t])] += 1
+            return M[t]
+        return SHELLWORD.sub(sub2, seg)
+
+    def tag_sub(seg, a):
+        # <img alt="…" aria-pressed="true" data-schermo="acceso" class="tela" style="…">: the element
+        # and the attribute names are the platform's (only data-* are ours); the values of enumerated
+        # attributes are the platform's too; style is CSS; the other values are data
+        m0 = re.match(r"<\s*/?\s*[A-Za-z][\w:.-]*", seg)
+        if not m0:
+            return None
+        parts, pos2 = [seg[:m0.end()]], m0.end()
+        for m in TAG_ATTR.finditer(seg, m0.end()):
+            parts.append(seg[pos2:m.start()])
+            name, val = m.group("name"), m.group("val")
+            low = name.lower()
+            if low.startswith("data-") and name in M:
+                changes[(name, M[name])] += 1
+                parts.append(M[name])
+            else:
+                parts.append(name)
+            parts.append(seg[m.end("name"):m.start("val")] if val is not None else "")
+            if val is not None:
+                if low in PLATFORM_VALUES or (low.startswith("aria-") and low not in ARIA_IDREFS):
+                    parts.append(val)
+                elif low == "style":
+                    parts.append(css_sub(val))
+                else:
+                    nv = literal(val, a + m.start("val"), "string")
+                    parts.append(val if nv is None else nv)
+            pos2 = m.end()
+        parts.append(seg[pos2:])
+        return "".join(parts)
+
     for a, b, k in regs:
         seg = text[a:b]
         if k == "skip":
             continue
         new_seg = None
         if k == "code-css" or (k == "code" and lang == "css"):
-            def subc(m):
-                t = m.group(0)
-                if t in M:
-                    changes[(t, M[t])] += 1
-                    return M[t]
-                return t
-            new_seg = WORD.sub(subc, seg)
+            new_seg = css_sub(seg)
+        elif k == "tag":
+            new_seg = tag_sub(seg, a)
         elif k == "code" and lang in ("c", "go", "py", "js", "html"):
             own = lang_own.get("js" if lang == "html" else lang, set())
 
@@ -1089,54 +1543,7 @@ def rewrite(text, lang, regs, M, keep_lines, path, frozen=None, lang_own=None):
                 return t
             new_seg = IDENT.sub(sub, seg)
         else:
-            # strings, comments, shell words, documents: whole tokens of the table only
-            if k == "comment" and italian_prose(seg):
-                continue
-            # in a literal, only the Italian sentence is protected, not the data around it:
-            # {"formato":"remotix-gruppi/1",…,"da":"REMOTIX alla prima connessione"} keeps the
-            # sentence and renames the keys like the struct that reads them
-            prose = prose_pieces(seg) if k in ("string", "code-doc") else []
-            if k in ("span",) and ("«" in seg or "»" in seg or italian_prose(seg) or LOGLIKE.match(seg)):
-                continue
-            if k in ("string", "comment") and kept_line(a):
-                continue
-            if k == "string" and frozen and any(m.group(0) in frozen for m in WORD.finditer(seg)):
-                # a key or value of the recorded registers (*.jsonl): readers of history need it as it is
-                seg_frozen = True
-            else:
-                seg_frozen = False
-
-            def sub2(m):
-                if m.group("dol"):
-                    # a shell variable: $nome, ${nome…} — never a path, never kebab
-                    v = m.group("v")
-                    if v in M and not (seg_frozen and v in frozen):      # «$x» is still the variable x
-                        changes[(v, M[v])] += 1
-                        return m.group("dol") + M[v]
-                    return m.group(0)
-                t = m.group("w")
-                s = m.start()
-                if t not in M and k == "string":
-                    # "memoria_" + rc builds memoria_sessioni: the compound follows its renamed tail
-                    for pre in prefixes:
-                        if t.startswith(pre) and t[len(pre):] in M and not is_path(seg, s, m.end()):
-                            changes[(t, pre + M[t[len(pre):]])] += 1
-                            return pre + M[t[len(pre):]]
-                if t not in M:
-                    return t
-                if seg_frozen and t in frozen:
-                    return t
-                if (k != "string" and in_guil(a + s)) or any(x <= s < y for x, y in prose):
-                    return t              # «…» protects prose; in a literal it is log punctuation
-                if k == "string" and t in dyn_stems:
-                    return t              # n + ".html" builds testo.html: the bare stem is a file name
-                if is_path(seg, s, m.end()):
-                    return t           # a path: renamed with the files (step 2)
-                if k == "code" and lang in ("sh", "make", "conf") and t in REPO_NAMES:
-                    return t           # a bare file or directory name in a command (gofmt -l motore)
-                changes[(t, M[t])] += 1
-                return M[t]
-            new_seg = SHELLWORD.sub(sub2, seg)
+            new_seg = literal(seg, a, k)
         if new_seg is not None and new_seg != seg:
             out.append(text[pos:a])
             out.append(new_seg)

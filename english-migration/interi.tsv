@@ -33,9 +33,9 @@ NODO_INTEL	INTEL_NODE	env-var: English word order
 NODO_RADEON	RADEON_NODE	env-var: English word order
 OPZIONI_SERVER	SERVER_OPTIONS	env-var: English word order
 ORDINE_PRODOTTO	PRODUCT_ORDER	env-var: English word order
-PAROLA_SUDO	SUDO_WORD	env-var: English word order
-PAROLA_UTENTE	USER_WORD	env-var: English word order
-PAROLA_UTENTE2	USER2_WORD	env-var: English word order
+PAROLA_SUDO	SUDO_PASSWORD	parola = password (was SUDO_WORD)
+PAROLA_UTENTE	USER_PASSWORD	parola = password (was USER_WORD)
+PAROLA_UTENTE2	USER2_PASSWORD	parola = password (was USER2_WORD)
 PIANO_OPZ	PLAN_OPTS	env-var: English word order
 PORTA_LUCCHETTO	LOCK_PORT	env-var: English word order
 PORTA_SSH	SSH_PORT	env-var: English word order
@@ -45,8 +45,8 @@ REMOTIX_16_CHROME_IN_PIU	REMOTIX_16_CHROME_EXTRA	env-var: English word order
 REMOTIX_16_IN_PIU	REMOTIX_16_EXTRA	env-var: English word order
 REMOTIX_ATTESA_CHIAMATA_S	REMOTIX_CALL_WAIT_S	env-var: English word order
 REMOTIX_BANCHI_VERI	REMOTIX_REAL_BENCHES	env-var: English word order
-REMOTIX_PAROLA_PROVA	REMOTIX_TEST_WORD	env-var: English word order
-REMOTIX_PAROLA_SUDO	REMOTIX_SUDO_WORD	env-var: English word order
+REMOTIX_PAROLA_PROVA	REMOTIX_TEST_PASSWORD	parola = password (was REMOTIX_TEST_WORD)
+REMOTIX_PAROLA_SUDO	REMOTIX_SUDO_PASSWORD	parola = password (was REMOTIX_SUDO_WORD)
 REMOTIX_SCATOLE_TENUTE	REMOTIX_KEPT_BOXES	env-var: English word order
 REMOTIX_SCHERMO_ANNIDATO	REMOTIX_NESTED_SCREEN	env-var: English word order
 REMOTIX_TELEFONO_A_SECCO	REMOTIX_PHONE_DRY_RUN	env-var: English word order
@@ -54,7 +54,7 @@ REMOTIX_TETTO_SESSIONI	REMOTIX_SESSION_CAP	env-var: English word order
 REMOTIX_UTENTE_VERI	REMOTIX_REAL_USER	env-var: English word order
 REMOTIX_WAYLAND_VERI	REMOTIX_REAL_WAYLAND	env-var: English word order
 STATO_SESSIONE	SESSION_STATE	env-var: English word order
-TELA_MINIMA	MINIMUM_CANVAS	env-var: English word order
+TELA_MINIMA	MIN_CANVAS	twins move together / English word order (was MINIMUM_CANVAS)
 VERI	REAL	env-var: English word order
 MINIMI	MINIMUMS	make-var: English word order
 anche-lo-sporco	dirty-too	py-option: English word order
@@ -82,7 +82,7 @@ lascia-una-casa	leave-a-home	py-option: English word order
 margine-filo	wire-margin	py-option: English word order
 margine-soglia	threshold-margin	py-option: English word order
 nome-figlio	child-name	py-option: English word order
-parola-cattiva	bad-word	py-option: English word order
+parola-cattiva	bad-password	parola = password (was bad-word)
 pausa-staccato	detached-pause	py-option: English word order
 porte-base	base-ports	py-option: English word order
 puntatore-vecchia	old-pointer	py-option: English word order
@@ -122,3 +122,2816 @@ ritira-esiti	fetch-outcomes	subcommand: English word order
 rpm-firma	rpm-sign	subcommand: English word order
 un-verso	one-way	subcommand: English word order
 VersioneMotore	EngineVersion	Go: -X remotix/installatore/motore.VersioneMotore in costruisci.sh; English word order
+# ── word order and meaning review, 11 Oct 2026 (ordine/out-01..out-11: ten chunk reviewers + the 136 kept names) ──
+ABBANDONO_PREDEFINITO_MS	DEFAULT_ABANDON_MS	English order; abbandono of a timeout = abandon (60-min give-up)
+ABBANDONO_S	ABANDON_S	abbandono of a timeout = abandon, not abandonment
+ACCENDONO_UNA_SESSIONE	STARTS_SESSION	set of boxes that start a session
+ADB_FINTO	FAKE_ADB	English order
+AGG_FAIL	UPDATE_FAIL	agg = the aggiorna (update) step of 17-t10.sh, not add
+ALLINEAMENTO_SCHEDA	CARD_ALIGNMENT	English order (GPU surface stride alignment)
+AL_MEGLIO	BEST_EFFORT	Reversibilita value is "BEST_EFFORT"; name follows its string
+AMBIENTE_BROWSER	BROWSER_ENV	English order (env vars for the browser)
+AMBIENTE_X	X_ENV	English order (regex of the X session env vars)
+ANCORA_TABELLA	TABLE_ANCHOR	ancora = anchor (text searched to find the table), not still
+ANNULLATA	ROLLED_BACK	state string is "ROLLED_BACK"; annullata = rolled back
+ANNULLATA_IN_PARTE	PARTIALLY_ROLLED_BACK	state string is "PARTIALLY_ROLLED_BACK"
+APPUNTI_RILETTURA_MS	CLIPBOARD_REREAD_MS	reread, not rereading
+AREA_MINIMA	MIN_AREA	English order
+AREE_DEL_SALUTO	HELLO_AREAS	English order; saluto = the HELLO exchange (CIAO→HELLO)
+AREE_DEL_SERVER	SERVER_AREAS	English order
+AREE_DI_SESSIONE	SESSION_AREAS	English order
+ARGOMENTI_RICETTA	RECIPE_ARGS	English order
+ASCOLTO_CONF	CONF_LISTENER	a wl listener struct: X_LISTENER, as Wayland code names it
+ASCOLTO_DMABUF	DMABUF_LISTENER	a wl listener struct: X_LISTENER
+ASCOLTO_FEEDBACK	FEEDBACK_LISTENER	a wl listener struct: X_LISTENER
+ASCOLTO_FRAME	FRAME_LISTENER	a wl listener struct: X_LISTENER
+ASCOLTO_GESTORE	MANAGER_LISTENER	a wl listener struct (output manager): X_LISTENER
+ASCOLTO_GIRO	ROUND_LISTENER	wl_callback listener of the round trip: X_LISTENER
+ASCOLTO_PARAMS	PARAMS_LISTENER	a wl listener struct: X_LISTENER
+ASCOLTO_REGISTRO	REGISTRY_LISTENER	wl_registry_listener: registro = registry here, not log
+ASCOLTO_SEAT	SEAT_LISTENER	a wl listener struct: X_LISTENER
+ASCOLTO_SINCRONIA	SYNC_LISTENER	a wl listener struct: X_LISTENER
+ASCOLTO_SONDA	PROBE_LISTENER	a wl listener struct: X_LISTENER
+ASCOLTO_SPIA	SPY_LISTENER	a wl listener struct: X_LISTENER
+ASCOLTO_TESTA	HEAD_LISTENER	a wl listener struct (output head): X_LISTENER
+ASCOLTO_USCITA	OUTPUT_LISTENER	a wl listener struct: X_LISTENER
+ATTESA_IN_PIEDI_S	WAIT_UP_S	in piedi = up (the session is up), not "in feet"
+ATTESA_LETTURA	WAIT_READ	wait before the read
+ATTESA_LETTURA_MS	WAIT_READ_MS	read timeout (g_poll), not reading
+ATTESA_USCITA_MS	WAIT_EXIT_MS	uscita = the session's exit here
+ATTESO_LIVELLI_VERI	EXPECTED_REAL_LEVELS	veri = real (10-bit-veri), not true
+A_LIVELLI_VERI	A_REAL_LEVELS	veri = real, English order
+A_VERDETTO_VERO	A_VERDICT_REAL	vero = real ("10-bit-veri"), not true
+ATTREZZI_COMUNI	COMMON_TOOLS	English order
+AUDIO_ANCORA_MARGINE_MS	AUDIO_ANCHOR_MARGIN_MS	ancora = anchor (re-basing the schedule), not still — doubtful
+AZIONE_GANCIO	HOOK_ACTION	English order
+AZIONI_DA_TOGLIERE	ACTIONS_TO_REMOVE	da togliere = to remove
+AZIONI_DI_SERIE	DEFAULT_ACTIONS	di serie = default/stock, not serial
+A_BYTE_DIVERSI_LOSSLESS	A_DIFFERENT_BYTES_LOSSLESS	English order
+A_SECCO	DRY_RUN	twin of REMOTIX_TELEFONO_A_SECCO → REMOTIX_PHONE_DRY_RUN
+A_STORPIATURE_RIFIUTATE	A_REFUSED_MANGLINGS	English order
+A_TESTO_MINIMO	A_TEXT_MIN	English order (minimum text-message body)
+AltLeft	AltLeft	KeyboardEvent.code "AltLeft" (key map), not Italian: must not change
+AltRight	AltRight	KeyboardEvent.code "AltRight" (key map), not Italian: must not change
+AmbienteVero	RealEnvironment	vero = real, English order
+ArchivioPacchetti	PackageArchive	pacchetti = packages here (distro), not packets
+ConfrontaPacchetti	ComparePackages	pacchetti = packages (versions), not packets
+AttrezzoMancante	MissingTool	English order
+AzionePiano	PlanAction	it is an action of the plan, not an action plan
+B8_NON_RICOSTRUIRE	B8_NO_REBUILD	idiomatic flag name
+BANCHI_VERI	REAL_BENCHES	veri = real, English order
+BANCO_FUNZIONE_SPENTA	BENCH_FEATURE_OFF	funzione = feature here
+BANCO_RITARDO_FUORI_LIMITI	BENCH_DELAY_OUT_OF_RANGE	fuori limiti = out of range
+BENE	ALL_GOOD	0/1 flag "it went well"; WELL is not a flag name
+BINARIO_INNESTO	GRAFT_BINARY	English order
+BINARIO_PRODOTTO	PRODUCT_BINARY	English order
+BIN_ORA	BIN_TIME	ora = the binary's time (mtime), not now
+BLOCCO_BYTE	BLOCK_BYTES	block size in bytes
+B_LEGAME	B_BIND	bind address (0.0.0.0), not bond
+B_NON_CHIESTI	B_UNREQUESTED	idiomatic
+BOTTONE_SINISTRO	LEFT_BUTTON	English order
+BUCO_SCHERMO_FERMO_S	FROZEN_SCREEN_GAP_S	English order
+BUDGET_NON_REGGE	BUDGET_DOES_NOT_HOLD	enum with BUDGET_HOLDS, BUDGET_UNKNOWN
+BUDGET_NON_SO	BUDGET_UNKNOWN	non so = I do not know
+BUDGET_RISERVA_PREDEFINITA	BUDGET_DEFAULT_RESERVE	English order
+BUDGET_RITARDO_AFFANNO_MS	BUDGET_STRAIN_DELAY_MS	English order
+BUDGET_RITMO_MAX_FOT_S	BUDGET_MAX_FPS	frames per second
+BUFFER_QUANTI	BUFFER_COUNT	quanti = how many → count
+CADENZA_CONTROLLO_MS	CHECK_INTERVAL_MS	English order
+CAMBIO_MASSIMO_TESTIMONE	MAX_WITNESS_CHANGE	English order
+CAMBIO_MINIMO_DENTRO	MIN_CHANGE_INSIDE	English order
+CAMBIO_RESIDUO	RESIDUAL_CHANGE	English order
+CAMPO_APRI	OPEN_FIELD	JS snippet that opens the field
+CAMPO_CHIUDI	CLOSE_FIELD	JS snippet that closes the field
+CANALE_VIDEO	VIDEO_CHANNEL	English order
+CAPS_COMUNI	COMMON_CAPS	English order
+CASI_ATTESI	EXPECTED_CASES	English order
+CONTROLLI_ATTESI	EXPECTED_CHECKS	English order
+CATTURA_RANGE_NON_CONCLUSIVO	CAPTURE_RANGE_INCONCLUSIVE	idiomatic
+CATTURA_RANGE_NON_MISURATO	CAPTURE_RANGE_UNMEASURED	idiomatic
+CATTURA_FONTE_NON_DICHIARATA	CAPTURE_SOURCE_UNDECLARED	idiomatic
+CATTURA_RITELA_GIA_COSI	CAPTURE_RECANVAS_UNCHANGED	già così = already that size
+CAUSE_DI_UNA_SESSIONE_CHE_NON_SI_APRE	SESSION_NOT_OPENING_CAUSES	word-by-word output is not English
+CHIAVI_IS	IS_KEYS	English order (input-sources gsettings keys)
+CHIUSA_DA_NOI	CLOSED_BY_US	da = by; twin chiusa_da_noi
+CHIUSO_DALL_UTENTE	CLOSED_BY_USER	RCP reason; da = by
+CL_MODIFICATORI_LETTERA	CL_LETTER_MODIFIERS	English order
+CL_PX_PER_SCATTO	CL_PX_PER_NOTCH	scatto of the wheel = notch
+CL_SALTO_FINTO	CL_FAKE_JUMP	English order
+CL_SPEDITI	CL_SENT	spediti = sent (input events)
+CL_SPEDITI_MAX	CL_SENT_MAX	spediti = sent
+CL_SPINTA_USCITA	CL_EXIT_PUSH	push needed to leave the edge
+CODA_MIA_MAX_PC	OWN_QUEUE_MAX_PC	English order
+CODA_NASCOSTO	HIDDEN_SUFFIX	coda = the ".c18-nascosto" suffix, not a queue
+CODA_SPAZZATURA	NOISE_LINE	the log line that is noise; not a queue — doubtful
+CODEC_CHIESTO	REQUESTED_CODEC	English order
+CODICI_GRUPPI	GROUP_CODES	English order
+CODIFICATORE_POTENZA_NON_DICHIARATA	ENCODER_POWER_UNDECLARED	idiomatic
+COLORE_ARRIVO	ARRIVAL_COLOR	English order
+COLORE_PARTENZA	START_COLOR	English order
+COLORE_FONDO	BACKGROUND_COLOR	English order
+COLORI_VIVO	ALIVE_COLORS	English order (distinct colours that mean alive)
+COLORI_NAV	NAV_COLORS	English order
+CONFERMATA_A_CONDIZIONI	CONFIRMED_WITH_CONDITIONS	state string is "CONFIRMED_WITH_CONDITIONS"
+CON_FOTOGRAFIA	NEEDS_SNAPSHOT	Reversibilita string is "NEEDS_SNAPSHOT"
+CONTINUA_PCT_ORA	CONTINUE_PCT_HOUR	ora = hour (%/hour slope), not now
+CONTO_GUARDIANO_MS	GUARDIAN_COUNT_MS	English order
+CONTRASTO_MINIMO	MIN_CONTRAST	English order
+COPERTURA_MINIMA	MIN_COVERAGE	English order
+COPIA_ZERO	ZERO_COPY	English order
+CORPO_ESATTO	EXACT_BODY	English order
+CORPO_OSPITE	GUEST_BODY	English order
+CREDENZIALI_ERRATE	WRONG_CREDENTIALS	twins move together / English word order
+CRF_DI_EMERGENZA	EMERGENCY_CRF	English order
+CRF_RESA	RENDER_CRF	resa = rendering (round B), not yield
+CUORI	CORE_PROCESSES	the compositor processes (gnome-shell, kwin…): the heart, not hearts
+CapacitaVideo	VideoCapabilities	English order
+CarattereScalabile	ScalableFont	carattere = font here; English order
+CartellaPiani	PlansFolder	English order
+CartelleCreate	CreatedDirs	English order (json key is created_dirs)
+CheFare	WhatToDo	che fare = what to do
+ClienteCoiTasti	ClientWithKeys	idiomatic
+ComeSiAnnulla	HowToUndo	come si annulla = how to undo
+ComeSiVerifica	HowToVerify	come si verifica = how to verify
+ComponenteMinimo	MinComponent	English order
+ComponentiMinimi	MinComponents	English order
+CondizioneComune	CommonCondition	English order
+ControllaMotoreMinimo	CheckMinEngine	English order
+ControlliPiattaforma	PlatformChecks	English order
+DA_ESITO_GUASTO	FAULT_FROM_OUTCOME	map outcome → fault flag
+DA_LEGGERE	TO_READ	da leggere = to read
+DA_LEGGERE_DEC	TO_READ_DEC	da leggere = to read
+DECODIFICA_AUDIO_S	AUDIO_DECODE_S	English order
+DESKTOP_E_GESTO	DESKTOPS_AND_GESTURES	e = and (tuple of desktop, gesture)
+DESKTOP_NOTI	KNOWN_DESKTOPS	English order
+DESKTOP_TUTTI	ALL_DESKTOPS	English order
+DICHIARATI_NON_SCRIVIBILI	DECLARED_UNWRITABLE	idiomatic
+DIFFERENZA_MINIMA	MIN_DIFFERENCE	English order
+DIR_NODI_SCHEDA	CARD_NODES_DIR	English order (/dev/dri)
+DISCO_GRANDE	DISK_SIZE	the size of the VM disk (40G)
+DITI_VERI_MAX	REAL_FINGERS_MAX	veri = real
+DI_SERVIZIO	SERVICE_PROCESSES	the service processes set
+DRIVER_SCHEDA	CARD_DRIVER	English order
+DROPIN_NOSTRI	OUR_DROPINS	English order
+DROPIN_NOSTRO	OUR_DROPIN	English order
+DX	DX	delta x in 15-f003 (and a mockup const), not destra: must not change
+DaFare	Todo	da fare = to do
+DomandeDaFare	QuestionsToAsk	da fare = to ask
+DepositiBaseMancanti	MissingBaseRepositories	English order
+DifferenzeImpronta	FingerprintDifferences	English order
+DigestMotore	EngineDigest	English order
+EP_NON_C_E	EP_ABSENT	non c'è = absent
+EP_NON_GUARDATO	EP_UNCHECKED	idiomatic
+ERRORE_PROTOCOLLO	PROTOCOL_ERROR	English order
+E_MIO	E_MINE	mio = mine
+ESITO_SI	OUTCOME_YES	was OUTCOME (lost the SI); pairs with OUTCOME_NO
+ErrNonAmmesso	ErrNotAllowed	program outside the allowed list
+EsitoControllo	CheckOutcome	English order
+EsitoDesktop	DesktopOutcome	English order
+EsitoEntrypoint	EntrypointOutcome	English order
+EtichettaVersione	VersionLabel	English order
+EventoPubblico	PublicEvent	English order
+FAMIGLIA_CHIESTA	REQUESTED_FAMILY	English order
+FERMA_MS	STILL_MS	ferma = still (screen unchanged this long), not stop
+FERMO_P1_S	STILL_P1_S	fermo = still (no gestures), not stopped
+FIGLI_USCITA_ABBANDONO	CHILDREN_EXIT_ABANDON	reason of the child's exit; abbandono = abandon
+FIGLI_USCITA_UTENTE	CHILDREN_EXIT_USER	reason of the child's exit
+FILE_DI_SISTEMA	SYSTEM_FILES	English order
+FILE_NOSTRI	OUR_FILES	English order
+FILE_PAGINA	PAGE_FILE	English order
+FILE_TOCCATI	TOUCHED_FILES	English order
+FINESTRA_MISURA	MEASURE_WINDOW	English order
+FINESTRA_SCENA	SCENE_WINDOW	English order
+FINESTRE_DIAGNOSI	DIAGNOSIS_WINDOWS	English order
+FIRMA_AMMESSO	ADMITTED_SIGNATURE	regex signature: English order
+FIRMA_FIGLIO	CHILD_SIGNATURE	regex signature: English order
+FIRMA_FORMATO	FORMAT_SIGNATURE	regex signature: English order
+FIRMA_FOTOGRAMMI	FRAMES_SIGNATURE	regex signature: English order
+FIRMA_OUTPUT	OUTPUT_SIGNATURE	regex signature: English order
+FIRMA_PALCO	STAGE_SIGNATURE	regex signature: English order
+FIRMA_ZERO_MONITOR	ZERO_MONITOR_SIGNATURE	regex signature: English order
+FORMATO_LETTORE	READER_FORMAT	English order
+FORMATO_PIXEL_IMPACCHETTATO	PACKED_PIXEL_FORMAT	impacchettato = packed (pixel layout)
+FORMATO_STATO	STATE_FORMAT	English order (struct format)
+FormatoPixel	PixelFormat	English order
+FormatoCatalogo	CatalogFormat	English order
+FORMA_ABBANDONO	ABANDON_MARK	forma = the log wording searched for, not a shape
+FORMA_GESTO	GESTURE_MARK	forma = the log wording searched for, not a shape
+FORME_STACCO	DETACH_MARKS	forme = the log wordings of a detach, not shapes
+FORMA_QUANTE	SHAPE_COUNT	quante = how many → count
+FORMA_MISURA	SHAPE_SIZE	misura = the nominal cursor size
+FOTOGRAMMI_MINIMI	MIN_FRAMES	English order
+FPS_LINEA_CHE_REGGE	HOLDING_LINE_FPS	English order
+FPS_VIDEO_SCELTO	CHOSEN_VIDEO_FPS	English order
+FRASE_PAGINA	PAGE_PHRASE	English order
+FRAZIONE_MINIMA	MINIMUM_FRACTION	English order; twin of --minimum-fraction (MIN_FRACTION taken by MIN_FRAZIONE)
+FRA_I_PUNTI_S	BETWEEN_POINTS_S	drop the article
+FUORI_PORTATA	OUT_OF_REACH	idiomatic
+F_LEGGE	F_READ	legge = reads (connection phase), not law
+F_SCRIVE	F_WRITE	connection phase: write
+F_STRETTA	F_HANDSHAKE	stretta (di mano) = handshake, not tight
+F_FINITA	F_DONE	connection phase: done
+FileIscrizioni	EnrollmentsFile	English order
+FileVersioniAnnotate	AnnotatedVersionsFile	English order
+FontiFiducia	TrustSources	English order
+FormaAnnexB	AnnexBLayout	forma = the stream's layout, English order
+FormaAnnexB264	AnnexB264Layout	forma = the stream's layout, English order
+FormaObu	ObuLayout	forma = the stream's layout, English order
+FuoriSempre	AlwaysOut	English order
+GESTI_RIDOTTI	REDUCED_GESTURES	English order
+GESTO_A_VUOTO	NOOP_GESTURE	a vuoto = a gesture that does nothing
+GIORNI_PREDEFINITI	DEFAULT_DAYS	English order
+GIRI_VELOCE	FAST_ROUNDS	English order
+GIRO_CORTO	SHORT_ROUND	English order
+GIRO_PIENO	FULL_ROUND	English order
+GiroIntero	FullRound	English order
+GRUPPI_CARTELLA	GROUPS_DIR	the groups' directory (/var/lib/remotix)
+GRUPPI_SCHEDA_TESTO	CARD_GROUPS_TEXT	twin of GRUPPI_SCHEDA → CARD_GROUPS (interi.tsv)
+GruppiScheda	CardGroups	English order, like CARD_GROUPS
+GRUPPO_ESCLUSO	EXCLUDED_GROUP	English order
+GUARIGIONE_FONDO_US	HEALING_BACKSTOP_US	fondo as a time limit → backstop (glossary)
+GUASTO_MASSIMO	MAX_FAULT	English order
+GUASTO_MINIMO	MIN_FAULT	English order
+GUSCIO_WORKER	WORKER_SHELL	English order
+GestoreFirewall	FirewallHandler	English order
+GestoreGruppi	GroupHandler	English order
+GestoreSessioni	SessionHandler	English order
+GestoreUnita	UnitHandler	English order
+GruppoPrimario	PrimaryGroup	English order
+GuastoAmbiente	EnvironmentFault	English order
+GuidaAndroid	AndroidDriver	English order
+GuidaCdp	CdpDriver	English order
+GuidaChrome	ChromeDriver	English order
+GuidaFirefox	FirefoxDriver	English order
+GuidaTelefono	PhoneDriver	English order
+IL_POSTO_CONDIVISO	SHARED_DIR	the shared /tmp/mozilla dir; not an RCP slot
+IMPRONTA_SERVITA	SERVED_FINGERPRINT	English order
+INATTIVITA_PREDEFINITA	DEFAULT_INACTIVITY	English order
+INCORSO	IN_PROGRESS	idiomatic
+GIRA_C1	RUN_C1	gira = run (shell function that runs it), imperative
+GIRA_C10G	RUN_C10G	gira = run (shell function that runs it), imperative
+GIRA_C17	RUN_C17	gira = run (shell function that runs it), imperative
+GIRA_C18	RUN_C18	gira = run (shell function that runs it), imperative
+GIRA_C19	RUN_C19	gira = run (shell function that runs it), imperative
+GIRA_C2	RUN_C2	gira = run (shell function that runs it), imperative
+GIRA_C20	RUN_C20	gira = run (shell function that runs it), imperative
+GIRA_C21	RUN_C21	gira = run (shell function that runs it), imperative
+GIRA_C22	RUN_C22	gira = run (shell function that runs it), imperative
+GIRA_C23	RUN_C23	gira = run (shell function that runs it), imperative
+GIRA_C24	RUN_C24	gira = run (shell function that runs it), imperative
+GIRA_C3	RUN_C3	gira = run (shell function that runs it), imperative
+GIRA_C4	RUN_C4	gira = run (shell function that runs it), imperative
+GIRA_C5	RUN_C5	gira = run (shell function that runs it), imperative
+GIRA_C6	RUN_C6	gira = run (shell function that runs it), imperative
+GIRA_C7	RUN_C7	gira = run (shell function that runs it), imperative
+GIRA_C8	RUN_C8	gira = run (shell function that runs it), imperative
+GIRA_C8B	RUN_C8B	gira = run (shell function that runs it), imperative
+GIRA_C9	RUN_C9	gira = run (shell function that runs it), imperative
+GIRA_P0	RUN_P0	gira = run (shell function that runs it), imperative
+GIRA_SUITE	RUN_SUITE	gira = run (shell function that runs it), imperative
+GIRA_MAGLIA	RUN_MESH	gira = run (shell function), imperative
+INNESTI_OSPITE	GUEST_GRAFTS	English word order
+INSIEME	OVERVIEW	the figure of the whole system (ch01), not «together»
+INTESTAZIONE_MAX	MAX_HEADER	English word order (max first)
+INTESTAZIONI_DI_SISTEMA	SYSTEM_HEADERS	English word order, no «of»
+INTESTAZIONI_MAX	MAX_HEADERS	English word order (max first)
+IN_ANNULLAMENTO	ROLLING_BACK	the state's own value is "ROLLING_BACK"
+IN_ESECUZIONE	RUNNING	the state's own value is "RUNNING"
+IN_VERIFICA	VERIFYING	the state's own value is "VERIFYING"
+Insieme	ResolvedSet	the field's JSON key is resolved_set
+InAttesa	Pending	a decision still open; twin json key in_attesa (other chunk) should become pending
+Iscrizioni	Memberships	the (user, group) pairs: memberships, not enrollments
+JSONCanonico	CanonicalJSON	English word order
+JS_GUASTO_VIA	JS_FAULT_OFF	the JS that removes the fault (clearInterval)
+LARGHEZZA_MAX	MAX_WIDTH	English word order (max first)
+LATO_ASSURDO	ABSURD_SIDE	English word order
+LA_PROVA_NON_E_GIRATA	TEST_DID_NOT_RUN	the vocabulary mangled the sentence
+LETTURA_OK	READ_OK	shorter, standard
+LISTA_NERA	DENYLIST	English word order; denylist is the standard term
+LIVELLI_H264	H264_LEVELS	English word order
+LIVELLI_HEVC	HEVC_LEVELS	English word order
+LivelloH264	H264Level	English word order (type of LIVELLI_H264)
+LivelloHEVC	HEVCLevel	English word order
+LIVELLO_DICHIARATO	DECLARED_LEVEL	English word order
+LUCE_MINIMA	MIN_LIGHT	English word order
+L_VERO	L_REAL	the real (measured) level count, not a boolean
+M_VERO	M_REAL	the real measurement, not a boolean (twin of L_VERO)
+LineaMorta	DeadLine	glossary: linea morta = dead line (options are already dead-line)
+MAGIA_VECCHIA	OLD_MAGIC	English word order
+MAKEFILE_FINTO	FAKE_MAKEFILE	English word order
+MARCHE_ATTESE	EXPECTED_MARKS	attese = expected, not waits
+MARCHE_ESTERNE	EXTERNAL_MARKS	English word order
+MARCHE_ROSSE	RED_MARKS	English word order
+MARCA_GUASTO	FAULT_MARK	English word order
+MARGINE_CRONOMETRI	TIMER_MARGIN	English word order
+MARGINE_FILO	WIRE_MARGIN	English word order; twin of option margine-filo → wire-margin (interi.tsv)
+MARGINE_IMPUTATO	BLAME_MARGIN	the margin before the server is blamed, not «accused»
+MARGINE_SOGLIA	THRESHOLD_MARGIN	English word order
+MARGINE_STALLO_MINIMO	MIN_STALL_MARGIN	English word order
+MASSIMO_MESSAGGIO	MAX_MESSAGE_LEN	English word order; MAX_MESSAGE is taken by MAX_MESSAGGIO
+MAX_PACCHETTO	MAX_PACKET	an Opus datagram is a packet, not a package
+MEZZO	MID	the count in the middle (between PRIMA and DOPO), not half
+MINIMO_CAMPIONI	MIN_SAMPLES	English word order, standard min
+MINIMO_FOTOGRAMMI	MIN_FRAMES	English word order, standard min
+MIN_FINESTRE_VALIDE	MIN_VALID_WINDOWS	English word order
+MISURA_NUOVA	NEW_SIZE	a screen size (2560x1440), English word order
+MISURA_PIXEL_OGNI_MS	PIXEL_MEASURE_EVERY_MS	English word order
+MISURE_SANE	HEALTHY_MEASUREMENTS	English word order
+MISURE_SCHERMO	SCREEN_SIZES	screen sizes (4k, 3k…), English word order
+MODELLO_INQUILINO	TENANT_PATTERN	a regex of tenant names: pattern, English word order
+MOTORI_GUASTO	FAULTY_ENGINES	count of faulty engines, English word order
+MP4_DURATA_MAX	MP4_MAX_DURATION	English word order
+MP4_DURATA_MIN	MP4_MIN_DURATION	English word order
+MSG_APPUNTI_VUOLE	MSG_CLIPBOARD_REQUEST	the child asks for the clipboard
+MSG_RIMANDA_PALCO	MSG_RESEND_STAGE	a message name is imperative, like the others
+MSG_SONO	MSG_INTRO	the child introduces itself («sono» = I am), not «are»
+SCADENZA_SONO_MS	INTRO_DEADLINE_MS	deadline of MSG_INTRO, twin
+M_NON_PARTE_PULSANTE	M_BUTTON_NOT_LEAVING	the message «DOES NOT LEAVE: … pressed»
+M_NON_PARTE_TASTO	M_KEY_NOT_LEAVING	twin of M_BUTTON_NOT_LEAVING
+M_ORFANI_PULSANTI	M_ORPHAN_BUTTONS	English word order
+M_ORFANI_TASTI	M_ORPHAN_KEYS	English word order
+Minimo	Minimum	twins move together / English word order
+ModoBitrate	BitrateMode	English word order
+ModoQualita	QualityMode	English word order
+MotoreDelPacchetto	PackagedEngine	the path where the package puts the engine; no «of»
+NAL_VCL_MASSIMO	NAL_VCL_MAX	standard max
+NODI_VERI	REAL_NODES	real device nodes, not «true»
+NODO_RENDERING	RENDER_NODE	the DRM term is render node
+NOME_ATTREZZO_GRUPPI	GROUPS_TOOL_NAME	English word order
+NOME_DEL_CODEC	CODEC_NAME	English word order, no «of»
+NOME_DISPLAY	DISPLAY_NAME	English word order (twin of PERCORSO_DISPLAY)
+NOME_ESITO	OUTCOME_NAME	English word order
+NOME_FIGLIO	CHILD_NAME	English word order
+NOME_G	GROUP_NAME	the name of group $G
+NOME_INIETTATO	INJECTED_NAME	English word order
+NOME_INPUT	INPUT_NAME	English word order
+NOME_LECITO	ALLOWED_NAME_CHARS	it is the set of allowed characters
+NOME_LOGIND	LOGIND_NAME	English word order (twin of PERCORSO_LOGIND)
+NOME_RD	RD_NAME	English word order
+NOME_REMOTE	REMOTE_NAME	English word order
+NOME_SCHEDA	CARD_NAME	English word order
+NOME_SCREENCAST	SCREENCAST_NAME	English word order
+NOME_SINK	SINK_NAME	English word order
+NOME_T	TYPE_NAME	the name of a message type T
+NOMI_BTN	BTN_NAMES	English word order
+NOMI_DEL_BAN	BAN_NAMES	English word order, no «of»
+NOMI_DESKTOP	DESKTOP_NAMES	English word order
+NOMI_NON_FUNZIONI	NON_FUNCTION_NAMES	English word order
+NOMI_NOTI	KNOWN_NAMES	English word order
+NOMI_PUNTI	POINT_NAMES	English word order
+NOMI_STATO	STATE_NAMES	English word order
+NOMI_TASTI	KEY_NAMES	English word order
+NOMI_VOCI	ENTRY_NAMES	English word order
+NON_E_UNA_MAGLIA	NOT_A_MESH	the vocabulary left the Italian «e»
+NOSTRO_CODEC_PREDEFINITO	OUR_DEFAULT_CODEC	English word order
+NienteDaFare	NothingToDo	«da fare» = to do, not «from»
+NienteDaGiudicare	NothingToJudge	«da giudicare» = to judge, not «from»
+NomeDesktop	DesktopName	English word order
+NomiDipendenze	DependencyNames	English word order
+NonHoPotutoGuardare	CouldNotLook	the vocabulary mangled the sentence
+NonMio	NotMine	English
+OPZIONI_BANCO	BENCH_OPTIONS	English word order
+OPZIONI_GIRO_A	ROUND_A_OPTIONS	English word order
+OUTPUT_MINIMI	MIN_OUTPUTS	English word order
+Ora	TimeNow	the approval time; twin of ora → time_now
+OpzioniInstallazione	InstallOptions	English word order
+OpzioniPianoProva	TestPlanOptions	English word order (options of TestPlan)
+OpzioniPreflight	PreflightOptions	English word order
+OrologioFinto	FakeClock	English word order
+PACCHETTI_OSPITE_XRDP	GUEST_XRDP_PACKAGES	dpkg packages, not packets; English word order
+PACCHETTI_XRDP	XRDP_PACKAGES	dpkg packages, English word order
+PAGINA_FINTA	FAKE_PAGE	English word order
+PAGINA_SCENA	SCENE_PAGE	English word order
+PAGINA_VIDEO	VIDEO_PAGE	English word order
+PAROLE_ITALIANE	ITALIAN_WORDS	the vocabulary left «italiane» untranslated
+PAROLE_ITALIANE_GRAFICI	ITALIAN_CHART_WORDS	untranslated word, English word order
+PAROLE_NOTA	NOTE_WORDS	English word order
+PASSAGGIO_OSPITE	GUEST_HANDOFF	the handoff folder seen by the guest
+PASSAGGIO_SCATOLA	BOX_HANDOFF	the handoff folder seen in the box
+REMOTIX_PASSAGGIO16	REMOTIX_HANDOFF16	env var of GUEST_HANDOFF, twin
+PASSI_GESTO	GESTURE_STEPS	English word order
+PASSO_AUDIO_US	AUDIO_STEP_US	English word order, unit last
+PASSO_LENTO_MS	SLOW_STEP_MS	English word order, unit last
+PASSO_MINIMO_US	MIN_STEP_US	English word order, unit last
+PASSO_SCANSIONE_S	SCAN_STEP_S	English word order, unit last
+PAUSA_GUASTO_S	FAULT_PAUSE_S	English word order, unit last
+PAUSA_PASSO_MS	STEP_PAUSE_MS	English word order, unit last
+PAUSA_PREDEFINITA_S	DEFAULT_PAUSE_S	English word order, unit last
+PAUSA_SANA_S	HEALTHY_PAUSE_S	English word order, unit last
+PAVIMENTO_FINESTRA	WINDOW_FLOOR	English word order
+PCM_BYTE_BLOCCO	PCM_BLOCK_BYTES	bytes of a PCM block, unit last
+PEGGIORE_MAI_VISTA	WORST_EVER_SEEN	«mai vista» = ever seen
+PERDITA_TRASCURABILE	NEGLIGIBLE_LOSS	English word order
+PERMESSO_DESKTOP	PERMISSION_DESKTOP_FILE	the .desktop file that grants the permission
+PESI_LUMA	LUMA_WEIGHTS	English word order
+PEZZI_DI_C1	C1_PIECES	English word order, no «of»
+PEZZO_MAX	MAX_PIECE	English word order (max first)
+PICCO_BLOCCATO_MS	BLOCKED_PEAK_MS	English word order, unit last
+PICCO_LIBERO_MS	FREE_PEAK_MS	English word order, unit last
+PICCO_MINIMO	MIN_PEAK	English word order
+PORTA_CDP	CDP_PORT	English word order
+PORTA_DI_QUESTO_BANCO	THIS_BENCH_PORT	English word order, no «of»
+PORTA_PAGINA	PAGE_PORT	English word order
+PORTA_PREDEFINITA	DEFAULT_PORT	English word order
+PORTA_RX	RX_PORT	English word order (sibling PORTA_SSH → SSH_PORT)
+PORTA_SONDA	PROBE_PORT	English word order (PORTE_SONDA → PROBE_PORTS)
+PORTA_WEB	WEB_PORT	English word order
+PORTE_AMMESSE	ALLOWED_PORTS	English word order
+PORTE_MIE	MY_PORTS	English word order
+PORTE_SCATOLE	BOX_PORTS	English word order
+POSIZIONE_TASTO	KEY_POSITION	English word order
+POSTI_USERMOD	USERMOD_PATHS	the places where usermod lives
+POSTO_NIENTE_PIU_POSTI	SLOT_NO_MORE_SLOTS	«niente più» = no more
+POSTO_OCCUPATO	SLOT_OCCUPIED	SLOT_V_TAKEN is unreadable; SLOT_TAKEN belongs to POSTO_PRESO
+POTENZA_RENDERING	RENDER_POWER	English word order
+PotenzaEntrypoint	EntrypointPower	English word order
+PREDICATI_GIRO	ROUND_PREDICATES	English word order
+PREF_INTERNE	INTERNAL_PREFS	English word order
+PRESE	GRABS	grab points along the border, not «taken»
+PRESE_DY	GRAB_DYS	the dy of the grab points
+PRODOTTO_CHIESTO	REQUESTED_PRODUCT	English word order
+PRODOTTO_DA_SE	SELF_CHOSEN_PRODUCT	«da sé» = by itself (Mutter chose it), not «from if»
+PRODOTTO_SCHERMO	SCREEN_PRODUCT	English word order
+PROLOGO_TELEFONO	PHONE_PROLOGUE	English word order
+PROPOSTE_APERTE	OPEN_PROPOSALS	English word order
+PROVA_GIRI	PROBE_ROUNDS	the startup probe (docs: probe attempts)
+PROVA_LATO	PROBE_SIDE	the probe's side in px (docs say so)
+PROVA_NESSUNA_SCHEDA	PROBE_NO_CARD	the probe's exit when there is no card
+PUNTI_DITO	FINGER_POINTS	English word order
+PUNTI_PAD	PAD_POINTS	English word order
+PX_PER_SCATTO	PX_PER_NOTCH	a wheel notch (docs: pixels per notch)
+PacchettiDelRun	RunPackages	the .run's packages, not packets
+PacchettiRemotix	RemotixPackages	REMOTIX's packages, not packets
+PacchettoDesktop	DesktopPackage	English word order
+PianoPacchetti	PlanPackages	packages, not packets (like PlanGroup, PlanUnit)
+PassiNonFatti	UnimplementedSteps	steps the engine cannot execute yet
+PercorsoInstallazione	InstallPath	English word order
+PianoAccendiServizio	PlanStartService	start, not «turn on»
+PianoDiProva	TestPlan	English word order; twin pianoDiProva (other chunk) should become testPlan
+PorteVive	LivePorts	English word order
+PortaValida	ValidPort	English word order
+PosizioneCornice	FramePosition	English word order
+ProcessiGrafici	GraphicalProcesses	English word order
+ProcessoGrafico	GraphicalProcess	English word order
+ProgrammiAmmessi	AllowedPrograms	English word order
+PuntoDiProva	TestPoint	the hook of the interruption tests; no «of»
+QUALITA_WEBP	WEBP_QUALITY	English word order
+QUANTE_CANDIDATE	MAX_CANDIDATES	the size of the candidate array
+QUANTI_GRUPPI_SCHEDA	MAX_CARD_GROUPS	the size of the card-group array
+QUANTI_RITROVATI_MAX	MAX_FOUND_AGAIN	the size of the found-again array
+QUANTO_FORZATO	FORCED_QUANTUM	the PipeWire node.force-quantum value
+QUOTA_CHIAVI_MAX	MAX_KEY_QUOTA	English word order (max first)
+RADICE_BANCHI	BENCH_ROOT	English word order
+RCP_CHIUSO_DALL_UTENTE	RCP_CLOSED_BY_USER	«dall'» = by
+RCP_CREDENZIALI_ERRATE	RCP_WRONG_CREDENTIALS	English word order
+RCP_ERRORE_PROTOCOLLO	RCP_PROTOCOL_ERROR	English word order
+RCP_GIA_ATTIVA_LOCALE	RCP_ALREADY_ACTIVE_LOCALLY	adverb, English
+RCP_GIA_ATTIVA_REMOTA	RCP_ALREADY_ACTIVE_REMOTELY	adverb, English (twin)
+RCP_RILASCIO_SENZA_CONTO	RCP_RELEASE_NO_COUNT	shorter, the count is unknown
+RCP_SERVER_IN_CHIUSURA	RCP_SERVER_SHUTTING_DOWN	«in chiusura» = shutting down
+SERVER_IN_CHIUSURA	SERVER_SHUTTING_DOWN	twin of RCP_SERVER_SHUTTING_DOWN
+RCP_SESSIONE_LOCALE_PREVALSA	RCP_LOCAL_SESSION_PREVAILED	English word order
+RCP_SESSIONE_NON_SERVIBILE	RCP_SESSION_UNSERVABLE	English
+SESSIONE_NON_SERVIBILE	SESSION_UNSERVABLE	twin of RCP_SESSION_UNSERVABLE
+RCP_TELA_A_MASSIMA	RCP_CANVAS_MAX_H	A = height; html TELA_A_MASSIMA (other chunk) should follow
+RCP_TELA_A_MINIMA	RCP_CANVAS_MIN_H	A = height, English word order
+RCP_TELA_L_MASSIMA	RCP_CANVAS_MAX_W	L = width, English word order
+RCP_TELA_L_MINIMA	RCP_CANVAS_MIN_W	L = width, English word order
+RCP_TELA_RICHIAMO_MAX_MS	RCP_CANVAS_RETRY_MAX_MS	how often the stage is asked again: retry, not callback
+RCP_TELA_RICHIAMO_MS	RCP_CANVAS_RETRY_MS	how often the stage is asked again: retry, not callback
+RCP_TEMPO_SCADUTO	RCP_TIMED_OUT	English
+RCP_TETTO_SESSIONI	RCP_SESSION_CAP	English word order (REMOTIX_TETTO_SESSIONI → REMOTIX_SESSION_CAP)
+RCP_VERSIONE_INCOMPATIBILE	RCP_INCOMPATIBLE_VERSION	English word order
+RCP_VIDEO_NIENTE_CANALE	RCP_VIDEO_NO_CHANNEL	«niente» = no
+RCP_VIDEO_PRIMA_DI_SESSIONE	RCP_VIDEO_BEFORE_SESSION	no «of»
+RCP_VIDEO_ROTTO_A_META	RCP_VIDEO_BROKEN_MIDWAY	«a metà» = midway, not A_META
+REGIONI_MAX	MAX_REGIONS	English word order (max first)
+REGISTRO_G7	G7_LOG	English word order
+REGISTRO_SHELL	SHELL_LOG	English word order
+REGOLA_AUDIO	AUDIO_RULE	English word order
+REGOLE_DI_STATO	STATE_RULES	English word order, no «of»
+REGOLE_NUOVE	NEW_RULES	English word order
+LettoreBit	BitReader	English word order
+RESA_FERMA	STILL_YIELD	the yield with a still scene
+RESA_MINIMA	MIN_YIELD	English word order
+RICODIFICHE_MASSIME	MAX_REENCODES	English word order
+RIFERIMENTO_SANO	HEALTHY_REFERENCE	English word order
+RIGA_FACCIO_NASCERE	LINE_SPAWNING	the «I AM MAKING IT BE BORN» log line
+RIGHE_FINITA	FINISHED_LINES	English word order
+RILIEVI_DICHIARATI	DECLARED_FINDINGS	English word order
+RIPASSO_LOCALI_MS	LOCAL_SWEEP_MS	English word order, unit last
+RIPASSO_RITROVATI_MS	FOUND_AGAIN_SWEEP_MS	English word order, unit last
+RIPORTA_ALT	RETURN_ALT	the Alt key of the return-inside combo; ALT is not «height»
+RIPORTA_CTRL	RETURN_CTRL	the return-inside combo (input_riporta_dentro)
+RIPORTA_F12	RETURN_F12	the return-inside combo
+RIPORTA_MAIUSC	RETURN_SHIFT	the return-inside combo
+RIPORTA_SUPER	RETURN_SUPER	the return-inside combo
+RISOLUZIONE_VOLUTA	WANTED_RESOLUTION	English word order
+RITARDO_FISSO	FIXED_DELAY	English word order
+RITARDO_SESSIONE	SESSION_DELAY	English word order
+RITMO_MINIMO	MINIMUM_RATE	English word order; twin of option ritmo-minimo → minimum-rate
+RX_ISO_SOLO_PREPARA	RX_ISO_PREPARE_ONLY	English word order
+RapportoVerifica	VerifyReport	English word order
+RegistriUtente	UserLogs	English word order
+RequisitiCatalogo	CatalogRequirements	English word order
+RifCatalogo	CatalogRef	English word order
+RifMotore	EngineRef	English word order
+RimettiDiSerie	ResetToDefaults	firewalld loadDefaults; «di serie» = factory default
+SALTO_MINIMO	MIN_JUMP	English word order
+SCALA_STALLO_MS	STALL_LADDER_MS	a ladder of stall thresholds, not a scale
+SCARTO_GUASTO	FAULT_OFFSET	the tap's offset in the faulty case
+SCARTO_MASSIMO	MAXIMUM_GAP	English word order; twin of option scarto-massimo → maximum-gap
+SCATOLA_CHIESTA	REQUESTED_BOX	English word order
+SCENA_CHE_LAMPEGGIA	FLASHING_SCENE	English
+SCENA_FERMA_DI_LUCE	STILL_LIGHT_SCENE	the still light scene, not «stop»
+SCHEDE_NOTE	KNOWN_CARDS	«note» = known
+SCORCIATOIE_VT	VT_SHORTCUTS	English word order
+SCRIPT_PRESA	GRAB_SCRIPT	the frame-grab script
+SEGNI	PLACEHOLDERS	the page placeholders (__IMPRONTA__…)
+SEGNI_DI_RIEPILOGO	SUMMARY_MARKERS	markers of the summary line, no «of»
+SEGNO_CLIENT	CLIENT_MARKER	a marker string of the client
+SERRATURA_SCATOLE	BOX_LOCK	English word order
+SESSIONE_MISURA_ALTRA	SESSION_WRONG_SIZE	its marker is «WRONG SIZE»
+SESSIONE_PRODOTTO_CHIESTO	SESSION_REQUESTED_PRODUCT	English word order
+SESSIONE_SCELTO_DA_SE	SESSION_SELF_CHOSEN	marker «MONITOR CHOSEN BY ITSELF»
+SEZIONI_ATTESE	EXPECTED_SECTIONS	attese = expected
+SFRATTO_CONSIGLIATO_MS	RECOMMENDED_EVICTION_MS	English word order, unit last
+SFRATTO_PREDEFINITO	DEFAULT_EVICTION	English word order
+SHA_CARICO	PAYLOAD_SHA	the payload's sha256 (it fills PAYLOAD_SHA256)
+SINK_MISURATO	MEASURED_SINK	English word order
+SOCKET_NOTI	KNOWN_SOCKETS	English word order
+SOGLIA_CAMBIO	CHANGE_THRESHOLD	English word order
+SOGLIA_COPPIA	PAIR_THRESHOLD	English word order
+SOGLIA_CPU	CPU_THRESHOLD	English word order
+SOGLIA_MONOCATEGORIA	SINGLE_CATEGORY_THRESHOLD	English word order
+SOGLIA_RMS	RMS_THRESHOLD	English word order
+SOGLIA_RUMORE	NOISE_THRESHOLD	English word order
+SOGLIA_SALTO	JUMP_THRESHOLD	English word order
+SOGLIA_SCENA	SCENE_THRESHOLD	English word order
+SOLO_TELEFONO	PHONE_ONLY	English word order
+SOLO_VERIFICA	VERIFY_ONLY	English word order
+SONDA_CODA_US	PROBE_TAIL_US	the tail probe after the last one, not a queue
+LAV_DENTRO	WORK_INSIDE	the vocabulary left LAV untranslated (LAV_COSTRUZIONE → WORK_BUILD)
+SONDA_DIPINTI	PAINT_PROBE	word order: the JS probe that counts painted frames
+SONDA_MINIMO_US	MIN_PROBE_US	word order: minimum probe interval
+SOPRAVVIVENZA_MISURATA_S	MEASURED_SURVIVAL_S	word order: adjective first
+SORGENTE_BANCO	BENCH_SOURCE	word order: qualifier first
+SORGENTE_RCP	RCP_SOURCE	word order: qualifier first
+SORGENTE_VERA	REAL_SOURCE	word order; vera = real (the real 10-bit source), not true
+SORGENTI_PRODOTTO	PRODUCT_SOURCES	word order: qualifier first
+SUFFISSI_SORGENTE	SOURCE_SUFFIXES	word order: qualifier first
+SPECIALI_PROVATI	TRIED_SPECIALS	word order: the special keys tried
+SPESA_ACCESSO	ACCESS_COST	word order: qualifier first
+SPESA_INQUILINO	TENANT_COST	word order: qualifier first
+SPORTELLO_LA	ENDPOINT_THERE	lost its qualifier (ENDPOINT); mirrors ENDPOINT_HERE (là = on the server)
+SPOSTATA_MIN	MIN_MOVE	word order: minimum distance the window must move (px)
+STATO_APPUNTI	CLIPBOARD_STATE	word order: qualifier first
+STATO_ENC	ENC_STATUS	word order; it is the exit status of ffmpeg -encoders
+STATO_SIS	SYS_STATE	word order: systemctl is-system-running
+STESSA_MISURA	SAME_SIZE_TOL	misura = size here: px tolerance for «same size»
+STRUMENTO	TOOL	strumento = the tool script run (02-sessione-stato.py), not an instrument
+SUDO_FINTO	FAKE_SUDO	word order: adjective first
+SUOI	THEIR_GROUPS	«ITS» says nothing: the user's group list
+SUO_MIN	MIN_SHARE	minimum share of frames each user must get
+SUPERFICI_PRONTE	READY_SURFACES	word order: adjective first
+S_COSTR	BUILD_STATUS	exit status of the build; CONSTR is not a word
+Sblocca	Unlock	releases the engine lock: Unlock, not Unblock (Blocca, other chunk, should then be Lock)
+Scrivi	Record	PutOut is not English; Registro.Scrivi records a durable line (Append is taken by Aggiungi)
+SenzaDesktop	NoDesktop	idiomatic: No… for a missing thing
+SenzaH264DiSerie	NoStockH264	«di serie» = stock (distribution's packages), not «of serial»
+SenzaScheda	NoCard	idiomatic: No… for a missing thing
+ServizioPAM	PAMService	word order: qualifier first
+SessioneDesktop	DesktopSession	word order: qualifier first
+SessioneGnome	GnomeSession	word order: qualifier first
+SessioneX	XSession	word order: qualifier first
+SessioniRemotix	RemotixSessions	word order: qualifier first
+StatoAttivo	ActiveState	systemd's own name for the unit property ActiveState
+StradaCodifica	EncodeRoute	word order: a route for encoding
+StradeCodifica	EncodeRoutes	word order; twin of StradaCodifica
+TASTI_DI_UNA_TASTIERA_VERA	REAL_KEYBOARD_KEYS	word order; vera = real, not true
+TASTI_ULTIMO	LAST_KEY	word order: the last key seen
+TELA_A_MASSIMA	CANVAS_MAX_H	page twin of RCP_CANVAS_MAX_H
+TELA_A_MINIMA	CANVAS_MIN_H	page twin of RCP_CANVAS_MIN_H
+TELA_L_MASSIMA	CANVAS_MAX_W	page twin of RCP_CANVAS_MAX_W
+TELA_L_MINIMA	CANVAS_MIN_W	page twin of RCP_CANVAS_MIN_W
+TELA_MINIMA_A	MIN_CANVAS_H	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+TELA_MINIMA_L	MIN_CANVAS_W	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+TELA_PIENA	FULL_CANVAS	word order: adjective first
+TELA_RICHIESTA_RIPETI_MS	CANVAS_REQUEST_RETRY_MS	ripeti of a request = retry
+TEMI_REALI	REAL_THEMES	word order: adjective first
+TEMPO_SCADUTO	TIMED_OUT	RCP reason: the idiomatic term (TIME_EXPIRED is word for word)
+TETTI_CODICE	CODE_CAPS	twin of tetti-codice/tetti_codice → code-caps/code_caps (interi.tsv)
+TETTI_DOC	DOC_CAPS	word order; follows CODE_CAPS
+TIPI_GRAFICI	GRAPHICAL_TYPES	word order: adjective first
+TIPI_INPUT	INPUT_TYPES	word order: qualifier first
+TIPI_MAX	MAX_TYPES	array bound: max number of types seen
+TIPI_TESTO	TEXT_TYPES	word order: qualifier first
+TIPO_INPUT	INPUT_TYPE	word order: qualifier first
+TOCCO_LARGHEZZA_CLASSICO	TOUCH_CLASSIC_WIDTH	word order: adjective before width
+TOCCO_SPEDITI	TOUCH_SENT	spediti of events = sent, not shipped
+TOCCO_SPEDITI_MAX	TOUCH_SENT_MAX	twin of TOUCH_SENT
+TOCCO_TELA_SENZA_SESSIONE	TOUCH_CANVAS_NO_SESSION	shorter, idiomatic
+TOLLERANZA_LUM	LUM_TOLERANCE	word order: qualifier first
+TOLLERANZA_REL	REL_TOLERANCE	word order: qualifier first
+TOLLERANZA_SFRATTO_MS	EVICTION_TOLERANCE_MS	word order: qualifier first, unit last
+TOLLERANZA_SILENZIO_MS	SILENCE_TOLERANCE_MS	word order: qualifier first, unit last
+TOLL_MISURA	TOL_SIZE	misura = the window size (± 3 %), not a measure
+TOLL_POSTO	TOL_POS	posto = window position here (px), not an RCP slot
+TOLTI_APPOSTA	DELIBERATELY_REMOVED	word order: adverb first
+TRATTI_CAMPIONI	STRETCH_SAMPLES	word order: samples of the stretches
+TRATTI_VOCI	STRETCH_ENTRIES	word order: twin of STRETCH_SAMPLES
+T_POSIZIONE_TASTO	T_KEY_POSITION	word order; html twin POSIZIONE_TASTO should become KEY_POSITION (other chunk)
+TabellaVersioni	VersionTable	word order: qualifier first
+TestAttendeIlGestore	TestWaitsForHandler	Attende left untranslated
+TestCatalogoIncorporato	TestEmbeddedCatalog	word order: adjective first
+TestCorniceLarghezzaCostante	TestBorderConstantWidth	word order: adjective before width
+TestDisinstallazione	TestUninstall	idiomatic: Uninstall
+TestDisinstallazioneAnnullata	TestUninstallCancelled	idiomatic: Uninstall
+TestDisinstallazioneSenzaPurge	TestUninstallWithoutPurge	idiomatic: Uninstall
+TestDisinstallazioneTrattiene	TestUninstallKeeps	trattiene = keeps (holds back)
+TestFallimentoAnnullaTutto	TestFailureRollsBackAll	verb agreement
+TestFermataDaChiInstalla	TestStoppedByInstaller	«from who install» is not English
+TestInstallazione	TestInstall	idiomatic: Install
+TestInstallazioneSchedaGuasta	TestInstallBrokenCard	word order: adjective first
+TestInterruzionePrimaDiToccare	TestInterruptBeforeTouching	«BeforeOfTouch» is not English
+TestMancaFermaTutto	TestMissingStopsAll	verb agreement
+TestModificaConcorrente	TestConcurrentModification	word order: adjective first
+TestPianoDiProva	TestTestPlan	twins move together / English word order
+TestPianoNonModificaIlSistema	TestPlanDoesNotModifySystem	grammar
+TestPianoPortaScelta	TestPlanChosenPort	word order: adjective first
+TestPortaChiusa	TestClosedPort	word order: adjective first
+TestPortaDaRigaDiComando	TestPortFromCommandLine	riga di comando = command line
+TestPreflightSenzaSchedaCapace	TestPreflightWithoutCapableCard	word order: adjective first
+TestRigaTroncata	TestTruncatedLine	word order: adjective first
+TestRipresaDopoInterruzione	TestResumeAfterInterruption	ripresa = resume
+TestRivelatoreItaliano	TestItalianDetector	word order: adjective first
+TestSconosciutoNonPassa	TestUnknownDoesNotPass	grammar
+TestStradaVulkan	TestVulkanRoute	word order: qualifier first
+TestTabellaVersioni	TestVersionTable	follows VersionTable
+TestTestiInterfaccia	TestInterfaceTexts	word order: qualifier first
+TestUnaAllaVolta	TestOneAtATime	«ToTime» is wrong: una alla volta = one at a time
+TestVersioneUguale	TestSameVersion	idiomatic
+TestVersioniPacchetti	TestPackageVersions	pacchetti here = distro packages, not network packets
+TestVistaControlloParoleComuni	TestCheckViewCommonWords	follows CheckView; word order
+TettoOccupato	BusyCap	word order: the cap on waiting for a busy package manager
+TipiAzione	ActionTypes	word order: qualifier first
+TipoEvento	EventType	word order: qualifier first
+UID_UTENTE	USER_UID	word order: qualifier first
+ULTIMI_PREDEFINITI	DEFAULT_LAST_N	default number of last rounds judged
+UNITA_REMOTA	REMOTE_UNIT	word order: adjective first
+USCITE_MAX	MAX_OUTPUTS	array bound; max first like other bounds of this file
+UTENTE_BANCHI	BENCHES_USER	word order (the benches' sudoers user)
+UTENTE_BANCO	BENCH_USER	word order: qualifier first
+UTENTE_CATTIVO	BAD_USER	word order: adjective first
+UTENTE_CONTROLLO	CONTROL_USER	word order: the control user index
+UTENTE_VERI	REAL_USER	twin of REMOTIX_UTENTE_VERI → REMOTIX_REAL_USER (interi.tsv)
+VALORE_SCATTO	DETENT_VALUE	scatto of the wheel = one detent click; word order
+VARIABILI_NOSTRE	OUR_VARIABLES	word order: possessive first
+VCL_MASSIMO	VCL_MAX	standard short max
+VERA	REAL_SO	it holds the real .so path; TRUE is wrong
+VERDETTO_FUORI	VERDICT_FILE	fuori = the output file path of the verdict
+VERDE_DIFETTO	DEFECT_GREEN	word order: the defect's green colour
+VERO	FULL_AMP	it is amplitude 1.0 of the tone; TRUE is wrong
+VERSIONE_INCOMPATIBILE	INCOMPATIBLE_VERSION	word order (RCP reason name)
+VERSO_CS	DIR_CS	verso = direction (client→server); TOWARDS is wrong
+VERSO_SC	DIR_SC	twin of DIR_CS
+VICINE	NEARBY_PORTS	a list of nearby ports; NEAR alone is unclear
+VIG	IN_FORCE	vigente = in force; INFORCE is not a word
+VK_O_FALLISCI	VK_OR_FAIL	o = or (macro: Vulkan call or fail)
+VOCI_LXQT	LXQT_ENTRIES	word order: qualifier first
+V_VERO	V_REAL	the «real» 10-bit verdict, not true
+VaglioAudio	AudioScreen	word order: qualifier first
+VersioneMinima	MinVersion	standard short min, word order
+VistaBloccata	BlockedView	word order: adjective first
+VistaControllo	CheckView	word order: qualifier first
+VistaDelControllo	NewCheckView	constructor of CheckView: Go New… convention
+VistaDelPronto	NewReadyView	constructor of ReadyView: Go New… convention
+VistaDellaFine	NewEndView	constructor of the end view: Go New… convention
+VistaDelleScelte	NewChoicesView	constructor of ChoicesView: Go New… convention
+VistaMancano	MissingView	word order: the «something is missing» view
+VistaPronto	ReadyView	word order: qualifier first
+VistaScelte	ChoicesView	word order: qualifier first
+VulkanVideoTempi	VulkanVideoTimings	tempi of a measurement = timings
+WLR_MISURA_ANNULLATA	WLR_SIZE_CANCELLED	misura = output size here (wlroots.h enum)
+WLR_MISURA_CHIESTA	WLR_SIZE_REQUESTED	misura = output size here (wlroots.h enum)
+WLR_MISURA_GIA_COSI	WLR_SIZE_UNCHANGED	«already has that size»; ALREADY_SO is not English
+WLR_MISURA_IMPOSSIBILE	WLR_SIZE_IMPOSSIBLE	misura = output size here (wlroots.h enum)
+WLR_MISURA_RIFIUTATA	WLR_SIZE_REFUSED	misura = output size here (wlroots.h enum)
+WlrMisuraEsito	WlrSizeOutcome	type of the WLR_SIZE_* enum
+WT_ATTESA_CHIUSURA_NS	WT_CLOSE_WAIT_NS	word order: qualifier first, unit last
+WT_GIRO_ATTESO_MS	WT_EXPECTED_ROUND_MS	word order: adjective first
+WT_RETE_NULLA	WT_NETWORK_NONE	enum value: none, not nothing
+WT_RIPASSO_INSIEME	WT_SWEEP_BATCH	array bound of names swept together: a batch
+WT_SGOMBRA_SOGLIA_MS	WT_CLEAR_THRESHOLD_MS	word order, shorter
+WT_TIENILA_VIVA_NS	WT_KEEPALIVE_NS	the standard term
+ZonaPredefinita	DefaultZone	word order: adjective first
+_BOTTONI_CDP	_CDP_BUTTONS	word order: qualifier first
+_MESTIERI_PROVVISTA	_PROVISIONING_JOBS	word order: qualifier first
+_MISURA_VERA	_REAL_MEASURE	the saved real measuring function; vera = real
+_RIGA_LOG	_LOG_LINE	word order: qualifier first
+_VESTE	_SKIN_URL	regex for the data: URL of the cursor skin; GUISE is odd
+_al_pixel_foto	_to_photo_pixel	word order: to the photo's pixel
+_allontana	_move_away	imperative helper: move away
+_centro_tela	_canvas_center	word order: qualifier first
+_certifica_stdin_di_sudo	_certify_sudo_stdin	«stdin of sudo» is not idiomatic
+_che	_what	loop variable: what must match
+_chiudi_scheda	_close_tab	scheda of a browser over CDP = tab, not card
+_chiuso_il_12_agosto	_closed_on_aug_12	idiomatic date
+_corsa_piu_lunga	_longest_run	«run more long» is not English
+_desktop_finto	_fake_desktop	word order: adjective first
+_fab_giro_a_tratti	_make_round_in_stretches	«a tratti» = in stretches
+_fabbrica_muta	_quiet_factory	word order: the silent factory
+_finestra_minima	_min_window	word order, standard min
+_foto_finta	_fake_photo	word order: adjective first
+_foto_muta	_quiet_photo	word order: the silent photo
+_guasti_possibili	_possible_faults	word order: adjective first
+_leggi_esito_cliente	_read_client_outcome	word order: qualifier first
+_linea_del_giro	_round_line	«line of round» is not idiomatic
+_misura_che_vede_la_consegna	_measure_seeing_delivery	shorter, idiomatic
+_nuova_scheda	_new_tab	scheda of a browser over CDP = tab, not card
+_numpy_o_niente	_numpy_or_nothing	o = or
+_perdita_dichiarata	_declared_loss	word order: adjective first
+_posto_passato	_past_slot	word order: adjective first
+_preferenze_firefox	_firefox_prefs	word order: qualifier first
+_prova_posizione	_try_position	prova = try (a candidate position)
+_quadro_sintetico	_synthetic_frame	quadro = picture/frame, not refresh
+_ragione_livello	_level_reason	word order: qualifier first
+_regola_dichiarata	_declared_rule	word order: adjective first
+_root_che_trascrive	_transcribing_root	«root that transcribes»: shorter
+_sano_non_regge	_healthy_does_not_hold	grammar
+_senza_ripetuti	_without_repeats	idiomatic
+_sorveglia	_watch	a method that watches: verb, not 3rd person
+_sorveglia_datagram	_watch_datagram	follows _watch
+_sorveglia_uni	_watch_uni	follows _watch
+_spento_o_lungo	_off_or_long	o = or
+_suona	_on_alarm	SIGALRM handler; «plays» is wrong
+_tabella_finta	_fake_table	word order: adjective first
+_tasti_cdp	_cdp_keys	word order: qualifier first
+_tasti_wd	_wd_keys	word order: qualifier first
+_veri	_real	builds VERI → REAL (interi.tsv): its twin
+a_capi_non_si_contraddicono	a_ends_do_not_contradict	grammar
+a_col_tono_tace_solo_il_primo	a_with_tone_only_first_is_silent	grammar
+a_come_pulito	a_like_clean	come = like
+a_doppioni_zero	a_zero_duplicates	word order
+a_i_datagram_spariscono	a_datagrams_disappear	plural
+a_il_pcm_si_fa_rifiutare	a_pcm_gets_refused	grammar
+a_il_prezzo_si_dichiara	a_price_is_declared	grammar
+a_il_riempimento_c_e	a_fill_is_there	«c_e» left Italian
+a_il_suono_non_si_tocca	a_sound_is_untouched	grammar
+a_il_tono_conferma	a_tone_confirms	verb agreement
+a_il_tono_non_torna_a_uno	a_tone_does_not_return_to_one	«a_one» is wrong: a = to
+a_la_cura_taglia	a_fix_trims	verb agreement
+a_le_due_coincidono	a_both_coincide	idiomatic
+a_matr	a_serial	matricola = serial number, not matrix
+a_niente_riordino_sul_liscio	a_no_reorder_on_smooth	niente = no
+a_opus_costa_meno_del_pcm	a_opus_costs_less_than_pcm	«minus of» is wrong
+a_perdita_dichiarata	a_declared_loss	word order: adjective first
+a_riordino_dai_due_capi	a_reorder_from_both_ends	idiomatic
+abbandono	abandon	timeout of an idle user = abandon (glossary), not abandonment
+abbandono-s	abandon-s	option of the abandon timeout; ABBANDONO_S (other chunk) should become ABANDON_S
+abbandono_giro	abandon_round	follows abandon
+abbandono_ms	abandon_ms	follows abandon
+abbandono_scaduto	abandon_expired	follows abandon
+abbassa_qualita	lower_quality	imperative, like the other function names
+abitate	occupied	the only occupied bucket; inhabited is odd for data
+accendi_a_misura	turn_on_at_size	a misura = at a given size
+accendi_l_applicazione	turn_on_application	stray l_ article
+acceso_da_me	turned_on_by_me	da = by
+al_congedo	on_farewell	atexit callback: on_…
+al_fuoco	on_focus	callback when the field gets focus
+al_peggiore	at_worst	counter of values counted at the worst
+al_segnale	on_signal	signal handler: on_…
+al_tempo	on_timer	timer callback: on_…
+alla_raffica	on_burst	callback of the burst timer: on_…
+altCorpo	bodyHeight	word order: body height
+altezzaMinima	minHeight	standard short min, word order
+altezza_codificata	encoded_height	word order: adjective first
+altezza_corrente	current_height	word order: adjective first
+altezza_flusso	stream_height	word order: qualifier first
+altezza_superficie	surface_height	word order: qualifier first
+altri_nomi	other_names	word order
+ambienteFinto	fakeEnvironment	word order: adjective first
+ambiente_browser	browser_env	twins move together / English word order
+ambiente_del_gestore	handler_environment	«environment of handler» is not idiomatic
+ambiente_pam	pam_environment	word order: qualifier first
+ambiente_rdp	rdp_environment	word order: qualifier first
+app_diario	app_log	diario = a log of the clipboard announcements
+app_offri_dopo	app_offer_later	dopo = later
+app_suo_id	app_peer_id	«its» = the CLIENT's (the peer's) last announcement
+app_suo_len	app_peer_len	twin of app_peer_id
+altKey	altKey	⛔ browser KeyboardEvent.altKey (ev.altKey): must not change at all
+approvaAMano	approveManually	«a mano» = by hand: manual consent flag
+appunti_a_una	clipboard_to_one	sends the clipboard to one connection of the user
+appunti_apri_la_domanda	clipboard_open_request	domanda = the request to open the clipboard stream; drop «la»
+appunti_chiedi_l_arretrato	clipboard_ask_backlog	drop the article «l'»
+appunti_montaggio	clipboard_assembly	montaggio = reassembly of the incoming chunks, not mount
+appunti_montaggio_libera	clipboard_assembly_free	follows appunti_montaggio
+appunti_offerta_arretrata	clipboard_pending_offer	offer held back for later: adjective first
+appunti_rileggi_prima_di_servire	clipboard_reread_before_serving	«before of serve» is not English
+appunti_servi_in_attesa	clipboard_serve_pending	serves the requests that were waiting
+appunto	clip	py: the cut/copied text snippet, not «precisely»
+apri_controllo	open_control	controllo = the RCP control channel (§4.2), not a check
+ascolta_controllo	listen_control	controllo = the control channel (CONGEDO), not a check
+azzera_controllo	reset_control	resets the control stream with a code, not a check
+apri_dispositivo_logico	open_logical_device	English word order
+apri_scheda_vaapi	open_vaapi_card	English word order
+apri_scheda_vulkan	open_vulkan_card	English word order
+argomenti_ciechi	blind_arguments	English word order (twin of argomenti-ciechi)
+argomenti-ciechi	blind-arguments	English word order (twin of argomenti_ciechi)
+aria-current	aria-current	HTML ARIA attribute, not ours: must not change
+aria-pressed	aria-pressed	HTML ARIA attribute (setAttribute, CSS selector): must not change
+arriva_la_chiave_nuova	new_key_arrives	English word order
+ascolto_dispositivo	device_listener	a zwlr_data_control_device_v1_listener
+ascolto_fin	toplevel_listener	an xdg_toplevel_listener (fin = finestra)
+ascolto_flusso	stream_listener	a zkde_screencast_stream listener
+ascolto_guscio	wm_base_listener	an xdg_wm_base_listener
+ascolto_offerta	offer_listener	a zwlr_data_control_offer_v1_listener
+ascolto_output	output_listener	a wl_output_listener (banchi/06-b33-testimone.c)
+ascolto_posto	seat_listener	a wl_seat_listener: posto is the Wayland seat here, not an RCP slot
+ascolto_puntatore	pointer_listener	a wl_pointer_listener
+ascolto_registro	registry_listener	a wl_registry_listener, not a log
+ascolto_sorgente	source_listener	a zwlr_data_control_source_v1_listener
+ascolto_sup	surface_listener	an xdg_surface_listener
+ascolto_tastiera	keyboard_listener	a wl_keyboard_listener
+ascolto_uscita	kwin_output_listener	a wl_output_listener in src/kwin.c (output_listener goes to the bench twin)
+aspetta_apertura	wait_open	shorter, idiomatic
+aspetta_che_finisca	wait_until_done	«wait that finish» is not English
+aspetta_che_i_fotogrammi_arrivino	wait_for_frames	«wait that i frames arrive» is not English
+aspetta_che_il_cliente_se_ne_vada	wait_client_gone	«wait that client if go» is not English
+aspetta_che_il_desktop_si_fermi	wait_desktop_settled	waits for the desktop to stop changing
+aspetta_che_parta	wait_started	«wait that starts» is not English
+aspetta_ferma	wait_still	waits until the screen stops changing, not a stop
+aspetta_fine_chiamata	wait_call_end	English word order
+aspetta_tela_ferma	wait_canvas_still	the canvas stops changing, not «stop»
+assesta	settle_series	list of samples that settle; noun, not a verb
+assesta_s	settle_s	option twin of --assesta-s
+assesta-s	settle-s	option: seconds to settle
+asta	stem	the vertical stroke of the I-beam cursor shape
+attesa_del_giro	round_wait	English word order
+attesa_esplicita	explicit_wait	English word order
+attesa_dx	expected_dx	it is the expected box shift, not a wait
+attesa_a	want_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+attesa_l	want_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+attesa_x	want_x	14-f1-forma.c: expected x from argv, not a wait
+attesa_y	want_y	14-f1-forma.c: expected y from argv, not a wait
+attesa_max	max_wait	English word order
+attesa_min	min_wait	English word order
+attesa_uscita	wait_exit	uscita = the session's exit, not an output
+attesa-uscita	wait-exit	option twin of attesa_uscita
+attesa_uscita_s	wait_exit_s	follows attesa_uscita
+attesa-uscita-s	wait-exit-s	option twin of attesa_uscita_s
+attese_impulsi	pulse_waits	English word order
+attese_tela	canvas_waits	English word order
+atteso	expected_val	the expected value of a check; «awaited» is the wrong meaning
+atteso_prov	expected_provocable	the expected motivi_provocabili; «orig» was wrong
+attrezzo_che_manca	missing_tool	«tool that missing» is not English
+audio_ascolta_qualcuno	audio_has_listener	true when some session of the user listens
+audio_detto	audio_logged	«already said in the log» flag
+audio_detto_us	audio_logged_us	time of the last log line
+audio_svuota	audio_drain	empties the audio queue
+avanti	keep_going	the bool that says whether to go on with the next message
+avanzo	leftover	the bytes left after the headers
+avevo_da_mandare	had_to_send	«had from send» is not English
+avviso-muro	warning-wall	CSS class; muro was left untranslated
+azioniDiProva	testActions	English word order
+b0_binario_e_sorgenti	b0_binary_and_sources	«e» is Italian for «and»
+banchi_prova	test_benches	English word order
+bene	all_ok	the success flag; «well» is not a name (ok is taken)
+bevi_tutto	slurp_fd	reads the whole fd, not «drink»
+bo_come_il_prodotto	bo_like_product	the gbm bo built as the product does
+bottoncino	small_button	natural English
+bottoni_orfani	orphan_buttons	English word order
+budget_riga_avvio	budget_startup_line	the log line at startup: English word order
+budget_riga_verdetto	budget_verdict_line	English word order
+buffer_distinti	distinct_buffers	English word order
+bus_di_sessione	session_dbus	the D-Bus session bus (session_bus is taken)
+buttane	drop_prob	probability of dropping a packet
+byte_non_usciti	unsent_bytes	bytes thrown away before leaving
+byte_totali	total_bytes	English word order
+c1_ha_quel_che_serve	c1_has_what_it_needs	«has that that needs» is not English
+c_e_capacita	has_capabilities	c_e = «c'è», there is
+c_e_la_chiave	schema_has_key	c'è la chiave: the GSettings schema has the key (has_key is taken)
+c_e_rilievo	has_survey	c_e = «c'è», there is
+c_e_testo	has_text	c_e = «c'è», there is
+cache_nata	cache_created	natural English
+cadenza_massima	max_cadence	English word order
+cadenza_minima	min_cadence	English word order
+callback_in_volo_massimo	max_callbacks_in_flight	English word order
+campioni_nuovi	new_samples	English word order
+campioni_sani	healthy_samples	English word order
+campioni_giro	round_samples	English word order
+campo_lascia_da_solo	field_left_alone	«leave from only» is not English
+campo-bordo	field-border	CSS var used as border-color
+campo-bordo-su	field-border-hover	CSS var for :hover border-color
+canale_corrente	current_channel	English word order
+canale_entro	channel_deadline	the time by which the channel must open
+capacita_mpixel_s	capacity_mpixel_s	the budget capacity in Mpixel/s, not a capability
+capacita_del_desktop	desktop_capabilities	English word order
+capacita_del_profilo	profile_capabilities	English word order
+capacita_della_maglia	mesh_capabilities	English word order
+capcoda	capqueue	capacity of the queue array (pair of nqueue), not its head
+capsalta	capsule_skip	bytes of a capsule still to skip
+capsula_chiusura	closing_capsule	twins move together / English word order
+carattere_ammesso	allowed_char	English word order
+cartellaStatoUtente	userStateDir	English word order
+cartella_attori	actors_dir	English word order
+cartella_avvio	autostart_dir	it is ~/.config/autostart
+cartella_dropin	dropin_dir	English word order
+cartella_ganci	hooks_dir	English word order
+cartella_nostra	is_our_dir	predicate: is this folder ours
+cartella_tema	theme_dir	English word order
+cartella_temi	themes_dir	English word order
+cartelleModuliPAM	pamModuleDirs	English word order
+casa_dell_ammissione	admission_home	English word order
+casa_della_provvista	provisioning_home	English word order
+casa_di_c1	c1_home	English word order
+casa_di_c8	c8_home	English word order
+casi_guasto	fault_cases	English word order
+casi_totali	total_cases	English word order
+caso_distacco	detach_case	English word order
+caso_guasto	fault_case	English word order
+caso_senza_palco	no_stage_case	English word order
+centri_caselle	box_centers	English word order; casella = box (cell_centers goes to centri_celle)
+centri_celle	cell_centers	English word order
+cera	had_buffer	c'era: whether a bo or a buffer was already there
+cerca_in_su	search_upward	«in on» is not English
+cerca_in_tutta_la_ripresa	search_whole_recording	«in whole resumed» is wrong
+cerca_frase	search_phrase	frase = phrase, not sentence, in a search
+cert_congedo_noto	cert_known_farewell	English word order
+cert_giro_completo	cert_full_round	English word order
+cert_morte_silenziosa	cert_silent_death	English word order
+certifica_va	certify_ok	shell predicate: the certification is GREEN
+certificati_ruota_se_serve	certificates_rotate_if_needed	«if needs» is not English
+che	desc	describes what failed; «that» is not a name (what is taken)
+che_cosa	topic	what is being counted; «that what» is not English
+chiHaConsegnato	whoDelivered	natural English
+chi_ascolta	who_listens	verb agreement
+chi_tiene_la_porta	port_holder	English word order
+chi_serviva	who_served	the pid that was serving
+chiama_per_descrittore	call_for_fd	the D-Bus call that returns a file descriptor
+chiamata_ms_mediana	median_call_ms	English word order
+chiaro-fondo	light-background	CSS var: light colour on a dark ground (twin of tenue-fondo → faint-background)
+chiave_alla_tela_nuova	key_on_new_canvas	English word order
+chiave_attesa_detta_ms	key_wait_logged_ms	detto = already logged, not «said»
+chiave_mancata	missed_key	English word order
+chiave_nuova	new_key	English word order
+chiave_serve	key_needed	«key needs» reads wrong: a keyframe is needed
+chiaviOrdinate	sortedKeys	English word order
+chiedi_a_mutter	ask_mutter	drop the preposition
+chiedi_al_compositore	ask_compositor	drop the preposition
+chiedi_sessione_locale	ask_local_session	English word order
+chiesta_a_mano	requested_manually	«requested a hand» is wrong: set by hand
+chiesti_al_secondo	requested_per_second	«to second» is wrong
+chiude_prima_di_attacca	closes_before_attach	«before of» is not English
+chiudi_perche_congedato	close_on_farewell	closes because a CONGEDO came
+chiusa_da_noi	closed_by_us	«from us» is wrong
+chiusa_dal_client	closed_by_client	«from client» is wrong
+chiusura_da	closing_since	the time the closing started
+chiusura_scadenza	closing_deadline	scadenza = deadline here
+chiusura_storta	bad_closing	English word order
+chrome_davanti	chrome_in_front	natural English
+ci_vuole	required_cmd	the command the desktop needs
+ciao_buono	good_hello	English word order
+ciclo_detto_ms	cycle_logged_ms	detto = last logged, not «said»
+caduta_detta	drop_logged	detto = already logged, not «said»
+cid_slega	cid_unbind	verb form like cid_bind
+cid_slega_tutti	cid_unbind_all	verb form like cid_bind
+cifre_ma	major_digits	digits of the major number
+cifre_mi	minor_digits	digits of the minor number
+cl_detti_pointerdown	cl_pointerdown_logged	counter of logged pointerdowns
+cl_detto_sorgente	cl_source_logged	flag: the event source was logged
+cl_hover_dal_rilascio	cl_hover_since_release	«from release» is wrong
+cl_nel_modulo	cl_in_form	modulo = the HTML form (password field)
+cl_satura	cl_clamp	function clamping the pointer to the canvas
+cl_scatti	cl_notches	wheel notches, not shots
+cl_visti_mouse	cl_mouse_seen	English word order
+cl_visti_pointer	cl_pointer_seen	English word order
+classe_imposta	class_imposed	imposed class (participle), not «set»
+classico_cucito	classic_seamed	glossary: cucitura → seam
+classifica_sagoma	classify_shape	verb: classifies the cursor shape
+clic_vero	real_click	English word order
+cliente_di_prova	test_client	English word order
+cliente_in_sottofondo	background_client	English word order
+cmd_torna	cmd_revert	reverts the VM disk to a photo
+banda_massimo	bandwidth_max	shorter, like the other banda_* fields
+coda_calcolo	compute_queue	Italian order: the Vulkan compute queue
+coda_codifica	encode_queue	Italian order: the Vulkan encode queue
+coda_da_spedire	queue_unsent	"da" = still to send, not "from"; keeps the queue_* family
+coda_da_svuotare	queue_to_drain	"da" = to be drained, not "from"
+coda_dec	dec_queue	Italian order: the decoder's queue size
+coda_di	tail_of	coda here is a file's tail (last lines), not a queue
+coda_d	tail_d	the tail of the client's log, not a queue
+coda_p	tail_p	the tail of the client's log, not a queue
+coda_n	tail_n	tail length (rcp.c body+tail; log tail in the benches), not a queue
+coda_registro	log_tail	the tail of the log; Italian order
+coda_max	max_queue	Italian order
+coda_mse	mse_queue	Italian order
+coda_svuotamento_ms	queue_drain_ms	noun form of drain
+codec_atteso	expected_codec	Italian order
+codec_buoni	good_codecs	Italian order
+codec_chiesto	requested_codec	Italian order
+codec_del_numero	codec_from_number	"of number" is literal; maps a wire number to a codec
+codec_negoziato	negotiated_codec	Italian order
+codec_scheda	card_codec	Italian order
+codice_chiusura	close_code	the WebTransport/WebSocket close code
+codici_rx	rx_codes	Italian order
+codificaPer	encodesFor	verb: a vendor encodes H.264 for this platform
+codifica_e_manda	encode_and_send	"e" = and; verb
+codifica_ffmpeg	encode_ffmpeg	sh function that encodes (verb)
+codifica_prodotto	encode_product	sh function that encodes with the product (verb)
+codificata_l	coded_width	l/a are larghezza/altezza; Italian order
+codificata_a	coded_height	l/a are larghezza/altezza; Italian order
+codificatore_allineamento_scheda	encoder_card_alignment	Italian order after the encoder_ prefix
+codificatore_tetto_banda	encoder_bandwidth_cap	Italian order after the encoder_ prefix
+col	clr	DOUBTFUL: col is mostly an ANSI colour in py (also a column, and once "with"); "along" fits none — keeping col would be best
+colEtichetta	labelCol	col = column width, not "with"
+colStato	stateCol	col = column width, not "with"
+colonneRaggruppate	groupedColumns	half untranslated
+colore_medio	avg_color	Italian order
+colori709_a_i420	colors709_to_i420	"a" = to (conversion)
+colori709_a_i420_10	colors709_to_i420_10	"a" = to (conversion)
+colori709_a_nv12	colors709_to_nv12	"a" = to (conversion)
+colori709_a_p010	colors709_to_p010	"a" = to (conversion)
+colori_distinti	distinct_colors	Italian order
+colori_scena	scene_colors	Italian order
+comando_da_root	run_as_root	function that runs a command as root ("da root" = as root)
+comando_desktop	desktop_command	Italian order
+comando_iso	iso_command	Italian order
+comando_lxqt	lxqt_command	Italian order (local variable)
+comando_xfce	xfce_command	Italian order (local variable)
+come_si_esce	how_to_exit	returns how to exit (desktop, gesture)
+conMancanza	withMissing	"mancanza" = what is missing
+conferma-si	confirm-yes	twin of conferma-no → confirm-no (page button ids)
+conta_conti_finali	count_final_counts	Italian order
+conta_file	count_files	plural object
+conta_i_casi	count_cases	"i" is the Italian article
+contesti_abbandonati	abandoned_contexts	Italian order
+conti_del_server	server_counts	Italian order
+conti_falliti	failed_counts	Italian order
+conti_pagina	page_counts	Italian order
+conti_qdisc	qdisc_counts	Italian order
+conto_e_mio	count_is_mine	"e" = è (is)
+controlli_dello_strumento	tool_checks	Italian order
+controllo_chiuso_dal_client	check_closed_by_client	"dal" = by here
+controllo_chiuso_dal_server	check_closed_by_server	"dal" = by here
+controllo_corto	short_check	Italian order
+controllo_positivo	positive_check	Italian order
+controllo_leggibile	readable_check	Italian order
+conv_muta	silent_conv	Italian order; the PAM conversation that answers nothing
+conversazione_muta_figlio	child_silent_conversation	Italian order
+conversione_diretta	direct_conversion	Italian order
+coordinate_ammesse	allowed_coordinates	Italian order
+copertura_filo	wire_coverage	Italian order
+copia_corretta	copy_corrected	copies a level dir with corrections
+copia_nella_sessione	copy_into_session	"in" → into
+coppie_esaminate	examined_pairs	Italian order
+coppie-esaminate	examined-pairs	twin of coppie_esaminate
+coppie_che_cambiano	changing_pairs	Italian order
+cornice_attiva	active_border	Italian order
+cornice_decisa	decided_border	Italian order
+cornice_dx	border_dx	dx is a delta (crop columns) paired with border_dy, not "right"
+cornice_al_suo_posto	border_in_place	"slot" is the RCP glossary word; this rewrites the crop in place
+corpo_sono	body_whoami	the SONO (I-am) message body; "body_are" is nonsense
+corpo_e_giudizio	body_and_verdict	"e" = and
+correggi_livello_hevc	fix_hevc_level	Italian order
+corse_a_vuoto	idle_runs	"a vuoto" = idle/empty runs
+costo_disegno	draw_cost	Italian order
+costo_disegno_ms	draw_cost_ms	Italian order
+cpu_del_cliente	client_cpu	Italian order
+cpu_del_codificatore	encoder_cpu	Italian order
+crc_atteso	expected_crc	Italian order
+credito_corrente	current_credit	Italian order
+croma_flusso	stream_chroma	Italian order
+cronometro_scollato	detached_stopwatch	Italian order
+cura_del_registro	log_fix	Italian order
+cura_della_cache	cache_fix	Italian order
+cura_della_provvista	provisioning_fix	Italian order
+cura_dichiarata	declared_fix	Italian order
+cure_come_voglio	fixes_as_wanted	"as want" is broken English
+cursore_metadati	cursor_meta_seen	counter of cursor metadata; pointer_shape_* is a collision workaround
+cursore_malformati	malformed_cursors	Italian order
+cursori_finti	fake_cursors	Italian order
+da_quando	since	"from when" = when the state began
+da_rifare	to_redo	"da" = to be, not "from"
+da_root_qui	as_root_here	"da root" = as root
+da_scartare	to_discard	"da" = to be, not "from"
+da_togliere	to_remove	"da" = to be, not "from"
+dal_desktop_al_vetro	desktop_to_glass	literal from/to dropped
+danno_area_fotogramma	frame_damage_area	Italian order
+danno_rett_fotogramma	frame_damage_rects	Italian order
+danno_pieno	full_damage	Italian order (counter)
+danno_parziale	partial_damage	Italian order (counter)
+danno_assente	missing_damage	Italian order (counter)
+danno_dichiarato	declared_damage	Italian order
+danno_interi	whole_damage	counter of whole-frame damage; "integers" is wrong
+danno_l	damage_w	l = larghezza (width)
+danno_a	damage_h	a = altezza (height)
+datagram_visti	datagrams_seen	plural
+dconf_profilo_di_base	dconf_base_profile	Italian order
+debito_chiave	key_debt	Italian order: a keyframe is owed
+debito_detto	debt_logged	"detto" = already logged once
+dec_us_medio	avg_dec_us	Italian order; unit last
+del_caso	case_samples	the samples of one case
+dell_utente	user_share	the user's ~/.local/share path
+della_rete	net_users	the net's users matching the pattern
+della_scatola	box_growth	list of what grew in the box
+del_prodotto	product_growth	list of what grew in the product
+della_sessione	session_layout	the session's keyboard layout (was a duplicate of of_session)
+di_sessione	per_session	bool: dconf is per session
+delta_si_ferma	delta_stops	"si ferma" = stops
+dentro_tolleranza	within_tolerance	"inside" → within
+descrittori_scheda	card_descriptors	Italian order
+desktop_scelto	chosen_desktop	Italian order
+desktop_spiegato	desktop_description	human description of the desktop
+detta_la_memoria_finita	logged_out_of_memory	once-only log flag ("detto" = already said)
+detta_misura_impossibile	logged_measure_impossible	once-only log flag
+detta_sync_implicita	logged_implicit_sync	once-only log flag
+detto_ancora_finta	logged_still_fake	once-only log flag
+detto_assente	logged_absent	once-only log flag
+detto_conto_ms	count_logged_ms	when the count was last logged
+detto_copia_zero	logged_zero_copy	once-only log flag
+detto_corti	logged_short	once-only log flag
+detto_dal_cliente	client_output	what the client printed
+detto_fd	out_fd	the client's output file
+detto_file	out_file	the client's output file
+detto_formato	logged_format	once-only log flag
+detto_formato_scheda	logged_card_format	once-only log flag
+detto_ignota	logged_unknown	once-only log flag
+detto_il_cursore	logged_cursor	once-only log flag
+detto_il_danno	logged_damage	once-only log flag
+detto_il_formato	format_logged	once-only log flag (logged_format is the cursore.c one)
+detto_il_formato_scheda	card_format_logged	once-only log flag (twin of the other wlroots one)
+detto_il_tipo	type_logged	once-only log flag (logged_type is the page one)
+detto_tipo	logged_type	once-only log flag
+detto_mai	logged_never	once-only log flag
+detto_ms	logged_ms	time of the last log line
+detto_pieno	logged_full	once-only log flag
+detto_punto	logged_point	once-only log flag
+detto_senza_istante	logged_no_timestamp	once-only log flag
+detto_senza_offerta	logged_no_offer	once-only log flag
+detto_taglio	logged_cut	once-only log flag
+eagain_detto	logged_eagain	once-only log flag
+dgram_negati_detto	dgram_denied_logged	once-only log flag
+dettagliControllo	checkDetails	Italian order
+dgram_tetto_del_pari	dgram_peer_cap	Italian order
+dgram_zitto_da	dgram_quiet_since	"da" = since (a time)
+diSerie	stock	"di serie" = factory/stock, not "of serial"
+di_controllo	control_blocks	counts blocks on the control channel
+di_riserva	as_fallback	"di riserva" = fallback
+di_troppo	unwanted	forbidden marks that are present
+di_fila	in_a_row	"di fila" = in a row
+dichiara_priorita_audio	declare_audio_priority	Italian order
+dichiarazione_scrivi	write_declaration	Italian order
+dilo_se_non_persiste	tell_if_not_persistent	grammar
+dimensione_chunk	chunk_size	Italian order
+dipingi_fascia_basso	paint_bottom_band	Italian order
+dirliv	level_path	Italian order (dir of a level)
+disegni_senza_callback	draws_without_callback	counts of draws, not drawings
+disegno_ms	draw_ms	draw time
+disegno_ms_mediana	draw_ms_median	draw time
+disegno_ms_p95	draw_ms_p95	draw time
+disposizione_carattere_ammesso	layout_char_allowed	grammar
+disposizione_in_attesa	pending_layout	Italian order
+disposizione_in_vigore	active_layout	"in vigore" = active
+dispatcia	dispatch_all	function name (verb), not 3rd person
+diventa_ed_esegui	become_and_exec	grammar
+domande_viste	questions_seen	"viste" = seen (past participle)
+dopo_scena	post_scene	afterwards_scene is a collision workaround
+dopo-scena	post-scene	twin of dopo_scena
+dormi_girando	spin_sleep	sleeps while spinning the main loop
+dove_dopo	after_pos	the position after the start code
+dove_giudice	judge_path	where the judge was found
+drena	drain	function name (verb)
+due-col	two-col	col = column
+durata_dichiarata	declared_duration	Italian order
+durata_max	max_duration	Italian order
+durata_prevista	expected_duration	Italian order
+dx_vetro	glass_dx	dx is a delta (pair of dy_vetro), not "right"
+dy_vetro	glass_dy	twin of dx_vetro
+e_chiave	is_key	"e" = è (is)
+e_delle_scatole	is_from_boxes	"e" = è (is)
+e_incolla	is_paste	"e" = è (is)
+e_lui	is_match	"e lui" = it is the one
+e_nato	is_born	"e" = è (is)
+e_nessuno	is_nobody	"e" = è (is)
+e_stato_ammesso	was_admitted	"è stato" = was, not "state"
+eco_attesa	expected_echo	Italian order (function and key)
+eccezioni_dichiarate	declared_exceptions	Italian order
+elenca_monitor	list_monitors	plural object
+elenco_monitor	monitor_list	noun (list of monitors)
+elenco_client	client_list	Italian order
+elenco_dichiarato	declared_list	Italian order
+elenco_file	file_list	Italian order
+elenco_makefile	makefile_list	Italian order
+entra_e_ascolta	enter_and_listen	"e" = and
+entra_nel_classico	enter_classic	grammar
+entra_nel_tocco	enter_touch	grammar
+esci_dal_classico	exit_classic	grammar
+esci_dal_tocco	exit_touch	grammar
+esci_e_guarda	exit_and_look	"e" = and
+esamina_quadro	examine_frame	quadro = frame (crop), not refresh
+eseguiOErrore	runOrError	"O" = or
+esclusi_a_mano	manually_excluded	grammar
+esclusione_misurata	measured_exclusion	Italian order
+esiti_buoni	good_outcomes	Italian order
+esito_complessivo	overall_outcome	Italian order
+esito_dei_giri	rounds_outcome	Italian order
+esito_finale	final_outcome	Italian order
+esito_sano	healthy_outcome	Italian order
+estensione_c_e	has_extension	"c'è" = there is
+estrai_i_fotogrammi	extract_frames	"i" is the Italian article
+estranea	foreign_family	the foreign/external queue family, not "stray"
+etichettaMancanza	labelForMissing	the label line where the missing item goes
+evidenze_nuove	new_evidence	Italian order
+exec_porta_a	exec_leads_to	"porta a" = leads to
+fabbrica_cliente	client_factory	Italian order
+falliti_ancora	still_failed	Italian order
+falliti_di_fila	failed_in_a_row	"di fila" = in a row
+falliti_prova	test_failures	counter of failed tests
+fam_calcolo	compute_fam	Italian order (Vulkan queue family)
+fam_codifica	encode_fam	Italian order (Vulkan queue family)
+famiglia_calcolo	compute_family	kin is a collision workaround; Italian order
+famiglia_codifica	encode_family	kin is a collision workaround; Italian order
+famigliaDriver	driverFamily	Italian order
+famiglia_carte	family_papers	carte = the PAPERS family (C16), not cards
+famiglia_dedotta	inferred_family	Italian order
+fanno_la_stessa_cosa	do_the_same	grammar
+fase9_tetto_banda_mbit	phase9_bandwidth_cap_mbit	Italian order
+fasi_indipendenti	independent_phases	Italian order
+fence_calcolo	compute_fence	Italian order
+fence_codifica	encode_fence	Italian order
+ferma_e_aspetta	stop_and_wait	"e" = and
+ferma_per_pid	stop_by_pid	"per" = by
+fermo_da	stalled_for	time since the link last moved: stalled for N ms
+fermo_ms	stalled_ms	length of the stall, unit last
+fermo_peggiore	worst_stall	qualifier first; a stall, not "stopped"
+fermo_acceso	idle_on	bench fixture: line idle with the pings on
+fermo_spento	idle_off	bench fixture: line idle with the pings off
+fermo_caro	idle_costly	bench fixture: line idle, expensive pings
+fetta_di_flusso	stream_slice	qualifier first
+filtri_sonda	probe_filters	qualifier first
+figli_quanti	children_count	"how_many" is Italian phrasing
+figli_ricontrolla	children_recheck	verb, not 3rd person
+figli_utente_ennesimo	children_nth_user	qualifier first
+figlio_capacita_video	child_video_capabilities	qualifier first
+fileSessione	sessionFile	qualifier first
+file_di_sistema	system_files	twins move together / English word order
+file_mio	my_file	qualifier first
+file_nostro	our_file	qualifier first
+file_primo	first_file	qualifier first
+file_scena	scene_file	qualifier first
+fine_attesa	wait_deadline	the time the wait ends (a deadline)
+fine_filo	wire_end	qualifier first
+fine_in_sospeso	pending_end	qualifier first
+fine_prevista	expected_end	qualifier first
+fine_sessione	session_end	qualifier first
+finestra_bastante	enough_window	qualifier first
+finestra_di_6_2	window_6_2	drop Italian "of"
+finestra_guasto	fault_window	qualifier first; twin of finestra-guasto
+finestra-guasto	fault-window	qualifier first; twin of finestra_guasto
+finestre_dichiarate	declared_windows	qualifier first
+fino_a_copia	until_copy	drop Italian article
+fino_a_eccomi	until_here_i_am	drop Italian article
+fino_a_sessione	until_session	drop Italian article
+fino_ad_ammesso	until_admitted	drop Italian article
+firefox_interno	internal_firefox	qualifier first
+firewallFinto	fakeFirewall	qualifier first
+flussi_video	video_streams	qualifier first
+flusso_input	input_stream	qualifier first
+flag_ingresso	input_flag	encoder input, not ingress; qualifier first
+formato_ingresso	input_format	encoder input format, not ingress
+fourcc_ingresso	input_fourcc	encoder input, not ingress
+ingresso_copia	input_copy	encoder input, not ingress
+ingresso_diretto	direct_input	encoder input, qualifier first
+ingresso_scrivibile_dallo_shader	input_writable_by_shader	encoder input; "by" the shader
+fonteImm	imageSource	qualifier first
+fonte_video	video_source	qualifier first
+fontiProva	testSources	qualifier first
+forma_ignota	unknown_shape	qualifier first
+forma_prova_cartella_temi	shape_test_themes_folder	qualifier order
+forma_va_bene	bitstream_ok	checks the encoded bytes' form; "va well" is literal Italian
+forma_valida	valid_shape	qualifier first
+forma_vuota	empty_shape	qualifier first
+formati_del_profilo	profile_formats	qualifier first
+formato_dpb	dpb_format	qualifier first
+formato_grezzo	raw_format	qualifier first
+formato_memoria	memory_format	qualifier first
+formato_noto	known_format	qualifier first
+formato_rt	rt_format	qualifier first
+formato_spa	spa_format	qualifier first
+formato_visto	seen_format	qualifier first
+formato_voluto	wanted_format	qualifier first
+formato_vulkan_di	vulkan_format_of	qualifier first
+forme_disponibili	available_shapes	qualifier first
+fornitoriScheda	cardVendors	qualifier first
+forza_intero	force_full	forces a full (whole-frame) render
+fotoRiferimento	referencePhoto	qualifier first
+foto_fatte	photos_taken	"done" is wrong for photos
+foto_piena	full_photo	qualifier first
+foto_pil	photo_pil	PIL image, not "pilot"
+foto_prima_della_finestra	photo_before_window	drop Italian articles
+foto_ridotta	reduced_photo	qualifier first
+fotografa_e_leggi	snapshot_and_read	"e" is Italian "and"
+fotografa_prima	snapshot_first	"before" reads wrong for a verb
+fotogrammi_al_secondo	frames_per_second	"to second" is literal Italian
+fotogrammi_avuti	frames_received	"got" is literal
+fotogrammi_incoerenti	inconsistent_frames	qualifier first
+i_fotogrammi_di_prima	previous_frames	drop Italian articles
+fps_del_giro	round_fps	qualifier first
+fps_pag	page_fps	qualifier first
+frase_motivo	reason_sentence	qualifier first
+frasi_italiane	italian_sentences	half-translated
+frazione_cambiata	changed_fraction	qualifier first
+frazione_ciano	cyan_fraction	qualifier first
+frazione_del_colore	color_fraction	qualifier first
+fretta_mse	mse_hurry	qualifier first
+fuoriDa	notIn	returns the items of a not in b
+fuori_arrivo	arrival_out_of_order	the overtakes on arrival
+fuori_dal_documento	out_of_document	"out from" is literal
+fuori_dal_video	out_of_video	"out from" is literal
+fuori_ordine	out_of_order	English idiom
+fuori_rete	out_of_network	English idiom
+fuori_tempo	out_of_time	English idiom
+g_tela_del_palco	g_stage_canvas	qualifier first
+gancio_tela_del_palco	hook_stage_canvas	qualifier first
+ganci_installati	installed_hooks	qualifier first
+gancio_sessione_locale	hook_local_session	qualifier first
+garantisci_i_gruppi	ensure_groups	drop Italian article
+generazione_buffer	buffer_generation	qualifier first
+generazione_cache	cache_generation	qualifier first
+generazione_nuova	new_generation	qualifier first
+generazione_vista	seen_generation	the generation already seen, not a view
+gentilezza	niceness	it is the getpriority() nice value
+geometria_incoerente	inconsistent_geometry	qualifier first
+gesto_esci	exit_gesture	qualifier first
+gesto_protetto	protected_gesture	qualifier first
+gestoreApt	aptManager	package manager; qualifier first
+gestoreDnf	dnfManager	package manager; qualifier first
+gestoreFinto	fakeManager	package manager; qualifier first
+gestorePacman	pacmanManager	package manager; qualifier first
+gestoreZypper	zypperManager	package manager; qualifier first
+gestoreUtente	userManager	systemd user manager connection
+gestore_fine	end_handler	qualifier first
+gestore_prima_percorso	manager_before_path	path of the systemd manager env saved before
+gestore_puntatore	pointer_handler	qualifier first
+gestore_tastiera	keyboard_handler	qualifier first
+gestore_testa	head_handler	qualifier first
+gettone_eis	eis_token	qualifier first
+gettone_noto	known_token	qualifier first
+gia_vista	already_seen	seen, not view
+gidUtente	userGid	qualifier first
+gid_della_scheda	card_gid	qualifier first
+gid_escluso	excluded_gid	qualifier first
+giorni_fa	days_ago	"fa" = ago
+gira_caso	run_case	gira = run (interi.tsv), imperative
+gira_prove	run_tests	gira = run (interi.tsv), imperative
+gira_una_volta	run_once	"una volta" = once
+gira_wlr	run_wlr	gira = run (interi.tsv), imperative
+giri_zero	zero_rounds	qualifier first
+giro_attori	actors_round	counter of actor folders, qualifier first
+giro_buono	good_round	qualifier first
+giro_completo	full_round	qualifier first
+giro_fermi	round_stalls	count of gaps (stalls) in the round
+giro_fermo_ms	round_stall_ms	stall, not "stopped"
+giro_fermo_peggiore_ms	round_worst_stall_ms	stall, qualifier first
+giro_fiacco	sluggish_round	qualifier first
+giro_lento	slow_round	qualifier first
+giro_non_regge	round_does_not_hold	grammar
+giro_raffica	burst_round	qualifier first
+giro_raffica_sana	healthy_burst_round	qualifier first
+giro_si_ferma	round_stops	grammar
+giro_sole	solo_round	the boxes run alone ("sole"), not "only"
+giro_ultimo_ms	last_round_ms	qualifier first
+giudica_di_nuovo	judge_again	"di nuovo" = again
+giudica_i_pixel	judge_the_pixels	drop "i"; judge_pixel is taken
+giudica_indietro	judge_going_back	it judges a move back, not "behind"
+giudica_presa	judge_grip	the border grip
+giudica_serie	judge_series	series, not serial
+giudica_spostamento	judge_move	plain word
+giudica_uscita	judge_exit	it judges the exit (15-f021-esci)
+giudice_del_desktop	desktop_judge	qualifier first
+giudice_del_fotogramma	frame_judge	qualifier first
+giudice_immagini	image_judge	qualifier first
+giudizio_completo	full_judgment	qualifier first
+giudizio_inquilino	tenant_judgment	qualifier first
+gl_perche	gl_reason	"why" as a noun
+gnome_metti_utente	gnome_set_user	put → set
+grafico-cpu	chart-cpu	a chart in the report page
+grafico-video	chart-video	a chart in the report page
+graficiRimasti	remainingGraphical	qualifier first
+grazia_di_6_2	grace_6_2	drop Italian "of"
+grig	gray_rows	gray count per row; "grow" is a wrong word
+grigi_male	bad_grays	qualifier first
+gruppiFinti	fakeGroups	qualifier first
+gruppiVeri	realGroups	vero = real here, not true
+gruppi_dei_nodi	node_groups	qualifier first
+gruppi_della_scheda	card_groups	qualifier first
+gruppi_parametri_prima_di_un_IDR	parameter_groups_before_IDR	qualifier first, drop articles
+gruppi_scheda_ci_sta	card_groups_has	shell lib prefix "card groups"; user is in gid
+gruppi_scheda_dai_a	card_groups_give_to	shell lib prefix "card groups"
+gruppi_scheda_gid	card_groups_gid	shell lib prefix "card groups"
+gruppi_scheda_mancanti	card_groups_missing	shell lib prefix "card groups"
+gruppi_scheda_nodo	card_groups_node	shell lib prefix "card groups"
+gruppi_scheda_nome	card_groups_name	shell lib prefix "card groups"
+guai_amm	admission_troubles	amm = admission, not admitted
+guai_campi	field_troubles	qualifier first
+guai_fine	end_troubles	qualifier first
+guai_gr	group_troubles	qualifier first
+guai_porte	port_troubles	qualifier first
+guarda_i_pixel	look_pixels	drop Italian article
+guarda_i_pixel_del_dmabuf	look_dmabuf_pixels	drop articles, qualifier first
+guarda_il_servizio_pam	look_pam_service	qualifier first
+guarda_le_due_meta	look_two_halves	metà = halves, not meta
+guardia_del_pannello_xfce	xfce_panel_guard	qualifier first
+guardia_delle_scatole	box_guard	qualifier first
+guardia_di_powerdevil	powerdevil_guard	qualifier first
+guasti_cert	cert_faults	qualifier first
+guasti_di_fase	phase_faults	qualifier first
+guasti_mediane	fault_medians	qualifier first
+guasti_rimasti_addosso	faults_left_on	idiom: faults left on (the box)
+guida	drive	the shell function drives the TUI, not a driver
+guida_prestata	lend_driver	context manager that lends the driver
+ha_canale_appunti	has_clipboard_channel	qualifier first
+ha_canale_input	has_input_channel	qualifier first
+ha_taglia	has_size	AV1 OBU has_size_field
+haDesktopBuono	hasGoodDesktop	qualifier first
+ho_consegna	got_delivery	"have_delivery" is literal
+ho_ritardo	got_delay	"have_delay" is literal
+hz_visti	seen_hz	qualifier first
+idAzione	actionId	qualifier first
+idPassi	stepsId	qualifier first
+id_controllo	check_id	qualifier first
+id_globale	global_id	qualifier first
+idle_nostro	our_idle	qualifier first
+idsano	safe_id	sanitized id; "idsafe" is not a word
+il_cliente_c_e	client_is_there	"c'è" = is there
+il_posto_e_di	slot_belongs_to	"il posto è di" = the slot belongs to
+impara_i_modificatori	learn_modifiers	drop Italian article
+impbuf	settings_buf	buffer of the rewritten SETTINGS; setbuf is a libc name
+impbuf_len	settings_buf_len	twin of impbuf
+impbuf_off	settings_buf_off	twin of impbuf
+impbuf_orig	settings_buf_orig	twin of impbuf
+importazione_libera	import_release	frees an import (C free)
+impronta_vista	fingerprint_seen	seen, not view
+impulsi_eco	echo_pulses	qualifier first
+impulsi_pendenti	pending_pulses	qualifier first
+imputato	culprit	the suspected cause; "accused" is not idiomatic
+imputato_dei_tempi	timing_culprit	qualifier first
+imputato_nostro	our_culprit	qualifier first
+inAscolto	listening	English word
+in_arrivo	incoming	English word
+in_attesa	waiting	English word
+in_attesa_di_gesto	awaiting_gesture	English idiom
+in_coda	queued	English word
+in_coda_ms	queued_ms	English word, unit last
+in_piu	in_excess	"in more" is literal
+in_ritardo	is_late	English idiom; late is taken
+in_tempo_reale	realtime	English word
+incolla_una_volta	paste_once	"una volta" = once
+indice	idx	index is the libc index() name
+indice_blocco	block_index	qualifier first
+indice_nuovo	new_index	qualifier first
+indirizzo_noto	known_address	qualifier first
+inizializza_pipewire	init_pipewire	imperative
+inizio_campo	field_start	qualifier first
+inizio_codice	code_start	qualifier first
+inizio_controllo	check_start	qualifier first
+inizio_finestra	window_start	qualifier first
+inizio_fotogramma	frame_start	qualifier first
+inizio_msg	msg_start	qualifier first
+inizio_parola	word_start	qualifier first
+inizio_perf	perf_start	qualifier first
+inizio_pixel	pixel_start	qualifier first
+innesta_e_giudica	graft_and_judge	"e" is Italian "and"
+inp_grazie	inp_graces	count of graces, not thanks
+input_abbandoni	input_abandons	abandon count
+input_gira	input_run	gira = run (interi.tsv)
+input_non_producibili	input_unproducible	single word
+input_riporta_dentro	input_bring_back_inside	imperative
+inq	tnt	abbreviation of tenant; "ten" reads as a number
+installaFinta	fakeInstall	qualifier first
+intero_da_F11	fullscreen_from_F11	intero = full screen here
+intestazioneRepo	repoHeader	qualifier first
+io_prima	io_before	I/O counters before, not "I"
+iscrivi_ai_gruppi_della_scheda	enroll_in_card_groups	drop articles, qualifier first
+istante_del_fotogramma	frame_instant	qualifier first
+journal_scatola	box_journal	qualifier first; twin of journal-scatola
+journal-scatola	box-journal	qualifier first; twin of journal_scatola
+keymap_sessione	session_keymap	qualifier first
+keymap_sessione_len	session_keymap_len	qualifier first
+kwin_nome_uscita	kwin_output_name	qualifier first
+kwin_quante_uscite	kwin_output_count	"how many" is Italian phrasing
+kwin_verifica_permesso	kwin_check_permission	plain verb
+l_ultimo_fotogramma	last_frame_seen	drop "l'"; last_frame is likely taken
+l_utente_ha_copiato	user_has_copied	drop "l'"
+la_scena_e_viva	scene_is_alive	"è" = is
+larg_cod	enc_width	qualifier first
+larg_img	img_width	qualifier first
+larghezzaMinima	minWidth	qualifier first
+larghezza_banda	stripe_width	width of one stripe in pixels, not bandwidth
+larghezza_codificata	encoded_width	qualifier first
+larghezza_corrente	current_width	qualifier first
+larghezza_flusso	stream_width	qualifier first
+larghezza_superficie	surface_width	qualifier first
+lastra_del_giro	round_slab	qualifier first
+lastre_massime	max_slabs	qualifier first
+lato_min	min_side	qualifier first
+lavoro_al_secondo	work_per_second	"to second" is literal
+lega_ext_se_serve	bind_ext_if_needed	English idiom
+legami	input_links	counts pipewire links on the input; links is taken
+leggiPrimaPacchetti	readPackagesBefore	"before" packages state
+leggi_appunti_browser	read_browser_clipboard	qualifier first
+leggi_blocco_gnome	read_gnome_block	qualifier first
+leggi_file_ban	read_ban_file	qualifier first
+leggi_linea_morta	read_dead_line	follows linea_morta → dead_line
+leggi_marca	read_image_mark	reads the mark from an image; "read_it_mark" is broken
+leggi_pacchetto	read_packet	network packet, not package
+leggi_riga_diario	read_diary_line	Italian word order
+leggi_riga_y	read_y_row	Italian word order (a row of the Y plane)
+leggi_sequenza_av1	read_av1_sequence	Italian word order
+leggi_sps_h264	read_h264_sps	Italian word order
+leggi_sps_hevc	read_hevc_sps	Italian word order
+leggi_rete_quic	read_quic_network	Italian word order
+leggi_tetti_codice	read_code_caps	Italian word order
+lettore_del_colore	color_reader	Italian word order
+licenza_go	go_license	Italian word order
+limite_rt	rt_limit	Italian word order
+linea_morta_accesa	dead_line_on	twin of the dead_line family: same order
+linea_morta_giudica	dead_line_judge	twin of the dead_line family: same order
+linea_morta_scatta	dead_line_fires	twin of the dead_line family: same order
+linea_morta_silenzio_ms	dead_line_silence_ms	twin of dead_line_silence_s
+livelli_distinti	distinct_levels	Italian word order
+livelli_qualita	quality_levels	Italian word order
+livello_chiesto_x10	requested_level_x10	Italian word order
+livello_corretto_nei_byte	level_fixed_in_bytes	clearer: the level was corrected in the bytes
+livello_dichiarato	declared_level	Italian word order
+livello_flusso	stream_level	Italian word order
+livello_h264	h264_level	Italian word order
+livello_hevc	hevc_level	Italian word order
+livello_idc	level_idc	the standard H.264/HEVC field name
+livello_imposto	imposed_level	Italian word order
+livello_legge	parse_level	legge = reads/parses here (function), not law
+livello_massimo_idc	max_level_idc	Italian word order, standard max
+livello_selinux_come_sshd	selinux_level_like_sshd	Italian word order
+livello_vulkan	vulkan_level	Italian word order
+lm_usciti	lm_out	bytes handed out to ngtcp2, not exited
+lm_usciti_visti	lm_out_seen	twin of lm_out
+lm_uscita_ms	lm_out_ms	twin of lm_out (instant the outgoing count restarted)
+log2_intero	log2_int	integer log2
+lontananza	dist	farness is not idiomatic: it is the distance
+lucchetto_bus	bus_lock	Italian word order
+luminanza_media	mean_luminance	Italian word order
+lungo_b	len_b	byte length, not long
+lxqt_cartella_config_sessione	lxqt_session_config_folder	Italian word order
+lxqt_cartella_dati_sessione	lxqt_session_data_folder	Italian word order
+m_vero	m_real	the real (vs fake) measurement
+magia_giusta	magic_ok	predicate: the magic is right
+mancanti_dichiarati	declared_missing	Italian word order
+manda_controllo	send_control	controllo is the control stream here
+manda_e_aspetta	send_and_wait	e = and
+manda_posizione_tasto	send_key_position	Italian word order
+manifesto_fermo	manifest_still	Fermo is the still frame, not stopped
+mapping_id_pubblicato	published_mapping_id	Italian word order
+mutter_mapping_id_pubblicato	mutter_published_mapping_id	Italian word order
+marche_attese	expected_marks	Italian word order, atteso = expected
+massimo_scarto_dal_nativo	max_gap_from_native	standard max
+massimo_totale	max_total	standard max
+matrice_grezza	raw_matrix	Italian word order
+media_e_scarto	mean_and_dev	e = and; scarto = deviation
+mediana_totale	total_median	Italian word order
+memoria_alloca	alloc_memory	verb first
+memoria_nuova	new_memory	Italian word order
+memoria_sessione	session_memory	Italian word order
+memorie_sessione	session_memories	Italian word order
+metti_in_vigore	apply_mode	sets the mode in effect
+metti_lingua	set_language	sets the language
+metti_misura	set_size	sets the WxH size
+miei_stream	my_streams	plural set of streams
+minimaDesktop	minDesktopVersion	returns the minimum version of a desktop
+minimo-dopo-scena	min-after-scene	standard min
+minimo_dopo_scena	min_after_scene	twin of --min-after-scene
+minuti-ultimo	last-rung-minutes	minutes of the last rung
+minuti_ultimo	last_rung_minutes	twin of --last-rung-minutes
+misura_massima	max_size	the decoder's max size capability
+misura_massima_a	max_size_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+misura_massima_l	max_size_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+misura_massima_legge	parse_max_size	legge = parses; size, not measure
+misura_massima_letta	max_size_read	twin of max_size
+misura_minima_a	min_size_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+misura_minima_l	min_size_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+misura_del_palco	stage_size	Italian word order; size
+misura_dichiarata	declared_size	Italian word order; size
+misura_di	size_of	it is the size
+misura_l	size_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+misura_a	size_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+misura_nota	size_known	the size is known
+misura_fatte	measures_done	plural count
+misura_saltate	measures_skipped	plural count
+misura_foto	screenshot_size	Italian word order; size (photo_size taken)
+misura_i_pixel	measure_pixels	i is the Italian article
+misura_i_pixel_a_campione	measure_pixels_sampled	Italian article and preposition
+misura_sbaglio	size_error	GError of the size request
+misura_tollerata	tolerated_size	Italian word order; size
+misura_vista	view_size	reads the view size
+misura_input	input_size	returns the size of an input type
+misura_ultima_us	last_measure_us	Italian word order
+misura_schermo	screen_size	returns the screen size
+misura_png	png_size	returns the png size
+misura_profondita_sfumatura	measure_gradient_depth	Italian word order
+monitor_misura	monitor_size	size declared by the stage line
+misure_video	video_measures	Italian word order
+mod_maiuscole	mod_caps	the Caps Lock modifier index
+mod_numeri	mod_num	the Num Lock modifier index
+mod_quanti	mod_count	quanti = count
+mod_scheda_quanti	mod_card_count	quanti = count
+modello_del_prodotto	product_model	Italian word order
+modi_bitrate	bitrate_modes	Italian word order
+modi_bitrate_letti	bitrate_modes_read	Italian word order
+modo_bitrate	bitrate_mode	Italian word order
+modo_bitrate_voluto	wanted_bitrate_mode	Italian word order
+modo_codifica	encoding_mode	Italian word order
+modo_colori	color_mode	Italian word order
+modo_corrente	current_mode	Italian word order
+modo_prima	prev_mode	the mode before
+modo_rc	rc_mode	Italian word order
+modo_rifiuti	refusals_mode	Italian word order
+modo_eventi	events_mode	Italian word order
+modo_sorgente	source_mode	Italian word order
+modo_va	va_mode	Italian word order
+moduloPAM	pamModule	Italian word order
+monitor_atteso	expected_monitor	Italian word order
+monitor_catturato	captured_monitor	Italian word order
+monta	assembly	reassembly of a frame's pieces, not mount
+monta_a	assembly_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+monta_l	assembly_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+monta_avuti	assembly_got	twin of assembly
+monta_chiave	assembly_key	twin of assembly
+monta_codec	assembly_codec	twin of assembly
+monta_input	assembly_input	twin of assembly
+monta_istante	assembly_instant	twin of assembly
+monta_totale	assembly_total	twin of assembly
+monta_pezzo	assemble_piece	reassembles a piece, not mount
+monta_appunti	assemble_clipboard	reassembles the clipboard pieces
+monta_cursore	assemble_cursor	reassembles the cursor pieces
+motivi_rotti	broken_reasons	Italian word order
+motivi_visti	seen_reasons	Italian word order
+motivi_pieni	full_reasons	Italian word order
+motivoScheda	cardReason	Italian word order
+motivo_chiusura	close_reason	Italian word order
+motivo_rifiuto	refusal_reason	Italian word order
+motivo_di_82	reason_for_82	predicate: a reason of message 0x82
+motoreFinto	fakeEngine	Italian word order
+ms_per_pacchetto	ms_per_packet	network packet, not package
+mse_posiziona	mse_position	verb, not plural noun
+mse_racconta	mse_report	reports the MSE state
+mse_racconto	mse_reporter	the report interval timer
+mse_veglia	mse_watch	watchdog, vigil is unidiomatic
+mse_scarica	mse_drain	drains the queue on updateend, not download
+muovi_un_po	nudge	move a little
+muta_sessione	session_muted	flag: the session went mute
+mutter_monitor_nostro	mutter_our_monitor	Italian word order
+mutter_scala_nostra	mutter_our_scale	Italian word order
+mutter_percorso_controllo	mutter_control_path	Italian word order
+mutter_percorso_flusso	mutter_stream_path	Italian word order
+mutter_monitor_cerca	mutter_find_monitor	verb first
+nasci	bring_up	function: page, admission, first frame; born is not a verb
+nascita_del_livello	level_birth	Italian word order
+negati_tutti	all_denied	Italian word order
+nero_che_alterna	alternating_black	relative clause in Italian order
+niente_azzeramento	no_reset	niente = no
+niente_persistenza	no_persistence	niente = no
+niente_tabella_detto	no_table_said	niente = no
+no_e_nostro	no_is_ours	e = is
+nodo_del_palco	stage_node	Italian word order
+nodo_della_scheda	card_node	Italian word order
+nodo_nvidia	nvidia_node	Italian word order
+nodo_rendering	render_node	the DRM render node
+nomeDistro	distroName	Italian word order
+nomeICD	icdName	Italian word order
+nomeProcesso	processName	Italian word order
+nomeScheda	cardName	Italian word order
+nomeStato	stateName	Italian word order
+nomeTmp	tmpName	Italian word order
+nome_atteso	expected_name	Italian word order
+nome_bozza	draft_name	Italian word order
+nome_cartella	folder_name	Italian word order
+nome_codec	codec_name	Italian word order
+nome_codec_arg	codec_name_arg	Italian word order
+nome_colore	color_name	Italian word order
+nome_colore_chiesto	requested_color_name	Italian word order
+nome_componente	component_name	Italian word order
+nome_danno	damage_name	Italian word order
+nome_del_gruppo	group_name	Italian word order
+nome_display	display_name	Italian word order
+nome_ext	ext_name	Italian word order
+nome_file	file_name	Italian word order
+nome_formato	format_name	Italian word order
+nome_foto	photo_name	Italian word order
+nome_giro	round_name	Italian word order
+nome_globale	global_name	Italian word order
+nome_input	input_name	Italian word order
+nome_lecito	valid_name	Italian word order
+nome_maglia	mesh_name	Italian word order
+nome_matrice	matrix_name	Italian word order
+nome_messaggio	message_name	Italian word order
+nome_modificatore	modifier_name	Italian word order
+nome_modo	mode_name	Italian word order
+nome_motivo	reason_name	Italian word order
+nome_msg	msg_name	Italian word order
+nome_primari	primaries_name	Italian word order
+nome_range	range_name	Italian word order
+nome_scheda	card_name	Italian word order
+nome_sfrattato	evicted_name	Italian word order
+nome_shm	shm_name	Italian word order
+nome_strada	route_name	Italian word order
+nome_tipo	type_name	Italian word order
+nome_trasferimento	transfer_name	Italian word order
+nome_tratto	stretch_name	Italian word order
+nome_xkb_pulito	clean_xkb_name	Italian word order
+nomiDesktop	desktopNames	Italian word order
+nomi_a_tempo	timed_names	a tempo = timed
+nomi_della_scheda	card_names	Italian word order
+nomi_modi_bitrate	bitrate_mode_names	Italian word order
+nomi_modi_vulkan	vulkan_mode_names	Italian word order
+nomi_processi	process_names	Italian word order
+nomi_scatola	box_names	Italian word order
+nomi_trovati	found_names	Italian word order
+nomi_viola	violated_names	Italian word order
+non-collegare	no-connect	idiomatic negative option
+non_collegare	no_connect	twin of --no-connect
+non-rifare	no-rebuild	the box is not rebuilt
+non_rifare	no_rebuild	twin of --no-rebuild
+nonAncoraFatta	notYetDone	ancora = yet
+nonAncoraFatti	notYetDoneWhy	ancora = yet; map type -> what is missing
+non_cala	not_decreasing	idiomatic
+non_ci_vuole	unwanted	idiomatic
+non_classificati	unclassified	idiomatic
+non_giudicate	unjudged	idiomatic
+non_misurate	unmeasured	idiomatic
+non_nero	non_black	idiomatic
+non_provate	untried	idiomatic
+non_scritti	unwritten	idiomatic
+nostro_quanti	our_count	quanti = count
+np_o_muori	np_or_die	o = or
+numeriVersione	versionNumbers	Italian word order
+numero_prossimo	next_number	Italian word order
+nuova_cartella_attori	new_actors_folder	Italian word order
+offerto_scheda	card_offered	Italian word order
+offerti_byte	offered_bytes	plural
+ok_tempo	time_ok	Italian word order
+oltre_a	excess_a	beyond the fixed delay = excess
+oltre_r	excess_r	twin of excess_a
+ordineDeb	debOrder	Italian word order
+ore_dei_tasti	key_times	ore = times (instants) of the keys
+orologio_falso	fake_clock	Italian word order
+ospite_pronto_xrdp	xrdp_guest_ready	Italian word order
+p1_niente_falso_positivo	p1_no_false_positive	niente = no
+p1b_il_margine_dello_stallo	p1b_stall_margin	Italian order and articles
+p1c_la_linea_regge_a_cura_spenta	p1c_line_holds_with_fix_off	a = with
+p21_trattiene_sempre	p21_always_holds_back	Italian word order
+p4_lo_sfratto_libera_il_posto	p4_eviction_frees_slot	verb form
+p5_fra_utenti_diversi_non_si_sfratta	p5_no_eviction_across_users	Italian order
+p5b_la_riga_del_negato	p5b_denied_line	Italian word order
+p6_i_predefiniti_non_cambiano_niente	p6_defaults_change_nothing	Italian articles and double negative
+p3b_costo_dei_ping	p3b_ping_cost	Italian word order
+p_coda_mia	p_my_queue	Italian word order
+p_consegna_non_si_ferma	p_delivery_never_stops	idiomatic
+p_degrada_nel_tempo	p_degrades_over_time	idiomatic
+p_linea_sana	p_healthy_line	Italian word order
+p_non_deve_scattare	p_must_not_fire	idiomatic
+p_non_e_perdita	p_not_loss	e = is
+p_pavimento_ritmo	p_rate_floor	Italian word order
+p_perdita_in_ritardo	p_late_loss	idiomatic
+p_ritardo_non_scappa	p_delay_no_runaway	idiomatic
+p_ritmo_restituito	p_rate_restored	idiomatic
+p_scena_ferma_non_scatta	p_still_scene_no_fire	Italian order; still scene
+pacchetti_giro	packets_per_round	per round
+pacchettoFinto	fakePackage	Italian word order
+pacchettoUnico	singlePackage	Italian word order
+pacchetto_in_mano	packet_in_hand	codec packet, not package
+padrone_del_posto_condiviso	shared_slot_owner	Italian word order
+paga_il_bottoncino	click_paste_panel	clicks Firefox's Paste panel
+pagina_bugiarda	lying_page	Italian word order
+pagina_e_nostro	page_is_ours	e = is
+pagina_marca	page_marker	the marker file pagina.nostro
+palchi_pronti	ready_stages	Italian word order
+palchi_quanti	stage_count	quanti = count
+palchi_scartati	discarded_stages	Italian word order
+pannello_lxqt	lxqt_panel	Italian word order
+parametri_di_consumo	consumer_parameters	Italian word order
+parametri_globali	global_parameters	Italian word order
+parametri_prima_dell_idr	parameters_before_idr	Italian article
+pari	even	pari = even numbers/lanes here, not peer
+parola	password	parola is the login password everywhere
+parola2	password2	twin of password
+parola-sudo	sudo-password	the sudo password
+parola_sudo	sudo_password	twin of --sudo-password
+parola-file	password-file	the password file
+parola_file	password_file	twin of --password-file
+parola_cattiva	bad_password	twin of --bad-password
+parola_dagli_argomenti	password_from_args	the password
+parola_dal_file	password_from_file	the password
+parola_dentro	password_inside	the password
+parola_dentro_dir	password_inside_dir	the password
+partenza_attesa	wait_start	Italian word order
+passoOccupato	busyStep	poll step while busy
+passo_img	img_stride	row pitch = stride
+passo_pixel	pixel_stride	row pitch = stride
+passo_u	stride_u	row pitch = stride
+passo_uv	stride_uv	row pitch = stride
+passo_v	stride_v	row pitch = stride
+non_provati	untried	idiomatic; twin of non_provate
+lett	rdr	the csv reader, not a letter
+pausa_piu_lunga	longest_pause	Italian order: «the longest pause»
+peggiore_ms	worst_stall_ms	the worst stalled round (wt_giri_fermi); worst_v_ms was a collision dodge
+perche_niente_settings	why_no_settings	«niente» = no, not «nothing»
+percorso	fpath	a file path, not a route; route_path was a collision dodge
+percorsoAmmesso	allowedPath	Italian order
+percorsoPiano	planPath	Italian order
+percorso_ban	ban_path	Italian order
+percorso_controllo	check_path	Italian order
+percorso_makefile	makefile_path	Italian order
+percorso_mio	my_path	Italian order
+perdita_vera	real_loss	Italian order
+pianoCheFallisce	failingPlan	word-for-word «plan that fails»
+pianoDiProva	testPlan	Italian order
+pianoDisinstallazione	uninstallPlan	twins move together / English word order
+piano_azzeramento	reset_plan	Italian order
+piano_campioni	sample_plan	Italian order (returns the sample steps)
+piano_cancella	delete_plan	Italian order
+pidDiBlocco	lockHolderPids	returns the pids holding a kernel lock on the file
+pid_del_codificatore	encoder_pid	Italian order
+pid_del_mio_scope	my_scope_pid	Italian order
+pid_di_prima	previous_pid	Italian order
+pid_relitto	stale_pid	pid read from a leftover state file
+pid_scena	scene_pid	Italian order
+pid_tono	tone_pid	Italian order
+ping_esteso	extended_ping	Italian order
+piu_alto_basso	highest_low	max of the low channels
+piu_basso_alto	lowest_high	min of the high channels
+piu_lenta	slowest	superlative, not «more slow»
+piu_lenta_sola	slowest_alone	superlative, not «more slow»
+piu_lento	slower	max of two times: the slower one
+piu_nuovo	newest	superlative, not «more new»
+pixel_misurati	measured_pixels	Italian order
+pixel_totali	total_pixels	Italian order
+plugin_di_tipo	plugins_of_type	returns an array of plugins
+png_uniforme	uniform_png	Italian order
+pool_calcolo	compute_pool	Italian order
+pool_codifica	encode_pool	Italian order
+portaInAscolto	listeningPort	Italian order
+portaInIntervalli	portInRanges	intervals of ports are ranges
+porta_contesa	contended_port	Italian order
+porta_i_banchi	push_benches	«porta» is the verb «bring», not «port»
+porta_il_puntatore	move_pointer	«porta» is the verb «carry», not «port»
+porta_interna	internal_port	Italian order
+porta_scena	scene_port	Italian order
+porta_sito	site_port	Italian order
+porta_vuota	unused_port	finds a port nobody listens on
+portePermanenti	permanentPorts	Italian order
+posa-scena	scene-settle	«posa» = let the scene settle (seconds), not «places»
+posa_scena	scene_settle	twin of posa-scena
+posizioni_rgb	rgb_positions	Italian order
+posti_dei_guasti	fault_slots	Italian order
+posti_occupati	taken_slots	Italian order
+posti_pronti	ready_slots	Italian order
+posto_capacita	seat_on_capabilities	wl_seat listener: «posto» is the Wayland seat here
+posto_nome	seat_on_name	wl_seat listener: «posto» is the Wayland seat here
+posto_chi	slot_holder	returns the session holding the slot
+posto_unico	unique_place	shell check that the binary has one location, not an RCP slot
+preferenze_interne	internal_preferences	Italian order
+prefissiAnnotati	annotatedPrefixes	Italian order
+prefissiVincolanti	bindingPrefixes	Italian order
+presente	present_v	«there» is wrong (struct of attendees, a «flag was 1» bool); present taken by presenti — unsure
+presenti_pieni_detto	attendees_full_logged	detto = already logged once → logged
+presta_fine	lend_end	verb stem, not «lends»
+presta_inizio	lend_start	verb stem, not «lends»
+primari_grezzi	raw_primaries	Italian order
+primario_citato	cited_primary	Italian order
+primario_misurato	measured_primary	Italian order
+prima_codifica_fatta	first_encode_done	«prima» = first here, not before
+prima_comune	first_in_common	«prima» = first: first codec common to both lists
+prima_desc	first_desc	«prima» = first (prima_desc or desc)
+prima_im	first_im	«prima» = first (prima_im or im)
+prima_l	prev_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+prima_a	prev_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+prima_riga	first_row	«prima» = first glyph row
+prima_della_scena	before_scene	drop the Italian «of»
+prima_di_questo	before_this	drop the Italian «of»
+prima_di_sessione	before_session	drop the Italian «of»
+primo_fotogramma_e_chiave	first_frame_is_key	«e» is «is», not a letter
+primo_vcl_e_chiave	first_vcl_is_key	«e» is «is», not a letter
+primo_tipo_grezzo	first_raw_type	Italian order
+probl	probs	list of problems; «prob» reads as probability
+problemiDnf	dnfProblems	Italian order
+proc_rete	net_procs	Italian order
+processi_inquilino	tenant_processes	Italian order
+processi_interessanti	interesting_processes	Italian order
+processi_miei	my_processes	Italian order
+processi_scena	scene_processes	Italian order
+processi_shell	shell_processes	Italian order
+processi_staccato	detached_processes	Italian order
+profiloFinto	fakeProfile	Italian order
+profilo_componi	compose_profile	Italian order (verb first)
+profilo_del_browser	browser_profile	Italian order
+profilo_flusso	stream_profile	Italian order
+profondita_asincrona	async_depth	Italian order
+profondita_buone	good_depths	Italian order
+profondita_chiesta	requested_depth	Italian order
+profondita_flusso	stream_depth	Italian order
+programmiAmmessi	allowedPrograms	Italian order
+promozione_8_a_10	promotion_8_to_10	«a» is «to»
+proposte_coperte	covered_proposals	Italian order
+proprieta_stringa	string_property	Italian order
+prossimo_chiave_forzato	force_next_key	flag that forces the next frame to be a key frame
+prova_ingressi_illegali	test_illegal_inputs	Italian order
+prova_keymap_della_sessione	test_session_keymap	Italian order
+prova_nomi_distinti	test_distinct_names	Italian order
+prova_ripiego_silenzioso	test_silent_fallback	Italian order
+prova_scena_ferma	test_still_scene	«ferma» = still scene, not «stop»
+prova_una	test_one	bare «test» is a shell builtin and too generic
+prove_nome	name_cases	list of (name, expected) cases; tests_name is broken English
+ps_vero	real_ps	Italian order
+pts_e_monotono	pts_is_monotonic	«e» is «is»
+puntatore-di-ripiego	fallback-pointer	Italian order
+puntatore_fine	pointer_fine	CSS «(any-pointer: fine)»: precise, not «end»
+puntatore_grosso	big_pointer	Italian order
+puntatore_tenuto	held_pointer	Italian order
+puntatore_vetro	glass_pointer	Italian order
+punto_fuori	hotspot_outside	counter: hotspot outside the image
+purezza_pagina	page_purity	Italian order
+purezza_tono	tone_purity	Italian order
+purezze_ord	sorted_purities	Italian order
+qp_corrente	current_qp	Italian order
+qp_fisso	fixed_qp	Italian order
+qp_massimo	qp_max	standard abbreviation; max_qp is a VA-API field name
+qp_minimo	qp_min	standard abbreviation; min_qp is a VA-API field name
+quaderno_nuovo	new_notebook	Italian order
+quadro	frame_buf	the composed frame buffer, not «refresh»
+quadro_ms	next_frame_ms	glass → next frame times, not «refresh»
+quadro_vista	view_raf	requestAnimationFrame handle of the view
+qualcuno_aspetta	someone_waiting	adjective form
+qualita-a	quality-at	«a» = at frame N
+qualita_a	quality_at	twin of qualita-a
+qualita_ammessa_sulla_scheda	allowed_quality_on_card	Italian order
+qualita_corrente	current_quality	Italian order
+qualita_fallita	failed_quality	Italian order
+quando_cambia	when_changes	verb agreement
+quanti_da_saltare	how_many_to_skip	«da» = to, not from
+quanti_fotogrammi_dice_il_cliente	client_frame_count	word-for-word sentence
+quanti_tela	canvas_count	counter of canvas events
+qui_c_e_il_deposito	repo_is_here	word-for-word «here there is the repo»
+quota_lorda	gross_quota	Italian order
+raccogli_gruppi_scheda	collect_card_groups	Italian order
+raccogli_morte	reap_dead	reaps dead children/threads
+radiceFinta	fakeRoot	Italian order
+radice_del_deposito	repo_root	Italian order
+radici_browser	browser_roots	Italian order
+raffica_concordate	bursts_matched	counter of bursts that matched
+raffica_fatte	bursts_done	counter of bursts sent
+raffica_quante	burst_count	number of bursts to send
+range_grezzo	raw_range	Italian order
+range_misurato	measured_range	Italian order
+rapporto	ratio	fps / reference fps: a ratio, not a report
+rbsp_voluto	wanted_rbsp	Italian order
+rc_da_riprogrammare	rc_to_reprogram	«da» = to
+rcp_azzera_registro_sessioni	rcp_reset_session_log	Italian order
+rcp_chiusa_dal_client	rcp_closed_by_client	«dal» = by
+rcp_e_finita	rcp_is_finished	«e» = is
+rcp_misura_ammessa	rcp_size_allowed	«misura» = size (range, parity, ceiling)
+rcp_misura_massima	rcp_max_size	«misura» = size
+rcp_tela_rimanda	rcp_canvas_postpone	moves the backstop deadline (glossary: postponement)
+rcp_video_abbandonato_a_valle	rcp_video_abandoned_downstream	drop the Italian «a»
+rcp_video_niente_credito	rcp_video_no_credit	«niente» = no
+rcp_video_scartato_prima_del_filo	rcp_video_discarded_before_wire	drop the Italian «of»
+rcp_video_spedisci	rcp_video_send	«spedisci» = send
+reg_sano	healthy_log	Italian order
+regione_nota	region_known	«nota» = known (bool), not «note»
+regione_scalata_lamentata	scaled_region_warned	once-only flag: scaled region already warned
+registraTipo	registerType	«registra» = register (a type), not log
+registroSalvato	savedLog	Italian order
+registro_applicazione	app_log	Italian order
+registro_dirotta	log_redirect	verb stem
+registro_global	registry_global	wl_registry .global listener, not a log
+registro_globale	registry_on_global	wl_registry .global listener in a bench, not a log
+registro_nel_journal	log_to_journal	«nel» = to/into
+registro_parla_molto	log_verbose	«speaks much» = verbose
+registro_tasto_dicibile	log_key_safe	may this key code be written to the log
+registro_via	registry_remove	wl_registry .global_remove listener, not a log
+registro_visto	seen_log	Italian order
+regole_12_agosto	rules_aug_12	English date order
+regole_coperte	covered_rules	Italian order
+regole_di_stato_coperte	covered_state_rules	Italian order
+reinstalla	reinstall	command word, verb stem
+rende_la_pagina_da_solo	renders_page_alone	word-for-word sentence
+resta-dopo	stay-after	seconds to stay attached after (noun), not «stays»
+resta-nascita	stay-birth	twin of resta_nascita
+resta-prima	stay-before	twin of resta_prima
+resta_dopo	stay_after	twin of resta-dopo
+resta_nascita	stay_birth	seconds to stay attached at birth
+resta_prima	stay_before	twin of resta-prima
+resta_del_filo	wire_time_left	returns the remaining wire time
+resto_orizzontale	horizontal_remainder	scroll remainder, Italian order
+resto_verticale	vertical_remainder	scroll remainder, Italian order
+rete_del_giro	round_network	Italian order
+rete_detto_ms	network_logged_ms	when the network line was last logged
+rete_dgram_falsi	network_dgram_bogus	bogus datagrams, not «false»
+rete_giudizio	network_verdict	the judgement code of the network line: a verdict
+rete_guasta	broken_network	Italian order
+rett_finestra	window_rect	Italian order
+ricambi_puntatore	pointer_replacements	Italian order
+ricambi_tastiera	keyboard_replacements	Italian order
+richieste_kwin	kwin_requests	Italian order
+riduci_linea_morta	reduce_dead_line	Italian order
+riduci_rete_quic	reduce_quic_network	Italian order
+riempi_profilo_capacita	fill_capability_profile	Italian order
+riempi_sequenza_h264	fill_h264_sequence	Italian order
+riempi_sequenza_hevc	fill_hevc_sequence	Italian order
+rientra_e_guarda	reenter_and_look	«e» = and
+rifai_una_scatola	redo_one_box	collided in meaning with rifai_scatola → redo_box
+riferimenti_attivi	active_references	Italian order
+rifiutati_server	server_refused	Italian order
+rifiuto_di_legarsi	bind_refusal	Italian order
+rifiuto_hardware	hardware_refusal	Italian order
+riga_avvio	startup_line	Italian order
+riga_comando	command_line	Italian order
+riga_conti	counts_line	Italian order
+riga_eta	age_line	Italian order
+riga_gialla	yellow_line	Italian order
+riga_guasto	fault_line	Italian order
+riga_json	json_line	Italian order
+riga_misure	measures_line	Italian order
+riga_numeri	numbers_line	Italian order
+riga_rampa	ramp_line	twins move together / English word order
+riga_registro	log_line	Italian order
+riga_shell	shell_line	Italian order
+riga_testo	text_line	Italian order
+riga_vera	real_line	Italian order
+righeEventi	eventLines	Italian order
+righe_cieco	blind_lines	Italian order
+righe_del_registro	log_lines	Italian order
+righe_di_commento	comment_lines	Italian order
+righe_finita	finished_lines	Italian order
+righe_imputato	accused_lines	Italian order
+righe_mie	my_lines	Italian order
+righe_nostre	our_lines	Italian order
+righe_nuove	new_lines	Italian order
+righe_registro	log_line_list	Italian order; log_lines taken by righe_del_registro
+righe_rientro	reentry_lines	Italian order
+righe_rotte	broken_lines	Italian order
+righe_sane	healthy_lines	Italian order
+righe_sconosciute	unknown_lines	Italian order
+rilascia_al_distacco	release_on_detach	«al» = on
+rilievi_tutti	all_findings	Italian order
+rimetti_in_piedi	bring_back_up	idiom «rimettere in piedi», not «in feet»
+rimozione_iniziale	initial_removal	Italian order
+ripassa_sessioni_locali	revisit_local_sessions	Italian order
+riquadro_cambiato	changed_rect	Italian order
+ris_tutte	all_results	Italian order
+risalita_accesa	rise_enabled	«accesa» = enabled
+risalito_da_poco	recently_risen	idiom «da poco» = recently
+riscrivi_sps_con_cornice	rewrite_sps_with_crop	the cornice is the SPS cropping window
+riso	resonator	formant resonator struct, «reson» is not a word
+riso_metti	resonator_set	twin of riso
+riso_passa	resonator_step	twin of riso
+risponde_il_tela	reply_to_canvas	method; replies_canvas twice in the table
+risponde_tela	canvas_reply	method; replies_canvas twice in the table
+risposta_secca	bare_response	Italian order
+risposte_vere	real_replies	Italian order
+risveglia_al_gesto	wake_on_gesture	«al» = on
+ritardo_decodifica_s	decode_delay_s	Italian order
+ritardo_iniziale	initial_delay	word order: initial delay (HRD flag)
+ritardo_mediano	median_delay	word order: median delay
+ritardo_minimo	low_latency	it is the ULTRA_LOW_LATENCY tuning switch, not a minimum delay
+ritardo_minimo_chiesto	low_latency_requested	twin of ritardo_minimo: ULTRA_LOW_LATENCY requested
+ritenuta	held_buffer	the pw_buffer held back (withheld is the wrong sense)
+ritenuti	held_count	counter of held buffers (retained is the wrong sense)
+ritenuti_resi	held_returned	held buffers given back
+ritmo_atteso	expected_rate	word order
+ritmo_sano	healthy_rate	word order
+ritrovati_all_avvio	found_again_at_startup	"all_startup" was a mistranslation of all'avvio
+rovescia32	reverse32	bit reversal of a 32-bit word, not "flips"
+rx_decodifica	rx_decode	wasm export is a verb: decode
+rx_pacchetto	rx_packet	pacchetto = network/Opus packet, not package
+rx_pacchetto_max	rx_packet_max	twin of rx_pacchetto
+s_in_attesa	s_pending	coalesced probe waiting to start: pending
+sa_scrivere_nella_cache	can_write_cache	sa = can, not "sa"
+salta_ancora	skip_left	frames still to skip
+salta_liste_scala	skip_scaling_lists	H.264/HEVC scaling lists
+salti_ammessi	allowed_jumps	word order
+salti_mse	mse_jumps	word order
+salti_suono	sound_jumps	word order
+sbaglio_app	err_app	GError out-parameter: err, not mistake
+sbaglio_eis	err_eis	GError: err
+sbaglio_input	err_input	error string out-parameter: err
+sbaglio_kwin	err_kwin	error out-parameter: err
+sblocca_e_dichiara	unblock_and_declare	e = and
+sblocco_cieco	blind_unlock	word order
+sc_entra_a_schermo_intero	sc_enter_fullscreen	schermo intero = fullscreen
+sc_esci_da_schermo_intero	sc_exit_fullscreen	schermo intero = fullscreen
+sc_intero_da_F11	sc_fullscreen_from_F11	schermo intero = fullscreen
+scala_dei_monitor_logici	logical_monitor_scale	word order
+scala_del_nostro	our_scale	scale of our monitor
+scala_byte	staging_bytes	scala here is the Vulkan staging buffer
+scala_mappa	staging_map	Vulkan staging buffer mapping
+scala_memoria	staging_memory	Vulkan staging buffer memory
+scala_gia_scattata	ladder_already_fired	scala = ladder of stall thresholds
+scala_larga	wide_ladder	ladder of thresholds, word order
+scala_poco_giu	slightly_lower_ladder	ladder of thresholds
+scala_stallo	stall_ladder	reruns with lower and lower stall thresholds: a ladder
+scala_stretta	tight_ladder	ladder of thresholds, word order
+scala_strettissima	tightest_ladder	ladder of thresholds, word order
+scarta_stream_di_troppo	discard_extra_stream	di troppo = extra
+scarto_dillo	log_discard	tells (logs) a discard
+scatole_viste	seen_boxes	seen, not views
+scatola_locale	local_box	word order
+scatola_pulita	clean_box	word order
+scatti	notches	wlr_input: whole scroll steps (notches) from a remainder, not shots
+scatto_da_inoltrare	shot_to_forward	da inoltrare = to be forwarded
+scatto_quanti	shot_count	how many = count
+scatto_restano	shots_left	remaining shots
+scatto_inoltro_segnale	shot_forward_signal	word order
+scegli_il_prima	choose_earliest	picks the earliest
+scegli_porta_sonda	choose_probe_port	word order
+scegli_fisico	choose_physical_device	picks the Vulkan physical device
+scelta_appunti	clipboard_choice	word order
+scelta_codec	codec_choice	word order
+scelta_del_driver	driver_choice	word order
+scelta_dist	best_dist	distance of the best candidate so far
+scelta_pos	best_pos	position of the best candidate so far
+scelta_profondita	depth_choice	word order
+scena_finta	fake_scene	word order
+scena_gialla	yellow_scene	word order
+scheda_browser	browser_card	the card the browser decodes on
+scheda_quale	which_card	word order
+scheda_giusta	right_card	word order
+scheda_da_abbandonare	card_to_abandon	da = to (flag), not from
+scheda_da_riprovare	card_to_retry	da = to, not from
+scheda_mai_piu	card_never_again	mai piu = never again
+scheda_sa_disegnare	card_can_draw	sa = can
+schede_gpu	gpu_cards	word order
+schedeVaapi	vaapiCards	word order
+schedeVulkan	vulkanCards	word order
+schede_in_tutto	total_cards	in tutto = total
+scheletro_della_macchina_vera	real_machine_skeleton	word order
+schermo_in_primo_piano	screen_in_foreground	primo piano = foreground
+schermo_intero	fullscreen	schermo intero = fullscreen
+schermo_intero_API	fullscreen_API	schermo intero = fullscreen
+schermo_intero_geometria	fullscreen_geometry	schermo intero = fullscreen
+schermo_voluto	wanted_screen	word order
+scopeVuoto	emptyScope	word order
+scorri_vero	real_scroll	a real swipe, not a boolean true
+scrivi_cursore_colorato	write_colored_cursor	word order
+scrivi_regole_menu_kde	write_kde_menu_rules	word order
+scrivi_tema_cursore	write_cursor_theme	word order
+scrivi_chiave_qt	write_qt_key	word order
+scrivi_negli_appunti	write_to_clipboard	preposition
+scrivi_in	write_dir	directory to write into
+secondi_a_entrare	seconds_to_enter	a = to
+secondi_a_scatto	seconds_to_fire	seconds until the stall fires
+secondi_chiusura	close_seconds	word order
+secondo_passato	second_elapsed	a second has elapsed
+sede	seat_id	logind ListSessions field: seat
+segnale-scena	scene-signal	word order (file that signals the scene)
+segnale_scena	scene_signal	twin of segnale-scena
+segno_registro	log_mark	returns a position in the log: a mark
+sentinella_locale	sentinel_local_one	was sentinel_v_local; checks one user (sentinel_local checks many)
+senza-clic	no-click	house style for negative options is no- (no-adaptive-rate)
+senza_clic	no_click	twin of no-click
+senza-controllo	no-check	no- option style
+senza_controllo	no_check	twin of no-check
+senza-copia	no-copy	no- option style
+senza_copia	no_copy	twin of no-copy
+senza-coppia	no-pair	no- option style
+senza_coppia	no_pair	twin of no-pair
+senza-cura	no-fix	no- option style
+senza_cura	no_fix	twin of no-fix
+senza_cura_	no_fix_	local copy of no_fix
+senza-eco	no-echo	no- option style
+senza_eco	no_echo	twin of no-echo
+senza-guasto	no-fault	no- option style
+senza_guasto	no_fault	twin of no-fault
+senza-maiusc	no-shift	no- option style
+senza_maiusc	no_shift	twin of no-shift
+senza-pulsante	no-button	no- option style
+senza_pulsante	no_button	twin of no-button
+senza-riscaldamento	no-warmup	no- option style
+senza_riscaldamento	no_warmup	twin of no-warmup
+senza-scheda	no-card	no- option style
+senza_scheda	no_card	twin of no-card
+senza-sessione	no-session	no- option style
+senza_sessione	no_session	twin of no-session
+senza-sorgente	no-source	no- option style
+senza_sorgente	no_source	twin of no-source
+senza-sveglia	no-wake	no- option style
+senza_sveglia	no_wake	twin of no-wake
+senza-tasto	no-key	no- option style
+senza_tasto	no_key	twin of no-key
+senza-tela-minima	no-min-canvas	no- option style; min canvas
+senza_tela_minima	no_min_canvas	twin of no-min-canvas
+senza-usermod	no-usermod	no- option style
+senza_usermod	no_usermod	twin of no-usermod
+senza_accenti	strip_accents	function strips accents
+senza_ora	without_time	ora = time of day here, not now
+senza_uno	missing_one	the set with one file missing
+separa_nome	split_name	idiom
+seq_nota	seq_valid	bool: the sequence number is known (note was wrong)
+sequenza_prima_della_chiave	sequence_before_key	of = noise
+sequenze_prima_di_una_chiave	sequences_before_key	of = noise
+sequenza_vista	sequence_seen	seen, not view
+serbatoio_entro_i_50_ms	reservoir_within_50_ms	i = article, noise
+serial_noto	known_serial	word order
+serie_b	series_b	serie = series (serial was a mistranslation)
+serve_ancora	still_needed	word order
+serve_chiave_perche	needs_key_reason	perche = reason
+server_delle_prove	test_server	word order
+serviziPermanenti	permanentServices	word order
+sessione-via	session-stop	via here = take the session away (stop)
+sessione_chiusa_dall_utente	session_closed_by_user	da = by
+sessione_fai_nascere	session_spawn	fai nascere = spawn
+sessione_finita_dal_figlio	session_ended_by_child	da = by
+sessione_proprietaria	session_owns	bool: the session owns the clipboard
+sessione_spedita	session_sent	the SESSIONE message was sent
+sessione_vista	session_seen	seen, not view
+sessioniFinte	fakeSessions	word order
+sessioni_vive	live_sessions	word order
+sezione_principale	main_section	word order
+sezioni_prova	test_sections	word order
+si_e_presentato	showed_up	reflexive verb, "e_presented" is broken
+si_ferma	stop_requested	signal flag: stop requested
+si_vede	is_visible	is visible
+sistema_azioni_del_pannello	fix_panel_actions	sistema is the verb fix here
+socket_comuni	shared_sockets	word order
+soglia_attesa	wait_threshold	word order
+soglia_stallo	stall_threshold	word order
+soglia_stallo_ms	stall_threshold_ms	word order
+solo-controllo-positivo	positive-check-only	"X-only" like technical-layer-only
+solo_controllo_positivo	positive_check_only	twin
+solo-distacco	detach-only	"X-only"
+solo_distacco	detach_only	twin
+solo-esito	outcome-only	"X-only"
+solo_esito	outcome_only	twin
+solo-porte	ports-only	"X-only"
+solo_porte	ports_only	twin
+solo_connessione	connection_only	word order
+solo_corpo	body_only	word order
+solo_cursore	cursor_only	word order
+solo_fotogrammi	frames_only	word order
+solo_chiave	key_only	word order
+solo_nostro	ours_only	word order
+soloLoro	onlyThese	only the given names
+sonda_casa	home_probe	word order
+sonda_gira	run_probe	function that runs a probe
+sonda_parti	probe_start	parti is the verb start
+sonda_una	probe_one	probe_v was a collision fallback
+sonda_mse_una	probe_mse_one	probe one MSE config
+sporco_della_scatola	box_dirt	word order
+spediti_in_tutto	shipped_total	in tutto = total
+spe	off_run	the clock-off run (pairs with acc); "sent" was wrong
+stampa_rete_quic	print_quic_network	word order
+stat_macchina	machine_stat	word order
+stato_delle_cure	fixes_state	word order
+stato_sporco	dirty_state	word order
+stato_tocco	touch_state	word order
+stato_http	http_status	HTTP status code
+stato_proc	proc_state	word order
+storte_la	malformed_there	malformed lines on the other side
+storte_qui	malformed_here	malformed lines here
+strada_chiesta	requested_route	word order
+strada_del_palco	stage_route	word order
+stream_di_controllo	control_stream	word order
+stream_di_un_fotogramma	single_frame_stream	word order
+stretta_fatta	handshake_done	stretta = EIS handshake (EI_EVENT_CONNECT)
+stretta_us	handshake_us	when the handshake arrived
+stretta_intera	full_handshake	whole handshake
+stretta_cronometrata	timed_handshake	timed handshake
+stringa_codec	codec_string	word order
+stringhe_codec	codec_strings	word order
+stringi_su_un_core	pin_to_one_core	pins the process to one core
+striscia_verde	green_strip	word order
+su_errore_protocollo	on_protocol_error	word order
+su_offerta_nuova	on_new_offer	word order
+su_selezione_primaria	on_primary_selection	word order
+su_sink_sbagliato	on_sink_error	pipewire .error callback
+su_richiesta_dati	on_data_request	word order
+sudo_mio	my_sudo	word order
+suff	ver_suffix	package version suffix
+suono_volume_massimo	sound_max_volume	word order
+superfici_ingresso	input_surfaces	input pool surfaces
+scrittore_input	input_writer	word order
+ssh-parola	ssh-password	parola = password
+t_fine_attesa_ms	t_wait_end_ms	word order: end of the wait
+t_ritr	t_found_again	"refound" is not English; it is the time desktops are found again
+tana	scratch_dir	a mktemp -d scratch directory, not a "lair"
+targa	banner	the big centred label of a test scene, not a plate
+tabella-capacita	capabilities-table	word order (html id)
+tabella_codici	code_table	word order
+tabella_escluse	excluded_table	word order
+tabella_minimi	min_table	word order
+tabella_piattaforme	platform_table	word order
+tap_vero	real_tap	word order: adjective first
+tasti_della_maschera	mask_keys	word order, drop "of"
+tasti_orfani	orphan_keys	word order
+tasti_premuti	pressed_keys	word order
+tasti_premuti_alla_fine	pressed_keys_at_end	word order; "alla fine" = at the end
+tastiera_apri_per	keyboard_open_for	"per" is the Italian preposition: for
+tastiera_commuta	keyboard_toggle	verb form, like keyboard_open/close
+tastiera_e_questa	keyboard_is_this	"e" is the verb "is" (does the layout match this name)
+tastiera_posizioni_per	keyboard_positions_for	"per" is the Italian preposition: for
+tastiera_spedisci_posizione	keyboard_send_position	spedisci = send (ship is unidiomatic)
+tastiera_spedisci_testo	keyboard_send_text	spedisci = send (ship is unidiomatic)
+tasto_del_mod	mod_key	word order, drop "of"
+tasto_dicibile	speakable_key	word order
+tastoPorta	portKey	key handler of the port box: word order
+taglio_dx	crop_right	H.264 frame cropping margin
+taglio_giu	crop_bottom	H.264 frame cropping margin (giu = bottom)
+taglio_su	crop_top	H.264 frame cropping margin (su = top, not "on")
+taglio_sx	crop_left	H.264 frame cropping margin
+tela_attendi_dal_figlio	canvas_wait_for_child	"dal figlio" here is "for the child"
+tela_da_chiedere	canvas_to_request	"da chiedere" = to be requested
+tela_del_palco	stage_canvas	word order, drop "of"
+tela_di_comodo	fallback_canvas	stand-in canvas when the real one is unknown
+tela_grazia_da	canvas_grace_since	"da" is a timestamp: since
+tela_disaccordo_da	canvas_mismatch_since	"da" is a timestamp: since
+tela_prec	prev_canvas	word order
+tela_precedente	previous_canvas	word order
+tela_vista	seen_canvas	struct of the canvas seen, word order
+tele_prec	prev_canvases	word order
+tele_recenti	recent_canvases	word order
+tema_buono	good_theme	word order
+tempoGestore	managerTimeout	timeout of the package-manager run
+tenta_tenace	try_hard	idiomatic for a persistent retry
+termina_al_figlio	terminate_in_child	callback: end the session in the child
+termina_davvero	really_terminate	word order
+testa_accesa	head_enabled	zwlr_output_head_v1 .enabled event
+testa_marca	head_make	zwlr_output_head_v1 .make event
+testa_misura_fisica	head_physical_size	zwlr_output_head_v1 .physical_size event
+testa_modo_corrente	head_current_mode	zwlr_output_head_v1 .current_mode event
+testimone_del_server	server_witness	word order, drop "of"
+testimoni_connessione	connection_witnesses	word order
+testoItaliano	italianText	word order
+testo_a_caso	random_text	"a caso" = random, not "a case"
+testo_campi	fields_text	word order
+testo_del_codice	code_text	word order, drop "of"
+testo_della_disposizione	layout_text	word order, drop "of"
+testo_finestra	window_text	word order
+testo_intero	whole_text	word order
+testo_rotto	broken_text	word order
+testo_sano	healthy_text	word order
+testo_stampabile	printable_text	word order
+testo_unico	unique_text	word order; unico = unique per run
+tetto_cliente	client_cap	word order
+tetto_del_palco	stage_cap	word order, drop "of"
+tetto_filo	wire_cap	word order
+tetto_foto	photo_cap	word order, twin of photo_cap_s
+tetto_serbatoio_bit	reservoir_cap_bit	word order
+tinte_del_flusso	stream_tints	word order, drop "of"
+tipiAzione	actionTypes	word order
+tipi_di_controllo	check_types	word order, drop "of"
+tipi_leciti	allowed_types	word order
+tipi_nostri	our_types	word order
+tipi_visti	seen_types	word order
+tipo_dati	data_type	word order
+tipo_frame	frame_type	word order
+tipo_livello	level_type	word order
+tipo_memoria	memory_type	word order
+tipo_motivo	reason_type	word order
+tipo_ordine	order_type	word order
+tipo_risposta	response_type	word order
+tipo_stream	stream_type	word order
+tls_contesto_pagina	tls_page_context	word order
+tls_contesto_quic	tls_quic_context	word order
+tocco_centra_puntatore	touch_center_pointer	verb form, not 3rd person
+tocco_id_locale	touch_local_id	word order
+tocco_interroga	touch_query	verb form (matchMedia query)
+tocco_lascia_tutto	touch_release_all	lascia = release (touches lifted)
+tocco_puntatore_disegna	touch_draw_pointer	word order
+tocco_spedisci	touch_send	spedisci = send
+tocco_su	touch_up	su = up (touchend), pairs with touch_down
+togli_di_mezzo_il_difetto_di_c8	remove_c8_defect	"togli di mezzo" = get rid of; "half" is a mistranslation
+trasferimento_grezzo	raw_transfer	word order
+trasporto_perche_restano	transport_remain_reason	returns why connections remain
+trasporto_quante	transport_count	"quante" = how many
+tratta_richiedi_chiave	handle_key_request	word order
+tratti_quanti	stretches_n	how many slots are full
+tratti_detto_us	stretches_logged_us	detto = already logged once → logged
+trova_abbandono	find_abandon	abandon event of a tenant
+trova_o_crea	find_or_create	"o" = or
+trovato_modo	mode_found	word order
+uccidiIn	killAt	kills the child at a given point
+uccisi_dal_server	killed_by_server	"dal" = by
+uid_dichiarato	declared_uid	word order
+ultima_col	last_col	col = column, not "with"
+ultima_rig	last_row	rig = row (pairs with last_col)
+ultima_in_mano	last_held	the last buffer still held
+ultima_guarigione_us	last_heal_us	verb noun form, shorter
+ultimo_conto_guardiano	last_guardian_count	word order
+ultimo_controllo_cert	last_cert_check	word order
+ultimo_pres_reale	last_real_pres	word order
+ultimo_ripasso_locali	last_locals_sweep	locali = local sessions; twin of wt_locals_sweep
+un_caso	one_case	avoids the soft keyword "case"; one test case
+un_giro	one_round	"a_round" is a sinonimi fallback
+un_passo	one_step	"a_step" is a sinonimi fallback
+un_solo_modificatore	single_modifier	idiomatic
+un_verso	one_way	flag: fault in one direction only
+una_casella	one_cell	"a_cell" is a sinonimi fallback
+una_prova	one_test	runs one test; "test" alone is too generic
+una_riga	one_line	"a_line" is a sinonimi fallback
+una_volta	init_once	pthread_once_t; "a_time" is wrong
+unitaFinte	fakeUnits	word order
+unita_ferma	unit_stopped	predicate: is the systemd unit stopped
+unita_inattiva	inactive_unit	word order
+us_allocazione	alloc_us	unit goes last
+us_apri	opening_us	unit goes last; open_us is taken
+us_arrivo	arrival_us	unit goes last
+us_attesa_gpu	gpu_wait_us	unit last, word order
+us_caricamento	upload_us	unit goes last
+us_carico	load_us	unit goes last
+us_codifica	encode_us	unit goes last
+us_conversione	convert_us	unit goes last
+us_copia	copy_us	unit goes last
+us_misura	measure_us	unit goes last
+us_nel_posto	in_slot_us	unit goes last
+us_spedizione	send_us	unit goes last
+usi_dpb	dpb_usage	VkImageUsageFlags, word order
+usi_ingresso	input_usage	VkImageUsageFlags, word order
+uso_sostenuto	sustained_use	word order
+uscita_chiesta	requested_output	word order
+uscita_confermata	confirmed_output	word order
+uscita_giud	judge_exit	exit status of the judge, not an output
+uscita_prod	producer_exit	exit status of the producer, not an output
+utente_lxqt	lxqt_user	word order
+utente_sessione	session_user	word order
+utenti_attesi	expected_users	word order
+utf8_valido	valid_utf8	word order
+valore_effettivo	effective_value	word order
+vadiretta_codifica	vadirect_encode	function: verb, not noun
+vadiretta_superficie_ingresso	vadirect_input_surface	word order
+veglia_primo_fotogramma	watch_first_frame	watchdog on the first frame
+verdetto_ammissione	admission_verdict	word order
+verdetto_atteso	expected_verdict	word order
+verdetto_giro	round_verdict	word order
+verdetto_gruppi	group_verdict	word order
+vero_entra	real_enter	saved original method
+vero_root	real_root	word order
+versioniAggiornate	updatedVersions	word order
+versione_api	api_version	word order
+versione_ext	ext_version	word order
+versione_gestore	handler_version	word order
+versione_puntatore	pointer_version	word order
+versione_scena	scene_version	word order
+versione_screencast	screencast_version	word order
+verso	which_way	rotation direction, not "towards"; direction is taken
+verso_a	target_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+verso_l	target_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+verso_atteso	expected_direction	direction of a message type
+verso_browser_sessione	browser_to_session	clipboard direction
+verso_sessione_browser	session_to_browser	clipboard direction
+verso_dei_byte	cursor_byte_order	returns the byte order of a cursor format
+vicini_non_miei	neighbors_not_mine	"miei" = mine
+video_annunci_tela	video_canvas_announcements	word order
+video_aperto	video_is_open	bool; frees video_open for the callback
+video_apri	video_open	"open_it" was a collision fallback
+video_da_scrivere	video_to_write	"da scrivere" = to be written
+video_e_chiave	video_is_key	"e" = is: the frame is a keyframe
+video_guarda_qualcuno	video_someone_watching	word order, -ing
+video_rifiutato_per_chiave	video_refused_for_key	"per" = for
+video_spediti	video_sent	spediti = sent
+viola_appunti	clipboard_violation	logs a clipboard protocol violation
+vivo_relitto	wreck_alive	word order
+voce_misurata	measured_entry	word order
+voce_ritardo	delay_entry	word order
+voce_ritardo_xrdp	xrdp_delay_entry	word order
+voci_cartella	folder_entries	word order
+voci_di_array	array_entries	word order
+voci_livello	level_entries	word order
+vuole_scrivere	wants_to_write	idiomatic
+vulkanvideo_codifica_dmabuf	vulkanvideo_encode_dmabuf	function: verb, not noun
+vulkanvideo_codifica_memoria	vulkanvideo_encode_memory	function: verb, not noun
+vulkanvideo_nome_driver	vulkanvideo_driver_name	word order
+vulkanvideo_nome_scheda	vulkanvideo_card_name	word order
+vulkanvideo_scheda_rifiuta_il_lineare	vulkanvideo_card_rejects_linear	verb form
+wl_svuota	wl_clear	clears the clipboard
+wlr_detto_il_testimone	wlr_witness_logged	detto = already logged once → logged
+wlr_forza_intero	wlr_force_full	forces a full copy
+wlr_input_gira	wlr_input_run	verb form
+wlr_input_rilascia_forzato	wlr_input_force_release	word order
+wlr_lastre_alla_tela_massima	wlr_slabs_at_max_canvas	word order
+wlr_lettura_cpu	wlr_cpu_read	word order
+wlr_misura_chiedi	wlr_ask_size	misura = size; verb first
+wt_audio_qualcuno_ascolta	wt_audio_someone_listening	word order, -ing
+wt_video_qualcuno_guarda	wt_video_someone_watching	word order, -ing
+wt_giri_fermi	wt_stalled_rounds	word order
+wt_giro_del_padre	wt_parent_round	word order, drop "of"
+wt_linea_morta	wt_dead_line	glossary «linea morta» = dead line, word order
+wt_linea_morta_scattata	wt_dead_line_fired	glossary «linea morta» = dead line
+wt_locali_gancio	wt_locals_hook	locali = local sessions; "local_vars" was a fallback
+wt_locali_ripasso	wt_locals_sweep	locali = local sessions (plural)
+wt_sorveglia_locali	wt_watch_locals	verb form
+wt_mio	wt_mine	"mio" = mine
+wt_misura_massima_di	wt_max_size_of	word order, misura = size
+wt_perche_ha_da_dire	wt_pending_reason	why the connection still has something to send
+wt_ritmo_adattivo	wt_adaptive_rate	word order, twin of adaptive_rate
+wt_stato_rcp	wt_rcp_state	word order
+wt_tela_rimanda	wt_canvas_resend	verb form
+xfce_xfconf_di_sessione	xfce_session_xfconf	word order
+xkb_parla	xkb_log_cb	xkb log callback
+Adesso	Clock	the injectable clock (Go func() time.Time); now is taken by ora (real collision ora/adesso → now in pagina.html, operazione.go)
+adesso	clock	case twin of Clock; now is taken by ora in the same files
+Amb	Env	natural name (scope-aware check: no real collision)
+amb	env	natural name (scope-aware check: no real collision)
+Motivo	Reason	natural name (scope-aware check: no real collision)
+motivo	reason	natural name (scope-aware check: no real collision)
+Nodo	Node	natural name (scope-aware check: no real collision)
+nodo	node	natural name (scope-aware check: no real collision)
+Origine	Origin	natural name (scope-aware check: no real collision)
+origine	origin	natural name (scope-aware check: no real collision)
+Porta	Port	natural name (scope-aware check: no real collision)
+porta	port	natural name (scope-aware check: no real collision)
+Stato	State	natural name (scope-aware check: no real collision)
+stato	state	natural name (scope-aware check: no real collision)
+Distribuzione	Distrib	twins: the Linux distribution; distribution exists in 19-nv-macchina.sh
+distribuzione	distrib	twins: the Linux distribution; distribution exists in 19-nv-macchina.sh
+Fiducia	Attestation	twins: the installer's trust record (catalogue version, sequence, source); trust exists as a string in the installer
+fiducia	attestation	twins: the installer's trust record (catalogue version, sequence, source); trust exists as a string in the installer
+Finita	Ended	twins: finished state (RCP state name too); finished is taken by fatto
+finita	ended	twins: finished state (RCP state name too); finished is taken by fatto
+Formato	Schema	twins: the record format id (remotix-gruppi/1, plan/certification format); format and fmt exist
+formato	schema	twins: the record format id (remotix-gruppi/1, plan/certification format); format and fmt exist
+Immagine	Bitmap	twins: an image buffer (cursor image, Vulkan image); image exists in vulkanvideo.c, picture taken by foto
+immagine	bitmap	twins: an image buffer (cursor image, Vulkan image); image exists in vulkanvideo.c, picture taken by foto
+Mestiere	Duty	twins: the plan kind / a bench's method to call; job exists in testi.go
+mestiere	duty	twins: the plan kind / a bench's method to call; job exists in testi.go
+Minima	Lowest	twins: the minimum (version, rate); minimum is taken by minimo
+minima	lowest	twins: the minimum (version, rate); minimum is taken by minimo
+Punto	Spot	twins: the step reached / a point value; point exists in 16-lavori.py
+punto	spot	twins: the step reached / a point value; point exists in 16-lavori.py
+Rimedio	Remediation	twins: what to do about a fault; remedy exists as a string in testi.go
+rimedio	remediation	twins: what to do about a fault; remedy exists as a string in testi.go
+Segnale	Signal	natural name (scope-aware check: no real collision)
+segnale	signal_v	signal is libc signal(): a real clash for the file-scope «static int16_t *segnale» of 18-a1-opus-senza-ffmpeg.c
+Tastiera	Keyboard	natural name (scope-aware check: no real collision)
+tastiera	keyboard	natural name (scope-aware check: no real collision)
+Fatti	Facts	Go field, json:"facts"; Done is taken by Fatto
+fatti	done_ones	the ones that succeeded (vs falliti); done exists in 02-codifica-lancia.sh
+CASA	HOME_DIR	the user's home directory; HOME is a well-known environment variable
+Togli	Revoke	remove from a group/firewall; Remove exists in motore
+accese	ongoing	calls in progress (mCallState); on/lit/switched_on taken
+aggiorna	do_update	the update step; update exists in 16-salita.py and 19-nv-macchina.sh
+altra	the_other	the other keymap; other exists in vista.go
+altre	other_ones	the other pages; other is taken by altro
+aperto	is_opened	whether it is open; open/is_open taken by aperta
+argomenti	call_args	call arguments; args exists
+att	expect	the expected values; expected is taken by atteso
+attendi	should_wait	whether to wait; wait_for exists in 01-b7-congedo.py
+attesi	expected_vals	the expected ones; expected/awaited taken by atteso
+attive	enabled_ones	the active ones; active is taken by attiva
+avviata	was_started	whether it was started; started is taken by partito
+bannate	banned_pages	pages expected banned; banned is taken by bannato
+bannati	banned_set	the set of banned addresses; banned is taken by bannato
+bottone	button_code	a pointer button; button exists
+buona	good_one	a good case/fake that succeeds; good is taken by buono
+buoni	good_n	count of good ones; good is taken by buono
+cammino	trail	the sequence of states walked; path is taken by percorso
+candidata	candidate_entry	struct of a candidate; candidate exists in ritrovo.c
+candidato	try_candidate	returns the session if it is a candidate; candidate exists
+chiesta	asked_size	the requested size; requested/asked taken
+chieste	asks	gestures requested (counter); requested/asked taken by chiesti
+chiusa	is_closed	closed / the closing paren; closed exists in the page
+chiusura	closure	the closing; closing exists in 01-b7-congedo.py
+comanda	in_charge	whether the page is in command; command is taken by comando
+completi	completed	count of complete ones; complete is taken by completo
+copia	copied	a copy; copy exists in 16-risorse.py
+corrente	current	the current one; current is free once adesso is clock
+dal	from_	from which (start of a walk); from is a Python keyword
+destra	right_edge	the right crop/edge; right exists in the page and the mockups
+dichiarato	claimed	what was declared; declared is taken by dichiarata
+dillo	report_it	prints a verdict; tell is taken by dilo
+dimensiona	resize_to	resize a window; size exists in the benches
+dipinta	painted_rect	the last painted rectangle; painted is taken by dipinti
+dipinto	on_painted	marks a painted frame; painted is taken by dipinti
+elenca	list_cmd	the listing command/option; list is taken by elenco
+esiste	path_exists	whether a path exists; exists exists in 16-lavori.py
+esiti_	outcomes_	parameter shadowing esiti; outcomes is taken by esiti
+espressione	js_expr	the JS expression; expression exists in 02-pagina-misura-cdp.py
+etich	tick_label	CSS class of chart labels; label is taken by etichetta
+fallite	failures	failed counter; failed/unsuccessful taken
+fallito	has_failed	whether it failed; failed/unsuccessful taken
+fatta	mark_done	records DONE; done is taken by fatti
+fermati	n_stopped	how many stopped; stop is taken by ferma
+fotografia	snapshot	a snapshot of the threads; photo is taken by foto
+genere	flavor	the kind of a WebTransport stream; kind is taken by tipo
+installata	is_installed	whether the page is installed as an app; installed/set_up taken
+larg	wid	width; width is taken by larghezza
+letta	got_read	whether it was read; read/was_read taken by letto
+libera	free_fn	the free function pointer; free exists
+liberi	free_n	free frames in the ring; free is taken by libero
+libero	free_slot	a free slot index; free exists
+linea	text_line	a line; line is taken by riga, row by riga
+lista	items	a list; list is taken by elenco
+mancante	absent_one	the missing case; missing is taken by manca
+mancanti	missing_n	how many are missing; missing is taken by manca
+mancati--	missed--	lexer artifact of `a.mancati--` in the page: must follow mancati → missed
+memoria	mem_buf	a memory buffer / properties; memory exists
+mostra	show_cmd	the systemctl show argv / show; show exists in the page
+mot	rsn	the reason byte; reason exists in the page
+muovi	move_to	moves the pointer; move exists in 12-client-veri.py
+muta	gone_mute	the outcome «muted»; mute/muted taken by muti
+nella	inside_of	in (data word of a case name); in is a Python keyword
+nostre	owned	ours; our/ours taken
+numero	nr	a number; number exists in docs/sources
+nuove	new_ones	the new ones; fresh is taken
+nuovi	newcomers	the new ones; fresh is taken by nuove
+pacchetto	pack	a package; package exists in motore (Go keyword)
+persa	lossy	the probe with losses; lost is taken by persi
+perso	loss_pct	the loss percentage; lost is taken by persi
+portatile	portable	a laptop-like round; laptop exists in the mockup
+previsti	foreseen	the expected duration; expected is taken by atteso
+princ	is_primary	whether it is the primary group; primary is taken by principale
+pulsanti	mouse_buttons	pointer buttons count; buttons is taken by bottoni
+ricevuto	received_one	what was received; received is taken by ricevuti
+riavvia	relaunch	the restart step; restart/reboot taken by riavvio
+rilette	reread_items	entries read again; reread/read_again taken
+ritaglia	crop_box	crop an image; crop exists in 15-g4-comune.py
+sezioni	section_list	the sections; sections exists in docs/sources
+si	yes	natural name (scope-aware check: no real collision)
+sinistra	left_edge	the left crop/edge; left exists in the page
+sistema	system_wide	system-wide key files; system exists in 19-nv-macchina.sh
+som	sum_of	sums a series; sum exists (Python builtin)
+somma	total_sum	a running sum; sum exists
+sospeso	on_hold	there is a gap open; pending is taken by sospesi
+tempo	time_limit	the time limit given to a command (Go Duration, Python seconds); time exists
+tocco	touch	natural name (scope-aware check: no real collision)
+trovata	found_at	the index found; found/located taken
+tutte	all_of	all of them; all exists (Python builtin)
+uguale	eq_sign	pointer to '='; equal is taken by uguali
+ultimi	last_n	the last N; last/latest taken
+usate	used_count	how many used; used is taken by usati
+usati	used_len	bytes used; used is taken by usato
+vecchie	old_ones	the old entries; old is taken by vecchio
+verdi	greens	count of greens; green is taken by verde
+veri	genuine	the true/real ones; true is a Go predeclared name
+visibile	is_visible	whether it is visible; visible exists in 15-n027-negative.py
+# ── consolidation, 11 Oct 2026: global decisions (_l/_a → _w/_h, detto → logged, --solo-X → --X-only, parola → password, passo → stride, fault-window) and twins ──
+CELLA_A	CELL_H	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+CELLA_L	CELL_W	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+SCHERMO_A	SCREEN_H	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+SCHERMO_L	SCREEN_W	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+TELA_A	CANVAS_H	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+TELA_L	CANVAS_W	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+WLR_LASTRA_A	WLR_SLAB_H	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+WLR_LASTRA_L	WLR_SLAB_W	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+altro_a	other_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+altro_l	other_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+avuta_a	got_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+avuta_l	got_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+bers_a	tgt_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+bers_l	tgt_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+buona_a	good_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+buona_l	good_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+cella_a	cell_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+cella_l	cell_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+chiesta_a	requested_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+chiesta_l	requested_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+ciclo_a	cycle_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+ciclo_l	cycle_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+dopo_a	after_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+dopo_l	after_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+fuori_a	out_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+fuori_l	out_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+granularita_a	granularity_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+granularita_l	granularity_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+negoziata_a	negotiated_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+negoziata_l	negotiated_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+nuova_a	new_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+nuova_l	new_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+o_scheda_a	o_card_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+o_scheda_l	o_card_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+ora_a	now_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+ora_l	now_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+ridim_a	resize_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+ridim_l	resize_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+scheda_negata_a	card_denied_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+scheda_negata_l	card_denied_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+sessione_a	session_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+sessione_l	session_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+sorgente_a	source_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+sorgente_l	source_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+sotto_a	below_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+sotto_l	below_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+taglio_a	cut_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+taglio_l	cut_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+tela_a	canvas_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+tela_l	canvas_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+tela_chiesta_a	canvas_requested_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+tela_chiesta_l	canvas_requested_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+tela_palco_a	canvas_stage_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+tela_palco_l	canvas_stage_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+tela_prec_a	canvas_prev_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+tela_prec_l	canvas_prev_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+tela_volo_a	canvas_flight_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+tela_volo_l	canvas_flight_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+tela_voluta_a	canvas_intended_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+tela_voluta_l	canvas_intended_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+tenuto_a	kept_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+tenuto_l	kept_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+unita_a	unit_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+unita_l	unit_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+uscita_a	output_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+uscita_l	output_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+voluta_a	intended_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+voluta_l	intended_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h
+tela_detta_a	canvas_logged_h	width/height suffix: _l/_a (larghezza/altezza) → _w/_h; detta = already logged
+tela_detta_l	canvas_logged_w	width/height suffix: _l/_a (larghezza/altezza) → _w/_h; detta = already logged
+TELA_A_PASSO	CANVAS_STEP_H	height step of the canvas; _H last like CANVAS_MAX_H
+TELA_L_PASSO	CANVAS_STEP_W	width step of the canvas; _W last like CANVAS_MAX_W
+chiave-a	key-at	suffix -a/_a here means «at» (frame/time N), not altezza
+chiave_a	key_at	suffix -a/_a here means «at» (frame/time N), not altezza
+ridimensiona-a	resize-at	suffix -a/_a here means «at» (frame/time N), not altezza
+ridimensiona_a	resize_at	suffix -a/_a here means «at» (frame/time N), not altezza
+caduta_a	drop_at	suffix -a/_a here means «at» (frame/time N), not altezza: index where the drop starts
+s_coda_a	s_tail_at	time at which the probe tail is due (s_ultima_partita + SONDA_CODA_US)
+decodificatore_a	decoder_size	the (width, height) the decoder was configured at
+torna_a_parlare	speak_again	torna a parlare = the wire speaks again
+gl_detto	gl_logged	detto = already logged once → logged
+muto_detto	mute_logged	detto = already logged once → logged
+muto_gia_detto	mute_already_logged	detto = already logged once → logged
+palchi_pieni_detto	stages_full_logged	detto = already logged once → logged
+ritmo_detti_n	rate_logged_n	detto = already logged once → logged
+ritmo_detto_ms	rate_logged_ms	detto = already logged once → logged
+s_detta_ignota	s_unknown_logged	detto = already logged once → logged
+s_detto_fallito	s_failed_logged	detto = already logged once → logged
+s_detto_formato	s_format_logged	detto = already logged once → logged
+sc_detto	sc_logged	detto = already logged once → logged
+scartati_detti	discarded_logged	detto = already logged once → logged
+sgombra_chiave_detta	clear_key_logged	detto = already logged once → logged
+video_detto	video_logged	detto = already logged once → logged
+wlr_detto_ripiego	wlr_fallback_logged	detto = already logged once → logged
+wlr_detto_y	wlr_y_logged	detto = already logged once → logged
+wlr_riattacco_fallito_detto	wlr_reattach_failed_logged	detto = already logged once → logged
+solo-qui	here-only	--solo-X → --X-only
+SOLO_QUI	HERE_ONLY	variable twin of --here-only
+FINESTRA_GUASTO	FAULT_WINDOW	twin of --fault-window
+FINESTRA_GUASTO_TETTO	FAULT_WINDOW_CAP	twin of --fault-window; tetto = cap
+PAROLA	PASSWORD	parola = password
+PAROLA_DENTRO	PASSWORD_INSIDE	parola = password
+PAROLA_FILE	PASSWORD_FILE	parola = password
+PAROLA_FUORI	PASSWORD_OUTSIDE	parola = password
+REMOTIX_PAROLA	REMOTIX_PASSWORD	parola = password
+FINTO_PAROLA	FAKE_PASSWORD	parola = password
+RIFAI_PAROLA	REDO_PASSWORD	parola = password
+_parola_sudo	_sudo_password	parola = password
+ripulisci_parola	clean_up_password	parola = password
+passo_y	stride_y	row pitch of the Y plane = stride, like stride_u/stride_v/stride_uv
+passo_x	stride_x	grid stride, twin of stride_y
+passo2	stride2	row pitch in bytes = stride
+a_secco	dry_run	twins move together / English word order
+COPPIE_ESAMINATE	EXAMINED_PAIRS	twins move together / English word order
+DOPO_SCENA	POST_SCENE	twins move together / English word order
+FRAZIONE_COPPIE	PAIR_FRACTION	twins move together / English word order
+errore_protocollo	protocol_error	twins move together / English word order
+esito_controllo	check_outcome	twins move together / English word order
+pagina_scena	scene_page	twins move together / English word order
+PianoDisinstallazione	UninstallPlan	twins move together / English word order
+QUOTA_LORDA	GROSS_QUOTA	twins move together / English word order
+registro_shell	shell_log	twins move together / English word order
+soglia_cambio	change_threshold	twins move together / English word order
+soglia_rumore	noise_threshold	twins move together / English word order
+spesa_accesso	access_cost	twins move together / English word order
+spesa_inquilino	tenant_cost	twins move together / English word order
+sessione_desktop	desktop_session	twins move together / English word order
+sessione_gnome	gnome_session	twins move together / English word order
+strada_codifica	encode_route	twins move together / English word order
+_capsula_chiusura	_closing_capsule	twins move together / English word order
+chiudi_scheda	close_tab	twins move together / English word order
+provaCodifica	encodingTest	twins move together / English word order
+GIA_ATTIVA_REMOTA	ALREADY_ACTIVE_REMOTELY	twins move together / English word order
+ATTESA_CHIAMATA_S	CALL_WAIT_S	twins move together / English word order
+tienila_viva_ns	keepalive_ns	twins move together / English word order
+tienila_viva	keepalive	twins move together / English word order
+sgombra-soglia-ms	clear-threshold-ms	twins move together / English word order
+sgombra_soglia_ms	clear_threshold_ms	twins move together / English word order
+REMOTIX_SGOMBRA_SOGLIA_MS	REMOTIX_CLEAR_THRESHOLD_MS	twins move together / English word order
+wt_sgombra_soglia	wt_clear_threshold	twins move together / English word order
+wt_sgombra_soglia_letta	wt_clear_threshold_read	twins move together / English word order
+LEGAME	BIND	twins move together / English word order
+SEGNI_BROWSER	BROWSER_MARKS	twins move together / English word order
+segni-browser	browser-marks	twins move together / English word order
+segni_browser	browser_marks	twins move together / English word order
+SONDE_MISURA	MEASURE_PROBES	twins move together / English word order
+sonde_misura	measure_probes	twins move together / English word order
+INQ	TNT	twins move together / English word order
+applicazione-che-muore	dying-app	twins move together / English word order
+applicazione_che_muore	dying_app	twins move together / English word order
+coda-scatto	shot-tail	twins move together / English word order
+coda_scatto	shot_tail	twins move together / English word order
+audio_codec_chiesto	requested_audio_codec	twins move together / English word order
+video_codec_chiesto	requested_video_codec	twins move together / English word order
+passo-cpu	cpu-step	twins move together / English word order
+passo_cpu	cpu_step	twins move together / English word order
+PASSO_CPU	CPU_STEP	twins move together / English word order
+passo-scena	scene-step	twins move together / English word order
+passo_scena	scene_step	twins move together / English word order
+ragione	rationale	reason is taken by motivo in the same files
+RIGA_RAMPA	RAMP_LINE	English word order, like ramp_line
+ricevuti	received	log key of the rete-quic line (ricevuti=, ricevuti_d → received_d in dati.tsv): one stem «received» for writers and readers; the clash in 07-b64-rete.py is a format string (false)

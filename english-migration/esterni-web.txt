@@ -1,0 +1,51 @@
+# esterni-web.txt — names of the Web platform (and of the protocols the benches speak to browsers)
+# that rinomina2.py never renames, whatever the vocabulary says (alt → height made AltLeft HeightLeft).
+# One or more names per line; '#' starts a comment.  The tool adds, mechanically, the names each page
+# shows to be the platform's (members of event objects, strings compared with .code/.key, attributes
+# in setAttribute & co., non-data attribute selectors in CSS) and every aria-* / ariaX name.
+# HTML attribute names, CSS properties and values need no list: the tool never renames an attribute
+# name other than data-*, and in CSS only selectors, custom properties and @keyframes names are ours.
+
+# ── KeyboardEvent.code values (UI Events KeyboardEvent code Values) ──
+Backquote Backslash BracketLeft BracketRight Comma Equal IntlBackslash IntlRo IntlYen Minus Period Quote
+Semicolon Slash Digit0 Digit1 Digit2 Digit3 Digit4 Digit5 Digit6 Digit7 Digit8 Digit9
+KeyA KeyB KeyC KeyD KeyE KeyF KeyG KeyH KeyI KeyJ KeyK KeyL KeyM KeyN KeyO KeyP KeyQ KeyR KeyS KeyT KeyU
+KeyV KeyW KeyX KeyY KeyZ
+AltLeft AltRight Backspace CapsLock ContextMenu ControlLeft ControlRight Enter MetaLeft MetaRight
+OSLeft OSRight ShiftLeft ShiftRight Space Tab Convert KanaMode Lang1 Lang2 Lang3 Lang4 Lang5 NonConvert
+Delete End Help Home Insert PageDown PageUp ArrowDown ArrowLeft ArrowRight ArrowUp
+NumLock Numpad0 Numpad1 Numpad2 Numpad3 Numpad4 Numpad5 Numpad6 Numpad7 Numpad8 Numpad9 NumpadAdd
+NumpadBackspace NumpadClear NumpadClearEntry NumpadComma NumpadDecimal NumpadDivide NumpadEnter
+NumpadEqual NumpadHash NumpadMemoryAdd NumpadMemoryClear NumpadMemoryRecall NumpadMemoryStore
+NumpadMemorySubtract NumpadMultiply NumpadParenLeft NumpadParenRight NumpadStar NumpadSubtract
+Escape F1 F2 F3 F4 F5 F6 F7 F8 F9 F10 F11 F12 F13 F14 F15 F16 F17 F18 F19 F20 F21 F22 F23 F24
+Fn FnLock PrintScreen ScrollLock Pause
+BrowserBack BrowserFavorites BrowserForward BrowserHome BrowserRefresh BrowserSearch BrowserStop Eject
+LaunchApp1 LaunchApp2 LaunchMail MediaPlayPause MediaSelect MediaStop MediaTrackNext MediaTrackPrevious
+Power Sleep AudioVolumeDown AudioVolumeMute AudioVolumeUp VolumeDown VolumeMute VolumeUp WakeUp
+Hyper Super Turbo Abort Resume Suspend Again Copy Cut Find Open Paste Props Select Undo Hiragana
+Katakana Unidentified
+
+# ── KeyboardEvent.key values (named keys) ──
+Alt AltGraph Control Meta Shift Symbol SymbolLock Clear CrSel EraseEof ExSel Redo Accept Attn Cancel
+Execute Finish Play ZoomIn ZoomOut BrightnessDown BrightnessUp LogOff PowerOff Hibernate Standby
+AllCandidates Alphanumeric CodeInput Compose Dead FinalMode GroupFirst GroupLast GroupNext
+GroupPrevious ModeChange NextCandidate PreviousCandidate Process SingleCandidate Dead
+Esc Del Left Right Up Down Spacebar Apps Win OS Scroll Decimal Multiply Add Subtract Divide Separator
+
+# ── event members ──
+altKey ctrlKey shiftKey metaKey getModifierState isComposing repeat location keyCode charCode which
+button buttons clientX clientY screenX screenY pageX pageY offsetX offsetY movementX movementY layerX
+layerY deltaX deltaY deltaZ deltaMode wheelDelta wheelDeltaX wheelDeltaY relatedTarget currentTarget
+srcElement timeStamp isTrusted bubbles cancelable cancelBubble defaultPrevented composed eventPhase
+preventDefault stopPropagation stopImmediatePropagation composedPath returnValue pointerId pointerType
+pressure tangentialPressure tiltX tiltY twist altitudeAngle azimuthAngle isPrimary getCoalescedEvents
+getPredictedEvents touches changedTouches targetTouches identifier radiusX radiusY rotationAngle force
+clipboardData dataTransfer inputType isComposing persisted newURL oldURL lengthComputable
+
+# ── DOM, media and codec members the page and the benches use with an Italian-looking part ──
+altitude ariaLabel ariaPressed ariaCurrent ariaHidden ariaExpanded colSpan rowSpan
+alternate alternative
+
+# ── protocol parameters the benches pass as Python keywords (Chrome DevTools Protocol) ──
+locale

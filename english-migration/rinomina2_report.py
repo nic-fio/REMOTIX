@@ -40,6 +40,14 @@ def write(P, contracts, out, root):
         "skipped_files": {f: w for f, w in sorted(P["skipped"].items())},
         "file_moves": files,
     }
+    # several old names onto one new name: allowed only where they never meet in one scope (§3); the
+    # merges that DID meet are the collisions above, each with its winner and the losers' fate
+    same = collections.defaultdict(list)
+    for n in sorted(M):
+        same[M[n]].append(n)
+    plan["shared_new_names"] = {k: v for k, v in sorted(same.items()) if len(v) > 1}
+    plan["counts"]["shared_new_names"] = len(plan["shared_new_names"])
+    plan["counts"]["merges_met_in_a_scope"] = sum(1 for e in P["collisions"] if e["kind"] == "collision")
     plan["counts"]["data_names_dati_tsv"] = len({o for d in P["dati_files"].values() for o in d})
     plan["contract_coverage"] = coverage(P, out)
     with open(os.path.join(out, "rinomina2-plan.json"), "w", encoding="utf-8") as fh:
@@ -165,6 +173,9 @@ def generated_md(plan):
                                                                     "; ".join(e["scopes"][:2])))
         else:
             L.append("| `%s` | `%s` | (forbidden: %s) | **kept** | |\n" % (e["new"], e["old"], e["why"]))
+    L.append("\n### One new name for several old names, never in one scope (checked per scope, §3)\n\n")
+    for k, v in plan.get("shared_new_names", {}).items():
+        L.append("- `%s` ← %s\n" % (k, ", ".join("`%s`" % x for x in v)))
     L.append("\n### Names not renamed (to resolve in interi.tsv or sinonimi.tsv)\n\n")
     for k in plan["kept"]:
         L.append("- `%s` — %s\n" % (k["old"], k["why"]))

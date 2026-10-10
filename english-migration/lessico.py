@@ -5,6 +5,7 @@ Each lexer returns a list of (start, end, kind) covering the text, kind in
   "comment"  prose for a person
   "string"   a literal (data, a format, a path, prose)
   "skip"     never touched (#include <...>, ``«…»`` quotes are cut later)
+  "tag"      an HTML start/end tag: element and attribute names are the platform's, values are data
 The lexers are deliberately small and conservative: when unsure, a region is
 classified as string or comment, where only whole names from the table change.
 """
@@ -191,6 +192,46 @@ def lex_css(t):
     return _merge(regs, len(t))
 
 
+# a CSS name: never ends with a hyphen (`.a--b` is one class, `x--` in JS is an operator, not a name)
+CSS_IDENT = r"[A-Za-z_][A-Za-z0-9_]*(?:-+[A-Za-z0-9_]+)*"
+
+
+def css_names(seg):
+    """The names a piece of CSS CODE (comments and strings already cut out) defines or uses that are OURS:
+    class and id selectors, custom properties (--x, without the dashes), @keyframes names, data-*
+    attribute selectors.  Returns (ours, platform_attributes): property names, values, element names and
+    pseudo-classes are the platform's and are never returned as ours; [aria-pressed] and other
+    non-data attribute selectors are returned as the platform's."""
+    ours, plat = set(), set()
+    buf = []
+    for part in re.split(r"([{};])", seg):
+        if part not in ("{", "}", ";"):
+            buf.append(part)
+            continue
+        text = "".join(buf).strip()
+        buf = []
+        if not text:
+            continue
+        if part == "{":                       # a prelude: a selector list or an at-rule
+            if text.startswith("@"):
+                m = re.match(r"@(?:-\w+-)?keyframes\s+(%s)" % CSS_IDENT, text)
+                if m:
+                    ours.add(m.group(1))
+                continue
+            for m in re.finditer(r"(?<![\w-])[.#](%s)" % CSS_IDENT, text):
+                if not m.group(1)[:1].isdigit():
+                    ours.add(m.group(1))
+            for m in re.finditer(r"\[\s*(%s)" % CSS_IDENT, text):
+                (ours if m.group(1).startswith("data-") else plat).add(m.group(1))
+        else:                                 # a declaration: only custom properties are ours
+            m = re.match(r"--(%s)\s*:" % CSS_IDENT, text)
+            if m:
+                ours.add(m.group(1))
+            for m in re.finditer(r"var\(\s*--(%s)" % CSS_IDENT, text):
+                ours.add(m.group(1))
+    return ours, plat
+
+
 # ── Python: the real tokenizer ──────────────────────────────────────────────
 def lex_py(t):
     starts = [0]
@@ -299,7 +340,9 @@ def lex_html(t):
                 regs.append((a + x, a + y, "code-css" if k == "code" else k))
             regs.append((m.end(2), m.end(), "string"))
         else:
-            regs.append((m.start(), m.end(), "string"))        # a tag: attributes are data
+            # a tag: the attribute NAMES are the platform's (alt, aria-pressed), only data-* are ours;
+            # the values are data (rinomina2.rewrite decides which)
+            regs.append((m.start(), m.end(), "tag"))
         pos = m.end()
     if pos < n:
         regs.append((pos, n, "comment"))
