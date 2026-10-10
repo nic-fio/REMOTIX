@@ -1,647 +1,647 @@
-# Fase 11 — La rete di sicurezza
+# Phase 11 — The safety net
 
-*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente.*
+*⚠ Historical measurements, on the machine of the time. With phase 18 (without ffmpeg) the ones the change invalidated were removed — encoding without the card and colour conversion with swscale; those of encoding on the card and of audio remain, because the new stream is identical (comparison of 30 Sep 2026). The user's decision.*
 
-*Aperta il **25 agosto 2026**. Chiusa il —*
+*Opened on **25 Aug 2026**. Closed on —*
 
-> ### 📋 QUESTO DOCUMENTO È SCRITTO ANCHE PER CHI NON CONOSCE IL PROGETTO
+> ### 📋 THIS DOCUMENT IS WRITTEN ALSO FOR WHOEVER DOES NOT KNOW THE PROJECT
 >
-> È il disegno della rete anti-regressione di REMOTIX. ⇒ **§0** il contesto minimo, **§1-§5** il
-> disegno, **§6** quel che la rete **non** prende, **§7** il piano di lavoro, **§8** le domande e le
-> risposte avute.
+> It is the design of REMOTIX's anti-regression net. ⇒ **§0** the minimum context, **§1-§5** the
+> design, **§6** what the net does **not** catch, **§7** the work plan, **§8** the questions and the
+> answers received.
 >
-> **Le marche usate ovunque nel progetto**, e vanno lette:
-> `[M]` misurato da noi, sul ferro, con la data · `[R]` letto nel codice di un riferimento ·
-> `[S]` letto in una specifica · `[?]` **ipotizzato, non ancora misurato**.
-> ⛔ Una decisione che poggia su una `[?]` è una decisione presa a metà, e va scritta come
-> provvisoria.
+> **The marks used everywhere in the project**, and they must be read:
+> `[M]` measured by us, on the hardware, with the date · `[R]` read in the code of a reference ·
+> `[S]` read in a specification · `[?]` **hypothesised, not yet measured**.
+> ⛔ A decision that rests on a `[?]` is a decision half taken, and it must be written as
+> provisional.
 
-> ## ⭐⭐⭐ REVISIONATO DA DUE REVISORI ESTERNI — *25 agosto 2026, sera*
+> ## ⭐⭐⭐ REVIEWED BY TWO EXTERNAL REVIEWERS — *25 Aug 2026, evening*
 >
-> La **prima stesura** di questo documento è stata sottoposta a due revisori esterni indipendenti
-> (**Qwen** e **Gemini**), su richiesta dell'utente: *«meglio quattro occhi che due»*.
+> The **first draft** of this document was submitted to two independent external reviewers
+> (**Qwen** and **Gemini**), at the user's request: *«meglio quattro occhi che due»*.
 >
-> ⭐ **Questa è la seconda stesura**, che integra i rilievi accolti. Le due revisioni sono
-> convergenti su cinque punti — ⛔ e la convergenza di due lettori che non si sono parlati vale più
-> di un rilievo solo (`PIANO.md` §0.4: *due programmi scritti dalla stessa mano che vanno d'accordo
-> non confermano niente*).
+> ⭐ **This is the second draft**, which integrates the findings accepted. The two reviews
+> converge on five points — ⛔ and the convergence of two readers who did not talk to each other is worth more
+> than a single finding (`PIANO.md` §0.4: *two programs written by the same hand that agree
+> confirm nothing*).
 >
-> | il rilievo | chi | esito |
+> | the finding | who | outcome |
 > |---|---|---|
-> | **`logind` nel contenitore va provato PRIMA di costruire** | tutt'e due | ✅ **accolto**: diventa il **passo 0**, ed è una precondizione, non un'opzione (§3.5) |
-> | **la marca da sola non basta** | tutt'e due | ✅ **accolto** (§4.2), nella forma **povera** di Qwen |
-> | **C8 è la prova più importante ed è la più fragile** | tutt'e due | ⚠ **accolto il rilievo, la cura aspetta l'utente** (§4.4) |
-> | **manca la politica del rosso** | Qwen | ✅ **accolto** (§5.2) |
-> | **la rete non controlla sé stessa nel tempo** | Qwen | ✅ **accolto**: C11-C13 (§4) |
-> | **prove cieche al desktop = lista comune + adattatori** | tutt'e due | ✅ **accolto** (§3.7) |
-> | **famiglia veloce sotto i 3 minuti** | tutt'e due | ✅ accolto come **tetto provvisorio** da misurare (§5.1) |
-> | **micro-macchine-virtuali (Firecracker) se il contenitore non regge** | Gemini | ⛔ **respinto**, §3.5-bis: si porta via la scheda grafica, cioè la ragione per cui le macchine virtuali erano già state scartate |
-> | **confronto d'immagine con SSIM / visione artificiale** | Gemini | ⛔ **respinto**, §4.2: peso e dipendenze nuove per un problema che si chiude con una **tolleranza** |
-> | osservazioni sull'ambiente della macchina di prova | Qwen §3.11 | ⛔ **fuori bersaglio**, escluse dall'utente |
+> | **`logind` in the container must be tested BEFORE building** | both | ✅ **accepted**: it becomes **step 0**, and it is a precondition, not an option (§3.5) |
+> | **the mark alone is not enough** | both | ✅ **accepted** (§4.2), in Qwen's **poor** form |
+> | **C8 is the most important test and the most fragile** | both | ⚠ **finding accepted, the cure waits for the user** (§4.4) |
+> | **the red policy is missing** | Qwen | ✅ **accepted** (§5.2) |
+> | **the net does not check itself over time** | Qwen | ✅ **accepted**: C11-C13 (§4) |
+> | **tests blind to the desktop = common list + adapters** | both | ✅ **accepted** (§3.7) |
+> | **fast family under 3 minutes** | both | ✅ accepted as a **provisional cap** to be measured (§5.1) |
+> | **micro virtual machines (Firecracker) if the container does not hold** | Gemini | ⛔ **rejected**, §3.5-bis: it takes away the graphics card, that is the reason virtual machines had already been discarded |
+> | **image comparison with SSIM / computer vision** | Gemini | ⛔ **rejected**, §4.2: weight and new dependencies for a problem that is closed with a **tolerance** |
+> | remarks on the test machine's environment | Qwen §3.11 | ⛔ **off target**, excluded by the user |
 
 ---
 
-# §0 · Il contesto minimo
+# §0 · The minimum context
 
-## 0.1 Che cos'è REMOTIX
+## 0.1 What REMOTIX is
 
-Un desktop remoto per Linux: **un server**, **nessun client da installare** — basta un browser
-moderno — e un protocollo nostro che viaggia su WebTransport/QUIC.
+A remote desktop for Linux: **one server**, **no client to install** — a modern browser
+is enough — and a protocol of our own that travels over WebTransport/QUIC.
 
-Il server gira su una macchina Linux e, quando qualcuno si collega, **accende per lui una sessione
-grafica sua**: un compositore Wayland privato, senza monitor fisico, catturato e codificato in
-hardware, spedito al browser. Più persone possono avere ciascuna la propria, sulla stessa macchina e
-sulla stessa scheda grafica.
+The server runs on a Linux machine and, when someone connects, **switches on for them a graphical
+session of their own**: a private Wayland compositor, without a physical monitor, captured and encoded in
+hardware, sent to the browser. Several people can each have their own, on the same machine and
+on the same graphics card.
 
 | | |
 |---|---|
-| **il prodotto** | ~53 000 righe di C in `src/` (24 file) |
-| **il client** | una pagina web servita dal server stesso |
-| **il ferro di prova** | i5-13500T · 31 GB · **Intel UHD 730 integrata** — ⛔ non una scheda potente, e ogni numero di questo progetto va letto sapendolo |
+| **the product** | ~53 000 lines of C in `src/` (24 files) |
+| **the client** | a web page served by the server itself |
+| **the test hardware** | i5-13500T · 31 GB · **integrated Intel UHD 730** — ⛔ not a powerful card, and every number of this project must be read knowing it |
 
-## 0.2 A che punto è
+## 0.2 Where it stands
 
-**Dieci fasi chiuse.** L'ultima (multi-tenant) si è chiusa il 25 agosto 2026 sul giudizio
-dell'utente: un video **4K** dentro il desktop remoto, con la banda del suo tablet strozzata a
+**Ten phases closed.** The last one (multi-tenant) closed on 25 Aug 2026 on the user's
+judgement: a **4K** video inside the remote desktop, with his tablet's bandwidth throttled to
 **10 Mbit/s** — *«audio e video fluidi e in sync»*.
 
-`[M]` **Sei sessioni** contemporanee sulla scena satura, **almeno undici** sul desktop vero (lì il
-soffitto non è stato trovato: sono finiti gli utenti, non la macchina).
+`[M]` **Six sessions** at the same time on the saturated scene, **at least eleven** on the real desktop (there the
+ceiling was not found: the users ran out, not the machine).
 
-**Oggi funziona un solo desktop: GNOME.** Le prossime tre fasi aggiungono **KDE (Plasma)**,
-**XFCE** e **LXQt**. ⛔ **Questa fase sta in mezzo, ed è stata decisa dall'utente proprio per stare
-in mezzo.**
+**Today only one desktop works: GNOME.** The next three phases add **KDE (Plasma)**,
+**XFCE** and **LXQt**. ⛔ **This phase sits in between, and it was decided by the user precisely to sit
+in between.**
 
-## 0.3 ⛔ Perché questa fase esiste — tre guasti veri, non un timore generico
+## 0.3 ⛔ Why this phase exists — three real faults, not a generic fear
 
-Tutti e tre trovati **lo stesso giorno**, il 25 agosto 2026:
+All three found **on the same day**, 25 Aug 2026:
 
-| il guasto | nascosto per | ⛔ perché era invisibile |
+| the fault | hidden for | ⛔ why it was invisible |
 |---|---|---|
-| **la sessione che nasce cieca** | giorni | il compositore, su una sessione **appena nata**, non annuncia nessun monitor ⇒ **nessuna applicazione può aprire una finestra**. ⛔ Invisibile perché **nessuno apriva mai una sessione NUOVA**: tutte le prove riusavano sessioni già aperte, che il monitor ce l'avevano |
-| **il browser che non parte agli utenti dopo il primo** | **due fasi** | sulla macchina la cartella della cache degli utenti punta a una cartella condivisa — ⭐ **scelta voluta del proprietario, non un guasto**. ⛔ Ma **è il nostro prodotto** a creare dieci utenti che finiscono tutti a scrivere lì: il primo si prende la cartella, e per gli altri nove il browser non nasce |
-| **cinque banchi che contavano zero fotogrammi** | un giro | una cura al registro ne aveva rotto le espressioni, e la funzione tornava **0 invece di «non lo so»** |
+| **the session that is born blind** | days | the compositor, on a **newborn** session, announces no monitor ⇒ **no application can open a window**. ⛔ Invisible because **nobody ever opened a NEW session**: all the tests reused sessions already open, which did have the monitor |
+| **the browser that does not start for the users after the first** | **two phases** | on the machine the users' cache folder points to a shared folder — ⭐ **a deliberate choice of the owner, not a fault**. ⛔ But **it is our product** that creates ten users who all end up writing there: the first takes the folder, and for the other nine the browser is not born |
+| **five benches that counted zero frames** | one round | a cure to the log had broken their expressions, and the function returned **0 instead of «I don't know»** |
 
-> ### ⛔⛔ E TUTTI E TRE SONO LO STESSO ERRORE VISTO DA TRE LATI
+> ### ⛔⛔ AND ALL THREE ARE THE SAME ERROR SEEN FROM THREE SIDES
 >
-> 1. **Si ripartiva sempre dallo stesso punto**, e quel punto era già a posto. Una prova che riusa
->    uno stato che funzionava **non può trovare un guasto della nascita**, per costruzione.
-> 2. **Si contava il processo invece di guardare il pixel.** `[M]` Il conto dei processi diceva
->    **1** sia con la finestra sia senza — **finestra o non finestra, lo stesso numero.**
+> 1. **One always restarted from the same point**, and that point was already in order. A test that reuses
+>    a state that worked **cannot find a birth fault**, by construction.
+> 2. **One counted the process instead of looking at the pixel.** `[M]` The process count said
+>    **1** both with the window and without — **window or no window, the same number.**
 >
-> ⚠ **E la contromisura non è «più prove».** Ce n'erano già **più di cento**, e i tre guasti sono
-> passati **in mezzo a loro**. ⇒ Il problema non è la quantità: è **da dove partono** le prove e
-> **che cosa guardano**.
+> ⚠ **And the countermeasure is not «more tests».** There were already **more than a hundred**, and the three faults
+> passed **through the middle of them**. ⇒ The problem is not the quantity: it is **where the tests start from** and
+> **what they look at**.
 
-## 0.4 ⛔ E la ragione per cui va fatto ADESSO
+## 0.4 ⛔ And the reason it must be done NOW
 
-Da qui in avanti ogni fase aggiunge un desktop, e ogni desktop si aggiunge **toccando il codice
-comune**. Chi lo tocca in quel momento sta guardando il desktop nuovo, e non ha nessun motivo di
-sospettare di aver appena rotto quello vecchio — perché quello vecchio funzionava.
+From here on every phase adds a desktop, and every desktop is added **by touching the common
+code**. Whoever touches it at that moment is looking at the new desktop, and has no reason to
+suspect having just broken the old one — because the old one worked.
 
-⇒ ⛔ **Un guasto che oggi si trova una volta, con quattro desktop si troverà quattro volte — e nel
-caso peggiore su tre non si troverà affatto**, perché nessuno pensa a riprovare il primo.
+⇒ ⛔ **A fault that today is found once, with four desktops will be found four times — and in the
+worst case on three it will not be found at all**, because nobody thinks of retesting the first.
 
-⭐ **E il costo vero di un guasto non è ripararlo: è la distanza fra quando è entrato e quando lo si
-trova.** Il guasto del browser, una volta capito, è stato curato in un pomeriggio. È costato due
-fasi perché era **vecchio**, e perché aveva addosso una spiegazione sbagliata — *«non è nostro»* —
-che è la spiegazione che **non chiede di continuare a cercare**.
+⭐ **And the real cost of a fault is not repairing it: it is the distance between when it came in and when it is
+found.** The browser fault, once understood, was cured in an afternoon. It cost two
+phases because it was **old**, and because it carried a wrong explanation — *«non è nostro»* —
+which is the explanation that **does not ask to keep looking**.
 
 ---
 
-# §1 · Il mandato, e il metro
+# §1 · The mandate, and the meter
 
-## 1.1 Che cosa deve produrre
+## 1.1 What it must produce
 
-**Un modo di accorgersi da soli che qualcosa si è rotto, prima che lo scopra l'utente.**
+**A way of noticing by ourselves that something has broken, before the user discovers it.**
 
-L'utente non vede niente di nuovo sullo schermo — ⭐ **e questo è il punto**: vede che le cose che
-funzionavano continuano a funzionare quando arrivano i desktop nuovi.
+The user sees nothing new on the screen — ⭐ **and that is the point**: he sees that the things that
+worked keep working when the new desktops arrive.
 
-## 1.2 ⛔⛔ Il metro della fase, e non è «quante prove girano»
+## 1.2 ⛔⛔ The meter of the phase, and it is not «how many tests run»
 
-> ### Il metro è uno solo: **che cosa la rete PRENDE.**
+> ### The meter is one only: **what the net CATCHES.**
 
-⛔ **Il collaudo è già scritto, ed è severo.** La rete si punta contro il codice del 25 agosto 2026 e
-**deve diventare rossa da sola su tutti e due i guasti**, ⛔ **senza che nessuno le abbia detto dove
-guardare**:
+⛔ **The acceptance test is already written, and it is severe.** The net is pointed at the code of 25 Aug 2026 and
+**must turn red by itself on both faults**, ⛔ **without anyone having told it where
+to look**:
 
 | | |
 |---|---|
-| **collaudo A** | la **sessione che nasce cieca** |
-| **collaudo B** | il **browser che non parte al secondo utente** |
+| **acceptance test A** | the **session that is born blind** |
+| **acceptance test B** | the **browser that does not start for the second user** |
 
-⇒ ⛔ **Se non li prende, non è una rete: è un rituale.** E se alla fine non ha preso niente che
-l'occhio non avrebbe preso, **la fase è fallita e va detto**.
+⇒ ⛔ **If it does not catch them, it is not a net: it is a ritual.** And if in the end it has caught nothing that
+the eye would not have caught, **the phase has failed and it must be said**.
 
-## 1.3 ⚠ Il pericolo di questa fase, dichiarato in apertura
+## 1.3 ⚠ The danger of this phase, declared at the opening
 
-Una fase così è **precisamente** il tipo di lavoro che può gonfiarsi fino a mangiarsi il progetto che
-doveva proteggere. ⇒ Le tre guardie che ci mettiamo addosso:
+A phase like this is **precisely** the kind of work that can swell until it eats the project it
+was meant to protect. ⇒ The three guards we put on ourselves:
 
-1. ⛔ **Poche prove, corte.** Una rete con cento maglie che nessuno legge è cerimonia, e la cerimonia
-   costa tempo esattamente come i difetti.
-2. ⛔ **Ogni prova si giustifica su un guasto VERO**, già successo o che sarebbe successo. Non su un
-   timore.
-3. ⛔ **Le prove che non prendono niente si buttano**, e si scrive che sono state buttate.
+1. ⛔ **Few tests, short.** A net with a hundred meshes that nobody reads is ceremony, and ceremony
+   costs time exactly like defects.
+2. ⛔ **Every test is justified on a REAL fault**, already happened or that would have happened. Not on a
+   fear.
+3. ⛔ **The tests that catch nothing are thrown away**, and it is written that they were thrown away.
 
-⚠ **E la revisione esterna ha aggiunto tredici cose.** ⛔ **Non sono state accolte tutte**, e le
-non-accolte sono scritte in testa con il motivo — perché *«il revisore ha detto»* non è una ragione
-per far crescere una rete che deve restare corta.
+⚠ **And the external review added thirteen things.** ⛔ **They were not all accepted**, and the
+non-accepted ones are written at the head with the reason — because *«the reviewer said so»* is not a reason
+to make a net grow that must stay short.
 
 ---
 
-# §2 · Le decisioni già prese — ⚠ **non sono in discussione**
+# §2 · The decisions already taken — ⚠ **they are not under discussion**
 
-*Prese dall'utente il 25 agosto 2026, discutendo questa fase.*
+*Taken by the user on 25 Aug 2026, discussing this phase.*
 
-| # | la decisione | la ragione, com'è stata data |
+| # | the decision | the reason, as it was given |
 |---|---|---|
-| **D1** | **Un contenitore per desktop**, non macchine virtuali | ⛔ la macchina virtuale si porta via la **scheda grafica vera**, e tutti i nostri numeri vengono da lì. Il contenitore sta sulla stessa macchina e la usa davvero |
-| **D2** | ⭐ **CORRETTA il 26 agosto 2026**: una scatola può avere **fino a dieci** inquilini — *«è un dato già misurato con GNOME»*. ⇒ La rete ne usa **due** | il vincolo era sulla **capienza**, che non si rifà; ⛔ non sulla **correttezza a più inquilini**, che è un'altra domanda. `DECISIONI.md` §4.6-terdecies ⇒ **§4.4 è chiusa: C8 sta in una scatola** |
-| **D3** | **4K · 60 fotogrammi/s è il bersaglio per TUTTI i desktop** | *«è il tetto che chiediamo a tutti»*. Nessun bersaglio su misura per compositore |
-| **D4** | ⛔ **Niente eccezioni per compositore** | *«non voglio mettere delle eccezioni nel progetto»*. ⚠ **Riguarda il PRODOTTO**: §3.7 spiega perché gli adattatori del banco non la violano |
-| **D5** | **I contenitori vanno tenuti allineati** | *«se sul container GNOME abbiamo remotix v1 e sul container KDE remotix v1.2 andiamo a sbattere»* |
-| **D6** | Le cose del «dopo» non entrano qui | vanno in `MASTERPLAN.md`, con scritto **che cosa costa non farle mai** |
+| **D1** | **One container per desktop**, not virtual machines | ⛔ the virtual machine takes away the **real graphics card**, and all our numbers come from there. The container sits on the same machine and really uses it |
+| **D2** | ⭐ **CORRECTED on 26 Aug 2026**: a box can have **up to ten** tenants — *«è un dato già misurato con GNOME»*. ⇒ The net uses **two** | the constraint was on **capacity**, which is not redone; ⛔ not on **correctness with several tenants**, which is another question. `DECISIONI.md` §4.6-terdecies ⇒ **§4.4 is closed: C8 sits in a box** |
+| **D3** | **4K · 60 frames/s is the target for ALL desktops** | *«è il tetto che chiediamo a tutti»*. No tailor-made target per compositor |
+| **D4** | ⛔ **No exceptions per compositor** | *«non voglio mettere delle eccezioni nel progetto»*. ⚠ **It concerns the PRODUCT**: §3.7 explains why the bench's adapters do not violate it |
+| **D5** | **The containers must be kept aligned** | *«se sul container GNOME abbiamo remotix v1 e sul container KDE remotix v1.2 andiamo a sbattere»* |
+| **D6** | The things of «later» do not come in here | they go into `MASTERPLAN.md`, with written **what it costs never to do them** |
 
-⚠ **E un vincolo che non è una decisione ma un fatto**: `[M]` **la scheda grafica è UNA**. Quattro
-contenitori possono essere accesi insieme, ma **non possono misurare insieme**.
+⚠ **And a constraint that is not a decision but a fact**: `[M]` **the graphics card is ONE**. Four
+containers can be switched on together, but **they cannot measure together**.
 
 ---
 
-# §3 · Il disegno
+# §3 · The design
 
-## 3.1 La rete è fatta di tre pezzi, e i contenitori sono uno solo
+## 3.1 The net is made of three pieces, and the containers are only one
 
 | | | |
 |---|---|---|
-| **DOVE** si prova | i quattro contenitori + la macchina vera | §3.2 |
-| **CHE COSA** si controlla | la lista corta — ⭐ **è questa la rete vera** | §4 |
-| **QUANDO** parte | il gancio che la fa girare da sola | §5 |
+| **WHERE** one tests | the four containers + the real machine | §3.2 |
+| **WHAT** is checked | the short list — ⭐ **this is the real net** | §4 |
+| **WHEN** it starts | the hook that makes it run by itself | §5 |
 
-## 3.2 I contenitori — e le tre regole che li tengono onesti
+## 3.2 The containers — and the three rules that keep them honest
 
-**Quattro contenitori, uno per desktop, sulla stessa macchina, con accesso alla scheda grafica
-vera.** Dentro ciascuno: un desktop, un utente, e il server.
+**Four containers, one per desktop, on the same machine, with access to the real graphics
+card.** Inside each: a desktop, a user, and the server.
 
-> ### ⛔ R1 · **Un solo binario, compilato una volta, copiato in tutti e quattro**
+> ### ⛔ R1 · **One single binary, compiled once, copied into all four**
 >
-> ⛔ **Non compilato dentro ciascun contenitore**: se ogni scatola si compila il suo, si hanno
-> quattro binari diversi e i confronti non valgono niente (D5).
+> ⛔ **Not compiled inside each container**: if every box compiles its own, one has
+> four different binaries and the comparisons are worth nothing (D5).
 
-> ### ⛔ R2 · **Le ricette dei contenitori dichiarano le versioni esatte**
+> ### ⛔ R2 · **The container recipes declare the exact versions**
 >
-> ⛔ *«l'ultima disponibile»* **è una data travestita da versione**. Una scatola costruita martedì e
-> una costruita giovedì differiscono anche a parità del nostro codice, perché in mezzo si è mosso il
-> magazzino dei pacchetti. ⇒ Poi si vede un numero peggiore su XFCE e si dà la colpa a XFCE, mentre
-> la colpa era di **giovedì**.
+> ⛔ *«l'ultima disponibile»* **is a date disguised as a version**. A box built on Tuesday and
+> one built on Thursday differ even with the same code of ours, because in between the
+> package store moved. ⇒ Then one sees a worse number on XFCE and blames XFCE, while
+> the blame was **Thursday's**.
 
-> ### ⛔ R3 · **L'allineamento si VERIFICA, non si dà per buono**
+> ### ⛔ R3 · **The alignment is VERIFIED, not taken for granted**
 >
-> Ogni contenitore dichiara **l'impronta del binario E della propria ricetta**; la rete le confronta
-> **prima** di credere a qualunque numero, e **si ferma dichiarandolo** se non combaciano.
-> ⭐ **E la ricetta conta quanto il binario**: se una scatola si ricostruisce e tira dentro una
-> versione più nuova del desktop, ⛔ l'impronta del binario **combacia lo stesso** e la rete
-> rassicura mentre l'ambiente è cambiato sotto. ⇒ È il controllo **C11**.
-> ⚠ Nel progetto c'è già il precedente: un controllo che verifica che *«quello che misuro è quello
-> che leggo»*, nato da questa stessa ferita.
+> Every container declares **the fingerprint of the binary AND of its own recipe**; the net compares them
+> **before** believing any number, and **stops, declaring it**, if they do not match.
+> ⭐ **And the recipe counts as much as the binary**: if a box is rebuilt and pulls in a
+> newer version of the desktop, ⛔ the binary's fingerprint **matches all the same** and the net
+> reassures while the environment has changed underneath. ⇒ It is check **C11**.
+> ⚠ In the project there is already the precedent: a check that verifies that *«quello che misuro è quello
+> che leggo»*, born from this same wound.
 
-## 3.3 ⭐⭐ La regola dei confronti: **si muove una cosa per volta**
+## 3.3 ⭐⭐ The rule of comparisons: **one thing moves at a time**
 
-⛔ Non è vero che le scatole debbano essere sempre identiche: se lo fossero, la rete non servirebbe a
-niente — tutto il senso è confrontare **prima** e **dopo** una modifica.
+⛔ It is not true that the boxes must always be identical: if they were, the net would be good for
+nothing — the whole point is comparing **before** and **after** a change.
 
-| il confronto | che cosa cambia | a che domanda risponde |
+| the comparison | what changes | what question it answers |
 |---|---|---|
-| **stesso desktop, due versioni del nostro codice** | il nostro codice | *«la modifica ha rotto qualcosa?»* — ⭐ **è la rete anti-regressione** |
-| **stessa versione del nostro codice, quattro desktop** | il desktop | *«questo desktop si comporta diversamente?»* — serve quando ne arriva uno nuovo |
+| **same desktop, two versions of our code** | our code | *«did the change break something?»* — ⭐ **it is the anti-regression net** |
+| **same version of our code, four desktops** | the desktop | *«does this desktop behave differently?»* — needed when a new one arrives |
 
-⛔ **Quel che non si fa mai è muovere tutt'e due insieme.** Codice nuovo su KDE contro codice vecchio
-su GNOME **non risponde a niente, e sembra rispondere.**
+⛔ **What is never done is moving both together.** New code on KDE against old code
+on GNOME **answers nothing, and seems to answer.**
 
-> ### ⚠ E il giorno in cui arriva un desktop nuovo, «una cosa per volta» diventa difficile
+> ### ⚠ And the day a new desktop arrives, «one thing at a time» becomes hard
 >
-> *Rilievo di Qwen §3.6, accolto.* Aggiungere KDE significa **due modifiche insieme**: si tocca il
-> codice comune **e** nasce una scatola nuova. ⇒ La regola si salva **spezzando in tre passi**:
+> *Qwen's finding §3.6, accepted.* Adding KDE means **two changes together**: one touches the
+> common code **and** a new box is born. ⇒ The rule is saved **by splitting into three steps**:
 >
-> 1. le modifiche al **codice comune**, provate sui desktop **già esistenti** — ⛔ **prima** che la
->    scatola nuova entri in gioco. È qui che si prende la regressione;
-> 2. il **codice nuovo** del desktop, che i vecchi non attraversano;
-> 3. l'**accensione** della scatola nuova.
+> 1. the changes to the **common code**, tested on the desktops **already existing** — ⛔ **before** the
+>    new box comes into play. This is where the regression is caught;
+> 2. the desktop's **new code**, which the old ones do not go through;
+> 3. the **switching on** of the new box.
 >
-> ⛔ Se il primo passo non si può separare, **va dichiarato nel documento della fase**: da quel
-> momento un rosso ha due sospetti invece di uno, e chi legge deve saperlo.
+> ⛔ If the first step cannot be separated, **it must be declared in the phase document**: from that
+> moment a red has two suspects instead of one, and whoever reads must know it.
 
-## 3.4 ⭐⭐ Le due famiglie di prove — e solo una guadagna dal parallelo
+## 3.4 ⭐⭐ The two families of tests — and only one gains from parallelism
 
-| famiglia | che cosa chiede | come gira | quanto costa |
+| family | what it asks | how it runs | how much it costs |
 |---|---|---|---|
-| ⭐ **FUNZIONA** | risposte sì/no: la sessione nasce, la finestra si apre, si vede, il tasto arriva, il suono c'è | **tutte e quattro insieme** | minuti |
-| ~~**VA VELOCE**~~ | ⛔ **non esiste, e non si fa** — vedi il riquadro qui sotto | | |
+| ⭐ **FUNZIONA** | yes/no answers: the session is born, the window opens, it is seen, the key arrives, the sound is there | **all four together** | minutes |
+| ~~**VA VELOCE**~~ | ⛔ **does not exist, and is not done** — see the box below | | |
 
-> ### ⛔ E «VA VELOCE» era una contraddizione, sciolta il 27 agosto 2026
+> ### ⛔ And «VA VELOCE» was a contradiction, resolved on 27 Aug 2026
 >
-> Questa tabella dichiarava **due** famiglie; ⛔ **§6 dichiara che la rete non è una rete di
-> prestazioni**; e `[M]` nel gancio quella famiglia **non è mai esistita**: ci sono `funziona`,
+> This table declared **two** families; ⛔ **§6 declares that the net is not a performance
+> net**; and `[M]` in the hook that family **never existed**: there are `funziona`,
 > `rete`, `rete-intera`, `tutto`, `desktop-nuovo`.
 >
-> ⇒ ⭐ **Ha ragione §6, e la famiglia non va creata.** Le quindici maglie sono tutte sì/no; una
-> famiglia di numeri duplicherebbe i ~40 banchi delle fasi 9 e 10 **fuori dalle condizioni in cui
-> quei numeri valgono**, e sarebbe la prima cosa che qualcuno smetterebbe di far girare.
-> ⇒ ⚠ Quel che resta vero di questa riga è **come girano le misure quando si fanno**: ⛔ una scatola
-> per volta, in fila, col lucchetto della scheda. Ed è una regola sul **lucchetto**, non un catalogo.
-> ⇒ ⛔ **Il buco che resta si dichiara in §6**: *nessun banco confronta ieri con oggi.*
+> ⇒ ⭐ **§6 is right, and the family must not be created.** The fifteen meshes are all yes/no; a
+> family of numbers would duplicate the ~40 benches of phases 9 and 10 **outside the conditions in which
+> those numbers hold**, and it would be the first thing someone would stop running.
+> ⇒ ⚠ What stays true of this row is **how the measurements run when they are done**: ⛔ one box
+> at a time, in a queue, with the card's lock. And it is a rule about the **lock**, not a catalogue.
+> ⇒ ⛔ **The hole that remains is declared in §6**: *no bench compares yesterday with today.*
 
-⭐ **E la buona notizia sta nella divisione**: la famiglia veloce è quella che serve **spesso**, e i
-tre guasti di ieri erano **tutti** suoi — nessuno era un problema di velocità, erano tutti *«non si
-vede niente»*.
+⭐ **And the good news lies in the division**: the fast family is the one needed **often**, and the
+three faults of yesterday were **all** its own — none was a speed problem, they were all *«nothing
+can be seen»*.
 
-⛔ **Ma «le quattro scatole non si disturbano» è affermato, non dimostrato** — rilievo di Qwen §3.10,
-accolto. ⇒ Va **misurato** una volta: le stesse prove da sole e in parallelo devono dare lo stesso
-esito, e il tempo non deve esplodere. È il controllo **C14**, e finché non è girato la parola resta
+⛔ **But «the four boxes do not disturb each other» is asserted, not proved** — Qwen's finding §3.10,
+accepted. ⇒ It must be **measured** once: the same tests alone and in parallel must give the same
+outcome, and the time must not explode. It is check **C14**, and until it has run the word stays
 `[?]`.
 
-## 3.5 ⛔⛔ IL PASSO 0 — **il contenitore va validato PRIMA di costruire**
+## 3.5 ⛔⛔ STEP 0 — **the container must be validated BEFORE building**
 
-*Rilievo su cui **tutt'e due i revisori** convergono, e il più grave dei due giri.*
+*A finding on which **both reviewers** converge, and the most serious of the two rounds.*
 
-Il prodotto si appoggia parecchio al pezzo di sistema che tiene il conto di chi è collegato
-(`systemd`/`logind`: linger, sessioni d'utente, il guardiano che chiude le sessioni morte). ⛔ Dentro
-un contenitore quel pezzo **può comportarsi diversamente**.
+The product leans heavily on the piece of the system that keeps count of who is connected
+(`systemd`/`logind`: linger, user sessions, the guardian that closes dead sessions). ⛔ Inside
+a container that piece **may behave differently**.
 
-> ⛔⛔ **Il rischio non è «una prova sbagliata»: è che l'intero strato dei contenitori diventi un
-> simulacro** — cioè **la peggiore forma di sicurezza, quella falsa.**
+> ⛔⛔ **The risk is not «a wrong test»: it is that the whole container layer becomes a
+> simulacrum** — that is **the worst form of safety, the false one.**
 
-⚠ **E la prima stesura era ottimista**, e la correzione è accolta: diceva *«se non regge, quella
-singola prova torna sulla macchina vera»*. ⛔ Se quel pezzo non regge, a tornare indietro non è **una**
-prova: è **una famiglia di comportamenti**.
+⚠ **And the first draft was optimistic**, and the correction is accepted: it said *«if it does not hold, that
+single test goes back to the real machine»*. ⛔ If that piece does not hold, what goes back is not **one**
+test: it is **a family of behaviours**.
 
-### ✅ La regola che sostituisce la `[?]`
+### ✅ The rule that replaces the `[?]`
 
-> **Il contenitore è valido solo se supera il passo 0.** Se il passo 0 fallisce, le prove che
-> dipendono da quel comportamento **restano sulla macchina vera**, e lo si scrive.
-> ⛔ **Non è un'opzione: è una precondizione.** Nessuna scatola definitiva si costruisce prima.
+> **The container is valid only if it passes step 0.** If step 0 fails, the tests that
+> depend on that behaviour **stay on the real machine**, and it is written down.
+> ⛔ **It is not an option: it is a precondition.** No final box is built before.
 
-### Le otto cose che il passo 0 verifica — *mezza giornata, non di più*
+### The eight things step 0 verifies — *half a day, no more*
 
-| # | | deve risultare |
+| # | | must turn out |
 |---|---|---|
-| 1 | la sessione d'utente **esiste** ed è del tipo giusto | come sulla macchina vera |
-| 2 | il **linger** funziona: i servizi dell'utente vivono senza che nessuno abbia fatto login | idem |
-| 3 | il **server parte dentro la sessione d'utente**, senza trucchi che sulla macchina vera non si potrebbero fare | idem |
-| 4 | quando la sessione finisce, ⛔ **i processi muoiono davvero** e non restano orfani | idem |
-| 5 | la cartella privata dell'utente per i socket esiste, è scrivibile, ⛔ **e non è condivisa fra contenitori** | idem |
-| 6 | il canale di messaggi della sessione esiste e il desktop lo vede | idem |
-| 7 | il **compositore nasce, vede un'uscita**, e un'applicazione riesce ad aprire una finestra | idem |
-| 8 | la **cattura e il codificatore hardware** sono raggiungibili, e i fotogrammi escono | idem |
+| 1 | the user session **exists** and is of the right type | as on the real machine |
+| 2 | **linger** works: the user's services live without anyone having logged in | same |
+| 3 | the **server starts inside the user session**, without tricks that could not be done on the real machine | same |
+| 4 | when the session ends, ⛔ **the processes really die** and are not left orphaned | same |
+| 5 | the user's private folder for sockets exists, is writable, ⛔ **and is not shared between containers** | same |
+| 6 | the session's message channel exists and the desktop sees it | same |
+| 7 | the **compositor is born, sees an output**, and an application manages to open a window | same |
+| 8 | **capture and the hardware encoder** are reachable, and the frames come out | same |
 
-⇒ ⛔ **Il contenitore è accettabile solo se tutti e otto si comportano come sulla macchina vera**
-per i punti che il prodotto usa davvero. **L'esito diventa `[M]`, con la data.**
+⇒ ⛔ **The container is acceptable only if all eight behave as on the real machine**
+for the points the product really uses. **The outcome becomes `[M]`, with the date.**
 
-## 3.5-bis ⛔ La strada di ripiego, se il passo 0 fallisce — **e non è quella proposta**
+## 3.5-bis ⛔ The fallback route, if step 0 fails — **and it is not the one proposed**
 
-Gemini propone **micro-macchine-virtuali** (Firecracker). ⛔ **Respinto**: una macchina virtuale si
-porta via la **scheda grafica vera**, che è esattamente la ragione per cui le macchine virtuali erano
-già state scartate (D1). Su una scheda **integrata** il passaggio della GPU a una macchina virtuale
-non è una strada praticabile, e senza scheda i numeri di `VA VELOCE` non valgono niente.
+Gemini proposes **micro virtual machines** (Firecracker). ⛔ **Rejected**: a virtual machine takes
+away the **real graphics card**, which is exactly the reason virtual machines had
+already been discarded (D1). On an **integrated** card passing the GPU through to a virtual machine
+is not a practicable route, and without the card the numbers of `VA VELOCE` are worth nothing.
 
-⭐ **Le due strade di ripiego vere, in quest'ordine:**
+⭐ **The two real fallback routes, in this order:**
 
-1. un contenitore **di sistema** invece che d'applicazione (⭐ **suggerito da Gemini stesso**, ed è il
-   suo consiglio buono su questo punto): stessa scheda grafica, ma un avvio vero dentro;
-2. ⚠ quelle prove **restano sulla macchina vera**, e le scatole tengono solo il resto — con scritto
-   **quali** prove sono rimaste fuori e perché.
+1. a **system** container instead of an application one (⭐ **suggested by Gemini itself**, and it is
+   its good advice on this point): same graphics card, but a real boot inside;
+2. ⚠ those tests **stay on the real machine**, and the boxes keep only the rest — with written
+   **which** tests were left out and why.
 
-## 3.6 ⛔⛔ La rete è un banco anche lei, e va certificata
+## 3.6 ⛔⛔ The net is a bench too, and it must be certified
 
-`[M]` Nella fase 10 sono stati trovati **sei difetti nello strato che coordina i banchi** — non nei
-banchi: nel pavimento su cui poggiano. Fra questi: un lucchetto che si poteva **aspettare sé stessi**
-(⛔ 80 minuti di scheda grafica bloccati per cinque prove, **e nessuna riga rossa da nessuna parte**),
-e un comando di pulizia globale che ha rischiato di **uccidere il lavoro di un'altra prova in corso**.
+`[M]` In phase 10 **six defects were found in the layer that coordinates the benches** — not in the
+benches: in the floor they rest on. Among them: a lock with which one could **wait for oneself**
+(⛔ 80 minutes of graphics card blocked for five tests, **and no red line anywhere**),
+and a global cleanup command that risked **killing the work of another test in progress**.
 
-> ⭐⭐ **La regola: ogni cosa da cui dipende una misura è una cosa da certificare — e il fatto che non
-> produca numeri non la esenta.**
+> ⭐⭐ **The rule: everything a measurement depends on is something to certify — and the fact that it does not
+> produce numbers does not exempt it.**
 
-⇒ La rete ha un `--certifica` suo: si inietta un guasto noto, e si verifica che la rete **lo veda**.
-⛔ **Ogni prova della lista ha, obbligatoriamente, il suo guasto innestato** (colonna «come so che sa
-dare rosso» in §4), **e quel caso va fatto girare, non immaginato**.
+⇒ The net has a `--certifica` of its own: a known fault is injected, and one verifies that the net **sees it**.
+⛔ **Every test of the list has, compulsorily, its injected fault** (column «how I know it can
+give red» in §4), **and that case must be run, not imagined**.
 
-> ### ⚠ E il rilievo di Qwen (§3.8), accolto: **così la rete è certificata contro il PASSATO**
+> ### ⚠ And Qwen's finding (§3.8), accepted: **this way the net is certified against the PAST**
 >
-> I guasti che si iniettano sono guasti **già noti**. ⛔ Ma i desktop nuovi porteranno guasti **loro**:
-> quello tipico di GNOME non è detto sia quello tipico di KDE.
+> The faults that are injected are faults **already known**. ⛔ But the new desktops will bring faults **of their own**:
+> the typical one of GNOME is not necessarily the typical one of KDE.
 >
-> ⇒ ⭐ **Regola aggiunta**: ogni desktop nuovo entra con **almeno un guasto suo, inventato e fatto
-> girare** — non serve che sia già accaduto, serve che sia **plausibile** e che la rete lo veda.
-> E il registro di quel che è stato iniettato, quando, e con che esito, **è parte della rete** (C13).
+> ⇒ ⭐ **Rule added**: every new desktop comes in with **at least one fault of its own, invented and
+> run** — it need not have already happened, it must be **plausible** and the net must see it.
+> And the log of what was injected, when, and with what outcome, **is part of the net** (C13).
 
-## 3.7 ⭐⭐⭐ Come si resta ciechi al desktop — **lista comune, adattatori sotto**
+## 3.7 ⭐⭐⭐ How one stays blind to the desktop — **common list, adapters underneath**
 
-*Risposta convergente dei due revisori alla domanda più difficile.*
+*The two reviewers' convergent answer to the hardest question.*
 
-⛔ **Il pericolo, detto da Gemini**: per non scrivere quattro liste si finisce con **una lista sola
-piena di «se il desktop è KDE allora…»**, che è la stessa cosa travestita.
+⛔ **The danger, as Gemini put it**: so as not to write four lists one ends up with **one single list
+full of «if the desktop is KDE then…»**, which is the same thing in disguise.
 
-⭐ **La forma che regge — tre livelli:**
+⭐ **The shape that holds — three levels:**
 
-| livello | che cosa dice | vale per |
+| level | what it says | holds for |
 |---|---|---|
-| **1 · esiste** | la sessione nasce, c'è un'uscita, l'immagine non è degenere | ⭐ **tutti e quattro, identico** |
-| **2 · si vede** | la marca c'è, la finestra si vede, l'input cambia i pixel | ⭐ **tutti e quattro, identico** |
-| **3 · come si fa** | come si avvia questo compositore, quale protocollo di cattura, dove si mette la marca | ⛔ **specifico**, e sta in un **adattatore** per desktop |
+| **1 · exists** | the session is born, there is an output, the image is not degenerate | ⭐ **all four, identical** |
+| **2 · is seen** | the mark is there, the window is seen, input changes the pixels | ⭐ **all four, identical** |
+| **3 · how it is done** | how this compositor is started, which capture protocol, where the mark is put | ⛔ **specific**, and it sits in an **adapter** per desktop |
 
-> ⭐⭐ **La rete non deve sapere tutto di ogni desktop: deve sapere che cosa CHIEDERE.**
-> La lista principale (C1-C14) resta **una**; ogni desktop porta un adattatore piccolo che risponde
-> alle stesse quattro domande.
+> ⭐⭐ **The net does not need to know everything about every desktop: it needs to know what to ASK.**
+> The main list (C1-C14) stays **one**; every desktop carries a small adapter that answers
+> the same four questions.
 
-⚠ **E questo NON viola D4**, e va detto perché la confusione è facile: D4 vieta le eccezioni **nel
-prodotto** — un ramo KDE diverso dal ramo GNOME dentro `src/`. ⛔ Qui siamo nel **banco**, e un banco
-che non sapesse come si avvia un compositore non potrebbe provarlo affatto. ⇒ **Il confine**: se un
-adattatore comincia a contenere *comportamento del prodotto* invece che *modo di avviarlo e
-guardarlo*, ⛔ **è un'eccezione travestita**, e va tolta.
+⚠ **And this does NOT violate D4**, and it must be said because the confusion is easy: D4 forbids exceptions **in the
+product** — a KDE branch different from the GNOME branch inside `src/`. ⛔ Here we are in the **bench**, and a bench
+that did not know how a compositor is started could not test it at all. ⇒ **The border**: if an
+adapter starts to contain *product behaviour* instead of *a way of starting it and
+looking at it*, ⛔ **it is a disguised exception**, and it must be removed.
 
 ---
 
-# §4 · La lista — ⭐ **è la rete vera**
+# §4 · The list — ⭐ **it is the real net**
 
-⚠ **Le due colonne che di solito mancano sono la terza e la quarta**, e sono quelle che spiegano i
-tre guasti di ieri: *da dove parte* e *che cosa guarda*.
+⚠ **The two columns that are usually missing are the third and the fourth**, and they are the ones that explain the
+three faults of yesterday: *where it starts from* and *what it looks at*.
 
-## 4.1 Le prove del prodotto
+## 4.1 The product tests
 
-| # | che cosa deve essere vero | ⭐ da dove parte | ⭐ che cosa guarda | ⛔ come so che sa dare rosso | dove gira |
+| # | what must be true | ⭐ where it starts from | ⭐ what it looks at | ⛔ how I know it can give red | where it runs |
 |---|---|---|---|---|---|
-| **C1** | ⭐⭐ **la sessione nasce e si VEDE** | ⛔ **da zero**: utente mai usato, sessione nuova, mai riusata | un'immagine: ⭐ **marca presente** *e* **immagine non degenere** (§4.2) | (a) sessione **senza monitor** ⇒ rosso, ⛔ distinguendo *«nero»* da *«non ho guardato»* · (b) ⭐ **immagine con i colori spostati apposta** ⇒ **deve restare VERDE**, o la soglia è troppo stretta e la rete si butta fra due settimane | scatole |
-| **C2** | ⭐⭐ **una finestra si apre** | da zero, sessione nuova | ⛔ **il pixel**: la finestra si deve VEDERE — non si conta il processo | applicazione che muore subito ⇒ rosso. ⚠ E il controllo che il conto dei processi **non** basta: `[M]` diceva 1 in tutt'e due i casi | scatole |
-| **C3** | **i fotogrammi arrivano, e la scena CAMBIA** | sessione nuova, **scena dichiarata e in movimento** | ⭐ **canarino anti-morte**: fotogrammi > 0 · **non crollati** rispetto a un riferimento grezzo · ⛔ **i fotogrammi consecutivi sono diversi fra loro** | si ferma il codificatore ⇒ rosso · ⭐ si manda **lo stesso fotogramma ripetuto** ⇒ rosso (immagine congelata). ⚠ E *«scena ferma»* **non** deve dare rosso | scatole |
-| **C4** | **il tasto arriva fino allo schermo** | sessione nuova | ⛔ **il pixel, prima e dopo**: immagine · tasto · immagine, e i pixel **della zona attesa** devono cambiare | si stacca il percorso dell'input ⇒ rosso | scatole |
-| **C5** | **il suono c'è e non è silenzio** | sessione nuova | i byte che arrivano al client, e che **non siano silenzio** | si toglie la sorgente ⇒ rosso | scatole |
-| **C6** | **si stacca e si ritrova** | sessione **già viva** (⚠ qui è giusto così) | dopo il riattacco: stessa sessione, stesse finestre, **viste nell'immagine** | si uccide la sessione ⇒ rosso | scatole |
-| **C7** | **si chiude tutto, e non resta niente** | dopo una sessione finita | processi orfani, socket, lucchetti, scheda grafica tornata a riposo | si lascia un processo apposta ⇒ rosso | scatole |
-| **C8a** | ⭐⭐⭐ **il SECONDO utente apre il browser** | ⛔ **da zero, e con DUE utenti** | ⛔ il pixel: il browser **rende una pagina** (`#FF00FF`, tolleranza dichiarata) | ✅ **misurato il 26 ago 2026**: si disfa la cura della provvista ⇒ ⛔ il **secondo** dà rosso, il primo no | ⭐ **qualunque scatola** — non passa dal prodotto |
-| **C8b** | e la stessa pagina **si vede DAL CLIENTE** | come sopra | il pixel, attraverso il prodotto | ⭐ **misurato il 27 ago 2026**: il verdetto è una **differenza** — primo fotogramma senza pagina, ultimo con. Desktop nero ⇒ `3`, pagina già presente ⇒ `3`, ⛔ mai un verde regalato | ⭐ **gnome**, e solo lì |
-| **C9** | **il registro dice DI CHI parla** | qualunque | ogni riga del registro ha l'inquilino | si toglie il nome ⇒ rosso | scatole |
-| **C10** | **le due copie gemelle del protocollo combaciano** | prima di compilare | i due file | se ne cambia uno ⇒ rosso. ⚠ **c'è già**, e va solo agganciata | ovunque |
+| **C1** | ⭐⭐ **the session is born and is SEEN** | ⛔ **from zero**: user never used, new session, never reused | an image: ⭐ **mark present** *and* **image not degenerate** (§4.2) | (a) session **without monitor** ⇒ red, ⛔ distinguishing *«black»* from *«I did not look»* · (b) ⭐ **image with colours shifted on purpose** ⇒ **must stay GREEN**, or the threshold is too tight and the net gets thrown away in two weeks | boxes |
+| **C2** | ⭐⭐ **a window opens** | from zero, new session | ⛔ **the pixel**: the window must be SEEN — the process is not counted | application that dies at once ⇒ red. ⚠ And the check that the process count is **not** enough: `[M]` it said 1 in both cases | boxes |
+| **C3** | **the frames arrive, and the scene CHANGES** | new session, **declared and moving scene** | ⭐ **anti-death canary**: frames > 0 · **not collapsed** compared with a rough reference · ⛔ **consecutive frames differ from each other** | the encoder is stopped ⇒ red · ⭐ **the same frame repeated** is sent ⇒ red (frozen image). ⚠ And *«still scene»* must **not** give red | boxes |
+| **C4** | **the key gets all the way to the screen** | new session | ⛔ **the pixel, before and after**: image · key · image, and the pixels **of the expected area** must change | the input path is cut off ⇒ red | boxes |
+| **C5** | **the sound is there and is not silence** | new session | the bytes that arrive at the client, and that they **are not silence** | the source is removed ⇒ red | boxes |
+| **C6** | **it detaches and finds itself again** | session **already alive** (⚠ here that is right) | after the re-attach: same session, same windows, **seen in the image** | the session is killed ⇒ red | boxes |
+| **C7** | **everything closes, and nothing remains** | after a finished session | orphan processes, sockets, locks, graphics card back at rest | a process is left on purpose ⇒ red | boxes |
+| **C8a** | ⭐⭐⭐ **the SECOND user opens the browser** | ⛔ **from zero, and with TWO users** | ⛔ the pixel: the browser **renders a page** (`#FF00FF`, declared tolerance) | ✅ **measured on 26 Aug 2026**: the provisioning cure is undone ⇒ ⛔ the **second** gives red, the first does not | ⭐ **any box** — it does not go through the product |
+| **C8b** | and the same page **is seen FROM THE CLIENT** | as above | the pixel, through the product | ⭐ **measured on 27 Aug 2026**: the verdict is a **difference** — first frame without the page, last with it. Black desktop ⇒ `3`, page already present ⇒ `3`, ⛔ never a free green | ⭐ **gnome**, and only there |
+| **C9** | **the log says WHOM it is talking about** | any | every log line has the tenant | the name is removed ⇒ red | boxes |
+| **C10** | **the two twin copies of the protocol match** | before compiling | the two files | one of them is changed ⇒ red. ⚠ **it already exists**, and only needs hooking up | everywhere |
 
-### ⭐⭐⭐ Che cosa di questa lista ESISTE, al 27 agosto 2026 — **tutta**
-
-| | |
-|---|---|
-| le prove del **prodotto** | **C1 · C2 · C3 · C4 · C5 · C6 · C7 · C8a · C8b · C9 · C10** — ⭐ **undici su undici** |
-| le prove che guardano **la rete** | **C11 · C12 · C13 · C14** — e ⭐ **C15**, che non era nella lista e serviva |
-
-⛔ **Niente è più bloccato**, e la ragione va detta perché è la storia della giornata: le cinque prove
-dichiarate «bloccate dalle sessioni cieche» **non erano bloccate**. `[M]` Il monitor di una sessione
-headless nasce **quando un consumatore si aggancia al flusso** ⇒ **mentre un cliente è attaccato, lo
-schermo c'è**, che è esattamente la condizione in cui quelle cinque lavorano. ⇒ §7-bis.19.
-
-## 4.2 ⭐⭐ Le prove che guardano la RETE, non il prodotto
-
-*Rilievo di Qwen §3.12, accolto: **la rete può continuare a girare e smettere di essere credibile.***
-
-| # | che cosa verifica | ⛔ il guasto che prende |
-|---|---|---|
-| **C11** | ⭐ **l'allineamento**: stessa impronta del binario in tutte le scatole, ricetta dichiarata e datata, ⛔ **nessuna scatola costruita con «l'ultima disponibile»** | è il guasto di D5, quello che l'utente ha visto per primo: *«remotix v1 su una scatola e v1.2 sull'altra»* |
-| **C12** | **il gancio è vivo**: esiste, è eseguibile, e c'è traccia dell'ultima volta che ha girato | ⛔ **il gancio spento in silenzio** — il modo in cui muoiono queste reti |
-| **C13** | **la certificazione è recente**: negli ultimi N giri almeno un guasto è stato iniettato e la rete ha dato rosso | una rete che non è più capace di dare rosso **ha esattamente l'aspetto di una rete che non trova niente** |
-| **C14** | ⭐ **le scatole non si disturbano**: le stesse prove da sole e in parallelo danno lo stesso esito | §3.4 lo **afferma**; questo lo **misura** |
-| **C15** | ⭐⭐ **la metà remota gira davvero**: il gancio ha due metà su due macchine, e questa guarda che quella con le scatole non abbia smesso | ⛔ **il guasto che nessuna delle altre prende**: macchina di prova spenta per sempre, e `[M]` **C12 e C13 restano verdi**. Il segno non è il nome della macchina: è **una maglia che vuole una scatola e arriva a un giudizio invece che a un `3`** |
-
-⚠ **Sono quattro, e non di più, di proposito.** Sono tutte a costo quasi zero e nessuna accende una
-sessione.
-
-## 4.3 ⭐⭐⭐ Come si guarda un'immagine senza costruire una prova fragile
-
-⛔ **Il confronto pixel-per-pixel con un'immagine di riferimento marcisce in una settimana**: cambia
-un carattere, cambia lo sfondo, e la prova diventa rossa senza che niente sia rotto. ⇒ Una prova che
-dà rosso a vuoto **viene spenta da chi lavora**, ed è peggio di nessuna prova.
-
-### ⛔ E la marca da sola non basta — *rilievo accolto, tutt'e due i revisori*
-
-La marca dice *«qualcosa c'è»*, ⛔ **non dice «quel che c'è è giusto»**. I casi che passerebbero:
+### ⭐⭐⭐ What of this list EXISTS, as of 27 Aug 2026 — **all of it**
 
 | | |
 |---|---|
-| metà schermo nero, e la marca sta nell'altra metà | ⛔ verde |
-| tutto rovinato intorno alla marca | ⛔ verde |
-| immagine **congelata**: la marca c'è, ma niente si aggiorna | ⛔ verde |
+| the **product** tests | **C1 · C2 · C3 · C4 · C5 · C6 · C7 · C8a · C8b · C9 · C10** — ⭐ **eleven out of eleven** |
+| the tests that look at **the net** | **C11 · C12 · C13 · C14** — and ⭐ **C15**, which was not in the list and was needed |
 
-### ⭐ La forma accolta — **tre controlli poveri**, e nessuno sa che aspetto abbia un desktop
+⛔ **Nothing is blocked any more**, and the reason must be told because it is the story of the day: the five tests
+declared «blocked by the blind sessions» **were not blocked**. `[M]` The monitor of a headless session
+is born **when a consumer hooks onto the stream** ⇒ **while a client is attached, the
+screen is there**, which is exactly the condition in which those five work. ⇒ §7-bis.19.
 
-1. **la marca**, con ⛔ **una tolleranza dichiarata** — non il colore esatto. *Rilievo di Gemini,
-   accolto*: i compositori applicano profili di colore e riscalamenti, e un `#FF00FF` può tornare
-   indietro leggermente diverso. ⛔ Una prova che pretende il colore esatto è già morta;
-2. **l'immagine non è degenere**: non tutta nera, non tutta di un colore, abbastanza varia. ⭐ È un
-   controllo di **sanità**, non di estetica, e non richiede di sapere come è fatto nessun desktop;
-3. **la zona attesa cambia** quando deve cambiare (C4) e **i fotogrammi consecutivi differiscono**
-   quando la scena si muove (C3).
+## 4.2 ⭐⭐ The tests that look at the NET, not at the product
 
-⛔ **Respinta la visione artificiale** (SSIM, riconoscimento di forme) proposta da Gemini: porta
-dipendenze e peso per un problema che si chiude con una **tolleranza** e un istogramma. ⚠ Se la
-tolleranza non bastasse, ⭐ **allora** quella strada torna sul tavolo — e sarà una decisione con una
-misura sotto, non un'anticipazione.
+*Qwen's finding §3.12, accepted: **the net can keep running and stop being credible.***
 
-### ⚠ E il metro va tarato prima di essere creduto
-
-La marca dev'essere **ritrovata quando c'è** e **non ritrovata quando non c'è**. ⭐ E il testimone
-esiste già: si attacca alla sessione col cliente di prova, si fa dare i fotogrammi dal filo e ne tira
-fuori un'immagine — **con il terzo esito distinto**: `0` ho guardato e regge · `1` ho guardato e non
-regge · ⛔ **`3` non ho potuto guardare**, che non è un rosso.
-
-## 4.4 ❓ **LA DOMANDA CHE RESTA ALL'UTENTE** — C8 e il senso di D2
-
-⛔ **Tutt'e due i revisori dicono la stessa cosa, ed è il rilievo più serio**: C8 è **la prova più
-importante** — è metà del collaudo — **ed è la più difficile da eseguire**. ⇒ *Una prova costosa da
-preparare viene eseguita meno; una prova eseguita meno lascia il guasto nascosto più a lungo.*
-
-⭐⭐ **E portano una distinzione che la prima stesura non faceva:**
-
-| tipo di prova | domanda | D2 |
+| # | what it verifies | ⛔ the fault it catches |
 |---|---|---|
-| **capienza** | *quanti utenti ci stanno insieme?* | ⛔ **già misurata**, non si rifà |
-| ⭐ **correttezza a più utenti** | *il secondo utente riesce a fare quel che deve?* | ⚠ **non è capienza**, e D2 non parla di questo |
+| **C11** | ⭐ **the alignment**: same binary fingerprint in all boxes, recipe declared and dated, ⛔ **no box built with «l'ultima disponibile»** | it is the fault of D5, the one the user saw first: *«remotix v1 su una scatola e v1.2 sull'altra»* |
+| **C12** | **the hook is alive**: it exists, it is executable, and there is a trace of the last time it ran | ⛔ **the hook switched off silently** — the way these nets die |
+| **C13** | **the certification is recent**: in the last N rounds at least one fault was injected and the net gave red | a net that is no longer able to give red **looks exactly like a net that finds nothing** |
+| **C14** | ⭐ **the boxes do not disturb each other**: the same tests alone and in parallel give the same outcome | §3.4 **asserts** it; this **measures** it |
+| **C15** | ⭐⭐ **the remote half really runs**: the hook has two halves on two machines, and this one checks that the one with the boxes has not stopped | ⛔ **the fault none of the others catches**: test machine switched off for good, and `[M]` **C12 and C13 stay green**. The sign is not the machine's name: it is **a mesh that wants a box and reaches a judgement instead of a `3`** |
 
-> ## ✅⭐⭐ RISPOSTA DELL'UTENTE — *26 agosto 2026*
+⚠ **They are four, and no more, on purpose.** They are all almost zero-cost and none switches on a
+session.
+
+## 4.3 ⭐⭐⭐ How to look at an image without building a fragile test
+
+⛔ **Pixel-by-pixel comparison with a reference image rots within a week**: a
+font changes, the background changes, and the test turns red without anything being broken. ⇒ A test that
+gives red for nothing **gets switched off by whoever is working**, and it is worse than no test.
+
+### ⛔ And the mark alone is not enough — *finding accepted, both reviewers*
+
+The mark says *«something is there»*, ⛔ **it does not say «what is there is right»**. The cases that would pass:
+
+| | |
+|---|---|
+| half the screen black, and the mark is in the other half | ⛔ green |
+| everything ruined around the mark | ⛔ green |
+| **frozen** image: the mark is there, but nothing updates | ⛔ green |
+
+### ⭐ The accepted shape — **three poor checks**, and none knows what a desktop looks like
+
+1. **the mark**, with ⛔ **a declared tolerance** — not the exact colour. *Gemini's finding,
+   accepted*: compositors apply colour profiles and rescalings, and an `#FF00FF` can come back
+   slightly different. ⛔ A test that demands the exact colour is already dead;
+2. **the image is not degenerate**: not all black, not all one colour, varied enough. ⭐ It is a
+   **sanity** check, not an aesthetic one, and it does not require knowing how any desktop is made;
+3. **the expected area changes** when it must change (C4) and **consecutive frames differ**
+   when the scene moves (C3).
+
+⛔ **Computer vision rejected** (SSIM, shape recognition) as proposed by Gemini: it brings
+dependencies and weight for a problem that is closed with a **tolerance** and a histogram. ⚠ If the
+tolerance were not enough, ⭐ **then** that route comes back on the table — and it will be a decision with a
+measurement underneath, not an anticipation.
+
+### ⚠ And the meter must be calibrated before being believed
+
+The mark must be **found when it is there** and **not found when it is not**. ⭐ And the witness
+already exists: it attaches to the session with the test client, has the frames given to it from the wire and draws
+an image out of them — **with the third outcome distinct**: `0` I looked and it holds · `1` I looked and it does not
+hold · ⛔ **`3` I could not look**, which is not a red.
+
+## 4.4 ❓ **THE QUESTION THAT REMAINS FOR THE USER** — C8 and the meaning of D2
+
+⛔ **Both reviewers say the same thing, and it is the most serious finding**: C8 is **the most
+important test** — it is half the acceptance test — **and it is the hardest to run**. ⇒ *A test that is costly to
+prepare gets run less; a test run less leaves the fault hidden longer.*
+
+⭐⭐ **And they bring a distinction the first draft did not make:**
+
+| kind of test | question | D2 |
+|---|---|---|
+| **capacity** | *how many users fit together?* | ⛔ **already measured**, not redone |
+| ⭐ **correctness with several users** | *does the second user manage to do what they must?* | ⚠ **it is not capacity**, and D2 does not speak of this |
+
+> ## ✅⭐⭐ THE USER'S ANSWER — *26 Aug 2026*
 >
 > > *«Per quanto mi riguarda un container può anche avere 10 utenti, è un dato già misurato con
 > > GNOME.»*
 >
-> ⇒ ⭐ **C8 sta in una scatola**, con due inquilini — non dieci, perché la domanda è la correttezza,
-> non la capienza. ⛔ Cade la strada «C8 sulla macchina vera con uno script di ricostruzione»: la
-> prova più importante **non sarà anche la più difficile da eseguire**, che era il rilievo dei due
-> revisori.
-> ⚠ E resta in piedi l'altra metà del rilievo, **rimandata di proposito**: farne tre (browser ·
-> finestra · input) si valuta **solo dopo** che la prima ha preso qualcosa.
+> ⇒ ⭐ **C8 sits in a box**, with two tenants — not ten, because the question is correctness,
+> not capacity. ⛔ The route «C8 on the real machine with a rebuild script» falls: the
+> most important test **will not also be the hardest to run**, which was the two
+> reviewers' finding.
+> ⚠ And the other half of the finding stays standing, **postponed on purpose**: making three of them (browser ·
+> window · input) is evaluated **only after** the first has caught something.
 
-⇒ *(la domanda che era stata posta, e la sua risposta è qui sopra:)*
+⇒ *(the question that had been asked, and its answer is above:)*
 
-> **D2 vieta un contenitore con DUE utenti dedicato alla sola correttezza?**
+> **Does D2 forbid a container with TWO users devoted to correctness alone?**
 >
-> | se D2 è **assoluta** | C8 resta sulla macchina vera, ⛔ e allora **serve uno script che ricostruisca lo stato da zero** — utenti, cartelle, la condizione che genera il guasto, il primo utente, il secondo, e il giudizio sull'immagine. ⚠ Senza quello script, C8 non è una prova: è una cosa che sa fare solo chi c'era |
+> | if D2 is **absolute** | C8 stays on the real machine, ⛔ and then **a script is needed that rebuilds the state from zero** — users, folders, the condition that generates the fault, the first user, the second, and the judgement on the image. ⚠ Without that script, C8 is not a test: it is something only whoever was there knows how to do |
 > |---|---|
-> | se D2 riguarda **la capienza** | ⭐ una scatola speciale a due utenti, ⛔ **due utenti e basta — non dieci**, e non torna a misurare capienza |
+> | if D2 concerns **capacity** | ⭐ a special box with two users, ⛔ **two users and that is all — not ten**, and it does not go back to measuring capacity |
 
-⚠ **E in tutt'e due i casi**, il rilievo di far diventare C8 **tre prove** (browser · finestra ·
-input) è ⛔ **rimandato**: la fase deve restare corta, e la terza guardia di §1.3 vale anche contro i
-revisori. ⇒ Si comincia con **una**, e si aggiungono le altre **solo se quella prende qualcosa**.
+⚠ **And in both cases**, the finding of turning C8 into **three tests** (browser · window ·
+input) is ⛔ **postponed**: the phase must stay short, and the third guard of §1.3 holds against the
+reviewers too. ⇒ One starts with **one**, and the others are added **only if that one catches something**.
 
-## 4.5 ⛔ La regola sugli esiti, che vale per ogni prova della lista
+## 4.5 ⛔ The rule on outcomes, which holds for every test of the list
 
-| uscita | vuol dire | si rifà? |
+| exit | means | redone? |
 |---|---|---|
-| 0 / 1 | ⭐ **un giudizio** — regge / non regge | ⛔ **mai** |
-| **3** | *«non giudico»*: ha misurato, e qualche pezzo non ha potuto parlare | ⛔ **mai** |
-| 2 | il terreno non regge, o l'uso è sbagliato | ⛔ mai — **un terreno cattivo si GUARDA** |
-| **4** | ⭐ **il turno non è mai arrivato** (lucchetto della scheda) | ✅ **sì** |
+| 0 / 1 | ⭐ **a judgement** — holds / does not hold | ⛔ **never** |
+| **3** | *«non giudico»*: it measured, and some piece could not speak | ⛔ **never** |
+| 2 | the terrain does not hold, or the use is wrong | ⛔ never — **a bad terrain is LOOKED AT** |
+| **4** | ⭐ **the turn never came** (the card's lock) | ✅ **yes** |
 
-⛔⛔ **E il `3` NON si rimette in coda, di proposito**: è la strada esatta per **misurare due volte
-finché esce il numero che piace**. In un progetto che ha già ritirato due conclusioni per questa
-ragione, la tentazione si chiude con una regola, non con la buona volontà.
+⛔⛔ **And the `3` is NOT put back in the queue, on purpose**: it is the exact route to **measuring twice
+until the number one likes comes out**. In a project that has already withdrawn two conclusions for this
+reason, the temptation is closed with a rule, not with good will.
 
 ---
 
-# §5 · Quando parte, e che cosa succede quando dice rosso
+# §5 · When it starts, and what happens when it says red
 
-⛔ **Le tre volte in cui, ieri, nessuno ha riprovato il vecchio, nessuno era distratto: semplicemente
-non c'era il gancio.**
+⛔ **The three times yesterday when nobody retested the old, nobody was distracted: there simply
+was no hook.**
 
-## 5.1 Il gancio — ⛔ definito per percorso, non per buona volontà
+## 5.1 The hook — ⛔ defined by path, not by good will
 
-| quando | che cosa gira |
+| when | what runs |
 |---|---|
-| ⭐ **si tocca `src/`** (il prodotto) | la famiglia **FUNZIONA**, su tutte e quattro le scatole insieme |
-| si toccano **i banchi o la rete** | C11-C14 (le prove della rete) |
-| **prima di chiudere una fase** | tutto, **VA VELOCE** compresa, una scatola per volta |
-| **all'ingresso di un desktop nuovo** | tutto sul nuovo, ⭐ **più la regressione sui vecchi** — e senza riscrivere una riga della lista |
+| ⭐ **`src/` is touched** (the product) | the **FUNZIONA** family, on all four boxes together |
+| **the benches or the net** are touched | C11-C14 (the net's tests) |
+| **before closing a phase** | everything, **VA VELOCE** included, one box at a time |
+| **when a new desktop comes in** | everything on the new one, ⭐ **plus the regression on the old ones** — and without rewriting one line of the list |
 
-⚠ **Il tetto di tempo**, e i due revisori convergono: **sotto i 3 minuti** per la famiglia veloce.
-Sopra i 5 comincia il rischio che venga spenta; sopra i 10 è quasi certo. ⛔ E se il tempo vero lo
-supera **si tagliano prove**, non si alza il tetto.
+⚠ **The time cap**, and the two reviewers converge: **under 3 minutes** for the fast family.
+Above 5 the risk that it gets switched off begins; above 10 it is almost certain. ⛔ And if the real time
+exceeds it **tests are cut**, the cap is not raised.
 
-> ### ⭐ E ADESSO IL TETTO È MISURATO — *`[M]` 26 agosto 2026*
+> ### ⭐ AND NOW THE CAP IS MEASURED — *`[M]` 26 Aug 2026*
 >
-> La famiglia veloce, girata davvero: **153 secondi su 180**. ⛔ **Il tetto è pieno**: qualunque
-> maglia in più va **scambiata** con qualcosa che esce, non sommata.
+> The fast family, really run: **153 seconds out of 180**. ⛔ **The cap is full**: any
+> extra mesh must be **swapped** with something that goes out, not added.
 >
-> Ci stanno **C11 + due giri di C1**, e basta. ⇒ Quel che è rimasto fuori, e quanto costa:
+> **C11 + two rounds of C1** fit, and that is all. ⇒ What was left out, and what it costs:
 >
-> | tagliato | ⛔ che cosa costa |
+> | cut | ⛔ what it costs |
 > |---|---|
-> | ⛔⛔ **C8, tutt'e due le prove** | **il taglio più caro**: la maglia più importante della lista **non viene guardata a ogni modifica**. Resta nel giro completo |
-> | **C1 dal terzo giro in poi** | oggi non morde — `[M]` 10 sessioni su 10 nascono cieche, e due giri bastano ad accorgersene. ⚠ **Il giorno in cui il difetto sarà curato e tornerà raro, due giri non basteranno** |
-> | **il passo 0** | guarda l'ambiente, che non cambia quando cambia `src/`. ⭐ E una scatola ricostruita di nascosto la prende **C11**, che nella famiglia veloce c'è — è per questo che c'è |
+> | ⛔⛔ **C8, both tests** | **the most expensive cut**: the most important mesh of the list **is not looked at at every change**. It stays in the complete round |
+> | **C1 from the third round on** | today it does not bite — `[M]` 10 sessions out of 10 are born blind, and two rounds are enough to notice. ⚠ **The day the defect is cured and becomes rare again, two rounds will not be enough** |
+> | **step 0** | it looks at the environment, which does not change when `src/` changes. ⭐ And a box rebuilt behind our back is caught by **C11**, which is in the fast family — that is why it is there |
 >
-> ⭐ E il gancio **salta** la maglia che non ci sta invece di troncarla, e **scrive nel registro che
-> cosa ha saltato e perché**: ⛔ troncare darebbe un rosso che non è del prodotto (`LEZIONI.md` §1.45).
+> ⭐ And the hook **skips** the mesh that does not fit instead of truncating it, and **writes in the log what
+> it skipped and why**: ⛔ truncating would give a red that does not belong to the product (`LEZIONI.md` §1.45).
 
-### ⚠ Due cose sul gancio che si sono decise scrivendolo
+### ⚠ Two things about the hook that were decided while writing it
 
-1. ⭐ **Si aggancia PRIMA DI MANDARE** (`pre-push`), non a ogni salvataggio. ⛔ Tre minuti a ogni
-   commit sono esattamente la cosa che questa sezione dice che fa **spegnere** un gancio. Chi vuole
-   `pre-commit` lo chiede per nome.
-2. ⚠ *«Prima di chiudere una fase»* **non è un percorso**: è una decisione, e si chiede per nome
-   (`--famiglia tutto`). ⛔ Far finta che un percorso possa indovinarla vorrebbe dire una regola che
-   non scatta mai e di cui nessuno si accorge che non è scattata. ⭐ L'ingresso di un **desktop
-   nuovo** invece sì: si vede da una `Contenitore.<nome>` che compare.
+1. ⭐ **It hooks in BEFORE SENDING** (`pre-push`), not at every save. ⛔ Three minutes at every
+   commit are exactly the thing this section says gets a hook **switched off**. Whoever wants
+   `pre-commit` asks for it by name.
+2. ⚠ *«Before closing a phase»* **is not a path**: it is a decision, and it is asked for by name
+   (`--famiglia tutto`). ⛔ Pretending that a path can guess it would mean a rule that
+   never triggers and nobody notices it has not triggered. ⭐ The arrival of a **new
+   desktop** instead is: it shows from a `Contenitore.<nome>` that appears.
 
-## 5.2 ⭐⭐ La politica del rosso — *rilievo di Qwen §3.7, accolto per intero*
+## 5.2 ⭐⭐ The red policy — *Qwen's finding §3.7, accepted in full*
 
-⛔ **Il documento spiegava benissimo come trovare il rosso e non diceva che cosa succede dopo.** E il
-primo rosso importante genererà una discussione, ⇒ **e la discussione costa più della riparazione.**
+⛔ **The document explained very well how to find the red and did not say what happens next.** And the
+first important red will generate a discussion, ⇒ **and the discussion costs more than the repair.**
 
-| il caso | la regola |
+| the case | the rule |
 |---|---|
-| **rosso in FUNZIONA** | ⛔ **blocca**: si ripara prima di andare avanti. Non si archivia come *«poi vediamo»* |
-| **rosso in VA VELOCE** | va capito **prima di chiudere la fase**. Se confermato, blocca la chiusura; se è dell'ambiente, si scrive perché |
-| ⛔ **rosso intermittente** | ⛔ **è un rosso.** Non si ripete la prova sperando nel verde: *«a volte succede»* spesso vuol dire *«succede sempre, aspetta solo il momento»* |
-| **esito 3 ripetuto** | il singolo `3` è neutro; ⛔ **un `3` frequente è un guasto del banco**, non un esito |
-| **falso allarme** | si può dichiarare **solo dopo averlo capito**, e **si scrive**. ⛔ Una prova che dà falsi allarmi ripetuti **si ripara o si butta** |
-| **prova che non prende niente** | ⛔ **si toglie, e si scrive perché.** Non si lascia morire per disuso |
+| **red in FUNZIONA** | ⛔ **it blocks**: it is repaired before going on. It is not filed as *«poi vediamo»* |
+| **red in VA VELOCE** | it must be understood **before closing the phase**. If confirmed, it blocks the closing; if it belongs to the environment, it is written why |
+| ⛔ **intermittent red** | ⛔ **it is a red.** The test is not repeated hoping for green: *«a volte succede»* often means *«succede sempre, aspetta solo il momento»* |
+| **repeated outcome 3** | the single `3` is neutral; ⛔ **a frequent `3` is a bench fault**, not an outcome |
+| **false alarm** | it can be declared **only after understanding it**, and **it is written down**. ⛔ A test that gives repeated false alarms **is repaired or thrown away** |
+| **test that catches nothing** | ⛔ **it is removed, and it is written why.** It is not left to die of disuse |
 
 ---
 
-# §6 · ⛔ QUEL CHE LA RETE **NON** PRENDE — *e va scritto, o qualcuno se ne fiderà troppo*
+# §6 · ⛔ WHAT THE NET does **NOT** CATCH — *and it must be written, or someone will trust it too much*
 
-*Rilievo di Qwen §3.2-E e Q1, accolto.*
+*Qwen's finding §3.2-E and Q1, accepted.*
 
-> ⭐ **La rete è fatta contro i guasti di nascita, di visibilità, di funzionamento di base e di
-> correttezza fra due utenti.** ⛔ **Non è** una rete di prestazioni, non è una rete di compatibilità
-> fra browser, e non è una prova di lunga durata.
+> ⭐ **The net is made against birth faults, visibility faults, basic functioning faults and
+> correctness faults between two users.** ⛔ **It is not** a performance net, it is not a compatibility net
+> across browsers, and it is not a long-duration test.
 
-| classe | perché resta fuori |
+| class | why it stays out |
 |---|---|
-| **regressioni visive sottili** — colori un po' diversi, testo un po' storto, difetti grafici non degeneri | ⛔ per costruzione: i controlli sono **poveri** apposta, o marciscono (§4.3) |
-| **perdite lente di memoria** — aprire e chiudere cento sessioni | vuole una prova di lunga durata, che è un altro mestiere |
-| **corse fra eventi** che dipendono dai tempi | la rete gira in condizioni tranquille |
-| **rete degradata** — perdita, ritardo, disordine | ⭐ **è tutto il tema della fase 9**, che ha i suoi banchi. Qui si duplicherebbe |
-| **browser diversi** | la pagina gira su tre motori; la rete ne usa **uno** |
-| **qualità fine di audio e video** | è giudizio dell'utente (I8), non di un banco |
-| **aggiornamenti dei desktop** | ⚠ **coperto solo a metà**: C11 vede che la ricetta è cambiata, ⛔ non che il desktop nuovo si comporta peggio |
-| **degrado termico** | fuori bersaglio |
-| ⛔⛔ **le regressioni di PRESTAZIONE** | ⭐ dichiarato il 27 ago 2026: **nessun banco confronta ieri con oggi**. Un fotogramma che diventa più lento senza che nulla smetta di funzionare **passa**. ⇒ §3.4 |
-| ⛔⛔ **il prodotto sugli altri tre desktop** | `[M]` 27 ago: il prodotto **sa avviare solo GNOME** (`src/sessione.c` · `scrivi_dropin()`) ⇒ su KDE, XFCE e LXQt la rete prova **l'ambiente, il suono, i residui, il registro e l'allineamento**, ⛔ **non il prodotto**. È materia della fase 12 |
-| ⛔ **le scelte mai fatte** | non si è **rotto** niente: quella roba sta in `MASTERPLAN.md` (D6), e la rete non la prenderà mai — **ed è giusto così** |
+| **subtle visual regressions** — slightly different colours, slightly crooked text, non-degenerate graphical defects | ⛔ by construction: the checks are **poor** on purpose, or they rot (§4.3) |
+| **slow memory leaks** — opening and closing a hundred sessions | it needs a long-duration test, which is another job |
+| **races between events** that depend on timing | the net runs in quiet conditions |
+| **degraded network** — loss, delay, reordering | ⭐ **it is the whole theme of phase 9**, which has its own benches. Here it would be duplicated |
+| **different browsers** | the page runs on three engines; the net uses **one** |
+| **fine quality of audio and video** | it is the user's judgement (I8), not a bench's |
+| **desktop updates** | ⚠ **covered only halfway**: C11 sees that the recipe changed, ⛔ not that the new desktop behaves worse |
+| **thermal degradation** | off target |
+| ⛔⛔ **PERFORMANCE regressions** | ⭐ declared on 27 Aug 2026: **no bench compares yesterday with today**. A frame that becomes slower without anything stopping working **passes**. ⇒ §3.4 |
+| ⛔⛔ **the product on the other three desktops** | `[M]` 27 Aug: the product **can start only GNOME** (`src/sessione.c` · `scrivi_dropin()`) ⇒ on KDE, XFCE and LXQt the net tests **the environment, the sound, the leftovers, the log and the alignment**, ⛔ **not the product**. It is matter for phase 12 |
+| ⛔ **the choices never made** | nothing **broke**: that stuff is in `MASTERPLAN.md` (D6), and the net will never catch it — **and that is right** |
 
-> ### ⛔⛔⛔ E OGGI C'È UNA COSA IN PIÙ CHE LA RETE NON PRENDE, e non è per scelta — *26 agosto 2026*
+> ### ⛔⛔⛔ AND TODAY THERE IS ONE MORE THING THE NET DOES NOT CATCH, and not by choice — *26 Aug 2026*
 >
-> **La rete non riesce a guardare NESSUN pixel attraverso il prodotto**, e non perché sia scritta
-> male: `[M]` **dieci sessioni GNOME nuove su dieci nascono senza monitor** (§7-bis.13), cioè non
-> c'è niente da guardare. ⇒ ⛔ Restano fuori **C2, C3, C4, C6 e la metà B di C8** — cioè la parte
-> della rete che dovrebbe dire *«si vede»* invece di *«è nato»*.
+> **The net cannot look at ANY pixel through the product**, and not because it is badly
+> written: `[M]` **ten new GNOME sessions out of ten are born without a monitor** (§7-bis.13), that is there
+> is nothing to look at. ⇒ ⛔ **C2, C3, C4, C6 and half B of C8** stay out — that is the part
+> of the net that should say *«it is seen»* instead of *«it was born»*.
 >
-> ⭐ **Quel che regge lo stesso**: C1 (che quel difetto lo PRENDE, ed è il suo mestiere) e **C8a**,
-> che guarda il pixel **senza passare dal prodotto** — ed è la ragione per cui è stata spezzata in
-> due invece di essere rimandata.
+> ⭐ **What holds all the same**: C1 (which CATCHES that defect, and it is its job) and **C8a**,
+> which looks at the pixel **without going through the product** — and that is the reason it was split in
+> two instead of being postponed.
 >
-> ⚠ **E questo NON è un buco della rete: è un difetto del prodotto**, aperto dalla fase 10. ⛔ La
-> differenza conta: un buco si tura scrivendo un'altra maglia, questo si tura **curando il
-> prodotto**, e finché è lì la fase 12 partirebbe senza modo di vedere se GNOME regge ancora.
+> ⚠ **And this is NOT a hole in the net: it is a defect of the product**, opened by phase 10. ⛔ The
+> difference counts: a hole is plugged by writing another mesh, this one is plugged **by curing the
+> product**, and as long as it is there phase 12 would start with no way of seeing whether GNOME still holds.
 
 ---
 
-# §7 · Il piano di lavoro
+# §7 · The work plan
 
-⛔ **Una scatola sola per prima, non quattro.** ⭐ E prima ancora, il passo 0.
+⛔ **One single box first, not four.** ⭐ And before that, step 0.
 
-| # | | perché in quest'ordine |
+| # | | why in this order |
 |---|---|---|
-| **0** | ⛔⛔ **il PASSO 0** (§3.5): mezza giornata, e la `[?]` su `logind` diventa `[M]` | ⛔ **precondizione.** Scoprire dopo quattro scatole che l'ambiente non è quello vero è il modo peggiore di spendere questa fase |
-| **1** | la **lista** (§4) e le tre decisioni aperte | ⛔ la forma della scatola dipende da che cosa ci si deve provare dentro |
-| **2** | **una** scatola, per GNOME: ricetta con le versioni, binario unico, impronta, marca, testimone, registro leggibile | |
-| **3** | ⭐⭐ **la si punta contro il codice del 25 agosto**, e si guarda se **C1 diventa rossa da sola** | ⛔ **è il punto di non ritorno.** Se prende, la forma è giusta. **Se non prende, non si costruiscono le altre: si capisce perché** |
-| **3-bis** | ⭐ **si prova anche il rosso SBAGLIATO**: immagine coi colori spostati apposta ⇒ **deve restare verde** | ⛔ *rilievo di Gemini, accolto*: se la marca cade per uno scarto minimo di colore, **la rete si butta fra due settimane** |
-| **4** | il **collaudo B** (C8), nella forma che l'utente avrà scelto (§4.4) | l'altra metà del collaudo |
-| **5** | le altre tre scatole, a stampo | ⛔ solo ora |
-| **6** | le prove della rete (C11-C14) | |
-| **7** | il **gancio** (§5.1) | ⚠ per ultimo, e **solo dopo che la rete ha preso almeno un guasto vero**: agganciare una rete che non prende niente è il modo più veloce di trasformarla in cerimonia |
+| **0** | ⛔⛔ **STEP 0** (§3.5): half a day, and the `[?]` on `logind` becomes `[M]` | ⛔ **precondition.** Discovering after four boxes that the environment is not the real one is the worst way to spend this phase |
+| **1** | the **list** (§4) and the three open decisions | ⛔ the shape of the box depends on what must be tested inside it |
+| **2** | **one** box, for GNOME: recipe with the versions, single binary, fingerprint, mark, witness, readable log | |
+| **3** | ⭐⭐ **it is pointed at the code of 25 Aug**, and one looks at whether **C1 turns red by itself** | ⛔ **it is the point of no return.** If it catches, the shape is right. **If it does not catch, the others are not built: one understands why** |
+| **3-bis** | ⭐ **the WRONG red is tested too**: image with colours shifted on purpose ⇒ **must stay green** | ⛔ *Gemini's finding, accepted*: if the mark falls for a minimal colour deviation, **the net gets thrown away in two weeks** |
+| **4** | **acceptance test B** (C8), in the form the user will have chosen (§4.4) | the other half of the acceptance test |
+| **5** | the other three boxes, from the mould | ⛔ only now |
+| **6** | the net's tests (C11-C14) | |
+| **7** | the **hook** (§5.1) | ⚠ last, and **only after the net has caught at least one real fault**: hooking up a net that catches nothing is the fastest way to turn it into ceremony |
 
 ---
 
-# §7-bis · ⭐⭐⭐⭐⭐ CHE COSA È STATO FATTO — *la notte del 25-26 agosto 2026*
+# §7-bis · ⭐⭐⭐⭐⭐ WHAT WAS DONE — *the night of 25-26 Aug 2026*
 
-> ## ⭐ IN UNA RIGA, PER CHI LEGGE SOLO QUESTA
+> ## ⭐ IN ONE LINE, FOR WHOEVER READS ONLY THIS
 >
-> | il piano di §7 | dove siamo |
+> | the plan of §7 | where we are |
 > |---|---|
-> | **0** il passo 0 | ✅ `[M]` **18/18**, e non su una scatola: **su tutte e quattro** |
-> | **1** la lista e le decisioni aperte | ✅ la lista c'è; ⭐ l'ultima domanda aperta (C8) l'ha chiusa l'utente |
-> | **2** una scatola | ✅ ⭐ **quattro** — GNOME, Plasma, XFCE, LXQt |
-> | **3** ⭐⭐ il **collaudo A** | ✅ **rossa da sola**, `[M]` 10 sessioni cieche su 10 |
-> | **3-bis** il rosso sbagliato | ✅ nella certificazione di C8: colore spostato ⇒ **resta verde** |
-> | **4** ⭐⭐ il **collaudo B** | ✅ **preso**: col guasto innestato il **secondo** inquilino non apre il browser, il primo sì |
-> | **5** le altre tre scatole | ✅ fatte, e ⭐ **senza riscrivere una riga della lista** |
-> | **6** le prove della rete | ✅ ⭐ **tutte e quattro**: C11 verde · C12 e C13 girano · C14 verde e misurata |
-> | **7** il gancio | ✅ ⭐ **c'è, e ha già girato davvero**: `[M]` **153 s** su un tetto di 180 |
+> | **0** step 0 | ✅ `[M]` **18/18**, and not on one box: **on all four** |
+> | **1** the list and the open decisions | ✅ the list exists; ⭐ the last open question (C8) was closed by the user |
+> | **2** one box | ✅ ⭐ **four** — GNOME, Plasma, XFCE, LXQt |
+> | **3** ⭐⭐ **acceptance test A** | ✅ **red by itself**, `[M]` 10 blind sessions out of 10 |
+> | **3-bis** the wrong red | ✅ in C8's certification: colour shifted ⇒ **stays green** |
+> | **4** ⭐⭐ **acceptance test B** | ✅ **caught**: with the fault injected the **second** tenant does not open the browser, the first does |
+> | **5** the other three boxes | ✅ done, and ⭐ **without rewriting one line of the list** |
+> | **6** the net's tests | ✅ ⭐ **all four**: C11 green · C12 and C13 run · C14 green and measured |
+> | **7** the hook | ✅ ⭐ **it exists, and it has already really run**: `[M]` **153 s** on a cap of 180 |
 >
-> ⛔ **E la cosa che pesa di più non è nessuna di queste**: `[M]` **dieci sessioni GNOME nuove su
-> dieci nascono senza monitor** ⇒ metà della rete — tutte le maglie che vogliono guardare un pixel
-> **attraverso il prodotto** — non ha niente da guardare. ⚠ Non è un buco della rete: è il difetto
-> **aperto** della fase 10 §7.4. ⇒ §7-bis.13, e la domanda all'utente in §11.
+> ⛔ **And the thing that weighs most is none of these**: `[M]` **ten new GNOME sessions out of
+> ten are born without a monitor** ⇒ half the net — all the meshes that want to look at a pixel
+> **through the product** — has nothing to look at. ⚠ It is not a hole in the net: it is the **open** defect
+> of phase 10 §7.4. ⇒ §7-bis.13, and the question to the user in §11.
 
-> ## ⭐⭐⭐⭐⭐ IL COLLAUDO A È PASSATO — **la rete è diventata rossa da sola**
+> ## ⭐⭐⭐⭐⭐ ACCEPTANCE TEST A HAS PASSED — **the net turned red by itself**
 >
-> `[M]` **25 agosto 2026, 22:42 UTC**, il primo giro in assoluto. Puntata contro il codice del 25
-> agosto, dentro una scatola, su **sei utenti nuovi**, la maglia C1 ha detto:
+> `[M]` **25 Aug 2026, 22:42 UTC**, the very first round. Pointed at the code of 25
+> Aug, inside a box, on **six new users**, mesh C1 said:
 >
 > ```
 >   giro  1/6  NO   CIECA          giro  4/6  ?    NON-LO-SO
@@ -652,11 +652,11 @@ primo rosso importante genererà una discussione, ⇒ **e la discussione costa p
 >   ⛔⛔ ROSSO — 3 sessioni su 6 sono nate CIECHE.
 > ```
 >
-> ⚠ *Questo è il **primo** giro. Il 26 agosto, con dieci utenti e il banco curato, il numero è
-> diventato **10 cieche su 10 e zero non giudicate** — ⇒ §7-bis.13.*
+> ⚠ *This is the **first** round. On 26 Aug, with ten users and the bench cured, the number
+> became **10 blind out of 10 and zero not judged** — ⇒ §7-bis.13.*
 >
-> ⛔ **Nessuno le aveva detto dove guardare.** Apre una sessione nuova, legge quel che il prodotto
-> dice di sé, e giudica. ⇒ **La riga che l'ha fatta scattare**, presa dal registro del server:
+> ⛔ **Nobody had told it where to look.** It opens a new session, reads what the product
+> says about itself, and judges. ⇒ **The line that triggered it**, taken from the server log:
 >
 > ```
 > 22:42:15.826 sessione [c1u1] ⛔ ZERO MONITOR, e la sessione e' viva: e' la sessione
@@ -664,853 +664,853 @@ primo rosso importante genererà una discussione, ⇒ **e la discussione costa p
 > 22:39:18.145 figlio  ⛔ il palco di «c1u1»: monitor «» (0 prima, 2 dopo), 0x0 stride 0 a 0 bit
 > ```
 >
-> ⭐ E il **terzo stato** di `fasi/10…` §7.4 — *«una volta per utente ne nascono due, senza nome»* —
-> ⭐ **si è riprodotto identico**: `monitor «» (0 prima, **2** dopo)`.
+> ⭐ And the **third state** of `fasi/10…` §7.4 — *«una volta per utente ne nascono due, senza nome»* —
+> ⭐ **reproduced identically**: `monitor «» (0 prima, **2** dopo)`.
 >
-> ⇒ ⛔ **Il guasto del 25 agosto vive dentro la scatola.** Che è la seconda notizia, e non è minore:
-> vuol dire che la scatola **non lo nasconde**, cioè che è il posto giusto dove tendere la rete.
+> ⇒ ⛔ **The fault of 25 Aug lives inside the box.** Which is the second piece of news, and not a lesser one:
+> it means the box **does not hide it**, that is, it is the right place to stretch the net.
 
-## 7-bis.1 ⭐ IL PASSO 0 È PASSATO — `[M]` **18 verdi, 0 rossi, 0 «non lo so»**
+## 7-bis.1 ⭐ STEP 0 HAS PASSED — `[M]` **18 greens, 0 reds, 0 «I don't know»**
 
-*La `[?]` più pesante del documento è diventata un `[M]`.*
+*The heaviest `[?]` of the document has become an `[M]`.*
 
-| # | | esito |
+| # | | outcome |
 |---|---|---|
-| 0 | il primo processo è `systemd`, il sistema parte | ⭐ **sì** (con una sola unità fallita, `polkit`, dichiarata) |
-| 1 | `logind` conosce l'utente, sessione aperta | ⭐ **sì** |
-| 2 | il **linger** si accende e il gestore d'utente vive senza login | ⭐ **sì** |
-| 3 | un'unità d'utente si avvia da dentro la sessione | ⭐ **sì** |
-| 4 | chiusa la sessione, ⛔ **i figli muoiono davvero** | ⭐ **sì** |
-| 5 | la cartella privata c'è, è sua, ed è **di questa scatola** (tmpfs) | ⭐ **sì** |
-| 6 | il canale di messaggi della sessione c'è e risponde | ⭐ **sì** |
-| 7 | il compositore vive, **annuncia un'uscita**, e un cliente vero disegna | ⭐ **sì** |
-| 8 | ⭐⭐ **la scheda grafica e il codificatore in hardware** | ⭐ **sì**: `iHD 25.2.3`, **3 profili H.264 di codifica** |
+| 0 | the first process is `systemd`, the system starts | ⭐ **yes** (with one single failed unit, `polkit`, declared) |
+| 1 | `logind` knows the user, session open | ⭐ **yes** |
+| 2 | **linger** switches on and the user manager lives without login | ⭐ **yes** |
+| 3 | a user unit starts from inside the session | ⭐ **yes** |
+| 4 | session closed, ⛔ **the children really die** | ⭐ **yes** |
+| 5 | the private folder is there, is theirs, and belongs **to this box** (tmpfs) | ⭐ **yes** |
+| 6 | the session's message channel is there and answers | ⭐ **yes** |
+| 7 | the compositor lives, **announces an output**, and a real client draws | ⭐ **yes** |
+| 8 | ⭐⭐ **the graphics card and the hardware encoder** | ⭐ **yes**: `iHD 25.2.3`, **3 H.264 encoding profiles** |
 
-> ### ⛔⛔ E IL PREZZO, MISURATO PERMESSO PER PERMESSO — *non uno per abitudine*
+> ### ⛔⛔ AND THE PRICE, MEASURED PERMISSION BY PERMISSION — *not one out of habit*
 >
-> ⛔ **Non è stato usato `--privileged`.** Un permesso generico avrebbe fatto passare tutto e non
-> avrebbe insegnato niente. ⇒ Quel che il prodotto chiede **davvero**:
+> ⛔ **`--privileged` was not used.** A generic permission would have let everything through and
+> would have taught nothing. ⇒ What the product **really** asks for:
 >
-> | permesso | ⛔ che cosa si rompe senza |
+> | permission | ⛔ what breaks without it |
 > |---|---|
-> | `--device /dev/dri` | ⭐ **la scheda vera.** È la ragione di D1 |
-> | ⛔ **`--cap-add=AUDIT_CONTROL`** | `[M]` `pam_loginuid.so`, che in Debian è **`required`**, fallisce con *«Cannot make/remove an entry for the specified session»* ⇒ ⛔ **il gestore d'utente non parte affatto**: niente sessione, niente canale, niente desktop |
-> | `--cap-add=AUDIT_WRITE` | accompagna il precedente nella stessa catena |
-> | ⚠ `--network=host` | ⛔ **non è una scelta**: `netavark` su questa macchina non applica le regole (*«nft did not return successfully»*). ⇒ **Prezzo dichiarato**: quattro scatole insieme condividono le porte dell'ospite, quindi ognuna ha la sua (8511-8514) — e resta da rivedere a **C14** |
+> | `--device /dev/dri` | ⭐ **the real card.** It is the reason for D1 |
+> | ⛔ **`--cap-add=AUDIT_CONTROL`** | `[M]` `pam_loginuid.so`, which in Debian is **`required`**, fails with *«Cannot make/remove an entry for the specified session»* ⇒ ⛔ **the user manager does not start at all**: no session, no channel, no desktop |
+> | `--cap-add=AUDIT_WRITE` | goes with the previous one in the same chain |
+> | ⚠ `--network=host` | ⛔ **it is not a choice**: `netavark` on this machine does not apply the rules (*«nft did not return successfully»*). ⇒ **Declared price**: four boxes together share the host's ports, so each one has its own (8511-8514) — and it remains to be reviewed at **C14** |
 >
-> ⭐ **E la strada scartata**: togliere `pam_loginuid` dalla catena PAM avrebbe fatto passare tutto
-> senza permessi in più — ⛔ **e avrebbe provato una catena PAM diversa da quella consegnata**, cioè
-> esattamente il simulacro che §3.5 esiste per impedire.
+> ⭐ **And the discarded route**: removing `pam_loginuid` from the PAM chain would have let everything through
+> without extra permissions — ⛔ **and it would have tested a PAM chain different from the one delivered**, that is
+> exactly the simulacrum §3.5 exists to prevent.
 
-## 7-bis.2 ⛔⛔ IL GUASTO CHE NESSUNO DEI DUE REVISORI AVEVA PREVISTO — **il gruppo della scheda**
+## 7-bis.2 ⛔⛔ THE FAULT NEITHER OF THE TWO REVIEWERS HAD FORESEEN — **the card's group**
 
-`[M]` Al primo giro il nodo `/dev/dri/renderD128` è entrato nella scatola col **numero** di gruppo
-dell'ospite (991), ⛔ **ma dentro Debian quel numero appartiene a un altro gruppo** (`polkitd`).
-⇒ L'inquilino è rimasto fuori, e il compositore ha ripiegato:
+`[M]` At the first round the node `/dev/dri/renderD128` entered the box with the host's group
+**number** (991), ⛔ **but inside Debian that number belongs to another group** (`polkitd`).
+⇒ The tenant stayed out, and the compositor fell back:
 
 ```
 libEGL warning: failed to open /dev/dri/renderD128: Permission denied
 libmutter-Message: Created surfaceless renderer without GPU
 ```
 
-> ⛔⛔ **Una scatola che misura la codifica in SOFTWARE credendo di misurare l'hardware** — e
-> **nessun rosso da nessuna parte**: solo numeri peggiori, che qualcuno avrebbe attribuito al
-> desktop. ⭐ È la forma di *«silenzio invece di rosso»* applicata a un ambiente invece che a un
-> banco.
+> ⛔⛔ **A box that measures SOFTWARE encoding believing it is measuring the hardware** — and
+> **no red anywhere**: only worse numbers, which someone would have attributed to the
+> desktop. ⭐ It is the shape of *«silence instead of red»* applied to an environment instead of to a
+> bench.
 
-⭐ **La cura, e non è inchiodare 991**: un'unità dentro la scatola **legge il numero dal nodo**
-all'avvio e vi allinea il gruppo `render`, **dichiarandolo**. ⇒ Inchiodare il numero avrebbe fatto
-una scatola che funziona su questa macchina e **tace** su un'altra.
+⭐ **The cure, and it is not nailing down 991**: a unit inside the box **reads the number from the node**
+at startup and aligns the `render` group to it, **declaring it**. ⇒ Nailing down the number would have made
+a box that works on this machine and **stays silent** on another.
 
-## 7-bis.3 ⛔ E DUE VOLTE IL DIFETTO ERA NEL BANCO, non nella scatola
+## 7-bis.3 ⛔ AND TWICE THE DEFECT WAS IN THE BENCH, not in the box
 
-*`REVIEWER.md` §1: il banco è il primo imputato. Confermato due volte in una notte.*
+*`REVIEWER.md` §1: the bench is the first suspect. Confirmed twice in one night.*
 
-| | ⛔ che cosa faceva | la cura |
+| | ⛔ what it did | the cure |
 |---|---|---|
-| **il punto 4 buttava giù il campo agli altri** | chiude la sessione per vedere se i figli muoiono ⇒ si porta via `/run/user/…` ⇒ **i punti 5, 6 e 7 davano TRE ROSSI FALSI** | chi prova la chiusura ha il dovere di **riaprire e verificare** prima di lasciar giudicare gli altri |
-| **il punto 1 giudicava prima di aver chiesto** | leggeva mentre il gestore d'utente era ancora `activating` ⇒ *«la scatola non regge»* quando la verità era *«non avevo ancora chiesto niente»* | si **prepara** come fa il prodotto, si aspetta l'evento, **poi** si giudica |
+| **point 4 knocked down the field for the others** | it closes the session to see whether the children die ⇒ it takes away `/run/user/…` ⇒ **points 5, 6 and 7 gave THREE FALSE REDS** | whoever tests the close has the duty to **reopen and verify** before letting the others judge |
+| **point 1 judged before having asked** | it read while the user manager was still `activating` ⇒ *«the box does not hold»* when the truth was *«I had not asked anything yet»* | one **prepares** as the product does, waits for the event, **then** judges |
 
-> ⭐⭐ **E la lezione nuova è il rovescio di quella nota.** `LEZIONI.md` §1.29 dice *«silenzio invece
-> di rosso»*. ⛔ Qui è stato **rosso invece di niente** — e costa uguale: *una rete che dà rossi a
-> vuoto viene spenta da chi lavora*, e allora non c'è più nessuna rete.
+> ⭐⭐ **And the new lesson is the reverse of the known one.** `LEZIONI.md` §1.29 says *«silence instead
+> of red»*. ⛔ Here it was **red instead of nothing** — and it costs the same: *a net that gives reds for
+> nothing gets switched off by whoever is working*, and then there is no net any more.
 
-## 7-bis.4 ⛔⛔ IL BINARIO ERA GIUSTO E LE LIBRERIE NO — **e il sintomo era dalla parte sbagliata**
+## 7-bis.4 ⛔⛔ THE BINARY WAS RIGHT AND THE LIBRARIES WERE NOT — **and the symptom was on the wrong side**
 
-`[M]` Il prodotto è stato messo nella scatola con le librerie prese da `/lib` dell'ospite:
-`libngtcp2.so.16` **versione 16.2.9**. ⛔ Ma il server vero gira con quella costruita in
-`src/b2/ngtcp2/build/lib`, **16.11.0**. ⇒ **Stesso nome, stesso `so.16`, cosa diversa.**
-
-| | |
-|---|---|
-| il server | è **partito**, ha detto tutte le sue righe d'avvio, ha generato i certificati, si è messo in ascolto |
-| ⛔ al **primo cliente** | è morto con `ngtcp2_settingslen_version: Unreachable` |
-| ⛔⛔ e il cliente | ha visto soltanto **«Idle timeout»** |
-
-> ⭐⭐ **È il guasto che l'utente aveva nominato per primo** — *«se sul container GNOME abbiamo
-> remotix v1 e sul container KDE remotix v1.2 andiamo a sbattere»* (D5) — ⛔ **arrivato però da una
-> porta che nessuno guardava**: non due versioni del prodotto, **due versioni di una libreria con lo
-> stesso nome.** ⇒ R1 va letta così: *un solo binario **e le sue librerie**, presi dove li prende il
-> server vero.*
-
-⚠ **E la stessa famiglia, due volte ancora**: `libei1` e `python3-aioquic` funzionavano perché
-qualcun altro se li tirava dietro. ⇒ Adesso le librerie che il prodotto chiede sono **dichiarate
-nella ricetta**, riga per riga, invece di essere ereditate per caso.
-
-## 7-bis.5 ⭐ IL PRODOTTO GIRA DENTRO LA SCATOLA — e la prova è un cliente vero
-
-`[M]` 26 agosto 2026: il cliente di prova si è attaccato al server **dentro la scatola**, ed è stato
-**AMMESSO in 1004 ms**, con `SESSIONE: stato=1 tela=1920x1080`, restando attaccato 30 s senza che
-cadesse niente. ⇒ ⭐ Il guardiano di `logind` si è collegato al bus di sistema **dentro il
-contenitore**, che era la `[?]` di Q2.
-
-⚠ **E una sessione, quella volta, è nata col monitor**: `monitor 1/1: connettore «Meta-0» …
-1920x1080@60`. ⛔ **Non è una smentita del rosso di sopra: è l'intermittenza**, la stessa che sul
-ferro dava a `provanic3` **2 riusciti e 6 falliti**.
-
-## 7-bis.6 ⛔ E DUE COSE CHE RESTANO APERTE, scritte invece che dimenticate
+`[M]` The product was put into the box with the libraries taken from the host's `/lib`:
+`libngtcp2.so.16` **version 16.2.9**. ⛔ But the real server runs with the one built in
+`src/b2/ngtcp2/build/lib`, **16.11.0**. ⇒ **Same name, same `so.16`, different thing.**
 
 | | |
 |---|---|
-| ⛔ **la scatola non si spegne da sola** | `[M]` un `podman rm -f` normale è rimasto appeso **oltre quattro minuti** aspettando uno spegnimento ordinato che non arrivava, bloccando anche i comandi successivi. Per ora si ammazza (`-t 0`). ⚠ **Non tocca il passo 0** (la scatola è usa-e-getta) ⛔ **ma tocca C7** — *«si chiude tutto e non resta niente»* — e lì quella domanda diventa il bersaglio |
-| ⚠ **tre giri su sei non hanno giudicato** | il palco impiega ~13 s a nascere e a volte non nasce affatto; l'attesa dichiarata è 45 s. ⇒ Restano **«non lo so»**, ⛔ **e non diventano verdi** |
+| the server | **started**, said all its startup lines, generated the certificates, began listening |
+| ⛔ at the **first client** | it died with `ngtcp2_settingslen_version: Unreachable` |
+| ⛔⛔ and the client | saw only **«Idle timeout»** |
 
-## 7-bis.7 ⭐⭐⭐⭐ LA SECONDA SCATOLA — **e le stesse prove girano su PLASMA senza una riga cambiata**
+> ⭐⭐ **It is the fault the user had named first** — *«se sul container GNOME abbiamo
+> remotix v1 e sul container KDE remotix v1.2 andiamo a sbattere»* (D5) — ⛔ **arrived however through a
+> door nobody was watching**: not two versions of the product, **two versions of a library with the
+> same name.** ⇒ R1 must be read like this: *one single binary **and its libraries**, taken where the
+> real server takes them.*
 
-`[M]` **26 agosto 2026, 04:05 UTC.** Costruita una seconda scatola con **KWin** al posto di Mutter,
-e le **stesse identiche otto verifiche** hanno detto:
+⚠ **And the same family, twice more**: `libei1` and `python3-aioquic` worked because
+someone else pulled them along. ⇒ Now the libraries the product asks for are **declared
+in the recipe**, line by line, instead of being inherited by chance.
+
+## 7-bis.5 ⭐ THE PRODUCT RUNS INSIDE THE BOX — and the proof is a real client
+
+`[M]` 26 Aug 2026: the test client attached to the server **inside the box**, and was
+**ADMITTED in 1004 ms**, with `SESSIONE: stato=1 tela=1920x1080`, staying attached for 30 s without
+anything dropping. ⇒ ⭐ The `logind` guardian connected to the system bus **inside the
+container**, which was the `[?]` of Q2.
+
+⚠ **And one session, that time, was born with the monitor**: `monitor 1/1: connettore «Meta-0» …
+1920x1080@60`. ⛔ **It is not a refutation of the red above: it is the intermittence**, the same that on the
+hardware gave `provanic3` **2 successes and 6 failures**.
+
+## 7-bis.6 ⛔ AND TWO THINGS THAT REMAIN OPEN, written down instead of forgotten
+
+| | |
+|---|---|
+| ⛔ **the box does not switch itself off** | `[M]` a normal `podman rm -f` stayed hung **over four minutes** waiting for an orderly shutdown that did not come, blocking the following commands too. For now it is killed (`-t 0`). ⚠ **It does not touch step 0** (the box is disposable) ⛔ **but it touches C7** — *«everything closes and nothing remains»* — and there that question becomes the target |
+| ⚠ **three rounds out of six did not judge** | the stage takes ~13 s to be born and sometimes is not born at all; the declared wait is 45 s. ⇒ They stay **«I don't know»**, ⛔ **and they do not become green** |
+
+## 7-bis.7 ⭐⭐⭐⭐ THE SECOND BOX — **and the same tests run on PLASMA without one line changed**
+
+`[M]` **26 Aug 2026, 04:05 UTC.** A second box was built with **KWin** in place of Mutter,
+and the **very same eight checks** said:
 
 > ### ⭐ `regge: 18 · non regge: 0 · non ho potuto guardare: 0`
 
-⛔ **Non è stata riscritta una riga della lista.** Ogni scatola porta allo stesso percorso un
-**adattatore** — un file corto che risponde a tre domande: *come ti chiami · da che pacchetto vieni ·
-come ti accendo*. ⇒ È la forma su cui **tutt'e due i revisori** avevano risposto la stessa cosa (Q3,
-§3.7), e ⭐ **adesso è misurata invece che creduta**.
+⛔ **Not one line of the list was rewritten.** Every box carries at the same path an
+**adapter** — a short file that answers three questions: *what is your name · what package do you come from ·
+how do I switch you on*. ⇒ It is the shape on which **both reviewers** had answered the same thing (Q3,
+§3.7), and ⭐ **now it is measured instead of believed**.
 
-### ⛔⛔ E il secondo desktop ha chiesto subito una cosa che il primo non chiedeva — **due volte**
+### ⛔⛔ And the second desktop at once asked for something the first did not ask for — **twice**
 
-| | ⛔ che cosa è successo | ⭐ che cosa insegna |
+| | ⛔ what happened | ⭐ what it teaches |
 |---|---|---|
-| **il gruppo della scheda non esisteva** | nella scatola di GNOME `render` c'era già: lo portava un pacchetto che `gnome-shell` si tira dietro. ⛔ In quella di Plasma **non esiste**, e la ricetta è morta con `usermod: group 'render' does not exist` | il primo desktop non era «giusto»: era **generoso**, e nascondeva una dipendenza che nessuno aveva dichiarato |
-| ⛔⛔ **KWin non partiva affatto** | `env: 'kwin_wayland': Operation not permitted`. ⇒ `/usr/bin/kwin_wayland` porta addosso `cap_sys_nice=ep`, e **un programma con un permesso scritto sul file non si avvia** se quel permesso non è nell'insieme della scatola | ⭐ un desktop nuovo può chiedere **permessi** che il primo non chiedeva — e il sintomo non somiglia per niente alla causa |
+| **the card's group did not exist** | in the GNOME box `render` was already there: it was brought by a package that `gnome-shell` pulls along. ⛔ In the Plasma one **it does not exist**, and the recipe died with `usermod: group 'render' does not exist` | the first desktop was not «right»: it was **generous**, and it hid a dependency nobody had declared |
+| ⛔⛔ **KWin did not start at all** | `env: 'kwin_wayland': Operation not permitted`. ⇒ `/usr/bin/kwin_wayland` carries `cap_sys_nice=ep`, and **a program with a permission written on the file does not start** if that permission is not in the box's set | ⭐ a new desktop can ask for **permissions** the first did not ask for — and the symptom looks nothing like the cause |
 
-⭐ **La cura è per desktop e dichiarata**: `SYS_NICE` va **solo** alla scatola di Plasma. ⛔ Darlo a
-tutte vorrebbe dire provare GNOME in un ambiente diverso da quello in cui gira davvero — cioè
-allontanare la scatola dal prodotto per comodità nostra.
+⭐ **The cure is per desktop and declared**: `SYS_NICE` goes **only** to the Plasma box. ⛔ Giving it to
+all of them would mean testing GNOME in an environment different from the one in which it really runs — that is
+moving the box away from the product for our own convenience.
 
-> ### ⭐⭐⭐ E QUESTA È LA TESI DELLA FASE, CAPITATA AL PRIMO TENTATIVO
+> ### ⭐⭐⭐ AND THIS IS THE THESIS OF THE PHASE, HAPPENING AT THE FIRST ATTEMPT
 >
-> Due cose che il secondo desktop ha fatto emergere **in dieci minuti**, e che dentro la fase 12 —
-> in mezzo al codice nuovo, con Plasma da far funzionare — sarebbero costate mezza giornata **e una
-> diagnosi sbagliata**: sarebbero sembrate difetti del nostro codice KDE.
+> Two things the second desktop brought out **in ten minutes**, and which inside phase 12 —
+> in the middle of the new code, with Plasma to make work — would have cost half a day **and a
+> wrong diagnosis**: they would have looked like defects of our KDE code.
 >
-> ⇒ ⛔ **È esattamente la ragione per cui l'utente ha messo questa fase PRIMA dei desktop nuovi.**
+> ⇒ ⛔ **It is exactly the reason the user put this phase BEFORE the new desktops.**
 
-⚠ **E quel che questa scatola NON fa, oggi**: il prodotto non sa ancora accendere KDE (è la fase 12),
-quindi lì dentro girano **solo** le verifiche dell'ambiente. Le maglie della rete che vogliono il
-prodotto — C1 e le altre — girano per ora **solo su GNOME**.
+⚠ **And what this box does NOT do, today**: the product cannot yet switch on KDE (it is phase 12),
+so in there **only** the environment checks run. The net's meshes that want the
+product — C1 and the others — run for now **only on GNOME**.
 
-## 7-bis.9 ⭐⭐⭐⭐⭐ LA TERZA E LA QUARTA SCATOLA — **e le quattro sono in piedi**
+## 7-bis.9 ⭐⭐⭐⭐⭐ THE THIRD AND THE FOURTH BOX — **and all four are standing**
 
-`[M]` **26 agosto 2026, 03:5x UTC.** Costruite le scatole di **XFCE** e **LXQt**, e la stessa
-identica lista di otto verifiche — ⛔ **non una riga cambiata, ancora** — ha detto:
+`[M]` **26 Aug 2026, 03:5x UTC.** The **XFCE** and **LXQt** boxes were built, and the very
+same list of eight checks — ⛔ **not one line changed, again** — said:
 
 > ### ⭐ XFCE `regge: 18 · non regge: 0 · non ho potuto guardare: 0`
 > ### ⭐ LXQt `regge: 18 · non regge: 0 · non ho potuto guardare: 0`
 
-⇒ ⭐⭐ **Quattro scatole, quattro desktop, un solo elenco di prove.** La cecità al desktop di §3.7
-non è più una proposta: è `[M]` su quattro compositori, e il costo per aggiungerne uno è **un
-adattatore da quaranta righe**.
+⇒ ⭐⭐ **Four boxes, four desktops, one single list of tests.** The desktop blindness of §3.7
+is no longer a proposal: it is `[M]` on four compositors, and the cost of adding one is **an
+adapter of forty lines**.
 
-### ⛔ E una cosa scomoda, detta prima che qualcuno la scopra contando male
+### ⛔ And an uncomfortable thing, said before someone discovers it by counting wrong
 
-**Le scatole sono quattro; i compositori sono TRE.** XFCE e LXQt non portano un compositore proprio
-su Wayland: portano una **sessione** e si appoggiano a uno di famiglia `wlroots` — e la scelta, per
-tutt'e due, è **labwc**. ⛔ Non è una comodità di questa fase: `DECISIONI.md` ha già misurato il
-ridimensionamento sotto l'etichetta **«labwc (XFCE, LXQt)»** (`[M]` 5,1 ms, 0 fotogrammi persi su
-25), e `PIANO.md` fase 13 lo dice in una riga — *«il terzo e il quarto desktop, che condividono
+**The boxes are four; the compositors are THREE.** XFCE and LXQt do not bring a compositor of their own
+on Wayland: they bring a **session** and lean on one of the `wlroots` family — and the choice, for
+both, is **labwc**. ⛔ It is not a convenience of this phase: `DECISIONI.md` has already measured
+resizing under the label **«labwc (XFCE, LXQt)»** (`[M]` 5.1 ms, 0 frames lost out of
+25), and `PIANO.md` phase 13 says it in one line — *«il terzo e il quarto desktop, che condividono
 wlroots e quindi quasi tutto»*.
 
-⇒ ⚠ **Che cosa mette alla prova davvero la quarta scatola**: una quarta **sessione**, una quarta
-**ricetta**, dipendenze diverse, e un demone d'inattività che `DECISIONI.md` dà già per **diverso**
-da quello di XFCE. ⛔ **Non** un quarto compositore. Chi legge i risultati conti così.
+⇒ ⚠ **What the fourth box really puts to the test**: a fourth **session**, a fourth
+**recipe**, different dependencies, and an idle daemon that `DECISIONI.md` already takes as **different**
+from XFCE's. ⛔ **Not** a fourth compositor. Whoever reads the results should count this way.
 
-### ⭐ E il terzo desktop non ha chiesto niente di nuovo — *ed è un risultato, non un non-evento*
+### ⭐ And the third desktop asked for nothing new — *and it is a result, not a non-event*
 
-⛔ Il secondo desktop aveva chiesto **due** cose che il primo non chiedeva (§7-bis.7). Il terzo e il
-quarto: **zero**. `labwc` non porta permessi scritti sul file, non pretende gruppi che non ci sono,
-e nasce senza schermo con `WLR_BACKENDS=headless` — la terza parola diversa per la stessa cosa, dopo
-`--headless` di Mutter e `--virtual` di KWin, ⭐ **e sta tutta nell'adattatore.**
+⛔ The second desktop had asked for **two** things the first did not ask for (§7-bis.7). The third and the
+fourth: **zero**. `labwc` carries no permissions written on the file, does not demand groups that are not there,
+and is born without a screen with `WLR_BACKENDS=headless` — the third different word for the same thing, after
+Mutter's `--headless` and KWin's `--virtual`, ⭐ **and it all sits in the adapter.**
 
-⚠ E va letto per quel che è: **non** *«allora le scatole nuove sono gratis»*. È **un** desktop che
-non ha chiesto niente dopo **uno** che aveva chiesto due cose — cioè la ragione per cui la domanda
-si fa a ciascuno invece di generalizzare dal primo.
+⚠ And it must be read for what it is: **not** *«so the new boxes are free»*. It is **one** desktop that
+asked for nothing after **one** that had asked for two things — that is the reason the question
+is asked of each one instead of generalising from the first.
 
-## 7-bis.10 ⭐⭐⭐⭐⭐ IL COLLAUDO B È PASSATO — *C8 prende il difetto, e lo prende dal SECONDO*
+## 7-bis.10 ⭐⭐⭐⭐⭐ ACCEPTANCE TEST B HAS PASSED — *C8 catches the defect, and catches it from the SECOND*
 
-⛔ Era la domanda aperta della fase (§4.4), chiusa dall'utente il 26 agosto: **C8 sta in una scatola,
-con due inquilini.** ⇒ È scritta, è certificata, ⭐ **e ha preso il guasto.**
+⛔ It was the open question of the phase (§4.4), closed by the user on 26 Aug: **C8 sits in a box,
+with two tenants.** ⇒ It is written, it is certified, ⭐ **and it caught the fault.**
 
-> ### `[M]` 26 agosto 2026 — le due righe che valgono la fase
+> ### `[M]` 26 Aug 2026 — the two lines that are worth the phase
 >
-> **con la cura della provvista:**
+> **with the provisioning cure:**
 > `c8u1 ⭐ la pagina copre il 98,7 % · c8u2 ⭐ la pagina copre il 98,7 %`
 >
-> **senza la cura** (il guasto innestato, cioè il codice del 25 agosto):
+> **without the cure** (the fault injected, that is the code of 25 Aug):
 > `c8u1 ⭐ la pagina copre il 98,7 %` · ⛔ `c8u2 NO — profilo: è di «c8u1» · sa scrivere in ~/.cache/mozilla: NO`
 
-⭐⭐ **E l'asimmetria è quella giusta**: il **primo** apre il browser, il **secondo** no. ⛔ Un rosso su
-tutt'e due non sarebbe stato il difetto di §4.6-undecies — sarebbe stato il banco — e ⭐ **adesso è
-C8 stessa a dirlo**, invece di lasciarlo dedurre a chi legge (§7-bis.12).
+⭐⭐ **And the asymmetry is the right one**: the **first** opens the browser, the **second** does not. ⛔ A red on
+both would not have been the defect of §4.6-undecies — it would have been the bench — and ⭐ **now it is
+C8 itself that says so**, instead of leaving it to be deduced by whoever reads (§7-bis.12).
 
-### ⛔⛔ E C8 SI È DOVUTA SPEZZARE IN DUE — *la ragione va letta prima dei numeri*
+### ⛔⛔ AND C8 HAD TO BE SPLIT IN TWO — *the reason must be read before the numbers*
 
-| | che cosa guarda | oggi |
+| | what it looks at | today |
 |---|---|---|
-| ⭐ **A · il browser rende la pagina** | Firefox si fotografa da sé, da utente, sulla macchina com'è configurata. ⛔ Il giudizio resta **nel pixel** | ✅ **si misura**, ed è quel che ha preso il guasto |
-| **B · e la pagina si vede DAL CLIENTE** | la stessa pagina, guardata **attraverso il prodotto** | ⚠ **oggi non si misura** |
+| ⭐ **A · the browser renders the page** | Firefox photographs itself, as the user, on the machine as it is configured. ⛔ The judgement stays **in the pixel** | ✅ **it is measured**, and it is what caught the fault |
+| **B · and the page is seen FROM THE CLIENT** | the same page, looked at **through the product** | ⚠ **today it is not measured** |
 
-⛔⛔ **Perché B non si misura**: `[M]` 26 agosto 2026, dentro la scatola **nessuna sessione GNOME nuova
-nasce con un monitor** — è il difetto **APERTO** della fase 10 §7.4, *«la sessione che nasce cieca»*,
-che sta **a monte** di C8. ⇒ ⭐ **Un desktop nero non testimonia sul browser**: chiamare quello «rosso
-di C8» vorrebbe dire dare la colpa al browser di una cosa successa **prima che il browser esistesse**.
-⚠ Quindi B dice *«non ho potuto guardare»* e **nomina il perché**, e non diventa mai un verde.
+⛔⛔ **Why B is not measured**: `[M]` 26 Aug 2026, inside the box **no new GNOME session
+is born with a monitor** — it is the **OPEN** defect of phase 10 §7.4, *«la sessione che nasce cieca»*,
+which sits **upstream** of C8. ⇒ ⭐ **A black desktop does not testify about the browser**: calling that «C8's
+red» would mean blaming the browser for something that happened **before the browser existed**.
+⚠ So B says *«I could not look»* and **names the why**, and it never becomes a green.
 
-⭐ **E la spaccatura ha un guadagno che non era previsto**: la prova A **non passa dal prodotto**, e
-quindi gira in **qualunque** scatola — anche in una dove il prodotto non c'è nemmeno. ⛔ Il collaudo
-qui sopra è girato dentro la scatola di **PLASMA**.
+⭐ **And the split has a gain that was not foreseen**: test A **does not go through the product**, and
+so it runs in **any** box — even in one where the product is not even present. ⛔ The acceptance test
+above ran inside the **PLASMA** box.
 
-### ⭐ Le scelte del banco che contano
+### ⭐ The bench choices that count
 
 | | |
 |---|---|
-| ⭐ **il terreno se lo prepara lei** | mette `/etc/skel/.cache -> /tmp`, cioè **riproduce la configurazione della macchina vera** — che è una **scelta del proprietario**, non un guasto. ⛔ Provare su uno scheletro pulito risponderebbe a una domanda più facile di quella vera |
-| ⭐ **gli inquilini nascono come li fa il prodotto** | `useradd -m`, che copia lo scheletro. ⛔ Una via più pulita qui proverebbe un prodotto diverso da quello consegnato |
-| ⭐⭐ **il bersaglio nei pixel è un COLORE** | la pagina è `#FF00FF` a schermo intero, e si misura **quanta parte dell'immagine è diventata di quel colore** — tolleranza **±48 per canale**, almeno il **25 %**. ⛔ Nessun desktop mette quel colore da solo: il metro non ha bisogno di sapere che aspetto abbia GNOME |
-| ⛔ **il motivo accanto al sintomo** | «non ha disegnato» da solo nasconde tre guasti: il browser morto, il profilo mai nato, la pagina non a schermo. Li distingue e li stampa — ⭐ ed è così che si legge *«profilo: è di «c8u1»»* |
-| ⛔ **e non guarda il collegamento** | guardare la causa che crediamo di conoscere invece dell'effetto che ci interessa vorrebbe dire una prova che tace il giorno che la cura cambia |
+| ⭐ **it prepares its terrain itself** | it puts `/etc/skel/.cache -> /tmp`, that is **it reproduces the configuration of the real machine** — which is an **owner's choice**, not a fault. ⛔ Testing on a clean skeleton would answer an easier question than the real one |
+| ⭐ **the tenants are born as the product makes them** | `useradd -m`, which copies the skeleton. ⛔ A cleaner route here would test a product different from the one delivered |
+| ⭐⭐ **the target in the pixels is a COLOUR** | the page is `#FF00FF` full screen, and one measures **how much of the image has become that colour** — tolerance **±48 per channel**, at least **25 %**. ⛔ No desktop puts that colour on by itself: the meter does not need to know what GNOME looks like |
+| ⛔ **the reason next to the symptom** | «it did not draw» on its own hides three faults: the browser dead, the profile never born, the page not full screen. It tells them apart and prints them — ⭐ and that is how one reads *«profilo: è di «c8u1»»* |
+| ⛔ **and it does not look at the link** | looking at the cause we believe we know instead of the effect we care about would mean a test that goes silent the day the cure changes |
 
-### ⭐ La certificazione del giudice — `[M]` **8 casi su 8**
+### ⭐ The judge's certification — `[M]` **8 cases out of 8**
 
-| il caso | perché c'è |
+| the case | why it is there |
 |---|---|
-| pagina intera · desktop senza browser · schermo nero | il minimo: vede quando c'è, non vede quando non c'è |
-| ⭐ **colore spostato di (−30, +30, −30) ⇒ deve restare VERDE** | i compositori applicano profili di colore e la catena passa per un H.264 **4:2:0**, che sottocampiona proprio il croma. ⛔ Una prova che pretende il colore esatto è già morta (§4.3, rilievo di Gemini) |
-| colore spostato **troppo** ⇒ deve restare ROSSO | o la tolleranza non separa più niente |
-| una macchia piccola non è una pagina | una finestra che si apre e non disegna |
-| ⛔ **il file che non c'è e il file vuoto ⇒ «non lo so», non zero** | *«non ho guardato»* e *«ho guardato e non c'era»* sono due cose diverse |
+| full page · desktop without browser · black screen | the minimum: it sees when it is there, it does not see when it is not |
+| ⭐ **colour shifted by (−30, +30, −30) ⇒ must stay GREEN** | compositors apply colour profiles and the chain goes through a **4:2:0** H.264, which subsamples precisely the chroma. ⛔ A test that demands the exact colour is already dead (§4.3, Gemini's finding) |
+| colour shifted **too much** ⇒ must stay RED | or the tolerance no longer separates anything |
+| a small stain is not a page | a window that opens and does not draw |
+| ⛔ **the file that is not there and the empty file ⇒ «I don't know», not zero** | *«I did not look»* and *«I looked and it was not there»* are two different things |
 
-⚠ **E la certificazione si dichiara per quel che copre**: il **lettore dei pixel**. ⛔ Non copre che il
-browser sia davvero partito — quello lo dice `--senza-cura` sul vero, ed è il collaudo qui sopra.
+⚠ **And the certification is declared for what it covers**: the **pixel reader**. ⛔ It does not cover that the
+browser really started — that is said by `--senza-cura` on the real thing, and it is the acceptance test above.
 
-## 7-bis.11 ⛔⛔⛔ **QUATTRO VOLTE IL DIFETTO ERA NEL BANCO** — *e le quattro lezioni*
+## 7-bis.11 ⛔⛔⛔ **FOUR TIMES THE DEFECT WAS IN THE BENCH** — *and the four lessons*
 
-⚠ **Va scritto, e va scritto per intero**: prima di prendere il guasto vero, il banco ha sbagliato
-**quattro volte** — tre rossi falsi e ⛔ **un verde falso**. ⭐ Ognuno è una forma d'errore che questa
-fase esiste per non ripetere, e tutti e quattro sono finiti in `LEZIONI.md`.
+⚠ **It must be written, and written in full**: before catching the real fault, the bench got it wrong
+**four times** — three false reds and ⛔ **one false green**. ⭐ Each one is a form of error this
+phase exists not to repeat, and all four ended up in `LEZIONI.md`.
 
-| | ⛔ che cosa succedeva | ⭐ la lezione |
+| | ⛔ what happened | ⭐ the lesson |
 |---|---|---|
-| **il predicato che non poteva fallire** | *«prova a scrivere in `~/.cache`»* — ⛔ ma col collegamento `~/.cache` **è `/tmp`**, scrivibile da chiunque (`1777`). ⇒ Diceva **sì** anche all'inquilino che il browser non apriva | `LEZIONI.md` §1.44 — **applicare E1 non basta: bisogna applicarlo NEL POSTO CHE MORDE** (`~/.cache/mozilla`), o il predicato ⛔ ha lo stesso aspetto di uno che passa |
-| **il tetto prestato** | il primo avvio di Firefox in una scatola fredda passa i 25 s, e il banco gli dava il tetto pensato per un'altra attesa ⇒ ⛔ **rosso a tutt'e due, con la cura e senza** | `LEZIONI.md` §1.45 — ⛔ e il danno vero non è il rosso falso: è che **il collaudo smette di valere**, perché non distingue più il guasto dal banco |
-| **il banco che si dava rosso da solo** | la cartella di lavoro è di `root` a modo `0755`, e Firefox gira **da utente** ⇒ non poteva scriverci l'immagine, e il banco leggeva *«il browser non ha disegnato»* | ⭐ la cura: **scatta in casa sua**, e a portare fuori l'immagine ci pensa `root` dopo |
-| ⛔⛔ **e un QUARTO, che è peggio di un rosso** | un comando annidato tre volte (`ssh` → `systemd-run` → `podman exec sh -c`) ha perso le virgolette, **non ha eseguito niente** e ha restituito **`0`** | `LEZIONI.md` §1.46 — ⛔ **un verde senza nessuna misura sotto**, identico a un giro riuscito. ⇒ Niente gusci in mezzo, e **un banco che non stampa niente non è «riuscito»** |
+| **the predicate that could not fail** | *«try to write in `~/.cache`»* — ⛔ but with the link `~/.cache` **is `/tmp`**, writable by anyone (`1777`). ⇒ It said **yes** even for the tenant whose browser would not open | `LEZIONI.md` §1.44 — **applying E1 is not enough: one must apply it IN THE PLACE THAT BITES** (`~/.cache/mozilla`), or the predicate ⛔ looks the same as one that passes |
+| **the borrowed cap** | Firefox's first start in a cold box goes over 25 s, and the bench gave it the cap meant for another wait ⇒ ⛔ **red for both, with the cure and without** | `LEZIONI.md` §1.45 — ⛔ and the real damage is not the false red: it is that **the acceptance test stops counting**, because it no longer tells the fault from the bench |
+| **the bench that gave itself red** | the working folder belongs to `root` with mode `0755`, and Firefox runs **as the user** ⇒ it could not write the image there, and the bench read *«the browser did not draw»* | ⭐ the cure: **it takes the snapshot in its own home**, and `root` takes care of bringing the image out afterwards |
+| ⛔⛔ **and a FOURTH, which is worse than a red** | a command nested three times (`ssh` → `systemd-run` → `podman exec sh -c`) lost its quotes, **executed nothing** and returned **`0`** | `LEZIONI.md` §1.46 — ⛔ **a green without any measurement underneath**, identical to a successful round. ⇒ No shells in between, and **a bench that prints nothing has not «succeeded»** |
 
-> ### ⭐⭐ E la cosa che le tiene insieme
+> ### ⭐⭐ And the thing that holds them together
 >
-> I primi tre davano **rosso**, ed erano **del banco**. ⛔ In una fase che costruisce una rete di
-> sicurezza questo è il pericolo numero uno di §1.3: *«una rete che dà rosso a vuoto viene spenta da
-> chi lavora»*. ⇒ ⭐ **Il guasto innestato li ha presi tutti e tre**, e in dieci minuti: senza
-> `--senza-cura` sarebbero passati per «il difetto c'è, guarda che rosso».
+> The first three gave **red**, and they belonged **to the bench**. ⛔ In a phase that builds a safety
+> net this is danger number one of §1.3: *«a net that gives red for nothing gets switched off by
+> whoever is working»*. ⇒ ⭐ **The injected fault caught all three**, and in ten minutes: without
+> `--senza-cura` they would have passed for «the defect is there, look at that red».
 >
-> ⛔⛔ **Il quarto no**, e per questo sta a parte: un **verde** non lo prende nessun guasto innestato,
-> perché il guasto innestato serve a controllare che si sappia dare rosso. ⇒ ⭐ Contro quello serve
-> l'altra regola: **pretendere di vedere le righe**. Un banco muto non è un banco contento.
+> ⛔⛔ **The fourth did not**, and that is why it stands apart: a **green** is caught by no injected fault,
+> because the injected fault serves to check that one can give red. ⇒ ⭐ Against that one needs
+> the other rule: **demand to see the lines**. A mute bench is not a happy bench.
 
-## 7-bis.12 ⛔ E UNA GUARDIA NUOVA, NATA DA QUEI ROSSI: **«ha fallito anche il PRIMO»**
+## 7-bis.12 ⛔ AND A NEW GUARD, BORN FROM THOSE REDS: **«the FIRST failed too»**
 
-Il guasto di §4.6-undecies morde **dal secondo inquilino in poi**. ⇒ ⭐ Se col guasto innestato dà
-rosso **anche il primo**, quel che si sta misurando **non è quel guasto**.
+The fault of §4.6-undecies bites **from the second tenant on**. ⇒ ⭐ If with the fault injected
+**the first** gives red too, what is being measured **is not that fault**.
 
-⛔ C8 adesso lo dice da sé, e in quel caso **esce 1 invece di 0** — cioè *«il collaudo non vale»*, e
-non *«il collaudo è riuscito»*. ⚠ È il rovescio esatto della trappola: una maglia che festeggia un
-rosso senza guardare **di chi** è.
+⛔ C8 now says it by itself, and in that case **exits 1 instead of 0** — that is *«the acceptance test does not count»*, and
+not *«the acceptance test succeeded»*. ⚠ It is the exact reverse of the trap: a mesh that celebrates a
+red without looking at **whose** it is.
 
-## 7-bis.13 ⛔⛔⛔ **DIECI SESSIONI NUOVE, ZERO CON UN MONITOR** — *e il banco che adesso giudica tutte e dieci*
+## 7-bis.13 ⛔⛔⛔ **TEN NEW SESSIONS, ZERO WITH A MONITOR** — *and the bench that now judges all ten*
 
-`[M]` 26 agosto 2026, C1 dentro la scatola di GNOME, **dieci** inquilini nuovi, attesa del palco
-alzata a **90 s**. Due giri, e il secondo dopo una cura al banco:
+`[M]` 26 Aug 2026, C1 inside the GNOME box, **ten** new tenants, stage wait
+raised to **90 s**. Two rounds, and the second after a cure to the bench:
 
-| | esito |
+| | outcome |
 |---|---|
-| primo giro | `nate con un monitor: 0 · ⛔ CIECHE: 5 · **non giudicate: 5**` |
-| ⭐ secondo giro, col banco curato | `nate con un monitor: 0 · ⛔ **CIECHE: 10** · non giudicate: **0**` |
+| first round | `nate con un monitor: 0 · ⛔ CIECHE: 5 · **non giudicate: 5**` |
+| ⭐ second round, with the bench cured | `nate con un monitor: 0 · ⛔ **CIECHE: 10** · non giudicate: **0**` |
 
-⭐ **Il rosso è quello atteso**, ed è il collaudo A che regge: la maglia punta il codice del 25 agosto
-e diventa rossa sul difetto della fase 10 §7.4. ⛔ **E il numero è peggiore di quel che il documento
-di fase lasciava sperare**: non «intermittente», ma **dieci su dieci**. ⚠ È coerente con la misura sul
-ferro (`provanic4/5/6`: **mai**, su 98 · 55 · 50 tentativi) — ⇒ per un utente **nuovo** il guasto non
-è raro: **è la regola**.
+⭐ **The red is the expected one**, and it is acceptance test A holding: the mesh points at the code of 25 Aug
+and turns red on the defect of phase 10 §7.4. ⛔ **And the number is worse than what the phase
+document let one hope**: not «intermittent», but **ten out of ten**. ⚠ It is consistent with the measurement on the
+hardware (`provanic4/5/6`: **never**, over 98 · 55 · 50 attempts) — ⇒ for a **new** user the fault is not
+rare: **it is the rule**.
 
-> ⛔⛔ **E questo è il fatto che blocca metà di C8** (§7-bis.10, prova B), e non solo: blocca **tutte**
-> le maglie che vogliono guardare un pixel attraverso il prodotto — C2, C3, C4, C6.
-> ⇒ ⚠ **E il fatto, senza consiglio**: cominciare la fase 12 con questo aperto vorrebbe dire far
-> funzionare KDE **senza avere modo di vedere se GNOME continua a funzionare**. ⭐ La scelta è
-> dell'utente, e sta in §11.
+> ⛔⛔ **And this is the fact that blocks half of C8** (§7-bis.10, test B), and not only: it blocks **all**
+> the meshes that want to look at a pixel through the product — C2, C3, C4, C6.
+> ⇒ ⚠ **And the fact, without advice**: starting phase 12 with this open would mean making
+> KDE work **with no way of seeing whether GNOME keeps working**. ⭐ The choice is
+> the user's, and it is in §11.
 
-### ⭐⭐ La cura del banco: **i cinque «non lo so» si alternavano, ed era lo sgombero**
+### ⭐⭐ The bench's cure: **the five «I don't know» alternated, and it was the clearing**
 
-⛔ Il primo giro aveva dato `? NO ? NO ? NO ? NO ? NO` — **uno sì e uno no, dieci giri di fila**. ⚠ Una
-alternanza perfetta non è un caso: è **uno stato che sopravvive al giro**.
+⛔ The first round had given `? NO ? NO ? NO ? NO ? NO` — **one yes and one no, ten rounds in a row**. ⚠ A
+perfect alternation is not chance: it is **a state that survives the round**.
 
-⇒ ⭐ **Era lo sgombero**: `loginctl terminate-user` più `pkill` tornano **subito**, e il giro dopo
-partiva mentre il precedente stava ancora morendo — il compositore nuovo non riusciva nemmeno a
-nascere, e il registro non diceva né «monitor» né «cieca». Il giro ancora dopo trovava il campo
-libero e giudicava.
+⇒ ⭐ **It was the clearing**: `loginctl terminate-user` plus `pkill` return **at once**, and the next round
+started while the previous one was still dying — the new compositor could not even manage to be
+born, and the log said neither «monitor» nor «blind». The round after that found the field
+free and judged.
 
-⛔ **La cura è la stessa regola di sempre: si aspetta l'EVENTO, non l'orologio.** Adesso C1 aspetta
-che l'inquilino del giro precedente non abbia **né sessione né processi**, e se entro il tempo
-dichiarato non se n'è andato **lo dice**, invece di partire fingendo di non saperlo.
+⛔ **The cure is the usual rule: one waits for the EVENT, not for the clock.** Now C1 waits
+until the previous round's tenant has **neither session nor processes**, and if it has not gone within the
+declared time **it says so**, instead of starting while pretending not to know.
 
-> ### ⭐ E il risultato è la differenza fra un banco e un banco che serve
+> ### ⭐ And the result is the difference between a bench and a bench that is useful
 >
-> `non giudicate: 5` ⇒ `non giudicate: **0**`. ⚠ Nessuno dei cinque era un rosso — la maglia aveva la
-> decenza di non giudicare (§4.5) — ⛔ **ma una prova che giudica la metà delle volte vale la metà.**
+> `non giudicate: 5` ⇒ `non giudicate: **0**`. ⚠ None of the five was a red — the mesh had the
+> decency not to judge (§4.5) — ⛔ **but a test that judges half the time is worth half.**
 
-### ⚠ E il TEMPO, misurato invece che stimato — *criterio §9.9*
+### ⚠ And the TIME, measured instead of estimated — *criterion §9.9*
 
-`[M]` I dieci giri sono durati **12 minuti e 20 secondi**: ⭐ **74 secondi a giro**.
+`[M]` The ten rounds lasted **12 minutes and 20 seconds**: ⭐ **74 seconds per round**.
 
-⇒ ⛔ **Il tetto dei 3 minuti per la famiglia veloce ci sta dentro solo con DUE giri.** ⚠ E questo è un
-numero preso **con il difetto aperto**: ogni giro spende l'attesa intera del palco (90 s di tetto) e
-poi lo sgombero. ⭐ Con le sessioni sane il giro sarà molto più corto — ⛔ ma finché non lo è, il
-gancio non può far girare dieci giri di C1 a ogni modifica: **si tagliano prove, non si alza il
-tetto** (§5.1).
+⇒ ⛔ **The 3-minute cap for the fast family fits only TWO rounds.** ⚠ And this is a
+number taken **with the defect open**: every round spends the whole stage wait (90 s cap) and
+then the clearing. ⭐ With healthy sessions the round will be much shorter — ⛔ but until it is, the
+hook cannot run ten rounds of C1 at every change: **tests are cut, the cap is not
+raised** (§5.1).
 
-## 7-bis.14 ⭐⭐⭐ **C11 È VIVA E DICE VERDE** — *la maglia che guarda la rete, non il prodotto*
+## 7-bis.14 ⭐⭐⭐ **C11 IS ALIVE AND SAYS GREEN** — *the mesh that looks at the net, not at the product*
 
-⭐ È il guasto che l'utente ha nominato **per primo**, con parole sue: *«se sul container gnome
-abbiamo remotix v1 e sul container kde remotix v1.2 andiamo a sbattere»* (D5). ⇒ Adesso c'è una
-maglia che lo va a cercare, e `[M]` **26 agosto 2026**:
+⭐ It is the fault the user named **first**, in his own words: *«se sul container gnome
+abbiamo remotix v1 e sul container kde remotix v1.2 andiamo a sbattere»* (D5). ⇒ Now there is a
+mesh that goes looking for it, and `[M]` **26 Aug 2026**:
 
 > ### ⭐ `le 4 scatole accese sono allineate su tutte le 13 voci dichiarate`
 
-| ⭐ dev'essere uguale | ⛔ dev'essere diverso |
+| ⭐ must be equal | ⛔ must be different |
 |---|---|
-| la base (`13.6`) · mesa · libva · pipewire · libavcodec · ffmpeg · **firefox-esr** · libc · libssl · libei · libpci · ⭐ **l'md5 del binario del prodotto** | **il desktop** — `gnome-shell 48.7` · `kwin-wayland 6.3.6` · `labwc 0.8.3` · `labwc 0.8.3` |
+| the base (`13.6`) · mesa · libva · pipewire · libavcodec · ffmpeg · **firefox-esr** · libc · libssl · libei · libpci · ⭐ **the md5 of the product binary** | **the desktop** — `gnome-shell 48.7` · `kwin-wayland 6.3.6` · `labwc 0.8.3` · `labwc 0.8.3` |
 
-⛔⛔ **E si guarda quel che c'è DENTRO le scatole accese, non quel che c'è scritto nelle ricette.** Le
-ricette sono diverse **apposta**, e un confronto che deve prima «togliere le parti diverse» diventa
-un confronto su cui si discute. ⇒ È la regola E1 applicata all'ambiente: *scritto non è in vigore*.
+⛔⛔ **And one looks at what is INSIDE the running boxes, not at what is written in the recipes.** The
+recipes are different **on purpose**, and a comparison that must first «remove the different parts» becomes
+a comparison one argues about. ⇒ It is rule E1 applied to the environment: *written is not in force*.
 
-⚠ **Il primo giro è stato ROSSO**, e per la ragione giusta: il prodotto stava **solo** nella scatola
-di GNOME. ⭐ Messo lo stesso identico binario in tutte e quattro, è diventato verde — ⇒ **la maglia
-ha fatto esattamente il suo mestiere al primo colpo.**
+⚠ **The first round was RED**, and for the right reason: the product was **only** in the GNOME
+box. ⭐ With the very same binary put into all four, it turned green — ⇒ **the mesh
+did exactly its job at the first shot.**
 
-### ⛔⛔ E ha avuto anche lei il suo difetto, che è il più insidioso di tutti
+### ⛔⛔ And it too had its defect, which is the most insidious of all
 
-`[M]` Tre voci su tredici chiedevano pacchetti col nome sbagliato (`libssl3` invece di `libssl3t64`).
-⇒ Tutte e quattro le scatole rispondevano **`?`** — e ⭐⭐ **`?` uguale a `?` è uguale**: quelle tre
-voci **passavano il confronto**, per sempre, senza guardare niente.
+`[M]` Three entries out of thirteen asked for packages with the wrong name (`libssl3` instead of `libssl3t64`).
+⇒ All four boxes answered **`?`** — and ⭐⭐ **`?` equal to `?` is equal**: those three
+entries **passed the comparison**, forever, without looking at anything.
 
-> ⇒ ⭐ C11 adesso le **conta e le stampa**: *«N voci a cui nessuna scatola sa rispondere — e una voce
+> ⇒ ⭐ C11 now **counts and prints them**: *«N voci a cui nessuna scatola sa rispondere — e una voce
 > muta passa il confronto senza aver guardato niente»*. `LEZIONI.md` §1.47.
 >
-> ⚠ È la stessa forma d'errore di §1.44 vista da un'altra parte: là il predicato diceva sempre sì,
-> qui il confronto diceva sempre uguale. ⛔ **Un controllo che non ha mai dato rosso in vita sua va
-> guardato in faccia, non festeggiato.**
+> ⚠ It is the same form of error as §1.44 seen from another side: there the predicate always said yes,
+> here the comparison always said equal. ⛔ **A check that has never given red in its life must be
+> looked in the face, not celebrated.**
 
-## 7-bis.15 ⭐⭐⭐⭐ **C14 — LE QUATTRO SCATOLE NON SI DISTURBANO**, e adesso è misurato
+## 7-bis.15 ⭐⭐⭐⭐ **C14 — THE FOUR BOXES DO NOT DISTURB EACH OTHER**, and now it is measured
 
-§3.4 lo **affermava**; ⭐ adesso c'è la misura sotto. `[M]` **26 agosto 2026**, la stessa prova
-(C8a) fatta girare **una scatola per volta** e poi **tutte e quattro insieme**:
+§3.4 **asserted** it; ⭐ now there is the measurement underneath. `[M]` **26 Aug 2026**, the same test
+(C8a) run **one box at a time** and then **all four together**:
 
-| | sole | insieme |
+| | alone | together |
 |---|---|---|
-| col guasto innestato | `1 sì · 1 no` × 4 | `1 sì · 1 no` × 4 |
-| con la cura | `2 sì · 0 no` × 4 | `2 sì · 0 no` × 4 |
+| with the fault injected | `1 sì · 1 no` × 4 | `1 sì · 1 no` × 4 |
+| with the cure | `2 sì · 0 no` × 4 | `2 sì · 0 no` × 4 |
 
-⇒ ⭐ **Stesso identico esito, quattro scatole su quattro, in tutt'e due i modi.**
+⇒ ⭐ **The very same outcome, four boxes out of four, in both modes.**
 
-### ⭐ E si chiude la riga che `11-accendi.sh` portava aperta
+### ⭐ And the line `11-accendi.sh` carried open is closed
 
 *«`--network=host` … quattro scatole accese insieme condividono le porte dell'ospite … **da rivedere
-quando si fa C14**»*. ⇒ ⭐ **Rivista, e regge**: ciascuna ascolta la sua porta, ciascuna riconosce
-come **propria** solo la sua e come **di un altro** le altre tre. La separazione per porta **è una
-separazione vera**, e adesso ha una misura sotto invece di una speranza.
+quando si fa C14**»*. ⇒ ⭐ **Reviewed, and it holds**: each listens on its own port, each recognises
+as **its own** only its own and as **someone else's** the other three. The separation by port **is a real
+separation**, and now it has a measurement underneath instead of a hope.
 
-### ⚠ Il tempo — che è informazione, non verdetto
+### ⚠ The time — which is information, not a verdict
 
-`[M]` **6,6 s da sola → 7,0 s in parallelo**, cioè **×1,06**. E il totale scende da 26,2 s a 7,0 s:
-⭐ **il parallelo fa risparmiare ×3,76**.
+`[M]` **6.6 s alone → 7.0 s in parallel**, that is **×1.06**. And the total drops from 26.2 s to 7.0 s:
+⭐ **parallelism saves ×3.76**.
 
-⛔ **E un tempo misurato è stato BUTTATO, e il banco lo dichiara da sé**: col guasto innestato i
-quattro tempi erano `125,9 · 126,0 · 126,0 · 126,1` s. ⚠ Quattro numeri uguali a un decimo non sono
-un caso: col guasto il secondo inquilino non apre il browser e C8 lo **aspetta** fino al suo tetto.
-⇒ Quel tempo è quasi tutto **attesa fissa nostra**, non lavoro — e chiamarlo «contesa» vorrebbe dire
-misurare il proprio tetto e crederlo un difetto del prodotto.
+⛔ **And a measured time was THROWN AWAY, and the bench declares it by itself**: with the fault injected the
+four times were `125,9 · 126,0 · 126,0 · 126,1` s. ⚠ Four numbers equal to a tenth are not
+chance: with the fault the second tenant does not open the browser and C8 **waits** for it up to its cap.
+⇒ That time is almost all **our own fixed waiting**, not work — and calling it «contention» would mean
+measuring one's own cap and believing it a defect of the product.
 
-### ⛔⛔ E che cosa NON misura, dichiarato
+### ⛔⛔ And what it does NOT measure, declared
 
-**Non misura la contesa vera sulla scheda grafica.** La prova A di C8 accende un browser che disegna
-**in software**: la scheda non la tocca. La contesa vera vorrebbe quattro sessioni vive, e le
-sessioni oggi nascono cieche (§7-bis.13). ⇒ Quel che è misurato è **lo strato di sotto**: le quattro
-scatole riescono ad **aprire il codificatore nello stesso istante** (3 profili H.264 ciascuna, sole e
-insieme). ⭐ Se già questo non reggesse, la contesa vera non avrebbe bisogno di essere provata.
+**It does not measure the real contention on the graphics card.** Test A of C8 switches on a browser that draws
+**in software**: it does not touch the card. Real contention would want four live sessions, and the
+sessions today are born blind (§7-bis.13). ⇒ What is measured is **the layer underneath**: the four
+boxes manage to **open the encoder at the same instant** (3 H.264 profiles each, alone and
+together). ⭐ If even this did not hold, the real contention would not need testing.
 
-### ⭐ E la certificazione ha bocciato il banco stesso
+### ⭐ And the certification failed the bench itself
 
-`[M]` **15 casi su 15**, ma solo dopo una correzione: il primo giudice buttava via il giudizio quando
-**una sola** scatola aveva saputo rispondere. ⛔ Sbagliato — *una scatola che gira e non riesce a
-riferire sta comunque occupando la macchina*, quindi il carico c'è e il giudizio delle altre vale.
+`[M]` **15 cases out of 15**, but only after a correction: the first judge threw away the judgement when
+**only one** box had managed to answer. ⛔ Wrong — *a box that runs and cannot manage to
+report is still occupying the machine*, so the load is there and the judgement of the others counts.
 
-⭐ **E la prova che sa dare rosso su dati veri, non solo sui casi finti**: `--smentisci` fa girare il
-parallelo chiedendo di proposito l'**altro** modo di C8, così le impronte *devono* essere diverse ⇒
-**4 scatole su 4 rosse.**
+⭐ **And the proof that it can give red on real data, not only on the fake cases**: `--smentisci` runs the
+parallel asking on purpose for the **other** mode of C8, so the fingerprints *must* be different ⇒
+**4 boxes out of 4 red.**
 
-## 7-bis.16 ⭐⭐⭐ **IL GANCIO, C12 E C13** — *e il primo giro vero*
+## 7-bis.16 ⭐⭐⭐ **THE HOOK, C12 AND C13** — *and the first real round*
 
-⛔ Il piano diceva di fare il gancio **per ultimo, e solo dopo che la rete avesse preso almeno un
-guasto vero**: *«agganciare una rete che non prende niente è il modo più veloce di trasformarla in
-cerimonia»*. ⇒ La condizione è soddisfatta — la rete ne ha presi due.
+⛔ The plan said to make the hook **last, and only after the net had caught at least one
+real fault**: *«hooking up a net that catches nothing is the fastest way to turn it into
+ceremony»*. ⇒ The condition is met — the net caught two.
 
 | | |
 |---|---|
-| `11-gancio.sh` | decide **per percorso** · fa girare · **lascia traccia** · si installa come hook di git |
-| `11-c12-il-gancio-e-vivo.py` | esiste, è installato, è girato **davvero** e di recente. ⛔ Prende **il gancio spento in silenzio** |
-| `11-c13-la-certificazione-e-recente.py` | negli ultimi giri un guasto è stato innestato **ed è stato visto** |
+| `11-gancio.sh` | decides **by path** · runs · **leaves a trace** · installs itself as a git hook |
+| `11-c12-il-gancio-e-vivo.py` | it exists, it is installed, it has **really** run and recently. ⛔ It catches **the hook switched off silently** |
+| `11-c13-la-certificazione-e-recente.py` | in the last rounds a fault was injected **and was seen** |
 
-⭐ **Certificazioni: 11 su 11 ciascuna.** E il caso che tiene in piedi C13 merita di essere scritto:
+⭐ **Certifications: 11 out of 11 each.** And the case that keeps C13 standing deserves to be written down:
 
-> ⛔ **Un rosso venuto da un'altra maglia non certifica niente.** Se in un giro la rete è diventata
-> rossa per conto suo (C1 sulla sessione cieca) **e** il guasto innestato **non** è stato visto, una
-> C13 ingenua direbbe «certificata»: il giro porta scritto *ha dato rosso* e *guasto innestato*.
-> ⇒ ⭐ Questa dà **rosso**, e fa **il nome della maglia** che ha mancato il guasto.
+> ⛔ **A red coming from another mesh certifies nothing.** If in a round the net turned
+> red on its own (C1 on the blind session) **and** the injected fault was **not** seen, a
+> naive C13 would say «certified»: the round carries written *gave red* and *fault injected*.
+> ⇒ ⭐ This one gives **red**, and gives **the name of the mesh** that missed the fault.
 
-### ⛔⛔ Le prove TAGLIATE per stare nei 3 minuti — *e il taglio è dichiarato, non subìto*
+### ⛔⛔ The tests CUT to stay within the 3 minutes — *and the cut is declared, not suffered*
 
-`[M]` Un giro di C1 costa 74 s ⇒ nei 180 s ci stanno **due giri**. Nella famiglia veloce restano
-**C11 + C1×2**. Fuori:
+`[M]` A round of C1 costs 74 s ⇒ **two rounds** fit in the 180 s. In the fast family there remain
+**C11 + C1×2**. Out:
 
-| tagliato | ⛔ che cosa costa |
+| cut | ⛔ what it costs |
 |---|---|
-| ⛔⛔ **C8, tutt'e due le prove** | **il taglio più caro**: la maglia più importante **non viene guardata a ogni modifica**. Resta nel giro completo |
-| **C1 dal terzo giro in poi** | oggi non morde (10 su 10 nascono cieche, e due giri bastano) ⚠ **ma il giorno in cui il difetto sarà curato e tornerà raro, due giri non basteranno** |
-| **il passo 0** | guarda l'ambiente, che non cambia quando cambia `src/`; e una scatola ricostruita di nascosto la prende **C11**, che nella famiglia veloce c'è |
+| ⛔⛔ **C8, both tests** | **the most expensive cut**: the most important mesh **is not looked at at every change**. It stays in the complete round |
+| **C1 from the third round on** | today it does not bite (10 out of 10 are born blind, and two rounds are enough) ⚠ **but the day the defect is cured and becomes rare again, two rounds will not be enough** |
+| **step 0** | it looks at the environment, which does not change when `src/` changes; and a box rebuilt behind our back is caught by **C11**, which is in the fast family |
 
-⭐ E il gancio **salta** la maglia che non ci sta invece di troncarla a metà, e **scrive nel registro
-che cosa ha saltato e perché**: ⛔ troncare darebbe un rosso che non è del prodotto (`LEZIONI.md`
+⭐ And the hook **skips** the mesh that does not fit instead of truncating it halfway, and **writes in the log
+what it skipped and why**: ⛔ truncating would give a red that does not belong to the product (`LEZIONI.md`
 §1.45).
 
-### ⚠ E il gancio si aggancia PRIMA DI MANDARE, non a ogni salvataggio
+### ⚠ And the hook hooks in BEFORE SENDING, not at every save
 
-Tre minuti a ogni commit sono esattamente la cosa che §5.1 dice che fa **spegnere** un gancio. ⇒ Il
-predefinito è `pre-push`; chi vuole `pre-commit` lo chiede per nome.
+Three minutes at every commit are exactly the thing §5.1 says gets a hook **switched off**. ⇒ The
+default is `pre-push`; whoever wants `pre-commit` asks for it by name.
 
-⚠ E una cosa che il percorso **non sa dire**, dichiarata invece di essere nascosta: *«prima di
-chiudere una fase»* non è un file che cambia, è una **decisione** ⇒ si chiede per nome
-(`--famiglia tutto`). ⭐ L'ingresso di un desktop nuovo invece **sì**: si vede da una
-`Contenitore.<nome>` che compare.
+⚠ And something the path **cannot say**, declared instead of hidden: *«before
+closing a phase»* is not a file that changes, it is a **decision** ⇒ it is asked for by name
+(`--famiglia tutto`). ⭐ The arrival of a new desktop instead **can**: it shows from a
+`Contenitore.<nome>` that appears.
 
-### ⛔⛔ IL PRIMO GIRO VERO — e ha trovato tre cose che nessuna prova a secco aveva preso
+### ⛔⛔ THE FIRST REAL ROUND — and it found three things no dry test had caught
 
-`[M]` 26 agosto 2026. Il gancio è stato costruito **senza la macchina di prova** (l'agente che lo
-scriveva non ce l'aveva, e lo ha dichiarato). ⇒ Al primo giro vero:
+`[M]` 26 Aug 2026. The hook was built **without the test machine** (the agent writing it
+did not have it, and declared so). ⇒ At the first real round:
 
-| ⛔ che cosa è successo | ⭐ che cosa insegna |
+| ⛔ what happened | ⭐ what it teaches |
 |---|---|
-| ⛔ **`GIRA_C11: command not found`** — una funzione che non esiste. L'esito è stato **127**, e il giro è proseguito come se niente fosse: la famiglia veloce girava **senza la sua prima maglia** | ⚠ `bash -n` passa, perché la sintassi è valida (`LEZIONI.md` §1.40). ⛔ **Si vede solo facendola girare** |
-| ⛔ **il gancio pretendeva un deposito git per GIRARE** | ⭐ le due metà vivono in due posti diversi: **decidere** vuole il deposito (portatile), **far girare** vuole le scatole (macchina di prova, dove il deposito **non c'è**). ⇒ Con la famiglia chiesta per nome non c'è niente da decidere, e il deposito non serve |
-| tre `git: command not found` per giro | rumore che somiglia a un guasto ⇒ senza deposito non si elenca niente, e **non è un errore** |
+| ⛔ **`GIRA_C11: command not found`** — a function that does not exist. The outcome was **127**, and the round went on as if nothing had happened: the fast family ran **without its first mesh** | ⚠ `bash -n` passes, because the syntax is valid (`LEZIONI.md` §1.40). ⛔ **It can be seen only by running it** |
+| ⛔ **the hook demanded a git repository in order to RUN** | ⭐ the two halves live in two different places: **deciding** wants the repository (laptop), **running** wants the boxes (test machine, where the repository **is not**). ⇒ With the family asked for by name there is nothing to decide, and the repository is not needed |
+| three `git: command not found` per round | noise that looks like a fault ⇒ without a repository nothing is listed, and **it is not an error** |
 
-### ⭐⭐⭐ E IL GIRO COMPLETO È STATO FATTO — *`[M]` 26 agosto 2026, 28 minuti*
+### ⭐⭐⭐ AND THE COMPLETE ROUND WAS DONE — *`[M]` 26 Aug 2026, 28 minutes*
 
-La famiglia `tutto` su GNOME, quella che si fa **prima di chiudere una fase**, girata dal gancio dal
-principio alla fine:
+The `tutto` family on GNOME, the one done **before closing a phase**, run by the hook from
+beginning to end:
 
-| maglia | esito | tempo |
+| mesh | outcome | time |
 |---|---|---|
-| passo 0 | ⭐ regge — 18/18 | 16 s |
-| C1 × 10 | ⛔ **NON REGGE** — 10 cieche su 10, **zero non giudicate** | 760 s |
-| C8 | ⭐ regge — tutt'e due gli inquilini aprono il browser | 6 s |
-| ⭐⭐ **C8 col guasto innestato** | ⭐ **il guasto è stato VISTO**: 1 inquilino su 2 non apre il browser | 126 s |
-| C11 | ⭐ regge — 13 voci su 13 | 10 s |
-| C12 | ⚠ *terreno non regge* — ⛔ e **è la risposta giusta**: su quella macchina non c'è il deposito git, e C12 guarda i ganci di git | 0 s |
-| C13 | ⛔ NON REGGE **durante il giro**, ⭐ **verde subito dopo** | 0 s |
-| C14 | ⭐ regge | 786 s |
-| | | **totale 1 704 s** |
+| step 0 | ⭐ holds — 18/18 | 16 s |
+| C1 × 10 | ⛔ **DOES NOT HOLD** — 10 blind out of 10, **zero not judged** | 760 s |
+| C8 | ⭐ holds — both tenants open the browser | 6 s |
+| ⭐⭐ **C8 with the fault injected** | ⭐ **the fault was SEEN**: 1 tenant out of 2 does not open the browser | 126 s |
+| C11 | ⭐ holds — 13 entries out of 13 | 10 s |
+| C12 | ⚠ *terrain does not hold* — ⛔ and **it is the right answer**: on that machine there is no git repository, and C12 looks at the git hooks | 0 s |
+| C13 | ⛔ DOES NOT HOLD **during the round**, ⭐ **green right after** | 0 s |
+| C14 | ⭐ holds | 786 s |
+| | | **total 1 704 s** |
 
-> ### ⭐⭐ E il momento che conta è quello di C13
+> ### ⭐⭐ And the moment that counts is C13's
 >
-> Durante il giro C13 era **rossa**, e diceva il vero: *«negli ultimi giri **nessun guasto è mai
+> During the round C13 was **red**, and it told the truth: *«negli ultimi giri **nessun guasto è mai
 > stato innestato** ⇒ la rete gira, e nessuno la mette alla prova. ⛔ Da fuori è indistinguibile da
 > una rete che funziona benissimo.»*
 >
-> ⇒ Finito il giro — che il guasto innestato **ce l'aveva dentro** — C13 è **verde**:
+> ⇒ Once the round was over — which **had** the injected fault inside it — C13 is **green**:
 > *«negli ultimi 3 giri un guasto è stato innestato ed **è stato visto**»*.
 >
-> ⭐ **Cioè la rete adesso sa dire di sé stessa se è ancora capace di dare rosso.** ⚠ E lo dice con
-> il suo limite attaccato: *«sui guasti che CONOSCE — e ogni desktop nuovo deve entrare con un
+> ⭐ **That is, the net can now say of itself whether it is still able to give red.** ⚠ And it says so with
+> its limit attached: *«sui guasti che CONOSCE — e ogni desktop nuovo deve entrare con un
 > guasto suo»* (§3.6).
 
-⚠ **E due letture che vanno fatte con attenzione**, perché sembrano buone notizie e non lo sono:
+⚠ **And two readings that must be done carefully**, because they look like good news and are not:
 
 | | |
 |---|---|
-| **C1 × 10 costa 760 s** | ⭐ 76 s a giro, coerente con i 74 misurati prima. ⛔ È il motivo per cui nella famiglia veloce ce ne stanno **due**, e non è un numero che si può migliorare tagliando: è il tempo che il prodotto impiega a **non** far nascere un monitor |
-| **C8 è durata 6 s** | ⚠ **non è la sua velocità vera**: gli inquilini c'erano già dal giro prima, col profilo del browser già fatto. ⛔ Da zero costa molto di più — lo dice l'altra riga, i **126 s** del giro col guasto innestato |
+| **C1 × 10 costs 760 s** | ⭐ 76 s per round, consistent with the 74 measured before. ⛔ It is the reason **two** fit in the fast family, and it is not a number that can be improved by cutting: it is the time the product takes **not** to give birth to a monitor |
+| **C8 lasted 6 s** | ⚠ **it is not its real speed**: the tenants were already there from the round before, with the browser profile already made. ⛔ From zero it costs much more — the other row says so, the **126 s** of the round with the fault injected |
 
-## 7-bis.17 Che cosa esiste adesso, su disco
+## 7-bis.17 What exists now, on disk
 
 | file | |
 |---|---|
-| `banchi/11-scatole/Contenitore.gnome` | ⭐ la **ricetta** della scatola: sistema, desktop, scheda, attrezzi, l'inquilino, e l'unità che allinea il gruppo della scheda |
-| `banchi/11-scatole/11-accendi.sh` | costruisci · accendi · prodotto · server · **c1** · **c5** · **c7** · **c8** · **c9** · **c10** · passo0 · impronta · spegni — ⭐ **con ogni permesso giustificato da quel che si rompe senza** |
-| `banchi/11-scatole/11-passo0.sh` | ⭐ le **otto verifiche** dell'ambiente, con i tre esiti distinti |
-| `banchi/11-scatole/11-c1-nasce-e-si-vede.py` | ⭐⭐ **la prima maglia della rete**, e il collaudo A. Con `--certifica`: **5 casi su 5**, compreso quello in cui *«cieca»* deve vincere su *«monitor 1/1»* |
-| `banchi/11-scatole/Contenitore.kde` | ⭐ la **seconda scatola**, con KWin — la prova che la rete non è fatta su misura di GNOME |
-| `banchi/11-scatole/Contenitore.xfce` · `Contenitore.lxqt` | ⭐ la **terza e la quarta**, con `labwc` — ⚠ quattro scatole, **tre** compositori (§7-bis.9) |
-| `banchi/11-scatole/adattatore.{gnome,kde,xfce,lxqt}.sh` | ⭐⭐ **il «come» di ogni desktop**, allo stesso percorso dentro ogni scatola: la lista delle prove resta **una** |
-| `banchi/11-scatole/11-c8-il-secondo-apre-il-browser.py` | ⭐⭐⭐ **la maglia più importante**, e il collaudo B. Con `--certifica`: **8 casi su 8**; con `--senza-cura`: il guasto innestato |
-| `banchi/11-scatole/11-c8-pagina.html` | il **bersaglio nei pixel**: `#FF00FF` a schermo intero, con le scritte apposta per non essere «tinta unita» |
-| `banchi/11-scatole/11-c11-allineamento.py` | ⭐⭐ **la maglia che guarda LA RETE**: le quattro scatole d'accordo su tredici voci, e l'md5 del prodotto fra queste. Con `--certifica`: **6 casi su 6** |
-| `banchi/11-scatole/11-c14-non-si-disturbano.py` | ⭐⭐ **le quattro scatole non si disturbano**, misurato: stesso esito sole e insieme. Con `--certifica`: **15 casi su 15**; con `--smentisci`: dà rosso su dati veri |
-| `banchi/11-scatole/11-gancio.sh` | ⭐⭐⭐ **quando parte la rete, e che cosa parte** — deciso **per percorso**, col tetto dei 3 minuti e le prove tagliate dichiarate |
-| `banchi/11-scatole/11-gancio-registro.jsonl` | la **traccia** di ogni giro: che cosa è partito, che esito, quanto è durato, se è stato innestato un guasto. ⛔ È quel che tiene in vita C12 e C13 |
-| `banchi/11-scatole/11-c12-il-gancio-e-vivo.py` · `11-c13-la-certificazione-e-recente.py` | ⭐ le due maglie che guardano **il gancio**. `--certifica`: **11 casi su 11** ciascuna |
-| `banchi/11-scatole/11-c5-il-suono-non-e-silenzio.py` | ⭐⭐ **il suono**: si misura l'**RMS** dei campioni che arrivano al cliente, soglia dichiarata **328/32767** (−40 dBFS). ⭐ Giudica **byte**, non pixel ⇒ è l'unica maglia che oggi attraversa il prodotto da cima a fondo. `--certifica`: **12 casi su 12** |
-| `banchi/11-scatole/11-c7-si-chiude-e-non-resta-niente.py` | ⭐⭐ **i residui**: impronta prima, sessione, chiusura, impronta dopo. ⚠ E il caso che **non** deve dare rosso: «si stacca soltanto» (I4). `--certifica`: **13 casi su 13** |
-| `banchi/11-scatole/11-c9-il-registro-dice-di-chi.py` | ⭐⭐ **il registro**: due inquilini vivi **insieme**, e ogni riga obbligata deve dire quale. `--certifica`: **16 casi su 16** |
-| `banchi/11-scatole/11-c10-le-copie-gemelle.py` | ⭐ **le copie gemelle**, e ⛔ l'elenco lo **legge da `src/Makefile`** invece di ricopiarlo. `--certifica`: **15 casi su 15**. ⭐ Gira **ovunque**, in 0,04 s, e non accende niente |
-| `banchi/10-f1-testimone.py` | ⛔ **non è di questa fase e non si tocca**: è il giudice delle immagini, già tarato sul vero. C8 lo **importa** — due giudici che possono divergere in silenzio sono peggio di uno |
+| `banchi/11-scatole/Contenitore.gnome` | ⭐ the box's **recipe**: system, desktop, card, tools, the tenant, and the unit that aligns the card's group |
+| `banchi/11-scatole/11-accendi.sh` | build · switch on · product · server · **c1** · **c5** · **c7** · **c8** · **c9** · **c10** · step0 · fingerprint · switch off — ⭐ **with every permission justified by what breaks without it** |
+| `banchi/11-scatole/11-passo0.sh` | ⭐ the **eight checks** of the environment, with the three distinct outcomes |
+| `banchi/11-scatole/11-c1-nasce-e-si-vede.py` | ⭐⭐ **the first mesh of the net**, and acceptance test A. With `--certifica`: **5 cases out of 5**, including the one in which *«cieca»* must win over *«monitor 1/1»* |
+| `banchi/11-scatole/Contenitore.kde` | ⭐ the **second box**, with KWin — the proof that the net is not tailor-made for GNOME |
+| `banchi/11-scatole/Contenitore.xfce` · `Contenitore.lxqt` | ⭐ the **third and the fourth**, with `labwc` — ⚠ four boxes, **three** compositors (§7-bis.9) |
+| `banchi/11-scatole/adattatore.{gnome,kde,xfce,lxqt}.sh` | ⭐⭐ **the «how» of every desktop**, at the same path inside every box: the list of tests stays **one** |
+| `banchi/11-scatole/11-c8-il-secondo-apre-il-browser.py` | ⭐⭐⭐ **the most important mesh**, and acceptance test B. With `--certifica`: **8 cases out of 8**; with `--senza-cura`: the injected fault |
+| `banchi/11-scatole/11-c8-pagina.html` | the **target in the pixels**: `#FF00FF` full screen, with the writing there on purpose so as not to be «solid colour» |
+| `banchi/11-scatole/11-c11-allineamento.py` | ⭐⭐ **the mesh that looks at THE NET**: the four boxes agreeing on thirteen entries, and the product's md5 among them. With `--certifica`: **6 cases out of 6** |
+| `banchi/11-scatole/11-c14-non-si-disturbano.py` | ⭐⭐ **the four boxes do not disturb each other**, measured: same outcome alone and together. With `--certifica`: **15 cases out of 15**; with `--smentisci`: it gives red on real data |
+| `banchi/11-scatole/11-gancio.sh` | ⭐⭐⭐ **when the net starts, and what starts** — decided **by path**, with the 3-minute cap and the cut tests declared |
+| `banchi/11-scatole/11-gancio-registro.jsonl` | the **trace** of every round: what started, what outcome, how long it lasted, whether a fault was injected. ⛔ It is what keeps C12 and C13 alive |
+| `banchi/11-scatole/11-c12-il-gancio-e-vivo.py` · `11-c13-la-certificazione-e-recente.py` | ⭐ the two meshes that look at **the hook**. `--certifica`: **11 cases out of 11** each |
+| `banchi/11-scatole/11-c5-il-suono-non-e-silenzio.py` | ⭐⭐ **the sound**: the **RMS** of the samples arriving at the client is measured, declared threshold **328/32767** (−40 dBFS). ⭐ It judges **bytes**, not pixels ⇒ it is the only mesh that today crosses the product from top to bottom. `--certifica`: **12 cases out of 12** |
+| `banchi/11-scatole/11-c7-si-chiude-e-non-resta-niente.py` | ⭐⭐ **the leftovers**: fingerprint before, session, close, fingerprint after. ⚠ And the case that must **not** give red: «it only detaches» (I4). `--certifica`: **13 cases out of 13** |
+| `banchi/11-scatole/11-c9-il-registro-dice-di-chi.py` | ⭐⭐ **the log**: two tenants alive **together**, and every compulsory line must say which. `--certifica`: **16 cases out of 16** |
+| `banchi/11-scatole/11-c10-le-copie-gemelle.py` | ⭐ **the twin copies**, and ⛔ it **reads** the list **from `src/Makefile`** instead of copying it. `--certifica`: **15 cases out of 15**. ⭐ It runs **everywhere**, in 0.04 s, and switches nothing on |
+| `banchi/10-f1-testimone.py` | ⛔ **it does not belong to this phase and is not touched**: it is the judge of the images, already calibrated on the real thing. C8 **imports** it — two judges that can diverge silently are worse than one |
 
-## 7-bis.18 ⭐⭐⭐⭐⭐ **QUATTRO MAGLIE IN PIÙ — e la rete adesso guarda anche quel che non è un pixel**
+## 7-bis.18 ⭐⭐⭐⭐⭐ **FOUR MORE MESHES — and the net now also looks at what is not a pixel**
 
-`[M]` 26 agosto 2026, sera. Quattro agenti in parallelo, **una scatola per ciascuno** (kde, xfce,
-lxqt, e il portatile), inquilini con prefissi separati, log e unità separate. ⭐ E il criterio della
-scelta è uno solo: **nessuna delle quattro giudica un pixel** ⇒ sono le quattro che il difetto delle
-sessioni cieche (§7-bis.13) **non blocca**.
+`[M]` 26 Aug 2026, evening. Four agents in parallel, **one box each** (kde, xfce,
+lxqt, and the laptop), tenants with separate prefixes, separate logs and units. ⭐ And the criterion of the
+choice is one only: **none of the four judges a pixel** ⇒ they are the four that the defect of the
+blind sessions (§7-bis.13) **does not block**.
 
-| maglia | il metro | certificazione | costo `[M]` |
+| mesh | the meter | certification | cost `[M]` |
 |---|---|---|---|
-| **C5** il suono non è silenzio | **RMS** dei campioni che arrivano al cliente · soglia **328/32767** (−40 dBFS) · ≥ 200 blocchi · ≥ 50 % sopra soglia | **12 su 12** | 38 s |
-| **C7** si chiude e non resta niente | impronta **prima** / sessione / chiusura / impronta **dopo** — processi, socket, unità, scheda | **13 su 13** | 26 s |
-| **C9** il registro dice di chi parla | **due** inquilini vivi insieme, e ogni riga obbligata deve dire quale | **16 su 16** | 50 s |
-| **C10** le copie gemelle | i tre file gemelli byte per byte, ⭐ con l'elenco **letto da `src/Makefile`** | **15 su 15** | 0,04 s |
+| **C5** the sound is not silence | **RMS** of the samples arriving at the client · threshold **328/32767** (−40 dBFS) · ≥ 200 blocks · ≥ 50 % above threshold | **12 out of 12** | 38 s |
+| **C7** everything closes and nothing remains | fingerprint **before** / session / close / fingerprint **after** — processes, sockets, units, card | **13 out of 13** | 26 s |
+| **C9** the log says whom it is talking about | **two** tenants alive together, and every compulsory line must say which | **16 out of 16** | 50 s |
+| **C10** the twin copies | the three twin files byte for byte, ⭐ with the list **read from `src/Makefile`** | **15 out of 15** | 0.04 s |
 
-### ⭐ E la taratura di C5 è stata fatta attraversando il confine, non dichiarata
+### ⭐ And C5's calibration was done crossing the border, not declared
 
-`[M]` Sei sessioni vere: ampiezza **0,02 ⇒ RMS 463, VERDE** · ampiezza **0,01 ⇒ RMS 231, ROSSO**. Il
-percorso è trasparente (guadagno **1,0000**), e i valori sintetici della certificazione coincidono
-con quelli del filo (463,4 contro 463,1). ⛔ Una soglia che non si è vista fallire è un numero
-inventato.
+`[M]` Six real sessions: amplitude **0.02 ⇒ RMS 463, GREEN** · amplitude **0.01 ⇒ RMS 231, RED**. The
+path is transparent (gain **1.0000**), and the synthetic values of the certification coincide
+with those of the wire (463.4 against 463.1). ⛔ A threshold that has not been seen failing is an invented
+number.
 
-### ⭐⭐ E C5 dimostra la sua tesi con un numero, invece di affermarla
+### ⭐⭐ And C5 proves its thesis with a number, instead of asserting it
 
-Nello stesso giro in cui il registro diceva *«nessun monitor virtuale da catturare»* e *«0 fotogrammi
-spediti»*, C5 ha contato **4 878 blocchi di suono, 4,6 MB, RMS 23 168**. ⇒ ⭐ **Zero pixel, e
-qualcosa da giudicare lo stesso**: oggi C5 è l'unica maglia che attraversa il prodotto da cima a
-fondo.
+In the same round in which the log said *«nessun monitor virtuale da catturare»* and *«0 fotogrammi
+spediti»*, C5 counted **4 878 sound blocks, 4.6 MB, RMS 23 168**. ⇒ ⭐ **Zero pixels, and
+something to judge all the same**: today C5 is the only mesh that crosses the product from top to
+bottom.
 
-### ⛔⛔ IL PRIMO ROSSO CHE LA RETE TIRA FUORI DAL PRODOTTO — **due righe di `src/tastiera.c`**
+### ⛔⛔ THE FIRST RED THE NET DRAWS OUT OF THE PRODUCT — **two lines of `src/tastiera.c`**
 
-`[M]` C9, su **tutte e quattro** le scatole: 5 752 righe di registro, **5 490 obbligate**, e **4** che
-non si possono attribuire a nessun inquilino. Sono `src/tastiera.c` e `:486`, che scrivono nel
-**padre** senza `registro_dice_di()`. ⛔ Due righe identiche parola per parola, una per inquilino:
-**con due sessioni vive non si può dire quale sia di chi.**
+`[M]` C9, on **all four** boxes: 5 752 log lines, **5 490 compulsory**, and **4** that
+cannot be attributed to any tenant. They are `src/tastiera.c` and `:486`, which write in the
+**parent** without `registro_dice_di()`. ⛔ Two lines identical word for word, one per tenant:
+**with two live sessions one cannot say which belongs to whom.**
 
-⭐ Non è un guasto iniettato, non è un banco che sbaglia: **è il prodotto**, e non lo cercava
-nessuno. La cura è di due righe — ⛔ **non applicata**, perché toccare `src/` obbliga a ricostruire e
-a rimettere il binario in quattro scatole, e l'ordine delle fasi è una decisione dell'utente (§11).
+⭐ It is not an injected fault, it is not a bench getting it wrong: **it is the product**, and nobody was
+looking for it. The cure is two lines — ⛔ **not applied**, because touching `src/` forces a rebuild and
+putting the binary back into four boxes, and the order of the phases is the user's decision (§11).
 
-⚠ **E accanto, un rilievo che NON è un rosso**: `[M]` **1 402 righe (25,5 %)** nominano l'inquilino
-solo nella prosa e non nella parentesi. Sono attribuibili ⇒ C9 le conta e le stampa senza giudicarle.
-Volerle rosse è una decisione, non un difetto.
+⚠ **And next to it, a finding that is NOT a red**: `[M]` **1 402 lines (25.5 %)** name the tenant
+only in the prose and not in the bracket. They are attributable ⇒ C9 counts and prints them without judging them.
+Wanting them red is a decision, not a defect.
 
-### ⛔⛔⛔ IL SECONDO ROSSO — **e questa volta è di UN desktop solo**
+### ⛔⛔⛔ THE SECOND RED — **and this time it belongs to ONE desktop only**
 
-`[M]` Cablate le maglie, sono state fatte girare **tutte e tre su tutte e quattro le scatole**, con i
-loro guasti innestati. Ventotto giri. Ed è saltato fuori questo:
+`[M]` With the meshes wired in, **all three were run on all four boxes**, with their
+injected faults. Twenty-eight rounds. And this came out:
 
 | | gnome | kde | xfce | lxqt |
 |---|---|---|---|---|
-| **C5** il suono | ⛔ **ROSSO** | ✅ | ✅ | ✅ |
-| C5 col guasto innestato | ⭐ visto | ⭐ visto | ⭐ visto | ⭐ visto |
-| **C7** i residui | ✅ | ✅ | ✅ | ✅ |
-| C7 «si stacca soltanto» (I4) | ✅ | ✅ | ✅ | ✅ |
-| C7 col guasto innestato | ⭐ visto | ⭐ visto | ⭐ visto | ⭐ visto |
-| **C9** il registro | ⛔ rosso *(il difetto del prodotto, uguale dappertutto)* | ⛔ | ⛔ | ⛔ |
+| **C5** the sound | ⛔ **RED** | ✅ | ✅ | ✅ |
+| C5 with the fault injected | ⭐ seen | ⭐ seen | ⭐ seen | ⭐ seen |
+| **C7** the leftovers | ✅ | ✅ | ✅ | ✅ |
+| C7 «only detaches» (I4) | ✅ | ✅ | ✅ | ✅ |
+| C7 with the fault injected | ⭐ seen | ⭐ seen | ⭐ seen | ⭐ seen |
+| **C9** the log | ⛔ red *(the product defect, the same everywhere)* | ⛔ | ⛔ | ⛔ |
 
-⭐⭐ **C5 è verde su tre desktop e rossa sul quarto**, e il quarto è **GNOME** — cioè quello su cui il
-prodotto è nato. I numeri:
+⭐⭐ **C5 is green on three desktops and red on the fourth**, and the fourth is **GNOME** — that is the one on which the
+product was born. The numbers:
 
 | | gnome | kde / xfce / lxqt |
 |---|---|---|
-| blocchi arrivati al cliente in 25 s | `[M]` **34 – 41** | `[M]` **~4 878** |
-| blocchi entrati nel codificatore | `[M]` **115** | `[M]` **~4 996** |
-| di cui silenzio digitale, taciuti | `[M]` **74 su 115** | ~2 % |
-| RMS di quel che arriva | **22 977** (forte) | 23 168 |
+| blocks arrived at the client in 25 s | `[M]` **34 – 41** | `[M]` **~4 878** |
+| blocks entered into the encoder | `[M]` **115** | `[M]` **~4 996** |
+| of which digital silence, muted | `[M]` **74 out of 115** | ~2 % |
+| RMS of what arrives | **22 977** (loud) | 23 168 |
 
-⇒ ⛔ **Non è «il suono manca»: è che ne arriva un quarantesimo.** Quel che arriva è forte e giusto
-(RMS 22 977, picco al fondo scala, 100 % sopra soglia): ⭐ **la soglia non c'entra**, e infatti C5 non
-dà rosso per il livello ma per il **conto** — *«41 blocchi su 200 attesi al minimo: non è un
+⇒ ⛔ **It is not «the sound is missing»: it is that a fortieth of it arrives.** What arrives is loud and right
+(RMS 22 977, peak at full scale, 100 % above threshold): ⭐ **the threshold has nothing to do with it**, and in fact C5 does not
+give red for the level but for the **count** — *«41 blocchi su 200 attesi al minimo: non è un
 flusso»*.
 
-⚠ **E non è la scatola invecchiata**: la scatola di GNOME è stata **buttata giù e rifatta**, prodotto
-e server rimessi dentro, e il rosso è tornato identico. ⛔ Tre giri su tre.
+⚠ **And it is not the aged box**: the GNOME box was **knocked down and rebuilt**, product
+and server put back inside, and the red came back identical. ⛔ Three rounds out of three.
 
-> ⭐⭐⭐ **Ed è la tesi della fase, misurata una seconda volta e nel verso che nessuno si aspettava.**
-> §7-bis.7 diceva *«il secondo desktop ha chiesto una cosa che il primo non chiedeva»*. ⇒ Qui il
-> desktop che si comporta diversamente è **il primo**, quello di casa: le tre scatole nuove vanno, e
-> quella su cui il prodotto è cresciuto no. ⛔ Senza le altre tre, questo numero sarebbe stato letto
-> come *«il suono va così»*.
+> ⭐⭐⭐ **And it is the thesis of the phase, measured a second time and in the direction nobody expected.**
+> §7-bis.7 said *«the second desktop asked for something the first did not ask for»*. ⇒ Here the
+> desktop that behaves differently is **the first**, the home one: the three new boxes work, and
+> the one on which the product grew up does not. ⛔ Without the other three, this number would have been read
+> as *«il suono va così»*.
 >
-> `[?]` **La causa non è stata trovata**, ed è scritta invece che indovinata: il sospetto è che nella
-> sessione GNOME qualcosa d'altro tocchi il grafo audio dell'inquilino (`wireplumber` che sospende, o
-> un secondo `pipewire` della sessione), ma ⛔ **non è misurato**, e finché non lo è resta un `[?]`.
+> `[?]` **The cause was not found**, and it is written instead of guessed: the suspicion is that in the
+> GNOME session something else touches the tenant's audio graph (`wireplumber` suspending, or
+> a second `pipewire` of the session), but ⛔ **it is not measured**, and until it is it stays a `[?]`.
 
-### ⛔⛔ E UN DIFETTO NEL CABLAGGIO, che nessuna certificazione poteva prendere
+### ⛔⛔ AND A DEFECT IN THE WIRING, which no certification could catch
 
-`[M]` `esegui_maglia` legge una maglia innestata **al contrario**: `0` vuol dire *«il guasto è stato
-visto»*, e nel registro finisce `ha_visto_il_guasto`, che è quel che C13 legge. ⛔ **C9 usciva col
-verdetto grezzo** ⇒ nel giro col guasto avrebbe scritto `false` **proprio quando il guasto era stato
-visto benissimo**, e C13 avrebbe cominciato a mentire.
+`[M]` `esegui_maglia` reads an injected mesh **in reverse**: `0` means *«the fault was
+seen»*, and what ends up in the log is `ha_visto_il_guasto`, which is what C13 reads. ⛔ **C9 exited with the
+raw verdict** ⇒ in the round with the fault it would have written `false` **precisely when the fault had been
+seen perfectly well**, and C13 would have started lying.
 
-⭐ **E la cura non era invertire l'esito**: C9 è rossa **anche senza guasto** (le due righe di
-`tastiera.c`), quindi un semplice *«rosso ⇒ visto»* avrebbe detto «visto» anche se l'iniezione non
-avesse morso — un predicato che non può fallire, §1.44 di nuovo, e stavolta a reggere la
-certificazione di tutta la rete. ⇒ Si pretendono **due** cose: verdetto rosso **e** più righe senza
-nome di prima. `[M]` 4 senza guasto ⇒ 5 490 col guasto. ⇒ `LEZIONI.md` §1.52.
+⭐ **And the cure was not inverting the outcome**: C9 is red **even without a fault** (the two lines of
+`tastiera.c`), so a simple *«red ⇒ seen»* would have said «seen» even if the injection had
+not bitten — a predicate that cannot fail, §1.44 again, and this time holding up the
+certification of the whole net. ⇒ **Two** things are demanded: red verdict **and** more lines without a
+name than before. `[M]` 4 without the fault ⇒ 5 490 with the fault. ⇒ `LEZIONI.md` §1.52.
 
-⚠ E un secondo difetto dello stesso genere, `LEZIONI.md` §1.51: `11-accendi.sh prodotto` falliva su
-tutte e quattro le scatole con *«Text file busy»* — ⛔ un rosso che veniva dall'**ordine dei
-comandi**, non dal prodotto.
+⚠ And a second defect of the same kind, `LEZIONI.md` §1.51: `11-accendi.sh prodotto` failed on
+all four boxes with *«Text file busy»* — ⛔ a red that came from the **order of the
+commands**, not from the product.
 
-### ⭐⭐ LA METÀ-PORTATILE DEL GANCIO ADESSO È VIVA — **e ci mette 1 secondo**
+### ⭐⭐ THE LAPTOP HALF OF THE HOOK IS NOW ALIVE — **and it takes 1 second**
 
-§4.6-novemdecies aveva scoperto che il gancio ha due metà su due macchine. ⛔ Quella sul portatile
-non innestava **nessun** guasto ⇒ C13 là non avrebbe potuto **mai** diventare verde. ⇒ C10 ha adesso
-un `--guasto-innestato` che copia i file **veri** in una cartella temporanea, ne cambia **un byte** e
-pretende il rosso.
+§4.6-novemdecies had discovered that the hook has two halves on two machines. ⛔ The one on the laptop
+injected **no** fault ⇒ C13 there could **never** have turned green. ⇒ C10 now has
+a `--guasto-innestato` that copies the **real** files into a temporary folder, changes **one byte** of them and
+demands the red.
 
-`[M]` Sul portatile, famiglia `rete`: **C10 verde · C12 verde · C13 verde**, ⭐ in **1 secondo**,
-senza accendere niente. (C11 e C14 dicono *«non ho potuto guardare»*, ed è giusto: le scatole non
-sono lì.) Il gancio è stato **installato** come `pre-push`.
+`[M]` On the laptop, family `rete`: **C10 green · C12 green · C13 green**, ⭐ in **1 second**,
+without switching anything on. (C11 and C14 say *«I could not look»*, and that is right: the boxes are not
+there.) The hook was **installed** as `pre-push`.
 
-### ⚠ E i tagli, dichiarati invece che subìti
+### ⚠ And the cuts, declared instead of suffered
 
-`[M]` Il tetto della famiglia veloce è a **173 s su 180** — ⚠ misurato di nuovo il 26 agosto con
-C10 dentro e con la voce nuova di C11: **venti secondi in più di quanto si credeva**, e resta pieno.
-§5.1 dice che una maglia in più si
-**scambia**, non si somma. ⇒ C5 (38 s), C7 (26 s) e C9 (50 s) stanno in `tutto` e in `desktop-nuovo`,
-col loro guasto innestato accanto. ⛔ **L'unica che entra nella veloce è C10**, che costa meno della
-risoluzione del cronometro. ⭐ E ci entra **due volte**: anche nella famiglia `rete`, perché il
-gemello vive metà in `src/` e metà in `banchi/rcp/`, e un cambiamento **lì** fa scattare `rete` — cioè
-esattamente il cambiamento che rompe il gemello.
+`[M]` The fast family's cap is at **173 s out of 180** — ⚠ measured again on 26 Aug with
+C10 inside and with the new entry of C11: **twenty seconds more than was believed**, and it stays full.
+§5.1 says an extra mesh is
+**swapped**, not added. ⇒ C5 (38 s), C7 (26 s) and C9 (50 s) sit in `tutto` and in `desktop-nuovo`,
+with their injected fault next to them. ⛔ **The only one that enters the fast family is C10**, which costs less than the
+stopwatch's resolution. ⭐ And it enters **twice**: also in the `rete` family, because the
+twin lives half in `src/` and half in `banchi/rcp/`, and a change **there** triggers `rete` — that is
+exactly the change that breaks the twin.
 
-## 7-bis.19 ⭐⭐⭐⭐⭐ **IL 27 AGOSTO — la rete è completa, e il tappo non c'era**
+## 7-bis.19 ⭐⭐⭐⭐⭐ **27 AUGUST — the net is complete, and the plug was not there**
 
-`[M]` Una giornata, fino a **dieci agenti insieme**, e il risultato in una riga: ⭐ **le quindici
-maglie esistono, girano, e il difetto più vecchio del progetto è chiuso.**
+`[M]` One day, up to **ten agents together**, and the result in one line: ⭐ **the fifteen
+meshes exist, run, and the oldest defect of the project is closed.**
 
-### ⭐⭐⭐ Il fatto della giornata: **le sessioni non nascevano cieche**
+### ⭐⭐⭐ The fact of the day: **the sessions were not being born blind**
 
-Il difetto di `fasi/10-…` §7.4 — *«dieci sessioni nuove su dieci nascono senza monitor»* — bloccava
-cinque prove della rete e rinviava la fase 12. ⛔ **Non era del prodotto, e non era nemmeno un
-difetto solo.** Sono state tre cose, e ciascuna nascondeva la successiva:
+The defect of `fasi/10-…` §7.4 — *«dieci sessioni nuove su dieci nascono senza monitor»* — blocked
+five tests of the net and postponed phase 12. ⛔ **It did not belong to the product, and it was not even one
+single defect.** They were three things, and each one hid the next:
 
-| | che cos'era | come si è visto |
+| | what it was | how it was seen |
 |---|---|---|
-| ⛔⛔ **la prova** | **C1 non poteva dire verde** — leggeva `ZERO MONITOR`, che il prodotto scrive nel percorso di una nascita **riuscita**, e il suo ramo verde era irraggiungibile | un agente mandato a **smentirla** ⇒ `LEZIONI.md` §1.53 |
-| ⛔ **la scatola** | il §6 della ricetta spostava il gruppo `polkitd` da 991 per darlo alla scheda; `groupmod` non porta i file ⇒ `polkit` moriva, `gnome-shell` incassava **4 scadenze da 25 s** | `[M]` da **~97 s** a **1,0 s** dopo la cura ⇒ §1.54 |
-| ⭐⭐⭐ **la causa vera** | **l'inquilino non era nei gruppi `video` e `render`** | `[M]` **17 sessioni su 17** vedono coi gruppi · **0 su 4** senza · ⭐ dati i gruppi allo stesso inquilino ⇒ **2,04 s**. Una variabile sola, esito ribaltato |
+| ⛔⛔ **the test** | **C1 could not say green** — it read `ZERO MONITOR`, which the product writes on the path of a **successful** birth, and its green branch was unreachable | an agent sent to **refute it** ⇒ `LEZIONI.md` §1.53 |
+| ⛔ **the box** | §6 of the recipe moved the `polkitd` group off 991 to give it to the card; `groupmod` does not carry the files ⇒ `polkit` died, `gnome-shell` took **4 timeouts of 25 s** | `[M]` from **~97 s** to **1.0 s** after the cure ⇒ §1.54 |
+| ⭐⭐⭐ **the real cause** | **the tenant was not in the `video` and `render` groups** | `[M]` **17 sessions out of 17** see with the groups · **0 out of 4** without · ⭐ given the groups to the same tenant ⇒ **2.04 s**. One single variable, outcome overturned |
 
-⭐⭐ **E la tabella di §7.4 si spiega da sola**: `provanic4/5/6` — quelli che non videro **mai**, su
-**98 · 55 · 50** tentativi — non hanno quei gruppi; `prova` e `provanic1`, che videro sempre, li
-hanno. ⇒ ⛔ **Non era intermittente: erano due popolazioni di inquilini.**
+⭐⭐ **And the table of §7.4 explains itself**: `provanic4/5/6` — those that **never** saw, over
+**98 · 55 · 50** attempts — do not have those groups; `prova` and `provanic1`, which always saw,
+have them. ⇒ ⛔ **It was not intermittent: they were two populations of tenants.**
 
-⚠ **E la coda tocca il passato**: i banchi creavano inquilini per conto loro in **tredici** posti, e
-⛔ senza quei gruppi. ⇒ Ogni banco che ha misurato lì ha misurato **una sessione che non vedeva**.
-⭐ Curati dodici in **un file solo** (`banchi/attrezzi-gruppi-scheda.sh`), e uno di essi
-(`07-b64-terreno.sh`) lo usano **ventitré banchi** delle fasi 9 e 10.
+⚠ **And the tail touches the past**: the benches created tenants on their own in **thirteen** places, and
+⛔ without those groups. ⇒ Every bench that measured there measured **a session that could not see**.
+⭐ Twelve cured in **one single file** (`banchi/attrezzi-gruppi-scheda.sh`), and one of them
+(`07-b64-terreno.sh`) is used by **twenty-three benches** of phases 9 and 10.
 
-### ⭐⭐ E il monitor: come nasce davvero, letto e misurato
+### ⭐⭐ And the monitor: how it is really born, read and measured
 
-`[R]` `--headless` da solo **non crea nessun monitor**, ed è voluto. In tutto Mutter **due** posti ne
-creano uno: la bandiera `--virtual-monitor` all'avvio, e `RecordVirtual`. ⭐ E quello di
-`RecordVirtual` nasce **quando PipeWire fissa il formato**, cioè **dopo che un consumatore si è
-agganciato** — `[M]` 65–93 ms dopo, mai prima.
+`[R]` `--headless` alone **creates no monitor**, and that is intended. In the whole of Mutter **two** places
+create one: the `--virtual-monitor` flag at startup, and `RecordVirtual`. ⭐ And the one from
+`RecordVirtual` is born **when PipeWire fixes the format**, that is **after a consumer has
+hooked on** — `[M]` 65–93 ms later, never before.
 
-⇒ ⭐⭐ **Ecco perché le cinque prove «bloccate» non erano bloccate**: mentre un cliente è attaccato,
-lo schermo **c'è** — che è esattamente la condizione in cui quelle cinque lavorano.
+⇒ ⭐⭐ **That is why the five «blocked» tests were not blocked**: while a client is attached,
+the screen **is there** — which is exactly the condition in which those five work.
 
-⚠ E un debito, scritto invece che nascosto: `[M]` il monitor **muore con la connessione D-Bus** di
-chi ha chiamato `RecordVirtual`, che nel prodotto è il **figlio**, e il figlio muore col client. ⛔ Sulla
-carta contraddice I4. ⭐ Ma **C6 misura verde**: `[M]` stesso figlio, stessa scena (60,5 % ⇒ 60,5 %,
-scarto 0,000) — **le finestre si ritrovano**. ⇒ Resta un debito dichiarato, non un lavoro di oggi.
+⚠ And a debt, written instead of hidden: `[M]` the monitor **dies with the D-Bus connection** of
+whoever called `RecordVirtual`, which in the product is the **child**, and the child dies with the client. ⛔ On
+paper it contradicts I4. ⭐ But **C6 measures green**: `[M]` same child, same scene (60.5 % ⇒ 60.5 %,
+deviation 0.000) — **the windows are found again**. ⇒ It stays a declared debt, not a job for today.
 
-### ⭐ Le cinque maglie che mancavano, e la sesta che nessuno aveva chiesto
+### ⭐ The five meshes that were missing, and the sixth nobody had asked for
 
-| | certificazione |
+| | certification |
 |---|---|
-| **C2** una finestra si apre — il pixel, non il conto dei processi | 51 casi |
-| **C3** i fotogrammi cambiano — il canarino contro l'immagine congelata | 56 |
-| **C4** il tasto arriva **fino allo schermo** — e solo nella **zona attesa** | 37 |
-| **C6** si stacca e si ritrova — ⭐ legge il **pid del figlio**, non il colore | 46 |
-| **C8b** la pagina vista **dal cliente** — il verdetto è una **differenza** | 17 |
-| ⭐⭐ **C15** la metà remota gira davvero | 21 |
+| **C2** a window opens — the pixel, not the process count | 51 cases |
+| **C3** the frames change — the canary against the frozen image | 56 |
+| **C4** the key arrives **all the way to the screen** — and only in the **expected area** | 37 |
+| **C6** it detaches and finds itself again — ⭐ it reads the **child's pid**, not the colour | 46 |
+| **C8b** the page seen **from the client** — the verdict is a **difference** | 17 |
+| ⭐⭐ **C15** the remote half really runs | 21 |
 
-⭐⭐ **C15 non era nella lista, ed è il buco più serio che restava**: ⛔ con la macchina di prova spenta
-per sempre, `[M]` **C12 e C13 restano verdi** e nessuno si accorge che le maglie vere non girano più.
-⇒ Dimostrato togliendo dal registro l'unica riga eseguita sulle scatole: **C12 verde · C13 verde ·
-C15 ROSSA** sullo stesso file.
+⭐⭐ **C15 was not in the list, and it is the most serious hole that remained**: ⛔ with the test machine switched off
+for good, `[M]` **C12 and C13 stay green** and nobody notices that the real meshes no longer run.
+⇒ Proved by removing from the log the only line executed on the boxes: **C12 green · C13 green ·
+C15 RED** on the same file.
 
-### ⛔⛔ E le maglie mentivano ancora — **dieci difetti, e due erano in tutte**
+### ⛔⛔ And the meshes were still lying — **ten defects, and two were in all of them**
 
-⭐ Due agenti mandati a **refutare** hanno trovato quel che nessuna certificazione aveva preso:
+⭐ Two agents sent to **refute** found what no certification had caught:
 
 | | |
 |---|---|
-| ⛔⛔ **«AMMESSO» era un predicato che non poteva dire di no** | quella parola sta **anche nei due messaggi di rifiuto** ⇒ **nove maglie** credevano di essere entrate anche quando erano respinte. ⭐ Curato con **una** funzione per nove, e la prova: col controllo vecchio, **7 casi nuovi su 9** rispondevano male |
-| ⛔ **il guasto innestato letto sul colore** | una maglia già rossa per conto suo diceva *«il guasto è stato visto»* anche se l'iniezione non aveva morso ⇒ §1.52, curato in **C5, C9, C10** |
-| ⛔⛔ **C7 diceva verde su una I4 rotta** | chiedeva *«è cambiato qualcosa?»* invece di *«il figlio c'è ancora?»* |
-| ⛔ **C8 accusava il filo** | un cliente **respinto** usciva come *«nessun fotogramma è arrivato dal filo»* |
-| ⛔ **il gancio** | un esito `3` faceva scrivere `ha_visto_il_guasto: false` — un'accusa a una prova che non è girata |
+| ⛔⛔ **«AMMESSO» was a predicate that could not say no** | that word is **also in the two refusal messages** ⇒ **nine meshes** believed they had got in even when they were rejected. ⭐ Cured with **one** function for nine, and the proof: with the old check, **7 new cases out of 9** answered wrongly |
+| ⛔ **the injected fault read on the colour** | a mesh already red on its own said *«the fault was seen»* even if the injection had not bitten ⇒ §1.52, cured in **C5, C9, C10** |
+| ⛔⛔ **C7 said green on a broken I4** | it asked *«did something change?»* instead of *«is the child still there?»* |
+| ⛔ **C8 blamed the wire** | a **rejected** client came out as *«no frame arrived from the wire»* |
+| ⛔ **the hook** | an outcome `3` made it write `ha_visto_il_guasto: false` — an accusation against a test that did not run |
 
-### ⭐⭐⭐ IL GIRO INTERO, e i numeri
+### ⭐⭐⭐ THE WHOLE ROUND, and the numbers
 
-`[M]` 27 agosto 2026, `--famiglia tutto` sulle quattro scatole, binario `aa950804fed7`:
-
-| | |
-|---|---|
-| durata | **7 896 s** (2 h 11) |
-| esiti `0` | **57** |
-| ⭐ **guasti innestati visti** | **23 su 25** |
-| esiti `3` (*«non ho potuto guardare»*) | **6** |
-| ⛔ rossi | **3**, e sono **lo stesso rosso**: C1 su kde/xfce/lxqt |
-| ⭐⭐ **rossi del banco** | **nessuno** |
-| **C11** allineamento | ⭐ verde, 14 voci, stesso binario in tutte e quattro |
-| **C14** non si disturbano | ⭐ verde, **801 s**, impronta identica sola e in parallelo |
-
-⛔ **E i tre rossi sono il prodotto, ed è la fase 12**: `[R]` `src/sessione.c` · `scrivi_dropin()` — il prodotto sa
-avviare **solo GNOME**. ⇒ Su KDE, XFCE e LXQt la rete prova l'ambiente, il suono, i residui, il
-registro e l'allineamento; ⛔ **non il prodotto**, perché lì il prodotto non ci gira.
-
-### ⭐ E cinque cure nel prodotto, tutte nate da una maglia
+`[M]` 27 Aug 2026, `--famiglia tutto` on the four boxes, binary `aa950804fed7`:
 
 | | |
 |---|---|
-| `src/tastiera.c` · `webtransport.c` | ⭐ **il primo rosso che la rete ha tirato fuori dal prodotto**: 4 righe di registro su 5 490 non dicevano di chi parlavano |
-| `src/figlio.c` — l'anello dell'audio | ⛔ non si svuotava senza palco ⇒ `[M]` **96 489 ms** di trabocco |
-| `src/figlio.c` — la busta non inizializzata | ⛔ **il «terzo stato» di §7.4 era memoria sporca** ⇒ §1.55 |
-| `src/mutter.c` | una riga diceva *«monitor virtuale montato»* quando il monitor **non esisteva ancora** |
-| `src/provisiona.sh` + `src/figlio.c` | ⭐⭐ i gruppi della scheda, letti **dal nodo**, e un controllo che **lo dice nel registro** invece di far nascere una sessione che non si vede |
+| duration | **7 896 s** (2 h 11) |
+| outcomes `0` | **57** |
+| ⭐ **injected faults seen** | **23 out of 25** |
+| outcomes `3` (*«I could not look»*) | **6** |
+| ⛔ reds | **3**, and they are **the same red**: C1 on kde/xfce/lxqt |
+| ⭐⭐ **bench reds** | **none** |
+| **C11** alignment | ⭐ green, 14 entries, same binary in all four |
+| **C14** do not disturb each other | ⭐ green, **801 s**, identical fingerprint alone and in parallel |
+
+⛔ **And the three reds are the product, and it is phase 12**: `[R]` `src/sessione.c` · `scrivi_dropin()` — the product can
+start **only GNOME**. ⇒ On KDE, XFCE and LXQt the net tests the environment, the sound, the leftovers, the
+log and the alignment; ⛔ **not the product**, because there the product does not run.
+
+### ⭐ And five cures in the product, all born from a mesh
+
+| | |
+|---|---|
+| `src/tastiera.c` · `webtransport.c` | ⭐ **the first red the net drew out of the product**: 4 log lines out of 5 490 did not say whom they were talking about |
+| `src/figlio.c` — the audio ring | ⛔ it was not emptied without a stage ⇒ `[M]` **96 489 ms** of overflow |
+| `src/figlio.c` — the uninitialised envelope | ⛔ **the «third state» of §7.4 was dirty memory** ⇒ §1.55 |
+| `src/mutter.c` | a line said *«monitor virtuale montato»* when the monitor **did not exist yet** |
+| `src/provisiona.sh` + `src/figlio.c` | ⭐⭐ the card's groups, read **from the node**, and a check that **says so in the log** instead of giving birth to a session that cannot be seen |
 
 ---
 
-# §8 · Le domande, e le risposte avute
+# §8 · The questions, and the answers received
 
-*Le sei domande della prima stesura. ⭐ Cinque hanno avuto risposta dai due revisori; una resta
-all'utente.*
+*The six questions of the first draft. ⭐ Five were answered by the two reviewers; one remains
+for the user.*
 
-| | | esito |
+| | | outcome |
 |---|---|---|
-| **Q1** | che classe di regressione il disegno non prende? | ✅ **risposta**, ed è diventata **§6** |
-| **Q2** | il contenitore regge il pezzo che tiene il conto di chi è collegato? | ⭐⭐ **CHIUSA CON UN `[M]`, 26 agosto 2026: SÌ** — 18 verdi su 18, al prezzo di due permessi dichiarati (§7-bis.1) |
-| **Q3** | come si resta ciechi al desktop? | ⭐⭐ **CHIUSA CON UN `[M]`, 26 agosto 2026**: le stesse otto verifiche girano su **Mutter e su KWin** senza una riga cambiata — 18/18 su tutt'e due (§7-bis.7) |
-| **Q4** | un utente per scatola: che cosa si perde? | ⚠ **la correttezza a più utenti, che non è capienza** ⇒ ❓ **§4.4, decide l'utente** |
-| **Q5** | quanto deve durare la famiglia veloce? | ✅ `[?]` **3 minuti**, provvisorio, da misurare (§5.1) |
-| **Q6** | la marca è la strada giusta? | ✅ *«sì, ma da sola no»* ⇒ **§4.3** |
+| **Q1** | what class of regression does the design not catch? | ✅ **answered**, and it became **§6** |
+| **Q2** | does the container hold the piece that keeps count of who is connected? | ⭐⭐ **CLOSED WITH AN `[M]`, 26 Aug 2026: YES** — 18 greens out of 18, at the price of two declared permissions (§7-bis.1) |
+| **Q3** | how does one stay blind to the desktop? | ⭐⭐ **CLOSED WITH AN `[M]`, 26 Aug 2026**: the same eight checks run on **Mutter and on KWin** without one line changed — 18/18 on both (§7-bis.7) |
+| **Q4** | one user per box: what is lost? | ⚠ **correctness with several users, which is not capacity** ⇒ ❓ **§4.4, the user decides** |
+| **Q5** | how long must the fast family last? | ✅ `[?]` **3 minutes**, provisional, to be measured (§5.1) |
+| **Q6** | is the mark the right route? | ✅ *«yes, but not on its own»* ⇒ **§4.3** |
 
-## 8.1 ⚠ E una cosa che nessuno dei due revisori ha detto, e va scritta
+## 8.1 ⚠ And something neither of the two reviewers said, and it must be written
 
-⛔ **Tutt'e due hanno accettato senza discutere la premessa più fragile del disegno**: che il
-contenitore debba ospitare **il prodotto intero**. ⇒ Non è stato chiesto a nessuno se esista un
-taglio diverso — per esempio il desktop dentro e il server fuori.
-⚠ La risposta breve è che **non si può**, perché il prodotto accende il compositore **dentro** la
-sessione che governa lui. ⭐ Ma è una `[?]` mai messa alla prova, e va lasciata scritta invece che
-data per chiusa.
+⛔ **Both accepted without discussion the most fragile premise of the design**: that the
+container must host **the whole product**. ⇒ Nobody was asked whether a different
+cut exists — for example the desktop inside and the server outside.
+⚠ The short answer is that **it cannot be done**, because the product switches on the compositor **inside** the
+session it governs. ⭐ But it is a `[?]` never put to the test, and it must be left written instead of
+taken as closed.
 
 ---
 
-# §9 · I criteri di chiusura della fase
+# §9 · The closing criteria of the phase
 
-*Proposti dalla revisione, accolti: la fase **non è chiusa** se manca uno di questi.*
+*Proposed by the review, accepted: the phase **is not closed** if one of these is missing.*
 
-*⭐ Aggiornati il **26 agosto 2026**, mattina, con quel che è stato fatto nella notte.*
+*⭐ Updated on **26 Aug 2026**, morning, with what was done during the night.*
 
-| # | | a che punto |
+| # | | where it stands |
 |---|---|---|
-| 1 | il **passo 0** è stato eseguito e scritto, con esito `[M]` | ✅ **18/18 su quattro desktop** |
-| 2 | esiste **una** scatola GNOME che gira | ✅ ⭐ **ne esistono quattro** |
-| 3 | ⭐⭐ **la rete diventa rossa sul collaudo A senza suggerimenti** | ✅ `[M]` 5 sessioni cieche su 10 giudicate |
-| 4 | la rete prende il **collaudo B**, ⚠ oppure è scritto perché non può e come si compensa | ✅ ⭐ **preso**: col guasto innestato il **secondo** inquilino non apre il browser, il primo sì (§7-bis.10) |
-| 5 | le prove visive **non si basano solo sulla marca** | ✅ colore con **tolleranza dichiarata** + istogramma + il «prima» |
-| 6 | il **gancio** è definito per percorso, non per buona volontà | ✅ ⭐ `11-gancio.sh`, e ha già girato sul vero (§7-bis.16) |
-| 7 | esiste la **politica del rosso** | ✅ §5.2 |
-| 8 | la rete ha **almeno una prova che controlla sé stessa** | ✅ ⭐⭐ **cinque**: C11 · C12 · C13 · C14 · **C15**, che non era nella lista ed era il buco più serio (§7-bis.19) |
-| 9 | il **tempo** della famiglia veloce è misurato, non stimato | ✅ ⭐ `[M]` **173 s** su un tetto di **180**, e il **giro intero** `[M]` **7 896 s** (§7-bis.19). ⛔ La veloce è **piena**: una maglia in più si **scambia**, non si somma |
-| 10 | ⛔ **quel che la rete non prende è scritto** | ✅ §6, ⭐ **compreso quel che oggi non può guardare e perché** |
-| 12 | ⭐⭐⭐ **e la lista è finita**: undici prove del prodotto e cinque della rete, **tutte scritte, tutte certificate, tutte fatte girare** | ✅ `[M]` 27 ago: **57 esiti `0`**, **23 guasti innestati visti su 25**, ⛔ **nessun rosso del banco** (§7-bis.19) |
-| 11 | ⭐⭐ e il criterio dell'utente, che sta sopra tutti: **la rete ha preso qualcosa che l'occhio non avrebbe preso**. Se no, **la fase è fallita e va detto** | ✅ ⭐⭐⭐⭐ **sì, e il conto è un altro adesso**: ⭐ **il difetto più vecchio del progetto**, chiuso il 27 ago — i gruppi `video` e `render` (§7-bis.19) · **cinque cure nel prodotto**, ognuna nata da una maglia · ⛔ **dieci difetti nelle maglie stesse**, due dei quali erano in **nove maglie su nove** · e prima ancora: **sì, e cinque volte**: la sessione che nasce cieca · il secondo inquilino che non apre il browser · ⛔ **tre rossi del BANCO** che sarebbero passati per difetti del prodotto (§7-bis.11) · ⭐ **le quattro righe di registro senza inquilino** · ⭐⭐ **il suono che su GNOME arriva a un quarantesimo** — e quest'ultimo **nessun occhio l'avrebbe visto**, perché il suono c'era ed era forte (§7-bis.18) |
+| 1 | **step 0** has been run and written, with outcome `[M]` | ✅ **18/18 on four desktops** |
+| 2 | **one** GNOME box exists that runs | ✅ ⭐ **four of them exist** |
+| 3 | ⭐⭐ **the net turns red on acceptance test A without hints** | ✅ `[M]` 5 blind sessions out of 10 judged |
+| 4 | the net catches **acceptance test B**, ⚠ or it is written why it cannot and how it is compensated | ✅ ⭐ **caught**: with the fault injected the **second** tenant does not open the browser, the first does (§7-bis.10) |
+| 5 | the visual tests **do not rest on the mark alone** | ✅ colour with **declared tolerance** + histogram + the «before» |
+| 6 | the **hook** is defined by path, not by good will | ✅ ⭐ `11-gancio.sh`, and it has already run on the real thing (§7-bis.16) |
+| 7 | the **red policy** exists | ✅ §5.2 |
+| 8 | the net has **at least one test that checks itself** | ✅ ⭐⭐ **five**: C11 · C12 · C13 · C14 · **C15**, which was not in the list and was the most serious hole (§7-bis.19) |
+| 9 | the **time** of the fast family is measured, not estimated | ✅ ⭐ `[M]` **173 s** on a cap of **180**, and the **whole round** `[M]` **7 896 s** (§7-bis.19). ⛔ The fast one is **full**: an extra mesh is **swapped**, not added |
+| 10 | ⛔ **what the net does not catch is written** | ✅ §6, ⭐ **including what today it cannot look at and why** |
+| 12 | ⭐⭐⭐ **and the list is finished**: eleven product tests and five of the net, **all written, all certified, all run** | ✅ `[M]` 27 Aug: **57 outcomes `0`**, **23 injected faults seen out of 25**, ⛔ **no bench red** (§7-bis.19) |
+| 11 | ⭐⭐ and the user's criterion, which stands above all: **the net caught something the eye would not have caught**. If not, **the phase has failed and it must be said** | ✅ ⭐⭐⭐⭐ **yes, and the count is another one now**: ⭐ **the oldest defect of the project**, closed on 27 Aug — the `video` and `render` groups (§7-bis.19) · **five cures in the product**, each born from a mesh · ⛔ **ten defects in the meshes themselves**, two of which were in **nine meshes out of nine** · and before that: **yes, and five times**: the session that is born blind · the second tenant who does not open the browser · ⛔ **three BENCH reds** that would have passed for product defects (§7-bis.11) · ⭐ **the four log lines without a tenant** · ⭐⭐ **the sound that on GNOME arrives at a fortieth** — and this last one **no eye would have seen**, because the sound was there and it was loud (§7-bis.18) |
 
 ---
 
-# §10 · Che cosa resta `[?]` all'apertura
+# §10 · What stays `[?]` at the opening
 
 | | |
 |---|---|
-| ~~`[?]`~~ ⭐ **`[M]`** | ~~se il contenitore regga il pezzo di sistema che tiene il conto di chi è collegato~~ ⇒ **passo 0 eseguito il 26 agosto 2026: regge, 18 su 18** (§7-bis.1) |
-| ~~`[?]`~~ ⭐ **`[M]`** | ~~quanto dura davvero la famiglia veloce~~ ⇒ **153 s su 180**. ⛔ E il tetto è **pieno**: qualunque maglia in più va **scambiata**, non sommata |
-| ~~❓~~ ⭐ **chiusa** | ~~come si esegue C8~~ ⇒ **in una scatola, con due inquilini** (risposta dell'utente, §4.4), e ⭐ **il collaudo è passato** (§7-bis.10) |
-| ~~`[?]`~~ ⭐ **`[M]`** | ~~se le quattro scatole davvero non si disturbano~~ ⇒ **misurato**: stesso esito sole e in parallelo, quattro su quattro (§7-bis.15). ⚠ **Resta fuori** la contesa vera sulla scheda grafica, che vuole sessioni vive |
-| `[?]` | se esista un taglio diverso fra contenitore e prodotto (§8.1) |
-| ~~❓ decide l'utente~~ ✅ **deciso** | il **registro del gancio** va in git — deciso dall'utente il 27 agosto 2026. ⭐ Con `merge=union` in `.gitattributes`: il quaderno è fatto di righe che si **aggiungono**, e due macchine che scrivono in giorni diversi non sono un conflitto da risolvere a mano. ⚠ Il prezzo, dichiarato: il file risulta modificato a ogni giro |
-| ⛔ **APERTO, ed è la fase 12** | ⭐ `[M]` **il prodotto sa avviare solo GNOME** (`src/sessione.c` · `scrivi_dropin()`) ⇒ C1 dà rosso su kde/xfce/lxqt, ed è **l'unico rosso** che il giro intero produce. ⚠ E una cosa che la fase 12 troverà: ⛔ **KWin non sa nascere cieco** — con `--output-count 0` un'uscita la fa lo stesso, quindi il disegno «zero monitor propri» **non si trasporta uguale** |
-| ⚠ **debito dichiarato** | il **palco muore con la connessione D-Bus del figlio** ⇒ sulla carta contraddice I4. ⭐ Ma `[M]` C6 misura **verde**: le finestre si ritrovano. ⇒ Scritto, non curato — la cura è architetturale (`DECISIONI.md` §4.6-teretvicies) |
-| ~~⛔ aperto~~ ⭐ **chiuso** | ~~perché la scatola non si spegne da sola~~ ⇒ **era il SEGNALE, non un'unità appesa**: `[M]` SIGTERM (il predefinito di `podman stop`) lascia la scatola in piedi **30 s su 30** — `systemd` come primo processo lo ignora; `SIGRTMIN+3` la spegne in **3,1 s**. ⇒ I «quattro minuti» erano un tetto scaduto, non un'attesa. La cura (`STOPSIGNAL` nelle ricette) è in vigore, e ⛔ l'ipotesi *«la tiene su una sessione viva»* è **smentita**: con una sessione dentro lo spegnimento è quello pulito (§7-bis.18) |
-| ~~⛔⛔ APERTO~~ ⭐ **chiuso** | ~~C5 è rossa su GNOME~~ ⇒ **era la stessa radice della sessione cieca**: senza palco il prodotto non svuotava l'anello dell'audio (`[M]` **96 489 ms** di trabocco). Curato in `src/figlio.c`; `[M]` C5 verde su tutte e quattro le scatole. *(voce vecchia: `[M]` C5 rossa su GNOME e verde sugli altri tre*: al cliente arrivano **34–41** blocchi di suono in 25 s invece di **~4 878**, e quel che arriva è forte e giusto. ⛔ Non è la scatola invecchiata (rifatta da zero, stesso rosso) e non è la soglia. `[?]` La causa non è misurata (§7-bis.18) |
-| ~~⛔ APERTO~~ ✅ **curato** | ~~4 righe di registro su 5 490 non dicono di chi parlano~~ ⇒ curato il 27 ago in `src/tastiera.c`, `tastiera.h`, `webtransport.c` — ⚠ **otto righe, non due**: le due misurate più sei gemelle nella stessa funzione. `[M]` C9 verde su tutte e quattro |
-| ❓ **decide l'utente** | il **registro del gancio** va in git o no? In git dà a C13 una memoria sola per tutte le macchine; fuori evita di avere quel file modificato a ogni giro. ⚠ E oggi ne esiste **uno solo, sulla macchina di prova** (`DECISIONI.md` §4.6-novemdecies) |
-| ~~⛔ aperto~~ ⭐ **chiuso** | ~~perché la metà dei giri di C1 non giudica~~ ⇒ **era lo sgombero**: si aspetta l'evento e non l'orologio, e `[M]` il giro dopo dà **10 giudizi su 10** (§7-bis.13) |
-| ~~⛔⛔ blocca~~ ⭐⭐⭐ **CHIUSO il 27 agosto** | **erano i gruppi `video` e `render` dell'inquilino**: `[M]` 17 sessioni su 17 vedono coi gruppi, **0 su 4** senza, e la controprova ribalta l'esito con una variabile sola (§7-bis.19). ⛔ E non era del prodotto: era della **provvista**, più una maglia che non poteva dire verde e una scatola che si rompeva da sola. *(voce vecchia: `[M]` dieci sessioni GNOME nuove su dieci nascono cieche* ⇒ C2, C3, C4, C6 e la metà B di C8 **non si possono misurare**. È il difetto APERTO della fase 10 §7.4 — ⛔ si tura curando il **prodotto**, non scrivendo un'altra maglia |
-| `[?]` | quanto costa in capienza un fotogramma in più a testa — ⚠ **fuori da questa fase**, sta in `MASTERPLAN.md` M1 |
+| ~~`[?]`~~ ⭐ **`[M]`** | ~~whether the container holds the piece of the system that keeps count of who is connected~~ ⇒ **step 0 run on 26 Aug 2026: it holds, 18 out of 18** (§7-bis.1) |
+| ~~`[?]`~~ ⭐ **`[M]`** | ~~how long the fast family really lasts~~ ⇒ **153 s out of 180**. ⛔ And the cap is **full**: any extra mesh must be **swapped**, not added |
+| ~~❓~~ ⭐ **closed** | ~~how C8 is run~~ ⇒ **in a box, with two tenants** (the user's answer, §4.4), and ⭐ **the acceptance test has passed** (§7-bis.10) |
+| ~~`[?]`~~ ⭐ **`[M]`** | ~~whether the four boxes really do not disturb each other~~ ⇒ **measured**: same outcome alone and in parallel, four out of four (§7-bis.15). ⚠ **Left out** is the real contention on the graphics card, which needs live sessions |
+| `[?]` | whether a different cut between container and product exists (§8.1) |
+| ~~❓ the user decides~~ ✅ **decided** | the **hook's log** goes into git — decided by the user on 27 Aug 2026. ⭐ With `merge=union` in `.gitattributes`: the notebook is made of lines that are **added**, and two machines writing on different days are not a conflict to resolve by hand. ⚠ The price, declared: the file shows as modified at every round |
+| ⛔ **OPEN, and it is phase 12** | ⭐ `[M]` **the product can start only GNOME** (`src/sessione.c` · `scrivi_dropin()`) ⇒ C1 gives red on kde/xfce/lxqt, and it is **the only red** the whole round produces. ⚠ And something phase 12 will find: ⛔ **KWin cannot be born blind** — with `--output-count 0` it makes an output all the same, so the «zero own monitors» design **does not carry over the same** |
+| ⚠ **declared debt** | the **stage dies with the child's D-Bus connection** ⇒ on paper it contradicts I4. ⭐ But `[M]` C6 measures **green**: the windows are found again. ⇒ Written, not cured — the cure is architectural (`DECISIONI.md` §4.6-teretvicies) |
+| ~~⛔ open~~ ⭐ **closed** | ~~why the box does not switch itself off~~ ⇒ **it was the SIGNAL, not a hung unit**: `[M]` SIGTERM (the default of `podman stop`) leaves the box standing **30 s out of 30** — `systemd` as the first process ignores it; `SIGRTMIN+3` switches it off in **3.1 s**. ⇒ The «four minutes» were an expired cap, not a wait. The cure (`STOPSIGNAL` in the recipes) is in force, and ⛔ the hypothesis *«a live session keeps it up»* is **refuted**: with a session inside the shutdown is the clean one (§7-bis.18) |
+| ~~⛔⛔ OPEN~~ ⭐ **closed** | ~~C5 is red on GNOME~~ ⇒ **it was the same root as the blind session**: without a stage the product did not empty the audio ring (`[M]` **96 489 ms** of overflow). Cured in `src/figlio.c`; `[M]` C5 green on all four boxes. *(old entry: `[M]` C5 red on GNOME and green on the other three*: **34–41** sound blocks arrive at the client in 25 s instead of **~4 878**, and what arrives is loud and right. ⛔ It is not the aged box (rebuilt from zero, same red) and it is not the threshold. `[?]` The cause is not measured (§7-bis.18) |
+| ~~⛔ OPEN~~ ✅ **cured** | ~~4 log lines out of 5 490 do not say whom they are talking about~~ ⇒ cured on 27 Aug in `src/tastiera.c`, `tastiera.h`, `webtransport.c` — ⚠ **eight lines, not two**: the two measured plus six twins in the same function. `[M]` C9 green on all four |
+| ❓ **the user decides** | does the **hook's log** go into git or not? In git it gives C13 one single memory for all machines; outside it avoids having that file modified at every round. ⚠ And today there is **only one, on the test machine** (`DECISIONI.md` §4.6-novemdecies) |
+| ~~⛔ open~~ ⭐ **closed** | ~~why half of C1's rounds do not judge~~ ⇒ **it was the clearing**: one waits for the event and not for the clock, and `[M]` the next round gives **10 judgements out of 10** (§7-bis.13) |
+| ~~⛔⛔ blocks~~ ⭐⭐⭐ **CLOSED on 27 Aug** | **it was the tenant's `video` and `render` groups**: `[M]` 17 sessions out of 17 see with the groups, **0 out of 4** without, and the counter-test overturns the outcome with one single variable (§7-bis.19). ⛔ And it did not belong to the product: it belonged to the **provisioning**, plus a mesh that could not say green and a box that broke by itself. *(old entry: `[M]` ten new GNOME sessions out of ten are born blind* ⇒ C2, C3, C4, C6 and half B of C8 **cannot be measured**. It is the OPEN defect of phase 10 §7.4 — ⛔ it is plugged by curing the **product**, not by writing another mesh |
+| `[?]` | how much an extra frame each costs in capacity — ⚠ **outside this phase**, it is in `MASTERPLAN.md` M1 |
 
 ---
 
-# §11 · ✅ **LA DOMANDA È DECADUTA** — *e la ragione vale più della risposta*
+# §11 · ✅ **THE QUESTION HAS LAPSED** — *and the reason is worth more than the answer*
 
-Questa sezione chiedeva: **«si va avanti con KDE avendo metà della rete che non può guardare, oppure
+This section asked: **«si va avanti con KDE avendo metà della rete che non può guardare, oppure
 prima si cura la sessione che nasce cieca?»**
 
-⇒ ⭐⭐ **La domanda non esiste più, perché la premessa era falsa.** `[M]` 27 agosto 2026: le sessioni
-**non nascevano cieche**. Erano tre cose sovrapposte — una **maglia** che non poteva dire verde, una
-**scatola** che si rompeva da sola, e la causa vera: ⭐ **l'inquilino non era nei gruppi `video` e
-`render`** (§7-bis.19).
+⇒ ⭐⭐ **The question no longer exists, because the premise was false.** `[M]` 27 Aug 2026: the sessions
+**were not being born blind**. They were three overlapping things — a **mesh** that could not say green, a
+**box** that broke by itself, and the real cause: ⭐ **the tenant was not in the `video` and
+`render` groups** (§7-bis.19).
 
-⇒ Le cinque prove dichiarate «bloccate» **non erano bloccate**, e oggi girano tutte.
+⇒ The five tests declared «blocked» **were not blocked**, and today they all run.
 
-> ### ⛔⛔ E la lezione è più grossa della fase
+> ### ⛔⛔ And the lesson is bigger than the phase
 >
-> Per settimane un numero — *«dieci sessioni su dieci»* — ha governato l'ordine del lavoro, il
-> rinvio di una fase, e una lista di cose «impossibili». ⛔ **Quel numero veniva da un'unica prova, e
-> quella prova non poteva produrre nessun altro risultato.**
+> For weeks a number — *«dieci sessioni su dieci»* — governed the order of the work, the
+> postponement of a phase, and a list of «impossible» things. ⛔ **That number came from one single test, and
+> that test could not produce any other result.**
 >
-> ⭐ Ci sono voluti dieci minuti a un agente il cui mandato era **«prova a smentirla»**. ⇒ La regola
-> che ne esce, e vale oltre questa fase: **quando un rosso regge da giorni e nessuno riesce a farlo
-> tornare verde, la prima domanda non è *«perché il prodotto è rotto»* ma *«questa prova sa dire
-> verde?»***. ⇒ `LEZIONI.md` §1.53.
+> ⭐ It took ten minutes for an agent whose mandate was **«prova a smentirla»**. ⇒ The rule
+> that comes out of it, and it holds beyond this phase: **when a red has held for days and nobody manages to make it
+> turn green again, the first question is not *«why is the product broken»* but *«can this test say
+> green?»***. ⇒ `LEZIONI.md` §1.53.
 
-## ⭐ Quel che resta all'utente, adesso
+## ⭐ What remains for the user, now
 
 | | |
 |---|---|
-| ✅ **il quaderno del gancio in git** | **deciso il 27 agosto**: sì, con `merge=union`. ⚠ Il prezzo è un file che risulta modificato a ogni giro |
-| ⭐ **la fase 12 è il prossimo passo, e non è più bloccata** | ⛔ Ma quel che troverà è già misurato: il prodotto **sa avviare solo GNOME** (`src/sessione.c` · `scrivi_dropin()`), ed è **l'unico rosso** che il giro intero produce. ⚠ E KWin **non sa nascere cieco**: il disegno «zero monitor propri» non si trasporta uguale |
-| ⚠ **un debito, non un lavoro** | il palco muore con la connessione D-Bus del figlio ⇒ sulla carta contraddice I4, ⭐ ma C6 misura **verde**: le finestre si ritrovano. Curarlo è architetturale, e ⇒ `DECISIONI.md` §4.6-teretvicies |
+| ✅ **the hook's notebook in git** | **decided on 27 Aug**: yes, with `merge=union`. ⚠ The price is a file that shows as modified at every round |
+| ⭐ **phase 12 is the next step, and it is no longer blocked** | ⛔ But what it will find is already measured: the product **can start only GNOME** (`src/sessione.c` · `scrivi_dropin()`), and it is **the only red** the whole round produces. ⚠ And KWin **cannot be born blind**: the «zero own monitors» design does not carry over the same |
+| ⚠ **a debt, not a job** | the stage dies with the child's D-Bus connection ⇒ on paper it contradicts I4, ⭐ but C6 measures **green**: the windows are found again. Curing it is architectural, and ⇒ `DECISIONI.md` §4.6-teretvicies |
 
 ---
 
-# §12 · Il giudizio dell'utente
+# §12 · The user's judgement
 
-*(da riempire alla chiusura)*
+*(to be filled in at closing)*
