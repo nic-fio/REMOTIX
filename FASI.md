@@ -86,7 +86,7 @@ The model is in `PIANO.md` §0.2.
 > of the browser probe**, with the scene next to every number), `F5-desktop-vero.md` and
 > `F2-6-giudizio.md` (9 each).
 >
-> ⇒ ⛔ **The rule this touches is `LEZIONI.md` §9.8**, *«la fonte sta accanto alla misura»*: the
+> ⇒ ⛔ **The rule this touches is `LEZIONI.md` §9 point 8**, *«la fonte sta accanto alla misura»*: the
 > source **is still there**, but now it is in a commit instead of a file. Whoever cites a number
 > measured from here on should know it — and the right place for a number that must survive is **the
 > phase chapter**, not the report that produced it.
