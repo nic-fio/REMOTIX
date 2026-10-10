@@ -706,7 +706,7 @@ being one without anyone seeing it.
 *Written on 13 Aug 2026, after a defect passed **under the certifications** for two days.*
 
 `RCP.md` §3.1 makes a session close by **two paths**, and the bench judging them accepted
-*«one of the two»*. ⇒ ⛔ **One of the two could have been broken forever and the bench stayed green**, because
+*«one of the two»*. ⇒ ⛔ **One of the two could have been broken all along and the bench stayed green**, because
 the other passed — and that is what happened: `[M]` the path lost was always the same one, and the red
 appeared only on the day when the one that fell was **the other**.
 
@@ -1190,10 +1190,10 @@ eye, they must have been mistaken»*.
 ⛔ **It was not needed.** Adding up what the bench **does not see**:
 
 ```
-70,3 [M] + 11,6 [M] (the browser's event queue: in the bench it is 0,165 ms
+70.3 [M] + 11.6 [M] (the browser's event queue: in the bench it is 0.165 ms
                      because the hand is SYNTHETIC)
        + [?] 4-12 (hand → event)  + [?] 16-40 (drawing → lit pixel)
-     = 102-134 ms  ⇒  0,48-0,63 bars
+     = 102-134 ms  ⇒  0.48-0.63 bars
 ```
 
 ⭐ **The user reported 0.50: the low edge of the interval.**
