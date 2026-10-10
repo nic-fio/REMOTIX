@@ -196,11 +196,10 @@ package() {
 	#   plus root excluded; pambase's pam_faillock applies as for ssh (§4.3).
 	install -Dm644 "$s/remotix.pam.arch" "$pkgdir/etc/pam.d/remotix"
 	install -Dm644 "$a/utenti-negati"    "$pkgdir/etc/remotix/utenti-negati"
-	# ⭐ the KWin capture permission: IDENTICAL, byte for byte, to the one
-	#    that `kwin_scrivi_permesso()` writes (kwin.c:48, main.c) with the binary in
-	#    /usr/lib/remotix/remotix — so the program finds it equal and
-	#    does not rewrite it.  ⚠ The code must change (§4.4): at run time only the
-	#    check (kwin.c:342), no writing as root into /usr.
+	# ⭐ the KWin capture permission, with Exec= on the binary in
+	#    /usr/lib/remotix/remotix: the package ships it and the program only
+	#    checks it at start-up (`kwin_verifica_permesso()`, kwin.c; codes
+	#    RX-KDE-001..003) — no writing as root into /usr.
 	install -Dm644 "$a/org.kde.remotix.desktop" \
 		"$pkgdir/usr/share/applications/org.kde.remotix.desktop"
 	# ⛔ DECISIONI.md §10.12 — the three belts are there but OFF: in a

@@ -31,9 +31,9 @@ func installaFinta(t *testing.T) *banco {
 	for _, u := range []string{"prova", "altro"} {
 		d := filepath.Join(b.radice, "home", u, cartellaStatoUtente)
 		os.MkdirAll(d, 0o700)
-		os.WriteFile(filepath.Join(d, fileSessione), []byte("2026-09-30 sessione di "+u+"\n"), 0o600)
+		os.WriteFile(filepath.Join(d, fileSessione), []byte("2026-09-30 session of "+u+"\n"), 0o600)
 	}
-	os.WriteFile(filepath.Join(b.radice, "home/altro", cartellaStatoUtente, "appunti.txt"), []byte("miei\n"), 0o600)
+	os.WriteFile(filepath.Join(b.radice, "home/altro", cartellaStatoUtente, "appunti.txt"), []byte("mine\n"), 0o600)
 	return b
 }
 

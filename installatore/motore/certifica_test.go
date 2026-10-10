@@ -31,17 +31,17 @@ func TestCertificaGuasti(t *testing.T) {
 			apri(b)
 		}, "GREEN"},
 		{"card that opens but does not encode the frame", func(b *banco, m *Motore) {
-			m.Amb.Esegui = codifica(`{"esito":"nessuno","codificatore":"h264_vaapi","nodo":"/dev/dri/renderD128","motivo":"il fotogramma non esce","codec":"h264","offerti":"","hevc":"nessuno","h264":"nessuno"}`, 1)
+			m.Amb.Esegui = codifica(`{"esito":"nessuno","codificatore":"h264_vaapi","nodo":"/dev/dri/renderD128","motivo":"the frame does not come out","codec":"h264","offerti":"","hevc":"nessuno","h264":"nessuno"}`, 1)
 			apri(b)
 		}, "RED"},
 		// phase 19: no fallback to the processor — no capable card (exit 3) is RED, never conditional
 		{"no card can encode (exit 3)", func(b *banco, m *Motore) {
-			m.Amb.Esegui = codifica(`{"esito":"nessuno","codificatore":"","nodo":"","motivo":"nessun nodo di rendering","codec":"h264","offerti":"","hevc":"nessuno","h264":"nessuno"}`, 3)
+			m.Amb.Esegui = codifica(`{"esito":"nessuno","codificatore":"","nodo":"","motivo":"no render node","codec":"h264","offerti":"","hevc":"nessuno","h264":"nessuno"}`, 3)
 			apri(b)
 		}, "RED"},
 		// an old binary that still says «software»: it is not the card ⇒ RED
 		{"the old software fallback", func(b *banco, m *Motore) {
-			m.Amb.Esegui = codifica(`{"esito":"software","codificatore":"libx264","nodo":"","motivo":"niente VA-API"}`, 0)
+			m.Amb.Esegui = codifica(`{"esito":"software","codificatore":"libx264","nodo":"","motivo":"no VA-API"}`, 0)
 			apri(b)
 		}, "RED"},
 		{"encoding test that does not answer", func(b *banco, m *Motore) { apri(b) }, "CONDITIONAL"},
@@ -103,7 +103,7 @@ func TestInstallazioneSchedaGuasta(t *testing.T) {
 	m := b.motore(t)
 	m.Amb.Esegui = func(_ time.Duration, nome string, _ ...string) (string, int, error) {
 		if nome == "remotix" {
-			return `{"esito":"nessuno","codificatore":"","nodo":"","motivo":"nessun nodo di rendering"}`, 3, nil
+			return `{"esito":"nessuno","codificatore":"","nodo":"","motivo":"no render node"}`, 3, nil
 		}
 		return nessunComando(0, nome)
 	}

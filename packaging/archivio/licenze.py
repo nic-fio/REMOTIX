@@ -11,7 +11,7 @@ that asks to accompany the program:
      in our packages, they carry the distribution's licence — they are listed;
   3. the engine (remotix-install, static Go): the Go library (<licenza-di-go>, from the build
      container) and the modules of installatore/vendor/ (modules.txt) with each one's LICENSE;
-A component with no licence text found is MARKED («DA VERIFICARE») and the exit code is 1: the file
+A component with no licence text found is MARKED («TO BE CHECKED») and the exit code is 1: the file
 never says more than it knows.
 """
 import glob, json, os, re, sys, urllib.request
@@ -36,7 +36,7 @@ def spdx(testo):
         return "MIT"
     if "redistribution and use in source and binary forms" in t:
         return "BSD-3-Clause" if "neither the name" in t or "may be used to endorse" in t else "BSD-2-Clause"
-    return "DA VERIFICARE"
+    return "TO BE CHECKED"
 
 
 def sezione(nome, versione, licenza, dove, testo):
@@ -101,11 +101,11 @@ for riga in open(os.path.join(vendor, "modules.txt")):
         continue
     if not trovato:
         mancano.append(f"{mod} {ver}: no LICENSE in the vendor tree")
-        sezione(mod, ver, "DA VERIFICARE", "Go module in the remotix-install binary", "(no licence text in the vendor tree: to be checked on the project)")
+        sezione(mod, ver, "TO BE CHECKED", "Go module in the remotix-install binary", "(no licence text in the vendor tree: to be checked on the project)")
         continue
     testo = "\n\n".join(open(x).read() for x in trovato)
     lic = spdx(testo)
-    if lic == "DA VERIFICARE":
+    if lic == "TO BE CHECKED":
         mancano.append(f"{mod} {ver}: licence not recognised")
     sezione(mod, ver, lic, "Go module in the remotix-install binary (" + ", ".join(os.path.relpath(x, vendor) for x in trovato) + ")", testo)
 
@@ -129,6 +129,6 @@ print(testa)
 for p in parti:
     print(p)
 if mancano:
-    print("⚠ DA VERIFICARE:\n" + "\n".join("   · " + x for x in mancano))
-    print("licenze.py: DA VERIFICARE — " + "; ".join(mancano), file=sys.stderr)
+    print("⚠ TO BE CHECKED:\n" + "\n".join("   · " + x for x in mancano))
+    print("licenze.py: TO BE CHECKED — " + "; ".join(mancano), file=sys.stderr)
     sys.exit(1)

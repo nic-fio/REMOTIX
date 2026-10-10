@@ -193,7 +193,7 @@ func preparaMacchina(t testing.TB, radice string) {
 	file := map[string]string{
 		"etc/group":                  "root:x:0:\nvideo:x:44:altro\nrender:x:991:\nprova:x:1000:\naltro:x:1001:\n",
 		"etc/passwd":                 "root:x:0:0::/root:/bin/sh\nprova:x:1000:1000::/home/prova:/bin/sh\naltro:x:1001:1001::/home/altro:/bin/sh\n",
-		"etc/remotix-esistente.conf": "vecchio contenuto dell'amministratore\n",
+		"etc/remotix-esistente.conf": "the administrator's old content\n",
 		"etc/os-release":             "ID=debian\nVERSION_ID=\"13\"\nNAME=\"Debian GNU/Linux\"\n",
 		"var/lib/finto-systemd.json": "{}",
 		// one of the four rules was already there: after the cancellation it must remain
@@ -227,7 +227,7 @@ func azioniDiProva() []AzionePiano {
 	return []AzionePiano{
 		PianoPacchetti("packages", "/var/pacchetti/remotix.pkg", "labwc"),
 		PianoScriviFile("conf-file", "/etc/remotix/engine-test.conf", "porta=7447\n", "0644"),
-		PianoScriviFile("overwritten-file", "/etc/remotix-esistente.conf", "contenuto di REMOTIX\n", "0644"),
+		PianoScriviFile("overwritten-file", "/etc/remotix-esistente.conf", "REMOTIX's content\n", "0644"),
 		PianoScriviFile("unit-file", "/etc/systemd/system/remotix-engine-test.service", "[Unit]\nDescription=prova\n[Install]\nWantedBy=multi-user.target\n", "0644"),
 		PianoUnita("unit", "remotix-engine-test.service"),
 		PianoGruppo("group-video", "prova", "video"),

@@ -69,10 +69,10 @@ override_dh_auto_install:
 	#    opened (§10.12, like the firewalld service in the .rpm): `ufw allow REMOTIX`
 	#    is done by the engine, with consent (D6), if ufw is on (fasi/17 T6).
 	install -D -m 0644 debian/remotix.ufw      $(B)/etc/ufw/applications.d/remotix
-	# KWin's capture permission.  ⛔ BYTE FOR BYTE as
-	# kwin_scrivi_permesso() (kwin.c:606) writes it with the binary in /usr/libexec/remotix:
-	# so the program finds it identical and does not rewrite it.  The code must be
-	# changed to stop writing it (only check it): noted, fasi/17 §13.1.
+	# KWin's capture permission.  ⛔ BYTE FOR BYTE the .rpm one (Arch's differs only
+	# in Exec=), with Exec= on the binary in /usr/libexec/remotix:
+	# the package ships it and the program only checks it at start-up
+	# (kwin_verifica_permesso(), kwin.c; RX-KDE-001..003), it never writes it.
 	install -D -m 0644 debian/org.kde.remotix.desktop \
 	  $(B)/usr/share/applications/org.kde.remotix.desktop
 	# ⛔ DECISIONI §10.12 — the package carries only INERT PIECES: the three belts
