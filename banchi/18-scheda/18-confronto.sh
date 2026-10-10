@@ -1,15 +1,15 @@
 #!/bin/bash
-# 18-confronto.sh — vecchia strada (libavcodec) contro nuova (libva diretta), sul
-# server, dentro `enter.sh --root` (serve l'accesso ai nodi DRM).
+# 18-confronto.sh — old path (libavcodec) against new (direct libva), on the
+# server, inside `enter.sh --root` (it needs access to the DRM nodes).
 #
 #   bash /media/REMOTIX/enter.sh --root 'bash /srv/src/f18-scheda/banchi/18-scheda/18-confronto.sh [costruisci|tutto|corto]'
 #
-# Si aspetta in $ALBERO (default /srv/src/f18-scheda/albero):
-#   src/                 il sorgente NUOVO (codificatore.c, vadiretta.c, scrittore_bit.c, registro.c…)
-#   vecchio/codificatore.c   il codificatore del commit di partenza (545ec55)
-#   banchi/18-scheda/    questo banco
-# Scrive in $USCITA (default /srv/src/f18-scheda/tmp/confronto): i flussi, i
-# registri, `esiti.jsonl` (una riga per prova) e la tabella (`18-tabella.py`).
+# It expects in $ALBERO (default /srv/src/f18-scheda/albero):
+#   src/                 the NEW source (codificatore.c, vadiretta.c, scrittore_bit.c, registro.c…)
+#   vecchio/codificatore.c   the encoder of the starting commit (545ec55)
+#   banchi/18-scheda/    this bench
+# It writes in $USCITA (default /srv/src/f18-scheda/tmp/confronto): the streams, the
+# logs, `esiti.jsonl` (one line per test) and the table (`18-tabella.py`).
 set -u
 ALBERO=${ALBERO:-/srv/src/f18-scheda/albero}
 USCITA=${USCITA:-/srv/src/f18-scheda/tmp/confronto}
@@ -24,30 +24,30 @@ costruisci() {
 	local INC LIBS
 	INC=$(pkg-config --cflags libva libva-drm libavcodec libavutil libswscale gbm libdrm)
 	LIBS=$(pkg-config --libs libva libva-drm libavcodec libavutil libswscale gbm)
-	# ⭐ Il NUOVO e' l'albero del prodotto dopo l'integrazione (fase 18): niente
-	#    ffmpeg — i colori sono colori709.c.  ⛔ Fase 19: il ripiego in software
-	#    (ripiego.c: OpenH264, SVT-AV1) e' uscito, e con lui `--software`, che
-	#    adesso il codificatore rifiuta dicendolo.  ⚠ libav* qui sotto serve
-	#    SOLO al vecchio.
-	echo "== costruisco 18-confronto-nuovo"
-	# ⭐ Fase 19 (innesto, 1 ott 2026): `codificatore.c` porta dentro anche la
-	#    strada Vulkan (`vulkanvideo.c`, `-lvulkan`); questo banco chiede
-	#    `h264_vaapi`/`hevc_vaapi` PER NOME, quindi misura la strada VA-API —
-	#    «niente peggio di prima» sulla Intel e sulla Radeon in VA-API.
+	# ⭐ The NEW one is the product tree after the integration (phase 18): no
+	#    ffmpeg — the colours are colori709.c.  ⛔ Phase 19: the software fallback
+	#    (ripiego.c: OpenH264, SVT-AV1) is gone, and with it `--software`, which
+	#    the encoder now refuses, saying so.  ⚠ libav* below serves
+	#    ONLY the old one.
+	echo "== building 18-confronto-nuovo"
+	# ⭐ Phase 19 (graft, 1 Oct 2026): `codificatore.c` also carries the
+	#    Vulkan path (`vulkanvideo.c`, `-lvulkan`); this bench asks for
+	#    `h264_vaapi`/`hevc_vaapi` BY NAME, so it measures the VA-API path —
+	#    «nothing worse than before» on the Intel and on the Radeon in VA-API.
 	gcc $F $(pkg-config --cflags vulkan) $INC -Wno-missing-field-initializers -o "$USCITA/18-confronto-nuovo" \
 		banchi/18-scheda/18-confronto.c \
 		src/codificatore.c src/vadiretta.c src/vulkanvideo.c src/scrittore_bit.c src/colori709.c \
 		src/registro.c $(pkg-config --libs libva libva-drm gbm vulkan) -lm || return 1
 	if nm -u "$USCITA/18-confronto-nuovo" | grep -qE ' (av_|avcodec_|sws_)'; then
-		echo "⛔ il NUOVO chiama ancora ffmpeg"; return 1
+		echo "⛔ the NEW one still calls ffmpeg"; return 1
 	fi
-	echo "== costruisco 18-confronto-vecchio"
+	echo "== building 18-confronto-vecchio"
 	gcc $F $INC -o "$USCITA/18-confronto-vecchio" banchi/18-scheda/18-confronto.c \
 		vecchio/codificatore.c src/registro.c $LIBS -lm || return 1
-	echo "== costruiti"
+	echo "== built"
 }
 
-# prova NOME VERSIONE NODO CODEC PROF MISURA STRADA [argomenti extra…]
+# prova NAME VERSION NODE CODEC DEPTH SIZE PATH [extra arguments…]
 prova() {
 	local nome=$1 versione=$2 nodo=$3 codec=$4 prof=$5 misura=$6 strada=$7; shift 7
 	local flusso="$USCITA/$nome-$versione.bin" registro="$USCITA/$nome-$versione.registro"
@@ -64,18 +64,18 @@ prova() {
 	local json
 	json=$(tail -1 "$csv")
 	[ "${json:0:1}" = "{" ] || json='{"esito":"nessuna riga"}'
-	# la decodifica con ffmpeg, fotogramma per fotogramma
+	# decoding with ffmpeg, frame by frame
 	local fmt=$codec; [ "$codec" = hevc ] && fmt=hevc
 	local decodificati errori_dec
 	errori_dec=$(ffmpeg -v error -f $fmt -i "$flusso" -f null - 2>&1 | grep -c .)
 	decodificati=$(ffprobe -v error -f $fmt -count_frames -show_entries stream=nb_read_frames -of csv=p=0 "$flusso" 2>/dev/null)
 	local probe
 	probe=$(ffprobe -v error -f $fmt -show_entries stream=profile,level,width,height,pix_fmt,color_range,color_space,color_transfer,color_primaries -of csv=p=0 "$flusso" 2>/dev/null | head -1)
-	# PSNR e SSIM contro la sorgente, solo se la misura non e' cambiata a meta'
+	# PSNR and SSIM against the source, only if the size did not change halfway
 	local psnr="" ssim=""
 	if [ -f "$sorgente" ] && [ -z "$(echo "$@" | grep -o ridimensiona)" ]; then
 		local pix=yuv420p; [ "$prof" = 10 ] && pix=yuv420p10le
-		# ⚠ `-v info`: i due filtri stampano il verdetto a livello info, con -v error tacciono
+		# ⚠ `-v info`: the two filters print the verdict at info level, with -v error they stay silent
 		psnr=$(ffmpeg -v info -f $fmt -r $FPS -i "$flusso" -f rawvideo -pix_fmt bgr0 -s "$misura" -r $FPS -i "$sorgente" \
 			-lavfi "[1:v]scale=out_color_matrix=bt709:out_range=tv,format=$pix[r];[0:v]format=$pix[a];[a][r]psnr" -f null - 2>&1 \
 			| grep -o 'PSNR y:[0-9.inf]* u:[0-9.inf]* v:[0-9.inf]* average:[0-9.inf]*' | tail -1 | sed 's/PSNR //')
@@ -107,11 +107,11 @@ matrice() {
 			done
 		done
 	done
-	# le tre prove «a caldo», 1080p, strada della scheda, H.264 e HEVC 8, sui due nodi
+	# the three «hot» tests, 1080p, card path, H.264 and HEVC 8, on the two nodes
 	for nodo in $nodi; do
 		for codec in h264 hevc; do
 			local base="D$nodo-${codec}8-1920x1080"
-			echo "== $base chiave a richiesta / tela nuova / tetto"
+			echo "== $base key on request / new canvas / cap"
 			for versione in vecchio nuovo; do
 				prova "$base-chiave" "$versione" "$nodo" "$codec" 8 1920x1080 scheda --chiave-a 40
 				prova "$base-tela" "$versione" "$nodo" "$codec" 8 1920x1080 scheda --ridimensiona-a 60:1280x720
@@ -130,5 +130,5 @@ tutto|corto)
 	python3 banchi/18-scheda/18-tabella.py "$USCITA/esiti.jsonl" | tee "$USCITA/tabella.txt"
 	rm -f "$USCITA"/sorgente-*.bgrx
 	;;
-*) echo "azione ignota: $AZIONE"; exit 2 ;;
+*) echo "unknown action: $AZIONE"; exit 2 ;;
 esac

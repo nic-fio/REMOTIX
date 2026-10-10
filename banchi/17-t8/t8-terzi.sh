@@ -19,7 +19,7 @@
 #                     installable (apt: pin -1 on the host; dnf: includepkgs);
 #   <output>/estranea.gpg/  the keyring of the foreign key (for R17: a wrong signature).
 set -euo pipefail
-U=$(realpath -m "${1:?uscita}")
+U=$(realpath -m "${1:?output}")
 mkdir -p "$U/terzi/deb/pool" "$U/terzi/rpm" "$U/intrusi" "$U/lavoro"
 export TMPDIR=$U/lavoro LC_ALL=C
 G=$U/estranea.gpg

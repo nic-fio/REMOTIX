@@ -1,12 +1,12 @@
 /*
- * 18-software-openh264-vuota.c — una copia VUOTA di OpenH264, per provare che
- * il ripiego la riconosce (fase 18).  Imita `noopenh264` di Fedora/EPEL/
- * openSUSE: stessi nomi, nessuna codifica.
+ * 18-software-openh264-vuota.c — an EMPTY copy of OpenH264, to prove that
+ * the fallback recognises it (phase 18).  It mimics `noopenh264` of Fedora/EPEL/
+ * openSUSE: same names, no encoding.
  *
  *   gcc -shared -fPIC -o libopenh264.so.8 18-software-openh264-vuota.c
  *   LD_LIBRARY_PATH=. ./18-software-confronto rifiuti
  *
- * VUOTA=1 (difetto): WelsCreateSVCEncoder fallisce.  VUOTA=0: mancano i simboli.
+ * VUOTA=1 (default): WelsCreateSVCEncoder fails.  VUOTA=0: the symbols are missing.
  */
 #include <stddef.h>
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""18-tabella.py — la tabella vecchio/nuovo dagli esiti di 18-confronto.sh.
+"""18-tabella.py — the old/new table from the outcomes of 18-confronto.sh.
 
-Per ogni prova mette in colonna le due versioni: ffprobe (profilo, livello,
-misura, colore) IDENTICO o no, i fotogrammi decodificati, PSNR, SSIM, i byte
-del flusso e della chiave, i tempi mediani per fotogramma.  ⛔ Il verdetto
-«peggio» si scrive coi numeri: PSNR piu' basso di 0,5 dB, o byte oltre il 10 %
-in piu', o codifica oltre il 20 % piu' lenta.
+For each test it puts the two versions side by side: ffprobe (profile, level,
+size, colour) IDENTICAL or not, the decoded frames, PSNR, SSIM, the bytes
+of the stream and of the key frame, the median times per frame.  ⛔ The verdict
+«worse» is written with numbers: PSNR lower by 0.5 dB, or bytes more than 10 %
+higher, or encoding more than 20 % slower.
 """
 import csv, io, json, os, statistics, sys
 
@@ -38,7 +38,7 @@ for e in esiti:
     per_prova.setdefault(e["prova"], {})[e["versione"]] = e
 
 def num(x):
-    """il PSNR e' «y:.. u:.. v:.. average:..»: si giudica la media, si stampa tutto"""
+    """the PSNR is «y:.. u:.. v:.. average:..»: the average is judged, everything is printed"""
     try:
         if "average:" in str(x):
             x = str(x).split("average:")[1]
@@ -52,7 +52,7 @@ for prova, v in per_prova.items():
     for versione in ("vecchio", "nuovo"):
         e = v.get(versione)
         if not e:
-            print(f"{prova:38} {versione:7} MANCA"); continue
+            print(f"{prova:38} {versione:7} MISSING"); continue
         t = tempi(prova, versione) or {}
         print(f"{prova:38} {versione:7} {e['codice']:<4} {e['decodificati']:>4} {str(num(e['psnr']) or '')[:6]:>6} {str(e['ssim'])[:6]:>6} "
               f"{e['byte_flusso']:>9} {t.get('chiave',0):>8} {t.get('delta',0):>7.0f} {t.get('cod',0):>7.0f} {t.get('prep',0):>7.0f}  {e['ffprobe']} · {e['psnr']}")
@@ -60,9 +60,9 @@ for prova, v in per_prova.items():
     if a and b:
         note = []
         if a["ffprobe"] != b["ffprobe"]:
-            note.append(f"ffprobe DIVERSO: «{a['ffprobe']}» → «{b['ffprobe']}»")
+            note.append(f"ffprobe DIFFERENT: «{a['ffprobe']}» → «{b['ffprobe']}»")
         if a["decodificati"] != b["decodificati"]:
-            note.append(f"decodificati {a['decodificati']} → {b['decodificati']}")
+            note.append(f"decoded {a['decodificati']} → {b['decodificati']}")
         pa, pb = num(a["psnr"]), num(b["psnr"])
         if pa and pb and pb < pa - 0.5:
             note.append(f"PSNR {pa:.2f} → {pb:.2f} dB")
@@ -70,15 +70,15 @@ for prova, v in per_prova.items():
             note.append(f"byte +{(b['byte_flusso']/a['byte_flusso']-1)*100:.0f} %")
         ta, tb = tempi(prova, "vecchio"), tempi(prova, "nuovo")
         if ta and tb and tb["cod"] > ta["cod"] * 1.20:
-            note.append(f"codifica {ta['cod']:.0f} → {tb['cod']:.0f} µs")
+            note.append(f"encoding {ta['cod']:.0f} → {tb['cod']:.0f} µs")
         if b["codice"] != 0 or int(b.get("errori_decodifica", 0)) > 0:
-            note.append(f"il NUOVO ha codice {b['codice']} e {b.get('errori_decodifica')} errori di decodifica")
+            note.append(f"the NEW one has code {b['codice']} and {b.get('errori_decodifica')} decoding errors")
         if note:
             peggio.append(f"{prova}: " + " · ".join(note))
 print()
 if peggio:
-    print("⛔ DOVE IL NUOVO NON E' UGUALE O E' PEGGIO:")
+    print("⛔ WHERE THE NEW ONE IS NOT EQUAL OR IS WORSE:")
     for r in peggio:
         print("   " + r)
 else:
-    print("⭐ nessuna prova in cui il nuovo sia peggio del vecchio (ffprobe, decodifica, PSNR, byte, tempi)")
+    print("⭐ no test in which the new one is worse than the old (ffprobe, decoding, PSNR, bytes, times)")

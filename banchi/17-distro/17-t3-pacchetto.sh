@@ -19,7 +19,7 @@
 #    sees whether uninstalling removes a group that was there (R33, ⛔ it must not).
 # ⛔ Between "fingerprint before" and "installa" nothing is touched by hand: that is R4.
 set -euo pipefail
-m=${1:?macchina}; passo=${2:?passo}
+m=${1:?machine}; passo=${2:?step}
 R=/media/REMOTIX/vm17
 T3=${T3:-$R/t3}
 QUI=$(cd "$(dirname "$0")" && pwd)
@@ -42,14 +42,14 @@ echo 'prova:$PAROLA' | sudo chpasswd
 sudo gpasswd -a prova video >/dev/null
 id prova" ;;
 impronta)
-	nome=${3:?nome}
+	nome=${3:?name}
 	# shellcheck disable=SC2086
 	scp -q $O -P "$PORTA_SSH" "$QUI/17-t3-impronta-arch.sh" nicfio@localhost:/var/tmp/
 	VM 'sudo bash /var/tmp/17-t3-impronta-arch.sh' >"$T3/$m/impronta-$nome.txt"
 	VM 'rm -f /var/tmp/17-t3-impronta-arch.sh'
 	wc -l "$T3/$m/impronta-$nome.txt" ;;
 installa)
-	pkg=${3:?pacchetto}
+	pkg=${3:?package}
 	# shellcheck disable=SC2086
 	scp -q $O -P "$PORTA_SSH" "$pkg" nicfio@localhost:/var/tmp/
 	b=$(basename "$pkg")

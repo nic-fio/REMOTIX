@@ -31,7 +31,7 @@
 # ⛔ At most 2 VMs of this bench and 4 in all; it does not power off a machine started by others.
 # Evidence in /media/REMOTIX/vm17/t6/esiti/<machine>/.
 set -uo pipefail
-m=${1:?macchina}; passo=${2:?passo}; shift 2
+m=${1:?machine}; passo=${2:?step}; shift 2
 R=/media/REMOTIX/vm17
 T6=$R/t6
 E=$T6/esiti/$m
@@ -55,7 +55,7 @@ t() { date +%H:%M:%S; }
 
 case $passo in
 accendi)
-	foto=${1:?foto}
+	foto=${1:?photo}
 	if pgrep -f "qemu-system.*-name rx-$m " >/dev/null; then echo "⛔ $m is already running"; exit 2; fi
 	[ "$(pgrep -c '^qemu-system')" -lt 4 ] || { echo "⛔ 4 VMs already running"; exit 2; }
 	rm -rf "$E"; mkdir -p "$E"
@@ -148,7 +148,7 @@ cmd)
 	vm "sudo sh -c '$*'" 2>&1 | tee -a "$E/comandi.txt"
 	;;
 spegni)
-	foto=${1:?foto}
+	foto=${1:?photo}
 	$V ferma "$m" >/dev/null 2>&1; $V torna "$m" "$foto" >/dev/null 2>&1; echo "   $m powered off, back to \"$foto\""
 	;;
 *) sed -n 3,24p "$0"; exit 2 ;;

@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-18-software-webcodecs.py — fase 18: il flusso del ripiego dato a un Chrome VERO
-(headless, sulla macchina di prova) con `VideoDecoder`, come fa la pagina.
+18-software-webcodecs.py — phase 18: the fallback stream given to a REAL Chrome
+(headless, on the test machine) with `VideoDecoder`, as the page does.
 
     python3 18-software-webcodecs.py DIR PORTA flusso:codec [flusso:codec …]
 
-DIR contiene i flussi, i loro .csv (dal banco `18-software-confronto`) e le
-impronte di ffmpeg (<flusso>.ffmpeg.json: la somma della luma di ogni
-fotogramma).  Per ogni flusso e ogni `hardwareAcceleration` apre la pagina
-`18-software-webcodecs.html`, aspetta l'esito (la pagina lo manda con un POST)
-e lo confronta fotogramma per fotogramma con ffmpeg.
+DIR holds the streams, their .csv (from the `18-software-confronto` bench) and the
+ffmpeg fingerprints (<flusso>.ffmpeg.json: the sum of the luma of each
+frame).  For each stream and each `hardwareAcceleration` it opens the page
+`18-software-webcodecs.html`, waits for the outcome (the page sends it with a POST)
+and compares it frame by frame with ffmpeg.
 
-⚠ Ascolta SOLO su 127.0.0.1 e su una porta che non e' del prodotto (mai
-  7447/7448), e il profilo di Chrome e' una cartella sua, buttata alla fine.
+⚠ It listens ONLY on 127.0.0.1 and on a port that is not the product's (never
+  7447/7448), and the Chrome profile is a folder of its own, thrown away at the end.
 """
 import http.server
 import json
@@ -80,7 +80,7 @@ for flusso, codec in CASI:
             time.sleep(0.5)
             for r in open(registro, errors="replace"):
                 if "F18ESITO " in r:
-                    # la riga di console: "F18ESITO {json}", source: …
+                    # the console line: "F18ESITO {json}", source: …
                     corpo = r.split("F18ESITO ", 1)[1]
                     corpo = corpo[:corpo.rindex("}") + 1].replace('\\"', '"')
                     esiti[chiave] = json.loads(corpo)
@@ -93,13 +93,13 @@ for flusso, codec in CASI:
         if not e:
             righe = [r.strip()[-160:] for r in open(os.path.join(profilo, "chrome.log"), errors="replace")
                      if "F18" in r or "CONSOLE" in r]
-            print(f"⛔ {flusso} [{codec}, {hw}]: nessun esito in 120 s · console: {righe[-4:]}")
+            print(f"⛔ {flusso} [{codec}, {hw}]: no outcome in 120 s · console: {righe[-4:]}")
             continue
         imp = e.get("impronte", [])
         uguali = sum(1 for a, b in zip(imp, rif) if a == b)
-        print(f"{flusso} [{codec}, {hw}]: supportato {e['supportato']} · {e['uscite']} fotogrammi "
-              f"su {e.get('chunk')} chunk · {e.get('l')}x{e.get('a')} {e.get('formato')} · errori "
-              f"{e['errori'] or 'nessuno'} · luma identica a ffmpeg in {uguali} su {len(rif)}")
+        print(f"{flusso} [{codec}, {hw}]: supported {e['supportato']} · {e['uscite']} frames "
+              f"from {e.get('chunk')} chunks · {e.get('l')}x{e.get('a')} {e.get('formato')} · errors "
+              f"{e['errori'] or 'none'} · luma identical to ffmpeg in {uguali} out of {len(rif)}")
 
 srv.shutdown()
 shutil.rmtree(profilo, ignore_errors=True)

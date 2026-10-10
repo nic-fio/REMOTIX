@@ -22,7 +22,7 @@ byte() {  # changes one byte in the middle of the file
 	python3 -c "import sys; p=sys.argv[1]; b=bytearray(open(p,'rb').read()); i=len(b)//2; b[i]^=0x20; open(p,'wb').write(bytes(b))" "$1"
 }
 [ "${1:-}" = ripristina ] || { [ -d "$S" ] || cp -a "$A" "$S"; }
-case ${1:?guasto} in
+case ${1:?fault} in
 ripristina)       [ -d "$S" ] && { rm -rf "$A"; cp -a "$S" "$A"; rm -rf "$S"; } ;;
 deb-byte)         byte "$A/deb/dists/debian13-stabile/main/binary-amd64/Packages"; rm -f "$A/deb/dists/debian13-stabile/main/binary-amd64/Packages.gz" ;;
 deb-firma)        d=$A/deb/dists/debian13-stabile; ge --clearsign -o "$d/InRelease" "$d/Release"; ge --armor --detach-sign -o "$d/Release.gpg" "$d/Release" ;;

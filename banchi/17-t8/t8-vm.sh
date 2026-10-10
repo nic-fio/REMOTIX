@@ -32,7 +32,7 @@
 # ⛔ At most 2 VMs of this bench and 4 in all; it does not power off a machine already started by others.
 # Evidence in /media/REMOTIX/vm17/t8/esiti/<machine>/.
 set -uo pipefail
-m=${1:?macchina}; passo=${2:?passo}; shift 2
+m=${1:?machine}; passo=${2:?step}; shift 2
 R=/media/REMOTIX/vm17
 T8=${T8:-$R/t8}
 QUI=$(cd "$(dirname "$0")" && pwd)
@@ -82,7 +82,7 @@ sudo dnf install -y terzi-prova 2>&1 | tail -2; rpm -q terzi-prova" ;;
 	esac 2>&1 | tee "$E/terzi.txt"
 	;;
 impronta)
-	nome=${1:?nome}
+	nome=${1:?name}
 	vm 'sudo bash -s' <"$R/t4/$IMPRONTA" >"$E/impronta-$nome.txt" 2>"$E/impronta-$nome.err"
 	vm "sudo sh -c 'for f in /etc/apt/sources.list.d/* /etc/apt/keyrings/* /etc/apt/trusted.gpg.d/* /etc/apt/preferences.d/* /usr/share/keyrings/* /etc/yum.repos.d/* /etc/pki/rpm-gpg/* /etc/pacman.conf; do [ -f \$f ] && sha256sum \$f; done 2>/dev/null; ls -la /etc/apt/trusted.gpg.d 2>/dev/null; rpm -q gpg-pubkey 2>/dev/null; pacman-key --list-keys 2>/dev/null | grep -c ^pub'" >"$E/depositi-$nome.txt" 2>&1
 	echo "   fingerprint \"$nome\": $(wc -l <"$E/impronta-$nome.txt") lines; repositories: $(wc -l <"$E/depositi-$nome.txt") lines"

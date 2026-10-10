@@ -29,7 +29,7 @@
 #   on Debian 13 (GNOME 48), Ubuntu 26.04 (GNOME 50) and Arch (KDE).  With the
 #   diagnostic binary (memory from the start) the rest of the chain can be tested.
 set -euo pipefail
-m=${1:?macchina}; b=${2:?bersaglio}; q=${3:-prodotto}
+m=${1:?machine}; b=${2:?target}; q=${3:-prodotto}
 R=/media/REMOTIX/vm17
 T1C=${T1C:-$R/t1c}
 VM="bash $R/17-vm.sh ssh $m"

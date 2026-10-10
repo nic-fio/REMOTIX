@@ -1,41 +1,41 @@
 /*
- * 18-a1 — Opus senza ffmpeg: il flusso che esce e' lo stesso di prima?
+ * 18-a1 — Opus without ffmpeg: is the stream that comes out the same as before?
  *
- * ⛔ LA DOMANDA (fase 18, linea A; `DECISIONI.md` §10.25): `src/audio.c` e'
- *    stato riscritto il 30 settembre 2026 da libavcodec a `libopus` diretta, e
- *    la condizione e' che chi riceve NON possa distinguere il prima dal dopo.
- *    ⇒ Non si giudica «suona bene»: si giudica **uguale**.
+ * ⛔ THE QUESTION (phase 18, line A; `DECISIONI.md` §10.25): `src/audio.c` was
+ *    rewritten on 30 September 2026 from libavcodec to `libopus` directly, and
+ *    the condition is that the receiver must NOT be able to tell before from after.
+ *    ⇒ We do not judge "sounds good": we judge **equal**.
  *
- * ⭐ Come: i DUE `audio.c` veri, collegati nello stesso programma —
- *      · il vecchio e' `audio-vecchio.c`, copia alla lettera di `src/audio.c`
- *        al commit 545ec55 (l'ultimo con libavcodec), coi simboli pubblici
- *        rinominati `vecchio_*` dalla riga di compilazione (vedi `costruisci.sh`);
- *      · il nuovo e' `../../src/audio.c` com'e' nell'albero.
- *    Stesso segnale a tutt'e due, blocco per blocco, attraverso la STESSA
- *    funzione che chiama il prodotto (`audio_cod_passa()`), con la cura del
- *    silenzio accesa (il predefinito) e poi spenta.
+ * ⭐ How: the TWO real `audio.c`, linked in the same program —
+ *      · the old one is `audio-vecchio.c`, a literal copy of `src/audio.c`
+ *        at commit 545ec55 (the last one with libavcodec), with the public symbols
+ *        renamed `vecchio_*` from the compile line (see `costruisci.sh`);
+ *      · the new one is `../../src/audio.c` as it is in the tree.
+ *    Same signal to both, block by block, through the SAME
+ *    function the product calls (`audio_cod_passa()`), with the silence
+ *    cure on (the default) and then off.
  *
- * Il segnale, 48 kHz stereo s16, a blocchi da 960 (20 ms):
- *   A  parlato sintetico      impulsi glottali 90-220 Hz in tre risonatori che
- *                             cambiano ogni sillaba, pause di fruscio a -60 dB
- *   B  musica                 accordi con armoniche diversi a sinistra e a
- *                             destra, colpi di rumore
- *   C  silenzio DIGITALE      tutti zero: la cura lo tace
- *   D  salti                  tono a fondo scala che entra di colpo, meta'
- *                             blocco a zero, onda quadra a ±32767 e -32768
- *   E  buchi di un blocco     un blocco a zero ogni cinque, dentro la musica
- *   F  quasi silenzio         ±1 LSB (NON e' zero: si codifica)
- *   G  rumore bianco forte    il pacchetto piu' grosso
- *   H  tono puro 440/660 Hz   a -6 dB: il controllo POSITIVO dell'allineamento
- *                             (se il `pre-skip` fosse sbagliato, qui si vede)
+ * The signal, 48 kHz stereo s16, in blocks of 960 (20 ms):
+ *   A  synthetic speech       glottal pulses 90-220 Hz in three resonators that
+ *                             change every syllable, hiss pauses at -60 dB
+ *   B  music                  chords with different harmonics left and
+ *                             right, noise hits
+ *   C  DIGITAL silence        all zero: the cure mutes it
+ *   D  jumps                  full-scale tone that comes in abruptly, half
+ *                             block at zero, square wave at ±32767 and -32768
+ *   E  one-block gaps         one block at zero every five, inside the music
+ *   F  near silence           ±1 LSB (NOT zero: it gets encoded)
+ *   G  loud white noise       the biggest packet
+ *   H  pure tone 440/660 Hz   at -6 dB: the POSITIVE check of the alignment
+ *                             (if the `pre-skip` were wrong, it shows here)
  *
- * Cosa si confronta:  pacchetti usciti e taciuti; byte per byte; dimensioni
- * (min/media/max); il TOC (configurazione, stereo, codice di trama); i
- * pacchetti da 1-2 byte (la DTX di Opus, che non deve esserci); la decodifica
- * con `libopus` (la stessa di `opusdec`) e l'errore rispetto alla sorgente,
- * per tratto, allineata sul `pre-skip`.  ⛔ E il PCM (codec 2) per completezza.
+ * What is compared:  packets out and muted; byte by byte; sizes
+ * (min/mean/max); the TOC (configuration, stereo, frame code); the
+ * 1-2 byte packets (Opus's DTX, which must not be there); the decoding
+ * with `libopus` (the same as `opusdec`) and the error against the source,
+ * per stretch, aligned on the `pre-skip`.  ⛔ And PCM (codec 2) for completeness.
  *
- * Uscita: 0 VERDE se ogni pacchetto e' identico, 1 ROSSO altrimenti.
+ * Exit: 0 VERDE if every packet is identical, 1 ROSSO otherwise.
  */
 #include "audio.h"
 
@@ -46,7 +46,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* I simboli del vecchio, rinominati da `costruisci.sh`. */
+/* The old one's symbols, renamed by `costruisci.sh`. */
 audio_cod *vecchio_cod_apri(uint8_t codec);
 void vecchio_cod_chiudi(audio_cod *c);
 bool vecchio_cod_passa(audio_cod *c, const int16_t *campioni, uint8_t *fuori,
@@ -54,14 +54,14 @@ bool vecchio_cod_passa(audio_cod *c, const int16_t *campioni, uint8_t *fuori,
 void vecchio_silenzio_taci(bool si);
 uint64_t vecchio_cod_taciuti(const audio_cod *c);
 
-/* ⚠ Il registro vero non serve: le righe si stampano, rientrate, perche'
- *   quelle dell'apertura SONO una delle cose da confrontare. */
+/* ⚠ The real log is not needed: the lines are printed, indented, because
+ *   the opening ones ARE one of the things to compare. */
 void registro_dice_in(const char *file, int linea, const char *area,
                       const char *fmt, ...)
 {
 	va_list ap;
 	(void)linea;
-	printf("      [%s %s] ", area, strstr(file, "vecchio") ? "vecchio" : "nuovo");
+	printf("      [%s %s] ", area, strstr(file, "vecchio") ? "old" : "new");
 	va_start(ap, fmt);
 	vprintf(fmt, ap);
 	va_end(ap);
@@ -70,15 +70,15 @@ void registro_dice_in(const char *file, int linea, const char *area,
 
 #define FQ 48000
 #define BL 960
-#define RITARDO 312 /* pre-skip, `[M]` 17 ago 2026 e letto di nuovo sotto */
+#define RITARDO 312 /* pre-skip, `[M]` 17 Aug 2026 and read again below */
 
 enum { T_A, T_B, T_C, T_D, T_E, T_F, T_G, T_H, T_N };
 static const char *nome_tratto[T_N] = {
-	"A parlato", "B musica", "C silenzio digitale", "D salti",
-	"E buchi di un blocco", "F quasi silenzio", "G rumore forte",
-	"H tono puro",
+	"A speech", "B music", "C digital silence", "D jumps",
+	"E one-block gaps", "F near silence", "G loud noise",
+	"H pure tone",
 };
-/* blocchi per tratto: 10 s, 10 s, 4 s, 2 s, 4 s, 4 s, 4 s, 4 s */
+/* blocks per stretch: 10 s, 10 s, 4 s, 2 s, 4 s, 4 s, 4 s, 4 s */
 static const int blocchi_tratto[T_N] = { 500, 500, 200, 100, 200, 200, 200, 200 };
 
 static uint32_t seme = 12345;
@@ -98,7 +98,7 @@ static int16_t sat(double v)
 	return (int16_t)lrint(v);
 }
 
-/* Risonatore a due poli, uno per canale per formante. */
+/* Two-pole resonator, one per channel per formant. */
 typedef struct { double a1, a2, g, y1, y2; } riso;
 static void riso_metti(riso *r, double f, double banda)
 {
@@ -115,13 +115,13 @@ static double riso_passa(riso *r, double x)
 	return y;
 }
 
-/* Genera tutto il segnale una volta: si ridà identico a ogni braccio. */
+/* Generates the whole signal once: it is given again, identical, to every arm. */
 static int16_t *segnale;
-/* `--scrivi DIR`: il braccio Opus a cura accesa lascia i suoi pacchetti per
- * `chrome.py` — due byte di lunghezza little-endian e il pacchetto, 0 = blocco
- * taciuto — e la decodifica NATIVA in float del nuovo, per il paragone. */
+/* `--scrivi DIR`: the Opus arm with the cure on leaves its packets for
+ * `chrome.py` — two bytes of little-endian length and the packet, 0 = muted
+ * block — and the NATIVE float decoding of the new one, for the comparison. */
 static const char *scrivi_in;
-static int *tratto_di; /* per blocco */
+static int *tratto_di; /* per block */
 static int blocchi_tot;
 
 static void genera(void)
@@ -205,7 +205,7 @@ static void genera(void)
 					}
 					break;
 				case T_F:
-					/* ±1 LSB, mai tutto zero in un blocco */
+					/* ±1 LSB, never all zero in a block */
 					d[i * 2] = (int16_t)((i & 1) ? 1 : -1);
 					d[i * 2 + 1] = (int16_t)((rumore() > 0) ? 1 : -1);
 					continue;
@@ -250,19 +250,19 @@ static void conta(conto *c, const uint8_t *p, size_t n)
 
 static const char *modo(int cfg)
 {
-	return cfg < 12 ? "SILK" : cfg < 16 ? "ibrido" : "CELT";
+	return cfg < 12 ? "SILK" : cfg < 16 ? "hybrid" : "CELT";
 }
 
-/* SNR per tratto, decodificato contro sorgente spostata di RITARDO.
- * ⚠ E' un errore di FORMA D'ONDA, e Opus non la conserva (il rumore lo
- *   ricostruisce per bande): i numeri bassi di A, B, G sono del codec, non del
- *   confronto, e contano solo PERCHE' UGUALI fra vecchio e nuovo.  Il tono
- *   puro H e' il controllo che l'allineamento sia giusto.  ⚠ E ai confini fra
- *   tratti i 312 campioni di coda finiscono nel tratto dopo: da qui l'energia
- *   «decodificata» nel silenzio C. */
+/* SNR per stretch, decoded against the source shifted by RITARDO.
+ * ⚠ It is a WAVEFORM error, and Opus does not preserve the waveform (it
+ *   rebuilds noise per band): the low numbers of A, B, G belong to the codec, not
+ *   to the comparison, and they matter only BECAUSE THEY ARE EQUAL between old
+ *   and new.  The pure tone H is the check that the alignment is right.  ⚠ And at
+ *   the borders between stretches the 312 tail samples end up in the next
+ *   stretch: hence the "decoded" energy in silence C. */
 static void errore_per_tratto(const int16_t *dec, const char *chi)
 {
-	printf("   errore rispetto alla sorgente, %s (SNR per tratto, pre-skip %d):\n",
+	printf("   error against the source, %s (SNR per stretch, pre-skip %d):\n",
 	       chi, RITARDO);
 	long inizio = 0;
 	for (int tr = 0; tr < T_N; tr++) {
@@ -279,7 +279,7 @@ static void errore_per_tratto(const int16_t *dec, const char *chi)
 				ee += e * e;
 			}
 		if (es == 0)
-			printf("      %-22s sorgente a zero; energia decodificata %.0f\n",
+			printf("      %-22s source at zero; decoded energy %.0f\n",
 			       nome_tratto[tr], ee);
 		else
 			printf("      %-22s %6.2f dB\n", nome_tratto[tr],
@@ -298,16 +298,16 @@ static int braccio(uint8_t codec, bool cura)
 
 	memset(&cv, 0, sizeof cv);
 	memset(&cn, 0, sizeof cn);
-	printf("\n== braccio: codec %u (%s), cura del silenzio %s\n", codec,
-	       codec == 1 ? "Opus" : "PCM", cura ? "ACCESA" : "SPENTA");
+	printf("\n== arm: codec %u (%s), silence cure %s\n", codec,
+	       codec == 1 ? "Opus" : "PCM", cura ? "ON" : "OFF");
 	vecchio_silenzio_taci(cura);
 	audio_silenzio_taci(cura);
-	printf("   -- apertura del vecchio:\n");
+	printf("   -- opening the old one:\n");
 	v = vecchio_cod_apri(codec);
-	printf("   -- apertura del nuovo:\n");
+	printf("   -- opening the new one:\n");
 	nu = audio_cod_apri(codec);
 	if (!v || !nu) {
-		printf("⛔ NIENTE DA GIUDICARE: un codificatore non si apre\n");
+		printf("⛔ NOTHING TO JUDGE: an encoder does not open\n");
 		return 2;
 	}
 	uint32_t bl = audio_cod_blocco(nu);
@@ -330,7 +330,7 @@ static int braccio(uint8_t codec, bool cura)
 		ff = fopen(nome, "wb");
 		dfl = opus_decoder_create(FQ, 2, &e);
 		if (!fv || !fn || !ff || !dfl) {
-			printf("⛔ non scrivo in %s\n", scrivi_in);
+			printf("⛔ cannot write in %s\n", scrivi_in);
 			return 2;
 		}
 	}
@@ -368,8 +368,8 @@ static int braccio(uint8_t codec, bool cura)
 					fwrite(fl, sizeof(float), BL * 2, ff);
 			}
 		}
-		/* ⭐ Chi riceve mette il blocco al suo istante; un blocco taciuto
-		 *   e' un buco, cioe' zero (il decodificatore non lo vede). */
+		/* ⭐ The receiver puts the block at its instant; a muted block
+		 *   is a gap, that is zero (the decoder does not see it). */
 		if (codec == 1) {
 			if (ov && opus_decode(dv, pv, (opus_int32)qv,
 			                      cv.decodificato + (size_t)b * BL * 2,
@@ -386,35 +386,35 @@ static int braccio(uint8_t codec, bool cura)
 		fclose(fn);
 		fclose(ff);
 		opus_decoder_destroy(dfl);
-		printf("   ⭐ pacchetti e decodifica nativa scritti in %s\n", scrivi_in);
+		printf("   ⭐ packets and native decoding written in %s\n", scrivi_in);
 	}
 	cv.taciuti = vecchio_cod_taciuti(v);
 	cn.taciuti = audio_cod_taciuti(nu);
-	printf("   -- chiusura:\n");
+	printf("   -- closing:\n");
 	vecchio_cod_chiudi(v);
 	audio_cod_chiudi(nu);
 
-	printf("   blocchi entrati           %u\n", passi);
-	printf("   %-26s %10s %10s\n", "", "VECCHIO", "NUOVO");
-	printf("   %-26s %10llu %10llu\n", "pacchetti usciti",
+	printf("   blocks in                 %u\n", passi);
+	printf("   %-26s %10s %10s\n", "", "OLD", "NEW");
+	printf("   %-26s %10llu %10llu\n", "packets out",
 	       (unsigned long long)cv.usciti, (unsigned long long)cn.usciti);
-	printf("   %-26s %10llu %10llu\n", "blocchi taciuti",
+	printf("   %-26s %10llu %10llu\n", "blocks muted",
 	       (unsigned long long)cv.taciuti, (unsigned long long)cn.taciuti);
-	printf("   %-26s %10llu %10llu\n", "byte in tutto",
+	printf("   %-26s %10llu %10llu\n", "bytes in all",
 	       (unsigned long long)cv.byte, (unsigned long long)cn.byte);
-	printf("   %-26s %10d %10d\n", "pacchetto piu' piccolo", cv.min, cn.min);
-	printf("   %-26s %10.1f %10.1f\n", "pacchetto medio",
+	printf("   %-26s %10d %10d\n", "smallest packet", cv.min, cn.min);
+	printf("   %-26s %10.1f %10.1f\n", "mean packet",
 	       cv.usciti ? (double)cv.byte / cv.usciti : 0,
 	       cn.usciti ? (double)cn.byte / cn.usciti : 0);
-	printf("   %-26s %10d %10d\n", "pacchetto piu' grosso", cv.max, cn.max);
+	printf("   %-26s %10d %10d\n", "biggest packet", cv.max, cn.max);
 	if (codec == 1) {
-		printf("   %-26s %10llu %10llu\n", "pacchetti da 1-2 byte (DTX)",
+		printf("   %-26s %10llu %10llu\n", "1-2 byte packets (DTX)",
 		       (unsigned long long)cv.piccoli, (unsigned long long)cn.piccoli);
 		printf("   %-26s %10llu %10llu\n", "TOC stereo",
 		       (unsigned long long)cv.stereo, (unsigned long long)cn.stereo);
 		for (int k = 0; k < 4; k++)
 			if (cv.codice[k] || cn.codice[k])
-				printf("   TOC codice %d               %10llu %10llu\n", k,
+				printf("   TOC code %d                 %10llu %10llu\n", k,
 				       (unsigned long long)cv.codice[k],
 				       (unsigned long long)cn.codice[k]);
 		for (int k = 0; k < 32; k++)
@@ -426,22 +426,22 @@ static int braccio(uint8_t codec, bool cura)
 		for (size_t i = 0; i < (size_t)blocchi_tot * BL * 2; i++)
 			if (cv.decodificato[i] != cn.decodificato[i])
 				dd++;
-		printf("   pacchetti che il decodificatore rifiuta: %d\n", rifiutati);
-		printf("   campioni decodificati diversi fra vecchio e nuovo: %ld su %ld\n",
+		printf("   packets the decoder refuses: %d\n", rifiutati);
+		printf("   decoded samples different between old and new: %ld of %ld\n",
 		       dd, (long)blocchi_tot * BL * 2);
-		errore_per_tratto(cv.decodificato, "vecchio");
-		errore_per_tratto(cn.decodificato, "nuovo");
+		errore_per_tratto(cv.decodificato, "old");
+		errore_per_tratto(cn.decodificato, "new");
 		opus_decoder_destroy(dv);
 		opus_decoder_destroy(dn);
 		free(cv.decodificato);
 		free(cn.decodificato);
 	}
 	if (diversi)
-		printf("   ⛔ ROSSO: %d blocchi con esito diverso, il primo al blocco %d\n",
+		printf("   ⛔ ROSSO: %d blocks with a different outcome, the first at block %d\n",
 		       diversi, primo_diverso);
 	else
-		printf("   ⭐ VERDE: %u blocchi, ogni esito e ogni pacchetto IDENTICO "
-		       "byte per byte\n", passi);
+		printf("   ⭐ VERDE: %u blocks, every outcome and every packet IDENTICAL "
+		       "byte for byte\n", passi);
 	return (diversi || rifiutati) ? 1 : 0;
 }
 
@@ -451,13 +451,13 @@ int main(int argc, char **argv)
 	if (argc == 3 && strcmp(argv[1], "--scrivi") == 0)
 		scrivi_in = argv[2];
 	genera();
-	printf("== 18-a1 · Opus senza ffmpeg · %d blocchi da 20 ms (%.0f s) · %s\n",
+	printf("== 18-a1 · Opus without ffmpeg · %d blocks of 20 ms (%.0f s) · %s\n",
 	       blocchi_tot, blocchi_tot * 0.02, opus_get_version_string());
 	esito |= braccio(1, true);
 	esito |= braccio(1, false);
 	esito |= braccio(2, true);
 	esito |= braccio(2, false);
-	printf("\n%s\n", esito == 0 ? "⭐ VERDE — il nuovo e' indistinguibile dal vecchio"
-	                            : "⛔ ROSSO — vedi i bracci qui sopra");
+	printf("\n%s\n", esito == 0 ? "⭐ VERDE — the new one is indistinguishable from the old one"
+	                            : "⛔ ROSSO — see the arms above");
 	return esito;
 }

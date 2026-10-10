@@ -29,7 +29,7 @@
 # ⛔ At most 2 VMs of this bench and 4 in all; it does not power off a machine started by others.
 # Evidence in /media/REMOTIX/vm17/t9/esiti/<machine>/.
 set -uo pipefail
-m=${1:?macchina}; passo=${2:?passo}; shift 2
+m=${1:?machine}; passo=${2:?step}; shift 2
 R=/media/REMOTIX/vm17
 T9=$R/t9
 E=$T9/esiti/$m

@@ -13,7 +13,7 @@
 #   says no for both versions, and a "0 = 0" is not a PASS — the
 #   table writes it as NON PROVATO.
 set -u
-CARTELLA=${1:?cartella con i flussi *.bin e esiti.jsonl}; shift
+CARTELLA=${1:?folder with the *.bin streams and esiti.jsonl}; shift
 PAGINA=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../18-scheda/18-decodifica-chrome.html
 CHROME=${CHROME:-google-chrome}
 PROFILO=$(mktemp -d)

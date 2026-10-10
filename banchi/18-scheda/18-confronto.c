@@ -1,39 +1,39 @@
 /*
- * 18-confronto.c — la STESSA sequenza di desktop, codificata dal codificatore
- * del PRODOTTO (`src/codificatore.c`): vecchia strada (libavcodec, il commit di
- * partenza della fase 18) contro nuova (libva diretta, `src/vadiretta.c`).
+ * 18-confronto.c — the SAME desktop sequence, encoded by the PRODUCT's
+ * encoder (`src/codificatore.c`): old path (libavcodec, the starting
+ * commit of phase 18) against new (direct libva, `src/vadiretta.c`).
  *
- * Il programma e' un guscio: non contiene nessuna logica di codifica.  Si
- * compila DUE volte, una col `codificatore.c` di ieri e una con quello di oggi
- * (`18-confronto.sh`), e i due binari fanno la stessa cosa:
+ * The program is a shell: it contains no encoding logic.  It is
+ * compiled TWICE, once with yesterday's `codificatore.c` and once with today's
+ * (`18-confronto.sh`), and the two binaries do the same thing:
  *
- *   1. disegnano N fotogrammi di un DESKTOP finto ma realistico — sfondo a
- *      gradiente, tre finestre con barra del titolo e righe di «testo» (glifi
- *      pseudo-casuali ma STABILI riga per riga), un terminale che scorre, un
- *      cursore che si muove, una finestra trascinata.  ⛔ Non un colore
- *      piatto: «i contatori non vedono l'immagine» (memoria di progetto), e
- *      un desktop vero ha testo, bordi e scorrimento;
- *   2. li danno al codificatore per una delle due STRADE del prodotto:
- *        --strada memoria   `codificatore_comprimi()` coi pixel BGRx;
- *        --strada scheda    `codificatore_comprimi_scheda()` con un DMA-BUF
- *                           creato con GBM sullo stesso nodo — la copia zero;
- *   3. scrivono il flusso (Annex-B) su --uscita, una riga CSV per fotogramma
- *      su stdout (numero, chiave, byte, µs di conversione/caricamento/codifica)
- *      e in fondo una riga JSON con la confessione (stringa del codec,
- *      livello letto dall'SPS, misura, nome del codificatore);
- *   4. a richiesta, in mezzo alla sequenza: una CHIAVE a richiesta
- *      (--chiave-a N), un cambio di TELA (--ridimensiona-a N:LxA), il tetto di
- *      banda acceso dall'inizio (--tetto MBIT: QVBR) o il ripiego in software
+ *   1. they draw N frames of a fake but realistic DESKTOP — gradient
+ *      background, three windows with title bar and lines of «text» (glyphs
+ *      pseudo-random but STABLE line by line), a scrolling terminal, a
+ *      moving cursor, a dragged window.  ⛔ Not a flat
+ *      colour: «the counters do not see the picture» (project memory), and
+ *      a real desktop has text, borders and scrolling;
+ *   2. they give them to the encoder along one of the product's two PATHS:
+ *        --strada memoria   `codificatore_comprimi()` with the BGRx pixels;
+ *        --strada scheda    `codificatore_comprimi_scheda()` with a DMA-BUF
+ *                           created with GBM on the same node — zero copy;
+ *   3. they write the stream (Annex-B) to --uscita, one CSV line per frame
+ *      on stdout (number, key, bytes, µs of conversion/upload/encoding)
+ *      and at the end one JSON line with the confession (codec string,
+ *      level read from the SPS, size, encoder name);
+ *   4. on request, in the middle of the sequence: a KEY frame on request
+ *      (--chiave-a N), a CANVAS change (--ridimensiona-a N:LxA), the bandwidth
+ *      cap on from the start (--tetto MBIT: QVBR) or the software fallback
  *      (--software).
  *
- * Il giudizio non e' qui: e' in `18-confronto.sh`, con ffmpeg che decodifica
- * ogni fotogramma, PSNR/SSIM contro la sorgente, e ffprobe sui due flussi.
+ * The judgement is not here: it is in `18-confronto.sh`, with ffmpeg decoding
+ * every frame, PSNR/SSIM against the source, and ffprobe on the two streams.
  *
  *   18-confronto --codec h264|hevc --profondita 8|10 --misura LxA
  *       --nodo /dev/dri/renderD128 --strada memoria|scheda --uscita F
  *       [--fotogrammi N] [--fps N] [--qp N] [--chiave-a N]
  *       [--ridimensiona-a N:LxA] [--tetto MBIT] [--software]
- *       [--sorgente-out F.bgrx]   (scrive anche i fotogrammi sorgente, per il PSNR)
+ *       [--sorgente-out F.bgrx]   (also writes the source frames, for the PSNR)
  */
 #include "../../src/codificatore.h"
 
@@ -47,7 +47,7 @@
 #include <drm_fourcc.h>
 #include <gbm.h>
 
-/* ─── un generatore deterministico: xorshift32 ──────────────────────────── */
+/* ─── a deterministic generator: xorshift32 ──────────────────────────────── */
 static uint32_t seme = 0x9E3779B9u;
 static uint32_t caso(void)
 {
@@ -57,8 +57,8 @@ static uint32_t caso(void)
 	return seme;
 }
 
-/* Un glifo 5x7 «stabile»: dipende solo da (riga, colonna) del testo, cosi' il
- * testo non cambia da un fotogramma all'altro se non scorre. */
+/* A «stable» 5x7 glyph: it depends only on (row, column) of the text, so the
+ * text does not change from one frame to the next unless it scrolls. */
 static uint32_t glifo(uint32_t riga, uint32_t colonna)
 {
 	uint32_t h = riga * 2654435761u ^ colonna * 40503u ^ 0xA5A5A5A5u;
@@ -90,8 +90,8 @@ static void rettangolo(Tela *t, int x0, int y0, int l, int a, uint8_t b, uint8_t
 	}
 }
 
-/* Righe di testo: glifi 5x7 in celle da (scala·6)x(scala·10), dal pixel
- * `scorrimento` in giu' (per far scorrere il terminale). */
+/* Lines of text: 5x7 glyphs in cells of (scale·6)x(scale·10), from pixel
+ * `scorrimento` downwards (to make the terminal scroll). */
 static void testo(Tela *t, int x0, int y0, int l, int a, int scala, uint32_t prima_riga,
                   int scorrimento, uint8_t b, uint8_t g, uint8_t r)
 {
@@ -109,7 +109,7 @@ static void testo(Tela *t, int x0, int y0, int l, int a, int scala, uint32_t pri
 		for (int c = 0; c < colonne; c++) {
 			uint32_t gl = glifo(prima_riga + (uint32_t) riga_testo, (uint32_t) c);
 			if ((gl & 7) == 0)
-				continue; /* uno spazio ogni otto */
+				continue; /* one space every eight */
 			for (int dx = 0; dx < 5 * scala; dx++) {
 				int bitx = dx / scala;
 				if (!((gl >> (dentro_y * 5 + bitx + 3)) & 1u))
@@ -129,9 +129,9 @@ static void finestra(Tela *t, int x, int y, int l, int a, int scala, uint32_t id
                      int scorrimento, bool scura)
 {
 	int barra = 28 * scala;
-	rettangolo(t, x - 1, y - 1, l + 2, a + 2, 60, 60, 60);           /* bordo */
-	rettangolo(t, x, y, l, barra, 0x3a, 0x4a, 0x5e);                 /* barra del titolo */
-	rettangolo(t, x + 10 * scala, y + 8 * scala, 12 * scala, 12 * scala, 0x38, 0x38, 0xe0); /* bottone */
+	rettangolo(t, x - 1, y - 1, l + 2, a + 2, 60, 60, 60);           /* border */
+	rettangolo(t, x, y, l, barra, 0x3a, 0x4a, 0x5e);                 /* title bar */
+	rettangolo(t, x + 10 * scala, y + 8 * scala, 12 * scala, 12 * scala, 0x38, 0x38, 0xe0); /* button */
 	rettangolo(t, x + 26 * scala, y + 8 * scala, 12 * scala, 12 * scala, 0x38, 0xc0, 0xe0);
 	testo(t, x + 50 * scala, y + 8 * scala, l / 2, 14 * scala, scala, id * 1000u, 0, 240, 240, 240);
 	if (scura) {
@@ -148,7 +148,7 @@ static void finestra(Tela *t, int x, int y, int l, int a, int scala, uint32_t id
 static void disegna(Tela *t, uint32_t n)
 {
 	int scala = (t->l >= 3000) ? 2 : 1;
-	/* sfondo: gradiente diagonale con una banda «wallpaper» */
+	/* background: diagonal gradient with a «wallpaper» band */
 	for (uint32_t y = 0; y < t->a; y++) {
 		uint8_t *riga = t->pixel + (size_t) y * t->passo;
 		for (uint32_t x = 0; x < t->l; x++) {
@@ -159,17 +159,17 @@ static void disegna(Tela *t, uint32_t n)
 			riga[x * 4 + 3] = 0;
 		}
 	}
-	/* la barra in basso (pannello) con «icone» */
+	/* the bottom bar (panel) with «icons» */
 	rettangolo(t, 0, (int) t->a - 40 * scala, (int) t->l, 40 * scala, 0x28, 0x28, 0x28);
 	for (int i = 0; i < 12; i++)
 		rettangolo(t, 12 * scala + i * 48 * scala, (int) t->a - 34 * scala, 28 * scala, 28 * scala,
 		           (uint8_t) (80 + i * 13), (uint8_t) (120 + i * 9), (uint8_t) (200 - i * 11));
 	int L = (int) t->l, A = (int) t->a;
-	/* finestra 1: un editor chiaro, fermo */
+	/* window 1: a light editor, still */
 	finestra(t, L / 20, A / 12, L * 9 / 20, A * 6 / 10, scala, 1, 0, false);
-	/* finestra 2: un terminale scuro che SCORRE di 3 px per fotogramma */
+	/* window 2: a dark terminal that SCROLLS by 3 px per frame */
 	finestra(t, L * 11 / 20, A / 8, L * 8 / 20, A * 5 / 10, scala, 2, (int) n * 3 * scala, true);
-	/* finestra 3: piccola, TRASCINATA fra i fotogrammi 30 e 90 */
+	/* window 3: small, DRAGGED between frames 30 and 90 */
 	int dx = 0, dy = 0;
 	if (n >= 30 && n < 90) {
 		dx = (int) (n - 30) * (L / 240);
@@ -179,7 +179,7 @@ static void disegna(Tela *t, uint32_t n)
 		dy = 60 * (A / 480);
 	}
 	finestra(t, L / 8 + dx, A * 6 / 10 + dy, L * 3 / 10, A * 3 / 10, scala, 3, 0, false);
-	/* il cursore: una freccetta che gira */
+	/* the cursor: a little arrow going round */
 	double ang = n * 0.11;
 	int cx = L / 2 + (int) (L / 3 * __builtin_cos(ang));
 	int cy = A / 2 + (int) (A / 3 * __builtin_sin(ang * 1.3));
@@ -190,7 +190,7 @@ static void disegna(Tela *t, uint32_t n)
 	(void) caso;
 }
 
-/* ─── il DMA-BUF con GBM, per la strada della scheda ────────────────────── */
+/* ─── the DMA-BUF with GBM, for the card path ───────────────────────────── */
 typedef struct {
 	struct gbm_bo *bo;
 	int fd;
@@ -232,10 +232,10 @@ int main(int argc, char **argv)
 		else if (!strcmp(k, "--tetto")) { tetto = (uint32_t) atoi(v); i++; }
 		else if (!strcmp(k, "--sorgente-out")) { sorgente_out = v; i++; }
 		else if (!strcmp(k, "--software")) { software = true; }
-		else { fprintf(stderr, "argomento ignoto: %s\n", k); return 2; }
+		else { fprintf(stderr, "unknown argument: %s\n", k); return 2; }
 	}
 	if (!uscita || !l || !a) {
-		fprintf(stderr, "uso: 18-confronto --codec h264|hevc --misura LxA --uscita F [...]\n");
+		fprintf(stderr, "usage: 18-confronto --codec h264|hevc --misura LxA --uscita F [...]\n");
 		return 2;
 	}
 	bool scheda = strcmp(strada, "scheda") == 0;
@@ -260,23 +260,23 @@ int main(int argc, char **argv)
 	char errore[512] = { 0 };
 	Codificatore *cod = codificatore_nuovo(&r, errore, sizeof errore);
 	if (!cod) {
-		fprintf(stderr, "⛔ il codificatore non si e' aperto: %s\n", errore);
+		fprintf(stderr, "⛔ the encoder did not open: %s\n", errore);
 		printf("{\"esito\":\"non aperto\",\"errore\":\"%s\"}\n", errore);
 		return 1;
 	}
 	if (scheda && !codificatore_in_hardware(cod)) {
-		fprintf(stderr, "⛔ strada della scheda chiesta, ma il codificatore e' in software\n");
+		fprintf(stderr, "⛔ card path requested, but the encoder is in software\n");
 		return 1;
 	}
 
 	FILE *fu = fopen(uscita, "wb");
 	FILE *fs = sorgente_out ? fopen(sorgente_out, "wb") : NULL;
 	if (!fu || (sorgente_out && !fs)) {
-		fprintf(stderr, "⛔ non apro i file d'uscita\n");
+		fprintf(stderr, "⛔ cannot open the output files\n");
 		return 1;
 	}
 
-	/* la tela in memoria (strada della memoria), o i buffer GBM (scheda) */
+	/* the canvas in memory (memory path), or the GBM buffers (card) */
 	Tela t = { .l = l, .a = a, .passo = l * 4 };
 	t.pixel = malloc((size_t) t.passo * a);
 	struct gbm_device *gbm = NULL;
@@ -287,7 +287,7 @@ int main(int argc, char **argv)
 		drm_fd = open(nodo, O_RDWR | O_CLOEXEC);
 		gbm = drm_fd >= 0 ? gbm_create_device(drm_fd) : NULL;
 		if (!gbm) {
-			fprintf(stderr, "⛔ GBM non si apre su %s\n", nodo);
+			fprintf(stderr, "⛔ GBM does not open on %s\n", nodo);
 			return 1;
 		}
 	}
@@ -295,9 +295,9 @@ int main(int argc, char **argv)
 	uint64_t byte_totali = 0;
 	uint32_t chiavi = 0, falliti = 0;
 	uint32_t larghezza_corrente = l, altezza_corrente = a;
-	/* ⛔ La GENERAZIONE dei buffer: quando la tela cambia i BO si rifanno, e i
-	 *    numeri di descrittore si riciclano — senza cambiarla il codificatore
-	 *    riuserebbe una superficie importata da un buffer che non c'e' piu'
+	/* ⛔ The GENERATION of the buffers: when the canvas changes the BOs are remade, and the
+	 *    descriptor numbers are recycled — without changing it the encoder
+	 *    would reuse a surface imported from a buffer that no longer exists
 	 *    (`CodificatoreSuperficie.generazione`). */
 	uint64_t generazione = 1;
 	printf("n,chiave,byte,us_conversione,us_caricamento,us_codifica,ricodifiche\n");
@@ -343,7 +343,7 @@ int main(int argc, char **argv)
 				b->fd = gbm_bo_get_fd(b->bo);
 				b->stride = gbm_bo_get_stride(b->bo);
 			}
-			/* i pixel dentro il DMA-BUF: la «cattura» */
+			/* the pixels inside the DMA-BUF: the «capture» */
 			uint32_t stride_mappa = 0;
 			void *mappa_dati = NULL;
 			void *mappa = gbm_bo_map(b->bo, 0, 0, larghezza_corrente, altezza_corrente,

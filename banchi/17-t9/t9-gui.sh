@@ -24,7 +24,7 @@
 #   processi              who runs: the window (uid) and the root part (R37)
 #   spegni                powers off and goes back to "cliente"
 set -uo pipefail
-m=${1:?macchina}; passo=${2:?passo}; shift 2
+m=${1:?machine}; passo=${2:?step}; shift 2
 R=/media/REMOTIX/vm17
 F=$R/t9-gui/$m
 V="bash $R/17-vm.sh"
@@ -82,7 +82,7 @@ password)
 	echo "sendkey ret" | monitor
 	;;
 foto)
-	$V schermo "$m" "$F/${1:?nome}.png" >/dev/null && echo "$F/$1.png"
+	$V schermo "$m" "$F/${1:?name}.png" >/dev/null && echo "$F/$1.png"
 	;;
 clic)
 	# QMP: absolute position (0..32767 over the whole screen, 1280×800) and the left button

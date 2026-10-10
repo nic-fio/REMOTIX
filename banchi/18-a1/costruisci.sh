@@ -1,17 +1,20 @@
 #!/bin/bash
 #
-# 18-a1 — costruisce e fa girare il confronto vecchio/nuovo di `audio.c`.
+# 18-a1 — builds and runs the old/new comparison of `audio.c`.
 #
-#   bash banchi/18-a1/costruisci.sh [cartella d'uscita]
+#   bash banchi/18-a1/costruisci.sh [output folder]
 #
-# ⚠ Vuole libavcodec (per il VECCHIO, che e' il termine di paragone) E libopus:
-#   dentro `remotix-costruzione` o nel `devroot` del server ci sono tutt'e due.
-#   ⛔ Il giorno che l'immagine di costruzione perde ffmpeg, questo banco gira
-#   solo sul server — ed e' giusto: e' il vecchio che ha bisogno di ffmpeg.
+# ⚠ It needs libavcodec (for the OLD one, which is the reference) AND libopus:
+#   inside `remotix-costruzione` or in the server's `devroot` both are there.
+#   ⛔ The day the build image loses ffmpeg, this bench runs
+#   only on the server — and that is right: it is the old one that needs ffmpeg.
 #
-# ⛔ Il vecchio si RINOMINA dalla riga di compilazione e non si tocca:
-#    `audio-vecchio.c` e' `src/audio.c` del commit 545ec55 alla lettera, e un
-#    termine di paragone ritoccato non paragona piu' niente.
+# ⛔ The old one is RENAMED from the compile line and is not touched:
+#    `audio-vecchio.c` is `src/audio.c` of commit 545ec55 to the letter, and a
+#    reference that has been retouched no longer compares anything.  (10 Oct 2026,
+#    §10.38: its comments and log lines are now in English, the CODE is unchanged
+#    — the packets compare as before, the printed opening lines no longer match
+#    the old ones word for word.)
 set -euo pipefail
 QUI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 SRC=$QUI/../../src
@@ -35,10 +38,10 @@ cc $CF $(pkg-config --cflags opus) -o "$FUORI/18-a1" \
    "$QUI/18-a1-opus-senza-ffmpeg.c" "$FUORI/audio-vecchio.o" "$FUORI/audio-nuovo.o" \
    $(pkg-config --libs libavcodec libavutil opus) -lm
 
-# ⚠ Il nuovo NON deve nominare libavcodec: si guarda l'oggetto.
+# ⚠ The new one must NOT name libavcodec: we look at the object.
 if nm -u "$FUORI/audio-nuovo.o" | grep -E ' (av_|avcodec_)'; then
-	echo "⛔ l'oggetto nuovo chiama ancora libavcodec"
+	echo "⛔ the new object still calls libavcodec"
 	exit 1
 fi
-echo "⭐ audio-nuovo.o: nessun simbolo av_/avcodec_ indefinito"
+echo "⭐ audio-nuovo.o: no undefined av_/avcodec_ symbol"
 "$FUORI/18-a1" --scrivi "$FUORI"

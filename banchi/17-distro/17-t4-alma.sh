@@ -17,7 +17,7 @@
 #
 #   (on the server)  sg kvm -c 'bash 17-t4-alma.sh alma10-gnome-iso <remotix-install>'
 set -uo pipefail
-m=${1:?macchina}; MOT=${2:?remotix-install}
+m=${1:?machine}; MOT=${2:?remotix-install}
 R=/media/REMOTIX/vm17
 T4=${T4:-$R/t4}
 E=$T4/esiti/$m

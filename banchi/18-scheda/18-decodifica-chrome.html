@@ -1,23 +1,23 @@
 <!doctype html>
 <!--
-  18-decodifica-chrome.html — un browser VERO decodifica il flusso, con la stessa
-  strada della pagina del prodotto: Annex-B → EncodedVideoChunk → VideoDecoder.
+  18-decodifica-chrome.html — a REAL browser decodes the stream, along the same
+  path as the product's page: Annex-B → EncodedVideoChunk → VideoDecoder.
 
-  Si apre con Chrome headless (`18-decodifica-chrome.sh`) e l'esito si legge
-  dalla console (`console.log`, con `--enable-logging=stderr`):
+  It is opened with headless Chrome (`18-decodifica-chrome.sh`) and the outcome is read
+  from the console (`console.log`, with `--enable-logging=stderr`):
     google-chrome --headless=new --allow-file-access-from-files --enable-logging=stderr \
       "file:///…/18-decodifica-chrome.html?flusso=file:///…/F.bin&codec=avc1.64002a"
-  E' una riga JSON: fotogrammi decodificati, errori, la
-  misura del primo fotogramma, e un'impronta (somma dei pixel) di ogni decimo
-  fotogramma — cosi' due flussi «uguali» si confrontano anche sull'immagine.
+  It is one JSON line: decoded frames, errors, the
+  size of the first frame, and a fingerprint (sum of the pixels) of every tenth
+  frame — so two «equal» streams are compared on the picture too.
 
-  ⚠ Il codec si passa come lo passa la pagina (`hev1.1.6.L120.B0`,
-    `avc1.64002a`): la stringa e' la stessa che `src/codificatore.c` legge
-    dall'SPS, e se Chrome la rifiuta e' un rosso vero.
+  ⚠ The codec is passed the way the page passes it (`hev1.1.6.L120.B0`,
+    `avc1.64002a`): the string is the same one `src/codificatore.c` reads
+    from the SPS, and if Chrome refuses it that is a real red.
 -->
 <html><head><meta charset="utf-8"><title>18-decodifica</title></head>
 <body>
-<pre id="esito">in corso</pre>
+<pre id="esito">running</pre>
 <script>
 (async () => {
   const p = new URLSearchParams(location.search);
@@ -26,13 +26,13 @@
   const fine = (m) => {
     const testo = "ESITO " + JSON.stringify(Object.assign(esito, m || {}));
     document.getElementById("esito").textContent = testo;
-    console.log(testo); /* e' quel che 18-decodifica-chrome.sh legge dal registro di Chrome */
-    setTimeout(() => window.close(), 300); /* in headless l'ultima finestra chiusa chiude Chrome */
+    console.log(testo); /* it is what 18-decodifica-chrome.sh reads from Chrome's log */
+    setTimeout(() => window.close(), 300); /* in headless, closing the last window closes Chrome */
   };
   try {
     const byte = new Uint8Array(await (await fetch(flusso)).arrayBuffer());
-    // la fila dei NAL: si taglia sui codici di inizio, si raggruppano in fotogrammi
-    // (un fotogramma = dal primo NAL non-VCL o VCL fino al VCL successivo compreso)
+    // the row of NALs: cut at the start codes, grouped into frames
+    // (one frame = from the first non-VCL or VCL NAL up to and including the next VCL)
     const hevc = codec.startsWith("hev1") || codec.startsWith("hvc1");
     const nal = [];
     let i = 0;
@@ -63,7 +63,7 @@
     const dec = new VideoDecoder({
       output: (f) => {
         n++;
-        if (!esito.misura) esito.misura = f.codedWidth + "x" + f.codedHeight + " (mostra " + f.displayWidth + "x" + f.displayHeight + ")";
+        if (!esito.misura) esito.misura = f.codedWidth + "x" + f.codedHeight + " (shown " + f.displayWidth + "x" + f.displayHeight + ")";
         if ((n - 1) % 10 === 0) {
           tela.width = 64; tela.height = 36;
           ctx.drawImage(f, 0, 0, 64, 36);
@@ -78,7 +78,7 @@
     const config = { codec, optimizeForLatency: true };
     const sup = await VideoDecoder.isConfigSupported(config);
     esito.supportato = sup.supported;
-    if (!sup.supported) return fine({ decodificati: 0, perche: "configure non supportata" });
+    if (!sup.supported) return fine({ decodificati: 0, perche: "configure not supported" });
     dec.configure(config);
     fotogrammi.forEach((f, k) => {
       dec.decode(new EncodedVideoChunk({ type: f.chiave ? "key" : "delta", timestamp: k * 16667, data: byte.subarray(f.inizio, f.fine) }));

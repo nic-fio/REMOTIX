@@ -7,7 +7,7 @@
 #
 # Starts from the snapshot, reads, powers off and goes back to the snapshot. Output in /media/REMOTIX/vm17/t6/pam/<machine>.txt
 set -uo pipefail
-m=${1:?macchina}; foto=${2:?foto}
+m=${1:?machine}; foto=${2:?photo}
 R=/media/REMOTIX/vm17; V="bash $R/17-vm.sh"; O=$R/t6/pam
 mkdir -p "$O"
 if pgrep -f "qemu-system.*-name rx-$m " >/dev/null; then echo "⛔ $m is already running"; exit 2; fi
