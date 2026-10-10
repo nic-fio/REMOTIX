@@ -1,500 +1,500 @@
-# Fase 9 — La qualità e la degradazione
+# Phase 9 — Quality and degradation
 
-*⚠ Misure storiche, sulla macchina di allora. Con la fase 18 (senza ffmpeg) sono state tolte quelle che il cambio ha invalidato — codifica senza scheda e conversione dei colori con swscale; quelle della codifica sulla scheda e dell'audio restano, perché il flusso nuovo è identico (confronto del 30 set 2026). Decisione dell'utente. Le misure rifatte dopo il cambio (1 ott 2026) stanno in `fasi/18-senza-ffmpeg.md` §5.*
+*⚠ Historical measurements, on the machine of the time. With phase 18 (without ffmpeg) the ones the change invalidated were removed — encoding without the card and colour conversion with swscale; those of encoding on the card and of audio remain, because the new stream is identical (comparison of 30 Sep 2026). The user's decision. The measurements redone after the change (1 Oct 2026) are in `fasi/18-senza-ffmpeg.md` §5.*
 
-Aperta il **23 agosto 2026** · ✅ **Chiusa il 24 agosto 2026**, sul giudizio dell'utente:
+Opened on **23 Aug 2026** · ✅ **Closed on 24 Aug 2026**, on the user's judgement:
 *«il prodotto cambia in meglio; questa fase era per rendere più solido il funzionamento di remotix su
 reti degradate, senza pretendere di fare miracoli»*
 
-> ⛔ **Questo documento si riempie strada facendo** (`PIANO.md` §0.1). Le misure hanno l'ora
-> accanto perché sono state scritte quando sono state prese.
+> ⛔ **This document fills up as we go** (`PIANO.md` §0.1). The measurements carry the time
+> beside them because they were written when they were taken.
 
-> ## 📖 DOVE SONO FINITI I SETTE DOCUMENTI DEL 23 AGOSTO
+> ## 📖 WHERE THE SEVEN DOCUMENTS OF 23 AUG WENT
 >
-> ⛔ **Sono stati accorpati qui e cancellati**, ed è la regola del progetto: *pochi documenti
-> grossi; i rapporti degli agenti non si conservano.* ⚠ **Alcuni commenti in `src/` e in `banchi/`
-> li citano ancora per nome** — questa tabella è quel che serve per seguire quei rimandi.
+> ⛔ **They were merged here and deleted**, and that is the project's rule: *few large
+> documents; the agents' reports are not kept.* ⚠ **Some comments in `src/` and in `banchi/`
+> still cite them by name** — this table is what you need to follow those references.
 >
-> | il file che non c'è più | dove sta adesso |
+> | the file that no longer exists | where it is now |
 > |---|---|
-> | `09-il-crollo.md` §1 · §2 (la prova, il registro) | **§4.2** |
-> | `09-il-crollo.md` §3 (i sospetti esclusi) | **§4.3** |
-> | `09-il-crollo.md` §4 (la causa) | **§4.1** e **§4.4** |
-> | `09-il-crollo.md` §5 (come si riproduce) | **§4.5** e **P1** |
-> | `09-il-crollo.md` §6 (la trappola) · §7 (la cura) · §8 (`[?]`) | **§4.7** · **§4.6** · **§4.8** |
-> | `09-proposta-sgombra.md` §1-§4 (il meccanismo, la soglia, i casi limite) | **§5.2** |
-> | `09-proposta-sgombra.md` §5 (la previsione) · §6 (il rifiuto parziale) | **P2**/**P3** · fine di **§5.2** e **§10.2** |
-> | `09-proposta-cricchetto.md` §1-§3 (il difetto, la cura) · §4 (il banco) | **§5.3** · **§7.3** e **P5** |
-> | `09-proposta-riordino.md` §1-§5 · §7 · §8 (la frontiera, il prezzo, la domanda onesta) | **§5.4** |
-> | `09-proposta-riordino.md` §6 (la previsione) | **P6** |
-> | `09-studio-bitrate.md` §0-§3 (i modi, il tetto) · §4 (il livello) | **§5.5** e **§10.1** |
-> | `09-studio-bitrate.md` §5 (la previsione) | **P4** e **§10.1** |
-> | `09-disegno-regolatore.md` (tutto) | **§6**; la previsione in **P7**/**P8**, e §5.3 in **§6.5** |
-> | `09-il-registro-delle-discese.md` (tutto) | **§7** |
+> | `09-il-crollo.md` §1 · §2 (the proof, the log) | **§4.2** |
+> | `09-il-crollo.md` §3 (the suspects ruled out) | **§4.3** |
+> | `09-il-crollo.md` §4 (the cause) | **§4.1** and **§4.4** |
+> | `09-il-crollo.md` §5 (how to reproduce it) | **§4.5** and **P1** |
+> | `09-il-crollo.md` §6 (the trap) · §7 (the cure) · §8 (`[?]`) | **§4.7** · **§4.6** · **§4.8** |
+> | `09-proposta-sgombra.md` §1-§4 (the mechanism, the threshold, the edge cases) | **§5.2** |
+> | `09-proposta-sgombra.md` §5 (the prediction) · §6 (the partial refusal) | **P2**/**P3** · end of **§5.2** and **§10.2** |
+> | `09-proposta-cricchetto.md` §1-§3 (the defect, the cure) · §4 (the bench) | **§5.3** · **§7.3** and **P5** |
+> | `09-proposta-riordino.md` §1-§5 · §7 · §8 (the frontier, the price, the honest question) | **§5.4** |
+> | `09-proposta-riordino.md` §6 (the prediction) | **P6** |
+> | `09-studio-bitrate.md` §0-§3 (the modes, the cap) · §4 (the level) | **§5.5** and **§10.1** |
+> | `09-studio-bitrate.md` §5 (the prediction) | **P4** and **§10.1** |
+> | `09-disegno-regolatore.md` (all of it) | **§6**; the prediction in **P7**/**P8**, and §5.3 in **§6.5** |
+> | `09-il-registro-delle-discese.md` (all of it) | **§7** |
 >
-> ⭐ E dove il documento ripeteva un commento del codice, **è rimasto il codice**: la sede della
-> ragione è `src/`, e qui c'è il `file:riga`.
+> ⭐ And where the document repeated a comment in the code, **the code stayed**: the seat of the
+> reasoning is `src/`, and here there is the `file:line`.
 
 ---
 
-## Che cosa deve produrre
+## What it must produce
 
-Il **controllo del ritmo**, la **scala di degradazione**, il comportamento su **rete cattiva**.
+**Rate control**, the **degradation ladder**, the behaviour on a **bad network**.
 
-> ## ⛔⭐⭐⭐ IL BERSAGLIO È STATO CORRETTO DAL REGISTA — *23 agosto 2026, sera* → **§17**
+> ## ⛔⭐⭐⭐ THE TARGET WAS CORRECTED BY THE DIRECTOR — *23 Aug 2026, evening* → **§17**
 >
 > *«30 mbps sono una connessione da metà anni 90. La vera sfida è misurare performance con reti che
 > perdono pacchetti o pacchetti fuori sequenza, o presentano fenomeni di jitter».* — `DECISIONI.md`
 > **§3.1-ter**.
 >
-> ⛔ **La banda esce dal corpo della fase**, e la ragione è una misura di questa stessa fase: §16,
-> sul **percorso vero**, il caso peggiore chiede 21,5-23,1 Mbit/s e il prodotto lo regge **senza
-> degradare e con tutte le cure spente**. Un banco che non riesce a far cedere quel che misura non
-> sta misurando la grandezza giusta.
+> ⛔ **Bandwidth leaves the body of the phase**, and the reason is a measurement of this very phase: §16,
+> on the **real path**, the worst case asks for 21.5-23.1 Mbit/s and the product holds it **without
+> degrading and with all the cures off**. A bench that cannot make what it measures give way is not
+> measuring the right quantity.
 >
-> ⭐⭐⭐ **E sulla grandezza giusta il prodotto cede, e cede prestissimo** (§17.1, §17.11):
-> ⛔⛔ **il gradino è DOPPIO** — la spirale di chiavi parte **al primo pacchetto perso**
-> (0,00-0,10 % di perdita vera), il calo che l'utente **vede** casca cinque volte più in là
-> (0,53-0,75 %): ⇒ fra i due c'è mezzo punto percentuale in cui il prodotto **sta già degenerando e
-> i fotogrammi al secondo dicono ancora che va tutto bene**. ⚠ E vicino al bordo è **bistabile**:
-> stesso ingresso, `0 chiavi · 40,16/s` **oppure** `24 chiavi · 33,84/s`; con **zero perdita** e ±15 ms di sfarfallio **16,6/s e il DOPPIO dei byte sul
-> filo**, che è la prova diretta che il disordine viene scambiato per perdita; al **13 %** a
-> raffiche ⛔⛔ **la sessione si stacca dopo 0,3 s**, e *«mai staccare»* è l'unico obbligo che vale
-> ovunque.
+> ⭐⭐⭐ **And on the right quantity the product gives way, and gives way very early** (§17.1, §17.11):
+> ⛔⛔ **the step is DOUBLE** — the keyframe spiral starts **at the first lost packet**
+> (0.00-0.10 % of real loss), the drop the user **sees** falls five times further on
+> (0.53-0.75 %): ⇒ between the two there is half a percentage point in which the product **is already degenerating and
+> the frames per second still say everything is fine**. ⚠ And near the edge it is **bistable**:
+> same input, `0 chiavi · 40,16/s` **or** `24 chiavi · 33,84/s`; with **zero loss** and ±15 ms of jitter **16.6/s and DOUBLE the bytes on the
+> wire**, which is the direct proof that disorder is mistaken for loss; at **13 %** in
+> bursts ⛔⛔ **the session detaches after 0.3 s**, and *«mai staccare»* is the only obligation that holds
+> everywhere.
 >
-> ⭐⭐⭐ **E LA CURA FUNZIONA** (§17.6, appaiata a tre bracci): la quota di chiavi passa da
-> **51,7-88,1 %** a **0,0-5,6 %**, il ritmo torna **da 1,7 a 2,8 volte**, e i byte sul filo
-> **salgono** — ⇒ la linea non era satura, **era sprecata**. ⛔ Ma servono **tutt'e due** le cure: la
-> sola soglia lascia il 12,8-33,6 % di chiavi. ⚠ **La linea sana non paga niente** (39,85 / 40,19 /
-> 39,63 fotogrammi/s, zero chiavi), e il prezzo è **da −38 a +161 ms** di ritardo sui profili
-> ordinari — **4,5 s** su `raffica-forte`, dove *«immagine che si muove con cinque secondi di
-> ritardo»* contro *«immagine ferma»* **non è una scelta che spetti a una misura**.
-> ⇒ ❓ **Le cure restano SPENTE**: I6, e la decisione è dell'utente.
+> ⭐⭐⭐ **AND THE CURE WORKS** (§17.6, paired with three arms): the keyframe share goes from
+> **51.7-88.1 %** to **0.0-5.6 %**, the rate comes back **by 1.7 to 2.8 times**, and the bytes on the wire
+> **rise** — ⇒ the line was not saturated, **it was wasted**. ⛔ But **both** cures are needed: the
+> threshold alone leaves 12.8-33.6 % keyframes. ⚠ **The healthy line pays nothing** (39.85 / 40.19 /
+> 39.63 frames/s, zero keyframes), and the price is **from −38 to +161 ms** of delay on the ordinary
+> profiles — **4.5 s** on `raffica-forte`, where *«immagine che si muove con cinque secondi di
+> ritardo»* against *«immagine ferma»* **is not a choice that belongs to a measurement**.
+> ⇒ ❓ **The cures stay OFF**: I6, and the decision is the user's.
 >
-> ⭐⭐ **E la cura del riordino dell'audio MORDE** (§17.2): purezza da 0,40-0,80 a **1,0000** su
-> tutti e cinque i profili che riordinano, sei su sei verdi.
+> ⭐⭐ **And the audio reorder cure BITES** (§17.2): purity from 0.40-0.80 to **1.0000** on
+> all five profiles that reorder, six out of six green.
 
-**Che cosa l'utente vede e giudica alla fine**: ⛔ **l'immagine, e basta.** In v1 la fase omologa
-fu validata con PSNR e SSIM, il giudizio dell'utente sul desktop vero fu *«siamo tornati
-indietro»*, e la fase fu **azzerata**.
+**What the user sees and judges at the end**: ⛔ **the image, and that's all.** In v1 the homologous phase
+was validated with PSNR and SSIM, the user's judgement on the real desktop was *«siamo tornati
+indietro»*, and the phase was **reset to zero**.
 
 ---
 
-# ⭐⭐⭐ LA SINTESI — *la giornata del 23 agosto 2026*
+# ⭐⭐⭐ THE SUMMARY — *the day of 23 Aug 2026*
 
-> ⛔ **Questa è la testa del documento: risponde in fretta alle quattro domande che si porranno
-> domani.** I dettagli, con le ore e le scene, stanno sotto: §0 lo studio d'apertura, §1 il banco,
-> §3 e §3-bis le misure, §4 il crollo, §5 le cure, §6 il lavoro che resta, §7 le previsioni,
-> §8 quel che non ha funzionato, §10 le contraddizioni.
+> ⛔ **This is the head of the document: it answers quickly the four questions that will be asked
+> tomorrow.** The details, with the times and the scenes, are below: §0 the opening study, §1 the bench,
+> §3 and §3-bis the measurements, §4 the crash, §5 the cures, §6 the work that remains, §7 the predictions,
+> §8 what did not work, §10 the contradictions.
 >
-> ⛔⛔ **E LA SERA DEL 23 AGOSTO LE CURE SONO STATE MISURATE: sta in §13, e cambia sei righe di
-> questa sintesi.** In due parole, e i dettagli là:
-> ⭐⭐⭐ **la cura della memoria REGGE** e il crollo si riproduce **due volte su due**, con la pila
-> letta dal core (§13.1) · ⭐⭐⭐ **il regolatore del ritmo spegne la spirale**: zero chiavi e zero
-> abbandoni dove prima ce n'erano 18 e 24 (§13.3) · ⛔ **la soglia da sola NON mantiene quel che
-> P3 prometteva**, e va tarata **al contrario** di come P3 diceva (§13.2) · ⭐⭐ **il tetto di
-> banda sopravvive ai suoi due rossi** (§13.4) · ⛔⛔ **tutti i numeri di banda di §3.8 sono
-> HEVC, e il prodotto manda H.264**: stessa scena, **21,18 contro 7,92 Mbit/s** (§13.5) ·
-> ⛔⛔ **il 4K regge 41 fot/s, non 60**, e il livello prodotto **sfora** quello del client
-> (§13.6) · ⭐⭐⭐ **§10.2 è decisa: la spirale sul desktop vero non morde fino a 10 Mbit/s**
+> ⛔⛔ **AND ON THE EVENING OF 23 AUG THE CURES WERE MEASURED: it is in §13, and it changes six lines of
+> this summary.** In two words, and the details there:
+> ⭐⭐⭐ **the memory cure HOLDS** and the crash reproduces **two times out of two**, with the stack
+> read from the core (§13.1) · ⭐⭐⭐ **the rate regulator switches off the spiral**: zero keyframes and zero
+> abandons where before there were 18 and 24 (§13.3) · ⛔ **the threshold alone does NOT keep what
+> P3 promised**, and it must be tuned **the opposite way** from what P3 said (§13.2) · ⭐⭐ **the bandwidth
+> cap survives its two reds** (§13.4) · ⛔⛔ **all the bandwidth numbers of §3.8 are
+> HEVC, and the product sends H.264**: same scene, **21.18 against 7.92 Mbit/s** (§13.5) ·
+> ⛔⛔ **4K holds 41 fps, not 60**, and the produced level **exceeds** the client's
+> (§13.6) · ⭐⭐⭐ **§10.2 is decided: the spiral on the real desktop does not bite down to 10 Mbit/s**
 > (§13.8).
 >
-> ⛔⛔⛔ **E LA NOTTE DEL 23 AGOSTO IL METRO È CAMBIATO: §14, e da lì in giù i numeri sono
-> H.264.** ⛔ Il cliente di prova negoziava HEVC per una riga rimasta indietro di tre giorni;
-> adesso negozia **quel che negozia Firefox**, verificato sulle righe di `pagina.html` (§14.1).
-> In due parole: ⛔⛔ **il caso duro in H.264 chiede ancora 44,6 Mbit/s = 223 % del pavimento** —
-> il tetto serve (§14.2, §14.3) · ⛔ **il rapporto HEVC/H.264 NON è una costante**: 0,36× sul
-> retinato, 0,76× sulla grana, ⛔ **1,7× in su** sul desktop vero (§14.2) · ⛔ **la soglia da sola
-> non mantiene la promessa a NESSUN valore**, e a 800 ms paga **1 321 ms** di coda; ⭐ la leva è la
-> **coppia** con `--ritmo-adattivo` (§14.4) · ⭐⭐⭐ **P8 è VERDE**, a coppie ferma/mossa nello
-> stesso giro (§14.5) · ⭐ **il 4K in H.264** e ⛔ **l'audio** in §14.6 e §14.7.
+> ⛔⛔⛔ **AND ON THE NIGHT OF 23 AUG THE YARDSTICK CHANGED: §14, and from there down the numbers are
+> H.264.** ⛔ The test client negotiated HEVC because of a line left three days behind;
+> now it negotiates **what Firefox negotiates**, verified on the lines of `pagina.html` (§14.1).
+> In two words: ⛔⛔ **the hard case in H.264 still asks for 44.6 Mbit/s = 223 % of the floor** —
+> the cap is needed (§14.2, §14.3) · ⛔ **the HEVC/H.264 ratio is NOT a constant**: 0.36× on the
+> halftone, 0.76× on the grain, ⛔ **1.7× and up** on the real desktop (§14.2) · ⛔ **the threshold alone
+> does not keep the promise at ANY value**, and at 800 ms it pays **1 321 ms** of queue; ⭐ the lever is the
+> **pair** with `--ritmo-adattivo` (§14.4) · ⭐⭐⭐ **P8 is GREEN**, in still/moving pairs in the
+> same round (§14.5) · ⭐ **4K in H.264** and ⛔ **audio** in §14.6 and §14.7.
 
-## S.1 · ⛔ Il fatto più grave della giornata: **il prodotto è morto, e la causa è provata**
+## S.1 · ⛔ The most serious fact of the day: **the product died, and the cause is proven**
 
-Alle **08:28:09** il server della 7900 è morto di `SEGV` sul fotogramma **185**, un delta da
-**525 298 byte**. ⭐ **La causa è stata trovata riga per riga**: `wt_scrivi()` liberava i byte di
-un fotogramma appena ngtcp2 li aveva **serializzati**, mentre il contratto di
-`ngtcp2_conn_writev_stream()` obbliga a tenerli **fino all'ack**. ⇒ **Uso dopo la liberazione**, e
-il difetto c'era **a ogni fotogramma ritrasmesso, da sempre**: quello da 525 KB è stato solo il
-primo abbastanza **grosso** perché `free()` restituisse davvero le pagine al kernel
-(`1` blocco `mmap` su **45 005** in quel giro). Sotto i 128 KiB lo stesso errore mandava al client
-**byte di spazzatura in silenzio**. ⇒ §4.
+At **08:28:09** the 7900 server died of `SEGV` on frame **185**, a delta of
+**525 298 bytes**. ⭐ **The cause was found line by line**: `wt_scrivi()` freed the bytes of
+a frame as soon as ngtcp2 had **serialized** them, while the contract of
+`ngtcp2_conn_writev_stream()` requires keeping them **until the ack**. ⇒ **Use after free**, and
+the defect was there **on every retransmitted frame, always**: the 525 KB one was only the
+first **large** enough for `free()` to really return the pages to the kernel
+(`1` `mmap` block out of **45 005** in that round). Below 128 KiB the same error sent the client
+**garbage bytes in silence**. ⇒ §4.
 
-⭐ **La cura è applicata** (`src/webtransport.c:745-870` e `:5929`): a `wt_scrivi()` non si libera
-più — si marca `consegnato`, e a liberare è l'ack (`coda_conferma()`) o la chiusura dello stream.
-⛔ **Non è dietro un interruttore**: non cambia quel che si vede, corregge un modo di morire.
+⭐ **The cure is applied** (`src/webtransport.c:745-870` and `:5929`): at `wt_scrivi()` nothing is freed
+any more — it is marked `consegnato`, and freeing is done by the ack (`coda_conferma()`) or by the closing of the stream.
+⛔ **It is not behind a switch**: it does not change what is seen, it corrects a way of dying.
 
-## S.2 · Che cosa è stato misurato, e quanto vale
+## S.2 · What was measured, and what it is worth
 
-| | `[M]` 23 agosto | dove |
+| | `[M]` 23 Aug | where |
 |---|---|---|
-| ⛔ **a scena ferma il ritmo non cala: SI FERMA** — 1 fotogramma in 30 s, poi zero. E **non è nostro**: Mutter consegna solo sul cambiamento (123 attese a vuoto/s) | 0,03 fot/s, ripetuto 2 volte, riconfermato a 2560x1080 | §3.1 |
-| ⭐⭐⭐ **e il risveglio da fermo NON costa niente** — 180 colpi, quiete da 0,2 a 15 s | **13 ms** di mediana, **tutte** le 180 misure fra **12,3 e 14,3** | §3.6 |
-| ⇒ e **l'80 % di quei 13 ms è attesa del compositore**; la codifica, che è nostra, ne vale 2,7 | 10,2-10,9 · **2,6-2,7** · 0,0 | §3.6 |
-| ⭐ **il desktop VERO dell'utente, a schermo intero e in movimento, costa l'1 % del pavimento** | **0,204 Mbit/s**, ritrovato due volte (0,193 · 0,195) | §3.8 · §3.15 |
-| ⛔ **ma il caso duro chiede TRE VOLTE il pavimento** — film con la grana a schermo intero | **58,668 Mbit/s = 293 %** di 20 | §3.8 |
-| ⛔ **e «quanti pixel cambiano» non predice niente**: la banda dipende dal CONTENUTO | `pieno` 1,2 · `barra` retinato **21** · grana **59** Mbit/s, a parità di pixel mossi | §3.8 |
-| ⛔⭐ **basta un buco di 3 secondi** per portare il ritmo da 40 a 13/s e fare metà chiavi | e `abbandoni §5.1` = `chiavi`, **uno a uno**, a ogni livello | §3.10 |
-| ⭐ **ma il ritorno è immediato e non c'è isteresi**: regime pieno al secondo dopo | 42 fot/s, **0 chiavi**, nessuno strascico in 17 s | §3.10 |
-| ⭐ **le tre cure del mattino non hanno cambiato niente dove non dovevano** — confronto appaiato 7900/7910 | risveglio ±0,5 ms · `pieno` **164 byte su 3,62 MB = 0,005 %** | §3-bis |
+| ⛔ **with a still scene the rate does not drop: IT STOPS** — 1 frame in 30 s, then zero. And **it is not ours**: Mutter delivers only on change (123 empty waits/s) | 0.03 fps, repeated 2 times, reconfirmed at 2560x1080 | §3.1 |
+| ⭐⭐⭐ **and waking from still costs NOTHING** — 180 shots, quiet from 0.2 to 15 s | **13 ms** median, **all** 180 measurements between **12.3 and 14.3** | §3.6 |
+| ⇒ and **80 % of those 13 ms is waiting for the compositor**; encoding, which is ours, is worth 2.7 of them | 10.2-10.9 · **2.6-2.7** · 0.0 | §3.6 |
+| ⭐ **the user's REAL desktop, full screen and moving, costs 1 % of the floor** | **0.204 Mbit/s**, found again twice (0.193 · 0.195) | §3.8 · §3.15 |
+| ⛔ **but the hard case asks for THREE TIMES the floor** — a film with grain at full screen | **58.668 Mbit/s = 293 %** of 20 | §3.8 |
+| ⛔ **and «how many pixels change» predicts nothing**: bandwidth depends on CONTENT | `pieno` 1.2 · `barra` halftone **21** · grain **59** Mbit/s, with the same pixels moved | §3.8 |
+| ⛔⭐ **a 3-second hole is enough** to bring the rate from 40 to 13/s and make half of them keyframes | and `abbandoni §5.1` = `chiavi`, **one to one**, at every level | §3.10 |
+| ⭐ **but the return is immediate and there is no hysteresis**: full regime the second after | 42 fps, **0 keyframes**, no aftermath in 17 s | §3.10 |
+| ⭐ **the three morning cures changed nothing where they should not have** — paired comparison 7900/7910 | wake-up ±0.5 ms · `pieno` **164 bytes out of 3.62 MB = 0.005 %** | §3-bis |
 
-## S.3 · Che cosa è cambiato nel codice, e dietro quale interruttore
+## S.3 · What changed in the code, and behind which switch
 
-⛔ **Sei cure, e quattro di loro sono SPENTE di nascita (I6).** Il diff non sta qui: sta in `src/`,
-e i commenti nel codice sono la sede della ragione.
+⛔ **Six cures, and four of them are OFF from birth (I6).** The diff is not here: it is in `src/`,
+and the comments in the code are the seat of the reasoning.
 
-| # | la cura | dove | interruttore | verificata? |
+| # | the cure | where | switch | verified? |
 |---|---|---|---|---|
-| **1** | ⛔⭐ **il crollo**: si libera all'**ack**, non alla serializzazione | `webtransport.c:745-870`, `:5929` | ⛔ **nessuno** — è la correzione di un difetto | ⛔ **no**: la ricetta di §4.5 non è stata eseguita |
-| **2** | **la soglia sulla coda** in `video_sgombra()`: un delta si abbandona solo se la coda non si svuota entro la soglia | `webtransport.c:2705-2800` | `--sgombra-soglia-ms N`, **0 = spenta** | ⛔ no |
-| **3** | **la risalita della qualità**: `qualita_corrente` era un cricchetto a senso unico | `codificatore.c` (`risali_qualita()`), `:141-143` | `--qualita-risale`, **spenta** | ⛔ no |
-| **4** | **il riordino dell'audio**: si scarta sul *«già consumato»* (§6.3), non sul *«già arrivato»* | `pagina.html` · `avvia_audio()` (`audio_posto_passato`), `:5992`, `:6507` | ⛔ **nessuno** — è un allentamento puro, non aggiunge un ms | ⛔ **no, e il banco NON PUÒ vederla** — §3.16 |
-| **5** | **il tetto di banda**: `QVBR` con filo, punto di lavoro e serbatoio derivati dal pavimento | `codificatore.c:200-340`, `:1786-1800` | `--tetto-banda-mbit N`, **0 = spento** | ⛔ no sulla macchina di prova (sì sul portatile) |
-| **6** | ⭐⭐ **il regolatore del ritmo**: un fotogramma non parte quando **2 delta** in volo hanno ancora byte nella nostra coda | `webtransport.c` — `ritmo_frena()`, `ritmo_ciclo()`, `wt_ritmo_adattivo()`; la chiamata è in `video_a_una()` **prima** di `video_sgombra()` | `--ritmo-adattivo`, **spento** ⛔ **e non basta da solo: vedi qui sotto** | ⛔ no — nessuna misura, solo la previsione scritta nel codice |
+| **1** | ⛔⭐ **the crash**: freeing happens at the **ack**, not at serialization | `webtransport.c:745-870`, `:5929` | ⛔ **none** — it is the correction of a defect | ⛔ **no**: the recipe of §4.5 was not run |
+| **2** | **the queue threshold** in `video_sgombra()`: a delta is abandoned only if the queue does not empty within the threshold | `webtransport.c:2705-2800` | `--sgombra-soglia-ms N`, **0 = off** | ⛔ no |
+| **3** | **the quality climb-back**: `qualita_corrente` was a one-way ratchet | `codificatore.c` (`risali_qualita()`), `:141-143` | `--qualita-risale`, **off** | ⛔ no |
+| **4** | **the audio reorder**: discarding happens on *«already consumed»* (§6.3), not on *«already arrived»* | `pagina.html` · `avvia_audio()` (`audio_posto_passato`), `:5992`, `:6507` | ⛔ **none** — it is a pure loosening, it does not add a ms | ⛔ **no, and the bench CANNOT see it** — §3.16 |
+| **5** | **the bandwidth cap**: `QVBR` with wire, working point and reservoir derived from the floor | `codificatore.c:200-340`, `:1786-1800` | `--tetto-banda-mbit N`, **0 = off** | ⛔ no on the test machine (yes on the laptop) |
+| **6** | ⭐⭐ **the rate regulator**: a frame does not leave when **2 deltas** in flight still have bytes in our queue | `webtransport.c` — `ritmo_frena()`, `ritmo_ciclo()`, `wt_ritmo_adattivo()`; the call is in `video_a_una()` **before** `video_sgombra()` | `--ritmo-adattivo`, **off** ⛔ **and it is not enough on its own: see below** | ⛔ no — no measurement, only the prediction written in the code |
 
-⛔⛔ **E LE CURE 2 E 6 SONO DUE INTERRUTTORI CHE DIPENDONO L'UNO DALL'ALTRO — sta scritto qui
-perché è il fatto più facile da misurare male di tutta la fase.**
+⛔⛔ **AND CURES 2 AND 6 ARE TWO SWITCHES THAT DEPEND ON EACH OTHER — it is written here
+because it is the easiest fact to measure wrongly in the whole phase.**
 
-Con `--sgombra-soglia-ms 0` (il predefinito) `video_sgombra()` abbandona ogni delta che ha ancora
-byte in coda, a ogni fotogramma più recente. ⇒ Quando arriva il fotogramma N+1, l'unico delta che
-può avere ancora byte nostri è N: **`arretrato` vale 0 o 1, mai 2, per costruzione** — e con
-`WT_RITMO_POSTI = 2` il regolatore **non scatta mai**.
+With `--sgombra-soglia-ms 0` (the default) `video_sgombra()` abandons every delta that still has
+bytes in the queue, at every more recent frame. ⇒ When frame N+1 arrives, the only delta that
+can still have our bytes is N: **`arretrato` is 0 or 1, never 2, by construction** — and with
+`WT_RITMO_POSTI = 2` the regulator **never fires**.
 
-⛔ Un banco che accendesse solo `--ritmo-adattivo` misurerebbe **zero discese** e leggerebbe *«la
-linea porta»*. Sono due fatti con la stessa faccia. ⇒ Il regolatore si prova **con tutt'e due
-accesi**:
+⛔ A bench that turned on only `--ritmo-adattivo` would measure **zero descents** and would read *«the
+line carries it»*. They are two facts with the same face. ⇒ The regulator is tested **with both
+on**:
 
 ```
 remotix --sgombra-soglia-ms 100 --ritmo-adattivo
 ```
 
-⭐ E il server lo **dice all'avvio** invece di lasciarlo dedurre: `wt_ritmo_adattivo()` è chiamata
-*dopo* `wt_sgombra_soglia()` apposta, così legge il valore **in vigore**, e con la soglia spenta
-scrive `⛔⛔ MA LA SOGLIA DELLA CODA VIDEO E' SPENTA … questo regolatore NON SCATTERA' MAI`.
-⚠ L'ordine delle due chiamate in `main.c` è parte della cura: invertirle farebbe leggere zero, e
-quella riga direbbe il falso proprio nel giro in cui serve.
+⭐ And the server **says it at startup** instead of leaving it to be deduced: `wt_ritmo_adattivo()` is called
+*after* `wt_sgombra_soglia()` on purpose, so it reads the value **in force**, and with the threshold off
+it writes `⛔⛔ MA LA SOGLIA DELLA CODA VIDEO E' SPENTA … questo regolatore NON SCATTERA' MAI`.
+⚠ The order of the two calls in `main.c` is part of the cure: inverting them would make it read zero, and
+that line would say the false thing precisely in the round where it is needed.
 
-⭐ **E una sesta cosa, che non è una cura ma si vede nel registro**: i valori **in vigore** adesso
-si scrivono all'avvio — `PARAMETRI IN VIGORE`, `la scala della degradazione` (26 → 35 → 44 → 51),
-`risalita della qualita' SPENTA`, `LIVELLO PRODOTTO`, `il client dichiara video.livello`. ⛔ Fino a
-stamattina il confronto di `RCP.md` §4.3 **non si poteva fare da fuori**: uno dei due numeri non
-era scritto da nessuna parte. Il controllo è in §3.12, e la 7900 non ha nessuna di quelle righe.
+⭐ **And a sixth thing, which is not a cure but shows in the log**: the values **in force** are now
+written at startup — `PARAMETRI IN VIGORE`, `la scala della degradazione` (26 → 35 → 44 → 51),
+`risalita della qualita' SPENTA`, `LIVELLO PRODOTTO`, `il client dichiara video.livello`. ⛔ Until
+this morning the comparison of `RCP.md` §4.3 **could not be made from outside**: one of the two numbers was
+not written anywhere. The check is in §3.12, and the 7900 has none of those lines.
 
-## S.4 · ⛔ Che cosa è stato provato e NON funziona
+## S.4 · ⛔ What was tried and does NOT work
 
-1. ⛔⛔ **Il banco prescritto per l'audio non può vedere la cura 4, e il numero lo dimostra.**
-   `07-b64-rete.py` misura il **trasporto**; la cura vive nella **pagina**. Il cliente di prova ha
-   la **sua** copia della regola vecchia (`01-b3-cliente.py` ⚠ *(il codice citato non c'e' piu': da rileggere)*), identica byte per byte nei due
-   alberi (`md5 13e68d19…`). ⇒ La previsione *«0,175 → ≥ 0,95»* è uscita **0,1149 → 0,1235**, cioè
-   niente — ⛔ **e non smentisce la cura: smentisce il banco.** §3.16;
-2. ⛔ **`VBR` è fuori, e non per opinione**: sotto VBR il `qp` è **ignorato** — con e senza `qp=26`
-   escono **gli stessi identici byte**, due volte su due. ⇒ Tutta la scala della degradazione e la
-   risalita scritta stamattina diventerebbero **no-op silenziosi**. Si è scelto **QVBR**, dove la
-   scala regge (`codificatore.c:200-215`);
-3. ⛔ **Il banco di stamattina misurava una VISTA D'INSIEME.** La sessione headless di GNOME sta
-   nell'Overview e ci resta: *«a schermo intero»* era **un'anteprima rimpicciolita**, e i byte di
-   §3.1–§3.3 sono quelli di **una frazione dello schermo**. Trovato **guardando i pixel**, non un
-   contatore. §3.7;
-4. ⛔⛔ **Otto inciampi del banco in un giorno, e sei su otto hanno prodotto «un numero
-   plausibile», non un rosso** — il palco orfano che accusava tre cure innocenti, l'`ESC` che
-   spegne quel che doveva accendere, il `UID_B` che ammazza il Firefox dell'altro utente, il
-   `wc -l <` che legge zero. §8;
-5. ⛔ **La strada spiccia per il crollo è sbagliata**: `shutdown_stream_write()` prima del `free`,
-   come fa `video_sgombra()`, *azzera* lo stream — e §6.2 vuole il fotogramma **completo**.
-   Sarebbe barattare un crollo raro con un fotogramma rotto **sempre**. §4.6.
+1. ⛔⛔ **The bench prescribed for audio cannot see cure 4, and the number proves it.**
+   `07-b64-rete.py` measures the **transport**; the cure lives in the **page**. The test client has
+   **its own** copy of the old rule (`01-b3-cliente.py` ⚠ *(the cited code is no longer there: to be reread)*), identical byte for byte in the two
+   trees (`md5 13e68d19…`). ⇒ The prediction *«0.175 → ≥ 0.95»* came out **0.1149 → 0.1235**, that is
+   nothing — ⛔ **and it does not refute the cure: it refutes the bench.** §3.16;
+2. ⛔ **`VBR` is out, and not by opinion**: under VBR the `qp` is **ignored** — with and without `qp=26`
+   **the very same bytes** come out, two times out of two. ⇒ The whole degradation ladder and the
+   climb-back written this morning would become **silent no-ops**. **QVBR** was chosen, where the
+   ladder holds (`codificatore.c:200-215`);
+3. ⛔ **This morning's bench measured an OVERVIEW.** The headless GNOME session sits
+   in the Overview and stays there: *«full screen»* was **a shrunken preview**, and the bytes of
+   §3.1–§3.3 are those of **a fraction of the screen**. Found **by looking at the pixels**, not at a
+   counter. §3.7;
+4. ⛔⛔ **Eight bench stumbles in one day, and six out of eight produced «a plausible
+   number», not a red** — the orphan stage that accused three innocent cures, the `ESC` that
+   switches off what it was supposed to switch on, the `UID_B` that kills the other user's Firefox, the
+   `wc -l <` that reads zero. §8;
+5. ⛔ **The quick route for the crash is wrong**: `shutdown_stream_write()` before the `free`,
+   as `video_sgombra()` does, *resets* the stream — and §6.2 wants the **complete** frame.
+   It would be trading a rare crash for a broken frame **always**. §4.6.
 
-## S.5 · ⏳ Che cosa resta, in che ordine, e **perché quell'ordine**
+## S.5 · ⏳ What remains, in what order, and **why that order**
 
-| | perché prima di quel che segue |
+| | why before what follows |
 |---|---|
-| **1.** ⛔ **riprodurre il crollo con la ricetta di §4.5** (`MALLOC_MMAP_THRESHOLD_=32768` + client congelato), e armare la trappola di §4.7 | ⛔ La causa è *probabile con la riga*, **non vista in volo**. E finché non si riproduce, non si può nemmeno dimostrare che la cura l'abbia curata: si starebbe misurando un'assenza |
-| **2.** ⭐ **misurare le cinque cure sul ferro vero**, una per volta, appaiate | ⛔ Sono **cinque variabili**. Il metodo di §3-bis (due server, «prima» vivo accanto al «dopo») è già scritto e ha già preso un falso allarme per la coda |
-| **3.** ⛔ **scrivere il banco che fa girare la PAGINA** per la cura 4 | Senza, la cura dell'audio resta **non verificabile**: il banco di oggi misura se stesso. La forma del banco è già scritta in §3.16 |
-| **4.** ✅ **il regolatore del ritmo** — **scritto** il 23 agosto 2026, cura 6 di S.3, ⏳ **non misurato** | ⛔ L'ordine obbligato è stato rispettato: la cura 2 (`--sgombra-soglia-ms`) è il suo prerequisito ed è arrivata prima. ⚠ **E resta la trappola**: acceso da solo non scatta mai, e il server lo scrive all'avvio — vedi S.3 |
-| **5.** ✅ **il registro delle discese**, §7 | Nasce insieme al regolatore, non dopo: **due righe per episodio** (`il ritmo SCENDE` / `il ritmo RISALE`), mai una per fotogramma; ogni discesa porta **la misura accanto alla soglia** (`arretrato N contro 2 posti`), più `cwnd`, `cwnd_left`, byte in volo e la coda dentro la rete in ms. ⏳ Resta la **taratura di `POSTI`** sul banco |
-| **6.** ⛔ **il giudizio dell'utente sulle due cose che cambiano quel che si VEDE** | È l'unica cosa che chiude la fase, ed è la lezione pagata con l'azzeramento della fase 10 di v1 |
+| **1.** ⛔ **reproduce the crash with the recipe of §4.5** (`MALLOC_MMAP_THRESHOLD_=32768` + frozen client), and arm the trap of §4.7 | ⛔ The cause is *probable with the line*, **not seen in flight**. And until it reproduces, one cannot even prove that the cure cured it: one would be measuring an absence |
+| **2.** ⭐ **measure the five cures on the real hardware**, one at a time, paired | ⛔ They are **five variables**. The method of §3-bis (two servers, «before» alive beside «after») is already written and has already caught a false alarm for the queue |
+| **3.** ⛔ **write the bench that runs the PAGE** for cure 4 | Without it, the audio cure stays **unverifiable**: today's bench measures itself. The shape of the bench is already written in §3.16 |
+| **4.** ✅ **the rate regulator** — **written** on 23 Aug 2026, cure 6 of S.3, ⏳ **not measured** | ⛔ The mandatory order was respected: cure 2 (`--sgombra-soglia-ms`) is its prerequisite and arrived first. ⚠ **And the trap remains**: switched on alone it never fires, and the server writes so at startup — see S.3 |
+| **5.** ✅ **the descent log**, §7 | It is born together with the regulator, not after: **two lines per episode** (`il ritmo SCENDE` / `il ritmo RISALE`), never one per frame; every descent carries **the measurement beside the threshold** (`arretrato N contro 2 posti`), plus `cwnd`, `cwnd_left`, bytes in flight and the queue inside the network in ms. ⏳ The **tuning of `POSTI`** on the bench remains |
+| **6.** ⛔ **the user's judgement on the two things that change what is SEEN** | It is the only thing that closes the phase, and it is the lesson paid for with the reset of phase 10 of v1 |
 
-⛔⛔ **E le TRE cose che aspettano lui, esplicitamente:**
+⛔⛔ **And the THREE things that wait for him, explicitly:**
 
-| | il prezzo, quantificato |
+| | the price, quantified |
 |---|---|
-| **la soglia sulla coda** (`--sgombra-soglia-ms 100`) | trascinando una finestra mentre la linea cala, la finestra segue il puntatore con fino a **~150 ms** di ritardo per un attimo (**~205 ms** dal gesto al pixel, sommando l'anello di fase 8) — ⛔ **invece di scattare da un'immagine all'altra a ritmo di chiave**, che è quel che fa oggi. ⚠ Quale delle due sia peggio **non lo decide una misura** |
-| **il tetto di banda** (`--tetto-banda-mbit 20`) | sul **caso duro** l'immagine diventa più brutta: è il suo mestiere. ⭐ Sul **contenuto vero** la previsione è che **non succeda niente** (0,204 Mbit/s, l'1 % del pavimento) — e se il desktop vero costasse **meno** di prima, il tetto sta risparmiando dove non deve e **la cura si butta** |
-| **il regolatore del ritmo** (`--ritmo-adattivo`, con la soglia accesa) | durante un calo di linea **si vedono meno fotogrammi**: il movimento diventa a scatti invece che vecchio. ⭐ La previsione è che **a 20 Mbit/s non faccia niente** — è un **parapetto**, e il suo comportamento corretto è non fare nulla. ⛔ Se un giorno la scena consegnata scende **sotto 25/s su una linea da 20 Mbit/s**, il registro lo dichiara **difetto** e non lo combatte: forzare un fotogramma dentro una coda che non si svuota peggiora la coda |
+| **the queue threshold** (`--sgombra-soglia-ms 100`) | dragging a window while the line drops, the window follows the pointer with up to **~150 ms** of delay for a moment (**~205 ms** from gesture to pixel, adding the loop of phase 8) — ⛔ **instead of jumping from one image to the next at keyframe rate**, which is what it does today. ⚠ Which of the two is worse **is not decided by a measurement** |
+| **the bandwidth cap** (`--tetto-banda-mbit 20`) | on the **hard case** the image gets uglier: that is its job. ⭐ On **real content** the prediction is that **nothing happens** (0.204 Mbit/s, 1 % of the floor) — and if the real desktop cost **less** than before, the cap is saving where it must not and **the cure is thrown away** |
+| **the rate regulator** (`--ritmo-adattivo`, with the threshold on) | during a line drop **fewer frames are seen**: movement becomes jerky instead of old. ⭐ The prediction is that **at 20 Mbit/s it does nothing** — it is a **parapet**, and its correct behaviour is to do nothing. ⛔ If one day the delivered scene goes **below 25/s on a 20 Mbit/s line**, the log declares it a **defect** and does not fight it: forcing a frame into a queue that does not empty makes the queue worse |
 
-## S.6 · ⛔⛔ LE DUE CONTRADDIZIONI, dichiarate e non lisciate
+## S.6 · ⛔⛔ THE TWO CONTRADICTIONS, declared and not smoothed over
 
-⚠ **Stanno per esteso in §10, con quel che le deciderebbe.** In breve:
+⚠ **They are in full in §10, with what would decide them.** In short:
 
-1. ⛔ **«Non serve nessun tetto di banda» (mattina) contro «ne chiede il 293 %» (pomeriggio).**
-   Lo studio delle 09:07 concluse *«sul contenuto misurato, a 20 Mbit/s, il CQP 26 va benissimo»*
-   sulla base di `[M]` fase 8 (24 956 byte per chiave, 4,17 Mbit/s nel regime peggiore). Alle 08:35
-   UTC il film con la grana a schermo intero ha dato **58,668 Mbit/s**. ⇒ ⭐ **Non si contraddicono
-   sul numero: misurano due contenuti diversi**, e lo studio lo aveva scritto (*«il desktop
-   dell'utente NON contiene quella scena»*). ⛔ **Quel che è stato smentito è la sua stima**: ~19,9
-   Mbit/s estrapolati da v1, **ottimista di tre volte**;
-2. ⛔ **Quanto morde la spirale sopra il pavimento — due posizioni.** La proposta della soglia
-   (§5.2) sostiene che il difetto **vive sotto il pavimento** e che sopra la cura è **inerte**
-   (`[M]` a 15 Mbit/s: 2 chiavi su 1 019). Il gradino di §3.10 mostra abbandoni e chiavi **anche
-   sulla linea larga** (3↔3, 1↔1 a 22-26 Mbit/s). ⇒ Le due posizioni non sono ancora decise, e
-   §10.2 dice con quale misura si decidono.
+1. ⛔ **«No bandwidth cap is needed» (morning) against «it asks for 293 %» (afternoon).**
+   The 09:07 study concluded *«on the measured content, at 20 Mbit/s, CQP 26 is just fine»*
+   on the basis of `[M]` phase 8 (24 956 bytes per keyframe, 4.17 Mbit/s in the worst regime). At 08:35
+   UTC the film with grain at full screen gave **58.668 Mbit/s**. ⇒ ⭐ **They do not contradict each other
+   on the number: they measure two different contents**, and the study had written so (*«the user's
+   desktop does NOT contain that scene»*). ⛔ **What was refuted is its estimate**: ~19.9
+   Mbit/s extrapolated from v1, **optimistic by three times**;
+2. ⛔ **How much the spiral bites above the floor — two positions.** The threshold proposal
+   (§5.2) maintains that the defect **lives below the floor** and that above it the cure is **inert**
+   (`[M]` at 15 Mbit/s: 2 keyframes out of 1 019). The step of §3.10 shows abandons and keyframes **even
+   on the wide line** (3↔3, 1↔1 at 22-26 Mbit/s). ⇒ The two positions are not decided yet, and
+   §10.2 says with which measurement they are decided.
 
 ---
 
-## §0 · LO STUDIO DI APERTURA — *23 agosto 2026*
+## §0 · THE OPENING STUDY — *23 Aug 2026*
 
-Letti per intero `RCP.md`, `SPECIFICHE.md`, `DECISIONI.md`, `LEZIONI.md`, `STUDI.md`, `PIANO.md`,
-`CODER.md`, i tre documenti di fase 6/7/8, i documenti di v1 e il codice del ritmo. Quattro agenti
-in parallelo, mandato di estrazione. Quel che segue è il **risultato**, non il racconto.
+Read in full `RCP.md`, `SPECIFICHE.md`, `DECISIONI.md`, `LEZIONI.md`, `STUDI.md`, `PIANO.md`,
+`CODER.md`, the three documents of phases 6/7/8, the v1 documents and the rate code. Four agents
+in parallel, extraction mandate. What follows is the **result**, not the story.
 
-### 0.1 ⛔⛔ UNA CORREZIONE DI NOMENCLATURA, prima di tutto
+### 0.1 ⛔⛔ A CORRECTION OF NOMENCLATURE, first of all
 
-**In v1 le ferite sono DUE fasi diverse, e i documenti di V2 le confondono.**
+**In v1 the wounds are TWO different phases, and the V2 documents confuse them.**
 
-| | v1 fase **9** | v1 fase **10** |
+| | v1 phase **9** | v1 phase **10** |
 |---|---|---|
-| che cosa era | la copia zero, i millisecondi di CPU per fotogramma | **la qualità e la banda** |
-| l'errore | ottimizzata la CPU mentre i fotogrammi consegnati **calavano** (29→22,7) | validata con **PSNR/SSIM** invece che con l'occhio dell'utente |
-| l'esito | una lezione | ⛔ **AZZERATA**, codice riportato indietro, banchi rimossi |
+| what it was | zero copy, the CPU milliseconds per frame | **quality and bandwidth** |
+| the error | CPU optimized while the delivered frames **dropped** (29→22.7) | validated with **PSNR/SSIM** instead of with the user's eye |
+| the outcome | a lesson | ⛔ **RESET TO ZERO**, code brought back, benches removed |
 
-⇒ ⭐ **La fase 9 di V2 è l'erede della fase 10 di v1.** `PIANO.md:1180` scrive *«in v1 questa fase
-era stata validata con PSNR»*: è vero come *fase omologa*, ⚠ ma chi cercasse «fase 9» in
-`LEZIONI.md` troverebbe **la ferita sbagliata** (la CPU). `LEZIONI.md` §2.4 e §7.2 e
-`DECISIONI.md` §3.2 dicono correttamente **fase 10**.
+⇒ ⭐ **Phase 9 of V2 is the heir of phase 10 of v1.** `PIANO.md:1180` writes *«in v1 this phase
+had been validated with PSNR»*: it is true as a *homologous phase*, ⚠ but whoever looked for «phase 9» in
+`LEZIONI.md` would find **the wrong wound** (the CPU). `LEZIONI.md` §2.4 and §7.2 and
+`DECISIONI.md` §3.2 correctly say **phase 10**.
 
-### 0.2 ⛔ Il racconto esatto dell'azzeramento — `fondamenta/documenti/PIANO.md:1410-1442`
+### 0.2 ⛔ The exact account of the reset — `fondamenta/documenti/PIANO.md:1410-1442`
 
-> *«La fase 10 va azzerata e ricominciare da zero.»* — Il codice è tornato allo stato di chiusura
-> della fase 9. **I banchi sono stati rimossi.**
+> *«La fase 10 va azzerata e ricominciare da zero.»* — The code went back to the closing state
+> of phase 9. **The benches were removed.**
 
-⛔ **`fondamenta/documenti/PIANO.md:1418`: «l'errore non è stato tecnico».** Le tre ragioni, testuali:
+⛔ **`fondamenta/documenti/PIANO.md:1418`: «the error was not technical».** The three reasons, verbatim:
 
-1. **Si è spedita a chi guarda una modifica a quel che si vede, validata solo sul banco.** Il
-   passaggio a **VBR** aveva PSNR, SSIM e un fotogramma fermo guardato a occhio; **non aveva il
-   giudizio dell'utente sul desktop vero, che è il metro**;
-2. **Si è ottimizzato nella direzione sbagliata.** «Spendere meno banda» era un guadagno; per il
-   prodotto la banda è un **pavimento**, non un budget. ⇒ ⛔ **Metà delle misure erano giuste e
-   rispondevano alla domanda sbagliata**;
-3. **Non si è controllato lo stato della macchina prima di cominciare** — l'utente si è preso in
-   faccia un difetto noto a metà giornata.
+1. **A change to what is seen was shipped to whoever watches, validated only on the bench.** The
+   switch to **VBR** had PSNR, SSIM and a still frame looked at by eye; **it did not have the
+   user's judgement on the real desktop, which is the yardstick**;
+2. **It was optimized in the wrong direction.** «Spending less bandwidth» was a gain; for the
+   product bandwidth is a **floor**, not a budget. ⇒ ⛔ **Half the measurements were right and
+   answered the wrong question**;
+3. **The state of the machine was not checked before starting** — the user took a known defect
+   in the face in the middle of the day.
 
-⭐ **Il fatto tecnico che innescò tutto** (`fondamenta/documenti/SPECIFICA.md:93-96`): il controllo di
-bitrate spedito *«su un desktop poco mosso scendeva a 2–6 Mbit/s, contento di risparmiare»*. ⚠ E
-il testo della specifica **si prestava alla lettura opposta** — cioè una fase è stata azzerata
-anche per **l'ambiguità di una riga di specifica**.
+⭐ **The technical fact that triggered everything** (`fondamenta/documenti/SPECIFICA.md:93-96`): the bitrate
+control shipped *«on a barely moving desktop dropped to 2–6 Mbit/s, happy to save»*. ⚠ And
+the text of the specification **lent itself to the opposite reading** — that is, a phase was reset to zero
+also because of **the ambiguity of one line of specification**.
 
-⭐⭐ **Che cosa NON fu buttato**: le misure con data e fonte, e le decisioni dell'utente —
-risoluzione adattiva **fuori**, AVC444 **fuori**, codifica per regioni **fuori**.
+⭐⭐ **What was NOT thrown away**: the measurements with date and source, and the user's decisions —
+adaptive resolution **out**, AVC444 **out**, encoding by regions **out**.
 
-### 0.3 ⛔ IL FATTO PIÙ GRAVE — **oggi la qualità non si governa affatto**
+### 0.3 ⛔ THE MOST SERIOUS FACT — **today quality is not governed at all**
 
-`[R]` 23 agosto 2026, letto nel codice:
+`[R]` 23 Aug 2026, read in the code:
 
-| | oggi |
+| | today |
 |---|---|
-| controllo di **bitrate** del video | ⛔ **non esiste**: `grep bit_rate\|maxrate\|bufsize codificatore.c` → **zero occorrenze** |
-| **QP** | `figlio.c` · `scatto_chiudi()` `QP_HARDWARE 26` **fisso**, `rc_mode = CQP` — e il commento lo dichiara: *«il valore è di comodo: il punto di lavoro fra qualità e banda è la fase 9»* |
-| algoritmo di **congestione** | ⛔ **mai scelto**: `grep cc_algo\|NGTCP2_CC` → **zero**. Si prende il default di ngtcp2 |
-| l'**unico** anello di reazione alla banda | `webtransport.c` · `wt_video_gancio()` `chiave_intervallo_ms()` — regola **ogni quanto si può CHIEDERE una chiave**, non quanto costa un fotogramma |
-| la degradazione che il prodotto **ha davvero** | `webtransport.c` · `WT_TIENILA_VIVA_NS` `video_sgombra()` |
+| video **bitrate** control | ⛔ **does not exist**: `grep bit_rate\|maxrate\|bufsize codificatore.c` → **zero occurrences** |
+| **QP** | `figlio.c` · `scatto_chiudi()` `QP_HARDWARE 26` **fixed**, `rc_mode = CQP` — and the comment declares it: *«the value is a convenience: the working point between quality and bandwidth is phase 9»* |
+| **congestion** algorithm | ⛔ **never chosen**: `grep cc_algo\|NGTCP2_CC` → **zero**. ngtcp2's default is taken |
+| the **only** loop reacting to bandwidth | `webtransport.c` · `wt_video_gancio()` `chiave_intervallo_ms()` — it rules **how often a keyframe can be REQUESTED**, not how much a frame costs |
+| the degradation the product **really has** | `webtransport.c` · `WT_TIENILA_VIVA_NS` `video_sgombra()` |
 
-⛔⛔ **E `video_sgombra()` va all'incontrario di quel che §3.3 chiede.** Chiamata a **ogni**
-fotogramma (`webtransport.c` · `wt_ritmo_adattivo()`): su linea stretta un delta non esce in 33 ms, quindi viene
-abbandonato **sempre**; ogni abbandono riaccende il debito di `RCP.md` §5.2 (`rcp.c` →
-`:3382`) ⇒ il flusso degenera in **sole chiavi**. ⇒ **Degrada nello spazio E nel tempo insieme**,
-invece di calare il ritmo tenendo i delta. ⭐ La cura è **nominata nel codice**, permessa da §5.1,
-e **non è mai stata scritta**: abbandonare un delta solo quando è *davvero senza speranza* — una
-soglia sulla coda.
+⛔⛔ **And `video_sgombra()` goes the opposite way from what §3.3 asks.** Called at **every**
+frame (`webtransport.c` · `wt_ritmo_adattivo()`): on a narrow line a delta does not get out in 33 ms, so it is
+abandoned **always**; every abandon rekindles the debt of `RCP.md` §5.2 (`rcp.c` →
+`:3382`) ⇒ the stream degenerates into **keyframes only**. ⇒ **It degrades in space AND in time together**,
+instead of lowering the rate while keeping the deltas. ⭐ The cure is **named in the code**, allowed by §5.1,
+and **was never written**: abandon a delta only when it is *really hopeless* — a
+threshold on the queue.
 
-### 0.4 Le regole che vincolano, e che non si rimettono in discussione
+### 0.4 The rules that bind, and that are not put back into question
 
 | | |
 |---|---|
-| **I1** (`SPECIFICHE.md` §8.2) | *«Il ritmo non cala mai per prudenza, per risparmio o perché la scena è ferma. Cala solo quando la misura dimostra che la linea non porta, e ogni discesa è dichiarata nel registro.»* |
-| **§8.3** | ⭐ **si calano i FOTOGRAMMI. Mai sgranare, mai staccare.** Degradare nel tempo, non nello spazio: il testo resta leggibile. E a ritmo basso si spendono **più** bit per fotogramma |
-| **I6** | ciò che cambia quel che si VEDE sta **dietro un interruttore spento** finché l'utente non l'ha guardato — ⛔ è la lezione pagata con l'azzeramento |
-| ⛔ **il ritardo pesa più dei fotogrammi** (`SPECIFICHE.md:128`) | *«ogni memoria intermedia compra fluidità e vende risposta»* ⇒ **ogni cuscino che questa fase volesse aggiungere va giustificato contro questa riga** |
-| **§3.1-bis** (nuova, 23 agosto) | ⭐ **il pavimento della linea è 20 Mbit/s** |
-| **§2.1** (confermata il 23 agosto) | ⭐ **il pavimento dell'immagine è 480p · 25 fps**, ed è ora il **fondo della scala**: sotto, il regolatore non ha il permesso di scendere |
+| **I1** (`SPECIFICHE.md` §8.2) | *«The rate never drops out of prudence, to save, or because the scene is still. It drops only when the measurement proves that the line does not carry it, and every descent is declared in the log.»* |
+| **§8.3** | ⭐ **FRAMES are dropped. Never blur, never detach.** Degrade in time, not in space: text stays readable. And at a low rate **more** bits are spent per frame |
+| **I6** | whatever changes what is SEEN stays **behind a switch that is off** until the user has looked at it — ⛔ it is the lesson paid for with the reset |
+| ⛔ **delay weighs more than frames** (`SPECIFICHE.md:128`) | *«every intermediate buffer buys smoothness and sells response»* ⇒ **every cushion this phase wanted to add must be justified against this line** |
+| **§3.1-bis** (new, 23 Aug) | ⭐ **the line floor is 20 Mbit/s** |
+| **§2.1** (confirmed on 23 Aug) | ⭐ **the image floor is 480p · 25 fps**, and it is now the **bottom of the ladder**: below it, the regulator has no permission to go down |
 
-⛔ **La scala è unidimensionale per decisione**: le altre leve sono chiuse, ciascuna con la sua
-riga — la **risoluzione** (`DECISIONI.md` §5.0-ter, volutamente fuori), **la tela** (non si tocca
-a sessione viva, §5.1-bis), il **4:4:4** (rinviato a RCP/2), la **profondità** (si negozia, non si
-degrada). Resta il **qp**, di cui non esiste nessuna scala definita.
+⛔ **The ladder is one-dimensional by decision**: the other levers are closed, each with its own
+line — **resolution** (`DECISIONI.md` §5.0-ter, deliberately out), **the canvas** (not touched
+with a live session, §5.1-bis), **4:4:4** (postponed to RCP/2), **depth** (negotiated, not
+degraded). What remains is the **qp**, for which no ladder is defined.
 
-### 0.5 ⭐ I numeri già in mano — non si riparte da zero
+### 0.5 ⭐ The numbers already in hand — we do not restart from zero
 
 | | `[M]` |
 |---|---|
-| a **3 Mbit/s con desktop MOSSO** l'audio passa 397 blocchi su 6 458 — purezza **0,18** | 21 ago |
-| a **3 Mbit/s con desktop FERMO** — purezza **1,000** ⇒ ⛔ **non è la banda: è il video** | 21 ago |
-| con **Opus** (1/32 della banda dell'audio) si perde comunque il **58 %** ⇒ ridurre quel che l'audio chiede **non lo salva** | 21 ago |
-| sui giri stretti i fotogrammi consegnati sono **tutti chiavi** (144/144, 149/149) contro **2 su 1 019** a 15 Mbit/s | 21 ago |
-| una chiave da 60 KB a 3 Mbit/s occupa la finestra **160 ms**, e `WT_CHIAVE_RICHIESTA_MS` ne concede una ogni **150** | 21 ago |
-| ⛔ **quattro varianti del trasporto non cambiano niente** (397 · 278 · 406 · 514 · 371) ⇒ *«la finestra non è contesa: è già piena»* | 21 ago |
-| il **pavimento del codificatore hardware** (v1, R31): chiedendo 2 000 kbit/s a 1440p mosso ne escono **3 702 (VBR) · 3 966 (CBR) · 4 111 (QVBR)** (il confronto con `libx264` non vale più dopo la fase 18) ⇒ **c'è un fondo attorno ai 4 Mbit/s, e da lì in giù l'unica leva sono meno pixel o meno fotogrammi** | v1 |
-| ⛔ **il modo di controllo del bitrate non si sceglie: lo DEDUCE il driver** (`rc_max_rate == bit_rate` ⇒ CBR, e nessuno l'aveva scelto) | v1, R31 |
-| su desktop fermo il CBR spendeva **9 875 kbit/s contro 277 del QVBR, per 1,8 dB** ⇒ *«la scelta non si gioca sulla scena dura: si gioca su quanto si spende quando non serve»* | v1, R31 |
-| il ritmo del **contenuto vero dell'utente**: **20,9 fotogrammi/s**, 31 % identici | fase 8 |
-| il peso vero delle chiavi sulla tela dell'utente: max **21 433 byte = 0,13 %** del tetto di 16 MiB | fase 8 |
+| at **3 Mbit/s with a MOVING desktop** audio passes 397 blocks out of 6 458 — purity **0.18** | 21 Aug |
+| at **3 Mbit/s with a STILL desktop** — purity **1.000** ⇒ ⛔ **it is not the bandwidth: it is the video** | 21 Aug |
+| with **Opus** (1/32 of the audio bandwidth) **58 %** is lost anyway ⇒ reducing what audio asks for **does not save it** | 21 Aug |
+| on the narrow rounds the delivered frames are **all keyframes** (144/144, 149/149) against **2 out of 1 019** at 15 Mbit/s | 21 Aug |
+| a 60 KB keyframe at 3 Mbit/s occupies the window for **160 ms**, and `WT_CHIAVE_RICHIESTA_MS` grants one every **150** | 21 Aug |
+| ⛔ **four transport variants change nothing** (397 · 278 · 406 · 514 · 371) ⇒ *«the window is not contended: it is already full»* | 21 Aug |
+| the **hardware encoder floor** (v1, R31): asking for 2 000 kbit/s at moving 1440p, out come **3 702 (VBR) · 3 966 (CBR) · 4 111 (QVBR)** (the comparison with `libx264` no longer holds after phase 18) ⇒ **there is a bottom around 4 Mbit/s, and from there down the only lever is fewer pixels or fewer frames** | v1 |
+| ⛔ **the bitrate control mode is not chosen: the driver DEDUCES it** (`rc_max_rate == bit_rate` ⇒ CBR, and nobody had chosen it) | v1, R31 |
+| on a still desktop CBR spent **9 875 kbit/s against 277 for QVBR, for 1.8 dB** ⇒ *«the choice is not played on the hard scene: it is played on how much is spent when it is not needed»* | v1, R31 |
+| the rate of the **user's real content**: **20.9 frames/s**, 31 % identical | phase 8 |
+| the real weight of keyframes on the user's canvas: max **21 433 bytes = 0.13 %** of the 16 MiB cap | phase 8 |
 
 ---
 
-## §1 · IL BANCO — *scritto PRIMA di sviluppare*
+## §1 · THE BENCH — *written BEFORE developing*
 
-*Le regole, fissate prima di misurare. I tre banchi che ne sono nati stanno in §1.1 e §1.2.*
+*The rules, fixed before measuring. The three benches born from them are in §1.1 and §1.2.*
 
-- ⭐ **il punto di lavoro è 20 Mbit/s e sopra** — `DECISIONI.md` §3.1-bis. Sotto, si può *guardare*
-  ma non si *promette*;
-- ⭐ **si strozza il percorso VERO, non `lo`**: `wondershaper` è in `~/.local/bin` sul tablet
-  dell'utente. ⚠ È il limite dichiarato di `banchi/07-b64-rete.py`, la cui metà `netem` gira su
-  `lo`, dove la MTU è 65536;
-- ⛔ **il controllo che decide c'è già**: `banchi/07-b65-datagram.py --scena no`. Un banco che a
-  scena ferma non dà purezza 1,000 non ha misurato niente;
-- ⛔ **il primo controllo della fase è l'INVARIANTE I1**: che il ritmo **non** cali a scena ferma;
-- ⛔ **si misurano tutte e tre le grandezze** — ms di CPU · fotogrammi/s · **ritardo** — **più i
-  byte in uscita**, e il lavoro si fissa prima del confronto (`LEZIONI.md` §6.2, §1.26);
-- ⚠ **PSNR/SSIM si possono usare come strumento di lavoro, mai come verdetto**, e prima si
-  certificano contro le tre trappole di `fondamenta/documenti/REFERENCE.md:2437` (l'fps del muxer, la
-  scena che finisce prima del filmato, il croma non esercitato).
+- ⭐ **the working point is 20 Mbit/s and above** — `DECISIONI.md` §3.1-bis. Below, one may *look*
+  but does not *promise*;
+- ⭐ **the REAL path is throttled, not `lo`**: `wondershaper` is in `~/.local/bin` on the user's
+  tablet. ⚠ It is the declared limit of `banchi/07-b64-rete.py`, whose `netem` half runs on
+  `lo`, where the MTU is 65536;
+- ⛔ **the deciding check already exists**: `banchi/07-b65-datagram.py --scena no`. A bench that with a
+  still scene does not give purity 1.000 has measured nothing;
+- ⛔ **the first check of the phase is INVARIANT I1**: that the rate does **not** drop with a still scene;
+- ⛔ **all three quantities are measured** — CPU ms · frames/s · **delay** — **plus the
+  outgoing bytes**, and the work is fixed before the comparison (`LEZIONI.md` §6.2, §1.26);
+- ⚠ **PSNR/SSIM may be used as a working tool, never as a verdict**, and first they are
+  certified against the three traps of `fondamenta/documenti/REFERENCE.md:2437` (the muxer's fps, the
+  scene that ends before the clip, the chroma not exercised).
 
-⚠ **Pulizia prima di misurare**: quattro server di prova degli agenti sono rimasti accesi da root
-(**7746, 7752, 7765-67, 7775**), e ⛔ **non si misura in due sulla stessa macchina**
-(`LEZIONI.md` §1.26: non dà un rosso, dà **un numero plausibile**).
-✅ *Chiusa il 23 agosto*: dopo il riavvio e la riprovisione la macchina ha **una sola porta 7xxx
-aperta, la 7900** — verificato con `ss -tuln` prima di misurare.
+⚠ **Cleanup before measuring**: four agents' test servers were left running as root
+(**7746, 7752, 7765-67, 7775**), and ⛔ **two do not measure on the same machine**
+(`LEZIONI.md` §1.26: it does not give a red, it gives **a plausible number**).
+✅ *Closed on 23 Aug*: after the reboot and the reprovisioning the machine has **a single 7xxx port
+open, 7900** — verified with `ss -tuln` before measuring.
 
-### 1.1 ⭐ IL PRIMO BANCO — `banchi/09-b68-ritmo.py`, *23 agosto 2026*
+### 1.1 ⭐ THE FIRST BENCH — `banchi/09-b68-ritmo.py`, *23 Aug 2026*
 
-**La domanda, una sola**: su **linea larga** — nessuna strozzatura, il caso in cui I1 non ha
-nessuna scusa — **il ritmo cala quando la scena è ferma?**
+**The question, only one**: on a **wide line** — no throttling, the case in which I1 has
+no excuse — **does the rate drop when the scene is still?**
 
 | | |
 |---|---|
-| **la sessione** | `banchi/01-b3-cliente.py` **dentro il contenitore** (`enter.sh --root`): `aioquic` sta lì, non fuori. È il mestiere di `07-b65-datagram.py`, non una strada nuova |
-| **la scena** | `04-b30-scena` già costruita, in tre stati: **ferma** (nessuna scena) · **barra** (una barra che scorre) · **pieno** (bande a schermo intero). ⛔ Vuole il monitor **per nome**, e il nome lo dice il registro (`monitor «Meta-0»`) |
-| **il palco** | nasce col **primo** cliente e sopravvive al distacco (I4) ⇒ senza una sessione aperta prima, `--uscita` non trova nessun monitor |
-| **i fotogrammi, chiave contro delta** | dalla riga per fotogramma `rcp.c` · `rcp_video_apri()` — `fotogramma N SPEDITO: CHIAVE 0x0301 \| delta 0x0302 … B byte di dati` |
-| **il ritmo al secondo** | dalla riga `figlio.c`, che il figlio scrive **ogni secondo** e che porta anche le **attese a vuoto** |
-| **gli abbandoni** | `§5.1` `rcp.c` · la chiave trattenuta `§5.2` `webtransport.c` ⚠ *(il codice citato non c'e' piu': da rileggere)* · `RICHIEDI_CHIAVE … accolta (§5.2)` `rcp.c` · `appunti_posto_libera()` |
-| ⭐ **i byte sul filo** | **si contano, non si deducono**: `/proc/net/dev` su `lo`. `[M]` `lo` **a riposo fa 0 byte in 5 s** su questa macchina (l'ssh passa da `enp7s0`, il resto è su socket unix) ⇒ contatore pulito, e **non serve toccare `tc`**. ⚠ È un vantaggio del momento, non una legge: si rimisura il riposo a ogni giro |
+| **the session** | `banchi/01-b3-cliente.py` **inside the container** (`enter.sh --root`): `aioquic` is there, not outside. It is the job of `07-b65-datagram.py`, not a new route |
+| **the scene** | `04-b30-scena` already built, in three states: **still** (no scene) · **bar** (a scrolling bar) · **full** (bands at full screen). ⛔ It wants the monitor **by name**, and the name is told by the log (`monitor «Meta-0»`) |
+| **the stage** | it is born with the **first** client and survives the detach (I4) ⇒ without a session opened before, `--uscita` finds no monitor |
+| **the frames, keyframe against delta** | from the per-frame line `rcp.c` · `rcp_video_apri()` — `fotogramma N SPEDITO: CHIAVE 0x0301 \| delta 0x0302 … B byte di dati` |
+| **the rate per second** | from the line `figlio.c`, which the child writes **every second** and which also carries the **empty waits** |
+| **the abandons** | `§5.1` `rcp.c` · the withheld keyframe `§5.2` `webtransport.c` ⚠ *(the cited code is no longer there: to be reread)* · `RICHIEDI_CHIAVE … accolta (§5.2)` `rcp.c` · `appunti_posto_libera()` |
+| ⭐ **the bytes on the wire** | **they are counted, not deduced**: `/proc/net/dev` on `lo`. `[M]` `lo` **at rest does 0 bytes in 5 s** on this machine (ssh goes through `enp7s0`, the rest is on unix sockets) ⇒ clean counter, and **there is no need to touch `tc`**. ⚠ It is an advantage of the moment, not a law: rest is remeasured at every round |
 
-⛔ **I byte del filo NON sono i byte dei fotogrammi**: la riga `SPEDITO` conta il **carico utile**,
-`lo` conta anche QUIC, l'audio PCM e i riscontri. Si riportano **tutt'e due**, e la differenza è
-un fatto, non un errore.
+⛔ **The wire bytes are NOT the frame bytes**: the `SPEDITO` line counts the **payload**,
+`lo` also counts QUIC, PCM audio and acks. **Both** are reported, and the difference is
+a fact, not an error.
 
-#### ⛔⛔ I DUE CONTROLLI POSITIVI — *e senza di loro i numeri di §3 non valgono*
+#### ⛔⛔ THE TWO POSITIVE CONTROLS — *and without them the numbers of §3 are not valid*
 
-Su linea larga *«abbandoni 0»* e *«`RICHIEDI_CHIAVE` 0»* hanno **la stessa faccia** di *«il banco
-non guarda quei contatori»* (`LEZIONI.md` §1.9: vuoto e giusto si somigliano). ⇒ Due giri fatti
-apposta per far **muovere** quei contatori:
+On a wide line *«abandons 0»* and *«`RICHIEDI_CHIAVE` 0»* have **the same face** as *«the bench
+does not look at those counters»* (`LEZIONI.md` §1.9: empty and right look alike). ⇒ Two rounds made
+on purpose to make those counters **move**:
 
-| | come | esito, 23 ago |
+| | how | outcome, 23 Aug |
 |---|---|---|
-| **§5.2** `09-b68-ritmo.py controllo` | il cliente **chiede** una chiave a metà giro | ✅ accolte **1**, girate al palco **1**, delta buttati **1** |
-| **§5.1** `09-b68-ritmo.py stretto` | la linea si stringe a **2 Mbit/s** (`netem` su `lo`, solo la 7900), una volta sola, poi si rimette | ✅ abbandoni **151**, chiave trattenuta **86** |
+| **§5.2** `09-b68-ritmo.py controllo` | the client **requests** a keyframe in the middle of the round | ✅ accepted **1**, passed to the stage **1**, deltas thrown away **1** |
+| **§5.1** `09-b68-ritmo.py stretto` | the line narrows to **2 Mbit/s** (`netem` on `lo`, only 7900), only once, then it is restored | ✅ abandons **151**, withheld keyframe **86** |
 
-⛔ **La rete si tocca con la disciplina di `07-b64`/`07-b65`**: solo `lo`, solo la porta 7900,
-`enp7s0` (ssh + la 7730 dell'utente) **mai**, guardiano staccato che rimette la disciplina anche se
-il copione muore. `[M]` verificato dopo: `lo` → `noqueue`, `enp7s0` → `mq`, intatta.
+⛔ **The network is touched with the discipline of `07-b64`/`07-b65`**: only `lo`, only port 7900,
+`enp7s0` (ssh + the user's 7730) **never**, a detached guardian that puts the discipline back even if
+the script dies. `[M]` verified afterwards: `lo` → `noqueue`, `enp7s0` → `mq`, intact.
 
-### 1.2 ⭐⭐ IL SECONDO BANCO — `banchi/09-b71-risveglio.py`, *23 agosto 2026, pomeriggio*
+### 1.2 ⭐⭐ THE SECOND BENCH — `banchi/09-b71-risveglio.py`, *23 Aug 2026, afternoon*
 
-**La domanda**: §3.1 ha misurato che a scena ferma il ritmo **si ferma**, e che il prezzo per chi
-guarda è zero *finché nessuno tocca niente*. ⇒ ⛔ **quanto passa fra il primo pixel che cambia e
-il primo fotogramma che esce?**
+**The question**: §3.1 measured that with a still scene the rate **stops**, and that the price for whoever
+watches is zero *as long as nobody touches anything*. ⇒ ⛔ **how long passes between the first pixel that changes and
+the first frame that leaves?**
 
 | | |
 |---|---|
-| **il colpo** | la scena `04-b30-scena` si **congela** (`SIGSTOP`) e si **risveglia** (`SIGCONT`). ⛔ Non si spegne e si riaccende il processo: l'avvio di un client Wayland (connessione, superficie, primo buffer) costa decine di ms che **non sono il risveglio del prodotto** e si sommerebbero al numero senza che nessuno se ne accorga |
-| ⭐ **l'istante del pixel** | **si legge, non si deduce**: `ultimo_disegno_us` nel blocco condiviso della scena (CLOCK_MONOTONIC, scritto al commit, `04-b30-scena.c` · `disegna_una_volta()`). Il colpo **non è** il momento in cui il pixel cambia: in mezzo c'è il risveglio della scena, e si riporta a parte |
-| **il battitore sta sulla macchina** | `banchi/09-b71-agente.py`, da root: batte il colpo e sorprende il primo disegno leggendo `/dev/shm` a ~2 kHz. ⛔ Da `ssh` non si può: il giro di rete è **cento volte** il numero cercato |
-| ⭐ **i due orologi si ancorano** | il registro scrive `HH:MM:SS.mmm` **senza data e senza fuso**. L'agente misura lo stesso istante nei due modi (epoch + locale) e il banco **ricava** lo scarto invece di indovinarlo. ⛔ Se fosse sbagliato i risvegli uscirebbero negativi o di ore: si vedrebbe, non si insinuerebbe |
-| **che cosa è misurato** | `SPECIFICHE.md` §2.4: il tratto **primo pixel → byte fuori dal server**. ⚠ **Non** l'anello intero — mancano il volo sul filo, la decodifica e la pittura sulla pagina, che sono fase 8 e **si sommano, non si confondono** |
-| ⭐⭐ **il confronto** | non un numero, una **scala**: lo stesso risveglio con quieti da 0,2 a 15 s. Se il risveglio dopo 15 s di fermo costa quanto quello dopo 0,2 s, **l'arresto non costa niente** |
-| **la premessa si controlla** | durante ogni quiete il banco conta i fotogrammi usciti: se ne esce anche uno, il desktop **non era fermo** e la misura non è quella che dice di essere |
+| **the shot** | the scene `04-b30-scena` is **frozen** (`SIGSTOP`) and **woken** (`SIGCONT`). ⛔ The process is not switched off and on again: the start of a Wayland client (connection, surface, first buffer) costs tens of ms that **are not the product's wake-up** and would add to the number without anyone noticing |
+| ⭐ **the instant of the pixel** | **it is read, not deduced**: `ultimo_disegno_us` in the scene's shared block (CLOCK_MONOTONIC, written at commit, `04-b30-scena.c` · `disegna_una_volta()`). The shot **is not** the moment the pixel changes: in between there is the wake-up of the scene, and it is reported separately |
+| **the striker sits on the machine** | `banchi/09-b71-agente.py`, as root: it strikes the shot and catches the first draw by reading `/dev/shm` at ~2 kHz. ⛔ From `ssh` it cannot be done: the network round trip is **a hundred times** the number sought |
+| ⭐ **the two clocks are anchored** | the log writes `HH:MM:SS.mmm` **without date and without time zone**. The agent measures the same instant in both ways (epoch + local) and the bench **derives** the offset instead of guessing it. ⛔ If it were wrong the wake-ups would come out negative or hours long: it would be seen, not insinuated |
+| **what is measured** | `SPECIFICHE.md` §2.4: the stretch **first pixel → bytes out of the server**. ⚠ **Not** the whole loop — missing are the flight on the wire, decoding and painting on the page, which are phase 8 and **add up, they do not get confused** |
+| ⭐⭐ **the comparison** | not a number, a **ladder**: the same wake-up with quiets from 0.2 to 15 s. If the wake-up after 15 s still costs as much as the one after 0.2 s, **the stop costs nothing** |
+| **the premise is checked** | during every quiet the bench counts the frames that left: if even one leaves, the desktop **was not still** and the measurement is not what it says it is |
 
-#### ⛔⛔ IL CONTROLLO POSITIVO — *e ci sono voluti tre tentativi, tutti istruttivi*
+#### ⛔⛔ THE POSITIVE CONTROL — *and it took three attempts, all instructive*
 
-Si inietta un ritardo **noto** di 200 ms congelando dei processi, e il banco deve ritrovarlo.
+A **known** delay of 200 ms is injected by freezing some processes, and the bench must find it again.
 
-| tentativo | dove cade il ritardo | esito |
+| attempt | where the delay falls | outcome |
 |---|---|---|
-| congelo il **figlio** (cattura+codifica) al colpo | ⛔ `colpo → pixel` **0,5 → 191,8 ms** | il ritardo finisce **prima** del pixel: non prova niente sul tratto misurato |
-| congelo il **padre** (trasporto) al colpo | ⛔ `colpo → pixel` **1,1 → 192,0 ms** | **uguale**: lo stimolo si sposta insieme allo strumento |
-| ⭐ congelo il padre **dopo che il pixel è cambiato** | ✅ risveglio **12,8 → 204,0 ms**, e `colpo → pixel` resta **1,2 ms** | il ritardo cade **dentro** il tratto misurato, e il banco lo vede tutto |
+| I freeze the **child** (capture+encoding) at the shot | ⛔ `colpo → pixel` **0.5 → 191.8 ms** | the delay ends **before** the pixel: it proves nothing about the measured stretch |
+| I freeze the **parent** (transport) at the shot | ⛔ `colpo → pixel` **1.1 → 192.0 ms** | **the same**: the stimulus moves together with the instrument |
+| ⭐ I freeze the parent **after the pixel has changed** | ✅ wake-up **12.8 → 204.0 ms**, and `colpo → pixel` stays **1.2 ms** | the delay falls **inside** the measured stretch, and the bench sees all of it |
 
-⭐⭐ **E i due tentativi falliti hanno misurato una cosa che non cercavo, e non è piccola**:
-congelare **qualunque** anello della nostra catena — figlio *o* padre — ferma il **disegno
-dell'applicazione**. `[M]` 191,8 e 192,0 ms su 200 iniettati, con dispersione di **0,6 ms**.
-⇒ ⛔ **Mutter concede il `wl_surface.frame` al ritmo di chi consuma il monitor virtuale**: se il
-prodotto non consuma, l'applicazione dentro la sessione **non disegna**. È la stessa riga
-letta dall'altro capo in §3.2 (*«il collo non è il codificatore: è la consegna»*), e spiega
-perché i 40/s su 60 chiesti non si spostano.
+⭐⭐ **And the two failed attempts measured something I was not looking for, and it is not small**:
+freezing **any** link of our chain — child *or* parent — stops the **drawing of the
+application**. `[M]` 191.8 and 192.0 ms out of 200 injected, with a spread of **0.6 ms**.
+⇒ ⛔ **Mutter grants `wl_surface.frame` at the rate of whoever consumes the virtual monitor**: if the
+product does not consume, the application inside the session **does not draw**. It is the same line
+read from the other end in §3.2 (*«the bottleneck is not the encoder: it is the delivery»*), and it explains
+why the 40/s out of 60 requested do not move.
 
 ---
 
-## §2 · Che cosa è stato sviluppato
+## §2 · What was developed
 
-> ⚠ **Questa riga diceva *«del prodotto, niente»* fino alle 09:00 del 23 agosto**, e allora era
-> vera. Nel corso della giornata sono entrate **cinque cure**: l'elenco con l'interruttore sta in
-> **S.3**, il perché di ciascuna in **§5**, e ⛔ **la sede della ragione è il commento nel codice**,
-> non questo documento.
+> ⚠ **This line said *«of the product, nothing»* until 09:00 on 23 Aug**, and then it was
+> true. During the day **five cures** came in: the list with the switch is in
+> **S.3**, the why of each in **§5**, and ⛔ **the seat of the reasoning is the comment in the code**,
+> not this document.
 
-### 2.1 Nel prodotto — *le cinque cure del 23 agosto*
+### 2.1 In the product — *the five cures of 23 Aug*
 
-| dove | che cosa |
+| where | what |
 |---|---|
-| `src/webtransport.c` | ⛔⭐ **la cura del crollo**: i byte di un fotogramma si liberano all'**ack** (`coda_conferma()`, `:840-870`) o alla chiusura dello stream, non alla serializzazione. A `:5929` c'è la riga che uccise il server, e il commento la nomina. ⭐ **la soglia sulla coda** in `video_sgombra()` (`:2705-2800`), con i due conti `sgombra_tenuti` / `sgombra_abbandoni` — perché *«zero abbandoni»* e *«la cura è spenta»* non abbiano la stessa faccia |
-| `src/codificatore.c` | ⭐ **la risalita della qualità** (`risali_qualita()`, `:3446`): si conta alla consegna, si risale **all'ingresso del fotogramma dopo**, uno scalino per volta, con l'attesa che **raddoppia** a ogni ricaduta. ⭐ **il tetto di banda** (`:200-340`, `:1786-1800`): `QVBR`, con filo · punto di lavoro · serbatoio **derivati dal pavimento** in un posto solo |
-| `src/pagina.html` | ⭐ **il riordino dell'audio**: `audio_posto_passato()` (`:5882`) calcola la **frontiera del consumo** da `a.base` e `ctx.currentTime`; `a.ist_max_us` (`:5669`) separa *«un blocco sorpassato»* da *«tutta la riproduzione in ritardo»* — ⛔ senza, un sorpasso da 1 ms costerebbe un riarmo, cioè **250 ms regalati** |
-| `src/main.c` · `src/figlio.c` | i **tre interruttori** (`:994`, `:999`, `:1005`), passati al figlio nell'`argv` (`figlio.c:1162-1165`), e ⭐ **i valori in vigore scritti all'avvio in tutt'e due i casi** — acceso e spento |
+| `src/webtransport.c` | ⛔⭐ **the crash cure**: the bytes of a frame are freed at the **ack** (`coda_conferma()`, `:840-870`) or at the closing of the stream, not at serialization. At `:5929` there is the line that killed the server, and the comment names it. ⭐ **the queue threshold** in `video_sgombra()` (`:2705-2800`), with the two counts `sgombra_tenuti` / `sgombra_abbandoni` — so that *«zero abandons»* and *«the cure is off»* do not have the same face |
+| `src/codificatore.c` | ⭐ **the quality climb-back** (`risali_qualita()`, `:3446`): counting at delivery, climbing back **at the entry of the next frame**, one rung at a time, with the wait that **doubles** at every relapse. ⭐ **the bandwidth cap** (`:200-340`, `:1786-1800`): `QVBR`, with wire · working point · reservoir **derived from the floor** in one place only |
+| `src/pagina.html` | ⭐ **the audio reorder**: `audio_posto_passato()` (`:5882`) computes the **consumption frontier** from `a.base` and `ctx.currentTime`; `a.ist_max_us` (`:5669`) separates *«an overtaken block»* from *«the whole playback late»* — ⛔ without it, a 1 ms overtaking would cost a re-arm, that is **250 ms given away** |
+| `src/main.c` · `src/figlio.c` | the **three switches** (`:994`, `:999`, `:1005`), passed to the child in the `argv` (`figlio.c:1162-1165`), and ⭐ **the values in force written at startup in both cases** — on and off |
 
-⭐ E una cosa che vale oltre la giornata: **la riga dei parametri dice i VALORI, non le parole** —
-*«QP 26»*, non *«QP costante»*. Il controllo è §3.12.
+⭐ And one thing that holds beyond the day: **the parameters line says the VALUES, not the words** —
+*«QP 26»*, not *«constant QP»*. The check is §3.12.
 
-### 2.2 Nei banchi
+### 2.2 In the benches
 
 | | |
 |---|---|
-| `banchi/09-b68-ritmo.py` | il banco dell'**invariante I1** — §1.1 qui sopra |
-| `banchi/09-b68-scena.sh` | accende `04-b30-scena` dentro la sessione di «prova». ⛔ Esiste perché **un file non ha livelli di virgolette** — vedi §4 |
-| ⭐ `banchi/09-b71-risveglio.py` | il banco del **risveglio** — §1.2. Non riscrive il mestiere: **importa** `09-b68` per ssh, sudo, `lo`, registro, scena e `tc` |
-| `banchi/09-b71-agente.py` | il **battitore**, gira sulla macchina: `SIGCONT` e `/dev/shm` a 2 kHz |
-| `banchi/09-b71-sessione.sh` | apre una sessione **lunga e in sottofondo** dentro il contenitore. ⛔ Stessa ragione dello script della scena: quattro strati di apici e un redirect verso una cartella di root |
-| `banchi/09-b72-banda.py` | il banco della **banda**: i tre punti a 2560x1080 e il **gradino** |
-| `banchi/09-b72-agente.py` | il **direttore del gradino**: cambia il `rate` e guarda il filo dalla macchina, perché il gradino dura 3 s e un giro di `ssh` ne costa 0,3 |
-| `banchi/09-b72-video.sh` | un **video vero** a schermo intero dentro la sessione. ⛔ Esiste perché le bande di `--movimento pieno` sono **tinte piatte**: misurare lì il costo di un video darebbe un numero basso e falso |
+| `banchi/09-b68-ritmo.py` | the bench of **invariant I1** — §1.1 above |
+| `banchi/09-b68-scena.sh` | starts `04-b30-scena` inside the «prova» session. ⛔ It exists because **a file has no levels of quotes** — see §4 |
+| ⭐ `banchi/09-b71-risveglio.py` | the **wake-up** bench — §1.2. It does not rewrite the job: it **imports** `09-b68` for ssh, sudo, `lo`, log, scene and `tc` |
+| `banchi/09-b71-agente.py` | the **striker**, runs on the machine: `SIGCONT` and `/dev/shm` at 2 kHz |
+| `banchi/09-b71-sessione.sh` | opens a **long, background** session inside the container. ⛔ Same reason as the scene script: four layers of quotes and a redirect towards a root folder |
+| `banchi/09-b72-banda.py` | the **bandwidth** bench: the three points at 2560x1080 and the **step** |
+| `banchi/09-b72-agente.py` | the **step director**: it changes the `rate` and watches the wire from the machine, because the step lasts 3 s and an `ssh` round costs 0.3 |
+| `banchi/09-b72-video.sh` | a **real video** at full screen inside the session. ⛔ It exists because the bands of `--movimento pieno` are **flat colours**: measuring the cost of a video there would give a low and false number |
 
 ---
 
-## §3 · Le misure
+## §3 · The measurements
 
-> Tutte del **23 agosto 2026**, macchina 192.168.0.2, porta **7900**, utente **`prova`**, tela
-> **1920x1080**, codec **HEVC** (`codec 1`), audio **PCM**, **30 s per giro**, **linea larga**
-> (nessuna strozzatura, `lo`).
-> ⚠ **Le ore sono quelle della macchina, che è UTC e sta due ore indietro** rispetto al portatile:
+> All from **23 Aug 2026**, machine 192.168.0.2, port **7900**, user **`prova`**, canvas
+> **1920x1080**, codec **HEVC** (`codec 1`), audio **PCM**, **30 s per round**, **wide line**
+> (no throttling, `lo`).
+> ⚠ **The times are the machine's, which is UTC and two hours behind** the laptop:
 > `07:02 UTC` = `09:02 CEST`.
 
-### 3.1 ⛔⭐⭐ I1 — A SCENA FERMA IL RITMO NON CALA: **SI FERMA**
+### 3.1 ⛔⭐⭐ I1 — WITH A STILL SCENE THE RATE DOES NOT DROP: **IT STOPS**
 
-> ⚠⚠ **DA LEGGERE CON §3.7 ACCANTO** (scritto il pomeriggio dello stesso giorno): queste misure
-> sono state prese con la sessione nella **vista d'insieme** di GNOME, dove una finestra «a schermo
-> intero» è in realtà **un'anteprima rimpicciolita**. ⇒ la forma del risultato regge (a scena ferma
-> escono zero fotogrammi, rimisurato a 2560x1080), ⛔ **ma i byte di `barra` e `pieno` qui sotto
-> sono quelli di una frazione dello schermo, non dello schermo.** I byte veri sono in §3.8.
+> ⚠⚠ **TO BE READ WITH §3.7 BESIDE IT** (written in the afternoon of the same day): these measurements
+> were taken with the session in GNOME's **overview**, where a «full
+> screen» window is really **a shrunken preview**. ⇒ the shape of the result holds (with a still scene
+> zero frames come out, remeasured at 2560x1080), ⛔ **but the bytes of `barra` and `pieno` below
+> are those of a fraction of the screen, not of the screen.** The real bytes are in §3.8.
 
-| scena | ora | fotogrammi/s | CHIAVE | delta | carico video | byte sul filo (`lo`) |
+| scene | time | frames/s | KEYFRAME | delta | video payload | bytes on the wire (`lo`) |
 |---|---|---|---|---|---|---|
-| **ferma** | 07:02:27 | ⛔ **0,03** | 1 | **0** | 10 147 B · **2,7 kbit/s** | 9 119 569 B · **2,432 Mbit/s** |
-| **barra** | 07:03:32 | **39,67** | 1 | 1 189 | 2 171 824 B · **579 kbit/s** | 11 771 322 B · **3,139 Mbit/s** |
-| **pieno** | 07:04:09 | **39,00** | 1 | 1 169 | 10 196 190 B · **2 719 kbit/s** | 20 121 206 B · **5,366 Mbit/s** |
-| **ferma** *(ripetuta)* | 07:04:44 | ⛔ **0,03** | 1 | **0** | 10 143 B · **2,7 kbit/s** | 9 118 304 B · **2,432 Mbit/s** |
+| **still** | 07:02:27 | ⛔ **0.03** | 1 | **0** | 10 147 B · **2.7 kbit/s** | 9 119 569 B · **2.432 Mbit/s** |
+| **bar** | 07:03:32 | **39.67** | 1 | 1 189 | 2 171 824 B · **579 kbit/s** | 11 771 322 B · **3.139 Mbit/s** |
+| **full** | 07:04:09 | **39.00** | 1 | 1 169 | 10 196 190 B · **2 719 kbit/s** | 20 121 206 B · **5.366 Mbit/s** |
+| **still** *(repeated)* | 07:04:44 | ⛔ **0.03** | 1 | **0** | 10 143 B · **2.7 kbit/s** | 9 118 304 B · **2.432 Mbit/s** |
 
-⛔⛔ **A scena ferma, in 30 secondi, esce UN fotogramma solo — la chiave d'apertura — e poi più
-niente.** Ripetuto due volte, **identico**: 1 e 1. Non è un calo: è un **arresto**.
+⛔⛔ **With a still scene, in 30 seconds, ONE frame only comes out — the opening keyframe — and then
+nothing more.** Repeated twice, **identical**: 1 and 1. It is not a drop: it is a **stop**.
 
-⭐ **E il ritmo al secondo lo dice senza mediarlo** (`fotogrammi al secondo`, dalla riga del figlio):
+⭐ **And the rate per second says it without averaging it** (`fotogrammi al secondo`, from the child's line):
 
 ```
 ferma   1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
@@ -502,295 +502,295 @@ barra  40 40 40 40 39 41 40 40 40 40 41 40 40 38 39 38 38 40 40 40 41 39 40 40 4
 pieno  40 39 40 40 38 38 37 38 38 39 37 40 37 40 40 39 40 40 39 39 40 40 39 40 40 41 39 41 40
 ```
 
-⭐⭐ **E LA CAUSA È SCRITTA NEL REGISTRO DAL PRODOTTO STESSO**, `figlio.c`, ogni secondo:
+⭐⭐ **AND THE CAUSE IS WRITTEN IN THE LOG BY THE PRODUCT ITSELF**, `figlio.c`, every second:
 
-> *«N fotogrammi consegnati (K chiavi), **M attese a vuoto (scena ferma: Mutter consegna solo
-> quando qualcosa cambia)**»*
+> *«N frames delivered (K keyframes), **M empty waits (still scene: Mutter delivers only
+> when something changes)**»*
 
-| scena | attese a vuoto al secondo | fotogrammi al secondo | somma |
+| scene | empty waits per second | frames per second | sum |
 |---|---|---|---|
-| **ferma** | **123** | 0 | ~123 |
-| **barra** | 80 | 40 | ~120 |
-| **pieno** | 81 | 39 | ~120 |
+| **still** | **123** | 0 | ~123 |
+| **bar** | 80 | 40 | ~120 |
+| **full** | 81 | 39 | ~120 |
 
-⇒ ⭐ **Il ciclo del figlio gira sempre a ~120 Hz**: non rallenta, non si risparmia, non decide
-niente. A cambiare è **quante volte Mutter gli mette qualcosa in mano** — 40 su 120 quando la
-scena si muove, **0 su 123** quando è ferma.
+⇒ ⭐ **The child's loop always runs at ~120 Hz**: it does not slow down, it does not save itself, it decides
+nothing. What changes is **how many times Mutter puts something in its hand** — 40 out of 120 when the
+scene moves, **0 out of 123** when it is still.
 
-⛔ **Quindi la discesa NON è nostra, e non è nemmeno una decisione**: nessuno la prende. Il
-prodotto **non ha un regolatore del ritmo** (§0.3: il controllo di bitrate *non esiste*), e la
-sorgente — `RecordVirtual` di Mutter — consegna **solo sul cambiamento**. ⇒ Il ritmo del prodotto
-è, oggi, **il ritmo con cui il compositore si degna di consegnare**.
+⛔ **So the descent is NOT ours, and it is not even a decision**: nobody takes it. The
+product **has no rate regulator** (§0.3: bitrate control *does not exist*), and the
+source — Mutter's `RecordVirtual` — delivers **only on change**. ⇒ The product's rate
+is, today, **the rate at which the compositor deigns to deliver**.
 
-⚠ **Che cosa questo NON dice ancora**, e va detto perché sono due domande diverse:
-- **l'immagine di chi guarda non si rompe**: la pagina tiene l'ultimo fotogramma buono, e su un
-  desktop fermo l'ultimo fotogramma buono **è giusto**. ⇒ ⭐ Letteralmente I1 è violata
-  (*«il ritmo non cala mai … perché la scena è ferma»*), ma **il prezzo per chi guarda è zero
-  finché nessuno tocca niente**;
-- ⛔ **il prezzo vero è al RISVEGLIO**, e questo banco **non l'ha ancora misurato**: quanto passa
-  fra il primo pixel che cambia e il primo fotogramma che esce. È la misura che segue.
+⚠ **What this does NOT say yet**, and it must be said because they are two different questions:
+- **the image of whoever watches does not break**: the page keeps the last good frame, and on a
+  still desktop the last good frame **is right**. ⇒ ⭐ Literally I1 is violated
+  (*«the rate never drops … because the scene is still»*), but **the price for whoever watches is zero
+  as long as nobody touches anything**;
+- ⛔ **the real price is at WAKE-UP**, and this bench **has not measured it yet**: how long passes
+  between the first pixel that changes and the first frame that leaves. It is the measurement that follows.
 
-### 3.2 Il ritmo a scena mossa: **40/s su 60 chiesti**
+### 3.2 The rate with a moving scene: **40/s out of 60 requested**
 
-`[M]` Il figlio chiede **60/s** alla cattura (`60/s chiesti`) e ne riceve **39–41**. Il tetto non è
-la nostra codifica: il tratto **cattura → byte fuori** ha mediana **8,12 ms** (barra) e **8,87 ms**
-(pieno) su 1920x1080 — cioè ~115/s di capienza. ⇒ ⭐ **Il collo non è il codificatore: è la
-consegna.** `[?]` Da capire in questa fase se i 40 sono un tetto di Mutter o della scena.
+`[M]` The child asks capture for **60/s** (`60/s chiesti`) and receives **39–41**. The cap is not
+our encoding: the stretch **capture → bytes out** has a median of **8.12 ms** (bar) and **8.87 ms**
+(full) at 1920x1080 — that is ~115/s of capacity. ⇒ ⭐ **The bottleneck is not the encoder: it is the
+delivery.** `[?]` To be understood in this phase whether the 40 are a cap of Mutter or of the scene.
 
-### 3.3 I byte, e ⛔ quanto costa il silenzio
+### 3.3 The bytes, and ⛔ how much silence costs
 
-> ⚠ **Vale l'avvertenza di §3.1**: `barra` e `pieno` erano anteprime, non schermo intero — §3.7.
-> La riga **ferma** invece regge, ed è confermata a 2560x1080 in §3.8.
+> ⚠ **The warning of §3.1 applies**: `barra` and `pieno` were previews, not full screen — §3.7.
+> The **still** line instead holds, and is confirmed at 2560x1080 in §3.8.
 
-| scena | carico video | filo totale | ⇒ overhead + audio |
+| scene | video payload | total wire | ⇒ overhead + audio |
 |---|---|---|---|
-| ferma | 2,7 kbit/s | 2,432 Mbit/s | ⛔ **il 99,9 % del filo non è video** |
-| barra | 579 kbit/s | 3,139 Mbit/s | |
-| pieno | 2 719 kbit/s | 5,366 Mbit/s | |
+| still | 2.7 kbit/s | 2.432 Mbit/s | ⛔ **99.9 % of the wire is not video** |
+| bar | 579 kbit/s | 3.139 Mbit/s | |
+| full | 2 719 kbit/s | 5.366 Mbit/s | |
 
-⛔⛔ **A desktop fermo il prodotto spende 2,4 Mbit/s per non mostrare niente**: sono l'audio PCM
-(5 995 blocchi × 960 B = 1,53 Mbit/s di carico) più QUIC. ⭐ È l'osservazione di v1 R31 rovesciata
-(*«la scelta si gioca su quanto si spende quando non serve»*), e stavolta chi spende **non è il
+⛔⛔ **With a still desktop the product spends 2.4 Mbit/s to show nothing**: it is the PCM audio
+(5 995 blocks × 960 B = 1.53 Mbit/s of payload) plus QUIC. ⭐ It is the observation of v1 R31 turned upside down
+(*«the choice is played on how much is spent when it is not needed»*), and this time whoever spends **is not the
 video**.
 
-### 3.4 Gli abbandoni e le richieste di chiave — **tutti a zero, e il perché è buono**
+### 3.4 Abandons and keyframe requests — **all at zero, and the reason is good**
 
-| | ferma | barra | pieno | ⭐ controllo a **2 Mbit/s** |
+| | still | bar | full | ⭐ control at **2 Mbit/s** |
 |---|---|---|---|---|
-| abbandoni **§5.1** | 0 | 0 | 0 | **151** |
-| chiave trattenuta **§5.2** | 0 | 0 | 0 | **86** |
-| `RICHIEDI_CHIAVE` accolte | 0 | 0 | 0 | 0 |
-| richieste **girate al palco** | 0 | 0 | 0 | **151** |
-| delta buttati perché §5.2 vuole una chiave | 0 | 0 | 0 | **538** |
-| audio buttati / rifiutati | 0 / 0 | 0 / 0 | 0 / 0 | **0 / 3 018** |
+| abandons **§5.1** | 0 | 0 | 0 | **151** |
+| withheld keyframe **§5.2** | 0 | 0 | 0 | **86** |
+| `RICHIEDI_CHIAVE` accepted | 0 | 0 | 0 | 0 |
+| requests **passed to the stage** | 0 | 0 | 0 | **151** |
+| deltas thrown away because §5.2 wants a keyframe | 0 | 0 | 0 | **538** |
+| audio thrown away / refused | 0 / 0 | 0 / 0 | 0 / 0 | **0 / 3 018** |
 
-⇒ Su linea larga **niente si mette in coda, quindi niente può essere abbandonato**: gli zeri sono
-la risposta giusta, e i due controlli positivi di §1.1 dimostrano che quei contatori **sanno
-muoversi**.
+⇒ On a wide line **nothing gets queued, so nothing can be abandoned**: the zeros are
+the right answer, and the two positive controls of §1.1 prove that those counters **can
+move**.
 
-### 3.5 ⛔⭐ E LA SPIRALE DI §0.3 SI RIPRODUCE ALLA PRIMA STRETTA — 07:09:38, **2 Mbit/s**, scena `pieno`
+### 3.5 ⛔⭐ AND THE SPIRAL OF §0.3 REPRODUCES AT THE FIRST SQUEEZE — 07:09:38, **2 Mbit/s**, scene `pieno`
 
 | | |
 |---|---|
-| fotogrammi spediti | 690 in 30 s = **23,0/s** (contro 39,0 su linea larga) |
-| di cui **CHIAVE** | ⛔ **152 su 690** — contro **1 su 1 170** |
-| abbandoni §5.1 | **151** ⇒ ⭐ **un abbandono, una chiave**: la corrispondenza è quasi esatta |
-| delta buttati perché serve una chiave | **538** ⇒ cioè **tutti** i delta consegnati |
-| quel che arriva a chi guarda | **367 fotogrammi, 128 chiavi** — su 690 spediti |
-| l'audio | **3 018 datagram rifiutati da ngtcp2** (su linea larga: 0) |
+| frames sent | 690 in 30 s = **23.0/s** (against 39.0 on a wide line) |
+| of which **KEYFRAME** | ⛔ **152 out of 690** — against **1 out of 1 170** |
+| abandons §5.1 | **151** ⇒ ⭐ **one abandon, one keyframe**: the correspondence is almost exact |
+| deltas thrown away because a keyframe is needed | **538** ⇒ that is **all** the delivered deltas |
+| what reaches whoever watches | **367 frames, 128 keyframes** — out of 690 sent |
+| audio | **3 018 datagrams refused by ngtcp2** (on a wide line: 0) |
 
-⇒ ⛔ **È esattamente la spirale che §0.3 aveva letto nel codice, qui misurata sul prodotto della
-fase 9**: `video_sgombra()` abbandona il delta ⇒ §5.2 apre il debito ⇒ esce una chiave ⇒ la chiave
-riempie la finestra ⇒ il delta dopo non esce ⇒ si ricomincia. ⭐ E il flusso **degrada nello
-spazio E nel tempo insieme** (23/s **e** sole chiavi) invece di calare il ritmo tenendo i delta,
-che è quel che §8.3 chiede.
+⇒ ⛔ **It is exactly the spiral that §0.3 had read in the code, here measured on the product of
+phase 9**: `video_sgombra()` abandons the delta ⇒ §5.2 opens the debt ⇒ a keyframe leaves ⇒ the keyframe
+fills the window ⇒ the next delta does not get out ⇒ it starts again. ⭐ And the stream **degrades in
+space AND in time together** (23/s **and** keyframes only) instead of lowering the rate while keeping the deltas,
+which is what §8.3 asks.
 
-⚠ **Questo è un CONTROLLO, non una misura della fase**: 2 Mbit/s è un decimo del pavimento
-dichiarato (§3.1-bis, 20 Mbit/s). Serve a sapere che i contatori vedono; il punto di lavoro va
-misurato a 20 Mbit/s e sopra.
+⚠ **This is a CONTROL, not a measurement of the phase**: 2 Mbit/s is a tenth of the declared
+floor (§3.1-bis, 20 Mbit/s). It serves to know that the counters see; the working point must be
+measured at 20 Mbit/s and above.
 
 ---
 
-### 3.6 ⭐⭐⭐ IL RISVEGLIO **NON COSTA** — *23 agosto, 07:46–08:00 (UTC macchina)*
+### 3.6 ⭐⭐⭐ WAKE-UP **COSTS NOTHING** — *23 Aug, 07:46–08:00 (machine UTC)*
 
-> Porta **7900**, utente **`prova`**, tela **1920x1080**, codec HEVC, audio PCM, linea **larga**.
-> Scena `04-b30-scena --movimento pieno`, congelata (`SIGSTOP`) e risvegliata (`SIGCONT`).
-> **180 risvegli**, 30 per ogni durata di quiete. Banco `banchi/09-b71-risveglio.py` — §1.2.
+> Port **7900**, user **`prova`**, canvas **1920x1080**, codec HEVC, audio PCM, **wide** line.
+> Scene `04-b30-scena --movimento pieno`, frozen (`SIGSTOP`) and woken (`SIGCONT`).
+> **180 wake-ups**, 30 for each quiet duration. Bench `banchi/09-b71-risveglio.py` — §1.2.
 
-⛔ **La domanda**: §3.1 ha misurato che a scena ferma il ritmo **si ferma**. Il prezzo per chi
-guarda è zero finché nessuno tocca niente — ⛔ **ma quanto costa ricominciare?**
+⛔ **The question**: §3.1 measured that with a still scene the rate **stops**. The price for whoever
+watches is zero as long as nobody touches anything — ⛔ **but how much does starting again cost?**
 
-| quiete prima del colpo | n | **mediana** | min | max | **p95** |
+| quiet before the shot | n | **median** | min | max | **p95** |
 |---|---|---|---|---|---|
-| **0,2 s** | 30 | **13,3 ms** | 12,7 | 13,8 | 13,8 |
-| **0,5 s** | 30 | **13,0 ms** | 12,6 | 13,5 | 13,5 |
-| **1,0 s** | 30 | **13,6 ms** | 13,0 | 14,3 | 14,2 |
-| **2,0 s** | 30 | **13,2 ms** | 12,6 | 13,8 | 13,7 |
-| **5,0 s** | 30 | **13,0 ms** | 12,3 | 13,6 | 13,5 |
-| **15,0 s** | 30 | **13,2 ms** | 12,6 | 13,8 | 13,8 |
+| **0.2 s** | 30 | **13.3 ms** | 12.7 | 13.8 | 13.8 |
+| **0.5 s** | 30 | **13.0 ms** | 12.6 | 13.5 | 13.5 |
+| **1.0 s** | 30 | **13.6 ms** | 13.0 | 14.3 | 14.2 |
+| **2.0 s** | 30 | **13.2 ms** | 12.6 | 13.8 | 13.7 |
+| **5.0 s** | 30 | **13.0 ms** | 12.3 | 13.6 | 13.5 |
+| **15.0 s** | 30 | **13.2 ms** | 12.6 | 13.8 | 13.8 |
 
-⭐⭐ **La risposta è secca: il risveglio da fermo NON costa niente.** Fra 0,2 s di quiete e 15 s
-di quiete la differenza è **0,3 ms su 13** — dentro il rumore. ⛔ E non è una mediana che nasconde
-una coda: **tutte e 180 le misure stanno fra 12,3 e 14,3 ms**, cioè la coda è larga **2 ms**.
-`LEZIONI.md` §6.5 chiede la coda perché *«il regime è cieco alla coda»*: qui la coda è stata
-guardata e **non c'è**.
+⭐⭐ **The answer is flat: waking from still costs NOTHING.** Between 0.2 s of quiet and 15 s
+of quiet the difference is **0.3 ms out of 13** — inside the noise. ⛔ And it is not a median that hides
+a tail: **all 180 measurements lie between 12.3 and 14.3 ms**, that is the tail is **2 ms** wide.
+`LEZIONI.md` §6.5 asks for the tail because *«the regime is blind to the tail»*: here the tail was
+looked at and **it is not there**.
 
-⇒ ⭐ **L'arresto a scena ferma non è un difetto della fase.** Il ritmo si ferma perché Mutter non
-consegna, e riparte al primo pixel come se non si fosse mai fermato.
+⇒ ⭐ **The stop with a still scene is not a defect of the phase.** The rate stops because Mutter does not
+deliver, and it restarts at the first pixel as if it had never stopped.
 
-**Che cosa è misurato** (`SPECIFICHE.md` §2.4): **primo pixel → byte fuori dal server**.
-⚠ **Non** l'anello intero: mancano il volo sul filo, la decodifica e la pittura, che sono di
-fase 8 e **si sommano**. ⭐ Il tratto della *scena* è dichiarato a parte e vale **0,3–0,4 ms**
-(il `SIGCONT` e il disegno): non è nostro e non è dentro i 13.
+**What is measured** (`SPECIFICHE.md` §2.4): **first pixel → bytes out of the server**.
+⚠ **Not** the whole loop: missing are the flight on the wire, decoding and painting, which belong to
+phase 8 and **add up**. ⭐ The *scene*'s stretch is declared separately and is worth **0.3–0.4 ms**
+(the `SIGCONT` and the drawing): it is not ours and it is not inside the 13.
 
-⭐ **E dove vanno quei 13 millisecondi** — dalle righe per fotogramma del registro:
+⭐ **And where those 13 milliseconds go** — from the per-frame lines of the log:
 
-| | mediana |
+| | median |
 |---|---|
-| pixel → inizio della codifica (**Mutter compone e ci consegna, più la nostra cattura**) | **10,2–10,9 ms** |
-| **la codifica**, che è nostra | **2,6–2,7 ms** |
-| fine codifica → `SPEDITO` (consegna al trasporto) | **0,0 ms** (sotto il millisecondo del registro) |
+| pixel → start of encoding (**Mutter composes and delivers to us, plus our capture**) | **10.2–10.9 ms** |
+| **encoding**, which is ours | **2.6–2.7 ms** |
+| end of encoding → `SPEDITO` (delivery to the transport) | **0.0 ms** (below the log's millisecond) |
 
-⇒ ⛔ **L'80 % del risveglio è attesa del compositore, non lavoro nostro**, ed è coerente con un
-monitor virtuale a 60 Hz (mezzo periodo medio = 8,3 ms). ⭐ **Non c'è niente da ottimizzare qui
-dentro**: la parte che possiamo toccare sono 2,7 ms su 13.
+⇒ ⛔ **80 % of the wake-up is waiting for the compositor, not our work**, and it is consistent with a
+60 Hz virtual monitor (average half period = 8.3 ms). ⭐ **There is nothing to optimize in
+here**: the part we can touch is 2.7 ms out of 13.
 
-**Il primo fotogramma che esce è sempre un `delta`** (180 su 180), mediana **2,9–3,1 KB**: il
-risveglio **non costa una chiave**.
+**The first frame that leaves is always a `delta`** (180 out of 180), median **2.9–3.1 KB**: the
+wake-up **does not cost a keyframe**.
 
-### 3.7 ⛔⭐⭐ E IL BANCO DI STAMATTINA MISURAVA UNA VISTA D'INSIEME — *08:08*
+### 3.7 ⛔⭐⭐ AND THIS MORNING'S BENCH WAS MEASURING AN OVERVIEW — *08:08*
 
-`[M]` **Guardato nei pixel della cattura**: la sessione headless di GNOME sta nella **vista
-d'insieme** (l'Overview di *Attività*) e ci resta, perché nessuno ha mai premuto un tasto dentro.
-⇒ le finestre non sono finestre, sono **anteprime rimpicciolite** in mezzo allo schermo, con la
-barra in alto e il cassetto in basso.
+`[M]` **Looked at in the capture's pixels**: the headless GNOME session sits in the **overview**
+(the *Activities* Overview) and stays there, because nobody ever pressed a key inside.
+⇒ the windows are not windows, they are **shrunken previews** in the middle of the screen, with the
+bar at the top and the drawer at the bottom.
 
-⛔⛔ **Quindi «a schermo intero» nei banchi di stamattina non era a schermo intero**, e i numeri di
-§3.1–§3.3 sono quelli di **una frazione dello schermo**. La forma del risultato di §3.1 non cambia
-(a scena ferma escono zero fotogrammi: rimisurato a 2560x1080, **0 in 30 s**), ⚠ **ma i byte sì**.
+⛔⛔ **So «full screen» in this morning's benches was not full screen**, and the numbers of
+§3.1–§3.3 are those of **a fraction of the screen**. The shape of the result of §3.1 does not change
+(with a still scene zero frames come out: remeasured at 2560x1080, **0 in 30 s**), ⚠ **but the bytes do**.
 
-⭐ **La cura, e non è un trucco**: si manda un **ESC** per la porta che usa il prodotto stesso —
-`org.gnome.Mutter.RemoteDesktop` (`banchi/09-b72-tasto.py`). Cioè si fa **quel che succede quando
-l'utente preme un tasto**. Le due strade più comode sono chiuse e le ho provate:
+⭐ **The cure, and it is not a trick**: an **ESC** is sent through the door the product itself uses —
+`org.gnome.Mutter.RemoteDesktop` (`banchi/09-b72-tasto.py`). That is, one does **what happens when
+the user presses a key**. The two more comfortable routes are closed and I tried them:
 `org.gnome.Shell.Eval` → `(false, '')`; `org.gnome.Shell.FocusApp` → `AccessDenied`.
 
-### 3.8 ⭐⭐⭐ LA BANDA A 2560x1080 — **il video a schermo intero chiede il 293 % del pavimento**
+### 3.8 ⭐⭐⭐ BANDWIDTH AT 2560x1080 — **full-screen video asks for 293 % of the floor**
 
-> Utente **`prova2`** (palco nuovo), tela **2560x1080**, 30 s per punto (25 s per la grana),
-> linea **larga**, `08:22–08:35`. Banco `banchi/09-b72-banda.py`. ⭐ Ogni scena è stata
-> **guardata nei pixel** prima di essere creduta.
+> User **`prova2`** (new stage), canvas **2560x1080**, 30 s per point (25 s for the grain),
+> **wide** line, `08:22–08:35`. Bench `banchi/09-b72-banda.py`. ⭐ Every scene was
+> **looked at in the pixels** before being believed.
 
-| scena | fot/s | chiavi | **carico video** | **% di 20 Mbit/s** | filo `lo` |
+| scene | fps | keyframes | **video payload** | **% of 20 Mbit/s** | wire `lo` |
 |---|---|---|---|---|---|
-| **ferma** (niente) | **0,00** | 0 | **0** | **0 %** | 2,426 Mbit/s |
-| **video: il desktop vero dell'utente, a schermo intero** | 23,10 | 0 | **0,204 Mbit/s** | **1,0 %** | 2,678 |
-| **pieno**: bande a tinta piatta, tutto lo schermo | 40,57 | 0 | **1,179 Mbit/s** | 5,9 % | 3,730 |
-| **barra**: gradiente **retinato** su tutto lo schermo + barra | 34,93 | 1 | **21,356 Mbit/s** | ⛔ **106,8 %** | 24,219 |
-| ⛔ **video con la grana, a schermo intero** | 23,44 | 0 | ⛔ **58,668 Mbit/s** | ⛔ **293,3 %** | **61,671** |
+| **still** (nothing) | **0.00** | 0 | **0** | **0 %** | 2.426 Mbit/s |
+| **video: the user's real desktop, full screen** | 23.10 | 0 | **0.204 Mbit/s** | **1.0 %** | 2.678 |
+| **full**: flat-colour bands, the whole screen | 40.57 | 0 | **1.179 Mbit/s** | 5.9 % | 3.730 |
+| **bar**: **halftone** gradient over the whole screen + bar | 34.93 | 1 | **21.356 Mbit/s** | ⛔ **106.8 %** | 24.219 |
+| ⛔ **video with grain, full screen** | 23.44 | 0 | ⛔ **58.668 Mbit/s** | ⛔ **293.3 %** | **61.671** |
 
-⛔⛔ **La risposta alla domanda di §0.3 è sì: serve un controllo del bitrate.** Con **QP 26 fisso**
-e **nessun tetto**, un contenuto duro a schermo intero chiede **tre volte il pavimento dichiarato**
-— 312 861 byte per fotogramma di media, 23 al secondo. ⚠ E il `[?]` di stamattina (**~19,9
-Mbit/s**, riscalato da v1) era **ottimista di tre volte**.
+⛔⛔ **The answer to the question of §0.3 is yes: a bitrate control is needed.** With **fixed QP 26**
+and **no cap**, hard content at full screen asks for **three times the declared floor**
+— 312 861 bytes per frame on average, 23 per second. ⚠ And this morning's `[?]` (**~19.9
+Mbit/s**, rescaled from v1) was **optimistic by three times**.
 
-⭐⭐ **E i tre punti insieme dicono la cosa che un numero solo non direbbe**: la banda non dipende
-dalla *superficie* che si muove, dipende dal **contenuto**. `pieno` muove **tutti** i pixel e costa
-**1,2 Mbit/s**; `barra` muove gli stessi pixel con un **retino** e costa **21**; il film con la
-grana costa **59**. ⇒ ⛔ **«quanti pixel cambiano» non predice niente**, e un regolatore costruito
-su quella grandezza sbaglierebbe di due ordini di grandezza.
+⭐⭐ **And the three points together say what a single number would not say**: bandwidth does not depend
+on the *surface* that moves, it depends on the **content**. `pieno` moves **all** the pixels and costs
+**1.2 Mbit/s**; `barra` moves the same pixels with a **halftone** and costs **21**; the film with
+grain costs **59**. ⇒ ⛔ **«how many pixels change» predicts nothing**, and a regulator built
+on that quantity would be wrong by two orders of magnitude.
 
-⭐ **Il desktop vero dell'utente, a schermo intero e in movimento, costa l'1 % del pavimento**
-(0,204 Mbit/s). ⇒ Sul contenuto per cui il prodotto esiste, oggi **non c'è nessun problema di
-banda**: il problema è il caso duro, ed è per il caso duro che il tetto va scritto.
+⭐ **The user's real desktop, full screen and moving, costs 1 % of the floor**
+(0.204 Mbit/s). ⇒ On the content the product exists for, today **there is no bandwidth
+problem**: the problem is the hard case, and it is for the hard case that the cap must be written.
 
-⚠ **Il filmato e il lettore si dichiarano**, perché un altro lettore darebbe un altro ritmo:
-`scena-utente.webm` (2560x1080, VP8, 17,5 s, 404 fotogrammi a ~23/s — **lo stesso file** su cui la
-fase 8 ha misurato 24 956 byte per chiave), riprodotto da **firefox-esr** a schermo intero.
-⛔ Sulla macchina non esistono mpv, ffplay, gst-launch, totem, vlc né ffmpeg: Firefox è **l'unico
-lettore**, ed è anche quello vero dell'utente.
+⚠ **The clip and the player are declared**, because another player would give another rate:
+`scena-utente.webm` (2560x1080, VP8, 17.5 s, 404 frames at ~23/s — **the same file** on which
+phase 8 measured 24 956 bytes per keyframe), played by **firefox-esr** at full screen.
+⛔ On the machine there are no mpv, ffplay, gst-launch, totem, vlc nor ffmpeg: Firefox is **the only
+player**, and it is also the user's real one.
 
-### 3.9 ⛔⛔ IL PRODOTTO È MORTO DI SEGV SUL FOTOGRAMMA DA 525 KB — *08:28:09*
+### 3.9 ⛔⛔ THE PRODUCT DIED OF SEGV ON THE 525 KB FRAME — *08:28:09*
 
 `[M]` `journalctl -u remotix-7900.service`:
 > `Main process exited, code=killed, status=11/SEGV`
 
-⭐ **L'ultima riga del suo registro, allo stesso secondo**:
+⭐ **The last line of its log, in the same second**:
 > `08:28:09.894 figlio  codec 1: 525298 byte, delta, caricamento 0 us, codifica 2597 us`
 > `08:28:09.895 rcp     fotogramma 185 SPEDITO: delta 0x0302, codec 1, 2560x1080, 525298 byte…`
 
-Era il primo fotogramma del **film con la grana**. ⚠ **Non riprodotto**: il giro dopo, con lo
-stesso filmato, ha retto 25 secondi e 586 fotogrammi (mediana 313 KB, punte oltre 500 KB).
-⛔ Nessun `core` (coredump disabilitato) e nessun OOM in `dmesg`: la memoria di picco dell'unità
-era **41,2 MiB**.
+It was the first frame of the **film with grain**. ⚠ **Not reproduced**: the next round, with the
+same clip, held for 25 seconds and 586 frames (median 313 KB, peaks over 500 KB).
+⛔ No `core` (coredump disabled) and no OOM in `dmesg`: the unit's peak memory
+was **41.2 MiB**.
 
-> ⭐⭐⭐ **E nel pomeriggio la causa è stata trovata, riga per riga: §4.** Questo riquadro resta
-> com'era scritto la mattina — *«`[?]` la causa non è nominata»* — perché è il verbale di quel che
-> si sapeva alle 08:28, e §4 è quel che si è saputo dopo. ⭐ E la frase *«non si è ripetuto»*, che
-> allora sembrava un'attenuante, è diventata **la prova**: §4.4 spiega **perché** il giro dopo non
-> poteva morire.
+> ⭐⭐⭐ **And in the afternoon the cause was found, line by line: §4.** This box stays
+> as it was written in the morning — *«`[?]` the cause is not named»* — because it is the record of what
+> was known at 08:28, and §4 is what was learned afterwards. ⭐ And the sentence *«it did not repeat»*, which
+> then seemed a mitigating circumstance, became **the proof**: §4.4 explains **why** the next round could
+> not die.
 
-### 3.10 ⭐⭐⭐ IL GRADINO — **basta un buco di 3 secondi, e il ritorno è immediato**
+### 3.10 ⭐⭐⭐ THE STEP — **a 3-second hole is enough, and the return is immediate**
 
-> Scena **`barra`** (quella che chiede 21 Mbit/s: sotto i 10 del buco c'è un **deficit vero**),
-> tela 2560x1080. `netem` su `lo`, solo la porta 7900, `delay 15ms` **in tutte e tre le fasi** —
-> cambia solo il `rate`, così il transitorio è della banda e non dell'RTT. `08:32`.
-> ⭐ Il cambio di disciplina costa **4,0–4,7 ms**, misurato: su un buco di 3 s è l'0,15 %.
+> Scene **`barra`** (the one asking for 21 Mbit/s: below the 10 of the hole there is a **real deficit**),
+> canvas 2560x1080. `netem` on `lo`, only port 7900, `delay 15ms` **in all three phases** —
+> only the `rate` changes, so the transient is of bandwidth and not of RTT. `08:32`.
+> ⭐ The change of discipline costs **4.0–4.7 ms**, measured: on a 3 s hole it is 0.15 %.
 
-| s | fot/s | **chiavi** | delta | abbandoni §5.1 | filo Mbit/s | fase |
+| s | fps | **keyframes** | delta | abandons §5.1 | wire Mbit/s | phase |
 |---|---|---|---|---|---|---|
-| 5 | 32 | 3 | 29 | 3 | 22,1 | larga |
-| 6 | 38 | 1 | 37 | 1 | 26,3 | larga |
-| 7 | **40** | **0** | 40 | **0** | 28,2 | larga |
-| **8** | ⛔ **14** | ⛔ **6** | 8 | **7** | **8,5** | **stretta** |
-| **9** | ⛔ **14** | ⛔ **7** | 7 | **6** | **8,3** | **stretta** |
-| **10** | ⛔ **13** | ⛔ **7** | 6 | **7** | **8,0** | **stretta** |
-| 11 | 32 | 2 | 30 | 2 | 24,1 | *la linea si riapre a +11,1 s* |
-| **12** | ⭐ **42** | ⭐ **0** | 42 | **0** | **29,2** | larga |
-| 13…28 | 39–41 | **0** | | **0** | 27,6–29,0 | larga |
+| 5 | 32 | 3 | 29 | 3 | 22.1 | wide |
+| 6 | 38 | 1 | 37 | 1 | 26.3 | wide |
+| 7 | **40** | **0** | 40 | **0** | 28.2 | wide |
+| **8** | ⛔ **14** | ⛔ **6** | 8 | **7** | **8.5** | **narrow** |
+| **9** | ⛔ **14** | ⛔ **7** | 7 | **6** | **8.3** | **narrow** |
+| **10** | ⛔ **13** | ⛔ **7** | 6 | **7** | **8.0** | **narrow** |
+| 11 | 32 | 2 | 30 | 2 | 24.1 | *the line reopens at +11.1 s* |
+| **12** | ⭐ **42** | ⭐ **0** | 42 | **0** | **29.2** | wide |
+| 13…28 | 39–41 | **0** | | **0** | 27.6–29.0 | wide |
 
-⛔⛔ **Sì: basta un buco.** Non serve una linea povera sostenuta — **tre secondi** portano il ritmo
-da 40 a 13/s e fanno diventare **metà dei fotogrammi delle chiavi** (7 su 13). È la spirale di
-§0.3, identica a quella vista a 2 Mbit/s costanti, innescata da un transitorio.
+⛔⛔ **Yes: a hole is enough.** A sustained poor line is not needed — **three seconds** bring the rate
+from 40 to 13/s and turn **half the frames into keyframes** (7 out of 13). It is the spiral of
+§0.3, identical to the one seen at constant 2 Mbit/s, triggered by a transient.
 
-⭐⭐ **E la corrispondenza è esatta, a ogni livello**: `abbandoni §5.1` = `chiavi`, uno a uno —
-7↔6, 6↔7, 7↔7 nel buco, e anche **sulla linea larga** (3↔3, 1↔1). ⇒ ⛔ Non è «la linea povera fa
-uscire chiavi»: è **`video_sgombra()` che abbandona un delta, e ogni abbandono compra una chiave**.
-La linea povera non fa che aumentare gli abbandoni.
+⭐⭐ **And the correspondence is exact, at every level**: `abbandoni §5.1` = `chiavi`, one to one —
+7↔6, 6↔7, 7↔7 in the hole, and also **on the wide line** (3↔3, 1↔1). ⇒ ⛔ It is not «the poor line makes
+keyframes come out»: it is **`video_sgombra()` abandoning a delta, and every abandon buys a keyframe**.
+The poor line only increases the abandons.
 
-⭐⭐⭐ **Ma il ritorno è immediato, e questa è la notizia buona**: la linea si riapre a +11,1 s, il
-secondo 11 è di transizione (32 fot, 2 chiavi) e **il secondo 12 è già regime pieno** — 42
-fotogrammi, **zero chiavi**, 29,2 Mbit/s. ⇒ **meno di un secondo**, e nessuno strascico nei 17
-secondi successivi. ⛔ **Non c'è isteresi**: il prodotto non ha un regolatore che «si ricorda» di
-essere sceso, quindi non ha nemmeno niente da far risalire.
+⭐⭐⭐ **But the return is immediate, and this is the good news**: the line reopens at +11.1 s, the
+11th second is a transition (32 frames, 2 keyframes) and **the 12th second is already full regime** — 42
+frames, **zero keyframes**, 29.2 Mbit/s. ⇒ **less than a second**, and no aftermath in the following 17
+seconds. ⛔ **There is no hysteresis**: the product has no regulator that «remembers» having
+gone down, so it has nothing to bring back up either.
 
-#### ⛔ IL CONTROLLO, e senza di lui il gradino non dimostra niente
+#### ⛔ THE CONTROL, and without it the step proves nothing
 
-Stesso gradino, scena **`pieno`** (3,7 Mbit/s sul filo, cioè **sotto** il buco):
+Same step, scene **`pieno`** (3.7 Mbit/s on the wire, that is **below** the hole):
 
 | s | 8 | 9 | 10 | 11 |
 |---|---|---|---|---|
-| fot/s | 40 | 39 | 39 | 40 |
-| chiavi | **0** | **0** | **0** | **0** |
-| abbandoni | **0** | **0** | **0** | **0** |
+| fps | 40 | 39 | 39 | 40 |
+| keyframes | **0** | **0** | **0** | **0** |
+| abandons | **0** | **0** | **0** | **0** |
 
-⇒ ⭐ Quando la banda chiesta sta sotto il buco **non succede assolutamente niente**. Il banco non
-spara a vuoto: spara quando c'è un deficit, e solo allora. ⛔ E questo dice anche l'altra metà:
-**strozzare a 20 Mbit/s costante non avrebbe mostrato nulla**, esattamente come previsto.
+⇒ ⭐ When the requested bandwidth is below the hole **absolutely nothing happens**. The bench does not
+fire blanks: it fires when there is a deficit, and only then. ⛔ And this also says the other half:
+**throttling at a constant 20 Mbit/s would have shown nothing**, exactly as predicted.
 
 ---
 
-## §3-bis · ⭐⭐ IL CONFRONTO APPAIATO — *le tre cure del 23 agosto, misurate*
+## §3-bis · ⭐⭐ THE PAIRED COMPARISON — *the three cures of 23 Aug, measured*
 
-> ⛔ **La domanda, una sola**: le tre cure applicate stamattina sono **in vigore**, e il
-> comportamento è cambiato **dove doveva e solo lì**?
+> ⛔ **The question, only one**: are the three cures applied this morning **in force**, and did the
+> behaviour change **where it had to and only there**?
 >
-> ⚠ **Le ore sono quelle della macchina, che è UTC** e sta due ore indietro rispetto al portatile.
+> ⚠ **The times are the machine's, which is UTC** and two hours behind the laptop.
 >
-> ⛔⛔ **E «le tre cure» di questo capitolo NON sono «le cinque cure» di S.3** — è una collisione di
-> nomi, e va sciolta qui o fra un'ora nessuno la scioglie più. Le tre di stamattina sono:
-> **cura 1** = il **riordino dell'audio** in `pagina.html` (= la **cura 4** di S.3, §5.4) ·
-> **cura 2** = la riga del codificatore che dice **i valori** (*«QP 26»*, non *«QP costante»*) ·
-> **cura 3** = le **dichiarazioni** del livello e dei parametri in vigore. ⇒ Le cure 2 e 3 sono la
-> *«sesta cosa»* di S.3: non cambiano un pixel, cambiano che cosa il registro sa dire.
-> ⚠ Le altre quattro di S.3 — il crollo, la soglia della coda, la risalita, il tetto di banda —
-> sono state scritte **dopo** queste misure, e **non sono state misurate qui**.
+> ⛔⛔ **And «the three cures» of this chapter are NOT «the five cures» of S.3** — it is a collision of
+> names, and it must be untangled here or in an hour nobody will untangle it any more. The three of this morning are:
+> **cure 1** = the **audio reorder** in `pagina.html` (= **cure 4** of S.3, §5.4) ·
+> **cure 2** = the encoder line that says **the values** (*«QP 26»*, not *«constant QP»*) ·
+> **cure 3** = the **declarations** of the level and of the parameters in force. ⇒ Cures 2 and 3 are the
+> *«sixth thing»* of S.3: they do not change a pixel, they change what the log can say.
+> ⚠ The other four of S.3 — the crash, the queue threshold, the climb-back, the bandwidth cap —
+> were written **after** these measurements, and **were not measured here**.
 
-### 3.11 ⭐ IL «DOPO» ESISTE, E IL «PRIMA» È RIMASTO VIVO — *08:45 – 08:48*
+### 3.11 ⭐ THE «AFTER» EXISTS, AND THE «BEFORE» STAYED ALIVE — *08:45 – 08:48*
 
 | | |
 |---|---|
-| l'albero del **dopo** | `/media/REMOTIX/src/09b-src` — ⛔ **non** `09-src`, che è quello che gira sulla 7900: se la costruzione fosse fallita si tornava indietro senza ricostruire niente |
-| la costruzione | `enter.sh --root 'bash /srv/src/09b-src/src/costruisci.sh'`, **08:47** · `make` uscito **0** · binario `/media/REMOTIX/src/09b-src/src/remotix` |
-| ⛔ le due copie di `rcp.c` | `md5 eed49ac7bf007796f051e5db5bb425c7` — **identiche**, `src/` e `banchi/rcp/`, o il Makefile rifiuta |
-| il server del dopo | porta **7910**, unità `remotix-7910.service`, lavoro `/media/REMOTIX/tmp/09b`, acceso **08:47:46** |
-| ⭐ l'attrezzo sta nel deposito | `banchi/09-riavvia-7910.sh` — *«un attrezzo fuori dal deposito è un attrezzo che nessuno rilegge»* |
-| A6 verificato | `⭐ VERIFICATO: il server e' fuori da ogni sessione utente (0::/system.slice/remotix-7910.service)` |
-| il **prima** | 7900 **viva e intatta**, binario di stamattina, albero `09-src` — è il termine di paragone |
+| the **after** tree | `/media/REMOTIX/src/09b-src` — ⛔ **not** `09-src`, which is the one running on 7900: if the build had failed we would have gone back without rebuilding anything |
+| the build | `enter.sh --root 'bash /srv/src/09b-src/src/costruisci.sh'`, **08:47** · `make` exited **0** · binary `/media/REMOTIX/src/09b-src/src/remotix` |
+| ⛔ the two copies of `rcp.c` | `md5 eed49ac7bf007796f051e5db5bb425c7` — **identical**, `src/` and `banchi/rcp/`, or the Makefile refuses |
+| the after server | port **7910**, unit `remotix-7910.service`, work `/media/REMOTIX/tmp/09b`, started **08:47:46** |
+| ⭐ the tool is in the repository | `banchi/09-riavvia-7910.sh` — *«a tool outside the repository is a tool nobody rereads»* |
+| A6 verified | `⭐ VERIFICATO: il server e' fuori da ogni sessione utente (0::/system.slice/remotix-7910.service)` |
+| the **before** | 7900 **alive and intact**, this morning's binary, tree `09-src` — it is the term of comparison |
 
-⛔⛔ **E IL «DOPO» È UN'ISTANTANEA DELLE 08:45, non «il codice di adesso»** — va scritto qui o fra
-un'ora nessuno saprà più che cosa è stato misurato. Sulla 7910 gira **esattamente** questo:
+⛔⛔ **AND THE «AFTER» IS A SNAPSHOT OF 08:45, not «the code of now»** — it must be written here or in
+an hour nobody will know any more what was measured. On 7910 runs **exactly** this:
 
-| file | `md5` di quel che gira sulla 7910 |
+| file | `md5` of what runs on 7910 |
 |---|---|
 | `src/codificatore.c` | `a35938a8c1fe8f22c4d9bf4c064bc13e` |
 | `src/codificatore.h` | `bfb22009e166c23556e1a302f32b2395` |
@@ -798,23 +798,23 @@ un'ora nessuno saprà più che cosa è stato misurato. Sulla 7910 gira **esattam
 | `src/pagina.html` | `e010d615f10643d5c6e2a2c01ae5ff25` |
 | `src/rcp.c` = `banchi/rcp/rcp.c` | `eed49ac7bf007796f051e5db5bb425c7` |
 
-⚠ Nel pomeriggio altri hanno continuato a lavorare sul deposito: alle 09:55 `codificatore.c`,
-`codificatore.h`, `figlio.c`, `webtransport.c`, `main.c` e `figlio.h` **non combaciano più** con
-questa istantanea (`pagina.html` e `rcp.c` sì). ⇒ ⛔ **Questi numeri valgono per le tre cure come
-erano alle 08:45, e per niente altro**: chi vuole giudicare il lavoro del pomeriggio deve
-ricostruire e rimisurare.
+⚠ In the afternoon others kept working on the repository: at 09:55 `codificatore.c`,
+`codificatore.h`, `figlio.c`, `webtransport.c`, `main.c` and `figlio.h` **no longer match**
+this snapshot (`pagina.html` and `rcp.c` do). ⇒ ⛔ **These numbers hold for the three cures as
+they were at 08:45, and for nothing else**: whoever wants to judge the afternoon's work must
+rebuild and remeasure.
 
-⚠ **E i banchi hanno preso porta, albero e cartella dall'ambiente** (`LAV`, `DENTRO_ALB`,
-`DENTRO_LAV`, `ALB_NOME`, `PORTE_AMMESSE`), coi **difetti invariati**: ogni giro di stamattina si
-rifà identico senza scrivere niente. ⛔ E `pulizia()` adesso **dichiara** le porte che tollera
-invece di pretenderne una sola: due server accesi non sono sporcizia, misurare in due lo è.
+⚠ **And the benches took port, tree and folder from the environment** (`LAV`, `DENTRO_ALB`,
+`DENTRO_LAV`, `ALB_NOME`, `PORTE_AMMESSE`), with the **defaults unchanged**: every round of this morning
+redoes itself identically without writing anything. ⛔ And `pulizia()` now **declares** the ports it tolerates
+instead of demanding only one: two servers running are not dirt, measuring in two is.
 
-### 3.12 ⛔⭐⭐ LE TRE CURE SONO IN VIGORE — le righe, **testuali** — *08:51:26 – 08:51:29*
+### 3.12 ⛔⭐⭐ THE THREE CURES ARE IN FORCE — the lines, **verbatim** — *08:51:26 – 08:51:29*
 
-⛔ È la lezione **E1**, *«scritto non è in vigore»*: le righe si riportano come sono uscite, e
-accanto c'è il **controllo** — la stessa sessione sulla 7900 non le ha.
+⛔ It is lesson **E1**, *«written is not in force»*: the lines are reported as they came out, and
+beside them there is the **control** — the same session on 7900 does not have them.
 
-**Cura 2 — il codificatore** (`08:51:29.083`, canale `video`):
+**Cure 2 — the encoder** (`08:51:29.083`, channel `video`):
 
 > `aperto: HEVC 8 bit via hevc_vaapi (in HARDWARE · /dev/dri/renderD128 · Intel iHD driver … ⚠ EncSliceLP, bassa potenza — NON e' la codifica piena) · 1920x1080 · **QP 26 costante** · chiavi solo su richiesta`
 >
@@ -822,11 +822,11 @@ accanto c'è il **controllo** — la stessa sessione sulla 7900 non le ha.
 >
 > `la risalita della qualita' e' **SPENTA** (invariante I6): scesa una volta, la qualita' resta giu' per tutta la sessione — e questa riga e' il perche', non «non ha mai dovuto scattare».  ⚠ Si accende con \`codificatore_qualita_risale(true)\`, e da spenta questi numeri (**120 fotogrammi, 2097152 byte, scalino 9, punto di lavoro QP 26 costante, tetto d'attesa 3840**) non hanno nessun effetto`
 
-⭐ **La riga dei parametri dice i VALORI, non le parole**: «QP 26», non «QP costante». ⛔ Il
-controllo: la stessa riga sulla **7900** dice `… · 2560x1080 · **QP costante** · chiavi solo su
-richiesta` — il numero non c'è.
+⭐ **The parameters line says the VALUES, not the words**: «QP 26», not «constant QP». ⛔ The
+control: the same line on **7900** says `… · 2560x1080 · **QP costante** · chiavi solo su
+richiesta` — the number is not there.
 
-**Cura 3 — le dichiarazioni** (`08:51:26.861` `rcp`, `08:51:26.961` e `08:51:29.097` `figlio`):
+**Cure 3 — the declarations** (`08:51:26.861` `rcp`, `08:51:26.961` and `08:51:29.097` `figlio`):
 
 > `il client dichiara video.livello=5.1 (= 5.1, cioe' level_idc 51 in H.264 e L153 in HEVC): §4.3 vieta al server di emettere un flusso PIU' ALTO di questo`
 >
@@ -838,13 +838,13 @@ richiesta` — il numero non c'è.
 >
 > `⭐⛔ §4.3 — LIVELLO PRODOTTO: **4.0** (nell'SPS e' 120, cioe' general_level_idc, che e' il triplo) · stringa per il decodificatore «hev1.1.6.L120.B0».  ⛔ §4.3 vieta di superare il \`video.livello\` del client: il numero CHIESTO sta nella riga «il client dichiara video.livello=…» di \`rcp\`, e il confronto fra le due righe lo fa CHI LEGGE — il programma NON lo fa`
 
-⭐⭐ **E il confronto, fatto da chi legge, dà il verde al primo colpo**: il client chiede **5.1**,
-il server produce **4.0** ⇒ §4.3 è rispettata. ⛔ Fino a stamattina quel confronto **non si poteva
-fare da fuori**: uno dei due numeri non era scritto da nessuna parte.
+⭐⭐ **And the comparison, made by whoever reads, gives green at the first shot**: the client asks for **5.1**,
+the server produces **4.0** ⇒ §4.3 is respected. ⛔ Until this morning that comparison **could not
+be made from outside**: one of the two numbers was not written anywhere.
 
-**Il controllo — la 7900 non ha nessuna di queste righe.** `grep -c` sul suo registro:
+**The control — 7900 has none of these lines.** `grep -c` on its log:
 
-| riga | 7910 (dopo) | 7900 (prima) |
+| line | 7910 (after) | 7900 (before) |
 |---|---|---|
 | `PARAMETRI IN VIGORE` | 2 | **0** |
 | `la scala della degradazione` | 1 | **0** |
@@ -852,112 +852,112 @@ fare da fuori**: uno dei due numeri non era scritto da nessuna parte.
 | `LIVELLO PRODOTTO` | 1 | **0** |
 | `il client dichiara video.livello` | 1 | **0** |
 
-**Cura 1 — i contatori dell'audio** (letti **sulla pagina servita**, non nel sorgente):
+**Cure 1 — the audio counters** (read **on the served page**, not in the source):
 
-| | 7910 (dopo) | 7900 (prima) |
+| | 7910 (after) | 7900 (before) |
 |---|---|---|
-| `audio_posto_passato` (la frontiera calcolata) | **2** occorrenze | **0** |
-| `" tardivi " + c.scartati_tardivi` sulla riga di stato | **1** | **0** |
+| `audio_posto_passato` (the computed frontier) | **2** occurrences | **0** |
+| `" tardivi " + c.scartati_tardivi` on the status line | **1** | **0** |
 
-⇒ ⭐ La pagina curata **è quella che il server del dopo consegna**: `curl https://192.168.0.2:7910/`
-la porta, `…:7900/` no. ⚠ La pagina si legge **una volta all'avvio** (`pagina.c` · `pagina_muovi()`) — questo è
-il controllo che quel riavvio è servito.
+⇒ ⭐ The cured page **is the one the after server delivers**: `curl https://192.168.0.2:7910/`
+carries it, `…:7900/` does not. ⚠ The page is read **once at startup** (`pagina.c` · `pagina_muovi()`) — this is
+the check that that restart was needed.
 
-### 3.13 ⭐⭐⭐ IL RISVEGLIO: **identico** — *7900 alle 09:07–09:09, 7910 alle 09:18–09:20*
+### 3.13 ⭐⭐⭐ THE WAKE-UP: **identical** — *7900 at 09:07–09:09, 7910 at 09:18–09:20*
 
-> Stessa scena (`04-b30-scena --movimento pieno`), stesso utente `prova`, tela 1920x1080,
-> **30 colpi per punto**, linea larga. ⛔ **Uno per volta**: fra i due giri la macchina è stata
-> rimessa a zero (nessun palco vivo, nessuna disciplina).
+> Same scene (`04-b30-scena --movimento pieno`), same user `prova`, canvas 1920x1080,
+> **30 shots per point**, wide line. ⛔ **One at a time**: between the two rounds the machine was
+> reset to zero (no live stage, no discipline).
 
-| quiete | **7900 · mediana** | p95 | primo fotogramma | **7910 · mediana** | p95 | primo fotogramma |
+| quiet | **7900 · median** | p95 | first frame | **7910 · median** | p95 | first frame |
 |---|---|---|---|---|---|---|
-| **0,2 s** | **12,4 ms** | 12,9 | 2 988 B | **12,0 ms** | 12,5 | 2 981 B |
-| **2,0 s** | **11,9 ms** | 12,4 | 2 880 B | **12,4 ms** | 13,2 | 2 889 B |
-| **15,0 s** | **12,1 ms** | 12,7 | 2 928 B | **12,7 ms** | 13,2 | 2 878 B |
+| **0.2 s** | **12.4 ms** | 12.9 | 2 988 B | **12.0 ms** | 12.5 | 2 981 B |
+| **2.0 s** | **11.9 ms** | 12.4 | 2 880 B | **12.4 ms** | 13.2 | 2 889 B |
+| **15.0 s** | **12.1 ms** | 12.7 | 2 928 B | **12.7 ms** | 13.2 | 2 878 B |
 
-⭐⭐ **Identico**: la differenza fra i due server è **0,4–0,6 ms su 12**, cioè meno della
-differenza fra due quieti dello stesso server. ⛔ E non è una mediana che nasconde una coda: i
-p95 stanno fra 12,4 e 13,2 su tutt'e sei i punti. ⭐ Il **primo fotogramma** è `delta` 180 volte
-su 180 e pesa **2 878 – 2 988 byte**: i due server si discostano di **meno dello 0,5 %**.
+⭐⭐ **Identical**: the difference between the two servers is **0.4–0.6 ms out of 12**, that is less than the
+difference between two quiets of the same server. ⛔ And it is not a median that hides a tail: the
+p95 lie between 12.4 and 13.2 on all six points. ⭐ The **first frame** is `delta` 180 times
+out of 180 and weighs **2 878 – 2 988 bytes**: the two servers differ by **less than 0.5 %**.
 
-⚠ E i 13 ms di stamattina (§3.6) sono diventati 12: la macchina è la stessa, la sessione è nuova.
-⛔ **Per questo il «prima» è stato rimisurato adesso invece di credere al numero delle 07:46** —
-un confronto appaiato si fa con due misure vicine, non con una di tre ore fa.
+⚠ And this morning's 13 ms (§3.6) became 12: the machine is the same, the session is new.
+⛔ **That is why the «before» was remeasured now instead of believing the number of 07:46** —
+a paired comparison is made with two close measurements, not with one from three hours ago.
 
-**Dove vanno**: pixel→codifica **9,2–9,9 ms** · la codifica **2,5–2,6 ms** · codifica→`SPEDITO`
-**0,0 ms**, sui due server allo stesso modo.
+**Where they go**: pixel→encoding **9.2–9.9 ms** · encoding **2.5–2.6 ms** · encoding→`SPEDITO`
+**0.0 ms**, on both servers in the same way.
 
-### 3.14 ⭐⭐ I1 — A SCENA FERMA, **identico** — *7910 alle 09:31–09:33, 7900 alle 09:35–09:38*
+### 3.14 ⭐⭐ I1 — WITH A STILL SCENE, **identical** — *7910 at 09:31–09:33, 7900 at 09:35–09:38*
 
-> Banco `09-b68-ritmo.py tutto --secondi 30`, utente `prova`, tela 1920x1080, linea larga.
+> Bench `09-b68-ritmo.py tutto --secondi 30`, user `prova`, canvas 1920x1080, wide line.
 
-| scena | **7900** fot/s | K + Δ | carico video | filo `lo` | **7910** fot/s | K + Δ | carico video | filo `lo` |
+| scene | **7900** fps | K + Δ | video payload | wire `lo` | **7910** fps | K + Δ | video payload | wire `lo` |
 |---|---|---|---|---|---|---|---|---|
-| **ferma** | **0,07** | 1 + 1 | 5 559 B · 1,5 kbit/s | **2,429** Mbit/s | **0,07** | 1 + 1 | 5 565 B · 1,5 kbit/s | **2,431** Mbit/s |
-| **barra** | 37,03 | 1 + 1 110 | 62 036 040 B · 16 543 kbit/s | 19,925 | 34,60 | 1 + 1 037 | 58 005 654 B · 15 468 kbit/s | 18,790 |
-| **pieno** | 39,97 | 1 + 1 198 | 4 936 055 B · 1 316 kbit/s | 3,920 | 40,17 | 1 + 1 204 | 5 038 472 B · 1 344 kbit/s | 3,947 |
-| **ferma** *(ripetuta)* | **0,07** | 1 + 1 | 5 556 B | 2,431 | **0,07** | 1 + 1 | 5 551 B | 2,431 |
-| abbandoni §5.1 · chiave trattenuta §5.2 | **0 · 0** | | | | **0 · 0** | | | |
-| audio `vecchi` del cliente | **0** | | | | **0** | | | |
+| **still** | **0.07** | 1 + 1 | 5 559 B · 1.5 kbit/s | **2.429** Mbit/s | **0.07** | 1 + 1 | 5 565 B · 1.5 kbit/s | **2.431** Mbit/s |
+| **bar** | 37.03 | 1 + 1 110 | 62 036 040 B · 16 543 kbit/s | 19.925 | 34.60 | 1 + 1 037 | 58 005 654 B · 15 468 kbit/s | 18.790 |
+| **full** | 39.97 | 1 + 1 198 | 4 936 055 B · 1 316 kbit/s | 3.920 | 40.17 | 1 + 1 204 | 5 038 472 B · 1 344 kbit/s | 3.947 |
+| **still** *(repeated)* | **0.07** | 1 + 1 | 5 556 B | 2.431 | **0.07** | 1 + 1 | 5 551 B | 2.431 |
+| abandons §5.1 · withheld keyframe §5.2 | **0 · 0** | | | | **0 · 0** | | | |
+| the client's `vecchi` audio | **0** | | | | **0** | | | |
 
-⭐⭐ **La misura che conta è il costo PER FOTOGRAMMA, non il conto dei fotogrammi**: su `barra`
-sono **55 838** byte (7900) contro **55 882** (7910), cioè **lo 0,08 % di differenza**. ⇒ Il
-codificatore fa la stessa cosa; a ballare del 6 % è **quante volte Mutter consegna**, che è la
-stessa grandezza di §3.1 e non è nostra.
+⭐⭐ **The measurement that counts is the cost PER FRAME, not the count of frames**: on `barra`
+it is **55 838** bytes (7900) against **55 882** (7910), that is **0.08 % of difference**. ⇒ The
+encoder does the same thing; what wobbles by 6 % is **how many times Mutter delivers**, which is the
+same quantity as §3.1 and is not ours.
 
-⛔ **E l'audio sul percorso locale conferma la premessa della cura 1**: `vecchi` **0** su
-tutt'e due, in tutt'e quattro i giri. Non c'era niente da curare, e infatti non è cambiato niente.
+⛔ **And audio on the local path confirms the premise of cure 1**: `vecchi` **0** on
+both, in all four rounds. There was nothing to cure, and indeed nothing changed.
 
-⚠ `barra` qui costa **16–20 Mbit/s** contro i 579 kbit/s di §3.1: quelle erano anteprime della
-vista d'insieme (§3.7), queste no. ⛔ Il confronto che vale è **colonna contro colonna**, non
-contro stamattina.
+⚠ `barra` here costs **16–20 Mbit/s** against the 579 kbit/s of §3.1: those were previews of the
+overview (§3.7), these are not. ⛔ The comparison that holds is **column against column**, not
+against this morning.
 
-### 3.15 ⭐⭐⭐ LA BANDA A 2560x1080: **identica al byte** — *7910 alle 09:44 e 09:51, 7900 alle 09:47*
+### 3.15 ⭐⭐⭐ BANDWIDTH AT 2560x1080: **identical to the byte** — *7910 at 09:44 and 09:51, 7900 at 09:47*
 
-> Banco `09-b72-banda.py punti`, utente **`prova2`**, tela **2560x1080**, **25 s** per punto,
-> linea larga. Il punto «video» è il **desktop vero dell'utente**: `scena-utente.webm` a schermo
-> intero in `firefox-esr`, cioè il contenuto per cui il prodotto esiste.
+> Bench `09-b72-banda.py punti`, user **`prova2`**, canvas **2560x1080**, **25 s** per point,
+> wide line. The «video» point is the **user's real desktop**: `scena-utente.webm` at full
+> screen in `firefox-esr`, that is the content the product exists for.
 
-| punto | **7900** fot/s | **carico video** | % di 20 Mbit/s | B/fotogramma | filo `lo` | **7910** fot/s | **carico video** | % | B/fot | filo |
+| point | **7900** fps | **video payload** | % of 20 Mbit/s | B/frame | wire `lo` | **7910** fps | **video payload** | % | B/frame | wire |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **ferma** | 0,00 | **0** | 0 % | — | 2,427 | 0,04 | **632 B** | 0 % | 632 | 2,427 |
-| **pieno** | 41,00 | **1,159 Mbit/s** | 5,8 % | 3 532 | 3,683 | 41,28 | **1,159 Mbit/s** | 5,8 % | 3 508 | 3,687 |
-| **video** *(desktop vero)* | 21,96 | **0,193 Mbit/s** | **1,0 %** | 1 099 | 2,666 | 21,92 | **0,195 Mbit/s** | **1,0 %** | 1 112 | 2,667 |
+| **still** | 0.00 | **0** | 0 % | — | 2.427 | 0.04 | **632 B** | 0 % | 632 | 2.427 |
+| **full** | 41.00 | **1.159 Mbit/s** | 5.8 % | 3 532 | 3.683 | 41.28 | **1.159 Mbit/s** | 5.8 % | 3 508 | 3.687 |
+| **video** *(real desktop)* | 21.96 | **0.193 Mbit/s** | **1.0 %** | 1 099 | 2.666 | 21.92 | **0.195 Mbit/s** | **1.0 %** | 1 112 | 2.667 |
 
-⭐⭐⭐ **`pieno`: 3 620 466 byte contro 3 620 630, su 25 secondi e ~1 030 fotogrammi.** Sono
-**164 byte di differenza su 3,62 MB — lo 0,005 %.** ⛔ Non «simile»: lo stesso codificatore che
-fa la stessa cosa.
+⭐⭐⭐ **`pieno`: 3 620 466 bytes against 3 620 630, over 25 seconds and ~1 030 frames.** That is
+**164 bytes of difference out of 3.62 MB — 0.005 %.** ⛔ Not «similar»: the same encoder that
+does the same thing.
 
-⭐ **E il desktop vero costa l'1,0 % del pavimento su tutt'e due** — 0,193 contro 0,195 Mbit/s,
-cioè il numero di §3.8 (0,204) ritrovato due volte a distanza di quattro minuti.
+⭐ **And the real desktop costs 1.0 % of the floor on both** — 0.193 against 0.195 Mbit/s,
+that is the number of §3.8 (0.204) found again twice four minutes apart.
 
-⚠ Il punto `pieno` sulla 7910 è stato **rifatto alle 09:51**: al primo giro la scena non era
-partita — `⛔ shm_open(//09-b68): Permission denied`, il segmento di memoria condivisa era rimasto
-di `prova` (uid 1001) dal banco di I1 e `prova2` (1002) non poteva aprirlo. ⛔ **Difetto del
-banco**, non del prodotto: `09-b68-scena.sh` non ripulisce `/dev/shm/09-b68` fra due utenti
-diversi, e il sintomo è «la scena non parte», che è muto sul perché.
+⚠ The `pieno` point on 7910 was **redone at 09:51**: at the first round the scene had not
+started — `⛔ shm_open(//09-b68): Permission denied`, the shared memory segment had remained
+`prova`'s (uid 1001) from the I1 bench and `prova2` (1002) could not open it. ⛔ **A bench
+defect**, not a product one: `09-b68-scena.sh` does not clean `/dev/shm/09-b68` between two different
+users, and the symptom is «the scene does not start», which is mute about the why.
 
-### 3.16 ⛔⛔ L'AUDIO SOTTO `netem` — **e qui mi fermo: il banco prescritto NON PUÒ vedere la cura 1**
+### 3.16 ⛔⛔ AUDIO UNDER `netem` — **and here I stop: the prescribed bench CANNOT see cure 1**
 
-> `banchi/07-b64-rete.py netem --solo 2-jitter --secondi 25` — `netem delay 20ms 2ms` su `lo`,
-> **solo la porta misurata**, `enp7s0` mai toccata, guardiano armato. Uno per volta:
-> 7900 alle **09:41**, 7910 alle **09:45**.
+> `banchi/07-b64-rete.py netem --solo 2-jitter --secondi 25` — `netem delay 20ms 2ms` on `lo`,
+> **only the measured port**, `enp7s0` never touched, guardian armed. One at a time:
+> 7900 at **09:41**, 7910 at **09:45**.
 
-| | **7900 · il PRIMA** | **7910 · il DOPO** |
+| | **7900 · the BEFORE** | **7910 · the AFTER** |
 |---|---|---|
-| spediti dal server | 5 005 | 5 005 |
-| ricevuti | 3 966 | 4 006 |
-| **`vecchi` (scartati §6.3)** | **1 024** | **980** |
-| **purezza** | **0,1149** | **0,1235** |
-| resa campioni | 0,79495 | 0,80281 |
-| buchi d'istante · scoppiettii/s | 938 · 42,31 | 917 · 41,24 |
+| sent by the server | 5 005 | 5 005 |
+| received | 3 966 | 4 006 |
+| **`vecchi` (discarded §6.3)** | **1 024** | **980** |
+| **purity** | **0.1149** | **0.1235** |
+| sample yield | 0.79495 | 0.80281 |
+| instant holes · crackles/s | 938 · 42.31 | 917 · 41.24 |
 
-⛔⛔ **La previsione era «0,175 → ≥ 0,95». È uscito 0,1149 → 0,1235, cioè NIENTE. E il numero
-non smentisce la cura: smentisce il banco.**
+⛔⛔ **The prediction was «0.175 → ≥ 0.95». It came out 0.1149 → 0.1235, that is NOTHING. And the number
+does not refute the cure: it refutes the bench.**
 
-⭐ **La ragione, e si legge nel codice del banco, non nel prodotto.** Chi scarta i datagram
-sorpassati in questo giro **non è `pagina.html`**: è il cliente di prova, `banchi/01-b3-cliente.py`
-riga **743**, che ha la **sua** copia della regola di §6.3 —
+⭐ **The reason, and it is read in the bench's code, not in the product.** Whoever discards the overtaken
+datagrams in this round **is not `pagina.html`**: it is the test client, `banchi/01-b3-cliente.py`
+line **743**, which has **its own** copy of the rule of §6.3 —
 
 ```python
 if self.a_ultimo_istante is not None and istante <= self.a_ultimo_istante:
@@ -966,690 +966,690 @@ if self.a_ultimo_istante is not None and istante <= self.a_ultimo_istante:
 self.a_ultimo_istante = istante
 ```
 
-— cioè **esattamente la riga vecchia**, quella che confronta con l'**ultimo arrivato**. La cura è
-stata scritta in `src/pagina.html`, che in questo banco **non gira mai**. ⇒ `vecchi` e `purezza`
-qui **devono** essere uguali sui due server, e lo sono.
+— that is **exactly the old line**, the one that compares with the **last arrived**. The cure was
+written in `src/pagina.html`, which in this bench **never runs**. ⇒ `vecchi` and `purezza`
+here **must** be equal on the two servers, and they are.
 
-⭐⭐ **E la prova che è così, non l'argomento**: `md5sum` di `01-b3-cliente.py` nei due alberi —
-`13e68d19ed44298b7926cded53affdda` in `09-src` **e** in `09b-src`. **Lo stesso file, byte per
-byte.** Un banco che misura se stesso non può dare che lo stesso numero.
+⭐⭐ **And the proof that it is so, not the argument**: `md5sum` of `01-b3-cliente.py` in the two trees —
+`13e68d19ed44298b7926cded53affdda` in `09-src` **and** in `09b-src`. **The same file, byte for
+byte.** A bench that measures itself can only give the same number.
 
-⛔ **Quindi mi fermo su questa cura, e dico perché**: `07-b64-rete.py` è un banco del **trasporto**
-— misura quanti datagram passano il filo e quanto è puro il tono che ne esce — e la cura 1 vive
-nel **cliente vero**, cioè nella pagina. Le due metà non si toccano.
+⛔ **So I stop on this cure, and I say why**: `07-b64-rete.py` is a **transport** bench
+— it measures how many datagrams pass the wire and how pure the tone that comes out is — and cure 1 lives
+in the **real client**, that is in the page. The two halves do not touch.
 
-**Che cosa È stato verificato della cura 1**, e che cosa **no**:
+**What WAS verified of cure 1**, and what **was not**:
 
 | | |
 |---|---|
-| ✅ la pagina curata è **consegnata** dalla 7910 e non dalla 7900 | §3.12, letto con `curl` sulla porta |
-| ✅ i quattro contatori nuovi (`tardivi`, `fuori`, `rec`, `dop`) sono **sulla riga di stato** e **escono da `audio_conti()`** verso `/diario` | letto nella pagina servita |
-| ✅ sul **percorso locale** i `vecchi` sono **0**, come previsto ⇒ non c'era niente da allentare | §3.14 |
-| ⛔ **NON verificato**: che sotto riordino vero la purezza salga a ≥ 0,95 | serve un banco che faccia girare **la pagina**, non il cliente di prova |
+| ✅ the cured page is **delivered** by 7910 and not by 7900 | §3.12, read with `curl` on the port |
+| ✅ the four new counters (`tardivi`, `fuori`, `rec`, `dop`) are **on the status line** and **come out of `audio_conti()`** towards `/diario` | read in the served page |
+| ✅ on the **local path** the `vecchi` are **0**, as predicted ⇒ there was nothing to loosen | §3.14 |
+| ⛔ **NOT verified**: that under real reordering purity rises to ≥ 0.95 | a bench is needed that runs **the page**, not the test client |
 
-⭐ **Che forma avrebbe quel banco**, perché la prossima volta non si ricominci da capo: un
-**browser vero** che apre `https://192.168.0.2:PORTA`, entra come `prova`, e i cui contatori si
-leggono **senza chiedere niente all'utente** — la pagina li manda già da sé al server ogni 5 s
-(`pagina.html` · `avvia_audio()`, `fetch("/diario?" + riga)`), e la riga porta tutt'e quattro i numeri nuovi.
-⇒ Il registro del server diventa il verbale. ⛔ **Il pezzo che manca è dove far girare il
-browser**: sulla macchina Firefox 140 ESR c'è, ma vive **solo dentro una sessione di REMOTIX**
-(non c'è `Xvfb`), e puntarlo al server che lo sta catturando è uno specchio; e il `netem` deve
-restare su `lo`, perché **`enp7s0` non si strozza mai**. ⚠ È una scelta di banco, e va fatta
-prima di scriverlo — non dopo.
+⭐ **What shape that bench would have**, so that next time we do not start from scratch: a
+**real browser** that opens `https://192.168.0.2:PORTA`, logs in as `prova`, and whose counters are
+read **without asking the user anything** — the page already sends them on its own to the server every 5 s
+(`pagina.html` · `avvia_audio()`, `fetch("/diario?" + riga)`), and the line carries all four new numbers.
+⇒ The server's log becomes the record. ⛔ **The missing piece is where to run the
+browser**: on the machine Firefox 140 ESR is there, but it lives **only inside a REMOTIX session**
+(there is no `Xvfb`), and pointing it at the server that is capturing it is a mirror; and the `netem` must
+stay on `lo`, because **`enp7s0` is never throttled**. ⚠ It is a bench choice, and it must be made
+before writing it — not after.
 
-### 3.17 ⛔⛔ DUE FALSI ALLARMI DEL BANCO, E VALGONO PIÙ DI UN NUMERO
+### 3.17 ⛔⛔ TWO FALSE ALARMS OF THE BENCH, AND THEY ARE WORTH MORE THAN A NUMBER
 
-**1. «Il dopo è più lento e i suoi fotogrammi pesano il doppio» — *08:52, e non era vero*.**
-Il primo giro del risveglio sulla 7910 ha dato mediana **13,4 / 14,0 / 13,8 ms** contro i
-**12,4 / 11,9 / 12,1** della 7900, e primo fotogramma **6 141 / 5 872 / 5 812 byte** contro
-**2 988 / 2 880 / 2 928**: il **doppio**, sistematico su 90 colpi, con la stessa scena.
+**1. «The after is slower and its frames weigh double» — *08:52, and it was not true*.**
+The first wake-up round on 7910 gave a median of **13.4 / 14.0 / 13.8 ms** against the
+**12.4 / 11.9 / 12.1** of 7900, and a first frame of **6 141 / 5 872 / 5 812 bytes** against
+**2 988 / 2 880 / 2 928**: **double**, systematic over 90 shots, with the same scene.
 
-⛔ La causa non era il prodotto: era **un palco orfano di stamattina** — il figlio di `prova2`
-rimasto vivo sulla 7900 dopo il banco della banda delle 08:30 (invariante I4: il palco sopravvive
-al distacco) — che continuava a catturare e codificare sulla **stessa GPU integrata**. Chiuso
-quello e rifatta la misura sulla macchina pulita, il dopo ha dato **12,0 / 12,4 / 12,7** e primo
-fotogramma **2 981 / 2 889 / 2 878**: identico al prima.
+⛔ The cause was not the product: it was **an orphan stage from this morning** — `prova2`'s child
+left alive on 7900 after the bandwidth bench of 08:30 (invariant I4: the stage survives
+the detach) — which kept capturing and encoding on the **same integrated GPU**. With that one closed
+and the measurement redone on the clean machine, the after gave **12.0 / 12.4 / 12.7** and a first
+frame of **2 981 / 2 889 / 2 878**: identical to the before.
 
-⇒ ⭐⭐ È `LEZIONI.md` §1.26 preso in flagrante: **non ha dato un rosso, ha dato un numero
-plausibile** — e quel numero, creduto, avrebbe accusato tre cure innocenti. ⚠ E la riga che lo
-denunciava era stampata dal banco stesso e non l'avevo pesata: *«fotogrammi usciti DURANTE le
-quieti: **1 · 1 · 7**»* contro *«0 · 0 · 0 (il desktop era davvero fermo)»* del giro pulito.
+⇒ ⭐⭐ It is `LEZIONI.md` §1.26 caught red-handed: **it did not give a red, it gave a plausible
+number** — and that number, believed, would have accused three innocent cures. ⚠ And the line that
+denounced it was printed by the bench itself and I had not weighed it: *«frames that left DURING the
+quiets: **1 · 1 · 7**»* against *«0 · 0 · 0 (the desktop was really still)»* of the clean round.
 
-**2. «Il dopo non spedisce quasi niente» — *09:29, e non era vero*.**
-Il primo giro di I1 sulla 7910 ha dato `barra` a **0,17 fot/s** e **13 kB** sul filo in 30 s. Nel
-registro la causa, testuale:
+**2. «The after sends almost nothing» — *09:29, and it was not true*.**
+The first I1 round on 7910 gave `barra` at **0.17 fps** and **13 kB** on the wire in 30 s. In the
+log the cause, verbatim:
 
 > `09:29:05.841 rcp     posto NEGATO a prova da [192.168.0.2]:55729: lo occupa un altro client di questo stesso utente (occupati: 1)`
 >
 > `09:29:12.006 rcp     STACCATO per silenzio: 30002 ms senza un PACCHETTO da [192.168.0.2]:33357 — e l'ultimo byte di RCP e' di 657637 ms fa`
 
-⇒ Il cliente del banco precedente era stato **ucciso** invece che congedato, e il server ha tenuto
-il suo posto fino ai **30 secondi di silenzio** di §5.3 — cioè per tutto il primo giro. È lo stesso
-difetto già scritto in `banchi/09-b71-sessione.sh` (`[M]` 23 ago 08:06), che lì è curato mandando
-`TERM` e aspettando; ⛔ **ma fra un banco e il successivo l'attesa non c'è**, e nessuno la fa.
+⇒ The previous bench's client had been **killed** instead of dismissed, and the server kept
+its place until the **30 seconds of silence** of §5.3 — that is for the whole first round. It is the same
+defect already written in `banchi/09-b71-sessione.sh` (`[M]` 23 Aug 08:06), which there is cured by sending
+`TERM` and waiting; ⛔ **but between one bench and the next the wait is not there**, and nobody does it.
 
-⚠ **Regola operativa che ne esce**: fra due banchi sullo stesso utente si **verifica che il posto
-sia libero** (nessun `01-b3-cliente.py` vivo **e** nessun palco), non si conta il tempo.
+⚠ **Operating rule that comes out of it**: between two benches on the same user one **verifies that the place
+is free** (no `01-b3-cliente.py` alive **and** no stage), one does not count the time.
 
 ---
 
-## §4 · ⛔⛔⛔ IL CROLLO DELLE 08:28:09 — la causa, provata riga per riga
+## §4 · ⛔⛔⛔ THE CRASH OF 08:28:09 — the cause, proven line by line
 
-> **Diagnosi del 23 agosto 2026, pomeriggio.** ⭐ La cura è stata **applicata lo stesso giorno**
-> (§5.1). ⚠ Quel che segue è la *causa*, non il racconto della caccia.
+> **Diagnosis of 23 Aug 2026, afternoon.** ⭐ The cure was **applied the same day**
+> (§5.1). ⚠ What follows is the *cause*, not the story of the hunt.
 
-### 4.1 ⭐⭐⭐ La causa, in una riga
+### 4.1 ⭐⭐⭐ The cause, in one line
 
-`src/webtransport.c` (albero `09-src`, quello che ha girato) **liberava** i byte di un fotogramma
-appena ngtcp2 li aveva *serializzati*. Il contratto di `ngtcp2_conn_writev_stream()`
-(`/media/REMOTIX/src/b2/ngtcp2/lib/includes/ngtcp2/ngtcp2.h:5246-5250`) dice l'opposto:
+`src/webtransport.c` (tree `09-src`, the one that ran) **freed** the bytes of a frame
+as soon as ngtcp2 had *serialized* them. The contract of `ngtcp2_conn_writev_stream()`
+(`/media/REMOTIX/src/b2/ngtcp2/lib/includes/ngtcp2/ngtcp2.h:5246-5250`) says the opposite:
 
 > *«The caller must keep the portion of data covered by `*pdatalen` bytes **in tact** until
 > `ngtcp2_callbacks.acked_stream_data_offset` indicates that they are acknowledged by a remote
 > endpoint or the stream is closed.»*
 
-⇒ **Uso dopo la liberazione.** `ndatalen` dice quanti byte sono finiti **in un pacchetto**, non
-quanti sono **confermati**. La callback dell'ack **esisteva** (`trasporto.c` · `accetta()`) ma inoltrava a
-nghttp3 e basta: nessuno la consultava prima del `free`.
+⇒ **Use after free.** `ndatalen` says how many bytes ended up **in a packet**, not
+how many are **acknowledged**. The ack callback **existed** (`trasporto.c` · `accetta()`) but it only forwarded to
+nghttp3: nobody consulted it before the `free`.
 
-⭐⭐ **E il difetto c'era a OGNI fotogramma ritrasmesso, da sempre.** Quello da 525 298 byte è
-stato solo il primo abbastanza **grosso** da farlo diventare rumoroso.
+⭐⭐ **And the defect was there on EVERY retransmitted frame, always.** The 525 298-byte one was
+only the first **large** enough to make it noisy.
 
-### 4.2 La prova che è rimasta sulla macchina — ⭐ `dmesg` ha salvato la giornata
+### 4.2 The proof that remained on the machine — ⭐ `dmesg` saved the day
 
-⛔ Nessun core: `coredumpctl` non è installato e `core_pattern` vale `core` (nome relativo) nella
-cartella di lavoro del servizio (`/`), dove non c'è. ⭐ Ma `dmesg -T`:
+⛔ No core: `coredumpctl` is not installed and `core_pattern` is `core` (relative name) in the
+service's working folder (`/`), where it is not. ⭐ But `dmesg -T`:
 
 ```
 [Sun Aug 23 08:28:10 2026] remotix[14739]: segfault at 7f148e056fc2 ip 00007f1495a88b49
     sp 00007ffc182131f8 error 4 in libc.so.6[162b49,7f149594e000+163000]
 ```
 
-| pezzo | che cosa dice |
+| piece | what it says |
 |---|---|
-| `error 4` | **lettura** in spazio utente di una pagina **non presente** — non una scrittura, non un permesso |
-| `segfault at 0x7f148e05…` | zona **`mmap`**: non è la pila (`sp` è `0x7ffc…`), non è il mucchio `brk` di un PIE (`0x55…`) |
-| `ip` a **scarto 0x162B49** in libc | `objdump`: `vmovdqu (%rsi),%ymm0` dentro `__memmove_avx_unaligned_erms` — la **primissima lettura di 32 byte dalla SORGENTE** |
+| `error 4` | **read** in user space of a page **not present** — not a write, not a permission |
+| `segfault at 0x7f148e05…` | **`mmap`** zone: it is not the stack (`sp` is `0x7ffc…`), it is not the `brk` heap of a PIE (`0x55…`) |
+| `ip` at **offset 0x162B49** in libc | `objdump`: `vmovdqu (%rsi),%ymm0` inside `__memmove_avx_unaligned_erms` — the **very first 32-byte read from the SOURCE** |
 
-⇒ `%rsi = 0x7f148e056fc2` **non è spazzatura** (non `NULL`, non `0xdead…`): è un puntatore
-**verosimile** in una regione **non più mappata**. ⭐ **È la firma esatta dell'uso dopo la
-liberazione di un blocco `mmap`.**
+⇒ `%rsi = 0x7f148e056fc2` **is not garbage** (not `NULL`, not `0xdead…`): it is a **plausible**
+pointer into a region **no longer mapped**. ⭐ **It is the exact signature of a use after
+free of an `mmap` block.**
 
-⭐ Il registro conferma la sequenza: il fotogramma **era stato copiato con successo**
-(`coda_metti()` copia i byte prima che `SPEDITO` esca), fra `.895` e la morte (`.9237`) passano
-**~28 ms** e **non succede altro che scrivere su QUIC** — nessun fotogramma 186, nessuna
-ricodifica, nessun cambio di scena. E il salto è **146 → 525 298 byte**, ×3 600 in un fotogramma.
+⭐ The log confirms the sequence: the frame **had been copied successfully**
+(`coda_metti()` copies the bytes before `SPEDITO` comes out), between `.895` and the death (`.9237`) pass
+**~28 ms** and **nothing happens other than writing to QUIC** — no frame 186, no
+re-encoding, no scene change. And the jump is **146 → 525 298 bytes**, ×3 600 in one frame.
 
-### 4.3 ⛔ I sei sospetti, ciascuno chiuso con la sua riga
+### 4.3 ⛔ The six suspects, each closed with its own line
 
-| sospetto | la riga che decide |
+| suspect | the line that decides |
 |---|---|
-| tetto **16 MiB** / ciclo delle **ricodifiche** | 525 298 byte è il **3,1 %** di 16 MiB, e *«si RICODIFICA»* compare **0 volte** nel giro morto |
-| `abbassa_qualita()` / `chiudi_contesto()` con un pacchetto in mano | si chiama **solo** dal ramo del tetto, **mai preso**. ⚠ `fuori->dati = c->pacchetto->data` resta un difetto **reale in attesa** — ma non è quello del 23 agosto |
-| **coda d'uscita** `WT_CODA_MAX` (17 MiB) | 525 KB entrano larghi; *«NON entrano in coda»* e *«la coda ha toccato il tetto»*: **0 volte** |
-| `video_sgombra()` / `WT_INVOLO_MAX` | ⭐ **ed è escluso per la ragione buona**: fa `shutdown_stream_write()` **prima** di buttare i byte, ed è **corretto**. ⛔ Il suo commento — *«PRIMA si azzera lo stream, POI si buttano i byte»* — dimostra che **la regola era conosciuta**, e rende più netto che l'altro punto quella protezione non ce l'avesse. Inoltre non è stata nemmeno chiamata: nessun fotogramma è arrivato dopo il 185 |
-| **copia zero** (fase 8), passo multiplo di 64 | 2560 px → passo 10 240 = 64 × 160 ✔; e comunque è la strada d'**ingresso**, già finita bene alle `.894` |
-| il **magazzino** dei fotogrammi | è quello delle **superfici VAAPI**, di misura fissa e aperto una volta col contesto |
+| **16 MiB** cap / **re-encoding** loop | 525 298 bytes is **3.1 %** of 16 MiB, and *«si RICODIFICA»* appears **0 times** in the dead round |
+| `abbassa_qualita()` / `chiudi_contesto()` with a packet in hand | it is called **only** from the cap branch, **never taken**. ⚠ `fuori->dati = c->pacchetto->data` remains a **real defect in waiting** — but it is not the one of 23 Aug |
+| **output queue** `WT_CODA_MAX` (17 MiB) | 525 KB fit with room to spare; *«NON entrano in coda»* and *«la coda ha toccato il tetto»*: **0 times** |
+| `video_sgombra()` / `WT_INVOLO_MAX` | ⭐ **and it is excluded for the good reason**: it does `shutdown_stream_write()` **before** throwing away the bytes, and it is **correct**. ⛔ Its comment — *«FIRST the stream is reset, THEN the bytes are thrown away»* — proves that **the rule was known**, and makes it sharper that the other spot did not have that protection. Moreover it was not even called: no frame arrived after 185 |
+| **zero copy** (phase 8), stride a multiple of 64 | 2560 px → stride 10 240 = 64 × 160 ✔; and anyway it is the **input** route, already finished well at `.894` |
+| the frames' **pool** | it is the one of the **VAAPI surfaces**, of fixed size and opened once with the context |
 
-### 4.4 ⭐⭐⭐ Perché **quel** fotogramma e non gli altri 45 004 — e perché il giro dopo non è morto
+### 4.4 ⭐⭐⭐ Why **that** frame and not the other 45 004 — and why the next round did not die
 
-L'allocazione della coda raddoppia da 64: per 525 298 byte la capacità sale a **1 MiB**. Sopra i
-**128 KiB** (`M_MMAP_THRESHOLD` di serie) glibc serve con `mmap`, e `free()` fa `munmap`: **la
-regione sparisce**. Sotto, il blocco resta nel mucchio e la lettura sbagliata **legge spazzatura
-senza far rumore**.
+The queue allocation doubles from 64: for 525 298 bytes the capacity rises to **1 MiB**. Above
+**128 KiB** (the default `M_MMAP_THRESHOLD`) glibc serves with `mmap`, and `free()` does `munmap`: **the
+region disappears**. Below, the block stays in the heap and the wrong read **reads garbage
+without making noise**.
 
-| classe di capacità, nel giro morto | quanti |
+| capacity class, in the dead round | how many |
 |---|---|
-| **> 512 KiB** ⇒ capacità 1 MiB, `mmap` | **1** ← il fotogramma 185 |
+| **> 512 KiB** ⇒ capacity 1 MiB, `mmap` | **1** ← frame 185 |
 | > 128 KiB | 0 |
-| ≤ 128 KiB (mucchio, **silenzioso**) | **45 004** |
+| ≤ 128 KiB (heap, **silent**) | **45 004** |
 
-⇒ **L'unico `free()` che abbia davvero smappato una regione in 1 h 50 min**, dunque l'unica volta
-in cui il puntatore penzolante di ngtcp2 ha trovato una pagina assente invece di mucchio riciclato.
-⭐ E il secondo moltiplicatore: 525 298 byte sono **~370 pacchetti** a raffica — che almeno uno sia
-dichiarato perduto (o che scatti una sonda PTO) nei 28 ms successivi è **quasi certo**. Con un
-delta da 146 byte il pacchetto è **uno**.
+⇒ **The only `free()` that really unmapped a region in 1 h 50 min**, hence the only time
+the dangling pointer of ngtcp2 found an absent page instead of recycled heap.
+⭐ And the second multiplier: 525 298 bytes are **~370 packets** in a burst — that at least one is
+declared lost (or that a PTO probe fires) in the following 28 ms is **almost certain**. With a
+146-byte delta the packet is **one**.
 
-⭐⭐ **E il giro dopo — 586 fotogrammi, punte oltre 500 KB — non è morto per la stessa ragione
-letta al contrario: la soglia di `mmap` di glibc è dinamica.** Liberando un blocco `mmap`,
-`munmap_chunk()` **alza** `mp_.mmap_threshold` alla misura di quel blocco. ⇒ Dopo il **primo**
-buffer da 1 MiB liberato, i successivi arrivano dal mucchio e l'uso dopo la liberazione torna
-**silenzioso**: byte di spazzatura sul filo invece di un `SEGV`.
+⭐⭐ **And the next round — 586 frames, peaks over 500 KB — did not die for the same reason
+read backwards: glibc's `mmap` threshold is dynamic.** When freeing an `mmap` block,
+`munmap_chunk()` **raises** `mp_.mmap_threshold` to the size of that block. ⇒ After the **first**
+1 MiB buffer freed, the following ones come from the heap and the use after free goes back to being
+**silent**: garbage bytes on the wire instead of a `SEGV`.
 
-⇒ ⛔ **Non è la dimensione da sola.** È: *la prima volta che un blocco grosso viene liberato mentre
-ngtcp2 lo tiene ancora per la ritrasmissione.*
+⇒ ⛔ **It is not the size alone.** It is: *the first time a large block is freed while
+ngtcp2 still holds it for retransmission.*
 
-### 4.5 ⏳ Come si riproduce — ⛔ **non eseguito**, e la previsione è falsificabile
+### 4.5 ⏳ How to reproduce it — ⛔ **not run**, and the prediction is falsifiable
 
-| ricetta | come | **previsione** |
+| recipe | how | **prediction** |
 |---|---|---|
-| ⭐ **A** — deterministica, senza rete e senza root | `Environment=MALLOC_MMAP_THRESHOLD_=32768` nell'unità (⭐ dall'ambiente **spegne l'adattamento dinamico**: ogni fotogramma sopra i 32 KiB diventa `mmap`/`munmap`, e il difetto smette di essere silenzioso **per sempre**), poi un fotogramma grosso e `kill -STOP` al browser per ~1 s ⇒ nessun ack ⇒ PTO ⇒ ritrasmissione | `SEGV`, `error 4`, `ip` in libc, sempre in `__memmove_avx_unaligned_erms`. ⛔ **Se non muore, questa diagnosi è sbagliata** |
-| **B** — la perdita vera | come A al punto 1, poi `netem loss 5%` e il film che scorre | muore in pochi secondi |
-| ⭐ **C** — la prova che nomina la riga | ricostruire con `-fsanitize=address -g -fno-omit-frame-pointer` e rifare A o B | `heap-use-after-free READ` con **due** pile: quella che legge (`ngtcp2_pkt_encode_stream_frame`) e quella che ha liberato (`coda_uccidi` ← `wt_scrivi`). ⭐ **Chiude il caso senza margine** |
+| ⭐ **A** — deterministic, without network and without root | `Environment=MALLOC_MMAP_THRESHOLD_=32768` in the unit (⭐ from the environment it **switches off the dynamic adaptation**: every frame above 32 KiB becomes `mmap`/`munmap`, and the defect stops being silent **forever**), then a large frame and `kill -STOP` to the browser for ~1 s ⇒ no ack ⇒ PTO ⇒ retransmission | `SEGV`, `error 4`, `ip` in libc, always in `__memmove_avx_unaligned_erms`. ⛔ **If it does not die, this diagnosis is wrong** |
+| **B** — real loss | as A at point 1, then `netem loss 5%` and the film playing | it dies within a few seconds |
+| ⭐ **C** — the proof that names the line | rebuild with `-fsanitize=address -g -fno-omit-frame-pointer` and redo A or B | `heap-use-after-free READ` with **two** stacks: the one that reads (`ngtcp2_pkt_encode_stream_frame`) and the one that freed (`coda_uccidi` ← `wt_scrivi`). ⭐ **It closes the case without margin** |
 
-### 4.6 ⛔ La cura: perché la (a) e non la (b)
+### 4.6 ⛔ The cure: why (a) and not (b)
 
-- ⭐ **(a) la sobria — quella applicata**: non si libera alla serializzazione; si marca
-  `consegnato`, si toglie dalla scelta di `coda_scegli()`, e il `free` lo fa l'ack quando l'offset
-  confermato copre `dati.n`, oppure la chiusura/reset dello stream. ⚠ **Costo**: la memoria di un
-  fotogramma resta impegnata per un giro di rete in più, e `WT_CODA_MAX` va riletto con quel conto
-  in mano — 16 sessioni × un fotogramma in più in volo;
-- ⛔ **(b) la spiccia — rifiutata**: `ngtcp2_conn_shutdown_stream_write()` prima del `free`, come fa
-  `video_sgombra()`. **Non va bene qui**: quello *azzera* lo stream, e §6.2 vuole il fotogramma
-  **completo**. Sarebbe **barattare un crollo raro con un fotogramma rotto sempre**.
+- ⭐ **(a) the sober one — the one applied**: nothing is freed at serialization; it is marked
+  `consegnato`, it is removed from the choice of `coda_scegli()`, and the `free` is done by the ack when the
+  acknowledged offset covers `dati.n`, or by the closing/reset of the stream. ⚠ **Cost**: the memory of a
+  frame stays committed for one more network round trip, and `WT_CODA_MAX` must be reread with that count
+  in hand — 16 sessions × one more frame in flight;
+- ⛔ **(b) the quick one — refused**: `ngtcp2_conn_shutdown_stream_write()` before the `free`, as
+  `video_sgombra()` does. **It is not right here**: that one *resets* the stream, and §6.2 wants the frame
+  **complete**. It would be **trading a rare crash for a frame broken always**.
 
-### 4.7 ⏳ La trappola da armare comunque — ⛔ non armata
+### 4.7 ⏳ The trap to arm anyway — ⛔ not armed
 
-Anche con la causa in mano, **la macchina non era attrezzata per farsi raccontare una morte**.
+Even with the cause in hand, **the machine was not equipped to have a death told to it**.
 
-1. ⛔ **nessun core dump** ⇒ installare `systemd-coredump`, **oppure**
-   `core_pattern = /media/REMOTIX/tmp/09/core.%e.%p.%t` (**assoluto**). `LimitCORE=infinity` c'è già;
-2. ⛔ **il registro è condiviso e viene sepolto**: la coda del 08:28 sta a metà di un file da 22 MB
-   e i giri successivi ci scrivono sopra ⇒ un `ExecStopPost=` che, se il codice d'uscita non è 0,
-   copia le ultime ~2 000 righe in `morte-%t.log` **insieme a `dmesg -T | tail -50`**;
-3. ⭐ **`dmesg` va raccolto SEMPRE allo spegnimento**, non solo quando qualcuno se lo ricorda: è
-   quello che ha salvato la giornata;
-4. ⭐⭐ **`MALLOC_MMAP_THRESHOLD_=32768` + `MALLOC_PERTURB_=165` sul banco.** Il primo trasforma
-   ogni uso-dopo-liberazione **grosso** da silenzioso a fatale; il secondo riempie di `0x92…` la
-   memoria liberata, così anche i casi piccoli smettono di sembrare dati buoni. ⛔ **Sul banco, non
-   nel prodotto**: sono lenti.
+1. ⛔ **no core dump** ⇒ install `systemd-coredump`, **or**
+   `core_pattern = /media/REMOTIX/tmp/09/core.%e.%p.%t` (**absolute**). `LimitCORE=infinity` is already there;
+2. ⛔ **the log is shared and gets buried**: the tail of 08:28 sits in the middle of a 22 MB file
+   and the following rounds write over it ⇒ an `ExecStopPost=` that, if the exit code is not 0,
+   copies the last ~2 000 lines into `morte-%t.log` **together with `dmesg -T | tail -50`**;
+3. ⭐ **`dmesg` must be collected ALWAYS at shutdown**, not only when someone remembers it: it is
+   what saved the day;
+4. ⭐⭐ **`MALLOC_MMAP_THRESHOLD_=32768` + `MALLOC_PERTURB_=165` on the bench.** The first turns
+   every **large** use-after-free from silent to fatal; the second fills the freed memory with `0x92…`,
+   so that even the small cases stop looking like good data. ⛔ **On the bench, not
+   in the product**: they are slow.
 
-### 4.8 ⛔ Che cosa di questa diagnosi resta `[?]`
+### 4.8 ⛔ What of this diagnosis remains `[?]`
 
-`[?]` **La ritrasmissione non è stata vista con gli occhi.** Il registro non conta i pacchetti
-perduti e il core non c'è. La catena — contratto violato → `frame_chain` che conserva il puntatore
-→ `rtb_on_pkt_lost` → `streamfrq_push` → `ngtcp2_pkt.c:1619 ngtcp2_cpymem()` — è letta **riga per
-riga nel codice di ngtcp2 presente sulla macchina**, non osservata in volo. ⇒ Finché non gira §4.5,
-è una **causa probabile con la riga**, non una causa vista.
+`[?]` **The retransmission was not seen with the eyes.** The log does not count lost packets
+and the core is not there. The chain — violated contract → `frame_chain` that keeps the pointer
+→ `rtb_on_pkt_lost` → `streamfrq_push` → `ngtcp2_pkt.c:1619 ngtcp2_cpymem()` — is read **line by
+line in the ngtcp2 code present on the machine**, not observed in flight. ⇒ Until §4.5 runs,
+it is a **probable cause with the line**, not a seen cause.
 
-⭐ `[M]` **Tutto il resto è misurato**: la riga di `dmesg`, l'istruzione a `0x162B49`, il contratto
-in `ngtcp2.h:5246-5250`, il `cpymem` a `ngtcp2_pkt.c:1619`, e il conto **1 su 45 005**.
+⭐ `[M]` **Everything else is measured**: the `dmesg` line, the instruction at `0x162B49`, the contract
+in `ngtcp2.h:5246-5250`, the `cpymem` at `ngtcp2_pkt.c:1619`, and the count **1 out of 45 005**.
 
 ---
 
-## §5 · ⭐⭐ LE CINQUE CURE — il perché, il prezzo, e quel che ciascuna NON fa
+## §5 · ⭐⭐ THE FIVE CURES — the why, the price, and what each one does NOT do
 
-> ⛔ **Il diff non sta qui.** È in `src/`, e i commenti nel codice sono la sede della ragione: dove
-> questo documento ripeterebbe un commento, cita `file:riga` e si ferma. Quel che resta qui è **il
-> perché della scelta**, **il prezzo** e **quel che è stato scartato**.
+> ⛔ **The diff is not here.** It is in `src/`, and the comments in the code are the seat of the reasoning: where
+> this document would repeat a comment, it cites `file:line` and stops. What remains here is **the
+> why of the choice**, **the price** and **what was discarded**.
 
-### 5.1 ⛔⭐ Cura 1 — il crollo · `webtransport.c:745-870`, `:5929`
+### 5.1 ⛔⭐ Cure 1 — the crash · `webtransport.c:745-870`, `:5929`
 
-Vedi §4 per intero. ⛔ **Nessun interruttore**: non cambia quel che si vede, corregge un modo di
-morire. ⚠ **Non verificata**: la ricetta di §4.5 non è stata eseguita.
+See §4 in full. ⛔ **No switch**: it does not change what is seen, it corrects a way of
+dying. ⚠ **Not verified**: the recipe of §4.5 was not run.
 
-### 5.2 Cura 2 — la soglia sulla coda in `video_sgombra()` · `webtransport.c:2705-2800`
+### 5.2 Cure 2 — the queue threshold in `video_sgombra()` · `webtransport.c:2705-2800`
 
-**Il difetto**: non c'era nessuna condizione fra *«esiste un fotogramma più recente»* e
-*«abbandona»*. Su linea stretta un delta non esce in 33 ms ⇒ la condizione è **sempre vera** ⇒
-l'abbandono è **sempre**, e ogni abbandono riaccende il debito di §5.2.
+**The defect**: there was no condition between *«a more recent frame exists»* and
+*«abandon»*. On a narrow line a delta does not get out in 33 ms ⇒ the condition is **always true** ⇒
+the abandon is **always**, and every abandon rekindles the debt of §5.2.
 
-⭐ **La regola nuova, e sta tutta in una parola di `RCP.md`**: `:1156` dice che il server **PUÒ**
-chiamare `RESET_STREAM`, non che **DEVE**. ⇒ un delta si abbandona **solo se la coda del video non
-si svuota entro la soglia**. Sotto la soglia si **tiene**: gli stream sono indipendenti
-(`RCP.md:1155`), quindi tenerlo **non blocca** quelli dopo.
+⭐ **The new rule, and it lies entirely in one word of `RCP.md`**: `:1156` says that the server **MAY**
+call `RESET_STREAM`, not that it **MUST**. ⇒ a delta is abandoned **only if the video queue does not
+empty within the threshold**. Below the threshold it is **kept**: the streams are independent
+(`RCP.md:1155`), so keeping it **does not block** the following ones.
 
-⛔ **La soglia è 100 ms, e i quattro vincoli che la derivano** *(⚠ derivata, non dimostrata: il
-banco la spazza a 50 · 100 · 200 e chi sceglie è l'utente, perché è un prezzo che si VEDE)*:
+⛔ **The threshold is 100 ms, and the four constraints that derive it** *(⚠ derived, not proven: the
+bench sweeps it at 50 · 100 · 200 and whoever chooses is the user, because it is a price that is SEEN)*:
 
-1. **più di un periodo di fotogramma**, o è la regola di oggi con un nome nuovo: `[M]` fase 8, il
-   contenuto vero va a **20,9 fot/s = 47,8 ms**;
-2. **meno del fondo con cui già si richiede una chiave** — `WT_CHIAVE_RICHIESTA_MS` = 150;
-3. deve **lasciar passare una CHIAVE più qualche delta** dove il difetto morde: `[M]` una chiave
-   sulla tela dell'utente misura **20 817 byte**; a 3 Mbit/s esce in **56 ms**, e nei 44 che
-   restano ci stanno **tre delta**;
-4. il prezzo si somma all'anello: `[M]` fase 8, l'anello intero è **55,20 ms**, e 100 + 55 sta
-   sotto il quinto di secondo.
+1. **more than one frame period**, or it is today's rule with a new name: `[M]` phase 8, the
+   real content goes at **20.9 fps = 47.8 ms**;
+2. **less than the bottom with which a keyframe is already requested** — `WT_CHIAVE_RICHIESTA_MS` = 150;
+3. it must **let a KEYFRAME plus a few deltas through** where the defect bites: `[M]` a keyframe
+   on the user's canvas measures **20 817 bytes**; at 3 Mbit/s it gets out in **56 ms**, and in the 44 that
+   remain **three deltas** fit;
+4. the price adds to the loop: `[M]` phase 8, the whole loop is **55.20 ms**, and 100 + 55 stays
+   below a fifth of a second.
 
-⚠ **Il ripiego dichiarato**: finché ngtcp2 non ha né `smoothed_rtt` né `cwnd` si assume **il
-pavimento**, 20 Mbit/s = 2 500 byte/ms — e **la riga di registro dice quale dei due casi è**, invece
-di far passare un numero inventato per misurato.
+⚠ **The declared fallback**: as long as ngtcp2 has neither `smoothed_rtt` nor `cwnd` **the
+floor** is assumed, 20 Mbit/s = 2 500 bytes/ms — and **the log line says which of the two cases it is**, instead
+of passing an invented number off as measured.
 
-⚠ **E quel che la cura NON cambia**: `RCP.md:1165-1203` dà **tre forme** all'abbandono — **A**
-(stream azzerato, se era già uscito un byte) · **B** (buco nei `numero`, se nessun byte era uscito)
-· ⛔ **C** (il credito mancato: **nessuno stream, nessun buco, nessun segnale**, difetto B-18).
-⛔ **Quale fra A e B il client veda non lo decide nessuno dei due lati**: dipende dal fatto che un
-byte fosse uscito. ⇒ La cura **non tocca questo**: cambia **quante volte** succede, e **la forma C
-non la tocca affatto**.
+⚠ **And what the cure does NOT change**: `RCP.md:1165-1203` gives the abandon **three forms** — **A**
+(stream reset, if a byte had already left) · **B** (hole in the `numero`, if no byte had left)
+· ⛔ **C** (the missed credit: **no stream, no hole, no signal**, defect B-18).
+⛔ **Which of A and B the client sees is decided by neither side**: it depends on whether a
+byte had left. ⇒ The cure **does not touch this**: it changes **how many times** it happens, and **form C
+it does not touch at all**.
 
-#### ⛔ I casi limite, nominati perché non si scoprano dopo
+#### ⛔ The edge cases, named so they are not discovered later
 
-| caso | che cosa succede |
+| case | what happens |
 |---|---|
-| **una CHIAVE in coda** | non si abbandona **mai** (`RCP.md:1256`). ⚠ Ma i suoi byte **contano nella somma**: con una chiave in coda la soglia si supera prima e i delta **dietro** di lei se ne vanno per primi — **che è giusto**, arriverebbero dopo di lei comunque |
-| **nessuna stima** | ripiego a 20 Mbit/s: se la linea vera è più stretta il ripiego **sottostima** l'attesa e si tiene un delta di troppo, per un giro di rete |
-| **elenco pieno** (32 posti) | un fotogramma fuori elenco non è abbandonabile **e i suoi byte non entrano nella somma** ⇒ coda sottostimata. ⚠ Oggi non può succedere: §2.3 concede 16 stream uni, il credito finisce prima |
-| ⛔ **il momento dell'attraversamento** | si abbandona un delta **e** quello appena arrivato è a sua volta un delta ⇒ `rcp_video_apri()` lo rifiuta e **se ne perdono due**. ⏳ `[?]` Il rimedio — chiedere la chiave **prima** e abbandonare quando arriva — non è in questa cura e va misurato prima di scriverlo |
-| **la scena si ferma** | `video_sgombra()` gira solo all'arrivo di un fotogramma ⇒ a desktop fermo non gira, ⭐ **e non serve**: senza fotogrammi nuovi non c'è niente da abbandonare |
+| **a KEYFRAME in the queue** | it is **never** abandoned (`RCP.md:1256`). ⚠ But its bytes **count in the sum**: with a keyframe in the queue the threshold is exceeded earlier and the deltas **behind** it go first — **which is right**, they would arrive after it anyway |
+| **no estimate** | fallback at 20 Mbit/s: if the real line is narrower the fallback **underestimates** the wait and one delta too many is kept, for one network round trip |
+| **full list** (32 slots) | a frame outside the list is not abandonable **and its bytes do not enter the sum** ⇒ queue underestimated. ⚠ Today it cannot happen: §2.3 grants 16 uni streams, the credit runs out first |
+| ⛔ **the moment of crossing** | a delta is abandoned **and** the one just arrived is in turn a delta ⇒ `rcp_video_apri()` refuses it and **two are lost**. ⏳ `[?]` The remedy — requesting the keyframe **first** and abandoning when it arrives — is not in this cure and must be measured before writing it |
+| **the scene stops** | `video_sgombra()` runs only at the arrival of a frame ⇒ with a still desktop it does not run, ⭐ **and it is not needed**: without new frames there is nothing to abandon |
 
-#### ⛔⛔ E il rifiuto parziale, che è la parte più importante
+#### ⛔⛔ And the partial refusal, which is the most important part
 
-**«Calare i fotogrammi tenendo i delta» — `RCP.md:1284` e `SPECIFICHE.md` §8.3 — NON si può fare in
-`webtransport.c`, e questa cura non lo fa.** Il codificatore gira a **GOP infinito**
-(`chiavi_ogni = 0`, `figlio.c` — ⚠ `[R]` `rcp.c` lo cita ancora come `figlio.c`, che
-oggi è un'altra funzione: **riferimento scaduto**): ogni delta predice dal fotogramma **codificato**
-prima, non da quello **spedito**. ⇒ Qualunque fotogramma il trasporto salti — abbandonandolo (forme
-A/B) o non accettandolo (forma C) — **rompe la catena e costa una chiave lo stesso**.
+**«Dropping frames while keeping the deltas» — `RCP.md:1284` and `SPECIFICHE.md` §8.3 — CANNOT be done in
+`webtransport.c`, and this cure does not do it.** The encoder runs with an **infinite GOP**
+(`chiavi_ogni = 0`, `figlio.c` — ⚠ `[R]` `rcp.c` still cites it as `figlio.c`, which
+today is another function: **expired reference**): every delta predicts from the frame **encoded**
+before, not from the one **sent**. ⇒ Any frame the transport skips — abandoning it (forms
+A/B) or not accepting it (form C) — **breaks the chain and costs a keyframe all the same**.
 
-⭐ **L'unico posto dove si cala il ritmo senza rompere la catena è il palco**: si cattura e si
-codifica meno spesso. ⚠ E la strada vicina è già chiusa da una misura: i **sotto-livelli
-temporali** l'Intel non li produce (`EncRateControlExt` assente su **7 profili su 7**,
-`sps_max_sub_layers = 1` su **6 celle su 6**).
+⭐ **The only place where the rate is lowered without breaking the chain is the stage**: capturing and
+encoding less often. ⚠ And the neighbouring route is already closed by a measurement: Intel does not produce
+**temporal sub-layers** (`EncRateControlExt` absent on **7 profiles out of 7**,
+`sps_max_sub_layers = 1` on **6 cells out of 6**).
 
-⇒ ⭐ **Questa cura è un prerequisito, non la cura della fase.** Senza di lei il regolatore di §6
-nascerebbe sopra un trasporto che abbandona comunque a ogni fotogramma, e non si potrebbe misurare
-che cosa ha fatto.
+⇒ ⭐ **This cure is a prerequisite, not the cure of the phase.** Without it the regulator of §6
+would be born on top of a transport that abandons anyway at every frame, and it would be impossible to measure
+what it did.
 
-### 5.3 Cura 3 — la risalita della qualità · `codificatore.c`, `:141-143`
+### 5.3 Cure 3 — the quality climb-back · `codificatore.c`, `:141-143`
 
-**Il difetto** `[R]`: `qualita_corrente` era **monotòna nel verso peggiore**. Quattro scritture in
-tutto (`:1880` la semina, e le tre dentro `abbassa_qualita()`), **tutte in discesa**. Cercata e non
-trovata la risalita in sei posti — `codificatore_ridimensiona()` riapre il contesto e **conserva**
-il valore; `chiudi_contesto()`/`apri_contesto()` lo **leggono**; nessun `alza_qualita()` in tutto
-`src/`; la `struct` è privata del file. ⇒ **La degradazione durava quanto la sessione.**
+**The defect** `[R]`: `qualita_corrente` was **monotonic in the worse direction**. Four writes in
+all (`:1880` the seeding, and the three inside `abbassa_qualita()`), **all going down**. The climb-back was searched for
+and not found in six places — `codificatore_ridimensiona()` reopens the context and **keeps**
+the value; `chiudi_contesto()`/`apri_contesto()` **read** it; no `alza_qualita()` in the whole of
+`src/`; the `struct` is private to the file. ⇒ **The degradation lasted as long as the session.**
 
-⛔ **E per un DELTA non è un gradino: sono tre in un colpo solo.** `abbassa_qualita()` è chiamata
-**prima** del controllo dei tentativi ⇒ il delta che alla fine viene abbandonato ha comunque già
-fatto scendere la scala **26 → 35 → 44 → 51**. ⇒ Un solo delta granuloso portava il codificatore a
-QP 51 **e ce lo lasciava per sempre**, e l'abbandono del delta era dichiarato nel registro mentre la
-degradazione permanente **no**.
+⛔ **And for a DELTA it is not one rung: it is three in one go.** `abbassa_qualita()` is called
+**before** the check of the attempts ⇒ the delta that is abandoned in the end has nevertheless already
+taken the ladder down **26 → 35 → 44 → 51**. ⇒ A single grainy delta brought the encoder to
+QP 51 **and left it there forever**, and the abandon of the delta was declared in the log while the
+permanent degradation **was not**.
 
-⭐ **Dove è raggiungibile, misurato** — ed è la ragione per cui la cura è piccola e non urgente:
+⭐ **Where it is reachable, measured** — and it is the reason why the cure is small and not urgent:
 
-| | il cricchetto scatta? |
+| | does the ratchet fire? |
 |---|---|
-| `[M]` tela dell'utente 2560×1080, QP 26, 404 chiavi vere: max **21 433 byte = 0,13 %** del tetto, margine **782×** | ⛔ **no** — nemmeno il rumore uniforme ci arriva (15,1 %) |
-| `[M]` 7680×4320 in hardware, desktop vero | ⛔ no (1,5 %) |
-| `[M]` 7680×4320, grana `alls=60` in hardware | ⚠ **94,9 %** — **al confine** |
-| `[M]` 7680×4320, rumore uniforme in hardware | ⛔ **sì**, 8 su 8 |
-| ⛔ **ripiego software**, 7680×4320, filmato granuloso | ⛔ **sì** — ⚠ la misura (`libx264`) non vale più dopo la fase 18 |
+| `[M]` user's canvas 2560×1080, QP 26, 404 real keyframes: max **21 433 bytes = 0.13 %** of the cap, margin **782×** | ⛔ **no** — not even uniform noise gets there (15.1 %) |
+| `[M]` 7680×4320 in hardware, real desktop | ⛔ no (1.5 %) |
+| `[M]` 7680×4320, grain `alls=60` in hardware | ⚠ **94.9 %** — **at the border** |
+| `[M]` 7680×4320, uniform noise in hardware | ⛔ **yes**, 8 out of 8 |
+| ⛔ **software fallback**, 7680×4320, grainy clip | ⛔ **yes** — ⚠ the measurement (`libx264`) no longer holds after phase 18 |
 
-⇒ Raggiungibile per **una via sola e stretta**: la tela grande **più** il ripiego software. E le due
-si tengono per mano: `[M]` `h264_vaapi` su questo chip si ferma a **4096 px per lato**, e la tela
-legale di `RCP.md` §4.5 arriva a 7680 ⇒ **oltre i 4096 il ripiego software non è un'eventualità, è
-la regola**. ⚠ dopo la fase 18: OpenH264 si ferma a 4096×2304; oltre, H.264 serve la scheda
+⇒ Reachable by **one single narrow way**: the large canvas **plus** the software fallback. And the two
+hold hands: `[M]` `h264_vaapi` on this chip stops at **4096 px per side**, and the legal canvas
+of `RCP.md` §4.5 goes up to 7680 ⇒ **beyond 4096 the software fallback is not an eventuality, it is
+the rule**. ⚠ after phase 18: OpenH264 stops at 4096×2304; beyond that, H.264 needs the card
 (`DECISIONI.md` §10.26).
 
-⛔ **Il morso vero non è il fotogramma perso: è quel che resta dopo.** Il fotogramma granuloso dura
-un secondo; da lì in poi il desktop — testo, finestre, scena ferma — usciva a **CRF 47** o **QP 51**
-**per ore**, e nessuna riga diceva perché. ⇒ È il *«mai sgranare»* di `DECISIONI.md` §3.3 perso
-**per inerzia** invece che per decisione.
+⛔ **The real bite is not the lost frame: it is what remains after.** The grainy frame lasts
+one second; from there on the desktop — text, windows, still scene — came out at **CRF 47** or **QP 51**
+**for hours**, and no line said why. ⇒ It is the *«never blur»* of `DECISIONI.md` §3.3 lost
+**by inertia** instead of by decision.
 
-**Il vincolo che decide DOVE va il codice**: `chiudi_contesto()` fa `av_packet_free()` ⇒ la risalita
-**non può** stare dopo `break`, dove `fuori->dati` punta dentro il pacchetto: sarebbe lo stesso
-difetto di §4. ⇒ **si conta alla consegna, si risale all'ingresso del fotogramma dopo**, e come
-effetto secondario il costo della riapertura (`[M]` **91-108 ms** in hardware; quella in software, misurata con `libx264`, non vale più dopo la
-fase 18) cade **fra** due fotogrammi.
+**The constraint that decides WHERE the code goes**: `chiudi_contesto()` does `av_packet_free()` ⇒ the climb-back
+**cannot** sit after `break`, where `fuori->dati` points inside the packet: it would be the same
+defect as §4. ⇒ **counting at delivery, climbing back at the entry of the next frame**, and as a
+side effect the cost of the reopening (`[M]` **91-108 ms** in hardware; the software one, measured with `libx264`, no longer holds after
+phase 18) falls **between** two frames.
 
-⛔ **E non è simmetrica alla discesa, di proposito**: si scende di tre scalini in un fotogramma, si
-risale di **UNO** ogni `RISALITA_ATTESA`, con l'attesa che **raddoppia** a ogni ricaduta
-(`RISALITA_ATTESA_MAX` ≈ 64 s). ⚠ I tre numeri sono `[?]` **sufficienti, non giusti**, come
+⛔ **And it is not symmetric to the descent, on purpose**: one goes down three rungs in one frame, one
+climbs back **ONE** every `RISALITA_ATTESA`, with the wait that **doubles** at every relapse
+(`RISALITA_ATTESA_MAX` ≈ 64 s). ⚠ The three numbers are `[?]` **sufficient, not right**, like
 `CRF_PASSO` = 9.
 
-⭐ **Perché non viola I1**: I1 parla del **ritmo**, questa cura della **qualità** — e le due leve le
-ha già separate l'utente (§3.3: *«si calano i fotogrammi. Mai sgranare»*). ⇒ La cura non tocca la
-leva di I1: **restituisce** quella di §3.3. ⛔ L'unico punto in cui potrebbe toccare il ritmo è la
-**riapertura**, ed è per questo che l'attesa raddoppia — senza, una scena al confine farebbe una
-riapertura ogni 2 secondi, **e quello sì sarebbe I1**.
+⭐ **Why it does not violate I1**: I1 speaks of the **rate**, this cure of **quality** — and the two levers
+were already separated by the user (§3.3: *«si calano i fotogrammi. Mai sgranare»*). ⇒ The cure does not touch the
+lever of I1: it **gives back** the one of §3.3. ⛔ The only point where it could touch the rate is the
+**reopening**, and that is why the wait doubles — without it, a scene at the border would do one
+reopening every 2 seconds, **and that would indeed be I1**.
 
-⛔ **Il guasto che ucciderebbe questa cura si chiama SBATTIMENTO, e non è ipotetico**: la grana
-`alls=60` a 7680×4320 sta al **94,9 %** del tetto, cioè è una scena che vive **esattamente sul
-confine**. In software basterebbero pochi giri (la riapertura costa molto di più che in hardware) perché **la cura costi più del
-difetto**, e a pagare sarebbe il **ritmo**. ⇒ Il banco che decide è in §7.3.
+⛔ **The fault that would kill this cure is called THRASHING, and it is not hypothetical**: the grain
+`alls=60` at 7680×4320 sits at **94.9 %** of the cap, that is it is a scene that lives **exactly on the
+border**. In software a few rounds would be enough (the reopening costs much more than in hardware) for **the cure to cost more than the
+defect**, and the one paying would be the **rate**. ⇒ The bench that decides is in §7.3.
 
-### 5.4 Cura 4 — il riordino dell'audio · `pagina.html` · `avvia_audio()`, `:5992`, `:6507`
+### 5.4 Cure 4 — the audio reorder · `pagina.html` · `avvia_audio()`, `:5992`, `:6507`
 
-**Il difetto**: `pagina.html` scartava confrontando con l'**ultimo datagram ARRIVATO**, mentre
-`RCP.md` §6.3 dice *«già **consumati**»*. ⇒ **si buttava materiale che ci starebbe cinquanta volte
-dentro il cuscino già pagato**: un datagram sorpassato di **1 ms** distrutto mentre **250 ms** di
-memoria stanno fermi a non fare niente. Lo squilibrio fra il danno e la riserva è di **1 a 250**.
-⚠ Lo scarto costa un buco di **5 ms** (PCM) o **20 ms** (Opus), **udibile**.
+**The defect**: `pagina.html` discarded by comparing with the **last datagram ARRIVED**, while
+`RCP.md` §6.3 says *«already **consumed**»*. ⇒ **material was thrown away that would fit fifty times
+inside the cushion already paid for**: a datagram overtaken by **1 ms** destroyed while **250 ms** of
+buffer sit still doing nothing. The imbalance between the damage and the reserve is **1 to 250**.
+⚠ The discard costs a hole of **5 ms** (PCM) or **20 ms** (Opus), **audible**.
 
-`[M]` **La misura che lo dimostra**, col `netem`: ritardo di **30 ms fissi** (che non riordina) ⇒
-purezza **1,000**; **jitter ±2 ms** ⇒ purezza **0,175**, con **1 004 datagram scartati su 4 989**
-(il 20 %). ⇒ ⭐ **Non era il ritardo: era il riordino**, e la cura è **gratis**.
+`[M]` **The measurement that proves it**, with `netem`: a **fixed 30 ms** delay (which does not reorder) ⇒
+purity **1.000**; **jitter ±2 ms** ⇒ purity **0.175**, with **1 004 datagrams discarded out of 4 989**
+(20 %). ⇒ ⭐ **It was not the delay: it was the reordering**, and the cure is **free**.
 
-⭐ **La frontiera esisteva già e non andava aggiunta: andava CALCOLATA.** `a.base` porta un
-`istante` del server nell'orologio dell'`AudioContext`, `ctx.currentTime` è la testina ⇒
-`frontiera_us = (ctx.currentTime − a.base) × 1e6`, e un blocco è *già consumato* **se e solo se**
-`istante < frontiera_us`. ⛔ **Costa zero memoria e zero ritardo**: è una sottrazione su numeri che
-esistevano da prima.
+⭐ **The frontier already existed and did not need adding: it needed CALCULATING.** `a.base` carries a server
+`istante` into the clock of the `AudioContext`, `ctx.currentTime` is the playhead ⇒
+`frontiera_us = (ctx.currentTime − a.base) × 1e6`, and a block is *already consumed* **if and only if**
+`istante < frontiera_us`. ⛔ **It costs zero memory and zero delay**: it is a subtraction on numbers that
+existed before.
 
-⚠ **E `a.ult_ist_us` non poteva fare da confine** anche se era il candidato naturale: si scrive in
-`onended`, sul thread principale — quello che si ferma a decodificare i fotogrammi — non è monotòno
-appena si accettano i fuori ordine, e ci sono appesi sopra `ult_quando_perf`/`aoff`, cioè **il metro
-della distanza audio-video**. ⇒ Farne il confine vorrebbe dire far dipendere il metro dal riordino.
+⚠ **And `a.ult_ist_us` could not act as the border** even though it was the natural candidate: it is written in
+`onended`, on the main thread — the one that stops to decode frames — it is not monotonic
+as soon as out-of-order ones are accepted, and `ult_quando_perf`/`aoff` hang on it, that is **the yardstick
+of the audio-video distance**. ⇒ Making it the border would mean making the yardstick depend on the reordering.
 
-⛔ **Il secondo pezzo è necessario, e senza di lui la cura sarebbe peggio del difetto**: la pagina
-trattava *«il posto di questo blocco è passato»* come **un caso solo** e riarmava l'ancora, cioè
-spostava tutta la riproduzione avanti di **250 ms**. Giusto quando è **la riproduzione** a essere in
-ritardo, sbagliatissimo quando è **un singolo blocco** ad arrivare dietro a uno più nuovo: si
-pagherebbero **250 ms per un blocco da 5**, a ogni sorpasso. ⇒ `a.ist_max_us` separa i due casi.
+⛔ **The second piece is necessary, and without it the cure would be worse than the defect**: the page
+treated *«the place of this block has passed»* as **one single case** and re-armed the anchor, that is it
+moved the whole playback forward by **250 ms**. Right when **the playback** is
+late, very wrong when **a single block** arrives behind a newer one: one would
+pay **250 ms for a 5 ms block**, at every overtaking. ⇒ `a.ist_max_us` separates the two cases.
 
-⭐⭐ **E per strada si è trovato un difetto che non era nel mandato**: la sentinella
-dell'*«ancora finta»* confrontava con `a.ult_ist_us` — l'ultimo blocco **FINITO**, vecchio di un
-cuscino intero. A regime `salto ≈ 250 000 µs` e `passo_us = 5 000` ⇒ `salti_suono` guadagnava **~49
-punti a ogni blocco sano** ⇒ la condizione `salti_suono === 0` **non poteva essere vera mai**, e la
-riga che sorveglia l'ipotesi su cui poggia tutta la cura dell'ancora **era morta**. Riparata con la
-stessa variabile che la cura introduce.
+⭐⭐ **And along the way a defect was found that was not in the mandate**: the sentinel
+of the *«fake anchor»* compared with `a.ult_ist_us` — the last **FINISHED** block, old by a whole
+cushion. At regime `salto ≈ 250 000 µs` and `passo_us = 5 000` ⇒ `salti_suono` gained **~49
+points at every healthy block** ⇒ the condition `salti_suono === 0` **could never be true**, and the
+line that watches the hypothesis on which the whole anchor cure rests **was dead**. Repaired with the
+same variable the cure introduces.
 
-⛔ **E il prezzo è ZERO, con il segno al contrario di quel che `SPECIFICHE.md:128` teme**: nessuna
-memoria intermedia, nessuna coda di riordino, `AUDIO_CUSCINO_MS` **non si tocca**, 4 interi per
-sessione. ⭐ Ogni sorpasso curato è un riarmo **risparmiato**, e un riarmo costa `+250 ms` ⇒ sotto
-riordino la cura **abbassa** il ritardo medio.
+⛔ **And the price is ZERO, with the sign opposite to what `SPECIFICHE.md:128` fears**: no
+intermediate buffer, no reorder queue, `AUDIO_CUSCINO_MS` **is not touched**, 4 integers per
+session. ⭐ Every cured overtaking is a re-arm **saved**, and a re-arm costs `+250 ms` ⇒ under
+reordering the cure **lowers** the average delay.
 
-⭐ **E la cura comoda che questo vincolo uccide, scritta perché nessuno la ripeschi**: *«teniamo i
-datagram in una coda ordinata per `istante` e li consegniamo con un ritardo fisso»*. È il jitter
-buffer classico, è quello che tutti scrivono, e **venderebbe X ms di risposta per comprare la
-fluidità che l'ancora dà già gratis** — l'ancora *è già* la de-jitterizzazione. ⇒ Sarebbero **250 ms
-pagati due volte**.
+⭐ **And the comfortable cure that this constraint kills, written so that nobody fishes it out again**: *«we keep the
+datagrams in a queue ordered by `istante` and deliver them with a fixed delay»*. It is the classic jitter
+buffer, it is what everybody writes, and **it would sell X ms of response to buy the
+smoothness the anchor already gives for free** — the anchor *already is* the de-jittering. ⇒ It would be **250 ms
+paid twice**.
 
-#### ⚠ La domanda onesta: morde davvero, o solo sotto `netem`?
+#### ⚠ The honest question: does it really bite, or only under `netem`?
 
-⭐ `[M]` **Su WiFi vero i «vecchi» sono zero.** ⇒ **Sul percorso di oggi dell'utente questo difetto
-NON morde, e chi presentasse questa cura come un miglioramento di quel che lui sente adesso
-mentirebbe.** E la ragione è meccanica, non fortuna: **802.11 riordina già lui** (un flusso QUIC sta
-in un solo TID, il ricevitore tiene una finestra di block-ack con riordino) ⇒ il WiFi **perde** e
-**ritarda**, ma **non sorpassa**. Lo stesso per un cavo e per il loopback.
+⭐ `[M]` **On real WiFi the «vecchi» are zero.** ⇒ **On the user's path of today this defect
+does NOT bite, and whoever presented this cure as an improvement of what he hears now
+would be lying.** And the reason is mechanical, not luck: **802.11 already reorders by itself** (a QUIC flow sits
+in a single TID, the receiver keeps a block-ack window with reordering) ⇒ WiFi **loses** and
+**delays**, but **does not overtake**. The same for a cable and for loopback.
 
-⚠ E `netem` sorpassa tanto per una ragione che va scritta o il banco sembra più severo della realtà:
-`delay X Y` dà a **ogni pacchetto** un'ora di consegna indipendente, e il figlio spedisce i datagram
-**a raffiche**, a microsecondi l'uno dall'altro ⇒ **dentro una raffica, qualunque jitter riordina.**
+⚠ And `netem` overtakes so much for a reason that must be written or the bench looks harsher than reality:
+`delay X Y` gives **every packet** an independent delivery time, and the child sends the datagrams
+**in bursts**, microseconds apart ⇒ **inside a burst, any jitter reorders.**
 
-**Allora perché curarlo lo stesso**, in tre argomenti e non un'opinione:
+**So why cure it anyway**, in three arguments and not an opinion:
 
-1. ⛔ **il percorso dichiarato del progetto non è il WiFi**: la **migrazione QUIC** è, per
-   costruzione, pacchetti in volo su **due percorsi contemporaneamente** che arrivano intrecciati —
-   è `netem` fatto dal protocollo stesso. E il datagram audio su rete non locale non è mai stato
-   misurato;
-2. ⛔ **il modo di fallire è sproporzionato**: 20 % di scarto ⇒ purezza **0,175**, cioè audio
-   distrutto. Un difetto che sta a zero finché il percorso è pulito e poi **toglie il suono di
-   colpo** alla prima rete che sorpassa arriva senza preavviso, e arriva sul telefono dell'utente,
-   **cioè dove non c'è il banco**;
-3. ⭐ **il prezzo è zero**. Un'assicurazione gratis contro un modo di fallire **totale** si compra.
+1. ⛔ **the project's declared path is not WiFi**: **QUIC migration** is, by
+   construction, packets in flight on **two paths at the same time** that arrive interleaved —
+   it is `netem` done by the protocol itself. And the audio datagram on a non-local network has never been
+   measured;
+2. ⛔ **the failure mode is disproportionate**: 20 % discard ⇒ purity **0.175**, that is audio
+   destroyed. A defect that stays at zero as long as the path is clean and then **takes the sound away
+   suddenly** at the first network that overtakes arrives without warning, and it arrives on the user's phone,
+   **that is where the bench is not**;
+3. ⭐ **the price is zero**. Free insurance against a **total** failure mode is bought.
 
-⇒ ⛔ **Si dichiara per quel che è: una conformità a §6.3 e un'assicurazione sui percorsi non ancora
-misurati, NON un miglioramento di quel che l'utente sente oggi.** La misura di controllo su WiFi
-vero deve dare **identica a prima**, e se desse diverso sarebbe la cura ad avere un difetto.
+⇒ ⛔ **It is declared for what it is: a conformance to §6.3 and an insurance on the paths not yet
+measured, NOT an improvement of what the user hears today.** The control measurement on real
+WiFi must give **identical to before**, and if it gave something different it would be the cure that has a defect.
 
-⚠ **E l'avvertenza già pagata resta**: la misura è in **PCM da 5 ms**. Con Opus (20 ms) la soglia di
-sorpasso è **quattro volte più alta** e il difetto morde quattro volte meno ⇒ il percorso vero è
-Opus, e su Opus il numero `[M]` **non c'è**.
+⚠ **And the warning already paid for remains**: the measurement is in **5 ms PCM**. With Opus (20 ms) the
+overtaking threshold is **four times higher** and the defect bites four times less ⇒ the real path is
+Opus, and on Opus the `[M]` number **is not there**.
 
-⛔ **Che cosa È verificato di questa cura, e che cosa no**: §3.16.
+⛔ **What IS verified of this cure, and what is not**: §3.16.
 
-#### ⛔ Le quattro cure d'audio **scartate**, e perché — *scritte perché nessuno le ripeschi*
+#### ⛔ The four audio cures **discarded**, and why — *written so that nobody fishes them out again*
 
-| cura scartata | perché |
+| discarded cure | why |
 |---|---|
-| **abbassare `AUDIO_CUSCINO_MS`** | il codice lo vieta espressamente **qui e ora**: prima si misura **il jitter d'arrivo**, che nessuno ha misurato. ⭐ E questa cura **produce quella misura** (`fuori_ordine` + gli scarti) ⇒ è il passo che va **prima**, non al posto |
-| **una coda di riordino con ritardo fisso** | 250 ms pagati due volte, e vende risposta |
-| **togliere del tutto lo scarto** | §6.3 lo impone, e senza confine un blocco davvero vecchio **si sovrapporrebbe a quel che sta suonando** — il rilievo 3 del 17 agosto rifatto |
-| **l'`AudioWorklet`** | è un'altra cosa, ed è già dichiarata: i numeri del 21 agosto dicono che non è **questo** il problema |
+| **lowering `AUDIO_CUSCINO_MS`** | the code expressly forbids it **here and now**: first one measures **the arrival jitter**, which nobody has measured. ⭐ And this cure **produces that measurement** (`fuori_ordine` + the discards) ⇒ it is the step that goes **first**, not instead |
+| **a reorder queue with fixed delay** | 250 ms paid twice, and it sells response |
+| **removing the discard altogether** | §6.3 imposes it, and without a border a really old block **would overlap what is playing** — finding 3 of 17 Aug all over again |
+| **the `AudioWorklet`** | it is another thing, and it is already declared: the numbers of 21 Aug say that **this** is not the problem |
 
-⚠ **E una falsificazione che vale per il banco intero**: se dopo la cura la purezza sale ma
-`usciti` **non** sale con lei, ⛔ **il suono non c'è** — ed è già successo in questo file: una
-sessione **muta con tutti i contatori verdi**.
+⚠ **And a falsification that holds for the whole bench**: if after the cure purity rises but
+`usciti` does **not** rise with it, ⛔ **the sound is not there** — and it has already happened in this file: a
+session **mute with all counters green**.
 
-### 5.5 Cura 5 — il tetto di banda · `codificatore.c:200-340`, `:1786-1800`
+### 5.5 Cure 5 — the bandwidth cap · `codificatore.c:200-340`, `:1786-1800`
 
-**La misura che la obbliga**: §3.8 — con **QP 26 fisso e nessun tetto**, un contenuto duro a schermo
-intero chiede **58,668 Mbit/s = il 293 % del pavimento**, e nessuno gli dice di no.
+**The measurement that makes it compulsory**: §3.8 — with **fixed QP 26 and no cap**, hard content at full
+screen asks for **58.668 Mbit/s = 293 % of the floor**, and nobody tells it no.
 
-⭐⭐ **E il modo si è scelto con i byte, non con una preferenza** — misurato sul portatile il 23
-agosto pomeriggio, il dettaglio in `codificatore.c:200-260`:
+⭐⭐ **And the mode was chosen with the bytes, not with a preference** — measured on the laptop on 23
+Aug in the afternoon, the detail in `codificatore.c:200-260`:
 
-| modo | esito |
+| mode | outcome |
 |---|---|
-| ⛔ **VBR** | **fuori**, e la prova non è un ragionamento: con e senza `qp=26` escono **gli stessi identici byte** (8 350 170 e 514 142, due volte su due) ⇒ **sotto VBR il `qp` è ignorato**, e tutta la scala della degradazione **più la risalita scritta stamattina** diventerebbero **no-op silenziosi** |
-| ⛔ **CBR** | **smascherato sul ferro nostro**: a scena ferma spende **15,98 Mbit/s contro 0,193** del CQP — **83 volte** per niente (R31 di v1 diceva 42× a 1440p: **qui è peggio**) |
-| ⛔ **ICQ / AVBR** | fuori: mai misurati, mai visti in v1, e `AVBR` converge *«in N frames»* — un modo che si assesta su una finestra sbaglia **proprio nell'istante in cui la scena cambia** |
-| ⭐ **QVBR** — **scelto** | la scala **REGGE**: `[M]` scena ferma QP 26 → **0,218** · QP 35 → **0,125** · QP 44 → **0,076** Mbit/s. ⚠ E a scena **dura** la scala non morde più (11,14 · 11,31 · 11,19): **quando il tetto è in presa la qualità la decide il tetto, non il QP** — va detto, o un banco che cercasse lì l'effetto del QP non lo troverebbe e concluderebbe male |
+| ⛔ **VBR** | **out**, and the proof is not a reasoning: with and without `qp=26` **the very same bytes** come out (8 350 170 and 514 142, two times out of two) ⇒ **under VBR the `qp` is ignored**, and the whole degradation ladder **plus the climb-back written this morning** would become **silent no-ops** |
+| ⛔ **CBR** | **unmasked on our own hardware**: with a still scene it spends **15.98 Mbit/s against 0.193** for CQP — **83 times** for nothing (R31 of v1 said 42× at 1440p: **here it is worse**) |
+| ⛔ **ICQ / AVBR** | out: never measured, never seen in v1, and `AVBR` converges *«in N frames»* — a mode that settles over a window is wrong **precisely at the instant the scene changes** |
+| ⭐ **QVBR** — **chosen** | the ladder **HOLDS**: `[M]` still scene QP 26 → **0.218** · QP 35 → **0.125** · QP 44 → **0.076** Mbit/s. ⚠ And with a **hard** scene the ladder no longer bites (11.14 · 11.31 · 11.19): **when the cap is engaged the quality is decided by the cap, not by the QP** — it must be said, or a bench looking there for the effect of the QP would not find it and would conclude wrongly |
 
-⛔ **I tre numeri si derivano dal pavimento, nessuno è scritto a mano**: `rc_max_rate` = **80 %** del
-pavimento (16 Mbit/s ⇒ 16 + i **2,426** `[M]` misurati di audio/input/QUIC = **il 92 %** del
-pavimento: il margine ha un numero sotto invece di essere prudenza) · `bit_rate` = **75 % del filo**,
-⛔ **mai uguale al filo, è R31 alla lettera** · `rc_buffer_size` = filo × **40 ms**.
+⛔ **The three numbers are derived from the floor, none is written by hand**: `rc_max_rate` = **80 %** of the
+floor (16 Mbit/s ⇒ 16 + the **2.426** `[M]` measured for audio/input/QUIC = **92 %** of the
+floor: the margin has a number under it instead of being prudence) · `bit_rate` = **75 % of the wire**,
+⛔ **never equal to the wire, it is R31 to the letter** · `rc_buffer_size` = wire × **40 ms**.
 
-⛔⛔ **E quella terza riga è quella che v1 sbagliò senza che nessuno se ne accorgesse**:
-`fondamenta/remotix-c/src/codificatore.c:256` metteva `rc_buffer_size = bit_rate / 2`, che **non è «metà»:
-è mezzo SECONDO** — un VBV si misura in bit, e `bit_rate/2` bit a `bit_rate` bit/s fanno **500 ms**,
-cioè **dieci volte** il tetto di 50 ms che `CODER.md` §1-bis dà a **tutto** il pezzo nostro.
-⭐ Qui sono **40**, cioè il *traguardo* e non il *tetto*: si sbaglia nel verso scomodo. ⚠ E il
-numero non è dedotto, è **stampato da ffmpeg**: `[M]` *«RC target: 75 % of 16000000 bps over 40 ms»*.
+⛔⛔ **And that third line is the one v1 got wrong without anybody noticing**:
+`fondamenta/remotix-c/src/codificatore.c:256` set `rc_buffer_size = bit_rate / 2`, which **is not «half»:
+it is half a SECOND** — a VBV is measured in bits, and `bit_rate/2` bits at `bit_rate` bits/s make **500 ms**,
+that is **ten times** the 50 ms cap that `CODER.md` §1-bis gives to **the whole** of our piece.
+⭐ Here it is **40**, that is the *target* and not the *cap*: it errs in the uncomfortable direction. ⚠ And the
+number is not deduced, it is **printed by ffmpeg**: `[M]` *«RC target: 75 % of 16000000 bps over 40 ms»*.
 
-⭐ **E un rosso previsto dallo studio è già CADUTO**: dichiarando 16 Mbit/s ffmpeg stampa
-`Using level 5`, cioè **5.0** ⇒ **la banda non fa salire `level_idc`** e `avc1.640033` regge.
+⭐ **And a red predicted by the study has already FALLEN**: declaring 16 Mbit/s ffmpeg prints
+`Using level 5`, that is **5.0** ⇒ **bandwidth does not raise `level_idc`** and `avc1.640033` holds.
 
-#### ⛔⛔ E i TRE testimoni, perché uno solo non basta — *R31 non dice «scrivi una riga di registro»*
+#### ⛔⛔ And the THREE witnesses, because one alone is not enough — *R31 does not say «write a log line»*
 
-R31 dice ***«si chiede per nome e si verifica che abbia obbedito»***, e verificare vuol dire **tre
-testimoni indipendenti**:
+R31 says ***«it is asked for by name and one verifies that it obeyed»***, and verifying means **three
+independent witnesses**:
 
-| # | testimone | che cosa prova | ⛔ che cosa **NON** prova |
+| # | witness | what it proves | ⛔ what it does **NOT** prove |
 |---|---|---|---|
-| **1** | **il driver, prima di aprire** — `VAConfigAttribRateControl` sulla coppia (profilo, entrypoint) | che il modo **esiste** su quella coppia | non che verrà usato |
-| **2** | **il contesto, dopo `avcodec_open2`** — `rc_mode`, `bit_rate`, `rc_max_rate`, `rc_buffer_size` **riletti** | che **libavcodec** ha tenuto quel che gli si è chiesto | ⛔ **non che il driver l'abbia applicato** |
-| **3** ⭐⭐ | **I BYTE** — byte/s a scena ferma contro byte/s a scena mossa | **quale modo è in vigore davvero** | — |
+| **1** | **the driver, before opening** — `VAConfigAttribRateControl` on the pair (profile, entrypoint) | that the mode **exists** on that pair | not that it will be used |
+| **2** | **the context, after `avcodec_open2`** — `rc_mode`, `bit_rate`, `rc_max_rate`, `rc_buffer_size` **reread** | that **libavcodec** kept what it was asked | ⛔ **not that the driver applied it** |
+| **3** ⭐⭐ | **THE BYTES** — bytes/s with a still scene against bytes/s with a moving scene | **which mode is really in force** | — |
 
-⛔⛔ **Il terzo è l'unico che avrebbe preso R31.** In v1 i testimoni 1 e 2 sarebbero stati **tutti
-verdi**: `bit_rate` e `rc_max_rate` erano esattamente i numeri chiesti, e **nessuno aveva chiesto
-CBR** — il CBR era **il nome che il driver dava a quella coppia di numeri**. ⇒ **Solo la bolletta lo
-diceva.**
+⛔⛔ **The third is the only one that would have caught R31.** In v1 witnesses 1 and 2 would have been **all
+green**: `bit_rate` and `rc_max_rate` were exactly the numbers requested, and **nobody had asked for
+CBR** — CBR was **the name the driver gave to that pair of numbers**. ⇒ **Only the bill
+said so.**
 
-⛔ **E la domanda al driver ha TRE esiti, non due**: *«non ho potuto guardare»* ≠ *«il driver non lo
-dichiara»* ≠ *«ecco la maschera»* — ⛔⛔ e il secondo **non vuol dire «c'è solo il CQP»**. `[M]` La
-trappola è **già armata dentro ffmpeg**, ed è una stringa nel binario: *«Driver does not report any
-supported rate control modes: **assuming CQP only**»*. ⇒ Se il driver tace, **libavcodec decide da
-sé** e va avanti: è R31 in una forma nuova — non *«il driver deduce»*, ma *«ffmpeg deduce per conto
-del driver»*, **con lo stesso silenzio**.
+⛔ **And the question to the driver has THREE outcomes, not two**: *«I could not look»* ≠ *«the driver does not
+declare it»* ≠ *«here is the mask»* — ⛔⛔ and the second **does not mean «there is only CQP»**. `[M]` The
+trap is **already armed inside ffmpeg**, and it is a string in the binary: *«Driver does not report any
+supported rate control modes: **assuming CQP only**»*. ⇒ If the driver is silent, **libavcodec decides by
+itself** and goes on: it is R31 in a new form — not *«the driver deduces»*, but *«ffmpeg deduces on behalf
+of the driver»*, **with the same silence**.
 
-⭐ **E chiedere per nome non è prudenza: è l'unico modo di ottenere un rosso invece di una
-bolletta.** Con `rc_mode = auto` si sceglie qualcos'altro **in silenzio**; col nome `avcodec_open2`
-**fallisce**, e la parentesi dell'errore *«(supported modes: …)»* **elenca quel che c'è**.
+⭐ **And asking by name is not prudence: it is the only way to get a red instead of a
+bill.** With `rc_mode = auto` something else is chosen **in silence**; with the name `avcodec_open2`
+**fails**, and the parenthesis of the error *«(supported modes: …)»* **lists what there is**.
 
-⚠ **E la regola del banco che ne esce, in una riga**: ⛔ **il controllo del modo si fa a schermo
-FERMO** — `[M]` a scena ferma i modi differiscono di **83×** (CQP 0,193 contro CBR 15,98 Mbit/s), a
-scena dura stanno tutti dentro l'1 % l'uno dall'altro ⇒ **un banco che misurasse solo la scena dura
-non misurerebbe niente**. ⛔ **Ma sul prodotto «fermo» vuol dire ZERO fotogrammi** (§3.8: 0,00
-fot/s), quindi la scena che fa da controllo è **la seconda: il desktop vero**, che si muove e costa
-l'1 %.
+⚠ **And the bench rule that comes out of it, in one line**: ⛔ **the mode check is done with a
+STILL screen** — `[M]` with a still scene the modes differ by **83×** (CQP 0.193 against CBR 15.98 Mbit/s), with a
+hard scene they all lie within 1 % of each other ⇒ **a bench that measured only the hard scene
+would measure nothing**. ⛔ **But on the product «still» means ZERO frames** (§3.8: 0.00
+fps), so the scene that acts as control is **the second one: the real desktop**, which moves and costs
+1 %.
 
-⚠ **Quel che NON si tocca, e va detto**: `max_frame_size`. `[M]` ffmpeg lo rifiuta sotto CQP e lo
-accetta sotto QVBR — darebbe **in un passaggio** quel che oggi costa fino a 3 riaperture da
-91-108 ms. ⛔ Non si accende oggi: è una **seconda leva sulla stessa grandezza**, e due leve accese
-insieme al primo giro darebbero **due misure sotto la stessa etichetta**.
+⚠ **What is NOT touched, and it must be said**: `max_frame_size`. `[M]` ffmpeg refuses it under CQP and
+accepts it under QVBR — it would give **in one pass** what today costs up to 3 reopenings of
+91-108 ms. ⛔ It is not switched on today: it is a **second lever on the same quantity**, and two levers switched on
+together at the first round would give **two measurements under the same label**.
 
-#### ⛔ E il difetto trovato strada facendo, che non era il bersaglio dello studio
+#### ⛔ And the defect found along the way, which was not the target of the study
 
-`[R]` **Il server non legge mai `video.livello`.** `rcp.c` · `livello_legge()` lo elenca fra i nomi noti, e il ciclo
-cattura `c_codec`, `c_prof`, `c_audio`, `c_misura` — **non il livello**. `RCP.md:701` dice che il
-server **DEVE** emettere un flusso di livello non superiore: **quel DEVE non era implementato**. Il
-resto della catena c'era già (il livello **vero** letto dai byte a `codificatore.c` · `tetto_serbatoio_bit()`, stampato al
-primo fotogramma) ⇒ ⭐ **mancava UN confronto fra due numeri che il prodotto ha già in mano.**
-Dal 23 agosto **le due righe si scrivono** (§3.12) — ⛔ ma **il confronto lo fa ancora chi legge, non
-il programma**.
+`[R]` **The server never reads `video.livello`.** `rcp.c` · `livello_legge()` lists it among the known names, and the loop
+captures `c_codec`, `c_prof`, `c_audio`, `c_misura` — **not the level**. `RCP.md:701` says that the
+server **MUST** emit a stream of a level not higher: **that MUST was not implemented**. The
+rest of the chain was already there (the **real** level read from the bytes at `codificatore.c` · `tetto_serbatoio_bit()`, printed at the
+first frame) ⇒ ⭐ **ONE comparison was missing between two numbers the product already has in hand.**
+Since 23 Aug **the two lines are written** (§3.12) — ⛔ but **the comparison is still made by whoever reads, not
+by the program**.
 
-⚠ **E il sintomo, se mordesse, è quello che `RCP.md` scrive**: un livello dichiarato troppo basso
-**non dà un errore di rete, fa rifiutare la configurazione dal decodificatore** — cioè **schermo che
-non parte, senza un rosso da nessuna parte**. Stessa famiglia di R31.
+⚠ **And the symptom, if it bit, is the one `RCP.md` writes**: a level declared too low
+**does not give a network error, it makes the decoder refuse the configuration** — that is **a screen that
+does not start, without a red anywhere**. Same family as R31.
 
-#### ⭐ E il livello morde davvero, ma **sui pixel e sui fotogrammi**, non sulla banda
+#### ⭐ And the level really bites, but **on pixels and frames**, not on bandwidth
 
-`[R]` Due correzioni che valgono oltre la fase:
+`[R]` Two corrections that hold beyond the phase:
 
-- ⛔ **`SPECIFICHE.md:1087` parla di un altro codec**: *«tier High»* e *«40 Mbit/s»* sono **HEVC**
-  (Tabella A.9, livello 5.1 Main tier = 40 000 kbit/s). **H.264 non ha tier affatto.** La riga era
-  corretta **per il codec che il prodotto aveva quando fu scritta**, e non ha seguito il cambio del
-  17 agosto (*«AV1 esce, entra H.264»*);
-- ⛔ **sul bitrate la riga non morde a nessun valore che questo prodotto possa produrre**: per
-  `avc1.6400xx` (High) il tetto è **168,75 Mbit/s a 5.0** e **300 a 5.1** — 8,4 volte il pavimento;
-- ⭐⭐ **ma `MaxFS` e `MaxMBPS` mordono**: 2560×1080 (la tela dell'utente) richiede il **5.0** come
-  minimo — è la ragione, mai scritta, per cui il banco `07-b48` verificò proprio `avc1.640032`.
-  ⛔ E **a 3840×2160 il 5.0 non ci sta affatto**: serve il 5.1, che concede `[?]` **30,3 fot/s**
-  ⇒ **il «60 fps» del desiderato non è raggiungibile a 4K nemmeno con banda infinita**;
-- ⚠ `[R]` **il prodotto dichiara 5.1, non 5.0** (`pagina.html` · `LIVELLO_DICHIARATO()`) ⇒ `avc1.640033`. Il 5.0 vive in
-  **due commenti**, e uno dei due (`codificatore.c:1559-1560`) è **stantìo**.
+- ⛔ **`SPECIFICHE.md:1087` speaks of another codec**: *«tier High»* and *«40 Mbit/s»* are **HEVC**
+  (Table A.9, level 5.1 Main tier = 40 000 kbit/s). **H.264 has no tier at all.** The line was
+  correct **for the codec the product had when it was written**, and did not follow the change of
+  17 Aug (*«AV1 esce, entra H.264»*);
+- ⛔ **on bitrate the line does not bite at any value this product can produce**: for
+  `avc1.6400xx` (High) the cap is **168.75 Mbit/s at 5.0** and **300 at 5.1** — 8.4 times the floor;
+- ⭐⭐ **but `MaxFS` and `MaxMBPS` bite**: 2560×1080 (the user's canvas) requires **5.0** as a
+  minimum — it is the reason, never written, why bench `07-b48` verified precisely `avc1.640032`.
+  ⛔ And **at 3840×2160 5.0 does not fit at all**: 5.1 is needed, which grants `[?]` **30.3 fps**
+  ⇒ **the «60 fps» of the wish list is not reachable at 4K even with infinite bandwidth**;
+- ⚠ `[R]` **the product declares 5.1, not 5.0** (`pagina.html` · `LIVELLO_DICHIARATO()`) ⇒ `avc1.640033`. 5.0 lives in
+  **two comments**, and one of the two (`codificatore.c:1559-1560`) is **stale**.
 
 ---
 
-## §6 · ⏳ IL REGOLATORE DEL RITMO — **disegnato, NON scritto**
+## §6 · ⏳ THE RATE REGULATOR — **designed, NOT written**
 
-> ⛔ **È il lavoro che resta**, ed è il pezzo per cui la fase esiste. Nessuna riga è stata applicata.
+> ⛔ **It is the work that remains**, and it is the piece the phase exists for. No line has been applied.
 
-### 6.1 Il disegno in una pagina
+### 6.1 The design on one page
 
 | | |
 |---|---|
-| **la grandezza** | ⭐ **`arretrato`** — quanti fotogrammi **delta** in volo hanno ancora byte **nella nostra coda d'uscita**, letto all'arrivo di un fotogramma nuovo, **prima** di `video_sgombra()` |
-| **la regola** | `arretrato == 0` ⇒ si spedisce · `arretrato >= POSTI` ⇒ **questo fotogramma non parte**. Nessun'altra leva |
-| **la discesa** | non è un numero che si abbassa: è **un fotogramma che non parte**. Il ritmo cala da sé, tanto quanto la coda non si svuota |
-| ⭐ **la risalita** | **non esiste, e questo è il pregio**: `arretrato` si rilegge a ogni fotogramma, non si ricorda. ⛔ Niente cricchetto — cioè niente `qualita_corrente`, che è il difetto misurato di §5.3 |
-| **il fondo** | 480p·25 **non è un freno, è un verdetto**: se il ritmo consegnato scende sotto 25/s su 20 Mbit/s, il registro lo dichiara **difetto**. Forzare un fotogramma dentro una coda che non si svuota peggiora la coda |
-| **il registro** | una riga all'**inizio** e una alla **fine** di ogni episodio, mai una per fotogramma; più un contatore suo, `video_ritmo_scesi` |
-| **l'interruttore** | `--ritmo-adattivo`, **spento di suo** (I6), e il valore in vigore **scritto all'avvio in tutt'e due i casi** |
-| **dove** | `webtransport.c`, dentro `video_a_una()`, tre righe sopra `video_sgombra()` |
-| ⛔ **l'ordine obbligato** | **prima la cura di `video_sgombra()`, poi il regolatore** — §6.5 |
+| **the quantity** | ⭐ **`arretrato`** — how many **delta** frames in flight still have bytes **in our output queue**, read at the arrival of a new frame, **before** `video_sgombra()` |
+| **the rule** | `arretrato == 0` ⇒ send · `arretrato >= POSTI` ⇒ **this frame does not leave**. No other lever |
+| **the descent** | it is not a number being lowered: it is **a frame that does not leave**. The rate drops by itself, as much as the queue does not empty |
+| ⭐ **the climb-back** | **does not exist, and this is the merit**: `arretrato` is reread at every frame, it is not remembered. ⛔ No ratchet — that is no `qualita_corrente`, which is the measured defect of §5.3 |
+| **the bottom** | 480p·25 **is not a brake, it is a verdict**: if the delivered rate goes below 25/s on 20 Mbit/s, the log declares it a **defect**. Forcing a frame into a queue that does not empty makes the queue worse |
+| **the log** | one line at the **start** and one at the **end** of every episode, never one per frame; plus a counter of its own, `video_ritmo_scesi` |
+| **the switch** | `--ritmo-adattivo`, **off by default** (I6), and the value in force **written at startup in both cases** |
+| **where** | `webtransport.c`, inside `video_a_una()`, three lines above `video_sgombra()` |
+| ⛔ **the mandatory order** | **first the cure of `video_sgombra()`, then the regulator** — §6.5 |
 
-`POSTI = 2`, e ⛔ **non è un orologio travestito**: è la profondità del tubo. Con `POSTI = 1` si
-salterebbe ogni volta che il fotogramma di prima non è uscito **interamente** entro l'arrivo del
-successivo — a 60/s sono 16 ms, e un delta da 10 KB su una linea sana ne impiega di più: sarebbe
-**euristica prudente**, cioè **I1 rotta**. ⚠ `[?]` Il valore si tara sul banco.
+`POSTI = 2`, and ⛔ **it is not a disguised clock**: it is the depth of the pipe. With `POSTI = 1` one would
+skip every time the previous frame has not left **entirely** by the arrival of the
+next — at 60/s that is 16 ms, and a 10 KB delta on a healthy line takes longer: it would be a
+**prudent heuristic**, that is **I1 broken**. ⚠ `[?]` The value is tuned on the bench.
 
-### 6.2 ⛔ Perché `arretrato` non ricade in P13 e in P20
+### 6.2 ⛔ Why `arretrato` does not fall back into P13 and P20
 
-- **P13**: la tolleranza diceva *«per un secondo»*, e fu corretta due ore dopo — *«il secondo era la
-  grandezza sbagliata: quel che deve svuotarsi è una **coda**, e quanto ci mette un fotogramma già
-  in volo dipende dalla **banda**, non dall'orologio»*. ⇒ `arretrato` **è la coda**, contata in
-  fotogrammi: non si chiede *«è passato troppo tempo?»*, si chiede *«i byte di prima sono ancora
-  qui?»*;
-- **P20**: la cura fu **quel che il client ha spedito lui — locale, monotono, indipendente dalla
-  consegna**. ⇒ `arretrato` ha esattamente quella forma dal **nostro** lato: byte prodotti da noi e
-  ancora in casa nostra. **Nessun pacchetto perso, nessun riordino e nessun silenzio del client può
-  falsarlo**, perché non si guarda niente che venga da fuori.
+- **P13**: the tolerance said *«for one second»*, and it was corrected two hours later — *«the second was the
+  wrong quantity: what must empty is a **queue**, and how long a frame already
+  in flight takes depends on the **bandwidth**, not on the clock»*. ⇒ `arretrato` **is the queue**, counted in
+  frames: one does not ask *«has too much time passed?»*, one asks *«are the earlier bytes still
+  here?»*;
+- **P20**: the cure was **what the client itself sent — local, monotonic, independent of
+  delivery**. ⇒ `arretrato` has exactly that shape on **our** side: bytes produced by us and
+  still in our house. **No lost packet, no reordering and no silence of the client can
+  falsify it**, because nothing that comes from outside is looked at.
 
-⭐ E la frase è **già nel codice**, scritta per la stessa ragione: *«una stima può sbagliare, un byte
-in coda no»*.
+⭐ And the sentence is **already in the code**, written for the same reason: *«an estimate can be wrong, a byte
+in the queue cannot»*.
 
-⚠ **E le tre cose che `arretrato` NON è**: non è un **ritmo target** (se esistesse dovrebbe
-risalire, e qualcuno un giorno dimenticherebbe di farlo risalire — **è già successo**, §5.3); non è
-la **banda** (`cwnd/rtt` è una stima, e come ingresso di un anello che decide se un fotogramma parte
-sarebbe un numero calcolato al posto di un fatto); ⛔ **non è un ack del client** — §6.6.
+⚠ **And the three things `arretrato` is NOT**: it is not a **target rate** (if it existed it would have to
+climb back, and someone one day would forget to make it climb back — **it has already happened**, §5.3); it is not
+the **bandwidth** (`cwnd/rtt` is an estimate, and as the input of a loop that decides whether a frame leaves
+it would be a calculated number in place of a fact); ⛔ **it is not a client ack** — §6.6.
 
-### 6.3 ⭐ Che cosa ngtcp2 ci dà già misurato e che oggi non guardiamo
+### 6.3 ⭐ What ngtcp2 already gives us measured and today we do not look at
 
-`ngtcp2_conn_get_conn_info()` riempie **sette** campi. Oggi la si chiama in **un solo punto** e se
-ne leggono **due**.
+`ngtcp2_conn_get_conn_info()` fills **seven** fields. Today it is called in **one single place** and
+**two** of them are read.
 
-| campo | oggi | che cosa direbbe |
+| field | today | what it would say |
 |---|---|---|
-| `smoothed_rtt` · `cwnd` | ✅ | il giro di rete e la finestra concessa |
-| `bytes_in_flight` | ⛔ **mai letto** | ⭐ è **il pezzo di arretrato che la nostra coda non vede più** — il codice lo dichiara già come buco |
-| `min_rtt` | ⛔ mai letto | ⭐ `smoothed_rtt − min_rtt` **è la coda dentro la rete, in millisecondi**: è il numero con cui si **onora** `SPECIFICHE.md:128` invece di citarlo |
-| `ssthresh` | ⛔ mai letto | distingue *«la linea sta salendo»* da *«la linea ha ceduto»* |
-| `latest_rtt` · `rttvar` | ⛔ mai letti | il tremolio, per l'audio |
+| `smoothed_rtt` · `cwnd` | ✅ | the network round trip and the granted window |
+| `bytes_in_flight` | ⛔ **never read** | ⭐ it is **the piece of backlog our queue no longer sees** — the code already declares it as a hole |
+| `min_rtt` | ⛔ never read | ⭐ `smoothed_rtt − min_rtt` **is the queue inside the network, in milliseconds**: it is the number with which one **honours** `SPECIFICHE.md:128` instead of citing it |
+| `ssthresh` | ⛔ never read | distinguishes *«the line is rising»* from *«the line has given way»* |
+| `latest_rtt` · `rttvar` | ⛔ never read | the jitter, for audio |
 
-⛔ **E l'algoritmo di congestione non è mai stato scelto**: si prende il predefinito di ngtcp2
-(CUBIC). ⚠ **Non si cambia dentro questo disegno** — sarebbe una seconda variabile nello stesso
-banco — **ma la voce va aperta**: su WiFi, CUBIC legge **una perdita da radio** come una congestione
-e dimezza la finestra; BBR, che ngtcp2 offre, lavora su banda di collo di bottiglia e `min_rtt`, cioè
-su due numeri che questo disegno vuole comunque leggere. `[?]` **da misurare come esperimento
-separato, dietro il suo interruttore.**
+⛔ **And the congestion algorithm was never chosen**: ngtcp2's default is taken
+(CUBIC). ⚠ **It is not changed inside this design** — it would be a second variable in the same
+bench — **but the item must be opened**: on WiFi, CUBIC reads **a radio loss** as congestion
+and halves the window; BBR, which ngtcp2 offers, works on bottleneck bandwidth and `min_rtt`, that is
+on two numbers this design wants to read anyway. `[?]` **to be measured as a separate
+experiment, behind its own switch.**
 
-⚠ E un limite che non è nostro: quanto possiamo spedire su uno stream lo decide il **client** con
-`initial_max_stream_data_uni` / `initial_max_data`. ⇒ **Una coda che cresce con `cwnd_left` ALTO non
-è la linea: è la finestra del browser**, e la cura è un'altra.
+⚠ And a limit that is not ours: how much we can send on a stream is decided by the **client** with
+`initial_max_stream_data_uni` / `initial_max_data`. ⇒ **A queue that grows with a HIGH `cwnd_left` is not
+the line: it is the browser's window**, and the cure is another one.
 
-### 6.4 ⚠ Il prezzo dichiarato: si taglia **a valle** del codificatore
+### 6.4 ⚠ The declared price: cutting happens **downstream** of the encoder
 
-Il fotogramma saltato **è già costato la GPU del figlio**. La leva vera — non catturarlo affatto —
-sta nel figlio, e il tubo per arrivarci **esiste già** (`figli_video()` porta già codec, profondità e
-chiave attraverso il confine di processo).
+The skipped frame **has already cost the child's GPU**. The real lever — not capturing it at all —
+lies in the child, and the pipe to get there **already exists** (`figli_video()` already carries codec, depth and
+keyframe across the process boundary).
 
-⛔ **Ma non si fa in fase 9, e la ragione è d'architettura**: il palco è **uno per utente**, le
-sessioni sono **N**. Un ritmo imposto al palco lo imporrebbe a tutte, **e la sessione sulla linea
-buona pagherebbe per quella sulla linea cattiva.** ⇒ `[?]` aperta, e vale la pena riaprirla solo con
-la misura di quanto costa davvero un fotogramma sprecato — che con la copia zero potrebbe essere
-poco. ⚠ E una differenza a nostro svantaggio, dichiarata: **GNOME regola prima di codificare, noi
-dopo.** Sul consumo di GPU il loro è migliore.
+⛔ **But it is not done in phase 9, and the reason is architectural**: the stage is **one per user**, the
+sessions are **N**. A rate imposed on the stage would impose it on all of them, **and the session on the good
+line would pay for the one on the bad line.** ⇒ `[?]` open, and it is worth reopening only with
+the measurement of how much a wasted frame really costs — which with zero copy could be
+little. ⚠ And a difference to our disadvantage, declared: **GNOME regulates before encoding, we
+after.** On GPU consumption theirs is better.
 
-### 6.5 ⛔⛔ IL CONTROLLO CHE INVALIDA TUTTO IL BANCO, e viene prima degli altri
+### 6.5 ⛔⛔ THE CHECK THAT INVALIDATES THE WHOLE BENCH, and it comes before the others
 
-**`video_sgombra()` svuota la coda dei delta a OGNI fotogramma.** Finché è così, `arretrato` **è zero
-per costruzione**: quando il fotogramma N+1 arriva, i byte di N sono già stati buttati dal giro
-precedente.
+**`video_sgombra()` empties the delta queue at EVERY frame.** As long as this is so, `arretrato` **is zero
+by construction**: when frame N+1 arrives, the bytes of N have already been thrown away by the
+previous round.
 
-⇒ ⛔ **Un regolatore installato oggi non scatterebbe mai, e il banco lo leggerebbe come «la linea
-porta».** Sono due fatti con la stessa faccia.
+⇒ ⛔ **A regulator installed today would never fire, and the bench would read it as «the line
+carries it».** They are two facts with the same face.
 
-⭐ E le due modifiche sono **una modifica sola guardata da due lati**: `video_sgombra()` smette di
-buttare il delta precedente solo perché ne è arrivato uno più recente (cura 2, §5.2), e il regolatore
-smette di produrne di nuovi nello stesso istante. ⛔ **Ordine obbligato: prima la cura, poi il
-regolatore.**
+⭐ And the two changes are **one single change looked at from two sides**: `video_sgombra()` stops
+throwing away the previous delta just because a more recent one has arrived (cure 2, §5.2), and the regulator
+stops producing new ones at the same instant. ⛔ **Mandatory order: first the cure, then the
+regulator.**
 
-### 6.6 ⛔ Che cosa del regolatore di GNOME si rifiuta — e che cosa si copia
+### 6.6 ⛔ What of GNOME's regulator is refused — and what is copied
 
-⭐ **La forma si copia**: posti fotogramma, nessun controllo di bitrate, nessuna risoluzione
-adattiva, l'anello che si auto-cadenza invece di inseguire un target. ⛔ **La grandezza no**, per tre
-ragioni indipendenti:
+⭐ **The shape is copied**: frame slots, no bitrate control, no adaptive
+resolution, the loop that paces itself instead of chasing a target. ⛔ **The quantity is not**, for three
+independent reasons:
 
-1. **`ack_rate` da noi non esiste.** La tabella dei messaggi di `RCP.md` non contiene nessun
-   riscontro di fotogramma. Copiarlo vorrebbe dire un tipo nuovo, un obbligo nuovo per il client, e
-   **un giro di rete dentro l'anello di controllo** — cioè comprare la reazione con il ritardo.
-   `arretrato` costa **zero ms**: è già in memoria nostra;
-2. ⛔ **`ack_rate` dipende dalla consegna e dalla cooperazione del pari**, cioè è *precisamente* la
-   famiglia P8→P20. Il client può sospendere i riscontri con `queueDepth == 0xFFFFFFFF` e **un
-   regolatore che non lo gestisce si ferma per sempre**. ⚠ E la trappola **non si disinnesca con un
-   `if`**: un anello che il pari **può** congelare non diventa sicuro perché si aggiunge un caso
-   speciale. Non chiedendo niente al pari, la trappola **non esiste**.
-   ⇒ ⭐ Conseguenza da scrivere perché nessuno la cerchi: il controllo **M1** di `STUDI.md:1173`
-   (*«il nostro regolatore regge `queueDepth == 0xFFFFFFFF`»*) diventa **vacuo** — va marcato **non
-   applicabile**, non lasciato aperto;
-3. ⛔ **La soglia di GNOME è un orologio travestito**: `delayed_frames = rtt_us × refresh_rate / 1e6`
-   converte un RTT in un numero di fotogrammi. È **P13 in un altro vestito**, e si rompe nello stesso
-   punto: una chiave da 60 KB non impiega un RTT, impiega `byte × rtt / cwnd`.
+1. **`ack_rate` does not exist for us.** The message table of `RCP.md` contains no
+   frame acknowledgement. Copying it would mean a new type, a new obligation for the client, and
+   **a network round trip inside the control loop** — that is buying the reaction with delay.
+   `arretrato` costs **zero ms**: it is already in our memory;
+2. ⛔ **`ack_rate` depends on delivery and on the peer's cooperation**, that is it is *precisely* the
+   P8→P20 family. The client can suspend acknowledgements with `queueDepth == 0xFFFFFFFF` and **a
+   regulator that does not handle it stops forever**. ⚠ And the trap **is not defused with an
+   `if`**: a loop that the peer **can** freeze does not become safe because a special case is
+   added. By asking nothing of the peer, the trap **does not exist**.
+   ⇒ ⭐ Consequence to be written so that nobody looks for it: check **M1** of `STUDI.md:1173`
+   (*«our regulator holds `queueDepth == 0xFFFFFFFF`»*) becomes **vacuous** — it must be marked **not
+   applicable**, not left open;
+3. ⛔ **GNOME's threshold is a disguised clock**: `delayed_frames = rtt_us × refresh_rate / 1e6`
+   converts an RTT into a number of frames. It is **P13 in another dress**, and it breaks at the same
+   point: a 60 KB keyframe does not take one RTT, it takes `byte × rtt / cwnd`.
 
-### 6.7 ⚠ La domanda onesta: a 20 Mbit/s serve davvero?
+### 6.7 ⚠ The honest question: at 20 Mbit/s is it really needed?
 
-**In regime, no**, ed è la previsione di §7.4. ⇒ ⭐ **Va giudicato per quel che è: un parapetto.** Il
-suo comportamento corretto è **non fare niente**, e un banco che dimostrasse solo che non scatta
-avrebbe dimostrato **metà** del lavoro.
+**At regime, no**, and it is the prediction of §7.4. ⇒ ⭐ **It must be judged for what it is: a parapet.** Its
+correct behaviour is **doing nothing**, and a bench that proved only that it does not fire
+would have proved **half** of the work.
 
-**Dove morde davvero**, in ordine di probabilità:
+**Where it really bites**, in order of probability:
 
-| | perché |
+| | why |
 |---|---|
-| ⭐⭐ **la migrazione WiFi → rete mobile** | il percorso cambia, ngtcp2 **riazzera il controllo di congestione**: `cwnd` torna alla finestra iniziale, ~10 pacchetti ≈ 14 KB. ⛔ **Una chiave da 60 KB non ci sta**, e la coda si forma con certezza. È *«la ragione migliore per cui QUIC è stato scelto»*, e oggi non c'è niente che lo governi |
-| ⭐ **il calo temporaneo del WiFi** | un fallback di modulazione porta 200 Mbit/s a 15 per uno o due secondi — ⭐ **ed è esattamente il gradino misurato in §3.10** |
-| **il traffico altrui sulla stessa linea** | la finestra si stringe senza che la linea cambi |
-| ⚠ **più sessioni dello stesso utente** | il palco è uno, le sessioni N; e a valle c'è il budget di rete (dieci × 20 = **200 Mbit/s**) |
-| ⛔ **NON in regime su una linea sana da 20 Mbit/s** | ed è la previsione che questa fase deve confermare per prima |
+| ⭐⭐ **WiFi → mobile network migration** | the path changes, ngtcp2 **resets the congestion control**: `cwnd` goes back to the initial window, ~10 packets ≈ 14 KB. ⛔ **A 60 KB keyframe does not fit**, and the queue forms with certainty. It is *«the best reason why QUIC was chosen»*, and today there is nothing governing it |
+| ⭐ **the temporary WiFi drop** | a modulation fallback brings 200 Mbit/s to 15 for one or two seconds — ⭐ **and it is exactly the step measured in §3.10** |
+| **other people's traffic on the same line** | the window narrows without the line changing |
+| ⚠ **several sessions of the same user** | the stage is one, the sessions N; and downstream there is the network budget (ten × 20 = **200 Mbit/s**) |
+| ⛔ **NOT at regime on a healthy 20 Mbit/s line** | and it is the prediction this phase must confirm first |
 
-⇒ ⭐ **Conseguenza sul banco, e non è un dettaglio**: **strozzare a 20 Mbit/s costante non prova
-questo disegno.** Serve un **gradino** — ed è la ragione per cui §3.10 è stato misurato così. ⭐ E il
-controllo di §3.10 (`pieno`, che chiede meno del buco: **niente si muove**) dimostra che il banco non
-spara a vuoto.
+⇒ ⭐ **Consequence on the bench, and it is not a detail**: **throttling at a constant 20 Mbit/s does not prove
+this design.** A **step** is needed — and it is the reason why §3.10 was measured that way. ⭐ And the
+control of §3.10 (`pieno`, which asks for less than the hole: **nothing moves**) proves that the bench does not
+fire blanks.
 
-### 6.8 Che cosa il disegno **non** tocca, dichiarato
+### 6.8 What the design does **not** touch, declared
 
-il **QP** (resta 26 fisso: farlo qui vorrebbe dire due variabili nello stesso banco) · l'**algoritmo
-di congestione** (§6.3 apre la voce e non la chiude) · la **risoluzione** (fuori per decisione) · il
-**cuscino audio** (non c'entra con la banda) · ⚠ e **nessuna memoria intermedia nuova**: è l'unico
-modo in cui `SPECIFICHE.md:128-131` si onora senza doverlo giustificare in millisecondi.
+the **QP** (stays fixed at 26: doing it here would mean two variables in the same bench) · the **congestion
+algorithm** (§6.3 opens the item and does not close it) · the **resolution** (out by decision) · the
+**audio cushion** (it has nothing to do with bandwidth) · ⚠ and **no new intermediate buffer**: it is the only
+way in which `SPECIFICHE.md:128-131` is honoured without having to justify it in milliseconds.
 
 ---
 
-## §7 · ⛔ IL REGISTRO DELLE DISCESE — e le previsioni in attesa di misura
+## §7 · ⛔ THE DESCENT LOG — and the predictions awaiting measurement
 
-> ⛔ **Perché il registro è di questa fase e non un accessorio.** I1 non dice solo *quando* si può
-> calare: dice che **«ogni discesa è dichiarata nel registro»**. ⇒ ⭐ **Un regolatore che scende
-> senza dirlo è indistinguibile da un difetto.**
+> ⛔ **Why the log belongs to this phase and is not an accessory.** I1 does not only say *when* one may
+> drop: it says that **«every descent is declared in the log»**. ⇒ ⭐ **A regulator that goes down
+> without saying so is indistinguishable from a defect.**
 
-### 7.1 ⏳ La forma della riga — ⛔ progettata, **non applicata**
+### 7.1 ⏳ The shape of the line — ⛔ designed, **not applied**
 
-`[R]` Non esiste nessun regolatore del ritmo, quindi la riga va **progettata prima**, o nascerà come
-prosa. ⛔ **Non prosa**: una riga sola, campi in ordine fisso, `chiave=valore`, così che un banco la
-legga con `split()` e non con una regex sulla prosa italiana.
+`[R]` No rate regulator exists, so the line must be **designed first**, or it will be born as
+prose. ⛔ **Not prose**: one single line, fields in fixed order, `chiave=valore`, so that a bench
+reads it with `split()` and not with a regex on Italian prose.
 
 ```
 🔻 RITMO  chi=nic/198.51.100.7  da=60  a=40  unita=fps
@@ -1657,400 +1657,400 @@ legga con `split()` e non con una regex sulla prosa italiana.
           per=I1/§8.2  attivo_da_ms=0
 ```
 
-| campo | perché non si può togliere |
+| field | why it cannot be removed |
 |---|---|
-| `🔻`/`🔺` | ⭐ la **risalita** è metà dell'invariante: un regolatore che scende e non risale **ha calato per prudenza col ritardo di un'ora**. Il cricchetto di §5.3 era già questo difetto, misurato |
-| `da=` / `a=` | senza il **prima**, «40 fps» non è una discesa: è un numero |
-| ⛔ `misura=` **e** `soglia=` | **è il campo che rende I1 verificabile senza fidarsi del codice**: se `misura < soglia`, quella discesa è **per prudenza**, e la riga stessa lo dimostra |
-| `causa=` **etichetta chiusa**, non frase | un banco conta le discese per causa; una frase italiana non si conta |
-| `unita_misura=` | *«il numero giusto e la parola sbagliata accanto»*: byte e kbit/s convivono già in questo file |
-| `attivo_da_ms=` | ⭐ senza, una discesa e risalita che si alternano 20 volte al secondo (**pendolamento**) hanno lo stesso registro di una discesa stabile |
-| `chi=` | quattro sessioni sullo stesso file di registro |
+| `🔻`/`🔺` | ⭐ the **climb-back** is half of the invariant: a regulator that goes down and does not climb back **has dropped out of prudence with an hour's delay**. The ratchet of §5.3 was already this defect, measured |
+| `da=` / `a=` | without the **before**, «40 fps» is not a descent: it is a number |
+| ⛔ `misura=` **and** `soglia=` | **it is the field that makes I1 verifiable without trusting the code**: if `misura < soglia`, that descent is **out of prudence**, and the line itself proves it |
+| `causa=` **closed label**, not a sentence | a bench counts the descents by cause; an Italian sentence cannot be counted |
+| `unita_misura=` | *«the right number and the wrong word beside it»*: bytes and kbit/s already live together in this file |
+| `attivo_da_ms=` | ⭐ without it, a descent and climb-back alternating 20 times a second (**oscillation**) have the same log as a stable descent |
+| `chi=` | four sessions on the same log file |
 
-⭐ **La stessa forma vale per la qualità** — `🔻 QUALITA modo=QP da=26 a=35 causa=tetto_16MiB …` — ed
-è la riga che `abbassa_qualita()` **non scrive**: scrive solo i due *fallimenti*. ⇒ Per un **delta**
-la scala scende **26 → 35 → 44 in silenzio**.
+⭐ **The same shape holds for quality** — `🔻 QUALITA modo=QP da=26 a=35 causa=tetto_16MiB …` — and
+it is the line that `abbassa_qualita()` **does not write**: it writes only the two *failures*. ⇒ For a **delta**
+the ladder goes down **26 → 35 → 44 in silence**.
 
-⛔ **E la riga si scrive solo quando il valore CAMBIA**, non a ogni fotogramma: così il registro *è*
-la curva del ritmo, e il costo è il numero di discese, non il numero di fotogrammi. ⚠ Con un **fondo
-di pendolamento**: se cambia più di *N* volte al secondo, la riga diventa *«🔻🔺 RITMO PENDOLA»*, che
-è **un difetto del regolatore** e va detto come tale.
+⛔ **And the line is written only when the value CHANGES**, not at every frame: so the log *is*
+the rate curve, and the cost is the number of descents, not the number of frames. ⚠ With an **oscillation
+bottom**: if it changes more than *N* times a second, the line becomes *«🔻🔺 RITMO PENDOLA»*, which
+is **a defect of the regulator** and must be stated as such.
 
-### 7.2 ⛔ I buchi che l'inventario ha trovato — e uno era già chiuso
+### 7.2 ⛔ The holes the inventory found — and one was already closed
 
-`[M]` **Quanto costa una riga**, misurato il 23 agosto su Intel N100 (il ferro **più lento** dei due,
-quindi è un tetto): **0,63 µs** e **98 byte**.
+`[M]` **How much a line costs**, measured on 23 Aug on Intel N100 (the **slower** hardware of the two,
+so it is a cap): **0.63 µs** and **98 bytes**.
 
 | | |
 |---|---|
-| ⭐⭐ **una parte del mandato è RIFIUTATA**: la **terza forma** dell'abbandono (il credito mancato, difetto B-18) **è scritta nel registro**, sempre accesa, con la cura del debito accanto | ⇒ Il buco non c'è. Restano **due riserve di forma**: la riga **non ha fondo** (sotto carestia scrive 60 righe/s per sessione, ⚠ ed è la forma dei **30,8 GB**), e il conto esce **solo a fine sessione** |
-| ⛔ **il debito della chiave: sette ragioni in nove punti, non cinque.** Il commento dichiara *«CINQUE punti»* e porta già la cicatrice della volta precedente (*«diceva tre e i punti erano quattro»*) | ⭐ La cosa notevole non è il numero: è che `serve_chiave_perche` **esiste e porta la ragione fino alla riga** ⇒ **la grandezza che serve al banco è già lì, e ha già la forma giusta** |
-| ⛔ **quattro discese esistono GIÀ nel prodotto, e tre sono silenziose** | `abbassa_qualita()` su un delta (26→35→44, **senza il numero**) · il **cricchetto** (nessun accessore per leggerlo da fuori) · il blocco d'audio più vecchio buttato perché la coda è piena (⚠ **il gemello tre righe sopra la riga ce l'ha**, e il commento dice perché) · ⭐ il **ritmo a zero** quando il codificatore non apre, che **sì**, è dichiarata col numero |
-| ⛔ **`*come` di `chiave_intervallo_ms()` finisce in parlantina** | Il commento sopra la funzione dichiara che *«è l'unica cosa che distingue "la cura sta lavorando" da "la cura non è ancora accesa"»* — **e poi la scrive in parlantina** ⇒ in ogni installazione normale le due hanno esattamente la stessa faccia. **È il principio 2 violato dentro la funzione che lo cita** |
-| ✅ **i valori in vigore all'avvio** | ⭐ **applicato il 23 agosto**: §3.12. ⛔ Ma il **pavimento** (480p·25 e 20 Mbit/s) **non esiste ancora nel codice**, e va scritto **anche se il regolatore non c'è**: è il numero sotto cui la fase non ha il permesso di scendere |
+| ⭐⭐ **one part of the mandate is REFUSED**: the **third form** of the abandon (the missed credit, defect B-18) **is written in the log**, always on, with the debt cure beside it | ⇒ The hole is not there. **Two reservations of form** remain: the line **has no bottom** (under famine it writes 60 lines/s per session, ⚠ and it is the shape of the **30.8 GB**), and the count comes out **only at the end of the session** |
+| ⛔ **the keyframe debt: seven reasons in nine points, not five.** The comment declares *«FIVE points»* and already bears the scar of the previous time (*«it said three and the points were four»*) | ⭐ The notable thing is not the number: it is that `serve_chiave_perche` **exists and carries the reason up to the line** ⇒ **the quantity the bench needs is already there, and already has the right shape** |
+| ⛔ **four descents ALREADY exist in the product, and three are silent** | `abbassa_qualita()` on a delta (26→35→44, **without the number**) · the **ratchet** (no accessor to read it from outside) · the oldest audio block thrown away because the queue is full (⚠ **the twin three lines above has the line**, and the comment says why) · ⭐ the **rate at zero** when the encoder does not open, which **is** declared with the number |
+| ⛔ **`*come` of `chiave_intervallo_ms()` ends up in verbose mode** | The comment above the function declares that *«it is the only thing that distinguishes "the cure is working" from "the cure is not switched on yet"»* — **and then writes it in verbose mode** ⇒ in every normal installation the two have exactly the same face. **It is principle 2 violated inside the function that cites it** |
+| ✅ **the values in force at startup** | ⭐ **applied on 23 Aug**: §3.12. ⛔ But the **floor** (480p·25 and 20 Mbit/s) **does not exist in the code yet**, and it must be written **even if the regulator is not there**: it is the number below which the phase has no permission to go |
 
-### 7.2-bis ⚠ IL PREZZO — e ⛔ **non serve un livello intermedio: serve un FONDO**
+### 7.2-bis ⚠ THE PRICE — and ⛔ **an intermediate level is not needed: a BOTTOM is needed**
 
-`[M]` 0,63 µs e 98 byte per riga. `[R]` A regime, **una** sessione a 60 fps, le righe **per
-fotogramma** sono due (`stream uni aperto` e `codec N: … byte`):
+`[M]` 0.63 µs and 98 bytes per line. `[R]` At regime, **one** session at 60 fps, the lines **per
+frame** are two (`stream uni aperto` and `codec N: … byte`):
 
-| | righe/s | byte/s | in un'ora | CPU |
+| | lines/s | bytes/s | in an hour | CPU |
 |---|---|---|---|---|
-| **una sessione, con `--parlantina`** | **120** | **11,8 kB/s** | **42 MB** | **0,0076 % di un nucleo** |
-| quattro sessioni | 480 | 47 kB/s | 170 MB | 0,03 % |
+| **one session, with `--parlantina`** | **120** | **11.8 kB/s** | **42 MB** | **0.0076 % of a core** |
+| four sessions | 480 | 47 kB/s | 170 MB | 0.03 % |
 
-⇒ ⭐ **La CPU non è il prezzo: è tre centesimi di millesimo di nucleo.** Il prezzo è il **disco** e
-la **leggibilità** — un registro in cui le due righe per fotogramma seppelliscono tutto il resto in
-rapporto **120 : 1**.
+⇒ ⭐ **CPU is not the price: it is three hundredths of a thousandth of a core.** The price is the **disk** and
+**readability** — a log in which the two lines per frame bury everything else in a
+ratio of **120 : 1**.
 
-⛔⛔ **E sotto congestione il prezzo lo paga anche il registro SPENTO.** `[M]` 21 agosto: a 3 Mbit/s
-la riga *«FOTOGRAMMA NON SPEDITO»* esce **28 volte al secondo**, e ogni abbandono ne genera un'altra
-⇒ ~**60 righe/s = 21 MB/ora senza `--parlantina`**, e **nessuna delle due ha un fondo**.
-⇒ ⛔ **Il registro è più rumoroso quando la linea è peggiore, cioè quando serve leggerlo.**
+⛔⛔ **And under congestion the price is paid even by the log when it is OFF.** `[M]` 21 Aug: at 3 Mbit/s
+the line *«FOTOGRAMMA NON SPEDITO»* comes out **28 times a second**, and every abandon generates another one
+⇒ ~**60 lines/s = 21 MB/hour without `--parlantina`**, and **neither of the two has a bottom**.
+⇒ ⛔ **The log is noisier when the line is worse, that is when it needs reading.**
 
-⛔ **Un terzo livello (`--parlantina-ritmo`) è la strada sbagliata**: metterebbe le righe di I1
-dietro un interruttore spento di serie, e ⛔ **una discesa dichiarata solo quando qualcuno ha acceso
-un interruttore NON è dichiarata**. ⇒ Il principio 2 e I1 impongono `registro_dice()` per ogni riga
-`🔻`/`🔺`. ⭐ **Quel che serve è il fondo**, e il prodotto ne ha già **quattro forme funzionanti**,
-tutte con la motivazione scritta accanto: *una volta sola* (`bool detto`) · *ogni N*
-(`== 1 || % 100 == 0`) · ⭐ *quando cambia di ≥ soglia* (**la forma delle righe `🔻`/`🔺`**) ·
-⭐ *una volta al secondo, con dentro gli ZERO* (**la forma della riga periodica del ritmo**).
+⛔ **A third level (`--parlantina-ritmo`) is the wrong road**: it would put the I1 lines
+behind a switch off by default, and ⛔ **a descent declared only when someone has switched on
+a switch is NOT declared**. ⇒ Principle 2 and I1 impose `registro_dice()` for every
+`🔻`/`🔺` line. ⭐ **What is needed is the bottom**, and the product already has **four working forms** of it,
+all with the motivation written beside them: *only once* (`bool detto`) · *every N*
+(`== 1 || % 100 == 0`) · ⭐ *when it changes by ≥ threshold* (**the shape of the `🔻`/`🔺` lines**) ·
+⭐ *once a second, with the ZEROS inside* (**the shape of the periodic rate line**).
 
-⇒ **La proposta, in quattro punti e senza un livello nuovo:**
+⇒ **The proposal, in four points and without a new level:**
 
-1. le righe `🔻`/`🔺` a `registro_dice()`, **solo quando il valore cambia** ⇒ su una sessione sana:
-   **zero righe**;
-2. una riga `ritmo:` **una volta al secondo, sempre, con dentro gli zero** — fotogrammi consegnati ·
-   saltati per credito · abbandonati · byte in coda · valore in vigore. **98 byte/s per sessione =
-   0,35 MB/ora**: **120 volte meno** della parlantina;
-3. ⛔ **un fondo sulle tre righe che sotto congestione escono a 28-60/s.** ⚠ E non si può mettere
-   **prima** della riga periodica del punto 2, perché oggi il conto esce solo a fine sessione: sono
-   **una cura sola in due pezzi**;
-4. ⚠ e, **fuori dal mandato di questa fase**, il **filtro per area** (`--parlantina wt,rcp`): oggi
-   la parlantina è un interruttore unico su **undici** aree, e chi indaga il ritmo si porta dietro
-   gli appunti, la tastiera e il cursore.
+1. the `🔻`/`🔺` lines at `registro_dice()`, **only when the value changes** ⇒ on a healthy session:
+   **zero lines**;
+2. a `ritmo:` line **once a second, always, with the zeros inside** — frames delivered ·
+   skipped for credit · abandoned · bytes in the queue · value in force. **98 bytes/s per session =
+   0.35 MB/hour**: **120 times less** than verbose mode;
+3. ⛔ **a bottom on the three lines that under congestion come out at 28-60/s.** ⚠ And it cannot be put
+   **before** the periodic line of point 2, because today the count comes out only at the end of the session: they are
+   **one single cure in two pieces**;
+4. ⚠ and, **outside the mandate of this phase**, the **filter by area** (`--parlantina wt,rcp`): today
+   verbose mode is a single switch over **eleven** areas, and whoever investigates the rate carries along
+   the clipboard, the keyboard and the cursor.
 
-### 7.3 ⛔ I controlli che decidono — *quale guasto fa cadere ciascuna cosa*
+### 7.3 ⛔ The checks that decide — *which fault brings down each thing*
 
-⭐ *«Un controllo deve leggere una cosa che si può **SBAGLIARE**, non una che si può mediare.»*
+⭐ *«A check must read something that can be **WRONG**, not something that can be averaged.»*
 
-| la cosa | il guasto che la fa cadere |
+| the thing | the fault that brings it down |
 |---|---|
-| `🔻 RITMO` esiste | ⛔ **il ritmo cala a scena ferma**: **una sola** riga `🔻` in 60 s di scena ferma ⇒ rosso |
-| `🔺 RITMO` esiste | ⛔ **il cricchetto**: strozza 10 s, togli la strozzatura, aspetta 10 s — nessun `🔺` ⇒ rosso. ⚠ **Oggi la qualità fallirebbe questo banco** *(finché `--qualita-risale` è spenta)* |
-| `misura=` / `soglia=` | ⛔ `misura < soglia` in una qualsiasi riga `🔻` ⇒ **rosso, e non serve altro** |
-| `attivo_da_ms=` | ⛔ **il pendolamento**: > 4 cambi/s ⇒ rosso |
-| riga d'avvio coi valori | ⛔ **forma E1**: avvia con `--qp 40`, leggi la riga — se dice 26, l'interruttore non arriva al codificatore |
-| **la risalita** (cura 3) | ⛔⛔ **lo SBATTIMENTO**: grana `alls=60` a 7680×4320 per 60 s continui — più di **3 riaperture al minuto** dopo il primo minuto ⇒ rosso. ⭐ **È il controllo che decide**: se l'attesa che raddoppia non lo spegne, i tre numeri sono sbagliati. ⚠ E il caso a cui credere è **I1 appaiato**: i fotogrammi/s **con** la cura più bassi di quelli **senza** ⇒ rosso |
-| il **pavimento** della risalita | ⛔ 10 000 fotogrammi vuoti: se la qualità scende **sotto** `richiesta.qualita` anche di uno scalino ⇒ rosso |
-| il **senza-perdita** | ⛔ si rientra in LOSSLESS ⇒ rosso: sarebbe il cambio di grandezza a metà sessione |
-| ⛔ la **memoria** | 10 000 discese e risalite di fila: `valgrind` trova una superficie della GPU non restituita ⇒ è il difetto *«che si vede solo dopo mezz'ora»* |
+| `🔻 RITMO` exists | ⛔ **the rate drops with a still scene**: **one single** `🔻` line in 60 s of still scene ⇒ red |
+| `🔺 RITMO` exists | ⛔ **the ratchet**: throttle 10 s, remove the throttling, wait 10 s — no `🔺` ⇒ red. ⚠ **Today quality would fail this bench** *(as long as `--qualita-risale` is off)* |
+| `misura=` / `soglia=` | ⛔ `misura < soglia` in any `🔻` line ⇒ **red, and nothing else is needed** |
+| `attivo_da_ms=` | ⛔ **oscillation**: > 4 changes/s ⇒ red |
+| startup line with the values | ⛔ **form E1**: start with `--qp 40`, read the line — if it says 26, the switch does not reach the encoder |
+| **the climb-back** (cure 3) | ⛔⛔ **THRASHING**: grain `alls=60` at 7680×4320 for 60 s continuously — more than **3 reopenings per minute** after the first minute ⇒ red. ⭐ **It is the check that decides**: if the doubling wait does not switch it off, the three numbers are wrong. ⚠ And the case to believe in is **I1 paired**: frames/s **with** the cure lower than those **without** ⇒ red |
+| the **floor** of the climb-back | ⛔ 10 000 empty frames: if quality goes **below** `richiesta.qualita` even by one rung ⇒ red |
+| the **lossless** | ⛔ re-entering LOSSLESS ⇒ red: it would be the change of quantity mid-session |
+| ⛔ the **memory** | 10 000 descents and climb-backs in a row: `valgrind` finds a GPU surface not returned ⇒ it is the defect *«that only shows after half an hour»* |
 
-### ⛔ E una riga che si RIFIUTA, per la stessa regola
+### ⛔ And a line that is REFUSED, by the same rule
 
-*«banda stimata = N kbit/s»*, scritta una volta al secondo. **Non c'è nessun guasto che la fa
-cadere**: `cwnd/rtt` è una grandezza **mediata**, plausibile in ogni condizione, e un banco che la
-legge non può dire se sia giusta. ⇒ ⭐ **Non va scritta.** Quel che va scritto è il **byte in coda**
-— che si può sbagliare — e la banda solo **dentro** una riga `🔻`, come *prova della soglia*.
+*«estimated bandwidth = N kbit/s»*, written once a second. **There is no fault that brings it
+down**: `cwnd/rtt` is an **averaged** quantity, plausible in every condition, and a bench that
+reads it cannot tell whether it is right. ⇒ ⭐ **It must not be written.** What must be written is the **byte in the queue**
+— which can be wrong — and the bandwidth only **inside** a `🔻` line, as *proof of the threshold*.
 
-### 7.4 ⛔⛔ LE PREVISIONI FALSIFICABILI IN ATTESA — **il patto della fase**
+### 7.4 ⛔⛔ THE FALSIFIABLE PREDICTIONS AWAITING — **the pact of the phase**
 
-> ⚠ **Si conservano tutte.** Dicono che cosa ci aspettiamo e che cosa ci smentirebbe, e servono al
-> giorno in cui si misura. ⭐ Dove la previsione sta anche nel codice, il codice è la sede: qui c'è
-> la riga sola, con il `file:riga` accanto.
+> ⚠ **They are all kept.** They say what we expect and what would refute us, and they serve the
+> day of measuring. ⭐ Where the prediction is also in the code, the code is the seat: here there is
+> only the line, with the `file:line` beside it.
 
-| # | la previsione | ⛔ che cosa la smentirebbe | dove per esteso |
+| # | the prediction | ⛔ what would refute it | where in full |
 |---|---|---|---|
-| **P1** | ⛔ **il crollo si riproduce** con `MALLOC_MMAP_THRESHOLD_=32768` + client congelato: `SEGV`, `error 4`, sempre in `__memmove_avx_unaligned_erms` | **se non muore, la diagnosi di §4 è sbagliata** | §4.5 |
-| **P2** | **la soglia sulla coda è INERTE a 20 Mbit/s**: `abbandonati per soglia` = 0, ritardo dell'anello = 55,20 ms | ⛔ **molti abbandoni al secondo con l'interruttore spento a 20 Mbit/s** ⇒ il difetto morde **sopra** il pavimento, la cura non è una robustezza, e **cambia la priorità della fase** — §10.2 | `webtransport.c:2738-2790` |
-| **P3** | **sul gradino** (3 s a 10 Mbit/s, `barra`): fot/s nei secondi 8-10 da 13-14 a **≥ 25**, chiavi/s da 6-7 a **≤ 2**, abbandoni/s **≤ 2**, secondi 7 e 12 **identici** | ⛔ **4 rossi**: (1) chiavi ferme mentre gli abbandoni scendono ⇒ il debito lo accende **un'altra** delle sette cause, quasi certamente il **credito mancato** (forma C, invisibile al ricevente); (2) i fot/s non salgono ⇒ soglia troppo alta, si scende a 50; (3) ⭐ **l'anello supera 55 + soglia** ⇒ la stima **sottostima**, ed è il rosso più importante perché sarebbe **un numero che sembra misurato**; (4) il ritorno smette di essere sotto il secondo ⇒ la cura paga il transitorio col ritorno, e va **spenta** invece che tarata | `webtransport.c:2738-2790` |
-| **P4** | **il tetto di banda**: `ferma` 0 · **desktop vero 0,20-0,45** · tinta piatta 1,1-1,6 · retinato **11-16** · grana **11-16**, e **MAI sopra 16** | ⛔ **2 cambiano la conclusione**: (1) ⭐⭐ **il desktop vero costa MENO di 0,204** ⇒ il tetto **risparmia dove non deve**, è v1 che si ripete, **e questa cura si butta** (la previsione è *«non scende»*, ed è secca: `[M]` sul portatile QVBR spende il **13 % in più** del CQP a scena ferma); (2) ⭐⭐ **il retinato resta sopra 20** ⇒ il driver **non ha obbedito**, R31 vale **anche contro la richiesta esplicita**, e lo coglie **solo il terzo testimone, i byte** | `codificatore.c:252-300` |
-| **P5** | **la risalita della qualità**: dopo una raffica granulosa e 600 fotogrammi fermi, la confessione torna **esattamente** a 26 (o 20) e c'è la riga `RISALITA` | ⛔ **lo sbattimento**: > 3 riaperture/minuto sulla scena al **94,9 %** del tetto ⇒ i tre numeri sono sbagliati; e ⛔ **i fot/s con la cura più bassi di quelli senza** (appaiato, stessa scena) ⇒ il prezzo lo paga I1 | §7.3 · `codificatore.c:100-145` |
-| **P6** | **il riordino dell'audio**, sui profili `netem`: ±2 ms **0,175 → ≥ 0,95** · ±5 ms ≥ 0,95 · ±10 ms ≥ 0,90; `vecchi` da **1 004 a ~0**, e `fuori` deve **prendersi quel numero** ⭐ *(la previsione più forte: se la somma non si conserva, è sbagliata)* | ⛔ **blocchi sovrapposti** ⇒ la purezza **peggiora** e il giudice sente **distorsione, non buchi** (⚠ è il modo peggiore di fallire, ed **è già successo** in questo file: il rilievo 3 del 17 agosto) · **confine troppo permissivo** ⇒ `tardivi ≈ vecchi di prima`, la cura non ha curato niente · **confine troppo severo** ⇒ `vecchi` alto **con `fuori` a zero**, l'ancora è alla deriva (sintomo distintivo: `pieni` sale insieme) · `[?]` **Opus non tollera i timestamp non monotòni** ⇒ `errori` sale sul percorso Opus e resta **zero sul PCM**: **non verificato**, e il banco va fatto su tutt'e due i codec | §5.4 |
-| **P7** | **il regolatore, scena MOSSA a 20 Mbit/s**: 20-37 fot/s (quelli che la scena produce), `arretrato` **0, ogni tanto 1, mai 2**, `video_ritmo_scesi` ⭐ **0** | ⛔ **discese con un desktop normale** ⇒ `POSTI = 2` è troppo stretto o un fotogramma costa più del misurato (**la riga di registro dice da sé quale dei due**) · **discese con `cwnd_left` ALTO** ⇒ non è la linea, è **la finestra del browser** · `video_saltati` che cresce con `arretrato` a 0 ⇒ il collo è **il credito di stream** · ⛔ **zero discese E zero letture di `arretrato`** ⇒ non è una previsione confermata, **è un anello mai percorso** — §6.5 | §6 |
-| **P8** | **il regolatore, scena FERMA**: `video_ritmo_scesi` **invariato**. ⭐ La dimostrazione è **strutturale prima che sperimentale**: a desktop fermo Mutter non consegna, `video_a_una()` non viene chiamata, **il ramo non è raggiungibile** | ⛔ **e il controllo non può essere «il contatore è zero»**: vuoto e proibito hanno la stessa faccia. ⇒ **si fa a coppie nello stesso giro** — metà ferma e metà mossa alternate, `arretrato` **letto** in tutt'e due le metà. Un giro che non lo soddisfa **non ha misurato niente, e va buttato invece che interpretato** | §6 |
-| **P9** | ⭐ **il confronto di `RCP.md` §4.3 lo farà il programma**, non chi legge: oggi le due righe ci sono ma il confronto è manuale | ⛔ un livello troppo basso **non dà un errore di rete**: **fa rifiutare la configurazione**, cioè schermo che non parte senza un rosso | §5.5 |
+| **P1** | ⛔ **the crash reproduces** with `MALLOC_MMAP_THRESHOLD_=32768` + frozen client: `SEGV`, `error 4`, always in `__memmove_avx_unaligned_erms` | **if it does not die, the diagnosis of §4 is wrong** | §4.5 |
+| **P2** | **the queue threshold is INERT at 20 Mbit/s**: `abbandonati per soglia` = 0, loop delay = 55.20 ms | ⛔ **many abandons per second with the switch off at 20 Mbit/s** ⇒ the defect bites **above** the floor, the cure is not a robustness measure, and **it changes the priority of the phase** — §10.2 | `webtransport.c:2738-2790` |
+| **P3** | **on the step** (3 s at 10 Mbit/s, `barra`): fps in seconds 8-10 from 13-14 to **≥ 25**, keyframes/s from 6-7 to **≤ 2**, abandons/s **≤ 2**, seconds 7 and 12 **identical** | ⛔ **4 reds**: (1) keyframes stuck while the abandons go down ⇒ the debt is kindled by **another** of the seven causes, almost certainly the **missed credit** (form C, invisible to the receiver); (2) fps do not rise ⇒ threshold too high, go down to 50; (3) ⭐ **the loop exceeds 55 + threshold** ⇒ the estimate **underestimates**, and it is the most important red because it would be **a number that looks measured**; (4) the return stops being under a second ⇒ the cure pays for the transient with the return, and must be **switched off** instead of tuned | `webtransport.c:2738-2790` |
+| **P4** | **the bandwidth cap**: `ferma` 0 · **real desktop 0.20-0.45** · flat colour 1.1-1.6 · halftone **11-16** · grain **11-16**, and **NEVER above 16** | ⛔ **2 change the conclusion**: (1) ⭐⭐ **the real desktop costs LESS than 0.204** ⇒ the cap **saves where it must not**, it is v1 repeating itself, **and this cure is thrown away** (the prediction is *«it does not go down»*, and it is flat: `[M]` on the laptop QVBR spends **13 % more** than CQP with a still scene); (2) ⭐⭐ **the halftone stays above 20** ⇒ the driver **did not obey**, R31 holds **even against the explicit request**, and **only the third witness, the bytes,** catches it | `codificatore.c:252-300` |
+| **P5** | **the quality climb-back**: after a grainy burst and 600 still frames, the confession goes back **exactly** to 26 (or 20) and there is the `RISALITA` line | ⛔ **thrashing**: > 3 reopenings/minute on the scene at **94.9 %** of the cap ⇒ the three numbers are wrong; and ⛔ **fps with the cure lower than those without** (paired, same scene) ⇒ the price is paid by I1 | §7.3 · `codificatore.c:100-145` |
+| **P6** | **the audio reorder**, on the `netem` profiles: ±2 ms **0.175 → ≥ 0.95** · ±5 ms ≥ 0.95 · ±10 ms ≥ 0.90; `vecchi` from **1 004 to ~0**, and `fuori` must **take that number** ⭐ *(the strongest prediction: if the sum is not conserved, it is wrong)* | ⛔ **overlapping blocks** ⇒ purity **gets worse** and the judge hears **distortion, not holes** (⚠ it is the worst way of failing, and **it has already happened** in this file: finding 3 of 17 Aug) · **border too permissive** ⇒ `tardivi ≈ vecchi di prima`, the cure cured nothing · **border too strict** ⇒ high `vecchi` **with `fuori` at zero**, the anchor is drifting (distinctive symptom: `pieni` rises together) · `[?]` **Opus does not tolerate non-monotonic timestamps** ⇒ `errori` rises on the Opus path and stays **zero on PCM**: **not verified**, and the bench must be done on both codecs | §5.4 |
+| **P7** | **the regulator, MOVING scene at 20 Mbit/s**: 20-37 fps (those the scene produces), `arretrato` **0, now and then 1, never 2**, `video_ritmo_scesi` ⭐ **0** | ⛔ **descents with a normal desktop** ⇒ `POSTI = 2` is too narrow or a frame costs more than measured (**the log line says by itself which of the two**) · **descents with a HIGH `cwnd_left`** ⇒ it is not the line, it is **the browser's window** · `video_saltati` growing with `arretrato` at 0 ⇒ the bottleneck is **the stream credit** · ⛔ **zero descents AND zero reads of `arretrato`** ⇒ it is not a confirmed prediction, **it is a loop never travelled** — §6.5 | §6 |
+| **P8** | **the regulator, STILL scene**: `video_ritmo_scesi` **unchanged**. ⭐ The demonstration is **structural before experimental**: with a still desktop Mutter does not deliver, `video_a_una()` is not called, **the branch is not reachable** | ⛔ **and the check cannot be «the counter is zero»**: empty and forbidden have the same face. ⇒ **it is done in pairs in the same round** — half still and half moving alternated, `arretrato` **read** in both halves. A round that does not satisfy this **has measured nothing, and must be thrown away instead of interpreted** | §6 |
+| **P9** | ⭐ **the comparison of `RCP.md` §4.3 will be made by the program**, not by whoever reads: today the two lines are there but the comparison is manual | ⛔ a level too low **does not give a network error**: **it makes the configuration be refused**, that is a screen that does not start without a red | §5.5 |
 
 ---
 
-## §8 · ⛔ Che cosa NON ha funzionato
+## §8 · ⛔ What did NOT work
 
-**23 agosto 2026 — tre inciampi, e tutt'e tre del BANCO, nessuno del prodotto.**
+**23 Aug 2026 — three stumbles, and all three of the BENCH, none of the product.**
 
-1. ⛔ **`wc -l < registro.log`: il `<` lo apre la shell di `nicfio`, non `sudo`.** Il registro è di
-   root ⇒ uscita **vuota** ⇒ `riga0 = 0` ⇒ lo spoglio si prendeva **anche le sessioni di prima**.
-   `[M]` Il primo giro contava **413** fotogrammi dove il server ne dichiarava **398**. ⚠ È la
-   forma cattiva: non un rosso, **un numero plausibile**. ⇒ Cura: il file lo apre `wc`, che gira
-   da root.
-2. ⛔ **La scena lanciata con `ssh → sudo → setsid … > $LAV/scena.log`**: stessa famiglia — il
-   redirect verso una cartella di root lo faceva `nicfio`, la scena moriva e **il suo registro era
-   vuoto**, cioè *«non partita»* senza dire perché. ⇒ Cura: **uno script**,
-   `banchi/09-b68-scena.sh` — *un file non ha livelli di virgolette*. ⚠ È la trappola già scritta
-   in `07-b65-datagram.py` per il guardiano, ripagata.
-3. ⛔⛔ **Il controllo positivo aveva bisogno, lui, di essere controllato.** Il primo giro di
-   controllo ha stampato *«il contatore delle `RICHIEDI_CHIAVE` non si muove: il banco è cieco»* —
-   e accusava il banco, mentre a non essere avvenuto era lo **stimolo**: nel cliente
-   `--chiave-dopo` vive **dentro il ramo di `--puntatore-vecchia`**
-   (`01-b3-cliente.py`), e senza il puntatore la richiesta non parte mai. ⇒ Cura: la tela va
-   prima **rimpicciolita** (`--adatta 1280x720@3 --puntatore-vecchia 0.3 --chiave-dopo 2`).
-   ⭐ **La lezione**: un controllo positivo che dà rosso ha *due* imputati, e il primo da guardare
-   è se il colpo è stato battuto.
+1. ⛔ **`wc -l < registro.log`: the `<` is opened by `nicfio`'s shell, not by `sudo`.** The log belongs to
+   root ⇒ **empty** output ⇒ `riga0 = 0` ⇒ the tally also took in **the earlier sessions**.
+   `[M]` The first round counted **413** frames where the server declared **398**. ⚠ It is the
+   bad form: not a red, **a plausible number**. ⇒ Cure: the file is opened by `wc`, which runs
+   as root.
+2. ⛔ **The scene launched with `ssh → sudo → setsid … > $LAV/scena.log`**: same family — the
+   redirect towards a root folder was done by `nicfio`, the scene died and **its log was
+   empty**, that is *«not started»* without saying why. ⇒ Cure: **a script**,
+   `banchi/09-b68-scena.sh` — *a file has no levels of quotes*. ⚠ It is the trap already written
+   in `07-b65-datagram.py` for the guardian, paid for again.
+3. ⛔⛔ **The positive control itself needed to be controlled.** The first control
+   round printed *«the `RICHIEDI_CHIAVE` counter does not move: the bench is blind»* —
+   and it accused the bench, while what had not happened was the **stimulus**: in the client
+   `--chiave-dopo` lives **inside the branch of `--puntatore-vecchia`**
+   (`01-b3-cliente.py`), and without the pointer the request never leaves. ⇒ Cure: the canvas must
+   first be **shrunk** (`--adatta 1280x720@3 --puntatore-vecchia 0.3 --chiave-dopo 2`).
+   ⭐ **The lesson**: a positive control that gives red has *two* defendants, and the first to look at
+   is whether the shot was struck.
 
-⚠ **E una cosa che NON è un difetto ma va dichiarata**: la `scena ferma` è un GNOME **headless
-senza finestre aperte**. Un desktop vero con un orologio in barra darebbe qualche fotogramma al
-minuto invece di zero — la forma del risultato non cambia, l'ordine di grandezza sì.
-⇒ ⛔ **Il giudizio finale resta di chi guarda, con un lavoro vero dentro.**
+⚠ **And one thing that is NOT a defect but must be declared**: the `scena ferma` is a **headless GNOME
+without open windows**. A real desktop with a clock in the bar would give a few frames a
+minute instead of zero — the shape of the result does not change, the order of magnitude does.
+⇒ ⛔ **The final judgement remains with whoever watches, with real work inside.**
 
-**Pomeriggio — altri cinque, e ⛔ quattro su cinque hanno prodotto «un numero plausibile».**
-⭐ È la stessa forma tutte le volte (`LEZIONI.md` §1.9), e per questo vale la pena elencarli.
+**Afternoon — five more, and ⛔ four out of five produced «a plausible number».**
+⭐ It is the same shape every time (`LEZIONI.md` §1.9), and that is why it is worth listing them.
 
-4. ⛔ **`pgrep -f 01-b3-cliente.py` trova sé stesso.** Il `bash -c` che porta quel testo nella
-   propria riga di comando viene contato come una sessione. `[M]` 07:29: *«una sessione è già
-   aperta (pid 18170)»* mentre di sessioni non ce n'era **nessuna**. ⇒ Cura: `01-b3-cliente[.]py`
-   — la classe di caratteri non compare mai nella riga vera e compare sempre in quella
-   dell'involucro.
-5. ⛔⛔ **«C'è un processo» non è «c'è una sessione», e sono costati quattro bracci su sei.**
-   Il banco ha visto vivo il cliente che il comando precedente aveva appena ucciso, non ne ha
-   aperto uno nuovo, e trenta secondi dopo il cliente è morto davvero: da lì in poi **nessun
-   `SPEDITO`**. Il banco non se n'è accorto. ⇒ Due cure: (a) la sessione la dichiara il **prodotto**
-   nel suo registro (*canale video ACCESO* senza distacco dopo); (b) un braccio con **zero
-   fotogrammi** esce come **guasto**, non come mediana vuota in mezzo agli altri.
-6. ⛔ **`kill -9` dopo un secondo è un guasto, non una prudenza.** Il cliente ucciso di forza non
-   manda il `CONGEDO`: il server tiene la sessione fino allo scadere dell'inattività QUIC e il giro
-   dopo si becca `CONGEDO invece di SESSIONE: 0x0f GIA_ATTIVA_REMOTA`. ⇒ Cura: `TERM`, e **si
-   aspetta**.
-7. ⛔⛔ **L'`ESC` che apre la porta è lo stesso che la chiude.** `ESC` fa uscire dalla vista
-   d'insieme di GNOME — ed è anche il tasto che fa uscire dallo **schermo intero del browser**.
-   Mandato *dopo* aver acceso il video, spegneva il video che doveva accendere: `[M]` 08:13, il
-   punto «video» ha dato **0,202 Mbit/s**, cioè lo stesso di «ferma». ⇒ Cura: l'ESC **prima**, e la
-   pagina richiede lo schermo intero **ogni secondo** invece di una volta sola.
-8. ⛔⛔ **`UID_B` va passato anche per spegnere.** `09-b72-video.sh -- spegni` senza `UID_B` prende
-   il riposo **1001** e ammazza il Firefox di «prova», non quello di «prova2». ⇒ nei quattro punti
-   del giro delle 08:11 **il video è rimasto acceso sotto tutti gli altri**, e «ferma» ha dato
-   **25,9 fotogrammi/s e 0,235 Mbit/s**: un desktop fermo che non era fermo. ⇒ Cura: si spegne
-   **e si verifica**, e chi non muore lo si dice.
+4. ⛔ **`pgrep -f 01-b3-cliente.py` finds itself.** The `bash -c` that carries that text in its
+   own command line is counted as a session. `[M]` 07:29: *«a session is already
+   open (pid 18170)»* while there were **no** sessions. ⇒ Cure: `01-b3-cliente[.]py`
+   — the character class never appears in the real line and always appears in the
+   wrapper's.
+5. ⛔⛔ **«There is a process» is not «there is a session», and it cost four arms out of six.**
+   The bench saw alive the client that the previous command had just killed, did not
+   open a new one, and thirty seconds later the client really died: from there on **no
+   `SPEDITO`**. The bench did not notice. ⇒ Two cures: (a) the session is declared by the **product**
+   in its log (*video channel ON* with no detach afterwards); (b) an arm with **zero
+   frames** comes out as a **fault**, not as an empty median among the others.
+6. ⛔ **`kill -9` after one second is a fault, not a prudence.** The client killed by force does not
+   send the `CONGEDO`: the server keeps the session until the QUIC idle timeout expires and the next
+   round gets `CONGEDO invece di SESSIONE: 0x0f GIA_ATTIVA_REMOTA`. ⇒ Cure: `TERM`, and **one
+   waits**.
+7. ⛔⛔ **The `ESC` that opens the door is the same one that closes it.** `ESC` exits GNOME's
+   overview — and it is also the key that exits the **browser's full screen**.
+   Sent *after* switching the video on, it switched off the video it was supposed to switch on: `[M]` 08:13, the
+   «video» point gave **0.202 Mbit/s**, that is the same as «still». ⇒ Cure: the ESC **first**, and the
+   page requests full screen **every second** instead of only once.
+8. ⛔⛔ **`UID_B` must be passed also to switch off.** `09-b72-video.sh -- spegni` without `UID_B` takes
+   the default **1001** and kills «prova»'s Firefox, not «prova2»'s. ⇒ in the four points
+   of the 08:11 round **the video stayed on underneath all the others**, and «still» gave
+   **25.9 frames/s and 0.235 Mbit/s**: a still desktop that was not still. ⇒ Cure: one switches off
+   **and verifies**, and whoever does not die is reported.
 
-⭐⭐ **La lezione del pomeriggio, e non è nuova**: cinque guasti su sei non hanno dato un rosso —
-hanno dato **un numero che si poteva scrivere in tabella**. ⛔ Le due cose che li hanno trovati
-tutti sono le stesse due: **guardare i pixel** (§3.7 è nato da un'immagine, non da un contatore) e
-**pretendere che un contatore a zero sappia muoversi**.
+⭐⭐ **The lesson of the afternoon, and it is not new**: five faults out of six did not give a red —
+they gave **a number that could be written in a table**. ⛔ The two things that found them
+all are the same two: **looking at the pixels** (§3.7 was born from an image, not from a counter) and
+**demanding that a counter at zero can move**.
 
 ---
 
-## §9 · Le decisioni prodotte
+## §9 · The decisions produced
 
-- **`DECISIONI.md` §2.2**, riquadro del 23 agosto — ✅ **il 4K è un limite superiore, non una
-  promessa al pavimento**: *«non pretendo di averlo su connessioni a 20 mbps»*. ⚠ E la riga di
-  §3.1 *«fisso buono, 30+ ⇒ punta al desiderato»* non regge nemmeno a 30 per il 4K **mosso**.
-  ⛔ Ne esce una misura obbligata per questa fase: **a quale banda il 4K in movimento diventa
-  servibile** — si dichiara, non si promette. ⛔ E un vincolo che non è di banda: il livello H.264
-  in vigore concede a 3840×2160 `[?]` **30,3 fotogrammi/s**, non 60 ⇒ **il «60 fps» del desiderato
-  non è raggiungibile a 4K nemmeno con banda infinita.**
-- **`DECISIONI.md` §2.1**, riquadro del 23 agosto — ✅ **480p · 25 fps resta**, ma come **fondo
-  della scala**: sotto i 25/s su una linea da 20 Mbit/s è **un difetto**, non una degradazione.
-- **`DECISIONI.md` §3.1-bis** — ✅ la rete minima è **20 Mbit/s**, pavimento dichiarato
-  (23 agosto 2026). Conseguenze applicate lo stesso giorno in `SPECIFICHE.md` §8.1,
-  `CODER.md` §1-bis, `PIANO.md` fase 9, e `DECISIONI.md` §3.1 marcata superata in parte.
+- **`DECISIONI.md` §2.2**, box of 23 Aug — ✅ **4K is an upper limit, not a
+  promise at the floor**: *«non pretendo di averlo su connessioni a 20 mbps»*. ⚠ And the line of
+  §3.1 *«good fixed line, 30+ ⇒ aim at the desired»* does not hold even at 30 for **moving** 4K.
+  ⛔ A mandatory measurement for this phase comes out of it: **at what bandwidth moving 4K becomes
+  usable** — it is declared, not promised. ⛔ And a constraint that is not about bandwidth: the H.264 level
+  in force grants at 3840×2160 `[?]` **30.3 frames/s**, not 60 ⇒ **the «60 fps» of the wish list
+  is not reachable at 4K even with infinite bandwidth.**
+- **`DECISIONI.md` §2.1**, box of 23 Aug — ✅ **480p · 25 fps stays**, but as the **bottom
+  of the ladder**: below 25/s on a 20 Mbit/s line it is **a defect**, not a degradation.
+- **`DECISIONI.md` §3.1-bis** — ✅ the minimum network is **20 Mbit/s**, declared floor
+  (23 Aug 2026). Consequences applied the same day in `SPECIFICHE.md` §8.1,
+  `CODER.md` §1-bis, `PIANO.md` phase 9, and `DECISIONI.md` §3.1 marked partly superseded.
 
-### 9.1 ⭐⭐ Quel che le misure del pomeriggio mettono sul tavolo — *da decidere*
+### 9.1 ⭐⭐ What the afternoon's measurements put on the table — *to be decided*
 
-⛔ **Non sono decisioni prese: sono decisioni che adesso hanno i numeri per essere prese.**
-`I6` vuole che ciò che cambia quel che si VEDE stia dietro un interruttore spento finché l'utente
-non l'ha guardato.
+⛔ **They are not decisions taken: they are decisions that now have the numbers to be taken.**
+`I6` wants whatever changes what is SEEN to stay behind a switch that is off until the user
+has looked at it.
 
-> ⚠ **Questa tabella fu scritta a metà pomeriggio, quando ancora *«non era stata toccata una riga
-> del prodotto»*.** ⭐ Poi le cure sono state scritte — §5 — **tutte dietro un interruttore spento**,
-> tranne le due che non cambiano quel che si vede. ⛔ **Il giudizio dell'utente resta il passo che
-> manca**, e la tabella resta perché è il verbale dei numeri che l'hanno obbligato.
+> ⚠ **This table was written in the middle of the afternoon, when still *«not one line of the
+> product had been touched»*.** ⭐ Then the cures were written — §5 — **all behind a switch that is off**,
+> except the two that do not change what is seen. ⛔ **The user's judgement remains the step that is
+> missing**, and the table stays because it is the record of the numbers that made it compulsory.
 
-| | il numero che la obbliga |
+| | the number that makes it compulsory |
 |---|---|
-| ⛔ **il tetto di banda va scritto** — §0.3 lo chiamava «non esiste» | §3.8: un video con la grana a schermo intero chiede **58,7 Mbit/s = 293 %** del pavimento, e nessuno gli dice di no |
-| ⭐ **ma NON per il contenuto vero** | §3.8: il desktop dell'utente a schermo intero costa **0,204 Mbit/s = 1 %**. ⇒ il tetto è per il **caso duro**, e un regolatore che si accendesse sul contenuto normale ripeterebbe **l'errore di v1** (*«contento di risparmiare»*, §0.2) |
-| ⛔ **il regolatore NON può guardare quanti pixel cambiano** | §3.8: `pieno` muove **tutti** i pixel e costa 1,2 Mbit/s; `barra` muove gli stessi pixel con un retino e costa **21**. Due ordini di grandezza a parità di superficie |
-| ⛔ **la cura di `video_sgombra()` è la leva giusta** | §3.10: `abbandoni §5.1` = `chiavi`, **uno a uno**, a ogni livello di banda. Togliere un abbandono toglie una chiave |
-| ⭐ **e NON serve isteresi né memoria della discesa** | §3.10: dopo la riapertura il regime torna pieno in **meno di un secondo**, senza strascichi |
-| ✅ **l'arresto a scena ferma NON è un difetto** | §3.6: 180 risvegli, **13 ms** da 0,2 s a 15 s di quiete, coda larga 2 ms. ⇒ §3.1 resta una violazione **letterale** di I1 che **non costa niente a chi guarda** |
-| ⛔ **e non c'è niente da ottimizzare nel nostro tratto** | §3.6: dei 13 ms, **10 sono attesa del compositore** e **2,7** sono la codifica |
+| ⛔ **the bandwidth cap must be written** — §0.3 called it «does not exist» | §3.8: a video with grain at full screen asks for **58.7 Mbit/s = 293 %** of the floor, and nobody tells it no |
+| ⭐ **but NOT for the real content** | §3.8: the user's desktop at full screen costs **0.204 Mbit/s = 1 %**. ⇒ the cap is for the **hard case**, and a regulator that switched on for normal content would repeat **the error of v1** (*«happy to save»*, §0.2) |
+| ⛔ **the regulator CANNOT look at how many pixels change** | §3.8: `pieno` moves **all** the pixels and costs 1.2 Mbit/s; `barra` moves the same pixels with a halftone and costs **21**. Two orders of magnitude for the same surface |
+| ⛔ **the cure of `video_sgombra()` is the right lever** | §3.10: `abbandoni §5.1` = `chiavi`, **one to one**, at every bandwidth level. Removing an abandon removes a keyframe |
+| ⭐ **and neither hysteresis nor memory of the descent is needed** | §3.10: after the reopening the regime goes back to full in **less than a second**, without aftermath |
+| ✅ **the stop with a still scene is NOT a defect** | §3.6: 180 wake-ups, **13 ms** from 0.2 s to 15 s of quiet, tail 2 ms wide. ⇒ §3.1 remains a **literal** violation of I1 that **costs nothing to whoever watches** |
+| ⛔ **and there is nothing to optimize in our stretch** | §3.6: of the 13 ms, **10 are waiting for the compositor** and **2.7** are encoding |
 
 ---
 
-## §10 · ⛔⛔ LE CONTRADDIZIONI — dichiarate, **non lisciate**
+## §10 · ⛔⛔ THE CONTRADICTIONS — declared, **not smoothed over**
 
-> ⛔ **Due documenti della giornata dicono cose diverse.** Qui stanno tutt'e due le posizioni e
-> **che cosa deciderebbe la questione**. ⚠ Chi legge non deve scegliere sulla fiducia: deve sapere
-> quale misura manca.
+> ⛔ **Two documents of the day say different things.** Here are both positions and
+> **what would decide the question**. ⚠ Whoever reads must not choose on trust: they must know
+> which measurement is missing.
 
-### 10.1 ⛔ «Non serve nessun tetto di banda» **contro** «ne chiede il 293 %»
+### 10.1 ⛔ «No bandwidth cap is needed» **against** «it asks for 293 %»
 
-| | la posizione | su che cosa poggia |
+| | the position | what it rests on |
 |---|---|---|
-| **la mattina** | *«Sul contenuto misurato, a 20 Mbit/s, il CQP 26 va benissimo, e non serve nessun controllo di bitrate.»* | `[M]` fase 8: sul contenuto **vero** dell'utente, **ogni fotogramma una chiave** — il regime peggiore che esista — la mediana è **24 956 byte** ⇒ a 20,9 fps sono **4,17 Mbit/s = il 21 %** del pavimento. **Quattro volte sotto**, perfino nello stato in cui il difetto di `video_sgombra()` lo fa cadere |
-| **il pomeriggio** | ⛔ *«Serve un controllo del bitrate»* | `[M]` §3.8: un film con la grana a schermo intero, 2560×1080, QP 26, **58,668 Mbit/s = il 293 %** del pavimento |
+| **the morning** | *«On the measured content, at 20 Mbit/s, CQP 26 is just fine, and no bitrate control is needed.»* | `[M]` phase 8: on the user's **real** content, **every frame a keyframe** — the worst regime there is — the median is **24 956 bytes** ⇒ at 20.9 fps that is **4.17 Mbit/s = 21 %** of the floor. **Four times below**, even in the state into which the defect of `video_sgombra()` makes it fall |
+| **the afternoon** | ⛔ *«A bitrate control is needed»* | `[M]` §3.8: a film with grain at full screen, 2560×1080, QP 26, **58.668 Mbit/s = 293 %** of the floor |
 
-⭐⭐ **E le due misure non si contraddicono sul numero: misurano due contenuti diversi** — e lo
-studio della mattina lo aveva **scritto lui stesso**: *«il desktop dell'utente misurato in fase 8 NON
-contiene quella scena»*. ⇒ La contraddizione vera è più stretta e va nominata:
+⭐⭐ **And the two measurements do not contradict each other on the number: they measure two different contents** — and
+the morning study had **written it itself**: *«the user's desktop measured in phase 8 does NOT
+contain that scene»*. ⇒ The real contradiction is narrower and must be named:
 
-⛔ **Quel che è stato SMENTITO è la stima del pomeriggio dello studio**: `[?]` **~19,9 Mbit/s**,
-estrapolati da R31 di v1 riscalando pixel e scalini di QP, contro **58,7** misurati.
-**Ottimista di tre volte.** ⇒ ⭐ L'estrapolazione da un ferro all'altro **non regge**, e questa è la
-lezione che sopravvive alla giornata più della conclusione.
+⛔ **What was REFUTED is the study's afternoon estimate**: `[?]` **~19.9 Mbit/s**,
+extrapolated from R31 of v1 by rescaling pixels and QP rungs, against **58.7** measured.
+**Optimistic by three times.** ⇒ ⭐ Extrapolation from one piece of hardware to another **does not hold**, and this is the
+lesson that survives the day more than the conclusion.
 
-⚠ **E lo studio aveva scritto il suo stesso falsificatore, con la soglia**: *«sotto 10 Mbit/s ⇒ si
-chiude tutto · fra 15 e 25 ⇒ serve un tetto, dietro l'interruttore spento · **sopra 30 ⇒ R31 è
-confermata sul ferro nostro, e il tetto non è più un'opzione**»*. ⇒ **58,7 sta nel terzo ramo**, ed è
-per questo che la cura 5 è stata scritta.
+⚠ **And the study had written its own falsifier, with the threshold**: *«below 10 Mbit/s ⇒ everything
+closes · between 15 and 25 ⇒ a cap is needed, behind the switch that is off · **above 30 ⇒ R31 is
+confirmed on our own hardware, and the cap is no longer an option**»*. ⇒ **58.7 is in the third branch**, and it is
+for this that cure 5 was written.
 
-⇒ ⭐ **La sintesi che regge tutt'e due**: *il tetto è per il **caso duro**, e per il contenuto vero
-deve essere inerte* — ⛔ **e un regolatore che si accendesse sul contenuto normale ripeterebbe
-esattamente l'errore di v1** (*«contento di risparmiare»*). **È il rosso n° 1 della previsione P4**,
-e la misura che lo decide c'è già: il desktop vero a tetto acceso deve costare **almeno** 0,204
+⇒ ⭐ **The synthesis that holds both**: *the cap is for the **hard case**, and for real content it
+must be inert* — ⛔ **and a regulator that switched on for normal content would repeat
+exactly the error of v1** (*«happy to save»*). **It is red no. 1 of prediction P4**,
+and the measurement that decides it is already there: the real desktop with the cap on must cost **at least** 0.204
 Mbit/s.
 
-### 10.2 ⛔ Quanto morde la spirale **sopra** il pavimento — due posizioni, e nessuna è decisa
+### 10.2 ⛔ How much the spiral bites **above** the floor — two positions, and neither is decided
 
-| | la posizione | su che cosa poggia |
+| | the position | what it rests on |
 |---|---|---|
-| **A** — *«il difetto vive SOTTO il pavimento; sopra, la cura è inerte»* | la soglia è **una robustezza sui transitori**, non la cura della fase | `[M]` **a 15 Mbit/s: 2 fotogrammi chiave su 1 019** ⇒ la catena dei delta era **intatta**, e 15 sta **sotto** il pavimento di 20. E `DECISIONI.md` §3.1-bis dice testualmente che sotto i 20 il prodotto *«non promette niente e non misura niente come requisito»* |
-| **B** — *«morde anche sopra il pavimento»* | la spirale scatta anche su una linea larga | `[M]` §3.10, il gradino a 2560×1080 con `barra`: **abbandoni e chiavi anche nei secondi «larga»** — 3↔3 al secondo 5 (22,1 Mbit/s sul filo) e 1↔1 al secondo 6 (26,3). ⇒ `video_sgombra()` abbandona **anche quando la linea porta** |
+| **A** — *«the defect lives BELOW the floor; above, the cure is inert»* | the threshold is **a robustness on transients**, not the cure of the phase | `[M]` **at 15 Mbit/s: 2 keyframes out of 1 019** ⇒ the delta chain was **intact**, and 15 is **below** the floor of 20. And `DECISIONI.md` §3.1-bis says verbatim that below 20 the product *«promises nothing and measures nothing as a requirement»* |
+| **B** — *«it bites also above the floor»* | the spiral fires also on a wide line | `[M]` §3.10, the step at 2560×1080 with `barra`: **abandons and keyframes also in the «wide» seconds** — 3↔3 at second 5 (22.1 Mbit/s on the wire) and 1↔1 at second 6 (26.3). ⇒ `video_sgombra()` abandons **even when the line carries it** |
 
-⛔ **Non si sceglie qui, e la ragione è che le due misure non sono confrontabili**: `barra` è un
-gradiente **retinato** sintetico che chiede **21 Mbit/s** da solo, cioè **cento volte** il desktop
-vero (0,204). Un contenuto che consuma tutto il pavimento produce una coda anche su linea larga;
-il contenuto per cui il prodotto esiste no.
+⛔ **It is not chosen here, and the reason is that the two measurements are not comparable**: `barra` is a
+synthetic **halftone** gradient that asks for **21 Mbit/s** by itself, that is **a hundred times** the real
+desktop (0.204). Content that consumes the whole floor produces a queue even on a wide line;
+the content the product exists for does not.
 
-⭐⭐ **CHE COSA DECIDEREBBE LA QUESTIONE — una misura sola, e si può fare domani:**
+⭐⭐ **WHAT WOULD DECIDE THE QUESTION — one single measurement, and it can be done tomorrow:**
 
-> **`abbandoni §5.1` al secondo, con l'interruttore SPENTO, a 20 Mbit/s strozzati sul percorso
-> vero, sul DESKTOP VERO dell'utente** — non su `barra`, non su `pieno`, non a 2 Mbit/s.
+> **`abbandoni §5.1` per second, with the switch OFF, at 20 Mbit/s throttled on the real
+> path, on the user's REAL DESKTOP** — not on `barra`, not on `pieno`, not at 2 Mbit/s.
 
-| esito | ⇒ chi ha ragione |
+| outcome | ⇒ who is right |
 |---|---|
-| **≈ 0 abbandoni/s** | ⭐ **A**: la soglia è un parapetto sui transitori, la fase 9 spende il suo tempo sul regolatore, e la cura 2 resta un **prerequisito** |
-| **abbandoni al secondo in regime** | ⛔ **B**: il difetto morde **sopra** il pavimento ⇒ la soglia **non è una robustezza, è una cura di prodotto**, e ⛔ **cambia la priorità della fase** |
+| **≈ 0 abandons/s** | ⭐ **A**: the threshold is a parapet on transients, phase 9 spends its time on the regulator, and cure 2 remains a **prerequisite** |
+| **abandons per second at regime** | ⛔ **B**: the defect bites **above** the floor ⇒ the threshold **is not a robustness measure, it is a product cure**, and ⛔ **it changes the priority of the phase** |
 
-⚠ **E l'altra metà della domanda è già decisa**: `[M]` §3.10 dimostra che **strozzare a 20 Mbit/s
-costante non avrebbe mostrato nulla** — serve il **gradino**. ⇒ La misura sopra si fa **in regime**
-per rispondere ad A/B, e **col gradino** per misurare la cura: sono **due giri, non uno**.
+⚠ **And the other half of the question is already decided**: `[M]` §3.10 proves that **throttling at a constant 20 Mbit/s
+would have shown nothing** — the **step** is needed. ⇒ The measurement above is done **at regime**
+to answer A/B, and **with the step** to measure the cure: they are **two rounds, not one**.
 
 ---
 
-## §11 · Che cosa resta `[?]`
+## §11 · What remains `[?]`
 
-| | dove |
+| | where |
 |---|---|
-| ✅ **il SEGV sul fotogramma da 525 KB — CHIUSO il 23 agosto pomeriggio**: la causa è provata riga per riga e ⭐ **la cura è applicata**. ⛔ Resta `[?]` **una cosa sola: la riproduzione**, che non è stata eseguita ⇒ finché la ricetta non gira, è una **causa probabile con la riga**, non una causa vista — e la cura non ha una prova di aver curato | §4 · §4.5 · §4.8 |
-| ⏳ ⛔ **la trappola non è armata**: niente core dump, il registro è condiviso e viene sepolto, `dmesg` non si raccoglie allo spegnimento | §4.7 |
-| ✅ **il tetto di banda: quale, e su che grandezza — DECISO il 23 agosto**: `QVBR`, con filo · punto di lavoro · serbatoio derivati dal pavimento, `--tetto-banda-mbit`, **spento**. ⛔ Resta `[?]` la misura sulla macchina di prova (P4) | §5.5 · `codificatore.c:200-340` |
-| ⏳ `[?]` **il film con la grana non si misura oltre i 25 s su questa macchina**: la decodifica VP8 software a 2560x1080 affama il **cliente**, che sta sulla stessa macchina, e QUIC cade per *idle timeout*. ⇒ il numero di §3.8 è buono, ma un giro lungo vuole un cliente su un'altra macchina | §3.8 |
-| ✅ la cura di **`video_sgombra()`** — ⭐ **scritta il 23 agosto**, dietro `--sgombra-soglia-ms`, **spenta**. ⛔ Resta `[?]` la misura (P3) e ⛔⛔ **il prezzo, che lo giudica l'utente**: ~150 ms di immagine leggermente vecchia sotto congestione | §5.2 · `webtransport.c:2705-2800` |
-| ✅ la **finestra di riordino dell'audio** — ⭐ **scritta il 23 agosto**, senza interruttore (allentamento puro). ⛔ Resta `[?]` **la verifica, e il banco prescritto NON PUÒ farla**: misura se stesso — serve un banco che faccia girare **la pagina** | §5.4 · §3.16 · `pagina.html` · `avvia_audio()` |
-| ⏳ `[?]` **il riordino su Opus**: la misura è in **PCM da 5 ms**, con Opus la soglia di sorpasso è **4 volte più alta** e il difetto morde 4 volte meno ⇒ il percorso vero è Opus, e su Opus il numero non c'è. ⚠ E `[?]` se il decodificatore Opus tolleri i timestamp non monotòni: **non verificato** | §5.4 · P6 |
-| ⏳ `[?]` la qualità di **`EncSliceLP`** contro l'entrypoint pieno a parità di banda — **mai misurata**, e ⚠ **sul ferro di casa non si può fare**: serve l'AMD | `PIANO.md:1197` |
-| ⏳ `[?]` i **sotto-livelli temporali** su `EncSliceLP` — `[M]` il driver non dichiara `EncRateControlExt` su 7 profili su 7 ⇒ *«ogni abbandono costa una chiave» resta in vigore* | `RCP.md:1261` |
-| ✅ `[R]` **`qualita_corrente` era un cricchetto a senso unico** — ⭐ **curato il 23 agosto** (`risali_qualita()`), dietro `--qualita-risale`, **spenta**. ⛔ Resta `[?]` la misura, e il controllo che decide è lo **SBATTIMENTO** (P5) | §5.3 · `codificatore.c` |
-| ⏳ ⛔ **il regolatore del ritmo — disegnato, NON scritto**: è il lavoro che resta, e ⛔ **l'ordine è obbligato** (prima la soglia della coda, o `arretrato` è zero per costruzione) | §6 |
-| ⏳ ⛔ **il registro delle discese** (`🔻`/`🔺 RITMO`) — progettato, non applicato. E ⛔ **il pavimento (480p·25 e 20 Mbit/s) non esiste ancora nel codice** | §7.1 · §7.2 |
-| ⏳ `[?]` **l'algoritmo di congestione non è mai stato scelto**: si prende CUBIC di ngtcp2. ⚠ Su WiFi CUBIC legge una perdita **da radio** come congestione; BBR lavora su banda di collo di bottiglia e `min_rtt`. ⛔ **Esperimento separato, dietro il suo interruttore** — non due variabili nello stesso banco | §6.3 |
-| ⏳ `[R]` il **confronto `livello_flusso` ≤ `video.livello`**: le due righe adesso ci sono, ⛔ **ma il confronto lo fa chi legge, non il programma** | §5.5 · P9 |
-| ⏳ `[?]` il valore di **`CRF_PASSO`** (9 è *sufficiente, non giusto*); la scala effettiva è **26 → 35 → 44 → 51** | `codificatore.c` · `RICODIFICHE_MASSIME` |
-| ⏳ **`AUDIO_CUSCINO_MS = 250`** non abbassato: deve coprire **il jitter d'arrivo, che nessuno ha misurato**. ⚠ E **non c'entra con la banda**: è un problema di thread | `pagina.html` · `AUDIO_CUSCINO_MS()` |
-| ⏳ la **migrazione QUIC** da WiFi a rete mobile — *«la ragione migliore per cui QUIC è stato scelto»* | `PIANO.md:1437` |
-| ⏳ il **datagram audio su rete non locale**, mai misurato (sonda `banchi/07-b40`) | `RCP.md:1329` |
-| ✅ *chiusa il 23 ago* — **§2.1, il minimo resta 480p · 25 fps**: *«480p/25fps è il pavimento»*. ⛔ Cambia la ragione: è **il fondo della scala di degradazione**, non più il livello a cui una linea povera costringe ⇒ **un ritmo sotto i 25 su una linea da 20 Mbit/s è un DIFETTO** | `DECISIONI.md` §2.1 |
-| ❓ il **budget di rete** accanto a quello di GPU: dieci sessioni × 20 Mbit/s = **200 Mbit/s** sul filo. Da misurare in fase 10 | `DECISIONI.md` §4.6 |
-| ⚠ il **livello H.264 dichiarato** è `avc1.640032` (High **5.0**), ma oltre i 40 Mbit/s serve **5.1**: un livello troppo basso non dà errore, **fa rifiutare la configurazione** | `SPECIFICHE.md:1087` |
+| ✅ **the SEGV on the 525 KB frame — CLOSED on the afternoon of 23 Aug**: the cause is proven line by line and ⭐ **the cure is applied**. ⛔ What remains `[?]` is **one thing only: the reproduction**, which was not run ⇒ until the recipe runs, it is a **probable cause with the line**, not a seen cause — and the cure has no proof of having cured | §4 · §4.5 · §4.8 |
+| ⏳ ⛔ **the trap is not armed**: no core dump, the log is shared and gets buried, `dmesg` is not collected at shutdown | §4.7 |
+| ✅ **the bandwidth cap: which one, and on what quantity — DECIDED on 23 Aug**: `QVBR`, with wire · working point · reservoir derived from the floor, `--tetto-banda-mbit`, **off**. ⛔ What remains `[?]` is the measurement on the test machine (P4) | §5.5 · `codificatore.c:200-340` |
+| ⏳ `[?]` **the film with grain cannot be measured beyond 25 s on this machine**: software VP8 decoding at 2560x1080 starves the **client**, which sits on the same machine, and QUIC drops by *idle timeout*. ⇒ the number of §3.8 is good, but a long round wants a client on another machine | §3.8 |
+| ✅ the cure of **`video_sgombra()`** — ⭐ **written on 23 Aug**, behind `--sgombra-soglia-ms`, **off**. ⛔ What remains `[?]` is the measurement (P3) and ⛔⛔ **the price, which the user judges**: ~150 ms of slightly old image under congestion | §5.2 · `webtransport.c:2705-2800` |
+| ✅ the **audio reorder window** — ⭐ **written on 23 Aug**, without a switch (pure loosening). ⛔ What remains `[?]` is **the verification, and the prescribed bench CANNOT do it**: it measures itself — a bench that runs **the page** is needed | §5.4 · §3.16 · `pagina.html` · `avvia_audio()` |
+| ⏳ `[?]` **reordering on Opus**: the measurement is in **5 ms PCM**, with Opus the overtaking threshold is **4 times higher** and the defect bites 4 times less ⇒ the real path is Opus, and on Opus the number is not there. ⚠ And `[?]` whether the Opus decoder tolerates non-monotonic timestamps: **not verified** | §5.4 · P6 |
+| ⏳ `[?]` the quality of **`EncSliceLP`** against the full entrypoint at equal bandwidth — **never measured**, and ⚠ **on the home hardware it cannot be done**: the AMD is needed | `PIANO.md:1197` |
+| ⏳ `[?]` the **temporal sub-layers** on `EncSliceLP` — `[M]` the driver does not declare `EncRateControlExt` on 7 profiles out of 7 ⇒ *«every abandon costs a keyframe» remains in force* | `RCP.md:1261` |
+| ✅ `[R]` **`qualita_corrente` was a one-way ratchet** — ⭐ **cured on 23 Aug** (`risali_qualita()`), behind `--qualita-risale`, **off**. ⛔ What remains `[?]` is the measurement, and the check that decides is **THRASHING** (P5) | §5.3 · `codificatore.c` |
+| ⏳ ⛔ **the rate regulator — designed, NOT written**: it is the work that remains, and ⛔ **the order is mandatory** (first the queue threshold, or `arretrato` is zero by construction) | §6 |
+| ⏳ ⛔ **the descent log** (`🔻`/`🔺 RITMO`) — designed, not applied. And ⛔ **the floor (480p·25 and 20 Mbit/s) does not exist in the code yet** | §7.1 · §7.2 |
+| ⏳ `[?]` **the congestion algorithm was never chosen**: ngtcp2's CUBIC is taken. ⚠ On WiFi CUBIC reads a **radio** loss as congestion; BBR works on bottleneck bandwidth and `min_rtt`. ⛔ **A separate experiment, behind its own switch** — not two variables in the same bench | §6.3 |
+| ⏳ `[R]` the **comparison `livello_flusso` ≤ `video.livello`**: the two lines are now there, ⛔ **but the comparison is made by whoever reads, not by the program** | §5.5 · P9 |
+| ⏳ `[?]` the value of **`CRF_PASSO`** (9 is *sufficient, not right*); the effective ladder is **26 → 35 → 44 → 51** | `codificatore.c` · `RICODIFICHE_MASSIME` |
+| ⏳ **`AUDIO_CUSCINO_MS = 250`** not lowered: it must cover **the arrival jitter, which nobody has measured**. ⚠ And **it has nothing to do with bandwidth**: it is a thread problem | `pagina.html` · `AUDIO_CUSCINO_MS()` |
+| ⏳ **QUIC migration** from WiFi to mobile network — *«the best reason why QUIC was chosen»* | `PIANO.md:1437` |
+| ⏳ the **audio datagram on a non-local network**, never measured (probe `banchi/07-b40`) | `RCP.md:1329` |
+| ✅ *closed on 23 Aug* — **§2.1, the minimum stays 480p · 25 fps**: *«480p/25fps è il pavimento»*. ⛔ The reason changes: it is **the bottom of the degradation ladder**, no longer the level a poor line forces ⇒ **a rate below 25 on a 20 Mbit/s line is a DEFECT** | `DECISIONI.md` §2.1 |
+| ❓ the **network budget** beside the GPU one: ten sessions × 20 Mbit/s = **200 Mbit/s** on the wire. To be measured in phase 10 | `DECISIONI.md` §4.6 |
+| ⚠ the **declared H.264 level** is `avc1.640032` (High **5.0**), but beyond 40 Mbit/s **5.1** is needed: a level too low gives no error, **it makes the configuration be refused** | `SPECIFICHE.md:1087` |
 
 ---
 
-## §12 · Il giudizio dell'utente
+## §12 · The user's judgement
 
-⏳ *La fase non è arrivata al giudizio.*
+⏳ *The phase has not reached the judgement.*
 
-⛔ **E ci sono due cose precise che aspettano lui**, elencate in **S.5** con il prezzo accanto: la
-**soglia sulla coda** (`--sgombra-soglia-ms`) e il **tetto di banda** (`--tetto-banda-mbit`). ⚠ Tutte
-e due cambiano quel che si VEDE, tutte e due nascono spente, e ⛔ **quale sia il male minore non lo
-decide una misura**: è esattamente la lezione dell'azzeramento della fase 10 di v1.
+⛔ **And there are two precise things that wait for him**, listed in **S.5** with the price beside them: the
+**queue threshold** (`--sgombra-soglia-ms`) and the **bandwidth cap** (`--tetto-banda-mbit`). ⚠ Both
+change what is SEEN, both are born off, and ⛔ **which is the lesser evil is not decided
+by a measurement**: it is exactly the lesson of the reset of phase 10 of v1.
 
 ---
 
-# §13 · ⭐⭐ IL SECONDO GIRO DI MISURE — *23 agosto 2026, pomeriggio-sera*
+# §13 · ⭐⭐ THE SECOND ROUND OF MEASUREMENTS — *23 Aug 2026, afternoon-evening*
 
-> ⛔ **Questa sezione si riempie strada facendo**, un numero alla volta con l'ora accanto.
-> Le previsioni sono quelle di **§7.4 (P1…P9)** e della sintesi **S.5**: qui, accanto a ogni
-> numero, c'è **l'atteso**.
+> ⛔ **This section fills up as we go**, one number at a time with the time beside it.
+> The predictions are those of **§7.4 (P1…P9)** and of summary **S.5**: here, beside every
+> number, there is **the expected**.
 
-## 13.0 ⛔ DA CHE CODICE VENGONO QUESTI NUMERI — gli `md5`, e perché stanno in testa
+## 13.0 ⛔ WHAT CODE THESE NUMBERS COME FROM — the `md5`s, and why they stand at the top
 
-⛔ **Il primo fatto della sera è che l'albero della 7920 era VECCHIO.** `/media/REMOTIX/src/09c-src`
-portava un `webtransport.c` del 23 agosto **09:23** (`md5 958170e2…`) — cioè **senza il regolatore
-del ritmo** (cura 6): mancavano `video_ritmo_scesi`, `ritmo_frena()`, `ritmo_ciclo()`,
-`wt_ritmo_adattivo()`, **506 righe di diff**. ⇒ Ogni misura presa su quel binario con
-`--ritmo-adattivo` avrebbe dato *«zero discese»* **perché l'opzione non esisteva**, non perché il
-regolatore non scattava. ⚠ È esattamente il difetto D5 di questa fase, con un'altra faccia.
+⛔ **The first fact of the evening is that the 7920 tree was OLD.** `/media/REMOTIX/src/09c-src`
+carried a `webtransport.c` of 23 Aug **09:23** (`md5 958170e2…`) — that is **without the rate
+regulator** (cure 6): missing were `video_ritmo_scesi`, `ritmo_frena()`, `ritmo_ciclo()`,
+`wt_ritmo_adattivo()`, **506 lines of diff**. ⇒ Every measurement taken on that binary with
+`--ritmo-adattivo` would have given *«zero descents»* **because the option did not exist**, not because the
+regulator did not fire. ⚠ It is exactly defect D5 of this phase, with another face.
 
-⭐ **Rifatti tutt'e due gli alberi dal codice committato `f90eb21`**, alle **15:05-15:20 locali**:
+⭐ **Both trees redone from the committed code `f90eb21`**, at **15:05-15:20 local**:
 
-| albero | `webtransport.c` | che cos'è |
+| tree | `webtransport.c` | what it is |
 |---|---|---|
-| `/media/REMOTIX/src/09c-src` | `md5 4785abf10e50bf4d86ce638a21bd685b` | ⭐ **il CURATO** — identico byte per byte a `src/webtransport.c` di `f90eb21` |
-| `/media/REMOTIX/src/09c-mal-src` | `md5 69e2d57fac73f48ce9e0ef6c0e628add` | ⛔ **il MALATO** — l'unica differenza è `coda_uccidi()` al posto di `coda_consegna()` (`:6421`), cioè il difetto delle 08:28:09 rimesso apposta: **è il controllo positivo** |
+| `/media/REMOTIX/src/09c-src` | `md5 4785abf10e50bf4d86ce638a21bd685b` | ⭐ **the CURED** — identical byte for byte to `src/webtransport.c` of `f90eb21` |
+| `/media/REMOTIX/src/09c-mal-src` | `md5 69e2d57fac73f48ce9e0ef6c0e628add` | ⛔ **the SICK** — the only difference is `coda_uccidi()` in place of `coda_consegna()` (`:6421`), that is the defect of 08:28:09 put back on purpose: **it is the positive control** |
 
-Gli altri sorgenti sono identici nei due alberi e al commit:
+The other sources are identical in the two trees and to the commit:
 `codificatore.c md5 5a29b80787042b0c6511c74d159c1bd0` · `main.c md5 2aa34655c19e20b5f0acf35c9c0af484` ·
 `pagina.html md5 e010d615f10643d5c6e2a2c01ae5ff25`.
 
-⚠ **E `--pagina` adesso punta al PROPRIO albero**: il server acceso a metà pomeriggio serviva
-`/media/REMOTIX/src/09-src/src/pagina.html`, cioè la pagina **prima** della cura 4.
+⚠ **And `--pagina` now points to ITS OWN tree**: the server started in the middle of the afternoon served
+`/media/REMOTIX/src/09-src/src/pagina.html`, that is the page **before** cure 4.
 
-## 13.0-bis ⛔ DUE INCIAMPI DELLA RICOSTRUZIONE — *15:05-15:20*, e il primo è **la trappola di questa fase**
+## 13.0-bis ⛔ TWO STUMBLES OF THE REBUILD — *15:05-15:20*, and the first is **the trap of this phase**
 
-1. ⛔⛔ **`enter.sh` è rimasto appeso 13 minuti su `sudo`, e la causa non è quella che sembra.**
-   Il copione dava la parola **una volta** (`printf 'nicfio\n' | sudo -S -v`) e poi chiamava
-   `bash /media/REMOTIX/enter.sh --root '…'`, contando che la credenziale fosse in cassa.
-   ⛔ **Non lo è**: `enter.sh` fa il suo `sudo -n true`, che **fallisce**, e ricade su
-   `sudo -v -S -p 'Password sudo: '` — che si mette a leggere dal proprio standard input, cioè da
-   una pipe di `ssh` **aperta e vuota**. ⇒ processo in `do_wait`, **zero righe di registro, zero
-   figli, carico 0,08**: la faccia di un compilatore lento.
-   ⭐ **Perché la credenziale non si eredita**: `sudo` di serie tiene il segno **per terminale**
-   (`timestamp_type=tty`), e **senza tty ricade sul processo padre**. Due processi fratelli sono
-   due padri diversi ⇒ due casse diverse. ⛔ **La forma che funziona è quella scritta in `enter.sh`
-   stesso, riga 17**: `printf '%s\n' "$PASSWORD" | bash /media/REMOTIX/enter.sh "…"` — la parola va
-   data **a `enter.sh`**, non a un `sudo` di prima.
-   ⇒ Rifatto così, **i due alberi si sono costruiti in 7 secondi l'uno**, `make -j` e tutto
-   (`13:18:16 → 13:18:30` UTC), con `OK make e' uscito 0` e le dodici marche dentro il binario.
-2. ⚠ **Il `tar` del codice non basta a far girare un banco.** `src` + `banchi/rcp` costruisce, ma
-   la sessione di prova la apre `banchi/01-b3-cliente.py`, che non c'era ⇒
-   `SESSIONE MORTA prima di aprirsi — python3: can't open file …`. ⭐ Rosso **immediato e
-   onesto**, in 20 secondi: il banco ha detto *quale* file mancava. ⇒ copiato tutto `banchi/*.py`
-   `*.sh` in tutt'e due gli alberi (`01-b3-cliente.py md5 13e68d19ed44298b7926cded53affdda`,
-   **lo stesso** dei due alberi del mattino: il metro non è cambiato).
+1. ⛔⛔ **`enter.sh` stayed hung for 13 minutes on `sudo`, and the cause is not what it seems.**
+   The script gave the password **once** (`printf 'nicfio\n' | sudo -S -v`) and then called
+   `bash /media/REMOTIX/enter.sh --root '…'`, counting on the credential being cached.
+   ⛔ **It is not**: `enter.sh` does its `sudo -n true`, which **fails**, and falls back on
+   `sudo -v -S -p 'Password sudo: '` — which starts reading from its own standard input, that is from
+   an `ssh` pipe **open and empty**. ⇒ process in `do_wait`, **zero log lines, zero
+   children, load 0.08**: the face of a slow compiler.
+   ⭐ **Why the credential is not inherited**: `sudo` by default keeps the mark **per terminal**
+   (`timestamp_type=tty`), and **without a tty it falls back on the parent process**. Two sibling processes are
+   two different parents ⇒ two different caches. ⛔ **The form that works is the one written in `enter.sh`
+   itself, line 17**: `printf '%s\n' "$PASSWORD" | bash /media/REMOTIX/enter.sh "…"` — the password must be
+   given **to `enter.sh`**, not to an earlier `sudo`.
+   ⇒ Redone this way, **the two trees built in 7 seconds each**, `make -j` and all
+   (`13:18:16 → 13:18:30` UTC), with `OK make e' uscito 0` and the twelve marks inside the binary.
+2. ⚠ **The `tar` of the code is not enough to run a bench.** `src` + `banchi/rcp` builds, but
+   the test session is opened by `banchi/01-b3-cliente.py`, which was not there ⇒
+   `SESSIONE MORTA prima di aprirsi — python3: can't open file …`. ⭐ An **immediate and
+   honest** red, in 20 seconds: the bench said *which* file was missing. ⇒ copied all of `banchi/*.py`
+   `*.sh` into both trees (`01-b3-cliente.py md5 13e68d19ed44298b7926cded53affdda`,
+   **the same** as the two trees of the morning: the yardstick has not changed).
 
-## 13.1 ⛔⭐⭐ P1 — LA CURA DELLA MEMORIA: i due binari appaiati
+## 13.1 ⛔⭐⭐ P1 — THE MEMORY CURE: the two binaries paired
 
-⛔ **La forma della prova**, e non è negoziabile: *«il curato non è morto»* non è un risultato — ha
-la stessa faccia di uno stimolo che non stimola. ⇒ **stessa porta, stessa cartella di lavoro,
-stessa scena, stessa perdita**, e l'unica variabile è la riga `webtransport.c` · `wt_scrivi()`.
+⛔ **The shape of the proof**, and it is not negotiable: *«the cured one did not die»* is not a result — it has
+the same face as a stimulus that does not stimulate. ⇒ **same port, same working folder,
+same scene, same loss**, and the only variable is the line `webtransport.c` · `wt_scrivi()`.
 
-⭐ **La trappola di glibc è verificata nel processo VIVO**, non nel copione:
-`MALLOC_MMAP_THRESHOLD_=32768 MALLOC_PERTURB_=165` letti da `/proc/PID/environ`.
+⭐ **The glibc trap is verified in the LIVE process**, not in the script:
+`MALLOC_MMAP_THRESHOLD_=32768 MALLOC_PERTURB_=165` read from `/proc/PID/environ`.
 
-### 13.1.1 ⛔⭐⭐⭐ IL MALATO È MORTO — *23 agosto 2026, 13:21:11 UTC*, e **il caso è chiuso senza margine**
+### 13.1.1 ⛔⭐⭐⭐ THE SICK ONE DIED — *23 Aug 2026, 13:21:11 UTC*, and **the case is closed without margin**
 
-`[M]` **Braccio MALATO** (`09c-mal-src`, `remotix md5 53a7e3be82f2a1f43afe6ead4398012d`), scena
-**film con la grana a schermo intero, 2560×1080**, sessione di `prova2`, trappola glibc armata e
-verificata nel processo vivo.
+`[M]` **SICK arm** (`09c-mal-src`, `remotix md5 53a7e3be82f2a1f43afe6ead4398012d`), scene
+**film with grain at full screen, 2560×1080**, `prova2` session, glibc trap armed and
+verified in the live process.
 
-| | atteso (**P1**) | `[M]` misurato |
+| | expected (**P1**) | `[M]` measured |
 |---|---|---|
-| muore? | ⛔ **sì, o la diagnosi di §4 è sbagliata** | ⭐ **SÌ**, alle **13:21:11** |
-| il segnale | `SEGV`, `error 4` | ⭐ `segfault at 7fc39818e4ca ip 00007fc39f338b49 **error 4** in libc.so.6[**162b49**…]` |
-| dove | sempre in `__memmove_avx_unaligned_erms` | ⭐ **lo stesso identico scostamento `162b49`** del crollo delle 08:28:10 |
-| il core | §4.7 punto 1 lo voleva **assoluto** | ⭐ **c'è**: `core.remotix.86418…`, **48 529 408 byte** |
+| does it die? | ⛔ **yes, or the diagnosis of §4 is wrong** | ⭐ **YES**, at **13:21:11** |
+| the signal | `SEGV`, `error 4` | ⭐ `segfault at 7fc39818e4ca ip 00007fc39f338b49 **error 4** in libc.so.6[**162b49**…]` |
+| where | always in `__memmove_avx_unaligned_erms` | ⭐ **the very same offset `162b49`** as the crash of 08:28:10 |
+| the core | §4.7 point 1 wanted it **absolute** | ⭐ **it is there**: `core.remotix.86418…`, **48 529 408 bytes** |
 
-⭐⭐⭐ **E il core ha dato la pila, cioè quel che §4.8 dichiarava `[?]` — «la ritrasmissione non è
-stata vista con gli occhi».** Adesso lo è:
+⭐⭐⭐ **And the core gave the stack, that is what §4.8 declared `[?]` — «the retransmission was not
+seen with the eyes».** Now it is:
 
 ```
 #0  __memmove_avx_unaligned_erms          ← libc, rip 0x…b49
@@ -2065,167 +2065,167 @@ stata vista con gli occhi».** Adesso lo è:
 #12 main at main.c:1395
 ```
 
-⛔ **È la catena scritta a mano in §4.8, riga per riga, adesso letta dal core.** ⇒ il `[?]` di §4.8
-**si chiude**: la causa non è più *«probabile con la riga»*, è **vista**.
+⛔ **It is the chain written by hand in §4.8, line by line, now read from the core.** ⇒ the `[?]` of §4.8
+**is closed**: the cause is no longer *«probable with the line»*, it is **seen**.
 
-⭐⭐ **E c'è di più — e cambia la ricetta.** L'ultima riga del registro, 300 ms prima della morte:
+⭐⭐ **And there is more — and it changes the recipe.** The last line of the log, 300 ms before the death:
 
 ```
 13:21:10.776 rcp  fotogramma 27 SPEDITO: delta 0x0302, codec 1, 2560x1080, 516782 byte di dati, stream 119, FIN
 ```
 
-⛔ **`516 782` byte — il gemello del `525 298` delle 08:28:09.** ⇒ **basta un fotogramma grosso: la
-perdita non serve.** Il server è morto **al fotogramma 27, in 13 secondi di sessione**, e
-⛔ **`netem loss 5%` non era ancora stato applicato** (arriva 13 s dopo, alle 13:21:24). ⚠ La
-ricetta **B** di §4.5 chiedeva la perdita vera; la **A** chiedeva il client congelato: `[M]`
-**non serve né l'una né l'altra**. Con `MALLOC_MMAP_THRESHOLD_=32768` bastano **un mezzo mega di
-delta e loopback pulito** — perché un fotogramma da 516 KB non entra in un pacchetto e ngtcp2
-rilegge **il nostro puntatore** al pacchetto dopo, che nel malato è già `munmap`-ato.
-⇒ **La ricetta più corta di tutte, e la più severa**: 27 fotogrammi contro **45 005**.
+⛔ **`516 782` bytes — the twin of the `525 298` of 08:28:09.** ⇒ **one large frame is enough: the
+loss is not needed.** The server died **at frame 27, in 13 seconds of session**, and
+⛔ **`netem loss 5%` had not been applied yet** (it arrives 13 s later, at 13:21:24). ⚠ Recipe
+**B** of §4.5 asked for real loss; **A** asked for the frozen client: `[M]`
+**neither is needed**. With `MALLOC_MMAP_THRESHOLD_=32768` **half a megabyte of
+delta and clean loopback** are enough — because a 516 KB frame does not fit in a packet and ngtcp2
+rereads **our pointer** at the next packet, which in the sick one is already `munmap`-ed.
+⇒ **The shortest recipe of all, and the harshest**: 27 frames against **45 005**.
 
-### 13.1.2 ⭐⭐⭐ IL CURATO HA RETTO — *13:22:35 → 13:25:03*, e lo stimolo era **più duro**
+### 13.1.2 ⭐⭐⭐ THE CURED ONE HELD — *13:22:35 → 13:25:03*, and the stimulus was **harder**
 
-`[M]` **Braccio CURATO** (`09c-src`, `remotix md5 162d2d105cbe930e7921a7041053f5e7`), **identico in
-tutto** al braccio malato: stessa porta 7920, stessa cartella `tmp/09c`, stessa sessione di
-`prova2` a 2560×1080, stesso film con la grana, stessa trappola glibc verificata nel processo vivo.
+`[M]` **CURED arm** (`09c-src`, `remotix md5 162d2d105cbe930e7921a7041053f5e7`), **identical in
+everything** to the sick arm: same port 7920, same folder `tmp/09c`, same `prova2`
+session at 2560×1080, same film with grain, same glibc trap verified in the live process.
 
-| | MALATO `09c-mal-src` | ⭐ CURATO `09c-src` |
+| | SICK `09c-mal-src` | ⭐ CURED `09c-src` |
 |---|---|---|
-| fotogrammi spediti | ⛔ **27**, poi morto | ⭐ **1 463** |
-| taglia mediana | — | **302 984** byte |
-| **taglia massima** | 516 782 (l'ultimo) | ⭐⭐ **537 063** byte — ⛔ **più grosso dei 525 298 che l'avevano ucciso stamattina** |
-| fotogrammi sopra i 32 KiB nei primi 6 s | 0 letti (morto prima) | ⭐ **173 su 173** — cioè **ogni** fotogramma passava dalla trappola |
-| `netem loss 5%` | ⛔ **non è nemmeno servito** | ⭐ **120 s interi** con la perdita addosso |
-| esito | ⛔ `SEGV` a 13:21:11 | ⭐ **VIVO**, nessun core, nessuna riga in `dmesg` |
+| frames sent | ⛔ **27**, then dead | ⭐ **1 463** |
+| median size | — | **302 984** bytes |
+| **maximum size** | 516 782 (the last) | ⭐⭐ **537 063** bytes — ⛔ **larger than the 525 298 that had killed it this morning** |
+| frames above 32 KiB in the first 6 s | 0 read (dead before) | ⭐ **173 out of 173** — that is **every** frame went through the trap |
+| `netem loss 5%` | ⛔ **it was not even needed** | ⭐ **120 whole s** with the loss on it |
+| outcome | ⛔ `SEGV` at 13:21:11 | ⭐ **ALIVE**, no core, no line in `dmesg` |
 
-⛔⛔ **E lo stimolo del curato è stato PIÙ severo di quello che ha ucciso il malato**, non meno: più
-fotogrammi (1 463 contro 27), più grossi (fino a 537 063 byte), e per giunta **con il 5 % di
-perdita**. ⇒ *«il curato non è morto»* qui **non** ha la faccia di uno stimolo che non stimola.
+⛔⛔ **And the stimulus of the cured one was HARSHER than the one that killed the sick one**, not less: more
+frames (1 463 against 27), larger (up to 537 063 bytes), and on top of that **with 5 %
+loss**. ⇒ *«the cured one did not die»* here does **not** have the face of a stimulus that does not stimulate.
 
-### 13.1.3 ⭐ LA GRANDEZZA CHE DICE SE LA CURA PERDE MEMORIA — e non ne perde
+### 13.1.3 ⭐ THE QUANTITY THAT TELLS WHETHER THE CURE LEAKS MEMORY — and it does not leak
 
-La riga della chiusura, `13:25:35.869` (`webtransport.c` · `wt_libera()`):
+The closing line, `13:25:35.869` (`webtransport.c` · `wt_libera()`):
 
 ```
 ⭐ FASE 9, i byte TENUTI per la ritrasmissione (contratto di ngtcp2_conn_writev_stream):
    punta 537063 byte, residuo alla chiusura 31, e 1185696 byte ancora da spedire in coda
 ```
 
-| grandezza | atteso | `[M]` |
+| quantity | expected | `[M]` |
 |---|---|---|
-| `byte_in_volo_max` (la punta) | ⭐ **oscilla**, non cresce | **537 063** byte = **esattamente un fotogramma**, il più grosso della sessione. ⛔ In 1 463 fotogrammi sono passati **~443 MB**: se trattenesse senza liberare, la punta sarebbe quella. ⇒ **la cura libera** |
-| residuo alla chiusura | **zero** | ⚠ **31 byte** — non zero, ma **31**: la coda di uno stream ancora non riscontrato nell'istante di uno strappo brutale (il cliente ucciso, col 5 % di perdita addosso). ⛔ **Lo dichiaro invece di arrotondarlo**: è il verde, non il pieno verde |
-| byte ancora in coda | — | 1 185 696 — quel che non era ancora partito quando il cliente è sparito |
+| `byte_in_volo_max` (the peak) | ⭐ **oscillates**, does not grow | **537 063** bytes = **exactly one frame**, the largest of the session. ⛔ In 1 463 frames **~443 MB** passed: if it held without freeing, the peak would be that. ⇒ **the cure frees** |
+| residue at closing | **zero** | ⚠ **31 bytes** — not zero, but **31**: the tail of a stream not yet acknowledged at the instant of a brutal tear (the client killed, with 5 % loss on it). ⛔ **I declare it instead of rounding it**: it is green, not full green |
+| bytes still in the queue | — | 1 185 696 — what had not left yet when the client disappeared |
 
-⭐ **E la stessa riga di chiusura porta il numero che serve a P2**, con l'interruttore **spento**:
+⭐ **And the same closing line carries the number P2 needs**, with the switch **off**:
 
 ```
 ⭐ FASE 9, la soglia della coda video: spenta (I6) (0 ms) — delta TENUTI 0,
    abbandonati per soglia 594, e NON ACCETTATI per credito mancato 0
 ```
 
-⇒ ⛔ **594 delta abbandonati** in 178 s di film duro col 5 % di perdita, e **`credito mancato` = 0**:
-il debito **non** viene dalla causa 4 di §2.3.
+⇒ ⛔ **594 deltas abandoned** in 178 s of hard film with 5 % loss, and **`credito mancato` = 0**:
+the debt does **not** come from cause 4 of §2.3.
 
-### 13.1.4 ⛔ VERDETTO SU P1 — **la previsione ha retto, e più di quanto chiedeva**
+### 13.1.4 ⛔ VERDICT ON P1 — **the prediction held, and more than it asked**
 
 | | |
 |---|---|
-| **il crollo si riproduce** | ⭐ **SÌ** — e con una ricetta **più corta** di tutt'e tre quelle di §4.5 |
-| **la cura regge** | ⭐ **SÌ**, appaiata, sullo stesso ferro e con lo stimolo più duro |
-| **la causa è vista, non dedotta** | ⭐ **SÌ** — la pila dal core chiude il `[?]` di §4.8 |
-| **la memoria non si perde** | ⭐ **SÌ** — la punta vale un fotogramma su ~443 MB passati |
+| **the crash reproduces** | ⭐ **YES** — and with a recipe **shorter** than all three of §4.5 |
+| **the cure holds** | ⭐ **YES**, paired, on the same hardware and with the harder stimulus |
+| **the cause is seen, not deduced** | ⭐ **YES** — the stack from the core closes the `[?]` of §4.8 |
+| **memory is not lost** | ⭐ **YES** — the peak is worth one frame out of ~443 MB passed |
 
-⚠ **E i due difetti del banco che vanno detti** (nessuno cambia l'esito, tutt'e due cambiano il
-banco):
-1. `09-b73-memoria.py` **legge la riga `byte TENUTI` troppo presto** — la cerca 3 s dopo la morte del
-   cliente, e il server la scrive quando smonta la sessione WebTransport. ⇒ il banco ha stampato
-   *«(nessuna riga «byte TENUTI»)»* mentre la riga **c'era**, scritta 3 secondi dopo. ⛔ È la forma
-   cattiva: **un'assenza che sembra un risultato**;
-2. `b71.pulizia()` **non guarda Firefox**. Il suo `pgrep` copre `04-b30-scena`, `01-b3-cliente`,
-   `b70-ritmo`, `b65-datagram` — ⛔ **non `firefox`**. ⇒ per tutt'e due i bracci è rimasto vivo un
-   Firefox orfano del banco `09-b74` nella sessione di `prova` (uid 1001), e il banco ha detto
-   *«altri banchi vivi: nessuno»*. ⚠ Non tocca l'esito (è la **stessa** sporcizia nei due bracci, ed
-   era su un'altra sessione), ma è **precisamente il difetto che ha già prodotto oggi numeri
-   plausibili e sbagliati**.
+⚠ **And the two bench defects that must be told** (neither changes the outcome, both change the
+bench):
+1. `09-b73-memoria.py` **reads the `byte TENUTI` line too early** — it looks for it 3 s after the death of the
+   client, and the server writes it when it tears down the WebTransport session. ⇒ the bench printed
+   *«(no «byte TENUTI» line)»* while the line **was there**, written 3 seconds later. ⛔ It is the bad
+   form: **an absence that looks like a result**;
+2. `b71.pulizia()` **does not look at Firefox**. Its `pgrep` covers `04-b30-scena`, `01-b3-cliente`,
+   `b70-ritmo`, `b65-datagram` — ⛔ **not `firefox`**. ⇒ for both arms an orphan
+   Firefox of bench `09-b74` stayed alive in the `prova` session (uid 1001), and the bench said
+   *«other benches alive: none»*. ⚠ It does not touch the outcome (it is the **same** dirt in both arms, and it
+   was on another session), but it is **precisely the defect that has already produced plausible and wrong
+   numbers today**.
 
-### 13.1.5 ⭐⭐ IL CROLLO SI RIPRODUCE **DUE VOLTE SU DUE** — e il terzo inciampo del banco
+### 13.1.5 ⭐⭐ THE CRASH REPRODUCES **TWO TIMES OUT OF TWO** — and the third stumble of the bench
 
-⛔ **Il core di 13.1.1 non c'è più, e l'ho cancellato io senza volerlo.** `09-b73-memoria.py`
-comincia ogni braccio con `rm -f registro.log core.*` — serve a non mescolare i due giri, ⛔ **ma
-butta anche la prova del braccio prima.** ⇒ Facendo girare il braccio *curato* ho distrutto il core
-del *malato*. ⭐ La **pila** era già stata letta e sta qui sopra: quel che si è perso è il file.
+⛔ **The core of 13.1.1 is no longer there, and I deleted it without meaning to.** `09-b73-memoria.py`
+starts every arm with `rm -f registro.log core.*` — it serves not to mix the two rounds, ⛔ **but
+it also throws away the proof of the previous arm.** ⇒ Running the *cured* arm I destroyed the core
+of the *sick* one. ⭐ The **stack** had already been read and is here above: what was lost is the file.
 
-⭐⭐ **E rifarlo è costato due minuti, con un guadagno**: il crollo si è riprodotto **una seconda
-volta, identico**.
+⭐⭐ **And redoing it cost two minutes, with a gain**: the crash reproduced **a second
+time, identical**.
 
-| | primo giro | ⭐ secondo giro |
+| | first round | ⭐ second round |
 |---|---|---|
-| ora | **13:21:11** | **14:03:24** |
-| segnale | `segfault … error 4 in libc.so.6[**162b49**…]` | `segfault … error 4 in libc.so.6[**162b49**…]` |
-| tempo per morire | **0,3 s** dall'inizio dell'attesa | **0,3 s** |
-| core | (cancellato) | ⭐ `core.remotix.110832.1787493803`, **48 525 312 byte** |
+| time | **13:21:11** | **14:03:24** |
+| signal | `segfault … error 4 in libc.so.6[**162b49**…]` | `segfault … error 4 in libc.so.6[**162b49**…]` |
+| time to die | **0.3 s** from the start of the wait | **0.3 s** |
+| core | (deleted) | ⭐ `core.remotix.110832.1787493803`, **48 525 312 bytes** |
 
-⇒ ⛔ **Due su due, stesso scostamento in libc, stesso codice d'errore.** Non è un caso raro da
-1 su 45 005: **con la trappola armata è deterministico.**
+⇒ ⛔ **Two out of two, same offset in libc, same error code.** It is not a rare case of
+1 in 45 005: **with the trap armed it is deterministic.**
 
-⚠ **La correzione da fare al banco** (non l'ho fatta: `src/` e i banchi non si toccano stasera):
-`09-b73` deve cancellare **solo il registro**, e mettere i core in una cartella per braccio.
+⚠ **The correction to make to the bench** (I did not make it: `src/` and the benches are not touched tonight):
+`09-b73` must delete **only the log**, and put the cores in a folder per arm.
 
-## 13.2 ⭐⭐ P2/P3 — LA SOGLIA SULLA CODA, sul gradino, appaiata
+## 13.2 ⭐⭐ P2/P3 — THE QUEUE THRESHOLD, on the step, paired
 
-**Il giro**: 8 s larga → **3 s a 10 Mbit/s** → 17 s larga, scena `barra`, **1920×1080**, sessione di
-`prova2`, `netem` solo sulla 7920 di `lo` col guardiano armato. ⛔ Trappola glibc **spenta**
-(`MALLOC=no`) in tutt'e due i bracci: `MALLOC_MMAP_THRESHOLD_` è lenta, e lasciarla accesa
-avrebbe misurato **lei** invece della soglia.
+**The round**: 8 s wide → **3 s at 10 Mbit/s** → 17 s wide, scene `barra`, **1920×1080**, `prova2`
+session, `netem` only on 7920 on `lo` with the guardian armed. ⛔ glibc trap **off**
+(`MALLOC=no`) in both arms: `MALLOC_MMAP_THRESHOLD_` is slow, and leaving it on
+would have measured **it** instead of the threshold.
 
-### 13.2.1 `[M]` IL BRACCIO A INTERRUTTORE SPENTO — *13:27:20 → 13:28:0x*, e serve da metro
+### 13.2.1 `[M]` THE ARM WITH THE SWITCH OFF — *13:27:20 → 13:28:0x*, and it serves as the yardstick
 
-`⭐ FASE 9, la soglia della coda video: **spenta (I6) (0 ms)**` — letto dal registro del server.
+`⭐ FASE 9, la soglia della coda video: **spenta (I6) (0 ms)**` — read from the server's log.
 
-| s | fot | chiavi | abbandoni §5.1 | filo Mbit/s | fase |
+| s | frames | keyframes | abandons §5.1 | wire Mbit/s | phase |
 |---|---|---|---|---|---|
-| 5-7 | 40-41 | **0** | **0** | 21,1-21,5 | larga |
-| **8** | 21 | ⛔ **6** | ⛔ **6** | 9,87 | **stretta** |
-| **9** | 25 | ⛔ **6** | ⛔ **6** | 9,14 | **stretta** |
-| **10** | 22 | ⛔ **6** | ⛔ **7** | 9,87 | **stretta** |
-| 11 | 28 | 4 | 3 | 16,87 | (ritorno) |
-| 12-27 | 39-42 | **0** | **0** | 20,4-23,0 | larga |
+| 5-7 | 40-41 | **0** | **0** | 21.1-21.5 | wide |
+| **8** | 21 | ⛔ **6** | ⛔ **6** | 9.87 | **narrow** |
+| **9** | 25 | ⛔ **6** | ⛔ **6** | 9.14 | **narrow** |
+| **10** | 22 | ⛔ **6** | ⛔ **7** | 9.87 | **narrow** |
+| 11 | 28 | 4 | 3 | 16.87 | (return) |
+| 12-27 | 39-42 | **0** | **0** | 20.4-23.0 | wide |
 
-⭐ **`abbandoni` = `chiavi`, uno a uno, a ogni secondo** (6↔6, 6↔6, 7↔6): §3.10 si riproduce
-**identico**, ed è il meccanismo della spirale visto in diretta.
-⭐ **E il ritorno è immediato**: dal secondo 12 si è già a 40/s con **zero** chiavi — nessuna
-isteresi, nessuno strascico in 16 s.
-⚠ **Un numero che NON coincide col «prima» citato**: `[M]` di stamattina dava **13-14 fot/s** nei
-secondi 8-10; qui sono **21-25**. ⛔ Lo dichiaro invece di lisciarlo — il metro del *prima* e quello
-di adesso non sono lo stesso giro, e **il paragone che vale è quello appaiato di qui sotto**, preso
-a mezz'ora di distanza sulla stessa porta, stessa scena, stessa tela, stesso binario.
+⭐ **`abbandoni` = `chiavi`, one to one, at every second** (6↔6, 6↔6, 7↔6): §3.10 reproduces
+**identically**, and it is the mechanism of the spiral seen live.
+⭐ **And the return is immediate**: from second 12 it is already at 40/s with **zero** keyframes — no
+hysteresis, no aftermath in 16 s.
+⚠ **A number that does NOT match the cited «before»**: this morning's `[M]` gave **13-14 fps** in
+seconds 8-10; here they are **21-25**. ⛔ I declare it instead of smoothing it — the yardstick of the *before* and that
+of now are not the same round, and **the comparison that holds is the paired one below**, taken
+half an hour apart on the same port, same scene, same canvas, same binary.
 
-### 13.2.2 ⛔⭐ IL BRACCIO CON `--sgombra-soglia-ms 100` — *13:28:26 → 13:29:1x*: **il meccanismo gira, l'effetto promesso NON arriva**
+### 13.2.2 ⛔⭐ THE ARM WITH `--sgombra-soglia-ms 100` — *13:28:26 → 13:29:1x*: **the mechanism runs, the promised effect does NOT arrive**
 
 `⭐ FASE 9, soglia della coda video (§5.1): **100 ms** … Impostata da: main.c, dalla riga di comando`
-— letto dal registro del server, non dedotto dal comando.
+— read from the server's log, not deduced from the command.
 
-| s | fot **spenta → 100 ms** | chiavi **spenta → 100** | abbandoni **spenta → 100** |
+| s | frames **off → 100 ms** | keyframes **off → 100** | abandons **off → 100** |
 |---|---|---|---|
-| 5-7 (larga) | 39-41 → **39-40** | 0 → **0** | 0 → **0** |
+| 5-7 (wide) | 39-41 → **39-40** | 0 → **0** | 0 → **0** |
 | **8** | 21 → **29** | 6 → **4** | 6 → **6** |
 | **9** | 25 → **26** | 6 → **5** | 6 → ⛔ **9** |
 | **10** | 22 → **21** | 6 → **5** | 7 → **5** |
-| 11 (ritorno) | 28 → **34** | 4 → **3** | 3 → **3** |
-| 12-27 (larga) | 39-42 → **39-42** | 0 → **0** | 0 → **0** |
+| 11 (return) | 28 → **34** | 4 → **3** | 3 → **3** |
+| 12-27 (wide) | 39-42 → **39-42** | 0 → **0** | 0 → **0** |
 
-| la previsione (**P3** e S.5) | `[M]` | esito |
+| the prediction (**P3** and S.5) | `[M]` | outcome |
 |---|---|---|
-| fot/s nei sec 8-10 **≥ 25** | **29 · 26 · 21** | ⚠ **due su tre** |
-| chiavi/s **≤ 2** | **4 · 5 · 5** | ⛔ **NO** |
-| abbandoni/s **≤ 2** | **6 · 9 · 5** | ⛔ **NO** — e al secondo 9 sono **saliti** |
-| secondi 7 e 12 **identici** a interruttore spento | 40/39 e 40/39, **0 chiavi** in tutt'e quattro | ⭐ **SÌ — la cura è INERTE sulla linea larga** |
-| ritorno **≥ 32/s** entro un secondo | sec 11 **34/s**, sec 12 **39/s** | ⭐ **SÌ**, e meglio del braccio spento (28) |
-| ⭐ **`arretrato` deve salire a 2-3** (oggi zero per costruzione) | **2 (14 volte) · 3 (19) · 4 (6)** | ⭐⭐ **SÌ, e arriva a 4** |
+| fps in sec 8-10 **≥ 25** | **29 · 26 · 21** | ⚠ **two out of three** |
+| keyframes/s **≤ 2** | **4 · 5 · 5** | ⛔ **NO** |
+| abandons/s **≤ 2** | **6 · 9 · 5** | ⛔ **NO** — and at second 9 they **rose** |
+| seconds 7 and 12 **identical** to the switch off | 40/39 and 40/39, **0 keyframes** in all four | ⭐ **YES — the cure is INERT on the wide line** |
+| return **≥ 32/s** within one second | sec 11 **34/s**, sec 12 **39/s** | ⭐ **YES**, and better than the arm off (28) |
+| ⭐ **`arretrato` must rise to 2-3** (today zero by construction) | **2 (14 times) · 3 (19) · 4 (6)** | ⭐⭐ **YES, and it reaches 4** |
 
-⭐⭐ **E il meccanismo si vede lavorare, riga per riga**: **17 attraversamenti SOPRA** la soglia e
-**17 ritorni SOTTO** nei 3 secondi di stretta, con le righe che dicono da sé che cosa hanno fatto:
+⭐⭐ **And the mechanism can be seen working, line by line**: **17 crossings ABOVE** the threshold and
+**17 returns BELOW** in the 3 seconds of squeeze, with the lines saying by themselves what they did:
 
 ```
 ⛔ la coda del video passa SOPRA la soglia (135475 byte = 114 ms, soglia 100 ms,
@@ -2234,70 +2234,70 @@ a mezz'ora di distanza sulla stessa porta, stessa scena, stessa tela, stesso bin
    i 2 delta arretrati si TENGONO — §5.1 dice PUO', non DEVE
 ```
 
-### 13.2.3 ⛔⛔ LA DIAGNOSI, E LA CURA VA TARATA NEL VERSO **OPPOSTO** A QUELLO PREVISTO
+### 13.2.3 ⛔⛔ THE DIAGNOSIS, AND THE CURE MUST BE TUNED IN THE DIRECTION **OPPOSITE** TO THE PREDICTED ONE
 
-⛔ **P3 aveva già scritto il rimedio per questo caso, e lo scriveva al contrario**: *«i fot/s non
-salgono ⇒ soglia troppo alta, **si scende a 50**»*. ⭐ **I byte dicono di salire.** Ecco perché — i
-**17** valori a cui la coda ha attraversato la soglia, in ms:
+⛔ **P3 had already written the remedy for this case, and wrote it backwards**: *«fps do not
+rise ⇒ threshold too high, **go down to 50**»*. ⭐ **The bytes say go up.** Here is why — the
+**17** values at which the queue crossed the threshold, in ms:
 
 ```
 101 · 103 · 106 · 109 · 113 · 114 · 116 · 117 · 117 · 120 · 125 · 126 · 126 · 128 · 134 · 135 · 138
 ```
 
-⛔ **Sono TUTTI fra 101 e 138.** Durante la stretta la coda del video **oscilla proprio attorno ai
-100 ms**: la soglia è piantata **in mezzo all'oscillazione**, e ogni mezzo respiro la fa
-attraversare. ⇒ La cura passa metà del tempo a **tenere** e metà ad **abbandonare**, e il totale
-degli abbandoni resta **23 contro 24** — cioè **nessuna differenza**.
-⛔ **Con la soglia a 50 ms l'attraversamento sarebbe sempre in corso e la cura tornerebbe a
-`sgombra` puro**, cioè peggio. ⇒ **il verso giusto è ALZARLA**, e la previsione da falsificare
-adesso è: *a 200 ms gli attraversamenti crollano, chiavi e abbandoni con loro*.
+⛔ **They are ALL between 101 and 138.** During the squeeze the video queue **oscillates right around
+100 ms**: the threshold is planted **in the middle of the oscillation**, and every half breath makes it
+cross. ⇒ The cure spends half the time **keeping** and half **abandoning**, and the total
+of abandons stays **23 against 24** — that is **no difference**.
+⛔ **With the threshold at 50 ms the crossing would always be in progress and the cure would go back to
+pure `sgombra`**, that is worse. ⇒ **the right direction is to RAISE it**, and the prediction to falsify
+now is: *at 200 ms the crossings collapse, keyframes and abandons with them*.
 
-### 13.2.4 ⭐⭐⭐ LA PROVA CHE DECIDE — *a 200 ms gli attraversamenti NON crollano: si spostano*
+### 13.2.4 ⭐⭐⭐ THE PROOF THAT DECIDES — *at 200 ms the crossings do NOT collapse: they move*
 
-`[M]` 13:30. Stesso giro, `--sgombra-soglia-ms 200`. I **14** valori a cui la coda ha attraversato:
+`[M]` 13:30. Same round, `--sgombra-soglia-ms 200`. The **14** values at which the queue crossed:
 
 ```
 204 · 206 · 209 · 211 · 211 · 212 · 219 · 221 · 222 · 222 · 224 · 225 · 227 · 236 ms
 ```
 
-⛔⛔ **Di nuovo tutti appena SOPRA la soglia, come a 100 erano tutti fra 101 e 138.**
+⛔⛔ **Again all just ABOVE the threshold, as at 100 they were all between 101 and 138.**
 
-⭐⭐⭐ **E questa è la scoperta della sera, e cambia il modo di leggere la cura 2**: la soglia
-**non è un filtro, è il PUNTO DI LAVORO della coda.** `video_sgombra()` abbandona non appena la
-coda supera la soglia ⇒ **la coda non può mai andare molto sopra**, qualunque numero si scelga: si
-assesta appena oltre. ⇒ Il numero degli abbandoni **non lo decide la soglia**: lo decide lo scarto
-fra quanto entra e quanto esce. La soglia decide **quanto in profondità si accumula prima di
-abbandonare**, cioè **quanto ritardo si paga**.
+⭐⭐⭐ **And this is the discovery of the evening, and it changes the way of reading cure 2**: the threshold
+**is not a filter, it is the WORKING POINT of the queue.** `video_sgombra()` abandons as soon as the
+queue exceeds the threshold ⇒ **the queue can never go much above it**, whatever number is chosen: it
+settles just beyond. ⇒ The number of abandons **is not decided by the threshold**: it is decided by the gap
+between how much goes in and how much comes out. The threshold decides **how deep it accumulates before
+abandoning**, that is **how much delay is paid**.
 
-| | spenta | **100 ms** | **200 ms** |
+| | off | **100 ms** | **200 ms** |
 |---|---|---|---|
-| fotogrammi nei 3 s | 68 | 76 | **79** |
-| ⛔ **chiavi** nei 3 s | **18** | 14 | **11** |
-| abbandoni §5.1, tutto il giro | 24 | 23 | **18** |
-| kbyte consegnati nei 3 s | 3 896 | 4 300 | **4 476** (+15 %) |
-| ⚠ **`arretrato`** (il prezzo) | 0-1 per costruzione | 2 (14×) · 3 (19×) · **4** (6×) | 3 · **4** (15×) · **5** (10×) · **6** (6×) |
-| ⚠ **il ritardo pagato** | — | 101-138 ms | ⛔ **204-236 ms** |
+| frames in the 3 s | 68 | 76 | **79** |
+| ⛔ **keyframes** in the 3 s | **18** | 14 | **11** |
+| abandons §5.1, whole round | 24 | 23 | **18** |
+| kbytes delivered in the 3 s | 3 896 | 4 300 | **4 476** (+15 %) |
+| ⚠ **`arretrato`** (the price) | 0-1 by construction | 2 (14×) · 3 (19×) · **4** (6×) | 3 · **4** (15×) · **5** (10×) · **6** (6×) |
+| ⚠ **the delay paid** | — | 101-138 ms | ⛔ **204-236 ms** |
 
-⭐ **C'è un miglioramento, ed è monotòno**: più alta la soglia, più fotogrammi e meno chiavi.
-⛔ **Ma è LONTANO da quel che P3 prometteva** — *chiavi ≤ 2/s* è uscito **3-5/s**, e *abbandoni
-≤ 2/s* è uscito **5-6/s**. ⇒ **P3 è SMENTITA sui due numeri che contavano**, e confermata su quelli
-di contorno (inerzia sulla linea larga, ritorno sotto il secondo).
+⭐ **There is an improvement, and it is monotonic**: the higher the threshold, the more frames and the fewer keyframes.
+⛔ **But it is FAR from what P3 promised** — *keyframes ≤ 2/s* came out **3-5/s**, and *abandons
+≤ 2/s* came out **5-6/s**. ⇒ **P3 is REFUTED on the two numbers that counted**, and confirmed on the
+side ones (inertia on the wide line, return under one second).
 
-⛔⛔ **E il prezzo per l'utente va corretto verso l'alto.** S.5 dichiarava *«fino a ~150 ms di
-ritardo per un attimo (~205 ms dal gesto al pixel)»*. `[M]` a soglia 100 la coda arriva a **138 ms**
-(⇒ ~193 ms d'anello) e **a soglia 200 arriva a 236 ms** (⇒ **~291 ms d'anello**). ⚠ La stima di
-S.5 era **giusta per 100 ms e sbagliata per qualunque taratura più generosa**, e la taratura più
-generosa è proprio quella che dà l'immagine migliore. ⛔ **È il compromesso che decide lui, e adesso
-ha i due numeri.**
+⛔⛔ **And the price for the user must be corrected upwards.** S.5 declared *«up to ~150 ms of
+delay for a moment (~205 ms from gesture to pixel)»*. `[M]` at threshold 100 the queue reaches **138 ms**
+(⇒ ~193 ms of loop) and **at threshold 200 it reaches 236 ms** (⇒ **~291 ms of loop**). ⚠ The estimate of
+S.5 was **right for 100 ms and wrong for any more generous tuning**, and the more
+generous tuning is precisely the one that gives the best image. ⛔ **It is the compromise he decides, and now
+he has the two numbers.**
 
-⭐ **E una cosa la soglia l'ha fatta bene, ed è il suo prerequisito**: ha portato `arretrato` da
-**0-1 per costruzione** a **2-6**. ⇒ `WT_RITMO_POSTI = 2` è **superato di continuo**, e il
-regolatore del ritmo — che senza la soglia non scatterebbe mai — adesso **può** scattare.
+⭐ **And one thing the threshold did well, and it is its prerequisite**: it brought `arretrato` from
+**0-1 by construction** to **2-6**. ⇒ `WT_RITMO_POSTI = 2` is **exceeded continuously**, and the
+rate regulator — which without the threshold would never fire — now **can** fire.
 
-## 13.3 ⭐⭐⭐ P7 — IL REGOLATORE DEL RITMO: **la spirale si spegne, e i due contatori vanno a ZERO**
+## 13.3 ⭐⭐⭐ P7 — THE RATE REGULATOR: **the spiral switches off, and the two counters go to ZERO**
 
-**Il giro**: identico ai tre di sopra — 8 s larga → 3 s a 10 Mbit/s → 17 s larga, `barra`,
-1920×1080 — con `--sgombra-soglia-ms 100 --ritmo-adattivo`. Le due righe d'avvio, **testuali**:
+**The round**: identical to the three above — 8 s wide → 3 s at 10 Mbit/s → 17 s wide, `barra`,
+1920×1080 — with `--sgombra-soglia-ms 100 --ritmo-adattivo`. The two startup lines, **verbatim**:
 
 ```
 ⭐ FASE 9, soglia della coda video (§5.1): 100 ms … Impostata da: main.c, dalla riga di comando
@@ -2305,47 +2305,47 @@ regolatore del ritmo — che senza la soglia non scatterebbe mai — adesso **pu
    quando 2 delta in volo hanno ancora byte nella mia coda d'uscita
 ```
 
-### 13.3.1 ⛔⭐⭐⭐ I QUATTRO BRACCI, AFFIANCATI — *e il quarto non somiglia agli altri tre*
+### 13.3.1 ⛔⭐⭐⭐ THE FOUR ARMS, SIDE BY SIDE — *and the fourth does not resemble the other three*
 
-| nei 3 s di stretta | spenta | soglia 100 | soglia 200 | ⭐⭐ **100 + ritmo** |
+| in the 3 s of squeeze | off | threshold 100 | threshold 200 | ⭐⭐ **100 + rate** |
 |---|---|---|---|---|
-| fotogrammi/s | 21 · 25 · 22 | 29 · 26 · 21 | 31 · 23 · 25 | 26 · 23 · **20** |
-| ⛔ **CHIAVI/s** | **6 · 6 · 6** | 4 · 5 · 5 | 3 · 5 · 3 | ⭐⭐⭐ **0 · 0 · 0** |
-| ⛔ **abbandoni §5.1/s** | **6 · 6 · 7** | 6 · 9 · 5 | 5 · 6 · 5 | ⭐⭐⭐ **0 · 0 · 0** |
-| chiavi in tutto il giro | 18 | 14 | 11 | ⭐ **0** |
-| abbandoni in tutto il giro | 24 | 23 | 18 | ⭐ **0** |
-| sulla linea larga (sec 0-7, 12-28) | 39-42 fot/s, 0 chiavi | idem | idem | ⭐ **idem: 37-41 fot/s, 0 chiavi** |
+| frames/s | 21 · 25 · 22 | 29 · 26 · 21 | 31 · 23 · 25 | 26 · 23 · **20** |
+| ⛔ **KEYFRAMES/s** | **6 · 6 · 6** | 4 · 5 · 5 | 3 · 5 · 3 | ⭐⭐⭐ **0 · 0 · 0** |
+| ⛔ **abandons §5.1/s** | **6 · 6 · 7** | 6 · 9 · 5 | 5 · 6 · 5 | ⭐⭐⭐ **0 · 0 · 0** |
+| keyframes in the whole round | 18 | 14 | 11 | ⭐ **0** |
+| abandons in the whole round | 24 | 23 | 18 | ⭐ **0** |
+| on the wide line (sec 0-7, 12-28) | 39-42 fps, 0 keyframes | same | same | ⭐ **same: 37-41 fps, 0 keyframes** |
 
-⛔⛔ **La spirale non è stata attenuata: è stata SPENTA.** Zero chiavi e zero abbandoni in tutto il
-giro — e non perché la soglia abbia lavorato meglio, ⭐ **ma perché non ha dovuto lavorare affatto**:
-`passa SOPRA la soglia` **0 volte**, `torna SOTTO` **0 volte**. Il regolatore tiene `arretrato`
-inchiodato a **2**, e la coda non arriva mai ai 100 ms che sveglierebbero `video_sgombra()`.
-⇒ **Le due cure non si sommano: la 6 rende la 2 inutile sul gradino.**
+⛔⛔ **The spiral was not attenuated: it was SWITCHED OFF.** Zero keyframes and zero abandons in the whole
+round — and not because the threshold worked better, ⭐ **but because it did not have to work at all**:
+`passa SOPRA la soglia` **0 times**, `torna SOTTO` **0 times**. The regulator keeps `arretrato`
+nailed at **2**, and the queue never reaches the 100 ms that would wake `video_sgombra()`.
+⇒ **The two cures do not add up: 6 makes 2 useless on the step.**
 
-### 13.3.2 ⭐⭐ IL CONTROLLO DI §6.5, quello *«che invalida tutto il banco»* — **superato**
+### 13.3.2 ⭐⭐ THE CHECK OF §6.5, the one *«that invalidates the whole bench»* — **passed**
 
-`LEZIONI.md` §1.9: un contatore a zero su un ramo mai percorso non dimostra niente. La riga di
-`ritmo_ciclo()` risponde, **una al secondo**:
+`LEZIONI.md` §1.9: a counter at zero on a branch never travelled proves nothing. The line of
+`ritmo_ciclo()` answers, **one per second**:
 
-| ora | `arretrato` LETTO | massimo | discese nel secondo | in tutto |
+| time | `arretrato` READ | maximum | descents in the second | in total |
 |---|---|---|---|---|
-| 13:32:19-27 (larga) | ⭐ **36-42 volte/s** | **0** | **0** | 0 |
+| 13:32:19-27 (wide) | ⭐ **36-42 times/s** | **0** | **0** | 0 |
 | **13:32:28** | 40 | **2** | ⛔ **13** | 13 |
 | **13:32:29** | 40 | **2** | ⛔ **17** | 30 |
 | **13:32:30** | 38 | **2** | ⛔ **17** | 47 |
-| **13:32:31** (ritorno) | 38 | **2** | 10 | **57** |
-| 13:32:32-48 (larga) | ⭐ **38-42 volte/s** | **0** | **0** | ⭐ **57, e resta 57** |
+| **13:32:31** (return) | 38 | **2** | 10 | **57** |
+| 13:32:32-48 (wide) | ⭐ **38-42 times/s** | **0** | **0** | ⭐ **57, and it stays 57** |
 
-⭐⭐ **Le letture ci sono — 36-42 al secondo — e valgono ZERO.** ⇒ Non è *«un anello mai
-percorso»* (il rosso **d** di `ritmo_frena()`): è **percorso 40 volte al secondo, e la risposta è
-«non c'è niente da fare»**. È esattamente il comportamento che S.5 chiamava *parapetto*.
+⭐⭐ **The reads are there — 36-42 per second — and they are worth ZERO.** ⇒ It is not *«a loop never
+travelled»* (red **d** of `ritmo_frena()`): it is **travelled 40 times a second, and the answer is
+«there is nothing to do»**. It is exactly the behaviour S.5 called *parapet*.
 
-### 13.3.3 ⭐ DUE RIGHE PER EPISODIO, non una per fotogramma — e il RISALE arriva
+### 13.3.3 ⭐ TWO LINES PER EPISODE, not one per frame — and the RISALE arrives
 
-`[M]` **5 discese e 5 risalite**, 10 righe in tutto per **57** fotogrammi trattenuti (il difetto dei
-30,8 GB di registro non si ripete):
+`[M]` **5 descents and 5 climb-backs**, 10 lines in all for **57** frames held back (the defect of the
+30.8 GB of log does not repeat):
 
-| episodio | durata | fotogrammi restati indietro | `cwnd_left` alla discesa |
+| episode | duration | frames held back | `cwnd_left` at the descent |
 |---|---|---|---|
 | 1 | 158 ms | 4 | **0** |
 | 2 | 841 ms | 16 | 51 466 |
@@ -2353,159 +2353,159 @@ percorso»* (il rosso **d** di `ritmo_frena()`): è **percorso 40 volte al secon
 | 4 | ⚠ **1 385 ms** | 25 | **0** |
 | 5 | 68 ms | 2 | 264 318 |
 
-⭐ **Il RISALE dopo il ritorno della linea è dentro il secondo**: l'episodio 4 è cominciato alle
-`13:32:30.071`, **dentro** la stretta, e si è chiuso alle `13:32:31.455` — la linea si era riaperta
-a `13:32:31.1`, quindi **355 ms dopo**. ⚠ *«durato 1 385 ms»* **non** smentisce *«RISALE entro 1 s»*:
-il cronometro giusto parte dal ritorno della linea, non dall'inizio dell'episodio.
+⭐ **The RISALE after the line comes back is within the second**: episode 4 started at
+`13:32:30.071`, **inside** the squeeze, and closed at `13:32:31.455` — the line had reopened
+at `13:32:31.1`, so **355 ms later**. ⚠ *«lasted 1 385 ms»* does **not** refute *«RISALE within 1 s»*:
+the right stopwatch starts from the return of the line, not from the start of the episode.
 
-⭐ **E il rosso (b) di `ritmo_frena()` — il più importante — NON è caduto**: `cwnd_left` è **0** in
-due discese su cinque e piccolo in una terza ⇒ **è la linea a frenare, non la finestra del
-browser**. ⚠ L'unica discesa con `cwnd_left` largo (264 318) è la **quinta**, quella da 68 ms,
-scattata quando la linea si era già riaperta e `cwnd` stava ricrescendo: coerente.
+⭐ **And red (b) of `ritmo_frena()` — the most important — did NOT fall**: `cwnd_left` is **0** in
+two descents out of five and small in a third ⇒ **it is the line that brakes, not the browser's
+window**. ⚠ The only descent with a wide `cwnd_left` (264 318) is the **fifth**, the 68 ms one,
+fired when the line had already reopened and `cwnd` was growing back: consistent.
 
-### 13.3.4 ⚠ IL PREZZO, misurato — **e il numero da portare a lui**
+### 13.3.4 ⚠ THE PRICE, measured — **and the number to bring to him**
 
-⛔ Il prezzo è quello dichiarato in S.5, e adesso ha una cifra: nei 3 secondi di stretta si vedono
-**20-26 fotogrammi/s invece di 21-25** — cioè **praticamente gli stessi**, ma **fatti tutti di
-delta**, senza le 18 chiavi. ⭐ In byte, la 100+ritmo consegna nei 3 s **4 349 kbyte** contro i
-**3 896** del braccio spento: **più immagine, non meno**.
+⛔ The price is the one declared in S.5, and now it has a figure: in the 3 seconds of squeeze one sees
+**20-26 frames/s instead of 21-25** — that is **practically the same**, but **all made of
+deltas**, without the 18 keyframes. ⭐ In bytes, 100+rate delivers in the 3 s **4 349 kbytes** against the
+**3 896** of the arm off: **more image, not less**.
 
-⚠ **E l'unico numero che si avvicina a un limite**: al secondo 10 si scende a **20 fot/s**, sotto i
-25 che `DECISIONI.md` §2.1 chiama pavimento. ⛔ **Non è il difetto che S.5 dichiarava**: quella riga
-parla di *«sotto 25/s su una linea da 20 Mbit/s»*, e qui la linea è **10 Mbit/s**, cioè **metà del
-pavimento**. ⇒ Va riguardato il giorno in cui si misura a 20.
+⚠ **And the only number that approaches a limit**: at second 10 it goes down to **20 fps**, below the
+25 that `DECISIONI.md` §2.1 calls the floor. ⛔ **It is not the defect S.5 declared**: that line
+speaks of *«below 25/s on a 20 Mbit/s line»*, and here the line is **10 Mbit/s**, that is **half the
+floor**. ⇒ It must be looked at again on the day one measures at 20.
 
-## 13.4 ⭐⭐⭐ P4 — IL TETTO DI BANDA: **i due rossi che chiudevano la cura NON sono caduti**
+## 13.4 ⭐⭐⭐ P4 — THE BANDWIDTH CAP: **the two reds that would close the cure did NOT fall**
 
-**Il giro**: cinque scene a **2560×1080**, 30 s l'una, sessione di `prova2`, `tc` mai toccato.
-⛔ **E l'ordine delle scene è parte della misura, ed è stato corretto strada facendo** — vedi 13.4.3.
+**The round**: five scenes at **2560×1080**, 30 s each, `prova2` session, `tc` never touched.
+⛔ **And the order of the scenes is part of the measurement, and it was corrected along the way** — see 13.4.3.
 
-### 13.4.1 `[M]` I DIECI NUMERI, appaiati — *tetto spento 13:38, tetto 20 alle 13:41*
+### 13.4.1 `[M]` THE TEN NUMBERS, paired — *cap off 13:38, cap 20 at 13:41*
 
-| scena | ⛔ **tetto SPENTO** | ⭐ **`--tetto-banda-mbit 20`** | |
+| scene | ⛔ **cap OFF** | ⭐ **`--tetto-banda-mbit 20`** | |
 |---|---|---|---|
-| **ferma** (nessuna scena) | 0 fot/s · **0,000** Mbit/s · filo **2,427** | 0 fot/s · **0,000** · filo **2,427** | ⭐ identico al terzo decimale |
-| **tinta piatta** (`pieno`) | 41,10 fot/s · **1,151** Mbit/s | 41,23 fot/s · **1,219** | ⚠ **+5,9 %** |
-| ⛔⛔ **desktop VERO** (`video`) | 23,13 fot/s · **0,208** = **1,0 %** | 23,13 fot/s · ⭐⭐ **0,249** = **1,2 %** | ⭐⭐⭐ **SALE del 19,7 %, NON scende** |
-| ⛔⛔ **gradiente retinato** (`barra`) | 34,67 fot/s · **21,183** = **105,9 %** | ⭐⭐ **40,70** fot/s · ⭐⭐⭐ **8,287** = **41,4 %** | ⭐ **il driver HA obbedito** |
-| **film con la grana** | 23,17 fot/s · **54,302** = 271,5 % · filo **58,414 = 292,1 %** | 23,30 fot/s · ⭐ **4,794** = **24,0 %** · filo **7,419 = 37,1 %** | ⭐ da **293 %** a **37 %** |
+| **still** (no scene) | 0 fps · **0.000** Mbit/s · wire **2.427** | 0 fps · **0.000** · wire **2.427** | ⭐ identical to the third decimal |
+| **flat colour** (`pieno`) | 41.10 fps · **1.151** Mbit/s | 41.23 fps · **1.219** | ⚠ **+5.9 %** |
+| ⛔⛔ **REAL desktop** (`video`) | 23.13 fps · **0.208** = **1.0 %** | 23.13 fps · ⭐⭐ **0.249** = **1.2 %** | ⭐⭐⭐ **RISES by 19.7 %, does NOT go down** |
+| ⛔⛔ **halftone gradient** (`barra`) | 34.67 fps · **21.183** = **105.9 %** | ⭐⭐ **40.70** fps · ⭐⭐⭐ **8.287** = **41.4 %** | ⭐ **the driver DID obey** |
+| **film with grain** | 23.17 fps · **54.302** = 271.5 % · wire **58.414 = 292.1 %** | 23.30 fps · ⭐ **4.794** = **24.0 %** · wire **7.419 = 37.1 %** | ⭐ from **293 %** to **37 %** |
 
-⭐ **E il metro è buono**: i cinque numeri a tetto spento riproducono §3.8 entro l'1-2 %
-(0,208 contro 0,204 · 1,151 contro 1,179 · 21,183 contro 21,36 · 58,414 contro 58,668).
+⭐ **And the yardstick is good**: the five numbers with the cap off reproduce §3.8 within 1-2 %
+(0.208 against 0.204 · 1.151 against 1.179 · 21.183 against 21.36 · 58.414 against 58.668).
 
-### 13.4.2 ⛔⛔ I DUE ROSSI CHE CHIUDEVANO LA CURA, uno per uno
+### 13.4.2 ⛔⛔ THE TWO REDS THAT WOULD CLOSE THE CURE, one by one
 
-| il rosso di **P4** | che cosa sarebbe successo | `[M]` |
+| the red of **P4** | what would have happened | `[M]` |
 |---|---|---|
-| ⭐⭐ **il desktop vero costa MENO di 0,204** ⇒ *«il tetto risparmia dove non deve, è v1 che si ripete, e questa cura si butta»* | 0,208 → qualcosa sotto 0,204 | ⭐⭐⭐ **NON è caduto**: 0,208 → **0,249**, cioè **+19,7 %**. ⚠ È il **prezzo del QVBR** già previsto (`[M]` sul portatile: *«spende il 13 % in più del CQP a scena ferma»*), misurato qui al **19,7 %** — ⇒ **la cura VIVE** |
-| ⭐⭐ **il retinato resta sopra 20** ⇒ *«il driver non ha obbedito, e lo coglie solo il terzo testimone»* | 21,18 → ancora ≥ 20 | ⭐⭐⭐ **NON è caduto**: **8,287** Mbit/s, cioè il **39 %** di prima |
+| ⭐⭐ **the real desktop costs LESS than 0.204** ⇒ *«the cap saves where it must not, it is v1 repeating itself, and this cure is thrown away»* | 0.208 → something below 0.204 | ⭐⭐⭐ **it did NOT fall**: 0.208 → **0.249**, that is **+19.7 %**. ⚠ It is the **price of QVBR** already predicted (`[M]` on the laptop: *«it spends 13 % more than CQP with a still scene»*), measured here at **19.7 %** — ⇒ **the cure LIVES** |
+| ⭐⭐ **the halftone stays above 20** ⇒ *«the driver did not obey, and only the third witness catches it»* | 21.18 → still ≥ 20 | ⭐⭐⭐ **it did NOT fall**: **8.287** Mbit/s, that is **39 %** of before |
 
-⚠ **E c'è uno scarto dalla previsione che va detto, ed è nel verso opposto a un rosso**: P4 diceva
-*«retinato 11-16 · grana 11-16, e MAI sopra 16»*. `[M]` sono usciti **8,287** e **4,794** —
-⛔ **sotto la forchetta, non sopra.** ⇒ Il tetto **stringe più del previsto**: il filo è
-**16 000 kbit/s** e il caso duro ne usa il **24-62 %**. ⚠ Vuol dire che sul caso duro l'immagine è
-più brutta di quanto il tetto obbligherebbe: `[?]` **da tarare**, non un difetto — e **non lo decide
-una misura, lo decide l'occhio**.
+⚠ **And there is a gap from the prediction that must be told, and it is in the direction opposite to a red**: P4 said
+*«halftone 11-16 · grain 11-16, and NEVER above 16»*. `[M]` out came **8.287** and **4.794** —
+⛔ **below the range, not above.** ⇒ The cap **squeezes more than predicted**: the wire is
+**16 000 kbit/s** and the hard case uses **24-62 %** of it. ⚠ It means that on the hard case the image is
+uglier than the cap would require: `[?]` **to be tuned**, not a defect — and **it is not decided by
+a measurement, it is decided by the eye**.
 
-⭐ **E i fotogrammi non li paga nessuno, anzi**: sul retinato il tetto acceso ne consegna **40,70/s
-contro 34,67** — perché fotogrammi più piccoli escono più in fretta.
+⭐ **And nobody pays for the frames, on the contrary**: on the halftone the cap on delivers **40.70/s
+against 34.67** — because smaller frames get out faster.
 
-### 13.4.3 ⭐⭐ I TRE TESTIMONI, letti tutti e tre — *e sono le righe che il prodotto scrive da sé*
+### 13.4.3 ⭐⭐ THE THREE WITNESSES, all three read — *and they are the lines the product writes by itself*
 
-| # | la riga, testuale |
+| # | the line, verbatim |
 |---|---|
-| **1** · il driver | `controllo del bitrate su «/dev/dri/renderD128» (Intel iHD driver … 25.2.3), profilo 17, EncSliceLP: il driver DICHIARA [CBR\|VBR\|VCM\|CQP\|MB\|QVBR\|TCBRC] (0x149e) · chiesto QVBR (0x400) · c'e'` |
-| **2** · il contesto | `PARAMETRI IN VIGORE (fase 9) … tetto di banda ACCESO (pavimento 20 Mbit/s)` + `codificatore 1 APERTO e TENUTO VIVO … 2560x1080 a 60/s` |
-| **3** ⭐⭐ · **i BYTE** | `banda del video: 5581 kbit/s su 10001 ms — 283 fotogrammi …, modo QVBR · TETTO ACCESO: filo 16000 kbit/s, **ne usa il 34 %**` — una riga ogni 10 s |
+| **1** · the driver | `controllo del bitrate su «/dev/dri/renderD128» (Intel iHD driver … 25.2.3), profilo 17, EncSliceLP: il driver DICHIARA [CBR\|VBR\|VCM\|CQP\|MB\|QVBR\|TCBRC] (0x149e) · chiesto QVBR (0x400) · c'e'` |
+| **2** · the context | `PARAMETRI IN VIGORE (fase 9) … tetto di banda ACCESO (pavimento 20 Mbit/s)` + `codificatore 1 APERTO e TENUTO VIVO … 2560x1080 a 60/s` |
+| **3** ⭐⭐ · **the BYTES** | `banda del video: 5581 kbit/s su 10001 ms — 283 fotogrammi …, modo QVBR · TETTO ACCESO: filo 16000 kbit/s, **ne usa il 34 %**` — one line every 10 s |
 
-⭐ **Il terzo è quello che decide, e dice che il tetto è in presa**: nei dieci intervalli letti il
-consumo va dall'**1 %** (desktop fermo) al **62 %** del filo, e **non lo supera mai**.
+⭐ **The third is the one that decides, and it says the cap is engaged**: in the ten intervals read the
+consumption goes from **1 %** (still desktop) to **62 %** of the wire, and **never exceeds it**.
 
-### 13.4.4 ⛔ IL DIFETTO DEL BANCO CHE HO TROVATO E CORRETTO — *e avrebbe dato «un numero plausibile»*
+### 13.4.4 ⛔ THE BENCH DEFECT I FOUND AND CORRECTED — *and it would have given «a plausible number»*
 
-`09-b72-banda.py` `scena()`: quando il punto dopo **non** è un video, **non spegne il Firefox del
-punto prima**. ⇒ Col mio primo ordine (`ferma,video,pieno,barra,video-grana`) il punto `pieno` è
-stato misurato **col film ancora vivo sotto**. ⛔ È la famiglia di difetti di §8, quarta volta oggi.
-⭐ **Rifatto tutto con le scene video IN FONDO** (`ferma,pieno,barra,video,video-grana`): fra due
-video ci pensa `09-b72-video.sh`, che fa `pkill`.
-⚠ **E l'esito del controllo va detto**: il `pieno` contaminato aveva dato **1,162** Mbit/s, quello
-pulito **1,151** — cioè **lo stesso numero**. ⇒ In *questo* caso la contaminazione non ha morso
-(la finestra della scena copre il film e Mutter non consegna quel che è nascosto). ⛔ **Ma la misura
-buona è quella dell'ordine giusto**, e il banco va corretto: un difetto che non morde oggi morde
-domani.
+`09-b72-banda.py` `scena()`: when the next point is **not** a video, **it does not switch off the Firefox of the
+previous point**. ⇒ With my first order (`ferma,video,pieno,barra,video-grana`) the `pieno` point was
+measured **with the film still alive underneath**. ⛔ It is the family of defects of §8, fourth time today.
+⭐ **Everything redone with the video scenes AT THE END** (`ferma,pieno,barra,video,video-grana`): between two
+videos `09-b72-video.sh` takes care of it, doing `pkill`.
+⚠ **And the outcome of the check must be told**: the contaminated `pieno` had given **1.162** Mbit/s, the
+clean one **1.151** — that is **the same number**. ⇒ In *this* case the contamination did not bite
+(the scene's window covers the film and Mutter does not deliver what is hidden). ⛔ **But the good
+measurement is the one with the right order**, and the bench must be corrected: a defect that does not bite today bites
+tomorrow.
 
-## 13.5 ⛔⛔⛔ IL FATTO CHE RIMETTE IN DISCUSSIONE §3.8, §10.1 E TUTTA LA BOLLETTA: **si stava misurando HEVC**
+## 13.5 ⛔⛔⛔ THE FACT THAT PUTS §3.8, §10.1 AND THE WHOLE BILL BACK INTO QUESTION: **HEVC was being measured**
 
-⭐ Trovato **leggendo il registro del tetto**, non cercandolo. La riga che nessuno aveva guardato:
+⭐ Found **by reading the cap's log**, not by looking for it. The line nobody had looked at:
 
 ```
 13:41:53.152 rcp   negoziato video.codec=hevc video.profondita=8 audio.codec=pcm
 13:41:54.365 video primo fotogramma: hev1.1.6.L150.B0 · … HEVC 8 bit via hevc_vaapi
 ```
 
-⛔ **`banchi/01-b3-cliente.py` · `--video-codec` dichiara `--video-codec` con predefinito `hevc,av1`**, e il
-server sceglie **HEVC**. ⇒ **Tutti i numeri di banda di §3.8 e della prima parte di questa sezione —
-0,204 · 1,179 · 21,36 · 58,668 Mbit/s — sono numeri HEVC.**
+⛔ **`banchi/01-b3-cliente.py` · `--video-codec` declares `--video-codec` with default `hevc,av1`**, and the
+server chooses **HEVC**. ⇒ **All the bandwidth numbers of §3.8 and of the first part of this section —
+0.204 · 1.179 · 21.36 · 58.668 Mbit/s — are HEVC numbers.**
 
-⛔⛔ **E il prodotto a Firefox Android NON manda HEVC**: `MEMORY.md`, *«AV1 esce, entra H.264 —
+⛔⛔ **And the product does NOT send HEVC to Firefox Android**: `MEMORY.md`, *«AV1 esce, entra H.264 —
 Firefox Android non ha né HEVC né AV1; `avc1.640032` è già verificato»*.
 
-### 13.5.1 `[M]` QUANTO CAMBIA — *stessa scena, stessa tela, stesso QP 26, 13:47*
+### 13.5.1 `[M]` HOW MUCH IT CHANGES — *same scene, same canvas, same QP 26, 13:47*
 
-| `barra`, 2560×1080, tetto spento | HEVC | ⭐ **H.264** |
+| `barra`, 2560×1080, cap off | HEVC | ⭐ **H.264** |
 |---|---|---|
-| fotogrammi/s | 34,67 | ⭐ **41,80** |
-| carico video | **21,183** Mbit/s = **105,9 %** | ⭐⭐ **7,920** Mbit/s = **39,6 %** |
-| filo | 24,052 = 120,3 % | ⭐ **10,511** = **52,6 %** |
-| byte medi per fotogramma | 61 100 | **23 683** |
+| frames/s | 34.67 | ⭐ **41.80** |
+| video payload | **21.183** Mbit/s = **105.9 %** | ⭐⭐ **7.920** Mbit/s = **39.6 %** |
+| wire | 24.052 = 120.3 % | ⭐ **10.511** = **52.6 %** |
+| average bytes per frame | 61 100 | **23 683** |
 
-⛔⛔ **H.264 costa QUI un terzo di HEVC**, non di più. ⚠ Non è la teoria dei codec: è che **`QP 26`
-non vuol dire la stessa qualità nei due**, e sul `hevc_vaapi` di questo driver, a QP 26 e
-`EncSliceLP`, esce **molta più roba**. ⇒ ⛔ **La scala della degradazione (26 → 35 → 44 → 51) è
-tarata su un numero che nei due codec significa due cose diverse**, e finora è stata provata sul
-codec sbagliato.
+⛔⛔ **H.264 costs HERE a third of HEVC**, not more. ⚠ It is not codec theory: it is that **`QP 26`
+does not mean the same quality in the two**, and on this driver's `hevc_vaapi`, at QP 26 and
+`EncSliceLP`, **much more stuff** comes out. ⇒ ⛔ **The degradation ladder (26 → 35 → 44 → 51) is
+tuned on a number that means two different things in the two codecs**, and so far it has been tested on the
+wrong codec.
 
-⇒ ⭐⭐ **La contraddizione §10.1 va riscritta.** *«Ne chiede il 293 %»* è HEVC. Sul codec che il
-prodotto manda davvero, la stessa scena dura chiede **il 39,6 %** del pavimento. ⛔ `[?]` **Il caso
-duro vero (film con la grana) sotto H.264 NON è stato misurato**: è il primo numero da prendere.
+⇒ ⭐⭐ **Contradiction §10.1 must be rewritten.** *«It asks for 293 %»* is HEVC. On the codec the
+product really sends, the same hard scene asks for **39.6 %** of the floor. ⛔ `[?]` **The real hard
+case (film with grain) under H.264 was NOT measured**: it is the first number to take.
 
-### 13.5.2 ⛔ `[R]` E UN DIFETTO CHE ESCE DALLA STESSA RIGA: **sotto H.264 la stringa per il decodificatore è VUOTA**
+### 13.5.2 ⛔ `[R]` AND A DEFECT THAT COMES OUT OF THE SAME LINE: **under H.264 the decoder string is EMPTY**
 
 ```
 HEVC   → primo fotogramma: hev1.1.6.L150.B0 …   stringa per il decodificatore «hev1.1.6.L150.B0»
 H.264  → primo fotogramma: (non letto)      …   stringa per il decodificatore «»
 ```
 
-⛔ Sotto H.264 il server **non compone** la stringa `avc1.<profilo><vincoli><livello>` (il commento
-che la descrive sta in `codificatore.c` · `salta_liste_scala()`), e scrive `(non letto)`. ⚠ **Il livello lo legge lo
-stesso** (`livello 51`, poi `52`): manca la **stringa**. `[?]` Se è quella che va al browser, è la
-famiglia di R31 — *«non dà un errore di rete, fa rifiutare la configurazione»*.
+⛔ Under H.264 the server **does not compose** the string `avc1.<profilo><vincoli><livello>` (the comment
+that describes it is in `codificatore.c` · `salta_liste_scala()`), and writes `(non letto)`. ⚠ **It reads the level
+anyway** (`livello 51`, then `52`): what is missing is the **string**. `[?]` If it is the one that goes to the browser, it is the
+R31 family — *«it does not give a network error, it makes the configuration be refused»*.
 
-## 13.6 ⛔⛔⛔ IL 4K — *13:50-13:52*: **41 fotogrammi/s, non 60 — e il livello prodotto SFORA quello del client**
+## 13.6 ⛔⛔⛔ 4K — *13:50-13:52*: **41 frames/s, not 60 — and the produced level EXCEEDS the client's**
 
-**Il giro**: tela **3840×2160** verificata **nel registro del prodotto** (`TELA NUOVA DAL PALCO:
-1920x1080 → 3840x2160`), scena `barra`, 20 s, tetto spento, `tc` mai toccato.
+**The round**: canvas **3840×2160** verified **in the product's log** (`TELA NUOVA DAL PALCO:
+1920x1080 → 3840x2160`), scene `barra`, 20 s, cap off, `tc` never touched.
 
-| a 3840×2160 | ⭐ **H.264** (quel che il browser riceve) | HEVC |
+| at 3840×2160 | ⭐ **H.264** (what the browser receives) | HEVC |
 |---|---|---|
-| **fotogrammi/s** | ⛔ **41,25** | 38,75 |
-| carico video | **24,055** Mbit/s = **120,3 %** del pavimento | ⛔ **74,390** = **372,0 %** |
-| filo | 26,711 = 133,6 % | ⛔ **78,018** = **390,1 %** |
-| byte medi per fotogramma | 72 895 | 239 968 |
-| chiavi / abbandoni in 20 s | ⭐ **0 / 0** | ⛔ **19 / 20** |
-| ⛔ **LIVELLO PRODOTTO** | ⛔⛔ **5.2** (`level_idc` 52 nell'SPS) | 5.0 (`general_level_idc` 150) |
+| **frames/s** | ⛔ **41.25** | 38.75 |
+| video payload | **24.055** Mbit/s = **120.3 %** of the floor | ⛔ **74.390** = **372.0 %** |
+| wire | 26.711 = 133.6 % | ⛔ **78.018** = **390.1 %** |
+| average bytes per frame | 72 895 | 239 968 |
+| keyframes / abandons in 20 s | ⭐ **0 / 0** | ⛔ **19 / 20** |
+| ⛔ **PRODUCED LEVEL** | ⛔⛔ **5.2** (`level_idc` 52 in the SPS) | 5.0 (`general_level_idc` 150) |
 
-### 13.6.1 ⛔ LA RISPOSTA ALLA DOMANDA: **il 4K·60 che il prodotto promette non c'è, e il tetto non è la linea**
+### 13.6.1 ⛔ THE ANSWER TO THE QUESTION: **the 4K·60 the product promises is not there, and the cap is not the line**
 
-⭐ **41,25 fot/s con la linea LIBERA** (nessun `tc`, nessuna perdita, zero abbandoni, zero chiavi).
-⇒ ⛔ **Non è la banda a fermarlo**: è la catena cattura → conversione → codifica.
-La riga del primo fotogramma a 4K dava conversione + codifica come tetto della catena prima ancora di
-uscire di casa. *(Quei tempi non valgono più dopo la fase 18: la conversione di quel fotogramma non si
-dimostra a copia zero — il codice di allora aveva anche la strada dalla memoria con `sws_scale` — e sono
-stati tolti.)*
-⇒ **`DECISIONI.md` va corretto: a 3840×2160 il prodotto regge ~41/s, non 60.**
+⭐ **41.25 fps with the line FREE** (no `tc`, no loss, zero abandons, zero keyframes).
+⇒ ⛔ **It is not bandwidth that stops it**: it is the chain capture → conversion → encoding.
+The line of the first frame at 4K gave conversion + encoding as the cap of the chain even before
+leaving home. *(Those times no longer hold after phase 18: the conversion of that frame is not
+proven to be zero copy — the code of the time also had the route from memory with `sws_scale` — and they were
+removed.)*
+⇒ **`DECISIONI.md` must be corrected: at 3840×2160 the product holds ~41/s, not 60.**
 
-### 13.6.2 ⛔⛔ E IL ROSSO DI **P9** È CADUTO, con un innesco concreto
+### 13.6.2 ⛔⛔ AND THE RED OF **P9** HAS FALLEN, with a concrete trigger
 
 ```
 rcp    il client dichiara video.livello=5.1 … §4.3 vieta al server di emettere un flusso PIU' ALTO
@@ -2513,113 +2513,113 @@ figlio §4.3 — LIVELLO PRODOTTO: 5.2 (nell'SPS e' 52) … il confronto fra le 
        LEGGE — il programma NON lo fa
 ```
 
-⛔⛔ **Il server ha emesso 5.2 dove il client ammetteva 5.1, e nessuno ha detto niente.** È
-esattamente il difetto che §5.5 aveva trovato leggendo il codice (`rcp.c` · `livello_legge()` non cattura il
-livello) e che **P9** prevedeva: *«un livello troppo basso non dà un errore di rete: fa rifiutare la
-configurazione, cioè schermo che non parte senza un rosso»*. ⭐ Adesso non è più una lettura del
-codice: **è successo, alle 13:50:48, e le due righe sono nel registro.**
+⛔⛔ **The server emitted 5.2 where the client admitted 5.1, and nobody said anything.** It is
+exactly the defect §5.5 had found by reading the code (`rcp.c` · `livello_legge()` does not capture the
+level) and that **P9** predicted: *«a level too low does not give a network error: it makes the
+configuration be refused, that is a screen that does not start without a red»*. ⭐ Now it is no longer a reading of the
+code: **it happened, at 13:50:48, and the two lines are in the log.**
 
-⚠ **E la stima di §5.5 era sbagliata in un altro modo ancora**: diceva *«a 4K serve il 5.1, che
-concede `[?]` 30,3 fot/s»*. `[M]` L'`h264_vaapi` non ha scelto 5.1: **ha scelto 5.2**. ⇒ il numero
-da mettere in `pagina.html` · `LIVELLO_DICHIARATO()` non è `avc1.640033` (5.1) ma `avc1.640034` (5.2) **se si vuole
-davvero il 4K** — ⛔ e va verificato che Firefox Android accetti il 5.2, perché altrimenti la scelta
-è **fra il 4K e quel browser**.
+⚠ **And the estimate of §5.5 was wrong in yet another way**: it said *«at 4K 5.1 is needed, which
+grants `[?]` 30.3 fps»*. `[M]` `h264_vaapi` did not choose 5.1: **it chose 5.2**. ⇒ the number
+to put in `pagina.html` · `LIVELLO_DICHIARATO()` is not `avc1.640033` (5.1) but `avc1.640034` (5.2) **if one really wants
+4K** — ⛔ and it must be verified that Firefox Android accepts 5.2, because otherwise the choice
+is **between 4K and that browser**.
 
-## 13.7 ⛔ L'AUDIO — **saltata, e dichiaro perché**: il banco non riesce ad aprire Marionette
+## 13.7 ⛔ AUDIO — **skipped, and I declare why**: the bench cannot open Marionette
 
-⭐ Il banco `banchi/09-b74-audio-firefox.py` (scritto oggi) è **la forma giusta** e risolve il
-difetto di §3.16: il *prima* e il *dopo* sono **due file `pagina.html`**, serviti dallo **stesso
-binario**, e il verbale è la riga `/diario` che **la pagina manda da sola** al server ogni 5 s.
-⭐ E il servizio è partito bene: `pagina: /media/REMOTIX/src/09-src/src/pagina.html ·
-md5 d387c166…` per il *prima* — cioè **la pagina VECCHIA, e si vede dall'`md5`**, non dal nome.
+⭐ The bench `banchi/09-b74-audio-firefox.py` (written today) is **the right shape** and solves the
+defect of §3.16: the *before* and the *after* are **two `pagina.html` files**, served by the **same
+binary**, and the record is the `/diario` line that **the page sends by itself** to the server every 5 s.
+⭐ And the service started well: `pagina: /media/REMOTIX/src/09-src/src/pagina.html ·
+md5 d387c166…` for the *before* — that is **the OLD page, and it shows from the `md5`**, not from the name.
 
-⛔ **Ma Firefox non apre mai la porta 2829 di Marionette.** Due tentativi (13:53 e 13:55), più una
-diagnosi: **80 s di attesa, la porta non compare mai**. ⇒ Il braccio non parte, e **senza il
-braccio «prima» non c'è controllo positivo**: un *dopo* pulito da solo non dimostrerebbe niente.
+⛔ **But Firefox never opens Marionette's port 2829.** Two attempts (13:53 and 13:55), plus a
+diagnosis: **80 s of waiting, the port never appears**. ⇒ The arm does not start, and **without the
+«before» arm there is no positive control**: a clean *after* alone would prove nothing.
 
-⚠ **E la diagnosi si è fermata su un difetto del banco dentro il banco**: `b74-ff.log` è creato in
-`$LAV`, che è **di root**, mentre Firefox gira come `prova` ⇒ ⛔ **il registro di Firefox è di ZERO
-byte**, e quando si chiede *«perché non è partito»* non c'è niente da leggere. È lo **stesso difetto
-del `user.js` vuoto** che il commento del banco racconta di aver già pagato alle 12:47, in un altro
-punto dello stesso file.
+⚠ **And the diagnosis stopped on a bench defect inside the bench**: `b74-ff.log` is created in
+`$LAV`, which **belongs to root**, while Firefox runs as `prova` ⇒ ⛔ **Firefox's log is ZERO
+bytes**, and when one asks *«why didn't it start»* there is nothing to read. It is the **same defect
+as the empty `user.js`** that the bench's comment says it already paid for at 12:47, in another
+spot of the same file.
 
-⇒ **La cura 4 (il riordino dell'audio) resta NON VERIFICATA.** ⛔ E resta *«il banco misura se
-stesso»* di §3.16, perché `01-b3-cliente.py` ha ancora la sua copia della regola vecchia
-(`md5 13e68d19ed44298b7926cded53affdda`, invariato). ⭐ **Ma la strada è corta**: la pagina il
-verbale lo manda da sola, quindi **basta che Nic apra la pagina col suo browser** e il registro del
-server porta i tre contatori (`vecchi` · `tardivi` · `fuori`). Non serve Marionette per il giudizio:
-serve per l'automazione.
+⇒ **Cure 4 (the audio reorder) remains NOT VERIFIED.** ⛔ And *«the bench measures
+itself»* of §3.16 remains, because `01-b3-cliente.py` still has its copy of the old rule
+(`md5 13e68d19ed44298b7926cded53affdda`, unchanged). ⭐ **But the road is short**: the page sends the
+record by itself, so **it is enough for Nic to open the page with his browser** and the server's
+log carries the three counters (`vecchi` · `tardivi` · `fuori`). Marionette is not needed for the judgement:
+it is needed for automation.
 
-## 13.8 ⭐⭐⭐ §10.2 DECISA — **il confine della spirale sta fra 10 e 5 Mbit/s**, e sopra non morde
+## 13.8 ⭐⭐⭐ §10.2 DECIDED — **the border of the spiral lies between 10 and 5 Mbit/s**, and above it does not bite
 
-⛔ La domanda di §10.2 era: *«sopra il pavimento la spirale morde o no?»*, con **due posizioni** in
-campo — §5.2 (*«il difetto vive sotto il pavimento, sopra la cura è inerte»*) contro §3.10
-(*«abbandoni e chiavi anche sulla linea larga, 3↔3 a 22-26 Mbit/s»*).
+⛔ The question of §10.2 was: *«above the floor does the spiral bite or not?»*, with **two positions** in
+the field — §5.2 (*«the defect lives below the floor, above the cure is inert»*) against §3.10
+(*«abandons and keyframes also on the wide line, 3↔3 at 22-26 Mbit/s»*).
 
-**Il giro che la decide**: ⛔ **sul DESKTOP VERO**, non su `barra` — ⭐ e col **codec che il browser
-riceve davvero, H.264** (`negoziato video.codec=h264`, letto dal registro). Una **sola** sessione a
-2560×1080 per tutti i gradini, così l'unica variabile è la stretta. Soglia e regolatore **spenti**,
-cioè il prodotto com'è oggi. Gradino: 8 s larga → **3 s stretti** → 6 s larga.
+**The round that decides it**: ⛔ **on the REAL DESKTOP**, not on `barra` — ⭐ and with the **codec the browser
+really receives, H.264** (`negoziato video.codec=h264`, read from the log). A **single** session at
+2560×1080 for all the steps, so the only variable is the squeeze. Threshold and regulator **off**,
+that is the product as it is today. Step: 8 s wide → **3 s narrow** → 6 s wide.
 
-| la stretta | fotogrammi spediti | ⛔ **CHIAVI** | ⛔ **abbandoni §5.1** |
+| the squeeze | frames sent | ⛔ **KEYFRAMES** | ⛔ **abandons §5.1** |
 |---|---|---|---|
-| **30 Mbit/s** (150 % del pavimento) | 421 | ⭐ **0** | ⭐ **0** |
+| **30 Mbit/s** (150 % of the floor) | 421 | ⭐ **0** | ⭐ **0** |
 | **25 Mbit/s** (125 %) | 429 | ⭐ **0** | ⭐ **0** |
-| ⭐ **20 Mbit/s** (**il pavimento**) | 426 | ⭐ **0** | ⭐ **0** |
+| ⭐ **20 Mbit/s** (**the floor**) | 426 | ⭐ **0** | ⭐ **0** |
 | **15 Mbit/s** (75 %) | 406 | ⭐ **0** | ⭐ **0** |
 | **10 Mbit/s** (50 %) | 426 | ⭐ **0** | ⭐ **0** |
 | ⛔ **5 Mbit/s** (25 %) | 424 | ⛔ **3** | ⛔ **3** |
 
-### ⭐ IL VERDETTO, secco
+### ⭐ THE VERDICT, flat
 
-⛔⛔ **Sul contenuto vero la spirale NON esiste fino a 10 Mbit/s compresi**, cioè fino a **metà
-pavimento**. Il primo segno arriva a **5 Mbit/s**, ed è **3 chiavi su 424 fotogrammi = lo 0,7 %**.
-⇒ **§5.2 aveva ragione e §3.10 misurava un'altra cosa**: i suoi abbandoni a 22-26 Mbit/s erano su
-**`barra`**, il gradiente retinato — una scena **sintetica** che a 2560×1080 costa **21 Mbit/s da
-sola** (105,9 % del pavimento). ⛔ **Non è il desktop di nessuno**: è un caso di prova che vive
-*sopra* il pavimento anche a riposo, e sotto quel carico qualunque stretta produce coda.
+⛔⛔ **On real content the spiral does NOT exist down to 10 Mbit/s inclusive**, that is down to **half the
+floor**. The first sign arrives at **5 Mbit/s**, and it is **3 keyframes out of 424 frames = 0.7 %**.
+⇒ **§5.2 was right and §3.10 was measuring something else**: its abandons at 22-26 Mbit/s were on
+**`barra`**, the halftone gradient — a **synthetic** scene that at 2560×1080 costs **21 Mbit/s by
+itself** (105.9 % of the floor). ⛔ **It is nobody's desktop**: it is a test case that lives
+*above* the floor even at rest, and under that load any squeeze produces a queue.
 
-⇒ ⭐⭐ **La soglia sulla coda e il regolatore del ritmo sono ROBUSTEZZE, non correzioni di un
-difetto che l'utente vede.** Sul suo desktop, a 20 Mbit/s, **non hanno niente da fare** — ed è quel
-che P2 e P7 prevedevano. ⚠ Servono quando la linea cala **sotto la metà**, oppure quando il
-contenuto è un caso duro (video a schermo intero), e lì lavorano bene: §13.3.
+⇒ ⭐⭐ **The queue threshold and the rate regulator are ROBUSTNESS MEASURES, not corrections of a
+defect the user sees.** On his desktop, at 20 Mbit/s, **they have nothing to do** — and it is what
+P2 and P7 predicted. ⚠ They are needed when the line drops **below half**, or when the
+content is a hard case (full-screen video), and there they work well: §13.3.
 
-⚠ **Il difetto del mio copione, dichiarato**: la tabella per-secondo che avevo stampato dava
-`fot [0,0,0]` in tutt'e sei i giri — un errore mio nel raggruppare per secondo, **non una misura**.
-⛔ I numeri qui sopra **non vengono da quella tabella**: vengono dal **conto diretto sui registri
-salvati** (`grep -c SPEDITO`, `grep -c 'SPEDITO: CHIAVE'`, `grep -c ABBANDONATO`), che è la
-grandezza che il prodotto scrive. ⚠ Se avessi riportato la tabella, avrei detto *«zero fotogrammi»*
-dove ce n'erano **424**.
+⚠ **The defect of my script, declared**: the per-second table I had printed gave
+`fot [0,0,0]` in all six rounds — an error of mine in grouping by second, **not a measurement**.
+⛔ The numbers above **do not come from that table**: they come from the **direct count on the saved
+logs** (`grep -c SPEDITO`, `grep -c 'SPEDITO: CHIAVE'`, `grep -c ABBANDONATO`), which is the
+quantity the product writes. ⚠ Had I reported the table, I would have said *«zero frames»*
+where there were **424**.
 
-## 13.9 ⭐⭐⭐ IL VERDETTO DELLA SERA — le nove previsioni, una per riga
+## 13.9 ⭐⭐⭐ THE VERDICT OF THE EVENING — the nine predictions, one per line
 
-| # | la previsione | esito | dove |
+| # | the prediction | outcome | where |
 |---|---|---|---|
-| **P1** | il crollo si riproduce; con la cura regge | ⭐⭐⭐ **CONFERMATA, e oltre**: il malato muore al fotogramma **27** (516 782 byte), il curato regge **1 463** fotogrammi fino a **537 063** byte col 5 % di perdita. ⭐ **La pila dal core chiude il `[?]` di §4.8** | 13.1 |
-| **P2** | la soglia è **inerte** a 20 Mbit/s | ⭐ **CONFERMATA**, e non solo a 20: sul desktop vero **niente da fare fino a 10 Mbit/s** | 13.2.2 · 13.8 |
-| **P3** | sul gradino: chiavi ≤ 2/s, abbandoni ≤ 2/s, fot ≥ 25 | ⛔ **SMENTITA sui due numeri che contavano**: chiavi **4-5/s**, abbandoni **5-9/s**. ⭐ Confermata su inerzia e ritorno. ⛔ **E il rimedio scritto in P3 era nel verso sbagliato** | 13.2.2 · 13.2.3 |
-| **P4** | il tetto: desktop vero **non scende**, retinato **sotto il pavimento** | ⭐⭐⭐ **CONFERMATA — i due rossi che buttavano la cura NON sono caduti**: 0,208 → **0,249** (+19,7 %), retinato 21,18 → **8,29**. ⚠ Stringe **più** del previsto (fuori forchetta in basso) | 13.4 |
-| **P5** | la risalita della qualità | ⛔ **NON PROVATA** — vedi 13.10 | 13.10 |
-| **P6** | il riordino dell'audio | ⛔ **NON PROVATA**: Marionette non apre la porta | 13.7 |
-| **P7** | il regolatore: **zero discese** a desktop normale; discese sul gradino, RISALE entro 1 s | ⭐⭐⭐ **CONFERMATA IN PIENO**: `arretrato` **LETTO 36-42 volte/s** sulla linea larga con **massimo 0** e **zero discese**; **57** discese concentrate nei 3 s; RISALE **355 ms** dopo il ritorno. ⛔ E il rosso *«è la finestra del browser»* **non è caduto**: `cwnd_left` = 0 | 13.3 |
-| **P8** | a scena ferma il ritmo non cala | ⚠ **NON misurata a coppie** (mezza ferma / mezza mossa). ⭐ Ma la metà del controllo c'è: le righe `arretrato LETTO N volte` esistono e distinguono *vuoto* da *proibito* | 13.3.2 |
-| **P9** | il livello prodotto contro quello del client, e nessuno li confronta | ⛔⛔ **CADUTA, con l'innesco**: a 4K H.264 il server emette **5.2** mentre il client dichiara **5.1**, e **il programma non se ne accorge** | 13.6.2 |
+| **P1** | the crash reproduces; with the cure it holds | ⭐⭐⭐ **CONFIRMED, and beyond**: the sick one dies at frame **27** (516 782 bytes), the cured one holds **1 463** frames up to **537 063** bytes with 5 % loss. ⭐ **The stack from the core closes the `[?]` of §4.8** | 13.1 |
+| **P2** | the threshold is **inert** at 20 Mbit/s | ⭐ **CONFIRMED**, and not only at 20: on the real desktop **nothing to do down to 10 Mbit/s** | 13.2.2 · 13.8 |
+| **P3** | on the step: keyframes ≤ 2/s, abandons ≤ 2/s, fps ≥ 25 | ⛔ **REFUTED on the two numbers that counted**: keyframes **4-5/s**, abandons **5-9/s**. ⭐ Confirmed on inertia and return. ⛔ **And the remedy written in P3 was in the wrong direction** | 13.2.2 · 13.2.3 |
+| **P4** | the cap: real desktop **does not go down**, halftone **below the floor** | ⭐⭐⭐ **CONFIRMED — the two reds that would throw the cure away did NOT fall**: 0.208 → **0.249** (+19.7 %), halftone 21.18 → **8.29**. ⚠ It squeezes **more** than predicted (out of the range at the bottom) | 13.4 |
+| **P5** | the quality climb-back | ⛔ **NOT TESTED** — see 13.10 | 13.10 |
+| **P6** | the audio reorder | ⛔ **NOT TESTED**: Marionette does not open the port | 13.7 |
+| **P7** | the regulator: **zero descents** with a normal desktop; descents on the step, RISALE within 1 s | ⭐⭐⭐ **FULLY CONFIRMED**: `arretrato` **READ 36-42 times/s** on the wide line with **maximum 0** and **zero descents**; **57** descents concentrated in the 3 s; RISALE **355 ms** after the return. ⛔ And the red *«it is the browser's window»* **did not fall**: `cwnd_left` = 0 | 13.3 |
+| **P8** | with a still scene the rate does not drop | ⚠ **NOT measured in pairs** (half still / half moving). ⭐ But half of the check is there: the lines `arretrato LETTO N volte` exist and distinguish *empty* from *forbidden* | 13.3.2 |
+| **P9** | the produced level against the client's, and nobody compares them | ⛔⛔ **FALLEN, with the trigger**: at 4K H.264 the server emits **5.2** while the client declares **5.1**, and **the program does not notice** | 13.6.2 |
 
-### ⭐⭐ E LE TRE COSE NUOVE, che nessuna previsione aveva previsto
+### ⭐⭐ AND THE THREE NEW THINGS, which no prediction had foreseen
 
-1. ⛔⛔⛔ **Si stava misurando HEVC.** Il cliente di prova negozia `hevc`, il prodotto manda H.264 a
-   Firefox. Stessa scena: **21,18** Mbit/s in HEVC contro **7,92** in H.264 — ⇒ **§10.1 va
-   riscritta e la bolletta rifatta** — 13.5;
-2. ⭐⭐⭐ **La soglia non è un filtro: è il punto di lavoro della coda.** A 100 ms la coda si assesta
-   a 101-138; a 200 ms a 204-236. ⇒ alzarla **compra immagine e paga ritardo**, e non cambia il
-   numero degli abbandoni — 13.2.3;
-3. ⭐⭐⭐ **Il regolatore rende la soglia inutile sul gradino**: tiene `arretrato` a 2, la coda non
-   arriva mai ai 100 ms, e `video_sgombra()` **non scatta nemmeno una volta** — 13.3.1.
+1. ⛔⛔⛔ **HEVC was being measured.** The test client negotiates `hevc`, the product sends H.264 to
+   Firefox. Same scene: **21.18** Mbit/s in HEVC against **7.92** in H.264 — ⇒ **§10.1 must be
+   rewritten and the bill redone** — 13.5;
+2. ⭐⭐⭐ **The threshold is not a filter: it is the working point of the queue.** At 100 ms the queue settles
+   at 101-138; at 200 ms at 204-236. ⇒ raising it **buys image and pays delay**, and does not change the
+   number of abandons — 13.2.3;
+3. ⭐⭐⭐ **The regulator makes the threshold useless on the step**: it keeps `arretrato` at 2, the queue never
+   reaches the 100 ms, and `video_sgombra()` **does not fire even once** — 13.3.1.
 
-## 13.10 ⛔ `--qualita-risale` — **non l'ho fatta scattare, e dichiaro perché**
+## 13.10 ⛔ `--qualita-risale` — **I did not make it fire, and I declare why**
 
-⭐ **Non è un tentativo fallito: è un esito, e si legge nel codice prima che sul ferro.** La riga che
-il prodotto scrive da sé a ogni apertura del codificatore:
+⭐ **It is not a failed attempt: it is an outcome, and it is read in the code before on the hardware.** The line
+the product writes by itself at every opening of the encoder:
 
 ```
 la risalita della qualita' e' SPENTA (invariante I6) … da spenta questi numeri
@@ -2627,77 +2627,77 @@ la risalita della qualita' e' SPENTA (invariante I6) … da spenta questi numeri
 non hanno nessun effetto
 ```
 
-⛔ **`2 097 152` byte = 2 MiB è la soglia che fa SCENDERE la qualità.** Perché la risalita abbia
-qualcosa da risalire, la qualità deve prima essere scesa, cioè serve un fotogramma **sopra i 2 MiB**.
-`[M]` di stasera, il fotogramma **più grosso mai visto in tutta la giornata**: **537 063 byte** — un
-**quarto** della soglia, e su un **film con la grana a schermo intero**, che è il caso più duro che
-questa fase abbia. A 4K HEVC la media è **239 968** byte, la punta resta lontana.
-⇒ ⛔ **Sulla tela dell'utente non succede mai**, ed è la stessa cosa che §5.3 aveva scritto.
+⛔ **`2 097 152` bytes = 2 MiB is the threshold that makes quality GO DOWN.** For the climb-back to have
+something to climb back, quality must first have gone down, that is a frame **above 2 MiB** is needed.
+`[M]` tonight, the **largest frame ever seen in the whole day**: **537 063 bytes** — a
+**quarter** of the threshold, and on a **film with grain at full screen**, which is the hardest case
+this phase has. At 4K HEVC the average is **239 968** bytes, the peak stays far away.
+⇒ ⛔ **On the user's canvas it never happens**, and it is the same thing §5.3 had written.
 
-⚠ **La strada per farla scattare c'è ed è quella dichiarata nel mandato** — tela enorme + ripiego
-software (`h264_vaapi` si ferma a 4096 px per lato) — ⛔ **ma è un giro che non misura il prodotto**:
-misurerebbe il codificatore software su una tela che nessun utente ha. ⇒ **Non l'ho fatto**, e la
-cura 3 resta **non verificata sul ferro**. ⭐ Quel che è verificato è che **è spenta e lo dice**, e
-che da spenta **non tocca niente**: i numeri del confronto appaiato di §3-bis lo mostravano già.
+⚠ **The road to make it fire exists and it is the one declared in the mandate** — huge canvas + software
+fallback (`h264_vaapi` stops at 4096 px per side) — ⛔ **but it is a round that does not measure the product**:
+it would measure the software encoder on a canvas no user has. ⇒ **I did not do it**, and
+cure 3 remains **not verified on the hardware**. ⭐ What is verified is that **it is off and says so**, and
+that when off **it touches nothing**: the numbers of the paired comparison of §3-bis already showed it.
 
-## 13.11 ⭐ COM'È RIMASTA LA MACCHINA — *verificato alle 14:01 UTC, non dichiarato a memoria*
+## 13.11 ⭐ HOW THE MACHINE WAS LEFT — *verified at 14:01 UTC, not declared from memory*
 
 | | |
 |---|---|
-| `tc` su **`lo`** | ⭐ `qdisc noqueue 0: root` — **nessuna disciplina** |
-| `tc` su **`enp7s0`** | ⭐ `qdisc mq 0: root` — **mai toccata**, come da regola |
-| il **guardiano** di `tc` | ⭐ nessuno: `.b68-guardiano.pid` non c'è |
-| **scene, clienti, browser** | ⭐ **nessuno** — né `04-b30-scena`, né `01-b3-cliente`, né `firefox` |
-| **`core_pattern`** | `/media/REMOTIX/tmp/09c/core.%e.%p.%t` — ⚠ **era già così prima che cominciassi** (`core_pattern.prima` dice lo stesso), ed è quel che §4.7 punto 1 chiedeva: **assoluto**. ⛔ Non è il valore di fabbrica (`core`): **lo lascio**, perché è la trappola armata, ⚠ e lo dichiaro perché è uno stato della macchina, non del progetto |
+| `tc` on **`lo`** | ⭐ `qdisc noqueue 0: root` — **no discipline** |
+| `tc` on **`enp7s0`** | ⭐ `qdisc mq 0: root` — **never touched**, as per the rule |
+| the `tc` **guardian** | ⭐ none: `.b68-guardiano.pid` is not there |
+| **scenes, clients, browsers** | ⭐ **none** — neither `04-b30-scena`, nor `01-b3-cliente`, nor `firefox` |
+| **`core_pattern`** | `/media/REMOTIX/tmp/09c/core.%e.%p.%t` — ⚠ **it was already so before I started** (`core_pattern.prima` says the same), and it is what §4.7 point 1 asked: **absolute**. ⛔ It is not the factory value (`core`): **I leave it**, because it is the armed trap, ⚠ and I declare it because it is a state of the machine, not of the project |
 
-**Le tre porte che restano accese, e perché:**
+**The three ports that stay on, and why:**
 
-| porta | albero | perché resta |
+| port | tree | why it stays |
 |---|---|---|
-| **7900** | `09-src` | ⭐ il **PRIMA** di stamattina — il termine di paragone di §3-bis. ⛔ Spegnerlo renderebbe non ripetibili tutte le misure appaiate già scritte |
-| **7910** | `09b-src` | le tre cure del mattino, l'altra metà dello stesso confronto |
-| **7920** | `09c-src` (`remotix md5 162d2d105cbe930e7921a7041053f5e7`) | ⭐ il **curato di stasera**, ricostruito da `f90eb21`, **senza nessun interruttore acceso** e con la **trappola glibc spenta** — cioè il prodotto com'è |
+| **7900** | `09-src` | ⭐ this morning's **BEFORE** — the term of comparison of §3-bis. ⛔ Switching it off would make all the paired measurements already written unrepeatable |
+| **7910** | `09b-src` | the three morning cures, the other half of the same comparison |
+| **7920** | `09c-src` (`remotix md5 162d2d105cbe930e7921a7041053f5e7`) | ⭐ **tonight's cured one**, rebuilt from `f90eb21`, **with no switch on** and with the **glibc trap off** — that is the product as it is |
 
-⭐ **E il corpo del reato si conserva**: `/media/REMOTIX/tmp/09c/core.remotix.110832.1787493803`,
-**48 525 312 byte** — il core del binario malato. ⛔ **Non si cancella**: è la prova *vista* del
-crollo del 23 agosto. ⚠ **E non è quello di 13.1.1**: vedi 13.1.5 qui sotto, che racconta perché.
+⭐ **And the corpus delicti is kept**: `/media/REMOTIX/tmp/09c/core.remotix.110832.1787493803`,
+**48 525 312 bytes** — the core of the sick binary. ⛔ **It is not deleted**: it is the *seen* proof of the
+crash of 23 Aug. ⚠ **And it is not the one of 13.1.1**: see 13.1.5 below, which tells why.
 
 ---
 
-# §14 · ⛔⛔⛔ IL METRO CAMBIATO — *23 agosto 2026, sera tardi*
+# §14 · ⛔⛔⛔ THE YARDSTICK CHANGED — *23 Aug 2026, late evening*
 
-> ⛔⛔ **HO CAMBIATO IL METRO, E LO DICO PRIMA DEI NUMERI.**
-> Fino alle 14:22 di oggi ogni giro di banco di questa fase ha misurato **HEVC**; da qui in giù
-> misura **H.264**, che è il codec che il browser dell'utente riceve davvero. ⇒ ⛔ **I numeri di
-> banda di §3.8, §3.15, §13.4 e §13.5 non si confrontano con quelli di §14.** Sono due scale.
-> ⭐ Il vecchio metro si rifà quando serve: `--video-codec hevc`.
+> ⛔⛔ **I CHANGED THE YARDSTICK, AND I SAY IT BEFORE THE NUMBERS.**
+> Until 14:22 today every bench round of this phase measured **HEVC**; from here down
+> it measures **H.264**, which is the codec the user's browser really receives. ⇒ ⛔ **The bandwidth
+> numbers of §3.8, §3.15, §13.4 and §13.5 are not compared with those of §14.** They are two scales.
+> ⭐ The old yardstick is redone when needed: `--video-codec hevc`.
 
-## 14.1 ⭐⭐ LA CURA DEL CLIENTE DI PROVA — e **come lo decide il browser vero**, verificato
+## 14.1 ⭐⭐ THE CURE OF THE TEST CLIENT — and **how the real browser decides it**, verified
 
-### La riga cambiata
+### The line changed
 
-`banchi/01-b3-cliente.py` — il predefinito di `--video-codec` era **`hevc,av1`**, adesso è
-**`h264`**. ⛔ **La causa non è una svista di stasera: è una riga rimasta indietro di tre giorni.**
-Il 20 agosto AV1 è uscito dal prodotto (`DECISIONI.md` §1.13-ter) e il cliente di prova ha
-continuato a dichiarare `hevc,av1` — ⇒ il server sceglieva **HEVC** in ogni giro, per tre giorni.
+`banchi/01-b3-cliente.py` — the default of `--video-codec` was **`hevc,av1`**, now it is
+**`h264`**. ⛔ **The cause is not a slip of tonight: it is a line left three days behind.**
+On 20 Aug AV1 left the product (`DECISIONI.md` §1.13-ter) and the test client
+kept declaring `hevc,av1` — ⇒ the server chose **HEVC** in every round, for three days.
 
-### ⛔ E LO DECIDE IL BROWSER? — verificato, non assunto
+### ⛔ AND DOES THE BROWSER DECIDE IT? — verified, not assumed
 
-⭐ `pagina.html` **non** chiede il codec alle API, e lo dichiara in testa al file: `[M]` 12 agosto,
-su tutte e sette le stringhe HEVC `mediaCapabilities.decodingInfo()` e `canPlayType()` dicono di
-**sì** e il pixel non arriva. ⇒ La pagina **dipinge una sonda vera e rilegge i pixel**, e nel `CIAO`
-ci finisce solo quel che ha dipinto:
+⭐ `pagina.html` does **not** ask the APIs for the codec, and it declares so at the top of the file: `[M]` 12 Aug,
+on all seven HEVC strings `mediaCapabilities.decodingInfo()` and `canPlayType()` say
+**yes** and the pixel does not arrive. ⇒ The page **paints a real probe and rereads the pixels**, and into the `CIAO`
+goes only what it painted:
 
 ```
-pagina.html:818   const PREFERENZA = ["hevc", "h264"];        ⛔ AV1 non c'è più
+pagina.html:818   const PREFERENZA = ["hevc", "h264"];        ⛔ AV1 is no longer there
 pagina.html:4672  const codec_buoni = PREFERENZA.filter((n) => …sondaggio…arriva);
 pagina.html:4725  ["video.codec", codec_buoni.join(",")]
 ```
 
-⇒ **Su Firefox HEVC non dipinge ⇒ la pagina manda `video.codec=h264` e basta.** Il predefinito
-nuovo del cliente è **esattamente quello**, non un'approssimazione.
+⇒ **On Firefox HEVC does not paint ⇒ the page sends `video.codec=h264` and that's all.** The client's new
+default is **exactly that**, not an approximation.
 
-### `[M]` LA PROVA CHE IL METRO È CAMBIATO — *14:22:06-07 UTC*, righe testuali dal registro
+### `[M]` THE PROOF THAT THE YARDSTICK CHANGED — *14:22:06-07 UTC*, verbatim lines from the log
 
 ```
 14:22:06.637 rcp     negoziato video.codec=h264 video.profondita=8 audio.codec=pcm
@@ -2705,280 +2705,280 @@ nuovo del cliente è **esattamente quello**, non un'approssimazione.
                      conversione … µs, … codifica … µs · H.264 8 bit via h264_vaapi
 ```
 
-*(I tempi di conversione e codifica della riga sono tolti dopo la fase 18: la conversione non si dimostra
-a copia zero.)* *→ conversione (in CPU) e codifica del primo fotogramma a 4K senza scheda: `fasi/18-senza-ffmpeg.md` §5.4.*
-⚠ Il giro delle 14:03, con lo stesso binario e il cliente vecchio, diceva
-`hev1.1.6.L150.B0 … HEVC 8 bit via hevc_vaapi`. **Stesso server, stesso minuto, due codec.**
+*(The conversion and encoding times of the line were removed after phase 18: the conversion is not proven
+to be zero copy.)* *→ conversion (on the CPU) and encoding of the first 4K frame without the card: `fasi/18-senza-ffmpeg.md` §5.4.*
+⚠ The 14:03 round, with the same binary and the old client, said
+`hev1.1.6.L150.B0 … HEVC 8 bit via hevc_vaapi`. **Same server, same minute, two codecs.**
 
-### 14.1.1 ⛔ LA STRINGA VUOTA — **è un difetto del PRODOTTO, non del banco**, e vale meno di quanto sembrava
+### 14.1.1 ⛔ THE EMPTY STRING — **it is a defect of the PRODUCT, not of the bench**, and it is worth less than it seemed
 
-`[R]` di §13.5.2 verificato riga per riga sull'albero congelato `09c-src`:
+`[R]` of §13.5.2 verified line by line on the frozen tree `09c-src`:
 
 ```
 codificatore.c:953   snprintf(c->stringa_codec, …, "hev1.%s%u.%X.%c%u%s", …)   ← HEVC
-codificatore.c:1152  snprintf(c->stringa_codec, …, "av01.%u.%02u%c.%02d", …)   ← AV1 (codice morto)
-                     ⛔ e per H.264 NON C'E' NESSUNA RIGA: `avc1.` non si compone da nessuna parte
+codificatore.c:1152  snprintf(c->stringa_codec, …, "av01.%u.%02u%c.%02d", …)   ← AV1 (dead code)
+                     ⛔ and for H.264 THERE IS NO LINE: `avc1.` is not composed anywhere
 codificatore.c:4065  c->conf.stringa_codec[0] ? … : "(non letto)"
 ```
 
-⇒ ⛔ **Difetto del prodotto**: `stringa_codec` non viene mai composta sotto H.264, e il registro
-scrive `(non letto)` e `«»`.
+⇒ ⛔ **Defect of the product**: `stringa_codec` is never composed under H.264, and the log
+writes `(non letto)` and `«»`.
 
-⭐⭐ **Ma NON è la famiglia di R31, e questo cambia la sua gravità.** L'unico uso di
-`stringa_codec` fuori dal codificatore è `figlio.c` ⚠ *(il codice citato non c'e' piu': da rileggere)* e `:4780`, e sono **due righe di
-registro**: la stringa **non parte mai verso il browser**. Quella che il browser usa davvero se la
-compone la pagina da sé, dal livello che **lei** dichiara:
+⭐⭐ **But it is NOT the R31 family, and this changes its seriousness.** The only use of
+`stringa_codec` outside the encoder is `figlio.c` ⚠ *(the cited code is no longer there: to be reread)* and `:4780`, and they are **two log
+lines**: the string **never leaves towards the browser**. The one the browser really uses is
+composed by the page itself, from the level that **it** declares:
 
 ```
 pagina.html:1182   return ["avc1.6400" + esa(idc), "avc1.64001f"];   /* idc da LIVELLO_DICHIARATO */
 ```
 
-⇒ ⭐ **Il difetto è una CECITÀ DELLA DIAGNOSI, non uno schermo nero**: sotto H.264 il registro non
-sa dire quale stringa servirebbe, e chi legge non può confrontarla con quella che la pagina
-manda. ⛔ **E la cecità morde proprio dove serve**: a 4K il server produce il livello **5.2**
-(§13.6.2) mentre la pagina configura `avc1.640033`, cioè **5.1** — e la riga che avrebbe reso
-visibile lo scarto è quella vuota.
+⇒ ⭐ **The defect is a BLINDNESS OF THE DIAGNOSIS, not a black screen**: under H.264 the log cannot
+say which string would be needed, and whoever reads cannot compare it with the one the page
+sends. ⛔ **And the blindness bites exactly where it is needed**: at 4K the server produces level **5.2**
+(§13.6.2) while the page configures `avc1.640033`, that is **5.1** — and the line that would have made
+the gap visible is the empty one.
 
-## 14.2 ⭐⭐⭐ LE CINQUE SCENE A 2560×1080 IN H.264 — *14:23:08 → 14:26:26 UTC*
+## 14.2 ⭐⭐⭐ THE FIVE SCENES AT 2560×1080 IN H.264 — *14:23:08 → 14:26:26 UTC*
 
-**Il giro**: porta **7920**, binario `md5 162d2d10…` (`f90eb21`, nessun interruttore, trappola
-glibc spenta), utente **`prova2`**, tela **2560×1080**, **una sola sessione** per tutti e cinque i
-punti — così l'unica variabile è la scena. Tetto **spento**, `tc` **mai toccato** (`lo` verificata
-`noqueue` prima e dopo, `enp7s0` mai sfiorata). 30 s per punto.
+**The round**: port **7920**, binary `md5 162d2d10…` (`f90eb21`, no switch, glibc trap
+off), user **`prova2`**, canvas **2560×1080**, **one single session** for all five
+points — so the only variable is the scene. Cap **off**, `tc` **never touched** (`lo` verified
+`noqueue` before and after, `enp7s0` never grazed). 30 s per point.
 
-| scena | ora | fot/s | ⭐ **carico video H.264** | % di 20 | filo `lo` | byte/fotogramma | chiavi | abbandoni |
+| scene | time | fps | ⭐ **H.264 video payload** | % of 20 | wire `lo` | bytes/frame | keyframes | abandons |
 |---|---|---|---|---|---|---|---|---|
-| **ferma** (nessuna scena) | 14:23:08 | 0,00 | **0,000** Mbit/s | 0 % | 2,427 | — | 0 | 0 |
-| ⭐ **desktop VERO** (`scena-utente.webm` a schermo intero) | 14:23:52 | 23,10 | **0,356** Mbit/s | **1,8 %** | 2,842 | 1 924 | 0 | 0 |
-| **tinta piatta** (`pieno`) | 14:24:31 | 41,03 | **1,190** Mbit/s | 5,9 % | 3,717 | 3 624 | 0 | 0 |
-| **gradiente retinato** (`barra`) | 14:25:10 | 40,77 | **7,728** Mbit/s | 38,6 % | 10,45 | 23 695 | 0 | 0 |
-| ⛔ **film con la GRANA** (il caso duro) | 14:25:55 | 23,30 | ⛔ **44,574** Mbit/s | ⛔ **222,9 %** | 48,42 | 239 129 | 0 | 0 |
+| **still** (no scene) | 14:23:08 | 0.00 | **0.000** Mbit/s | 0 % | 2.427 | — | 0 | 0 |
+| ⭐ **REAL desktop** (`scena-utente.webm` at full screen) | 14:23:52 | 23.10 | **0.356** Mbit/s | **1.8 %** | 2.842 | 1 924 | 0 | 0 |
+| **flat colour** (`pieno`) | 14:24:31 | 41.03 | **1.190** Mbit/s | 5.9 % | 3.717 | 3 624 | 0 | 0 |
+| **halftone gradient** (`barra`) | 14:25:10 | 40.77 | **7.728** Mbit/s | 38.6 % | 10.45 | 23 695 | 0 | 0 |
+| ⛔ **film with GRAIN** (the hard case) | 14:25:55 | 23.30 | ⛔ **44.574** Mbit/s | ⛔ **222.9 %** | 48.42 | 239 129 | 0 | 0 |
 
-### ⛔⭐ LA RISPOSTA ALLA DOMANDA CHE DECIDE
+### ⛔⭐ THE ANSWER TO THE QUESTION THAT DECIDES
 
-> **Il caso duro in H.264 supera i 20 Mbit/s?** ⇒ ⛔ **SÌ. 44,574 Mbit/s, cioè 2,2 volte il
-> pavimento.**
+> **Does the hard case in H.264 exceed 20 Mbit/s?** ⇒ ⛔ **YES. 44.574 Mbit/s, that is 2.2 times the
+> floor.**
 
-### `[M]` I DUE METRI AFFIANCATI — e la distanza **non** è un fattore costante
+### `[M]` THE TWO YARDSTICKS SIDE BY SIDE — and the distance is **not** a constant factor
 
-| a 2560×1080, tetto spento | HEVC (§3.8, mattina) | ⭐ **H.264** (14:2x) | rapporto |
+| at 2560×1080, cap off | HEVC (§3.8, morning) | ⭐ **H.264** (14:2x) | ratio |
 |---|---|---|---|
-| ferma | 0 | 0 | — |
-| desktop vero | 0,204 | ⚠ **0,356** | ⛔ **1,7× in SU** |
-| tinta piatta | 1,179 | 1,190 | 1,01× |
-| gradiente retinato | 21,36 | ⭐ **7,728** | **0,36×** |
-| film con la grana | 58,668 | **44,574** | **0,76×** |
+| still | 0 | 0 | — |
+| real desktop | 0.204 | ⚠ **0.356** | ⛔ **1.7× UP** |
+| flat colour | 1.179 | 1.190 | 1.01× |
+| halftone gradient | 21.36 | ⭐ **7.728** | **0.36×** |
+| film with grain | 58.668 | **44.574** | **0.76×** |
 
-⛔⛔ **E questa riga è il fatto nuovo della tabella**: H.264 **non** costa «un terzo di HEVC», come
-§13.5.1 lasciava credere misurando una scena sola. Costa **il 36 %** sul gradiente retinato, il
-**76 %** sul film con la grana e ⛔ **il 170 %** — cioè **di più** — sul desktop vero.
-⇒ ⭐ **Il rapporto fra i due codec dipende dal CONTENUTO**, ed è la stessa lezione di §3.8 («quanti
-pixel cambiano non predice niente») applicata al codec. ⚠ Un fattore di conversione da HEVC a
-H.264 **non esiste**: i numeri vecchi non si convertono, si **rifanno**.
+⛔⛔ **And this line is the new fact of the table**: H.264 does **not** cost «a third of HEVC», as
+§13.5.1 suggested by measuring a single scene. It costs **36 %** on the halftone gradient,
+**76 %** on the film with grain and ⛔ **170 %** — that is **more** — on the real desktop.
+⇒ ⭐ **The ratio between the two codecs depends on the CONTENT**, and it is the same lesson as §3.8 («how many
+pixels change predicts nothing») applied to the codec. ⚠ A conversion factor from HEVC to
+H.264 **does not exist**: the old numbers are not converted, they are **redone**.
 
-### ⭐ Il controllo positivo, e sta dentro la tabella
+### ⭐ The positive control, and it is inside the table
 
-I cinque punti coprono **tre ordini di grandezza** (0 → 0,356 → 1,19 → 7,73 → 44,57): se il banco
-fosse cieco darebbero lo stesso numero. ⭐ E `barra` ritrovato a **7,728** contro i **7,920** di
-§13.5.1, preso trentacinque minuti prima con un'altra sessione: **2,4 % di scarto**, cioè la misura
-si ripete.
-⚠ **La riga `ferma` dice un'altra cosa che vale la pena leggere**: **zero** video e **2,427
-Mbit/s sul filo**. ⇒ A desktop fermo il **100 %** di quel che passa è QUIC + **l'audio PCM**, che da
-solo chiede 1,536 Mbit/s. `[?]` **A linea stretta è l'audio a mangiare il video, non il contrario** —
-vedi 14.4.1, dove a 3 Mbit/s il video scende a 5 fot/s e il filo resta a 2,4.
+The five points cover **three orders of magnitude** (0 → 0.356 → 1.19 → 7.73 → 44.57): if the bench
+were blind they would give the same number. ⭐ And `barra` found again at **7.728** against the **7.920** of
+§13.5.1, taken thirty-five minutes earlier with another session: **2.4 % gap**, that is the measurement
+repeats.
+⚠ **The `ferma` line says another thing worth reading**: **zero** video and **2.427
+Mbit/s on the wire**. ⇒ With a still desktop **100 %** of what passes is QUIC + **the PCM audio**, which by
+itself asks for 1.536 Mbit/s. `[?]` **On a narrow line it is audio that eats video, not the opposite** —
+see 14.4.1, where at 3 Mbit/s video goes down to 5 fps and the wire stays at 2.4.
 
-## 14.3 ⭐⭐⭐ §10.1 RIFATTA COL NUMERO GIUSTO — la contraddizione **non cade, si dimezza**
+## 14.3 ⭐⭐⭐ §10.1 REDONE WITH THE RIGHT NUMBER — the contradiction **does not fall, it halves**
 
-§10.1 metteva a confronto due frasi: lo studio diceva *«non serve nessun tetto»* sul contenuto vero,
-la misura diceva *«293 % del pavimento»* sul caso duro. ⛔ Erano tutt'e due **numeri HEVC**.
+§10.1 compared two sentences: the study said *«no cap is needed»* on the real content,
+the measurement said *«293 % of the floor»* on the hard case. ⛔ They were both **HEVC numbers**.
 
-| | HEVC (quel che diceva §10.1) | ⭐ **H.264** (quel che l'utente riceve) |
+| | HEVC (what §10.1 said) | ⭐ **H.264** (what the user receives) |
 |---|---|---|
-| il **contenuto vero** dell'utente | 0,204 Mbit/s = **1,0 %** | **0,356** Mbit/s = **1,8 %** |
-| il **caso duro** (film con la grana) | 58,668 = **293 %** | ⛔ **44,574** = **223 %** |
-| la distanza fra i due | **288×** | **125×** |
+| the user's **real content** | 0.204 Mbit/s = **1.0 %** | **0.356** Mbit/s = **1.8 %** |
+| the **hard case** (film with grain) | 58.668 = **293 %** | ⛔ **44.574** = **223 %** |
+| the distance between the two | **288×** | **125×** |
 
-### ⭐ LA CONCLUSIONE, col numero e non con l'opinione
+### ⭐ THE CONCLUSION, with the number and not with opinion
 
-1. ⭐ **La prima frase regge, e regge meglio di prima**: sul desktop vero il prodotto chiede
-   **l'1,8 % del pavimento**. Un tetto a 20 Mbit/s lì **non ha niente da fare**, e §13.4 l'ha già
-   misurato (0,208 → 0,249, e la cura non è caduta);
-2. ⛔ **La seconda frase regge anche lei, e il cambio di codec NON la salva**: il caso duro chiede
-   **223 %** invece di 293 %. ⇒ ⛔ **Passare a H.264 toglie 70 punti percentuali e lascia il
-   problema in piedi**: 44,6 contro 20 è ancora **più del doppio**;
-3. ⇒ ⭐⭐ **LA CONTRADDIZIONE NON ERA UNA CONTRADDIZIONE, ed è deciso**: le due frasi parlano di due
-   contenuti diversi, e tutt'e due sono vere **sullo stesso codec**. **Il tetto serve, e serve solo
-   per il caso duro** — cioè è esattamente quel che §5.5 aveva progettato: un parapetto che sul
-   desktop vero non si accorge di esistere.
-   ⛔ **E chi volesse buttare il tetto adesso deve rispondere a questa riga**: *con quale numero il
-   film a schermo intero sta dentro i 20 Mbit/s senza di lui?*
+1. ⭐ **The first sentence holds, and holds better than before**: on the real desktop the product asks for
+   **1.8 % of the floor**. A cap at 20 Mbit/s **has nothing to do** there, and §13.4 has already
+   measured it (0.208 → 0.249, and the cure did not fall);
+2. ⛔ **The second sentence holds too, and the change of codec does NOT save it**: the hard case asks for
+   **223 %** instead of 293 %. ⇒ ⛔ **Moving to H.264 removes 70 percentage points and leaves the
+   problem standing**: 44.6 against 20 is still **more than double**;
+3. ⇒ ⭐⭐ **THE CONTRADICTION WAS NOT A CONTRADICTION, and it is decided**: the two sentences speak of two
+   different contents, and both are true **on the same codec**. **The cap is needed, and needed only
+   for the hard case** — that is it is exactly what §5.5 had designed: a parapet that on the
+   real desktop does not notice it exists.
+   ⛔ **And whoever wanted to throw the cap away now must answer this line**: *with what number does the
+   film at full screen stay within 20 Mbit/s without it?*
 
-## 14.4 ⛔⭐⭐ LA SOGLIA SULLA CODA, tarata nel verso giusto — *14:27 → 14:35 UTC*
+## 14.4 ⛔⭐⭐ THE QUEUE THRESHOLD, tuned in the right direction — *14:27 → 14:35 UTC*
 
-### 14.4.1 ⛔⛔ IL BANCO CHIESTO NON HA UN CONTROLLO POSITIVO, e lo dico prima dei numeri
+### 14.4.1 ⛔⛔ THE REQUESTED BENCH HAS NO POSITIVE CONTROL, and I say it before the numbers
 
-Il mandato chiedeva lo spazzamento **sul desktop vero**, e ha ragione: `barra` è sintetico.
-⛔ **Ma sul desktop vero non c'è niente da tarare, e l'ho misurato invece di dedurlo.**
+The mandate asked for the sweep **on the real desktop**, and it is right: `barra` is synthetic.
+⛔ **But on the real desktop there is nothing to tune, and I measured it instead of deducing it.**
 
-`[M]` **14:27:48**, gradino sul desktop vero in H.264, soglia **spenta**, stretta a **3 Mbit/s** —
-cioè **un terzo** di quel che §13.8 aveva già provato a 10:
+`[M]` **14:27:48**, step on the real desktop in H.264, threshold **off**, squeeze at **3 Mbit/s** —
+that is **a third** of what §13.8 had already tried at 10:
 
-| s | 5-7 (larga) | **8** | **9** | **10** | **11** | 13-25 (larga) |
+| s | 5-7 (wide) | **8** | **9** | **10** | **11** | 13-25 (wide) |
 |---|---|---|---|---|---|---|
-| fotogrammi | 29 | 21 | 13 | **5** | 5 | 27-29 |
-| ⛔ **chiavi** | 0 | **0** | **0** | **0** | **0** | 0 |
-| ⛔ **abbandoni** | 0 | **0** | **0** | **0** | **0** | 0 |
+| frames | 29 | 21 | 13 | **5** | 5 | 27-29 |
+| ⛔ **keyframes** | 0 | **0** | **0** | **0** | **0** | 0 |
+| ⛔ **abandons** | 0 | **0** | **0** | **0** | **0** | 0 |
 
-⇒ ⭐⭐ **A 3 Mbit/s — il 15 % del pavimento — sul desktop vero il ritmo crolla da 29 a 5 fot/s e
-la spirale NON PARTE LO STESSO: zero chiavi, zero abbandoni.** §13.8 si fermava a 5 Mbit/s e ne
-trovava 3; qui, più in basso ancora, ce ne sono **zero**.
-⇒ ⛔ **Uno spazzamento della soglia su questa scena misurerebbe zero contro zero contro zero**, cioè
-niente. Il banco non ha lo stimolo, e un banco senza stimolo dà *«la cura funziona»* per ogni
-valore. **Non l'ho fatto lì.**
+⇒ ⭐⭐ **At 3 Mbit/s — 15 % of the floor — on the real desktop the rate collapses from 29 to 5 fps and
+the spiral DOES NOT START ALL THE SAME: zero keyframes, zero abandons.** §13.8 stopped at 5 Mbit/s and
+found 3; here, even lower, there are **zero**.
+⇒ ⛔ **A sweep of the threshold on this scene would measure zero against zero against zero**, that is
+nothing. The bench has no stimulus, and a bench without stimulus gives *«the cure works»* for every
+value. **I did not do it there.**
 
-⭐ **E c'è un secondo motivo, e viene dal metro nuovo**: l'obiezione di §13.8 contro `barra`
-(*«a 2560×1080 costa 21 Mbit/s da sola, non è il desktop di nessuno»*) era un'obiezione **HEVC**.
-In H.264 `barra` costa **7,73 Mbit/s** (14.2), cioè il 39 % del pavimento. ⚠ Ma il caso che
-**chiede** la cura è un altro, ed è quello vero: il **film con la grana**, 44,6 Mbit/s.
+⭐ **And there is a second reason, and it comes from the new yardstick**: the objection of §13.8 against `barra`
+(*«at 2560×1080 it costs 21 Mbit/s by itself, it is nobody's desktop»*) was an **HEVC** objection.
+In H.264 `barra` costs **7.73 Mbit/s** (14.2), that is 39 % of the floor. ⚠ But the case that
+**asks for** the cure is another one, and it is the real one: the **film with grain**, 44.6 Mbit/s.
 
-### 14.4.2 `[M]` LO SPAZZAMENTO, sul CASO DURO — film con la grana, 2560×1080, H.264
+### 14.4.2 `[M]` THE SWEEP, on the HARD CASE — film with grain, 2560×1080, H.264
 
-**Il giro**, identico sei volte: 8 s larga → **3 s a 10 Mbit/s** → 17 s larga, `tc` solo su `lo`
-e solo sulla 7920, guardiano armato, `enp7s0` mai toccata (verificato dopo ogni braccio).
-Server riavviato a ogni braccio, `md5 162d2d10…`, trappola glibc spenta. Le righe qui sotto sono
-**i 3 secondi di stretta**, e i millisecondi sono quelli che il prodotto scrive da sé nella riga
+**The round**, identical six times: 8 s wide → **3 s at 10 Mbit/s** → 17 s wide, `tc` only on `lo`
+and only on 7920, guardian armed, `enp7s0` never touched (verified after each arm).
+Server restarted at every arm, `md5 162d2d10…`, glibc trap off. The rows below are
+**the 3 seconds of squeeze**, and the milliseconds are those the product writes by itself in the line
 *«la coda del video passa SOPRA la soglia (… byte = N ms …)»*.
 
-| braccio | ora | fot/s nei 3 s | ⛔ chiavi | ⛔ abbandoni | kbyte | attrav. | ⚠ **ms di coda pagati** | `arretrato` max |
+| arm | time | fps in the 3 s | ⛔ keyframes | ⛔ abandons | kbytes | cross. | ⚠ **ms of queue paid** | max `arretrato` |
 |---|---|---|---|---|---|---|---|---|
-| **spenta** | 14:29 | 6,0 | **8** | **8** | 6 111 | — | — | 0-1 per costruzione |
-| **100 ms** | 14:30 | 6,7 | 8 | 10 | 6 507 | 8 | **136 – 397** | 3 |
-| **200 ms** | 14:31 | 7,7 | 8 | 14 | 7 216 | 8 | **222 – 942** | 6 |
-| **400 ms** | 14:32 | 5,7 | 6 | 8 | 5 930 | 7 | **414 – 643** | 8 |
-| **800 ms** | 14:33 | 7,3 | **5** | 14 | 6 738 | 6 | ⛔ **856 – 1 321** | 7 |
-| ⭐ **200 + `--ritmo-adattivo`** | 14:34 | 5,3 | 6 | ⭐ **6** | 5 521 | 7 | ⭐ **209 – 323** | ⭐ **2** |
+| **off** | 14:29 | 6.0 | **8** | **8** | 6 111 | — | — | 0-1 by construction |
+| **100 ms** | 14:30 | 6.7 | 8 | 10 | 6 507 | 8 | **136 – 397** | 3 |
+| **200 ms** | 14:31 | 7.7 | 8 | 14 | 7 216 | 8 | **222 – 942** | 6 |
+| **400 ms** | 14:32 | 5.7 | 6 | 8 | 5 930 | 7 | **414 – 643** | 8 |
+| **800 ms** | 14:33 | 7.3 | **5** | 14 | 6 738 | 6 | ⛔ **856 – 1 321** | 7 |
+| ⭐ **200 + `--ritmo-adattivo`** | 14:34 | 5.3 | 6 | ⭐ **6** | 5 521 | 7 | ⭐ **209 – 323** | ⭐ **2** |
 
-### ⭐ LA COPPIA CHE L'UTENTE DEVE GIUDICARE, e la risposta secca
+### ⭐ THE PAIR THE USER MUST JUDGE, and the flat answer
 
-> **A quale valore la soglia mantiene la promessa di P3, e a che prezzo in ms?**
-> ⇒ ⛔ **NESSUNO. Da sola non ci arriva a nessun valore.** P3 chiedeva *chiavi ≤ 2/s*,
-> *abbandoni ≤ 2/s* e *fot ≥ 25/s*: ⭐ le chiavi scendono nella promessa a **400 ms** (2,0/s) e a
-> **800** (1,7/s), ⛔ gli **abbandoni non ci arrivano a nessun valore** (2,7 – 4,7/s), e ⛔ i
-> **fotogrammi non ci si avvicinano nemmeno** (5,3 – 7,7/s contro 25).
-> ⭐⭐ **L'unico braccio che porta gli abbandoni dentro la promessa è la COPPIA**
-> `--sgombra-soglia-ms 200 --ritmo-adattivo`: **6 abbandoni in 3 s = 2,0/s**, e li paga con
-> **209-323 ms** di coda, cioè **~264-378 ms dal gesto al pixel** sommando i 55 ms dell'anello di
-> fase 8.
+> **At what value does the threshold keep P3's promise, and at what price in ms?**
+> ⇒ ⛔ **NONE. Alone it does not get there at any value.** P3 asked for *keyframes ≤ 2/s*,
+> *abandons ≤ 2/s* and *fps ≥ 25/s*: ⭐ keyframes come down into the promise at **400 ms** (2.0/s) and at
+> **800** (1.7/s), ⛔ **abandons do not get there at any value** (2.7 – 4.7/s), and ⛔
+> **frames do not even come close** (5.3 – 7.7/s against 25).
+> ⭐⭐ **The only arm that brings abandons inside the promise is the PAIR**
+> `--sgombra-soglia-ms 200 --ritmo-adattivo`: **6 abandons in 3 s = 2.0/s**, and it pays for them with
+> **209-323 ms** of queue, that is **~264-378 ms from gesture to pixel** adding the 55 ms of the loop of
+> phase 8.
 
-### ⛔⛔ E TRE COSE CHE SMENTISCONO QUEL CHE §13.2.4 AVEVA CONCLUSO
+### ⛔⛔ AND THREE THINGS THAT REFUTE WHAT §13.2.4 HAD CONCLUDED
 
-1. ⛔ **«Il miglioramento è monòtono» NON regge sul caso duro.** Le chiavi calano piano
-   (8 · 8 · 8 · 6 · 5) ma gli **abbandoni ballano** (8 · 10 · 14 · 8 · 14) e i fotogrammi pure
-   (6,0 · 6,7 · 7,7 · 5,7 · 7,3). ⚠ Un solo giro per braccio: **una differenza di una o due chiavi
-   è dentro il rumore, e non la riporto come un effetto.** Quel che è **fuori** dal rumore è una
-   cosa sola, ed è il prezzo;
-2. ⛔⛔ **IL PREZZO CRESCE PIÙ IN FRETTA DI QUEL CHE COMPRA, e a 800 ms è fuori scala**:
-   397 → 942 → 643 → **1 321 ms**. ⭐ Il punto di lavoro di §13.2.4 è confermato una seconda volta e
-   su un'altra scena (la coda si assesta **appena sopra** la soglia, qualunque numero si scelga) —
-   ⛔ ma la conseguenza è che **alzare la soglia compra 3 chiavi e vende un secondo e tre decimi di
-   ritardo.** ⇒ **Il verso «alzala» di §13.2.3 è giusto solo fino a ~200-400 ms**: sopra, il
-   commercio è quello che `SPECIFICHE.md` §3.2 vieta in una riga;
-3. ⭐⭐⭐ **E IL REGOLATORE È LA LEVA, NON LA SOGLIA.** `arretrato` massimo: **3 · 6 · 8 · 7** con la
-   sola soglia, ⭐ **2** con la coppia — cioè `WT_RITMO_POSTI = 2` **tiene**, e la coda smette di
-   approfondirsi. ⇒ Alla stessa soglia di 200 ms, accendere il regolatore **dimezza gli abbandoni
-   (14 → 6)** e **taglia il ritardo di massimo da 942 a 323 ms**. ⛔ **La soglia da sola non è la
-   leva giusta; la coppia sì**, ed è quel che il mandato sospettava.
+1. ⛔ **«The improvement is monotonic» does NOT hold on the hard case.** Keyframes go down slowly
+   (8 · 8 · 8 · 6 · 5) but **abandons wobble** (8 · 10 · 14 · 8 · 14) and so do frames
+   (6.0 · 6.7 · 7.7 · 5.7 · 7.3). ⚠ One single round per arm: **a difference of one or two keyframes
+   is within the noise, and I do not report it as an effect.** What is **outside** the noise is one
+   thing only, and it is the price;
+2. ⛔⛔ **THE PRICE GROWS FASTER THAN WHAT IT BUYS, and at 800 ms it is off the scale**:
+   397 → 942 → 643 → **1 321 ms**. ⭐ The working point of §13.2.4 is confirmed a second time and
+   on another scene (the queue settles **just above** the threshold, whatever number is chosen) —
+   ⛔ but the consequence is that **raising the threshold buys 3 keyframes and sells a second and three tenths of
+   delay.** ⇒ **The «raise it» direction of §13.2.3 is right only up to ~200-400 ms**: above that, the
+   trade is the one `SPECIFICHE.md` §3.2 forbids in one line;
+3. ⭐⭐⭐ **AND THE REGULATOR IS THE LEVER, NOT THE THRESHOLD.** Max `arretrato`: **3 · 6 · 8 · 7** with the
+   threshold alone, ⭐ **2** with the pair — that is `WT_RITMO_POSTI = 2` **holds**, and the queue stops
+   getting deeper. ⇒ At the same threshold of 200 ms, switching on the regulator **halves the abandons
+   (14 → 6)** and **cuts the maximum delay from 942 to 323 ms**. ⛔ **The threshold alone is not the
+   right lever; the pair is**, and it is what the mandate suspected.
 
-⚠ **Il rosso di §2 del mandato resta in piedi e lo dichiaro**: se il ritardo dell'anello superasse
-55 ms + la soglia, la stima dello svuotamento sottostima. `[M]` qui la coda misurata arriva a
-**1 321 ms** contro una soglia di 800: ⇒ ⛔ **a 800 ms la stima È già fuori dal suo campo di
-validità**, ed è una ragione in più per non salire lì.
+⚠ **The red of §2 of the mandate is still standing and I declare it**: if the loop delay exceeded
+55 ms + the threshold, the estimate of the draining underestimates. `[M]` here the measured queue reaches
+**1 321 ms** against a threshold of 800: ⇒ ⛔ **at 800 ms the estimate IS already outside its range of
+validity**, and it is one more reason not to go up there.
 
-## 14.5 ⭐⭐⭐ P8 — IL RITMO A SCENA FERMA, A COPPIE: **VERDE** — *14:40:00 → 14:41:00 UTC*
+## 14.5 ⭐⭐⭐ P8 — THE RATE WITH A STILL SCENE, IN PAIRS: **GREEN** — *14:40:00 → 14:41:00 UTC*
 
-**Il giro**: `banchi/09-b75-p8.py` (nuovo), porta 7920 con **tutt'e due gli interruttori**
-(`--sgombra-soglia-ms 100 --ritmo-adattivo`, letti dalla riga d'avvio del prodotto, non dedotti dal
-comando), tela 2560×1080, H.264, linea **larga**, **tre coppie** ferma/mossa da 8 s **alternate
-nello stesso giro**. Il verbale è la riga che `ritmo_ciclo()` scrive **col battito e non coi
-fotogrammi**, una al secondo.
+**The round**: `banchi/09-b75-p8.py` (new), port 7920 with **both switches**
+(`--sgombra-soglia-ms 100 --ritmo-adattivo`, read from the product's startup line, not deduced from the
+command), canvas 2560×1080, H.264, **wide** line, **three pairs** still/moving of 8 s **alternated
+in the same round**. The record is the line that `ritmo_ciclo()` writes **on the beat and not on the
+frames**, one per second.
 
-| | secondi | ⭐ **`arretrato` LETTO** | secondi con **ZERO** letture | massimo | ⛔ **discese** |
+| | seconds | ⭐ **`arretrato` READ** | seconds with **ZERO** reads | maximum | ⛔ **descents** |
 |---|---|---|---|---|---|
-| ⛔ **metà FERMA** | 16 | **0 in tutto** | ⭐ **16 su 16** | 0 | ⭐ **0** |
-| ⭐ **metà MOSSA** | 27 | **1 072** = **39,7 al secondo** | ⭐ **0 su 27** | 0 | ⭐ **0** |
+| ⛔ **STILL half** | 16 | **0 in all** | ⭐ **16 out of 16** | 0 | ⭐ **0** |
+| ⭐ **MOVING half** | 27 | **1 072** = **39.7 per second** | ⭐ **0 out of 27** | 0 | ⭐ **0** |
 
-⇒ ⭐⭐⭐ **VERDE, e sui due punti insieme**: nella metà ferma il ramo **non è stato percorso**
-(«LETTO 0 volte», 16 righe su 16) e il ritmo **non è sceso**; nella metà mossa l'anello è stato
-percorso **1 072 volte** e il ritmo **non è sceso lo stesso**.
-⛔ **E questo è quel che «il contatore è zero» non poteva dire**: le due metà danno lo stesso zero
-di discese, e le righe `LETTO` dicono che **una l'ha guadagnato e l'altra no**. Vuoto e proibito
-sono distinti, che è tutto il punto di P8.
+⇒ ⭐⭐⭐ **GREEN, and on both points together**: in the still half the branch **was not travelled**
+(«LETTO 0 volte», 16 lines out of 16) and the rate **did not go down**; in the moving half the loop was
+travelled **1 072 times** and the rate **did not go down all the same**.
+⛔ **And this is what «the counter is zero» could not say**: the two halves give the same zero
+descents, and the `LETTO` lines say that **one earned it and the other did not**. Empty and forbidden
+are distinct, which is the whole point of P8.
 
-⭐ **E `massimo 0` nella metà mossa è il secondo fatto**: su linea larga `arretrato` non arriva
-neanche a 1. ⇒ Il regolatore è **un parapetto che non tocca niente**, com'era previsto (P7, S.5).
+⭐ **And `massimo 0` in the moving half is the second fact**: on a wide line `arretrato` does not even reach
+1. ⇒ The regulator is **a parapet that touches nothing**, as predicted (P7, S.5).
 
-### ⛔ DUE DIFETTI DEL BANCO TROVATI STRADA FACENDO — e tutt'e due davano «un numero plausibile»
+### ⛔ TWO BENCH DEFECTS FOUND ALONG THE WAY — and both gave «a plausible number»
 
-1. ⛔ **La tappa «mossa» era segnata DOPO l'accensione.** `09-b68-scena.sh` lancia la scena e poi
-   **dorme 2 s** per verificare che sia viva: quei 2,3 secondi, in cui la scena **dipinge già**,
-   finivano nella metà **ferma**. `[M]` 14:37 — la metà ferma usciva con **26 righe invece di 18** e
-   **147 letture**, e il banco diceva **GIALLO su un giro sano**;
-2. ⛔ **Il primo secondo dopo la morte della scena porta ancora 22-40 letture.** Non è il prodotto
-   che non si ferma: **uccidere il processo della scena non ferma Mutter**, e i fotogrammi già
-   composti continuano ad arrivare per circa un secondo. ⇒ Si butta **2,5 s di guardia** dopo ogni
-   cambio, **e si dichiara**: contarli da una parte o dall'altra sarebbe attribuire al prodotto un
-   transitorio del compositore. ⚠ **E la guardia non può nascondere il rosso che conta**: una
-   discesa a scena ferma cadrebbe nei secondi **centrali**, non sul bordo.
+1. ⛔ **The «moving» stage was marked AFTER the start.** `09-b68-scena.sh` launches the scene and then
+   **sleeps 2 s** to verify it is alive: those 2.3 seconds, in which the scene **already paints**,
+   ended up in the **still** half. `[M]` 14:37 — the still half came out with **26 lines instead of 18** and
+   **147 reads**, and the bench said **YELLOW on a healthy round**;
+2. ⛔ **The first second after the death of the scene still carries 22-40 reads.** It is not the product
+   that does not stop: **killing the scene's process does not stop Mutter**, and the frames already
+   composed keep arriving for about a second. ⇒ **2.5 s of guard** are thrown away after every
+   change, **and it is declared**: counting them on one side or the other would attribute to the product a
+   transient of the compositor. ⚠ **And the guard cannot hide the red that counts**: a
+   descent with a still scene would fall in the **central** seconds, not on the edge.
 
-## 14.6 ⭐⭐ IL 4K IN H.264 — *14:45:42 → 14:48:15 UTC*: **il numero che mancava, e il tetto SI MUOVE**
+## 14.6 ⭐⭐ 4K IN H.264 — *14:45:42 → 14:48:15 UTC*: **the missing number, and the cap MOVES**
 
-**Il giro**: stessa 7920, stesso binario, **nessun interruttore**, tela **3840×2160** verificata nel
-registro del prodotto (`SESSIONE: stato=1 tela=3840x2160`), `tc` mai toccato, 30 s per punto,
-una sola sessione.
+**The round**: same 7920, same binary, **no switch**, canvas **3840×2160** verified in the
+product's log (`SESSIONE: stato=1 tela=3840x2160`), `tc` never touched, 30 s per point,
+one single session.
 
-| a **3840×2160**, H.264, tetto spento | fot/s | ⭐ **carico video** | % di 20 | filo | byte/fotogramma | chiavi | abb. |
+| at **3840×2160**, H.264, cap off | fps | ⭐ **video payload** | % of 20 | wire | bytes/frame | keyframes | ab. |
 |---|---|---|---|---|---|---|---|
-| ⭐ **desktop VERO** | 23,10 | **0,852** Mbit/s | ⭐ **4,3 %** | 3,351 | 4 607 | 0 | 0 |
-| **tinta piatta** (`pieno`) | ⚠ **33,37** | 2,716 | 13,6 % | 5,259 | 10 174 | 0 | 0 |
-| **gradiente retinato** (`barra`) | **40,40** | 23,564 | **117,8 %** | 26,641 | 72 908 | 0 | 0 |
-| ⛔ **film con la GRANA** | 23,27 | ⛔ **74,699** | ⛔ **373,5 %** | 79,279 | 401 320 | ⛔ **2** | ⛔ **2** |
+| ⭐ **REAL desktop** | 23.10 | **0.852** Mbit/s | ⭐ **4.3 %** | 3.351 | 4 607 | 0 | 0 |
+| **flat colour** (`pieno`) | ⚠ **33.37** | 2.716 | 13.6 % | 5.259 | 10 174 | 0 | 0 |
+| **halftone gradient** (`barra`) | **40.40** | 23.564 | **117.8 %** | 26.641 | 72 908 | 0 | 0 |
+| ⛔ **film with GRAIN** | 23.27 | ⛔ **74.699** | ⛔ **373.5 %** | 79.279 | 401 320 | ⛔ **2** | ⛔ **2** |
 
-### ⭐ 1. IL TETTO DEI 41 FOT/S **SI MUOVE CON LA SCENA** — e §13.6 non poteva vederlo
+### ⭐ 1. THE 41 FPS CAP **MOVES WITH THE SCENE** — and §13.6 could not see it
 
-§13.6 aveva misurato **41,25 fot/s** su `barra` e ne aveva concluso *«a 3840×2160 il prodotto regge
-~41/s»*. ⭐ Con quattro scene invece di una si vede che **non è un tetto, è un punto**: `barra`
-**40,40**, ⚠ `pieno` **33,37** — cioè **7 fotogrammi in meno su una scena che costa NOVE VOLTE
-MENO banda** (2,7 contro 23,6 Mbit/s).
-⇒ ⛔ **Non è la banda a decidere il ritmo a 4K**, e non è neanche il costo della codifica: è quel
-che **il compositore consegna**, ed è la stessa lezione di §3.1. ⚠ I due punti `video` (23,1 e
-23,27) **non dicono niente sul tetto**: è il filmato stesso che gira a ~23/s.
-⇒ **`DECISIONI.md` va corretto così**: a 3840×2160 il prodotto regge **33-41 fot/s a seconda della
-scena**, non 60 e nemmeno «41».
+§13.6 had measured **41.25 fps** on `barra` and had concluded *«at 3840×2160 the product holds
+~41/s»*. ⭐ With four scenes instead of one one sees that **it is not a cap, it is a point**: `barra`
+**40.40**, ⚠ `pieno` **33.37** — that is **7 frames fewer on a scene that costs NINE TIMES
+LESS bandwidth** (2.7 against 23.6 Mbit/s).
+⇒ ⛔ **It is not bandwidth that decides the rate at 4K**, and it is not even the cost of encoding: it is what
+**the compositor delivers**, and it is the same lesson as §3.1. ⚠ The two `video` points (23.1 and
+23.27) **say nothing about the cap**: it is the clip itself that runs at ~23/s.
+⇒ **`DECISIONI.md` must be corrected like this**: at 3840×2160 the product holds **33-41 fps depending on the
+scene**, not 60 and not even «41».
 
-### ⭐ 2. QUANTO COSTA IL 4K, e cresce **quasi coi pixel** (ma non sul caso duro)
+### ⭐ 2. HOW MUCH 4K COSTS, and it grows **almost with the pixels** (but not on the hard case)
 
-I pixel a 4K sono **3,0×** quelli di 2560×1080. `[M]` la banda:
+The pixels at 4K are **3.0×** those of 2560×1080. `[M]` the bandwidth:
 
-| scena | 2560×1080 | 3840×2160 | rapporto |
+| scene | 2560×1080 | 3840×2160 | ratio |
 |---|---|---|---|
-| desktop vero | 0,356 | 0,852 | **2,4×** |
-| tinta piatta | 1,190 | 2,716 | **2,3×** |
-| gradiente retinato | 7,728 | 23,564 | **3,05×** |
-| ⛔ film con la grana | 44,574 | 74,699 | ⚠ **1,68×** |
+| real desktop | 0.356 | 0.852 | **2.4×** |
+| flat colour | 1.190 | 2.716 | **2.3×** |
+| halftone gradient | 7.728 | 23.564 | **3.05×** |
+| ⛔ film with grain | 44.574 | 74.699 | ⚠ **1.68×** |
 
-⭐ **La riga che conta per l'utente**: a **4K** il suo desktop vero costa **0,852 Mbit/s, il 4,3 %
-del pavimento**. ⇒ ⛔ **Il 4K non è un problema di banda**: è un problema di **fotogrammi**.
-⚠ E il caso duro cresce **meno** degli altri (1,68× invece di 3×) perché a 2560 era **già** al
-limite di quel che la catena riesce a produrre.
+⭐ **The line that counts for the user**: at **4K** his real desktop costs **0.852 Mbit/s, 4.3 %
+of the floor**. ⇒ ⛔ **4K is not a bandwidth problem**: it is a **frames** problem.
+⚠ And the hard case grows **less** than the others (1.68× instead of 3×) because at 2560 it was **already** at the
+limit of what the chain manages to produce.
 
-### ⛔ 3. IL PRIMO SEGNO DI CEDIMENTO SU LINEA LIBERA
+### ⛔ 3. THE FIRST SIGN OF GIVING WAY ON A FREE LINE
 
-Il film con la grana a 4K è l'**unico** punto di tutta la sera che ha prodotto **chiavi e abbandoni
-con `tc` mai toccato**: 2 chiavi, 2 abbandoni, 1 chiave trattenuta da §5.2 in 30 s.
-⇒ ⭐ A **79,3 Mbit/s sul filo** la coda comincia a non svuotarsi **anche senza nessuna
-strozzatura**. ⚠ È il punto in cui «linea larga» smette di essere larga.
+The film with grain at 4K is the **only** point of the whole evening that produced **keyframes and abandons
+with `tc` never touched**: 2 keyframes, 2 abandons, 1 keyframe withheld by §5.2 in 30 s.
+⇒ ⭐ At **79.3 Mbit/s on the wire** the queue starts not emptying **even without any
+throttling**. ⚠ It is the point where «wide line» stops being wide.
 
-### ⛔⛔ 4. E P9 SI RIPRODUCE COL METRO NUOVO — *14:42:50-51*, due righe a un secondo di distanza
+### ⛔⛔ 4. AND P9 REPRODUCES WITH THE NEW YARDSTICK — *14:42:50-51*, two lines one second apart
 
 ```
 14:42:50.068 rcp     il client dichiara video.livello=5.1 … §4.3 vieta al server di emettere
@@ -2987,15 +2987,15 @@ strozzatura**. ⚠ È il punto in cui «linea larga» smette di essere larga.
                      decodificatore «»
 ```
 
-⛔ **Il server emette 5.2 dove il client ammette 5.1, e il programma non se ne accorge** — §13.6.2
-non era un caso del giro di allora: si ripete **ogni volta** che la tela è 4K.
-⚠ Il tetto «conversione + codifica» del primo fotogramma stava sopra i 40,40 di `barra`. *(I tempi sono
-tolti dopo la fase 18: la conversione non si dimostra a copia zero.)* *→ in software: `fasi/18-senza-ffmpeg.md` §5.4.*
+⛔ **The server emits 5.2 where the client admits 5.1, and the program does not notice** — §13.6.2
+was not a chance of that round: it repeats **every time** the canvas is 4K.
+⚠ The «conversion + encoding» cap of the first frame was above the 40.40 of `barra`. *(The times were
+removed after phase 18: the conversion is not proven to be zero copy.)* *→ in software: `fasi/18-senza-ffmpeg.md` §5.4.*
 
-## 14.7 ⛔ L'AUDIO — **ancora NON verificata**, ma la causa di due sere è trovata e curata
+## 14.7 ⛔ AUDIO — **still NOT verified**, but the cause of two evenings is found and cured
 
-⭐ **§13.7 accusava il browser, e sbagliava imputato.** La riga che chiude il caso, `[M]` 23 agosto
-**14:49**, col registro creato **prima**, con l'uid giusto e i permessi giusti:
+⭐ **§13.7 accused the browser, and got the wrong defendant.** The line that closes the case, `[M]` 23 Aug
+**14:49**, with the log created **first**, with the right uid and the right permissions:
 
 ```
 ⛔ Marionette non ha aperto la 2829 in 40 s.
@@ -3003,378 +3003,378 @@ tolti dopo la fase 18: la conversione non si dimostra a copia zero.)* *→ in so
    il suo registro (/tmp/b74-ff.log): ⛔ VUOTO
 ```
 
-⇒ ⛔⛔ **Non era Marionette a non aprire la porta: era Firefox a non partire affatto.**
+⇒ ⛔⛔ **It was not Marionette not opening the port: it was Firefox not starting at all.**
 
-### ⛔ 14.7.1 LA CAUSA, e sono TRE difetti in fila — due miei, uno del sistema
+### ⛔ 14.7.1 THE CAUSE, and it is THREE defects in a row — two mine, one of the system
 
-1. ⛔⛔ **Il lanciatore era una riga di comando invece di un file.**
-   `root("bash -c \"setsid nohup setpriv … firefox … &\"")`: `bash -c` mette il lavoro in
-   sottofondo ed **esce nello stesso istante**, `sudo` esce dietro di lui e `ssh` chiude la
-   sessione — il processo **muore nella corsa** prima che `setsid` l'abbia staccato.
-   ⭐ **Curato**: `banchi/09-b74-ff.sh`, la stessa forma di `09-b72-video.sh` che funziona dal
-   mattino — un **FILE**, e il padre resta vivo mentre il figlio si stacca. ⚠ È la terza volta
-   oggi che la cura è *«un copione lungo si spedisce come file»*;
-2. ⛔ **`fs.protected_regular = 2`** (verificato con `sysctl`): in una cartella **sticky** come
-   `/tmp`, **nemmeno root** può aprire in scrittura un file **world-writable** che appartiene a un
-   altro utente — ed era esattamente quel che il tentativo precedente aveva lasciato lì.
-   `[M]` `cannot create /tmp/b74-ff.log: Permission denied` **da root**.
-   ⭐ **Curato**: si **cancella** e si ricrea (il permesso è della cartella, non del file);
-3. ⛔ **E adesso Firefox parte, resta vivo — e la prova NON si chiude lo stesso.** `[M]` 14:52:
-   `firefox-esr 140.14.0esr`, tre processi vivi con `--profile /tmp/b74-ff --marionette`,
-   `MOZ_MARIONETTE=1` **letto da `/proc/PID/environ`**, `marionette.port = 2829` in un `user.js`
-   di **487 byte** — e ⛔ **`ss -tlnp` non mostra NESSUN socket in ascolto del processo Firefox**,
-   né sulla 2829 né sulla 2828.
+1. ⛔⛔ **The launcher was a command line instead of a file.**
+   `root("bash -c \"setsid nohup setpriv … firefox … &\"")`: `bash -c` puts the job in the
+   background and **exits at the same instant**, `sudo` exits behind it and `ssh` closes the
+   session — the process **dies in the race** before `setsid` has detached it.
+   ⭐ **Cured**: `banchi/09-b74-ff.sh`, the same shape as `09-b72-video.sh` that has worked since the
+   morning — a **FILE**, and the parent stays alive while the child detaches. ⚠ It is the third time
+   today that the cure is *«a long script is shipped as a file»*;
+2. ⛔ **`fs.protected_regular = 2`** (verified with `sysctl`): in a **sticky** folder like
+   `/tmp`, **not even root** can open for writing a **world-writable** file belonging to
+   another user — and that was exactly what the previous attempt had left there.
+   `[M]` `cannot create /tmp/b74-ff.log: Permission denied` **as root**.
+   ⭐ **Cured**: it is **deleted** and recreated (the permission belongs to the folder, not to the file);
+3. ⛔ **And now Firefox starts, stays alive — and the test does NOT close all the same.** `[M]` 14:52:
+   `firefox-esr 140.14.0esr`, three live processes with `--profile /tmp/b74-ff --marionette`,
+   `MOZ_MARIONETTE=1` **read from `/proc/PID/environ`**, `marionette.port = 2829` in a `user.js`
+   of **487 bytes** — and ⛔ **`ss -tlnp` shows NO listening socket of the Firefox process**,
+   neither on 2829 nor on 2828.
 
-### ⛔⛔ 14.7.2 E C'È UN SECONDO MURO DIETRO IL PRIMO, che il registro del prodotto dimostra
+### ⛔⛔ 14.7.2 AND THERE IS A SECOND WALL BEHIND THE FIRST, which the product's log proves
 
-Nel registro della 7920 **non c'è nessuna richiesta della pagina da parte del browser**: dopo
-`ascolto TCP su 0.0.0.0:7920` l'unica stretta di mano è quella del cliente di prova.
-⇒ ⛔ **Firefox non ha mai chiesto la pagina.** Il certificato è **autofirmato**, e senza
-`acceptInsecureCerts` — che è una funzione **di Marionette** — il browser si ferma
-all'avviso e non emette la richiesta.
+In the 7920 log **there is no request for the page from the browser**: after
+`ascolto TCP su 0.0.0.0:7920` the only handshake is the test client's.
+⇒ ⛔ **Firefox never asked for the page.** The certificate is **self-signed**, and without
+`acceptInsecureCerts` — which is a function **of Marionette** — the browser stops
+at the warning and does not issue the request.
 
-⇒ ⛔ **I due muri sono lo stesso muro**: senza Marionette non si accetta il certificato, e senza
-certificato accettato non c'è pagina. **Mi fermo qui e lo dichiaro**, come dice la regola: due
-tentativi, poi si passa.
+⇒ ⛔ **The two walls are the same wall**: without Marionette the certificate is not accepted, and without an
+accepted certificate there is no page. **I stop here and declare it**, as the rule says: two
+attempts, then one moves on.
 
-### ⭐ CHE COSA RESTA DA FARE, e la strada corta non ha bisogno di Marionette
+### ⭐ WHAT REMAINS TO DO, and the short road does not need Marionette
 
-⭐ **La forma del banco è giusta e adesso è anche dimostrata**: il *prima* e il *dopo* sono **due
-file `pagina.html`** serviti dallo **stesso binario** (`md5 162d2d10…`), e il `md5` della pagina si
-legge nel registro (`d387c166…` per il vecchio, `e010d615…` per il nuovo). Il verbale lo manda la
-**pagina stessa** ogni 5 s.
+⭐ **The shape of the bench is right and now it is also proven**: the *before* and the *after* are **two
+`pagina.html` files** served by the **same binary** (`md5 162d2d10…`), and the `md5` of the page is
+read in the log (`d387c166…` for the old, `e010d615…` for the new). The record is sent by the
+**page itself** every 5 s.
 
-⇒ **Basta che la pagina si apra e si entri.** Due strade, in ordine di costo:
+⇒ **It is enough for the page to open and to log in.** Two roads, in order of cost:
 
-1. ⭐⭐ **Nic apre la pagina col suo browser** (`https://192.168.0.2:7920/`, utente `prova2`),
-   accetta il certificato come fa sempre, e il registro del server porta i tre contatori
-   `vecchi` · `tardivi` · `fuori` da sé. ⛔ **Non serve nessuno strumento nuovo**;
-2. ⚠ Oppure si toglie il certificato di mezzo prima del browser: `cert_override.txt` nel profilo,
-   o un certificato che il profilo già conosce. `[?]` **Non provato.**
+1. ⭐⭐ **Nic opens the page with his browser** (`https://192.168.0.2:7920/`, user `prova2`),
+   accepts the certificate as he always does, and the server's log carries the three counters
+   `vecchi` · `tardivi` · `fuori` by itself. ⛔ **No new tool is needed**;
+2. ⚠ Or the certificate is taken out of the way before the browser: `cert_override.txt` in the profile,
+   or a certificate the profile already knows. `[?]` **Not tried.**
 
-⛔ **Finché non succede una delle due, la cura 4 (il riordino dell'audio) resta NON VERIFICATA**, ed
-è l'ultima delle sei cure del 23 agosto senza un numero.
+⛔ **Until one of the two happens, cure 4 (the audio reorder) remains NOT VERIFIED**, and
+it is the last of the six cures of 23 Aug without a number.
 
 ---
 
-# §15 · ⛔ COM'È RIMASTA LA MACCHINA — *verificato alle 14:56 UTC, non dichiarato a memoria*
+# §15 · ⛔ HOW THE MACHINE WAS LEFT — *verified at 14:56 UTC, not declared from memory*
 
 | | |
 |---|---|
-| `tc` su **`lo`** | ⭐ `qdisc noqueue 0: root` — **nessuna disciplina** |
-| `tc` su **`enp7s0`** | ⭐ `qdisc mq 0: root` — **mai toccata**, come da regola |
-| il **guardiano** di `tc` | ⭐ nessuno: `.b68-guardiano.pid` non c'è |
-| **scene, clienti, browser** | ⭐ **nessuno** — né `04-b30-scena`, né `01-b3-cliente`, né `firefox` |
-| **porte** | ⭐ **7900 · 7910 · 7920**, le tre di prima, nessuna in più |
-| ⚠ **e alle 15:0x una QUARTA** | ⛔ **`7932` — NON è mia.** È comparsa **dopo** che avevo finito, insieme a `banchi/09-b78-apertura.py` sul portatile: è il banco di **un altro agente**. ⭐ Non l'ho toccata. ⚠ La scrivo perché «la macchina è rimasta così» invecchia male: ⛔ **i numeri di §14 non ne sono sporcati** — l'ultimo controllo `pulizia()` di ogni mio giro, fino alle 14:52:35, elencava **solo 7900 · 7910 · 7920** |
-| **`core_pattern`** | `/media/REMOTIX/tmp/09c/core.%e.%p.%t` — **lasciato**, è la trappola armata di §4.7 |
-| ⭐ **il registro della sera** | salvato in `/media/REMOTIX/tmp/09c/registro-fase9-sera-PRIMA-DI-B74.log` (9 216 437 byte) ⛔ **prima** che `09-b74` cancellasse `registro.log`: senza quella copia i numeri di §14.2-§14.6 non sarebbero più rileggibili |
+| `tc` on **`lo`** | ⭐ `qdisc noqueue 0: root` — **no discipline** |
+| `tc` on **`enp7s0`** | ⭐ `qdisc mq 0: root` — **never touched**, as per the rule |
+| the `tc` **guardian** | ⭐ none: `.b68-guardiano.pid` is not there |
+| **scenes, clients, browsers** | ⭐ **none** — neither `04-b30-scena`, nor `01-b3-cliente`, nor `firefox` |
+| **ports** | ⭐ **7900 · 7910 · 7920**, the three from before, none more |
+| ⚠ **and at 15:0x a FOURTH** | ⛔ **`7932` — it is NOT mine.** It appeared **after** I had finished, together with `banchi/09-b78-apertura.py` on the laptop: it is the bench of **another agent**. ⭐ I did not touch it. ⚠ I write it because «the machine was left like this» ages badly: ⛔ **the numbers of §14 are not dirtied by it** — the last `pulizia()` check of each of my rounds, up to 14:52:35, listed **only 7900 · 7910 · 7920** |
+| **`core_pattern`** | `/media/REMOTIX/tmp/09c/core.%e.%p.%t` — **left**, it is the armed trap of §4.7 |
+| ⭐ **the evening's log** | saved in `/media/REMOTIX/tmp/09c/registro-fase9-sera-PRIMA-DI-B74.log` (9 216 437 bytes) ⛔ **before** `09-b74` deleted `registro.log`: without that copy the numbers of §14.2-§14.6 would no longer be rereadable |
 
-⭐ **E la 7920 è tornata esattamente com'era**, verificato sulle righe che scrive lei stessa:
-binario `md5 162d2d10…` (`f90eb21`), pagina **`md5 e010d615…`** (quella del prodotto, non quella
-del *prima* dell'audio), **soglia della coda 0 ms (SPENTA)**, **regolatore SPENTO**, trappola glibc
-spenta, fuori da ogni sessione utente.
+⭐ **And 7920 went back exactly as it was**, verified on the lines it writes itself:
+binary `md5 162d2d10…` (`f90eb21`), page **`md5 e010d615…`** (the product's, not the one
+of the audio *before*), **queue threshold 0 ms (OFF)**, **regulator OFF**, glibc trap
+off, outside any user session.
 
-⚠ **Quel che ho cambiato e non rimetto, perché è il lavoro**: `banchi/01-b3-cliente.py` adesso
-negozia **H.264** (§14.1). ⛔ È il metro nuovo, e chi rilegge un numero vecchio deve guardare
-**quale codec** dice il registro di quel giro.
+⚠ **What I changed and do not put back, because it is the work**: `banchi/01-b3-cliente.py` now
+negotiates **H.264** (§14.1). ⛔ It is the new yardstick, and whoever rereads an old number must look at
+**which codec** the log of that round says.
 
 ---
 
-## §16 · ⭐⭐⭐ IL CASO DURO SUL PERCORSO VERO — *23 agosto 2026, 15:20-15:30, col browser dell'utente*
+## §16 · ⭐⭐⭐ THE HARD CASE ON THE REAL PATH — *23 Aug 2026, 15:20-15:30, with the user's browser*
 
-⛔ **La prima misura della fase presa con un browser vero, sulla tela vera, sulla rete vera.** Tutte
-quelle di prima venivano dal cliente di prova su `lo`.
+⛔ **The first measurement of the phase taken with a real browser, on the real canvas, on the real network.** All
+the earlier ones came from the test client on `lo`.
 
-**La scena**: un filmato di **grana pura** 2560×1080 a 30/s (`ffmpeg noise=alls=40:allf=t+u`, CRF 32,
-90 s in ciclo), riprodotto con `mpv --fullscreen` dentro la sessione di `prova` sulla **7920**
-(prodotto di `f90eb21`+, **nessun interruttore acceso**, tetto di banda SPENTO). Il client è
-**Chrome** dell'utente da 192.168.0.3. ⇒ È il caso peggiore che un desktop possa produrre.
+**The scene**: a clip of **pure grain** 2560×1080 at 30/s (`ffmpeg noise=alls=40:allf=t+u`, CRF 32,
+90 s in a loop), played with `mpv --fullscreen` inside `prova`'s session on **7920**
+(product of `f90eb21`+, **no switch on**, bandwidth cap OFF). The client is the user's
+**Chrome** from 192.168.0.3. ⇒ It is the worst case a desktop can produce.
 
-### 16.1 ⭐⭐ La banda: **21,5 – 23,1 Mbit/s**, cioè il **107-115 %** del pavimento
+### 16.1 ⭐⭐ Bandwidth: **21.5 – 23.1 Mbit/s**, that is **107-115 %** of the floor
 
-| | kbit/s | fotogrammi in 10 s | il più grosso |
+| | kbit/s | frames in 10 s | the largest |
 |---|---|---|---|
-| `[M]` 15:2x | **21 542** | 306 | 365 133 byte |
-| `[M]` 15:2x | **23 092** | 299 | 355 169 byte |
+| `[M]` 15:2x | **21 542** | 306 | 365 133 bytes |
+| `[M]` 15:2x | **23 092** | 299 | 355 169 bytes |
 
-⛔ **E questo corregge §14.2 nel verso che conta**: il banco, con la sua scena sintetica, dava
-**44,574 Mbit/s = 223 %** del pavimento. Il caso duro **vero** ne chiede **la metà**.
-⇒ ⭐ **Il tetto di banda serve ancora — ma il margine da recuperare è di 2-3 Mbit/s, non di 25.**
-⚠ E resta `[?]` **quanto sia duro il caso più duro possibile**: la grana pura è un limite superiore
-sintetico anche lei; un film vero comprime meglio.
+⛔ **And this corrects §14.2 in the direction that counts**: the bench, with its synthetic scene, gave
+**44.574 Mbit/s = 223 %** of the floor. The **real** hard case asks for **half** of it.
+⇒ ⭐ **The bandwidth cap is still needed — but the margin to recover is 2-3 Mbit/s, not 25.**
+⚠ And `[?]` remains **how hard the hardest possible case is**: pure grain is a synthetic upper
+limit too; a real film compresses better.
 
-### 16.2 ⭐⭐⭐ E il prodotto TIENE, senza nessuna cura accesa
+### 16.2 ⭐⭐⭐ And the product HOLDS, with no cure on
 
-`[M]` dal verbale che la pagina manda da sé ogni 5 s, e dal registro del figlio:
+`[M]` from the record the page sends by itself every 5 s, and from the child's log:
 
 | | |
 |---|---|
-| fotogrammi | **7 125 consegnati → 7 125 dipinti** · `salt 0` · `buchi 0` · `ord 0` |
-| chiavi | ⭐ **1** in tutto il giro |
-| audio | **35 169 ricevuti → 35 169 suonati** · `vecchi 0 · tardivi 0 · fuori 0 · rec 0 · dop 0` |
-| coda audio | 238 ms |
+| frames | **7 125 delivered → 7 125 painted** · `salt 0` · `buchi 0` · `ord 0` |
+| keyframes | ⭐ **1** in the whole round |
+| audio | **35 169 received → 35 169 played** · `vecchi 0 · tardivi 0 · fuori 0 · rec 0 · dop 0` |
+| audio queue | 238 ms |
 
-⇒ ⛔ **Nessuna spirale, nessun abbandono, nessuna degradazione** — a **interruttori tutti spenti**,
-sul caso peggiore, appena sopra il pavimento. ⭐ È la conferma più forte che la fase 9 potesse
-ricevere sul verso della decisione §3.1-bis: **a 20 Mbit/s il prodotto non ha bisogno di degradare.**
+⇒ ⛔ **No spiral, no abandon, no degradation** — with **all switches off**,
+on the worst case, just above the floor. ⭐ It is the strongest confirmation phase 9 could
+receive in the direction of decision §3.1-bis: **at 20 Mbit/s the product does not need to degrade.**
 
-### 16.3 ⭐ La cura del riordino audio (cura 4): **inerte sul percorso dell'utente, come previsto**
+### 16.3 ⭐ The audio reorder cure (cure 4): **inert on the user's path, as predicted**
 
-`[M]` `vecchi 0 · tardivi 0 · fuori 0` sia a riposo (4 936/4 936) sia sotto il caso duro
-(35 169/35 169). ⇒ ⭐ **La metà che conta per il prodotto è dimostrata**: la cura **non ha cambiato
-niente per l'utente**. ⚠ **La metà che morde — la purezza sotto riordino ≥ 0,95 — resta `[?]`**: si
-può fare solo sporcando `enp7s0`, che è l'interfaccia dell'ssh e della sessione dell'utente, e non
-è stata toccata.
+`[M]` `vecchi 0 · tardivi 0 · fuori 0` both at rest (4 936/4 936) and under the hard case
+(35 169/35 169). ⇒ ⭐ **The half that counts for the product is proven**: the cure **changed
+nothing for the user**. ⚠ **The half that bites — purity under reordering ≥ 0.95 — remains `[?]`**: it
+can only be done by dirtying `enp7s0`, which is the interface of ssh and of the user's session, and it
+was not touched.
 
-### 16.4 ⛔⛔ LA DESINCRONIA AUDIO-VIDEO CRESCE SOTTO CARICO — ma **NON è giudicabile a occhio**
+### 16.4 ⛔⛔ AUDIO-VIDEO DESYNC GROWS UNDER LOAD — but **it CANNOT be judged by eye**
 
-`[M]` il campo `AV` del verbale della pagina: **+331 ms** a riposo → **+690 ms** sotto il caso duro.
-⇒ Il suono precede l'immagine di quasi **sette decimi di secondo**.
+`[M]` the `AV` field of the page's record: **+331 ms** at rest → **+690 ms** under the hard case.
+⇒ Sound precedes the image by almost **seven tenths of a second**.
 
-⛔ **E qui il banco è stato l'occhio dell'utente, per due volte, e ha detto NO:**
+⛔ **And here the bench was the user's eye, twice, and it said NO:**
 
-> *«non posso sapere se c'è disallineamento se il video è incomprensibile»* — sulla grana pura, che
-> non offre **nessun riferimento** fra quel che si vede e quel che si sente.
+> *«non posso sapere se c'è disallineamento se il video è incomprensibile»* — on pure grain, which
+> offers **no reference** between what is seen and what is heard.
 >
-> *«ancora difficile giudicare il sync»* — sulla stessa scena con un **riferimento innestato**: tutto
-> lo schermo lampeggia in bianco per 0,12 s **una volta al secondo**, e nello stesso istante c'è un
-> **bip** (`sine=frequency=440:beep_factor=4`).
+> *«ancora difficile giudicare il sync»* — on the same scene with an **injected reference**: the whole
+> screen flashes white for 0.12 s **once a second**, and at the same instant there is a
+> **beep** (`sine=frequency=440:beep_factor=4`).
 
-⛔ **Due letture, e vanno tenute tutt'e due invece di scegliere quella comoda:**
+⛔ **Two readings, and both must be kept instead of choosing the comfortable one:**
 
 | | |
 |---|---|
-| ⭐ **una desincronia che non si riesce a giudicare è una desincronia che non morde** | ed è il metro del prodotto: `LEZIONI.md` §7.3, *«quando l'utente dice che va bene, va bene»* |
-| ⛔ **oppure lo STRUMENTO non serve, e allora il numero non è ancora stato messo alla prova** | 690 ms su un lampo a schermo intero **dovrebbero** vedersi. Se non si vedono, o `AV` non misura quel che crediamo, o il lampo si perde nella grana, o il bip non cade dove credo |
+| ⭐ **a desync that cannot be judged is a desync that does not bite** | and it is the product's yardstick: `LEZIONI.md` §7.3, *«when the user says it's fine, it's fine»* |
+| ⛔ **or the INSTRUMENT is no good, and then the number has not been put to the test yet** | 690 ms on a full-screen flash **should** be seen. If they are not seen, either `AV` does not measure what we believe, or the flash gets lost in the grain, or the beep does not fall where I believe |
 
-⇒ ⏳ **Resta `[?]`, e la strada è una misura OGGETTIVA, non un altro giro d'occhio**: un riferimento
-che si possa **leggere** invece che giudicare — un lampo su fondo **calmo** (non grana), catturato
-insieme al suono, e i due istanti confrontati sul filo. ⛔ E prima di misurarlo va **certificato lo
-strumento**: `AV` va confrontato con un ritardo **noto e innestato**, o è un numero che nessuno ha
-mai verificato. ⚠ È la stessa forma di `DECISIONI.md` §7.19, dove la desincronia ~400 ms è aperta
-**da agosto** e non è mai stata chiusa.
+⇒ ⏳ **It remains `[?]`, and the road is an OBJECTIVE measurement, not another round by eye**: a reference
+that can be **read** instead of judged — a flash on a **calm** background (not grain), captured
+together with the sound, and the two instants compared on the wire. ⛔ And before measuring it the
+**instrument must be certified**: `AV` must be compared with a **known and injected** delay, or it is a number nobody has
+ever verified. ⚠ It is the same shape as `DECISIONI.md` §7.19, where the ~400 ms desync has been open
+**since August** and has never been closed.
 
-⚠ **E un difetto del metodo, dichiarato**: la scena di prova era **grana pura**, cioè il caso in cui
-l'occhio ha **meno** appigli possibili. Chiedere un giudizio di sincronia lì è stato un errore mio,
-e la seconda scena non l'ha corretto abbastanza.
+⚠ **And a defect of the method, declared**: the test scene was **pure grain**, that is the case in which
+the eye has the **fewest** possible holds. Asking for a sync judgement there was my error,
+and the second scene did not correct it enough.
 
-### 16.5 Che cosa resta acceso
+### 16.5 What stays on
 
-`[M]` la scena e `mpv` **fermati** alle 15:30. I due filmati restano in
-`/media/REMOTIX/tmp/09-scena/` (`duro.mp4` 209 MB, `duro-sync.mp4` 208 MB) — ⚠ su NVMe, **non** sul
-rootfs in RAM: il primo tentativo li aveva scritti in `/home/prova`, che vive in RAM, e a CRF 18
-faceva **4,1 GB**. Cancellato subito.
-⚠ Installati sulla macchina `mpv` e `ffmpeg` (il rootfs vive in RAM: dopo un riavvio vanno rimessi).
-⛔ **Firefox sulla macchina di prova NON parte** per l'utente `prova`: il profilo non viene mai
-creato (`~/.mozilla/firefox/` ha solo `Crash Reports` e `Pending Pings`). È lo stesso muro su cui si
-è fermato il banco dell'audio. ⏳ Non diagnosticato.
+`[M]` the scene and `mpv` **stopped** at 15:30. The two clips stay in
+`/media/REMOTIX/tmp/09-scena/` (`duro.mp4` 209 MB, `duro-sync.mp4` 208 MB) — ⚠ on NVMe, **not** on the
+rootfs in RAM: the first attempt had written them in `/home/prova`, which lives in RAM, and at CRF 18
+it made **4.1 GB**. Deleted immediately.
+⚠ Installed on the machine `mpv` and `ffmpeg` (the rootfs lives in RAM: after a reboot they must be put back).
+⛔ **Firefox on the test machine does NOT start** for user `prova`: the profile is never
+created (`~/.mozilla/firefox/` has only `Crash Reports` and `Pending Pings`). It is the same wall the
+audio bench stopped at. ⏳ Not diagnosed.
 
 ---
 
-# §17 · ⭐⭐⭐ LA RETE CATTIVA — *23 agosto 2026, sera*, e **il bersaglio della fase è stato corretto dal regista**
+# §17 · ⭐⭐⭐ THE BAD NETWORK — *23 Aug 2026, evening*, and **the target of the phase was corrected by the director**
 
 > *«Comunque voglio farti notare una cosa: 30 mbps sono una connessione da metà anni 90. La vera
 > sfida è misurare performance con reti che perdono pacchetti o pacchetti fuori sequenza, o
 > presentano fenomeni di jitter».*
-> — ⇒ `DECISIONI.md` **§3.1-ter**, `PIANO.md` fase 9.
+> — ⇒ `DECISIONI.md` **§3.1-ter**, `PIANO.md` phase 9.
 
-⛔ **E la correzione arriva a fase mezza misurata, con la prova che serviva.** §16 aveva appena
-mostrato che sul **percorso vero** il caso peggiore chiede 21,5-23,1 Mbit/s e il prodotto lo regge
-**senza degradare e con tutte le cure spente**: 7 125 consegnati → 7 125 dipinti, **una** chiave,
-zero abbandoni. ⇒ Un banco che non riesce a far cedere quel che misura **non sta misurando la
-grandezza giusta**. Le pagine che seguono sono la grandezza giusta.
+⛔ **And the correction arrives with the phase half measured, with the proof that was needed.** §16 had just
+shown that on the **real path** the worst case asks for 21.5-23.1 Mbit/s and the product holds it
+**without degrading and with all the cures off**: 7 125 delivered → 7 125 painted, **one** keyframe,
+zero abandons. ⇒ A bench that cannot make what it measures give way **is not measuring the right
+quantity**. The pages that follow are the right quantity.
 
-## 17.0 ⛔ Le tre grandezze non sono la stessa cosa — e confonderle è il modo facile di misurare male
+## 17.0 ⛔ The three quantities are not the same thing — and confusing them is the easy way of measuring wrongly
 
-| | che cos'è | che cosa tocca da noi |
+| | what it is | what it touches for us |
 |---|---|---|
-| **perdita** | il pacchetto non arriva | il **video** va su stream QUIC, che ritrasmettono ⇒ `[?]` si dovrebbe pagare in **ritardo**, non in fotogrammi. L'**audio** va su datagram ⇒ si paga in **buchi** |
-| **fuori sequenza** | arriva, ma dietro a uno più nuovo | ⭐ è la condizione mancante della **cura del riordino dell'audio** del 23 agosto, l'unica cura della giornata la cui metà utile non era mai stata verificata |
-| **jitter** | arriva a intervalli irregolari | `[?]` QUIC può **scambiarlo per perdita** e stringere la finestra senza motivo. Se succede, il calo è **nostro** |
+| **loss** | the packet does not arrive | **video** goes on QUIC streams, which retransmit ⇒ `[?]` it should be paid in **delay**, not in frames. **Audio** goes on datagrams ⇒ it is paid in **holes** |
+| **out of sequence** | it arrives, but behind a newer one | ⭐ it is the missing condition of the **audio reorder cure** of 23 Aug, the only cure of the day whose useful half had never been verified |
+| **jitter** | it arrives at irregular intervals | `[?]` QUIC can **mistake it for loss** and narrow the window for no reason. If it happens, the drop is **ours** |
 
-⭐ **E il `netem` su `lo` è diventato una risorsa unica con un lucchetto** (`banchi/09-lucchetto.py`):
-la disciplina si mette sulla **radice** dell'interfaccia, quindi due banchi che guastano insieme
-non si dividono il lavoro — **il secondo cancella il guasto del primo, e il primo continua a
-misurare credendo di averlo**. ⚠ Non darebbe rosso: darebbe un numero plausibile. Il possesso si
-prende con `mkdir` (atomico anche su ssh), porta una **scadenza scritta dentro**, e chi scassina un
-lucchetto scaduto **lo dichiara**.
+⭐ **And `netem` on `lo` became a unique resource with a lock** (`banchi/09-lucchetto.py`):
+the discipline is put on the **root** of the interface, so two benches that inject faults together
+do not share the work — **the second cancels the fault of the first, and the first keeps
+measuring believing it has it**. ⚠ It would not give red: it would give a plausible number. Ownership is
+taken with `mkdir` (atomic even over ssh), it carries an **expiry written inside**, and whoever breaks an
+expired lock **declares it**.
 
-## 17.1 ⛔⛔⛔ IL VIDEO — la griglia, e **non è una degradazione: è un dirupo**
+## 17.1 ⛔⛔⛔ VIDEO — the grid, and **it is not a degradation: it is a cliff**
 
-`banchi/09-b76-rete-cattiva.py` · `[M]` 23 agosto 2026 · 25 s per profilo · 1920×1080 · h264 ·
-**banda libera** · ⛔ **tutte le cure ai predefiniti, cioè SPENTE** · binario `51b5994`.
+`banchi/09-b76-rete-cattiva.py` · `[M]` 23 Aug 2026 · 25 s per profile · 1920×1080 · h264 ·
+**free bandwidth** · ⛔ **all cures at their defaults, that is OFF** · binary `51b5994`.
 
-| profilo | persi % (sonda) | raffica | fuori ord. % | **fps** | peggior s | chiavi/tot | deriva max | Mbit/s sul filo |
+| profile | lost % (probe) | burst | out of ord. % | **fps** | worst s | keyframes/tot | max drift | Mbit/s on the wire |
 |---|---|---|---|---|---|---|---|---|
-| `liscio` | 0,00 | – | 0,0 | **39,97** | 38 | 0/878 | 6 ms | 3,18 |
-| `ritardo-30` ⭐**rif.** | 0,00 | – | 0,0 | **40,11** | 37 | 0/881 | 1 ms | 3,13 |
-| `perdita-0,5` | 0,36 | 1,00 | 0,0 | **40,06** | 37 | 0/881 | 46 ms | 3,14 |
-| ⛔ `perdita-1` | 0,94 | 1,01 | 0,0 | **9,56** | 4 | 117/209 | 142 ms | 4,00 |
-| ⛔ `perdita-3` | 2,96 | 1,03 | 0,0 | **4,03** | 2 | **87/87** | 180 ms | 2,56 |
-| ⚠ `perdita-5` | 4,78 | 1,04 | 0,0 | **3,35** | 2 | 73/73 | 157 ms | 2,01 |
-| ⭐ `raffica-1` | 1,07 | **6,14** | 0,0 | **23,94** | **0** | 38/526 | **3 707 ms** | 2,99 |
-| ⛔⛔ `raffica-forte` | 13,03 | 5,03 | 0,0 | **sessione STACCATA a 0,3 s su 25** | – | – | – | – |
-| ⭐ `riordino-25` | 0,00 | – | **68,0** | **40,03** | 38 | 0/880 | 11 ms | 3,27 |
-| `jitter-5` | 0,00 | – | 85,3 | **39,30** | 32 | 2/864 | 17 ms | 3,52 |
-| ⛔ `jitter-15` | 0,00 | – | 86,3 | **16,62** | 4 | 102/364 | 312 ms | **6,93** |
-| ⛔ `jitter-30` | 0,00 | – | 73,2 | **8,07** | 2 | 110/175 | 475 ms | **6,26** |
-| `duplicazione-1` | 0,00 (1,02 % dup) | – | 0,0 | **39,96** | 37 | 0/878 | 2 ms | 3,20 |
-| ⛔ `casa-cattiva` | 1,71 | 1,02 | 93,8 | **7,78** | **0** | 73/169 | 609 ms | 3,51 |
+| `liscio` | 0.00 | – | 0.0 | **39.97** | 38 | 0/878 | 6 ms | 3.18 |
+| `ritardo-30` ⭐**ref.** | 0.00 | – | 0.0 | **40.11** | 37 | 0/881 | 1 ms | 3.13 |
+| `perdita-0,5` | 0.36 | 1.00 | 0.0 | **40.06** | 37 | 0/881 | 46 ms | 3.14 |
+| ⛔ `perdita-1` | 0.94 | 1.01 | 0.0 | **9.56** | 4 | 117/209 | 142 ms | 4.00 |
+| ⛔ `perdita-3` | 2.96 | 1.03 | 0.0 | **4.03** | 2 | **87/87** | 180 ms | 2.56 |
+| ⚠ `perdita-5` | 4.78 | 1.04 | 0.0 | **3.35** | 2 | 73/73 | 157 ms | 2.01 |
+| ⭐ `raffica-1` | 1.07 | **6.14** | 0.0 | **23.94** | **0** | 38/526 | **3 707 ms** | 2.99 |
+| ⛔⛔ `raffica-forte` | 13.03 | 5.03 | 0.0 | **session DETACHED at 0.3 s out of 25** | – | – | – | – |
+| ⭐ `riordino-25` | 0.00 | – | **68.0** | **40.03** | 38 | 0/880 | 11 ms | 3.27 |
+| `jitter-5` | 0.00 | – | 85.3 | **39.30** | 32 | 2/864 | 17 ms | 3.52 |
+| ⛔ `jitter-15` | 0.00 | – | 86.3 | **16.62** | 4 | 102/364 | 312 ms | **6.93** |
+| ⛔ `jitter-30` | 0.00 | – | 73.2 | **8.07** | 2 | 110/175 | 475 ms | **6.26** |
+| `duplicazione-1` | 0.00 (1.02 % dup) | – | 0.0 | **39.96** | 37 | 0/878 | 2 ms | 3.20 |
+| ⛔ `casa-cattiva` | 1.71 | 1.02 | 93.8 | **7.78** | **0** | 73/169 | 609 ms | 3.51 |
 
-⛔ **Tredici predicati rossi**, e nessuno muto. Il guasto è stato **verificato messo** su tutti e 14
-i profili, con **due gambe che concordano**: il `dropped` del qdisc e una sonda indipendente
-(`[M]` `loss 5%`: `dropped 101`, sonda 101 su 2000).
+⛔ **Thirteen red predicates**, and none mute. The fault was **verified as in place** on all 14
+profiles, with **two legs that agree**: the qdisc's `dropped` and an independent probe
+(`[M]` `loss 5%`: `dropped 101`, probe 101 out of 2000).
 
-### 17.1-bis ⭐⭐ Le tre cose che i numeri dicono, e nessuna era attesa
+### 17.1-bis ⭐⭐ The three things the numbers say, and none was expected
 
-1. ⛔⛔ **C'è un dirupo dentro il primo punto percentuale di perdita**: dal 100 % del riferimento al
-   **24 %**. Non è una curva, è un **gradino**. ⚠ E nessuna prova di banda l'avrebbe mai trovato: a
-   `perdita-1` il filo porta **4,00 Mbit/s**, cioè il **20 % del pavimento dichiarato**. La linea è
-   vuota, e il prodotto è in ginocchio.
-   ⛔ ⚠ **La forbice «0,36 %-0,94 %» che questa riga portava è SBAGLIATA, e §17.11 la ritira**:
-   nasceva da una casella (`perdita-0,5` a *40,06 · zero chiavi*) che **non si riproduce**.
-2. ⭐⭐⭐ **A `jitter-15/30` il filo porta il DOPPIO dei byte (6,9 contro 3,1 Mbit/s) per UN QUINTO
-   dei fotogrammi, su una rete che non perde un pacchetto.** `[M]` perdita misurata **0,00**.
-   ⇒ È la prova diretta che **il disordine viene scambiato per perdita**: ritrasmissioni e chiavi
-   che nessuna perdita ha chiesto. Il calo **è nostro**, non della rete — e §3.1-ter lo aveva
-   scritto come `[?]` prima di misurarlo.
-3. ⚠ **La stessa perdita media fa MENO danno a grappoli che sparsa**: `raffica-1` (1,07 %, grappoli
-   da 6) tiene 23,94/s contro i 9,56/s di `perdita-1` (0,94 %, uno alla volta). ⛔ **Ma il prezzo si
-   sposta e peggiora**: un secondo intero a **zero fotogrammi**, e la deriva a **3,7 secondi**.
+1. ⛔⛔ **There is a cliff inside the first percentage point of loss**: from 100 % of the reference to
+   **24 %**. It is not a curve, it is a **step**. ⚠ And no bandwidth test would ever have found it: at
+   `perdita-1` the wire carries **4.00 Mbit/s**, that is **20 % of the declared floor**. The line is
+   empty, and the product is on its knees.
+   ⛔ ⚠ **The «0.36 %-0.94 %» range this line carried is WRONG, and §17.11 withdraws it**:
+   it came from a cell (`perdita-0,5` at *40.06 · zero keyframes*) that **does not reproduce**.
+2. ⭐⭐⭐ **At `jitter-15/30` the wire carries DOUBLE the bytes (6.9 against 3.1 Mbit/s) for ONE FIFTH
+   of the frames, on a network that does not lose a packet.** `[M]` measured loss **0.00**.
+   ⇒ It is the direct proof that **disorder is mistaken for loss**: retransmissions and keyframes
+   that no loss asked for. The drop **is ours**, not the network's — and §3.1-ter had
+   written it as `[?]` before measuring it.
+3. ⚠ **The same average loss does LESS damage in clusters than scattered**: `raffica-1` (1.07 %, clusters
+   of 6) holds 23.94/s against the 9.56/s of `perdita-1` (0.94 %, one at a time). ⛔ **But the price
+   moves and gets worse**: a whole second at **zero frames**, and the drift at **3.7 seconds**.
 
-### 17.1-ter ⭐⭐ IL MECCANISMO — letto nel registro del server, non dedotto
+### 17.1-ter ⭐⭐ THE MECHANISM — read in the server's log, not deduced
 
-`[M]` sugli stessi giri: `abbandonato_in_coda` = `abbandonati` = `chiave_aspetta` **a ogni profilo
-rosso** (129 · 102 · 116 · 125 · 83), con `delta_non_spedito` a 550-800. E i **buchi nella
-successione dei `numero`** — la seconda gamba, contata dal lato che riceve e indipendente dal
-registro del server — concordano: 116, 86, 102, 109, 72.
+`[M]` on the same rounds: `abbandonato_in_coda` = `abbandonati` = `chiave_aspetta` **at every red
+profile** (129 · 102 · 116 · 125 · 83), with `delta_non_spedito` at 550-800. And the **holes in the
+succession of `numero`s** — the second leg, counted from the receiving side and independent of the
+server's log — agree: 116, 86, 102, 109, 72.
 
-⇒ **La catena è la spirale di §5.1→§5.2**, ed è la stessa faccia del difetto del 21 agosto:
+⇒ **The chain is the spiral of §5.1→§5.2**, and it is the same face as the defect of 21 Aug:
 
-> il filo ritarda → la coda di spedizione cresce → §5.1 abbandona i delta → §5.2 accende il debito
-> → si chiede una **chiave** → la chiave riempie la finestra → **ricomincia**
+> the wire delays → the send queue grows → §5.1 abandons the deltas → §5.2 kindles the debt
+> → a **keyframe** is requested → the keyframe fills the window → **it starts again**
 
-⛔ A `perdita-3` fa **87 chiavi su 87 fotogrammi**: identica al 144/144 del 21 agosto.
+⛔ At `perdita-3` it does **87 keyframes out of 87 frames**: identical to the 144/144 of 21 Aug.
 
-⭐⭐ **E la cura di questa catena era già scritta, collaudata e SPENTA** — `--sgombra-soglia-ms` e
-`--ritmo-adattivo`, dietro interruttore per l'invariante I6. ⇒ La griglia qui sopra è girata **con
-gli interruttori spenti**, ed è la ragione per cui la prova appaiata delle cure (§17.6) è il
-seguito obbligato di questa pagina e non un di più.
+⭐⭐ **And the cure of this chain was already written, tested and OFF** — `--sgombra-soglia-ms` and
+`--ritmo-adattivo`, behind a switch for invariant I6. ⇒ The grid above ran **with
+the switches off**, and it is the reason why the paired test of the cures (§17.6) is the
+mandatory sequel of this page and not an extra.
 
-### 17.1-quater ⛔⛔ `raffica-forte` — **NESSUNO si stacca: si ferma la CONSEGNA**
+### 17.1-quater ⛔⛔ `raffica-forte` — **NOBODY detaches: DELIVERY stops**
 
-⚠ La prima lettura di questa casella diceva *«la sessione muore dopo 0,3 s su 25»*. ⛔ **La parola
-era sbagliata, e una parola sbagliata su un rosso è peggio di un rosso mancato**: manda a cercare la
-causa dove non è — qui, un congedo che non esiste.
+⚠ The first reading of this cell said *«the session dies after 0.3 s out of 25»*. ⛔ **The word
+was wrong, and a wrong word on a red is worse than a missed red**: it sends one looking for the
+cause where it is not — here, a farewell that does not exist.
 
-`[M]` 23 agosto, **quattro testimoni** (`banchi/09-b79-cure.py`): il cliente stampa *«ancora
-attaccato dopo 25,0 s: niente è caduto»* e chiude **lui** a fine finestra · l'audio arriva per tutto
-il giro (**696 datagram, purezza 1,0000**) · il registro del server non ha **nessun** `CONGEDO`,
-nessun `posto NEGATO`, nessun ban · la sessione si era aperta normalmente (`AMMESSO dopo 1 837 ms`),
-il che esclude anche *«la stretta di mano non si completa»* — coerente con §17.4. `IDLE_MS` è
-30 000 ms e infatti non c'entra.
+`[M]` 23 Aug, **four witnesses** (`banchi/09-b79-cure.py`): the client prints *«still
+attached after 25.0 s: nothing dropped»* and closes **itself** at the end of the window · audio arrives for the whole
+round (**696 datagrams, purity 1.0000**) · the server's log has **no** `CONGEDO`,
+no `posto NEGATO`, no ban · the session had opened normally (`AMMESSO dopo 1 837 ms`),
+which also rules out *«the handshake does not complete»* — consistent with §17.4. `IDLE_MS` is
+30 000 ms and indeed has nothing to do with it.
 
-⇒ **A fermarsi è la sola consegna dei fotogrammi**: `[M]` **121 spediti su 981 catturati, 860 NON
-SPEDITI**, con `cwnd` inchiodata a **~10 KB** e il pacer che rifiuta.
+⇒ **What stops is only the delivery of frames**: `[M]` **121 sent out of 981 captured, 860 NOT
+SENT**, with `cwnd` nailed at **~10 KB** and the pacer refusing.
 
-⛔ **Il fatto resta grave, e non va declassato**: una sessione **viva e muta** è uno schermo fermo, e
-per chi guarda è indistinguibile da un filo caduto. ⚠ Ma ha **un altro nome e un'altra causa** — non
-viola *«mai staccare»*, viola il pavimento della scala (`DECISIONI.md` §2.1: 25 fotogrammi/s).
-⇒ Il predicato `p_niente_stacco` di `09-b76` misurava **quanto è durata la consegna**, non **se la
-connessione è caduta**: il numero era giusto, la parola no. ⏳ In cura: il predicato si spezza in
-due, perché sono due fatti con due cause.
+⛔ **The fact remains serious, and must not be downgraded**: a **live and mute** session is a still screen, and
+for whoever watches it is indistinguishable from a dropped wire. ⚠ But it has **another name and another cause** — it does not
+violate *«mai staccare»*, it violates the floor of the ladder (`DECISIONI.md` §2.1: 25 frames/s).
+⇒ The predicate `p_niente_stacco` of `09-b76` measured **how long delivery lasted**, not **whether the
+connection dropped**: the number was right, the word was not. ⏳ Being cured: the predicate is split in
+two, because they are two facts with two causes.
 
-⭐⭐ **E le cure lo cambiano**: in B e in C la consegna dura **tutti i 25 secondi** (§17.6).
+⭐⭐ **And the cures change it**: in B and in C delivery lasts **all 25 seconds** (§17.6).
 
-## 17.2 ⭐⭐⭐ L'AUDIO NEL RIORDINO — **la cura morde**, e adesso è misurato
+## 17.2 ⭐⭐⭐ AUDIO UNDER REORDERING — **the cure bites**, and now it is measured
 
-⛔ Era la sola cura del 23 agosto la cui metà utile fosse rimasta `[?]`, e per una ragione detta:
-*«per verificarla bisogna sporcare la rete e non l'ho fatto»*. La correzione del regista **è la
-condizione mancante di quella verifica**.
+⛔ It was the only cure of 23 Aug whose useful half had remained `[?]`, and for a stated reason:
+*«to verify it one must dirty the network and I did not do it»*. The director's correction **is the
+missing condition of that verification**.
 
-⛔ **E prima è stato necessario portare la cura nel cliente dei banchi**: era stata scritta **solo
-in `src/pagina.html`**, mentre `banchi/01-b3-cliente.py` aveva ancora la regola vecchia. ⇒ Fino a
-stasera **nessun banco poteva misurarla**. Adesso c'è `--audio-regola vecchia|nuova`, ⛔ col
-predefinito **`vecchia`** e la verifica che con quello i contatori e la **lista** dei blocchi
-consegnati sono identici a una trascrizione letterale del codice del 22 agosto su cinque
-successioni: un cliente che cambia i numeri già scritti non è uno strumento, è una variabile.
+⛔ **And first it was necessary to bring the cure into the benches' client**: it had been written **only
+in `src/pagina.html`**, while `banchi/01-b3-cliente.py` still had the old rule. ⇒ Until
+tonight **no bench could measure it**. Now there is `--audio-regola vecchia|nuova`, ⛔ with the
+default **`vecchia`** and the verification that with it the counters and the **list** of blocks
+delivered are identical to a literal transcription of the code of 22 Aug over five
+successions: a client that changes the numbers already written is not an instrument, it is a variable.
 
-`banchi/09-b77-audio-riordino.py` · `[M]` 23 agosto 2026 · porta 7931 · 25 s per giro · **due giri
-identici in tutto tranne la regola**:
+`banchi/09-b77-audio-riordino.py` · `[M]` 23 Aug 2026 · port 7931 · 25 s per round · **two rounds
+identical in everything except the rule**:
 
-| profilo | regola | **PUREZZA** | tono | copertura | sul filo | conseg. | vecchi | fuori | rec | dop | srv `dgram_falsi` |
+| profile | rule | **PURITY** | tone | coverage | on the wire | deliv. | vecchi | fuori | rec | dop | srv `dgram_falsi` |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `liscio` | vecchia | 1,0000 | 1,000 | 1,0000 | 4993 | 4993 | 0 | 0 | 0 | 0 | 0 |
-| `liscio` | **nuova** | 1,0000 | 1,000 | 1,0000 | 4992 | 4992 | 0 | 0 | 0 | 0 | 0 |
-| `jitter-2` | vecchia | 0,7992 | 0,804 | 0,7993 | 4989 | 3987 | **1002** | 0 | 0 | 0 | 1062 |
-| `jitter-2` | **nuova** | **1,0000** | 1,000 | 0,9982 | 4983 | 4983 | 0 | 1028 | 1028 | 0 | 115 |
-| `jitter-5` | vecchia | 0,6877 | 0,683 | 0,6854 | 4970 | 3418 | 1552 | 0 | 0 | 0 | 698 |
-| `jitter-5` | **nuova** | **1,0000** | 0,995 | 0,9954 | 4970 | 4970 | 0 | 1620 | 1620 | 0 | 732 |
-| `jitter-15` | vecchia | 0,4350 | 0,370 | 0,3670 | 4214 | 1833 | 2381 | 0 | 0 | 0 | 1458 |
-| `jitter-15` | **nuova** | **1,0000** | 0,846 | 0,8361 | 4177 | 4177 | 0 | 2392 | 2392 | 0 | 1458 |
-| `riordino-25` | vecchia | 0,8912 | 0,895 | 0,8912 | 4990 | 4447 | 543 | 0 | 0 | 0 | 1415 |
-| `riordino-25` | **nuova** | **1,0000** | 1,000 | 0,9982 | 4982 | 4982 | 0 | 550 | 550 | 0 | 450 |
-| `casa-cattiva` | vecchia | 0,4013 | 0,261 | 0,2585 | 3192 | 1281 | 1911 | 0 | 0 | 0 | 1190 |
-| `casa-cattiva` | **nuova** | **1,0000** | 0,648 | 0,6264 | 3120 | 3120 | 0 | 1837 | 1836 | 0 | 1190 |
+| `liscio` | old | 1.0000 | 1.000 | 1.0000 | 4993 | 4993 | 0 | 0 | 0 | 0 | 0 |
+| `liscio` | **new** | 1.0000 | 1.000 | 1.0000 | 4992 | 4992 | 0 | 0 | 0 | 0 | 0 |
+| `jitter-2` | old | 0.7992 | 0.804 | 0.7993 | 4989 | 3987 | **1002** | 0 | 0 | 0 | 1062 |
+| `jitter-2` | **new** | **1.0000** | 1.000 | 0.9982 | 4983 | 4983 | 0 | 1028 | 1028 | 0 | 115 |
+| `jitter-5` | old | 0.6877 | 0.683 | 0.6854 | 4970 | 3418 | 1552 | 0 | 0 | 0 | 698 |
+| `jitter-5` | **new** | **1.0000** | 0.995 | 0.9954 | 4970 | 4970 | 0 | 1620 | 1620 | 0 | 732 |
+| `jitter-15` | old | 0.4350 | 0.370 | 0.3670 | 4214 | 1833 | 2381 | 0 | 0 | 0 | 1458 |
+| `jitter-15` | **new** | **1.0000** | 0.846 | 0.8361 | 4177 | 4177 | 0 | 2392 | 2392 | 0 | 1458 |
+| `riordino-25` | old | 0.8912 | 0.895 | 0.8912 | 4990 | 4447 | 543 | 0 | 0 | 0 | 1415 |
+| `riordino-25` | **new** | **1.0000** | 1.000 | 0.9982 | 4982 | 4982 | 0 | 550 | 550 | 0 | 450 |
+| `casa-cattiva` | old | 0.4013 | 0.261 | 0.2585 | 3192 | 1281 | 1911 | 0 | 0 | 0 | 1190 |
+| `casa-cattiva` | **new** | **1.0000** | 0.648 | 0.6264 | 3120 | 3120 | 0 | 1837 | 1836 | 0 | 1190 |
 
-**Sei profili su sei verdi, zero rossi, zero non giudicati.** `doppioni` **0** dappertutto (un
-doppione qui vorrebbe dire che l'ha spedito il server); `scartati_tardivi` **0** dappertutto (la
-rete di sicurezza dopo il decodificatore non ha mai dovuto scattare); `recuperati` ripaga i
-`mancati` **uno a uno** (1028/1028, 1620/1620, 2392/2392) — cioè la cura **non si accusa da sola**
-di perdite che ha invece recuperato.
+**Six profiles out of six green, zero red, zero not judged.** `doppioni` **0** everywhere (a
+duplicate here would mean the server sent it); `scartati_tardivi` **0** everywhere (the
+safety net after the decoder never had to fire); `recuperati` repays the
+`mancati` **one to one** (1028/1028, 1620/1620, 2392/2392) — that is the cure **does not accuse itself**
+of losses it has instead recovered.
 
-⭐ **E la cura resta onesta**: `--certifica` porta due casi che le darebbero **rosso** se lo fosse —
-purezza 0,999 **con** `fuori_ordine` a zero (vorrebbe dire che il profilo non morde e il verde è un
-caso), e la controprova che la regola nuova **butta comunque** il blocco arrivato davvero troppo
-tardi. Una cura che tenesse tutto non sarebbe una cura: sarebbe la rimozione di un controllo.
+⭐ **And the cure stays honest**: `--certifica` carries two cases that would give it **red** if it were not —
+purity 0.999 **with** `fuori_ordine` at zero (it would mean the profile does not bite and the green is
+chance), and the counter-proof that the new rule **still throws away** the block that really arrived too
+late. A cure that kept everything would not be a cure: it would be the removal of a check.
 
-### 17.2-bis ⛔⛔ IL `[M]` DEL «0,175» — il conteggio regge, **la sua purezza no**
+### 17.2-bis ⛔⛔ THE `[M]` OF «0.175» — the count holds, **its purity does not**
 
-`src/pagina.html` · `avvia_audio()` portava: *«jitter ±2 ms ⇒ purezza 0,175, 1 004 scartati su 4 989»*.
-`[M]` stasera, stesso profilo: **1 002 buttati su 4 989 sul filo**. ⇒ Lo **stesso denominatore**,
-due blocchi di differenza: il **conteggio** di quel `[M]` è solido.
+`src/pagina.html` · `avvia_audio()` carried: *«jitter ±2 ms ⇒ purity 0.175, 1 004 discarded out of 4 989»*.
+`[M]` tonight, same profile: **1 002 thrown away out of 4 989 on the wire**. ⇒ The **same denominator**,
+two blocks of difference: the **count** of that `[M]` is solid.
 
-⛔ **Ma la sua «purezza 0,175» non è confrontabile con niente**, ed è stato fermato prima che
-diventasse un trionfo. La frazione che usano i banchi della pagina è `suonati/ricevuti`
-(`09-b74:300`), e `a.ricevuti++` sta **dopo** i rami di scarto (`pagina.html` · `avvia_audio()`): il denominatore
-conta **solo i sopravvissuti**, quindi quel rapporto vale ~1,000 **con tutt'e due le regole**, su
-una successione anche distrutta. ⚠ È vero nel codice **prima** e **dopo** la cura, verificato su
-`f90eb216^`: da dove venisse quello 0,175 **non si sa**, ed è un numero di cui non si conosce la
-definizione.
+⛔ **But its «purity 0.175» is comparable with nothing**, and it was stopped before it
+became a triumph. The fraction the page benches use is `suonati/ricevuti`
+(`09-b74:300`), and `a.ricevuti++` sits **after** the discard branches (`pagina.html` · `avvia_audio()`): the denominator
+counts **only the survivors**, so that ratio is ~1.000 **with both rules**, on
+even a destroyed succession. ⚠ It is true in the code **before** and **after** the cure, verified on
+`f90eb216^`: where that 0.175 came from **is not known**, and it is a number whose
+definition is unknown.
 
-⭐ ⇒ La grandezza del banco è **`purezza = consegnati / sul filo`**, col denominatore contato
-**prima** del vaglio, e l'atteso è un **confine dichiarato** (0,90 / 0,80 / 0,60), non quel punto.
-`purezza_pagina` si stampa accanto **solo per confronto**, con scritto che è cieca.
+⭐ ⇒ The bench's quantity is **`purezza = consegnati / sul filo`**, with the denominator counted
+**before** the screening, and the expected value is a **declared border** (0.90 / 0.80 / 0.60), not that point.
+`purezza_pagina` is printed beside it **only for comparison**, with a note saying it is blind.
 
-### 17.2-ter ⛔⭐ IL ROSSO CHE ERA DEL BANCO — e la cura del predicato
+### 17.2-ter ⛔⭐ THE RED THAT BELONGED TO THE BENCH — and the cure of the predicate
 
-`casa-cattiva` dava rosso: il cliente contava **2 183 `mancati` su 4 996, il 43,7 %**, con `netem`
-al **2 %**. ⛔ Non era la rete: il registro del server diceva **1 823 blocchi RIFIUTATI da ngtcp2** —
-mai messi sul filo, finestra di congestione chiusa a 40 ms di ritardo. `mancati` si costruisce sui
-salti di `istante`, e **un blocco mai spedito lascia lo stesso salto di uno perso**.
+`casa-cattiva` gave red: the client counted **2 183 `mancati` out of 4 996, 43.7 %**, with `netem`
+at **2 %**. ⛔ It was not the network: the server's log said **1 823 blocks REFUSED by ngtcp2** —
+never put on the wire, congestion window closed at 40 ms of delay. `mancati` is built on the
+jumps of `istante`, and **a block never sent leaves the same jump as a lost one**.
 
-⇒ Il predicato è stato riscritto **sui due capi**: `spediti dal server − sul filo del cliente` =
-**67 perduti sulla rete, il 2,10 %**, contro il 2 % chiesto a `netem`. ⭐ È R13 in forma pura — un
-numero che sembrava misurare la rete e misurava noi.
+⇒ The predicate was rewritten **on both ends**: `spediti dal server − sul filo del cliente` =
+**67 lost on the network, 2.10 %**, against the 2 % asked of `netem`. ⭐ It is R13 in pure form — a
+number that seemed to measure the network and measured us.
 
-### 17.2-quater ⚠⚠ E DIETRO C'È UN FATTO DEL PRODOTTO CHE NON C'ENTRA CON LA CURA
+### 17.2-quater ⚠⚠ AND BEHIND IT THERE IS A FACT OF THE PRODUCT THAT HAS NOTHING TO DO WITH THE CURE
 
-`[M]` i blocchi audio **rifiutati da ngtcp2**, cioè prodotti e mai messi sul filo: **4** su
-`jitter-2`, **819** su `jitter-15`, **1 823** su `casa-cattiva` — ⛔ **il 36 % dell'audio prodotto
-non raggiunge il filo**. ⇒ È anche il motivo per cui su `jitter-15` e `casa-cattiva` la *copertura*
-resta 0,84 e 0,63 **pur avendo purezza 1,0000**: il ricevente consegna tutto quel che gli arriva,
-ma **il trasporto non gli fa arrivare tutto**. ⏳ Aperto, e non è un difetto della cura: è la stessa
-finestra di congestione che nel video produce la spirale.
+`[M]` the audio blocks **refused by ngtcp2**, that is produced and never put on the wire: **4** on
+`jitter-2`, **819** on `jitter-15`, **1 823** on `casa-cattiva` — ⛔ **36 % of the audio produced
+does not reach the wire**. ⇒ It is also the reason why on `jitter-15` and `casa-cattiva` the *coverage*
+stays at 0.84 and 0.63 **despite having purity 1.0000**: the receiver delivers everything that reaches it,
+but **the transport does not make everything reach it**. ⏳ Open, and it is not a defect of the cure: it is the same
+congestion window that in video produces the spiral.
 
-## 17.3 ⭐⭐⭐ DUE TESTIMONI NUOVI NEL SERVER — e uno misura il RIORDINO
+## 17.3 ⭐⭐⭐ TWO NEW WITNESSES IN THE SERVER — and one measures REORDERING
 
-⛔ Prima di stasera il registro **non sapeva dire di chi fosse la colpa**. Un fotogramma in ritardo
-poteva essere un pacchetto perso e rimandato, la finestra chiusa, noi che l'abbiamo tenuto o noi
-che l'abbiamo abbandonato: le ultime due si contavano, **le prime due no**.
+⛔ Before tonight the log **could not say whose fault it was**. A late frame
+could be a packet lost and resent, the window closed, us having held it or us
+having abandoned it: the last two were counted, **the first two were not**.
 
-**1 · la riga `rete-quic`** (`src/webtransport.c`, `rete_ciclo()`) — al più una al secondo, e
-**tace se i contatori sono fermi e il giudizio non è cambiato**:
+**1 · the `rete-quic` line** (`src/webtransport.c`, `rete_ciclo()`) — at most one per second, and
+**silent if the counters are still and the judgement has not changed**:
 
 ```
 rete-quic 192.168.1.9:52344 da_ms=1002 persi=7 persi_d=3 byte_persi=9856 ... cwnd=48000
@@ -3382,477 +3382,477 @@ cwnd_left=0 ssthresh=32000 involo=47180 srtt_us=41230 latest_us=52980 rttvar_us=
 min_rtt_us=22100 coda_rete_us=19130 pto_us=132000 dgram_persi=… giudizio=⛔ la linea perde
 ```
 
-⚠ Tre scelte che un banco deve sapere: `giudizio=` è **l'ultimo campo** e il suo valore arriva a
-fine riga; l'rtt è in **microsecondi** (in rete locale `rttvar` arrotondato ai ms varrebbe 0, e
-nasconderebbe proprio il jitter che è il bersaglio); `da_ms` è l'intervallo **vero**, e i campi `_d`
-valgono su quello — chiamarli `_1s` sarebbe stato un numero che sembra misurato e non lo è.
+⚠ Three choices a bench must know: `giudizio=` is **the last field** and its value runs to the
+end of the line; the rtt is in **microseconds** (on a local network `rttvar` rounded to ms would be 0, and
+would hide precisely the jitter that is the target); `da_ms` is the **real** interval, and the `_d` fields
+hold over it — calling them `_1s` would have been a number that looks measured and is not.
 
-Il **giudizio** ha tre valori e la regola è scritta: `persi_d > 0` ⇒ `⛔ la linea perde` (per primo,
-perché la finestra chiusa è quasi sempre la **conseguenza** della perdita, e invertendo la causa si
-nasconderebbe dietro il suo effetto); altrimenti `cwnd_left == 0 && cwnd > 0` ⇒ `⚠ la finestra e'
-chiusa`; altrimenti `-- niente da segnalare`. ⛔ Il giudizio **non parla di jitter né di riordino**,
-apposta: quei numeri ngtcp2 non li dà, e dedurli da `rttvar` avrebbe voluto una **soglia**, cioè una
-decisione.
+The **judgement** has three values and the rule is written: `persi_d > 0` ⇒ `⛔ la linea perde` (first,
+because the closed window is almost always the **consequence** of loss, and inverting the cause would
+hide it behind its effect); otherwise `cwnd_left == 0 && cwnd > 0` ⇒ `⚠ la finestra e'
+chiusa`; otherwise `-- niente da segnalare`. ⛔ The judgement **speaks neither of jitter nor of reordering**,
+on purpose: ngtcp2 does not give those numbers, and deducing them from `rttvar` would have required a **threshold**, that is a
+decision.
 
-**2 · ⭐⭐⭐ `dgram_falsi` — il riordino, misurato dal lato del server.**
-`[S]` `ngtcp2.h:3442`, sul callback `lost_datagram`: *«Note that the loss might be spurious, and
-DATAGRAM frame might be acknowledged later»*. ⇒ Stesso `dgram_id` visto prima come **perso** e poi
-come **riscontrato** = pacchetto **arrivato fuori sequenza**, dichiarato perduto dalla soglia dei
-tre pacchetti e riscontrato dopo.
+**2 · ⭐⭐⭐ `dgram_falsi` — reordering, measured from the server side.**
+`[S]` `ngtcp2.h:3442`, on the `lost_datagram` callback: *«Note that the loss might be spurious, and
+DATAGRAM frame might be acknowledged later»*. ⇒ Same `dgram_id` seen first as **lost** and then
+as **acknowledged** = packet **arrived out of sequence**, declared lost by the three-packet
+threshold and acknowledged afterwards.
 
-⛔ Fino a stasera `ngtcp2_callbacks` (`src/trasporto.c` · `ngtcp2_callbacks`) registrava `recv_datagram` **e basta**:
-i datagram in arrivo si contavano (rilievo B-10), quelli in **partenza** — cioè l'audio — sparivano
-nel filo senza lasciare traccia. *«L'audio non è arrivato»* e *«è arrivato e il cliente l'ha
-buttato»* avevano la stessa faccia, ed è lo stesso difetto di allora dall'altro verso.
-⛔ E si registrano **in coppia**: `lost_datagram` da sola conterebbe i riordini come **perdite**,
-cioè darebbe un numero **più alto del vero** e senza dirlo.
+⛔ Until tonight `ngtcp2_callbacks` (`src/trasporto.c` · `ngtcp2_callbacks`) registered `recv_datagram` **and nothing else**:
+incoming datagrams were counted (finding B-10), **outgoing** ones — that is audio — vanished
+into the wire without leaving a trace. *«The audio did not arrive»* and *«it arrived and the client threw it
+away»* had the same face, and it is the same defect as then from the other direction.
+⛔ And they are registered **as a pair**: `lost_datagram` alone would count reorderings as **losses**,
+that is it would give a number **higher than the true one** and without saying so.
 
-⚠ **Il prezzo, dichiarato**: vale **sui datagram soltanto**, cioè sull'audio. Gli stream QUIC non
-hanno un identificativo per pezzo, e questa strada lì **non c'è** — sul video il riordino resta
-senza testimone diretto.
+⚠ **The price, declared**: it holds **on datagrams only**, that is on audio. QUIC streams do not
+have an identifier per piece, and this road **does not exist** there — on video reordering remains
+without a direct witness.
 
-### 17.3-bis ⛔ Quel che ngtcp2 1.25 NON dà, detto forte
+### 17.3-bis ⛔ What ngtcp2 1.25 does NOT give, said loudly
 
-- **i ritrasmessi non esistono** `[S]`: QUIC non ritrasmette pacchetti, ritrasmette i *frame*
-  dentro pacchetti nuovi, e non c'è nessun contatore di rimandi. `pkt_lost` (i pacchetti
-  **dichiarati** perduti) è quanto ci si avvicina;
-- **il riordino sugli stream non si conta** `[S]`: nessun campo, nessun callback, e la soglia dei
-  tre pacchetti ngtcp2 la usa al suo interno senza esporla. ⇒ Lì `rttvar` resta l'unico indizio;
-- **`delivery_rate` non esiste** `[S]`: la banda resta stimata da `cwnd`/`smoothed_rtt`;
-- ⛔ **il contatore `reordered` di `tc` non esiste su questa macchina** `[M]`: iproute2 6.15.0, il
-  blocco `netem` stampa solo `Sent/dropped/overlimits/requeues/backlog`, e con `reorder 25% 50%`
-  acceso si muove solo `requeues`. ⇒ Il riordino è stato misurato con **tre testimoni concordi** —
-  una sonda UDP numerata attraverso lo stesso `netem`, i sorpassi contati sul JSONL del cliente, e
-  `dgram_falsi` dal server — non dedotto.
+- **retransmitted packets do not exist** `[S]`: QUIC does not retransmit packets, it retransmits the *frames*
+  inside new packets, and there is no resend counter. `pkt_lost` (the packets
+  **declared** lost) is as close as one gets;
+- **reordering on streams is not counted** `[S]`: no field, no callback, and the three-packet
+  threshold ngtcp2 uses internally without exposing it. ⇒ There `rttvar` remains the only clue;
+- **`delivery_rate` does not exist** `[S]`: bandwidth stays estimated from `cwnd`/`smoothed_rtt`;
+- ⛔ **the `reordered` counter of `tc` does not exist on this machine** `[M]`: iproute2 6.15.0, the
+  `netem` block prints only `Sent/dropped/overlimits/requeues/backlog`, and with `reorder 25% 50%`
+  on only `requeues` moves. ⇒ Reordering was measured with **three concordant witnesses** —
+  a numbered UDP probe through the same `netem`, the overtakings counted on the client's JSONL, and
+  `dgram_falsi` from the server — not deduced.
 
-## 17.4 ⭐⭐ LA STRETTA DI MANO SOTTO PERDITA — **il `[M]` del 10 % era un difetto del banco**
+## 17.4 ⭐⭐ THE HANDSHAKE UNDER LOSS — **the `[M]` of 10 % was a bench defect**
 
-`banchi/09-b78-apertura.py` · `[M]` 23 agosto 2026 · 10 giri per gradino · perdita **letta** da
-`tc -s qdisc` · fino ad `AMMESSO` (QUIC + CONNECT estesa + `CIAO/ECCOMI` + `CREDENZIALI/AMMESSO`):
+`banchi/09-b78-apertura.py` · `[M]` 23 Aug 2026 · 10 rounds per step · loss **read** from
+`tc -s qdisc` · up to `AMMESSO` (QUIC + extended CONNECT + `CIAO/ECCOMI` + `CREDENZIALI/AMMESSO`):
 
-| perdita chiesta | perdita vera | aperte | QUIC mediana | totale mediana | totale max |
+| loss requested | real loss | opened | QUIC median | total median | total max |
 |---|---|---|---|---|---|
-| 0 % | – | **10/10** | 7,8 ms | 1 014 ms | 1 116 ms |
-| 5 % | 8,2 % | **10/10** | 7,8 ms | 1 078 ms | 1 318 ms |
-| 10 % | 9,5 % | **10/10** | 10,9 ms | 1 103 ms | 1 219 ms |
-| 15 % | 15,2 % | **10/10** | 111,5 ms | 1 281 ms | 1 708 ms |
-| 25 % | 24,3 % | **10/10** | 211,9 ms | 1 299 ms | 1 738 ms |
+| 0 % | – | **10/10** | 7.8 ms | 1 014 ms | 1 116 ms |
+| 5 % | 8.2 % | **10/10** | 7.8 ms | 1 078 ms | 1 318 ms |
+| 10 % | 9.5 % | **10/10** | 10.9 ms | 1 103 ms | 1 219 ms |
+| 15 % | 15.2 % | **10/10** | 111.5 ms | 1 281 ms | 1 708 ms |
+| 25 % | 24.3 % | **10/10** | 211.9 ms | 1 299 ms | 1 738 ms |
 
-⭐ **La sessione si apre sempre**, anche al 25 %. **La rete costa 285 ms fra lo 0 e il 25 %**; il
-secondo che si vede **non è la rete**, è il ritardo fisso di §4.4-bis contro chi prova le password.
-I massimi della stretta di mano stanno a 212 e 613 ms — **uno e due PTO**.
+⭐ **The session always opens**, even at 25 %. **The network costs 285 ms between 0 and 25 %**; the
+second that one sees **is not the network**, it is the fixed delay of §4.4-bis against whoever tries passwords.
+The handshake maxima sit at 212 and 613 ms — **one and two PTOs**.
 
-Le cinque ipotesi, tutte smentite una per una: il cliente non si arrende (**0 giri su 70** hanno
-superato il suo tetto di 8 s); il ban non c'entra (`src/rcp.c` · il conteggio dei verdetti PAM conta solo verdetti PAM su
-`CREDENZIALI`, e una stretta di mano non ci arriva); ngtcp2 riprova (`handshake_timeout` resta
-`UINT64_MAX`, `trasporto.c` · `accetta()`); il `netem` non è applicato due volte (i due filtri prendono i due
-**versi**, quindi un **giro** paga `1-(1-p)²` e un **datagram**, che fa un verso solo, paga `p` —
-`[M]` 3 235/3 607 = 89,7 %).
+The five hypotheses, all refuted one by one: the client does not give up (**0 rounds out of 70**
+exceeded its cap of 8 s); the ban has nothing to do with it (`src/rcp.c` · the count of PAM verdicts counts only PAM verdicts on
+`CREDENZIALI`, and a handshake does not get there); ngtcp2 retries (`handshake_timeout` stays
+`UINT64_MAX`, `trasporto.c` · `accetta()`); the `netem` is not applied twice (the two filters take the two
+**directions**, so a **round trip** pays `1-(1-p)²` and a **datagram**, which goes one direction only, pays `p` —
+`[M]` 3 235/3 607 = 89.7 %).
 
-### 17.4-bis ⛔ IL PREDICATO CHE NON POTEVA DARE ROSSO — R13 di nuovo, in `07-b64-rete.py`
+### 17.4-bis ⛔ THE PREDICATE THAT COULD NOT GIVE RED — R13 again, in `07-b64-rete.py`
 
 ```python
 def a_non_si_apre(n):
     return _p(n["ricevuti"] == 0, "nessun datagram: la sessione non si apre")
 ```
 
-⛔ `01-b3-cliente.py` · `_capsula_chiusura()` stampa `[audio] ricevuti 0` **anche dal ramo `except`**, prima di
-rilanciare. ⇒ **Ogni** modo di fallire — un `CONGEDO`, un tetto scaduto, un `NameError` del banco —
-faceva passare quel gradino di **verde**. Il banco non misurava *«non si apre»*: misurava *«non ho
-ricevuto»*, e le due cose hanno la stessa faccia.
+⛔ `01-b3-cliente.py` · `_capsula_chiusura()` prints `[audio] ricevuti 0` **also from the `except` branch**, before
+re-raising. ⇒ **Every** way of failing — a `CONGEDO`, an expired cap, a `NameError` of the bench —
+made that step pass **green**. The bench was not measuring *«it does not open»*: it measured *«I have not
+received»*, and the two things have the same face.
 
-⛔ **E un secondo difetto nello stesso file**: `guasta([])` chiama `rimetti(False)`, che chiama
-`guardiano_disarma()`. Il profilo `0-liscio` è **il primo**, quindi disarmava il guardiano armato
-due righe prima, e gli **otto profili successivi giravano senza rete di sicurezza**.
+⛔ **And a second defect in the same file**: `guasta([])` calls `rimetti(False)`, which calls
+`guardiano_disarma()`. The profile `0-liscio` is **the first**, so it disarmed the guardian armed
+two lines earlier, and the **eight following profiles ran without a safety net**.
 
-⏳ **Le due cure sono scritte e NON applicate**: `07-b64-rete.py` è importato dai banchi che stanno
-girando in questo momento, e cambiargli una firma a metà misura sarebbe il difetto che questa
-sezione descrive.
+⏳ **The two cures are written and NOT applied**: `07-b64-rete.py` is imported by the benches that are
+running at this moment, and changing a signature of it in the middle of a measurement would be the defect this
+section describes.
 
-## 17.5 ⛔⛔ IL FANTASMA — *«hai già una sessione attiva altrove»*, e per l'utente è **falso**
+## 17.5 ⛔⛔ THE GHOST — *«you already have an active session elsewhere»*, and for the user it is **false**
 
-⭐ È il fatto di prodotto trovato dietro §17.4, e sul bersaglio della fase.
+⭐ It is the product fact found behind §17.4, and on the target of the phase.
 
-L'unico modo in cui un'apertura fallisce davvero sotto perdita è `ATTACCA` → `CONGEDO(0x0F)
-GIA_ATTIVA_REMOTA` (`[M]` 5/10 al 10 % di perdita). Il registro dice: *«posto NEGATO … lo occupa un
-altro client di questo stesso utente»*.
+The only way an opening really fails under loss is `ATTACCA` → `CONGEDO(0x0F)
+GIA_ATTIVA_REMOTA` (`[M]` 5/10 at 10 % loss). The log says: *«place DENIED … it is occupied by
+another client of this same user»*.
 
-⛔ **Il conto si chiude senza `netem`**, perché un addio **perso** e un addio **mai detto** sono lo
-stesso fatto: ucciso il cliente con `-9`, `[M]` **11 rifiuti di fila, e il posto torna libero a
-+30,5 s** — cioè `SILENZIO` (`src/rcp.c` · `SILENZIO`, 30 000 ms).
+⛔ **The account closes without `netem`**, because a **lost** goodbye and a goodbye **never said** are the
+same fact: with the client killed with `-9`, `[M]` **11 refusals in a row, and the place becomes free again at
++30.5 s** — that is `SILENZIO` (`src/rcp.c` · `SILENZIO`, 30 000 ms).
 
-⚠ **La frase che il client costruisce è falsa per chi la legge**: quella sessione è **la sua**, ed è
-morta un attimo prima. E il riquadro di `src/rcp.c:229-233` dichiara che quell'orologio *«fa
-sparire il caso "il telefono è morto in galleria"»* — ⛔ non lo fa sparire: lo **dura trenta
-secondi**, e la perdita di pacchetti è precisamente quel che lo rende **normale** invece che raro.
+⚠ **The sentence the client builds is false for whoever reads it**: that session is **his own**, and it
+died a moment before. And the box of `src/rcp.c:229-233` declares that that clock *«makes
+the case "the phone died in a tunnel" disappear»* — ⛔ it does not make it disappear: it makes it **last thirty
+seconds**, and packet loss is precisely what makes it **normal** instead of rare.
 
-**La cura proposta, NON scritta — è un cambio di politica di §8.2 e la decide l'utente:** in
-`src/rcp.c`, ramo `POSTO_OCCUPATO` di `rcp_attacca()` (righe 2605-2616), prima di congedare con
-`0x0F` guardare l'`ultima_vita` dell'occupante: se tace da più di una soglia breve (~3 s) **mentre
-un altro client dello stesso utente sta chiedendo il posto**, sfrattarlo. §8.2 dice *«nessun client
-attaccato e **vivo** viene mai spodestato»* — l'occupante qui è attaccato ma **non vivo**, e oggi
-l'unico orologio che lo distingue è quello da 30 s. `torna_a_parlare()` (`rcp.c` · `drena()`) gestisce già
-lo sfrattato che torna. ⛔ Non toccherebbe `SILENZIO`, che resta 30 s per tutto il resto.
+**The proposed cure, NOT written — it is a change of policy of §8.2 and the user decides it:** in
+`src/rcp.c`, branch `POSTO_OCCUPATO` of `rcp_attacca()` (lines 2605-2616), before dismissing with
+`0x0F` look at the occupant's `ultima_vita`: if it has been silent for more than a short threshold (~3 s) **while
+another client of the same user is asking for the place**, evict it. §8.2 says *«no client
+attached and **alive** is ever ousted»* — the occupant here is attached but **not alive**, and today
+the only clock that distinguishes it is the 30 s one. `torna_a_parlare()` (`rcp.c` · `drena()`) already handles
+the evicted one coming back. ⛔ It would not touch `SILENZIO`, which stays 30 s for everything else.
 
-## 17.6 ⭐⭐⭐ LE DUE CURE, APPAIATE — **la spirale si spegne, e solo con tutt'e due**
+## 17.6 ⭐⭐⭐ THE TWO CURES, PAIRED — **the spiral switches off, and only with both**
 
-`banchi/09-b79-cure.py` · `[M]` 23 agosto 2026 · binario `eee17f40…` dall'**albero di lavoro** ·
-25 s per casella · 1920×1080 · h264 · un giro per casella. ⛔ Ogni braccio verificato dalle **righe
-d'avvio del prodotto**, non dalla riga di comando (un interruttore che si crede acceso e non lo è
-darebbe un appaiamento senza differenza, cioè un verde). Il guasto verificato dalla sonda a **ogni**
-casella.
+`banchi/09-b79-cure.py` · `[M]` 23 Aug 2026 · binary `eee17f40…` from the **working tree** ·
+25 s per cell · 1920×1080 · h264 · one round per cell. ⛔ Every arm verified from the **product's
+startup lines**, not from the command line (a switch believed on and not on would
+give a pairing without difference, that is a green). The fault verified by the probe at **every**
+cell.
 
-- **A** = i predefiniti, cioè **cure spente**. ⛔ Rimisurato, non ripreso da §17.1: quei numeri
-  vengono da un altro binario e da un'altra ora.
-- **B** = `--sgombra-soglia-ms 100` — la sola soglia sulla coda.
-- **C** = `--sgombra-soglia-ms 100 --ritmo-adattivo` — soglia **più** regolatore del ritmo.
+- **A** = the defaults, that is **cures off**. ⛔ Remeasured, not taken over from §17.1: those numbers
+  come from another binary and another time.
+- **B** = `--sgombra-soglia-ms 100` — the queue threshold alone.
+- **C** = `--sgombra-soglia-ms 100 --ritmo-adattivo` — threshold **plus** rate regulator.
 
-| profilo | br | fps | peggior s | **chiavi %** | deriva fin. | **deriva max** | Mbit/s filo |
+| profile | arm | fps | worst s | **keyframes %** | final drift | **max drift** | Mbit/s wire |
 |---|---|---|---|---|---|---|---|
-| `ritardo-30` ⭐**sana** | A | 39,85 | 36 | 0,0 | 0,1 | 8,9 | 7,55 |
-| | B | 40,19 | 37 | 0,0 | 0,2 | 5,8 | 7,60 |
-| | C | 39,63 | 36 | 0,0 | 0,9 | 6,1 | 7,53 |
-| `perdita-1` | A | 11,96 | 5 | **51,7** | −2,4 | 76,5 | 3,43 |
-| | B | 32,13 | 17 | 6,4 | 23,2 | 107,8 | 4,84 |
-| | **C** | **32,85** | 21 | **0,0** | −1,6 | 99,3 | 5,11 |
-| `perdita-3` | A | 7,34 | 5 | **88,1** | −40,0 | 53,4 | 2,17 |
-| | B | 20,63 | 11 | ⛔ 23,8 | 32,9 | 139,3 | 2,90 |
-| | **C** | 19,63 | 11 | **0,2** | −62,2 | 165,7 | 2,79 |
-| `jitter-15` | A | 10,76 | 6 | **59,2** | 11,7 | 102,1 | 3,48 |
-| | B | 25,88 | 9 | ⛔ 12,8 | −65,7 | 64,0 | 8,06 |
-| | **C** | 21,48 | 15 | **0,0** | 53,8 | 168,4 | 6,63 |
-| `jitter-30` | A | 8,56 | 5 | **73,1** | 6,7 | 115,6 | 2,55 |
-| | B | 20,25 | 10 | ⛔ 19,9 | −5,0 | 277,0 | 5,77 |
-| | **C** | 16,68 | 12 | **0,0** | −116,0 | 180,8 | 4,96 |
-| `casa-cattiva` | A | 8,28 | 3 | **72,0** | −71,5 | 295,3 | 2,21 |
-| | B | 14,37 | 6 | ⛔ 33,6 | 152,7 | 238,4 | 3,01 |
-| | **C** | 13,86 | 4 | **5,6** | 102,2 | 284,2 | 3,38 |
-| ⚠ `raffica-forte` | A | *la consegna muore a **4,4 s** su 25* | | | | | |
-| | B | 4,25 | **0** | 44,6 | 24,9 | **7 756** | 0,59 |
-| | C | 4,18 | **0** | 4,4 | 2,1 | **4 521** | 0,78 |
+| `ritardo-30` ⭐**healthy** | A | 39.85 | 36 | 0.0 | 0.1 | 8.9 | 7.55 |
+| | B | 40.19 | 37 | 0.0 | 0.2 | 5.8 | 7.60 |
+| | C | 39.63 | 36 | 0.0 | 0.9 | 6.1 | 7.53 |
+| `perdita-1` | A | 11.96 | 5 | **51.7** | −2.4 | 76.5 | 3.43 |
+| | B | 32.13 | 17 | 6.4 | 23.2 | 107.8 | 4.84 |
+| | **C** | **32.85** | 21 | **0.0** | −1.6 | 99.3 | 5.11 |
+| `perdita-3` | A | 7.34 | 5 | **88.1** | −40.0 | 53.4 | 2.17 |
+| | B | 20.63 | 11 | ⛔ 23.8 | 32.9 | 139.3 | 2.90 |
+| | **C** | 19.63 | 11 | **0.2** | −62.2 | 165.7 | 2.79 |
+| `jitter-15` | A | 10.76 | 6 | **59.2** | 11.7 | 102.1 | 3.48 |
+| | B | 25.88 | 9 | ⛔ 12.8 | −65.7 | 64.0 | 8.06 |
+| | **C** | 21.48 | 15 | **0.0** | 53.8 | 168.4 | 6.63 |
+| `jitter-30` | A | 8.56 | 5 | **73.1** | 6.7 | 115.6 | 2.55 |
+| | B | 20.25 | 10 | ⛔ 19.9 | −5.0 | 277.0 | 5.77 |
+| | **C** | 16.68 | 12 | **0.0** | −116.0 | 180.8 | 4.96 |
+| `casa-cattiva` | A | 8.28 | 3 | **72.0** | −71.5 | 295.3 | 2.21 |
+| | B | 14.37 | 6 | ⛔ 33.6 | 152.7 | 238.4 | 3.01 |
+| | **C** | 13.86 | 4 | **5.6** | 102.2 | 284.2 | 3.38 |
+| ⚠ `raffica-forte` | A | *delivery dies at **4.4 s** out of 25* | | | | | |
+| | B | 4.25 | **0** | 44.6 | 24.9 | **7 756** | 0.59 |
+| | C | 4.18 | **0** | 4.4 | 2.1 | **4 521** | 0.78 |
 
-### 17.6-bis ⭐⭐ I quattro fatti
+### 17.6-bis ⭐⭐ The four facts
 
-1. ⭐⭐⭐ **La spirale si spegne — ma solo col braccio C.** La quota di chiavi passa da **51,7-88,1 %**
-   a **0,0-5,6 %** su tutti e cinque i profili rossi. ⛔ **La sola soglia (B) non basta**: lascia
-   12,8-33,6 % di chiavi in quattro profili su cinque.
-   ⭐ **E il perché si legge nei contatori del server**: in C, su `raffica-forte`,
-   `delta_non_spedito` **988 → 6** e `chiave_aspetta` **32 → 0**. La soglia smette di *buttare*, ma
-   il debito di §5.2 continua ad **accendersi**; il regolatore lo previene perché il fotogramma
-   **non parte affatto**. ⇒ È la conferma sperimentale dell'ordine obbligato dichiarato in §6: la
-   soglia è il **prerequisito** del regolatore, non un'alternativa.
-2. ⛔⭐ **La linea sana non paga niente** — ed era il predicato che valeva più di tutti.
-   39,85 / 40,19 / 39,63 fps (un punto percentuale, dentro il rumore dichiarato del 5 %), **zero
-   chiavi** in tutt'e tre i bracci, deriva finale 0,1 / 0,2 / 0,9 ms. ⇒ Le cure **non hanno un
-   costo di regime**: sono mute finché non servono, che è precisamente quel che I1 pretende.
-3. ⭐ **Il ritmo torna da 1,7 a 2,8 volte** su ogni profilo rosso. ⚠ E B dà quasi sempre **più**
-   fotogrammi/s di C: ⛔ non sono «peggio e meglio», sono **più fotogrammi con più chiavi** contro
-   **meno fotogrammi tutti delta**. Chi confrontasse la sola colonna dei fotogrammi/s sceglierebbe B
-   e prenderebbe la spirale in casa.
-4. ⭐⭐ **E i byte sul filo SALGONO** (3,48 → 8,06 Mbit/s a `jitter-15`): ⇒ **la linea non era satura,
-   era sprecata.** È l'altra faccia di §17.1-bis punto 2 — lì il doppio dei byte per un quinto dei
-   fotogrammi, qui il doppio dei byte per **il doppio** dei fotogrammi.
+1. ⭐⭐⭐ **The spiral switches off — but only with arm C.** The keyframe share goes from **51.7-88.1 %**
+   to **0.0-5.6 %** on all five red profiles. ⛔ **The threshold alone (B) is not enough**: it leaves
+   12.8-33.6 % keyframes on four profiles out of five.
+   ⭐ **And the why is read in the server's counters**: in C, on `raffica-forte`,
+   `delta_non_spedito` **988 → 6** and `chiave_aspetta` **32 → 0**. The threshold stops *throwing away*, but
+   the debt of §5.2 keeps **kindling**; the regulator prevents it because the frame
+   **does not leave at all**. ⇒ It is the experimental confirmation of the mandatory order declared in §6: the
+   threshold is the **prerequisite** of the regulator, not an alternative.
+2. ⛔⭐ **The healthy line pays nothing** — and it was the predicate worth more than all the others.
+   39.85 / 40.19 / 39.63 fps (one percentage point, within the declared 5 % noise), **zero
+   keyframes** in all three arms, final drift 0.1 / 0.2 / 0.9 ms. ⇒ The cures **have no
+   regime cost**: they are mute until they are needed, which is precisely what I1 demands.
+3. ⭐ **The rate comes back by 1.7 to 2.8 times** on every red profile. ⚠ And B almost always gives **more**
+   frames/s than C: ⛔ they are not «worse and better», they are **more frames with more keyframes** against
+   **fewer frames, all deltas**. Whoever compared only the frames/s column would choose B
+   and take the spiral home.
+4. ⭐⭐ **And the bytes on the wire RISE** (3.48 → 8.06 Mbit/s at `jitter-15`): ⇒ **the line was not saturated,
+   it was wasted.** It is the other face of §17.1-bis point 2 — there double the bytes for a fifth of the
+   frames, here double the bytes for **double** the frames.
 
-### 17.6-ter ⚠ IL PREZZO, e i due numeri si danno senza scegliere
+### 17.6-ter ⚠ THE PRICE, and the two numbers are given without choosing
 
-**Deriva massima**, sui cinque profili ordinari: da **−38 a +161 ms** rispetto ad A (⭐ su
-`casa-cattiva` e `jitter-15` il braccio B la fa perfino **calare**). **Zero sulla linea sana.**
+**Maximum drift**, on the five ordinary profiles: from **−38 to +161 ms** compared to A (⭐ on
+`casa-cattiva` and `jitter-15` arm B even makes it **drop**). **Zero on the healthy line.**
 
-⛔ **Su `raffica-forte` il prezzo esplode: 4,5-7,8 secondi.** Lì C **non è ovviamente meglio di A**:
-è *un'immagine che si muove con cinque secondi di ritardo* contro *un'immagine ferma*. ⚠ Questo
-documento dà i due numeri e **non sceglie**: la scelta fra immagine e ritardo è dell'utente
-(`DECISIONI.md` §0.1, invariante I6), non di una misura.
+⛔ **On `raffica-forte` the price explodes: 4.5-7.8 seconds.** There C **is not obviously better than A**:
+it is *an image that moves with five seconds of delay* against *a still image*. ⚠ This
+document gives the two numbers and **does not choose**: the choice between image and delay is the user's
+(`DECISIONI.md` §0.1, invariant I6), not a measurement's.
 
-## 17.7 ⛔ I DIFETTI DI BANCO TROVATI STASERA — tutti della forma «silenzio invece di rosso»
+## 17.7 ⛔ THE BENCH DEFECTS FOUND TONIGHT — all of the form «silence instead of red»
 
-| dove | che cosa | esito |
+| where | what | outcome |
 |---|---|---|
-| `07-b64-rete.py` | `a_non_si_apre` verde su qualunque modo di fallire | ⭐ **curato** e rifatto girare (§17.4-bis, §17.9-bis) |
-| `07-b64-rete.py` | `0-liscio` disarma il guardiano per gli otto profili dopo | ⭐ **curato**, `[M]` guardiano ancora vivo dopo `guasta([])` |
-| `07-b64-rete.py` | `spediti_dal_server` a `None`: `None == 0` è falso ⇒ verde su un giro in cui il capo del server non era stato letto | ⭐ **curato**: adesso è muto (§17.9-bis) |
-| ⛔ `07-b64-rete.py` | la riga di «conto finale» arriva **29 s tardi** quando il pacer ha coda ⇒ il giro dopo legge **il conto del giro prima** — e il posto ancora occupato lo fa morire di `GIA_ATTIVA_REMOTA` | ⭐ **curato** con `registro_posato()` (§17.9-bis) |
-| `09-b70-ritmo.py` | `sudo -S` copre solo il **primo** comando della catena ⇒ il lettore §11.1 non si scriveva | ⭐ **curato** con `catena_root()` (§17.9-ter) |
-| `09-b70-ritmo.py` | un `< file` in coda **ruba lo stdin a `sudo -S`** ⇒ `righe_registro()` torna 0 in silenzio, e `attese_a_vuoto` diventa cumulativo dall'accensione — cioè la colonna su cui I1 decide se rifiutarsi di giudicare | ⭐ **curato**, `[M]` 1 604 del giro contro 4 041 cumulativi |
-| `09-b70-ritmo.py` | `01-b4-validatore.py` non viene spedito dal terreno ⇒ giornale vuoto ⇒ **rosso a «non stacca» su una sessione viva da 797 fotogrammi** | ⭐ **curato**: il terreno lo verifica, il banco si rifiuta |
-| `09-b76` | ⛔ `p_niente_stacco` misurava **la durata della consegna** e la chiamava **stacco** | ⭐ **spezzato in due** (§17.9-quater) |
-| `09-b79-cure.py` | l'avvolgimento di `root()` saltava la cura del sottostante | ⭐ **curato**, e `[M]` **nessun numero era sporcato** (§17.9-sexies) |
-| `09-b76` (in corso d'opera) | ⛔ **`tc qdisc change` è appiccicoso**: un `reorder` messo per un profilo restava acceso nei quattro dopo | curato: il banco **rilegge** la regola installata e dà rosso se porta un verbo non chiesto |
-| `09-b77` (in corso d'opera) | le regex cercavano i nomi **interni** dei contatori mentre il cliente stampa altri nomi ⇒ `None` su tutto, nessun errore | curato, e `--certifica` ora prova le regex sull'**uscita vera** del cliente |
-| `09-b77` (in corso d'opera) | `mancati` conta come perduti anche i blocchi **mai spediti** | curato: il predicato lavora **sui due capi** (§17.2-ter) |
+| `07-b64-rete.py` | `a_non_si_apre` green on any way of failing | ⭐ **cured** and run again (§17.4-bis, §17.9-bis) |
+| `07-b64-rete.py` | `0-liscio` disarms the guardian for the eight profiles after it | ⭐ **cured**, `[M]` guardian still alive after `guasta([])` |
+| `07-b64-rete.py` | `spediti_dal_server` at `None`: `None == 0` is false ⇒ green on a round in which the server's end had not been read | ⭐ **cured**: now it is mute (§17.9-bis) |
+| ⛔ `07-b64-rete.py` | the «final count» line arrives **29 s late** when the pacer has a queue ⇒ the next round reads **the count of the previous round** — and the place still occupied makes it die of `GIA_ATTIVA_REMOTA` | ⭐ **cured** with `registro_posato()` (§17.9-bis) |
+| `09-b70-ritmo.py` | `sudo -S` covers only the **first** command of the chain ⇒ the §11.1 reader was not written | ⭐ **cured** with `catena_root()` (§17.9-ter) |
+| `09-b70-ritmo.py` | a trailing `< file` **steals stdin from `sudo -S`** ⇒ `righe_registro()` returns 0 in silence, and `attese_a_vuoto` becomes cumulative since startup — that is the column on which I1 decides whether to refuse to judge | ⭐ **cured**, `[M]` 1 604 for the round against 4 041 cumulative |
+| `09-b70-ritmo.py` | `01-b4-validatore.py` is not shipped by the ground ⇒ empty journal ⇒ **red on «does not detach» on a session alive for 797 frames** | ⭐ **cured**: the ground verifies it, the bench refuses |
+| `09-b76` | ⛔ `p_niente_stacco` measured **the duration of delivery** and called it **detach** | ⭐ **split in two** (§17.9-quater) |
+| `09-b79-cure.py` | the wrapping of `root()` skipped the cure of the underlying one | ⭐ **cured**, and `[M]` **no number was dirtied** (§17.9-sexies) |
+| `09-b76` (while working) | ⛔ **`tc qdisc change` is sticky**: a `reorder` set for one profile stayed on in the four after | cured: the bench **rereads** the installed rule and gives red if it carries a verb not asked for |
+| `09-b77` (while working) | the regexes looked for the **internal** names of the counters while the client prints other names ⇒ `None` on everything, no error | cured, and `--certifica` now tests the regexes on the client's **real output** |
+| `09-b77` (while working) | `mancati` counts as lost also blocks **never sent** | cured: the predicate works **on both ends** (§17.2-ter) |
 
-## 17.9 ⭐⭐ LA TORNATA DELLE CURE AI BANCHI — *23 agosto, notte*, e ne sono usciti altri quattro
+## 17.9 ⭐⭐ THE ROUND OF CURES TO THE BENCHES — *23 Aug, night*, and four more came out
 
-⛔ **Sette difetti di banco su nove trovati stasera, e tutti della stessa forma: «silenzio invece di
-rosso».** Le cure sono state applicate e **ogni banco è stato rifatto girare**. Quel che segue è il
-seguito, e vale la pena leggerlo perché **due dei quattro nuovi sono usciti facendo girare il banco
-curato**, non leggendolo.
+⛔ **Seven bench defects out of nine found tonight, and all of the same form: «silence instead of
+red».** The cures were applied and **every bench was run again**. What follows is the
+sequel, and it is worth reading because **two of the four new ones came out by running the cured
+bench**, not by reading it.
 
-### 17.9-bis ⛔⛔ IL TERZO E IL QUARTO DI `07-b64-rete.py` — e il quarto è il più grosso
+### 17.9-bis ⛔⛔ THE THIRD AND FOURTH OF `07-b64-rete.py` — and the fourth is the biggest
 
-**Terzo.** `spediti_dal_server` a `None`: `conti_del_server` torna `{"esito": "NIENTE DA LEGGERE"}`,
-e `None == 0` è **falso** ⇒ il gradino filava dritto al predicato. I predicati che non guardano il
-server (`a_pulito`, `a_sorpassi`) davano **verde su un giro in cui il capo del server non era stato
-letto affatto**. ⇒ Adesso è **muto**.
+**Third.** `spediti_dal_server` at `None`: `conti_del_server` returns `{"esito": "NIENTE DA LEGGERE"}`,
+and `None == 0` is **false** ⇒ the step went straight to the predicate. The predicates that do not look at the
+server (`a_pulito`, `a_sorpassi`) gave **green on a round in which the server's end had not been
+read at all**. ⇒ Now it is **mute**.
 
-**Quarto — ⛔ e questo sporca i numeri, non solo i verdetti.**
-`[M]` **la chiusura di una sessione è lenta quando il pacer ha coda**: il profilo al 10 % di perdita
-ha impiegato **29 secondi in più** degli altri a scrivere la sua riga di «conto finale». ⇒ Il giro
-**successivo** prendeva la sua `riga0` **prima** che quella riga esistesse, e `conti_del_server()`
-leggeva **il conto del giro precedente**.
+**Fourth — ⛔ and this dirties the numbers, not only the verdicts.**
+`[M]` **the closing of a session is slow when the pacer has a queue**: the profile at 10 % loss
+took **29 seconds more** than the others to write its «final count» line. ⇒ The
+**next** round took its `riga0` **before** that line existed, and `conti_del_server()`
+read **the count of the previous round**.
 
-⭐ **La firma è inconfondibile**: `[M]` tre profili di fila hanno riferito gli **stessi identici
-numeri** («spediti 4999 · rifiutati 3 · rimandati 7410»), che erano il conto del **primo** dei tre.
-Il conto vero del secondo era **4 632**. ⇒ Il predicato nuovo ha dato **rosso su un denominatore
-altrui** (4 152/4 999 = 0,831), mentre col denominatore giusto era 4 152/4 632 = **0,896**, verde.
+⭐ **The signature is unmistakable**: `[M]` three profiles in a row reported the **very same
+numbers** («sent 4999 · refused 3 · resent 7410»), which were the count of the **first** of the three.
+The real count of the second was **4 632**. ⇒ The new predicate gave **red on someone else's
+denominator** (4 152/4 999 = 0.831), while with the right denominator it was 4 152/4 632 = **0.896**, green.
 
-⚠ **E lo stesso ritardo produce un secondo effetto, peggiore**: il gradino dopo è morto con
-`CONGEDO 0x0F GIA_ATTIVA_REMOTA` — il posto del precedente era **ancora occupato**, ed è la
-serratura di 30 s di **§17.5**. ⇒ **Un giro può fallire per colpa del giro prima**, e l'`[audio]
-ricevuti 0` che ne usciva è **esattamente il numero che il vecchio `a_non_si_apre` avrebbe chiamato
-verde**. ⭐ I due difetti di §17.4-bis e il fantasma di §17.5 si nutrivano a vicenda.
+⚠ **And the same delay produces a second, worse effect**: the next step died with
+`CONGEDO 0x0F GIA_ATTIVA_REMOTA` — the previous one's place was **still occupied**, and it is the
+30 s lock of **§17.5**. ⇒ **A round can fail because of the round before**, and the `[audio]
+ricevuti 0` that came out of it is **exactly the number the old `a_non_si_apre` would have called
+green**. ⭐ The two defects of §17.4-bis and the ghost of §17.5 fed each other.
 
-**La cura**: `registro_posato()` — si aspetta che il conto delle righe «conto finale» stia **fermo
-3 s** prima di cominciare un gradino — e `conti_del_server(riga0, n0)` **pretende una riga sua**,
-altrimenti resta muto.
+**The cure**: `registro_posato()` — one waits for the count of «final count» lines to stay **still
+for 3 s** before starting a step — and `conti_del_server(riga0, n0)` **demands a line of its own**,
+otherwise it stays mute.
 
-**Il giro nuovo di `07-b64`** `[M]` 23 agosto, porta 7801, 25 s per profilo: **9 gradini · 0 rossi ·
-0 muti**, e il controllo positivo (`--controllo-rosso`) dà rosso con uscita 1 — il verdetto sa
-ancora fallire. ⭐ Il gradino al 10 % conferma il conto dei due versi: **4 077/4 504 = 0,905** contro
-`1-p` = 0,901. **È `1-p`, non `1-(1-p)²`**: un datagram fa **un verso solo**.
+**The new round of `07-b64`** `[M]` 23 Aug, port 7801, 25 s per profile: **9 steps · 0 red ·
+0 mute**, and the positive control (`--controllo-rosso`) gives red with exit 1 — the verdict can
+still fail. ⭐ The step at 10 % confirms the count of the two directions: **4 077/4 504 = 0.905** against
+`1-p` = 0.901. **It is `1-p`, not `1-(1-p)²`**: a datagram goes **one direction only**.
 
-### 17.9-ter ⭐ LE TRE CURE DI `09-b70-ritmo.py`, e il numero che dimostra la seconda
+### 17.9-ter ⭐ THE THREE CURES OF `09-b70-ritmo.py`, and the number that proves the second
 
-`sudo -S` che copre solo il primo anello ⇒ nuova `catena_root()`, un solo `sudo -S bash -c` con la
-catena dentro. `[M]` il lettore di §11.1 adesso **si scrive davvero** (4 130 byte) e riduce
-**794 fotogrammi** per giro; la forma vecchia sullo stesso comando dava `Permission denied`.
+`sudo -S` covering only the first link ⇒ new `catena_root()`, a single `sudo -S bash -c` with the
+chain inside. `[M]` the §11.1 reader now **really gets written** (4 130 bytes) and reduces
+**794 frames** per round; the old form on the same command gave `Permission denied`.
 
-Il `< file` che ruba lo stdin ⇒ `righe_registro()` torna **`None`**, non 0, e la guardia sta dove il
-numero **si consuma**. ⭐ **Il numero che dimostra la cura:**
+The `< file` that steals stdin ⇒ `righe_registro()` returns **`None`**, not 0, and the guard sits where the
+number **is consumed**. ⭐ **The number that proves the cure:**
 
-| | riga di partenza | righe `ciclo:` | `attese_a_vuoto` |
+| | starting line | `ciclo:` lines | `attese_a_vuoto` |
 |---|---|---|---|
-| giro mosso | 327 | 21 | **1 607** |
-| giro fermo | 3 711 | 21 | **1 604** |
-| ⛔ forma vecchia (`riga0` = 0) | 1 | 49 | **4 041** |
+| moving round | 327 | 21 | **1 607** |
+| still round | 3 711 | 21 | **1 604** |
+| ⛔ old form (`riga0` = 0) | 1 | 49 | **4 041** |
 
-⇒ Col difetto, il giro fermo avrebbe dichiarato **4 041 invece di 1 604** — **2,5 volte**, e in
-salita a ogni giro. ⛔ Ed è precisamente la colonna con cui `p_I1` decide **se rifiutarsi di
-giudicare**.
+⇒ With the defect, the still round would have declared **4 041 instead of 1 604** — **2.5 times**, and
+rising at every round. ⛔ And it is precisely the column with which `p_I1` decides **whether to refuse to
+judge**.
 
-**E la premessa falsa di I1**: la gamba «zero abbandoni a scena ferma» ora è **condizionata alla
-perdita letta dal `qdisc` installato**, non assunta zero. Con perdita > 0 il predicato **si rifiuta**
-invece di accusare il prodotto (era il falso rosso di `casa-cattiva`).
+**And the false premise of I1**: the leg «zero abandons with a still scene» is now **conditioned on the
+loss read from the installed `qdisc`**, not assumed to be zero. With loss > 0 the predicate **refuses**
+instead of accusing the product (it was the false red of `casa-cattiva`).
 
-**Quarta cura, trovata dal giro vero**: il lettore §11.1 non partiva perché `01-b4-validatore.py`
-non è fra i file che `07-b64-terreno.sh porta` spedisce ⇒ giornale vuoto ⇒ il banco dava **rosso a
-«non stacca» su una sessione viva da 797 fotogrammi**.
+**Fourth cure, found by the real round**: the §11.1 reader did not start because `01-b4-validatore.py`
+is not among the files that `07-b64-terreno.sh porta` ships ⇒ empty journal ⇒ the bench gave **red on
+«does not detach» on a session alive for 797 frames**.
 
-### 17.9-quater ⭐⭐ `09-b76` — IL NOME GIUSTO, e la griglia rifatta
+### 17.9-quater ⭐⭐ `09-b76` — THE RIGHT NAME, and the grid redone
 
-`p_niente_stacco` è **spezzato in due**, perché sono due fatti con due cause:
+`p_niente_stacco` is **split in two**, because they are two facts with two causes:
 
-- **`p_connessione_viva()`** — vale su **tutti** i profili (§3.3/§8.3, anche sotto il pavimento) e
-  interroga i **testimoni della connessione**, non i fotogrammi: il cliente (*«ancora attaccato dopo
-  N s»*) e il registro (`congedo motivo=`, `posto NEGATO`, ban), **col motivo stampato**. ⚠ La terza
-  possibilità — *«non si è mai aperta»* — è **muta** per costruzione, non rossa.
-- **`p_consegna_non_si_ferma()`** — copertura ≥ 0,90 dei secondi che hanno visto almeno un
-  fotogramma, e ⛔ **nessun buco ≥ 1,0 s**, **coda compresa**. ⚠ La soglia 0,90 **non è nuova**: è la
-  stessa che usava il predicato vecchio. **Il numero non cambia: cambia la parola, ed è tutta la
-  cura.** Il buco di 1 s ha la sua ragione: §2.1 mette il pavimento a 25 fotogrammi/s, quindi un
-  secondo a **zero** è fuori scala, non «un ritmo basso».
-- ⚠ Prezzo dichiarato: `[M]` sui tredici profili sani il buco massimo va da **0,04 a 0,35 s**,
-  contro **14,26 s** a `raffica-forte` — più di un ordine di grandezza di margine, **zero falsi
-  rossi**, diagnosi compresi.
+- **`p_connessione_viva()`** — holds on **all** profiles (§3.3/§8.3, even below the floor) and
+  questions the **witnesses of the connection**, not the frames: the client (*«still attached after
+  N s»*) and the log (`congedo motivo=`, `posto NEGATO`, ban), **with the reason printed**. ⚠ The third
+  possibility — *«it never opened»* — is **mute** by construction, not red.
+- **`p_consegna_non_si_ferma()`** — coverage ≥ 0.90 of the seconds that saw at least one
+  frame, and ⛔ **no hole ≥ 1.0 s**, **tail included**. ⚠ The 0.90 threshold **is not new**: it is the
+  same the old predicate used. **The number does not change: the word changes, and that is the whole
+  cure.** The 1 s hole has its reason: §2.1 puts the floor at 25 frames/s, so a
+  second at **zero** is off the scale, not «a low rate».
+- ⚠ Declared price: `[M]` on the thirteen healthy profiles the maximum hole goes from **0.04 to 0.35 s**,
+  against **14.26 s** at `raffica-forte` — more than an order of magnitude of margin, **zero false
+  reds**, diagnoses included.
 
-⭐ E `--certifica` porta ora il caso che aveva ingannato il banco: **lo stesso giro dà rosso sulla
-consegna e verde sulla connessione**. 49 casi su 49.
+⭐ And `--certifica` now carries the case that had fooled the bench: **the same round gives red on
+delivery and green on the connection**. 49 cases out of 49.
 
-**`raffica-forte`, col nome giusto e i numeri** `[M]` (sonda: **11,10 %** di perdita in 197 raffiche,
-media 4,51, max 27): **nessuno ha staccato** — cliente attaccato per tutti i 25 s, zero congedi. A
-fermarsi è la **sola consegna**: **7 secondi su 25** hanno visto un fotogramma, **14,26 s di schermo
-fermo di fila**, 952 righe `FOTOGRAMMA NON SPEDITO`, `cwnd` mediana **8 948 B** contro **105 616 B**
-del riferimento (**12 volte meno**), `cwnd_left` mediana **0**. ⭐⭐ **E il server lo dice da sé**:
-`⚠ la finestra e' chiusa` su **10 righe `rete-quic` su 18** — è il testimone di §17.3 che dà la
-risposta senza che nessuno debba dedurla.
+**`raffica-forte`, with the right name and the numbers** `[M]` (probe: **11.10 %** loss in 197 bursts,
+average 4.51, max 27): **nobody detached** — client attached for all 25 s, zero farewells. What
+stops is **delivery alone**: **7 seconds out of 25** saw a frame, **14.26 s of still screen
+in a row**, 952 `FOTOGRAMMA NON SPEDITO` lines, `cwnd` median **8 948 B** against **105 616 B**
+of the reference (**12 times less**), `cwnd_left` median **0**. ⭐⭐ **And the server says it by itself**:
+`⚠ la finestra e' chiusa` on **10 `rete-quic` lines out of 18** — it is the witness of §17.3 giving the
+answer without anyone having to deduce it.
 
-### 17.9-quinquies ⛔⛔ E DUE GRIGLIE DELLO STESSO BANCO NON COINCIDONO — dichiarato, non lisciato
+### 17.9-quinquies ⛔⛔ AND TWO GRIDS OF THE SAME BENCH DO NOT MATCH — declared, not smoothed over
 
-Il giro di `09-b76` rifatto stanotte **non riproduce** quello di §17.1 su due profili:
+The `09-b76` round redone tonight **does not reproduce** that of §17.1 on two profiles:
 
-| profilo | §17.1 (binario `51b5994`) | giro nuovo (binario da HEAD) |
+| profile | §17.1 (binary `51b5994`) | new round (binary from HEAD) |
 |---|---|---|
-| `perdita-0,5` | 40,06 fps · 0 chiavi | ⛔ **19,27** fps · spirale rossa |
-| `jitter-5` | 39,30 fps | **31,45** fps |
-| `perdita-1` | 9,56 | 12,32 |
-| `raffica-1` | 23,94 | 29,47 |
+| `perdita-0,5` | 40.06 fps · 0 keyframes | ⛔ **19.27** fps · red spiral |
+| `jitter-5` | 39.30 fps | **31.45** fps |
+| `perdita-1` | 9.56 | 12.32 |
+| `raffica-1` | 23.94 | 29.47 |
 
-⛔ **Non lo liscio, e non scelgo quale sia buono.** Le differenze note fra i due giri sono almeno
-tre — binario diverso (HEAD porta le righe `rete-quic`, cioè **una `registro_dice` in più al
-secondo**), macchina **riavviata** in mezzo, e il terreno ricostruito. ⇒ `[?]` **Non so quale delle
-tre.**
+⛔ **I do not smooth it over, and I do not choose which is good.** The known differences between the two rounds are at least
+three — different binary (HEAD carries the `rete-quic` lines, that is **one more `registro_dice` per
+second**), machine **rebooted** in between, and the ground rebuilt. ⇒ `[?]` **I do not know which of the
+three.**
 
-⭐ **Che cosa sopravvive comunque, perché non dipende dal punto esatto:** la forma è la stessa in
-tutt'e due i giri — una linea sana a ~40 fotogrammi/s, un **dirupo** entro il primo punto
-percentuale di perdita, la spirale di chiavi come meccanismo, e il jitter che morde **senza perdere
-un pacchetto**. ⛔ Quel che **non** si poteva più dire era **dove** stesse il gradino.
-⇒ ⭐ **Sciolta da §17.11**, e la risposta è più interessante della domanda.
+⭐ **What survives anyway, because it does not depend on the exact point:** the shape is the same in
+both rounds — a healthy line at ~40 frames/s, a **cliff** within the first percentage
+point of loss, the keyframe spiral as mechanism, and jitter that bites **without losing
+a packet**. ⛔ What could **no longer** be said was **where** the step was.
+⇒ ⭐ **Untangled by §17.11**, and the answer is more interesting than the question.
 
-### 17.9-sexies ⭐ LA RIVERIFICA DI `09-b79` — **nessun numero era sporcato**, e sono tre prove lette
+### 17.9-sexies ⭐ THE RE-VERIFICATION OF `09-b79` — **no number was dirtied**, and they are three proofs read
 
-`09-b79-cure.py` avvolgeva `RETE.root` invece della catena curata. ⚠ E **non bastava scrivere
-`B70.root`**: quando b79 arriva, `B70.root` è **già** stato sostituito da `09-b76:416` con un
-avvolgimento che a sua volta chiama `RETE.root`. ⇒ La catena si ricostruisce dai pezzi
-(`RETE.rem(B70.catena_root(c))`), e se `catena_root` non c'è **il banco si ferma invece di
-misurare**.
+`09-b79-cure.py` wrapped `RETE.root` instead of the cured chain. ⚠ And **writing
+`B70.root` was not enough**: when b79 arrives, `B70.root` has **already** been replaced by `09-b76:416` with a
+wrapping that in turn calls `RETE.root`. ⇒ The chain is rebuilt from the pieces
+(`RETE.rem(B70.catena_root(c))`), and if `catena_root` is not there **the bench stops instead of
+measuring**.
 
-⛔ Ma i numeri di §17.6 **reggono**, e non per fiducia:
+⛔ But the numbers of §17.6 **hold**, and not on trust:
 
-1. `[R]` **il difetto era ancora da riscuotere**: alle 19:00 `09-b70.root()` faceva ancora
-   `return RETE.root(...)`; la cura è delle **19:41**, dopo. Avvolgere `RETE.root` era allora
-   *identico*. Il difetto era **prospettico**;
-2. `[R]` **la `riga0` c'era**: `09-b76` sostituiva già `righe_registro` con la sua, col redirect
-   **dentro** `bash -c`. `[M]` E la firma nei dati lo conferma: su tutte e **36** le caselle
-   `attese_a_vuoto` sta fra 1 973 e 2 156 — **costante, non in salita** (su `ritardo-30` A/B/C:
-   2 015 / 2 006 / 2 016). Il cumulativo di b70 era 4 041 contro 1 604, **in salita**: qui non c'è;
-3. `[R]` **il conto di un altro giro è strutturalmente impossibile**: `07-b64-terreno.sh` fa
-   `: > registro.log` a ogni `accendi`, e questo banco **riaccende il server a ogni braccio**.
-   `[M]` Controprova: nessuna coppia di caselle porta numeri identici dal registro, e tre caselle
-   hanno detto «NIENTE DA LEGGERE» invece del numero del vicino — ⭐ prova che **nella finestra non
-   c'era niente da rubare**.
+1. `[R]` **the defect had not yet been cashed in**: at 19:00 `09-b70.root()` still did
+   `return RETE.root(...)`; the cure is from **19:41**, after. Wrapping `RETE.root` was then
+   *identical*. The defect was **prospective**;
+2. `[R]` **the `riga0` was there**: `09-b76` already replaced `righe_registro` with its own, with the redirect
+   **inside** `bash -c`. `[M]` And the signature in the data confirms it: on all **36** cells
+   `attese_a_vuoto` lies between 1 973 and 2 156 — **constant, not rising** (on `ritardo-30` A/B/C:
+   2 015 / 2 006 / 2 016). b70's cumulative was 4 041 against 1 604, **rising**: here it is not there;
+3. `[R]` **the count of another round is structurally impossible**: `07-b64-terreno.sh` does
+   `: > registro.log` at every `accendi`, and this bench **restarts the server at every arm**.
+   `[M]` Counter-proof: no pair of cells carries identical numbers from the log, and three cells
+   said «NIENTE DA LEGGERE» instead of the neighbour's number — ⭐ proof that **in the window there was
+   nothing to steal**.
 
-⭐⭐ **E la divisione che conta**: `[R]` i predicati sulla spirale, sul ritmo e sulla linea sana
-leggono **solo** dalla traccia §11.1 del cliente; dal registro vengono solo quattro numeri di
-**corroborazione**. ⇒ *«la spirale si spegne solo col braccio C: 51,7-88,1 % → 0,0-5,6 %»*
-**non passa dal registro**, e i cinque profili rossi non si rifanno.
+⭐⭐ **And the division that counts**: `[R]` the predicates on the spiral, on the rate and on the healthy line
+read **only** from the client's §11.1 trace; from the log come only four numbers of
+**corroboration**. ⇒ *«the spiral switches off only with arm C: 51.7-88.1 % → 0.0-5.6 %»*
+**does not go through the log**, and the five red profiles are not redone.
 
-**Rimisurato `ritardo-30` a tre bracci** — il predicato che vale più di tutti:
+**Remeasured `ritardo-30` with three arms** — the predicate worth more than all the others:
 
-| braccio | fps | chiavi | deriva fine | deriva max |
+| arm | fps | keyframes | final drift | max drift |
 |---|---|---|---|---|
-| A | 39,94 | 0,0 % | 0,0 ms | 10,1 ms |
-| B | 39,94 | 0,0 % | 0,2 ms | 11,0 ms |
-| C | 39,32 | 0,0 % | −0,1 ms | 6,2 ms |
+| A | 39.94 | 0.0 % | 0.0 ms | 10.1 ms |
+| B | 39.94 | 0.0 % | 0.2 ms | 11.0 ms |
+| C | 39.32 | 0.0 % | −0.1 ms | 6.2 ms |
 
-**S′ verde**, e regge il confronto con le 19:00 (39,85 / 40,19 / 39,63). ⭐ E le righe della spirale
-del braccio A tornano **identiche** (`chiave_aspetta` 1, `delta_non_spedito` 5,
-`abbandonato_in_coda` 1): **un numero cumulativo non si riproduce, questi sì.**
+**S′ green**, and it holds the comparison with 19:00 (39.85 / 40.19 / 39.63). ⭐ And the spiral lines
+of arm A come back **identical** (`chiave_aspetta` 1, `delta_non_spedito` 5,
+`abbandonato_in_coda` 1): **a cumulative number does not reproduce, these do.**
 
-## 17.11 ⭐⭐⭐ DOV'È IL DIRUPO — *23 agosto, notte fonda*: **il gradino è DOPPIO**, e il prodotto è **bistabile**
+## 17.11 ⭐⭐⭐ WHERE THE CLIFF IS — *23 Aug, dead of night*: **the step is DOUBLE**, and the product is **bistable**
 
-`banchi/09-b80-dirupo.py` · **42 giri** · perdita **letta** da una sonda a **20 000 pacchetti** a
-ogni casella (⛔ a 0,1 % otto pacchetti non misurano un decimo di punto) · denominatore girato in
-**apertura e chiusura** (39,95 → 39,93, **0,1 %**: la macchina non è derivata) · macchina messa
-ferma per nome prima di cominciare · cure spente per tutti e 42 i giri.
+`banchi/09-b80-dirupo.py` · **42 rounds** · loss **read** by a probe of **20 000 packets** at
+every cell (⛔ at 0.1 % eight packets do not measure a tenth of a point) · denominator run at
+**opening and closing** (39.95 → 39.93, **0.1 %**: the machine has not drifted) · machine stilled
+by name before starting · cures off for all 42 rounds.
 
-### 17.11-bis ⛔ Prima il metro, poi la misura — e il metro è grosso
+### 17.11-bis ⛔ First the yardstick, then the measurement — and the yardstick is coarse
 
-⛔ **Non ha senso confrontare due giri se non si sa quanto vale il rumore fra due giri identici.**
+⛔ **It makes no sense to compare two rounds if one does not know how much the noise between two identical rounds is worth.**
 
-| profilo | giri | escursione | semi-escursione |
+| profile | rounds | spread | half-spread |
 |---|---|---|---|
-| perdita **0,00 %** | 3 | 39,89-40,17 | **0,4 %** |
-| perdita **0,50 %** | 3 | 28,16-36,70 | **14,8 %** |
-| perdita **0,50 %** | 5 | 20,79-36,70 | **27,6 %** |
-| perdita **0,75 %** | — | — | **46,6 %** |
+| loss **0.00 %** | 3 | 39.89-40.17 | **0.4 %** |
+| loss **0.50 %** | 3 | 28.16-36.70 | **14.8 %** |
+| loss **0.50 %** | 5 | 20.79-36.70 | **27.6 %** |
+| loss **0.75 %** | — | — | **46.6 %** |
 
-⇒ La contraddizione di §17.9-quinquies vale il **35,0 %**: il rumore **non la spiega tutta, ma ne
-copre i quattro quinti**.
+⇒ The contradiction of §17.9-quinquies is worth **35.0 %**: the noise **does not explain all of it, but
+covers four fifths of it**.
 
-⭐⭐ **E il fatto vero è qui**: la dispersione **cresce con la perdita** (0,2 → 8,5 → 23,8 → 46,6 %)
-e **non col carico**. `[M]` la CPU è stata **3,7-4,7 %** in *ognuno* dei 42 giri, il carico 0,3-0,8
-su 20 core. ⇒ L'ipotesi «macchina carica» è **esclusa**, e quel che resta è del prodotto:
+⭐⭐ **And the real fact is here**: the dispersion **grows with loss** (0.2 → 8.5 → 23.8 → 46.6 %)
+and **not with load**. `[M]` CPU was **3.7-4.7 %** in *each* of the 42 rounds, load 0.3-0.8
+on 20 cores. ⇒ The «loaded machine» hypothesis is **ruled out**, and what remains belongs to the product:
 
-> ⛔⛔ **vicino al bordo la spirale è BISTABILE.** `[M]` a **0,20 %** di perdita, stesso binario,
-> stesso terreno, a venti minuti di distanza: **`0 chiavi · 40,16/s`** e **`24 chiavi · 33,84/s`**.
+> ⛔⛔ **near the edge the spiral is BISTABLE.** `[M]` at **0.20 %** loss, same binary,
+> same ground, twenty minutes apart: **`0 chiavi · 40,16/s`** and **`24 chiavi · 33,84/s`**.
 
-⇒ Non è una soglia: è un **punto di biforcazione**. Lo stesso ingresso dà due uscite, e quale delle
-due dipende da come è andata la prima manciata di secondi.
+⇒ It is not a threshold: it is a **bifurcation point**. The same input gives two outputs, and which of the
+two depends on how the first handful of seconds went.
 
-> ⛔⭐⭐ **«BISTABILE» È LA PAROLA SBAGLIATA, e la correzione è in §21.2** — *24 agosto*. Non sono due
-> rami fra cui il prodotto sceglie: è **un innesco a senso unico**, con una probabilità **costante**
-> ogni secondo. I giri da 25 s non erano una moneta lanciata sul prodotto: erano **una moneta
-> lanciata su quanto a lungo avevamo guardato**.
+> ⛔⭐⭐ **«BISTABLE» IS THE WRONG WORD, and the correction is in §21.2** — *24 Aug*. They are not two
+> branches between which the product chooses: it is **a one-way trigger**, with a **constant** probability
+> every second. The 25 s rounds were not a coin tossed on the product: they were **a coin
+> tossed on how long we had watched**.
 
-### 17.11-ter ⭐⭐⭐ IL GRADINO È DOPPIO, e le due metà stanno lontanissime
+### 17.11-ter ⭐⭐⭐ THE STEP IS DOUBLE, and the two halves are very far apart
 
-| | dove casca | che cos'è |
+| | where it falls | what it is |
 |---|---|---|
-| **il MECCANISMO** — la spirale di chiavi (§3.3) | ⛔ fra **0,00 % e 0,10 %** di perdita vera, **su tutt'e due i binari** | cioè **al primo pacchetto perso** |
-| **il SINTOMO** — sotto il pavimento di 25/s (§2.1) | fra **0,53 % e 0,75 %** (HEAD) · fra **0,27 % e 0,47 %** (`51b5994`) | cioè **cinque volte più in là** |
+| **the MECHANISM** — the keyframe spiral (§3.3) | ⛔ between **0.00 % and 0.10 %** of real loss, **on both binaries** | that is **at the first lost packet** |
+| **the SYMPTOM** — below the floor of 25/s (§2.1) | between **0.53 % and 0.75 %** (HEAD) · between **0.27 % and 0.47 %** (`51b5994`) | that is **five times further on** |
 
-⛔⛔ **Questa è la scoperta, e cambia il modo di leggere tutta §17.1**: il difetto **non comincia
-dove si vede**. Fra il primo pacchetto perso e il momento in cui l'utente se ne accorge c'è mezzo
-punto percentuale di perdita in cui **il prodotto sta già degenerando in chiavi** — e la degradazione
-è già *nello spazio e nel tempo insieme*, che §3.3 vieta — **mentre i fotogrammi al secondo dicono
-ancora che va tutto bene**.
+⛔⛔ **This is the discovery, and it changes the way of reading the whole of §17.1**: the defect **does not begin
+where it is seen**. Between the first lost packet and the moment the user notices there is half a
+percentage point of loss in which **the product is already degenerating into keyframes** — and the degradation
+is already *in space and in time together*, which §3.3 forbids — **while the frames per second still
+say everything is fine**.
 
-⇒ ⭐ **Un banco che avesse guardato solo i fotogrammi/s avrebbe dato verde fino allo 0,5 %.** La
-colonna che dà l'allarme cinque volte prima è **la quota di chiavi**, ed è la ragione per cui §17.1
-la porta accanto ai fotogrammi/s invece che al posto loro.
+⇒ ⭐ **A bench that had looked only at frames/s would have given green up to 0.5 %.** The
+column that sounds the alarm five times earlier is **the keyframe share**, and it is the reason why §17.1
+carries it beside frames/s instead of in their place.
 
-**La griglia fine (HEAD)** `[M]`:
+**The fine grid (HEAD)** `[M]`:
 
-| perdita vera | fps | chiavi | peggior secondo |
+| real loss | fps | keyframes | worst second |
 |---|---|---|---|
-| 0,000 % | 39,95 | **0** | 37,5 |
-| 0,100 % | 39,44 | 2,5 | 23,5 |
-| 0,195 % | 37,00 | 12 | 21 |
-| 0,253 % | 34,83 | 20,5 | 5 |
-| 0,532 % | 27,29 | 48 | 4 |
-| **0,748 %** | ⛔ **13,50** | 101,5 | 4 |
-| 0,998 % | 7,23 | 119,5 | 3,5 |
-| 1,475 % | 5,52 | 112,5 | 3 |
+| 0.000 % | 39.95 | **0** | 37.5 |
+| 0.100 % | 39.44 | 2.5 | 23.5 |
+| 0.195 % | 37.00 | 12 | 21 |
+| 0.253 % | 34.83 | 20.5 | 5 |
+| 0.532 % | 27.29 | 48 | 4 |
+| **0.748 %** | ⛔ **13.50** | 101.5 | 4 |
+| 0.998 % | 7.23 | 119.5 | 3.5 |
+| 1.475 % | 5.52 | 112.5 | 3 |
 
-⭐ **E niente si è mai staccato, e la consegna non si è mai fermata** — copertura 1,00 e buco massimo
-≤ 0,37 s **ovunque**, nemmeno a 1,5 %. ⇒ Il divieto di §3.3 regge; a cedere è la scala, non il filo.
+⭐ **And nothing ever detached, and delivery never stopped** — coverage 1.00 and maximum hole
+≤ 0.37 s **everywhere**, not even at 1.5 %. ⇒ The prohibition of §3.3 holds; what gives way is the ladder, not the wire.
 
-### 17.11-quater ⛔ La forbice del primo giro è ritirata, e il binario non c'entra
+### 17.11-quater ⛔ The range of the first round is withdrawn, and the binary has nothing to do with it
 
-**La forbice «0,36-0,94 %» di §17.1-bis è sbagliata** e §17.11 la ritira. Nasceva da un
-`perdita-0,5` che aveva dato *40,06 fotogrammi/s con **zero** chiavi*. `[M]` **In 7 giri a ~0,5 % di
-perdita vera, su tutt'e due i binari, le chiavi sono state 11, 47, 44, 72, 24, 112, 129 — mai zero.**
-⇒ Quel numero **non si riproduce**: era il ramo fortunato della bistabilità, preso una volta e
-scambiato per la regola.
+**The «0.36-0.94 %» range of §17.1-bis is wrong** and §17.11 withdraws it. It came from a
+`perdita-0,5` that had given *40.06 frames/s with **zero** keyframes*. `[M]` **In 7 rounds at ~0.5 % of
+real loss, on both binaries, the keyframes were 11, 47, 44, 72, 24, 112, 129 — never zero.**
+⇒ That number **does not reproduce**: it was the lucky branch of the bistability, taken once and
+mistaken for the rule.
 
-**Il binario** — `HEAD` (`2954bf0`) md5 `dae98670…` contro `51b5994` md5 `760c6fd7…`, e fra i due
-`src/` cambia in **un commit solo** (+412 righe, 0 tolte):
-- ⛔ **sulla linea pulita non conta**: 39,95 contro 39,25 = **1,8 %**, dentro il metro.
-  ⇒ `[M]` **il sospetto «la riga `rete-quic` costa» è REFUTATO**: una `registro_dice` in più al
-  secondo non si misura;
-- conta **solo dove c'è perdita**, e ⭐ **si incrocia**: HEAD rende di più sotto lo 0,5 % (37,0 contro
-  29,1 a 0,2 %), meno sopra lo 0,75 %. ⚠ **Ma i rossi sopra lo 0,75 % poggiano su caselle la cui
-  dispersione interna (46,6 %) supera il metro**: sono **indizi, non numeri**. Quelli a 0,2/0,3/0,5 %
-  sono solidi e dicono tutti la stessa cosa;
-- ⭐ e `51b5994` è **già dentro la spirale a ogni casella** (55-142 chiavi): per questo è *stabile* —
-  **non ha un bordo su cui oscillare**.
+**The binary** — `HEAD` (`2954bf0`) md5 `dae98670…` against `51b5994` md5 `760c6fd7…`, and between the two
+`src/` changes in **a single commit** (+412 lines, 0 removed):
+- ⛔ **on the clean line it does not count**: 39.95 against 39.25 = **1.8 %**, within the yardstick.
+  ⇒ `[M]` **the suspicion «the `rete-quic` line costs» is REFUTED**: one more `registro_dice` per
+  second cannot be measured;
+- it counts **only where there is loss**, and ⭐ **they cross**: HEAD yields more below 0.5 % (37.0 against
+  29.1 at 0.2 %), less above 0.75 %. ⚠ **But the reds above 0.75 % rest on cells whose
+  internal dispersion (46.6 %) exceeds the yardstick**: they are **clues, not numbers**. Those at 0.2/0.3/0.5 %
+  are solid and all say the same thing;
+- ⭐ and `51b5994` is **already inside the spiral at every cell** (55-142 keyframes): that is why it is *stable* —
+  **it has no edge to oscillate on**.
 
-## 17.10 Che cosa resta aperto dopo questa sezione
+## 17.10 What remains open after this section
 
-1. ⭐ **le cure contro la spirale sono MISURATE** (§17.6) e restano **spente**: I6 le tiene dietro
-   l'interruttore finché l'utente non le ha guardate. ⇒ ❓ **decisione dell'utente**, e ha i due
-   numeri che le servono — il ritmo guadagnato (1,7-2,8 volte) e il ritardo pagato (−38/+161 ms sui
-   profili ordinari, 4,5 s su `raffica-forte`);
-2. ⛔ **il 36 % di audio rifiutato da ngtcp2** su `casa-cattiva` (§17.2-quater): stessa finestra di
-   congestione che nel video produce la spirale, e non è un difetto della cura del riordino;
-3. ⭐ **`raffica-forte` è spiegato** (§17.1-quater): non si stacca nessuno, si ferma la consegna —
-   `cwnd` a ~10 KB e 860 fotogrammi mai spediti. ⛔ Resta grave (schermo fermo) e **le cure lo
-   curano**, ma il nome era sbagliato e il predicato è in cura;
-4. ❓ **il fantasma di §17.5**: decisione dell'utente, non di una misura;
-5. ⭐ **le cure ai banchi sono applicate e i banchi rifatti girare** (§17.9): nove difetti in tutto,
-   ⛔ **tutti della forma «silenzio invece di rosso»**;
-5-bis. ⭐ **la contraddizione fra le due griglie è sciolta** (§17.11): non erano due binari, era il
-   prodotto che **vicino al bordo è bistabile**. ⛔ E ne è uscito il fatto più importante della
-   sezione: **il gradino è doppio** — il meccanismo parte al **primo pacchetto perso**, il sintomo
-   si vede **cinque volte più in là**;
-5-ter. ⏳ **e la bistabilità non ha una spiegazione**: `[?]` perché lo stesso ingresso dia
-   `0 chiavi · 40,16/s` oppure `24 chiavi · 33,84/s` non è stato indagato. È la prima cosa da
-   guardare se si vuole curare il difetto **dove comincia** invece che dove si vede;
-6. ⚠ **il riordino sugli stream resta senza testimone diretto** (§17.3): `dgram_falsi` vale
-   sull'audio soltanto.
+1. ⭐ **the cures against the spiral are MEASURED** (§17.6) and stay **off**: I6 keeps them behind
+   the switch until the user has looked at them. ⇒ ❓ **the user's decision**, and he has the two
+   numbers he needs — the rate gained (1.7-2.8 times) and the delay paid (−38/+161 ms on the
+   ordinary profiles, 4.5 s on `raffica-forte`);
+2. ⛔ **the 36 % of audio refused by ngtcp2** on `casa-cattiva` (§17.2-quater): the same congestion
+   window that in video produces the spiral, and it is not a defect of the reorder cure;
+3. ⭐ **`raffica-forte` is explained** (§17.1-quater): nobody detaches, delivery stops —
+   `cwnd` at ~10 KB and 860 frames never sent. ⛔ It remains serious (still screen) and **the cures
+   cure it**, but the name was wrong and the predicate is being cured;
+4. ❓ **the ghost of §17.5**: the user's decision, not a measurement's;
+5. ⭐ **the cures to the benches are applied and the benches run again** (§17.9): nine defects in all,
+   ⛔ **all of the form «silence instead of red»**;
+5-bis. ⭐ **the contradiction between the two grids is untangled** (§17.11): it was not two binaries, it was the
+   product that **near the edge is bistable**. ⛔ And the most important fact of the
+   section came out of it: **the step is double** — the mechanism starts at the **first lost packet**, the symptom
+   is seen **five times further on**;
+5-ter. ⏳ **and the bistability has no explanation**: `[?]` why the same input gives
+   `0 chiavi · 40,16/s` or `24 chiavi · 33,84/s` has not been investigated. It is the first thing to
+   look at if one wants to cure the defect **where it begins** instead of where it is seen;
+6. ⚠ **reordering on streams remains without a direct witness** (§17.3): `dgram_falsi` holds
+   for audio only.
 
 ---
 
-# §18 · ⭐⭐⭐ LE DUE CURE DECISE DAL REGISTA — *23-24 agosto 2026, notte*
+# §18 · ⭐⭐⭐ THE TWO CURES DECIDED BY THE DIRECTOR — *23-24 Aug 2026, night*
 
 > *«Ho già detto che il pavimento, per quanto riguarda la banda, è a 30 mbps. Se in 10 secondi non
 > arrivano più pacchetti è chiaro che la connessione è morta. […] se all'interno di un intervallo di
@@ -3860,415 +3860,415 @@ scambiato per la regola.
 > la connessione è caduta.»*
 > — ⇒ `DECISIONI.md` **§3.1-quater**, **§3.1-quinquies**, **§3.1-sexies**.
 
-⛔ **Da dove nasce**: la scelta fra **due mali misurati** (§17.1, §17.6). Con perdita a raffiche
-pesanti, **senza** le cure lo schermo si congela **14,26 s**; **con** le cure si muove ma con
-**4,5 s di ritardo**. ⇒ L'utente ha deciso che **nessuno dei due va servito**: una linea così non è
-lenta, è **rotta**. E alla domanda su che cosa veda, ha scelto fra tre: ✅ **il filo cade e si
-rientra a mano** — non un riattacco automatico, non un ripristino invisibile.
+⛔ **Where it comes from**: the choice between **two measured evils** (§17.1, §17.6). With heavy burst
+loss, **without** the cures the screen freezes for **14.26 s**; **with** the cures it moves but with
+**4.5 s of delay**. ⇒ The user decided that **neither of the two should be served**: such a line is not
+slow, it is **broken**. And to the question of what he sees, he chose among three: ✅ **the wire drops and one
+re-enters by hand** — not an automatic reattach, not an invisible restore.
 
-⚠ **L'obiezione è stata fatta e superata**: *«su rete cattiva la diagnosi "è caduta la linea" è
-frequente, e farla pagare con un accesso a mano rende il prodotto inusabile proprio dove serve»*.
-⇒ Da lì nasce il prerequisito: **§18.3, il fantasma**.
+⚠ **The objection was raised and overcome**: *«on a bad network the diagnosis "the line dropped" is
+frequent, and making it cost a manual login makes the product unusable precisely where it is needed»*.
+⇒ From there comes the prerequisite: **§18.3, the ghost**.
 
-## 18.1 ⛔⛔⛔ LA PRIMA GRANDEZZA ERA SBAGLIATA — e il banco l'ha refutata prima che uscisse
+## 18.1 ⛔⛔⛔ THE FIRST QUANTITY WAS WRONG — and the bench refuted it before it shipped
 
-La cura fu scritta su `pkt_lost / pkt_sent` di ngtcp2 dentro una finestra: una frazione di perdita,
-soglia **50‰ (5,0 %)**, tarata con due margini apparentemente comodi — 2,9× sopra il peggiore che
-regge (`casa-cattiva`, 1,71 %) e 2,2× sotto quello che non serve nessuno (`raffica-forte`, 11,10 %).
+The cure was written on ngtcp2's `pkt_lost / pkt_sent` within a window: a loss fraction,
+threshold **50‰ (5.0 %)**, tuned with two apparently comfortable margins — 2.9× above the worst that
+holds (`casa-cattiva`, 1.71 %) and 2.2× below the one that serves nobody (`raffica-forte`, 11.10 %).
 
-⛔ **`banchi/09-b81-linea-morta.py` l'ha uccisa in dieci minuti** `[M]`:
+⛔ **`banchi/09-b81-linea-morta.py` killed it in ten minutes** `[M]`:
 
-| profilo | perdita **iniettata** (sonda) | perdita **DICHIARATA** da ngtcp2 | la linea |
+| profile | loss **injected** (probe) | loss **DECLARED** by ngtcp2 | the line |
 |---|---|---|---|
-| `casa-cattiva` | 1,86-2,15 % | ⛔ **512‰** (51,2 %) | **REGGE 10 minuti** — 9,60 fotogrammi/s, copertura 1,00, buco max 0,50 s, cliente attaccato a 599,99 s |
-| `raffica-forte` | 12,28-14,00 % | **123‰** (12,3 %) | **non regge** — copertura 0,20, buco 30,06 s |
+| `casa-cattiva` | 1.86-2.15 % | ⛔ **512‰** (51.2 %) | **HOLDS for 10 minutes** — 9.60 frames/s, coverage 1.00, max hole 0.50 s, client attached at 599.99 s |
+| `raffica-forte` | 12.28-14.00 % | **123‰** (12.3 %) | **does not hold** — coverage 0.20, hole 30.06 s |
 
-⛔⛔ **La grandezza ordina i due casi AL CONTRARIO**: la linea che **funziona** dichiara **quattro
-volte più perdita** di quella che non funziona. ⇒ **Nessuna soglia le separa** — qualunque valore
-lasci passare `casa-cattiva` (≥ 512‰) lascia passare anche `raffica-forte`; qualunque valore fermi
-`raffica-forte` (≤ 123‰) ferma **prima** `casa-cattiva`. **Non era una taratura da rifare: era la
-grandezza sbagliata.**
+⛔⛔ **The quantity orders the two cases BACKWARDS**: the line that **works** declares **four
+times more loss** than the one that does not work. ⇒ **No threshold separates them** — any value that
+lets `casa-cattiva` through (≥ 512‰) also lets `raffica-forte` through; any value that stops
+`raffica-forte` (≤ 123‰) stops `casa-cattiva` **first**. **It was not a tuning to redo: it was the
+wrong quantity.**
 
-⭐⭐ **E la causa è il fatto centrale di questa fase, tornato addosso a noi.** `casa-cattiva` porta
-`delay 40ms 20ms distribution normal`, e la sonda ci misura il **93,5 % di pacchetti fuori ordine**
-con l'1,9 % di perdita vera. **ngtcp2 conta un pacchetto sorpassato come perso.** ⇒ `pkt_lost` su
-una linea che riordina **misura il riordino**, non la perdita — ed è §3.1-ter che ci presenta il
-conto: *avevamo scritto che il disordine viene scambiato per perdita, e poi ci abbiamo costruito
-sopra una decisione*.
+⭐⭐ **And the cause is the central fact of this phase, come back to bite us.** `casa-cattiva` carries
+`delay 40ms 20ms distribution normal`, and the probe measures there **93.5 % of packets out of order**
+with 1.9 % of real loss. **ngtcp2 counts an overtaken packet as lost.** ⇒ `pkt_lost` on
+a line that reorders **measures the reordering**, not the loss — and it is §3.1-ter presenting us with the
+bill: *we had written that disorder is mistaken for loss, and then we built
+a decision on top of it*.
 
-⚠ E non era l'avvio della connessione: tolte le prime dieci finestre, **399 su 399** restano sopra
-soglia, mediana **524‰**, ininterrotto per dieci minuti.
+⚠ And it was not the start of the connection: with the first ten windows removed, **399 out of 399** stay above
+threshold, median **524‰**, uninterrupted for ten minutes.
 
-⭐ **Il falsificatore era stato dichiarato `[?]` da chi ha scritto la cura**, prima che il banco
-girasse: *«la soglia è sulla frazione **dichiarata**, mentre i due estremi sono la perdita
-**iniettata** — con jitter e riordino la dichiarata può essere più alta»*. ⇒ È servito: il banco
-sapeva **che cosa andare a rompere**, e l'ha rotto al primo giro.
+⭐ **The falsifier had been declared `[?]` by whoever wrote the cure**, before the bench
+ran: *«the threshold is on the **declared** fraction, while the two extremes are the **injected**
+loss — with jitter and reordering the declared one can be higher»*. ⇒ It served: the bench
+knew **what to go and break**, and broke it at the first round.
 
-## 18.2 ⭐⭐⭐ LA GRANDEZZA GIUSTA — **lo stallo dell'uscita**
+## 18.2 ⭐⭐⭐ THE RIGHT QUANTITY — **the output stall**
 
-⭐ **I dati la indicavano da soli**: `casa-cattiva` buco massimo **0,50 s**, `raffica-forte`
-**30,06 s** — **sessanta volte**. ⇒ Quel che separa i due casi non è **quanto si perde**: è **se i
-fotogrammi escono**.
+⭐ **The data pointed to it by themselves**: `casa-cattiva` maximum hole **0.50 s**, `raffica-forte`
+**30.06 s** — **sixty times**. ⇒ What separates the two cases is not **how much is lost**: it is **whether the
+frames get out**.
 
-> **la grandezza è: da quanto tempo non esce un fotogramma pur avendone da mandare**
+> **the quantity is: how long a frame has not gone out despite there being some to send**
 
-Due contatori **locali e monotoni** (forma P8→P20 di `RCP.md`: un fatto osservabile, mai un
-orologio) più un istante:
+Two **local and monotonic** counters (form P8→P20 of `RCP.md`: an observable fact, never a
+clock) plus an instant:
 
-| | come si calcola |
+| | how it is computed |
 |---|---|
-| **«è uscito»** | i **byte di video consegnati a ngtcp2** in `coda_consegna()` — l'unico punto in cui i byte sono davvero dentro un pacchetto |
-| **«avevo da mandare»** | coda video non vuota **oppure** `lm_offerti` salito (in `video_a_una()`, **prima** di freno, sgombero e rifiuto) |
+| **«it went out»** | the **video bytes delivered to ngtcp2** in `coda_consegna()` — the only point where the bytes are really inside a packet |
+| **«I had something to send»** | video queue not empty **or** `lm_offerti` risen (in `video_a_una()`, **before** brake, clearing and refusal) |
 
-⛔⭐ **Il secondo termine non è un di più, ed è la riga che rende la cura onesta**: senza
-`lm_offerti`, **il regolatore del ritmo nasconderebbe lo stallo** — smette di produrre,
-`video_sgombra()` abbandona i delta, la coda si svuota, e *«non ho niente da mandare»* diventa vero
-**mentre lo schermo è fermo**. La cura si assolverebbe da sola proprio nel caso che deve prendere.
+⛔⭐ **The second term is not an extra, and it is the line that makes the cure honest**: without
+`lm_offerti`, **the rate regulator would hide the stall** — it stops producing,
+`video_sgombra()` abandons the deltas, the queue empties, and *«I have nothing to send»* becomes true
+**while the screen is still**. The cure would acquit itself precisely in the case it must catch.
 
-⛔ **E se non c'è niente da mandare il conto non parte nemmeno**: `[M]` in questa fase la scena ferma
-consegna **1 fotogramma in 30 s e poi zero** — e non è un difetto, è `RecordVirtual` di Mutter che
-consegna solo sul cambiamento (§13, il risveglio costa 13 ms). ⇒ Una cura che partisse lì
-**butterebbe fuori chi guarda un desktop fermo**, che è il modo peggiore in cui potrebbe fallire.
+⛔ **And if there is nothing to send the count does not even start**: `[M]` in this phase the still scene
+delivers **1 frame in 30 s and then zero** — and it is not a defect, it is Mutter's `RecordVirtual` that
+delivers only on change (§13, the wake-up costs 13 ms). ⇒ A cure that started there
+**would throw out whoever watches a still desktop**, which is the worst way it could fail.
 
-⚠ **Si contano i byte, non i fotogrammi interi**, e la ragione è dichiarata: una chiave da ~60 000
-byte su linea stretta può metterci secondi a uscire tutta, e a fotogrammi quei secondi sarebbero uno
-«stallo» **mentre il filo lavora**. Un byte che parte è un filo che porta.
+⚠ **Bytes are counted, not whole frames**, and the reason is declared: a keyframe of ~60 000
+bytes on a narrow line can take seconds to get out completely, and in frames those seconds would be a
+«stall» **while the wire is working**. A byte that leaves is a wire that carries.
 
-### 18.2-bis La soglia — **5 000 ms**, e i due margini col caso intermedio
+### 18.2-bis The threshold — **5 000 ms**, and the two margins with the intermediate case
 
-| | stallo/buco più lungo | |
+| | longest stall/hole | |
 |---|---|---|
-| tredici profili sani | 0,04-0,35 s | reggono |
-| `casa-cattiva` | **0,50 s** | ⛔ **REGGE — non va dichiarata morta** |
-| ⚠ `raffica-1` | **un secondo intero a zero** | ma consegna **23,94 fotogrammi/s**: regge benissimo |
-| `raffica-forte` | **14,26 s** (30,06 nell'altro giro) | non regge |
+| thirteen healthy profiles | 0.04-0.35 s | they hold |
+| `casa-cattiva` | **0.50 s** | ⛔ **HOLDS — it must not be declared dead** |
+| ⚠ `raffica-1` | **a whole second at zero** | but it delivers **23.94 frames/s**: it holds very well |
+| `raffica-forte` | **14.26 s** (30.06 in the other round) | does not hold |
 
-⇒ intervallo **1,00-14,26 s**, centro geometrico **3,78 s**, scelta **5,0 s** — ⭐ **sopra** il
-centro, apposta. Margine **5,0×** sopra il peggiore che regge, **2,9×** sotto quello che non serve.
+⇒ interval **1.00-14.26 s**, geometric centre **3.78 s**, choice **5.0 s** — ⭐ **above** the
+centre, on purpose. Margin **5.0×** above the worst that holds, **2.9×** below the one that serves no purpose.
 
-⛔ **Il lato stretto usa il PIÙ CORTO dei due stalli di `raffica-forte`**, non il più lungo: un
-margine scritto sul numero fortunato non è un margine.
-⛔ **E l'asimmetria è voluta**: i due errori **non costano uguale**. Sbagliare in alto = qualche
-secondo di schermo fermo in più. Sbagliare in basso = **buttare fuori uno che stava lavorando**, e
-non si rimedia.
-⚠ **Anche il campionamento sbaglia dalla parte buona**: il conto riparte dall'istante del giro
-(≤ 1/s), non da quando i byte sono usciti davvero ⇒ lo `stallo_ms` misurato può essere fino a ~1 s
-**più corto** del vero. Si scatta più tardi, mai più presto.
+⛔ **The narrow side uses the SHORTER of the two stalls of `raffica-forte`**, not the longer: a
+margin written on the lucky number is not a margin.
+⛔ **And the asymmetry is deliberate**: the two errors **do not cost the same**. Erring high = a few
+more seconds of still screen. Erring low = **throwing out someone who was working**, and
+it cannot be remedied.
+⚠ **Even the sampling errs on the good side**: the count restarts from the instant of the round
+(≤ 1/s), not from when the bytes really left ⇒ the measured `stallo_ms` can be up to ~1 s
+**shorter** than the true one. It fires later, never earlier.
 
-### 18.2-ter ⭐⭐ LA PROVA — *24 agosto 2026*, e il margine è **misurato**, non «non è scattato»
+### 18.2-ter ⭐⭐ THE PROOF — *24 Aug 2026*, and the margin is **measured**, not «it did not fire»
 
-⛔ La riga esce **solo allo scatto**. ⇒ Un «non è scattato» non dice **quanto ci è mancato**: il
-banco ribatte lo stesso profilo **con soglie sempre più basse** finché una scatta, e allora il
-prodotto stampa il suo `stallo_ms`.
+⛔ The line comes out **only when it fires**. ⇒ A «it did not fire» does not say **how close it came**: the
+bench replays the same profile **with ever lower thresholds** until one fires, and then the
+product prints its `stallo_ms`.
 
-| profilo | stallo massimo | margine sulla soglia di 5 000 ms | buco al client |
+| profile | maximum stall | margin on the 5 000 ms threshold | hole at the client |
 |---|---|---|---|
-| `ritardo-30` (sano) | < 500 ms | **> 10×** | 0,157-0,175 s |
-| ⭐ `casa-cattiva` | < 500 ms | **> 10×** | 0,359-0,479 s |
-| ⚠ `raffica-1` | **1 001 ms** | **5,0×** | 0,52-3,73 s |
-| ⛔ scena **ferma** | *il conto non parte* | — | 1 e 3 fotogrammi in 90 s |
+| `ritardo-30` (healthy) | < 500 ms | **> 10×** | 0.157-0.175 s |
+| ⭐ `casa-cattiva` | < 500 ms | **> 10×** | 0.359-0.479 s |
+| ⚠ `raffica-1` | **1 001 ms** | **5.0×** | 0.52-3.73 s |
+| ⛔ **still** scene | *the count does not start* | — | 1 and 3 frames in 90 s |
 
-⭐ **`raffica-1` conferma la derivazione con un numero indipendente**: il lato stretto vale
-**1,00 s**, esattamente quello del riquadro, e il margine sono i **5,0×** dichiarati.
+⭐ **`raffica-1` confirms the derivation with an independent number**: the narrow side is worth
+**1.00 s**, exactly the one of the box, and the margin is the declared **5.0×**.
 
-**`casa-cattiva`, dieci minuti, cura accesa: ZERO SCATTI** — 9,71 fotogrammi/s, copertura **1,00**
-(600 s su 600), buco massimo **0,479 s**, cliente attaccato a 599,88 s, nessun congedo.
+**`casa-cattiva`, ten minutes, cure on: ZERO FIRINGS** — 9.71 frames/s, coverage **1.00**
+(600 s out of 600), maximum hole **0.479 s**, client attached at 599.88 s, no farewell.
 
-⭐⭐ **E il confronto che chiude la refuta**, nello **stesso** giro: il **testimone** dice `permille`
-mediana **529‰**, con **392 finestre su 392** sopra i vecchi 50‰. ⇒ **La cura vecchia avrebbe ucciso
-questa identica sessione; la nuova non la tocca.** Stesso profilo, stesso banco, stessi dieci
-minuti: cambia **solo la grandezza su cui si decide**. E dall'altro lato `raffica-forte` — quella
-che *non* regge — dichiara `permille=133`, cioè **meno**.
+⭐⭐ **And the comparison that closes the refutation**, in the **same** round: the **witness** says `permille`
+median **529‰**, with **392 windows out of 392** above the old 50‰. ⇒ **The old cure would have killed
+this very session; the new one does not touch it.** Same profile, same bench, same ten
+minutes: **only the quantity on which one decides** changes. And on the other side `raffica-forte` — the one
+that does *not* hold — declares `permille=133`, that is **less**.
 
-**Lo scatto vero** `[M]`: `raffica-forte` (13,19 % iniettato) scatta a **18,95 s**, con
-`causa=stallo stallo_ms=5008 · offerti=198 · usciti_byte=0 · coda_video=31146` — ⭐ **le due metà
-tutt'e due vere**: avevamo da mandare, e non è uscito niente. E il filo cade.
+**The real firing** `[M]`: `raffica-forte` (13.19 % injected) fires at **18.95 s**, with
+`causa=stallo stallo_ms=5008 · offerti=198 · usciti_byte=0 · coda_video=31146` — ⭐ **both halves
+true**: we had something to send, and nothing went out. And the wire drops.
 
-**Il silenzio** `[M]`: `kill -9` ⇒ `silenzio_ms=10006`, `prove=12`, **10,24 s** dopo il colpo, e
-nella stessa riga `stallo_ms=8 offerti=0` — ⭐ **le due cause restano separate**. A cura spenta,
-zero scatti.
+**The silence** `[M]`: `kill -9` ⇒ `silenzio_ms=10006`, `prove=12`, **10.24 s** after the shot, and
+in the same line `stallo_ms=8 offerti=0` — ⭐ **the two causes stay separate**. With the cure off,
+zero firings.
 
-**La scena ferma** `[M]`: 90 s di desktop che non cambia, zero scatti alla soglia in vigore **e a
-1 000 ms**, cioè cinque volte più stretta. ⭐ E la scena era ferma **davvero, verificato e non
-sperato**: il conto del server dice 1 e 3 fotogrammi in 90 s, tutti spediti.
+**The still scene** `[M]`: 90 s of a desktop that does not change, zero firings at the threshold in force **and at
+1 000 ms**, that is five times narrower. ⭐ And the scene was **really** still, **verified and not
+hoped**: the server's count says 1 and 3 frames in 90 s, all sent.
 
-**I predefiniti (I6)** `[M]`: senza `--linea-morta`, zero scatti e zero sfratti, e i due profili
-stanno nella griglia di §17.
+**The defaults (I6)** `[M]`: without `--linea-morta`, zero firings and zero evictions, and the two profiles
+sit in the grid of §17.
 
-⚠ **Una cosa da dire, e va nel verso prudente**: lo **stallo** (server: byte usciti) e il **buco**
-(client: fotogrammi arrivati) **non sono la stessa grandezza**, e la soglia è derivata dal secondo
-mentre la cura misura il primo. `[M]` su `raffica-1` un giro ha dato buco **3,73 s** con lo stallo
-che non scattava nemmeno a 1 000 ms: **i byte partono, a mancare è la ritrasmissione**. ⇒ L'errore
-va dalla parte buona, ma il numero della derivazione è **prudente, non esatto**.
+⚠ **One thing to say, and it goes in the prudent direction**: the **stall** (server: bytes out) and the **hole**
+(client: frames arrived) **are not the same quantity**, and the threshold is derived from the second
+while the cure measures the first. `[M]` on `raffica-1` one round gave a hole of **3.73 s** with the stall
+not firing even at 1 000 ms: **the bytes leave, what is missing is the retransmission**. ⇒ The error
+goes on the good side, but the number of the derivation is **prudent, not exact**.
 
-### 18.2-quater ⛔ Che fine ha fatto il `permille` — da **giudice** a **testimone**
+### 18.2-quater ⛔ What became of the `permille` — from **judge** to **witness**
 
-`--linea-morta-permille` è **tolta**: un'opzione che accetta un numero **senza usarlo** è peggio di
-un'opzione che non c'è, perché chi la batte crede di aver tarato qualcosa. ⇒ Adesso si becca aiuto e
-uscita 2.
-⭐ Ma `permille=` **resta nella riga come testimone**: è la miglior misura di **riordino** che il
-server abbia **sugli stream**, dove `dgram_falsi` (§17.3) non arriva. ⚠ E il banco verifica
-l'**assenza** dell'opzione **battendola**, non con un `grep`: `[M]` la stringa nel binario c'è
-eccome — sta nel testo d'aiuto — e il primo giro di quel controllo **ha dato rosso su un binario
-giusto**.
+`--linea-morta-permille` is **removed**: an option that accepts a number **without using it** is worse than
+an option that does not exist, because whoever types it believes they have tuned something. ⇒ Now it gets help and
+exit 2.
+⭐ But `permille=` **stays in the line as a witness**: it is the best measure of **reordering** the
+server has **on the streams**, where `dgram_falsi` (§17.3) does not reach. ⚠ And the bench verifies
+the **absence** of the option **by typing it**, not with a `grep`: `[M]` the string in the binary is there
+all right — it sits in the help text — and the first round of that check **gave red on a
+right binary**.
 
-## 18.3 ⭐⭐ LO SFRATTO DEL FANTASMA — e abbassare `SILENZIO` è stato scartato **su una misura**
+## 18.3 ⭐⭐ THE EVICTION OF THE GHOST — and lowering `SILENZIO` was discarded **on a measurement**
 
-⛔ La strada ovvia — portare `SILENZIO` da 30 s a 10 — **si rompe**, `[M]` 16 agosto: fra due
-pacchetti autenticati di un **browser fermo ma VIVO** passano **15 004 / 15 005 / 15 002 ms**. È il
-keep-alive del browser, non nostro. ⇒ A 10 s **ogni client che guarda e non tocca perde il posto a
-ogni giro di keep-alive** — è la regressione già pagata il 16 agosto (*«una seconda scheda è entrata
+⛔ The obvious road — bringing `SILENZIO` from 30 s to 10 — **breaks**, `[M]` 16 Aug: between two
+authenticated packets of a **still but ALIVE browser** pass **15 004 / 15 005 / 15 002 ms**. It is the
+browser's keep-alive, not ours. ⇒ At 10 s **every client that watches and does not touch loses its place at
+every keep-alive round** — it is the regression already paid for on 16 Aug (*«una seconda scheda è entrata
 e ha preso il desktop del primo»*).
 
-⚠ **E `SILENZIO` ne governa altri quattro**: l'avviso a `SILENZIO/2` (passerebbe da «mai su una
-sessione sana» a «su tutte»), il rilascio dei tasti premuti (⛔ un `Ctrl` tenuto giù durante una
-pausa di rete di 12 s verrebbe rilasciato **sotto le dita**), l'ordine silenzio→inattività, e **tre
-documenti** che dichiarano il numero all'utente.
+⚠ **And `SILENZIO` governs four more**: the warning at `SILENZIO/2` (it would go from «never on a
+healthy session» to «on all of them»), the release of pressed keys (⛔ a `Ctrl` held down during a
+network pause of 12 s would be released **under the fingers**), the order silence→inactivity, and **three
+documents** that declare the number to the user.
 
-⇒ **La strada scelta è più stretta e più mirata**: `--sfratto-ms N` (**0 = spento**, predefinito;
-consigliato **15 000**). Scatta **solo quando qualcuno chiede quel posto**, mai da solo, e **solo fra
-client dello stesso utente**.
+⇒ **The road chosen is narrower and more targeted**: `--sfratto-ms N` (**0 = off**, default;
+recommended **15 000**). It fires **only when someone asks for that place**, never by itself, and **only between
+clients of the same user**.
 
-⛔ **§8.2 non è violata, è applicata**: *«nessun client attaccato e **vivo** viene mai spodestato»* —
-l'occupante qui è attaccato ma **non vivo**, e finora l'unico orologio che li distinguesse era quello
-da 30 s. ⭐ `torna_a_parlare()` riparte **solo da `S_STACCATA`**: per questo lo sfratto cambia lo
-**stato** e non si limita a togliere il posto, o il fantasma resterebbe `S_ATTIVA` senza posto.
+⛔ **§8.2 is not violated, it is applied**: *«no client attached and **alive** is ever ousted»* —
+the occupant here is attached but **not alive**, and until now the only clock that distinguished them was the
+30 s one. ⭐ `torna_a_parlare()` restarts **only from `S_STACCATA`**: that is why the eviction changes the
+**state** and does not merely remove the place, or the ghost would stay `S_ATTIVA` without a place.
 
-`[M]` **Il fantasma scende del 48 %**: da **32,13 s e 14 rifiuti** a **16,83 s e 7 rifiuti**. ⭐ E con
-la linea morta accesa scende a **~10 s con zero rifiuti** — il posto torna libero al primo tentativo.
+`[M]` **The ghost drops by 48 %**: from **32.13 s and 14 refusals** to **16.83 s and 7 refusals**. ⭐ And with
+the dead line on it drops to **~10 s with zero refusals** — the place becomes free at the first attempt.
 
-**Due utenti diversi** `[M]`: zero sfratti, il secondo utente entra sul **proprio** posto con zero
-rifiuti. ⚠ La riga `⛔ SFRATTO NEGATO` **non esce**, ed era previsto `[R]` prima di girare: il
-registro dei posti è indicizzato per nome, quindi `POSTO_OCCUPATO` implica già «stesso utente» e quel
-ramo non è raggiungibile. **La protezione la fa la struttura; il controllo esplicito resta come
-rete** — il giorno in cui `MAX_ATTACCATE` diventa la tabella di un server multi-tenant sarebbe
-l'unica cosa a reggere.
+**Two different users** `[M]`: zero evictions, the second user enters on **their own** place with zero
+refusals. ⚠ The line `⛔ SFRATTO NEGATO` **does not come out**, and it was predicted `[R]` before running: the
+register of places is indexed by name, so `POSTO_OCCUPATO` already implies «same user» and that
+branch is not reachable. **The protection is done by the structure; the explicit check stays as a
+net** — the day `MAX_ATTACCATE` becomes the table of a multi-tenant server it would be
+the only thing to hold.
 
-## 18.4 ⛔ E LA FRASE CHE MENTIVA
+## 18.4 ⛔ AND THE SENTENCE THAT LIED
 
-*«Quell'utente è già collegato da un altro dispositivo»* (`src/pagina.html`, `MOTIVO[0x0F]`) è una
-**diagnosi che il server non è in grado di fare**: non sa se l'altro client è un altro apparecchio o
-è lo stesso utente appena caduto. ⇒ Adesso dice **quel che sa** e dà il gesto:
+*«That user is already connected from another device»* (`src/pagina.html`, `MOTIVO[0x0F]`) is a
+**diagnosis the server is not able to make**: it does not know whether the other client is another device or
+is the same user who has just dropped. ⇒ Now it says **what it knows** and gives the gesture:
 
-> *«il posto di questa sessione risulta occupato da un altro client — se eri tu e sei appena caduto,
-> riprova fra qualche secondo»*
+> *«this session's place appears to be occupied by another client — if it was you and you have just dropped,
+> try again in a few seconds»*
 
-⚠ **E conta più di prima**: dopo §3.1-quater **si rientra a mano**, quindi è la **prima frase che
-l'utente incontra rientrando**.
+⚠ **And it counts more than before**: after §3.1-quater **one re-enters by hand**, so it is the **first sentence the
+user meets when re-entering**.
 
-## 18.5 ⚠ E un prezzo dichiarato per un caso che non esiste — corretto
+## 18.5 ⚠ And a price declared for a case that does not exist — corrected
 
-I PING passano a metà della soglia quando la cura è accesa, e il costo era stato dichiarato in
-**0,21 kbit/s** per sessione. ⛔ Il banco **non ha potuto isolarlo, e si è rifiutato di dare un verde
-vuoto**: `[M]` una sessione «ferma» costa comunque **2 463 kbit/s** di audio PCM (§4.3, che non si
-spegne — un `CIAO` senza codec audio comune si becca `0x09 NIENTE_IN_COMUNE`), cioè **11 727 volte**
-quel numero; la differenza acceso−spento è **+0,539 kbit/s**, dentro il rumore.
+PINGs go at half the threshold when the cure is on, and the cost had been declared at
+**0.21 kbit/s** per session. ⛔ The bench **could not isolate it, and refused to give an empty
+green**: `[M]` a «still» session costs anyway **2 463 kbit/s** of PCM audio (§4.3, which does not
+switch off — a `CIAO` without a common audio codec gets `0x09 NIENTE_IN_COMUNE`), that is **11 727 times**
+that number; the difference on−off is **+0.539 kbit/s**, within the noise.
 
-⭐ **E il fatto vero**: `[M]` su una sessione viva il contatore **non si ferma mai per 0,6 s** ⇒ il
-keep-alive **non ha mai occasione di scattare**, e quei 0,21 kbit/s descrivevano **un caso in cui il
-prodotto non entra**. Un prezzo dichiarato per un caso che non esiste **è peggio di nessun prezzo**.
+⭐ **And the real fact**: `[M]` on a live session the counter **never stops for 0.6 s** ⇒ the
+keep-alive **never has a chance to fire**, and those 0.21 kbit/s described **a case the
+product does not enter**. A price declared for a case that does not exist **is worse than no price**.
 
-## 18.6 Che cosa resta, dopo §18
+## 18.6 What remains, after §18
 
-1. ⭐ **le due cure sono provate e restano SPENTE** (I6): `--linea-morta` e `--sfratto-ms`.
-   ❓ **La decisione di accenderle è dell'utente**, e ora ha i numeri;
-2. ⏳ **le cure contro la spirale** (§17.6) restano spente e aspettano **i suoi occhi**, che è l'unica
-   cosa che non si può delegare a una misura;
-3. ⏳ **la bistabilità** di §17.11 non ha ancora una spiegazione;
-4. ⛔ **il 36 % di audio rifiutato da ngtcp2** su `casa-cattiva` (§17.2-quater) non ha ancora una cura;
-5. ⚠ **lo stallo e il buco non sono la stessa grandezza** (§18.2-ter): la derivazione è prudente, non
-   esatta, e un giro che le misuri **insieme** la renderebbe esatta.
+1. ⭐ **the two cures are tested and stay OFF** (I6): `--linea-morta` and `--sfratto-ms`.
+   ❓ **The decision to switch them on is the user's**, and now he has the numbers;
+2. ⏳ **the cures against the spiral** (§17.6) stay off and wait for **his eyes**, which is the only
+   thing that cannot be delegated to a measurement;
+3. ⏳ **the bistability** of §17.11 has no explanation yet;
+4. ⛔ **the 36 % of audio refused by ngtcp2** on `casa-cattiva` (§17.2-quater) has no cure yet;
+5. ⚠ **the stall and the hole are not the same quantity** (§18.2-ter): the derivation is prudent, not
+   exact, and a round that measured them **together** would make it exact.
 
 ---
 
-# §19 · ⭐⭐⭐ IL GIUDIZIO DELL'UTENTE SUL PERCORSO VERO — *24 agosto 2026, mattina*
+# §19 · ⭐⭐⭐ THE USER'S JUDGEMENT ON THE REAL PATH — *24 Aug 2026, morning*
 
-⛔ **È la sezione che conta più di tutte le altre**, e per la ragione scritta in testa al documento: in
-v1 la fase omologa fu validata con PSNR, SSIM e l'occhio dello sviluppatore, e il giudizio
-dell'utente sul desktop vero fu *«siamo tornati indietro»*. **La fase fu azzerata.**
+⛔ **It is the section that counts more than all the others**, and for the reason written at the top of the document: in
+v1 the homologous phase was validated with PSNR, SSIM and the developer's eye, and the
+user's judgement on the real desktop was *«siamo tornati indietro»*. **The phase was reset to zero.**
 
-**Il banco**: sessione vera dell'utente, browser sul **portatile** (192.168.0.3, WiFi `wlo1`), server
-sulla macchina di prova, porta **7920**, binario `2792271f…` dall'albero di lavoro, tela
-**2544×926**, ⛔ **tutte le cure spente**, trappola di glibc **spenta** (il server gira alla velocità
-vera).
+**The bench**: the user's real session, browser on the **laptop** (192.168.0.3, WiFi `wlo1`), server
+on the test machine, port **7920**, binary `2792271f…` from the working tree, canvas
+**2544×926**, ⛔ **all cures off**, glibc trap **off** (the server runs at real
+speed).
 
-⭐ **E la rete si è sporcata dal lato del CLIENTE**, non del server: il video arriva in **ingresso**
-su `wlo1`, quindi il guasto sta su un `ifb0` con `netem`, alimentato da un filtro `u32` sulla **sola
-porta UDP 7920 in arrivo**. ⛔ Sulla macchina di prova lo stesso traffico passerebbe da `enp7s0`,
-dove passa l'ssh, e quella non si tocca. L'ssh è TCP sulla 22 e non è filtrato.
-⚠ E il guasto **si disarma da sé** dopo N secondi, con un guardiano staccato: la stessa disciplina
-già usata su `lo`.
+⭐ **And the network was dirtied on the CLIENT side**, not the server's: video arrives **incoming**
+on `wlo1`, so the fault sits on an `ifb0` with `netem`, fed by a `u32` filter on **only
+incoming UDP port 7920**. ⛔ On the test machine the same traffic would pass through `enp7s0`,
+where ssh passes, and that one is not touched. ssh is TCP on 22 and is not filtered.
+⚠ And the fault **disarms itself** after N seconds, with a detached guardian: the same discipline
+already used on `lo`.
 
-## 19.1 ⭐⭐⭐ LA SCALA, E VIENE DAI SUOI OCCHI
+## 19.1 ⭐⭐⭐ THE LADDER, AND IT COMES FROM HIS EYES
 
-| perdita **misurata sul filo** | il suo giudizio |
+| loss **measured on the wire** | his judgement |
 |---|---|
 | 1 % | *«mi sembra ok»* |
-| **5,6 %** | *«è tutto fluido»* |
+| **5.6 %** | *«è tutto fluido»* |
 | ⛔ **10 %** | *«adesso si è bloccato»* |
 
-> ⇒ **Il confine dell'uso reale sta fra il 5 e il 10 per cento di perdita.**
+> ⇒ **The border of real use lies between 5 and 10 per cent loss.**
 
-⛔⛔ **E questo CONTRADDICE il banco, di un ordine di grandezza.** §17.11 mette il dirupo dentro il
-primo punto percentuale: la spirale di chiavi parte allo **0,10 %** e il ritmo casca sotto il
-pavimento allo **0,53-0,75 %**. `[M]` Sul percorso vero, al **5,6 %** — cioè da **sette a
-cinquantasei volte** più perdita — l'utente non se ne accorge.
+⛔⛔ **And this CONTRADICTS the bench, by an order of magnitude.** §17.11 puts the cliff inside the
+first percentage point: the keyframe spiral starts at **0.10 %** and the rate falls below the
+floor at **0.53-0.75 %**. `[M]` On the real path, at **5.6 %** — that is from **seven to
+fifty-six times** more loss — the user does not notice.
 
-## 19.2 ⛔ E LA PROVA È STATA RIFATTA DUE VOLTE, PERCHÉ LA PRIMA NON MORDEVA
+## 19.2 ⛔ AND THE TEST WAS REDONE TWICE, BECAUSE THE FIRST DID NOT BITE
 
-⚠ **Va scritto perché è un errore di metodo mio, ed è il terzo della stessa famiglia** (dopo il
-video pieno di grana di §16.4 e i nove «attesi» mai confrontati di R13): un giudizio su una prova che
-non sollecita non è un giudizio.
+⚠ **It must be written because it is an error of method of mine, and it is the third of the same family** (after the
+video full of grain of §16.4 and the nine «expected» never compared of R13): a judgement on a test that
+does not stress is not a judgement.
 
-`[M]` **Primo giro, e non valeva**: perdita all'1 % accesa e verificata (il server la vedeva:
-*«la linea perde»*, 27 pacchetti dichiarati persi, 22 datagram audio perduti), **zero fotogrammi
-abbandonati su 920**, **due chiavi in tutto**. ⇒ Nessuna spirale — ma la ragione era nel numero che
-non stavo guardando: ⛔ **i suoi fotogrammi pesavano 242-283 byte.** Duecento byte. Il banco crollava
-su una scena che riempiva il filo con 3 Mbit/s; qui la perdita **non aveva niente da rompere**.
+`[M]` **First round, and it did not count**: loss at 1 % on and verified (the server saw it:
+*«the line is losing»*, 27 packets declared lost, 22 audio datagrams lost), **zero frames
+abandoned out of 920**, **two keyframes in all**. ⇒ No spiral — but the reason was in the number I
+was not looking at: ⛔ **his frames weighed 242-283 bytes.** Two hundred bytes. The bench collapsed
+on a scene that filled the wire with 3 Mbit/s; here the loss **had nothing to break**.
 
-`[M]` **Secondo tentativo, il trascinamento di una finestra**: fotogrammi fino a **3 801 byte**,
-**zero chiavi** su 400, **2 abbandoni su 2 181**. ⇒ Ancora insufficiente: il banco lavorava su
-fotogrammi **sette volte più grossi**.
+`[M]` **Second attempt, dragging a window**: frames up to **3 801 bytes**,
+**zero keyframes** out of 400, **2 abandons out of 2 181**. ⇒ Still not enough: the bench worked on
+frames **seven times larger**.
 
-`[M]` **E al 5 % il primo giudizio è stato RITIRATO prima di scriverlo**, contando i pacchetti
-passati davvero dentro il guasto: **221, con 18 buttati**. ⛔ Diciotto pacchetti non sono una prova.
-⇒ Rifatto con **trenta secondi senza mai fermarsi**, e allora sì: **7 596 pacchetti nel guasto, 423
-buttati = 5,6 % reale**.
+`[M]` **And at 5 % the first judgement was WITHDRAWN before writing it**, by counting the packets
+that really went through the fault: **221, with 18 thrown away**. ⛔ Eighteen packets are not a test.
+⇒ Redone with **thirty seconds without ever stopping**, and then yes: **7 596 packets in the fault, 423
+thrown away = 5.6 % real**.
 
-⭐ **Il numero che rende valido il giro buono** — e che mancava ai due precedenti: fotogrammi fino a
-**77 304 byte**, cioè ⭐ **tre volte più grossi di quelli su cui il banco crollava**. Con quelli:
-**chiavi 3,8 %** (23 su 600), **abbandoni 11 su 3 017** (0,36 %), e il giudizio *«è tutto fluido»*.
+⭐ **The number that makes the good round valid** — and that the two previous ones lacked: frames up to
+**77 304 bytes**, that is ⭐ **three times larger than those on which the bench collapsed**. With those:
+**keyframes 3.8 %** (23 out of 600), **abandons 11 out of 3 017** (0.36 %), and the judgement *«è tutto fluido»*.
 
-⛔ **La lezione, e vale oltre questa fase**: il gradino non lo decide la perdita, lo decide **quanto
-la scena chiede**. Il banco produce una sollecitazione che pretende **quaranta fotogrammi al secondo
-di cambiamento continuo**; un desktop vero — anche mentre si trascina una finestra — cambia **a
-strappi**. ⇒ **Non è la stessa sollecitazione**, e le previsioni del banco **non si applicano al
-prodotto così com'è usato**.
+⛔ **The lesson, and it holds beyond this phase**: the step is not decided by the loss, it is decided by **how much
+the scene asks**. The bench produces a stress that demands **forty frames per second
+of continuous change**; a real desktop — even while dragging a window — changes **in
+jerks**. ⇒ **It is not the same stress**, and the bench's predictions **do not apply to the
+product as it is used**.
 
-## 19.3 ⭐⭐ IL BLOCCO AL 10 %, COLTO NELL'ISTANTE — e il meccanismo è quello di §17.1-ter
+## 19.3 ⭐⭐ THE FREEZE AT 10 %, CAUGHT IN THE INSTANT — and the mechanism is the one of §17.1-ter
 
-`[M]` Nel momento in cui l'utente ha detto *«si è bloccato»*, il registro del server diceva:
+`[M]` At the moment the user said *«si è bloccato»*, the server's log said:
 
 | | |
 |---|---|
-| **`cwnd = 2 888 byte`** | ⛔ la finestra di congestione **collassata a due pacchetti** — dieci volte meno del minuto prima |
-| `cwnd_left = 2 888` · **in volo = 0** | ⛔⭐ **non è che il filo sia pieno: non c'è NIENTE in volo.** Il server *potrebbe* mandare, e non manda |
-| **27 fotogrammi `NON SPEDITO`** | e il contatore dei consegnati **fermo a 3 117** su tre letture di fila |
-| chiavi | salite da 4 a **16** |
+| **`cwnd = 2 888 byte`** | ⛔ the congestion window **collapsed to two packets** — ten times less than the minute before |
+| `cwnd_left = 2 888` · **in flight = 0** | ⛔⭐ **it is not that the wire is full: there is NOTHING in flight.** The server *could* send, and does not |
+| **27 `NON SPEDITO` frames** | and the delivered counter **stuck at 3 117** over three readings in a row |
+| keyframes | risen from 4 to **16** |
 | `persi=664` · `dgram_persi=493` | `giudizio=⛔ la linea perde` |
 
-⇒ ⭐ **È esattamente la catena di §17.1-ter, vista sul percorso vero**: la finestra si chiude → i
-fotogrammi non partono → si chiedono chiavi → lo schermo si ferma. Il meccanismo del banco **è
-giusto**; sbagliato era **dove** lo collocava.
+⇒ ⭐ **It is exactly the chain of §17.1-ter, seen on the real path**: the window closes → the
+frames do not leave → keyframes are requested → the screen stops. The bench's mechanism **is
+right**; what was wrong was **where** it placed it.
 
-⭐⭐ **E `cwnd_left = cwnd` con «in volo = 0» è la firma che assolve il filo e accusa noi**: non è
-congestione osservata, è il pacer che rifiuta. È lo stesso quadro di `raffica-forte` (§17.9-quater,
-`cwnd` mediana 8 948 B, `cwnd_left` mediana 0) su una linea vera.
+⭐⭐ **And `cwnd_left = cwnd` with «in flight = 0» is the signature that acquits the wire and accuses us**: it is not
+observed congestion, it is the pacer refusing. It is the same picture as `raffica-forte` (§17.9-quater,
+`cwnd` median 8 948 B, `cwnd_left` median 0) on a real line.
 
-## 19.4 ⚠ E DUE COSE CHE QUESTA SESSIONE NON HA POTUTO PROVARE
+## 19.4 ⚠ AND TWO THINGS THIS SESSION COULD NOT TEST
 
-1. ⛔⛔ ~~**Le applicazioni che il coordinatore avvia non arrivano sullo schermo dell'utente.**~~
-   → **ERRATA, e la correzione è in §20.1.** `[M]` `mpv` **arriva eccome** — 241 fotogrammi in 8 s
-   su un banco controllato. Quando l'ho giudicato *«non arriva»* ⛔ **non c'era nessun cliente
-   attaccato**: il server non spediva, e il contatore era fermo **per costruzione**. I «167 byte»
-   erano gli ultimi valori di prima.
-   ⚠ **Ho giudicato con un metro che in quella scena non poteva dire niente**, ed è la stessa ferita
-   di §19.2 — la terza volta in due giorni. **Firefox** invece è rotto davvero, ma `[M]` **anche
-   fuori da REMOTIX**: non è nostro (§20.1).
-2. ⭐ **Le cure sono state provate a occhio** ⇒ **§19.6**, e il verdetto è che **fanno quel che
-   promettevano e non basta**.
+1. ⛔⛔ ~~**The applications the coordinator launches do not reach the user's screen.**~~
+   → **WRONG, and the correction is in §20.1.** `[M]` `mpv` **does arrive** — 241 frames in 8 s
+   on a controlled bench. When I judged it *«does not arrive»* ⛔ **there was no client
+   attached**: the server was not sending, and the counter was stuck **by construction**. The «167 bytes»
+   were the last values from before.
+   ⚠ **I judged with a yardstick that in that scene could say nothing**, and it is the same wound
+   as §19.2 — the third time in two days. **Firefox** instead is really broken, but `[M]` **also
+   outside REMOTIX**: it is not ours (§20.1).
+2. ⭐ **The cures were tested by eye** ⇒ **§19.6**, and the verdict is that **they do what they
+   promised and it is not enough**.
 
-## 19.6 ⭐⭐⭐ LE CURE, GUARDATE — **fanno quel che promettevano, e non basta**
+## 19.6 ⭐⭐⭐ THE CURES, LOOKED AT — **they do what they promised, and it is not enough**
 
-`[M]` 24 agosto, stessa sessione, stesso binario, **stesso 10 % di perdita**, e a cambiare **solo
-gli interruttori del server** — verificati dalle righe d'avvio, non dalla riga di comando: soglia
-della coda **100 ms**, regolatore del ritmo **ACCESO**, ⛔ **linea morta e sfratto SPENTI di
-proposito** (se il filo cadesse non si saprebbe se è merito o colpa delle cure).
+`[M]` 24 Aug, same session, same binary, **same 10 % loss**, and changing **only
+the server's switches** — verified from the startup lines, not from the command line: queue
+threshold **100 ms**, rate regulator **ON**, ⛔ **dead line and eviction OFF on
+purpose** (if the wire dropped one would not know whether it was thanks to or because of the cures).
 
-Perdita **misurata sul filo**: 8 597 pacchetti passati, **905 buttati = 10,5 %**.
+Loss **measured on the wire**: 8 597 packets passed, **905 thrown away = 10.5 %**.
 
-| | **senza** cure | **con** le cure |
+| | **without** cures | **with** the cures |
 |---|---|---|
-| fotogrammi consegnati | ⛔ **fermi** — stesso numero su tre letture di fila | ⭐ **continuano**: 1533 → 1552 → 1557 |
-| fotogrammi mai spediti | **27**, in una raffica | ⭐ **1** |
+| frames delivered | ⛔ **stuck** — same number over three readings in a row | ⭐ **they continue**: 1533 → 1552 → 1557 |
+| frames never sent | **27**, in one burst | ⭐ **1** |
 | `cwnd` | 2 888 B | 3 652 B |
-| chiavi | 16 | 17 |
-| **il giudizio dell'utente** | *«si è bloccato»* | ⛔ *«si è bloccato»* |
+| keyframes | 16 | 17 |
+| **the user's judgement** | *«si è bloccato»* | ⛔ *«si è bloccato»* |
 
-⭐ **Le cure fanno esattamente quel che il banco prometteva**: senza, la consegna si **ferma**; con,
-va avanti a **cinque-venti fotogrammi al secondo**, e i fotogrammi mai spediti passano da 27 a **1**.
-Il meccanismo è curato.
+⭐ **The cures do exactly what the bench promised**: without them, delivery **stops**; with them,
+it goes on at **five to twenty frames per second**, and the frames never sent go from 27 to **1**.
+The mechanism is cured.
 
-⛔⛔ **E non basta.** Per chi guarda, cinque fotogrammi al secondo con quel ritardo **sono un blocco
-lo stesso**. ⇒ Il numero migliora e **l'esperienza no**, ed è precisamente la distinzione che questa
-fase esisteva per proteggere (v1: *«siamo tornati indietro»* su numeri che erano migliorati).
+⛔⛔ **And it is not enough.** For whoever watches, five frames per second with that delay **are a freeze
+all the same**. ⇒ The number improves and **the experience does not**, and it is precisely the distinction this
+phase existed to protect (v1: *«siamo tornati indietro»* on numbers that had improved).
 
-⭐⭐⭐ **E questo è l'argomento più forte a favore di §3.1-quater**, la decisione presa dall'utente
-la notte prima **senza avere questo numero**: al 10 % di perdita **non esiste una versione buona** —
-o lo schermo si ferma, o si muove in un modo che l'utente chiama **comunque bloccato**. ⇒ *«Nessuno
-dei due va servito»* non era una preferenza: era la lettura giusta, e adesso ha la prova.
+⭐⭐⭐ **And this is the strongest argument in favour of §3.1-quater**, the decision taken by the user
+the night before **without having this number**: at 10 % loss **a good version does not exist** —
+either the screen stops, or it moves in a way the user calls **frozen anyway**. ⇒ *«Nessuno
+dei due va servito»* was not a preference: it was the right reading, and now it has the proof.
 
-**La scala completa, tutta dai suoi occhi:**
+**The complete ladder, all from his eyes:**
 
-| perdita reale | **senza** cure | **con** cure |
+| real loss | **without** cures | **with** cures |
 |---|---|---|
 | 1 % | *«mi sembra ok»* | — |
-| 5,6 % | *«è tutto fluido»* | — |
+| 5.6 % | *«è tutto fluido»* | — |
 | **10 %** | ⛔ *«bloccato»* | ⛔ *«bloccato lo stesso»* |
 
-### 19.6-bis ⚠ E DUE COSE VISTE DI PASSAGGIO, che non erano nel programma
+### 19.6-bis ⚠ AND TWO THINGS SEEN IN PASSING, which were not in the programme
 
-1. ⭐ **La regola dei sessanta minuti ha scattato su una sessione vera, ed è la prima volta.**
-   `[M]` *«prova2 non tocca niente da 3 600 012 ms (tetto 3 600 000) — CHIUDO la sessione grafica»*
-   (`DECISIONI.md` §4.8). Ha chiesto l'uscita gentilmente e, **dopo dieci secondi**, l'ha chiusa a
-   forza (`Logout 1` → `Logout 2`). ⚠ E ha prodotto un falso allarme: l'utente ha visto lo schermo
-   fermo e ha detto *«il server è ancora bloccato»* — ⛔ **non lo era**: `NRestarts=0`, acceso da
-   un'ora e mezza, e il solo core presente era di **ieri**.
-2. ⛔⭐ **«Sessione viva e muta» è indistinguibile da «programma morto», e l'utente l'ha dimostrato
-   di persona** — due volte, dicendo *«si è bloccato»* e *«il server è ancora bloccato»* di un
-   server che stava benissimo. ⇒ È lo stesso fatto di §17.1-quater e §17.9-quater visto **dall'altro
-   lato**: là il banco chiamava «stacco» una consegna ferma, qui l'utente chiama «server bloccato»
-   la stessa cosa. ⭐ **Ed è la ragione per cui la cura della linea morta serve**: non perché
-   migliori l'immagine — non può — ma perché **dice la verità** invece di lasciare uno schermo fermo
-   che sembra un guasto del programma.
-   ⚠ E la sessione **si riprende da sé**: `[M]` tolta la perdita, `cwnd` risale da 2 888 a
-   **46 412 byte** (sedici volte) senza che nessuno tocchi niente.
+1. ⭐ **The sixty-minute rule fired on a real session, and it is the first time.**
+   `[M]` *«prova2 has not touched anything for 3 600 012 ms (cap 3 600 000) — I CLOSE the graphical session»*
+   (`DECISIONI.md` §4.8). It asked for the logout politely and, **after ten seconds**, closed it by
+   force (`Logout 1` → `Logout 2`). ⚠ And it produced a false alarm: the user saw the screen
+   still and said *«il server è ancora bloccato»* — ⛔ **it was not**: `NRestarts=0`, up for
+   an hour and a half, and the only core present was from **yesterday**.
+2. ⛔⭐ **«Live and mute session» is indistinguishable from «dead program», and the user proved it
+   in person** — twice, saying *«si è bloccato»* and *«il server è ancora bloccato»* of a
+   server that was perfectly fine. ⇒ It is the same fact as §17.1-quater and §17.9-quater seen **from the other
+   side**: there the bench called «detach» a stopped delivery, here the user calls «server frozen»
+   the same thing. ⭐ **And it is the reason why the dead line cure is needed**: not because it
+   improves the image — it cannot — but because **it tells the truth** instead of leaving a still screen
+   that looks like a fault of the program.
+   ⚠ And the session **recovers by itself**: `[M]` with the loss removed, `cwnd` climbs back from 2 888 to
+   **46 412 bytes** (sixteen times) without anybody touching anything.
 
-## 19.5 ⭐ Che cosa questa sezione cambia nelle decisioni
+## 19.5 ⭐ What this section changes in the decisions
 
-1. ⭐⭐ **Le cure servono, ma non per il lavoro quotidiano dell'utente.** `[M]` Fino al 5,6 % di
-   perdita il prodotto **così com'è** è giudicato fluido. ⇒ Le cure servono al **caso a raffiche** e a
-   **chi guarda video**, non a chi lavora. ⚠ È un buon motivo per accenderle **con calma**, e non di
-   corsa — e I6 resta rispettata senza costi;
-1-bis. ⛔ **E al 10 % non salvano l'esperienza** (§19.6): curano il meccanismo — consegna che continua
-   invece di fermarsi, fotogrammi mai spediti da 27 a 1 — ma il giudizio dell'utente **non cambia**.
-   ⇒ Sopra una certa perdita **la scala di degradazione non ha più niente da offrire**, e l'unica
-   risposta onesta è §3.1-quater: dichiarare la linea morta;
-2. ⛔ **Il pavimento di banda (§3.1-sexies, 30 Mbit/s) non c'entra niente con tutto questo.** `[M]`
-   Nel giro buono i fotogrammi grossi arrivavano a 77 KB e la linea non era mai satura: quel che si
-   chiudeva era la **finestra di congestione**, non la banda. ⇒ ⭐ **§3.1-ter riceve la sua conferma
-   più forte**: la banda è una premessa, la grandezza che decide è la **qualità** del filo;
-3. ⚠ **e le soglie del banco vanno lette per quel che sono**: `[M]` misure su una sollecitazione
-   **dieci volte più severa** dell'uso reale. Non sono sbagliate — sono un **caso peggiore**, e va
-   scritto accanto a ogni numero di §17 che qualcuno potrebbe prendere per una promessa.
+1. ⭐⭐ **The cures are needed, but not for the user's daily work.** `[M]` Up to 5.6 %
+   loss the product **as it is** is judged smooth. ⇒ The cures are needed for the **burst case** and for
+   **whoever watches video**, not for whoever works. ⚠ It is a good reason to switch them on **calmly**, and not in a
+   rush — and I6 stays respected at no cost;
+1-bis. ⛔ **And at 10 % they do not save the experience** (§19.6): they cure the mechanism — delivery that continues
+   instead of stopping, frames never sent from 27 to 1 — but the user's judgement **does not change**.
+   ⇒ Above a certain loss **the degradation ladder has nothing more to offer**, and the only
+   honest answer is §3.1-quater: declare the line dead;
+2. ⛔ **The bandwidth floor (§3.1-sexies, 30 Mbit/s) has nothing to do with all this.** `[M]`
+   In the good round the large frames reached 77 KB and the line was never saturated: what
+   closed was the **congestion window**, not the bandwidth. ⇒ ⭐ **§3.1-ter receives its strongest
+   confirmation**: bandwidth is a premise, the quantity that decides is the **quality** of the wire;
+3. ⚠ **and the bench thresholds must be read for what they are**: `[M]` measurements on a stress
+   **ten times harsher** than real use. They are not wrong — they are a **worst case**, and it must be
+   written beside every number of §17 that someone might take for a promise.
 
 ---
 
-# §20 · ⭐⭐⭐ I PUNTI APERTI, CHIUSI — *24 agosto 2026*
+# §20 · ⭐⭐⭐ THE OPEN POINTS, CLOSED — *24 Aug 2026*
 
-⛔ **E due dei quattro hanno demolito una premessa che questo documento dava per buona.** Si scrive
-la correzione, non si liscia.
+⛔ **And two of the four demolished a premise this document took for granted.** The correction is
+written, not smoothed over.
 
-## 20.1 ⛔⛔ «LE APPLICAZIONI NON ARRIVANO SULLO SCHERMO» — **era falso, ed era mio**
+## 20.1 ⛔⛔ «APPLICATIONS DO NOT REACH THE SCREEN» — **it was false, and it was mine**
 
-`banchi/09-b82-mostra.sh` · binario `b86cf6df…` dall'albero di lavoro.
+`banchi/09-b82-mostra.sh` · binary `b86cf6df…` from the working tree.
 
-⭐ **`mpv` arriva eccome.** `[M]` Con **solo** `XDG_RUNTIME_DIR` + `WAYLAND_DISPLAY`: **241
-fotogrammi in 8 s, 38 513 byte medi**. Con `systemd-run --user` (la strada del menu): **317**. E
-`WAYLAND_DISPLAY` **c'era già** nell'ambiente del gestore d'utente — ce lo scrive GNOME.
+⭐ **`mpv` does arrive.** `[M]` With **only** `XDG_RUNTIME_DIR` + `WAYLAND_DISPLAY`: **241
+frames in 8 s, 38 513 bytes on average**. With `systemd-run --user` (the menu's route): **317**. And
+`WAYLAND_DISPLAY` **was already there** in the user manager's environment — GNOME writes it there.
 
-⇒ ⛔ **La causa vera del caso di stamattina: non c'era nessuno che guardava.** `[M]` Il registro
-della 7920, minuto per minuto:
+⇒ ⛔ **The real cause of this morning's case: nobody was watching.** `[M]` The 7920 log,
+minute by minute:
 
 ```
 08:33   765 fotogrammi ·  49 battiti rete-quic
@@ -4278,537 +4278,537 @@ della 7920, minuto per minuto:
 poi     NIENTE, solo «il legame regge» ogni minuto
 ```
 
-Senza un cliente attaccato il server **non spedisce**, il contatore è fermo **per costruzione**, e i
-«167 byte» erano gli ultimi valori di prima. ⚠ **Ho giudicato in una scena in cui il metro non
-poteva dire niente** — la terza volta in due giorni (§19.2, §16.4).
+Without an attached client the server **does not send**, the counter is stuck **by construction**, and the
+«167 bytes» were the last values from before. ⚠ **I judged in a scene in which the yardstick could
+say nothing** — the third time in two days (§19.2, §16.4).
 
-**Le tre ipotesi che avevo scritto sono tutte cadute** `[M]`: un solo compositore e un solo
-`wayland-0` (⚠ la data del 23 agosto che avevo letto era quella di `bus`, non del socket); **un
-monitor solo**, `Meta-0` «Virtual remote monitor» 2544×926 scala 1,000; l'ambiente **non** era
-incompleto.
+**The three hypotheses I had written all fell** `[M]`: a single compositor and a single
+`wayland-0` (⚠ the date of 23 Aug I had read was that of `bus`, not of the socket); **a single
+monitor**, `Meta-0` «Virtual remote monitor» 2544×926 scale 1.000; the environment was **not**
+incomplete.
 
-### 20.1-bis ⛔ E ANCHE IL METRO ERA SBAGLIATO — i byte non dicono quel che credevo
+### 20.1-bis ⛔ AND THE YARDSTICK WAS WRONG TOO — bytes do not say what I believed
 
-`[M]` Calibrazione su finestre di 8 s:
+`[M]` Calibration on 8 s windows:
 
-| scena | fotogrammi | byte medi |
+| scene | frames | average bytes |
 |---|---|---|
-| desktop fermo | 0-1 | 238-283 |
-| ⛔ una **bandiera a schermo intero** | **321** | **268** |
+| still desktop | 0-1 | 238-283 |
+| ⛔ a **full-screen flag** | **321** | **268** |
 | `film-grana.webm` | 226 | 18 600 |
 | `duro.mp4` | 240 | 37 081 |
 
-⇒ **Una finestra viva a schermo intero può produrre fotogrammi da 268 byte, cioè quanto un desktop
-fermo.** ⭐ **Il verdetto è il CONTO, non i byte**: i byte dicono *quanto* cambia, il conto dice *se*
-cambia. ⚠ E in §19.2 avevo usato i byte come metro: quel ragionamento regge sul merito (i suoi
-fotogrammi *erano* piccoli) ma il metro giusto era un altro.
+⇒ **A live full-screen window can produce 268-byte frames, that is as much as a still
+desktop.** ⭐ **The verdict is the COUNT, not the bytes**: bytes say *how much* changes, the count says *whether*
+it changes. ⚠ And in §19.2 I had used bytes as the yardstick: that reasoning holds on the merits (his
+frames *were* small) but the right yardstick was another one.
 
-### 20.1-ter ⛔⛔⛔ ~~Firefox è rotto — e non è nostro~~ → **REFUTATA il 25 agosto 2026**
+### 20.1-ter ⛔⛔⛔ ~~Firefox is broken — and it is not ours~~ → **REFUTED on 25 Aug 2026**
 
-> ## ⛔⛔⛔ QUESTA SEZIONE È SBAGLIATA, E LA PROVA CHE LA CHIUDEVA ERA VIZIATA
+> ## ⛔⛔⛔ THIS SECTION IS WRONG, AND THE PROOF THAT CLOSED IT WAS FLAWED
 >
-> *Refutata nella fase 10, `fasi/10-multi-tenant-e-il-budget.md` §5.10.* ⭐ **Firefox non è mai stato
-> rotto su questa macchina.**
+> *Refuted in phase 10, `fasi/10-multi-tenant-e-il-budget.md` §5.10.* ⭐ **Firefox was never
+> broken on this machine.**
 >
-> ⛔ **La causa vera**: `~/.cache` è un **collegamento a `/tmp`** (da `/etc/skel`, immagine base del
-> 30 luglio). Firefox tiene il profilo *locale* sotto `$HOME/.cache/mozilla` = **`/tmp/mozilla`**, e
-> `[M]` **`/tmp/mozilla` appartiene a `prova2`, modo `0700`, creata il 23 agosto alle 08:03** — cioè
-> **prima** di tutte le misure di questa sezione. ⇒ Per ogni altro utente il profilo **non nasce**.
+> ⛔ **The real cause**: `~/.cache` is a **link to `/tmp`** (from `/etc/skel`, base image of
+> 30 Jul). Firefox keeps the *local* profile under `$HOME/.cache/mozilla` = **`/tmp/mozilla`**, and
+> `[M]` **`/tmp/mozilla` belongs to `prova2`, mode `0700`, created on 23 Aug at 08:03** — that is
+> **before** all the measurements of this section. ⇒ For every other user the profile **is not born**.
 >
-> ### ⛔⛔ E il difetto di METODO è nel «controllo che chiude la questione»
+> ### ⛔⛔ And the defect of METHOD is in the «check that closes the question»
 >
-> Diceva: *«`firefox --headless --screenshot` come **`nicfio`** — nessuna sessione REMOTIX, nessun
-> Wayland, nessun monitor — **si pianta uguale**»*.
+> It said: *«`firefox --headless --screenshot` as **`nicfio`** — no REMOTIX session, no
+> Wayland, no monitor — **hangs the same way**»*.
 >
-> ⇒ ⛔ **Ma `nicfio` ha lo STESSO `~/.cache -> /tmp`**, e quindi lo stesso `/tmp/mozilla` di
-> `prova2`. `[M]` Verificato il 25 agosto: `lrwxrwxrwx nicfio -> /tmp`, e dentro
+> ⇒ ⛔ **But `nicfio` has the SAME `~/.cache -> /tmp`**, and therefore the same `/tmp/mozilla` as
+> `prova2`. `[M]` Verified on 25 Aug: `lrwxrwxrwx nicfio -> /tmp`, and inside
 > `drwx------ prova2 prova2`.
 >
-> ⭐⭐ **Il controllo CONDIVIDEVA il fattore che avrebbe dovuto escludere** — e un controllo così non
-> controlla niente: mostra lo stesso guasto per la stessa ragione, e chi lo legge conclude *«allora
-> non è la sessione»* quando invece **non era mai stata in prova la sessione**.
+> ⭐⭐ **The check SHARED the factor it should have excluded** — and such a check does not
+> check anything: it shows the same fault for the same reason, and whoever reads it concludes *«then
+> it is not the session»* when instead **the session had never been under test**.
 >
-> ### ⭐ La rimisura, con la sola cosa cambiata
+> ### ⭐ The remeasurement, with only one thing changed
 >
-> `~/.cache` di `nicfio` rifatta **cartella vera**, e **niente altro** — stesso comando, stessa
-> macchina, stesso Firefox:
+> `nicfio`'s `~/.cache` remade as a **real folder**, and **nothing else** — same command, same
+> machine, same Firefox:
 >
-> | | fase 9, 24 agosto | ⭐ 25 agosto, dopo |
+> | | phase 9, 24 Aug | ⭐ 25 Aug, after |
 > |---|---|---|
-> | `firefox --headless --screenshot` come `nicfio` | ⛔ **si pianta**, ucciso a **60 s**, profilo vuoto | ⭐ **`rc=0`**, e uno scatto da **5,5 MB** |
+> | `firefox --headless --screenshot` as `nicfio` | ⛔ **hangs**, killed at **60 s**, empty profile | ⭐ **`rc=0`**, and a **5.5 MB** screenshot |
 >
-> ⚠ **Restano veri i due indizi in fondo alla sezione** (*«More than 1 GPU vendor detected»*, la
-> Radeon recintata): ⛔ **sono avvertimenti, non la causa** — la stessa riga esce anche adesso, col
-> browser che funziona.
+> ⚠ **The two clues at the bottom of the section remain true** (*«More than 1 GPU vendor detected»*, the
+> fenced-off Radeon): ⛔ **they are warnings, not the cause** — the same line comes out even now, with the
+> browser working.
 >
-> ⭐ **E quel che resta di giusto**: *«il difetto c'è, la diagnosi no»*, scritto qui in fondo il 24
-> agosto. ⇒ **Era la frase esatta**, ed è quella che andava seguita invece di chiudere con un ✅.
+> ⭐ **And what remains right**: *«the defect is there, the diagnosis is not»*, written here at the bottom on 24
+> Aug. ⇒ **It was the exact sentence**, and it is the one that should have been followed instead of closing with a ✅.
 
-### ~~20.1-ter~~ *(il testo originale, conservato)* ✅ Firefox è rotto — **e non è nostro**
+### ~~20.1-ter~~ *(the original text, kept)* ✅ Firefox is broken — **and it is not ours**
 
-`[M]` Firefox `140.14.0esr`: vivo (80 thread, 126 MB), **zero fotogrammi dopo 90 s**, mai attaccato
-al socket Wayland. Fallisce identico da `systemd-run --user`, con `--profile` esplicito, con
+`[M]` Firefox `140.14.0esr`: alive (80 threads, 126 MB), **zero frames after 90 s**, never attached
+to the Wayland socket. It fails identically from `systemd-run --user`, with explicit `--profile`, with
 `MOZ_CRASHREPORTER_DISABLE`, `MOZ_DISABLE_GPU_PROCESS`, `LIBGL_ALWAYS_SOFTWARE`,
-`MOZ_ENABLE_WAYLAND=0`, sandbox spente.
+`MOZ_ENABLE_WAYLAND=0`, sandboxes off.
 
-⭐⭐ **Il controllo che chiude la questione**: `firefox --headless --screenshot` come **`nicfio`** —
-nessuna sessione REMOTIX, nessun Wayland, nessun monitor — **si pianta uguale** e viene ucciso a
-60 s col profilo vuoto. ⇒ **Firefox è rotto su questa macchina per tutti, dentro e fuori REMOTIX.**
-Non è un difetto del prodotto, e §14.7/§16.5 vanno lette così.
+⭐⭐ **The check that closes the question**: `firefox --headless --screenshot` as **`nicfio`** —
+no REMOTIX session, no Wayland, no monitor — **hangs the same way** and is killed at
+60 s with an empty profile. ⇒ **Firefox is broken on this machine for everyone, inside and outside REMOTIX.**
+It is not a defect of the product, and §14.7/§16.5 must be read this way.
 
-⚠ Due indizi per chi lo riprenderà: `[GFX1-]: More than 1 GPU vendor detected via PCI, cannot deduce
-vendor` (Intel `0x8086/0x4680` + AMD `0x1002/0x73bf`), e `/dev/dri/renderD129` è del gruppo
-`remotix-nogpu` — la scheda AMD è recintata **apposta** (§4.6-ter).
-⭐ E il `[M]` del 23 agosto (*«il profilo non viene mai creato in `~/.mozilla/firefox/`»*) guardava
-**il posto sbagliato**: Debian `firefox-esr` usa `~/.mozilla/firefox-esr/`. ⚠ Anche quella resta
-vuota — il difetto c'è, la diagnosi no.
+⚠ Two clues for whoever picks it up again: `[GFX1-]: More than 1 GPU vendor detected via PCI, cannot deduce
+vendor` (Intel `0x8086/0x4680` + AMD `0x1002/0x73bf`), and `/dev/dri/renderD129` belongs to the group
+`remotix-nogpu` — the AMD card is fenced off **on purpose** (§4.6-ter).
+⭐ And the `[M]` of 23 Aug (*«the profile is never created in `~/.mozilla/firefox/`»*) looked at
+**the wrong place**: Debian `firefox-esr` uses `~/.mozilla/firefox-esr/`. ⚠ That one stays
+empty too — the defect is there, the diagnosis is not.
 
-### 20.1-quater ⭐ Lo strumento che mancava — `banchi/09-b82-mostra.sh`
+### 20.1-quater ⭐ The tool that was missing — `banchi/09-b82-mostra.sh`
 
-Lancia un comando dentro la sessione di un utente con `systemd-run --user` (cioè in `app.slice`,
-dove finirebbe scegliendolo dal menu), poi **conta i fotogrammi prima e dopo e dà il verdetto su quel
-numero** — ⛔ mai su *«il processo è vivo»*. Quattro guardie: un compositore solo · un monitor solo e
-nostro · l'ambiente **letto** da `systemctl --user show-environment` invece che inventato · e
-⭐⭐ **G4: c'è qualcuno che guarda?** — zero battiti `rete-quic` ⇒ **nessun verdetto**.
+It launches a command inside a user's session with `systemd-run --user` (that is in `app.slice`,
+where it would end up when chosen from the menu), then **counts the frames before and after and gives the verdict on that
+number** — ⛔ never on *«the process is alive»*. Four guards: a single compositor · a single monitor and
+ours · the environment **read** from `systemctl --user show-environment` instead of invented · and
+⭐⭐ **G4: is someone watching?** — zero `rete-quic` beats ⇒ **no verdict**.
 
-⭐ **G4 è nata da un rosso su codice giusto**, ed è la guardia che avrebbe evitato le tre prove
-bloccate di stamattina. Provata nei tre versi: `mpv` 240 contro 0 (verde) · `gnome-terminal` 40
-contro 1 (verde) · `firefox` 0 contro 1 (rosso) · senza cliente, **si rifiuta di giudicare**.
+⭐ **G4 was born from a red on right code**, and it is the guard that would have avoided the three blocked
+tests of this morning. Tested in the three directions: `mpv` 240 against 0 (green) · `gnome-terminal` 40
+against 1 (green) · `firefox` 0 against 1 (red) · without a client, **it refuses to judge**.
 
-⛔ **E non c'era niente da curare in `src/`**: il figlio prepara la sessione bene — un compositore, un
-monitor, scala 1,0, ambiente completo. La cura era **nel modo di giudicare**.
+⛔ **And there was nothing to cure in `src/`**: the child prepares the session well — one compositor, one
+monitor, scale 1.0, complete environment. The cure was **in the way of judging**.
 
-## 20.2 ⛔⛔⛔ L'AUDIO — la premessa era falsa, e sotto c'era di peggio
+## 20.2 ⛔⛔⛔ AUDIO — the premise was false, and underneath there was worse
 
-### 20.2-bis ⛔ «Il 36 % dell'audio non raggiunge il filo» era una proprietà **del banco**
+### 20.2-bis ⛔ «36 % of audio does not reach the wire» was a property **of the bench**
 
-`[M]` Il registro della 7920, **quattro attacchi su quattro** della sessione vera dell'utente:
+`[M]` The 7920 log, **four attaches out of four** of the user's real session:
 `negoziato … audio.codec=opus` → `canale audio ACCESO — codec 1 (Opus)`.
 
-⇒ ⛔ **L'utente non è mai stato su PCM.** `[R]` Il PCM lo impongono **i banchi**: `09-b68:191`,
-`09-b70:1890`, `09-b71:144`, `09-b77:978`, `09-b81:2294` passano tutti `--audio-codec pcm`.
-⇒ **§17.2-quater e §18.5 vanno lette così**: il 36 % di rifiutati e i 2 463 kbit/s sono proprietà di
-una **configurazione di banco**, non del prodotto in uso.
+⇒ ⛔ **The user was never on PCM.** `[R]` PCM is imposed by **the benches**: `09-b68:191`,
+`09-b70:1890`, `09-b71:144`, `09-b77:978`, `09-b81:2294` all pass `--audio-codec pcm`.
+⇒ **§17.2-quater and §18.5 must be read this way**: the 36 % refused and the 2 463 kbit/s are properties of
+a **bench configuration**, not of the product in use.
 
-### 20.2-ter ⭐⭐⭐ E QUEL CHE C'ERA SOTTO: **si spendono 589 kbit/s per portare 1,2 kbit/s di silenzio**
+### 20.2-ter ⭐⭐⭐ AND WHAT WAS UNDERNEATH: **589 kbit/s are spent to carry 1.2 kbit/s of silence**
 
-`[M]` Che cosa viene rifiutato, sulla sessione **vera**: `datagram di 16 byte` = 1 (prefisso) + 12
-(§6.3) + **3 di carico**. Riprodotto sul banco: `codec 1 (Opus), 3 byte di carico`, 1 248 su 1 248, e
-`suono.c` dice **`PICCO 0 su 32767`**. ⇒ **Si rifiuta il silenzio digitale.**
+`[M]` What gets refused, on the **real** session: `datagram di 16 byte` = 1 (prefix) + 12
+(§6.3) + **3 of payload**. Reproduced on the bench: `codec 1 (Opus), 3 byte di carico`, 1 248 out of 1 248, and
+`suono.c` says **`PICCO 0 su 32767`**. ⇒ **Digital silence is being refused.**
 
-`[M]` A desktop fermo, Opus: **48,0 datagram al secondo su 48,4 pacchetti** — il filo è *tutto*
-audio — e ogni pacchetto è **pieno**, 1 441 byte su 1 452, per il `PADDING`.
+`[M]` With a still desktop, Opus: **48.0 datagrams per second out of 48.4 packets** — the wire is *all*
+audio — and every packet is **full**, 1 441 bytes out of 1 452, because of the `PADDING`.
 
-**La cura** (`src/audio.c`, ⛔ nasce **spenta**, I6): un blocco in cui **tutti** i campioni sono
-esattamente zero **non diventa un datagram**. ⭐ La ragione per cui è lecito: §6.3 mette l'`istante`
-in ogni blocco e chi riceve lo rimette al posto assoluto ⇒ **un blocco non spedito è un buco, e un
-buco è silenzio** — che è esattamente quel che quel blocco conteneva. ⛔ Nessuna soglia: **solo lo
-zero digitale**, l'unico caso in cui «spedito» e «non spedito» suonano identici.
+**The cure** (`src/audio.c`, ⛔ born **off**, I6): a block in which **all** samples are
+exactly zero **does not become a datagram**. ⭐ The reason why it is legitimate: §6.3 puts the `istante`
+in every block and the receiver puts it back in its absolute place ⇒ **a block not sent is a hole, and a
+hole is silence** — which is exactly what that block contained. ⛔ No threshold: **only digital
+zero**, the only case in which «sent» and «not sent» sound identical.
 
-| desktop fermo, Opus | sul filo | pacchetti/s | datagram/s | byte/pacchetto | carico utile |
+| still desktop, Opus | on the wire | packets/s | datagrams/s | bytes/packet | payload |
 |---|---|---|---|---|---|
-| **spenta** | 557,6 kbit/s | 48,4 | 48,0 | 1 441 | 1,18 kbit/s |
-| ⭐ **accesa** | **5,5 kbit/s** | 0,5 | 0,0 | — | 0,00 |
+| **off** | 557.6 kbit/s | 48.4 | 48.0 | 1 441 | 1.18 kbit/s |
+| ⭐ **on** | **5.5 kbit/s** | 0.5 | 0.0 | — | 0.00 |
 
-⇒ ⭐⭐ **102,1 volte**, e 1 248 blocchi taciuti su 1 248. **Oggi una sessione ferma spende 589 kbit/s
-per portare 1,2 kbit/s di silenzio: il 99,8 % è riempimento.**
+⇒ ⭐⭐ **102.1 times**, and 1 248 blocks silenced out of 1 248. **Today a still session spends 589 kbit/s
+to carry 1.2 kbit/s of silence: 99.8 % is padding.**
 
-**Il controllo che protegge l'utente** (tono a 440 Hz nel sink, giudice di `07-b42`): copertura
-**1,0000 → 0,9996**, purezza del tono **1,000 → 1,000**, blocchi taciuti **1 su 5 001** — e quell'uno
-precede i primi campioni. ⚠ Prezzo dichiarato: i `mancati` del cliente vanno da 0 a 2 (un buco voluto
-lascia lo stesso salto di `istante` di uno perso).
+**The check that protects the user** (440 Hz tone in the sink, judge of `07-b42`): coverage
+**1.0000 → 0.9996**, tone purity **1.000 → 1.000**, blocks silenced **1 out of 5 001** — and that one
+precedes the first samples. ⚠ Declared price: the client's `mancati` go from 0 to 2 (a wanted hole
+leaves the same jump of `istante` as a lost one).
 
-⚠ ~~L'interruttore oggi è **di compilazione** (`-DAUDIO_SILENZIO_PREDEFINITO=1`) … ⏳ la riga di
-comando è **descritta e non scritta**.~~
-> ✅ **SCRITTA, il 24 agosto 2026** *(riallineato al codice il 28)*. Il `-D` **è stato tolto**, e
-> l'unica strada è **`--niente-audio-silenzio`** sulla riga di comando del server, che `figlio.c`
-> ricopia in coda all'`argv` del figlio come fa già con `--parlantina`. ⛔ E vale per **due
-> processi**: il codificatore vero sta nel figlio, ma il tono di `--audio-prova` apre un `audio_cod`
-> nel server — se se ne accendesse uno solo, i due banchi misurerebbero due prodotti diversi.
-> ⚠ La ragione per cui non ce ne sono due: *«due strade per la stessa cura sono due numeri che
-> divergono»* (`src/audio.h`).
+⚠ ~~The switch today is **a build-time one** (`-DAUDIO_SILENZIO_PREDEFINITO=1`) … ⏳ the command
+line is **described and not written**.~~
+> ✅ **WRITTEN, on 24 Aug 2026** *(realigned to the code on the 28th)*. The `-D` **was removed**, and
+> the only road is **`--niente-audio-silenzio`** on the server's command line, which `figlio.c`
+> copies at the end of the child's `argv` as it already does with `--parlantina`. ⛔ And it holds for **two
+> processes**: the real encoder sits in the child, but the `--audio-prova` tone opens an `audio_cod`
+> in the server — if only one were switched on, the two benches would measure two different products.
+> ⚠ The reason why there are not two of them: *«two roads for the same cure are two numbers that
+> diverge»* (`src/audio.h`).
 
-### 20.2-quater ⛔ DUE DIFETTI TROVATI STRADA FACENDO, e nessuno dei due era cercato
+### 20.2-quater ⛔ TWO DEFECTS FOUND ALONG THE WAY, and neither was looked for
 
-1. ⛔⭐ **`WT_DGRAM_RIMANDI_MAX` non misura quel che il suo commento dichiara.** `[R]`
-   `w->dgram_rimandi` è un campo di `struct wt`, cioè **della connessione**: sale a ogni passata
-   rifiutata e torna a zero solo su un successo. Il commento accanto dice *«quante passate di fila
-   **il blocco in testa** è stato rimandato»* — ⛔ ma la testa nel frattempo è stata sostituita
-   decine di volte. ⇒ **Non misura l'età del blocco: misura da quanto la connessione non spedisce
-   nulla.** `[M]` Ed è per questo che il primo rifiuto è avvenuto **a finestra aperta**
-   (`cwnd_left = 7 424`, e la riga stessa dice *«NON è la congestione»*).
-   ⭐ E i rifiuti sono **a raffica, non sparsi**: fuori dalla raffica 0,004 %, **dentro 100 %** — 100
-   rifiuti ogni 2,00 s = ogni blocco prodotto, per venti secondi. Non click sparsi: **venti secondi
-   di niente**.
-2. ⛔ **«L'audio non dev'essere affamato dal video» NON È SCRITTO DA NESSUNA PARTE.** `[R]` Cercato
-   in `SPECIFICHE.md` (§10 e gli invarianti), `RCP.md` §6.3, `DECISIONI.md`, `CODER.md`: **niente**.
-   L'unico posto in cui la domanda è decisa è il codice — `wt_scrivi():7286`, *«I DATAGRAM PRIMA
-   DEGLI STREAM»*. ⇒ ⚠ **Una decisione presa nel codice e mai messa a verbale**, ed è precisamente
-   il genere di cosa che questa fase esiste per scoprire.
-   `[M]` E oggi vince **l'audio**: a desktop fermo il filo è tutto suo; sulla sessione vera col
-   desktop in movimento tocca il **25-33 %** dei pacchetti.
+1. ⛔⭐ **`WT_DGRAM_RIMANDI_MAX` does not measure what its comment declares.** `[R]`
+   `w->dgram_rimandi` is a field of `struct wt`, that is **of the connection**: it rises at every refused
+   pass and goes back to zero only on a success. The comment beside it says *«how many passes in a row
+   **the block at the head** has been postponed»* — ⛔ but the head has meanwhile been replaced
+   dozens of times. ⇒ **It does not measure the age of the block: it measures how long the connection has not sent
+   anything.** `[M]` And that is why the first refusal happened **with the window open**
+   (`cwnd_left = 7 424`, and the line itself says *«it is NOT congestion»*).
+   ⭐ And the refusals are **in bursts, not scattered**: outside the burst 0.004 %, **inside 100 %** — 100
+   refusals every 2.00 s = every block produced, for twenty seconds. Not scattered clicks: **twenty seconds
+   of nothing**.
+2. ⛔ **«Audio must not be starved by video» IS NOT WRITTEN ANYWHERE.** `[R]` Searched
+   in `SPECIFICHE.md` (§10 and the invariants), `RCP.md` §6.3, `DECISIONI.md`, `CODER.md`: **nothing**.
+   The only place where the question is decided is the code — `wt_scrivi():7286`, *«DATAGRAMS BEFORE
+   STREAMS»*. ⇒ ⚠ **A decision taken in the code and never put on record**, and it is precisely
+   the kind of thing this phase exists to discover.
+   `[M]` And today **audio** wins: with a still desktop the wire is all its own; on the real session with the
+   desktop moving it takes **25-33 %** of the packets.
 
-### 20.2-quinquies ⛔ E UNA PREVISIONE DELL'AGENTE CHE NON HA RETTO — scritta com'è
+### 20.2-quinquies ⛔ AND A PREDICTION OF THE AGENT THAT DID NOT HOLD — written as it is
 
-`casa-cattiva`, scena col tono, stesso `netem`, cura spenta:
+`casa-cattiva`, scene with the tone, same `netem`, cure off:
 
-| codec | sul filo | spediti | rifiutati | ‰ | **copertura** |
+| codec | on the wire | sent | refused | ‰ | **coverage** |
 |---|---|---|---|---|---|
-| PCM | 1 024,5 kbit/s | 3 135 | **1 880** | **375‰** | 0,6088 |
-| Opus | 366,3 kbit/s | 1 127 | **126** | **101‰** | **0,8803** |
+| PCM | 1 024.5 kbit/s | 3 135 | **1 880** | **375‰** | 0.6088 |
+| Opus | 366.3 kbit/s | 1 127 | **126** | **101‰** | **0.8803** |
 
-⭐ La copertura sale **0,61 → 0,88** (+27 punti di audio che arriva davvero). ⛔ Ma il predicato
-chiedeva *«Opus sotto 20‰»* e ha dato **rosso**: Opus divide il rifiuto per 3,7, **non lo toglie**.
-⇒ **Il codec è la cura del costo, non del rifiuto.** Il confine è stato lasciato dov'era e il rosso
-scritto nel banco, invece di ritarare la soglia dopo aver visto il numero.
+⭐ Coverage rises **0.61 → 0.88** (+27 points of audio that really arrives). ⛔ But the predicate
+asked for *«Opus below 20‰»* and gave **red**: Opus divides the refusal by 3.7, **it does not remove it**.
+⇒ **The codec is the cure of the cost, not of the refusal.** The border was left where it was and the red
+written in the bench, instead of retuning the threshold after seeing the number.
 
-### 20.2-sexies ⏳ La mezza cura descritta e non scritta — il `PADDING`
+### 20.2-sexies ⏳ The half cure described and not written — the `PADDING`
 
-`dgram_scrivi_uno()`, righe **1613** e **1647**: `NGTCP2_WRITE_DATAGRAM_FLAG_PADDING` va
-**condizionato** al fatto che ci sia davvero un lotto da comporre (più di un datagram in coda, o byte
-di video da infilare). Con **un** datagram solo e la coda video vuota il lotto GSO è di un pacchetto
-e il riempimento **non compra niente** — costa 1 425 byte su 1 441. ⛔ **Non si toglie, si
-condiziona**: il riquadro di `:1581` spiega perché c'è (un primo pacchetto corto fa collassare il
-lotto GSO).
+`dgram_scrivi_uno()`, lines **1613** and **1647**: `NGTCP2_WRITE_DATAGRAM_FLAG_PADDING` must be
+**conditioned** on there really being a batch to compose (more than one datagram in the queue, or video bytes
+to slip in). With **one** datagram only and the video queue empty the GSO batch is one packet
+and the padding **buys nothing** — it costs 1 425 bytes out of 1 441. ⛔ **It is not removed, it is
+conditioned**: the box at `:1581` explains why it is there (a short first packet makes the
+GSO batch collapse).
 
-## 20.3 ⭐⭐⭐ IL DISALLINEAMENTO AUDIO-VIDEO — il numero regge, **la lettura no**, e si sente
+## 20.3 ⭐⭐⭐ THE AUDIO-VIDEO MISALIGNMENT — the number holds, **the reading does not**, and it can be heard
 
-`banchi/09-b85-*` · binario `64258ca4…`. ⛔ **E il metro è stato certificato prima di misurare
-qualunque cosa**, in tre gradini, nessuno saltato.
+`banchi/09-b85-*` · binary `64258ca4…`. ⛔ **And the yardstick was certified before measuring
+anything**, in three steps, none skipped.
 
-**(a) sul file**, 7 sfalsi noti iniettati con `-itsoffset`: ritrovati **−700,0 · −300,0 · −100,0 ·
-−0,0 · +100,0 · +300,0 · +700,0**. **(b) ricampionato a 40/s**, 4 fasi: bias **−2,3 ms**, ampiezza
-**4,0 ms**. **(c) ⭐⭐ attraverso il prodotto vero**, lo stesso film con l'audio spostato di ±300 ms
-noti, suonato nella sessione e ripreso dal filo:
+**(a) on the file**, 7 known offsets injected with `-itsoffset`: found again **−700.0 · −300.0 · −100.0 ·
+−0.0 · +100.0 · +300.0 · +700.0**. **(b) resampled at 40/s**, 4 phases: bias **−2.3 ms**, amplitude
+**4.0 ms**. **(c) ⭐⭐ through the real product**, the same film with the audio shifted by known ±300 ms,
+played in the session and captured from the wire:
 
-| messo | ritrovato (n=23) | errore |
+| set | found (n=23) | error |
 |---|---|---|
-| **+300** | **+288,5** | −11,5 |
-| **0** | **−12,6** | −12,6 |
-| **−300** | **−310,8** | −10,8 |
+| **+300** | **+288.5** | −11.5 |
+| **0** | **−12.6** | −12.6 |
+| **−300** | **−310.8** | −10.8 |
 
-⇒ **pendenza 0,9988, costante −11,6 ms.** Il metro ritrova quel che si sa di aver messo, col segno
-giusto, su tutta la catena.
+⇒ **slope 0.9988, constant −11.6 ms.** The yardstick finds again what one knows one has put in, with the right
+sign, over the whole chain.
 
-### 20.3-bis ⭐⭐ IL PRODOTTO È PULITO — **niente +331, niente +690, in nessun caso**
+### 20.3-bis ⭐⭐ THE PRODUCT IS CLEAN — **no +331, no +690, in any case**
 
-`[M]` 24 agosto (segno: **positivo = il suono esce DOPO l'immagine**, la convenzione di
+`[M]` 24 Aug (sign: **positive = the sound comes out AFTER the image**, the convention of
 `pagina.html` · `avvia_audio()`):
 
-| caso | fps | Mbit/s video | **sfalso alla sorgente** | **sfalso in rete** | rete p90 |
+| case | fps | video Mbit/s | **offset at the source** | **offset on the network** | network p90 |
 |---|---|---|---|---|---|
-| fermo | 40,1 | 0,30 | **−12,6** (n=23) | −5,8 | −3,9 |
-| sotto carico | 35,1 | **106,5** | **−7,8** (n=22) | −14,7 | −16,6 |
-| perdita 1 % | 36,5 | 0,30 | **−12,7** (n=22) | −6,1 | −9,8 |
-| perdita 5 % | 16,2 | 0,60 | **−17,2** (n=10) | −19,1 | **−94,9** |
+| still | 40.1 | 0.30 | **−12.6** (n=23) | −5.8 | −3.9 |
+| under load | 35.1 | **106.5** | **−7.8** (n=22) | −14.7 | −16.6 |
+| loss 1 % | 36.5 | 0.30 | **−12.7** (n=22) | −6.1 | −9.8 |
+| loss 5 % | 16.2 | 0.60 | **−17.2** (n=10) | −19.1 | **−94.9** |
 
-⇒ **Tutti e quattro entro ±6 ms dalla costante certificata.** Il prodotto marca i due flussi con lo
-stesso orologio e li marca bene: **lo sfalso non nasce prima del browser.**
+⇒ **All four within ±6 ms of the certified constant.** The product stamps the two streams with the
+same clock and stamps them well: **the offset is not born before the browser.**
 
-⭐ **E l'ipotesi «con la perdita peggiora» è smentita sulla mediana**, confermata solo sulla coda: a
-5 % la latenza video p90 va a **118,5 ms** contro 23,6 dell'audio (gli stream ritrasmettono, i
-datagram no) ⇒ **−94,9 ms**, cioè **l'audio che corre avanti**, non l'audio che resta indietro.
-⚠ E metà delle claquette sparisce: **11 lampi su 20 click**.
+⭐ **And the hypothesis «it gets worse with loss» is refuted on the median**, confirmed only on the tail: at
+5 % the video p90 latency goes to **118.5 ms** against 23.6 for audio (streams retransmit,
+datagrams do not) ⇒ **−94.9 ms**, that is **audio running ahead**, not audio lagging behind.
+⚠ And half of the clapperboards disappear: **11 flashes out of 20 clicks**.
 
-### 20.3-ter ⭐⭐⭐ IL +331 NON È UN ARTEFATTO: **è il cuscino dell'audio, ed è scritto nel prodotto**
+### 20.3-ter ⭐⭐⭐ THE +331 IS NOT AN ARTEFACT: **it is the audio cushion, and it is written in the product**
 
 `[R]` `src/pagina.html` · `AUDIO_CUSCINO_MS()` `AUDIO_CUSCINO_MS = 250` · `:5564` `AUDIO_CUSCINO_MAX_MS = 600` ·
 `:5761` `aoff = (perf − ist/1000) + CUSCINO + u`.
 
 > ⇒ `AV ≈ cuscino + latenza d'uscita − ritardo di pittura`
 
-A riposo 250 → **~331**; sotto carico la coda supera i 600 e `a.base` **si riàncora** (`:6152`) →
-**~690**. ⭐ **I due numeri di §16.4 sono le due tacche del cuscino**, non due misure di un difetto.
+At rest 250 → **~331**; under load the queue exceeds 600 and `a.base` **re-anchors** (`:6152`) →
+**~690**. ⭐ **The two numbers of §16.4 are the two notches of the cushion**, not two measurements of a defect.
 
-⛔⛔ **E §16.4 legge il segno alla rovescia.** Scrive *«il suono precede l'immagine»*; il prodotto
-dice *«positivo = il suono esce DOPO»*. ⇒ **L'audio è in RITARDO, non in anticipo** — e le due cose
-hanno soglie percettive **diversissime**.
+⛔⛔ **And §16.4 reads the sign backwards.** It writes *«sound precedes the image»*; the product
+says *«positive = the sound comes out AFTER»*. ⇒ **Audio is LATE, not early** — and the two things
+have **very different** perceptual thresholds.
 
-⚠ **E `AV` non può vedere la metà misurata qui**: elide l'`istante` del server da tutti e due gli
-addendi. ⇒ Un prodotto con `AV` verde può essere desincronizzato, e viceversa. Le due misure **non si
-sovrappongono**, e insieme dicono che lo sfalso vive **tutto dentro la pagina** — che è il posto dove
-costa meno curarlo.
+⚠ **And `AV` cannot see the half measured here**: it cancels the server's `istante` from both
+terms. ⇒ A product with a green `AV` can be desynchronized, and vice versa. The two measurements **do not
+overlap**, and together they say that the offset lives **entirely inside the page** — which is the place where
+it costs least to cure it.
 
-### 20.3-quater ⛔ SI SENTE — e la fonte è citata
+### 20.3-quater ⛔ IT CAN BE HEARD — and the source is cited
 
-**Rec. ITU-R BT.1359-1** (*Relative timing of sound and vision for broadcasting*, 1998), clausola g)
-e Nota 1: *«detectability thresholds are about +45 ms to −125 ms and acceptability thresholds are
+**Rec. ITU-R BT.1359-1** (*Relative timing of sound and vision for broadcasting*, 1998), clause g)
+and Note 1: *«detectability thresholds are about +45 ms to −125 ms and acceptability thresholds are
 about +90 ms to −185 ms on the average, a positive value indicates that sound is advanced with
 respect to vision»*.
 
-⚠ **Il segno dell'ITU è l'opposto del nostro**: per loro positivo = suono in **anticipo**. Il nostro
-+331 (audio **in ritardo**) è l'ITU **−331 ms**.
+⚠ **The ITU sign is the opposite of ours**: for them positive = sound **early**. Our
++331 (audio **late**) is ITU **−331 ms**.
 
-| | soglia ITU (audio in ritardo) | §16.4 a riposo (−331) | §16.4 sotto carico (−690) |
+| | ITU threshold (audio late) | §16.4 at rest (−331) | §16.4 under load (−690) |
 |---|---|---|---|
-| **si nota** | −125 ms | ⛔ **2,6× oltre** | ⛔ **5,5× oltre** |
-| **è accettabile** | −185 ms | ⛔ **1,8× oltre** | ⛔ **3,7× oltre** |
+| **it is noticed** | −125 ms | ⛔ **2.6× beyond** | ⛔ **5.5× beyond** |
+| **it is acceptable** | −185 ms | ⛔ **1.8× beyond** | ⛔ **3.7× beyond** |
 
-⇒ ⛔⛔ **Se il +331 è quel che l'utente riceve, si nota e non è accettabile.** ⚠ Che l'utente non
-l'abbia giudicato sulla grana **non dice che non morde**: dice che quella scena non permetteva di
-giudicarlo — ed è la **seconda** delle due letture tenute aperte in §16.4, non la prima.
+⇒ ⛔⛔ **If the +331 is what the user receives, it is noticed and it is not acceptable.** ⚠ That the user
+did not judge it on the grain **does not say it does not bite**: it says that that scene did not allow
+judging it — and it is the **second** of the two readings kept open in §16.4, not the first.
 
-⏳ **Che cosa resta**: la metà `AV` non è stata rimisurata (vuole il browser, e su quella macchina
-Firefox non parte — §20.1-ter). Tutto quel che sta **prima** del browser è pulito; la conferma
-diretta del 331 aspetta quello strumento.
+⏳ **What remains**: the `AV` half has not been remeasured (it wants the browser, and on that machine
+Firefox does not start — §20.1-ter). Everything that sits **before** the browser is clean; the direct
+confirmation of the 331 waits for that instrument.
 
-> ### ⭐⭐⭐ E IL GIUDIZIO È ARRIVATO — **25 agosto 2026, fase 10**
+> ### ⭐⭐⭐ AND THE JUDGEMENT HAS ARRIVED — **25 Aug 2026, phase 10**
 >
-> ⛔ *Il motivo per cui questo `[?]` era rimasto aperto era falso*: Firefox **non era rotto**, era
-> `~/.cache -> /tmp` (§20.1-ter, **refutata**). ⇒ Tolto quello, il browser parte, e la prova si è
-> potuta fare.
+> ⛔ *The reason why this `[?]` had stayed open was false*: Firefox **was not broken**, it was
+> `~/.cache -> /tmp` (§20.1-ter, **refuted**). ⇒ With that removed, the browser starts, and the test could
+> be done.
 >
-> ⭐ **E l'utente l'ha giudicata sulla scena più dura che ci sia** — un video **4K** dentro il
-> desktop remoto, con la banda del suo tablet strozzata a **10 Mbit/s**, cioè **sotto il pavimento
-> dichiarato**:
+> ⭐ **And the user judged it on the hardest scene there is** — a **4K** video inside the
+> remote desktop, with his tablet's bandwidth throttled to **10 Mbit/s**, that is **below the declared
+> floor**:
 >
 > > *«Il video mostra degli artefatti, ma è normale: siamo sotto le specifiche. Però **audio e video
 > > fluidi e in sync**.»*
 >
-> ⇒ ⭐ **La metà `AV` del sincronismo ha il suo giudizio.** ⚠ **Non un numero**: un giudizio — il
-> `[M]` dei **331 ms** e il termine di Opus restano `[?]`, e per quelli serve ancora lo strumento.
-> ⭐ Ma la domanda che contava — *«all'orecchio e all'occhio, stanno insieme?»* — ha una risposta, ed
-> è **sì**, presa dove il metro è l'utente (**I8**).
+> ⇒ ⭐ **The `AV` half of the sync has its judgement.** ⚠ **Not a number**: a judgement — the
+> `[M]` of the **331 ms** and the Opus term remain `[?]`, and for those the instrument is still needed.
+> ⭐ But the question that counted — *«to the ear and to the eye, do they go together?»* — has an answer, and it
+> is **yes**, taken where the yardstick is the user (**I8**).
 >
-> `[M]` E accanto al giudizio ci sono i numeri della stessa scena, letti dal registro senza toccarla:
-> **37,4 fot/s**, **3,20 Mbit/s**, ⭐ **coda vuota** — la banda **dimezzata senza perdere un
-> fotogramma**. ⇒ `fasi/10-multi-tenant-e-il-budget.md` §10. ⚠ E il giro è a **PCM**: il termine di Opus non c'è dentro
-(nel repo non esiste un decodificatore Opus, `07-b42-giudice.py` · `main()`).
+> `[M]` And beside the judgement there are the numbers of the same scene, read from the log without touching it:
+> **37.4 fps**, **3.20 Mbit/s**, ⭐ **empty queue** — bandwidth **halved without losing a
+> frame**. ⇒ `fasi/10-multi-tenant-e-il-budget.md` §10. ⚠ And the round is in **PCM**: the Opus term is not inside it
+(in the repo there is no Opus decoder, `07-b42-giudice.py` · `main()`).
 
-⭐ **Il filmato c'è, ed è quel che serve all'utente per dare il suo giudizio**:
-`/media/REMOTIX/tmp/09nr10/film/09-b85-claquette-calma-p000.mp4` (70 s, **34 attacchi**), coi gemelli
-`-p300`/`-m300` a sfalso noto, e `-dura-` per il caso sotto carico. Il server **7973 è acceso**.
+⭐ **The clip is there, and it is what the user needs to give his judgement**:
+`/media/REMOTIX/tmp/09nr10/film/09-b85-claquette-calma-p000.mp4` (70 s, **34 claps**), with the twins
+`-p300`/`-m300` at known offset, and `-dura-` for the case under load. Server **7973 is on**.
 
 ---
 
-# §21 · ⭐⭐⭐ LA CHIUSURA — *24 agosto 2026*: le cure si accendono, e la parola «bistabile» cade
+# §21 · ⭐⭐⭐ THE CLOSING — *24 Aug 2026*: the cures are switched on, and the word «bistable» falls
 
-## 21.1 ⭐⭐ IL GIUDIZIO DELL'UTENTE SUL SINCRONISMO — **alla cieca, e il metro era il suo orecchio**
+## 21.1 ⭐⭐ THE USER'S JUDGEMENT ON SYNC — **blind, and the yardstick was his ear**
 
-⛔ **La prova di §16.4 era fallita per un errore di disegno mio**: avevo chiesto un giudizio sul
-sincronismo guardando **pura grana**, cioè l'immagine con meno appigli possibili. ⇒ Rifatta con la
-claquette di §20.3 — un cartello che sbatte, **34 volte in 70 s** — e ⭐ **alla cieca, con tre
-gemelli**, senza dire all'utente quale fosse quale.
+⛔ **The test of §16.4 had failed because of a design error of mine**: I had asked for a judgement on
+sync while watching **pure grain**, that is the image with the fewest possible holds. ⇒ Redone with the
+clapperboard of §20.3 — a board that slaps, **34 times in 70 s** — and ⭐ **blind, with three
+twins**, without telling the user which was which.
 
-| ordine | che cosa c'era **nel file** | il suo giudizio |
+| order | what was **in the file** | his judgement |
 |---|---|---|
-| 1° | audio **321 ms in anticipo** | *«perfetto»* |
-| 2° | **allineato** (21 ms) | *«perfetto»* · *«il bip è in sincrono con il flash»* |
-| 3° | audio **279 ms in ritardo** | ⭐ *«il flash è in anticipo rispetto al bip»* |
+| 1st | audio **321 ms early** | *«perfetto»* |
+| 2nd | **aligned** (21 ms) | *«perfetto»* · *«il bip è in sincrono con il flash»* |
+| 3rd | audio **279 ms late** | ⭐ *«il flash è in anticipo rispetto al bip»* |
 
-⭐⭐ **Ha riconosciuto il ritardo vero, con la direzione giusta, senza saperlo.** ⇒ Il suo orecchio è
-**tarato** su questa scala, e i suoi giudizi valgono — che è precisamente quel che mancava a §16.4.
+⭐⭐ **He recognized the real delay, with the right direction, without knowing it.** ⇒ His ear is
+**calibrated** on this scale, and his judgements count — which is precisely what §16.4 lacked.
 
-⛔ **E il verdetto è che il difetto non arriva.** Il filmato **allineato** gli è arrivato **in
-sincrono**. Se il prodotto aggiungesse davvero i **+331 ms** di §16.4, quel filmato gli sarebbe
-suonato **come il terzo** — riconoscibile, perché ha appena dimostrato di riconoscere 279 ms.
-⇒ **Il ritardo che raggiunge l'orecchio è sotto la soglia che lui sa riconoscere**, cioè **< ~280 ms**,
-e probabilmente molto meno.
+⛔ **And the verdict is that the defect does not arrive.** The **aligned** clip reached him **in
+sync**. If the product really added the **+331 ms** of §16.4, that clip would have
+sounded to him **like the third** — recognizable, because he has just shown he recognizes 279 ms.
+⇒ **The delay that reaches the ear is below the threshold he can recognize**, that is **< ~280 ms**,
+and probably much less.
 
-⚠ **Che cosa questo NON dice**, e va scritto: fra il 1° e il 2° non ha visto differenza, e sono
-distanti **321 ms**. ⇒ Dalla parte dell'**anticipo** la sua risoluzione è più grossa di 300 ms. Ma il
-cuscino spinge dalla parte del **ritardo**, ed è lì che discrimina. ⚠ E il giro è a PCM: il termine
-di Opus non c'è dentro.
+⚠ **What this does NOT say**, and it must be written: between the 1st and the 2nd he saw no difference, and they are
+**321 ms** apart. ⇒ On the **early** side his resolution is coarser than 300 ms. But the
+cushion pushes towards the **late** side, and it is there that he discriminates. ⚠ And the round is in PCM: the Opus
+term is not inside it.
 
-⇒ ⭐ **§20.3-quater va letta con questo accanto**: il conto con la soglia ITU dice *«si sentirebbe»*
-**se** i 331 ms arrivassero. `[M]` L'orecchio dice che **non arrivano**. Le due cose non si
-contraddicono: §20.3 misura il cuscino **dentro la pagina**, e la latenza di pittura del video lo
-compensa in gran parte — la parte che **nessuna delle due misure di ieri poteva vedere da sola**.
+⇒ ⭐ **§20.3-quater must be read with this beside it**: the count with the ITU threshold says *«it would be heard»*
+**if** the 331 ms arrived. `[M]` The ear says that **they do not arrive**. The two things do not
+contradict each other: §20.3 measures the cushion **inside the page**, and the video's painting latency
+compensates for it to a large extent — the part that **neither of yesterday's two measurements could see on its own**.
 
-⛔ **E una correzione mia, presa e ritirata in tre minuti**: dopo i primi due *«perfetto»* avevo
-concluso che `mpv` rimettesse in sincrono i flussi e che la prova fosse **nulla**. ⚠ Era una
-conclusione affrettata su due dati: **il terzo giudizio l'ha smentita**. Lo scrivo perché la fretta di
-dichiarare nullo uno strumento è lo stesso difetto della fretta di dichiararlo buono.
+⛔ **And a correction of mine, taken and withdrawn in three minutes**: after the first two *«perfetto»* I had
+concluded that `mpv` put the streams back in sync and that the test was **void**. ⚠ It was a
+hasty conclusion on two data points: **the third judgement refuted it**. I write it because the haste to
+declare an instrument void is the same defect as the haste to declare it good.
 
-## 21.2 ⭐⭐⭐ «BISTABILE» ERA LA PAROLA SBAGLIATA — è **un innesco a rischio costante**
+## 21.2 ⭐⭐⭐ «BISTABLE» WAS THE WRONG WORD — it is **a trigger at constant risk**
 
-`banchi/09-b83-biforcazione.py` · `[M]` 24 agosto · casella `perdita-0,20` · **40 giri** a due durate
-· binario `56c62bb0…` · cure spente.
+`banchi/09-b83-biforcazione.py` · `[M]` 24 Aug · cell `perdita-0,20` · **40 rounds** at two durations
+· binary `56c62bb0…` · cures off.
 
-**Prima campagna** (20 giri da 25 s): spirale **13 volte su 20**. Chiavi **0** in 7 giri, **≥ 5** in
-13, ⛔ **nessun giro fra 1 e 4**: due rami, non una distribuzione larga.
+**First campaign** (20 rounds of 25 s): spiral **13 times out of 20**. Keyframes **0** in 7 rounds, **≥ 5** in
+13, ⛔ **no round between 1 and 4**: two branches, not a wide distribution.
 
-⛔ **E il fatto che li distingue nei primi dieci secondi NON C'È: 43 prove su 43 negative**
-(soglia Bonferroni 0,05/43, permutazione esatta sulla somma dei ranghi). ⭐ **E si è capito perché** —
-gli istanti d'accensione (primo abbandono §5.1 a regime):
+⛔ **And the fact that distinguishes them in the first ten seconds IS NOT THERE: 43 tests out of 43 negative**
+(Bonferroni threshold 0.05/43, exact permutation on the rank sum). ⭐ **And it became clear why** —
+the ignition instants (first abandon §5.1 at regime):
 
-> **3,1 · 3,2 · 4,3 · 4,5 · 5,3 · 8,0 · 8,8 · 9,5 · 10,5 · 11,4 · 18,4 · 18,6 · 24,9 s**
+> **3.1 · 3.2 · 4.3 · 4.5 · 5.3 · 8.0 · 8.8 · 9.5 · 10.5 · 11.4 · 18.4 · 18.6 · 24.9 s**
 
-⇒ **5 accensioni su 13 cadono DOPO i dieci secondi.** In quella finestra non c'era niente da trovare
-perché in quei giri la spirale **non era ancora partita**. ⚠ La finestra corta era un limite del
-**disegno**, dichiarato come tale e non attribuito al prodotto.
+⇒ **5 ignitions out of 13 fall AFTER the ten seconds.** In that window there was nothing to find
+because in those rounds the spiral **had not started yet**. ⚠ The short window was a limit of the
+**design**, declared as such and not attributed to the product.
 
-### 21.2-bis ⭐⭐ LA PROVA A DUE DURATE — la previsione regge
+### 21.2-bis ⭐⭐ THE TEST AT TWO DURATIONS — the prediction holds
 
-| durata del giro | spirale **osservata** | **attesa** dal rischio costante |
+| round duration | spiral **observed** | **expected** from the constant risk |
 |---|---|---|
-| **10 s** | **35 %** (7 su 20) | 31 % |
-| **50 s** | **90 %** (18 su 20) | 92 % |
+| **10 s** | **35 %** (7 out of 20) | 31 % |
+| **50 s** | **90 %** (18 out of 20) | 92 % |
 
-`[M]` λ = **0,0529 al secondo**. Le prove pre-registrate: **T3** — un solo λ spiega tutte e tre le
-durate? **p = 0,53**, non si rifiuta. **T4** — c'è una forma nel tempo? **p = 0,055**, sopra la
-soglia di 0,0125: nessuna forma.
+`[M]` λ = **0.0529 per second**. The pre-registered tests: **T3** — does a single λ explain all three
+durations? **p = 0.53**, not rejected. **T4** — is there a shape in time? **p = 0.055**, above the
+threshold of 0.0125: no shape.
 
-> ⇒ ⭐⭐⭐ **Non sono due comportamenti fra cui il prodotto sceglie. È un innesco A SENSO UNICO: ogni
-> secondo ha la stessa probabilità (~5 %) di accendersi, e una volta acceso non si spegne più.**
+> ⇒ ⭐⭐⭐ **They are not two behaviours between which the product chooses. It is a ONE-WAY trigger: every
+> second has the same probability (~5 %) of igniting, and once ignited it never goes out.**
 
-⛔⛔ **E la conseguenza è la cosa che conta**, perché tocca ogni numero di §17:
+⛔⛔ **And the consequence is the thing that counts**, because it touches every number of §17:
 
-- tempo **mediano** perché si accenda: **13 secondi**;
-- in **un minuto** di lavoro su quella linea è quasi certo;
-- in **un'ora** — che è la durata vera di una sessione — è **certo**.
+- **median** time for it to ignite: **13 seconds**;
+- in **one minute** of work on that line it is almost certain;
+- in **one hour** — which is the real duration of a session — it is **certain**.
 
-⇒ ⚠ **I nostri banchi girano venticinque secondi; le sessioni durano ore.** Ogni misura presa vicino
-al bordo della perdita **sottostima, e non di poco**: quel che al banco appare come *«a volte
-succede»* sul desktop vero è **succede sempre, aspetta solo il momento**.
-⭐ E rilegge anche il *«è tutto fluido»* di §19.1: quei trenta secondi stavano dentro la finestra in
-cui, statisticamente, spesso non si è ancora acceso. ⛔ **Non lo smentisce** — ma dice che **una
-sessione lunga su quella linea andrebbe guardata prima di concludere**.
+⇒ ⚠ **Our benches run for twenty-five seconds; sessions last hours.** Every measurement taken near
+the edge of loss **underestimates, and not by a little**: what at the bench appears as *«sometimes
+it happens»* on the real desktop is **it always happens, it is just waiting for the moment**.
+⭐ And it also rereads the *«è tutto fluido»* of §19.1: those thirty seconds were inside the window in
+which, statistically, it has often not yet ignited. ⛔ **It does not refute it** — but it says that **a
+long session on that line should be watched before concluding**.
 
-**Le ipotesi, una per una** `[M]`: la perdita non era la stessa ⇒ **esclusa** (0,165-0,255 % in
-entrambe le famiglie) · l'avvio lento di CUBIC ⇒ **non verificata** (`ssthresh` lascia l'infinito a
-~2 s in tutt'e due) · la scena ⇒ **esclusa** (prima chiave 58,44-58,88 kB in entrambe) · la soglia
-dei tre pacchetti ⇒ **non verificata** · macchina carica ⇒ **esclusa** (CPU 5,1-6,5 % in tutti e 20).
-`[R]` L'algoritmo è **CUBIC** (ngtcp2 1.25, `trasporto.c` · `accetta()` non tocca `cc_algo`) — ⚠ e la prova per
-contrasto **non è stata fatta**: non è esposto da nessuna opzione.
+**The hypotheses, one by one** `[M]`: the loss was not the same ⇒ **ruled out** (0.165-0.255 % in
+both families) · CUBIC's slow start ⇒ **not verified** (`ssthresh` leaves infinity at
+~2 s in both) · the scene ⇒ **ruled out** (first keyframe 58.44-58.88 kB in both) · the three-packet
+threshold ⇒ **not verified** · loaded machine ⇒ **ruled out** (CPU 5.1-6.5 % in all 20).
+`[R]` The algorithm is **CUBIC** (ngtcp2 1.25, `trasporto.c` · `accetta()` does not touch `cc_algo`) — ⚠ and the test by
+contrast **was not done**: it is not exposed by any option.
 
-⚠ **Che cosa non si sarebbe potuto vedere**, scritto prima: una separazione più piccola della
-dispersione interna; una terza modalità rara (36 % di probabilità di non incontrarla); e ⛔ **niente
-fra un secondo e l'altro** — `webtransport.c` · `linea_morta_giudica()` frena `rete_ciclo()` a una riga al secondo, quindi
-dell'avvio lento si vede il punto d'arrivo, **non la corsa**.
+⚠ **What could not have been seen**, written beforehand: a separation smaller than the
+internal dispersion; a rare third mode (36 % probability of not meeting it); and ⛔ **nothing
+between one second and the next** — `webtransport.c` · `linea_morta_giudica()` throttles `rete_ciclo()` to one line per second, so
+of the slow start one sees the arrival point, **not the run**.
 
-## 21.3 ⭐⭐⭐ LE CURE SI ACCENDONO — e sulla linea sana **non peggiora niente**
+## 21.3 ⭐⭐⭐ THE CURES ARE SWITCHED ON — and on the healthy line **nothing gets worse**
 
 *⇒ `DECISIONI.md` §3.1-septies. «Il prodotto cambia in meglio; questa fase era per rendere più solido
 il funzionamento di remotix su reti degradate, senza pretendere di fare miracoli.»*
 
-**Il contratto — e per ciascuna una strada sola:**
+**The contract — and for each one a single road:**
 
-| cura | predefinito | **unica** strada per spegnerla |
+| cure | default | **only** road to switch it off |
 |---|---|---|
-| soglia sulla coda video | **100 ms** | `--sgombra-soglia-ms 0` |
-| regolatore del ritmo | **acceso** | `--niente-ritmo-adattivo` |
-| linea morta | **accesa** (stallo 5 000 ms · silenzio 10 s) | `--niente-linea-morta` |
-| sfratto del fantasma | **15 000 ms** | `--sfratto-ms 0` |
-| silenzio dell'audio | **acceso** | `--niente-audio-silenzio` |
+| video queue threshold | **100 ms** | `--sgombra-soglia-ms 0` |
+| rate regulator | **on** | `--niente-ritmo-adattivo` |
+| dead line | **on** (stall 5 000 ms · silence 10 s) | `--niente-linea-morta` |
+| eviction of the ghost | **15 000 ms** | `--sfratto-ms 0` |
+| audio silence | **on** | `--niente-audio-silenzio` |
 
-⛔ `--ritmo-adattivo` e `--linea-morta` **non esistono più**: chi li batte riceve un messaggio che
-spiega il cambio e **uscita 2**, non un aiuto generico. ⛔ E il `-D AUDIO_SILENZIO_PREDEFINITO` è
-**tolto**: due strade per accendere la stessa cura sono due numeri che divergono.
-⭐ L'opzione dell'audio viaggia **negata** in coda all'`argv` del figlio — la strada di `--parlantina`
-— perché il figlio è un `execve` con l'ambiente composto **da zero**.
+⛔ `--ritmo-adattivo` and `--linea-morta` **no longer exist**: whoever types them receives a message that
+explains the change and **exit 2**, not a generic help. ⛔ And the `-D AUDIO_SILENZIO_PREDEFINITO` is
+**removed**: two roads to switch on the same cure are two numbers that diverge.
+⭐ The audio option travels **negated** at the end of the child's `argv` — the road of `--parlantina`
+— because the child is an `execve` with the environment composed **from zero**.
 
-⛔⛔ **Le righe d'avvio sono il verbale, e nessuna dice più «SPENTO (I6)».** Ognuna dichiara **stato ·
-numero in vigore · che è il predefinito dal 24 agosto per decisione dell'utente · come si spegne**, e
-`[M]` **il prezzo accanto**. Spente dicono *«SPENTA a mano … e NON è il predefinito»*.
+⛔⛔ **The startup lines are the record, and none says «SPENTO (I6)» any more.** Each one declares **state ·
+number in force · that it is the default since 24 Aug by the user's decision · how to switch it off**, and
+`[M]` **the price beside it**. When off they say *«switched OFF by hand … and it is NOT the default»*.
 
-### 21.3-bis ⭐⭐ LA PROVA CHE CONTA — la ferita di v1, cercata apposta
+### 21.3-bis ⭐⭐ THE TEST THAT COUNTS — the wound of v1, looked for on purpose
 
-`banchi/09-b86-predefiniti.py` · porta 7980 · binario `14561dce…` · **29 casi di `--certifica`**.
+`banchi/09-b86-predefiniti.py` · port 7980 · binary `14561dce…` · **29 cases of `--certifica`**.
 
-- **(a) acceso di suo** ✅ — server lanciato **senza nessuna opzione**, e le cinque cure risultano
-  attive ⛔ **lette dalle righe d'avvio del prodotto**, non dalla riga di comando;
-- **(b) ognuna si spegne ancora** ✅ — cinque riavvii, una per volta; e i due nomi vecchi **rifiutati**;
-- **(c) ⭐ il prodotto funziona acceso**, giro appaiato di 25 s a 1920×1080:
+- **(a) on by itself** ✅ — server launched **without any option**, and the five cures turn out
+  active ⛔ **read from the product's startup lines**, not from the command line;
+- **(b) each one can still be switched off** ✅ — five restarts, one at a time; and the two old names **refused**;
+- **(c) ⭐ the product works with them on**, paired round of 25 s at 1920×1080:
 
-| braccio | fotogrammi/s | chiavi | quota delta | deriva finale |
+| arm | frames/s | keyframes | delta share | final drift |
 |---|---|---|---|---|
-| tutte **spente** | 39,60 | **0** | 1,0000 | 0,0 ms |
-| ⭐ **predefiniti** | **39,69** | **0** | 1,0000 | 0,4 ms |
-| `[M]` l'ancora di §17.6 | 39,85 | 0 | — | 0,1 ms |
+| all **off** | 39.60 | **0** | 1.0000 | 0.0 ms |
+| ⭐ **defaults** | **39.69** | **0** | 1.0000 | 0.4 ms |
+| `[M]` the anchor of §17.6 | 39.85 | 0 | — | 0.1 ms |
 
-⇒ **Nessun peggioramento**: −0,2 % contro le cure spente, −0,4 % contro l'ancora, **dentro il rumore
-dichiarato del 5 %**. Zero chiavi, zero buchi, **zero scatti della linea morta, zero sfratti**.
-⭐⭐ **Era la prova che poteva far ritirare tutto** — la ferita di v1 è esattamente «i numeri
-migliorano e l'esperienza peggiora» — ed è verde.
+⇒ **No worsening**: −0.2 % against the cures off, −0.4 % against the anchor, **within the declared
+noise of 5 %**. Zero keyframes, zero holes, **zero dead-line firings, zero evictions**.
+⭐⭐ **It was the test that could have made us withdraw everything** — the wound of v1 is exactly «the numbers
+improve and the experience gets worse» — and it is green.
 
-⚠ **E due banchi si rompono per costruzione**, il che è voluto e va detto: `09-b79-cure.py` batteva
-`--ritmo-adattivo`, `09-b84-audio-silenzio.py` appaiava **due binari** compilati diversi. ⭐ Adesso
-il braccio spento si fa **dalla riga di comando sullo stesso identico binario**: un imputato in meno.
-⏳ In cura.
+⚠ **And two benches break by construction**, which is intended and must be said: `09-b79-cure.py` typed
+`--ritmo-adattivo`, `09-b84-audio-silenzio.py` paired **two binaries** compiled differently. ⭐ Now
+the off arm is done **from the command line on the very same binary**: one defendant fewer.
+⏳ Being cured.
 
-## 21.4 ⭐⭐ LE CODE — e due delle tre si chiudono con un **no**
+## 21.4 ⭐⭐ THE TAILS — and two of the three close with a **no**
 
-### 21.4-bis I due banchi rotti dalla modifica, e un difetto trovato rimettendoli a posto
+### 21.4-bis The two benches broken by the change, and a defect found while putting them right
 
-`09-b79-cure.py`: bracci **rovesciati** — **A** = cure spente **a mano**, **C** = *nessuna opzione*.
-⭐ Il guadagno è scritto nel commento: **il braccio che rappresenta il prodotto adesso è quello a cui
-non si chiede niente**, e quindi non può promettere niente. `[M]` `--certifica` 21/21; giro vero su
-`ritardo-30`: fps **38,15 / 39,61 / 39,78**, chiavi 0,2 / 0,0 / 0,0 %, **S′ verde**.
+`09-b79-cure.py`: arms **reversed** — **A** = cures off **by hand**, **C** = *no option*.
+⭐ The gain is written in the comment: **the arm that represents the product is now the one that is
+asked nothing**, and therefore it cannot promise anything. `[M]` `--certifica` 21/21; real round on
+`ritardo-30`: fps **38.15 / 39.61 / 39.78**, keyframes 0.2 / 0.0 / 0.0 %, **S′ green**.
 
-`09-b84-audio-silenzio.py`: da **due binari** a **uno**. ⭐ Due binari erano **due imputati** — se i
-bracci davano numeri uguali le spiegazioni erano due (*«la cura non serve»* oppure *«i binari non
-erano quelli che credevo»*); uno solo ne lascia una.
-⛔⭐ **E semplificandolo è saltato fuori un difetto vero**: la riga del braccio **spento** adesso
-contiene *«dal 24 agosto nasce ACCESA»*, e il banco cercava `"ACCESA" in dett` ⇒ **avrebbe letto
-«accesa» su un braccio spento**, dando verde a due bracci sbagliati **proprio ora che quel predicato
-è l'unica cintura**. Curato ancorandolo alle due frasi di stato.
-`[M]` `--certifica` 31/31; giro `muto` (Opus, fermo): **557,5 → 5,7 kbit/s = 97,3×**, 1 248 blocchi
-taciuti; giro `tono` (PCM): copertura **1,0000 → 1,0000**, purezza **1,000 → 1,000**, taciuti **1 su
+`09-b84-audio-silenzio.py`: from **two binaries** to **one**. ⭐ Two binaries were **two defendants** — if the
+arms gave equal numbers the explanations were two (*«the cure is not needed»* or *«the binaries were not
+the ones I believed»*); a single one leaves one.
+⛔⭐ **And while simplifying it a real defect popped out**: the line of the **off** arm now
+contains *«since 24 Aug it is born ON»*, and the bench looked for `"ACCESA" in dett` ⇒ **it would have read
+«on» on an off arm**, giving green to two wrong arms **precisely now that that predicate
+is the only belt**. Cured by anchoring it to the two state sentences.
+`[M]` `--certifica` 31/31; `muto` round (Opus, still): **557.5 → 5.7 kbit/s = 97.3×**, 1 248 blocks
+silenced; `tono` round (PCM): coverage **1.0000 → 1.0000**, purity **1.000 → 1.000**, silenced **1 out of
 5 002**.
 
-### 21.4-ter ⛔⭐ `WT_DGRAM_RIMANDI_MAX` — **si tiene la grandezza, si cambia l'unità**
+### 21.4-ter ⛔⭐ `WT_DGRAM_RIMANDI_MAX` — **the quantity is kept, the unit is changed**
 
-`[M]` Il numero che spiega tutto: `casa-cattiva`, 25 s ⇒ **2,2 milioni di rimandi**, cioè **~85 000
-passate di scrittura al secondo** sotto carico contro **~200** a riposo. ⇒ Il tetto `4096` valeva
-**~48 ms** in un caso e **decine di secondi** nell'altro. ⛔ E non era un fusibile, **era la
-politica**: 2 258 blocchi buttati da quel tetto contro **9** dalla coda piena — il **99,6 %**.
+`[M]` The number that explains everything: `casa-cattiva`, 25 s ⇒ **2.2 million postponements**, that is **~85 000
+write passes per second** under load against **~200** at rest. ⇒ The `4096` cap was worth
+**~48 ms** in one case and **tens of seconds** in the other. ⛔ And it was not a fuse, **it was the
+policy**: 2 258 blocks thrown away by that cap against **9** by the full queue — **99.6 %**.
 
-⭐⭐ **La strada ovvia è stata provata e la misura l'ha rifiutata.** Timbrare ogni blocco e buttarlo
-sull'**età vera**: `[M]` a 50 ms non scatta più di quanto scatti a 250, perché la coda tiene 8
-blocchi = 40 ms di PCM e **la testa non è quasi mai più vecchia di 40 ms**. Prezzo di quel «non tocca
-niente»: **+30 % di byte sul filo** (1 415 → 1 840 kbit/s, **rubati alla finestra del video**) per
-**+11 % di blocchi utili** — il resto arriva già vecchio e **lo butta il cliente**.
+⭐⭐ **The obvious road was tried and the measurement refused it.** Timestamping every block and throwing it away
+on its **real age**: `[M]` at 50 ms it does not fire more than it fires at 250, because the queue holds 8
+blocks = 40 ms of PCM and **the head is almost never older than 40 ms**. Price of that «touches
+nothing»: **+30 % of bytes on the wire** (1 415 → 1 840 kbit/s, **stolen from the video's window**) for
+**+11 % of useful blocks** — the rest arrives already old and **the client throws it away**.
 
-⇒ Il campo diventa **`dgram_zitto_da`** («da quanto la connessione non mette un datagram in un
-pacchetto») e il tetto **`WT_DGRAM_ZITTO_MAX_MS`**, in millisecondi. ⛔ E `4096` **non si converte con
-una divisione**: è auto-referenziale — quante passate si fanno dipende da quanto si butta. `[M]` Col
-prodotto 2,1 M rimandi, col tetto a 50 ms **20 M**. ⇒ Il valore si è **tarato sulla misura**, e il
-verde è *«indistinguibile dal prodotto»*:
+⇒ The field becomes **`dgram_zitto_da`** («how long the connection has not put a datagram into a
+packet») and the cap **`WT_DGRAM_ZITTO_MAX_MS`**, in milliseconds. ⛔ And `4096` **is not converted with
+a division**: it is self-referential — how many passes are made depends on how much is thrown away. `[M]` With the
+product 2.1 M postponements, with the cap at 50 ms **20 M**. ⇒ The value was **tuned on the measurement**, and the
+green is *«indistinguishable from the product»*:
 
-| tetto | spediti | butt. (coda) | rifiutati | kbit/s | utili | utili/filo |
+| cap | sent | thrown (queue) | refused | kbit/s | useful | useful/wire |
 |---|---|---|---|---|---|---|
-| **il prodotto** (5 giri) | 2 912-3 242 | 14-16 | 1 753-2 084 | 1 312-1 447 | 1 223-1 315 | 0,40-0,44 |
-| ⭐ **10 ms** | 2 947 | 16 | 2 039 | 1 286 | 1 246 | 0,435 |
-| 5 ms | 2 999 | 15 | 1 995 | 1 327 | 1 246 | 0,424 |
-| 50 ms | 3 955 | **797** | 263 | 1 743 | 1 390 | 0,360 |
+| **the product** (5 rounds) | 2 912-3 242 | 14-16 | 1 753-2 084 | 1 312-1 447 | 1 223-1 315 | 0.40-0.44 |
+| ⭐ **10 ms** | 2 947 | 16 | 2 039 | 1 286 | 1 246 | 0.435 |
+| 5 ms | 2 999 | 15 | 1 995 | 1 327 | 1 246 | 0.424 |
+| 50 ms | 3 955 | **797** | 263 | 1 743 | 1 390 | 0.360 |
 
-**10 ms** (= due blocchi di PCM) sta **dentro la dispersione del prodotto su ogni colonna**.
-⇒ ⭐ **La cura cambia quel che il numero vuol dire, non quel che il prodotto fa.** L'età vera del
-blocco resta registrata (`dgram[].nato`) ma ⛔ **non decide**: finisce nella riga di registro accanto
-al silenzio, **apposta per farsi smentire**.
-⏳ Da riportare in `rcp.c`: il «conto finale» dice ancora *«rifiutati da ngtcp2»*, e adesso sono
-*«buttati perché il filo era muto da N ms»*.
+**10 ms** (= two PCM blocks) lies **inside the product's dispersion on every column**.
+⇒ ⭐ **The cure changes what the number means, not what the product does.** The real age of the
+block stays recorded (`dgram[].nato`) but ⛔ **does not decide**: it ends up in the log line beside
+the silence, **on purpose to be refuted**.
+⏳ To be carried over into `rcp.c`: the «final count» still says *«refused by ngtcp2»*, and now they are
+*«thrown away because the wire had been mute for N ms»*.
 
-### 21.4-quater ⛔ IL `PADDING` — **NON fatta, e la diagnosi era sbagliata**
+### 21.4-quater ⛔ THE `PADDING` — **NOT done, and the diagnosis was wrong**
 
-Scritta, costruita e misurata appaiata (desktop fermo col tono, `lo` liscio, stesso binario a meno di
-quella riga):
+Written, built and measured paired (still desktop with the tone, smooth `lo`, same binary except for
+that line):
 
-| codec | riempimento | kbit/s | byte per pacchetto |
+| codec | padding | kbit/s | bytes per packet |
 |---|---|---|---|
-| Opus | sempre | 557,7 / 556,5 | 1 441 |
-| Opus | condizionato | 556,9 / 555,8 | 1 441 |
-| Opus | ⛔ **mai** | 556,4 | ⛔ **1 441** |
-| PCM | sempre | 2 221,7 | 1 443 |
-| PCM | condizionato | 1 988,0 | 1 292 |
+| Opus | always | 557.7 / 556.5 | 1 441 |
+| Opus | conditioned | 556.9 / 555.8 | 1 441 |
+| Opus | ⛔ **never** | 556.4 | ⛔ **1 441** |
+| PCM | always | 2 221.7 | 1 443 |
+| PCM | conditioned | 1 988.0 | 1 292 |
 
-⛔⛔ **Su Opus il guadagno è ZERO, non «piccolo»**: col riempimento **mai chiesto** il pacchetto resta
-di **1 441 byte**. `[R]` **A riempirlo è `wt_scrivi()`**, che chiede il riempimento a *ogni* scrittura
-di stream e chiude il pacchetto che il datagram aveva lasciato aperto con `WRITE_MORE`. ⇒ **Il
-riempimento di una sessione ferma è dello STREAM, non del datagram**, e chi lo volesse togliere deve
-andare lì.
+⛔⛔ **On Opus the gain is ZERO, not «small»**: with padding **never requested** the packet stays
+at **1 441 bytes**. `[R]` **What fills it is `wt_scrivi()`**, which asks for padding at *every* stream
+write and closes the packet the datagram had left open with `WRITE_MORE`. ⇒ **The
+padding of a still session belongs to the STREAM, not to the datagram**, and whoever wanted to remove it must
+go there.
 
-⚠ Su PCM la condizione morde (**−10,5 %**) solo perché a 200 blocchi/s il datagram chiude il pacchetto
-da solo — ma il PCM **non è quel che il prodotto negozia**, e col silenzio acceso a desktop fermo i
-datagram sono **0,0/s**. ⇒ **Codice revertito**, e il verbale coi numeri resta nel riquadro
-`MORE`/`PADDING` di `webtransport.c`: ⭐ una cura che non compra niente è **codice in più da
-mantenere**, e va rifiutata con i numeri accanto invece che dimenticata.
+⚠ On PCM the condition bites (**−10.5 %**) only because at 200 blocks/s the datagram closes the packet
+by itself — but PCM **is not what the product negotiates**, and with silence on and a still desktop the
+datagrams are **0.0/s**. ⇒ **Code reverted**, and the record with the numbers stays in the
+`MORE`/`PADDING` box of `webtransport.c`: ⭐ a cure that buys nothing is **more code to
+maintain**, and it must be refused with the numbers beside it instead of forgotten.
 
-### 21.4-quinquies ✅ E la decisione mai messa a verbale è ora in `SPECIFICHE.md` §10.1
+### 21.4-quinquies ✅ And the decision never put on record is now in `SPECIFICHE.md` §10.1
 
-⛔ *«Quando la finestra si stringe, l'audio passa davanti al video»* era una politica del prodotto
-presa **nel codice** (`wt_scrivi()`) e **scritta in nessun documento**. ⇒ Adesso è `SPECIFICHE.md`
-**§10.1**, con la ragione (i due carichi non si degradano allo stesso modo), il prezzo (banda tolta
-al video proprio quando ce n'è poca) e il limite **per costruzione** (la coda dei datagram è lunga
-otto ⇒ al massimo otto pacchetti passano davanti).
+⛔ *«When the window narrows, audio goes ahead of video»* was a product policy
+taken **in the code** (`wt_scrivi()`) and **written in no document**. ⇒ Now it is `SPECIFICHE.md`
+**§10.1**, with the reason (the two loads do not degrade in the same way), the price (bandwidth taken
+from video precisely when there is little of it) and the limit **by construction** (the datagram queue is
+eight long ⇒ at most eight packets go ahead).
