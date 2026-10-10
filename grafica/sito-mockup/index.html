@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Browser-based VDI for Linux</title>
+<title>REMOTIX — The remote desktop server for Linux</title>
 <link rel="stylesheet" href="stile.css">
 <style>
   /* l'apertura */
@@ -73,39 +73,10 @@
   .invito h2 { color: #fff; margin: 0 auto .4em; font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.02em; max-width: 20em; }
   .invito p { color: var(--tenue-fondo); margin: 0 auto 1.8rem; max-width: 34em; }
 
-  /* l'apertura VDI: lo schema host → persone */
-  .etichetta-vdi { display: inline-flex; align-items: center; gap: .5em; font-size: .78rem; font-weight: 700; letter-spacing: .08em;
-    text-transform: uppercase; color: var(--ciano); background: rgba(95,211,255,.1); box-shadow: inset 0 0 0 1px rgba(95,211,255,.3);
-    padding: .35em .8em; border-radius: 99em; }
-  .schema { display: grid; gap: .9rem; }
-  .host { background: #0e1a3f; border-radius: .9em; box-shadow: var(--ombra-notte); padding: 1.1rem 1.2rem; }
-  .host .titolo { display: flex; align-items: center; gap: .6rem; font-size: .8rem; color: var(--tenue-fondo); margin-bottom: .8rem; }
-  .host .titolo b { color: #fff; font-size: .92rem; }
-  .host .titolo .chip { margin-left: auto; font-size: .7rem; padding: .2em .6em; border-radius: 99em; background: rgba(63,211,138,.14); color: #6ee7b0; }
-  .sessione { display: grid; grid-template-columns: 1.6rem 1fr auto; align-items: center; gap: .7rem; padding: .55rem .65rem;
-    border-radius: .55em; background: rgba(255,255,255,.04); font-size: .84rem; color: #dfe7ff; }
-  .sessione + .sessione { margin-top: .4rem; }
-  .sessione .avatar { width: 1.6rem; height: 1.6rem; border-radius: 50%; display: grid; place-items: center; font-size: .72rem; font-weight: 700; color: #08143a; }
-  .sessione small { display: block; color: var(--tenue-fondo); font-size: .74rem; }
-  .sessione .st { font-size: .72rem; color: #6ee7b0; white-space: nowrap; }
-  .sessione .st.attesa { color: var(--tenue-fondo); }
-  .gpu { display: flex; gap: .5rem; margin-top: .8rem; font-size: .72rem; color: var(--tenue-fondo); flex-wrap: wrap; }
-  .gpu span { padding: .25em .6em; border-radius: .4em; background: rgba(255,255,255,.06); }
-  .dispositivi { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; }
-  .disp { background: rgba(255,255,255,.06); border-radius: .7em; padding: .7rem; text-align: center; font-size: .74rem; color: var(--chiaro-fondo); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1); }
-  .disp svg { width: 1.6rem; height: 1.6rem; color: var(--ciano); display: block; margin: 0 auto .35rem; }
-  .filo { text-align: center; font-size: .72rem; color: var(--tenue-fondo); letter-spacing: .04em; }
-
   /* i tre passi */
   .passi { counter-reset: passo; }
   .passi .voce h3::before { counter-increment: passo; content: counter(passo); display: inline-grid; place-items: center; width: 1.7rem; height: 1.7rem;
     margin-right: .55rem; border-radius: 50%; background: var(--accento); color: #fff; font-size: .85rem; }
-
-  /* i limiti dichiarati */
-  .limiti { list-style: none; margin: 0; padding: 0; display: grid; gap: .8rem; }
-  @media (min-width: 720px) { .limiti { grid-template-columns: 1fr 1fr; } }
-  .limiti li { background: var(--carta); border-radius: .8em; box-shadow: var(--ombra); padding: 1rem 1.2rem; font-size: .93rem; color: var(--tenue); }
-  .limiti b { display: block; color: var(--inchiostro); margin-bottom: .2em; }
 
   /* il prodotto in grande */
   .vetrina { margin: 0; border-radius: 1em; background: #0e1a3f; box-shadow: var(--ombra-notte); overflow: hidden; }
@@ -118,48 +89,20 @@
   .vetrina .segnaposto { color: rgba(255,255,255,.7); font-size: .9rem; letter-spacing: .04em; }
   .vetrina figcaption { padding: .75rem 1rem; font-size: .82rem; color: var(--tenue-fondo); background: #0b1638; }
 
-  /* le righe alternate */
-  .righe .riga-f { display: grid; gap: 2rem; align-items: center; padding: 2.5rem 0; }
-  .righe .riga-f + .riga-f { border-top: 1px solid var(--bordo); }
-  @media (min-width: 860px) { .righe .riga-f { grid-template-columns: 1fr 1fr; gap: 4rem; } .righe .inversa .testo { order: 2; } }
-  .righe h2 { margin: 0 0 .5em; font-size: clamp(1.4rem, 2.4vw, 1.8rem); line-height: 1.2; letter-spacing: -.02em; }
-  .righe .testo p:last-child { margin: 0; color: var(--tenue); font-size: 1.02rem; }
-  .figura { background: var(--carta); border-radius: 1em; box-shadow: var(--ombra); padding: 1.6rem; }
-  .viaggio { display: grid; gap: .8rem; }
-  .tappa { display: grid; grid-template-columns: 3.4rem 1fr auto; gap: .8rem; align-items: center; font-size: .92rem; padding: .7rem .9rem; border-radius: .6em; background: var(--fondo); }
-  .tappa b { font-variant-numeric: tabular-nums; }
-  .tappa em { font-style: normal; font-size: .8rem; color: var(--tenue); }
-  .tappa em.on { color: var(--vivo); font-weight: 650; }
-  .flusso { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: .6rem; font-size: .88rem; }
-  .flusso span { padding: .55em .9em; border-radius: .55em; background: var(--fondo); box-shadow: inset 0 0 0 1px var(--bordo); }
-  .flusso span.forte { background: #eef4ff; color: var(--accento-scuro); font-weight: 650; box-shadow: inset 0 0 0 1px #cfdcfb; }
-  .flusso i { font-style: normal; color: var(--tenue); }
-  .confronto-vm { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; text-align: center; }
-  .confronto-vm h4 { margin: 0 0 .8rem; font-size: .85rem; color: var(--tenue); }
-  .confronto-vm .nostra h4 { color: var(--accento); }
-  .confronto-vm small { display: block; margin-top: .7rem; font-size: .76rem; color: var(--tenue); }
-  .vm { display: grid; grid-template-columns: 1fr 1fr; gap: .45rem; }
-  .vm b { padding: .9rem 0; border-radius: .45em; background: var(--fondo); box-shadow: inset 0 0 0 1px var(--bordo); font-size: .75rem; color: var(--tenue); }
-  .host1 { border-radius: .6em; padding: .7rem; background: #eef4ff; box-shadow: inset 0 0 0 1px #cfdcfb; display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; }
-  .host1 span { grid-column: 1 / -1; font-size: .75rem; color: var(--accento-scuro); font-weight: 650; }
-  .host1 b { height: 1.55rem; border-radius: .35em; background: linear-gradient(180deg, var(--accento), var(--accento-scuro)); opacity: .85; }
-
-  /* amministratori, su fascia scura */
-  .amministra { padding: 4.5rem 0; }
-  .amministra h2 { color: #fff; margin: 0 0 1.8rem; font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.02em; }
-  .spunte { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.1rem 2.5rem; }
-  @media (min-width: 860px) { .spunte { grid-template-columns: 1fr 1fr; } }
-  .spunte li { display: flex; gap: .8rem; color: var(--chiaro-fondo); font-size: .98rem; }
-  .spunte svg { width: 1.25em; height: 1.25em; flex: none; color: var(--ciano); margin-top: .15em; }
-  .spunte b { color: #fff; }
-
-  /* fa per te? */
-  .adatto { display: grid; gap: 1.2rem; }
-  @media (min-width: 720px) { .adatto { grid-template-columns: 1fr 1fr; } }
-  .adatto h3 { margin: 0 0 .8em; font-size: 1.08rem; }
-  .adatto ul { margin: 0; padding-left: 1.1rem; display: grid; gap: .5em; color: var(--tenue); font-size: .95rem; }
-  .adatto .sì { box-shadow: var(--ombra), inset 0 3px 0 var(--vivo); }
-  .adatto .no-adatto { box-shadow: var(--ombra), inset 0 3px 0 #98a2b3; }
+  .apertura .vetrina { box-shadow: var(--ombra-notte); }
+  .schema-rete { display: grid; gap: 1rem; align-items: center; grid-template-columns: 1fr; }
+  @media (min-width: 860px) { .schema-rete { grid-template-columns: 1.1fr .5fr 1fr; } }
+  .schema-rete .nodo { background: var(--carta); border-radius: .9em; box-shadow: var(--ombra); padding: 1rem 1.2rem; display: grid; grid-template-columns: 2rem 1fr; column-gap: .8rem; align-items: center; }
+  .schema-rete .nodo svg { width: 2rem; height: 2rem; color: var(--accento); grid-row: span 2; }
+  .schema-rete .nodo b { font-size: .98rem; }
+  .schema-rete .nodo span { font-size: .82rem; color: var(--tenue); }
+  .schema-rete .server { padding: 1.4rem; box-shadow: var(--ombra), inset 0 0 0 2px #cfdcfb; }
+  .schema-rete .sessioni { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: .45rem; margin-top: 1rem; }
+  .schema-rete .sessioni em { font-style: normal; font-size: .78rem; padding: .35em .7em; border-radius: .45em; background: #eef4ff; color: var(--accento-scuro); font-weight: 600; }
+  .schema-rete .fili { text-align: center; font-size: .78rem; color: var(--tenue); position: relative; }
+  .schema-rete .fili::before { content: ""; display: block; height: 2px; margin-bottom: .5rem; background: repeating-linear-gradient(90deg, var(--accento) 0 8px, transparent 8px 14px); }
+  .schema-rete .clienti { display: grid; gap: .6rem; }
+  .passi .terminale { font-size: .82rem; padding: .7em .9em; }
 </style>
 </head>
 <body>
@@ -182,7 +125,7 @@
     <div class="contenitore riga">
       <a class="marchio" href="index.html" aria-label="REMOTIX home"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
       <nav aria-label="Main">
-        <a href="#how">Product</a><a href="#admins">For admins</a><a href="#fit">Is it for you?</a><a href="#download">Download</a><a href="#license">License</a><a href="#">Docs</a>
+        <a href="#how">How it works</a><a href="#why">Why REMOTIX</a><a href="#download">Download</a><a href="#license">License</a><a href="#">Docs</a>
       </nav>
       <div class="azioni">
         <a class="pulsante vetro piccolo" href="#download">Download</a>
@@ -193,130 +136,95 @@
   <section class="apertura">
     <div class="contenitore impianto">
       <div>
-        <span class="etichetta-vdi">Browser-based VDI for Linux</span>
-        <h1>Linux desktops for your whole team, served from one host.</h1>
-        <p class="sotto">REMOTIX is a session-based VDI server. Every user gets their own full desktop on a shared Linux host, encoded by the GPU and delivered to the browser. No hypervisor, no broker, no client to deploy, no per-seat fees.</p>
+        <h1>The remote desktop server for Linux.</h1>
+        <p class="sotto">Install REMOTIX on a Linux machine, and everyone who has an account on it gets their own desktop, from any browser. Nothing to install on the devices that connect. Free.</p>
         <div class="bottoni">
-          <a class="pulsante primario" href="#download">Download REMOTIX</a>
-          <a class="pulsante vetro" href="#how">See how it works</a>
+          <a class="pulsante primario" href="#download">Download the server</a>
+          <a class="pulsante vetro" href="#how">How it works</a>
         </div>
         <ul class="punti">
-          <li><svg><use href="#spunta"/></svg>One desktop session per user</li>
-          <li><svg><use href="#spunta"/></svg>Intel, AMD and NVIDIA encoding</li>
-          <li><svg><use href="#spunta"/></svg>Free, companies included</li>
+          <li><svg><use href="#spunta"/></svg>Runs on your server</li>
+          <li><svg><use href="#spunta"/></svg>A desktop per user</li>
+          <li><svg><use href="#spunta"/></svg>Clients: just a browser</li>
         </ul>
       </div>
-      <div class="schema" aria-label="One Linux host serving a desktop session to each user">
-        <div class="host">
-          <div class="titolo"><b>vdi-01</b> · Debian 13 · remotix.service <span class="chip">4 sessions</span></div>
-          <div class="sessione"><span class="avatar" style="background:#5fd3ff">AR</span><div>a.rossi <small>GNOME · Chrome on Windows</small></div><span class="st">● connected</span></div>
-          <div class="sessione"><span class="avatar" style="background:#a78bfa">MB</span><div>m.bianchi <small>KDE Plasma · Firefox on Linux</small></div><span class="st">● connected</span></div>
-          <div class="sessione"><span class="avatar" style="background:#6ee7b0">LV</span><div>l.verdi <small>XFCE · Chrome on Android</small></div><span class="st">● connected</span></div>
-          <div class="sessione"><span class="avatar" style="background:#fbbf24">GN</span><div>g.neri <small>LXQt · disconnected 12 min ago</small></div><span class="st attesa">◌ waiting</span></div>
-          <div class="gpu"><span>GPU encoding · H.264 / HEVC</span><span>TLS · WebTransport</span><span>PAM accounts</span></div>
-        </div>
-        <div class="filo">one web page · nothing installed on the devices</div>
-        <div class="dispositivi" aria-hidden="true">
-          <div class="disp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="11" rx="1.5"/><path d="M1 19h22"/></svg>Laptop</div>
-          <div class="disp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Workstation</div>
-          <div class="disp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M11 18h2"/></svg>Tablet, phone</div>
-        </div>
-      </div>
+      <figure class="vetrina" style="margin:0">
+        <div class="barra"><i></i><i></i><i></i><span class="indirizzo">https://office-server:7447</span></div>
+        <div class="tela"><img src="schermate/gnome.png" alt="A GNOME desktop served by REMOTIX, inside a browser tab" onerror="this.remove()"><span class="segnaposto">real screenshot from the test server</span></div>
+      </figure>
     </div>
   </section>
 </div>
 
 <main>
-  <section class="sezione bianca vedi" id="how">
+  <section class="sezione bianca" id="how">
     <div class="contenitore">
-      <p class="occhiello">See it</p>
-      <h2>A real desktop, in a browser tab.</h2>
-      <p class="guida">Not a picture of a desktop: the session runs on the host, the GPU encodes it, the browser decodes it in hardware. Keyboard, mouse, touch, audio and clipboard included.</p>
-      <figure class="vetrina">
-        <div class="barra"><i></i><i></i><i></i><span class="indirizzo">https://vdi.example.com</span></div>
-        <div class="tela"><img src="schermate/gnome.png" alt="A GNOME desktop with a file manager and a terminal, inside a Chrome tab" onerror="this.remove()"><span class="segnaposto">real screenshot coming from the test server</span></div>
-        <figcaption>GNOME on Debian 13, served by REMOTIX to Chrome on Windows.</figcaption>
-      </figure>
-    </div>
-  </section>
-
-  <section class="sezione righe">
-    <div class="contenitore">
-      <div class="riga-f">
-        <div class="testo">
-          <p class="occhiello">Sessions that wait</p>
-          <h2>Close the laptop. Open the tablet.</h2>
-          <p>The desktop belongs to the session, not to the connection. Disconnect, change device, change network: the windows are where you left them. Idle sessions are closed cleanly after an hour without input.</p>
+      <p class="occhiello">How it works</p>
+      <h2>One server. Every user. Any browser.</h2>
+      <p class="guida">REMOTIX is the server half of remote desktop: it runs on the Linux machine, creates a desktop session for each user who signs in, and serves the page they connect with.</p>
+      <div class="schema-rete" aria-hidden="true">
+        <div class="nodo server">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="7" rx="1.5"/><rect x="3" y="14" width="18" height="7" rx="1.5"/><path d="M7 6.5h.01M7 17.5h.01"/></svg>
+          <b>Your Linux server</b><span>REMOTIX + GNOME, KDE, XFCE or LXQt</span>
+          <div class="sessioni"><em>anna's desktop</em><em>marco's desktop</em><em>luca's desktop</em></div>
         </div>
-        <div class="figura viaggio" aria-hidden="true">
-          <div class="tappa"><b>09:10</b><span>Laptop · office</span><em class="on">connected</em></div>
-          <div class="tappa"><b>12:30</b><span>Lid closed</span><em>session keeps running</em></div>
-          <div class="tappa"><b>14:05</b><span>Tablet · train</span><em class="on">same windows</em></div>
+        <div class="fili"><span>HTTPS · encrypted</span></div>
+        <div class="clienti">
+          <div class="nodo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="11" rx="1.5"/><path d="M1 19h22"/></svg><b>anna</b><span>Chrome on Windows</span></div>
+          <div class="nodo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg><b>marco</b><span>Firefox on Linux</span></div>
+          <div class="nodo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M11 18h2"/></svg><b>luca</b><span>Chrome on Android</span></div>
         </div>
       </div>
-      <div class="riga-f inversa">
-        <div class="testo">
-          <p class="occhiello">GPU encoding</p>
-          <h2>The graphics card does the heavy lifting.</h2>
-          <p>Each session is encoded in H.264 or HEVC on the host's Intel, AMD or NVIDIA GPU and decoded by the browser in hardware. The CPU stays free for the applications your users run.</p>
+      <div class="griglia tre passi" style="margin-top:2.6rem">
+        <div class="scheda voce">
+          <h3>Install it on the server</h3>
+          <div class="terminale">sudo sh remotix-0.18.0-1.run</div>
+          <p style="margin-top:.8rem">One file for every supported distribution. It checks the machine first.</p>
         </div>
-        <div class="figura flusso" aria-hidden="true">
-          <span>Desktop session</span><i>→</i><span class="forte">GPU encoder</span><i>→</i><span>WebTransport · TLS</span><i>→</i><span class="forte">Browser decoder</span>
+        <div class="scheda voce">
+          <h3>Open it in a browser</h3>
+          <div class="terminale">https://your-server:7447</div>
+          <p style="margin-top:.8rem">From a laptop, a workstation, a tablet or a phone. No app, no plug-in.</p>
         </div>
-      </div>
-      <div class="riga-f">
-        <div class="testo">
-          <p class="occhiello">Session-based VDI</p>
-          <h2>One system to look after, not one VM per user.</h2>
-          <p>Every user gets a session on a shared Linux host: one operating system to update, one set of applications to install, a fraction of the memory a virtual machine per user would need. No hypervisor, no broker.</p>
-        </div>
-        <div class="figura confronto-vm" aria-hidden="true">
-          <div class="col"><h4>VM-based VDI</h4><div class="vm"><b>VM</b><b>VM</b><b>VM</b><b>VM</b></div><small>hypervisor · broker · storage</small></div>
-          <div class="col nostra"><h4>REMOTIX</h4><div class="host1"><span>one Linux host</span><b></b><b></b><b></b><b></b></div><small>one service</small></div>
+        <div class="scheda voce">
+          <h3>Sign in, get your desktop</h3>
+          <div class="terminale">user: anna  ·  password: ●●●●●●</div>
+          <p style="margin-top:.8rem">The same account as SSH. Each user lands in their own session.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="notte amministra" id="admins">
-    <div class="satin"></div>
+  <section class="sezione" id="why">
     <div class="contenitore">
-      <p class="occhiello" style="color:var(--ciano)">For administrators</p>
-      <h2>Built to be left running.</h2>
-      <ul class="spunte">
-        <li><svg><use href="#spunta"/></svg><span><b>Same sign-in as SSH.</b> REMOTIX follows the host's PAM stack; root is always excluded.</span></li>
-        <li><svg><use href="#spunta"/></svg><span><b>TLS, always.</b> Its own certificate, renewed by itself, or yours.</span></li>
-        <li><svg><use href="#spunta"/></svg><span><b>Three strikes.</b> Three failed sign-ins from an address and it is out for 12 hours.</span></li>
-        <li><svg><use href="#spunta"/></svg><span><b>Admission control.</b> When the host is full a new session is refused with the reason, never squeezed in.</span></li>
-        <li><svg><use href="#spunta"/></svg><span><b>Nobody switches the host off.</b> Shutdown and reboot are removed from every session.</span></li>
-        <li><svg><use href="#spunta"/></svg><span><b>Your system stays yours.</b> Packages from your distribution's repositories, a clean uninstall.</span></li>
-      </ul>
-    </div>
-  </section>
-
-  <section class="sezione" id="fit">
-    <div class="contenitore">
-      <p class="occhiello">Is it for you?</p>
-      <h2>Better to know before you install.</h2>
-      <div class="adatto">
-        <div class="scheda sì">
-          <h3>A good fit</h3>
-          <ul>
-            <li>A team working on Linux desktops, from anywhere</li>
-            <li>One server, physical or virtual, with a GPU</li>
-            <li>Users on Windows, Linux or Android laptops, tablets and phones</li>
-            <li>No budget for per-seat VDI licences</li>
-          </ul>
+      <p class="occhiello">Why REMOTIX</p>
+      <h2>Built for Linux, not adapted to it.</h2>
+      <div class="griglia tre">
+        <div class="voce">
+          <div class="icona"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="4"/></svg></div>
+          <h3>The desktop waits for you</h3>
+          <p>Close the browser, change device, come back tomorrow: the session keeps running and your windows are still there.</p>
         </div>
-        <div class="scheda no-adatto">
-          <h3>Look elsewhere if you need</h3>
-          <ul>
-            <li>Windows desktops, or a farm of hosts with load balancing</li>
-            <li>File transfer, printer, drive or USB redirection</li>
-            <li>Multi-factor sign-in today (it is planned)</li>
-            <li>Session recording</li>
-          </ul>
+        <div class="voce">
+          <div class="icona"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></div>
+          <h3>Video from the graphics card</h3>
+          <p>Intel, AMD or NVIDIA encode the screen in H.264 or HEVC; the browser decodes it in hardware. Audio and clipboard included.</p>
         </div>
+        <div class="voce">
+          <div class="icona"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+          <h3>Safe defaults</h3>
+          <p>Always encrypted, root excluded, three wrong passwords and the address is out for twelve hours. Nobody can switch the server off from a session.</p>
+        </div>
+      </div>
+      <div class="scheda scorre" style="padding:.4rem .6rem;margin-top:2.6rem">
+        <table class="tabella confronto">
+          <thead><tr><th></th><th>REMOTIX</th><th>xrdp</th><th>VNC server</th></tr></thead>
+          <tbody>
+            <tr><td>What users install</td><td class="si">Nothing, a browser</td><td>An RDP client</td><td>A VNC client</td></tr>
+            <tr><td>Desktops</td><td class="si">Wayland: GNOME, KDE, XFCE, LXQt</td><td>X11 sessions</td><td>X11 sessions</td></tr>
+            <tr><td>Session survives a disconnect</td><td class="si">Yes</td><td>Yes</td><td>Yes</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </section>
@@ -383,8 +291,8 @@ sudo sh remotix-0.18.0-1.run</div>
     <div class="contenitore" style="max-width:52rem">
       <p class="occhiello">FAQ</p>
       <h2>Questions.</h2>
-      <details><summary>How many users can one host serve?</summary><p>It depends on the CPU, the graphics card and what users do: office work and video are very different loads. REMOTIX admits a new session only while the host can carry it, and refuses with the reason when it cannot. The sizing guide in the documentation has measurements on real hardware.</p></details>
-      <details><summary>Can users sign in with our directory accounts?</summary><p>REMOTIX uses the same PAM stack as SSH. If your users can already log in to the host with SSH, through local accounts or a directory, they can open a desktop. Root is always excluded.</p></details>
+      <details><summary>How many users can one server serve?</summary><p>It depends on the CPU, the graphics card and what users do: office work and video are very different loads. REMOTIX admits a new session only while the server can carry it, and refuses with the reason when it cannot. The sizing guide in the documentation has measurements on real hardware.</p></details>
+      <details><summary>Which accounts can sign in?</summary><p>REMOTIX uses the same PAM stack as SSH. If your users can already log in to the server with SSH, through local accounts or a directory, they can open a desktop. Root is always excluded.</p></details>
       <details><summary>What happens when a user closes the browser?</summary><p>The session keeps running. They can reconnect from the same or another device and find their windows as they left them. After 60 minutes without input the session is closed cleanly.</p></details>
       <details><summary>Is it really free, even for a company?</summary><p>Yes. Using REMOTIX costs nothing, at home or at work. A license is needed only to sell it, build it into a product, or sell access to desktops served by it.</p></details>
       <details><summary>Is REMOTIX open source?</summary><p>The source code is visible, and you can build and modify it for yourself. It is not "open source" in the OSI sense, because selling it and distributing modified copies are reserved.</p></details>
@@ -395,8 +303,8 @@ sudo sh remotix-0.18.0-1.run</div>
   <section class="notte invito">
     <div class="satin"></div>
     <div class="contenitore">
-      <h2>Put a desktop in every browser in your team.</h2>
-      <p>Download one file, install it on a Linux host, and open the first session.</p>
+      <h2>Turn your Linux machine into a remote desktop server.</h2>
+      <p>Download one file, install it on the server, and open your desktop in a browser.</p>
       <a class="pulsante primario" href="#download">Download REMOTIX</a>
     </div>
   </section>
@@ -406,8 +314,8 @@ sudo sh remotix-0.18.0-1.run</div>
   <div class="contenitore">
     <div class="colonne">
       <div><a class="marchio" href="index.html" aria-label="REMOTIX"><svg viewBox="0 0 1640 360"><use href="#logo"/></svg></a>
-        <p style="margin:1rem 0 0;max-width:22em">Browser-based VDI for Linux.</p></div>
-      <div><h4>Product</h4><ul><li><a href="#how">How it works</a></li><li><a href="#admins">For admins</a></li><li><a href="#fit">Is it for you?</a></li><li><a href="#download">Download</a></li></ul></div>
+        <p style="margin:1rem 0 0;max-width:22em">The remote desktop server for Linux.</p></div>
+      <div><h4>Product</h4><ul><li><a href="#how">How it works</a></li><li><a href="#why">Why REMOTIX</a></li><li><a href="#download">Download</a></li></ul></div>
       <div><h4>Resources</h4><ul><li><a href="#">Documentation</a></li><li><a href="#">Release notes</a></li><li><a href="#">Report a problem</a></li></ul></div>
       <div><h4>Legal</h4><ul><li><a href="#">Privacy</a></li><li><a href="#license">License</a></li><li><a href="mailto:remotix@nicfio.it">Contact</a></li></ul></div>
     </div>
