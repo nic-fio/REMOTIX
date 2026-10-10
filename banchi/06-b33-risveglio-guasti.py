@@ -167,10 +167,10 @@ GUASTI = {
         "src/input.c",
         "SECOND MEASURED NON-FAULT: the detach is not sent to libei",
         "",
-        """	ei_disconnect(in->ei);
-	ei_unref(in->ei);""",
-        """	/* fault RG4 injected: no detach, it just lets go */
-	ei_unref(in->ei);""",
+        """		ei_disconnect(in->ei);
+		ei_unref(in->ei);""",
+        """		/* fault RG4 injected: no detach, it just lets go */
+		ei_unref(in->ei);""",
     ),
     # ⛔⛔ RG5 — THE FAULT THAT CLOSES THE QUESTION.  It removes **both**
     #      paths: no protocol detach AND no closing of the context (so the
@@ -201,11 +201,11 @@ GUASTI = {
         #    ⭐ It is the same shape as the button, on the keyboard: the first
         #      time this project sees it really happen.
         "T3 T4 T5 T7",
-        """	ei_disconnect(in->ei);
-	ei_unref(in->ei);
-	in->ei = NULL;""",
-        """	/* fault RG5 injected: the old context stays ALIVE and connected */
-	in->ei = NULL;""",
+        """		ei_disconnect(in->ei);
+		ei_unref(in->ei);
+		in->ei = NULL;""",
+        """		/* fault RG5 injected: the old context stays ALIVE and connected */
+		in->ei = NULL;""",
     ),
 }
 

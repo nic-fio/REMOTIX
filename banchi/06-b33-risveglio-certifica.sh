@@ -292,5 +292,5 @@ else
 fi
 
 log "Outcome"
-inf "results: $LAV/esiti-<round>.jsonl"
+inf "results: $LAV/esiti-<label>.jsonl (one per round)"
 exit $ESITO

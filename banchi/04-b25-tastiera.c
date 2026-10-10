@@ -731,7 +731,7 @@ fine:
  *   line, which is the only part of this work someone will read on the
  *   day the letters do not add up.
  *
- * ⛔ A «FALLBACK DECLARED» that comes out at every connection is worse than useless:
+ * ⛔ A «DECLARED FALLBACK» that comes out at every connection is worse than useless:
  *    whoever reads the log learns to skip it.  ⇒ It is checked in BOTH directions —
  *    that it comes out when it must, and that it does **not** come out when it must not.
  *
@@ -785,7 +785,7 @@ static void prova_dichiarazione(const char *della_sessione, const char *negoziat
 		while (fgets(riga, sizeof riga, f))
 		{
 			letti++;
-			if (strstr(riga, "FALLBACK DECLARED"))
+			if (strstr(riga, "DECLARED FALLBACK"))
 				dichiarato = 1;
 		}
 		fclose(f);
@@ -804,7 +804,7 @@ static void prova_dichiarazione(const char *della_sessione, const char *negoziat
 		goto fine;
 	}
 
-	snprintf(dett, sizeof dett, "%ld log lines, «FALLBACK DECLARED» %s", letti,
+	snprintf(dett, sizeof dett, "%ld log lines, «DECLARED FALLBACK» %s", letti,
 	         dichiarato ? "present" : "absent");
 	esito(nome, dichiarato == deve_dichiarare, dett);
 
