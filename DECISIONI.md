@@ -6636,6 +6636,27 @@ il **canone comune** copiato byte per byte da Phonestra (che non si modifica in 
 verifica che file, funzioni, variabili `REMOTIX_*` e codici `RX-` citati esistano nel codice, e che non resti
 italiano. Prestazioni e capacità aspettano la campagna xrdp.
 
+### 10.38 ✅ REMOTIX is fully English: code, documents, page, commits (10 Oct 2026)
+
+User's words (10 Oct 2026): *«Va abolita la lingua italiana dal codice e dai documenti, così è tutto coerente»*,
+and on the counter-proposal to keep the project diary in Italian: *«no, remotix è full english»*.
+- **Code**: identifiers, file and folder names, comments, log lines, command-line options, RCP message and
+  capability names, bench names. **Documents**: all of them, the project diary included (decisions, phases,
+  lessons, studies, plan). **Page**: every string the user sees (closes what §10.32 left half done).
+  **Commits**: English from `be21b85` on.
+- The conversation with the user stays in Italian; only the project changes language.
+
+🔸 Derived by me, correctable:
+- **No compatibility aliases** for the old Italian option names or wire strings: no product release has been
+  published (the only GitHub release holds measurement archives), so there is no installed base to protect, and
+  page and server always ship together.
+- **One glossary first, then the rename**: every Italian term gets one English name in a single table, so the
+  same word never becomes two different English words in two files.
+- **Nothing reaches the test server until the xrdp campaign has finished**; the rename is built and checked on the
+  laptop, then the whole suite runs on the server.
+- The technical manual (§10.37) is regenerated after the rename, and `--controlla` then rejects Italian
+  everywhere, `<code>` spans included.
+
 ---
 
 ## Come si tiene questo documento
