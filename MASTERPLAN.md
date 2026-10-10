@@ -118,6 +118,34 @@ una funzione nuova.
 
 ---
 
+## M6 · Stampare sulla stampante di chi è collegato (solo PDF, dal server al client)
+
+**Che cos'è.** Una stampante virtuale «REMOTIX» sul server trasforma la stampa in **PDF**; il PDF arriva alla
+pagina, che apre la finestra di stampa del browser, e chi è collegato stampa sulla **sua** stampante (quella di
+casa, per chi lavora da fuori). ⛔ **Solo PDF, solo dal server al client** (utente, 10 ott 2026), mai al contrario.
+Le stampanti di rete dell'ufficio **non** sono questa voce: le usa già il server con CUPS, senza REMOTIX.
+
+**Da dove viene.** 10 ottobre 2026, dal confronto con i prodotti commerciali: *«trovo la condivisione di files
+piuttosto pericolosa, mentre si potrebbe ragionare sul discorso stampanti»*; poi *«solo pdf, server -> client. La
+annotiamo nel masterplan»*. La decisione sta in `DECISIONI.md` §10.41; fino ad allora era fuori dal progetto
+(`SPECIFICHE.md` §12).
+
+**Che cosa costa se non si fa MAI.** Chi lavora da fuori **non può stampare** un documento del desktop remoto
+sulla propria stampante: deve stamparlo su una stampante raggiungibile dal server, o farselo arrivare per altra
+via (email, una cartella condivisa) — cioè proprio i passaggi di file che non vogliamo. Per un'azienda piccola è
+una delle prime domande; per un privato a casa, che ha la stampante accanto al server, quasi niente.
+
+**Che cosa serve prima.** ⚠ Dichiarare all'amministratore che **stampare è portare fuori un documento**: dalla
+finestra di stampa il browser lo salva anche come PDF. ⇒ Le regole proposte: **spenta finché l'amministratore non
+la accende**; **ogni stampa nel registro** (chi, quando, quante pagine); il PDF non si salva sul client da
+REMOTIX, va solo alla finestra di stampa. Poi: quale stampante virtuale (CUPS con un backend nostro, o
+`cups-pdf`), un canale nuovo in `RCP.md` per il PDF, la prova sui quattro desktop e sui browser serviti.
+
+**Quanto pesa.** `[?]` Non guardato davvero. Stima a occhio: una fase piccola (stampante virtuale, un canale,
+la finestra di stampa nella pagina, il banco).
+
+---
+
 # ⚠ Le cose che qualcuno potrebbe voler mettere qui, e NON ci vanno
 
 ⛔ Perché il documento resti corto, va detto anche che cosa **rifiuta**.
@@ -149,7 +177,7 @@ una funzione nuova.
 ## Le voci tolte
 
 ⭐ **21 settembre 2026, decisione dell'utente**: *«M2, M3 e M5 sono gli unici punti da conservare
-nel masterplan»*. ⇒ Tolte, e i numeri **non** si riusano (regola 3):
+nel masterplan»* (poi, il 10 ottobre, è entrata **M6**). ⇒ Tolte, e i numeri **non** si riusano (regola 3):
 
 | | che cos'era | perché è uscita |
 |---|---|---|

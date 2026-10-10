@@ -6717,3 +6717,17 @@ ma riprendere una sessione e non avere il resize al reattach non è accettabile�
   distribution, and KWin < 6.8 stays on Debian 13 (≥ 2028) and Ubuntu 26.04 LTS (≥ 2031). ⇒ One path that works on
   every KWin, no branch per compositor version; Forky joins the test matrix once it carries Plasma 6.8, to check that
   the same path holds there.
+
+### 10.41 ✅ Printing: later, PDF only, server → client; no file transfer (10 Oct 2026)
+
+User's words: *«trovo la condivisione di files piuttosto pericolosa, mentre si potrebbe ragionare sul discorso
+stampanti»*, then *«solo pdf, server -> client. La annotiamo nel masterplan»*.
+
+- **File transfer stays out** (SPECIFICHE §12): it is a way for data to leave and enter the server.
+- **Office network printers already work** without REMOTIX: the server prints to them with CUPS (the administrator's
+  setup). To be said in the documentation.
+- **Printing on the client's own printer** becomes a "later" item: `MASTERPLAN.md` **M6** — a virtual printer
+  turns the job into a PDF, the page opens the browser's print dialog. Only PDF, only server → client. ⚠ Printing is
+  taking a document out (the dialog can save it as PDF): off until the administrator turns it on, every print in
+  the log.
+
