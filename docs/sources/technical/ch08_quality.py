@@ -508,9 +508,8 @@ S14 = p("On Debian, Ubuntu, Fedora and openSUSE the packaged unit reads " + c("/
     code("""
 # /etc/remotix/remotix.conf.d/capacity.conf
 REMOTIX_OPZIONI=--budget-mpixel-s 480 --riserva 0.5 --tetto-sessioni 8
-""", "bash", "Switching on the budget on a deb or rpm system") + \
-    p("The Arch unit has no " + c("EnvironmentFile") + " and no " + c("REMOTIX_OPZIONI") + ": options are added "
-      "by overriding " + c("ExecStart") + " with " + c("systemctl edit remotix") + ". After a restart, check the "
+""", "bash", "Switching on the budget (deb, rpm and Arch alike)") + \
+    p("After a restart, check the "
       "startup lines (" + rif("Logging and diagnostics") + "): each cure states whether it is on and with which "
       "number, and the budget prints its three values with the option names.") + \
     ul([

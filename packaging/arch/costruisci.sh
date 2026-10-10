@@ -3,6 +3,7 @@
 #
 #     packaging/arch/costruisci.sh [commit]        (default: HEAD)
 #
+# 0. First: the Arch, .deb and .rpm units (and defaults) are equivalent.
 # 1. PKGBUILD, remotix.install and the tarball (src/, banchi/rcp/, packaging/arch/)
 #    come out of the SAME commit (`git archive`): what is not committed does not
 #    get in, and the package says which commit it comes from (sorgente.txt).
@@ -25,6 +26,35 @@ LAV="$USCITA/.lavoro"
 PKGVER=$(git -C "$ALBERO" show "$COMMIT:packaging/arch/PKGBUILD" | sed -n 's/^pkgver=//p')
 # the release (packaging/rilascio.sh): RX_VERSIONE = pkgver, RX_REVISIONE = pkgrel
 PKGVER=${RX_VERSIONE:-$PKGVER}
+
+echo "== the three units: equivalent?"
+# ⭐ The Arch unit once set the port with `Environment=` and read no
+#   EnvironmentFile: the engine's /etc/remotix/remotix.conf.d/porta.conf was ignored
+#   and an install with a non-default port rolled back (0.18.0-1).  The three
+#   families' units and defaults must stay the same apart from the DOCUMENTED
+#   differences, which are normalised here:
+#   · the binary's folder: /usr/lib/remotix (Arch) vs /usr/libexec/remotix;
+#   · the .deb launches through `/bin/sh -c 'exec …'` with `$$` escapes (the
+#     .rpm and Arch directly, for SELinux and for uniformity);
+#   · `RestartPreventExitStatus=78`: .deb only.
+#   Read from the SAME commit as the package.
+unita() {   # the significant lines of a unit, normalised
+	git -C "$ALBERO" show "$COMMIT:$1" | sed -e '/^[[:space:]]*#/d' -e '/^[[:space:]]*$/d' \
+		-e '/^RestartPreventExitStatus=78$/d' \
+		-e "s|^ExecStart=/bin/sh -c 'exec \(.*\)'\$|ExecStart=\1|" \
+		-e 's|"\$\${REMOTIX_PORTA}"|${REMOTIX_PORTA}|' -e 's|\$\${REMOTIX_OPZIONI}|$REMOTIX_OPZIONI|' \
+		-e 's|/usr/lib/remotix/|/usr/libexec/remotix/|g'
+}
+predefiniti() {   # the variables of the defaults file
+	git -C "$ALBERO" show "$COMMIT:$1" | sed -e '/^[[:space:]]*#/d' -e '/^[[:space:]]*$/d'
+}
+for f in debian rpm; do
+	diff <(unita packaging/arch/remotix.service) <(unita packaging/$f/remotix.service) \
+		|| { echo "⛔ packaging/arch/remotix.service and packaging/$f/remotix.service differ (above)"; exit 1; }
+	diff <(predefiniti packaging/arch/remotix.conf) <(predefiniti packaging/$f/remotix.conf) \
+		|| { echo "⛔ packaging/arch/remotix.conf and packaging/$f/remotix.conf differ (above)"; exit 1; }
+done
+echo "units and defaults equivalent (arch = debian = rpm, documented differences aside)"
 
 rm -rf "$LAV"; mkdir -p "$LAV/tmp"
 export TMPDIR="$LAV/tmp"

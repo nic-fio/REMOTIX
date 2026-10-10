@@ -10,11 +10,6 @@ S1 = p("Defects found while this manual was written (10 October 2026), by readin
          + c("packaging/arch/remotix.service"),
          "A banned address waits the full 12 hours. The unlock command promised by SPECIFICHE.md §4.2 and RCP.md §4.4-bis "
          "does not exist there; the directory " + c("/run/remotix") + " is created for a socket nobody opens."],
-        ["<b>The Arch unit reads no configuration.</b> It has no " + c("EnvironmentFile") + " and no "
-         + c("--journal") + ", unlike the Debian and RPM units.",
-         c("packaging/arch/remotix.service"),
-         "A non-default port chosen at installation is never applied, so the installation's own verification fails "
-         "and it rolls back; " + c("REMOTIX_OPZIONI") + " is ignored; nothing reaches the journal."],
         ["<b>The first enrolment in the graphics card groups ends every session of that user.</b> After adding the "
          "user to the groups of the " + c("/dev/dri") + " nodes, the parent (before the fork) runs " + c("loginctl terminate-user")
          + " so that the new groups reach the compositor. It spares a live REMOTIX desktop (" + c("ritrovo_vivo()")
