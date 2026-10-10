@@ -1,18 +1,18 @@
-<!-- Stile: SVIZZERO — bianco puro, griglia a 12 colonne, tipografia grande e un solo accento rosso.
-     Idea: la pagina è un manifesto tipografico; il marchio enorme a sinistra, il modulo allineato alla griglia a destra. -->
+<!-- Style: SWISS — pure white, 12-column grid, large typography and a single red accent.
+     Idea: the page is a typographic manifesto; the huge brand on the left, the form aligned to the grid on the right. -->
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root {
     --ink: #111111;
     --muted: #5a5a5a;
     --line: #d9d9d9;
     --paper: #ffffff;
-    --accent: #d0021b;       /* unico accento: rosso svizzero (bianco su rosso 5,3:1) */
+    --accent: #d0021b;       /* the only accent: Swiss red (white on red 5.3:1) */
     --accent-dark: #a30015;
     --err-bg: #fff3f4;
     --err-line: #f2b8bf;
@@ -37,7 +37,7 @@
     column-gap: clamp(12px, 2vw, 40px);
     padding: 0 var(--gutter);
   }
-  /* Linee della griglia, leggere: il segno dello stile */
+  /* Grid lines, light: the mark of the style */
   .rule { grid-column: 1 / -1; border-top: 2px solid var(--ink); }
   header {
     grid-column: 1 / -1;
@@ -126,7 +126,7 @@
   button:hover svg { transform: translateX(4px); }
   button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 
-  /* ESEMPIO: stato d'errore disegnato */
+  /* EXAMPLE: error state, drawn */
   .error {
     margin-top: 1.4rem;
     display: grid; grid-template-columns: auto 1fr; gap: .7rem;
@@ -148,7 +148,7 @@
   footer .lock { display: inline-flex; gap: .4rem; align-items: center; color: var(--ink); }
   footer svg { width: 1em; height: 1em; }
 
-  /* Ingresso leggero */
+  /* Light entrance */
   @media (prefers-reduced-motion: no-preference) {
     .hero, .panel { animation: rise .7s cubic-bezier(.2,.7,.2,1) both; }
     .panel { animation-delay: .12s; }
@@ -166,7 +166,7 @@
 <div class="page">
   <header>
     <div class="brand">
-      <!-- Logo: schermo a spigoli vivi con il segnale che parte -->
+      <!-- Logo: sharp-cornered screen with the signal leaving -->
       <svg viewBox="0 0 32 32" aria-hidden="true">
         <rect x="2" y="5" width="28" height="18" fill="none" stroke="#111" stroke-width="2.5"/>
         <rect x="12" y="25" width="8" height="2.5" fill="#111"/>
@@ -176,42 +176,42 @@
       </svg>
       REMOTIX
     </div>
-    <span class="idx">Accesso · 01</span>
+    <span class="idx">Sign in · 01</span>
   </header>
 
   <section class="hero">
-    <div class="kicker"><b>●</b> Desktop remoto per Linux</div>
+    <div class="kicker"><b>●</b> Remote desktop for Linux</div>
     <h1 aria-label="REMOTIX">REMO<br>TIX<span class="dot">.</span></h1>
-    <p>Il tuo desktop Linux, da qualunque browser.</p>
+    <p>Your Linux desktop, from any browser.</p>
   </section>
 
   <main class="panel">
-    <h2>Accedi <span>01 / 01</span></h2>
+    <h2>Sign in <span>01 / 01</span></h2>
     <form action="#" method="post" onsubmit="return false">
       <div class="field">
-        <label for="u">Utente</label>
+        <label for="u">User</label>
         <input id="u" name="utente" autocomplete="username" autocapitalize="none" spellcheck="false" required>
       </div>
       <div class="field">
-        <label for="p">Parola d'ordine</label>
+        <label for="p">Password</label>
         <input id="p" name="parola" type="password" autocomplete="current-password" required>
       </div>
-      <button type="submit">Collegati
+      <button type="submit">Connect
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>
       </button>
     </form>
 
-    <!-- esempio: stato d'errore, visibile solo per il mockup -->
+    <!-- example: error state, visible only for the mockup -->
     <div class="error" role="alert">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v6M12 16.5v.5" stroke="currentColor" stroke-width="2.4"/></svg>
-      <span>Utente o parola d'ordine non corretti.</span>
+      <span>Wrong user or password.</span>
     </div>
   </main>
 
   <footer>
     <span class="lock">
       <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" fill="currentColor"/><path d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
-      Connessione cifrata · niente da installare
+      Encrypted connection · nothing to install
     </span>
     <span>REMOTIX</span>
   </footer>

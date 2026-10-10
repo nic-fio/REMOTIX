@@ -1,12 +1,12 @@
 <!doctype html>
-<!-- Stile: «Vetro chiaro» — bianco caldo, due nuvole di blu tenue sullo sfondo, una scheda smerigliata con ombre blu morbide e un bottone a pillola.
-     Idea: il premium chiaro, alla Apple: luce, aria e materiali; il logo vero con «EMO» quasi nero, e il blu del marchio solo dove serve. -->
-<html lang="it">
+<!-- Style: «Light glass» — warm white, two clouds of soft blue in the background, a frosted card with soft blue shadows and a pill button.
+     Idea: the light premium, Apple-style: light, air and materials; the real logo with «EMO» near-black, and the brand's blue only where it is needed. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --fondo:#f7f4ef; --testo:#0b1430; --tenue:#5a6378; --etichetta:#2b3448;
@@ -19,7 +19,7 @@
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Cantarell,Ubuntu,sans-serif;
     color:var(--testo); background:var(--fondo); overflow-x:hidden; -webkit-font-smoothing:antialiased;
   }
-  /* le nuvole: gradienti già sfumati, fermi o quasi */
+  /* the clouds: pre-blurred gradients, still or nearly so */
   .nuvole{position:fixed; inset:0; overflow:hidden; pointer-events:none}
   .nuvole i{position:absolute; border-radius:50%; display:block}
   .nuvole .a{width:62vmax; height:62vmax; left:-14vmax; top:-24vmax;
@@ -135,19 +135,19 @@
       <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
     </svg>
   </h1>
-  <p class="motto">Il tuo desktop Linux,<br>da qualunque browser.</p>
+  <p class="motto">Your Linux desktop,<br>from any browser.</p>
   <div id="avviso"></div>
 
   <form id="modulo" action="#" method="post">
     <div>
-      <label for="utente">Utente</label>
+      <label for="utente">User</label>
       <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
     </div>
     <div>
-      <label for="parola">Parola d'ordine</label>
+      <label for="parola">Password</label>
       <input id="parola" name="parola" type="password" autocomplete="current-password" required>
     </div>
-    <button type="submit" id="vai"><span>Collegati</span>
+    <button type="submit" id="vai"><span>Connect</span>
       <svg class="freccia" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <svg class="ruota" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-opacity=".35" stroke-width="2.2"/><path d="M10 3a7 7 0 0 1 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
     </button>
@@ -158,7 +158,7 @@
 
   <p class="piede">
     <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="8.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
-    <span>Connessione cifrata con</span>
+    <span>Encrypted connection with</span>
     <span class="pillola"><i class="punto" aria-hidden="true"></i>alfa.lan</span>
   </p>
 </main>
@@ -167,7 +167,7 @@
   var esito=document.getElementById("esito"), vai=document.getElementById("vai"),
       campi=[document.getElementById("utente"), document.getElementById("parola")];
   function errore(){
-    esito.textContent="Utente o parola d'ordine non validi."; esito.className="male";
+    esito.textContent="Invalid user or password."; esito.className="male";
     campi.forEach(function(c){c.setAttribute("aria-invalid","true")});
   }
   campi.forEach(function(c){c.addEventListener("input",function(){

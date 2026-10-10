@@ -1,52 +1,52 @@
-# Il sito remotix.nicfio.it — mockup
+# The site remotix.nicfio.it — mockup
 
-Prova di veste, **non il sito**: dati finti (versione, data, impronta del `.run`), nessun collegamento vero. In
-inglese (utente, 9 ott). Lo stile è quello della pagina d'accesso del prodotto (`src/pagina.html`, classe
-`.accesso`), raccolto in `stile.css`.
+A trial of the look, **not the site**: fake data (version, date, fingerprint of the `.run`), no real links. In
+English (user, 9 Oct). The style is that of the product's sign-in page (`src/pagina.html`, class
+`.accesso`), collected in `stile.css`.
 
-✅ **10 ott 2026: REMOTIX è gratuito** (DECISIONI §10.33) ⇒ il sito è solo **file fissi** serviti da Caddy sulla
-VPS, come gli altri siti (`~/Documenti/VPS`): niente accesso, area cliente, pannello né prezzi. Tolti
-`signin.html`, `account.html`, `console.html` (restano nella storia di git, commit 91b7bc5).
-✅ **Il `.run` si scarica dalla VPS** (utente, 10 ott): `remotix.nicfio.it/download/remotix-X.Y.Z-R.run` con
-accanto il suo `.sha256`.
+✅ **10 Oct 2026: REMOTIX is free of charge** (DECISIONI §10.33) ⇒ the site is only **static files** served by Caddy on the
+VPS, like the other sites (`~/Documenti/VPS`): no sign-in, customer area, panel or prices. Removed
+`signin.html`, `account.html`, `console.html` (they remain in git history, commit 91b7bc5).
+✅ **The `.run` is downloaded from the VPS** (user, 10 Oct): `remotix.nicfio.it/download/remotix-X.Y.Z-R.run` with
+its `.sha256` beside it.
 
-✅ **10 ott sera, la forma scelta dall'utente**: un disegno suo (*«questo è quello che volevo, bisogna solo renderla
-widescreen»*), costruito in HTML largo (contenuto fino a 1480 px). Corretti rispetto al disegno: «Open source» →
-**«Source available»** (§10.33: non è open source per l'OSI); lo schema ha il browser sui dispositivi, non dopo il
-server; tolto «files» (niente trasferimento di file); aggiunta AlmaLinux. ⚠ Loghi delle distribuzioni (Simple Icons):
-marchi registrati, la politica di ciascuna va letta prima di pubblicare.
+✅ **10 Oct evening, the form chosen by the user**: a drawing of his own (*«questo è quello che volevo, bisogna solo renderla
+widescreen»*), built in wide HTML (content up to 1480 px). Corrected with respect to the drawing: «Open source» →
+**«Source available»** (§10.33: it is not open source by the OSI's definition); the diagram has the browser on the devices, not after the
+server; removed «files» (no file transfer); added AlmaLinux. ⚠ Distribution logos (Simple Icons):
+registered trademarks, each one's policy must be read before publishing.
 
-| sezione | che cosa c'è |
+| section | what is there |
 |---|---|
-| apertura | «Connect to your Linux desktop from anywhere», schema dispositivi → cifrato → server REMOTIX ⟷ desktop nel browser, quattro punti |
-| Use it anywhere | portatile, tablet e telefono con le schermate vere (`schermate/*.png`, in arrivo dal server) |
-| How it works | tre passi: dispositivo con browser → REMOTIX sul server → il tuo desktop |
-| Supported distributions | sei loghi e «Get started now» (Download, GitHub) |
-| fascia finale | Personal use · Teams · Infrastructure |
+| opening | «Connect to your Linux desktop from anywhere», diagram devices → encrypted → REMOTIX server ⟷ desktop in the browser, four points |
+| Use it anywhere | laptop, tablet and phone with the real screenshots (`schermate/*.png`, coming from the server) |
+| How it works | three steps: device with browser → REMOTIX on the server → your desktop |
+| Supported distributions | six logos and «Get started now» (Download, GitHub) |
+| final band | Personal use · Teams · Infrastructure |
 
-⛔ Niente prestazioni nella vetrina: stanno nella documentazione tecnica (utente, 9 ott).
+⛔ No performance in the showcase: it belongs in the technical documentation (user, 9 Oct).
 
-Si apre direttamente dal disco: `xdg-open grafica/sito-mockup/index.html`.
+It opens directly from disk: `xdg-open grafica/sito-mockup/index.html`.
 
-## La pagina in un file solo (10 ott sera)
+## The page in a single file (10 Oct evening)
 
-✅ Utente: *«rendi la landing page autocontenuta (con le immagini incorporate)»*. Il sorgente resta `index.html` +
-`stile.css` + `icone/` (Simple Icons 13.21.0, copie locali) + `schermate-vere/`; il file da pubblicare si rigenera con
+✅ User: *«rendi la landing page autocontenuta (con le immagini incorporate)»*. The source stays `index.html` +
+`stile.css` + `icone/` (Simple Icons 13.21.0, local copies) + `schermate-vere/`; the file to publish is regenerated with
 
-    python3 grafica/sito-mockup/autocontenuta.py                 # pubblica/index.html, col nastro «Mockup»
-    python3 grafica/sito-mockup/autocontenuta.py --senza-nastro  # quella da mettere online
+    python3 grafica/sito-mockup/autocontenuta.py                 # pubblica/index.html, with the «Mockup» ribbon
+    python3 grafica/sito-mockup/autocontenuta.py --senza-nastro  # the one to put online
 
-Incorpora CSS, icone (SVG) e schermate (WebP, al massimo 1600 px, qualità 82): **~420 KB, nessuna richiesta a
-terzi** (niente CDN né caratteri esterni). Lo script si rifiuta di scrivere se resta un collegamento a un file esterno.
+It inlines CSS, icons (SVG) and screenshots (WebP, at most 1600 px, quality 82): **~420 KB, no requests to
+third parties** (no CDN or external fonts). The script refuses to write if a link to an external file remains.
 
-## Online (10 ott 2026, sera)
+## Online (10 Oct 2026, evening)
 
-✅ Utente: *«ormai la homepage di remotix direi che è ok»* ⇒ pubblicata su **https://remotix.nicfio.it** (DNS A su
-OVH, blocco Caddy con `~/Documenti/VPS/add-site.sh`, certificato Let's Encrypt). Si ripubblica con
+✅ User: *«ormai la homepage di remotix direi che è ok»* ⇒ published at **https://remotix.nicfio.it** (DNS A at
+OVH, Caddy block with `~/Documenti/VPS/add-site.sh`, Let's Encrypt certificate). It is republished with
 
     python3 grafica/sito-mockup/autocontenuta.py --senza-nastro
     scp grafica/sito-mockup/pubblica/index.html progetti@57.131.27.241:/srv/www/remotix.nicfio.it/index.html
 
-Il pulsante che puntava al `.run` è «Coming soon» finché il primo rilascio non sta in `/download/` sulla VPS.
-La scheda di REMOTIX («Coming soon · Free») è nella homepage di nicfio.it (`~/Documenti/VPS/sites/nicfio.it/holding`,
-`publish.sh`). Contatto: alias Zimbra `remotix@nicfio.it` → nicfio@nicfio.it.
+The button that pointed to the `.run` is «Coming soon» until the first release is in `/download/` on the VPS.
+REMOTIX's card («Coming soon · Free») is on the nicfio.it homepage (`~/Documenti/VPS/sites/nicfio.it/holding`,
+`publish.sh`). Contact: Zimbra alias `remotix@nicfio.it` → nicfio@nicfio.it.

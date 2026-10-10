@@ -1,12 +1,12 @@
 <!doctype html>
-<!-- Stile: «Notte profonda» — fondo blu notte quasi nero, una luce blu-ciano soffusa dietro una scheda di vetro scuro, il logo grande sopra.
-     Idea: la proposta di base, la più pulita: il marchio parla da solo e la scheda non chiede attenzione. -->
-<html lang="it">
+<!-- Style: «Deep night» — a near-black night-blue background, a soft blue-cyan light behind a dark-glass card, the large logo above.
+     Idea: the baseline proposal, the cleanest: the brand speaks for itself and the card does not ask for attention. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --fondo:#050811; --testo:#e9eefb; --tenue:#8c97b0; --etichetta:#c3cce0;
@@ -21,7 +21,7 @@
     color:var(--testo); background:var(--fondo); overflow-x:hidden;
     -webkit-font-smoothing:antialiased;
   }
-  /* la luce dietro la scheda: un solo gradiente, respira lentissimo con l'opacità */
+  /* the light behind the card: a single gradient, breathing very slowly with opacity */
   .luce{
     position:fixed; left:50%; top:44%; width:60em; height:44em; margin:-22em 0 0 -30em; pointer-events:none;
     background:radial-gradient(closest-side, rgba(26,124,255,.30), rgba(0,150,255,.12) 45%, transparent 100%);
@@ -136,23 +136,23 @@
       <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
     </svg>
   </h1>
-  <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+  <p class="motto">Your Linux desktop, from any browser.</p>
 
   <main class="scheda">
-    <h2>Accedi</h2>
-    <p class="sotto">Con l'utente e la parola d'ordine del server.</p>
+    <h2>Sign in</h2>
+    <p class="sotto">With the server's user and password.</p>
     <div id="avviso"></div>
 
     <form id="modulo" action="#" method="post">
       <div>
-        <label for="utente">Utente</label>
+        <label for="utente">User</label>
         <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
       </div>
       <div>
-        <label for="parola">Parola d'ordine</label>
+        <label for="parola">Password</label>
         <input id="parola" name="parola" type="password" autocomplete="current-password" required>
       </div>
-      <button type="submit" id="vai"><span>Collegati</span>
+      <button type="submit" id="vai"><span>Connect</span>
         <svg class="freccia" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <svg class="ruota" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-opacity=".3" stroke-width="2.2"/><path d="M10 3a7 7 0 0 1 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
       </button>
@@ -162,7 +162,7 @@
     <div id="dichiarazione"></div>
 
     <p class="piede">
-      <span><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="8.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>Connessione cifrata</span>
+      <span><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="8.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>Encrypted connection</span>
       <span><i class="punto" aria-hidden="true"></i><code>alfa.lan</code></span>
     </p>
   </main>
@@ -172,7 +172,7 @@
   var esito=document.getElementById("esito"), vai=document.getElementById("vai"),
       campi=[document.getElementById("utente"), document.getElementById("parola")];
   function errore(){
-    esito.textContent="Utente o parola d'ordine non validi."; esito.className="male";
+    esito.textContent="Invalid user or password."; esito.className="male";
     campi.forEach(function(c){c.setAttribute("aria-invalid","true")});
   }
   campi.forEach(function(c){c.addEventListener("input",function(){

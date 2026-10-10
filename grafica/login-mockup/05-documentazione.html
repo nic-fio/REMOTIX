@@ -1,19 +1,19 @@
-<!-- Stile: DOCUMENTAZIONE TECNICA — fondo avorio, titoli con grazie, dettagli in monospazio, accenti verde petrolio e bordi sottili.
-     Idea: la pagina d'accesso come la prima pagina di un buon manuale: sobria, precisa, con le note a margine. -->
+<!-- Style: TECHNICAL DOCUMENTATION — ivory background, serif headings, monospace details, petrol-green accents and thin borders.
+     Idea: the sign-in page like the first page of a good manual: sober, precise, with margin notes. -->
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root {
     --ivory: #faf7ef;
     --paper: #fffdf7;
     --ink: #1f2623;
-    --muted: #56605b;        /* 6,4:1 sull'avorio */
+    --muted: #56605b;        /* 6.4:1 on the ivory */
     --rule: #ddd6c4;
-    --teal: #0e5f5c;         /* verde petrolio: bianco sopra 7,6:1 */
+    --teal: #0e5f5c;         /* petrol green: white on top 7.6:1 */
     --teal-dark: #0a4845;
     --teal-soft: #e3efec;
     --err-bg: #fbeeea;
@@ -73,7 +73,7 @@
     padding: 2rem 2rem 1.6rem;
     box-shadow: 0 1px 0 rgba(0,0,0,.02), 0 18px 40px -28px rgba(40,50,30,.35);
   }
-  .sheet::before {                      /* il filo verde in testa, come un segnalibro */
+  .sheet::before {                      /* the green thread at the top, like a bookmark */
     content: ""; position: absolute; left: -1px; right: -1px; top: -1px; height: 3px;
     background: var(--teal); border-radius: 6px 6px 0 0;
   }
@@ -110,7 +110,7 @@
   button:hover { background: var(--teal-dark); box-shadow: 0 4px 12px -6px rgba(10,72,69,.6); }
   button:focus-visible { outline: 2px solid var(--teal-dark); outline-offset: 3px; }
 
-  /* esempio: errore, scritto come un'«avvertenza» del manuale */
+  /* example: error, written like a «warning» in the manual */
   .error {
     margin-top: 1.2rem;
     border: 1px solid var(--err-line); border-left: 3px solid #b6452c;
@@ -147,7 +147,7 @@
 <body>
   <div class="topbar">
     <span class="brand">
-      <!-- Logo: schermo in linea sottile con un «>_» e una traccia di collegamento -->
+      <!-- Logo: thin-line screen with a «>_» and a connection trail -->
       <svg viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="5" width="26" height="17" rx="2.5" stroke="#0e5f5c" stroke-width="2"/>
         <path d="M9 11l3 2.5-3 2.5M15 16h6" stroke="#0e5f5c" stroke-width="2"/>
@@ -155,49 +155,49 @@
       </svg>
       REMOTIX
     </span>
-    <span class="ver">accesso · https</span>
+    <span class="ver">sign-in · https</span>
   </div>
 
   <div class="layout">
     <section class="intro">
-      <div class="sec">§ 1 — Accesso</div>
+      <div class="sec">§ 1 — Sign in</div>
       <h1>REMOTIX</h1>
-      <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+      <p class="motto">Your Linux desktop, from any browser.</p>
       <dl>
-        <dt>cosa</dt><dd>La tua sessione grafica sul server, nella finestra del browser.</dd>
-        <dt>dove</dt><dd>Da un computer, un tablet o un telefono.</dd>
-        <dt>come</dt><dd>Con l'utente e la parola d'ordine del server.</dd>
+        <dt>what</dt><dd>Your graphical session on the server, in the browser window.</dd>
+        <dt>where</dt><dd>From a computer, a tablet or a phone.</dd>
+        <dt>how</dt><dd>With the server's user and password.</dd>
       </dl>
     </section>
 
     <main class="sheet">
       <header>
-        <h2>Entra</h2>
+        <h2>Enter</h2>
         <code>1.1</code>
       </header>
       <form action="#" method="post" onsubmit="return false">
         <div class="field">
-          <label for="u">Utente <small>come sul server</small></label>
+          <label for="u">User <small>as on the server</small></label>
           <input id="u" name="utente" autocomplete="username" autocapitalize="none" spellcheck="false" required>
         </div>
         <div class="field">
-          <label for="p">Parola d'ordine</label>
+          <label for="p">Password</label>
           <input id="p" name="parola" type="password" autocomplete="current-password" required>
         </div>
-        <button type="submit">Collegati <kbd aria-hidden="true">Invio ↵</kbd></button>
+        <button type="submit">Connect <kbd aria-hidden="true">Enter ↵</kbd></button>
       </form>
 
-      <!-- esempio: stato d'errore, visibile solo nel mockup -->
+      <!-- example: error state, visible only in the mockup -->
       <div class="error" role="alert">
-        <span class="tag">Avvertenza</span>
-        Utente o parola d'ordine non corretti.
+        <span class="tag">Warning</span>
+        Wrong user or password.
       </div>
     </main>
   </div>
 
   <footer>
     <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-    Connessione cifrata · niente da installare
+    Encrypted connection · nothing to install
   </footer>
 </body>
 </html>

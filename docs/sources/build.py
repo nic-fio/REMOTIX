@@ -1,23 +1,23 @@
-"""Generatore del manuale tecnico di REMOTIX, nello stile comune dei manuali dei
-progetti di nic-fio (AMS, EFI_PARTITION_MANAGER, HOSTER, MTERM, NESH, PHONESTRA,
-SCRAPER): il canone è preso da PHONESTRA il 10 ottobre 2026.
+"""Generator of REMOTIX's technical manual, in the common style of the manuals of
+nic-fio's projects (AMS, EFI_PARTITION_MANAGER, HOSTER, MTERM, NESH, PHONESTRA,
+SCRAPER): the canon was taken from PHONESTRA on 10 Oct 2026.
 
-Produce un file HTML autosufficiente (nessun file esterno), in inglese:
-  docs/Technical Manual.html   dai capitoli in technical/chNN_*.py
+It produces a self-contained HTML file (no external files), in English:
+  docs/Technical Manual.html   from the chapters in technical/chNN_*.py
 
-Ogni capitolo espone CHAPTER = (titolo, [(titolo_sezione, html), ...]).
-I segnaposto «FIG» e «TAB» nelle didascalie diventano «Figure N.M» e
-«Table N.M», numerati per capitolo; rif("Titolo di una sezione") diventa il
-collegamento a quella sezione. Lo stile è style.css e lo script (ricerca nella
-barra laterale, pulsante Copy sui blocchi di comandi) è manual.js: sono il
-canone comune, identico byte per byte in tutti i manuali, e non si modificano
-qui; le sole aggiunte di REMOTIX stanno in EXTRA_CSS, dopo.
-La mappa dei file e la tabella dei numeri si contano dai sorgenti a ogni generazione.
+Each chapter exposes CHAPTER = (title, [(section_title, html), ...]).
+The placeholders «FIG» and «TAB» in the captions become «Figure N.M» and
+«Table N.M», numbered per chapter; rif("Title of a section") becomes the
+link to that section. The style is style.css and the script (search in the
+sidebar, Copy button on command blocks) is manual.js: they are the
+common canon, identical byte for byte in all the manuals, and are not modified
+here; REMOTIX's only additions live in EXTRA_CSS, below.
+The file map and the numbers table are counted from the sources at every generation.
 
-    python3 docs/sources/build.py              rigenera il manuale
-    python3 docs/sources/build.py --controlla  controlla che sia allineato al codice
+    python3 docs/sources/build.py              regenerates the manual
+    python3 docs/sources/build.py --controlla  checks that it is aligned with the code
 
-Servono le librerie pygments e Pillow (pacchetti python3-pygments e python3-pil).
+It needs the pygments and Pillow libraries (packages python3-pygments and python3-pil).
 """
 import html
 import importlib.util
@@ -30,7 +30,7 @@ import tempfile
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 DATE = "October 2026"
-# La versione di REMOTIX: la stessa va a tutti i pacchetti (packaging/rilascio.sh); quella predefinita sta nella ricetta rpm.
+# REMOTIX's version: the same one goes to all packages (packaging/rilascio.sh); the default one lives in the rpm recipe.
 VERSION = re.search(r"rx_versione}%{!\?rx_versione:([0-9.]+)}", (ROOT / "packaging" / "rpm" / "remotix.spec").read_text()).group(1)
 
 MANUALS = {
@@ -38,11 +38,11 @@ MANUALS = {
                     h1="Technical Manual"),
 }
 
-# Dopo il canone (style.css), solo le regole per elementi che esistono soltanto nel manuale di REMOTIX
-# (per ora le stesse aggiunte di Phonestra: terminali, albero, pastiglie, glossario).
+# After the canon (style.css), only the rules for elements that exist only in REMOTIX's manual
+# (for now the same additions as Phonestra: terminals, tree, pills, glossary).
 EXTRA_CSS = """
-/* Solo per REMOTIX: terminali (titolo, prompt, righe del programma, errori), comandi dentro le procedure,
-   albero delle cartelle, pastiglie di stato, glossario, righe di gruppo nelle tabelle */
+/* REMOTIX only: terminals (title, prompt, program lines, errors), commands inside procedures,
+   folder tree, status pills, glossary, group rows in tables */
 .steps .code-w{margin:10px 0 4px}
 .code .pr{color:#93c5fd} .code .cmd{color:#fff;font-weight:700} .code .am{color:#fdba74;font-weight:600}
 .code .er{color:#fca5a5} .code .dim{color:#94a3b8}
@@ -66,14 +66,14 @@ def c(t):
 
 
 def sysf(t):
-    """Un file o un'unità della macchina, non del repository (org.gnome.Shell@wayland.service, lxqt.conf):
-    si mostra come codice, ma il controllo non lo cerca in git."""
+    """A file or unit of the machine, not of the repository (org.gnome.Shell@wayland.service, lxqt.conf):
+    shown as code, but the check does not look for it in git."""
     return f'<code class="sys">{esc(t)}</code>'
 
 
 def ui(label):
-    """Etichetta esatta di una finestra o di un pulsante. Le etichette lunghe (messaggi interi) vanno
-    a capo, per non uscire dalle tabelle."""
+    """Exact label of a window or a button. Long labels (whole messages) wrap,
+    so as not to overflow the tables."""
     stile = ' style="white-space:normal"' if len(label) > 40 else ""
     return f'<span class="ui"{stile}>{esc(label)}</span>'
 
@@ -119,12 +119,12 @@ def tip(t, title="Tip."):
 
 
 def rif(titolo):
-    """Collegamento a una sezione del manuale, per titolo; lo risolve number()."""
+    """Link to a section of the manual, by title; number() resolves it."""
     return f"«RIF:{titolo}»"
 
 
 def table(head, rows, cap, tid=None):
-    """rows: liste di celle; una stringa sola fa da riga di gruppo su tutta la larghezza."""
+    """rows: lists of cells; a single string acts as a group row across the full width."""
     th = "".join(f"<th>{h}</th>" for h in head)
     tr = []
     for r in rows:
@@ -162,7 +162,7 @@ PROMPT = re.compile(r"^([$#](?: |$))(.*)$")
 
 
 def term(text, title=""):
-    """Una sessione di terminale: prompt e comandi, righe del programma, errori, commenti."""
+    """A terminal session: prompts and commands, program lines, errors, comments."""
     lines = []
     for line in text.strip("\n").split("\n"):
         m = PROMPT.match(line)
@@ -181,7 +181,7 @@ def term(text, title=""):
 
 
 def tree(lines, cap):
-    """Albero di cartelle: righe 'percorso  # commento'."""
+    """Folder tree: lines 'path  # comment'."""
     out = []
     for line in lines:
         path, _, comment = line.partition("  #")
@@ -193,7 +193,7 @@ def tree(lines, cap):
     return f'<figure class="fig"><pre class="tree">' + "\n".join(out) + f'</pre><figcaption class="cap">{cap}</figcaption></figure>'
 
 
-# ── Figure SVG nello stile di IR_Service ───────────────────────────────
+# ── SVG figures in the style of IR_Service ─────────────────────────────
 COL = {"dark": "#475569", "blue": "#0050C0", "light": "#3b82f6", "navy": "#003a90", "soft": "#eef2f7",
        "green": "#16a34a", "amber": "#d97706", "grey": "#94a3b8", "white": "#ffffff"}
 FONT = 'font-family="Outfit,Segoe UI,Arial,sans-serif"'
@@ -240,7 +240,7 @@ def arrow(x1, y1, x2, y2, color="#0050C0", dash=False, label="", lx=None, ly=Non
 
 
 def path(points, color="#0050C0", dash=False, label="", lx=0, ly=0):
-    """Spezzata con freccia finale: points = [(x, y), ...]."""
+    """Polyline with a final arrow: points = [(x, y), ...]."""
     d = " ".join(("M" if i == 0 else "L") + f"{x} {y}" for i, (x, y) in enumerate(points))
     dd = ' stroke-dasharray="5 4"' if dash else ""
     (xa, ya), (xb, yb) = points[-2], points[-1]
@@ -252,7 +252,7 @@ def path(points, color="#0050C0", dash=False, label="", lx=0, ly=0):
 
 
 def text(x, y, t, size=12, color="#334155", weight="400", anchor="middle", halo=True):
-    """Etichetta; il contorno chiaro la stacca dalle linee che attraversa."""
+    """Label; the light outline sets it apart from the lines it crosses."""
     h = ' stroke="#f8fafc" stroke-width="4" stroke-linejoin="round" paint-order="stroke"' if halo else ""
     return (f'<text x="{x}" y="{y}" text-anchor="{anchor}" font-size="{size}" font-weight="{weight}" '
             f'fill="{color}"{h}>{esc(t)}</text>')
@@ -264,7 +264,7 @@ def zone(x, y, w, h, title, color="#e8eef7"):
 
 
 def fig(body, width, height, cap, title=""):
-    """Figura SVG; come nei manuali di IR la didascalia è dentro il disegno, in basso."""
+    """SVG figure; as in IR's manuals, the caption is inside the drawing, at the bottom."""
     t = text(20, 28, title, 12, "#003a90", "700", "start") if title else ""
     didascalia = html.unescape(re.sub(r"<[^>]+>", "", cap))
     height += 30
@@ -274,7 +274,7 @@ def fig(body, width, height, cap, title=""):
 
 
 def flow(nodes, cap, title="", width=900):
-    """Flusso orizzontale: nodes = [(titolo, sottotitolo, colore)]."""
+    """Horizontal flow: nodes = [(title, subtitle, colour)]."""
     n = len(nodes)
     gap = 36
     w = (width - 40 - gap * (n - 1)) / n
@@ -290,10 +290,10 @@ def flow(nodes, cap, title="", width=900):
 
 
 def seq(actors, events, cap, title="", width=900):
-    """Diagramma di sequenza.
-    actors = [(nome, sottotitolo, colore)];
-    events = (da, a, testo[, tratteggio]) per un messaggio, ("nota", i, testo) per una nota,
-             ("sep", testo) per una separazione con testo."""
+    """Sequence diagram.
+    actors = [(name, subtitle, colour)];
+    events = (from, to, text[, dashed]) for a message, ("nota", i, text) for a note,
+             ("sep", text) for a separator with text."""
     n = len(actors)
     top = 50 if title else 22
     colw = (width - 40) / n
@@ -338,17 +338,17 @@ def seq(actors, events, cap, title="", width=900):
     return fig("".join(head + body), width, height, cap, title)
 
 
-# ── Sorgenti: mappa dei file e numeri ────────────────────────────────────
+# ── Sources: file map and numbers ────────────────────────────────────────
 def sorgenti():
-    """I file del prodotto che il manuale descrive, con le loro righe: quelli tenuti da git (niente
-    vendor/ dell'installatore, niente intestazioni generate dai protocolli Wayland). I banchi no:
-    sono quasi duemila file, e il manuale li descrive per cartella."""
+    """The product files the manual describes, with their line counts: those tracked by git (no
+    installer vendor/, no headers generated from the Wayland protocols). Not the benches:
+    they are almost two thousand files, and the manual describes them by folder."""
     import subprocess
     elenco = subprocess.run(["git", "-C", str(ROOT), "ls-files", "src", "installatore", "packaging", "docs/sources"],
                             capture_output=True, text=True, check=True).stdout.split()
     tenuti = [f for f in elenco if "/vendor/" not in f and not f.endswith("-protocol.h")
               and not f.endswith((".wasm", ".png", ".svg"))]
-    # I sorgenti del manuale nuovi, non ancora in git, contano lo stesso.
+    # New manual sources, not yet in git, count all the same.
     tenuti += [p.relative_to(ROOT).as_posix() for p in HERE.rglob("*") if p.is_file() and p.suffix in (".py", ".css", ".js")
                and "__pycache__" not in p.parts]
     return {f: (ROOT / f).read_bytes().count(b"\n") for f in dict.fromkeys(tenuti) if (ROOT / f).is_file()}
@@ -359,16 +359,16 @@ def righe(n):
 
 
 def file_map(groups, cap):
-    """Mappa dei file: groups = [(gruppo, [(percorso, ruolo)])]. Fallisce se un
-    sorgente manca dalla mappa o se la mappa cita un file che non c'è più."""
+    """File map: groups = [(group, [(path, role)])]. Fails if a
+    source is missing from the map or if the map cites a file that no longer exists."""
     tutti = sorgenti()
     citati = [f for _, rows in groups for f, _ in rows]
     mancano = sorted(set(tutti) - set(citati))
     in_piu = sorted(set(citati) - set(tutti))
     if mancano or in_piu:
-        raise SystemExit("mappa dei file del manuale da aggiornare (technical/ch22_map.py):"
-                         + "".join(f"\n  manca {f}" for f in mancano)
-                         + "".join(f"\n  non esiste più {f}" for f in in_piu))
+        raise SystemExit("the manual's file map needs updating (technical/ch22_map.py):"
+                         + "".join(f"\n  missing {f}" for f in mancano)
+                         + "".join(f"\n  no longer exists {f}" for f in in_piu))
     out = []
     for gruppo, rows in groups:
         out.append(gruppo)
@@ -378,8 +378,8 @@ def file_map(groups, cap):
 
 
 def numeri(parti, cap):
-    """Tabella «il progetto in numeri»: parti = [(nome, dove, contenuto, regola)];
-    ogni file va nella prima parte la cui regola lo accetta."""
+    """Table «the project in numbers»: parti = [(name, where, contents, rule)];
+    each file goes into the first part whose rule accepts it."""
     conti = [0] * len(parti)
     for f, n in sorgenti().items():
         for i, (_, _, _, regola) in enumerate(parti):
@@ -392,14 +392,14 @@ def numeri(parti, cap):
 
 
 def conta(estensione):
-    """Righe di tutti i file di un tipo (per la copertina del primo capitolo)."""
+    """Lines of all the files of one type (for the cover of the first chapter)."""
     return sum(n for f, n in sorgenti().items() if f.endswith(estensione))
 
 
-# ── Copertina ──────────────────────────────────────────────────────────
+# ── Cover ──────────────────────────────────────────────────────────────
 def logo():
-    """Il logo di REMOTIX (grafica/logo/remotix-logo.png, che non si tocca), incorporato nella pagina:
-    senza i margini bianchi, largo 700 px e a 256 colori, così resta nitido e il file resta leggero."""
+    """REMOTIX's logo (grafica/logo/remotix-logo.png, which is not touched), embedded in the page:
+    without the white margins, 700 px wide and in 256 colours, so it stays sharp and the file stays light."""
     import base64
     import io
     from PIL import Image, ImageChops
@@ -451,7 +451,7 @@ def number(doc, sezioni):
     def collega(mm):
         titolo = mm.group(1)
         if titolo not in sezioni:
-            raise SystemExit(f"rif(«{titolo}»): nessuna sezione ha questo titolo")
+            raise SystemExit(f"rif(«{titolo}»): no section has this title")
         sid, numero = sezioni[titolo]
         return f'<a href="#{sid}">{numero} “{esc(titolo)}”</a>'
     return re.sub(r"«RIF:([^»]+)»", collega, "".join(out))
@@ -470,7 +470,7 @@ def build(kind, outdir=ROOT / "docs"):
         for si, (stitle, shtml) in enumerate(sections, 1):
             sid = f"ch{ci}s{si}"
             if stitle in sezioni:
-                raise SystemExit(f"due sezioni si chiamano «{stitle}»: rif() non saprebbe quale scegliere")
+                raise SystemExit(f"two sections are called «{stitle}»: rif() would not know which one to pick")
             sezioni[stitle] = (sid, f"{ci}.{si}")
             toc.append(f'<li class="toc-se"><a href="#{sid}"><span class="toc-n">{ci}.{si}</span><span class="toc-t">{esc(stitle)}</span></a></li>')
             body.append(f'<section class="sec" id="{sid}"><h3 class="h-sec">{ci}.{si} · {esc(stitle)}</h3>{shtml}</section>')
@@ -505,10 +505,10 @@ def build(kind, outdir=ROOT / "docs"):
     return outfile, len(page)
 
 
-# ── Controlli: il manuale allineato al codice ───────────────────────────
+# ── Checks: the manual aligned with the code ────────────────────────────
 def testo_del_codice(*cartelle, estensioni=(".c", ".h", ".go", ".sh", ".py", ".html", ".mjs", ".comp", ".service",
                                              ".conf", ".rules", ".spec")):
-    """Il testo dei sorgenti tenuti da git sotto quelle cartelle (niente costruzioni, niente vendor/)."""
+    """The text of the git-tracked sources under those folders (no builds, no vendor/)."""
     out = []
     for f in sorted(subprocess_ls()):
         if not any(f == c or f.startswith(c.rstrip("/") + "/") for c in cartelle) or "/vendor/" in f:
@@ -519,11 +519,11 @@ def testo_del_codice(*cartelle, estensioni=(".c", ".h", ".go", ".sh", ".py", ".h
     return "\n".join(out)
 
 
-# Parole che in un testo inglese non compaiono: due diverse nella stessa frase la
-# segnalano come italiana. Restano fuori solo codice, tasti e blocchi <pre> (nomi veri
-# dei sorgenti, che sono in italiano). I manuali sono interamente in inglese: niente
-# etichette italiane tra parentesi, niente citazioni italiane, niente scritte italiane
-# nei grafici (decisione del 4 ottobre 2026).
+# Words that do not appear in an English text: two different ones in the same sentence
+# flag it as Italian. Only code, keys and <pre> blocks are left out (real names
+# from the sources, which are in Italian). The manuals are entirely in English: no
+# Italian labels in brackets, no Italian quotations, no Italian text
+# in the diagrams (decision of 4 Oct 2026).
 PAROLE_ITALIANE = re.compile(
     r"\b(il|lo|gli|della|delle|degli|dello|nella|nelle|negli|sono|questo|questa|quando|perché|anche|però|oppure|"
     r"finché|ancora|sempre|niente|nessun|nessuna|dopo|ogni|tutti|tutte|viene|serve|deve|può|hanno|col|coi|dal|dai|"
@@ -537,19 +537,19 @@ PAROLE_ITALIANE_GRAFICI = re.compile(
 
 
 def frasi_italiane(pagina):
-    """Le frasi del testo corrente di un manuale che sembrano ancora in italiano."""
+    """The sentences of a manual's running text that still look Italian."""
     t = re.sub(r'<style.*?</style>|<script.*?</script>|<pre.*?</pre>|<code>.*?</code>|<kbd>.*?</kbd>', " ",
                pagina, flags=re.S)
     frasi = [f.strip() for f in re.split(r"(?<=[.;:!?])\s+|\n", html.unescape(re.sub(r"<[^>]+>", "\n", t)))
              if len({w.lower() for w in PAROLE_ITALIANE.findall(f)}) >= 2]
-    # Le scritte dei grafici sono brevi: basta una parola tipicamente italiana.
+    # Diagram labels are short: one typically Italian word is enough.
     for svg in re.findall(r"<svg.*?</svg>", t, flags=re.S):
         for x in re.findall(r"<text[^>]*>(.*?)</text>", svg, flags=re.S):
             x = html.unescape(x)
-            # Opzioni, percorsi e nomi del codice (--prova-codifica, figlio.c, REMOTIX_AREA) sono nomi veri, non italiano.
+            # Options, paths and code names (--prova-codifica, figlio.c, REMOTIX_AREA) are real names, not Italian.
             parole = re.sub(r"(?<!\w)(--?[\w-]+|[\w./-]*[_/.][\w./-]*)", " ", x)
             if PAROLE_ITALIANE_GRAFICI.search(parole):
-                frasi.append("grafico: " + x)
+                frasi.append("diagram: " + x)
     return frasi
 
 
@@ -560,26 +560,26 @@ def controlla():
             fresco, _ = build(kind, tmp)
             pagina = fresco.read_text()
             if "<style>" + (HERE / "style.css").read_text() not in pagina:
-                errori.append(f"{meta['file']}: lo stile non comincia col canone comune (style.css)")
+                errori.append(f"{meta['file']}: the style does not start with the common canon (style.css)")
             if (HERE / "manual.js").read_text() not in pagina:
-                errori.append(f"{meta['file']}: manca lo script comune (manual.js)")
+                errori.append(f"{meta['file']}: the common script is missing (manual.js)")
             pagine.append(re.sub(r"<script.*?</script>", "", pagina, flags=re.S))
             pubblicato = ROOT / "docs" / meta["file"]
             if not pubblicato.exists() or pubblicato.read_text() != pagina:
-                errori.append(f"«docs/{meta['file']}» non corrisponde ai sorgenti: python3 docs/sources/build.py")
+                errori.append(f"«docs/{meta['file']}» does not match the sources: python3 docs/sources/build.py")
             if VERSION not in pagina:
-                errori.append(f"{meta['file']}: la versione {VERSION} non compare")
+                errori.append(f"{meta['file']}: version {VERSION} does not appear")
             if '<html lang="en">' not in pagina:
-                errori.append(f"{meta['file']}: la pagina non dichiara lang=\"en\"")
+                errori.append(f"{meta['file']}: the page does not declare lang=\"en\"")
             for frase in frasi_italiane(pagina):
-                errori.append(f"{meta['file']}: testo ancora in italiano: {frase[:120]}")
+                errori.append(f"{meta['file']}: text still in Italian: {frase[:120]}")
             ids = set(re.findall(r'\bid="([^"]+)"', pagina))
             for a in sorted(set(re.findall(r'href="#([^"]+)"', pagina)) - ids):
-                errori.append(f"{meta['file']}: collegamento interno #{a} senza destinazione")
+                errori.append(f"{meta['file']}: internal link #{a} without a target")
     pagina = "\n".join(pagine)
     codici = [html.unescape(re.sub(r"<[^>]+>", "", x)) for x in re.findall(r"<code>(.*?)</code>", pagina, re.S)]
 
-    # Funzioni C citate come «nome()»: devono esistere nei sorgenti del prodotto (src/), o nel C dei banchi.
+    # C functions cited as «name()»: they must exist in the product sources (src/), or in the benches' C.
     c_testo = testo_del_codice("src", "banchi/rcp")
     parole_c = set(re.findall(r"\b\w+\b", c_testo))
     go_testo = testo_del_codice("installatore")
@@ -591,9 +591,9 @@ def controlla():
             ultimo = nome.split(".")[-1]
             if ultimo not in parole_c and ultimo not in parole_go and ultimo not in parole_js \
                     and nome not in NOMI_NON_FUNZIONI:
-                errori.append(f"funzione citata che non esiste nei sorgenti: {nome}()")
+                errori.append(f"cited function that does not exist in the sources: {nome}()")
 
-    # File citati: devono esistere nel repository (si confronta il nome, e il percorso se è scritto intero).
+    # Cited files: they must exist in the repository (the name is compared, and the path if written in full).
     tenuti = subprocess_ls()
     nomi = {f.rsplit("/", 1)[-1] for f in tenuti}
     for x in codici:
@@ -602,26 +602,26 @@ def controlla():
                 continue
             if "/" in f and not f.startswith(("/", "~")):
                 if f not in tenuti and not any(t.endswith("/" + f) for t in tenuti):
-                    errori.append(f"file citato che non esiste: {f}")
+                    errori.append(f"cited file that does not exist: {f}")
             elif f not in nomi and f not in FILE_DI_SISTEMA:
-                errori.append(f"file citato che non esiste: {f}")
+                errori.append(f"cited file that does not exist: {f}")
 
-    # Variabili d'ambiente REMOTIX_*: tutte quelle che il prodotto legge nel manuale, e nessuna di più.
+    # REMOTIX_* environment variables: all those the product reads are in the manual, and no more.
     letto = testo_del_codice("src", "installatore", "packaging")
     nel_codice = {v for v in re.findall(r"getenv\(\s*\"(REMOTIX_[A-Z0-9_]+)\"", letto)}
     nel_codice |= {v for v in re.findall(r"Getenv\(\s*\"(REMOTIX_[A-Z0-9_]+)\"", letto)}
     nel_manuale = set(re.findall(r"\bREMOTIX_[A-Z0-9_]+\b", pagina))
     for v in sorted(nel_codice - nel_manuale):
-        errori.append(f"variabile d'ambiente non documentata: {v}")
-    # Quelle dei banchi si possono citare (non sono obbligatorie): esistono, ma non le legge il prodotto.
+        errori.append(f"undocumented environment variable: {v}")
+    # The benches' ones may be cited (they are not mandatory): they exist, but the product does not read them.
     tutte = set(re.findall(r"\bREMOTIX_[A-Z0-9_]+\b", letto + testo_del_codice("banchi")))
     for v in sorted(nel_manuale - tutte):
-        errori.append(f"variabile d'ambiente documentata ma inesistente: {v}")
+        errori.append(f"documented but non-existent environment variable: {v}")
 
-    # Codici RX-…: ogni codice citato deve esistere nel codice, dell'installatore o del server (RX-KDE-… sta in kwin.c).
+    # RX-… codes: every cited code must exist in the code, of the installer or of the server (RX-KDE-… is in kwin.c).
     codici_rx = set(re.findall(r"\bRX-[A-Z]+-\d{3}\b", go_testo + c_testo))
     for x in sorted(set(re.findall(r"\bRX-[A-Z]+-\d{3}\b", pagina)) - codici_rx):
-        errori.append(f"codice citato che non esiste nel codice: {x}")
+        errori.append(f"cited code that does not exist in the code: {x}")
     return list(dict.fromkeys(errori))
 
 
@@ -631,15 +631,15 @@ def subprocess_ls():
                               check=True).stdout.split()) | set(sorgenti())
 
 
-# File della macchina su cui REMOTIX gira, non del repository: si possono citare.
+# Files of the machine REMOTIX runs on, not of the repository: they may be cited.
 FILE_DI_SISTEMA = {"remotix.conf", "sessione.log", "porta.conf"}
 
-# Intestazioni di sistema: quelle che i sorgenti includono fra < >.
+# System headers: those the sources include between < >.
 INTESTAZIONI_DI_SISTEMA = set(re.findall(r"#\s*include\s*<([^>]+)>", "\n".join(
     (ROOT / f).read_text(errors="replace") for f in sorted(subprocess_ls())
     if f.startswith("src/") and f.endswith((".c", ".h")) and (ROOT / f).is_file())))
 
-# Scritture con le parentesi che non sono funzioni: la sintassi delle ricette rpm, Provides: bundled(ngtcp2).
+# Spellings with brackets that are not functions: the rpm recipe syntax, Provides: bundled(ngtcp2).
 NOMI_NON_FUNZIONI = {"bundled"}
 
 
@@ -647,11 +647,11 @@ if __name__ == "__main__":
     if "--controlla" in sys.argv[1:]:
         errori = controlla()
         for e in errori:
-            print("manuale:", e)
+            print("manual:", e)
         if errori:
             sys.exit(1)
-        print("manuale allineato al codice")
+        print("manual aligned with the code")
     else:
         for kind in MANUALS:
             f, n = build(kind)
-            print("scritto", f.relative_to(ROOT), n, "byte")
+            print("written", f.relative_to(ROOT), n, "bytes")

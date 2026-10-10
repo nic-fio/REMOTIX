@@ -6,7 +6,7 @@
 <title>REMOTIX — Connect to your Linux desktop from anywhere</title>
 <link rel="stylesheet" href="stile.css">
 <style>
-  /* widescreen: il contenuto arriva a 1320px, le fasce scure vanno da bordo a bordo */
+  /* widescreen: the content reaches 1320px, the dark bands go from edge to edge */
   .largo { width: 100%; max-width: 1480px; margin: 0 auto; padding: 0 20px; }
   @media (min-width: 720px) { .largo { padding: 0 40px; } }
   .blu { color: #fff; background: radial-gradient(90% 70% at 70% 30%, #1546b8 0%, transparent 60%), radial-gradient(60% 60% at 10% 90%, #0b3aa8 0%, transparent 70%), linear-gradient(180deg, #071233, #0a1f5c 60%, #0b2a7a); position: relative; overflow: hidden; }
@@ -15,7 +15,7 @@
   .occhiello { font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accento); margin: 0 0 .8em; }
   .blu .occhiello { color: var(--ciano); }
 
-  /* testata */
+  /* header */
   .testata { position: relative; z-index: 3; }
   .testata .riga { display: flex; align-items: center; gap: 2rem; padding-top: 1.3rem; padding-bottom: 1.3rem; }
   .testata nav { display: none; gap: 2.2rem; margin: 0 auto; font-size: .95rem; }
@@ -24,7 +24,7 @@
   .testata .azioni { margin-left: auto; }
   @media (min-width: 900px) { .testata nav { display: flex; } .testata .azioni { margin-left: 0; } }
 
-  /* apertura */
+  /* opening */
   .apertura { position: relative; z-index: 2; text-align: center; padding: 2.5rem 0 0; }
   .apertura h1 { margin: 0 auto .45em; max-width: 16em; font-size: clamp(2.3rem, 5vw, 4.4rem); line-height: 1.05; letter-spacing: -.035em; text-wrap: balance; }
   .apertura h1 em { font-style: normal; background: linear-gradient(90deg, #5fd3ff, #1a9cff); -webkit-background-clip: text; background-clip: text; color: transparent; }
@@ -34,7 +34,7 @@
   .vetro-blu { color: #fff; background: rgba(10,30,90,.35); box-shadow: inset 0 0 0 1.5px rgba(95,160,255,.6); }
   .vetro-blu:hover { background: rgba(20,60,160,.45); }
 
-  /* lo schema: dispositivi → cifrato → server ↔ desktop */
+  /* the diagram: devices → encrypted → server ↔ desktop */
   .schema { display: grid; align-items: center; gap: 1.5rem; margin: 3.5rem 0 0; grid-template-columns: 1fr; }
   @media (min-width: 1000px) { .schema { grid-template-columns: 9rem 10rem 4rem 12rem 4rem 1fr; gap: 0; } }
   .dispositivi { display: flex; justify-content: center; gap: 2rem; }
@@ -61,7 +61,7 @@
   .portatile .didascalia { margin-top: .9rem; font-size: .95rem; color: #eaf0ff; font-weight: 600; }
   .portatile .didascalia small { display: block; color: var(--chiaro-fondo); font-size: .88rem; font-weight: 400; }
 
-  /* dispositivi disegnati, con dentro la schermata vera */
+  /* drawn devices, with the real screenshot inside */
   .schermo { position: relative; overflow: hidden; background: linear-gradient(160deg, #1d2b6e 0%, #4b3ca8 45%, #f08a5d 75%, #233a7a 100%); }
   .schermo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top left; display: block; }
   .laptop { max-width: 34rem; margin: 0 auto; }
@@ -74,7 +74,7 @@
   .telefono { padding: .4rem; border-radius: 1.6rem; background: #0c1020; box-shadow: 0 0 0 1px #2a3352, 0 20px 40px rgba(0,0,0,.35); }
   .telefono .schermo { aspect-ratio: 9 / 19.5; border-radius: 1.1rem; }
 
-  /* striscia dei quattro punti */
+  /* strip of the four points */
   .striscia { position: relative; z-index: 2; display: grid; gap: 1.5rem; grid-template-columns: 1fr; padding: 3.5rem 0 3rem; }
   @media (min-width: 720px) { .striscia { grid-template-columns: 1fr 1fr; } }
   @media (min-width: 1100px) { .striscia { grid-template-columns: repeat(4, 1fr); gap: 0; } .striscia > div + div { border-left: 1px solid rgba(255,255,255,.12); } }
@@ -85,7 +85,7 @@
   .striscia .tux { width: 1.6rem; height: 1.6rem; background: #cfe2ff; -webkit-mask: url(icone/linux.svg) center / contain no-repeat; mask: url(icone/linux.svg) center / contain no-repeat; }
   .striscia span { font-size: .88rem; color: var(--chiaro-fondo); }
 
-  /* sezioni chiare */
+  /* light sections */
   .sezione { padding: 5.5rem 0; }
   .sezione.chiara { background: #fff; }
   .sezione.grigia { background: linear-gradient(180deg, #f3f6fc, #eef3fb); }
@@ -100,13 +100,13 @@
   .punti-v b { display: block; font-size: 1.02rem; }
   .punti-v span { color: var(--tenue); font-size: .95rem; }
 
-  /* la famiglia di dispositivi */
+  /* the family of devices */
   .famiglia { position: relative; padding-bottom: 10%; }
   .famiglia .laptop { max-width: none; width: 78%; margin: 0; }
   .famiglia .tablet { position: absolute; width: 42%; right: 13%; bottom: 0; }
   .famiglia .telefono { position: absolute; width: 16%; right: 0; bottom: 0; }
 
-  /* come funziona */
+  /* how it works */
   .come { display: grid; gap: 2.5rem; align-items: center; grid-template-columns: 1fr; }
   @media (min-width: 1100px) { .come { grid-template-columns: 4fr 8fr; gap: 4rem; } }
   .passi { display: grid; gap: 1rem; grid-template-columns: 1fr; align-items: stretch; }
@@ -122,7 +122,7 @@
   .mini-server i { display: block; height: .7rem; margin-bottom: .3rem; border-radius: .2rem; background: #08164a; box-shadow: inset 0 0 0 1px rgba(90,150,255,.35); }
   .mini-server i:last-child { margin-bottom: 0; }
 
-  /* distribuzioni + inizia ora */
+  /* distributions + get started now */
   .distro-riga { display: grid; gap: 3rem; align-items: center; grid-template-columns: 1fr; }
   @media (min-width: 1100px) { .distro-riga { grid-template-columns: 7fr 5fr; } }
   .distro-riga h2 { font-size: clamp(1.3rem, 2vw, 1.7rem); font-weight: 600; letter-spacing: -.01em; }
@@ -144,7 +144,7 @@
   .spunte span { display: inline-flex; align-items: center; gap: .45rem; }
   .spunte svg { width: 1.1rem; height: 1.1rem; color: #fff; background: var(--accento); border-radius: 50%; padding: .15rem; }
 
-  /* fascia finale */
+  /* final band */
   .finale { padding: 4.5rem 0; }
   .finale .griglia-f { position: relative; z-index: 2; display: grid; gap: 3rem; align-items: center; grid-template-columns: 1fr; }
   @media (min-width: 1100px) { .finale .griglia-f { grid-template-columns: 6fr 6fr; } }
@@ -158,7 +158,7 @@
   .usi b { display: block; }
   .usi span { font-size: .9rem; color: var(--chiaro-fondo); }
 
-  /* piede */
+  /* footer */
   .piede-chiaro { background: #fff; border-top: 1px solid var(--bordo); padding: 1.6rem 0; }
   .piede-chiaro .riga { display: flex; flex-wrap: wrap; align-items: center; gap: 1.5rem 2.5rem; font-size: .9rem; }
   .piede-chiaro .marchio { color: var(--inchiostro); }
@@ -169,7 +169,7 @@
 
   .telefono .schermo { background: #000; }
 
-  /* browser provati e Android */
+  /* tested browsers and Android */
   .browser-griglia { display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr); }
   .browser-griglia > * { min-width: 0; }
   @media (min-width: 1000px) { .browser-griglia { grid-template-columns: 7fr 5fr; } }

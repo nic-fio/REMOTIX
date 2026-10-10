@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- Stile: «Quattro desktop» — omaggio ordinato a GNOME, KDE, XFCE e LXQt.
-     Idea: quattro piccoli simboli astratti (cerchio, ingranaggio, onda, esagono) fanno da cornice a un modulo chiaro e pulito. -->
-<html lang="it">
+<!-- Style: «Four desktops» — a tidy homage to GNOME, KDE, XFCE and LXQt.
+     Idea: four small abstract symbols (circle, gear, wave, hexagon) frame a light, clean form. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --sfondo:#f5f7fa; --carta:#ffffff; --inchiostro:#1b2430; --tenue:#5a6676;
@@ -38,7 +38,7 @@
   .marchio h1{margin:0; font-size:1.6rem; letter-spacing:.14em; font-weight:750}
   .motto{margin:.5rem 0 1.5rem; text-align:center; color:var(--tenue); font-size:.95rem}
 
-  /* i quattro desktop */
+  /* the four desktops */
   .desktop{list-style:none; margin:0 0 1.75rem; padding:0; display:grid; grid-template-columns:repeat(4,1fr); gap:.5rem}
   .desktop li{
     display:flex; flex-direction:column; align-items:center; gap:.35rem;
@@ -77,7 +77,7 @@
   button:active{transform:translateY(1px)}
   button:focus-visible{outline:3px solid #9bb7f0; outline-offset:2px}
 
-  /* esempio: lo stato d'errore, disegnato anche lui */
+  /* example: the error state, drawn as well */
   .errore{
     margin-top:1rem; display:flex; gap:.6rem; align-items:flex-start;
     padding:.7rem .85rem; border-radius:.55rem; font-size:.88rem;
@@ -110,9 +110,9 @@
       </svg>
       <h1>REMOTIX</h1>
     </div>
-    <p class="motto">Il tuo desktop Linux, da qualunque browser</p>
+    <p class="motto">Your Linux desktop, from any browser</p>
 
-    <ul class="desktop" aria-label="Desktop supportati">
+    <ul class="desktop" aria-label="Supported desktops">
       <li>
         <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="11" fill="none" stroke="#3268c9" stroke-width="2.5"/><circle cx="16" cy="16" r="4.5" fill="#3268c9"/></svg>
         GNOME
@@ -133,23 +133,23 @@
 
     <form action="#" method="post" autocomplete="on">
       <div>
-        <label for="utente">Utente</label>
+        <label for="utente">User</label>
         <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
       </div>
       <div>
-        <label for="parola">Parola d'ordine</label>
+        <label for="parola">Password</label>
         <input id="parola" name="parola" type="password" autocomplete="current-password" required>
       </div>
-      <button type="submit">Collegati</button>
+      <button type="submit">Connect</button>
     </form>
 
-    <!-- esempio: stato d'errore dopo un tentativo sbagliato -->
+    <!-- example: error state after a wrong attempt -->
     <div class="errore" role="alert">
       <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10 5.5v5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="14.2" r="1.2" fill="currentColor"/></svg>
-      <span>Utente o parola d'ordine non corretti.</span>
+      <span>Wrong user or password.</span>
     </div>
 
-    <p class="piede"><span>Connessione cifrata</span> · <span>niente da installare</span></p>
+    <p class="piede"><span>Encrypted connection</span> · <span>nothing to install</span></p>
   </div>
 </main>
 </body>

@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>REMOTIX — Performance under load</title>
 <style>
-/* remotix.nicfio.it — mockup (9 ott 2026). La veste della pagina d'accesso (src/pagina.html,
-   classe .accesso): fascia satinata blu notte, schede bianche, accento #1466e0, verde #0f9f6e,
-   caratteri di sistema, il marchio con «TIX» sfumato. Solo prototipo: niente di questo e' il sito. */
+/* remotix.nicfio.it — mockup (9 Oct 2026). The look of the sign-in page (src/pagina.html,
+   class .accesso): night-blue satin band, white cards, accent #1466e0, green #0f9f6e,
+   system fonts, the brand with a gradient «TIX». Prototype only: none of this is the site. */
 
 :root {
   --notte: #08143a; --notte-2: #0a1f5c; --notte-3: #0b2a7a;
@@ -32,12 +32,12 @@ code, .mono { font-family: ui-monospace, "JetBrains Mono", "DejaVu Sans Mono", m
 .contenitore { width: 100%; max-width: 72rem; margin: 0 auto; padding: 0 16px; }
 @media (min-width: 720px) { .contenitore { padding: 0 32px; } }
 
-/* il marchio */
+/* the brand */
 .marchio { display: inline-flex; align-items: center; color: #fff; text-decoration: none; }
 .marchio svg { height: 1.9rem; width: auto; display: block; }
 .marchio-grande svg { height: auto; width: 15rem; max-width: 70vw; }
 
-/* la fascia satinata, presa dalla pagina d'accesso */
+/* the satin band, taken from the sign-in page */
 .notte { position: relative; color: #eaf0ff; background: var(--notte); overflow: hidden; isolation: isolate; }
 .notte .satin { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: -1; }
 .notte .satin::before { content: ""; position: absolute; left: -20%; right: -20%; top: -10%; height: 120%;
@@ -56,7 +56,7 @@ code, .mono { font-family: ui-monospace, "JetBrains Mono", "DejaVu Sans Mono", m
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .14 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
 @media (prefers-reduced-motion: reduce) { .notte .satin::before { animation: none; } }
 
-/* la testata */
+/* the header */
 .testata { position: relative; z-index: 2; }
 .testata .riga { display: flex; align-items: center; gap: 1.5rem; padding-top: 1.1rem; padding-bottom: 1.1rem; }
 .testata nav { display: none; gap: 1.6rem; margin-left: auto; font-size: .92rem; }
@@ -67,7 +67,7 @@ code, .mono { font-family: ui-monospace, "JetBrains Mono", "DejaVu Sans Mono", m
 .testata-chiara { background: var(--carta); border-bottom: 1px solid var(--bordo); }
 .testata-chiara .marchio { color: var(--inchiostro); }
 
-/* i pulsanti, uguali a «Sign in» */
+/* the buttons, the same as «Sign in» */
 .pulsante { display: inline-flex; align-items: center; justify-content: center; gap: .5em; font: inherit;
   font-weight: 650; font-size: .95rem; padding: .7em 1.15em; border-radius: .55em; border: 0; cursor: pointer;
   text-decoration: none; white-space: nowrap; transition: filter .15s, transform .1s, background .15s; }
@@ -85,11 +85,11 @@ code, .mono { font-family: ui-monospace, "JetBrains Mono", "DejaVu Sans Mono", m
 .piccolo { font-size: .82rem; padding: .45em .8em; }
 .pulsante svg { width: 1.05em; height: 1.05em; flex: none; }
 
-/* le schede bianche */
+/* the white cards */
 .scheda { background: var(--carta); border-radius: 1em; box-shadow: var(--ombra); padding: 1.6rem; min-width: 0; }
 .notte .scheda { box-shadow: var(--ombra-notte); color: var(--inchiostro); }
 
-/* campi, uguali a quelli dell'accesso */
+/* fields, the same as the sign-in ones */
 label { display: block; font-size: .82rem; font-weight: 600; color: var(--etichetta); margin: 0 0 .45em; }
 label .facoltativo { font-weight: 400; color: var(--tenue); }
 input[type=text], input[type=email], input[type=search], select { width: 100%; font: inherit; font-size: 1rem;
@@ -99,14 +99,14 @@ input:hover, select:hover { border-color: var(--campo-bordo-su); }
 input:focus, select:focus { outline: none; border-color: var(--accento); box-shadow: 0 0 0 3px rgba(20,102,224,.2); }
 .campi { display: grid; gap: 1rem; }
 
-/* avvisi, dalla pagina d'accesso (#avviso, #esito) */
+/* notices, from the sign-in page (#avviso, #esito) */
 .avviso { padding: .85em 1em; font-size: .9rem; line-height: 1.45; border-radius: .65em; border: 1px solid; }
 .avviso.giallo { color: var(--giallo-t); background: var(--giallo-f); border-color: var(--giallo-b); }
 .avviso.rosso { color: var(--rosso-t); background: var(--rosso-f); border-color: var(--rosso-b); }
 .avviso.verde { color: var(--verde-t); background: var(--verde-f); border-color: var(--verde-b); }
 .avviso.grigio { color: var(--tenue); background: #f6f8fb; border-color: var(--bordo); }
 
-/* etichette di stato */
+/* status labels */
 .stato { display: inline-flex; align-items: center; gap: .4em; font-size: .78rem; font-weight: 650;
   padding: .2em .65em; border-radius: 99em; border: 1px solid; white-space: nowrap; }
 .stato::before { content: ""; width: .5em; height: .5em; border-radius: 50%; background: currentColor; }
@@ -117,7 +117,7 @@ input:focus, select:focus { outline: none; border-color: var(--accento); box-sha
 .stato.gold { color: #7a4a00; background: #fff6e0; border-color: #f5d48a; }
 .stato.sospesa { color: var(--tenue); background: #f2f4f7; border-color: var(--bordo); }
 
-/* tabelle */
+/* tables */
 .tabella { width: 100%; border-collapse: collapse; font-size: .9rem; }
 .tabella th { text-align: left; font-size: .75rem; font-weight: 650; text-transform: uppercase; letter-spacing: .04em;
   color: var(--tenue); padding: .7em .8em; border-bottom: 1px solid var(--bordo); white-space: nowrap; }
@@ -126,7 +126,7 @@ input:focus, select:focus { outline: none; border-color: var(--accento); box-sha
 .tabella .num { text-align: right; font-variant-numeric: tabular-nums; }
 .scorre { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
-/* il piede */
+/* the footer */
 .piede { background: var(--notte); color: var(--tenue-fondo); font-size: .88rem; padding: 3rem 0 2rem; }
 .piede .colonne { display: grid; gap: 2rem; grid-template-columns: 1fr; }
 @media (min-width: 720px) { .piede .colonne { grid-template-columns: 2fr 1fr 1fr 1fr; } }
@@ -136,7 +136,7 @@ input:focus, select:focus { outline: none; border-color: var(--accento); box-sha
 .piede a:hover { color: #fff; }
 .piede .fondo { margin-top: 2.5rem; padding-top: 1.4rem; border-top: 1px solid rgba(255,255,255,.1); font-size: .8rem; }
 
-/* il nastro del mockup */
+/* the mockup ribbon */
 .nastro { position: fixed; right: 12px; bottom: 12px; z-index: 50; font-size: .72rem; font-weight: 700;
   letter-spacing: .06em; text-transform: uppercase; color: #fff; background: #d92d20; padding: .35em .7em;
   border-radius: .4em; box-shadow: 0 4px 12px rgba(0,0,0,.25); }
@@ -172,7 +172,7 @@ input:focus, select:focus { outline: none; border-color: var(--accento); box-sha
   .sezione h2 { margin: 0 0 .4em; font-size: clamp(1.7rem, 2.8vw, 2.4rem); line-height: 1.12; letter-spacing: -.025em; }
   .guida { margin: 0 0 1.8rem; color: var(--tenue); font-size: 1.05rem; max-width: 50em; }
 
-  /* controlli: una riga sopra i grafici */
+  /* controls: one row above the charts */
   .controlli { display: flex; flex-wrap: wrap; gap: .8rem 1.6rem; align-items: center; margin-bottom: 1.4rem; }
   .segmenti { display: inline-flex; background: #eef1f6; border-radius: .6rem; padding: .2rem; }
   .segmenti button { font: inherit; font-size: .9rem; font-weight: 600; border: 0; background: transparent; color: var(--tenue); padding: .45em 1em; border-radius: .45rem; cursor: pointer; }

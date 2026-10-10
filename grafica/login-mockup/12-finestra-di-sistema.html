@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- Stile: «Finestra di sistema» — il modulo vive dentro una finestra con barra del titolo, su un desktop chiaro stilizzato.
-     Idea: l'accesso ha già l'aspetto di quello che si ottiene dopo: un pannello in alto, uno sfondo morbido, una finestra in primo piano. -->
-<html lang="it">
+<!-- Style: «System window» — the form lives inside a window with a title bar, on a stylised light desktop.
+     Idea: the sign-in already looks like what you get afterwards: a panel at the top, a soft background, a window in the foreground. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --inchiostro:#1c2330; --tenue:#566172; --bordo:#d6dce5;
@@ -26,7 +26,7 @@
       radial-gradient(ellipse 40% 40% at 70% 15%, #e0f3ef 0, transparent 70%);
   }
 
-  /* pannello del desktop, in alto */
+  /* desktop panel, at the top */
   .pannello{
     display:flex; align-items:center; justify-content:space-between;
     padding:.35rem 1rem; font-size:.8rem; color:#2c3442;
@@ -40,12 +40,12 @@
 
   .scrivania{flex:1; display:grid; place-items:center; padding:2rem 1rem 3rem; position:relative}
 
-  /* icone sul desktop, solo decoro */
+  /* icons on the desktop, decoration only */
   .icone{position:absolute; left:1.5rem; top:1.5rem; display:grid; gap:1.2rem}
   .icone div{display:grid; justify-items:center; gap:.25rem; font-size:.7rem; color:#3d4758; width:4.2rem}
   .icone svg{width:2.2rem; height:2.2rem}
 
-  /* la finestra */
+  /* the window */
   .finestra{
     width:100%; max-width:28rem; background:#fff; border-radius:.7rem; overflow:hidden;
     border:1px solid rgba(30,40,60,.14);
@@ -96,7 +96,7 @@
   button:active{transform:translateY(1px)}
   button:focus-visible{outline:3px solid #9fb0f2; outline-offset:2px}
 
-  /* esempio: stato d'errore */
+  /* example: error state */
   .errore{
     margin:1rem 0 0; padding:.6rem .8rem; border-radius:.35rem; font-size:.86rem;
     display:flex; gap:.55rem; align-items:flex-start;
@@ -127,7 +127,7 @@
 </head>
 <body>
 <header class="pannello" aria-hidden="true">
-  <div class="sx"><b>REMOTIX</b><span>Attività</span><span>Sessione</span></div>
+  <div class="sx"><b>REMOTIX</b><span>Activities</span><span>Session</span></div>
   <div class="dx">
     <svg viewBox="0 0 16 16"><path d="M1.5 6.5a9.5 9.5 0 0 1 13 0M4 9a6 6 0 0 1 8 0M6.5 11.5a2.4 2.4 0 0 1 3 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
     <svg viewBox="0 0 16 16"><rect x="3.5" y="7" width="9" height="7" rx="1.2" fill="currentColor"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
@@ -137,15 +137,15 @@
 
 <div class="scrivania">
   <div class="icone" aria-hidden="true">
-    <div><svg viewBox="0 0 36 36"><path d="M4 9a2 2 0 0 1 2-2h8l3 3h13a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" fill="#8fb0ea"/><path d="M4 13h28v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" fill="#6f96e0"/></svg>Cartella</div>
-    <div><svg viewBox="0 0 36 36"><rect x="4" y="6" width="28" height="24" rx="3" fill="#39414f"/><path d="M9 13l4 3-4 3M15 20h7" stroke="#bfe7c9" stroke-width="2" fill="none" stroke-linecap="round"/></svg>Terminale</div>
-    <div><svg viewBox="0 0 36 36"><rect x="8" y="4" width="20" height="28" rx="2" fill="#fff" stroke="#b9c2cf"/><path d="M12 11h12M12 16h12M12 21h8" stroke="#b9c2cf" stroke-width="2" stroke-linecap="round"/></svg>Note</div>
+    <div><svg viewBox="0 0 36 36"><path d="M4 9a2 2 0 0 1 2-2h8l3 3h13a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" fill="#8fb0ea"/><path d="M4 13h28v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z" fill="#6f96e0"/></svg>Folder</div>
+    <div><svg viewBox="0 0 36 36"><rect x="4" y="6" width="28" height="24" rx="3" fill="#39414f"/><path d="M9 13l4 3-4 3M15 20h7" stroke="#bfe7c9" stroke-width="2" fill="none" stroke-linecap="round"/></svg>Terminal</div>
+    <div><svg viewBox="0 0 36 36"><rect x="8" y="4" width="20" height="28" rx="2" fill="#fff" stroke="#b9c2cf"/><path d="M12 11h12M12 16h12M12 21h8" stroke="#b9c2cf" stroke-width="2" stroke-linecap="round"/></svg>Notes</div>
   </div>
 
   <main class="finestra">
     <div class="barra">
       <span class="spazio" aria-hidden="true"><svg viewBox="0 0 16 16"><rect x="3.5" y="7" width="9" height="7" rx="1.2" fill="#3a56d4"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="#3a56d4" stroke-width="1.5"/></svg></span>
-      <span class="titolo">Accesso — REMOTIX</span>
+      <span class="titolo">Sign in — REMOTIX</span>
       <span class="comandi" aria-hidden="true"><span></span><span></span><span></span></span>
     </div>
 
@@ -159,34 +159,34 @@
         </svg>
         <div>
           <h1>REMOTIX</h1>
-          <p class="motto">Il tuo desktop Linux, in una finestra del browser</p>
+          <p class="motto">Your Linux desktop, in a browser window</p>
         </div>
       </div>
 
       <form action="#" method="post">
         <div class="campo">
-          <label for="utente">Utente</label>
+          <label for="utente">User</label>
           <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
         </div>
         <div class="campo">
-          <label for="parola">Parola d'ordine</label>
+          <label for="parola">Password</label>
           <input id="parola" name="parola" type="password" autocomplete="current-password" required>
         </div>
         <div class="azioni">
-          <button type="submit">Collegati</button>
+          <button type="submit">Connect</button>
         </div>
       </form>
 
-      <!-- esempio: stato d'errore dopo un tentativo sbagliato -->
+      <!-- example: error state after a wrong attempt -->
       <div class="errore" role="alert">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5l8 14H2z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M10 8v4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="10" cy="14.3" r="1.1" fill="currentColor"/></svg>
-        <span>Utente o parola d'ordine non corretti.</span>
+        <span>Wrong user or password.</span>
       </div>
     </div>
 
     <footer class="stato">
-      <span class="ok">Connessione cifrata</span>
-      <span>Niente da installare</span>
+      <span class="ok">Encrypted connection</span>
+      <span>Nothing to install</span>
     </footer>
   </main>
 </div>

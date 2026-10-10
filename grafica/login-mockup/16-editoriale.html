@@ -1,11 +1,11 @@
-<!-- Stile: EDITORIALE — impaginazione da rivista su fondo carta.
-     Idea: un grande titolo serif di sistema a sinistra come una copertina, il modulo a destra come una colonna di testo, filetti sottili e numeri di pagina. -->
+<!-- Style: EDITORIAL — magazine layout on a paper background.
+     Idea: a large system serif title on the left like a cover, the form on the right like a column of text, thin rules and page numbers. -->
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --carta:#f6f1e7; --carta-2:#efe8da; --inchiostro:#1d1a16; --grigio:#5a5249;
@@ -94,27 +94,27 @@
       </svg>
       REMOTIX
     </span>
-    <span class="num">N° 1 — Accesso</span>
+    <span class="num">No. 1 — Sign in</span>
   </header>
 
   <section class="copertina">
-    <p class="occhiello">Desktop remoto</p>
-    <h1>Il tuo<br>desktop,<br><em>ovunque.</em></h1>
-    <p class="motto">Apri la pagina e ritrovi il tuo desktop Linux, da qualunque browser, tutto dove l'avevi lasciato.</p>
+    <p class="occhiello">Remote desktop</p>
+    <h1>Your<br>desktop,<br><em>anywhere.</em></h1>
+    <p class="motto">Open the page and find your Linux desktop again, from any browser, everything where you left it.</p>
   </section>
 
   <section class="colonna" aria-labelledby="titolo-accesso">
-    <h2 id="titolo-accesso">Entra nella tua sessione</h2>
+    <h2 id="titolo-accesso">Enter your session</h2>
     <form action="#" method="post">
-      <div><label for="utente">Utente</label><input id="utente" name="utente" autocomplete="username" required></div>
-      <div><label for="parola">Parola d'ordine</label><input id="parola" name="parola" type="password" autocomplete="current-password" required></div>
-      <button type="submit">Collegati <span aria-hidden="true">→</span></button>
+      <div><label for="utente">User</label><input id="utente" name="utente" autocomplete="username" required></div>
+      <div><label for="parola">Password</label><input id="parola" name="parola" type="password" autocomplete="current-password" required></div>
+      <button type="submit">Connect <span aria-hidden="true">→</span></button>
     </form>
-    <!-- esempio: stato d'errore, visibile solo per il mockup -->
-    <p class="errore" role="alert">Utente o parola d'ordine non corretti.</p>
+    <!-- example: error state, visible only for the mockup -->
+    <p class="errore" role="alert">Wrong user or password.</p>
   </section>
 
-  <footer class="piede"><span>Connessione cifrata · niente da installare</span><span>REMOTIX</span></footer>
+  <footer class="piede"><span>Encrypted connection · nothing to install</span><span>REMOTIX</span></footer>
 </main>
 </body>
 </html>

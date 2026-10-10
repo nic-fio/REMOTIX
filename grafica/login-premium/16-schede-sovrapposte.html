@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- Stile: «Schede sovrapposte» — tre schede sfalsate come un mazzo, leggermente inclinate in 3D; quella davanti porta il modulo.
-     Idea: la profondità dice «c'è un desktop dietro questa porta», e i colori delle schede di dietro sono quelli del logo. -->
-<html lang="it">
+<!-- Style: «Stacked cards» — three staggered cards like a deck, slightly tilted in 3D; the front one carries the form.
+     Idea: the depth says «there is a desktop behind this door», and the colours of the cards behind are those of the logo. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --fondo:#070b18; --scheda:#0f1730; --scheda-alta:#131d3b; --filo:rgba(170,190,240,.12);
@@ -30,7 +30,7 @@
   .logo{width:12.5rem; height:auto; color:#fff; display:block; margin:0 0 .7rem}
   .motto{margin:0 0 2.6rem; color:var(--tenue); font-size:.95rem; text-align:center; line-height:1.45}
 
-  /* il mazzo: la prospettiva sta sul contenitore, l'inclinazione è ferma */
+  /* the deck: the perspective is on the container, the tilt is fixed */
   .mazzo{position:relative; width:100%; perspective:1800px}
   .pila{position:relative; transform-style:preserve-3d; transform:rotateX(4deg) rotateY(-5deg)}
   .foglio{
@@ -145,27 +145,27 @@
     </g>
     <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
   </svg>
-  <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+  <p class="motto">Your Linux desktop, from any browser.</p>
 
   <div class="mazzo">
     <div class="pila">
       <div class="foglio terzo" aria-hidden="true"></div>
       <div class="foglio secondo" aria-hidden="true"></div>
       <main class="scheda" aria-labelledby="titolo">
-        <h1 id="titolo">Accedi</h1>
-        <p class="sotto">Entra con l'utente del server.</p>
+        <h1 id="titolo">Sign in</h1>
+        <p class="sotto">Enter with the server's user.</p>
         <div id="avviso"></div>
 
         <form id="modulo" action="#" method="post" novalidate>
           <div>
-            <label for="utente">Utente</label>
+            <label for="utente">User</label>
             <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
           </div>
           <div>
-            <label for="parola">Parola d'ordine</label>
+            <label for="parola">Password</label>
             <input id="parola" name="parola" type="password" autocomplete="current-password" required>
           </div>
-          <button type="submit" id="vai">Collegati
+          <button type="submit" id="vai">Connect
             <span class="giro" aria-hidden="true"></span>
             <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
@@ -176,7 +176,7 @@
 
         <p class="piede">
           <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="8.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
-          Connessione cifrata <span class="sep">·</span> <code>alfa.lan</code>
+          Encrypted connection <span class="sep">·</span> <code>alfa.lan</code>
         </p>
       </main>
     </div>
@@ -189,7 +189,7 @@
   var modulo=$('modulo'), esito=$('esito'), vai=$('vai'), utente=$('utente'), parola=$('parola');
   function errore(){
     esito.className='errore';
-    esito.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 5.8v5.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="14.2" r="1.1" fill="currentColor"/></svg><span>Utente o parola d\'ordine non validi.</span>';
+    esito.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 5.8v5.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="14.2" r="1.1" fill="currentColor"/></svg><span>Invalid user or password.</span>';
     utente.setAttribute('aria-invalid','true'); parola.setAttribute('aria-invalid','true');
   }
   function pulisci(){esito.className=''; esito.textContent=''; utente.removeAttribute('aria-invalid'); parola.removeAttribute('aria-invalid');}
@@ -201,7 +201,7 @@
   var stato=new URLSearchParams(location.search).get('stato');
   if(stato==='errore') errore();
   if(stato==='attesa'){vai.disabled=true; vai.classList.add('attesa');}
-  if(stato==='avviso') $('avviso').textContent='I tentativi di accesso da questo indirizzo sono esauriti. Riprova fra 11 ore e 59 minuti.';
+  if(stato==='avviso') $('avviso').textContent='The sign-in attempts from this address are used up. Try again in 11 hours and 59 minutes.';
 })();
 </script>
 </body>

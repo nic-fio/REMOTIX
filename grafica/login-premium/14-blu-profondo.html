@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- Stile: «Blu profondo» — tutto lo schermo nel blu del marchio, dal notte in alto al blu vivo in basso; sopra il logo in bianco, poi una scheda bianca netta con un'ombra lunga.
-     Idea: il colore È il marchio: una sola superficie piena e sicura, e la scheda bianca che ne esce con la nettezza di un biglietto da visita. -->
-<html lang="it">
+<!-- Style: «Deep blue» — the whole screen in the brand's blue, from night at the top to vivid blue at the bottom; above it the logo in white, then a crisp white card with a long shadow.
+     Idea: the colour IS the brand: a single full, confident surface, and the white card that comes out of it with the crispness of a business card. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --notte:#031444; --marchio:#0646c8; --vivo:#1a7cff; --ciano:#00d8ff;
@@ -126,21 +126,21 @@
 </h1>
 
 <main class="scheda" aria-labelledby="entra">
-  <h2 id="entra">Accedi</h2>
-  <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+  <h2 id="entra">Sign in</h2>
+  <p class="motto">Your Linux desktop, from any browser.</p>
 
   <div id="avviso"></div>
 
   <form id="modulo" action="#" method="post">
     <div>
-      <label for="utente">Utente</label>
+      <label for="utente">User</label>
       <input id="utente" name="utente" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
     </div>
     <div>
-      <label for="parola">Parola d'ordine</label>
+      <label for="parola">Password</label>
       <input id="parola" name="parola" type="password" autocomplete="current-password" required>
     </div>
-    <button type="submit" id="vai"><span class="testo">Collegati</span>
+    <button type="submit" id="vai"><span class="testo">Connect</span>
       <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
   </form>
@@ -151,7 +151,7 @@
 
 <p class="piede">
   <svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>
-  Connessione cifrata con <code>alfa.lan</code>
+  Encrypted connection with <code>alfa.lan</code>
 </p>
 
 <script>
@@ -159,7 +159,7 @@
   var $=function(i){return document.getElementById(i)};
   var esito=$("esito"), vai=$("vai"), testo=vai.querySelector(".testo"), campi=[$("utente"),$("parola")];
   function errore(){
-    esito.textContent="Utente o parola d'ordine non validi.";
+    esito.textContent="Invalid user or password.";
     esito.className="errore";
     campi.forEach(function(c){c.setAttribute("aria-invalid","true")});
   }
@@ -171,12 +171,12 @@
   campi.forEach(function(c){c.addEventListener("input",pulisci)});
   $("modulo").addEventListener("submit",function(ev){
     ev.preventDefault(); pulisci();
-    vai.disabled=true; testo.textContent="Collegamento…";
-    setTimeout(function(){vai.disabled=false; testo.textContent="Collegati"; errore(); $("parola").select();},700);
+    vai.disabled=true; testo.textContent="Connecting…";
+    setTimeout(function(){vai.disabled=false; testo.textContent="Connect"; errore(); $("parola").select();},700);
   });
   var stato=new URLSearchParams(location.search).get("stato");
   if(stato==="errore")errore();
-  if(stato==="avviso")$("avviso").textContent="I tentativi di accesso da questo indirizzo sono esauriti. Riprova fra 11 ore e 59 minuti, oppure sblocca l'indirizzo dal server.";
+  if(stato==="avviso")$("avviso").textContent="The sign-in attempts from this address are used up. Try again in 11 hours and 59 minutes, or unblock the address from the server.";
 })();
 </script>
 </body>

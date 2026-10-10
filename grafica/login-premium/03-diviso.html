@@ -1,12 +1,12 @@
 <!doctype html>
-<!-- Stile: «Diviso» — a sinistra un pannello nei blu del marchio col logo grande, il motto e la R in filigrana; a destra il modulo su fondo quasi nero.
-     Idea: la pagina d'ingresso di un prodotto commerciale: metà vetrina del marchio, metà lavoro; sul telefono la vetrina diventa una fascia in alto. -->
-<html lang="it">
+<!-- Style: «Split» — on the left a panel in the brand's blues with the large logo, the motto and the watermark R; on the right the form on a near-black background.
+     Idea: the entry page of a commercial product: half brand showcase, half work; on the phone the showcase becomes a band at the top. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --fondo:#07090f; --testo:#ecf0f8; --tenue:#8e98ab; --etichetta:#c4ccda;
@@ -21,7 +21,7 @@
     color:var(--testo); background:var(--fondo); overflow-x:hidden; -webkit-font-smoothing:antialiased;
   }
 
-  /* --- la vetrina --- */
+  /* --- the showcase --- */
   .vetrina{
     position:relative; overflow:hidden; isolation:isolate;
     display:flex; flex-direction:column; justify-content:space-between; padding:3em 3.5em;
@@ -30,11 +30,11 @@
       radial-gradient(80% 70% at 100% 100%, rgba(26,124,255,.40), transparent 70%),
       linear-gradient(135deg, #062466 0%, #041640 50%, #020a22 100%);
   }
-  /* la R del marchio, enorme e tagliata, in filigrana */
+  /* the brand's R, huge and cropped, as a watermark */
   .filigrana{position:absolute; z-index:-1; right:-14%; bottom:-18%; width:78%; height:auto; opacity:.16;
     animation:deriva 30s ease-in-out infinite alternate}
   @keyframes deriva{from{transform:translate(0,0)} to{transform:translate(-2%,-2%)}}
-  /* una trama finissima di righe, come una retina di schermo */
+  /* a very fine texture of lines, like a screen's mesh */
   .vetrina::after{content:""; position:absolute; inset:0; z-index:-1; opacity:.5;
     background:repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 4px)}
   .vetrina .alto{font-size:.78em; letter-spacing:.18em; text-transform:uppercase; color:rgba(220,236,255,.82); font-weight:600}
@@ -46,7 +46,7 @@
   .vetrina .basso{display:flex; gap:1.6em; flex-wrap:wrap; font-size:.8em; color:rgba(220,236,255,.82)}
   .vetrina .basso b{display:block; color:#fff; font-size:1.05em; font-weight:650; margin-bottom:.15em}
 
-  /* --- il modulo --- */
+  /* --- the form --- */
   .lato{display:grid; place-items:center; padding:3em 2em}
   .scheda{width:100%; max-width:21em; animation:entra .6s cubic-bezier(.2,.7,.2,1) both}
   @keyframes entra{from{opacity:0; transform:translateX(.8em)} to{opacity:1; transform:none}}
@@ -104,7 +104,7 @@
   .piede .punto{width:.45em; height:.45em; border-radius:50%; background:var(--vivo); box-shadow:0 0 0 .2em rgba(47,211,154,.16); margin-left:auto}
   .piede code{font-family:ui-monospace,"JetBrains Mono","DejaVu Sans Mono",monospace; color:var(--etichetta)}
 
-  /* tablet in piedi e telefono: la vetrina diventa una fascia in alto */
+  /* portrait tablet and phone: the showcase becomes a band at the top */
   @media (max-width:860px){
     body{grid-template-columns:1fr; grid-template-rows:auto 1fr}
     .vetrina{padding:2.2em 1.4em 2em; min-height:0}
@@ -136,7 +136,7 @@
       <path d="M150 180H232L442 356H296Z"/>
     </g>
   </svg>
-  <div class="alto">Desktop remoto · multiutente</div>
+  <div class="alto">Remote desktop · multi-user</div>
   <div class="centro">
     <h1>
       <svg viewBox="0 0 1640 360" role="img" aria-label="REMOTIX">
@@ -156,30 +156,30 @@
         <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
       </svg>
     </h1>
-    <p class="motto">Il tuo desktop Linux, <span>da qualunque browser.</span></p>
+    <p class="motto">Your Linux desktop, <span>from any browser.</span></p>
   </div>
   <div class="basso">
-    <div><b>Niente da installare</b>Basta un browser moderno</div>
-    <div><b>Un desktop a testa</b>Ognuno la sua sessione</div>
+    <div><b>Nothing to install</b>A modern browser is enough</div>
+    <div><b>One desktop each</b>Everyone has their own session</div>
   </div>
 </aside>
 
 <div class="lato">
   <main class="scheda">
-    <h2>Accedi</h2>
-    <p class="sotto">Entra nel tuo desktop con l'utente del server.</p>
+    <h2>Sign in</h2>
+    <p class="sotto">Enter your desktop with the server's user.</p>
     <div id="avviso"></div>
 
     <form id="modulo" action="#" method="post">
       <div>
-        <label for="utente">Utente</label>
+        <label for="utente">User</label>
         <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
       </div>
       <div>
-        <label for="parola">Parola d'ordine</label>
+        <label for="parola">Password</label>
         <input id="parola" name="parola" type="password" autocomplete="current-password" required>
       </div>
-      <button type="submit" id="vai"><span>Collegati</span>
+      <button type="submit" id="vai"><span>Connect</span>
         <svg class="freccia" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <svg class="ruota" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-opacity=".3" stroke-width="2.2"/><path d="M10 3a7 7 0 0 1 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
       </button>
@@ -190,7 +190,7 @@
 
     <p class="piede">
       <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="8.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
-      Connessione cifrata <i class="punto" aria-hidden="true"></i><code>alfa.lan</code>
+      Encrypted connection <i class="punto" aria-hidden="true"></i><code>alfa.lan</code>
     </p>
   </main>
 </div>
@@ -199,7 +199,7 @@
   var esito=document.getElementById("esito"), vai=document.getElementById("vai"),
       campi=[document.getElementById("utente"), document.getElementById("parola")];
   function errore(){
-    esito.textContent="Utente o parola d'ordine non validi."; esito.className="male";
+    esito.textContent="Invalid user or password."; esito.className="male";
     campi.forEach(function(c){c.setAttribute("aria-invalid","true")});
   }
   campi.forEach(function(c){c.addEventListener("input",function(){

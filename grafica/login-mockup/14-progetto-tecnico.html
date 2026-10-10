@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- Stile: «Progetto tecnico» — carta millimetrata azzurrina, righe sottili, quote e squadri come su una tavola da disegno.
-     Idea: la pagina è una tavola di progetto; il modulo è la «figura 1», con il cartiglio in basso come nei disegni d'officina. -->
-<html lang="it">
+<!-- Style: «Technical drawing» — light-blue graph paper, thin lines, dimensions and corner marks as on a drawing board.
+     Idea: the page is a design sheet; the form is «figure 1», with the title block at the bottom as in workshop drawings. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --carta:#f6fafe; --maglia:#dbe8f5; --maglia-forte:#bfd5ec;
@@ -20,7 +20,7 @@
     margin:0; min-height:100vh; display:grid; place-items:center; padding:2.5rem 1rem;
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Cantarell,Ubuntu,sans-serif;
     color:var(--inchiostro); background-color:var(--carta);
-    /* carta millimetrata: maglia fine ogni 0,5 rem, maglia grossa ogni 2,5 rem */
+    /* graph paper: fine mesh every 0.5 rem, coarse mesh every 2.5 rem */
     background-image:
       linear-gradient(var(--maglia-forte) 1px, transparent 1px),
       linear-gradient(90deg, var(--maglia-forte) 1px, transparent 1px),
@@ -38,7 +38,7 @@
     display:flex; justify-content:space-between; margin:0 0 1rem;
   }
 
-  /* la scheda, con squadri agli angoli */
+  /* the card, with corner marks */
   .scheda{
     position:relative; background:rgba(255,255,255,.93); border:1.5px solid var(--tratto);
     padding:2rem 1.8rem 1.5rem;
@@ -52,7 +52,7 @@
   .angoli::before{bottom:-.55rem; left:-.55rem; border-right:0; border-top:0}
   .angoli::after{bottom:-.55rem; right:-.55rem; border-left:0; border-top:0}
 
-  /* quota orizzontale sotto */
+  /* horizontal dimension underneath */
   .quota{position:absolute; left:0; right:0; bottom:-1.9rem; height:1rem; display:none}
   .quota svg{width:100%; height:100%; display:block}
 
@@ -81,7 +81,7 @@
   button:active{transform:translate(3px,3px); box-shadow:1px 1px 0 var(--maglia-forte)}
   button:focus-visible{outline:2px dashed var(--tratto); outline-offset:4px}
 
-  /* esempio: stato d'errore, come una nota di revisione */
+  /* example: error state, like a revision note */
   .errore{
     margin-top:1.1rem; display:grid; grid-template-columns:auto 1fr; gap:.6rem; align-items:start;
     padding:.65rem .8rem; font-size:.87rem;
@@ -89,7 +89,7 @@
   }
   .errore b{font:700 .7rem/1.6 var(--mono); letter-spacing:.08em; padding:0 .3rem; border:1px solid currentColor}
 
-  /* cartiglio */
+  /* title block */
   .cartiglio{
     margin-top:1.4rem; display:grid; grid-template-columns:1fr auto; border:1px solid var(--tratto);
     font:500 .68rem/1.3 var(--mono); color:var(--tenue); letter-spacing:.05em;
@@ -107,7 +107,7 @@
 </head>
 <body>
 <div class="tavola">
-  <p class="fig" aria-hidden="true"><span>FIG. 1 — ACCESSO</span><span>SCALA 1:1</span></p>
+  <p class="fig" aria-hidden="true"><span>FIG. 1 — SIGN IN</span><span>SCALE 1:1</span></p>
 
   <main class="scheda">
     <span class="angoli" aria-hidden="true"></span>
@@ -128,30 +128,30 @@
       </svg>
       <h1>REMOTIX</h1>
     </div>
-    <p class="motto">Il tuo desktop Linux, da qualunque browser. Progettato per funzionare, ovunque.</p>
+    <p class="motto">Your Linux desktop, from any browser. Designed to work, anywhere.</p>
 
     <form action="#" method="post">
       <div>
-        <label for="utente">Utente <small aria-hidden="true">A</small></label>
+        <label for="utente">User <small aria-hidden="true">A</small></label>
         <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
       </div>
       <div>
-        <label for="parola">Parola d'ordine <small aria-hidden="true">B</small></label>
+        <label for="parola">Password <small aria-hidden="true">B</small></label>
         <input id="parola" name="parola" type="password" autocomplete="current-password" required>
       </div>
-      <button type="submit">Collegati</button>
+      <button type="submit">Connect</button>
     </form>
 
-    <!-- esempio: stato d'errore dopo un tentativo sbagliato -->
+    <!-- example: error state after a wrong attempt -->
     <div class="errore" role="alert">
-      <b aria-hidden="true">NOTA</b>
-      <span>Utente o parola d'ordine non corretti.</span>
+      <b aria-hidden="true">NOTE</b>
+      <span>Wrong user or password.</span>
     </div>
 
     <div class="cartiglio">
-      <div>REMOTIX · TAVOLA 01</div>
+      <div>REMOTIX · SHEET 01</div>
       <div>REV. A</div>
-      <div class="riga">Connessione cifrata · niente da installare</div>
+      <div class="riga">Encrypted connection · nothing to install</div>
     </div>
   </main>
 </div>

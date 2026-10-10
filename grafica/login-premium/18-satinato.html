@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- Stile: «Satinato» — fondo scuro con una fascia obliqua di gradienti morbidi blu e ciano e una grana sottile come carta satinata; a destra una scheda bianca.
-     Idea: il registro di Stripe — colore ricco ma fermo, un solo foglio chiaro dove si scrive; la grana toglie l'effetto «plastica» ai gradienti. -->
-<html lang="it">
+<!-- Style: «Satin» — dark background with an oblique band of soft blue and cyan gradients and a fine grain like satin paper; on the right a white card.
+     Idea: Stripe's register — rich but still colour, a single light sheet where you write; the grain takes the «plastic» effect off the gradients. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --notte:#070b1a; --testo-fondo:#eaf0ff; --tenue-fondo:#a9b6d6;
@@ -22,7 +22,7 @@
     font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",Cantarell,Ubuntu,sans-serif;
     color:var(--testo-fondo); background:var(--notte); overflow-x:hidden; position:relative;
   }
-  /* la fascia satinata: gradienti morbidi su una banda obliqua, ferma */
+  /* the satin band: soft gradients on an oblique band, still */
   .satin{position:fixed; inset:0; overflow:hidden; pointer-events:none; z-index:0}
   .satin::before{
     content:""; position:absolute; left:-20%; right:-20%; top:-30%; height:95%;
@@ -38,7 +38,7 @@
     animation:respira 14s ease-in-out infinite alternate;
   }
   @keyframes respira{to{transform:rotate(-11deg) translateX(2.5%)}}
-  .satin::after{ /* la grana: rumore fermo, 160 px ripetuti */
+  .satin::after{ /* the grain: still noise, 160 px repeated */
     content:""; position:absolute; inset:0; opacity:.55;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .14 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
     background-size:160px 160px;
@@ -153,29 +153,29 @@
       </g>
       <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
     </svg>
-    <h2>Il tuo desktop Linux, da qualunque browser.</h2>
-    <p>Portatile, telefono o tablet: apri la pagina, entra, e ritrovi le tue finestre come le avevi lasciate.</p>
+    <h2>Your Linux desktop, from any browser.</h2>
+    <p>Laptop, phone or tablet: open the page, sign in, and find your windows as you left them.</p>
     <ul class="punti">
-      <li><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Niente da installare</li>
-      <li><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Un desktop per ogni utente, sullo stesso server</li>
+      <li><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Nothing to install</li>
+      <li><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10.5l3.5 3.5 7.5-8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>One desktop for every user, on the same server</li>
     </ul>
   </section>
 
   <main class="scheda" aria-labelledby="titolo">
-    <h1 id="titolo">Accedi</h1>
-    <p class="sotto">Usa l'utente e la parola d'ordine del server.</p>
+    <h1 id="titolo">Sign in</h1>
+    <p class="sotto">Use the server's user and password.</p>
     <div id="avviso"></div>
 
     <form id="modulo" action="#" method="post" novalidate>
       <div>
-        <label for="utente">Utente</label>
+        <label for="utente">User</label>
         <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
       </div>
       <div>
-        <label for="parola">Parola d'ordine</label>
+        <label for="parola">Password</label>
         <input id="parola" name="parola" type="password" autocomplete="current-password" required>
       </div>
-      <button type="submit" id="vai">Collegati
+      <button type="submit" id="vai">Connect
         <span class="giro" aria-hidden="true"></span>
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
@@ -186,7 +186,7 @@
 
     <p class="piede">
       <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="9" width="12" height="8.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M7 9V6.5a3 3 0 0 1 6 0V9" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>
-      Connessione cifrata <span class="sep">·</span> <code>alfa.lan</code>
+      Encrypted connection <span class="sep">·</span> <code>alfa.lan</code>
     </p>
   </main>
 </div>
@@ -197,7 +197,7 @@
   var modulo=$('modulo'), esito=$('esito'), vai=$('vai'), utente=$('utente'), parola=$('parola');
   function errore(){
     esito.className='errore';
-    esito.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 5.8v5.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="14.2" r="1.1" fill="currentColor"/></svg><span>Utente o parola d\'ordine non validi.</span>';
+    esito.innerHTML='<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.2" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 5.8v5.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="14.2" r="1.1" fill="currentColor"/></svg><span>Invalid user or password.</span>';
     utente.setAttribute('aria-invalid','true'); parola.setAttribute('aria-invalid','true');
   }
   function pulisci(){esito.className=''; esito.textContent=''; utente.removeAttribute('aria-invalid'); parola.removeAttribute('aria-invalid');}
@@ -209,7 +209,7 @@
   var stato=new URLSearchParams(location.search).get('stato');
   if(stato==='errore') errore();
   if(stato==='attesa'){vai.disabled=true; vai.classList.add('attesa');}
-  if(stato==='avviso') $('avviso').textContent='I tentativi di accesso da questo indirizzo sono esauriti. Riprova fra 11 ore e 59 minuti.';
+  if(stato==='avviso') $('avviso').textContent='The sign-in attempts from this address are used up. Try again in 11 hours and 59 minutes.';
 })();
 </script>
 </body>

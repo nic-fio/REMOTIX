@@ -323,7 +323,7 @@ SESSIONE
  ├── u8     stato                state: 1 = NUOVA (new), 2 = RIPRESA (resumed)
  ├── u32    tela_larghezza       the GRANTED canvas width
  ├── u32    tela_altezza         and height
- └── string desktop              gnome · kde · xfce · lxqt · sconosciuto (unknown)""", "text", "Bodies") + \
+ └── string desktop              gnome · kde · xfce · lxqt · unknown""", "text", "Bodies") + \
     p("<b>The canvas</b> is the desktop's resolution; the <b>view</b> is the browser area it is drawn into. The canvas "
       "belongs to the session and survives the client; the view belongs to the connection. " + c("tratta_attacca()")
       + " (handle ATTACCA) applies, in order:") + \

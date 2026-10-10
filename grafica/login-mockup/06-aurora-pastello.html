@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<!-- Stile 06 «Aurora pastello»: sfumatura morbida pesca, lilla e azzurro che respira lentamente.
-     Idea: una scheda di vetro smerigliato chiaro galleggia sull'aurora, calma e luminosa. -->
-<html lang="it">
+<!-- Style 06 «Pastel aurora»: a soft peach, lilac and light-blue gradient that breathes slowly.
+     Idea: a light frosted-glass card floats on the aurora, calm and bright. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX · Accesso</title>
+<title>REMOTIX · Sign in</title>
 <style>
   :root {
     --ink: #2b2540;
@@ -30,7 +30,7 @@
     position: relative;
     overflow-x: hidden;
   }
-  /* L'aurora: tre macchie sfumate che si spostano piano */
+  /* The aurora: three blurred blobs that move slowly */
   .aurora { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
   .aurora span {
     position: absolute; border-radius: 50%;
@@ -91,7 +91,7 @@
   button:active { transform: translateY(0); }
   button:focus-visible { outline: 3px solid #2b2540; outline-offset: 3px; }
 
-  /* esempio: stato d'errore, qui sempre visibile per disegnarlo */
+  /* example: error state, always visible here so it gets drawn */
   .errore {
     margin-top: 18px; display: flex; gap: 10px; align-items: flex-start;
     padding: 12px 14px; border-radius: 12px;
@@ -124,29 +124,29 @@
       </svg>
       <h1>REMOTIX</h1>
     </div>
-    <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+    <p class="motto">Your Linux desktop, from any browser.</p>
 
     <form action="#" method="post" onsubmit="return false">
       <div>
-        <label for="utente">Utente</label>
+        <label for="utente">User</label>
         <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
       </div>
       <div>
-        <label for="parola">Parola d'ordine</label>
+        <label for="parola">Password</label>
         <input id="parola" name="parola" type="password" autocomplete="current-password" required>
       </div>
-      <button type="submit">Collegati</button>
+      <button type="submit">Connect</button>
     </form>
 
-    <!-- esempio: messaggio d'errore dopo un tentativo sbagliato -->
+    <!-- example: error message after a wrong attempt -->
     <div class="errore" role="alert">
       <svg width="18" height="18" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10 5.5v5.5M10 14v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      <span>Utente o parola d'ordine non corretti.</span>
+      <span>Wrong user or password.</span>
     </div>
 
     <p class="piede">
       <svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" fill="currentColor"/><path d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
-      Connessione cifrata · niente da installare
+      Encrypted connection · nothing to install
     </p>
   </main>
 </body>

@@ -1,12 +1,12 @@
 <!doctype html>
-<!-- Stile: «Aurora» — fondo scuro attraversato da tre bande d'aurora ciano e blu che scivolano lentissime; la scheda porta il logo in testa.
-     Idea: un fondo vivo ma quieto, fatto di soli gradienti già sfumati (niente filtri), che si muove con transform e opacità e costa nulla alla scheda grafica. -->
-<html lang="it">
+<!-- Style: «Aurora» — a dark background crossed by three cyan and blue aurora bands sliding very slowly; the card carries the logo at the top.
+     Idea: a lively but quiet background, made only of pre-blurred gradients (no filters), that moves with transform and opacity and costs the graphics card nothing. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --fondo:#03060f; --testo:#eaf1fc; --tenue:#8f9cb6; --etichetta:#c6d1e4;
@@ -21,7 +21,7 @@
     color:var(--testo); background:var(--fondo); overflow-x:hidden; -webkit-font-smoothing:antialiased;
   }
 
-  /* l'aurora: tre ellissi già sfumate dal gradiente, ruotate e allungate; si muovono solo con transform/opacity */
+  /* the aurora: three ellipses already blurred by the gradient, rotated and stretched; they move only with transform/opacity */
   .cielo{position:fixed; inset:0; overflow:hidden; pointer-events:none}
   .banda{position:absolute; left:50%; top:50%; will-change:transform, opacity}
   .banda.a{
@@ -45,7 +45,7 @@
   @keyframes va-a{from{transform:translate(-8vmax,-22vmax) rotate(-14deg); opacity:.85} to{transform:translate(6vmax,-16vmax) rotate(-9deg); opacity:1}}
   @keyframes va-b{from{transform:translate(10vmax,-6vmax) rotate(-22deg); opacity:1} to{transform:translate(-6vmax,-1vmax) rotate(-16deg); opacity:.7}}
   @keyframes va-c{from{transform:translate(-4vmax,16vmax) rotate(-8deg); opacity:.6} to{transform:translate(8vmax,11vmax) rotate(-13deg); opacity:1}}
-  /* un velo in basso: l'aurora sta in cielo, la terra resta buia */
+  /* a veil at the bottom: the aurora is in the sky, the ground stays dark */
   .cielo::after{content:""; position:absolute; inset:0; background:linear-gradient(180deg, transparent 40%, rgba(3,6,15,.85) 100%)}
 
   .scheda{
@@ -56,7 +56,7 @@
     -webkit-backdrop-filter:blur(10px) saturate(1.3); backdrop-filter:blur(10px) saturate(1.3);
     animation:entra .7s cubic-bezier(.2,.7,.2,1) both;
   }
-  /* il filo di luce sul bordo alto, coi colori del marchio */
+  /* the thread of light on the top edge, in the brand's colours */
   .scheda::before{
     content:""; position:absolute; left:1.4em; right:1.4em; top:-1px; height:1px;
     background:linear-gradient(90deg, transparent, #00d8ff 30%, #1a7cff 70%, transparent);
@@ -86,7 +86,7 @@
     box-shadow:0 1px 0 rgba(255,255,255,.2) inset, 0 .8em 1.8em -.7em rgba(0,170,255,.7);
     position:relative; overflow:hidden; transition:transform .1s, box-shadow .2s;
   }
-  /* il riflesso che passa sul bottone al passaggio del puntatore */
+  /* the gleam passing over the button when the pointer goes over it */
   button::after{
     content:""; position:absolute; top:0; bottom:0; left:-40%; width:40%;
     background:linear-gradient(100deg, transparent, rgba(255,255,255,.22), transparent);
@@ -158,19 +158,19 @@
       <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
     </svg>
   </h1>
-  <p class="motto">Il tuo desktop Linux, da qualunque browser.</p>
+  <p class="motto">Your Linux desktop, from any browser.</p>
   <div id="avviso"></div>
 
   <form id="modulo" action="#" method="post">
     <div>
-      <label for="utente">Utente</label>
+      <label for="utente">User</label>
       <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
     </div>
     <div>
-      <label for="parola">Parola d'ordine</label>
+      <label for="parola">Password</label>
       <input id="parola" name="parola" type="password" autocomplete="current-password" required>
     </div>
-    <button type="submit" id="vai"><span>Collegati</span>
+    <button type="submit" id="vai"><span>Connect</span>
       <svg class="freccia" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <svg class="ruota" viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7" fill="none" stroke="currentColor" stroke-opacity=".3" stroke-width="2.2"/><path d="M10 3a7 7 0 0 1 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
     </button>
@@ -181,7 +181,7 @@
 
   <p class="piede">
     <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.5l6 2.3v4.6c0 3.9-2.6 6.6-6 8.1-3.4-1.5-6-4.2-6-8.1V4.8z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7.4 10l1.8 1.8 3.5-3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    <span>Connessione cifrata</span><span class="sep">·</span><code>alfa.lan</code>
+    <span>Encrypted connection</span><span class="sep">·</span><code>alfa.lan</code>
   </p>
 </main>
 <script>
@@ -189,7 +189,7 @@
   var esito=document.getElementById("esito"), vai=document.getElementById("vai"),
       campi=[document.getElementById("utente"), document.getElementById("parola")];
   function errore(){
-    esito.textContent="Utente o parola d'ordine non validi."; esito.className="male";
+    esito.textContent="Invalid user or password."; esito.className="male";
     campi.forEach(function(c){c.setAttribute("aria-invalid","true")});
   }
   campi.forEach(function(c){c.addEventListener("input",function(){

@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- Stile: «Rete» — nodi e linee sottili collegano un portatile, un telefono e il server.
-     Idea: il disegno racconta cosa fa REMOTIX (un desktop che viaggia sulla rete), il modulo resta sobrio accanto. -->
-<html lang="it">
+<!-- Style: «Network» — nodes and thin lines connect a laptop, a phone and the server.
+     Idea: the drawing tells what REMOTIX does (a desktop travelling over the network), the form stays sober beside it. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --sfondo:#f7f9fc; --carta:#fff; --inchiostro:#17212e; --tenue:#556274; --bordo:#e0e6ee;
@@ -24,7 +24,7 @@
     width:100%; max-width:60rem; display:grid; grid-template-columns:1.1fr 1fr; align-items:center; gap:3rem;
   }
 
-  /* il disegno della rete */
+  /* the network drawing */
   .rete{width:100%; height:auto; display:block}
   .rete .filo{fill:none; stroke:var(--linea); stroke-width:1.4}
   .rete .flusso{fill:none; stroke:var(--nodo); stroke-width:1.6; stroke-dasharray:4 14; stroke-linecap:round; animation:scorre 2.4s linear infinite}
@@ -69,7 +69,7 @@
   button:active{transform:translateY(1px)}
   button:focus-visible{outline:3px solid #93bde3; outline-offset:2px}
 
-  /* esempio: stato d'errore */
+  /* example: error state */
   .errore{
     margin-top:1rem; display:flex; gap:.6rem; align-items:flex-start; padding:.7rem .85rem;
     border-radius:.5rem; font-size:.88rem;
@@ -93,7 +93,7 @@
 <body>
 <div class="impianto">
   <svg class="rete" viewBox="0 0 470 390" aria-hidden="true">
-      <!-- sei dispositivi, un server: tanti utenti insieme, ognuno col suo desktop -->
+      <!-- six devices, one server: many users together, each with their own desktop -->
       <path class="filo" d="M162 33 C267 33 267 196 372 196"/>
       <path class="filo" d="M74 94 C223 94 223 196 372 196"/>
       <path class="filo" d="M106 156 C239 156 239 196 372 196"/>
@@ -117,9 +117,9 @@
         <circle cx="47" cy="20" r="2.5" fill="#16a37a"/><circle cx="47" cy="52" r="2.5" fill="#16a37a"/><circle cx="47" cy="84" r="2.5" fill="#2a6fb0"/>
         <path d="M14 20h20M14 52h20M14 84h20" stroke="#9fb3cc" stroke-width="1.6"/>
       </g>
-      <text x="404" y="270" text-anchor="middle">SERVER LINUX</text>
+      <text x="404" y="270" text-anchor="middle">LINUX SERVER</text>
 
-      <!-- i dispositivi -->
+      <!-- the devices -->
       <g transform="translate(70 6)">
         <rect class="corpo" x="10" y="0" width="68" height="44" rx="4"/>
         <rect class="schermo" x="15" y="5" width="58" height="34" rx="1.5"/>
@@ -176,29 +176,29 @@
       </svg>
       <h1>REMOTIX</h1>
     </div>
-    <p class="motto">Il tuo desktop Linux, da qualunque browser: portatile, telefono o tablet.</p>
+    <p class="motto">Your Linux desktop, from any browser: laptop, phone or tablet.</p>
 
     <form action="#" method="post">
       <div>
-        <label for="utente">Utente</label>
+        <label for="utente">User</label>
         <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required>
       </div>
       <div>
-        <label for="parola">Parola d'ordine</label>
+        <label for="parola">Password</label>
         <input id="parola" name="parola" type="password" autocomplete="current-password" required>
       </div>
-      <button type="submit">Collegati
+      <button type="submit">Connect
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
     </form>
 
-    <!-- esempio: stato d'errore dopo un tentativo sbagliato -->
+    <!-- example: error state after a wrong attempt -->
     <div class="errore" role="alert">
       <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 7l6 6M13 7l-6 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-      <span>Utente o parola d'ordine non corretti.</span>
+      <span>Wrong user or password.</span>
     </div>
 
-    <p class="piede">Connessione cifrata · niente da installare</p>
+    <p class="piede">Encrypted connection · nothing to install</p>
   </main>
 </div>
 </body>

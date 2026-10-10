@@ -1,189 +1,189 @@
-# MASTERPLAN — quel che si fa DOPO
+# MASTERPLAN — what is done AFTERWARDS
 
-*Aperto il **25 agosto 2026**, per decisione dell'utente:*
+*Opened on **25 Aug 2026**, by decision of the user:*
 
 > *«Per gli altri DE non ci portiamo dietro questo buco, per GNOME potremmo fare una manutenzione
 > evolutiva al termine del progetto, insieme all'integrazione di altre funzioni. Potrebbe essere
 > utile creare un documento `MASTERPLAN.md` dove annotare tutte queste cose da fare al termine del
 > progetto.»*
 
-⇒ La decisione sta in [`DECISIONI.md` §0.4](DECISIONI.md).
+⇒ The decision is in [`DECISIONI.md` §0.4](DECISIONI.md).
 
 ---
 
-## Che cos'è questo documento — e che cosa NON è
+## What this document is — and what it is NOT
 
-**È** l'elenco delle cose che si faranno **quando il prodotto sarà finito**: migliorie, scelte
-rimandate apposta, funzioni che non erano nel patto iniziale.
+**It is** the list of the things that will be done **when the product is finished**: improvements, choices
+deferred on purpose, features that were not in the initial pact.
 
-⛔ **Non è**:
+⛔ **It is not**:
 
 | | |
 |---|---|
-| il registro delle decisioni | quello è [`DECISIONI.md`](DECISIONI.md), e ogni voce di qui **rimanda** là invece di ricopiare |
-| l'elenco delle domande aperte | quello è `DECISIONI.md` **§7** — là stanno i buchi del *pensiero*, qui i lavori del *dopo* |
-| il piano delle fasi | quello è [`PIANO.md`](PIANO.md). ⛔ **Se una cosa deve succedere PRIMA della fine, non sta qui: sta lì, con la sua fase** |
-| un elenco di guasti | un guasto non aspetta la fine del progetto. Se è rotto si cura, e se non si cura si dichiara nella fase |
+| the decision register | that is [`DECISIONI.md`](DECISIONI.md), and every entry here **refers** there instead of copying |
+| the list of open questions | that is `DECISIONI.md` **§7** — there are the holes in the *thinking*, here the work of *afterwards* |
+| the phase plan | that is [`PIANO.md`](PIANO.md). ⛔ **If something must happen BEFORE the end, it does not belong here: it belongs there, with its phase** |
+| a list of faults | a fault does not wait for the end of the project. If it is broken it is cured, and if it is not cured it is declared in the phase |
 
 ---
 
-## ⛔⛔ LA REGOLA CHE TIENE IN PIEDI QUESTO DOCUMENTO — e non è una formalità
+## ⛔⛔ THE RULE THAT KEEPS THIS DOCUMENT STANDING — and it is not a formality
 
-> ### Ogni voce deve dire **che cosa costa non farla MAI**.
+> ### Every entry must say **what it costs never to do it, EVER**.
 
-⛔ **Un elenco di cose da fare dopo è il cassetto dove le cose vanno a morire.** Ci finisce tutto, si
-allunga, nessuno lo rilegge, e a un certo punto guardarlo mette solo ansia — e un documento che mette
-ansia non si apre più.
+⛔ **A list of things to do afterwards is the drawer where things go to die.** Everything ends up in it, it
+grows, nobody rereads it, and at some point looking at it only causes anxiety — and a document that causes
+anxiety is no longer opened.
 
-⇒ ⭐ **Il costo del «mai» è l'unica informazione che serve davvero**, perché è quella che separa *«va
-fatto»* da *«sarebbe bello»*, e quella scelta la fa l'utente, non chi scrive la voce.
+⇒ ⭐ **The cost of «never» is the only information that is really needed**, because it is what separates *«must be
+done»* from *«would be nice»*, and that choice is made by the user, not by whoever writes the entry.
 
-⚠ E il rovescio, che vale quanto la regola: **una voce il cui costo del «mai» è ZERO si cancella**.
-Non si tiene per rispetto: si toglie, e il documento resta corto abbastanza da essere riletto.
+⚠ And the reverse, which is worth as much as the rule: **an entry whose cost of «never» is ZERO is deleted**.
+It is not kept out of respect: it is removed, and the document stays short enough to be reread.
 
 ---
 
-## Il modello di una voce
+## The template of an entry
 
 ```markdown
-### M<n> · <titolo in parole normali>
+### M<n> · <title in plain words>
 
-**Che cos'è**            due righe, senza gergo
-**Da dove viene**        la fase e il documento dove è nato, con la data
-**Che cosa costa se non si fa MAI**   ⛔ la riga che decide tutto
-**Che cosa serve prima** la misura o la prova che rende la scelta informata
-**Quanto pesa**          `[?]` finché non è stato guardato davvero
+**What it is**            two lines, without jargon
+**Where it comes from**        the phase and the document where it was born, with the date
+**What it costs if it is NEVER done**   ⛔ the line that decides everything
+**What is needed first** the measurement or the test that makes the choice informed
+**How much it weighs**          `[?]` until it has really been looked at
 ```
 
 ---
 
-# Le voci
+# The entries
 
-## M2 · ⚠ QVBR non è mai stata accesa, e la prova che servirebbe non è stata fatta
+## M2 · ⚠ QVBR has never been switched on, and the test that would be needed has not been done
 
-**Che cos'è.** Un modo diverso di far lavorare il codificatore. Oggi è **spenta**, e valgono i numeri
-di fabbrica (tetto 10, riserva 0,5).
+**What it is.** A different way of making the encoder work. Today it is **off**, and the factory
+numbers apply (ceiling 10, reserve 0.5).
 
-**Da dove viene.** Fase 10, `fasi/10-multi-tenant-e-il-budget.md` **§10-bis**: due decisioni **non
-prese**, con i predefiniti in vigore.
+**Where it comes from.** Phase 10, `fasi/10-multi-tenant-e-il-budget.md` **§10-bis**: two decisions **not
+taken**, with the defaults in force.
 
-**Che cosa costa se non si fa MAI.** ⭐ **Su un utente solo, niente**: il regolatore fa già il suo
-mestiere, e la fase 10 lo ha argomentato. ⛔ Il dubbio riguarda **dieci insieme su un filo vero**, e
-quel giro non è stato fatto: nella fase 10 i clienti giravano dentro la macchina, quindi **il filo è
-contato, non provato**.
+**What it costs if it is NEVER done.** ⭐ **On a single user, nothing**: the regulator already does its
+job, and phase 10 argued it. ⛔ The doubt concerns **ten together on a real wire**, and
+that round has not been done: in phase 10 the clients ran inside the machine, so **the wire was
+counted, not tested**.
 
-**Che cosa serve prima.** Dieci clienti **su rete vera**, non dentro la macchina. ⚠ È una prova che
-vuole apparecchiatura, non un pomeriggio.
+**What is needed first.** Ten clients **on a real network**, not inside the machine. ⚠ It is a test that
+needs equipment, not an afternoon.
 
-**Quanto pesa.** `[?]`
-
----
-
-## M3 · ⚠ L'algoritmo che decide quanto spingere sul filo non è mai stato scelto
-
-**Che cos'è.** Sul filo il trasporto usa **CUBIC**. ⛔ Nessuno l'ha scelto: è quel che c'era.
-
-**Da dove viene.** Fase 9, elencata fra le cose aperte nel `README.md`.
-
-**Che cosa costa se non si fa MAI.** `[?]` **Non si sa, ed è questo il punto.** La prova per
-contrasto non è mai stata fatta **perché nessuna opzione lo espone** — quindi non è che l'abbiamo
-provato e andava bene: non l'abbiamo mai provato.
-⚠ Sulle reti sane non cambierebbe probabilmente nulla; il sospetto riguarda **le reti sporche**, che
-sono il tema su cui l'utente ha corretto il bersaglio della fase 9.
-
-**Che cosa serve prima.** Un'opzione che lo esponga, e due giri sullo stesso filo sporco.
-
-**Quanto pesa.** `[?]` Piccolo il lavoro, **incerta** la resa.
+**How much it weighs.** `[?]`
 
 ---
 
-## M5 · Scegliere il desktop quando sulla macchina ce n'è più d'uno
+## M3 · ⚠ The algorithm that decides how hard to push on the wire has never been chosen
 
-**Che cos'è.** Oggi una macchina ha **un** desktop, e REMOTIX accende quello. Con GNOME e KDE
-installati insieme, nessuno può dire «a me KDE»: né l'utente dalla pagina, né chi amministra il server.
+**What it is.** On the wire the transport uses **CUBIC**. ⛔ Nobody chose it: it is what was there.
 
-**Da dove viene.** Fase 12, aprendo KDE — `DECISIONI.md` **§4.6-duodetricies**, 18 settembre 2026:
+**Where it comes from.** Phase 9, listed among the open things in the `README.md`.
+
+**What it costs if it is NEVER done.** `[?]` **Nobody knows, and that is the point.** The contrast
+test has never been done **because no option exposes it** — so it is not that we
+tried it and it was fine: we never tried it.
+⚠ On healthy networks it would probably change nothing; the suspicion concerns **dirty networks**, which
+are the theme on which the user corrected the target of phase 9.
+
+**What is needed first.** An option that exposes it, and two rounds on the same dirty wire.
+
+**How much it weighs.** `[?]` The work is small, the payoff **uncertain**.
+
+---
+
+## M5 · Choosing the desktop when there is more than one on the machine
+
+**What it is.** Today a machine has **one** desktop, and REMOTIX starts that one. With GNOME and KDE
+installed together, nobody can say «KDE for me»: neither the user from the page, nor whoever administers the server.
+
+**Where it comes from.** Phase 12, when opening KDE — `DECISIONI.md` **§4.6-duodetricies**, 18 Sep 2026:
 *«la funzionalità di scelta di desktop multipli la lasciamo per una futura implementazione»*.
 
-**Che cosa costa se non si fa MAI.** Su una macchina con un desktop solo, **niente**. Su una con due,
-il secondo **non è raggiungibile** da REMOTIX: vince GNOME, sempre, per tutti gli utenti. ⚠ Chi
-installa KDE accanto a GNOME e si aspetta di usarlo da remoto resta deluso senza un messaggio chiaro —
-per questo il server lo scrive nel registro all'avvio.
+**What it costs if it is NEVER done.** On a machine with a single desktop, **nothing**. On one with two,
+the second **cannot be reached** by REMOTIX: GNOME wins, always, for all users. ⚠ Whoever
+installs KDE beside GNOME and expects to use it remotely is disappointed without a clear message —
+that is why the server writes it in the log at start-up.
 
-**Che cosa serve prima.** Che l'utente dica **chi** sceglie (l'amministratore per la macchina, o ogni
-utente per sé). ⛔ La seconda tocca la pagina e il protocollo, e cambia `RCP.md`.
+**What is needed first.** That the user says **who** chooses (the administrator for the machine, or each
+user for themselves). ⛔ The second touches the page and the protocol, and changes `RCP.md`.
 
-**Quanto pesa.** `[?]` Con la scelta per macchina, poco: un'impostazione. Con la scelta per utente,
-una funzione nuova.
+**How much it weighs.** `[?]` With the choice per machine, little: a setting. With the choice per user,
+a new feature.
 
 ---
 
-## M6 · Stampare sulla stampante di chi è collegato (solo PDF, dal server al client)
+## M6 · Printing on the printer of whoever is connected (PDF only, from server to client)
 
-**Che cos'è.** Una stampante virtuale «REMOTIX» sul server trasforma la stampa in **PDF**; il PDF arriva alla
-pagina, che apre la finestra di stampa del browser, e chi è collegato stampa sulla **sua** stampante (quella di
-casa, per chi lavora da fuori; quelle di rete già installate sul suo PC, per chi è in ufficio). ⛔ **Solo PDF,
-solo dal server al client** (utente, 10 ott 2026), mai al contrario. ⭐ **Una tecnologia sola per ogni stampante**
-(utente: *«niente casi particolari per stampanti locali o stampanti remote: usiamo la stessa tecnologia per
-entrambi i casi»*): la stampa va dove sa stampare il dispositivo di chi è collegato. Le stampanti che
-l'amministratore configura da sé sul server (CUPS) sono affare del sistema, non una funzione di REMOTIX.
+**What it is.** A «REMOTIX» virtual printer on the server turns the print job into a **PDF**; the PDF reaches the
+page, which opens the browser's print dialog, and whoever is connected prints on **their own** printer (the one at
+home, for those working from outside; the network ones already installed on their PC, for those in the office). ⛔ **PDF only,
+only from server to client** (user, 10 Oct 2026), never the other way. ⭐ **One technology for every printer**
+(user: *«niente casi particolari per stampanti locali o stampanti remote: usiamo la stessa tecnologia per
+entrambi i casi»*): the print goes where the device of whoever is connected knows how to print. The printers that
+the administrator configures by themselves on the server (CUPS) are the system's business, not a REMOTIX feature.
 
-**Da dove viene.** 10 ottobre 2026, dal confronto con i prodotti commerciali: *«trovo la condivisione di files
-piuttosto pericolosa, mentre si potrebbe ragionare sul discorso stampanti»*; poi *«solo pdf, server -> client. La
-annotiamo nel masterplan»*. La decisione sta in `DECISIONI.md` §10.41; fino ad allora era fuori dal progetto
+**Where it comes from.** 10 Oct 2026, from the comparison with commercial products: *«trovo la condivisione di files
+piuttosto pericolosa, mentre si potrebbe ragionare sul discorso stampanti»*; then *«solo pdf, server -> client. La
+annotiamo nel masterplan»*. The decision is in `DECISIONI.md` §10.41; until then it was outside the project
 (`SPECIFICHE.md` §12).
 
-**Che cosa costa se non si fa MAI.** Da REMOTIX **non si stampa**: chi lavora deve farsi arrivare il documento
-per altra via (email, una cartella condivisa) — cioè proprio i passaggi di file che non vogliamo — oppure
-l'amministratore deve configurare a mano le stampanti sul server, una per una. Per un'azienda piccola è una delle
-prime domande.
+**What it costs if it is NEVER done.** From REMOTIX **you cannot print**: whoever works has to get the document
+by other means (email, a shared folder) — that is, exactly the file transfers we do not want — or
+the administrator has to configure the printers on the server by hand, one by one. For a small company it is one of the
+first questions.
 
-**Che cosa serve prima.** ⚠ Dichiarare all'amministratore che **stampare è portare fuori un documento**: dalla
-finestra di stampa il browser lo salva anche come PDF. ⇒ Le regole proposte: **spenta finché l'amministratore non
-la accende**; **ogni stampa nel registro** (chi, quando, quante pagine); il PDF non si salva sul client da
-REMOTIX, va solo alla finestra di stampa. Poi: quale stampante virtuale (CUPS con un backend nostro, o
-`cups-pdf`), un canale nuovo in `RCP.md` per il PDF, la prova sui quattro desktop e sui browser serviti.
+**What is needed first.** ⚠ Declaring to the administrator that **printing is taking a document out**: from the
+print dialog the browser can also save it as PDF. ⇒ The proposed rules: **off until the administrator
+switches it on**; **every print job in the log** (who, when, how many pages); the PDF is not saved on the client by
+REMOTIX, it goes only to the print dialog. Then: which virtual printer (CUPS with a backend of ours, or
+`cups-pdf`), a new channel in `RCP.md` for the PDF, the test on the four desktops and on the served browsers.
 
-**Quanto pesa.** `[?]` Non guardato davvero. Stima a occhio: una fase piccola (stampante virtuale, un canale,
-la finestra di stampa nella pagina, il banco). ⚠ Il prezzo d'uso: ogni stampa passa dalla finestra del browser e
-chiede un clic (i browser non stampano in silenzio).
+**How much it weighs.** `[?]` Not really looked at. Rough estimate: a small phase (virtual printer, a channel,
+the print dialog in the page, the bench). ⚠ The price of use: every print goes through the browser's dialog and
+asks for a click (browsers do not print silently).
 
 ---
 
-# ⚠ Le cose che qualcuno potrebbe voler mettere qui, e NON ci vanno
+# ⚠ The things someone might want to put here, and do NOT belong here
 
-⛔ Perché il documento resti corto, va detto anche che cosa **rifiuta**.
+⛔ For the document to stay short, it must also say what it **refuses**.
 
-| | dove va invece | perché |
+| | where it goes instead | why |
 |---|---|---|
-| aggiornare il server senza buttare fuori nessuno | **`PIANO.md`, fase 15** | è già una fase. Non aspetta la fine |
-| il ritardo che sfora il tetto | resta `[?]` in `DECISIONI.md` §2.5 | è una **grandezza dichiarata**, non un lavoro rimandato |
-| il ridimensionamento a caldo | ⛔ **fuori dal prodotto** (`DECISIONI.md` §5.1-bis) | tolto **per decisione dell'utente**. Rimandare è diverso da togliere, e questa è tolta |
-| la sessione che nasce cieca | **fase 11**, il collaudo della rete | è un **guasto vivo**. Un guasto non aspetta la fine del progetto |
-| una frase sbagliata in un commento | si corregge **subito** | non è un lavoro: sono due minuti |
+| updating the server without throwing anyone out | **`PIANO.md`, phase 15** | it is already a phase. It does not wait for the end |
+| the delay that exceeds the ceiling | stays `[?]` in `DECISIONI.md` §2.5 | it is a **declared quantity**, not deferred work |
+| hot resizing | ⛔ **out of the product** (`DECISIONI.md` §5.1-bis) | removed **by decision of the user**. Deferring is different from removing, and this one is removed |
+| the session that is born blind | **phase 11**, the acceptance test of the network | it is a **live fault**. A fault does not wait for the end of the project |
+| a wrong sentence in a comment | it is fixed **at once** | it is not work: it is two minutes |
 
 ---
 
-## Come si tiene questo documento
+## How this document is kept
 
-1. ⛔ **Una voce entra solo con la riga «che cosa costa se non si fa mai» compilata.** Senza quella
-   riga non è una voce: è un desiderio.
-2. ⛔ **Una voce il cui costo del «mai» diventa zero si CANCELLA**, e si scrive in fondo perché.
-3. ⛔ **Le voci non si numerano di nuovo** quando una se ne va: `M3` resta `M3` per sempre, o i
-   rimandi degli altri documenti puntano nel vuoto.
-4. ⚠ **Questo documento non decide niente.** Quando una voce viene affrontata, la decisione va in
-   `DECISIONI.md` e il lavoro in `PIANO.md`; qui resta il rimando.
-5. ⭐ **Si rilegge alla chiusura di ogni fase**, insieme al `README.md` — è l'unico modo perché un
-   elenco del «dopo» non diventi archeologia.
+1. ⛔ **An entry gets in only with the line «what it costs if it is never done» filled in.** Without that
+   line it is not an entry: it is a wish.
+2. ⛔ **An entry whose cost of «never» becomes zero is DELETED**, and why is written at the bottom.
+3. ⛔ **Entries are not renumbered** when one goes away: `M3` stays `M3` forever, or the
+   references from other documents point into the void.
+4. ⚠ **This document decides nothing.** When an entry is tackled, the decision goes into
+   `DECISIONI.md` and the work into `PIANO.md`; here the reference remains.
+5. ⭐ **It is reread at the closing of every phase**, together with the `README.md` — it is the only way for a
+   list of the «afterwards» not to become archaeology.
 
 ---
 
-## Le voci tolte
+## The removed entries
 
-⭐ **21 settembre 2026, decisione dell'utente**: *«M2, M3 e M5 sono gli unici punti da conservare
-nel masterplan»* (poi, il 10 ottobre, è entrata **M6**). ⇒ Tolte, e i numeri **non** si riusano (regola 3):
+⭐ **21 Sep 2026, decision of the user**: *«M2, M3 e M5 sono gli unici punti da conservare
+nel masterplan»* (then, on 10 Oct, **M6** came in). ⇒ Removed, and the numbers are **not** reused (rule 3):
 
-| | che cos'era | perché è uscita |
+| | what it was | why it left |
 |---|---|---|
-| **M1** | GNOME consegna meno fotogrammi di quelli che gli si chiedono (per averne 60 bisognerebbe chiedergliene di più, e `MOVIMENTO_FPS` è una costante) | deciso dall'utente: non è più un lavoro del «dopo». Il fatto resta scritto in `DECISIONI.md` §2.5-bis |
-| **M4** | due client sullo stesso desktop nello stesso momento | deciso dall'utente: non è un lavoro del «dopo». L'invariante I2 (un posto per utente) resta com'è, `DECISIONI.md` §7.3 |
+| **M1** | GNOME delivers fewer frames than it is asked for (to get 60 you would have to ask it for more, and `MOVIMENTO_FPS` is a constant) | decided by the user: it is no longer work for «afterwards». The fact stays written in `DECISIONI.md` §2.5-bis |
+| **M4** | two clients on the same desktop at the same time | decided by the user: it is not work for «afterwards». Invariant I2 (one seat per user) stays as it is, `DECISIONI.md` §7.3 |

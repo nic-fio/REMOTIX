@@ -1,19 +1,19 @@
-<!-- Stile: NEUMORFISMO CHIARO — tutto è della stessa «argilla» grigio-perla, i pezzi escono o rientrano con ombre morbide.
-     Idea: un oggetto tattile e calmo; i campi sono incavi, il pulsante sporge e si «preme» davvero. Testi scuri per restare AA. -->
+<!-- Style: LIGHT NEUMORPHISM — everything is made of the same pearl-grey «clay», the pieces stand out or sink in with soft shadows.
+     Idea: a tactile, calm object; the fields are hollows, the button protrudes and really gets «pressed». Dark text to stay AA. -->
 <!doctype html>
-<html lang="it">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root {
     --clay: #e7ebf0;
     --hi: #ffffff;
     --lo: #c3cad4;
     --ink: #232a36;
-    --muted: #525b69;       /* 6,2:1 sull'argilla */
-    --accent: #3b6fd8;      /* bianco su accento 4,9:1 */
+    --muted: #525b69;       /* 6.2:1 on the clay */
+    --accent: #3b6fd8;      /* white on accent 4.9:1 */
     --accent-dark: #2d5bbd;
     --err-ink: #9d1f2b;
     --err-bg: #f7e4e6;
@@ -89,7 +89,7 @@
   }
   button:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; }
 
-  /* esempio: errore — un incavo rosato */
+  /* example: error — a pinkish hollow */
   .error {
     display: flex; gap: .65rem; align-items: center;
     margin-top: 1.4rem; padding: .85rem 1rem;
@@ -130,7 +130,7 @@
 <main class="card">
   <div class="brand">
     <div class="knob"><div class="inner">
-      <!-- Logo: schermo con un punto di segnale al centro e due onde -->
+      <!-- Logo: screen with a signal dot in the centre and two waves -->
       <svg viewBox="0 0 32 32" aria-hidden="true" fill="none" stroke-linecap="round" stroke-linejoin="round">
         <rect x="4" y="6" width="24" height="16" rx="3.5" stroke="#3b6fd8" stroke-width="2.2"/>
         <path d="M12 26h8" stroke="#3b6fd8" stroke-width="2.2"/>
@@ -139,28 +139,28 @@
       </svg>
     </div></div>
     <h1>REMOTIX</h1>
-    <p class="motto">Il tuo desktop Linux, a portata di browser</p>
+    <p class="motto">Your Linux desktop, within reach of a browser</p>
   </div>
 
   <form action="#" method="post" onsubmit="return false">
     <div class="field">
-      <label for="u">Utente</label>
+      <label for="u">User</label>
       <input id="u" name="utente" autocomplete="username" autocapitalize="none" spellcheck="false" required>
     </div>
     <div class="field">
-      <label for="p">Parola d'ordine</label>
+      <label for="p">Password</label>
       <input id="p" name="parola" type="password" autocomplete="current-password" required>
     </div>
-    <button type="submit">Collegati</button>
+    <button type="submit">Connect</button>
   </form>
 
-  <!-- esempio: stato d'errore, visibile solo nel mockup -->
+  <!-- example: error state, visible only in the mockup -->
   <div class="error" role="alert">
     <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16.5v.5"/></svg>
-    Utente o parola d'ordine non corretti.
+    Wrong user or password.
   </div>
 
-  <p class="foot"><span class="dot" aria-hidden="true"></span>Connessione cifrata · niente da installare</p>
+  <p class="foot"><span class="dot" aria-hidden="true"></span>Encrypted connection · nothing to install</p>
 </main>
 </body>
 </html>

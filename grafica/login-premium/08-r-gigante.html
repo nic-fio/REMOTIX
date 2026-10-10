@@ -1,11 +1,11 @@
 <!doctype html>
-<!-- Stile: «R gigante» — fondo chiaro, il segno della R enorme e tagliato dal bordo, in trasparenza e a contorno; il modulo bianco gli sta davanti.
-     Idea: il marchio diventa architettura, come la copertina di una rivista: una sola forma grande, e tutto il resto piccolo e preciso. -->
-<html lang="it">
+<!-- Style: «Giant R» — light background, the R mark huge and cropped by the edge, translucent and outlined; the white form stands in front of it.
+     Idea: the brand becomes architecture, like a magazine cover: a single large shape, and everything else small and precise. -->
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>REMOTIX — Accesso</title>
+<title>REMOTIX — Sign in</title>
 <style>
   :root{
     --fondo:#f2f4f8; --carta:#fff; --inchiostro:#0b1430; --tenue:#5a6478; --etichetta:#2a3550;
@@ -22,7 +22,7 @@
     background:radial-gradient(90% 70% at 15% 10%, #fff 0, rgba(255,255,255,0) 60%), var(--fondo);
   }
 
-  /* ── la R: enorme, tagliata dal bordo destro e da quello in basso ── */
+  /* ── the R: huge, cropped by the right edge and the bottom one ── */
   .segno{
     position:fixed; z-index:0; pointer-events:none;
     height:112vh; aspect-ratio:442/356; left:44vw; top:-6vh;
@@ -33,7 +33,7 @@
   .segno .contorno{fill:none; stroke:url(#rx-g2); stroke-width:1.25; vector-effect:non-scaling-stroke; opacity:.6}
   @keyframes deriva{from{transform:translate3d(0,0,0)} to{transform:translate3d(-1.2vh,1.6vh,0)}}
 
-  /* ── l'impianto: a sinistra la voce, a destra la scheda ── */
+  /* ── the layout: the voice on the left, the card on the right ── */
   .impianto{
     position:relative; z-index:1; width:100%; max-width:64rem;
     display:grid; grid-template-columns:1fr 23rem; gap:4rem; align-items:center;
@@ -160,25 +160,25 @@
         <text x="450" y="356" font-family="Montserrat,'Arial Black','Helvetica Neue',system-ui,sans-serif" font-weight="900" font-size="272" letter-spacing="6"><tspan fill="currentColor">EMO</tspan><tspan fill="url(#rx-t)">TIX</tspan></text>
       </svg>
     </div>
-    <h2>Il tuo desktop Linux, <em>da qualunque browser.</em></h2>
-    <p>Portatile, telefono o tablet: niente da installare.</p>
+    <h2>Your Linux desktop, <em>from any browser.</em></h2>
+    <p>Laptop, phone or tablet: nothing to install.</p>
   </div>
 
   <main class="scheda" aria-labelledby="titolo">
-    <h1 id="titolo">Accedi</h1>
-    <p class="sotto">Con il tuo utente di questo server.</p>
+    <h1 id="titolo">Sign in</h1>
+    <p class="sotto">With your user on this server.</p>
     <div id="avviso"></div>
 
     <form id="modulo" novalidate>
       <div>
-        <label for="utente">Utente</label>
+        <label for="utente">User</label>
         <input id="utente" name="utente" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required>
       </div>
       <div>
-        <label for="parola">Parola d'ordine</label>
+        <label for="parola">Password</label>
         <input id="parola" name="parola" type="password" autocomplete="current-password" required>
       </div>
-      <button type="submit" id="vai">Collegati
+      <button type="submit" id="vai">Connect
         <svg class="freccia" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5.5L15.5 10 11 14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <span class="ruota" aria-hidden="true"></span>
       </button>
@@ -188,7 +188,7 @@
     <div id="dichiarazione"></div>
 
     <p class="piede">
-      <span><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7.5" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.3 7V5.2a2.7 2.7 0 0 1 5.4 0V7" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>Connessione cifrata</span>
+      <span><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7.5" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M5.3 7V5.2a2.7 2.7 0 0 1 5.4 0V7" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>Encrypted connection</span>
       <span><i class="vivo" aria-hidden="true"></i><code>alfa.lan</code></span>
     </p>
   </main>
@@ -200,7 +200,7 @@
       scheda=document.querySelector('.scheda'), campi=[document.getElementById('utente'), document.getElementById('parola')];
   var ICONA='<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8.25" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M10 5.8v5.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="10" cy="14" r="1.1" fill="currentColor"/></svg>';
   function errore(){
-    esito.className='errore'; esito.innerHTML=ICONA+'<span>Utente o parola d\'ordine non validi.</span>';
+    esito.className='errore'; esito.innerHTML=ICONA+'<span>Invalid user or password.</span>';
     campi.forEach(function(c){c.setAttribute('aria-invalid','true')});
     scheda.classList.remove('scuoti'); void scheda.offsetWidth; scheda.classList.add('scuoti');
   }
