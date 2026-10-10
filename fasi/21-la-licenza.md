@@ -106,7 +106,7 @@ the 🔸 rows are Claude's proposals, born from the gaps §15 leaves.*
 | # | operation | §15 |
 |---|---|---|
 | B0 | **ask for a trial key**: email (mandatory), name and company (optional), ✅ the user 9 Oct ⇒ the key arrives by email (🔸 and so the email is confirmed, without a separate link). ✅ **Only from the service's site** (the user, 9 Oct); the installer only asks for the `LICENSE_KEY` | 15.7 |
-| B1 | **buy a full**: from the service's page (`remotix.nicfio.it`, «Acquista»); whoever buys may not be the administrator. ⏳ The data depend on the processor. Until it exists, the seller creates it (D1) | 15.3 |
+| B1 | **buy a full**: from the service's page (`remotix.nicfio.it`, «Acquista»); whoever buys may be someone other than the administrator. ⏳ The data depend on the processor. Until it exists, the seller creates the full (D1) | 15.3 |
 | B2 | **choose the copy** between the two active; the kept one receives a new `INSTALL_KEY`, the other stops; it also unblocks an already blocked licence | 15.8 |
 | B3 | **confirm the recovery** | 15.9 |
 | B4 | **automatic renewal yes/no** — 🔸 the payment processor keeps it, here only the link; ⏳ it depends on the processor | 15.6 |
@@ -285,7 +285,7 @@ OVH (port 25, PTR). ⚠ «Accedi con Google» requires registering REMOTIX with 
 3. **The sales contract** of the full: which text (§10.30: for the trial there is PolyForm Free Trial, for the full
    no standard text)?
    ⏳ **8 Oct: suspended** (the user), together with the payment: whoever collects decides what remains to be written (Polar or
-   Paddle sell themselves and have their own purchase terms, we are left with the licence of use; with Stripe the
+   Paddle are the sellers and have their own purchase terms, we are left with the licence of use; with Stripe the
    seller is us). ⛔ It does not block the work: the sale waits for the payment anyway.
 4. **The VPS**: provider, operating system, **domain** by which the customers reach it (needed for the HTTPS
    certificate and to be written into the product), who has access.
@@ -422,7 +422,7 @@ transcript is not kept; here is the result.*
     a relay is needed. ⚠ To be verified on the VPS.
 14. **The VPS**: transactional operations, encrypted copies off the VPS, log of activations and
     recoveries; recovery page reachable even with the licence expired.
-15. **TPM (second version)**: key born in the TPM, without touching its ownership or the PCRs; a broken TPM leads
+15. **TPM (second version)**: key born in the TPM, without touching its ownership or the PCRs; a faulty TPM leads
     to recovery, never to a key secretly in a file.
 
 ### 11.3 The decisions that stay with the user

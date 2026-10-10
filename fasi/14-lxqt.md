@@ -89,11 +89,11 @@ dedicata»*. The four boxes of the net stay intact.
   runner; **Qt on wayland**, no Xwayland, no wizard nor `lxqt-leave` open, no
   swayidle/qlipper/locker; `enableIdlenessWatcher=false` and `runCheckLevel=1` **win** from the user's
   file; labwc offers layer-shell, foreign-toplevel, screencopy, virtual input, data-control;
-- `[M]` **the round of all the box links on LXQt**, with the capabilities opened **only in the development
+- `[M]` **the round of all the box meshes on LXQt**, with the capabilities opened **only in the development
   copy**: passo0, C7 (+ detach), C5, C8, C9, C18, C2, C3 (+ still scene), C4, C6, C8b, C17,
   C20, C19 **all green**, and **16 grafted faults out of 16 SEEN**. C20: the gesture is the `logout()` of
   `org.lxqt.session`, «il figlio è sopravvissuto e se n'è accorto», clean re-entry.
-  ⚠ A first red C19 was **class C, of my round**: it did not clear out the tenants between the links as
+  ⚠ A first red C19 was **class C, of my round**: it did not clear out the tenants between the meshes as
   the hook does; cleared out, C19 green and its two faults seen.
 
 **The defect found by looking**: the panel **without icons** and without the menu button ⇒ increment 2.
@@ -157,7 +157,7 @@ black, the last column is background (1,81,129) and not the strip.
 
 `[M]` 24 Sep 2026, 12:00 → 17:18, binary **`c0e8f010`** and page **`d77177f1`** in all four,
 `rete11-lxqt` **redone** from the new recipe, `--famiglia tutto`: **«nessun rosso»**.
-**34 greens on gnome, 34 on kde, 34 on xfce, 34 on lxqt** — LXQt does exactly the same links
+**34 greens on gnome, 34 on kde, 34 on xfce, 34 on lxqt** — LXQt does exactly the same meshes
 as the other three; **no grafted fault escaped**; C14 (the four together) holds; C10 C12 C15
 C16 «il terreno non regge» from the server, as always. ⇒ GNOME, KDE and XFCE **have lost nothing**,
 neither because of LXQt nor because of Firefox's cure that touches everyone.
@@ -200,7 +200,7 @@ Heartbeat guard with the fault `--schermo-congelato` (SIGSTOP to labwc found by 
 ## ⭐ THE EVENING OF 24 SEPTEMBER — the user's hand test, and the six defects the user found
 
 The user tested by hand (tablet, Firefox and Chrome) and found what the net did not see.
-All cured, measured with the real browsers, and each with a new link watching over it:
+All cured, measured with the real browsers, and each with a new mesh watching over it:
 
 | # | defect `[M]` | desktop | cure | test |
 |---|---|---|---|---|
