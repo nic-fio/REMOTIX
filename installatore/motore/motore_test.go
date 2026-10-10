@@ -74,7 +74,7 @@ func TestCodici(t *testing.T) {
 // R31 in small: the plan does not apply to a different machine, and touches nothing.
 func TestImprontaCambiata(t *testing.T) {
 	b := nuovoBanco(t)
-	os.WriteFile(filepath.Join(b.radice, "etc/remotix-esistente.conf"), []byte("cambiato dopo il piano\n"), 0o640)
+	os.WriteFile(filepath.Join(b.radice, "etc/remotix-esistente.conf"), []byte("changed after the plan\n"), 0o640)
 	dopoCambio := foto(t, b.radice)
 	op, err := b.motore(t).Applica(b.piano, false, "prova")
 	if CodiceDi(err) != "RX-PIANO-001" || op.Stato != BLOCCATA {

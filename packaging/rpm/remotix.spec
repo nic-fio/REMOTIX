@@ -270,10 +270,9 @@ printf 'root\n' > %{buildroot}%{_sysconfdir}/remotix/utenti-negati
 chmod 0644 %{buildroot}%{_sysconfdir}/remotix/utenti-negati
 
 # The KWin capture permission (`zkde_screencast_unstable_v1`): KWin looks for it in
-# XDG_DATA_DIRS.  ⚠ Today the program ALSO writes it, as root, while running
-# (`src/kwin.c:48`, `kwin_scrivi_permesso()`): the content here is byte-for-byte
-# identical to what it would write, so it does not rewrite it.  ⇒ To be changed in the C
-# (§4.4): at run time only the check (`kwin.c:342`).  Not changed in T3.
+# XDG_DATA_DIRS.  The package ships it and the program only checks it at start-up
+# (`src/kwin.c`, `kwin_verifica_permesso()`, codes RX-KDE-001..003): it never writes it.
+# The content is byte-for-byte identical to the .deb one (Arch's differs only in Exec=).
 install -D -m 0644 packaging/rpm/org.kde.remotix.desktop %{buildroot}%{_datadir}/applications/org.kde.remotix.desktop
 
 # ⭐ `DECISIONI.md` §10.12 — the installer is the only way: the three belts of
