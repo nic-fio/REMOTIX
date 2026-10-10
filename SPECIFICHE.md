@@ -147,6 +147,12 @@ promette **il pezzo che è nostro** (input → fotogramma che parte), questa dic
 sentire l'utente**. Le due non si sostituiscono: la prima è collaudabile da un banco, la seconda è
 il giudizio a cui la prima serve.
 
+> ✅ **Il giudizio dell'utente, 10 ottobre 2026** — prova a mano da **Windows con Chrome**, sulle scatole del
+> server (binario delle campagne `716e35b`, Intel UHD 770): *«Gnome, XFCE e LXQt funzionano in modo spettacolare»*;
+> *«su windows l'esperienza d'uso è fantastica: sembra davvero di essere davanti al PC»*. ⇒ La specifica qui sopra,
+> per quei tre desktop, è **raggiunta**. ⚠ KDE no: il desktop compare a mezza altezza nel browser (anche a un
+> secondo utente, client Zorin OS), in esame lo stesso giorno.
+
 #### ⭐ La scena su cui è stata dettata, e il numero che l'utente ha prodotto con l'occhio
 
 22 agosto 2026, dal video dell'utente: una finestra di terminale trascinata a mano dentro la
