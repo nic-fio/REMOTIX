@@ -1957,7 +1957,7 @@ def giro(nome, movimento, tela, secondi, con_traccia=True):
         filo = {"byte": b, "pacchetti": pk, "secondi": vero,
                 "byte_per_pacchetto": round(b / pk, 1) if pk else None}
     server = conti_del_server(riga0)
-    giornale, letto, muta = [], {"esito": "senza traccia"}, None
+    giornale, letto, muta = [], {"esito": "without trace"}, None
     if con_traccia:
         rc, out2, err2 = root("python3 %s/09-b70-leggi.py %s/%s.rcpreg "
                               "%s/banchi/01-b4-validatore.py"

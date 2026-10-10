@@ -432,7 +432,7 @@ def chi_ascolta(scatola, porta):
     righe = [r for r in out.splitlines() if ":%d" % porta in r]
     if not righe:
         return "nessuno"
-    return "mia" if "users:((" in righe[0] else "di un altro"
+    return "mine" if "users:((" in righe[0] else "someone else's"
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -598,11 +598,11 @@ def parte_porte(scatole, a):
         mia = chi_ascolta(s, PORTA[s.split("-")[-1]])
         altrui = [chi_ascolta(s, PORTA[t.split("-")[-1]])
                   for t in scatole if t != s]
-        ok = (mia == "mia") and all(x in ("di un altro", "nessuno", None)
+        ok = (mia == "mine") and all(x in ("someone else's", "nessuno", None)
                                     for x in altrui)
         print("       %-14s its own: %-12s  the others: %s"
               % (s, mia, ", ".join(str(x) for x in altrui)))
-        if mia != "mia":
+        if mia != "mine":
             guai.append("%s does not recognise port %d as its own"
                         % (s, PORTA[s.split("-")[-1]]))
 

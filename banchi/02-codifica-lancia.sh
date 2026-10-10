@@ -163,7 +163,7 @@ ESITI=${ESITI:-$QUI/02-codifica-esiti.jsonl}
 CODIFICATORE=${CODIFICATORE:-ffmpeg}
 CODEC=${CODEC:-hevc}
 PROVA=$QUI/02-codifica-prova
-SCENA="SCENA-2.3-A · immagine nota 1920x1080 yuv420p10le BT.709 range limitato, ferma"
+SCENA="SCENA-2.3-A · known image 1920x1080 yuv420p10le BT.709 limited range, still"
 SCENA="$SCENA · codificatore=$CODIFICATORE · codec=$CODEC"
 
 log()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }

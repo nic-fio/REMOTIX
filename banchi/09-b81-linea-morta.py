@@ -622,7 +622,7 @@ def riduci_sfratto(righe, letto=True):
         m = re.search(r"sign of life (\d+) ms ago", rifiuti[-1])
         n["ultimo_rifiuto_muto_ms"] = int(m.group(1)) if m else None
         n["sfratto_dice"] = ("SPENTO" if "is switched OFF" in rifiuti[-1]
-                             else "NON e' scattato" if "did NOT fire" in rifiuti[-1]
+                             else "did NOT fire" if "did NOT fire" in rifiuti[-1]
                              else None)
     # ⛔ Who took the slot LAST, and at what time: it is the number of
     #    test 4 — «at which second it gets in», and on the server's clock.
@@ -1786,7 +1786,7 @@ def certifica():
     ok = (sf["sfratti"] == 1 and sf["rifiuti"] == 2 and sf["presi"] == 1
           and sf["muto_ms"] == 15412 and sf["sfrattato"] == UTENTE
           and sf["negati"] == 0 and sf["ultimo_rifiuto_muto_ms"] == 4020
-          and sf["sfratto_dice"] == "NON e' scattato")
+          and sf["sfratto_dice"] == "did NOT fire")
     (_ok if ok else _ko)("the three eviction marks are read: %d evictions, "
                          "%d refusals, silent %s ms, evicted «%s», the refusal "
                          "line says «%s»"

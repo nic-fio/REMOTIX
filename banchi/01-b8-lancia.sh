@@ -544,7 +544,7 @@ VIVO() # ⛔ B0.5: after every test the server must still be there
 
 # ---------------------------------------------------------------------------
 log "3. The FIRST life of the server — the samples and the ban run"
-ACCENDI "prima vita" || exit 4
+ACCENDI "first life" || exit 4
 
 log "3.0  The initial state, declared AND verified (B0.1)"
 inf "⛔ and this unblock is BEFORE the run, not inside it (B0.3)"
@@ -621,7 +621,7 @@ log "5. ⭐ The SECOND life of the server — does the ban survive the restart?"
 inf "⛔ the ban file is NOT touched: it is the only road by which the ban can"
 inf "   come back, and throwing it away here would mean proving the opposite of"
 inf "   what one wants to prove"
-ACCENDI "seconda vita" || exit 4
+ACCENDI "second life" || exit 4
 bash "$ENTRA" --root "$CRONO --ban dopo"
 ESITO_DOPO=$?
 VIVO "persistence and the unblock" || exit 4

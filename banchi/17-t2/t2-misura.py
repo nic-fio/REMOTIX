@@ -126,7 +126,7 @@ def una(esp):
         elif esp == "uccidi-figlio":
             c, t = s.sc.dentro("kill -TERM %s; date +%%H:%%M:%%S.%%N" % figlio, 30)
         log("ACTION %s at %s → %s" % (esp, ta.strip(), t.strip().replace("\n", " ")))
-        scrivi(ev, "azione.txt", "%s\npadre %s figlio %s\ninizio %s\n%s\n" % (esp, padre, figlio, ta, t))
+        scrivi(ev, "azione.txt", "%s\nparent %s child %s\nstart: %s\n%s\n" % (esp, padre, figlio, ta, t))
         time.sleep(38)
         c, dopo = s.sc.dentro("python3 /tmp/t2box.py foto %s" % u, 60)
         scrivi(ev, "dopo.txt", dopo)

@@ -116,3 +116,18 @@
 {"file": "banchi/17-t8/t8-vm.sh", "prima": "", "dopo": "⛔ step «script» retired (DECISIONI §10.36): install.sh and the engine checked against its sha256 no longer exist — REMOTIX comes as one .run; the real run is banchi/17-distro/17-t10.sh"}
 {"file": "banchi/17-t9/t9-vm.sh", "prima": "", "dopo": "⛔ step «r21» retired (DECISIONI §10.36): the seed ran «curl install.sh | sh», and install.sh no longer exists — REMOTIX comes as one .run; the real run is banchi/17-distro/17-t10.sh"}
 {"file": "banchi/02-figlio-prova.py", "prima": "⭐ and had it delivered, someone else's store would have refused it (the guard of `main.c`)", "dopo": ""}
+{"file": "banchi/01-b7-congedo.py", "prima": "il banco B7 chiude, come farebbe l'utente", "dopo": "bench B7 closes, as the user would"}
+{"file": "banchi/01-b7-congedo.py", "prima": "controllo dello stato iniziale di B7", "dopo": "check of B7's initial state"}
+{"file": "banchi/01-b8-cronometro.py", "prima": "«PAM ha risposto: ammesso» was enough", "dopo": "«PAM answered: admitted» was enough"}
+{"file": "banchi/02-codifica-lancia.sh", "prima": "SCENA-2.3-A · immagine nota 1920x1080 yuv420p10le BT.709 range limitato, ferma", "dopo": "SCENA-2.3-A · known image 1920x1080 yuv420p10le BT.709 limited range, still"}
+{"file": "banchi/09-b70-ritmo.py", "prima": "senza traccia", "dopo": "without trace"}
+{"file": "banchi/09-b81-linea-morta.py", "prima": "NON e' scattato", "dopo": "did NOT fire"}
+{"file": "banchi/11-scatole/11-gancio.sh", "prima": "C7($d) si stacca soltanto", "dopo": "C7($d) detach only"}
+{"file": "banchi/11-scatole/11-c21-sul-bordo-la-forma-cambia.py", "prima": "doppia di Breeze", "dopo": "Breeze double arrow"}
+{"file": "banchi/11-scatole/11-c21-sul-bordo-la-forma-cambia.py", "prima": "e-resize di Adwaita", "dopo": "Adwaita e-resize"}
+{"file": "banchi/11-scatole/11-c21-sul-bordo-la-forma-cambia.py", "prima": "clessidra piena", "dopo": "full hourglass"}
+{"file": "banchi/11-scatole/11-c21-sul-bordo-la-forma-cambia.py", "prima": "mano", "dopo": "hand"}
+{"file": "banchi/11-scatole/11-c14-non-si-disturbano.py", "prima": "mia / di un altro", "dopo": "mine / someone else's"}
+{"file": "banchi/17-t2/t2-misura.py", "prima": "%s\\npadre %s figlio %s\\ninizio %s\\n%s\\n", "dopo": "%s\\nparent %s child %s\\nstart: %s\\n%s\\n"}
+{"file": "banchi/01-b8-lancia.sh", "prima": "prima vita", "dopo": "first life"}
+{"file": "banchi/01-b8-lancia.sh", "prima": "seconda vita", "dopo": "second life"}
