@@ -10,8 +10,10 @@ NOMI = [
     (c("aiutante"), "<i>Helper.</i> The PAM helper process: a dispatcher started once at boot that forks one short-lived "
      "grandchild per password check, so that PAM, which can take seconds, never blocks the server's single loop "
      "(" + c("aiutante.c") + ")." + v("The PAM helper process")),
-    (c("anello"), "<i>Link.</i> One link of the chain a phase builds — capture, encoding, wire, decoding, input. A "
-     "module's header says which link of which phase it is, and each link has its own bench."),
+    (c("anello"), "<i>Link, loop, ring.</i> Three senses, three words. <i>Link</i>: one link of the chain a phase "
+     "builds — capture, encoding, wire, decoding, input; a module's header says which link of which phase it is, and "
+     "each link has its own bench. <i>Loop</i>: a delay loop or a closed loop, input to glass included. <i>Ring</i> "
+     "only for the audio ring buffer."),
     (c("appunti"), "<i>Clipboard.</i> Plain text only, in both directions, announced first and pulled on demand ("
      + c("appunti.c") + " on GNOME, " + c("appunti_kde.c") + " on KDE and labwc)." + v("Clipboard at a glance")),
     (c("attore"), "<i>Actor.</i> One simulated user of the stress benches: its own process, browser, labwc and "
@@ -50,8 +52,12 @@ NOMI = [
      "coloured images and a dictionary recover it." + v("The cursor channel", "The encoded cursor theme")),
     (c("diario"), "<i>Diary.</i> The page's " + c("/diario") + " endpoint: the page writes its own lines into the "
      "server log." + v("The page server")),
+    (c("difetto"), "<i>Defect.</i> Something wrong in the product or in a bench, found and to be repaired. Never "
+     "the same word as " + c("guasto") + "."),
     (c("disposizione"), "<i>Layout</i> (keyboard). Proposed by the page in " + c("ATTACCA") + "; the session's real "
      "keymap is always the one in force." + v("Keyboard layout negotiation")),
+    (c("fondo"), "<i>Backstop</i> when it is a time limit that ends a wait whatever happens; <i>bottom</i> in "
+     + c("fondo della scala") + ", the lowest step of a ladder."),
     (c("figlio"), "<i>Child.</i> One process per admitted user, running as that user: it opens the logind session, "
      "starts the desktop and holds the stage. In " + c("ps") + " it is " + c("remotix-figlio --figlio-interno") + "."
      + v("The per-user child process")),
@@ -60,10 +66,17 @@ NOMI = [
     (c("gemello"), "<i>Twin.</i> The copy of " + c("rcp.c") + ", " + c("rcp.h") + " and " + c("autenticazione.c")
      + " in " + c("banchi/rcp/") + "; " + c("make") + " refuses to build if the two differ (" + c("GEMELLO")
      + " names the folder)." + v("The twin-copy check")),
+    (c("giro"), "<i>Round.</i> One full pass of a suite or a net (round 1, round 2); never <i>run</i>."),
+    (c("guasto"), "<i>Fault.</i> A fault grafted on purpose by a bench to prove that its judge sees it; also the "
+     "fault in the sense of whose fault it is (" + c("colpa") + ": fault, blame). Never the same word as "
+     + c("difetto") + ", which is a defect."),
     (c("impronta"), "<i>Fingerprint.</i> Four different things: the SHA-256 of the session certificate the page "
      "fetches from " + c("/impronta") + "; the installer's machine fingerprint that binds a plan; the "
      + c("impronte") + " target of the Makefile (the twin check); the folder fingerprint of test R1."
      + v("serverCertificateHashes and the fingerprint", "The machine fingerprint")),
+    (c("innesto") + ", " + c("innestare"), "<i>Graft, grafted.</i> Code added on purpose to a copy of the product "
+     "or of a third-party example, a fault grafted by a bench included. Never <i>inject</i>, which is only for "
+     + c("iniettare") + "."),
     (c("incremento"), "<i>Increment.</i> A new capability or desktop added while every certified one is kept, "
      "through the gates CP0 onwards." + v("The increment method")),
     (c("inquilino"), "<i>Tenant.</i> A user being served. Tenants created by benches are named "
@@ -79,6 +92,7 @@ NOMI = [
     (c("marca"), "<i>Mark.</i> The bench marker " + c("BANCO_MARCA") + " (a coloured square painted after a known "
      "delay, refused in the product), and the image mark read by " + c("03-marca.py") + "."
      + v("The bench marker: BANCO_MARCA")),
+    (c("metro"), "<i>Yardstick.</i> The measure a result is compared against; never <i>meter</i>."),
     (c("motore"), "<i>Engine.</i> " + c("remotix-install") + ", the only place with installation logic; the TUI and "
      "the command line are its faces." + v("The installer at a glance")),
     (c("catalogo"), "<i>Catalogue.</i> " + c("catalogo.json") + ", the supported distributions, desktops, minimum "
@@ -97,7 +111,7 @@ NOMI = [
     (c("ponte"), "<i>Bridge.</i> " + c("struct ponte") + ", which carries the transport and the children table to "
      "the callbacks; " + c("main.c") + " is the only file that knows both." + v("The parent process")),
     (c("posto"), "<i>Attach slot.</i> A user's place in RCP's registry: one per user, freed on detach or after "
-     "30 s of silence." + v("Detach and reattach")),
+     "30 s of silence. The logind and Mutter <i>seat</i> stays <i>seat</i>." + v("Detach and reattach")),
     (c("presenza"), "<i>Presence.</i> The table of " + c("main.c") + " that runs each user's abandonment clock, "
      "from the birth of the stage to its end." + v("Where state lives")),
     (c("registro"), "<i>Register, log.</i> In the server, the log module (" + c("registro.c") + "), the only place "
@@ -105,6 +119,8 @@ NOMI = [
      + v("The log module", "The write-ahead log and resume")),
     (c("riserva"), "<i>Reserve.</i> " + c("--riserva") + ": the share of an idle tenant's worst case the budget "
      "keeps aside." + v("Admission: the session cap and the budget")),
+    (c("rinvio") + ", " + c("rimando"), "<i>Postponement.</i> The pacer putting a send off to a later moment; "
+     + c("tetto ai rinvii") + " is the <i>postponement cap</i>. <i>Resend</i> is only QUIC retransmission."),
     (c("ritmo"), "<i>Rate</i> (frame rate). The rate regulator holds a frame back when two live deltas are "
      "still queued (" + c("arretrato") + "); the only mechanism that lowers the frame rate." + v("The rate regulator")),
     (c("ritrovo") + ", " + c("ritrovati"), "<i>Finding again, found again.</i> Live REMOTIX desktops that no child "
