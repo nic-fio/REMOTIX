@@ -253,7 +253,7 @@ static GVariant *chiedi_a_mutter(GDBusConnection *bus, const char *nome, const c
 		 *     distinction between «not there» (4) and «could not look» (5) already exists
 		 *     in `sessione_stato()`, and it is recognised PRECISELY by this code.
 		 *     ⚠ The first draft used `G_IO_ERROR_NOT_FOUND`, which does not match:
-		 *     ⛔ and then every session came out «LETTURA IGNOTA», the child did not
+		 *     ⛔ and then every session came out «UNKNOWN READING», the child did not
 		 *     make it be born — «states other than dead are not touched» — and
 		 *     `[M]` four bench rounds out of four were red.  A right error
 		 *     with the wrong name is a wrong error. */

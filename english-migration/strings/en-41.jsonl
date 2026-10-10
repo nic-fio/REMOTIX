@@ -1,0 +1,4 @@
+{"file": "src/rcp.c", "prima": "the real count is the line «rilascio al distacco: N fra tasti e pulsanti», a few milliseconds further down", "dopo": "the real count is the line «release at detach: N keys and buttons», a few milliseconds further down"}
+{"file": "banchi/rcp/rcp.c", "prima": "the real count is the line «rilascio al distacco: N fra tasti e pulsanti», a few milliseconds further down", "dopo": "the real count is the line «release at detach: N keys and buttons», a few milliseconds further down"}
+{"file": "src/comando.c", "prima": "NON-CAPITO riga vuota\\n", "dopo": "NON-CAPITO empty line\\n"}
+{"file": "banchi/01-b3-rcp-innesta.py", "prima": "NON-CAPITO riga vuota\\n", "dopo": "NON-CAPITO empty line\\n"}

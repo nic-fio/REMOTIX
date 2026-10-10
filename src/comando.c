@@ -94,7 +94,7 @@ static void servi(int fd)
 		              "⚠ empty command on the unblock socket (read %zd bytes): "
 		              "I removed nothing",
 		              letti);
-		scrivi_tutto(fd, "NON-CAPITO riga vuota\n");
+		scrivi_tutto(fd, "NON-CAPITO empty line\n");
 		return;
 	}
 	buf[letti] = 0;
