@@ -21,7 +21,7 @@ keep installed **anything** of what is needed to RUN the benches.
 - the benches' dependencies are installed **there**, with `fondamenta/banco/provision.sh`,
   ⛔ not by hand on the tablet — the bench itself says so when `cargo` is missing.
 - ⇒ 28 Aug 2026: removed Rust from the tablet (1.3 GB, a leftover of v1 which was in Rust), our
-  two podman images and 3.3 GB of bench outputs scattered in home and in
+  two podman images of ours and 3.3 GB of bench outputs scattered in home and in
   `/var/tmp`. From 41 to 33 GB.
 
 ⭐ **The exception, and it is not an exception:** the Android SDK and the emulator stay on the

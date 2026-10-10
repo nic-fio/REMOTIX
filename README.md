@@ -404,7 +404,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > re-measured (14 out of 14). ⚠ **And no tool does that propagation** — the benches only *check*
 > it: it is the reason why the misalignment stayed there half a day.
 >
-> ⭐⭐⭐ **AND THEN B13 CAME BACK IN TOO: `[M]` 12 Aug 2026, `14 out of 14`, zero expired, zero not
+> ⭐⭐⭐ **AND THEN B13 CAME BACK IN TOO: `[M]` 12 Aug 2026, `14 su 14`, zero expired, zero not
 > re-verifiable, zero never tested.** The cure was not touching a number: it was **changing
 > scene**. `01-b13-sera-certifica.sh certifica` redoes the same cycle with the **same fault** but
 > against the **PRODUCT** on 7481 — which really serves the page — and there `B13.4` has a defendant:
@@ -761,7 +761,7 @@ libopus (phase 18, [`fasi/18-senza-ffmpeg.md`](fasi/18-senza-ffmpeg.md)).
 > ### 📅 HOW IT WAS ON **12 Aug 2026**, night — *superseded; start again from the box at the top of the README.*
 >
 > **The state**: clean tree (`636f088`), **14 benches out of 14 certified and valid today**, graft
-> ground `14 out of 14`. ⚠ On NIC-OS **two** servers stay on, and they are meant to: the **home
+> ground `14 su 14`. ⚠ On NIC-OS **two** servers stay on, and they are meant to: the **home
 > product on 7448** (restarted tonight on the right binary) and **P5's target on 7501**.
 > Ports **7447** and **7481** are free. No round in progress, on either machine.
 >
