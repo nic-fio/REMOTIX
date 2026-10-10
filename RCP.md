@@ -1998,9 +1998,9 @@ by error — the server **MUST** release **every key and every button that is pr
 ⭐ It is trap 11 of `LEZIONI.md` §4 in its worst form: a Ctrl left down in a session
 that outlives the client makes the desktop unusable at reattach, and nobody connects the two things.
 
-### 7.4 Appunti
+### 7.4 Clipboard
 
-| Tipo | Nome | |
+| Type | Name | |
 |---|---|---|
 | `0x0201` | `APPUNTI_ANNUNCIO` | «ho del testo nuovo» |
 | `0x0202` | `APPUNTI_CHIEDI` | «mandamelo» |
@@ -2008,448 +2008,448 @@ that outlives the client makes the desktop unusable at reattach, and nobody conn
 
 ```
 APPUNTI_ANNUNCIO
- ├── u32 trasferimento       ⭐ l'identificatore, scelto da chi annuncia
- └── u32 lunghezza           quanti byte ha il testo disponibile
+ ├── u32 trasferimento       ⭐ the identifier, chosen by whoever announces
+ └── u32 lunghezza           how many bytes the available text has
 
 APPUNTI_CHIEDI
- └── u32 trasferimento       quello dell'annuncio a cui si risponde
+ └── u32 trasferimento       that of the announcement being answered
 
 APPUNTI_TESTO
- ├── u32 trasferimento       quello della richiesta che si sta servendo
- └── byte                    fino alla fine dello stream, UTF-8 valido
+ ├── u32 trasferimento       that of the request being served
+ └── byte                    up to the end of the stream, valid UTF-8
 ```
 
-> ### ⛔ Due correzioni della sera del 9 agosto 2026 — rilievi **R1.11** e **R1.20**
+> ### ⛔ Two corrections of the evening of 9 Aug 2026 — findings **R1.11** and **R1.20**
 >
-> **L'identificatore mancava del tutto.** La regola *«ogni trasferimento va sul suo stream»* non era
-> soddisfacibile: i tre messaggi viaggiano in **due versi** e gli stream sono **unidirezionali**,
-> quindi un trasferimento ne occupa almeno due. E senza un campo che li leghi, con due annunci
-> aperti nei due versi — *l'utente copia di qua mentre incolla di là* — le due implementazioni
-> appaiano le richieste agli annunci **in ordine diverso e si scambiano i testi**.
+> **The identifier was missing altogether.** The rule *«ogni trasferimento va sul suo stream»* could not
+> be satisfied: the three messages travel in **two directions** and the streams are **unidirectional**,
+> so a transfer occupies at least two of them. And without a field binding them, with two announcements
+> open in the two directions — *the user copies here while pasting there* — the two implementations
+> pair the requests with the announcements **in a different order and swap the texts**.
 >
-> ⛔ Ciascun lato numera **i propri** trasferimenti, da 1 e crescendo. Un `APPUNTI_CHIEDI` con un
-> identificatore che non corrisponde a nessun annuncio vivo è `ERRORE_PROTOCOLLO`.
+> ⛔ Each side numbers **its own** transfers, from 1 upwards. An `APPUNTI_CHIEDI` with an
+> identifier that corresponds to no live announcement is `ERRORE_PROTOCOLLO`.
 >
-> **E la seconda lunghezza è stata tolta.** `APPUNTI_TESTO` portava `u32 lunghezza` *dentro* un
-> messaggio che ha già la sua lunghezza nell'inquadratura di §6.1: due verità sullo stesso fatto,
-> cioè il difetto che §2.2 vieta con quelle parole. ⚠ Con una conseguenza sull'implementazione:
-> il testo si legge **fino alla fine del messaggio**, e il tetto è quello di §5.4.
+> **And the second length has been removed.** `APPUNTI_TESTO` carried `u32 lunghezza` *inside* a
+> message that already has its length in the framing of §6.1: two truths about the same fact,
+> that is the defect §2.2 forbids with those words. ⚠ With a consequence on the implementation:
+> the text is read **up to the end of the message**, and the ceiling is that of §5.4.
 
-Bidirezionale. Si annuncia e si chiede, invece di spingere: chi copia un documento intero non lo
-spedisce a nessuno finché qualcuno non incolla.
+Bidirectional. One announces and asks, instead of pushing: whoever copies a whole document does not
+send it to anyone until someone pastes.
 
-⛔ **Il contenuto è sempre e solo testo semplice in UTF-8**, e non c'è nessun campo che dichiari un
-tipo: non esiste perché non c'è niente da scegliere. ⚠ *Questa riga diceva «un tipo diverso è
-`ERRORE_PROTOCOLLO`», e nessun messaggio portava un campo di tipo — una regola che nessuna
-implementazione poteva violare e nessun banco vedere fallire, e che invitava chi legge ad aggiungere
-un campo inesistente (rilievo **R1.20**).*
+⛔ **The content is always and only plain text in UTF-8**, and there is no field declaring a
+type: it does not exist because there is nothing to choose. ⚠ *This line said «un tipo diverso è
+`ERRORE_PROTOCOLLO`», and no message carried a type field — a rule no
+implementation could violate and no bench see fail, and that invited the reader to add
+a nonexistent field (finding **R1.20**).*
 
-⛔ **Ogni trasferimento ha il suo identificatore**, e i messaggi di trasferimenti diversi non si
-mescolano. ⚠ Un `APPUNTI_CHIEDI` che arriva quando l'annuncio è già stato superato da uno più
-recente si serve **con il testo attuale**, e il mittente lo scrive nel registro: è la corsa normale
-fra due persone che copiano, non un errore. ⭐ **Ed è la quinta eccezione dichiarata a §3** — vedi
-l'elenco lì.
+⛔ **Every transfer has its own identifier**, and messages of different transfers do not
+mix. ⚠ An `APPUNTI_CHIEDI` that arrives when the announcement has already been superseded by a more
+recent one is served **with the current text**, and the sender writes it in the log: it is the normal race
+between two people copying, not an error. ⭐ **And it is the fifth exception declared in §3** — see
+the list there.
 
-⛔ Un `APPUNTI_TESTO` che nessuno ha chiesto è `ERRORE_PROTOCOLLO`: gli appunti si tirano, non si
-spingono.
+⛔ An `APPUNTI_TESTO` nobody asked for is `ERRORE_PROTOCOLLO`: the clipboard is pulled, not
+pushed.
 
-### 7.5 ⭐ La funzione di banco: la marca, e il ritardo noto
+### 7.5 ⭐ The bench function: the mark, and the known delay
 
-*Aggiunta la notte del 9 agosto 2026, rilievo **R3.4** della revisione del banco della fase 1, e
-**prima del primo byte di codice** — §9 chiude la finestra dei tipi nuovi da lì in poi, e la clausola
-che la teneva aperta era che allora non esistesse nessuna implementazione. ⛔ **Il primo byte è del
-10 agosto 2026 e la finestra è chiusa** (§0-bis, §9): questi due tipi sono entrati con l'ultima
-occasione, e non ce n'è una seconda. ⚠* Diceva «*la clausola che la tiene aperta è che **oggi** non
-esiste nessuna implementazione*», *al presente — corretta l'11 agosto 2026, rilievo **R12C.2***.
+*Added on the night of 9 Aug 2026, finding **R3.4** of the review of the phase 1 bench, and
+**before the first byte of code** — §9 closes the window for new types from there on, and the clause
+that kept it open was that then no implementation existed. ⛔ **The first byte is from
+10 Aug 2026 and the window is closed** (§0-bis, §9): these two types came in with the last
+opportunity, and there is no second one. ⚠* It said «*la clausola che la tiene aperta è che **oggi** non
+esiste nessuna implementazione*», *in the present tense — corrected on 11 Aug 2026, finding **R12C.2***.
 
-⚠ **La sua marca resta 🔸, non ✅**, ed è registrata dove le decisioni stanno: `DECISIONI.md` §1.5
-riga 26. La domanda *«era una decisione dell'utente?»* — rilievo **R11.15** — **è stata chiusa
-l'11 agosto 2026**: no, non lo era, e resta togliibile senza tornare da lui.
+⚠ **Its mark stays 🔸, not ✅**, and it is recorded where decisions live: `DECISIONI.md` §1.5
+row 26. The question *«era una decisione dell'utente?»* — finding **R11.15** — **was closed
+on 11 Aug 2026**: no, it was not, and it stays removable without going back to him.
 
-> ### ⛔⭐ E DA OGGI NON ENTRA NEL PRODOTTO CONSEGNATO — ✅ 11 agosto 2026
+> ### ⛔⭐ And FROM TODAY IT DOES NOT ENTER THE DELIVERED PRODUCT — ✅ 11 Aug 2026
 >
-> *`DECISIONI.md` §7.16, dall'utente: «l'utente deve vedere il desktop senza artefatti, come se
+> *`DECISIONI.md` §7.16, from the user: «l'utente deve vedere il desktop senza artefatti, come se
 > fosse davanti al monitor del PC … si tiene quello che serve per i test, ma poi nel prodotto
 > finale si fa pulizia».*
 >
-> ⛔ **Questa è una funzione di BANCO, e nel binario che si installa NON DEVE esserci.** Non spenta:
-> **assente** — non compilata, non raggiungibile, e ⛔ **non trovabile cercandone le marche dentro il
-> binario**. Sullo schermo di chi si collega non compare mai niente che non sia il suo desktop.
+> ⛔ **This is a BENCH function, and in the binary that gets installed it MUST NOT be there.** Not switched off:
+> **absent** — not compiled, not reachable, and ⛔ **not findable by searching for its marks inside the
+> binary**. On the screen of whoever connects nothing ever appears that is not their desktop.
 >
-> ⚠ **«Spenta» era la forma di prima, e non basta più.** La funzione nasce spenta e
-> `banchi/01-b5-violazioni.py` verifica che a funzione spenta il server rifiuti con
-> `FUNZIONE_SPENTA`: quel comportamento **resta**, ed è giusto — ma vale per la **costruzione di
-> prova**, che è la sola in cui questi due tipi esistano.
+> ⚠ **«Spenta» was the previous form, and it is no longer enough.** The function is born off and
+> `banchi/01-b5-violazioni.py` checks that with the function off the server refuses with
+> `FUNZIONE_SPENTA`: that behaviour **stays**, and it is right — but it holds for the **test
+> build**, which is the only one in which these two types exist.
 >
-> ⛔ **E la differenza si misura, o è una buona intenzione**: *«non c'è»* e *«c'è ed è spenta»* hanno
-> lo stesso aspetto da fuori. Si separano **cercando le marche dentro il binario consegnato** — la
-> stessa tecnica con cui `banchi/01-p1-prodotto.sh` distingue un binario nuovo da uno vecchio. Il
-> banco è della **fase 13**, dove il pacchetto nasce.
+> ⛔ **And the difference is measured, or it is a good intention**: *«non c'è»* and *«c'è ed è spenta»* look
+> the same from outside. They are separated **by searching for the marks inside the delivered binary** — the
+> same technique with which `banchi/01-p1-prodotto.sh` tells a new binary from an old one. The
+> bench belongs to **phase 13**, where the package is born.
 >
-> ⭐ **Perché la funzione sopravvive comunque**: taratura del cronometro del ritardo alla fase 3 —
-> si inietta un ritardo noto e si verifica che la mediana salga di esattamente quello. Toglierla del
-> tutto avrebbe lasciato il tetto dei 50 ms **senza un modo di sapere se il numero è vero**.
+> ⭐ **Why the function survives all the same**: calibration of the delay stopwatch at phase 3 —
+> a known delay is injected and one checks that the median rises by exactly that. Removing it
+> altogether would have left the 50 ms ceiling **without a way of knowing whether the number is true**.
 
-> ### ⛔⛔ 13 agosto 2026 — **la funzione di banco NON dà il ritardo noto**, e non l'ha dato alla fase 3
+> ### ⛔⛔ 13 Aug 2026 — **the bench function DOES NOT give the known delay**, and did not give it at phase 3
 >
-> *Questo paragrafo è normativo e descrive un meccanismo che nel prodotto **non c'è**. Va scritto
-> qui, o chi legge questa sezione crede di avere in mano uno strumento che non esiste.*
+> *This paragraph is normative and describes a mechanism that **is not there** in the product. It must be written
+> here, or whoever reads this section believes they have in hand an instrument that does not exist.*
 >
-> | | stato `[R]` |
+> | | state `[R]` |
 > |---|---|
-> | la funzione | `BANCO_ACCESO 0` — nasce spenta, come §7.5 vuole |
-> | ⛔ **il ramo `ACCETTATA`** | **è uno stub**: non dipinge, non aspetta il `ritardo_ms`, non produce l'`istante` che il messaggio promette |
+> | the function | `BANCO_ACCESO 0` — born off, as §7.5 wants |
+> | ⛔ **the `ACCETTATA` branch** | **is a stub**: it does not paint, does not wait for the `ritardo_ms`, does not produce the `istante` the message promises |
 >
-> ⇒ ⛔ **P1, il controllo decisivo dell'anello del ritardo, alla fase 3 NON è passato di qui.**
-> L'iniezione del ritardo noto è stata fatta **fuori dal prodotto**, ed è risultata `[M]` verde
-> (N = 25 → **+25,08 ms**; N = 60 → **+58,58 ms**).
+> ⇒ ⛔ **P1, the decisive control of the delay loop, at phase 3 did NOT pass through here.**
+> The injection of the known delay was made **outside the product**, and it came out `[M]` green
+> (N = 25 → **+25.08 ms**; N = 60 → **+58.58 ms**).
 >
-> ⭐ **E l'iniezione fuori dal prodotto non è un ripiego: è meglio.** L'ancora d'orologio del metro
-> **non passa** per il percorso iniettato — se ci passasse, **P1 passerebbe anche a banco rotto**,
-> perché i N millisecondi si sommerebbero identici da tutt'e due le parti. Un controllo decisivo
-> che non sa più fallire ha smesso di essere un controllo (`LEZIONI.md` §1.2).
+> ⭐ **And the injection outside the product is not a fallback: it is better.** The clock anchor of the meter
+> **does not pass** through the injected path — if it did, **P1 would pass even with the bench broken**,
+> because the N milliseconds would add up identically on both sides. A decisive control
+> that can no longer fail has stopped being a control (`LEZIONI.md` §1.2).
 >
-> ⇒ ⏳ **Che cosa resta da decidere, e non si decide qui**: se il ramo `ACCETTATA` vada completato o
-> se i due messaggi vadano tolti dal protocollo, visto che la loro sola ragione dichiarata —
-> «tarare il cronometro del ritardo» — è stata soddisfatta **senza di loro**. ⚠ Finché stanno
-> scritti qui e non esistono nel codice, questa sezione descrive una cosa che non c'è: è la specie
-> di difetto contro cui §0 esiste.
+> ⇒ ⏳ **What remains to be decided, and is not decided here**: whether the `ACCETTATA` branch must be completed or
+> whether the two messages must be removed from the protocol, given that their only declared reason —
+> «tarare il cronometro del ritardo» — has been satisfied **without them**. ⚠ As long as they stay
+> written here and do not exist in the code, this section describes a thing that is not there: it is the species
+> of defect against which §0 exists.
 
-⚠ **E i due tipi hanno consumato la clausola di §9** che §12 dichiara essere stata *«l'ultima
-occasione»* per aggiungere tipi di messaggio: restano nel documento, ⛔ ma d'ora in poi come
-**funzione di banco dichiarata**, non come funzione del prodotto.
+⚠ **And the two types consumed the clause of §9** that §12 declares to have been *«l'ultima
+occasione»* to add message types: they stay in the document, ⛔ but from now on as a
+**declared bench function**, not as a function of the product.
 
-> ⛔ **Perché una funzione di banco sta nel protocollo e non nel codice di prova.** L'anello del
-> ritardo di `DECISIONI.md` §2.6 misura **dal lato che riceve**: il client provoca un cambiamento
-> visivo inequivocabile e guarda i fotogrammi che decodifica finché non lo vede. Perché quel numero
-> valga, il banco deve poter **iniettare un ritardo noto** e verificare che la mediana salga di
-> esattamente quello — ⛔ *«un banco che non lo fa non sa di misurare»*
-> (`web/rapporti/S4-ritardo-disegno.md` §4.2, controllo P1).
+> ⛔ **Why a bench function is in the protocol and not in the test code.** The delay
+> loop of `DECISIONI.md` §2.6 measures **from the receiving side**: the client causes an unmistakable visual
+> change and watches the frames it decodes until it sees it. For that number
+> to count, the bench must be able to **inject a known delay** and check that the median rises by
+> exactly that — ⛔ *«un banco che non lo fa non sa di misurare»*
+> (`web/rapporti/S4-ritardo-disegno.md` §4.2, control P1).
 >
-> Quel comando **attraversa il filo**. Improvvisarlo nel codice di prova significa due
-> implementazioni che se lo inventano diverso, cioè il difetto muto contro cui §0 esiste — e S4
-> §5.3 lo dice con queste parole: *«va scritto in `RCP.md` come funzione di banco, non improvvisato
+> That command **crosses the wire**. Improvising it in the test code means two
+> implementations that invent it differently, that is the silent defect against which §0 exists — and S4
+> §5.3 says it with these words: *«va scritto in `RCP.md` come funzione di banco, non improvvisato
 > nel codice di prova»*.
 
-**I due messaggi, in byte:**
+**The two messages, in bytes:**
 
 ```
 BANCO_MARCA                                          client → server
- ├── u32 id            ⛔ cresce di almeno uno a ogni messaggio; 0 è riservato
- ├── u32 colore        0x00RRGGBB — il colore a cui portare la marca
- └── u32 ritardo_ms    ⛔ il ritardo NOTO che il server DEVE aspettare prima di
-                       dipingere. 0 = subito. È il controllo del banco
+ ├── u32 id            ⛔ grows by at least one at every message; 0 is reserved
+ ├── u32 colore        0x00RRGGBB — the colour to bring the mark to
+ └── u32 ritardo_ms    ⛔ the KNOWN delay the server MUST wait before
+                       painting. 0 = at once. It is the control of the bench
 
 BANCO_ESITO                                          server → client
- ├── u32 id            quello di BANCO_MARCA
+ ├── u32 id            that of BANCO_MARCA
  ├── u8  esito         1 = ACCETTATA, 2 = RIFIUTATA
- ├── u8  motivo        0 se accettata; altrimenti:
+ ├── u8  motivo        0 if accepted; otherwise:
  │                       1 = FUNZIONE_SPENTA
  │                       2 = RITARDO_FUORI_LIMITI
- └── u64 istante       microsecondi dell'orologio monotono del server, del momento
-                       in cui la marca è stata dipinta. ⛔ 0 se rifiutata, ed è
-                       l'unico significato di «assente» per questo campo (§6.0)
+ └── u64 istante       microseconds of the server's monotonic clock, of the moment
+                       the mark was painted. ⛔ 0 if refused, and it is
+                       the only meaning of «assente» for this field (§6.0)
 ```
 
-**Dove sta la marca, e chi la dipinge:**
+**Where the mark is, and who paints it:**
 
 | | |
 |---|---|
-| **la misura** | **16×16 pixel della tela**, nell'angolo in alto a sinistra: da `0,0` a `15,15` |
-| ⛔ **perché 16 e non 1** | il video è codificato in **4:2:0**, quindi la crominanza è a metà risoluzione, e i codificatori lavorano a blocchi. Un quadratino piccolo o a cavallo di un bordo di blocco viene **spalmato**, e il banco leggerebbe un colore che non è stato mandato. ⚠ E chi riceve **DEVE** leggere la **mediana** dei 256 pixel, con tolleranza, non il pixel centrale |
-| ⛔ **chi la dipinge** | **il server**, nel fotogramma che sta per codificare — **dopo la cattura**. ⚠ *Quindi la misura che ne esce **esclude il compositore**, e questo va dichiarato accanto a ogni numero: è il ritardo di* codifica → filo → decodifica → disegno*, non quello che l'utente sente. Il pezzo del compositore lo misura l'anello completo di `DECISIONI.md` §2.6, che passa dall'input vero* |
-| ⚠ **e nella tela, non nella vista** | il client riscala: se vista e tela non coincidono, i 16×16 della tela diventano un'altra misura sul suo disegno, e **il calcolo è suo** |
+| **the size** | **16×16 pixels of the canvas**, in the top-left corner: from `0,0` to `15,15` |
+| ⛔ **why 16 and not 1** | the video is encoded in **4:2:0**, so chroma is at half resolution, and encoders work in blocks. A small square or one straddling a block boundary gets **smeared**, and the bench would read a colour that was not sent. ⚠ And the receiver **MUST** read the **median** of the 256 pixels, with tolerance, not the central pixel |
+| ⛔ **who paints it** | **the server**, in the frame it is about to encode — **after capture**. ⚠ *So the measurement that comes out of it **excludes the compositor**, and this must be declared next to every number: it is the delay of* encoding → wire → decoding → drawing*, not the one the user feels. The compositor's piece is measured by the complete loop of `DECISIONI.md` §2.6, which goes through the real input* |
+| ⚠ **and in the canvas, not in the view** | the client rescales: if view and canvas do not coincide, the 16×16 of the canvas become another size on its drawing, and **the computation is its own** |
 
-**Le regole, e sono cinque:**
+**The rules, and they are five:**
 
-1. ⛔ **La funzione è SPENTA salvo che l'amministratore non l'accenda nella configurazione del
-   server.** È l'invariante **I6** alla lettera — *ciò che cambia quel che si vede sta dietro un
-   interruttore spento di suo* — e qui letteralmente dipinge sopra il desktop di qualcuno;
-2. ⛔ **spenta, il server risponde `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)`. NON DEVE tacere e NON
-   DEVE chiudere**: un silenzio lascia il banco ad aspettare per sempre, ed è lo stesso difetto che
-   §7.1 vieta per `ADATTA_TELA`. Un client che chiede una funzione spenta non ha violato niente;
-3. ⛔ **il server DEVE dichiararla**: la capacità `banco.marca` di §4.3. Un client che la chiede
-   senza che sia stata dichiarata riceve comunque `FUNZIONE_SPENTA`, non un errore di protocollo;
-4. `ritardo_ms` **DEVE** stare fra **0 e 10 000**; fuori è `BANCO_ESITO(RIFIUTATA,
-   RITARDO_FUORI_LIMITI)` — ⚠ **non** `ERRORE_PROTOCOLLO`: è un parametro di banco sbagliato, e far
-   cadere la sessione al banco che si sta tarando è la stessa cattiva idea di §7.1 per le misure
-   fuori limite;
-5. ⛔ **ogni accensione e ogni `BANCO_MARCA` servito si scrivono nel registro del server.** Una
-   sessione che dipinge quadratini colorati sul desktop di una persona **deve poterlo dimostrare
-   dal registro**, o il giorno in cui qualcuno se ne lamenterà non ci sarà modo di sapere se è
-   stata accesa.
+1. ⛔ **The function is OFF unless the administrator switches it on in the server
+   configuration.** It is invariant **I6** to the letter — *what changes what is seen stays behind a
+   switch that is off by itself* — and here it literally paints over someone's desktop;
+2. ⛔ **off, the server answers `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)`. It MUST NOT keep silent and MUST NOT
+   close**: a silence leaves the bench waiting forever, and it is the same defect that
+   §7.1 forbids for `ADATTA_TELA`. A client that asks for a function that is off has violated nothing;
+3. ⛔ **the server MUST declare it**: the capability `banco.marca` of §4.3. A client that asks for it
+   without it having been declared gets `FUNZIONE_SPENTA` all the same, not a protocol error;
+4. `ritardo_ms` **MUST** be between **0 and 10 000**; outside it is `BANCO_ESITO(RIFIUTATA,
+   RITARDO_FUORI_LIMITI)` — ⚠ **not** `ERRORE_PROTOCOLLO`: it is a wrong bench parameter, and making
+   the session drop for the bench being calibrated is the same bad idea as §7.1 for out-of-limit
+   sizes;
+5. ⛔ **every switch-on and every `BANCO_MARCA` served are written in the server log.** A
+   session that paints coloured squares on a person's desktop **must be able to prove it
+   from the log**, or the day someone complains about it there will be no way of knowing whether it was
+   switched on.
 
-⚠ **E `istante` non serve a misurare il ritardo**: serve al banco per **distinguere il ritardo che
-ha chiesto lui da quello che ha trovato**. Il ritardo lo misura il client, dal lato che riceve, come
-dice `DECISIONI.md` §2.6 — questo campo dice soltanto quando il server ha obbedito.
+⚠ **And `istante` is not for measuring the delay**: it serves the bench to **distinguish the delay it
+asked for from the one it found**. The delay is measured by the client, from the receiving side, as
+`DECISIONI.md` §2.6 says — this field only says when the server obeyed.
 
 ---
 
-### 7.6 ⭐ `TERMINA_SESSIONE` — l'unico messaggio con cui il client chiude la SESSIONE
+### 7.6 ⭐ `TERMINA_SESSIONE` — the only message with which the client closes the SESSION
 
-*Nato il 15 agosto 2026 con la decisione dell'utente `DECISIONI.md` §4.1-ter.*
+*Born on 15 Aug 2026 with the user's decision `DECISIONI.md` §4.1-ter.*
 
 ```
 TERMINA_SESSIONE
- └── (corpo vuoto)
+ └── (empty body)
 ```
 
-⛔ **Non è «chiudi la connessione»**: quello si fa col `CONGEDO`, e lascia la sessione viva
-(invariante I4). Questo dice *«ho finito»*: la sessione grafica finisce e **i programmi dell'utente
-si chiudono**. Sono le due uscite di `DECISIONI.md` §4.1-ter, e il protocollo deve poterle
-distinguere — un client con un modo solo costringerebbe l'utente a scegliere fra non uscire mai e
-perdere il lavoro.
+⛔ **It is not «chiudi la connessione»**: that is done with `CONGEDO`, and leaves the session alive
+(invariant I4). This one says *«ho finito»*: the graphical session ends and **the user's programs
+close**. They are the two exits of `DECISIONI.md` §4.1-ter, and the protocol must be able to
+distinguish them — a client with only one way would force the user to choose between never logging out and
+losing their work.
 
 | | |
 |---|---|
-| **chi lo manda** | il client, e **solo** dopo un gesto esplicito dell'utente: la scorciatoia `Ctrl+Alt+Fine` con la sua conferma. ⚠ La voce «Esci…» del menu del desktop **non passa di qui** — quella la esegue il desktop, e il server se ne accorge da sé |
-| **quando è valido** | ⛔ solo a sessione **attaccata**. Prima dell'`ATTACCA` non c'è nessuna sessione da terminare, e §3 non fa sconti: chi lo manda fuori posto riceve `ERRORE_PROTOCOLLO` |
-| **la risposta** | ⛔ un `CONGEDO` con motivo **`0x10 SESSIONE_TERMINATA`**, e **DEVE partire prima** che la sessione grafica finisca di morire: quando il compositore cade, il palco cade con lui e il canale non serve più. Un `0x10` spedito tardi è il rilievo **B-7** con un nome nuovo |
-| **e agli altri** | ⛔ il congedo va a **tutte** le sessioni di quell'utente, non solo a chi ha chiesto: la sessione grafica è una sola (I2), e chi la guardasse da un secondo dispositivo resterebbe con uno schermo fermo per sempre |
+| **who sends it** | the client, and **only** after an explicit gesture of the user: the shortcut `Ctrl+Alt+Fine` with its confirmation. ⚠ The item «Esci…» of the desktop menu **does not pass through here** — the desktop executes that one, and the server notices it by itself |
+| **when it is valid** | ⛔ only with the session **attached**. Before `ATTACCA` there is no session to terminate, and §3 gives no discounts: whoever sends it out of place gets `ERRORE_PROTOCOLLO` |
+| **the answer** | ⛔ a `CONGEDO` with reason **`0x10 SESSIONE_TERMINATA`**, and it **MUST leave before** the graphical session finishes dying: when the compositor falls, the stage falls with it and the channel is no longer needed. A `0x10` sent late is finding **B-7** with a new name |
+| **and to the others** | ⛔ the farewell goes to **all** the sessions of that user, not only to whoever asked: the graphical session is only one (I2), and whoever watched it from a second device would be left with a frozen screen forever |
 
-⚠ **E non esiste una risposta «sto terminando»**: l'esito è il congedo. Un messaggio intermedio
-sarebbe una deduzione al posto di un fatto (`LEZIONI.md` §7.5), e l'unico fatto che conta è che la
-sessione sia finita.
+⚠ **And there is no «sto terminando» answer**: the outcome is the farewell. An intermediate message
+would be a deduction in place of a fact (`LEZIONI.md` §7.5), and the only fact that counts is that the
+session is over.
 
 ---
 
-## 8. Il congedo
+## 8. The farewell
 
-### 8.1 Si dice, e si verifica dal lato che riceve
+### 8.1 It is said, and checked from the receiving side
 
-⛔ Chi chiude **DEVE** mandare `CONGEDO` con un motivo **prima** di chiudere la **sessione
-WebTransport** — ⛔ **se il canale di controllo è ancora utilizzabile** (§3.1 punto 2) — e **DEVE**
-ripetere il motivo nel codice d'errore applicativo della chiusura (§3.1 punto 3). ⭐ **Il punto 3
-non ha condizioni e non ne ha bisogno**: viaggia nella chiusura stessa, e parte anche quando il
-canale è morto.
+⛔ Whoever closes **MUST** send `CONGEDO` with a reason **before** closing the **WebTransport
+session** — ⛔ **if the control channel is still usable** (§3.1 point 2) — and **MUST**
+repeat the reason in the application error code of the closing (§3.1 point 3). ⭐ **Point 3
+has no conditions and needs none**: it travels in the closing itself, and leaves even when the
+channel is dead.
 
-> ⛔ *Corretto il 10 agosto 2026, rilievo **R11.8**: qui c'era «prima di chiudere la **connessione
-> QUIC**», e in §4.4 «con lo stesso motivo nel **`CONNECTION_CLOSE`**». Sono i due resti che la
-> correzione R1.4 di §3.1 non aveva raggiunto, e §8.1 è il paragrafo che detta l'obbligo a **chi
-> chiude** — che è spesso la pagina, cioè il lato che R1.4 dichiara **incapace** di chiudere la
-> connessione HTTP/3 sotto.*
+> ⛔ *Corrected on 10 Aug 2026, finding **R11.8**: here there was «prima di chiudere la **connessione
+> QUIC**», and in §4.4 «con lo stesso motivo nel **`CONNECTION_CLOSE`**». They are the two remainders the
+> correction R1.4 of §3.1 had not reached, and §8.1 is the paragraph that dictates the obligation to **whoever
+> closes** — which is often the page, that is the side R1.4 declares **unable** to close the
+> HTTP/3 connection underneath.*
 >
-> ⛔ **È lo stesso ingresso con due byte diversi** — un `CONNECTION_CLOSE` di trasporto contro una
-> `CLOSE_WEBTRANSPORT_SESSION` — cioè la forma esatta che R1.4 dichiarava di aver chiuso: *«un
+> ⛔ **It is the same input with two different bytes** — a transport `CONNECTION_CLOSE` against a
+> `CLOSE_WEBTRANSPORT_SESSION` — that is the exact form R1.4 declared it had closed: *«un
 > programmatore chiudeva la sessione e dichiarava assolta la regola; l'altro cercava l'API della
 > connessione, non la trovava, e lasciava il punto 3 non implementato — ed era conforme al testo
-> quanto il primo»*. ⚠ E §4.4 lo imponeva proprio sul percorso `RESPINTO`, quello che B11 ha
-> riaperto il 10 agosto.
+> quanto il primo»*. ⚠ And §4.4 imposed it precisely on the `RESPINTO` path, the one B11
+> reopened on 10 Aug.
 
-⚠ **E questa riga ha un prezzo già pagato.** In v1, per **tre fasi**, il server scriveva compìto
-«congedo il client» mentre il client, alla stessa ora, scriveva «errore di rete»: mancava una
-seconda chiamata di libreria che nessuno sospettava (`LEZIONI.md` §1.7). Da cui l'obbligo di
-collaudo: **il congedo si verifica dal lato che lo riceve**, mai dal registro di chi lo manda.
+⚠ **And this line has a price already paid.** In v1, for **three phases**, the server dutifully wrote
+«congedo il client» while the client, at the same time, wrote «errore di rete»: a
+second library call nobody suspected was missing (`LEZIONI.md` §1.7). Hence the
+acceptance-test obligation: **the farewell is checked from the side that receives it**, never from the log of whoever sends it.
 
-⚠ **L'unica eccezione è `RESPINTO`** (§4.4), che *è* il congedo dell'autenticazione.
+⚠ **The only exception is `RESPINTO`** (§4.4), which *is* the farewell of authentication.
 
-> ### ⛔ E «chi chiude» non è chi ha ricevuto un `FIN` — ✅ 11 agosto 2026
+> ### ⛔ And «chi chiude» is not whoever received a `FIN` — ✅ 11 Aug 2026
 >
-> *L'eccezione che la decisione di `DECISIONI.md` §7.14 pretende, scritta qui perché è qui che
-> l'obbligo è dettato. Senza questa frase §4.2 vieta di spedire sul canale di controllo dopo un
-> `FIN` e §8.1 continua a **imporre** proprio quel byte: la decisione avrebbe spostato la
-> contraddizione invece di chiuderla.*
+> *The exception the decision of `DECISIONI.md` §7.14 demands, written here because it is here that
+> the obligation is dictated. Without this sentence §4.2 forbids sending on the control channel after a
+> `FIN` and §8.1 keeps **imposing** precisely that byte: the decision would have moved the
+> contradiction instead of closing it.*
 >
-> ⛔ **Chi riceve un `FIN` sul canale di controllo non è «chi chiude», e non manda nessun
-> `CONGEDO`.** A chiudere è stata l'altra parte; il motivo di quella chiusura arriva da lei, e la
-> sola cosa dovuta a chi riceve è **considerare la sessione finita** (§4.2).
+> ⛔ **Whoever receives a `FIN` on the control channel is not «chi chiude», and sends no
+> `CONGEDO`.** It was the other party that closed; the reason for that closing comes from it, and the
+> only thing owed by the receiver is **to consider the session finished** (§4.2).
 >
-> ⭐ **Restano dovuti i byte del punto 3 di §3.1** — il codice d'errore applicativo — quando è
-> **questo** lato a chiudere la sessione WebTransport per primo. L'eccezione riguarda il `CONGEDO`
-> sul canale, non il motivo nella chiusura.
+> ⭐ **The bytes of point 3 of §3.1 remain owed** — the application error code — when it is
+> **this** side that closes the WebTransport session first. The exception concerns the `CONGEDO`
+> on the channel, not the reason in the closing.
 
-> ### ✅ La condizione, decisa dall'utente l'11 agosto 2026 — `DECISIONI.md` §7.15
+> ### ✅ The condition, decided by the user on 11 Aug 2026 — `DECISIONI.md` §7.15
 >
-> *Fino a oggi questa riga non poneva condizioni, mentre §3.1 punto 2 dice «**se il canale di
-> controllo è ancora utilizzabile**»: ⛔ **un'implementazione conforme a §3.1 era in violazione di
-> §8.1**, e due sezioni normative dello stesso documento davano due verdetti sullo stesso ingresso
-> — la violazione che arriva su uno stream unidirezionale col controllo già finito (rilievo
+> *Until today this line set no conditions, while §3.1 point 2 says «**se il canale di
+> controllo è ancora utilizzabile**»: ⛔ **an implementation conforming to §3.1 was in violation of
+> §8.1**, and two normative sections of the same document gave two verdicts on the same input
+> — the violation that arrives on a unidirectional stream with control already finished (finding
 > **R11.23**).*
 >
-> ⛔ **Vince la condizione.** L'obbligo del `CONGEDO` sul canale **cade quando il canale non è
-> utilizzabile**; quel che non cade mai è il motivo dentro il codice di chiusura (§3.1 punto 3).
+> ⛔ **The condition wins.** The obligation of the `CONGEDO` on the channel **falls when the channel is not
+> usable**; what never falls is the reason inside the closing code (§3.1 point 3).
 >
-> ⭐ **La ragione, con le parole dell'utente**: *«se una connessione cade nessuno può dire al server
-> "chiudo perché ho finito"»*. Un `DEVE` che non si può rispettare non è una regola: è un difetto
-> di questo file, e §0 dice che i difetti di questo file sono di questo file.
+> ⭐ **The reason, in the user's words**: *«se una connessione cade nessuno può dire al server
+> "chiudo perché ho finito"»*. A `DEVE` that cannot be respected is not a rule: it is a defect
+> of this file, and §0 says that the defects of this file belong to this file.
 >
-> ⚠ **E non indebolisce `DECISIONI.md` §4.1-bis**, decisa lo stesso giorno — *ogni chiusura del
-> server ha un motivo che sa spiegare*: il motivo arriva comunque, per la seconda strada. ⛔ Quel
-> che si perde è **solo il byte sul canale morto**, cioè un byte che non partiva.
+> ⚠ **And it does not weaken `DECISIONI.md` §4.1-bis**, decided the same day — *every closing by the
+> server has a reason it can explain*: the reason arrives all the same, by the second road. ⛔ What
+> is lost is **only the byte on the dead channel**, that is a byte that would not have left.
 >
-> ⭐ **E chiude un rosso su codice giusto**: **B5 e B11 applicavano già il condizionale di §3.1**
-> (`FASI.md` §01-filo-nudo, rilievo R3.3), e un banco scritto sulla forma assoluta **avrebbe bocciato
-> un server corretto** ogni volta che la violazione arriva su uno stream unidirezionale.
+> ⭐ **And it closes a red on correct code**: **B5 and B11 already applied the conditional of §3.1**
+> (`FASI.md` §01-filo-nudo, finding R3.3), and a bench written on the absolute form **would have failed
+> a correct server** every time the violation arrives on a unidirectional stream.
 >
-> ⛔ **E le due decisioni dell'11 agosto non si sostituiscono.** §7.15 dice *quando* l'obbligo cade;
-> §7.14 dice *chi* non è tenuto affatto. Dopo un `FIN` ricevuto il canale, nel verso di chi lo ha
-> ricevuto, **è ancora utilizzabile**: senza §7.14 la condizione di §7.15 non lo salverebbe.
+> ⛔ **And the two decisions of 11 Aug do not replace each other.** §7.15 says *when* the obligation falls;
+> §7.14 says *who* is not bound at all. After a `FIN` received, the channel, in the direction of whoever
+> received it, **is still usable**: without §7.14 the condition of §7.15 would not save it.
 
-### 8.2 I motivi
+### 8.2 The reasons
 
-| Codice | Nome | Quando |
+| Code | Name | When |
 |---|---|---|
-| `0x01` | `CHIUSO_DALL_UTENTE` | l'utente ha chiuso il client |
-| `0x02` | `INATTIVITA` | 30 minuti senza input (`SPECIFICHE.md` §5.3) |
-| `0x03` | `SESSIONE_ABBANDONATA` | ⭐ **60 minuti senza input** (`SPECIFICHE.md` §5.3, `DECISIONI.md` §4.8). ⚠ *Diceva «6 ore senza attacchi»: cambiato il 16 agosto 2026 — cambia il tetto **e** il criterio, perché chi guarda senza toccare non rinnova niente. Il codice e il nome restano* |
-| `0x04` | `SESSIONE_LOCALE_PREVALSA` | l'utente ha aperto una sessione grafica locale |
-| `0x05` | `GIA_ATTIVA_LOCALE` | c'è già una sessione grafica locale |
-| `0x06` | `BUDGET_PIENO` | ⭐ **la macchina non ha più capacità di COMPOSIZIONE** — ⚠ *diceva «di codifica»: corretto il 24 agosto 2026, `DECISIONI.md` §4.6-nonies, perché `[M]` il collo è `rcs0` a **0,97 Gpixel/s**, la **metà** del codificatore. ⛔ E fino alla fase 10 questo codice **non è mai stato mandato da nessuna riga del server**: dalla fase 10 parte davvero* |
+| `0x01` | `CHIUSO_DALL_UTENTE` | the user closed the client |
+| `0x02` | `INATTIVITA` | 30 minutes without input (`SPECIFICHE.md` §5.3) |
+| `0x03` | `SESSIONE_ABBANDONATA` | ⭐ **60 minutes without input** (`SPECIFICHE.md` §5.3, `DECISIONI.md` §4.8). ⚠ *It said «6 ore senza attacchi»: changed on 16 Aug 2026 — the ceiling **and** the criterion change, because whoever watches without touching renews nothing. The code and the name stay* |
+| `0x04` | `SESSIONE_LOCALE_PREVALSA` | the user opened a local graphical session |
+| `0x05` | `GIA_ATTIVA_LOCALE` | there is already a local graphical session |
+| `0x06` | `BUDGET_PIENO` | ⭐ **the machine has no more COMPOSITION capacity** — ⚠ *it said «di codifica»: corrected on 24 Aug 2026, `DECISIONI.md` §4.6-nonies, because `[M]` the bottleneck is `rcs0` at **0.97 Gpixel/s**, **half** of the encoder. ⛔ And until phase 10 this code **was never sent by any line of the server**: from phase 10 it really leaves* |
 | `0x07` | `CREDENZIALI_ERRATE` | |
-| `0x08` | `TROPPI_TENTATIVI` | ⭐ **l'indirizzo è bannato**: tre autenticazioni fallite, dodici ore (§4.4-bis). ⚠ *Diceva «limitazione della frequenza», ed era la forma precedente: dal 10 agosto 2026 non è più una frequenza, è un ban* |
-| `0x09` | `NIENTE_IN_COMUNE` | nessun codec condiviso |
+| `0x08` | `TROPPI_TENTATIVI` | ⭐ **the address is banned**: three failed authentications, twelve hours (§4.4-bis). ⚠ *It said «limitazione della frequenza», and it was the previous form: since 10 Aug 2026 it is no longer a rate, it is a ban* |
+| `0x09` | `NIENTE_IN_COMUNE` | no shared codec |
 | `0x0A` | `VERSIONE_INCOMPATIBILE` | |
 | `0x0B` | `ERRORE_PROTOCOLLO` | §3 |
 | `0x0C` | `SERVER_IN_CHIUSURA` | |
-| `0x0D` | `TEMPO_SCADUTO` | ⭐ *nuovo, 9 ago*: un tetto di §4.6 è scaduto |
-| `0x0E` | `SESSIONE_NON_SERVIBILE` | ⭐ *nuovo, 9 ago*: l'attacco è ben formato ma non si può servire — un compositore che non parte, una disposizione che il sistema non conosce. **DEVE** portare il dettaglio nel corpo |
-| `0x0F` | `GIA_ATTIVA_REMOTA` | ⭐ *nuovo, 9 ago sera*: **c'è già un client attaccato a questa sessione**, e questa connessione viene **rifiutata** |
-| `0x10` | `SESSIONE_TERMINATA` | ⭐ *nuovo, 15 ago*: **l'utente è uscito dal desktop** («Esci/logout» dal menu di sistema). La sessione grafica è finita e i suoi programmi sono chiusi ⇒ ⛔ **non c'è niente a cui riattaccarsi**, e la pagina torna al **modulo di accesso** (`DECISIONI.md` §4.1-quater) |
+| `0x0D` | `TEMPO_SCADUTO` | ⭐ *new, 9 Aug*: a ceiling of §4.6 has expired |
+| `0x0E` | `SESSIONE_NON_SERVIBILE` | ⭐ *new, 9 Aug*: the attach is well formed but cannot be served — a compositor that does not start, a layout the system does not know. It **MUST** carry the detail in the body |
+| `0x0F` | `GIA_ATTIVA_REMOTA` | ⭐ *new, evening of 9 Aug*: **there is already a client attached to this session**, and this connection is **refused** |
+| `0x10` | `SESSIONE_TERMINATA` | ⭐ *new, 15 Aug*: **the user has logged out of the desktop** («Esci/logout» from the system menu). The graphical session is over and its programs are closed ⇒ ⛔ **there is nothing to reattach to**, and the page goes back to the **login form** (`DECISIONI.md` §4.1-quater) |
 
-> ### ⛔ Perché `0x10` non è un doppione di `0x01` — 15 agosto 2026
+> ### ⛔ Why `0x10` is not a duplicate of `0x01` — 15 Aug 2026
 >
-> I due codici descrivono **due gesti dell'utente con esiti opposti**, e `DECISIONI.md` §4.1-ter li
-> separa: `0x01 CHIUSO_DALL_UTENTE` è il **filo che cade** — scheda chiusa, browser chiuso, il PC
-> dell'utente spento o riavviato — e porta la promessa *«riattacca e ritrovi tutto»*. `0x10` è il
-> **logout**, e quella promessa lì è **falsa**.
+> The two codes describe **two gestures of the user with opposite outcomes**, and `DECISIONI.md` §4.1-ter
+> separates them: `0x01 CHIUSO_DALL_UTENTE` is the **wire that drops** — tab closed, browser closed, the user's
+> PC switched off or restarted — and carries the promise *«riattacca e ritrovi tutto»*. `0x10` is the
+> **logout**, and there that promise is **false**.
 >
-> ⛔ **Il vincolo che questo codice porta è sull'ordine, non sul contenuto**: quando il compositore
-> cade il palco cade con lui, e il canale non serve più. `0x10` **DEVE** partire **prima** che la
-> sessione grafica sia finita di morire. Un `0x10` definito e spedito troppo tardi è il rilievo
-> **B-7** con un nome nuovo.
+> ⛔ **The constraint this code carries is on the order, not on the content**: when the compositor
+> falls the stage falls with it, and the channel is no longer needed. `0x10` **MUST** leave **before** the
+> graphical session has finished dying. A `0x10` defined and sent too late is finding
+> **B-7** with a new name.
 >
-> ⚠ **E chi riceve un `0x10` non deve riattaccare**: un client che ritentasse aprirebbe una sessione
-> **nuova**, non ritroverebbe la vecchia — che è esattamente ciò che l'utente ha chiesto di chiudere.
+> ⚠ **And whoever receives a `0x10` must not reattach**: a client that retried would open a **new**
+> session, it would not find the old one again — which is exactly what the user asked to close.
 
-> ### ⛔ Perché `0x0F` è stato aggiunto, e perché adesso — rilievo **R1.3**
+> ### ⛔ Why `0x0F` was added, and why now — finding **R1.3**
 >
-> I quattordici motivi precedenti coprivano **locale contro remoto** (`SPECIFICHE.md` §5.1) e non
-> **remoto contro remoto**: sei attaccato dal portatile e apri la stessa sessione dal telefono.
+> The fourteen previous reasons covered **local against remote** (`SPECIFICHE.md` §5.1) and not
+> **remote against remote**: you are attached from the laptop and open the same session from the phone.
 >
-> **La scelta, dell'utente, il 9 agosto 2026**: *«se un utente ha già una sessione grafica remota
+> **The choice, the user's, on 9 Aug 2026**: *«se un utente ha già una sessione grafica remota
 > attiva, e ne vuole attivare una seconda da un secondo device, la seconda connessione viene
-> rifiutata»*. ⭐ È l'invariante **I2** applicata alla lettera — *«la seconda connessione è rifiutata
-> con messaggio esplicito»* — e `0x0F` è il gemello remoto di `0x05 GIA_ATTIVA_LOCALE`.
+> rifiutata»*. ⭐ It is invariant **I2** applied to the letter — *«la seconda connessione è rifiutata
+> con messaggio esplicito»* — and `0x0F` is the remote twin of `0x05 GIA_ATTIVA_LOCALE`.
 >
-> ⛔ **Chi viene rifiutato è chi arriva, non chi c'era.** Nessun client attaccato e vivo viene mai
-> spodestato da un altro.
+> ⛔ **The one refused is whoever arrives, not whoever was there.** No attached and live client is ever
+> ousted by another.
 >
-> ⚠ **E il confine con `DECISIONI.md` §4.4 va letto bene**, perché le due regole sembrano cozzare e
-> non cozzano: *«chi tace è staccato, chi arriva entra»* parla del client **fantasma** — il telefono
-> morto in galleria. Un client **silenzioso da 30 secondi** (`SPECIFICHE.md` §5.3) non è più
-> attaccato, quindi non occupa niente e il nuovo entra. Un client **vivo** occupa, e il nuovo è
-> rifiutato. ⛔ Il discrimine è **l'orologio del silenzio**, non l'intenzione di chi arriva.
+> ⚠ **And the boundary with `DECISIONI.md` §4.4 must be read carefully**, because the two rules seem to clash and
+> do not: *«chi tace è staccato, chi arriva entra»* speaks of the **ghost** client — the phone
+> dead in a tunnel. A client **silent for 30 seconds** (`SPECIFICHE.md` §5.3) is no longer
+> attached, so it occupies nothing and the new one gets in. A **live** client occupies, and the new one is
+> refused. ⛔ The discriminant is **the silence clock**, not the intention of whoever arrives.
 >
-> ⚠ **Il prezzo, dichiarato**: se il portatile si spegne di colpo senza congedarsi, dal telefono si
-> entra **dopo trenta secondi**, non subito.
+> ⚠ **The price, declared**: if the laptop switches off abruptly without a farewell, from the phone one
+> gets in **after thirty seconds**, not at once.
 >
-> ⚠ E la finestra per aggiungere un motivo si è chiusa subito dopo: §9 lo vieta dentro una versione
-> maggiore, e la clausola che lo permetteva era che allora non esistesse nessuna implementazione.
-> ⛔ **Dal 10 agosto 2026 esistono** (§0-bis), e questa strada non c'è più. ⚠ *Diceva «la clausola
-> che lo permette è che **oggi** non esiste nessuna implementazione», al presente: corretta l'11
-> agosto 2026, rilievo **R12C.2**.*
+> ⚠ And the window to add a reason closed right after: §9 forbids it within a major
+> version, and the clause that allowed it was that then no implementation existed.
+> ⛔ **Since 10 Aug 2026 they exist** (§0-bis), and this road is no longer there. ⚠ *It said «la clausola
+> che lo permette è che **oggi** non esiste nessuna implementazione», in the present tense: corrected on 11
+> Aug 2026, finding **R12C.2**.*
 
-⛔ Ogni motivo **DEVE** essere mostrabile all'utente in una frase comprensibile. `BUDGET_PIENO`
-non è «errore 6».
+⛔ Every reason **MUST** be showable to the user in an understandable sentence. `BUDGET_PIENO`
+is not «errore 6».
 
-> ⭐ **E la frase che il client mostra davvero, dal 25 agosto 2026** (`src/pagina.html`):
+> ⭐ **And the sentence the client really shows, since 25 Aug 2026** (`src/pagina.html`):
 >
 > > *«questo server non ha più capacità per un altro desktop: le sessioni già aperte continuano,
 > > e un posto si libera appena qualcuno esce — riprova fra un momento, e se si ripete chiedi a
 > > chi amministra il server»*
 >
-> ⛔⛔ **E quel che NON dice, per scelta: «rimpicciolisci la finestra».** Ce l'aveva, ed era
-> **falsa**: al cancello la tela **non è ancora decisa**, e l'unico numero in mano al server è
-> `video.misura_massima`, che è il tetto del **DECODIFICATORE** del client — non della finestra.
-> ⇒ Chi rimpiccioliva e riprovava riceveva **lo stesso identico no**.
-> ⭐ *Una frase che promette un gesto che il prodotto non offre è peggio del silenzio: manda
-> l'utente a cercare un comando che non esiste.*
+> ⛔⛔ **And what it does NOT say, by choice: «rimpicciolisci la finestra».** It had it, and it was
+> **false**: at the gate the canvas **is not yet decided**, and the only number in the server's hands is
+> `video.misura_massima`, which is the ceiling of the client's **DECODER** — not of the window.
+> ⇒ Whoever shrank the window and retried got **the very same no**.
+> ⭐ *A sentence that promises a gesture the product does not offer is worse than silence: it sends
+> the user looking for a command that does not exist.*
 
-⛔ **La frase la costruisce il client**, dal codice. Il campo `dettaglio` **NON DEVE** essere
-mostrato all'utente: è per il registro, e contiene quel che serve a chi diagnostica.
-
----
-
-## 9. Le versioni
-
-`CIAO` porta la versione maggiore che il client sa parlare; `ECCOMI` quella scelta dal server.
-Se non c'è una versione comune, `VERSIONE_INCOMPATIBILE`.
-
-⛔ **In concreto**: il server sceglie la versione più alta che sa parlare e che non superi quella
-del `CIAO`, ⛔ **fra quelle che il percorso ammette (§2.2)**. Se non ne ha nessuna, congeda. Il
-client **DEVE** verificare che la versione di `ECCOMI` sia una che sa parlare, e congedare con
-`VERSIONE_INCOMPATIBILE` se non lo è — un server che risponde con una versione più alta di quella
-chiesta sta sbagliando, e accettarla in silenzio è l'indulgenza che §3 vieta.
-
-> ### ⛔⭐ Le sette parole di §2.2 sono del 10 agosto 2026, e le ha trovate **B5**
->
-> ⚠ *Il numero di sezione è stato corretto lo stesso giorno, rilievo **R11.18-bis** (R11.2): queste
-> tre righe mandavano a **§2.4**, che è «La porta» — 7447, TCP e UDP — e non nomina né i percorsi
-> né le versioni. La regola vive in **§2.2**, righe «l'indirizzo della sessione … il numero dopo la
-> barra è la versione maggiore» e «le due DEVONO coincidere», ed è lì che R1.24 l'ha scritta.*
-> ⛔ **Chi leggeva §9 e andava a §2.4 come gli si diceva trovava la porta, nessun vincolo, e
-> tornava a §9** — cioè ricostruiva esattamente la lettura che aveva prodotto la prima stesura di
-> `banchi/rcp/rcp.c`. La cura di una contraddizione fra due sezioni mandava a una terza.
->
-> Questo paragrafo diceva soltanto *«la più alta che non superi quella del `CIAO`»*. §2.2 dice che
-> un `CIAO(versione=2)` su `/rcp/1` è `VERSIONE_INCOMPATIBILE`. ⛔ **Le due regole danno byte
-> diversi sul filo per lo stesso ingresso** — `ECCOMI(1)` contro `CONGEDO(0x0A)` — e **nessuna
-> delle due citava l'altra**.
->
-> ⚠ Non è un caso di scuola: chi scrive il server legge §9, che è il paragrafo intitolato *«Le
-> versioni»*, e scrive `if (versione < LA_MIA) congeda;`. È esattamente quel che è successo — la
-> prima stesura di `banchi/rcp/rcp.c` **accettava un `CIAO(2)`** e rispondeva `ECCOMI(1)`, ed era
-> conforme a §9 alla lettera.
->
-> ⭐ **Vince §2.2**, perché è la più specifica e perché è stata scritta per risolvere proprio questo
-> caso (rilievo R1.24). Questa riga adesso la nomina, così chi legge solo una delle due trova
-> l'altra.
->
-> ⚠ È la **seconda** contraddizione interna trovata da un banco in due giorni: la prima fu il
-> trattino basso di §4.3, trovato dal validatore di B4. ⭐ Tutt'e due sono state trovate da
-> programmi che leggevano **solo questo documento**, e nessuna delle due da chi lo rileggeva.
-
-**Dentro una versione maggiore si cresce solo per capacità** (§4.3), mai aggiungendo campi a
-messaggi esistenti né tipi nuovi che il vecchio dovrebbe ignorare — perché ignorare è vietato
-(§3). Un tipo nuovo obbligatorio è una versione maggiore nuova.
-
-⚠ **In pratica, finché client e server si aggiornano insieme, la versione serve a poco.** Serve il
-giorno in cui un telefono resta indietro — e quel giorno o si è scritta bene, o si scopre che il
-campo in più lo si era aggiunto «tanto è compatibile».
-
-⛔ **E la finestra in cui questo documento si poteva ancora completare È CHIUSA**: il divieto qui
-sopra protegge le implementazioni esistenti, e **adesso esistono** — l'elenco, contato, sta in
-§0-bis. **Dal 10 agosto 2026, primo byte di codice, vale la regola senza sconti.**
-
-⛔ **Quanto è stata usata la finestra, prima di chiudersi: QUATTRO tipi, non due.**
-`RICHIEDI_CHIAVE` (`0x000D`) e `TELA` (`0x000E`) il 9 agosto; ⭐ **`BANCO_MARCA` (`0x000F`) e
-`BANCO_ESITO` (`0x0010`) la notte del 9** (§7.5). Più **tre** motivi di congedo (`TEMPO_SCADUTO`,
-`SESSIONE_NON_SERVIBILE`, `GIA_ATTIVA_REMOTA`). Il conto sta in `DECISIONI.md` §1.5, e §12 dichiara
-che quella dei due della funzione di banco è stata *«l'ultima occasione»*.
-
-> ⚠ *Questa riga diceva* «I **due** tipi aggiunti il 9 agosto (`0x000D`, `0x000E`) sono entrati sotto
-> questa clausola», *e la finestra la dichiarava aperta. I due della funzione di banco erano stati
-> aggiunti nella stessa notte e non erano mai stati portati qui: la cura del rilievo **R11.13** era
-> arrivata a `DECISIONI.md` e non alla riga che tiene il conto della clausola — cioè chi verificava
-> quanto era stata usata una finestra irripetibile, contando da qui, ne trovava la metà. Corretta
-> l'11 agosto 2026, rilievo **R12C.3**.*
+⛔ **The sentence is built by the client**, from the code. The `dettaglio` field **MUST NOT** be
+shown to the user: it is for the log, and it contains what whoever diagnoses needs.
 
 ---
 
-## 10. Che cosa RCP non fa
+## 9. The versions
 
-| | Dove sta scritto |
+`CIAO` carries the major version the client can speak; `ECCOMI` the one chosen by the server.
+If there is no common version, `VERSIONE_INCOMPATIBILE`.
+
+⛔ **Concretely**: the server chooses the highest version it can speak that does not exceed that
+of `CIAO`, ⛔ **among those the path admits (§2.2)**. If it has none, it sends the farewell. The
+client **MUST** check that the version of `ECCOMI` is one it can speak, and send the farewell
+`VERSIONE_INCOMPATIBILE` if it is not — a server that answers with a version higher than the one
+asked for is erring, and accepting it in silence is the leniency §3 forbids.
+
+> ### ⛔⭐ The seven words of §2.2 are from 10 Aug 2026, and **B5** found them
+>
+> ⚠ *The section number was corrected the same day, finding **R11.18-bis** (R11.2): these
+> three lines pointed to **§2.4**, which is «La porta» — 7447, TCP and UDP — and names neither paths
+> nor versions. The rule lives in **§2.2**, rows «l'indirizzo della sessione … il numero dopo la
+> barra è la versione maggiore» and «le due DEVONO coincidere», and it is there that R1.24 wrote it.*
+> ⛔ **Whoever read §9 and went to §2.4 as told found the port, no constraint, and
+> came back to §9** — that is reconstructed exactly the reading that had produced the first draft of
+> `banchi/rcp/rcp.c`. The cure of a contradiction between two sections pointed to a third.
+>
+> This paragraph said only *«la più alta che non superi quella del `CIAO`»*. §2.2 says that
+> a `CIAO(versione=2)` on `/rcp/1` is `VERSIONE_INCOMPATIBILE`. ⛔ **The two rules give different bytes
+> on the wire for the same input** — `ECCOMI(1)` against `CONGEDO(0x0A)` — and **neither
+> of the two cited the other**.
+>
+> ⚠ It is not a textbook case: whoever writes the server reads §9, which is the paragraph titled *«Le
+> versioni»*, and writes `if (versione < LA_MIA) congeda;`. It is exactly what happened — the
+> first draft of `banchi/rcp/rcp.c` **accepted a `CIAO(2)`** and answered `ECCOMI(1)`, and it was
+> conforming to §9 to the letter.
+>
+> ⭐ **§2.2 wins**, because it is the more specific and because it was written to resolve precisely this
+> case (finding R1.24). This line now names it, so whoever reads only one of the two finds
+> the other.
+>
+> ⚠ It is the **second** internal contradiction found by a bench in two days: the first was the
+> underscore of §4.3, found by the validator of B4. ⭐ Both were found by
+> programs that read **only this document**, and neither by whoever reread it.
+
+**Within a major version one grows only by capabilities** (§4.3), never adding fields to
+existing messages nor new types the old one would have to ignore — because ignoring is forbidden
+(§3). A new mandatory type is a new major version.
+
+⚠ **In practice, as long as client and server are updated together, the version is of little use.** It is needed the
+day a phone stays behind — and that day either it has been written well, or one discovers that the
+extra field had been added «tanto è compatibile».
+
+⛔ **And the window in which this document could still be completed IS CLOSED**: the prohibition
+above protects the existing implementations, and **now they exist** — the list, counted, is in
+§0-bis. **Since 10 Aug 2026, first byte of code, the rule holds with no discounts.**
+
+⛔ **How much the window was used, before closing: FOUR types, not two.**
+`RICHIEDI_CHIAVE` (`0x000D`) and `TELA` (`0x000E`) on 9 Aug; ⭐ **`BANCO_MARCA` (`0x000F`) and
+`BANCO_ESITO` (`0x0010`) on the night of the 9th** (§7.5). Plus **three** farewell reasons (`TEMPO_SCADUTO`,
+`SESSIONE_NON_SERVIBILE`, `GIA_ATTIVA_REMOTA`). The count is in `DECISIONI.md` §1.5, and §12 declares
+that the one of the two of the bench function was *«l'ultima occasione»*.
+
+> ⚠ *This line said* «I **due** tipi aggiunti il 9 agosto (`0x000D`, `0x000E`) sono entrati sotto
+> questa clausola», *and declared the window open. The two of the bench function had been
+> added the same night and had never been brought here: the cure of finding **R11.13** had
+> reached `DECISIONI.md` and not the line that keeps the count of the clause — that is whoever checked
+> how much a non-repeatable window had been used, counting from here, found half of it. Corrected
+> on 11 Aug 2026, finding **R12C.3**.*
+
+---
+
+## 10. What RCP does not do
+
+| | Where it is written |
 |---|---|
-| non trasporta file, dischi, stampanti, porte | `SPECIFICHE.md` §12 |
-| non trasporta immagini negli appunti | §7.4 |
-| non ha un canale per il puntatore **relativo** | riservato, non definito in RCP/1 |
-| non ha un canale per lo stilo né per il tocco multi-dito | `input.tocco` esiste come capacità e vale sempre `no` |
-| non porta l'**audio del microfono** | il verso è previsto in §5, il formato non è definito: `SPECIFICHE.md` §10 lo dà per non urgente |
-| non ha compressione propria | la fa il codec, e QUIC cifra |
-| non ha un battito applicativo | §2.2 |
-| non ha modalità in chiaro | §2 |
-| non trasporta il volume | è della sessione, invariante I5 |
-| non descrive più di **uno schermo** | il multi-monitor è fuori scope come funzione (`SPECIFICHE.md` §6.5); la tela è una sola, e più grande della vista |
+| it does not carry files, disks, printers, ports | `SPECIFICHE.md` §12 |
+| it does not carry images in the clipboard | §7.4 |
+| it has no channel for the **relative** pointer | reserved, not defined in RCP/1 |
+| it has no channel for the stylus nor for multi-finger touch | `input.tocco` exists as a capability and is always `no` |
+| it does not carry **microphone audio** | the direction is foreseen in §5, the format is not defined: `SPECIFICHE.md` §10 considers it not urgent |
+| it has no compression of its own | the codec does it, and QUIC encrypts |
+| it has no application heartbeat | §2.2 |
+| it has no cleartext mode | §2 |
+| it does not carry the volume | it belongs to the session, invariant I5 |
+| it does not describe more than **one screen** | multi-monitor is out of scope as a function (`SPECIFICHE.md` §6.5); the canvas is only one, and larger than the view |
 
 ---
 
