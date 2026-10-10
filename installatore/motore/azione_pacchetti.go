@@ -198,7 +198,8 @@ func (a *pacchetti) conta(c *Contesto, p primaPacchetti) (completi, nuoviPresent
 	return completi, nuoviPresenti, nil
 }
 
-// versioneUguale: dpkg says «1:2.3-1», rpm «2.3-1»; the epoch «0:» does not count.
+// versioneUguale: the epoch «0:» does not count (dnf may write «0:2.3-1», rpm and dpkg «2.3-1»); any
+// other epoch does, and every manager reports it (dpkg, pacman, and rpm through rpmEVR).
 func versioneUguale(a, b string) bool {
 	return strings.TrimPrefix(a, "0:") == strings.TrimPrefix(b, "0:")
 }

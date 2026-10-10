@@ -111,10 +111,12 @@ type modello struct {
 	esito    *interfaccia.Esito
 }
 
-// Avvia: the TUI on the engine's session. The exit code follows the CLI's (0 if
+// Avvia: the TUI on the engine's session, starting from the port given with --port (the check
+// examines that one; tab still changes it in the plan). The exit code follows the CLI's (0 if
 // the installation is CONFERMATA).
-func Avvia(mot interfaccia.Motore) (int, error) {
+func Avvia(mot interfaccia.Motore, porta int) (int, error) {
 	m := nuovoModello(mot, lipgloss.DefaultRenderer())
+	m.iniziale(porta)
 	p := tea.NewProgram(m, tea.WithAltScreen())
 	m.prog = p
 	if _, err := p.Run(); err != nil {
@@ -134,9 +136,17 @@ func nuovoModello(mot interfaccia.Motore, r *lipgloss.Renderer) *modello {
 		attesa: interfaccia.T("attendi.controllo"), porta: "7447", larg: larghezzaMinima, alt: 24}
 }
 
+// iniziale: the starting port (--port); 0 or out of range keeps 7447.
+func (m *modello) iniziale(porta int) {
+	if porta > 0 && porta <= 65535 {
+		m.porta = strconv.Itoa(porta)
+	}
+}
+
 func (m *modello) Init() tea.Cmd {
+	porta, _ := strconv.Atoi(m.porta)
 	return func() tea.Msg {
-		c, err := m.mot.Controlla(7447)
+		c, err := m.mot.Controlla(porta)
 		return msgControllo{c, err}
 	}
 }
