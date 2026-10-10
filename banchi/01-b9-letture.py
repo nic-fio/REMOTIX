@@ -363,7 +363,7 @@ voce(
         (lambda c: inquadratura(0x0001, c + b"\xDE\xAD\xBE\xEF"))(u16(1) + capacita(
             [("audio.codec", "opus,pcm"), ("video.profondita", "8")])),
         "four bytes at the tail of the body and the u32 `lunghezza` higher by "
-        "four: `0000002A` against `0000002E`",
+        "four: `00000030` against `00000034`",
     ),
 )
 
@@ -388,13 +388,21 @@ voce(
         "⚠ But if **after discarding\n  the list remains empty**, the farewell is "
         "`NIENTE_IN_COMUNE`",
     ],
-    appigli_cliente=['("video.codec", "hevc,av1"), ("video.profondita", "8,10")'],
+    # ⚠ The two anchors are the WHOLE list of `corpo_ciao()`, first and last
+    #   line: it is the «all eight, always» the entry claims.  The values of
+    #   `video.codec` and `video.profondita` come from the command line, so the
+    #   anchor quotes the names, not the values (the default became `h264` on
+    #   23 Aug 2026, and the old anchor quoted `hevc,av1`).
+    appigli_cliente=[
+        'voci = [("video.codec", video), ("video.profondita", prof),',
+        '("input.tocco", "no"), ("client.nome", "cliente-di-prova 0.1.0")]',
+    ],
     byte=lambda: (
-        ciao(voci=[("video.codec", "hevc,av1"), ("video.profondita", "8,10"),
+        ciao(voci=[("video.codec", "h264"), ("video.profondita", "8,10"),
                    ("audio.codec", "opus,pcm")]),
         ciao(voci=[("video.profondita", "8,10"), ("audio.codec", "opus,pcm")]),
         "the `quante` field of the capability list: `0003` against `0002`, and "
-        "twenty-two bytes fewer",
+        "nineteen bytes fewer",
     ),
 )
 
@@ -515,12 +523,15 @@ voce(
     "A — the real identifier, always: §11.1 says «the identifier of the "
     "QUIC stream» and does not foresee a case in which it is missing",
     "B — zero, as «absent»",
-    "⛔ the test client **always writes zero** — "
-    "`struct.pack(\"!BBQIH\", verso, 0x00, 0, ...)` — that is reading B.  But "
-    "§6.0 forbids exactly this: *«every integer has a single meaning of "
-    "«absent», and it must be declared where needed: there are no implicit "
-    "sentinel values»*, and **zero is a legal stream identifier** (it is the one "
-    "of the CONNECT)",
+    "⭐ the test client **now writes the REAL identifier** — the control channel "
+    "one (`reg.stream = cli.apri_controllo()`), and the input and clipboard "
+    "ones block by block — that is reading A, **and so it no longer meets "
+    "the question**: nothing is recorded before the control channel exists.  "
+    "⚠ Reading B is still there, latent: `Registratore.__init__` starts from "
+    "`self.stream = 0`, and a block recorded before that line would carry "
+    "the zero.  ⛔ And the document has NOT decided: §11.1 still declares no "
+    "«absent» for `stream`, while §6.0 forbids the implicit one, and **zero is "
+    "a legal stream identifier** (it is the one of the CONNECT)",
     "whoever reads the recording to understand on which stream a "
     "message passed reads zero and believes the zero.  ⚠ And the validator cannot "
     "notice: a field that is always zero and an absent field look the "
@@ -530,13 +541,27 @@ voce(
         "⛔ **Every integer has a single meaning of «absent»**, and it must be "
         "declared where needed: there are no\nimplicit sentinel values.",
     ],
-    appigli_cliente=['out += struct.pack("!BBQIH", verso, 0x00, 0, len(carico), len(osc))'],
+    appigli_cliente=[
+        'out += struct.pack("!BBBIQIH", verso, canale, fine, ist, stream,',
+        "reg.stream = cli.apri_controllo()",
+        "self.stream = 0",
+    ],
     byte=lambda: (
-        struct.pack("!BBQIH", 1, 0x00, 4, 12, 0),
-        struct.pack("!BBQIH", 1, 0x00, 0, 12, 0),
-        "the eight bytes of `stream` at the head of every block: "
+        struct.pack("!BBBIQIH", 1, 0x00, 0, 0, 4, 12, 0),
+        struct.pack("!BBBIQIH", 1, 0x00, 0, 0, 0, 12, 0),
+        "the eight bytes of `stream`, after `verso` · `canale` · `fine` · "
+        "`istante_ms` (offset 7 of every block): "
         "`00 00 00 00 00 00 00 04` against `00 00 00 00 00 00 00 00`",
     ),
+    nota="⚠ **The choice of the test client changed, the ambiguity did not.**  "
+         "Until the recorder wrote a fixed `0` (block `!BBQIH`, magic `0x02`) "
+         "this entry said «reading B, and against §6.0»; then the client was "
+         "brought to the real stream (box in `Registratore.__init__`, finding "
+         "R1.5), and the block grew to `!BBBIQIH` with magic `0x03` (§11.1, "
+         "21 Aug 2026).  The anchors had stayed on the old line, and B9 "
+         "reported them as `[?]` until 10 Oct 2026.  ⛔ Code and document now "
+         "agree on what is written; they still do not say what to write when "
+         "the identifier is NOT known.",
 )
 
 # ── L10 ─────────────────────────────────────────────────────────────────────
@@ -564,7 +589,7 @@ voce(
     byte=lambda: (
         inquadratura(0x000C, bytes([0x01]) + stringa("")),
         b"",
-        "a framing of eleven bytes against **nothing**: `000C 00000003 01 "
+        "a framing of nine bytes against **nothing**: `000C 00000003 01 "
         "0000` against the silence",
     ),
 )
@@ -773,11 +798,16 @@ class _Coda:
 
 
 class _Finto:
-    """The minimum `_sfoglia` asks of `self`: the bytes that arrived and the queue."""
+    """The minimum `_sfoglia` asks of `self`: the bytes that arrived, the queue and the recorder."""
 
     def __init__(self, dati):
         self.arrivati = bytearray(dati)
         self.messaggi = _Coda()
+        # ⛔ `_sfoglia` records on arrival since 21 Aug 2026 (`if self.reg is
+        #    not None`): without this attribute the L4 test fell into «the
+        #    extraction is incomplete» and stopped measuring the client.
+        #    `None` = no recorder, which is the path the reading takes.
+        self.reg = None
 
 
 def prova_L4(sp):

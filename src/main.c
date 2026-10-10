@@ -699,7 +699,8 @@ static void consegna_verdetto(void *ctx, uint64_t pratica, bool ammesso,
 {
 	struct ponte *p = (struct ponte *)ctx;
 	/* ⛔ The farewell is sent AFTER `trasporto_verdetto()`: the long reason is
-	 *    at the end of the function, in the box «WHY NOT HERE». */
+	 *    at the end of the function, in the box «AND THE FAREWELL GOES OUT
+	 *    HERE, AFTER THE VERDICT». */
 	char senza_palco[320] = "";
 	/* ⛔⭐ AND SINCE 25 AUG 2026 (evening) THE REASONS ARE **TWO**, not one —
 	 *     §8.1 **D5**, and the two do NOT replace each other:
