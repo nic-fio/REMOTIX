@@ -137,7 +137,7 @@ misure della fase):
 | LXQt | **2.0** (Wayland) | la sessione sotto labwc |
 | labwc / wlroots | labwc 0.8 con `-m/-C/-S`; wlroots 0.18 (screencopy, virtual pointer/keyboard, data-control, output-management) | `wlroots.c`, `sessione.c` |
 | un carattere scalabile | qualunque (DejaVu, Noto, Droid…) | senza, labwc muore (labwc #2525) |
-| VA-API | driver con H.264 in codifica (`iHD` Intel, `radeonsi` AMD); NVIDIA proprietaria no | la codifica sulla scheda; altrimenti il ripiego software |
+| VA-API | driver con H.264 in codifica (`iHD` Intel, `radeonsi` AMD); NVIDIA proprietaria no | la codifica sulla scheda (il ripiego software non c'è più dalla fase 19, §10.27) |
 | Vulkan Video (AMD, NVIDIA) | AMD: RADV di Mesa; **NVIDIA: driver proprietario ≥ 550 con il suo ICD Vulkan**, installato dal cliente (`DECISIONI.md` §10.34). NVIDIA certificata su Ubuntu 26.04 (fase 19), compatibile altrove | la codifica sulla scheda; ⛔ niente ripiego software dalla fase 19 (§10.27) |
 
 ---
