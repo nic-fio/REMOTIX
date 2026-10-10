@@ -1,22 +1,22 @@
-# Fase 17 — L'installatore, e REMOTIX su Linux in generale
+# Phase 17 — The installer, and REMOTIX on Linux in general
 
-*Aperta dall'utente il **29 settembre 2026**, a fase 16 chiusa nei numeri. Questo documento fissa
-**prima** del lavoro tutto quel che la fase farà: la domanda, quel che l'indagine sulle distribuzioni
-ha trovato, la forma dell'installatore, le tappe, le prove, e le decisioni che spettano all'utente.
-Le decisioni prese stanno anche in `DECISIONI.md` §10; qui c'è il come.*
+*Opened by the user on **29 Sep 2026**, with phase 16 closed in its numbers. This document fixes,
+**before** the work, everything the phase will do: the question, what the survey of the distributions
+found, the shape of the installer, the milestones, the tests, and the decisions that belong to the user.
+The decisions taken are also in `DECISIONI.md` §10; here is the how.*
 
-*Marche: `[M]` misurato sul ferro · `[L]` letto in una fonte primaria (sorgenti, file dei pacchetti,
-documentazione ufficiale) · `[D]` dedotto · `[?]` da confermare. L'indagine del 29 settembre è
-quasi tutta `[L]`: nessuna distribuzione diversa da Debian ha ancora fatto girare REMOTIX.*
+*Marks: `[M]` measured on the hardware · `[L]` read in a primary source (sources, package files,
+official documentation) · `[D]` deduced · `[?]` to be confirmed. The survey of 29 September is
+almost all `[L]`: no distribution other than Debian has run REMOTIX yet.*
 
 ---
 
-## 1. La domanda
+## 1. The question
 
-REMOTIX è nato e cresciuto su **Debian 13 Trixie**. L'obiettivo è che giri **su Linux in generale**,
-e che si installi con un sistema **professionale, di assoluta eccellenza**.
+REMOTIX was born and grew up on **Debian 13 Trixie**. The goal is for it to run **on Linux in general**,
+and to be installed with a **professional system, of absolute excellence**.
 
-Parole dell'utente (29 set 2026):
+The user's words (29 Sep 2026):
 
 > *«Al momento REMOTIX è stato sviluppato su Debian Trixie, ma l'obiettivo è farlo girare su Linux in
 > generale. Per ottenere questo risultato, e quindi avere basi solide per costruire l'installer, è
@@ -24,916 +24,916 @@ Parole dell'utente (29 set 2026):
 >
 > *«REMOTIX dovrà essere dotato di un sistema di installazione professionale, di assoluta eccellenza.»*
 
-⇒ L'installatore è un **requisito del prodotto**, non una rifinitura di fine lavori, e si misura come
-il resto. È un sottosistema vero: largo (distribuzioni × desktop × schede × tre mestieri), anche se
-ogni suo pezzo è noto e altri lo hanno già risolto.
+⇒ The installer is a **product requirement**, not an end-of-work finishing touch, and it is measured like
+the rest. It is a real subsystem: wide (distributions × desktops × cards × three jobs), even though
+each of its pieces is known and others have already solved it.
 
-**«Installare» sono tre mestieri**, e l'installatore li fa tutti e tre:
+**"Installing" is three jobs**, and the installer does all three:
 
-| | la macchina prima | che cosa deve succedere |
+| | the machine before | what must happen |
 |---|---|---|
-| **prima installazione** | REMOTIX non c'è | si controlla che la macchina abbia quel che serve, si installa, si dice come entrare |
-| **aggiornamento** | REMOTIX c'è ed è **in uso**: magari 5 persone collegate | si cambia versione **senza chiudere i desktop** di chi è collegato |
-| **disinstallazione** | REMOTIX c'è | si toglie, e la macchina **torna com'era** |
+| **first installation** | REMOTIX is not there | check that the machine has what is needed, install, say how to get in |
+| **update** | REMOTIX is there and **in use**: maybe 5 people connected | change version **without closing the desktops** of those connected |
+| **uninstallation** | REMOTIX is there | remove it, and the machine **goes back to how it was** |
 
 ---
 
-## 2. Le decisioni dell'utente (29 settembre 2026)
+## 2. The user's decisions (29 Sep 2026)
 
-| | decisione | perché |
+| | decision | why |
 |---|---|---|
-| **Linux in generale** | Debian/Ubuntu, Fedora/RHEL, Arch, openSUSE | `DECISIONI.md` §10.1 |
-| **installatore di eccellenza** | requisito del prodotto, con prove misurabili | `DECISIONI.md` §10.2 |
-| **prima l'indagine, poi l'installatore** | l'installatore si scrive una volta sola, sapendo già le differenze | fatta il 29 set, §4 |
-| **le prove in MACCHINE VIRTUALI, non nelle scatole** | *«stavolta non dobbiamo misurare le performance, ma il corretto funzionamento dell'installer, quindi la potenza bruta della GPU non serve»* | una VM ha kernel, SELinux, firewall e avvio **della distribuzione**; una scatola usa il kernel del server (Debian) e direbbe «tutto bene» dove la macchina vera rifiuterebbe |
-| **il motore in otto fasi** | PREFLIGHT, COMPATIBILITY, PLANNING, CONSENT & SAFETY, ACQUISITION, INSTALLATION & CONFIGURATION, VERIFICATION & CERTIFICATION, COMMIT / ROLLBACK | proposta dell'utente, rafforzata su sua richiesta (TRUST, tre esiti per desktop, il piano come documento, l'accensione fra 7a e 7b, la RIPRESA), §6.0 |
-| **TUI e GUI irrinunciabili** | *«su TUI e GUI dico che è un requisito irrinunciabile»* — ⛔ superata il 5 ott: niente GUI, solo una TUI curata (`DECISIONI.md` §10.31); GUI tolta dal codice il 10 ott | §6.6.1, D12 |
-| **le dipendenze che mancano le porta REMOTIX** | *«se ci sono pacchetti/dipendenze assenti da una particolare distro, REMOTIX le deve includere e/o scaricare»*; eccezione i codec brevettati, confine i desktop | `DECISIONI.md` §10.6; D2 chiusa |
-| **una VM per desktop** | *«4 VM distinte, esempio Ubuntu/GNOME, Ubuntu/KDE, Ubuntu/XFCE, Ubuntu/LXQt»* | il cliente ha di solito **un** desktop: con quattro insieme, un pezzo dimenticato per XFCE arriverebbe lo stesso trascinato da KDE, e la prova direbbe verde |
+| **Linux in general** | Debian/Ubuntu, Fedora/RHEL, Arch, openSUSE | `DECISIONI.md` §10.1 |
+| **an installer of excellence** | product requirement, with measurable tests | `DECISIONI.md` §10.2 |
+| **first the survey, then the installer** | the installer is written only once, already knowing the differences | done on 29 Sep, §4 |
+| **the tests in VIRTUAL MACHINES, not in the boxes** | *«stavolta non dobbiamo misurare le performance, ma il corretto funzionamento dell'installer, quindi la potenza bruta della GPU non serve»* | a VM has the kernel, SELinux, firewall and boot **of the distribution**; a box uses the server's kernel (Debian) and would say "all fine" where the real machine would refuse |
+| **the engine in eight phases** | PREFLIGHT, COMPATIBILITY, PLANNING, CONSENT & SAFETY, ACQUISITION, INSTALLATION & CONFIGURATION, VERIFICATION & CERTIFICATION, COMMIT / ROLLBACK | the user's proposal, strengthened at his request (TRUST, three outcomes per desktop, the plan as a document, the switch-on between 7a and 7b, RESUME), §6.0 |
+| **TUI and GUI indispensable** | *«su TUI e GUI dico che è un requisito irrinunciabile»* — ⛔ superseded on 5 Oct: no GUI, only a polished TUI (`DECISIONI.md` §10.31); GUI removed from the code on 10 Oct | §6.6.1, D12 |
+| **the missing dependencies are brought by REMOTIX** | *«se ci sono pacchetti/dipendenze assenti da una particolare distro, REMOTIX le deve includere e/o scaricare»*; exception the patented codecs, boundary the desktops | `DECISIONI.md` §10.6; D2 closed |
+| **one VM per desktop** | *«4 VM distinte, esempio Ubuntu/GNOME, Ubuntu/KDE, Ubuntu/XFCE, Ubuntu/LXQt»* | the customer usually has **one** desktop: with four together, a piece forgotten for XFCE would arrive anyway dragged in by KDE, and the test would say green |
 
 ---
 
-## 3. Dove REMOTIX può girare: la matrice
+## 3. Where REMOTIX can run: the matrix
 
-Distribuzioni e desktop che entrano nella fase (✅ = da portare e provare; ⛔ = fuori, col perché).
+Distributions and desktops that enter the phase (✅ = to port and test; ⛔ = out, with the why).
 
-| distribuzione | GNOME | KDE | XFCE | LXQt | note |
+| distribution | GNOME | KDE | XFCE | LXQt | notes |
 |---|---|---|---|---|---|
-| **Debian 13** (riferimento) | ✅ | ✅ | ✅ | ✅ | la base di oggi |
-| **Ubuntu 26.04 LTS** | ✅ | ✅ | ✅ | ✅ | GNOME 50 (§5.1); il GNOME «vanilla» va installato (§4.6) |
-| Ubuntu 24.04 LTS | ⛔ | ⛔ | ⛔ | ⛔ | **fuori** (D7, decisione dell'utente del 29 set): si parte dalla 26.04. KDE 5.27, XFCE 4.18 e LXQt 1.4 non vanno su Wayland; GNOME 46 sì, ma chiederebbe di portare dentro OpenSSL 3.5 e due adattamenti per ffmpeg 6.1 e libei 1.2. Con lei resta fuori Mint 22 (Mint 23 sarà «compatibile, non certificata») |
-| **Fedora 44** | ✅ | ✅ | ✅ | ✅ | GNOME 50; H.264 da RPM Fusion (§4.2) |
-| Fedora 43 | · | · | · | · | **analizzata, non certificata**: GNOME 49, esce di supporto a fine 2026; c'è la sua VM nuda per confronti |
-| **Alma 10** (certificata) · Rocky / RHEL 10 (compatibili, non certificate) | ✅ | ✅ | ⛔ | ⛔ | KDE da EPEL; né labwc né XFCE né LXQt in RHEL/EPEL 10; su AMD niente VA-API (Mesa senza) |
-| **Arch** (Manjaro, EndeavourOS) | ✅ | ✅ | ✅ | ✅ | tutto ufficiale, anche ngtcp2 1.25 e i codec |
-| **openSUSE Tumbleweed** | ✅ | ✅ | ✅ | ✅ | GNOME 50; H.264 solo con Packman (§4.2) |
-| **openSUSE Leap 16** | ✅ | ✅ | ✅ | ✅ | XFCE e LXQt sotto Wayland «sperimentali» per SUSE; ngtcp2 da portare dentro |
+| **Debian 13** (reference) | ✅ | ✅ | ✅ | ✅ | today's base |
+| **Ubuntu 26.04 LTS** | ✅ | ✅ | ✅ | ✅ | GNOME 50 (§5.1); the "vanilla" GNOME must be installed (§4.6) |
+| Ubuntu 24.04 LTS | ⛔ | ⛔ | ⛔ | ⛔ | **out** (D7, the user's decision of 29 Sep): we start from 26.04. KDE 5.27, XFCE 4.18 and LXQt 1.4 do not run on Wayland; GNOME 46 does, but would require bundling OpenSSL 3.5 and two adaptations for ffmpeg 6.1 and libei 1.2. With it Mint 22 stays out too (Mint 23 will be "compatible, not certified") |
+| **Fedora 44** | ✅ | ✅ | ✅ | ✅ | GNOME 50; H.264 from RPM Fusion (§4.2) |
+| Fedora 43 | · | · | · | · | **analysed, not certified**: GNOME 49, leaves support at the end of 2026; its bare VM is there for comparisons |
+| **Alma 10** (certified) · Rocky / RHEL 10 (compatible, not certified) | ✅ | ✅ | ⛔ | ⛔ | KDE from EPEL; neither labwc nor XFCE nor LXQt in RHEL/EPEL 10; on AMD no VA-API (Mesa without it) |
+| **Arch** (Manjaro, EndeavourOS) | ✅ | ✅ | ✅ | ✅ | all official, including ngtcp2 1.25 and the codecs |
+| **openSUSE Tumbleweed** | ✅ | ✅ | ✅ | ✅ | GNOME 50; H.264 only with Packman (§4.2) |
+| **openSUSE Leap 16** | ✅ | ✅ | ✅ | ✅ | XFCE and LXQt under Wayland "experimental" for SUSE; ngtcp2 to be bundled |
 
-**Fuori, e perché** (`[L]`):
-- **Debian 12** e **RHEL 9**: mutter 43 / GNOME 40, niente libei, niente labwc — la base è troppo vecchia.
-- **openSUSE Leap 15.6**: fine vita il 30 aprile 2026. **SLES 16**: solo GNOME, niente Packman — si
-  rivede se un cliente la chiede.
-- **Linux Mint Cinnamon**: non è uno dei quattro desktop (Muffin non ha le API di mutter). Mint 22 si
-  porta dietro i limiti di Ubuntu 24.04.
-- **Distribuzioni senza systemd** (Alpine, Devuan, Artix con OpenRC…): REMOTIX usa logind, il gestore
-  d'utente e `systemctl --user` dappertutto (`figlio.c:1158-1163`). Va scritto nei requisiti.
-- **Immutabili** (Silverblue/Kinoite, Aeon/Kalpa, Ubuntu Core, SteamOS): `/usr` in sola lettura, gruppi
-  in `/usr/lib/group`, installazione con riavvio. Si rimandano a dopo la fase (§12, D9).
+**Out, and why** (`[L]`):
+- **Debian 12** and **RHEL 9**: mutter 43 / GNOME 40, no libei, no labwc — the base is too old.
+- **openSUSE Leap 15.6**: end of life on 30 April 2026. **SLES 16**: only GNOME, no Packman — to be
+  reconsidered if a customer asks for it.
+- **Linux Mint Cinnamon**: it is not one of the four desktops (Muffin does not have mutter's APIs). Mint 22
+  carries the limits of Ubuntu 24.04.
+- **Distributions without systemd** (Alpine, Devuan, Artix with OpenRC…): REMOTIX uses logind, the user
+  manager and `systemctl --user` everywhere (`figlio.c:1158-1163`). It must be written in the requirements.
+- **Immutable ones** (Silverblue/Kinoite, Aeon/Kalpa, Ubuntu Core, SteamOS): `/usr` read-only, groups
+  in `/usr/lib/group`, installation with a reboot. Postponed until after the phase (§12, D9).
 
-⇒ **La matrice di certificazione: 26 macchine virtuali** — Debian 13, Ubuntu 26.04, Fedora 44, Arch,
-Tumbleweed, Leap 16 × 4 desktop (24), più Alma 10 × 2 (GNOME, KDE) = **26**. **Fedora 43 e Ubuntu 24.04 (D7) sono analizzate ma fuori
-dalla matrice.**
+⇒ **The certification matrix: 26 virtual machines** — Debian 13, Ubuntu 26.04, Fedora 44, Arch,
+Tumbleweed, Leap 16 × 4 desktops (24), plus Alma 10 × 2 (GNOME, KDE) = **26**. **Fedora 43 and Ubuntu 24.04 (D7) are analysed but outside
+the matrix.**
 
-⚠ **Che cosa si certifica, e che cosa no.** Si certifica solo quel che gira nelle nostre VM: **Alma 10**,
-non «la famiglia RHEL 10». Rocky 10 e RHEL 10 si dichiarano **compatibili, non certificate**: stessa
-base di pacchetti, ma nessuno le ha provate. Lo stesso per Manjaro ed EndeavourOS rispetto ad Arch,
-e per Mint 23 rispetto a Ubuntu 26.04. Una derivata diventa certificata solo con la sua VM nella
-matrice.
+⚠ **What is certified, and what is not.** Only what runs in our VMs is certified: **Alma 10**,
+not "the RHEL 10 family". Rocky 10 and RHEL 10 are declared **compatible, not certified**: same
+package base, but nobody has tested them. The same for Manjaro and EndeavourOS with respect to Arch,
+and for Mint 23 with respect to Ubuntu 26.04. A derivative becomes certified only with its own VM in the
+matrix.
 
-### 3.1 Le versioni supportate — per il manuale tecnico
+### 3.1 The supported versions — for the technical manual
 
-*Richiesta dell'utente (30 set 2026): «andrà documentato, anche nel manuale tecnico, da quali versioni gli
-SO sono supportati da REMOTIX». ⚠ La fonte unica è il **catalogo** del motore (§6.6.8): la tabella del
-manuale si **genera** dal catalogo a ogni rilascio, non si ricopia a mano. Questa è quella di oggi.*
+*The user's request (30 Sep 2026): «andrà documentato, anche nel manuale tecnico, da quali versioni gli
+SO sono supportati da REMOTIX». ⚠ The single source is the engine's **catalog** (§6.6.8): the manual's
+table is **generated** from the catalog at every release, not copied by hand. This is today's.*
 
-**Le distribuzioni**
+**The distributions**
 
-| distribuzione | versione minima | stato | desktop | condizioni |
+| distribution | minimum version | status | desktops | conditions |
 |---|---|---|---|---|
-| Debian | **13** (Trixie) | certificata | GNOME, KDE, XFCE, LXQt | — |
-| Ubuntu | **26.04 LTS** | certificata | GNOME, KDE, XFCE, LXQt | `gnome-session` per GNOME (D8) |
-| Fedora | **44** | certificata | GNOME, KDE, XFCE, LXQt | H.264: RPM Fusion (D5); PAM senza `pam_selinux` fino a T6 |
-| AlmaLinux | **10.1** (OpenSSL 3.5) | certificata | GNOME, KDE | EPEL e CRB; H.264: RPM Fusion; niente XFCE/LXQt |
-| Arch Linux | rolling (da set 2026) | certificata | GNOME, KDE, XFCE, LXQt | — |
-| openSUSE Tumbleweed | rolling (da set 2026) | certificata | GNOME, KDE, XFCE, LXQt | H.264: Packman; `breeze6-wallpapers` (KDE) |
-| openSUSE Leap | **16.0** | certificata | GNOME, KDE, XFCE, LXQt | H.264: Packman; un carattere scalabile per LXQt (`google-droid-fonts`) |
-| Rocky Linux, RHEL | 10.1 | compatibile, non certificata | GNOME, KDE | come Alma |
-| Manjaro, EndeavourOS | rolling | compatibile, non certificata | come Arch | Manjaro è indietro di qualche settimana |
-| Linux Mint | **23** (base 26.04) | compatibile, non certificata | quelli di Ubuntu (non Cinnamon) | come Ubuntu |
+| Debian | **13** (Trixie) | certified | GNOME, KDE, XFCE, LXQt | — |
+| Ubuntu | **26.04 LTS** | certified | GNOME, KDE, XFCE, LXQt | `gnome-session` for GNOME (D8) |
+| Fedora | **44** | certified | GNOME, KDE, XFCE, LXQt | H.264: RPM Fusion (D5); PAM without `pam_selinux` until T6 |
+| AlmaLinux | **10.1** (OpenSSL 3.5) | certified | GNOME, KDE | EPEL and CRB; H.264: RPM Fusion; no XFCE/LXQt |
+| Arch Linux | rolling (from Sep 2026) | certified | GNOME, KDE, XFCE, LXQt | — |
+| openSUSE Tumbleweed | rolling (from Sep 2026) | certified | GNOME, KDE, XFCE, LXQt | H.264: Packman; `breeze6-wallpapers` (KDE) |
+| openSUSE Leap | **16.0** | certified | GNOME, KDE, XFCE, LXQt | H.264: Packman; a scalable font for LXQt (`google-droid-fonts`) |
+| Rocky Linux, RHEL | 10.1 | compatible, not certified | GNOME, KDE | like Alma |
+| Manjaro, EndeavourOS | rolling | compatible, not certified | like Arch | Manjaro is a few weeks behind |
+| Linux Mint | **23** (base 26.04) | compatible, not certified | those of Ubuntu (not Cinnamon) | like Ubuntu |
 
-**Il principio** (`DECISIONI.md` §10.9): prodotto nuovo, tecnologie di nuova generazione; una versione
-**entra** quando ha i componenti minimi e passa il giro sulle VM, **esce** quando la distribuzione smette di
-aggiornarla.
+**The principle** (`DECISIONI.md` §10.9): a new product, new-generation technologies; a version
+**enters** when it has the minimum components and passes the round on the VMs, **leaves** when the distribution stops
+updating it.
 
-**Fuori, e perché**: Debian 12 e RHEL 9 (base troppo vecchia: mutter 43/GNOME 40, niente libei, niente
-labwc); Ubuntu 24.04 e Mint 22 (D7); Fedora 43 (fuori supporto a fine 2026); openSUSE Leap 15.6 (fine vita);
-SLES 16 (solo GNOME, niente Packman: si rivede su richiesta); distribuzioni senza systemd; immutabili (D9).
+**Out, and why**: Debian 12 and RHEL 9 (base too old: mutter 43/GNOME 40, no libei, no
+labwc); Ubuntu 24.04 and Mint 22 (D7); Fedora 43 (out of support at the end of 2026); openSUSE Leap 15.6 (end of life);
+SLES 16 (only GNOME, no Packman: reconsidered on request); distributions without systemd; immutable ones (D9).
 
-**Le versioni minime dei componenti** (per chi usa una distribuzione non in elenco; `[L]` dal codice e dalle
-misure della fase):
+**The minimum versions of the components** (for whoever uses a distribution not in the list; `[L]` from the code and from the
+phase's measurements):
 
-| componente | minimo | perché |
+| component | minimum | why |
 |---|---|---|
-| nucleo Linux | quello della distribuzione certificata più vecchia (6.12) | driver i915/xe e amdgpu, DMA-BUF |
-| systemd / logind | con `systemctl --user` e sessioni `Remote=yes` | le sessioni per utente |
-| OpenSSL | **3.5** | l'API QUIC del ponte `ngtcp2_crypto_ossl` |
-| ngtcp2 / nghttp3 | 1.25.0 / 1.18.0 | dentro il binario (`DECISIONI.md` §10.6) |
+| Linux kernel | that of the oldest certified distribution (6.12) | i915/xe and amdgpu drivers, DMA-BUF |
+| systemd / logind | with `systemctl --user` and `Remote=yes` sessions | the per-user sessions |
+| OpenSSL | **3.5** | the QUIC API of the `ngtcp2_crypto_ossl` bridge |
+| ngtcp2 / nghttp3 | 1.25.0 / 1.18.0 | inside the binary (`DECISIONI.md` §10.6) |
 | libavcodec (ffmpeg) | **61.13.100** (ffmpeg 7.1) | `avcodec_get_supported_config` |
 | libei | 1.3 | `ei_disconnect` |
-| PipeWire | 0.3.48 | la cattura di GNOME e KDE |
-| GNOME (mutter) | **46** (API `ConnectToEIS`, `--headless`); da 50 l'unità `@user` | `sessione.c` |
+| PipeWire | 0.3.48 | the capture of GNOME and KDE |
+| GNOME (mutter) | **46** (`ConnectToEIS` API, `--headless`); from 50 the `@user` unit | `sessione.c` |
 | KDE Plasma (KWin) | **6.1** (`connectToEIS`) | `kwin.c` |
-| XFCE | **4.20** (Wayland) | la sessione sotto labwc |
-| LXQt | **2.0** (Wayland) | la sessione sotto labwc |
-| labwc / wlroots | labwc 0.8 con `-m/-C/-S`; wlroots 0.18 (screencopy, virtual pointer/keyboard, data-control, output-management) | `wlroots.c`, `sessione.c` |
-| un carattere scalabile | qualunque (DejaVu, Noto, Droid…) | senza, labwc muore (labwc #2525) |
-| VA-API | driver con H.264 in codifica (`iHD` Intel, `radeonsi` AMD) — ⭐ le schede **integrate** vanno bene: il server di prova è una Intel UHD 770 integrata; NVIDIA proprietaria no | la codifica sulla scheda (il ripiego software non c'è più dalla fase 19, §10.27) |
-| Vulkan Video (AMD, NVIDIA) | AMD: RADV di Mesa; **NVIDIA: driver proprietario ≥ 550 con il suo ICD Vulkan**, installato dal cliente (`DECISIONI.md` §10.34). `[?]` La generazione minima di scheda NVIDIA non è misurata: provata solo una RTX 4090; «da RTX 20 / T4 in su» era il consiglio del noleggio. NVIDIA certificata su Ubuntu 26.04 (fase 19), compatibile altrove | la codifica sulla scheda; ⛔ niente ripiego software dalla fase 19 (§10.27) |
+| XFCE | **4.20** (Wayland) | the session under labwc |
+| LXQt | **2.0** (Wayland) | the session under labwc |
+| labwc / wlroots | labwc 0.8 with `-m/-C/-S`; wlroots 0.18 (screencopy, virtual pointer/keyboard, data-control, output-management) | `wlroots.c`, `sessione.c` |
+| a scalable font | any (DejaVu, Noto, Droid…) | without one, labwc dies (labwc #2525) |
+| VA-API | driver with H.264 encoding (`iHD` Intel, `radeonsi` AMD) — ⭐ **integrated** cards are fine: the test server is an integrated Intel UHD 770; proprietary NVIDIA no | encoding on the card (the software fallback is gone since phase 19, §10.27) |
+| Vulkan Video (AMD, NVIDIA) | AMD: Mesa's RADV; **NVIDIA: proprietary driver ≥ 550 with its Vulkan ICD**, installed by the customer (`DECISIONI.md` §10.34). `[?]` The minimum NVIDIA card generation is not measured: only an RTX 4090 was tested; "from RTX 20 / T4 up" was the rental's advice. NVIDIA certified on Ubuntu 26.04 (phase 19), compatible elsewhere | encoding on the card; ⛔ no software fallback since phase 19 (§10.27) |
 
 ---
 
-## 4. Che cosa l'indagine ha trovato
+## 4. What the survey found
 
-Cinque ricerche in parallelo il 29 settembre (Debian/Ubuntu, Fedora/RHEL, Arch, openSUSE, e «come
-installano i migliori»), poi due verifiche mandate a **smentirle** (una sulle distribuzioni, una sul
-codice di REMOTIX). La verifica sulle distribuzioni è `[?]` finché non torna: i punti che tocca sono
-segnati.
+Five searches in parallel on 29 September (Debian/Ubuntu, Fedora/RHEL, Arch, openSUSE, and "how
+the best ones install"), then two verifications sent to **refute them** (one on the distributions, one on
+the REMOTIX code). The verification on the distributions is `[?]` until it comes back: the points it touches are
+marked.
 
-### 4.1 Le voci, famiglia per famiglia
+### 4.1 The items, family by family
 
-| voce | Debian 13 | Ubuntu 26.04 | Fedora 44 | RHEL/Alma 10 | Arch | openSUSE TW / Leap 16 |
+| item | Debian 13 | Ubuntu 26.04 | Fedora 44 | RHEL/Alma 10 | Arch | openSUSE TW / Leap 16 |
 |---|---|---|---|---|---|---|
-| **H.264 sulla scheda** | ✅ | ✅ Mesa coi codec | ⛔ Intel e AMD: RPM Fusion | Intel: RPM Fusion; ⛔ AMD: Mesa senza VA-API | ✅ tutto ufficiale | ⛔ ffmpeg senza `h264_vaapi`: serve Packman |
-| **ripiego software x264** | ✅ | ✅ | ⛔ solo RPM Fusion | ⛔ solo RPM Fusion | ✅ | ⛔ solo Packman |
-| **OpenSSL ≥ 3.5** (QUIC) | ✅ 3.5 | ✅ 3.5 (26.10: **4.0**) | ✅ 3.5 | ✅ da 10.1 | ✅ 3.6 | ✅ 3.5 |
-| **ngtcp2 ≥ 1.25** | da sorgente | ⛔ 1.16 | ⛔ 1.21 | ⛔ 1.22 (EPEL) | ✅ 1.25 | TW ✅ · Leap ⛔ 1.6 |
-| **PAM** | `common-*` ✅ | `common-*` ✅ | ⛔ `password-auth` | ⛔ `password-auth` | ⛔ `system-auth`, niente `@include` | ⛔ un nome diverso, e in `/usr/lib/pam.d` |
-| **SELinux / AppArmor** | — | AppArmor, non ci tocca | SELinux **attivo** | SELinux **attivo** | — | SELinux **attivo** (TW dal 2025, Leap 16) |
-| **firewall di serie** | — | ufw (spento) | firewalld (Workstation: porta aperta; Server: chiusa) | firewalld, **chiuso** | — (EndeavourOS: firewalld) | firewalld, **chiuso** |
+| **H.264 on the card** | ✅ | ✅ Mesa with the codecs | ⛔ Intel and AMD: RPM Fusion | Intel: RPM Fusion; ⛔ AMD: Mesa without VA-API | ✅ all official | ⛔ ffmpeg without `h264_vaapi`: Packman needed |
+| **x264 software fallback** | ✅ | ✅ | ⛔ only RPM Fusion | ⛔ only RPM Fusion | ✅ | ⛔ only Packman |
+| **OpenSSL ≥ 3.5** (QUIC) | ✅ 3.5 | ✅ 3.5 (26.10: **4.0**) | ✅ 3.5 | ✅ from 10.1 | ✅ 3.6 | ✅ 3.5 |
+| **ngtcp2 ≥ 1.25** | from source | ⛔ 1.16 | ⛔ 1.21 | ⛔ 1.22 (EPEL) | ✅ 1.25 | TW ✅ · Leap ⛔ 1.6 |
+| **PAM** | `common-*` ✅ | `common-*` ✅ | ⛔ `password-auth` | ⛔ `password-auth` | ⛔ `system-auth`, no `@include` | ⛔ a different name, and in `/usr/lib/pam.d` |
+| **SELinux / AppArmor** | — | AppArmor, does not affect us | SELinux **active** | SELinux **active** | — | SELinux **active** (TW since 2025, Leap 16) |
+| **default firewall** | — | ufw (off) | firewalld (Workstation: port open; Server: closed) | firewalld, **closed** | — (EndeavourOS: firewalld) | firewalld, **closed** |
 | **GNOME** | 48 | **50** ⚠ §5.1 | **50** ⚠ | 47→49 | **50** ⚠ | TW **50** ⚠ · Leap 48 |
 | **KDE Plasma** | 6.3 | 6.6 | 6.x | 6.x (EPEL) | 6.7 | 6.7 · 6.4 |
-| **labwc** (XFCE, LXQt) | 0.8.3 | 0.9.3 | 0.9.6 | ⛔ assente | 0.20.2 | 0.20.2 · 0.8.1 |
-| **servizi nuovi** | accesi | accesi | **spenti** (preset) | spenti | **spenti** (`disable *`) | spenti |
+| **labwc** (XFCE, LXQt) | 0.8.3 | 0.9.3 | 0.9.6 | ⛔ absent | 0.20.2 | 0.20.2 · 0.8.1 |
+| **new services** | enabled | enabled | **disabled** (preset) | disabled | **disabled** (`disable *`) | disabled |
 
-`[M]` 29 set, dalle immagini ufficiali accese in VM: SELinux **Enforcing** su Fedora 43/44 e Alma 10;
-su openSUSE i processi hanno l'etichetta SELinux ma l'immagine minima non ha `getenforce` (`[?]`);
-**nessun firewall attivo** in nessuna immagine *cloud* — dal cliente, che installa dall'ISO, non
-sarà così: le prove del firewall lo accendono apposta (R2).
+`[M]` 29 Sep, from the official images booted in a VM: SELinux **Enforcing** on Fedora 43/44 and Alma 10;
+on openSUSE the processes have the SELinux label but the minimal image has no `getenforce` (`[?]`);
+**no firewall active** in any *cloud* image — at the customer's, who installs from the ISO, it will not
+be so: the firewall tests turn it on on purpose (R2).
 
-### 4.2 La codifica H.264 e i brevetti
+### 4.2 H.264 encoding and the patents
 
-REMOTIX **non contiene** un codificatore H.264: usa quello della scheda (`h264_vaapi`, via libavcodec
-e VA-API) e, come ripiego, `libx264` della distribuzione (`codificatore.c:1350`).
+REMOTIX **does not contain** an H.264 encoder: it uses the card's (`h264_vaapi`, via libavcodec
+and VA-API) and, as a fallback, the distribution's `libx264` (`codificatore.c:1350`).
 
-Fedora e openSUSE tolgono H.264 dai loro pacchetti per i brevetti, in punti diversi:
-- **Fedora**: ffmpeg «free» ha `h264_vaapi`, ma **nessuna scheda codifica H.264 di serie**: Mesa è
-  costruita senza (AMD ⇒ `mesa-va-drivers-freeworld` da RPM Fusion), e il driver Intel ridotto
-  (`intel-media-driver-free`) è costruito con `AVC_Encode_VDEnc_Supported=no` e
-  `AVC_Encode_VME_Supported=no` dal 2023 (Intel ⇒ `intel-media-driver` da RPM Fusion) `[L]` spec F44.
-- **openSUSE**: la ffmpeg ufficiale **non ha `h264_vaapi`** (`[L]` nella lista degli encoder di
-  `libavcodec62-8.1.2` di Tumbleweed, aperta: ci sono `av1/vp9/mpeg2_vaapi` e `libopenh264`). Senza Packman REMOTIX non codifica, su nessuna scheda: **il caso peggiore**.
-- **RHEL 10**: Mesa costruita **senza VA-API**, e RPM Fusion non la sostituisce: su AMD niente; EPEL 10
-  non ha nemmeno il driver Intel. ⇒ Su RHEL/Alma 10 il video sulla scheda c'è solo con depositi di
-  terzi, e XFCE/LXQt non ci sono: **bersaglio debole**, si tiene per GNOME e KDE col ripiego dichiarato.
-- **NVIDIA col driver proprietario**: non codifica via VA-API su nessuna distribuzione `[D]`. Il
-  controllo preliminare la riconosce e lo dice prima.
+Fedora and openSUSE remove H.264 from their packages because of the patents, in different places:
+- **Fedora**: the "free" ffmpeg has `h264_vaapi`, but **no card encodes H.264 out of the box**: Mesa is
+  built without it (AMD ⇒ `mesa-va-drivers-freeworld` from RPM Fusion), and the reduced Intel driver
+  (`intel-media-driver-free`) is built with `AVC_Encode_VDEnc_Supported=no` and
+  `AVC_Encode_VME_Supported=no` since 2023 (Intel ⇒ `intel-media-driver` from RPM Fusion) `[L]` spec F44.
+- **openSUSE**: the official ffmpeg **does not have `h264_vaapi`** (`[L]` in the encoder list of
+  Tumbleweed's `libavcodec62-8.1.2`, opened: there are `av1/vp9/mpeg2_vaapi` and `libopenh264`). Without Packman REMOTIX does not encode, on any card: **the worst case**.
+- **RHEL 10**: Mesa built **without VA-API**, and RPM Fusion does not replace it: on AMD nothing; EPEL 10
+  does not even have the Intel driver. ⇒ On RHEL/Alma 10 video on the card exists only with third-party
+  repositories, and XFCE/LXQt are not there: **a weak target**, kept for GNOME and KDE with the declared fallback.
+- **NVIDIA with the proprietary driver**: does not encode via VA-API on any distribution `[D]`. The
+  preliminary check recognises it and says so beforehand.
 
-⇒ Regole per l'installatore:
-1. ⛔ **Non distribuire mai un'implementazione di H.264** (né x264 né ffmpeg «completa» dentro il
-   pacchetto): REMOTIX **usa** quella della macchina, come fa gnome-remote-desktop dentro Fedora.
-2. ⛔ **Non aggiungere depositi di terzi in silenzio** (RPM Fusion, Packman): il controllo preliminare
-   lo **dice**, col comando esatto, e lo fa solo se l'amministratore acconsente (D5).
-3. Non è un parere legale: prima di distribuire in grande serve un avvocato. L'ultimo brevetto H.264
-   scade fra il 2027 e il 2030 (le fonti non concordano).
+⇒ Rules for the installer:
+1. ⛔ **Never distribute an implementation of H.264** (neither x264 nor a "complete" ffmpeg inside the
+   package): REMOTIX **uses** the machine's, as gnome-remote-desktop does inside Fedora.
+2. ⛔ **Never add third-party repositories silently** (RPM Fusion, Packman): the preliminary check
+   **says so**, with the exact command, and does it only if the administrator consents (D5).
+3. It is not legal advice: before distributing at large, a lawyer is needed. The last H.264 patent
+   expires between 2027 and 2030 (the sources disagree).
 
-### 4.3 PAM: il file d'accesso
+### 4.3 PAM: the access file
 
-`/etc/pam.d/remotix` (sorgente `src/remotix.pam`) dice al sistema quali controlli fare quando
-qualcuno scrive nome e parola d'ordine nella pagina. Oggi rimanda ai controlli standard di Debian
-(`@include common-auth`, righe 43, 48, 50, 83). ⛔ E `@include` stesso è **una modifica di Debian** a
-Linux-PAM (patch `031_pam_include`): altrove la riga è «illegal module type» e **fallisce anche
-l'autenticazione** `[L]`. ⇒ Su Fedora, RHEL, Arch e openSUSE oggi **nessuno entra**.
+`/etc/pam.d/remotix` (source `src/remotix.pam`) tells the system which checks to do when
+someone types name and password in the page. Today it refers to Debian's standard checks
+(`@include common-auth`, lines 43, 48, 50, 83). ⛔ And `@include` itself is **a Debian modification** to
+Linux-PAM (patch `031_pam_include`): elsewhere the line is "illegal module type" and **authentication
+fails too** `[L]`. ⇒ On Fedora, RHEL, Arch and openSUSE today **nobody gets in**.
 
-⇒ **Un file per famiglia**, come fa Cockpit (che fa lo stesso mestiere su tutte e quattro):
+⇒ **One file per family**, as Cockpit does (which does the same job on all four):
 
-| famiglia | base | dove |
+| family | base | where |
 |---|---|---|
-| Debian/Ubuntu | come `/etc/pam.d/sshd`: `common-auth`, `pam_nologin` + `common-account`, `pam_selinux` (tace senza SELinux), `pam_loginuid`, `pam_keyinit`, `common-session`, `pam_motd`, `pam_mail`, `pam_limits`, `pam_env`, `common-password` | `/etc/pam.d/remotix` |
-| Fedora/RHEL | come `/etc/pam.d/sshd`: `password-auth` + `postlogin`, `pam_sepermit` e `pam_nologin` in account, `pam_selinux close/open`, `pam_loginuid`, `pam_namespace`, `pam_keyinit`, `pam_motd` | `/etc/pam.d/remotix` |
-| openSUSE | come `/usr/lib/pam.d/sshd`: `common-*` (substack) + `postlogin-*`, `pam_loginuid`, `pam_keyinit`, `pam_motd`; `pam_selinux` arriva da `common-session` | **`/usr/lib/pam.d/remotix`** |
-| Arch | come `/etc/pam.d/sshd`: `system-remote-login` | `/etc/pam.d/remotix` |
+| Debian/Ubuntu | like `/etc/pam.d/sshd`: `common-auth`, `pam_nologin` + `common-account`, `pam_selinux` (silent without SELinux), `pam_loginuid`, `pam_keyinit`, `common-session`, `pam_motd`, `pam_mail`, `pam_limits`, `pam_env`, `common-password` | `/etc/pam.d/remotix` |
+| Fedora/RHEL | like `/etc/pam.d/sshd`: `password-auth` + `postlogin`, `pam_sepermit` and `pam_nologin` in account, `pam_selinux close/open`, `pam_loginuid`, `pam_namespace`, `pam_keyinit`, `pam_motd` | `/etc/pam.d/remotix` |
+| openSUSE | like `/usr/lib/pam.d/sshd`: `common-*` (substack) + `postlogin-*`, `pam_loginuid`, `pam_keyinit`, `pam_motd`; `pam_selinux` comes from `common-session` | **`/usr/lib/pam.d/remotix`** |
+| Arch | like `/etc/pam.d/sshd`: `system-remote-login` | `/etc/pam.d/remotix` |
 
-In tutti: `pam_systemd` (senza, il desktop non nasce) e **root escluso** per impostazione predefinita.
-⭐ **T6 (30 set, D3 chiusa, DECISIONI §10.18): ogni file è la pila di sshd della distribuzione riga per riga**
-(`[M]` letta sulle VM «iso» con `banchi/17-t6/t6-leggi-pam.sh`: Fedora e Alma identiche, Tumbleweed e
-Leap identiche, Debian e Ubuntu identiche), con UNA riga in più in testa: root escluso. Dove SELinux c'è
-(Fedora, Alma, openSUSE) il passaggio al contesto dell'utente lo permette il modulo `remotix-selinux`.
-Su Arch anche `pam_systemd_home`, o gli utenti di `systemd-homed` non entrano `[?]` da misurare.
+In all of them: `pam_systemd` (without it, the desktop is not born) and **root excluded** by default.
+⭐ **T6 (30 Sep, D3 closed, DECISIONI §10.18): each file is the distribution's sshd stack line by line**
+(`[M]` read on the "iso" VMs with `banchi/17-t6/t6-leggi-pam.sh`: Fedora and Alma identical, Tumbleweed and
+Leap identical, Debian and Ubuntu identical), with ONE extra line at the top: root excluded. Where SELinux is present
+(Fedora, Alma, openSUSE) the transition to the user's context is allowed by the `remotix-selinux` module.
+On Arch also `pam_systemd_home`, or `systemd-homed` users do not get in `[?]` to be measured.
 
-⚠ **Il blocco dei tentativi.** Arch (e Fedora/RHEL con authselect) mettono `pam_faillock` nella pila
-di serie: tre parole d'ordine sbagliate in 15 minuti chiudono il conto per 10 minuti — **anche per chi
-si siede davanti alla macchina** (`[L]` pambase: `pam_faillock` senza parametri ⇒ deny=3,
-fail_interval=900 s, unlock_time=600 s). Da remoto, chiunque raggiunga la porta e conosca un nome
-utente può chiudere fuori il proprietario; il ban per indirizzo non basta se i tentativi arrivano da
-più indirizzi. ⇒ **Decisione D3.**
+⚠ **The lockout on attempts.** Arch (and Fedora/RHEL with authselect) put `pam_faillock` in the default
+stack: three wrong passwords in 15 minutes lock the account for 10 minutes — **even for whoever
+sits in front of the machine** (`[L]` pambase: `pam_faillock` without parameters ⇒ deny=3,
+fail_interval=900 s, unlock_time=600 s). Remotely, anyone who reaches the port and knows a user
+name can lock out the owner; the per-address ban is not enough if the attempts come from
+several addresses. ⇒ **Decision D3.**
 
-### 4.4 Il codice di REMOTIX: le cose legate a Debian
+### 4.4 The REMOTIX code: the things tied to Debian
 
-Confermate dalla verifica sul codice (`[L]`), con la riga giusta:
+Confirmed by the verification on the code (`[L]`), with the right line:
 
-| dove | che cosa | cura |
+| where | what | cure |
 |---|---|---|
-| `src/remotix.pam:43,48,50,83` | `@include common-*` | un file per famiglia (§4.3) |
-| `src/sessione.h:95`, `sessione.c:1850-1960` | il drop-in `--headless` per `org.gnome.Shell@wayland.service` | GNOME 50 lo chiama `@user` (§5.1) |
-| `src/main.c:348-358`, `autenticazione.c:158` | l'avviso cerca il PAM solo in `/etc/pam.d`, e il messaggio su «other» è **sbagliato anche su Debian** | cercare anche `/usr/lib/pam.d`; testo giusto |
-| `src/kwin.c:48` (`main.c:1924`) | scrive `/usr/share/applications/org.kde.remotix.desktop` **mentre gira**, da root | lo porta il pacchetto; a esecuzione solo la verifica (`kwin.c:342`) |
-| `src/Makefile:238-239` | `-L… /lib` e rpath su `lib` (Fedora/SUSE: `lib64`) | ngtcp2/nghttp3 statiche (§6.3): rpath non serve più |
-| `src/Makefile:33` | dichiara libavcodec ≥ 61, serve la 7.1; `dipendenze` controlla solo le intestazioni | versioni minime vere, controllate |
-| `src/codificatore.c:1419,1436` | `avcodec_get_supported_config` (manca in ffmpeg 6.1 di Ubuntu 24.04) | un `#if`, solo se D7 dice sì |
-| `src/certificati.c:149` | `const` con OpenSSL 4.0 (Ubuntu 26.10, Fedora rawhide) | 5 righe |
-| `src/figlio.c:4684` | nodo `renderD128` fisso per il codificatore | con più schede prende quella sbagliata: scegliere dal driver |
-| `src/sessione.c:2236` | registro della sessione con nome prevedibile in `/tmp` | un altro utente lo può creare prima: spostarlo in `~/.local/state/remotix/` |
-| `src/sessione.h:94,96` | GNOME riconosciuto dalla sola presenza di `gnome-session`, sessione sempre `gnome` | su Ubuntu serve il GNOME «vanilla» (§4.6) |
-| `src/provisiona.sh` | utenti `prova`/`prova2` con parola d'ordine in chiaro, `sudoers` dei banchi, `gpu-udev.sh`, `ld.so.conf.d` | ⛔ è un allestitore **da banco**: l'installatore si scrive da capo, e niente di questo entra nel pacchetto |
-| `src/Contenitore` | immagine `debian:13`, `apt`, pkgconfig `x86_64-linux-gnu` | un contenitore di costruzione per famiglia |
+| `src/remotix.pam:43,48,50,83` | `@include common-*` | one file per family (§4.3) |
+| `src/sessione.h:95`, `sessione.c:1850-1960` | the `--headless` drop-in for `org.gnome.Shell@wayland.service` | GNOME 50 calls it `@user` (§5.1) |
+| `src/main.c:348-358`, `autenticazione.c:158` | the warning looks for the PAM only in `/etc/pam.d`, and the message about "other" is **wrong even on Debian** | look in `/usr/lib/pam.d` too; right text |
+| `src/kwin.c:48` (`main.c:1924`) | writes `/usr/share/applications/org.kde.remotix.desktop` **while running**, as root | the package brings it; at run time only the check (`kwin.c:342`) |
+| `src/Makefile:238-239` | `-L… /lib` and rpath on `lib` (Fedora/SUSE: `lib64`) | static ngtcp2/nghttp3 (§6.3): rpath no longer needed |
+| `src/Makefile:33` | declares libavcodec ≥ 61, 7.1 is needed; `dipendenze` checks only the headers | real minimum versions, checked |
+| `src/codificatore.c:1419,1436` | `avcodec_get_supported_config` (missing in Ubuntu 24.04's ffmpeg 6.1) | an `#if`, only if D7 says yes |
+| `src/certificati.c:149` | `const` with OpenSSL 4.0 (Ubuntu 26.10, Fedora rawhide) | 5 lines |
+| `src/figlio.c:4684` | fixed `renderD128` node for the encoder | with several cards it takes the wrong one: choose by the driver |
+| `src/sessione.c:2236` | session log with a predictable name in `/tmp` | another user can create it first: move it to `~/.local/state/remotix/` |
+| `src/sessione.h:94,96` | GNOME recognised by the mere presence of `gnome-session`, session always `gnome` | on Ubuntu the "vanilla" GNOME is needed (§4.6) |
+| `src/provisiona.sh` | users `prova`/`prova2` with a plaintext password, the benches' `sudoers`, `gpu-udev.sh`, `ld.so.conf.d` | ⛔ it is a **bench** provisioner: the installer is written from scratch, and none of this enters the package |
+| `src/Contenitore` | `debian:13` image, `apt`, pkgconfig `x86_64-linux-gnu` | one build container per family |
 
-Versioni minime mai dichiarate, da scrivere: labwc con `-m/-C/-S` (tarato su 0.8.3), KWin ≥ 6.1
-(`connectToEIS`), le API di mutter, `wlr-randr` (LXQt), `xfconfd.service`, OpenSSL ≥ 3.5, ngtcp2 ≥ 1.25.
+Minimum versions never declared, to be written: labwc with `-m/-C/-S` (tuned on 0.8.3), KWin ≥ 6.1
+(`connectToEIS`), mutter's APIs, `wlr-randr` (LXQt), `xfconfd.service`, OpenSSL ≥ 3.5, ngtcp2 ≥ 1.25.
 
-### 4.5 La funzione di banco nel binario
+### 4.5 The bench function in the binary
 
-Il piano chiedeva che il binario installato **non contenga** la funzione di banco (`BANCO_MARCA`,
-`BANCO_ESITO`). `[L]` Il codice è sempre compilato, ma spento da `#define BANCO_ACCESO 0`
-(`rcp.c:186`): il server rifiuta ogni marca e lo dichiara. ⇒ Il binario di oggi è già «da prodotto»
-per questa funzione. Restano compilati altri arnesi (`--audio-prova`, `--rilievo`, `--comando-socket`,
-`--sblocca`, `--parlantina`, lo scatto con `SIGUSR1/2`): l'unità del pacchetto **non li passa**, e la
-prova R13 guarda anche quelli.
+The plan asked that the installed binary **not contain** the bench function (`BANCO_MARCA`,
+`BANCO_ESITO`). `[L]` The code is always compiled, but turned off by `#define BANCO_ACCESO 0`
+(`rcp.c:186`): the server refuses every mark and declares it. ⇒ Today's binary is already "product-grade"
+for this function. Other tools remain compiled (`--audio-prova`, `--rilievo`, `--comando-socket`,
+`--sblocca`, `--parlantina`, the snapshot with `SIGUSR1/2`): the package's unit **does not pass them**, and the
+R13 test checks those too.
 
-### 4.6 Altre differenze che l'installatore deve gestire
+### 4.6 Other differences the installer must handle
 
-- **Ubuntu**: il GNOME di serie è la sessione `ubuntu` (dock, colori Ubuntu); REMOTIX avvia la sessione
-  `gnome`, che c'è solo col pacchetto `gnome-session` (universe) ⇒ o lo si porta come dipendenza, o
-  REMOTIX impara la sessione `ubuntu` (**decisione D8**: quale GNOME vede chi si collega?).
-- **labwc** non è installato da nessun gruppo XFCE/LXQt di serie (Xubuntu e Lubuntu restano su X11):
-  lo porta l'installatore.
-- **Gruppi `video`/`render`**: numeri diversi da una macchina all'altra — il codice li legge già dal
-  nodo della scheda (`provisiona.sh:71-83`). Su Arch `renderD*` è aperto a tutti (0666).
-- **`/etc/login.defs`**: su openSUSE sta in `/usr/etc` (lo script oggi funziona per caso).
-- **Firmware** diviso in pezzi su Arch (`linux-firmware-intel`, `-amdgpu`).
-- **Rolling release** (Arch, Tumbleweed): ffmpeg e ngtcp2 cambiano spesso il numero della libreria; un
-  binario pronto si romperebbe al primo aggiornamento del sistema ⇒ il pacchetto si lega alla versione
-  esatta, o si ricostruisce a ogni cambio (§6.2).
+- **Ubuntu**: the default GNOME is the `ubuntu` session (dock, Ubuntu colours); REMOTIX starts the
+  `gnome` session, which exists only with the `gnome-session` package (universe) ⇒ either it is brought as a dependency, or
+  REMOTIX learns the `ubuntu` session (**decision D8**: which GNOME does whoever connects see?).
+- **labwc** is not installed by any default XFCE/LXQt group (Xubuntu and Lubuntu stay on X11):
+  the installer brings it.
+- **`video`/`render` groups**: different numbers from one machine to another — the code already reads them from
+  the card's node (`provisiona.sh:71-83`). On Arch `renderD*` is open to everyone (0666).
+- **`/etc/login.defs`**: on openSUSE it is in `/usr/etc` (the script works today by chance).
+- **Firmware** split into pieces on Arch (`linux-firmware-intel`, `-amdgpu`).
+- **Rolling release** (Arch, Tumbleweed): ffmpeg and ngtcp2 often change the library number; a
+  prebuilt binary would break at the first system update ⇒ the package is tied to the exact
+  version, or is rebuilt at every change (§6.2).
 
 ---
 
-## 5. Le due cure del prodotto che vengono PRIMA dell'installatore
+## 5. The two product cures that come BEFORE the installer
 
-### 5.1 GNOME 50: il servizio della Shell ha cambiato nome
+### 5.1 GNOME 50: the Shell's service has changed name
 
-`[L]` Da GNOME 50 (Fedora 44, Ubuntu 26.04, Tumbleweed, Arch; prima o poi Debian) l'unità
-`org.gnome.Shell@wayland.service` non c'è più: c'è `org.gnome.Shell@.service` con
-`ExecStart=gnome-shell --mode=%i`, e la sessione chiede `org.gnome.Shell@user.service`. Il nostro
-drop-in con `--headless` finisce sotto un nome che nessuno usa ⇒ la Shell nasce **senza schermo
-virtuale**. Anche gnome-session 49+ è stato riscritto (REMOTIX conosce a fondo i meccanismi interni
-della 48, `sessione.h:420-523`) ⇒ **da riprovare tutto** su GNOME 50.
+`[L]` Since GNOME 50 (Fedora 44, Ubuntu 26.04, Tumbleweed, Arch; sooner or later Debian) the
+`org.gnome.Shell@wayland.service` unit no longer exists: there is `org.gnome.Shell@.service` with
+`ExecStart=gnome-shell --mode=%i`, and the session asks for `org.gnome.Shell@user.service`. Our
+drop-in with `--headless` ends up under a name nobody uses ⇒ the Shell is born **without a virtual
+screen**. gnome-session 49+ has also been rewritten (REMOTIX knows the internal mechanisms
+of 48 in depth, `sessione.h:420-523`) ⇒ **everything to be retested** on GNOME 50.
 
-`[L]` commit gnome-shell `0eb754a08` (13 nov 2025): l'unità diventa il modello
-`org.gnome.Shell@.service` con `ExecStart=gnome-shell --mode=%i`; `@user` lo chiede gnome-session 50.
-GNOME 50 c'è su Fedora 44, Ubuntu 26.04, Tumbleweed e Arch; Fedora 43 (49), Leap 16 (48) e Debian 13
-(48) hanno ancora `@wayland`. `--headless` e `--no-x11` in mutter 50 ci sono ancora;
-`org.gnome.Shell@headless.service` **non** va (diventerebbe `--mode=headless`, che non esiste).
+`[L]` gnome-shell commit `0eb754a08` (13 Nov 2025): the unit becomes the template
+`org.gnome.Shell@.service` with `ExecStart=gnome-shell --mode=%i`; `@user` is requested by gnome-session 50.
+GNOME 50 is on Fedora 44, Ubuntu 26.04, Tumbleweed and Arch; Fedora 43 (49), Leap 16 (48) and Debian 13
+(48) still have `@wayland`. `--headless` and `--no-x11` are still in mutter 50;
+`org.gnome.Shell@headless.service` does **not** work (it would become `--mode=headless`, which does not exist).
 
-⛔ **E il nostro controllo darebbe un falso verde**: su GNOME 50 `systemctl --user show -p ExecStart
-org.gnome.Shell@wayland.service` crea l'istanza «wayland» dal modello, ci applica il nostro drop-in e
-restituisce la nostra riga — il controllo passa, mentre gnome-session avvia `@user` senza `--headless`.
+⛔ **And our check would give a false green**: on GNOME 50 `systemctl --user show -p ExecStart
+org.gnome.Shell@wayland.service` creates the "wayland" instance from the template, applies our drop-in to it and
+returns our line — the check passes, while gnome-session starts `@user` without `--headless`.
 
-Cura (`sessione.c`, `sessione.h`): scegliere l'unità da quel che è installato (`@wayland` se c'è,
-altrimenti `@user`); il drop-in in `<unità>.d/`, **non** nella cartella del modello (toccherebbe anche
-GDM); la riga `--headless --no-x11` senza `--mode=%i`; rileggere la stessa unità scelta; la pulizia di
-`provisiona.sh:245,510` estesa a `@user` e `@`. Si prova su `fedora44-gnome` e `ubuntu2604-gnome`.
+Cure (`sessione.c`, `sessione.h`): choose the unit from what is installed (`@wayland` if present,
+otherwise `@user`); the drop-in in `<unità>.d/`, **not** in the template's folder (it would also touch
+GDM); the line `--headless --no-x11` without `--mode=%i`; reread the same chosen unit; the cleanup in
+`provisiona.sh:245,510` extended to `@user` and `@`. Tested on `fedora44-gnome` and `ubuntu2604-gnome`.
 
-### 5.2 Aggiornare senza chiudere i desktop: la misura (T2, 29 set 2026) `[M]`
+### 5.2 Updating without closing the desktops: the measurement (T2, 29 Sep 2026) `[M]`
 
-`PIANO.md` (Fase 15), `fasi/10` §7.5, `SPECIFICHE.md` e `DECISIONI.md` dicevano che fermare il servizio
-uccide le sessioni per `KillMode=mixed` (misura del 25 agosto). La verifica sul codice aveva già
-smentito la causa; **la misura di T2 smentisce il fatto**:
+`PIANO.md` (Phase 15), `fasi/10` §7.5, `SPECIFICHE.md` and `DECISIONI.md` said that stopping the service
+kills the sessions because of `KillMode=mixed` (measurement of 25 August). The verification on the code had already
+refuted the cause; **the T2 measurement refutes the fact**:
 
-- **dieci prove con Firefox vero** sulle quattro scatole: 4 «ferma» (`systemctl stop`, `KillMode=mixed`),
-  4 «uccidi il padre» (`kill -KILL` al solo padre), 2 «uccidi il figlio» (SIGTERM al solo figlio). In
-  ogni sessione tre testimoni che scrivono l'ora ogni secondo (il terminale vero del desktop, un
-  processo in `session-cN.scope`, uno in `user@.service`) e una sentinella a 50 ms su nascite e morti;
-- **muoiono solo padre, aiutante PAM e figlio**, entro 0,06-1,2 s (GNOME: Stopping 53.596, «il figlio è
-  spento» 54.307, unità Deactivated 54.311, poi nient'altro). logind non fa nulla
-  (`KillUserProcesses=no`): nessuna sessione chiusa;
-- **sopravvivono il compositore, la sessione e i programmi**: i tre testimoni battono senza buchi, in
-  tutte e dieci le prove, fino allo sgombero 3 minuti e mezzo dopo;
-- **al riattacco** torna lo stesso compositore, con lo stesso pid, e il terminale dov'era. Su GNOME il
-  desktop ripreso è prima «ZERO MONITOR» (il monitor virtuale era del figlio morto): il figlio nuovo ne
-  monta un altro e le finestre ricompaiono;
-- **la causa**: il palco parte con `setsid --fork` e sta fuori dall'unità; la morte del figlio non si
-  propaga e nessuno chiude la sessione logind. Il fatto del 25 agosto oggi non si riproduce (non si sa se
-  allora il desktop fosse morto davvero o se si sia letta come morte la riga «New session … vuota»: anche
-  un riattacco riuscito apre una sessione logind nuova).
+- **ten tests with real Firefox** on the four boxes: 4 "stop" (`systemctl stop`, `KillMode=mixed`),
+  4 "kill the parent" (`kill -KILL` to the parent only), 2 "kill the child" (SIGTERM to the child only). In
+  each session three witnesses writing the time every second (the desktop's real terminal, a
+  process in `session-cN.scope`, one in `user@.service`) and a 50 ms sentinel on births and deaths;
+- **only parent, PAM helper and child die**, within 0.06-1.2 s (GNOME: Stopping 53.596, "the child is
+  off" 54.307, unit Deactivated 54.311, then nothing else). logind does nothing
+  (`KillUserProcesses=no`): no session closed;
+- **the compositor, the session and the programs survive**: the three witnesses beat without gaps, in
+  all ten tests, until the clear-out three and a half minutes later;
+- **on reattach** the same compositor comes back, with the same pid, and the terminal where it was. On GNOME the
+  resumed desktop is at first "ZERO MONITOR" (the virtual monitor belonged to the dead child): the new child
+  mounts another and the windows reappear;
+- **the cause**: the stage starts with `setsid --fork` and stays outside the unit; the child's death does not
+  propagate and nobody closes the logind session. The fact of 25 August does not reproduce today (it is not known whether
+  back then the desktop really died or whether the line "New session … empty" was read as a death: even
+  a successful reattach opens a new logind session).
 
-⇒ **La cura è quella leggera, 1-2 giorni; il «custode» non serve.** Resta da fare (T7):
-1. il **padre nuovo ritrova i desktop vivi** all'avvio: oggi riparte con «inquilini=0» e quei desktop
-   non li conta nessuno (né il tetto delle sessioni, né il budget, né l'orologio dell'abbandono);
-2. **`loginctl terminate-user`** (`figlio.c:1577`) non va dato quando l'utente ha già un desktop vivo.
+⇒ **The cure is the light one, 1-2 days; the "keeper" is not needed.** Still to do (T7):
+1. the **new parent finds the live desktops** at start-up: today it restarts with "tenants=0" and nobody
+   counts those desktops (neither the session cap, nor the budget, nor the abandonment clock);
+2. **`loginctl terminate-user`** (`figlio.c:1577`) must not be issued when the user already has a live desktop.
 
-✅ **Fatto in T7 (30 set 2026, 700cc1b)**: il padre nuovo ritrova i desktop vivi all'avvio (`src/ritrovo.c`:
-sessione logind col servizio PAM `remotix` e, nella sua scope, il capo del palco nato da `setsid --fork`), li
-dichiara nel registro, li conta nel tetto, nel budget e nell'orologio dell'abbandono (che riparte dall'avvio del
-padre nuovo, dichiarato); al riattacco ognuno rientra nel **suo** desktop; `terminate-user` non si dà più su un
-desktop vivo. D1 invariata: il figlio muore col padre e si rifà al riattacco. Misure in §13.1.
+✅ **Done in T7 (30 Sep 2026, 700cc1b)**: the new parent finds the live desktops at start-up (`src/ritrovo.c`:
+logind session with the PAM service `remotix` and, in its scope, the stage leader born from `setsid --fork`), it
+declares them in the log, counts them in the cap, the budget and the abandonment clock (which restarts from the start-up of the
+new parent, declared); on reattach each one goes back into **its own** desktop; `terminate-user` is no longer issued on a
+live desktop. D1 unchanged: the child dies with the parent and is remade on reattach. Measurements in §13.1.
 
-⚠ Due cose per l'installatore: (a) la sessione logind del figlio risulta «in chiusura» 24 ms dopo la
-nascita (`pam_end` senza `pam_close_session`): con **`KillUserProcesses=yes`** il desktop potrebbe morire —
-`[?]` da misurare, e il controllo preliminare deve leggere quell'impostazione; (b) ogni riattacco lascia
-una sessione logind in più (col capo morto), innocua per l'utente.
+⚠ Two things for the installer: (a) the child's logind session shows as "closing" 24 ms after
+birth (`pam_end` without `pam_close_session`): with **`KillUserProcesses=yes`** the desktop could die —
+`[?]` to be measured, and the preliminary check must read that setting; (b) each reattach leaves
+one more logind session (with a dead leader), harmless for the user.
 
-Quel che i migliori insegnano (`[L]`): **NoMachine** butta fuori tutti a ogni aggiornamento e lo scrive
-nella guida; **xrdp** ha sessioni che sopravvivono ma che nessuno ritrova (schermo nero). ⇒ REMOTIX ha già
-la metà difficile (sopravvivere); gli manca la metà di xrdp (**ritrovare**). Le connessioni QUIC non
-sopravvivono comunque: la promessa onesta resta *«aggiornare costa a chi è collegato un riattacco di pochi
-secondi; le finestre restano»*.
+What the best ones teach (`[L]`): **NoMachine** throws everyone out at every update and writes it
+in the guide; **xrdp** has sessions that survive but that nobody finds again (black screen). ⇒ REMOTIX already has
+the difficult half (surviving); it lacks xrdp's half (**finding again**). QUIC connections do not
+survive anyway: the honest promise remains *"updating costs whoever is connected a reattach of a few
+seconds; the windows stay"*.
 
-Il banco: `banchi/17-t2/` (`t2-misura.py`, `t2box.py`, `lancia.sh`, `catena.sh`, `riassunto.sh`,
-`tabella.sh`); le evidenze sul server in `/media/REMOTIX/tmp/t2/<desktop>-<azione>/`.
+The bench: `banchi/17-t2/` (`t2-misura.py`, `t2box.py`, `lancia.sh`, `catena.sh`, `riassunto.sh`,
+`tabella.sh`); the evidence on the server in `/media/REMOTIX/tmp/t2/<desktop>-<azione>/`.
 
 ---
 
-## 6. La forma dell'installatore
+## 6. The shape of the installer
 
-### 6.0 Il motore d'installazione — lo schema dell'utente, rafforzato (29 set 2026)
+### 6.0 The installation engine — the user's scheme, strengthened (29 Sep 2026)
 
-**La proposta dell'utente**, in otto fasi: PREFLIGHT (conoscere il sistema) · COMPATIBILITY (stabilire
-cosa è supportato) · PLANNING (costruire il piano) · CONSENT & SAFETY (presentare il piano e preparare
-la protezione) · ACQUISITION (pacchetti, risorse, dipendenze) · INSTALLATION & CONFIGURATION
-(applicare il piano) · VERIFICATION & CERTIFICATION (dimostrare che il prodotto funziona) · COMMIT /
-ROLLBACK (rendere definitiva o annullare l'operazione).
+**The user's proposal**, in eight phases: PREFLIGHT (know the system) · COMPATIBILITY (establish
+what is supported) · PLANNING (build the plan) · CONSENT & SAFETY (present the plan and prepare
+the protection) · ACQUISITION (packages, resources, dependencies) · INSTALLATION & CONFIGURATION
+(apply the plan) · VERIFICATION & CERTIFICATION (prove that the product works) · COMMIT /
+ROLLBACK (make the operation final or cancel it).
 
-Che cosa aggiunge a un installatore «buono»: un **piano esplicito presentato prima di agire**, e
-un'operazione che si **conferma o si annulla per intero** — anche la prima installazione che fallisce
-a metà, non solo l'aggiornamento. L'utente ha chiesto di rafforzarla nei punti deboli; le sei
-aggiunte, tutte nelle giunture fra una fase e l'altra:
+What it adds to a "good" installer: an **explicit plan presented before acting**, and
+an operation that is **confirmed or cancelled as a whole** — also the first installation that fails
+halfway, not only the update. The user asked to strengthen it at the weak points; the six
+additions, all in the joints between one phase and the next:
 
-1. **una fase zero, TRUST**: il motore esegue comandi da root sulla macchina di un altro; prima di
-   tutto si accerta che **il catalogo** (le combinazioni supportate) sia quello giusto e che lui lo
-   capisca — dopo D11 (§6.6.10) è quello che il motore porta dentro, consegnato dal gestore di
-   pacchetti (il pacchetto `remotix-install`) o da `install.sh` (lo sha256);
-2. **COMPATIBILITY ha tre esiti, per desktop**: *certificata* (provata nelle nostre VM, §7) ·
-   *a condizioni* (RPM Fusion, labwc, ripiego software…) · *non supportata*; e una macchina può
-   essere a posto per GNOME e non per XFCE;
-3. **il piano è un documento**: si salva, si legge, si approva, si applica anche su cento macchine
-   uguali; ogni azione porta **come si fa, come si verifica, come si annulla** — l'annullamento nasce
-   col passo, non si aggiunge dopo; e il piano porta l'**impronta** della macchina su cui è stato
-   fatto: se fra il piano e l'esecuzione la macchina è cambiata, il piano non vale più;
-4. **ACQUISITION non è innocua**: aggiungere il deposito di RPM Fusion cambia già la macchina ⇒ è
-   un'azione del piano come le altre; e la regola: **niente si installa finché tutto non è scaricato
-   e verificato** — una rete che cade a metà ferma l'operazione *prima* di toccare la macchina;
-5. **fra installare e verificare c'è l'ACCENSIONE**: si installa a servizio spento, si fanno i
-   controlli che non chiedono il servizio (7a), si accende, si fanno quelli dal vivo (7b) — la gran
-   parte degli errori si scopre quando annullare costa poco e nessuno è collegato;
-6. **la RIPRESA**: ogni passo si scrive nel registro **prima** di farlo; se la corrente salta durante
-   la fase 6, il giro dopo il motore trova l'operazione aperta e propone di completarla o annullarla.
-   E nell'aggiornamento anche il ritorno indietro rispetta la regola di non chiudere i desktop.
+1. **a phase zero, TRUST**: the engine runs commands as root on someone else's machine; before
+   everything it makes sure that **the catalog** (the supported combinations) is the right one and that it
+   understands it — after D11 (§6.6.10) it is the one the engine carries inside, delivered by the package
+   manager (the `remotix-install` package) or by `install.sh` (the sha256);
+2. **COMPATIBILITY has three outcomes, per desktop**: *certified* (tested in our VMs, §7) ·
+   *conditional* (RPM Fusion, labwc, software fallback…) · *not supported*; and a machine can
+   be fine for GNOME and not for XFCE;
+3. **the plan is a document**: it is saved, read, approved, applied even on a hundred identical
+   machines; each action carries **how it is done, how it is verified, how it is undone** — the undo is born
+   with the step, it is not added later; and the plan carries the **fingerprint** of the machine on which it was
+   made: if the machine changed between the plan and the execution, the plan is no longer valid;
+4. **ACQUISITION is not harmless**: adding the RPM Fusion repository already changes the machine ⇒ it is
+   an action of the plan like the others; and the rule: **nothing is installed until everything is downloaded
+   and verified** — a network that drops halfway stops the operation *before* touching the machine;
+5. **between installing and verifying there is the SWITCH-ON**: install with the service stopped, do the
+   checks that do not need the service (7a), switch on, do the live ones (7b) — most
+   errors are discovered when undoing costs little and nobody is connected;
+6. **RESUME**: every step is written in the log **before** doing it; if the power goes during
+   phase 6, on the next round the engine finds the operation open and offers to complete it or cancel it.
+   And in the update, going back too respects the rule of not closing the desktops.
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                          REMOTIX INSTALL ENGINE                          │
 ├──────────────────────────────────────────────────────────────────────────┤
-│ 0. TRUST                 il catalogo del pacchetto, e il motore lo capisce│
-│ 1. PREFLIGHT             conoscere il sistema — sola lettura; l'impronta │
-│ 2. COMPATIBILITY         per desktop: certificata · a condizioni · no    │
-│ 3. PLANNING              il piano come documento: fai / verifica / annulla│
-│ 4. CONSENT & SAFETY      approvazione (a mano o da file), salvataggi,    │
-│                          registro aperto                                 │
-│ 5. ACQUISITION           tutto scaricato e verificato prima di toccare   │
-│ 6. INSTALLATION & CONF.  a servizio spento, ogni passo annotato prima    │
-│ 7. VERIFICATION & CERT.  7a senza servizio → ACCENSIONE → 7b dal vivo    │
-│ 8. COMMIT / ROLLBACK     conferma, o annulla ripercorrendo il registro   │
-│ ↺  RIPRESA               un'operazione interrotta si completa o si annulla│
+│ 0. TRUST                 the package's catalog, and the engine understands it│
+│ 1. PREFLIGHT             know the system — read-only; the fingerprint    │
+│ 2. COMPATIBILITY         per desktop: certified · conditional · no       │
+│ 3. PLANNING              the plan as a document: do / verify / undo      │
+│ 4. CONSENT & SAFETY      approval (by hand or from file), backups,       │
+│                          log open                                        │
+│ 5. ACQUISITION           everything downloaded and verified before touching│
+│ 6. INSTALLATION & CONF.  with the service stopped, each step noted first │
+│ 7. VERIFICATION & CERT.  7a without service → SWITCH-ON → 7b live        │
+│ 8. COMMIT / ROLLBACK     confirm, or undo by walking back the log        │
+│ ↺  RESUME                an interrupted operation is completed or undone │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Un motore, tre mestieri.** Le fasi valgono per installare, aggiornare e disinstallare:
+**One engine, three jobs.** The phases hold for installing, updating and uninstalling:
 
-| fase | prima installazione | aggiornamento | disinstallazione |
+| phase | first installation | update | uninstallation |
 |---|---|---|---|
-| 0 TRUST | il catalogo del motore (§6.6.10) | idem | idem |
-| 1 PREFLIGHT | distribuzione, scheda (NVIDIA proprietaria compresa), H.264, desktop, PAM, porta, firewall, SELinux | in più: la versione installata e **le sessioni aperte** | che cosa c'è, e il registro delle modifiche fatte da REMOTIX |
-| 2 COMPATIBILITY | la macchina contro il catalogo (§3), desktop per desktop | la N+1 sulla stessa macchina; N+1 accetta la configurazione di N | — |
-| 3 PLANNING | azioni: depositi, pacchetti, gruppi, firewall | in più: «chi è collegato si riattacca in pochi secondi» | che cosa si toglie, che cosa resta (configurazione, se non `purge`) |
-| 4 CONSENT & SAFETY | sì/no per ogni scelta (D5, D6); salvataggio di quel che si toccherà | salvataggio di `/etc/remotix` e `/var/lib/remotix` | salvataggio della configurazione |
-| 5 ACQUISITION | depositi (annotati) e pacchetti scaricati e **verificati** | la N+1 | — |
-| 6 INSTALLATION | il gestore di pacchetti installa, servizio spento; il motore fa il resto e annota | l'installazione della N+1 **mentre la N serve ancora** | il gestore di pacchetti toglie; il motore disfa il suo registro |
-| 7 VERIFICATION | 7a · accensione · 7b | 7a · riavvio del servizio senza chiudere i desktop (§5.2) · 7b + sessioni ritrovate | le impronte tornate com'erano |
-| 8 COMMIT / ROLLBACK | verde ⇒ si conferma; rosso ⇒ si annulla tutto | rosso ⇒ si torna a N, **senza chiudere i desktop** | — |
+| 0 TRUST | the engine's catalog (§6.6.10) | same | same |
+| 1 PREFLIGHT | distribution, card (proprietary NVIDIA included), H.264, desktop, PAM, port, firewall, SELinux | in addition: the installed version and **the open sessions** | what is there, and the log of the changes made by REMOTIX |
+| 2 COMPATIBILITY | the machine against the catalog (§3), desktop by desktop | N+1 on the same machine; N+1 accepts N's configuration | — |
+| 3 PLANNING | actions: repositories, packages, groups, firewall | in addition: "whoever is connected reattaches in a few seconds" | what is removed, what stays (configuration, if not `purge`) |
+| 4 CONSENT & SAFETY | yes/no for each choice (D5, D6); backup of what will be touched | backup of `/etc/remotix` and `/var/lib/remotix` | backup of the configuration |
+| 5 ACQUISITION | repositories (noted) and packages downloaded and **verified** | N+1 | — |
+| 6 INSTALLATION | the package manager installs, service stopped; the engine does the rest and notes it | the installation of N+1 **while N is still serving** | the package manager removes; the engine undoes its log |
+| 7 VERIFICATION | 7a · switch-on · 7b | 7a · restart of the service without closing the desktops (§5.2) · 7b + sessions found again | the fingerprints back to how they were |
+| 8 COMMIT / ROLLBACK | green ⇒ confirm; red ⇒ undo everything | red ⇒ back to N, **without closing the desktops** | — |
 
-⭐ **Un programma solo, monolitico** (`DECISIONI.md` §10.14): `remotix-install` è motore, CLI, TUI e GUI in un
-eseguibile; parla con systemd, logind, firewalld e polkit dall'interno (D-Bus); lancia solo un elenco chiuso
-di programmi di sistema (il gestore di pacchetti, `usermod`/`gpasswd`) col percorso completo e ogni chiamata
-nel registro; la GUI gira come l'utente e rilancia lo stesso eseguibile con i permessi di polkit.
+⭐ **A single, monolithic program** (`DECISIONI.md` §10.14): `remotix-install` is engine, CLI, TUI and GUI in one
+executable; it talks to systemd, logind, firewalld and polkit from the inside (D-Bus); it launches only a closed list
+of system programs (the package manager, `usermod`/`gpasswd`) with the full path and every call
+in the log; the GUI runs as the user and relaunches the same executable with polkit's permissions.
 
-**Tre regole che tengono in piedi lo schema:**
+**Three rules that hold the scheme up:**
 
-1. ⛔ **Le fasi 5 e 6 le esegue il gestore di pacchetti della distribuzione, non il motore.** Il motore
-   dirige (decide, chiede, controlla, annulla); i file di REMOTIX li mettono `apt`, `dnf`, `zypper`,
-   `pacman`. Se li copiasse il motore ci sarebbero **due verità** su che cosa è installato, e gli
-   aggiornamenti di sistema non lo conoscerebbero (Tailscale e Netdata fanno così, §6.5).
-2. ⭐ **Il ritorno indietro è nostro.** Solo `dnf` ha un «annulla» vero (`dnf history undo`), e
-   openSUSE su btrfs le fotografie di sistema (snapper); `apt` e `pacman` no. ⇒ Il motore ripercorre
-   all'indietro il **registro** (le azioni del piano, ognuna col suo «come si annulla»); dove la
-   macchina offre le fotografie di sistema, le usa in più. La promessa onesta: *«tutto quel che
-   abbiamo fatto noi si annulla»*.
-3. **Il consenso anche senza nessuno davanti allo schermo**: il piano approvato è un file, e si
-   applica da cloud-init o Ansible su molte macchine; il motore lo rifiuta se l'impronta non combacia.
+1. ⛔ **Phases 5 and 6 are run by the distribution's package manager, not by the engine.** The engine
+   directs (decides, asks, checks, undoes); REMOTIX's files are put in place by `apt`, `dnf`, `zypper`,
+   `pacman`. If the engine copied them there would be **two truths** about what is installed, and system
+   updates would not know it (Tailscale and Netdata do it this way, §6.5).
+2. ⭐ **Going back is ours.** Only `dnf` has a real "undo" (`dnf history undo`), and
+   openSUSE on btrfs has system snapshots (snapper); `apt` and `pacman` do not. ⇒ The engine walks
+   the **log** backwards (the actions of the plan, each with its "how it is undone"); where the
+   machine offers system snapshots, it uses them in addition. The honest promise: *"everything
+   we did is undone"*.
+3. **Consent even with nobody in front of the screen**: the approved plan is a file, and it is
+   applied from cloud-init or Ansible on many machines; the engine refuses it if the fingerprint does not match.
 
-**La certificazione (fase 7), con quel che il motore può dimostrare da solo** — non ha un browser:
-- *7a, a servizio spento*: le librerie viste con l'uid di un inquilino (nessun `not found`); la pila
-  PAM si carica e rifiuta un utente inesistente; la configurazione si legge; la scheda **codifica
-  davvero** un fotogramma di prova in H.264 (o si dichiara il ripiego software); per ogni desktop
-  installato, il palco **parte senza schermo** e produce un'immagine;
-- *7b, a servizio acceso*: attivo, la porta 7447 risponde (TCP e UDP), il certificato TLS è quello
-  atteso, il firewall la lascia passare.
+**The certification (phase 7), with what the engine can prove by itself** — it has no browser:
+- *7a, with the service stopped*: the libraries seen with a tenant's uid (no `not found`); the PAM
+  stack loads and refuses a nonexistent user; the configuration reads; the card **really
+  encodes** a test frame in H.264 (or the software fallback is declared); for each installed
+  desktop, the stage **starts without a screen** and produces an image;
+- *7b, with the service on*: active, port 7447 answers (TCP and UDP), the TLS certificate is the
+  expected one, the firewall lets it through.
 
-Il resto (un browser vero che entra e lavora) lo dimostrano le VM di §7, prima di ogni rilascio — ed
-è quel che rende una combinazione «certificata» nel catalogo. L'esito si scrive nel **certificato
-dell'installazione** (`/var/lib/remotix/certificato-<data>.txt`): versione, macchina, ogni prova con
-l'esito — lo stesso che il benvenuto riassume.
+The rest (a real browser that gets in and works) is proved by the VMs of §7, before every release — and
+it is what makes a combination "certified" in the catalog. The outcome is written in the **installation
+certificate** (`/var/lib/remotix/certificato-<data>.txt`): version, machine, each test with
+its outcome — the same that the welcome summarises.
 
-### 6.1 Pacchetti nativi, e uno script d'ingresso
+### 6.1 Native packages, and an entry script
 
-Scartati, col perché (`[L]`, i casi di RustDesk e Sunshine):
-- **Flatpak, Snap, AppImage**: non installano servizi di sistema né file PAM, o non possono caricare
-  i driver VA-API, Mesa e PAM della macchina;
-- **binario unico statico**: REMOTIX carica a tempo di esecuzione i moduli PAM, il driver della scheda,
-  Mesa, PipeWire — devono essere quelli della macchina.
+Discarded, with the why (`[L]`, the cases of RustDesk and Sunshine):
+- **Flatpak, Snap, AppImage**: they do not install system services or PAM files, or cannot load
+  the machine's VA-API drivers, Mesa and PAM;
+- **a single static binary**: REMOTIX loads at run time the PAM modules, the card's driver,
+  Mesa, PipeWire — they must be the machine's.
 
-⇒ **Pacchetti nativi** per ogni famiglia (`.deb`, `.rpm`, `.pkg.tar.zst`), come Cockpit, Docker,
+⇒ **Native packages** for each family (`.deb`, `.rpm`, `.pkg.tar.zst`), like Cockpit, Docker,
 Tailscale, gnome-remote-desktop:
 
 ```
-                     un sorgente (git)
+                     one source (git)
                            │
      ┌─────────────────────┼─────────────────────────┐
 packaging/debian/   packaging/rpm/remotix.spec   packaging/arch/PKGBUILD
                     (%if fedora / rhel / suse,
-                     come Cockpit)
+                     like Cockpit)
      │                     │                         │
      ▼                     ▼                         ▼
- costruiti DENTRO la radice di ogni distribuzione (contenitori podman)
- ngtcp2 + nghttp3 statiche, versione fissata · tutto il resto della distribuzione
+ built INSIDE the root of each distribution (podman containers)
+ ngtcp2 + nghttp3 static, pinned version · everything else from the distribution
                            │
                            ▼
- depositi firmati:  apt (deb822 + keyring) · dnf / zypper · pacman
- canali: stabile · candidato     versioni vecchie conservate (per tornare indietro)
+ signed repositories:  apt (deb822 + keyring) · dnf / zypper · pacman
+ channels: stable · candidate     old versions kept (to go back)
                            │
                            ▼
- install.sh — riconosce la distribuzione, --verifica, aggiunge il deposito, installa
- (ingresso comodo, come Tailscale; ⛔ non copia mai file del prodotto)
+ install.sh — recognises the distribution, --verifica, adds the repository, installs
+ (a convenient entry, like Tailscale; ⛔ never copies product files)
 ```
 
-Gli strumenti nativi (`dpkg-shlibdeps`, `rpmbuild`, `makepkg`) **leggono il binario e calcolano da
-soli** le librerie di cui ha bisogno: è la cura della lezione di `LEZIONI.md` §2.5-bis (i pacchetti
-installati a mano che nessuno dichiarava). Per questo niente nFPM/fpm, che impacchettano file già
-pronti con le dipendenze scritte a mano.
+The native tools (`dpkg-shlibdeps`, `rpmbuild`, `makepkg`) **read the binary and compute by
+themselves** the libraries it needs: it is the cure for the lesson of `LEZIONI.md` §2.5-bis (the packages
+installed by hand that nobody declared). That is why no nFPM/fpm, which package ready-made files
+with dependencies written by hand.
 
-### 6.2 Si compila per ogni distribuzione
+### 6.2 It is compiled for each distribution
 
-Il binario **non si copia** da una distribuzione all'altra: libavcodec (60, 61, 62), OpenSSL (3 o 4),
-libei hanno versioni diverse. Un contenitore di costruzione per bersaglio, come `src/Contenitore` oggi
-per Debian. Sulle rolling release il pacchetto si lega alle versioni esatte di ffmpeg: meglio un
-aggiornamento **rifiutato** dal gestore di pacchetti che uno che rompe in silenzio.
+The binary **is not copied** from one distribution to another: libavcodec (60, 61, 62), OpenSSL (3 or 4),
+libei have different versions. One build container per target, like `src/Contenitore` today
+for Debian. On rolling releases the package is tied to the exact versions of ffmpeg: better an
+update **refused** by the package manager than one that breaks silently.
 
-### 6.3 Che cosa entra nel binario e che cosa no
+### 6.3 What goes into the binary and what does not
 
-| | scelta | perché |
+| | choice | why |
 |---|---|---|
-| **ngtcp2, nghttp3** | dentro, **statiche**, versione fissata | serve ngtcp2 ≥ **1.25.0** (26 lug 2026: la impongono i flag `NGTCP2_STREAM_CLOSE2_FLAG_*` di `trasporto.c:296-299`; senza, 1.23) e quasi nessuna distribuzione la ha; sono piccole. ⚠ Gli **aggiornamenti di sicurezza diventano nostri** — **decisione D2** |
-| OpenSSL | della distribuzione | è la libreria di sicurezza più curata dalle distribuzioni |
-| libavcodec, driver, Mesa | ⛔ della distribuzione, **mai** dentro | è lì che stanno i codec brevettati (§4.2) |
-| PAM, PipeWire, libei, glib, Wayland | della distribuzione | devono combaciare con la macchina |
+| **ngtcp2, nghttp3** | inside, **static**, pinned version | ngtcp2 ≥ **1.25.0** is needed (26 Jul 2026: required by the `NGTCP2_STREAM_CLOSE2_FLAG_*` flags of `trasporto.c:296-299`; without them, 1.23) and almost no distribution has it; they are small. ⚠ **Security updates become ours** — **decision D2** |
+| OpenSSL | from the distribution | it is the security library best looked after by the distributions |
+| libavcodec, drivers, Mesa | ⛔ from the distribution, **never** inside | that is where the patented codecs live (§4.2) |
+| PAM, PipeWire, libei, glib, Wayland | from the distribution | they must match the machine |
 
-⇒ `ld.so.conf.d` **sparisce**: oggi `provisiona.sh:394` mette la nostra ngtcp2 davanti a quella di
-sistema, che usano anche curl e il gestore di pacchetti. Con le statiche non resta nessuna libreria
-fuori dai percorsi di sistema.
+⇒ `ld.so.conf.d` **disappears**: today `provisiona.sh:394` puts our ngtcp2 in front of the system's,
+which curl and the package manager use too. With the static ones no library remains
+outside the system paths.
 
-### 6.4 Che cosa installa il pacchetto
+### 6.4 What the package installs
 
-| che cosa | dove |
+| what | where |
 |---|---|
-| server e figlio | `/usr/libexec/remotix/` |
-| comando dell'amministratore | `/usr/bin/remotix` — `verifica`, `stato`, `certificato`, `configurazione` |
-| unità | `/usr/lib/systemd/system/remotix.service` (root; certificato generato all'avvio se manca) |
-| predefiniti / scelte dell'amministratore | `/usr/share/remotix/remotix.conf` · `/etc/remotix/remotix.conf.d/` (vuota) |
-| PAM | un file per famiglia (§4.3) |
-| il permesso di cattura di KWin | `/usr/share/applications/org.kde.remotix.desktop` (oggi lo scrive il programma, §4.4) |
-| le tre cinture di `DECISIONI.md` §4.7 (niente spegnimento, sospensione, tasti) | `/usr/share/polkit-1/rules.d/`, `/usr/lib/systemd/{logind,sleep}.conf.d/` — ⚠ cambiano la macchina: **decisione D4** |
-| firewall | `/usr/lib/firewalld/services/remotix.xml`, `/etc/ufw/applications.d/remotix` — **definiti**, aperti solo col consenso (D6) |
-| cartelle | `/var/lib/remotix` (0700), `/run/remotix` via `tmpfiles.d` |
-| SELinux | sottopacchetto `remotix-selinux`, **solo se** le prove dicono che serve (prima si prova senza) |
-| ⛔ **mai** | utenti di prova, `sudoers.d` dei banchi, `gpu-udev.sh`, `riavvia-*.sh`, `ld.so.conf.d` |
+| server and child | `/usr/libexec/remotix/` |
+| the administrator's command | `/usr/bin/remotix` — `verifica`, `stato`, `certificato`, `configurazione` |
+| unit | `/usr/lib/systemd/system/remotix.service` (root; certificate generated at start-up if missing) |
+| defaults / the administrator's choices | `/usr/share/remotix/remotix.conf` · `/etc/remotix/remotix.conf.d/` (empty) |
+| PAM | one file per family (§4.3) |
+| KWin's capture permission | `/usr/share/applications/org.kde.remotix.desktop` (today the program writes it, §4.4) |
+| the three belts of `DECISIONI.md` §4.7 (no shutdown, suspend, keys) | `/usr/share/polkit-1/rules.d/`, `/usr/lib/systemd/{logind,sleep}.conf.d/` — ⚠ they change the machine: **decision D4** |
+| firewall | `/usr/lib/firewalld/services/remotix.xml`, `/etc/ufw/applications.d/remotix` — **defined**, opened only with consent (D6) |
+| folders | `/var/lib/remotix` (0700), `/run/remotix` via `tmpfiles.d` |
+| SELinux | `remotix-selinux` subpackage, **only if** the tests say it is needed (first it is tested without) |
+| ⛔ **never** | test users, the benches' `sudoers.d`, `gpu-udev.sh`, `riavvia-*.sh`, `ld.so.conf.d` |
 
-⭐ **L'installatore è l'unica via** (`DECISIONI.md` §10.12): il pacchetto porta i pezzi **inerti** — niente
-servizio acceso, niente gruppi, niente firewall, le cinture spente in `/usr/share/remotix/`; il motore li
-monta col consenso e li registra; le vie sono due sole — l'installatore o il codice sorgente a mano, a proprio rischio — e REMOTIX non ha né blocchi né opzioni per una via intermedia: `remotix stato` dice solo se l'installazione è certificata dall'installatore;
-un aggiornamento del pacchetto richiama il motore. Quel che segue va letto così: lo fa **il motore**, non
-gli script del pacchetto.
+⭐ **The installer is the only way** (`DECISIONI.md` §10.12): the package carries the **inert** pieces — no
+service on, no groups, no firewall, the belts off in `/usr/share/remotix/`; the engine
+mounts them with consent and records them; there are only two ways — the installer or the source code by hand, at one's own risk — and REMOTIX has neither locks nor options for an intermediate way: `remotix stato` only says whether the installation is certified by the installer;
+a package update calls the engine back. What follows must be read this way: it is done by **the engine**, not
+by the package scripts.
 
-Dopo l'installazione: le persone vengono iscritte ai gruppi della scheda (`DECISIONI.md` §7.21) **e
-lo si annota** (chi c'era già, chi l'ha messo REMOTIX), o la disinstallazione non sa che cosa togliere.
+After the installation: people are enrolled in the card's groups (`DECISIONI.md` §7.21) **and
+it is noted** (who was already there, who was put there by REMOTIX), or the uninstallation does not know what to remove.
 
-### 6.5 Le qualità dell'eccellenza
+### 6.5 The qualities of excellence
 
-Prese da chi le fa meglio (`[L]`): Cockpit per PAM, SELinux e certificato; Tailscale per lo script
-d'ingresso; Netdata per `--dry-run` e l'installazione senza rete; GitLab per il salvataggio prima di
-aggiornare; Syncthing per il canale «candidato»; OpenSSH per la configurazione provata prima di
-ripartire. ⚠ E da **non** copiare: Chrome (un cron che riscrive il deposito), Docker (la
-disinstallazione che lascia la macchina diversa, e lo dice), la telemetria di Netdata (un server che fa
-login non telefona a casa).
+Taken from those who do them best (`[L]`): Cockpit for PAM, SELinux and certificate; Tailscale for the entry
+script; Netdata for `--dry-run` and installation without network; GitLab for the backup before
+updating; Syncthing for the "candidate" channel; OpenSSH for the configuration tested before
+restarting. ⚠ And **not** to be copied: Chrome (a cron that rewrites the repository), Docker (the
+uninstallation that leaves the machine different, and says so), Netdata's telemetry (a server that does
+login does not phone home).
 
-1. **Il controllo preliminare**, prima di toccare niente: `install.sh --verifica` e, a installazione
-   fatta, `remotix verifica`. Guarda distribuzione e versione, scheda e nodo, **H.264 davvero
-   disponibile** (profilo VA-API e `h264_vaapi` in libavcodec), desktop presenti e versioni, PAM,
-   porta 7447 libera, firewall, SELinux, OpenSSL. Ogni problema con un messaggio in italiano semplice
-   **e il comando che lo risolve**. ⚠ Non sta negli script del pacchetto: un pacchetto che rifiuta di
-   installarsi perché manca la scheda rompe le immagini e cloud-init. Il pacchetto avvisa; il
-   controllo decide quando lo si chiama.
-2. **Idempotenza**: rieseguire non cambia niente.
-3. **Disinstallazione** che rimette la macchina com'era; `remove` tiene la configurazione, `purge`
-   toglie tutto; toglie dai gruppi **solo** chi ci aveva messo REMOTIX.
-4. **Aggiornamento** senza chiudere i desktop (§5.2), con la configurazione **provata prima** di
-   chiedere il riavvio del servizio.
-5. **Ritorno alla versione precedente**: il deposito conserva le vecchie; prima di aggiornare si salva
-   `/etc/remotix` e `/var/lib/remotix`; la versione N−1 legge la configurazione della N.
-6. **Firme**: UNA chiave (§6.6.10), per il solo deposito REMOTIX (`Signed-By`, mai `trusted.gpg.d`),
-   nel pacchetto `remotix-archive-keyring`; dove si custodisce e come si cambia: con D10.
-7. **Configurazione**: predefiniti in `/usr`, scelte dell'amministratore in `/etc` che vincono;
-   `remotix configurazione --mostra` dice da quale file viene ogni voce.
-8. **Benvenuto** alla fine: gli indirizzi da aprire, l'impronta del certificato, chi può entrare
-   (root escluso), che cosa REMOTIX ha cambiato nella macchina, lo stato di H.264.
-9. **Registro dell'installazione** e registro delle modifiche alla macchina
+1. **The preliminary check**, before touching anything: `install.sh --verifica` and, once installation
+   is done, `remotix verifica`. It looks at distribution and version, card and node, **H.264 really
+   available** (VA-API profile and `h264_vaapi` in libavcodec), desktops present and versions, PAM,
+   port 7447 free, firewall, SELinux, OpenSSL. Each problem with a message in plain Italian
+   **and the command that solves it**. ⚠ It is not in the package scripts: a package that refuses to
+   install because the card is missing breaks images and cloud-init. The package warns; the
+   check decides when it is called.
+2. **Idempotence**: running again changes nothing.
+3. **Uninstallation** that puts the machine back as it was; `remove` keeps the configuration, `purge`
+   removes everything; it removes from the groups **only** those REMOTIX had put there.
+4. **Update** without closing the desktops (§5.2), with the configuration **tested before**
+   asking for the service restart.
+5. **Going back to the previous version**: the repository keeps the old ones; before updating,
+   `/etc/remotix` and `/var/lib/remotix` are backed up; version N−1 reads N's configuration.
+6. **Signatures**: ONE key (§6.6.10), for the REMOTIX repository only (`Signed-By`, never `trusted.gpg.d`),
+   in the `remotix-archive-keyring` package; where it is kept and how it is changed: with D10.
+7. **Configuration**: defaults in `/usr`, the administrator's choices in `/etc`, which win;
+   `remotix configurazione --mostra` says which file each entry comes from.
+8. **Welcome** at the end: the addresses to open, the certificate's fingerprint, who can get in
+   (root excluded), what REMOTIX changed on the machine, the state of H.264.
+9. **Installation log** and log of the changes to the machine
    (`/var/lib/remotix/modifiche.log`).
-10. **Senza domande** per chi gestisce molte macchine (cloud-init, Ansible) e **senza rete**.
-11. **Costruzione riproducibile** (`SOURCE_DATE_EPOCH`) e **SBOM** che nomina ngtcp2 e nghttp3 con la
-    versione esatta.
+10. **No questions** for whoever manages many machines (cloud-init, Ansible) and **no network**.
+11. **Reproducible build** (`SOURCE_DATE_EPOCH`) and an **SBOM** that names ngtcp2 and nghttp3 with the
+    exact version.
 
-### 6.5-bis Che cosa l'installatore chiede a REMOTIX — elenco chiuso (30 set 2026)
+### 6.5-bis What the installer asks of REMOTIX — closed list (30 Sep 2026)
 
-*Preoccupazione dell'utente: «su T5 andrà fatto un ragionamento, perché rischiamo di dover introdurre
-funzionalità in REMOTIX non previste». ⇒ Quel che l'installatore chiede al prodotto sta **solo** in questo
-elenco; una richiesta nuova passa dall'utente prima di entrare.*
+*The user's concern: «su T5 andrà fatto un ragionamento, perché rischiamo di dover introdurre
+funzionalità in REMOTIX non previste». ⇒ What the installer asks of the product is **only** in this
+list; a new request goes through the user before entering.*
 
-| richiesta a REMOTIX | perché | stato |
+| request to REMOTIX | why | status |
 |---|---|---|
-| ritrovare i desktop vivi dopo un riavvio del servizio | aggiornare senza chiudere i desktop (§5.2, T7) | decisa (T2) |
-| una prova di codifica: un fotogramma in H.264, e dire se riesce | la certificazione, fase 7 (§6.0) | proposta del 30 set |
-| `remotix stato`: installazione certificata o no, condizioni attive | assistenza (§10.12) | decisa |
-| non scrivere più da sé il file di KDE (`kwin.c:48`) | il pacchetto possiede i suoi file | correzione |
-| annotare chi iscrive ai gruppi alla prima connessione (`figlio.c:~1525`) | la disinstallazione sa chi togliere | correzione |
+| find the live desktops again after a service restart | update without closing the desktops (§5.2, T7) | decided (T2) |
+| an encoding test: one frame in H.264, and say whether it succeeds | the certification, phase 7 (§6.0) | proposed on 30 Sep |
+| `remotix stato`: installation certified or not, active conditions | support (§10.12) | decided |
+| no longer write KDE's file by itself (`kwin.c:48`) | the package owns its files | correction |
+| note whom it enrols in the groups at the first connection (`figlio.c:~1525`) | the uninstallation knows whom to remove | correction |
 
-⛔ **Non** stanno in REMOTIX, e li fa il motore: gruppi, cinture, firewall, desktop, archivi, pacchetti, e alla
-**disinstallazione** la chiusura dei desktop aperti — il motore li trova da logind (sessioni col servizio PAM
-`remotix`) e li fa chiudere da logind (vedi sotto).
+⛔ They are **not** in REMOTIX, and the engine does them: groups, belts, firewall, desktops, archives, packages, and at
+**uninstallation** the closing of the open desktops — the engine finds them through logind (sessions with the PAM service
+`remotix`) and has logind close them (see below).
 
-**La disinstallazione** (parola dell'utente, 30 set: *«è un'operazione dell'admin del server: l'admin avverte
+**The uninstallation** (the user's word, 30 Sep: *«è un'operazione dell'admin del server: l'admin avverte
 gli utenti nelle modalità classiche (email, WhatsApp…); poi, quando avvia la disinstallazione, l'installer
 chiude le sessioni REMOTIX degli utenti e i loro processi e avvia la pulizia del sistema»*):
-1. **prima**, l'amministratore avvisa le persone coi suoi mezzi — REMOTIX non ha né avrà un sistema di messaggi
-   per questo;
-2. **nessuna domanda in più**: se ci sono ancora persone collegate, le loro sessioni REMOTIX si chiudono e basta
-   — erano state avvisate (parola dell'utente, 30 set). Il piano di disinstallazione, che si conferma una volta
-   sola come ogni piano, ne porta solo la riga «chiudo le sessioni REMOTIX ancora aperte (N)»;
-3. il motore chiude **le sessioni REMOTIX** e tutti i programmi nati dentro di esse (logind `TerminateSession`
-   sulla sessione, che porta via il suo gruppo di processi) — ⚠ **non** tutti i processi dell'utente: la stessa
-   persona può avere una sessione davanti al monitor o un lavoro via ssh, e quelli non si toccano;
-4. poi la **pulizia** del sistema, ripercorrendo il registro (§6.6.4).
+1. **first**, the administrator warns people with his own means — REMOTIX does not have and will not have a messaging system
+   for this;
+2. **no extra question**: if there are still people connected, their REMOTIX sessions are closed and that is that
+   — they had been warned (the user's word, 30 Sep). The uninstallation plan, which is confirmed only once
+   like every plan, carries only the line "I close the REMOTIX sessions still open (N)";
+3. the engine closes **the REMOTIX sessions** and all the programs born inside them (logind `TerminateSession`
+   on the session, which takes away its process group) — ⚠ **not** all the user's processes: the same
+   person may have a session in front of the monitor or a job over ssh, and those are not touched;
+4. then the **cleanup** of the system, walking back the log (§6.6.4).
 
-### 6.6 La specifica del motore — stati, registro, azioni, fiducia (29 set 2026)
+### 6.6 The engine specification — states, log, actions, trust (29 Sep 2026)
 
-*Scritta dopo una revisione della bozza portata dall'utente: l'architettura in otto fasi regge; quel che
-mancava era renderne le promesse **precise abbastanza da poterle provare in automatico**. Qui si fissa
-quel che cambia i dati e il comportamento del motore — cambiarlo dopo vorrebbe dire riscriverlo. I
-dettagli che dipendono da cose che oggi non esistono (il deposito pubblico, la custodia della chiave)
-hanno il loro modello qui e la loro decisione alla tappa.*
+*Written after a review of the draft brought by the user: the eight-phase architecture holds; what
+was missing was making its promises **precise enough to be tested automatically**. Here is fixed
+what changes the engine's data and behaviour — changing it later would mean rewriting it. The
+details that depend on things that do not exist today (the public repository, the custody of the key)
+have their model here and their decision at the milestone.*
 
-#### 6.6.1 Il contratto: gli oggetti del motore
+#### 6.6.1 The contract: the engine's objects
 
-Il motore produce e consuma **sette oggetti**, file JSON con una versione di formato
-(`"formato": "remotix-install/1"`). Sono suoi: chiunque usi il motore li legge, nessuno li inventa.
+The engine produces and consumes **seven objects**, JSON files with a format version
+(`"formato": "remotix-install/1"`). They are its own: whoever uses the engine reads them, nobody invents them.
 
-| oggetto | chi lo produce | che cosa contiene |
+| object | who produces it | what it contains |
 |---|---|---|
-| **Profilo della macchina** | PREFLIGHT | ogni fatto rilevato, ciascuno con lo stato RILEVATO / VERIFICATO / SCONOSCIUTO (§6.6.7) |
-| **Rapporto di compatibilità** | COMPATIBILITY | per desktop: livello e condizioni (§6.6.8), con la versione del catalogo usata |
-| **Piano** | PLANNING | le azioni (§6.6.4) con le loro intenzioni e vincoli; l'impronta (§6.6.5); le scelte da approvare |
-| **Insieme risolto** | ACQUISITION | gli artefatti esatti che il piano diventa (§6.6.6) |
-| **Registro dell'esecuzione** | INSTALLATION, e il ritorno indietro | il giornale a scrittura anticipata (§6.6.3) |
-| **Rapporto di verifica** | VERIFICATION | ogni controllo con esito PASS / FAIL / UNKNOWN / N.A. |
-| **Certificato dell'installazione** | COMMIT | lo stato finale (§6.6.2), le condizioni, i riferimenti a motore, catalogo, piano, prodotto (§6.6.11) |
+| **Machine profile** | PREFLIGHT | every fact detected, each with the state RILEVATO / VERIFICATO / SCONOSCIUTO (§6.6.7) |
+| **Compatibility report** | COMPATIBILITY | per desktop: level and conditions (§6.6.8), with the catalog version used |
+| **Plan** | PLANNING | the actions (§6.6.4) with their intents and constraints; the fingerprint (§6.6.5); the choices to approve |
+| **Resolved set** | ACQUISITION | the exact artefacts the plan becomes (§6.6.6) |
+| **Execution log** | INSTALLATION, and going back | the write-ahead journal (§6.6.3) |
+| **Verification report** | VERIFICATION | each check with outcome PASS / FAIL / UNKNOWN / N.A. |
+| **Installation certificate** | COMMIT | the final state (§6.6.2), the conditions, the references to engine, catalog, plan, product (§6.6.11) |
 
-> ⛔ **10 ott 2026: la GUI è stata tolta** (`DECISIONI.md` §10.31, decisa il 5 ott): le interfacce sono **due**, la
-> riga di comando e la TUI. La tabella qui sotto resta come storia del disegno del 29 set.
+> ⛔ **10 Oct 2026: the GUI has been removed** (`DECISIONI.md` §10.31, decided on 5 Oct): the interfaces are **two**, the
+> command line and the TUI. The table below remains as the history of the design of 29 Sep.
 
-**Le interfacce: tre, e TUI e GUI sono un requisito irrinunciabile** (parola dell'utente, 29 set
+**The interfaces: three, and TUI and GUI are an indispensable requirement** (the user's word, 29 Sep
 2026):
 
-| interfaccia | per chi | come gira |
+| interface | for whom | how it runs |
 |---|---|---|
-| **CLI** (`remotix-install`, e `install.sh` che la scarica) | chi amministra da terminale, e l'installazione senza domande (§6.6.12) | da root |
-| **TUI** (a schermo intero nel terminale) | chi amministra via ssh o dalla console, anche su una macchina senza nessuno davanti | da root, nel terminale |
-| **GUI** (finestra nel desktop) | chi amministra dal desktop della macchina | ⛔ **come l'utente, non da root** (sotto Wayland un client grafico da root è sbagliato e spesso rifiutato): chiede i permessi al motore con **polkit**, come gli installatori grafici delle distribuzioni |
+| **CLI** (`remotix-install`, and `install.sh` which downloads it) | whoever administers from a terminal, and the installation without questions (§6.6.12) | as root |
+| **TUI** (full screen in the terminal) | whoever administers via ssh or from the console, even on a machine with nobody in front | as root, in the terminal |
+| **GUI** (a window in the desktop) | whoever administers from the machine's desktop | ⛔ **as the user, not as root** (under Wayland a graphical client as root is wrong and often refused): it asks the engine for permissions with **polkit**, like the distributions' graphical installers |
 
-⛔ **Le interfacce non contengono logica d'installazione.** Mostrano gli oggetti del motore (profilo,
-rapporto, piano, avanzamento dal registro, certificato) e raccolgono il consenso; non scelgono mai
-pacchetti, depositi, PAM o ritorni indietro. Il motore è uno solo, e le tre interfacce parlano con lui
-nello stesso modo: il motore scrive gli oggetti e gli eventi (JSON, una riga per evento) e legge il
-consenso come un piano approvato. ⇒ La stessa operazione dà lo stesso piano, lo stesso registro e lo
-stesso certificato qualunque interfaccia la guidi (R36). Lo strumento per TUI e GUI è la **decisione D12**.
+⛔ **The interfaces contain no installation logic.** They show the engine's objects (profile,
+report, plan, progress from the log, certificate) and collect consent; they never choose
+packages, repositories, PAM or rollbacks. There is only one engine, and the three interfaces talk to it
+in the same way: the engine writes the objects and the events (JSON, one line per event) and reads the
+consent as an approved plan. ⇒ The same operation gives the same plan, the same log and the
+same certificate whatever interface drives it (R36). The tool for TUI and GUI is **decision D12**.
 
-#### 6.6.2 Gli stati dell'operazione
+#### 6.6.2 The states of the operation
 
-Un'operazione (installazione, aggiornamento, disinstallazione) ha un identificativo e **uno stato**,
-scritto in `/var/lib/remotix/operazioni/<id>/stato`:
+An operation (installation, update, uninstallation) has an identifier and **one state**,
+written in `/var/lib/remotix/operazioni/<id>/stato`:
 
 ```
 NUOVA → FIDATA → ESAMINATA → VALUTATA → PIANIFICATA → APPROVATA → ACQUISITA
       → IN_ESECUZIONE → APPLICATA → IN_VERIFICA → VERIFICATA → CONFERMATA
-                ↓ interruzione          ↓ rosso               ↓ rosso
-            INTERROTTA ──ripresa──→ IN_ESECUZIONE        IN_ANNULLAMENTO → ANNULLATA
-                                                              ↓ un'azione non si annulla
+                ↓ interruption          ↓ red                 ↓ red
+            INTERROTTA ──resume──→ IN_ESECUZIONE         IN_ANNULLAMENTO → ANNULLATA
+                                                              ↓ an action cannot be undone
                                                           ANNULLATA_IN_PARTE
-dalle fasi 0-5, senza aver toccato niente:  BLOCCATA (serve un intervento) · RIFIUTATA (niente consenso)
+from phases 0-5, without having touched anything:  BLOCCATA (intervention needed) · RIFIUTATA (no consent)
 ```
 
-| stato finale | vuol dire | il certificato dice |
+| final state | means | the certificate says |
 |---|---|---|
-| **CONFERMATA** | installata e verificata, tutti i controlli richiesti PASS | la piattaforma: CERTIFICATA o COMPATIBILE |
-| **CONFERMATA_A_CONDIZIONI** | installata e verificata, con condizioni attive (§6.6.8) | le condizioni, una per una |
-| **ANNULLATA** | tutto quel che REMOTIX ha fatto è stato disfatto | quel che resta di INDIRETTO (§6.6.4) |
-| **ANNULLATA_IN_PARTE** | il ritorno indietro non ha potuto disfare tutto | l'elenco esatto di quel che resta, e perché |
-| **BLOCCATA / RIFIUTATA** | niente è stato toccato | il codice del motivo (§6.6.9) |
+| **CONFERMATA** | installed and verified, all required checks PASS | the platform: CERTIFICATA or COMPATIBILE |
+| **CONFERMATA_A_CONDIZIONI** | installed and verified, with active conditions (§6.6.8) | the conditions, one by one |
+| **ANNULLATA** | everything REMOTIX did has been undone | what remains that is INDIRETTO (§6.6.4) |
+| **ANNULLATA_IN_PARTE** | going back could not undo everything | the exact list of what remains, and why |
+| **BLOCCATA / RIFIUTATA** | nothing has been touched | the reason code (§6.6.9) |
 
-Regole: ⛔ **nessuno stato si salta**; le transizioni valide sono solo quelle disegnate; il motore
-rifiuta di partire se trova un'operazione in uno stato non finale e **non** la sua (va prima ripresa o
-annullata). ⭐ **installata ≠ certificata**: CONFERMATA_A_CONDIZIONI su una piattaforma COMPATIBILE è
-un'installazione riuscita, ma non una combinazione certificata.
+Rules: ⛔ **no state is skipped**; the valid transitions are only those drawn; the engine
+refuses to start if it finds an operation in a non-final state and **not** its own (it must first be resumed or
+cancelled). ⭐ **installed ≠ certified**: CONFERMATA_A_CONDIZIONI on a COMPATIBILE platform is
+a successful installation, but not a certified combination.
 
-#### 6.6.3 Il registro: scrittura anticipata e ripresa
+#### 6.6.3 The log: write-ahead and resume
 
-Ogni azione del piano si esegue in quattro tempi, e il registro (`registro.jsonl`, una riga per
-evento, `fsync` del file e della cartella prima di proseguire) li annota:
+Every action of the plan runs in four beats, and the log (`registro.jsonl`, one line per
+event, `fsync` of the file and the folder before going on) notes them:
 
 ```
-INTENZIONE(azione, stato_prima)  → [effetto]  → FATTA(azione, stato_dopo)
+INTENZIONE(azione, stato_prima)  → [effect]  → FATTA(azione, stato_dopo)
                                             ↘ FALLITA(azione, codice)
 ```
 
-Ogni azione ha tre funzioni (§6.6.4): **fai**, **controlla** (dice se l'effetto c'è, senza cambiare
-niente), **annulla**. La ripresa dopo un'interruzione guarda l'ultima riga di ogni azione:
+Each action has three functions (§6.6.4): **do**, **check** (says whether the effect is there, without changing
+anything), **undo**. The resume after an interruption looks at the last line of each action:
 
-| nel registro | che cosa è successo | che cosa fa la ripresa |
+| in the log | what happened | what the resume does |
 |---|---|---|
-| niente | non cominciata | la fa |
-| INTENZIONE senza FATTA | cominciata; forse finita, forse no, forse a metà | chiama **controlla**: effetto completo ⇒ annota FATTA; assente ⇒ la rifà; **a metà** ⇒ annulla quel che c'è e la rifà |
-| FATTA | finita e annotata | passa oltre |
-| FATTA ma l'effetto non c'è più (controllo di coerenza) | qualcuno l'ha disfatta dopo | ⛔ si ferma: BLOCCATA, «la macchina è cambiata durante l'operazione» |
+| nothing | not started | does it |
+| INTENZIONE without FATTA | started; perhaps finished, perhaps not, perhaps halfway | calls **check**: effect complete ⇒ notes FATTA; absent ⇒ redoes it; **halfway** ⇒ undoes what is there and redoes it |
+| FATTA | finished and noted | moves on |
+| FATTA but the effect is no longer there (consistency check) | someone undid it afterwards | ⛔ stops: BLOCCATA, "the machine changed during the operation" |
 
-⇒ Per questo ogni azione deve essere **idempotente** (rifarla non raddoppia l'effetto) e il suo
-**controlla** deve saper distinguere completo / assente / a metà. Un file di configurazione si scrive
-sempre su un nome temporaneo e poi si rinomina (mai a metà); un'unità si abilita e si controlla con
+⇒ That is why every action must be **idempotent** (redoing it does not double the effect) and its
+**check** must be able to tell complete / absent / halfway. A configuration file is always written
+to a temporary name and then renamed (never halfway); a unit is enabled and checked with
 `systemctl is-enabled`.
 
-⚠ **La transazione del gestore di pacchetti è un'azione speciale**: un'interruzione a metà lascia il
-gestore nel suo stato di mezzo. La ripresa usa **il rimedio del gestore stesso** prima di tutto il resto:
-`dpkg --configure -a` (apt), la ripetizione della transazione con `dnf` (e `rpm --verify`), la rimozione
-del file di blocco e `pacman -Dk` (pacman), `zypper verify` (zypper); poi il **controlla** dell'azione
-guarda i pacchetti uno per uno.
+⚠ **The package manager's transaction is a special action**: an interruption halfway leaves the
+manager in its intermediate state. The resume uses **the manager's own remedy** before everything else:
+`dpkg --configure -a` (apt), repeating the transaction with `dnf` (and `rpm --verify`), removing
+the lock file and `pacman -Dk` (pacman), `zypper verify` (zypper); then the action's **check**
+looks at the packages one by one.
 
-#### 6.6.4 Le azioni: quanto si annullano, e di chi è la modifica
+#### 6.6.4 The actions: how far they can be undone, and whose the change is
 
-Ogni azione del piano dichiara **quanto è reversibile**:
+Each action of the plan declares **how reversible it is**:
 
-| classe | vuol dire | esempi |
+| class | means | examples |
 |---|---|---|
-| **ESATTA** | si torna allo stato di prima, byte per byte | un file nostro in `/etc`; un'unità abilitata; un utente aggiunto a un gruppo in cui non c'era; una regola del firewall aggiunta |
-| **AL_MEGLIO** | si torna indietro, ma non per forza allo stesso stato | un pacchetto dipendenza tolto (se nessun altro lo vuole); un deposito tolto (ma i pacchetti presi da lì restano, e si dice) |
-| **CON_FOTOGRAFIA** | reversibile solo con una fotografia di sistema (snapper, btrfs, LVM) | una dipendenza **aggiornata** dal gestore di pacchetti |
-| **IRREVERSIBILE** | non si annulla | una conversione di formato che la versione vecchia non legge |
+| **ESATTA** | back to the state before, byte for byte | a file of ours in `/etc`; an enabled unit; a user added to a group they were not in; a firewall rule added |
+| **AL_MEGLIO** | goes back, but not necessarily to the same state | a dependency package removed (if nobody else wants it); a repository removed (but the packages taken from there remain, and it is said) |
+| **CON_FOTOGRAFIA** | reversible only with a system snapshot (snapper, btrfs, LVM) | a dependency **upgraded** by the package manager |
+| **IRREVERSIBILE** | cannot be undone | a format conversion the old version does not read |
 
-⛔ Un'azione IRREVERSIBILE ha **una riga sua nel consenso**, e il piano non la contiene se esiste
-un'alternativa. Il certificato dice quali azioni CON_FOTOGRAFIA sono state fatte senza fotografia.
+⛔ An IRREVERSIBILE action has **a line of its own in the consent**, and the plan does not contain it if there is
+an alternative. The certificate says which CON_FOTOGRAFIA actions were done without a snapshot.
 
-E ogni **modifica** della macchina ha un'**origine**, che decide fin dove il ritorno indietro è
-autorizzato:
+And every **change** to the machine has an **origin**, which decides how far going back is
+authorised:
 
-| origine | esempio | il ritorno indietro |
+| origin | example | going back |
 |---|---|---|
-| **DIRETTA** | il file PAM di REMOTIX; un utente messo in `render` da noi | la disfa |
-| **INDIRETTA** | libX aggiornata da 1.0 a 1.1 perché REMOTIX la chiede | ⛔ non la tocca (non si retrocede una libreria che altri possono già usare); la **dichiara** |
-| **PREESISTENTE** | l'utente era già in `video` prima | ⛔ non la tocca mai |
-| **CONCORRENTE** | l'amministratore cambia la stessa cosa durante l'operazione | ⛔ non la tocca; l'operazione si ferma (§6.6.3, ultima riga) |
+| **DIRETTA** | REMOTIX's PAM file; a user put in `render` by us | undoes it |
+| **INDIRETTA** | libX upgraded from 1.0 to 1.1 because REMOTIX asks for it | ⛔ does not touch it (a library others may already be using is not downgraded); it **declares** it |
+| **PREESISTENTE** | the user was already in `video` before | ⛔ never touches it |
+| **CONCORRENTE** | the administrator changes the same thing during the operation | ⛔ does not touch it; the operation stops (§6.6.3, last line) |
 
-⇒ **La promessa normativa** (R6, R28): *«tutto quel che REMOTIX ha fatto direttamente si annulla; quel
-che è successo indirettamente si dichiara; quel che c'era prima non si tocca»*. Le dipendenze
-**installate** per noi si tolgono se nessun altro le vuole (la marca «automatica» dei gestori:
-`apt-mark auto`, `dnf` *userinstalled*, `pacman --asdeps`); quelle **aggiornate** restano aggiornate.
+⇒ **The normative promise** (R6, R28): *"everything REMOTIX did directly is undone; what
+happened indirectly is declared; what was there before is not touched"*. The dependencies
+**installed** for us are removed if nobody else wants them (the managers' "automatic" mark:
+`apt-mark auto`, `dnf` *userinstalled*, `pacman --asdeps`); those **upgraded** stay upgraded.
 
-Per ogni modifica che tocca uno stato che c'era già (le tre cinture, i gruppi, il firewall) il registro
-annota **lo stato di prima, la modifica, il consenso, lo stato dopo, come si annulla** (R33, R34).
+For each change that touches a state that already existed (the three belts, the groups, the firewall) the log
+notes **the state before, the change, the consent, the state after, how it is undone** (R33, R34).
 
-#### 6.6.5 L'impronta della macchina
+#### 6.6.5 The machine's fingerprint
 
-Il piano vale solo per la macchina su cui è stato fatto. L'impronta ha due parti:
+The plan is valid only for the machine on which it was made. The fingerprint has two parts:
 
-| **vincolante** — se cambia, il piano non vale più | **annotata** — si registra, non invalida |
+| **binding** — if it changes, the plan is no longer valid | **noted** — recorded, does not invalidate |
 |---|---|
-| distribuzione, versione, architettura | nome della macchina, indirizzi |
-| i desktop installati e le loro versioni | pacchetti che il piano non tocca e da cui non dipende |
-| i pacchetti che il piano tocca o da cui dipende, con la versione | carico, memoria libera |
-| i depositi configurati (elenco e chiavi) | |
-| scheda, driver, capacità H.264 rilevata | |
-| i file che il piano scrive o legge (PAM, logind, polkit, firewall), con la loro impronta sha256 | |
-| i gruppi `video`/`render` e i loro membri | |
-| SELinux e il suo stato, il firewall e il suo stato | |
-| versione del motore e del catalogo | |
+| distribution, version, architecture | machine name, addresses |
+| the installed desktops and their versions | packages the plan does not touch and does not depend on |
+| the packages the plan touches or depends on, with the version | load, free memory |
+| the configured repositories (list and keys) | |
+| card, driver, detected H.264 capability | |
+| the files the plan writes or reads (PAM, logind, polkit, firewall), with their sha256 fingerprint | |
+| the `video`/`render` groups and their members | |
+| SELinux and its state, the firewall and its state | |
+| version of the engine and of the catalog | |
 
-L'impronta vincolante è un sha256 sul testo canonico di questi elementi (ordinati, un elemento per
-riga); il piano la contiene, APPLY la ricalcola e la confronta. R31 prova ciascun elemento.
+The binding fingerprint is a sha256 over the canonical text of these elements (sorted, one element per
+line); the plan contains it, APPLY recomputes it and compares it. R31 tests each element.
 
-#### 6.6.6 Dal piano agli artefatti: PLAN → RESOLUTION → ARTIFACTS → VERIFY → APPLY
+#### 6.6.6 From the plan to the artefacts: PLAN → RESOLUTION → ARTIFACTS → VERIFY → APPLY
 
-Il piano contiene **intenzioni con vincoli** («`remotix` ≥ 1.4, dal deposito REMOTIX; `labwc` dal
-deposito della distribuzione»), non file. ACQUISITION le **risolve** nell'**insieme risolto**: per ogni
-pacchetto nome, versione esatta, architettura, deposito, **digest** (sha256), firma verificata. Poi:
-- APPLY installa **esattamente** quell'insieme, dalla cache locale già verificata (`apt install
-  nome=versione` sui `.deb` già scaricati, `dnf install` sui file, `pacman -U` sui file) — mai «l'ultima
-  versione» presa al momento;
-- se la risoluzione esce dai vincoli del piano (il deposito è cambiato fra il piano e l'esecuzione), si
-  torna a PLANNING con un **consenso nuovo**;
-- l'insieme risolto entra nel registro: dice, a posteriori, che cosa è stato installato bit per bit.
+The plan contains **intents with constraints** ("`remotix` ≥ 1.4, from the REMOTIX repository; `labwc` from the
+distribution's repository"), not files. ACQUISITION **resolves** them into the **resolved set**: for each
+package name, exact version, architecture, repository, **digest** (sha256), verified signature. Then:
+- APPLY installs **exactly** that set, from the already-verified local cache (`apt install
+  nome=versione` on the already-downloaded `.deb` files, `dnf install` on the files, `pacman -U` on the files) — never "the latest
+  version" taken at the moment;
+- if the resolution goes outside the plan's constraints (the repository changed between the plan and the execution), it
+  goes back to PLANNING with a **new consent**;
+- the resolved set enters the log: it says, afterwards, what was installed bit by bit.
 
-#### 6.6.7 I fatti e i controlli: rilevato non è verificato, e UNKNOWN non è PASS
+#### 6.6.7 Facts and checks: detected is not verified, and UNKNOWN is not PASS
 
-Ogni fatto del profilo ha uno di tre stati:
+Each fact of the profile has one of three states:
 
-| stato | esempio |
+| state | example |
 |---|---|
-| **RILEVATO** | «PipeWire è installato», «c'è una scheda AMD», «il file PAM esiste», «firewalld c'è» |
-| **VERIFICATO** | «PipeWire risponde», «la scheda ha codificato un fotogramma H.264», «la pila PAM rifiuta un utente inesistente», «la porta è raggiungibile» |
-| **SCONOSCIUTO** | lo strumento non c'è, il permesso manca, il tempo è scaduto |
+| **RILEVATO** | "PipeWire is installed", "there is an AMD card", "the PAM file exists", "firewalld is there" |
+| **VERIFICATO** | "PipeWire answers", "the card encoded an H.264 frame", "the PAM stack refuses a nonexistent user", "the port is reachable" |
+| **SCONOSCIUTO** | the tool is not there, the permission is missing, the time ran out |
 
-E ogni controllo della certificazione ha uno di quattro esiti: **PASS**, **FAIL**, **UNKNOWN**,
-**N.A.** (non si applica: il controllo di XFCE su una macchina senza XFCE).
+And each check of the certification has one of four outcomes: **PASS**, **FAIL**, **UNKNOWN**,
+**N.A.** (not applicable: the XFCE check on a machine without XFCE).
 
-⛔ **La regola generale: UNKNOWN non è mai PASS.** Un controllo che non riesce a dimostrare la sua
-proprietà dà UNKNOWN; un controllo **richiesto** in UNKNOWN porta l'operazione a CONFERMATA_A_CONDIZIONI
-(se la proprietà ha un ripiego dichiarato) o a IN_ANNULLAMENTO (se no). ⛔ E un fatto soltanto
-RILEVATO non basta mai per un PASS. È la lezione del falso verde di GNOME 50 (§5.1) e dei contatori
-che non vedono l'immagine: un verde su informazione incompleta è peggio di un rosso (R32).
+⛔ **The general rule: UNKNOWN is never PASS.** A check that cannot prove its
+property gives UNKNOWN; a **required** check in UNKNOWN takes the operation to CONFERMATA_A_CONDIZIONI
+(if the property has a declared fallback) or to IN_ANNULLAMENTO (if not). ⛔ And a fact that is only
+RILEVATO is never enough for a PASS. It is the lesson of the false green of GNOME 50 (§5.1) and of the counters
+that do not see the image: a green on incomplete information is worse than a red (R32).
 
-#### 6.6.8 Compatibilità: livelli e condizioni
+#### 6.6.8 Compatibility: levels and conditions
 
-Il livello, **per desktop**:
+The level, **per desktop**:
 
-| livello | vuol dire |
+| level | means |
 |---|---|
-| **CERTIFICATA** | la combinazione distribuzione × versione × desktop è nella matrice (§3) e il catalogo registra un giro intero verde su di essa |
-| **COMPATIBILE** | nessuna ragione nota di rifiuto, ma nessuna nostra VM l'ha provata (Rocky 10, Manjaro, Mint 23…) |
-| **NON_SUPPORTATA** | un motivo noto, col suo codice (§6.6.9) |
+| **CERTIFICATA** | the combination distribution × version × desktop is in the matrix (§3) and the catalog records a whole green round on it |
+| **COMPATIBILE** | no known reason for refusal, but none of our VMs has tested it (Rocky 10, Manjaro, Mint 23…) |
+| **NON_SUPPORTATA** | a known reason, with its code (§6.6.9) |
 
-E, sopra CERTIFICATA o COMPATIBILE, zero o più **condizioni**, ognuna col suo codice:
+And, on top of CERTIFICATA or COMPATIBILE, zero or more **conditions**, each with its code:
 
-| codice | condizione | esempio |
+| code | condition | example |
 |---|---|---|
-| `C-DEPOSITO` | serve un deposito di terzi | RPM Fusion, Packman |
-| `C-COMPONENTE` | l'installatore aggiunge un pezzo che il desktop di serie non ha | labwc per XFCE e LXQt; `gnome-session` su Ubuntu |
-| `C-RIPIEGO` | una funzione passa al ripiego | H.264 in software (niente codifica sulla scheda) |
-| `C-LIMITE` | una funzione manca | niente audio, una misura dello schermo non raggiungibile |
-| `C-HARDWARE` | un requisito della scheda | NVIDIA col driver proprietario |
-| `C-AMMINISTRATORE` | serve un passo a mano | aprire la porta sul router |
-| `C-DESKTOP` | il desktop non c'è (o non è supportato) e l'installatore lo aggiunge dagli archivi della distribuzione | Ubuntu Server, un'immagine cloud, una macchina con solo Cinnamon |
+| `C-DEPOSITO` | a third-party repository is needed | RPM Fusion, Packman |
+| `C-COMPONENTE` | the installer adds a piece the default desktop does not have | labwc for XFCE and LXQt; `gnome-session` on Ubuntu |
+| `C-RIPIEGO` | a function falls back | H.264 in software (no encoding on the card) |
+| `C-LIMITE` | a function is missing | no audio, a screen size that cannot be reached |
+| `C-HARDWARE` | a requirement of the card | NVIDIA with the proprietary driver |
+| `C-AMMINISTRATORE` | a manual step is needed | opening the port on the router |
+| `C-DESKTOP` | the desktop is not there (or not supported) and the installer adds it from the distribution's archives | Ubuntu Server, a cloud image, a machine with only Cinnamon |
 
-⭐ Le condizioni **non spariscono dopo il piano**: stanno nel certificato, in `remotix verifica` e in
-`remotix stato` finché valgono (R35); se una si risolve (l'amministratore aggiunge RPM Fusion dopo),
-`remotix verifica` lo vede e lo dice.
+⭐ The conditions **do not disappear after the plan**: they are in the certificate, in `remotix verifica` and in
+`remotix stato` as long as they hold (R35); if one is resolved (the administrator adds RPM Fusion later),
+`remotix verifica` sees it and says so.
 
-Il **catalogo** (le combinazioni e le loro regole) ha una versione, una sequenza e la versione minima
-del motore che lo capisce; viaggia DENTRO il motore, e il motore nel pacchetto `remotix-install`
-(§6.6.10). Il certificato registra quale catalogo ha deciso lo stato di quella installazione.
+The **catalog** (the combinations and their rules) has a version, a sequence and the minimum version
+of the engine that understands it; it travels INSIDE the engine, and the engine in the `remotix-install` package
+(§6.6.10). The certificate records which catalog decided the state of that installation.
 
-#### 6.6.9 Esiti e codici
+#### 6.6.9 Outcomes and codes
 
-Ogni messaggio del motore ha:
-- una **gravità**: `INFO` · `AVVISO` · `BLOCCANTE`;
-- una **natura**: `SERVE_AZIONE` (dell'amministratore) · `RIPROVABILE` (es. rete) · `RECUPERABILE` (la
-  ripresa lo sistema) · `SERVE_ANNULLAMENTO` · `FATALE`;
-- un **codice stabile** `RX-<AREA>-<NNN>` (`RX-PAM-001` «la pila d'accesso della distribuzione non si
-  trova», `RX-H264-003` «la scheda non codifica H.264: su Fedora serve RPM Fusion»), con il testo in
-  italiano semplice, il comando che rimedia, e la pagina del manuale.
+Every message of the engine has:
+- a **severity**: `INFO` · `AVVISO` · `BLOCCANTE`;
+- a **nature**: `SERVE_AZIONE` (by the administrator) · `RIPROVABILE` (e.g. network) · `RECUPERABILE` (the
+  resume fixes it) · `SERVE_ANNULLAMENTO` · `FATALE`;
+- a **stable code** `RX-<AREA>-<NNN>` (`RX-PAM-001` "the distribution's access stack cannot be
+  found", `RX-H264-003` "the card does not encode H.264: on Fedora RPM Fusion is needed"), with the text in
+  plain Italian, the command that remedies it, and the manual page.
 
-Lo stesso codice compare nella riga di comando, nel registro, nel certificato, nel manuale e in ogni
-futura interfaccia. ⛔ Un codice non si riusa mai per un altro significato.
+The same code appears in the command line, in the log, in the certificate, in the manual and in every
+future interface. ⛔ A code is never reused for another meaning.
 
-#### 6.6.10 La fiducia: una chiave sola (`DECISIONI.md` §10.21, 30 set 2026)
+#### 6.6.10 Trust: a single key (`DECISIONI.md` §10.21, 30 Sep 2026)
 
-| che cosa | chi lo garantisce | come |
+| what | who guarantees it | how |
 |---|---|---|
-| `install.sh`, scaricato a mano | l'amministratore | lo **sha256** pubblicato sul sito di REMOTIX, in HTTPS |
-| il motore scaricato da `install.sh` (`remotix-install`, `-gui`) | `install.sh` | lo **sha256** scritto dentro `install.sh` dal comando di rilascio (una copia di sviluppo: quello pubblicato accanto al motore, **solo in HTTPS**; http solo con `--insicuro`, per le prove) — `RX-TRUST-017` se non torna |
-| i pacchetti (`remotix`, `remotix-install`, `remotix-selinux`, `remotix-archive-keyring`) e i metadati dell'archivio | il **gestore di pacchetti** | l'**unica chiave** di REMOTIX (GPG), che firma pacchetti e archivio: apt (`Signed-By`, `Valid-Until`), dnf (`gpgcheck`, `repo_gpgcheck`), zypper, pacman — R17 |
-| il **catalogo** | chi ha consegnato il motore | sta DENTRO il motore (`installatore/catalogo/catalogo.json`, incorporato), e il motore dentro il pacchetto `remotix-install`: si aggiorna **come ogni pacchetto** (`apt upgrade`…, §10.23) |
+| `install.sh`, downloaded by hand | the administrator | the **sha256** published on the REMOTIX site, over HTTPS |
+| the engine downloaded by `install.sh` (`remotix-install`, `-gui`) | `install.sh` | the **sha256** written inside `install.sh` by the release command (a development copy: the one published next to the engine, **only over HTTPS**; http only with `--insicuro`, for the tests) — `RX-TRUST-017` if it does not match |
+| the packages (`remotix`, `remotix-install`, `remotix-selinux`, `remotix-archive-keyring`) and the archive metadata | the **package manager** | REMOTIX's **single key** (GPG), which signs packages and archive: apt (`Signed-By`, `Valid-Until`), dnf (`gpgcheck`, `repo_gpgcheck`), zypper, pacman — R17 |
+| the **catalog** | whoever delivered the engine | it is INSIDE the engine (`installatore/catalogo/catalogo.json`, embedded), and the engine inside the `remotix-install` package: it is updated **like every package** (`apt upgrade`…, §10.23) |
 
-La fase 0 TRUST, quindi: il catalogo è quello del motore che gira — del pacchetto (`/usr/bin/remotix-install`:
-«lo garantisce il gestore di pacchetti») o scaricato da `install.sh` («verificato con lo sha256») — oppure uno
-dato a mano con `--catalogo FILE` (è dell'amministratore, e il certificato lo dice). Resta un solo controllo:
-che si legga (`RX-TRUST-004`) e che questo motore lo capisca (`RX-TRUST-003`); niente scadenza, niente
-catalogo memorizzato sulla macchina. ⚠ Onestamente: lo sha256 di `install.sh` vale quanto il sito che lo
-pubblica (HTTPS); da lì in giù la catena è chiusa. **Ritirati** (non si riusano): `RX-TRUST-002`, `006`…`016`
-(la vecchia «catena A»: radice ed25519, sottochiavi, revoche, firme del motore e del catalogo, `fiducia`).
-Resta da decidere, con **D10**, dove si custodisce la chiave e la sua copia di riserva.
+Phase 0 TRUST, therefore: the catalog is the one of the running engine — from the package (`/usr/bin/remotix-install`:
+"guaranteed by the package manager") or downloaded by `install.sh` ("verified with the sha256") — or one
+given by hand with `--catalogo FILE` (it is the administrator's, and the certificate says so). One check remains:
+that it can be read (`RX-TRUST-004`) and that this engine understands it (`RX-TRUST-003`); no expiry, no
+catalog stored on the machine. ⚠ Honestly: the sha256 of `install.sh` is worth as much as the site that
+publishes it (HTTPS); from there down the chain is closed. **Retired** (not reused): `RX-TRUST-002`, `006`…`016`
+(the old "chain A": ed25519 root, subkeys, revocations, signatures of the engine and of the catalog, `fiducia`).
+Still to decide, with **D10**, where the key and its backup copy are kept.
 
-#### 6.6.11 Il certificato si verifica a posteriori
+#### 6.6.11 The certificate is verified afterwards
 
-Il certificato è un JSON (più la sua versione leggibile) con: identificativo dell'operazione, stato
-finale (§6.6.2), versione del prodotto, **versione e digest del motore**, **versione e digest del
-catalogo**, **digest del piano** e dell'insieme risolto, l'impronta, ogni controllo col suo esito, le
-condizioni. ⚠ Onestamente: sulla macchina stessa non lo si può firmare in modo che valga contro root.
-«Verificabile» vuol dire: `remotix verifica --certificato <file>` ricalcola i digest dagli oggetti
-conservati in `/var/lib/remotix/operazioni/<id>/` e **rifà i controlli**, dicendo che cosa è ancora
-come allora e che cosa è cambiato.
+The certificate is a JSON (plus its readable version) with: identifier of the operation, final
+state (§6.6.2), product version, **version and digest of the engine**, **version and digest of the
+catalog**, **digest of the plan** and of the resolved set, the fingerprint, each check with its outcome, the
+conditions. ⚠ Honestly: on the machine itself it cannot be signed in a way that holds against root.
+"Verifiable" means: `remotix verifica --certificato <file>` recomputes the digests from the objects
+kept in `/var/lib/remotix/operazioni/<id>/` and **redoes the checks**, saying what is still
+as it was and what has changed.
 
-#### 6.6.12 Senza domande non vuol dire senza consenso; e che cosa vuol dire «senza rete»
+#### 6.6.12 No questions does not mean no consent; and what "no network" means
 
-- **Senza domande**: il consenso è **dato prima**, come un **piano approvato** (un file, fatto su una
-  macchina di riferimento con la stessa impronta vincolante) o un file di risposte che il motore
-  trasforma in piano e registra. ⛔ Mai un interruttore che salta CONSENT & SAFETY; ogni azione, anche
-  quelle di D5 e D6 (depositi, firewall), è nel piano, nel consenso e nel registro.
-- **Senza rete** (R22): un **pacchetto fuori linea**, preparato su una macchina collegata per una
-  impronta data, che contiene il motore (col catalogo dentro) e il suo sha256, l'insieme risolto (tutti
-  gli artefatti, con i digest e le firme), e i metadati firmati dei depositi. Il motore lo usa come un deposito locale; le
-  firme si verificano come in linea.
+- **No questions**: the consent is **given beforehand**, as an **approved plan** (a file, made on a
+  reference machine with the same binding fingerprint) or an answers file that the engine
+  turns into a plan and records. ⛔ Never a switch that skips CONSENT & SAFETY; every action, even
+  those of D5 and D6 (repositories, firewall), is in the plan, in the consent and in the log.
+- **No network** (R22): an **offline bundle**, prepared on a connected machine for a given
+  fingerprint, which contains the engine (with the catalog inside) and its sha256, the resolved set (all
+  the artefacts, with digests and signatures), and the signed metadata of the repositories. The engine uses it as a local repository; the
+  signatures are verified as online.
 
-⭐ **Come è fatto (T9, 30 set 2026)** — il codice in `installatore/motore/risposte.go` e `fuorilinea.go`:
-- **il file di risposte** (`remotix-risposte/1`), testo semplice, una voce per riga: `formato`, `lingua`
-  (it · en; vince sulla lingua del sistema, DECISIONI §10.15), `porta`, `canale`, `utenti` (tutti · nomi),
-  `desktop` (solo se manca: se il file tace vale quello di riferimento, §10), e i consensi
-  `consenso.firewall` (D6, solo con firewalld acceso) — ⭐ le cinture **non si chiedono** (D4 era già decisa:
-  `DECISIONI.md` §4.7; una `consenso.cinture` di un file vecchio si annota fra le «superflue» e non conta, T9),
-  `consenso.deposito.rpmfusion|packman|epel` (D5, solo dove serve), ognuno «si» o «no» (`consenso.aggiornamenti`
-  è ritirata con D14, §10.23: in un file vecchio è «superflua»). Il motore sa quali consensi servono **su quella macchina**: se ne manca uno il piano
-  si fa (per mostrarlo) con `mancanti` scritti dentro, e l'operazione è **BLOCCATA** con `RX-RISPOSTE-001`
-  prima di toccare niente; una voce sconosciuta (un errore di battitura in un consenso) è `RX-RISPOSTE-002`,
-  un valore sbagliato `RX-RISPOSTE-003`. Il piano porta il file (percorso, sha256, voci, predefinite,
-  superflue) e l'approvazione «senza domande: file di risposte … (sha256 …)»: tutto nel registro.
-  `remotix-install installa --risposte FILE` fa piano, registrazione e applicazione; `piano --installa
-  --risposte FILE` fa solo il piano, che si porta **approvato** su altre macchine con la stessa impronta
-  (`applica FILE-PIANO`, rifiutato con `RX-PIANO-001` se l'impronta non combacia, R31);
-- **il pacchetto fuori linea**: `remotix-install prepara-fuori-linea --archivio URL --risposte FILE
-  --uscita DIR` su una macchina **collegata uguale** a quella senza rete (stessa impronta vincolante e
-  **stessi pacchetti installati**: l'insieme risolto dipende da quel che c'è già). Dentro: il manifesto
-  `fuori-linea.json` (l'impronta, l'elenco dei pacchetti, l'insieme risolto, ogni file col suo sha256),
-  `archivio/` (il motore col suo sha256 — il catalogo è dentro —, la chiave pubblica, il deposito di REMOTIX
-  coi suoi metadati firmati e i soli pacchetti che servono), `distro/apt/<n>/` (apt: una copia **parziale**
-  di ogni deposito della distribuzione, col suo InRelease firmato dalla distribuzione, gli indici che
-  certifica e nel pool i soli `.deb` che mancano), `distro/rpm/<passo>/` (dnf: i `.rpm` che mancano,
-  firmati uno per uno), `terzi/rpmfusion/` (su Fedora, col consenso D5: senza RPM Fusion REMOTIX non
-  codifica, §11.1 C). Sulla macchina senza rete: `installa --fuori-linea DIR --risposte FILE`; l'archivio
-  diventa `file://DIR/archivio`; ogni file si verifica col manifesto (`RX-FUORI-001`), la macchina col
-  pacchetto (`RX-FUORI-002`); apt legge **solo** i depositi del pacchetto (configurazione temporanea,
-  `target=Packages`) e verifica InRelease → indici → `.deb` come in linea; dnf installa i file con
-  `localpkg_gpgcheck=1` e nessun deposito. Limiti: zypper e pacman non ancora (`RX-FUORI-004`),
-  Packman ed EPEL non entrano (`RX-FUORI-005`). ⚠ Il pacchetto va messo in una cartella che l'utente
-  `_apt` legge (non `/root`): il deposito locale di REMOTIX resta configurato dopo, per gli aggiornamenti
-  portati con un pacchetto nuovo, e da `/root` `apt-get update` non lo legge;
-- **lo script d'ingresso** `installatore/install.sh`: tutto in funzioni, `main "$@"` all'ultima riga;
-  riconosce la famiglia (`/etc/os-release`), scarica il motore statico dall'archivio, ne verifica lo
-  **sha256** (§6.6.10: scritto nello script dal comando di rilascio) e gli passa la mano (`installa`,
+⭐ **How it is made (T9, 30 Sep 2026)** — the code in `installatore/motore/risposte.go` and `fuorilinea.go`:
+- **the answers file** (`remotix-risposte/1`), plain text, one entry per line: `formato`, `lingua`
+  (it · en; wins over the system language, DECISIONI §10.15), `porta`, `canale`, `utenti` (tutti · names),
+  `desktop` (only if missing: if the file is silent the reference one applies, §10), and the consents
+  `consenso.firewall` (D6, only with firewalld on) — ⭐ the belts **are not asked** (D4 was already decided:
+  `DECISIONI.md` §4.7; a `consenso.cinture` from an old file is noted among the "superflue" and does not count, T9),
+  `consenso.deposito.rpmfusion|packman|epel` (D5, only where needed), each one "si" or "no" (`consenso.aggiornamenti`
+  is retired with D14, §10.23: in an old file it is "superflua"). The engine knows which consents are needed **on that machine**: if one is missing the plan
+  is made (to show it) with `mancanti` written inside, and the operation is **BLOCCATA** with `RX-RISPOSTE-001`
+  before touching anything; an unknown entry (a typo in a consent) is `RX-RISPOSTE-002`,
+  a wrong value `RX-RISPOSTE-003`. The plan carries the file (path, sha256, entries, defaulted,
+  superfluous) and the approval "no questions: answers file … (sha256 …)": all in the log.
+  `remotix-install installa --risposte FILE` does plan, recording and application; `piano --installa
+  --risposte FILE` does only the plan, which is carried **approved** to other machines with the same fingerprint
+  (`applica FILE-PIANO`, refused with `RX-PIANO-001` if the fingerprint does not match, R31);
+- **the offline bundle**: `remotix-install prepara-fuori-linea --archivio URL --risposte FILE
+  --uscita DIR` on a **connected machine identical** to the one without network (same binding fingerprint and
+  **same installed packages**: the resolved set depends on what is already there). Inside: the manifest
+  `fuori-linea.json` (the fingerprint, the list of packages, the resolved set, each file with its sha256),
+  `archivio/` (the engine with its sha256 — the catalog is inside —, the public key, the REMOTIX repository
+  with its signed metadata and only the packages that are needed), `distro/apt/<n>/` (apt: a **partial** copy
+  of each repository of the distribution, with its InRelease signed by the distribution, the indexes it
+  certifies and in the pool only the `.deb` files that are missing), `distro/rpm/<passo>/` (dnf: the missing `.rpm` files,
+  signed one by one), `terzi/rpmfusion/` (on Fedora, with the D5 consent: without RPM Fusion REMOTIX does not
+  encode, §11.1 C). On the machine without network: `installa --fuori-linea DIR --risposte FILE`; the archive
+  becomes `file://DIR/archivio`; each file is verified against the manifest (`RX-FUORI-001`), the machine against the
+  bundle (`RX-FUORI-002`); apt reads **only** the bundle's repositories (temporary configuration,
+  `target=Packages`) and verifies InRelease → indexes → `.deb` as online; dnf installs the files with
+  `localpkg_gpgcheck=1` and no repository. Limits: zypper and pacman not yet (`RX-FUORI-004`),
+  Packman and EPEL do not enter (`RX-FUORI-005`). ⚠ The bundle must be put in a folder that the `_apt`
+  user reads (not `/root`): the local REMOTIX repository stays configured afterwards, for the updates
+  brought with a new bundle, and from `/root` `apt-get update` does not read it;
+- **the entry script** `installatore/install.sh`: all in functions, `main "$@"` on the last line;
+  it recognises the family (`/etc/os-release`), downloads the static engine from the archive, verifies its
+  **sha256** (§6.6.10: written in the script by the release command) and hands over to it (`installa`,
   `verifica`, `piano`); `--verifica`
-  (anche da utente), `--dry-run` (da root: il piano legge i file che toccherebbe), `--risposte`,
-  `--lingua`; bilingue (⛔ dal 10 ott 2026 solo inglese, senza `--lingua`: `DECISIONI.md` §10.35); il motore sta in una cartella temporanea; ⛔ nessun file del prodotto copiato
-  (lo controlla anche `TestScript`). `pubblica.sh script` lo mette nell'archivio con gli sha256 dei due
-  motori dentro, e `install.sh.sha256` accanto (quello da pubblicare sul sito);
-- **cloud-init** (R21): `banchi/17-t9/cloud-init-r21.yaml`, un user-data che scrive il file di risposte e
-  lancia `curl …/install.sh | sh -s -- --archivio … --risposte …`.
+  (also as a user), `--dry-run` (as root: the plan reads the files it would touch), `--risposte`,
+  `--lingua`; bilingual (⛔ since 10 Oct 2026 English only, without `--lingua`: `DECISIONI.md` §10.35); the engine sits in a temporary folder; ⛔ no product file copied
+  (`TestScript` checks it too). `pubblica.sh script` puts it in the archive with the sha256s of the two
+  engines inside, and `install.sh.sha256` next to it (the one to publish on the site);
+- **cloud-init** (R21): `banchi/17-t9/cloud-init-r21.yaml`, a user-data that writes the answers file and
+  launches `curl …/install.sh | sh -s -- --archivio … --risposte …`.
 
-#### 6.6.13 Il certificato del server (R16)
+#### 6.6.13 The server certificate (R16)
 
-`/var/lib/remotix/certificati/0-generato.pem` si genera al primo avvio se manca. L'amministratore
-mette il suo in `/etc/remotix/certificati.d/` (certificato + chiave, stesso nome base); **vince quello
-col nome che viene ultimo in ordine alfabetico**, e quelli dell'amministratore vincono sempre sul
-generato (la regola di Cockpit). `remotix certificato --mostra` dice quale è in uso e da dove viene.
+`/var/lib/remotix/certificati/0-generato.pem` is generated at first start-up if missing. The administrator
+puts his own in `/etc/remotix/certificati.d/` (certificate + key, same base name); **the one
+whose name comes last in alphabetical order wins**, and the administrator's always win over the
+generated one (Cockpit's rule). `remotix certificato --mostra` says which is in use and where it comes from.
 
-#### 6.6.14 Le interfacce: TUI e GUI (T9, 30 set 2026)
+#### 6.6.14 The interfaces: TUI and GUI (T9, 30 Sep 2026)
 
-> ⛔ **10 ott 2026: la GUI è stata tolta** (`DECISIONI.md` §10.31). Tolti `interfaccia/gui/`, `protocollo.go`,
-> `permessi.go` (la parte da root fatta partire da systemd e polkit), `Contenitore.gui`, `gui_si.go`/`gui_no.go`, i
-> comandi `gui` e `motore-interfaccia`, `install.sh --finestra`, `remotix-install-gui` dal comando di rilascio e
-> dall'archivio, i caratteri OFL, Gio dal `go.mod` e dal `vendor/`. Resta **una costruzione sola**, statica:
-> motore, CLI e TUI. RX-UI-001…004 ritirati (restano nei codici, segnati); RX-UI-005 e 006 in vigore. Quel che
-> segue è il disegno del 30 set, come storia; per la TUI e la Sessione vale ancora.
+> ⛔ **10 Oct 2026: the GUI has been removed** (`DECISIONI.md` §10.31). Removed `interfaccia/gui/`, `protocollo.go`,
+> `permessi.go` (the root part started by systemd and polkit), `Contenitore.gui`, `gui_si.go`/`gui_no.go`, the
+> commands `gui` and `motore-interfaccia`, `install.sh --finestra`, `remotix-install-gui` from the release command and
+> from the archive, the OFL fonts, Gio from `go.mod` and from `vendor/`. **A single build** remains, static:
+> engine, CLI and TUI. RX-UI-001…004 retired (they remain in the codes, marked); RX-UI-005 and 006 in force. What
+> follows is the design of 30 Sep, as history; for the TUI and the Session it still holds.
 
-⭐ **Due costruzioni dello stesso sorgente** (il vincolo di `DECISIONI.md` §10.19, verificato): Gio v0.10.3 su
-Linux si lega alle librerie grafiche **al collegamento** (pkg-config: wayland-client, wayland-cursor,
-wayland-egl, egl, x11, xkbcommon, xkbcommon-x11, x11-xcb, xcursor, xfixes; solo Vulkan a richiesta): un
-binario con la finestra su una macchina senza quelle librerie non arriva nemmeno a `main`. Caricarle «solo
-quando servono» vorrebbe dire riscrivere le chiamate di Gio. ⇒ `remotix-install` (statico, senza cgo: motore,
-CLI, TUI — quello del pacchetto, va ovunque) e `remotix-install-gui` (etichetta `gui`, cgo,
-costruito su **glibc di Debian 12** in `installatore/Contenitore.gui`, perché giri anche su Alma 10): **gli
-stessi comandi più `gui`**. La statica a `gui` risponde **RX-UI-001**. `install.sh --finestra` scarica la
-seconda (col suo sha256), `--tui` la prima. Su ogni macchina resta **un file**, un programma che fa
-partire sé stesso da root; nell'archivio i binari sono due, ognuno col suo sha256.
+⭐ **Two builds of the same source** (the constraint of `DECISIONI.md` §10.19, verified): Gio v0.10.3 on
+Linux binds to the graphics libraries **at link time** (pkg-config: wayland-client, wayland-cursor,
+wayland-egl, egl, x11, xkbcommon, xkbcommon-x11, x11-xcb, xcursor, xfixes; only Vulkan on demand): a
+binary with the window on a machine without those libraries does not even reach `main`. Loading them "only
+when needed" would mean rewriting Gio's calls. ⇒ `remotix-install` (static, without cgo: engine,
+CLI, TUI — the package's one, goes everywhere) and `remotix-install-gui` (`gui` tag, cgo,
+built on **Debian 12's glibc** in `installatore/Contenitore.gui`, so that it runs on Alma 10 too): **the
+same commands plus `gui`**. The static one answers `gui` with **RX-UI-001**. `install.sh --finestra` downloads the
+second (with its sha256), `--tui` the first. On each machine **one file** remains, a program that starts
+itself as root; in the archive there are two binaries, each with its sha256.
 
 **Il disegno** (`installatore/interfaccia/`, nessuna logica d'installazione, §6.6.1):
 - `motore/interfaccia.go` — quel che il motore aggiunge per le interfacce: `DomandeDaFare` (la porta; il
