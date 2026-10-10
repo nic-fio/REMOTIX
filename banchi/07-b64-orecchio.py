@@ -105,11 +105,11 @@ def scoppiettii(campioni, hz, soglia=SOGLIA, attesi=None):
        count does.  ⚠ If it is not passed, the judgement holds only for what the
        waveform can tell, and this outcome declares it."""
     if len(campioni) < 64:
-        return {"esito": "NIENTE DA GIUDICARE", "campioni": len(campioni)}
+        return {"esito": "NOTHING TO JUDGE", "campioni": len(campioni)}
     picco = max(abs(x) for x in campioni)
     if picco < PICCO_MINIMO:
         # ⛔ R7: here `scoppiettii 0` used to come out, that is top marks.
-        return {"esito": "SILENZIO O QUASI — NON GIUDICO",
+        return {"esito": "SILENCE OR NEARLY — I DO NOT JUDGE",
                 "perche": "peak %d below the minimum of %d: the detector's "
                           "threshold would end up below the quantisation "
                           "noise, and every answer would be made up"
@@ -228,7 +228,7 @@ def giudizio_completo(dati, hz, finestra_s):
         g42 = importlib.util.module_from_spec(sp); sp.loader.exec_module(g42)
         r["tono"] = g42.giudica([x / 32768.0 for x in c[i:i + n]])
     else:
-        r["tono"] = {"esito": "NIENTE DA GIUDICARE",
+        r["tono"] = {"esito": "NOTHING TO JUDGE",
                      "perche": "less than %d s of samples" % finestra_s}
     return r
 
@@ -283,7 +283,7 @@ def certifica(hz=440):
 
     # ⛔ R7a — SILENCE.  It used to give `scoppiettii 0`, that is top marks.
     casi.append(("4-⛔ R7a: four seconds of ZEROS", [0] * (FREQUENZA * 4),
-                 None, "SILENZIO O QUASI — NON GIUDICO", "the refusal"))
+                 None, "SILENCE OR NEARLY — I DO NOT JUDGE", "the refusal"))
 
     # ⛔ R7b — THE BLIND GAP.  The residual does not see it and cannot see it: 1200
     #    samples are exactly 11.000 cycles.  THE COUNT must see it.
@@ -356,13 +356,13 @@ def principale():
     fuori = {"file": a.jsonl}
     if not os.path.exists(a.jsonl) or os.path.getsize(a.jsonl) == 0:
         # ⛔ CODER.md §3.10: «I read nothing» is an outcome of ITS OWN, not a zero.
-        fuori["esito"] = "NIENTE DA GIUDICARE — the JSONL is missing or empty"
+        fuori["esito"] = "NOTHING TO JUDGE — the JSONL is missing or empty"
         print(json.dumps(fuori, ensure_ascii=False, indent=1)); return 2
     fuori["nostro"] = giudizio_completo(da_jsonl(a.jsonl), a.hz, a.finestra)
     if a.rif and os.path.exists(a.rif) and os.path.getsize(a.rif) > 1000:
         fuori["arbitro_pw_record"] = giudizio_completo(da_wav(a.rif), a.hz, a.finestra)
     elif a.rif:
-        fuori["arbitro_pw_record"] = "NIENTE DA GIUDICARE — the wav is missing or empty"
+        fuori["arbitro_pw_record"] = "NOTHING TO JUDGE — the wav is missing or empty"
     print(json.dumps(fuori, ensure_ascii=False, indent=1))
     return 0
 

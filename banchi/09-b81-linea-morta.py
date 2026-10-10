@@ -522,7 +522,7 @@ def riduci_linea_morta(righe, letto=True):
           well, and without it this function refuses.
     """
     if not letto:
-        return {"esito": "⛔ NON HO LETTO IL REGISTRO — «zero firings» and «I did not "
+        return {"esito": "⛔ I DID NOT READ THE LOG — «zero firings» and «I did not "
                          "look» must not look the same"}
     righe = [r for r in righe if "linea-morta " in r]
     n = {"esito": "letto", "scatti": len(righe), "righe": []}
@@ -598,7 +598,7 @@ def riduci_sfratto(righe, letto=True):
     ⛔ Here too «zero» is not «I did not read» — see `riduci_linea_morta`.
     """
     if not letto:
-        return {"esito": "⛔ NON HO LETTO IL REGISTRO"}
+        return {"esito": "⛔ I DID NOT READ THE LOG"}
     sfratti = [r for r in righe if "EVICTION for silence:" in r]
     negati = [r for r in righe if "EVICTION DENIED:" in r]
     rifiuti = [r for r in righe if "slot DENIED" in r]
@@ -657,7 +657,7 @@ def finestre_dichiarate(righe, soglia_permille=PERMILLE_DIAGNOSI):
     """From the `rete-quic` lines to the dead line's judgement windows."""
     righe = [r for r in righe if "rete-quic " in r]
     if not righe:
-        return {"esito": "NIENTE DA LEGGERE — no «rete-quic» line in this "
+        return {"esito": "NOTHING TO READ — no «rete-quic» line in this "
                          "run (⚠ binary older than 23 Aug 2026?)"}
     valide, tutte = [], []
     for r in righe:
@@ -678,7 +678,7 @@ def finestre_dichiarate(righe, soglia_permille=PERMILLE_DIAGNOSI):
             valide.append(pm)
     n = {"esito": "letto", "righe": len(tutte), "finestre_valide": len(valide)}
     if not valide:
-        n["esito"] = ("NON GIUDICO — no window passed the cure's "
+        n["esito"] = ("I DO NOT JUDGE — no window passed the cure's "
                       "guards (%d packets sent, %d ms): over %d "
                       "`rete-quic` lines the cure would NEVER have decided anything"
                       % (LM_MIN_PACCHETTI, LM_FINESTRA_MS, len(tutte)))
@@ -799,14 +799,14 @@ def riduci_orologio(campioni, quiete_s=0.6):
     """
     n = {"campioni": len(campioni or [])}
     if not campioni or len(campioni) < 3:
-        n["esito"] = ("NON GIUDICO — %d samples: without at least three there is no "
+        n["esito"] = ("I DO NOT JUDGE — %d samples: without at least three there is no "
                       "interval to measure" % len(campioni or []))
         return n
     t0, b0, p0 = campioni[0]
     t1, b1, p1 = campioni[-1]
     durata = t1 - t0
     if durata <= 0:
-        n["esito"] = "NON GIUDICO — the window of the samples is zero long"
+        n["esito"] = "I DO NOT JUDGE — the window of the samples is zero long"
         return n
     n["esito"] = "misurato"
     n["secondi"] = round(durata, 2)
@@ -862,7 +862,7 @@ def orologio_gira(secondi=60.0, passo=0.1):
         d = json.loads(out)
     except Exception as e:
         _dub("the clock did not answer: %s — %s" % (e, (out + err)[-200:]))
-        return {"esito": "NON GIUDICO — the wire clock did not answer"}
+        return {"esito": "I DO NOT JUDGE — the wire clock did not answer"}
     return riduci_orologio(d.get("campioni") or [])
 
 
@@ -885,7 +885,7 @@ def stato_delle_cure():
     rc, out, _ = root("bash -c \"grep -a -n -e 'DEAD LINE is' -e 'ghost "
                       "eviction: threshold' %s/registro.log | tail -6\"" % LAV)
     righe = [r for r in out.splitlines() if r.strip()]
-    n = {"esito": "letto" if righe else "⛔ NON HO LETTO any startup line "
+    n = {"esito": "letto" if righe else "⛔ I DID NOT READ any startup line "
                                         "of the two cures",
          "linea_morta": None, "stallo_ms": None, "silenzio_s": None,
          "sfratto_ms": None, "righe": righe[-2:]}
@@ -1336,7 +1336,7 @@ def p3b_costo_dei_ping(acceso, spento, dichiarato=COSTO_PING_DICHIARATO_KBIT_S):
     # ⛔ The background must be small compared with the target, or one is not
     #    measuring the target.  Ten times is generous and it is declared.
     if fondo > 10.0 * dichiarato:
-        return _muto("⛔ NON GIUDICO — a «still» session of this product "
+        return _muto("⛔ I DO NOT JUDGE — a «still» session of this product "
                      "is not still: it costs %.1f kbit/s, that is %d times the "
                      "declared cost of the PINGs (%.2f).  ⭐ It is the PCM audio of §4.3, "
                      "which CANNOT be turned off (`[M]` a CIAO without an audio codec "
@@ -1824,7 +1824,7 @@ def certifica():
     verde = verde and ok
 
     fin0 = finestre_dichiarate([_fab_rq(persi_d=1, spediti_d=10)] * 30)
-    ok = fin0["esito"].startswith("NON GIUDICO")
+    ok = fin0["esito"].startswith("I DO NOT JUDGE")
     (_ok if ok else _ko)("⭐ and if NO window passes the guards, the "
                          "reconstruction REFUSES instead of saying «zero»: «%s»"
                          % fin0["esito"][:110])
@@ -2049,7 +2049,7 @@ def certifica():
     verde &= caso("P3b mute · ⛔ the background is bigger than the target", None,
                   p3b_costo_dei_ping(audio_acceso, audio_spento))
     verde &= caso("P3b mute · one of the two measurements is missing", None,
-                  p3b_costo_dei_ping(fermo_acceso, {"esito": "NON GIUDICO"}))
+                  p3b_costo_dei_ping(fermo_acceso, {"esito": "I DO NOT JUDGE"}))
 
     _inf("P4 · the eviction")
     sf_ok = riduci_sfratto([_fab_rifiuto(), _fab_sfratto(), _fab_preso()])
@@ -2142,7 +2142,7 @@ def certifica():
     verde &= caso("⛔ mute if the STALL threshold is not the one I believe", None,
                   cure_come_voglio(acceso, linea_morta="accesa", stallo_ms=1))
     verde &= caso("⛔ mute if I did not read the startup line", None,
-                  cure_come_voglio({"esito": "⛔ NON HO LETTO nessuna riga"},
+                  cure_come_voglio({"esito": "⛔ I DID NOT READ any line"},
                                    linea_morta="accesa"))
 
     os.makedirs(FUORI, exist_ok=True)

@@ -553,13 +553,13 @@ def conti_del_server(riga0, n0=None, tetto=90.0):
           `riga0` has been taken, that line falls inside the window and is
           read as if it were mine.  ⇒ `n0` = how many «final count» lines
           there were when this run began, and here we **wait** for one more
-          to appear.  If it does not appear, «NIENTE DA LEGGERE» — which is now
+          to appear.  If it does not appear, «NOTHING TO READ» — which is now
           MUTE, not green."""
     if n0 is not None:
         scade = time.time() + tetto
         while conta_conti_finali() <= n0:
             if time.time() >= scade:
-                return {"esito": "NIENTE DA LEGGERE — in %d s this run wrote "
+                return {"esito": "NOTHING TO READ — in %d s this run wrote "
                                  "no «final count» of its own (session "
                                  "refused? still closing?)" % int(tetto)}
             time.sleep(1.0)
@@ -568,7 +568,7 @@ def conti_del_server(riga0, n0=None, tetto=90.0):
     r = out.strip()
     if not r:
         # ⛔ `CODER.md` §3.10: «I did not read» is not «zero».
-        return {"esito": "NIENTE DA LEGGERE — no «final count» in this run"}
+        return {"esito": "NOTHING TO READ — no «final count» in this run"}
     import re as _re
     m = _re.search(r"(\d+) blocks sent, (\d+) dropped.*?(\d+) refused.*?"
                    r"(\d+) DEFERRED", r)
@@ -604,7 +604,7 @@ def righe_registro():
 def giudica(nome):
     j = os.path.join(FUORI, nome + ".jsonl")
     if not os.path.exists(j) or os.path.getsize(j) == 0:
-        return {"esito": "NIENTE DA GIUDICARE — no blocks"}
+        return {"esito": "NOTHING TO JUDGE — no blocks"}
     p = subprocess.run(["python3", os.path.join(QUI, "07-b64-orecchio.py"), j,
                         "--hz", "440"], capture_output=True)
     try:
@@ -718,7 +718,7 @@ def principale():
             if leg <= 0:
                 print("   NO  the tone no longer plays: I do NOT judge this profile")
                 esiti.append({"profilo": nome, "passa": None,
-                              "esito": "NIENTE DA GIUDICARE, the tone was silent"})
+                              "esito": "NOTHING TO JUDGE, the tone was silent"})
                 continue
             print("    tc:", " ".join(q.split("\n")[:2])[:160])
             c = cliente(nome, "contenitore", a.secondi)
@@ -769,7 +769,7 @@ def principale():
             #     read at all.  `CODER.md` §3.10: «I did not read» is not
             #     «zero», and here it is not even «green».
             if numeri["spediti_dal_server"] is None:
-                passa, perche = None, ("NIENTE DA GIUDICARE: the SERVER's count "
+                passa, perche = None, ("NOTHING TO JUDGE: the SERVER's count "
                                        "was not read (%s)"
                                        % sv.get("esito", "?"))
             elif numeri["spediti_dal_server"] == 0:

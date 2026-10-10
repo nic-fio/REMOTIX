@@ -380,10 +380,10 @@ def giudica(nome, codec):
                    "cat %s/%s.jsonl\" > %s" % (MACCHINA, PAROLA_SUDO, LAV, nome, j),
                    shell=True)
     if codec != "pcm":
-        return {"esito": "NON GIUDICATO — Opus: the judge does not decode it, "
+        return {"esito": "NOT JUDGED — Opus: the judge does not decode it, "
                          "here the transport is counted"}
     if not os.path.exists(j) or os.path.getsize(j) == 0:
-        return {"esito": "NIENTE DA GIUDICARE — no blocks"}
+        return {"esito": "NOTHING TO JUDGE — no blocks"}
     p = subprocess.run(["python3", os.path.join(QUI, "07-b64-orecchio.py"), j,
                         "--hz", "440"], capture_output=True)
     try:

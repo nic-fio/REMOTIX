@@ -267,7 +267,7 @@ diagnosis by themselves:
 
 ⚠ THE PRICE, DECLARED — THREE.
   1. The `rete-quic` line exists only if the binary is built **from today's
-     HEAD**: on an older tree the reading returns *«NIENTE DA LEGGERE»* and
+     HEAD**: on an older tree the reading returns *«NOTHING TO READ»* and
      the bench **says so**, instead of printing zeros (`CODER.md` §3.10).
   2. This reduction also exists in `banchi/09-b79-cure.py`, by another
      agent.  ⛔ It is not imported: b79 imports **this** file, and importing it back
@@ -574,7 +574,7 @@ def riduci_sonda(arrivi, quanti):
     """
     n = {"quanti": quanti, "ricevuti": len(arrivi)}
     if not quanti:
-        n["esito"] = "NON GIUDICO — the probe sent nothing"
+        n["esito"] = "I DO NOT JUDGE — the probe sent nothing"
         return n
     numeri = [a[0] for a in arrivi]
     unici = set(numeri)
@@ -645,7 +645,7 @@ def riduci_consegna(arrivi_ms, chiesto_s):
     """
     n = {"chiesto_s": chiesto_s}
     if not chiesto_s:
-        n["esito"] = "NON GIUDICO — I do not know how long the window was requested to be"
+        n["esito"] = "I DO NOT JUDGE — I do not know how long the window was requested to be"
         return n
     celle = int(math.ceil(chiesto_s))
     n["secondi_finestra"] = celle
@@ -1495,9 +1495,9 @@ def certifica():
                      ensure_ascii=False))
 
     q = riduci_rete_quic(["18:22:07 wt  any other line of the log"])
-    esito("49-⛔ binary older than the `rete-quic` line: «NIENTE DA "
-          "LEGGERE», ⛔ not zeros (`CODER.md` §3.10)",
-          q.get("esito", "").startswith("NIENTE DA LEGGERE"), True,
+    esito("49-⛔ binary older than the `rete-quic` line: «NOTHING TO "
+          "READ», ⛔ not zeros (`CODER.md` §3.10)",
+          q.get("esito", "").startswith("NOTHING TO READ"), True,
           q.get("esito"))
 
     # ── 5 · MY queue, and the predicates imported from b70 ─────────────────
@@ -1681,7 +1681,7 @@ def leggi_rete_quic(riga0):
 
     ⛔ It does not judge: it reads and prints.  A threshold on `cwnd` would be a promise
        the product never made.
-    ⚠ And if the binary is older than the line, it returns «NIENTE DA LEGGERE» —
+    ⚠ And if the binary is older than the line, it returns «NOTHING TO READ» —
        which is not «zero» (`CODER.md` §3.10).
     """
     rc, out, _ = root("bash -c \"tail -n +%d %s/registro.log | grep -a "
@@ -1694,7 +1694,7 @@ def riduci_rete_quic(righe):
        on fabricated lines: a contract on the text is tested on the TEXT."""
     righe = [r for r in righe if "rete-quic " in r]
     if not righe:
-        return {"esito": "NIENTE DA LEGGERE — no «rete-quic» line in this "
+        return {"esito": "NOTHING TO READ — no «rete-quic» line in this "
                          "run (⚠ binary older than 23 Aug 2026?)"}
     campi = []
     for r in righe:
@@ -2029,7 +2029,7 @@ def principale():
                 usc = scena_accendi(movimento)
                 if not usc:
                     _ko("the scene «%s» does not start: I do NOT judge this run" % movimento)
-                    coppia[etichetta] = {"esito": "NON HO NIENTE DA GIUDICARE — "
+                    coppia[etichetta] = {"esito": "I HAVE NOTHING TO JUDGE — "
                                                   "the scene did not start"}
                     continue
                 _inf("scene «%s» on monitor %s" % (movimento, usc))

@@ -2,3 +2,66 @@
 {"file": "banchi/rcp/rcp.c", "prima": "the real count is the line «rilascio al distacco: N fra tasti e pulsanti», a few milliseconds further down", "dopo": "the real count is the line «release at detach: N keys and buttons», a few milliseconds further down"}
 {"file": "src/comando.c", "prima": "NON-CAPITO riga vuota\\n", "dopo": "NON-CAPITO empty line\\n"}
 {"file": "banchi/01-b3-rcp-innesta.py", "prima": "NON-CAPITO riga vuota\\n", "dopo": "NON-CAPITO empty line\\n"}
+{"file": "banchi/07-b64-rete.py", "prima": "return {\"esito\": \"NIENTE DA GIUDICARE — no blocks\"}", "dopo": "return {\"esito\": \"NOTHING TO JUDGE — no blocks\"}"}
+{"file": "banchi/07-b64-rete.py", "prima": "\"esito\": \"NIENTE DA GIUDICARE, the tone was silent\"})", "dopo": "\"esito\": \"NOTHING TO JUDGE, the tone was silent\"})"}
+{"file": "banchi/07-b64-rete.py", "prima": "passa, perche = None, (\"NIENTE DA GIUDICARE: the SERVER's count \"", "dopo": "passa, perche = None, (\"NOTHING TO JUDGE: the SERVER's count \""}
+{"file": "banchi/07-b64-rete.py", "prima": "to appear.  If it does not appear, «NIENTE DA LEGGERE» — which is now", "dopo": "to appear.  If it does not appear, «NOTHING TO READ» — which is now"}
+{"file": "banchi/07-b64-rete.py", "prima": "return {\"esito\": \"NIENTE DA LEGGERE — in %d s this run wrote \"", "dopo": "return {\"esito\": \"NOTHING TO READ — in %d s this run wrote \""}
+{"file": "banchi/07-b64-rete.py", "prima": "return {\"esito\": \"NIENTE DA LEGGERE — no «final count» in this run\"}", "dopo": "return {\"esito\": \"NOTHING TO READ — no «final count» in this run\"}"}
+{"file": "banchi/07-b64-orecchio.py", "prima": "return {\"esito\": \"SILENZIO O QUASI — NON GIUDICO\",", "dopo": "return {\"esito\": \"SILENCE OR NEARLY — I DO NOT JUDGE\","}
+{"file": "banchi/07-b64-orecchio.py", "prima": "None, \"SILENZIO O QUASI — NON GIUDICO\", \"the refusal\"))", "dopo": "None, \"SILENCE OR NEARLY — I DO NOT JUDGE\", \"the refusal\"))"}
+{"file": "banchi/07-b64-orecchio.py", "prima": "return {\"esito\": \"NIENTE DA GIUDICARE\", \"campioni\": len(campioni)}", "dopo": "return {\"esito\": \"NOTHING TO JUDGE\", \"campioni\": len(campioni)}"}
+{"file": "banchi/07-b64-orecchio.py", "prima": "r[\"tono\"] = {\"esito\": \"NIENTE DA GIUDICARE\",", "dopo": "r[\"tono\"] = {\"esito\": \"NOTHING TO JUDGE\","}
+{"file": "banchi/07-b64-orecchio.py", "prima": "fuori[\"esito\"] = \"NIENTE DA GIUDICARE — the JSONL is missing or empty\"", "dopo": "fuori[\"esito\"] = \"NOTHING TO JUDGE — the JSONL is missing or empty\""}
+{"file": "banchi/07-b64-orecchio.py", "prima": "fuori[\"arbitro_pw_record\"] = \"NIENTE DA GIUDICARE — the wav is missing or empty\"", "dopo": "fuori[\"arbitro_pw_record\"] = \"NOTHING TO JUDGE — the wav is missing or empty\""}
+{"file": "banchi/07-b65-datagram.py", "prima": "return {\"esito\": \"NIENTE DA GIUDICARE — no blocks\"}", "dopo": "return {\"esito\": \"NOTHING TO JUDGE — no blocks\"}"}
+{"file": "banchi/07-b65-datagram.py", "prima": "return {\"esito\": \"NON GIUDICATO — Opus: the judge does not decode it, \"", "dopo": "return {\"esito\": \"NOT JUDGED — Opus: the judge does not decode it, \""}
+{"file": "banchi/07-b42-giudice.py", "prima": "return {\"esito\": \"NIENTE DA GIUDICARE\", \"campioni\": 0}", "dopo": "return {\"esito\": \"NOTHING TO JUDGE\", \"campioni\": 0}"}
+{"file": "banchi/07-b42-giudice.py", "prima": "g = {\"esito\": \"NON GIUDICABILE QUI\",", "dopo": "g = {\"esito\": \"NOT JUDGEABLE HERE\","}
+{"file": "banchi/09-b77-audio-riordino.py", "prima": "return {\"esito\": \"NIENTE DA GIUDICARE — the JSONL is missing or empty\"}", "dopo": "return {\"esito\": \"NOTHING TO JUDGE — the JSONL is missing or empty\"}"}
+{"file": "banchi/09-b77-audio-riordino.py", "prima": "return {\"esito\": \"NIENTE DA GIUDICARE — %d blocks\" % len(blocchi),", "dopo": "return {\"esito\": \"NOTHING TO JUDGE — %d blocks\" % len(blocchi),"}
+{"file": "banchi/09-b77-audio-riordino.py", "prima": "return {\"esito\": \"NIENTE DA GIUDICARE — absurd timeline (%d)\" % n_tot}", "dopo": "return {\"esito\": \"NOTHING TO JUDGE — absurd timeline (%d)\" % n_tot}"}
+{"file": "banchi/09-b77-audio-riordino.py", "prima": "\"esito\": \"NIENTE DA GIUDICARE — the tone was silent\"})", "dopo": "\"esito\": \"NOTHING TO JUDGE — the tone was silent\"})"}
+{"file": "banchi/09-b77-audio-riordino.py", "prima": "return {\"esito\": \"NIENTE DA LEGGERE — no «final count» in this run\"}", "dopo": "return {\"esito\": \"NOTHING TO READ — no «final count» in this run\"}"}
+{"file": "banchi/09-b77-audio-riordino.py", "prima": "return {\"esito\": \"NIENTE DA LEGGERE — no «rete-quic» line in \"", "dopo": "return {\"esito\": \"NOTHING TO READ — no «rete-quic» line in \""}
+{"file": "banchi/09-b81-linea-morta.py", "prima": "n[\"esito\"] = (\"NON GIUDICO — no window passed the cure's \"", "dopo": "n[\"esito\"] = (\"I DO NOT JUDGE — no window passed the cure's \""}
+{"file": "banchi/09-b81-linea-morta.py", "prima": "n[\"esito\"] = (\"NON GIUDICO — %d samples: without at least three there is no \"", "dopo": "n[\"esito\"] = (\"I DO NOT JUDGE — %d samples: without at least three there is no \""}
+{"file": "banchi/09-b81-linea-morta.py", "prima": "n[\"esito\"] = \"NON GIUDICO — the window of the samples is zero long\"", "dopo": "n[\"esito\"] = \"I DO NOT JUDGE — the window of the samples is zero long\""}
+{"file": "banchi/09-b81-linea-morta.py", "prima": "return {\"esito\": \"NON GIUDICO — the wire clock did not answer\"}", "dopo": "return {\"esito\": \"I DO NOT JUDGE — the wire clock did not answer\"}"}
+{"file": "banchi/09-b81-linea-morta.py", "prima": "return _muto(\"⛔ NON GIUDICO — a «still» session of this product \"", "dopo": "return _muto(\"⛔ I DO NOT JUDGE — a «still» session of this product \""}
+{"file": "banchi/09-b81-linea-morta.py", "prima": "ok = fin0[\"esito\"].startswith(\"NON GIUDICO\")", "dopo": "ok = fin0[\"esito\"].startswith(\"I DO NOT JUDGE\")"}
+{"file": "banchi/09-b81-linea-morta.py", "prima": "p3b_costo_dei_ping(fermo_acceso, {\"esito\": \"NON GIUDICO\"}))", "dopo": "p3b_costo_dei_ping(fermo_acceso, {\"esito\": \"I DO NOT JUDGE\"}))"}
+{"file": "banchi/09-b81-linea-morta.py", "prima": "return {\"esito\": \"⛔ NON HO LETTO IL REGISTRO — «zero firings» and «I did not \"", "dopo": "return {\"esito\": \"⛔ I DID NOT READ THE LOG — «zero firings» and «I did not \""}
+{"file": "banchi/09-b81-linea-morta.py", "prima": "return {\"esito\": \"⛔ NON HO LETTO IL REGISTRO\"}", "dopo": "return {\"esito\": \"⛔ I DID NOT READ THE LOG\"}"}
+{"file": "banchi/09-b81-linea-morta.py", "prima": "n = {\"esito\": \"letto\" if righe else \"⛔ NON HO LETTO any startup line \"", "dopo": "n = {\"esito\": \"letto\" if righe else \"⛔ I DID NOT READ any startup line \""}
+{"file": "banchi/09-b81-linea-morta.py", "prima": "cure_come_voglio({\"esito\": \"⛔ NON HO LETTO nessuna riga\"},", "dopo": "cure_come_voglio({\"esito\": \"⛔ I DID NOT READ any line\"},"}
+{"file": "banchi/09-b81-linea-morta.py", "prima": "return {\"esito\": \"NIENTE DA LEGGERE — no «rete-quic» line in this \"", "dopo": "return {\"esito\": \"NOTHING TO READ — no «rete-quic» line in this \""}
+{"file": "banchi/09-b76-rete-cattiva.py", "prima": "coppia[etichetta] = {\"esito\": \"NON HO NIENTE DA GIUDICARE — \"", "dopo": "coppia[etichetta] = {\"esito\": \"I HAVE NOTHING TO JUDGE — \""}
+{"file": "banchi/09-b76-rete-cattiva.py", "prima": "n[\"esito\"] = \"NON GIUDICO — the probe sent nothing\"", "dopo": "n[\"esito\"] = \"I DO NOT JUDGE — the probe sent nothing\""}
+{"file": "banchi/09-b76-rete-cattiva.py", "prima": "n[\"esito\"] = \"NON GIUDICO — I do not know how long the window was requested to be\"", "dopo": "n[\"esito\"] = \"I DO NOT JUDGE — I do not know how long the window was requested to be\""}
+{"file": "banchi/09-b76-rete-cattiva.py", "prima": "HEAD**: on an older tree the reading returns *«NIENTE DA LEGGERE»* and", "dopo": "HEAD**: on an older tree the reading returns *«NOTHING TO READ»* and"}
+{"file": "banchi/09-b76-rete-cattiva.py", "prima": "q.get(\"esito\", \"\").startswith(\"NIENTE DA LEGGERE\"), True,", "dopo": "q.get(\"esito\", \"\").startswith(\"NOTHING TO READ\"), True,"}
+{"file": "banchi/09-b76-rete-cattiva.py", "prima": "⚠ And if the binary is older than the line, it returns «NIENTE DA LEGGERE» —", "dopo": "⚠ And if the binary is older than the line, it returns «NOTHING TO READ» —"}
+{"file": "banchi/09-b76-rete-cattiva.py", "prima": "return {\"esito\": \"NIENTE DA LEGGERE — no «rete-quic» line in this \"", "dopo": "return {\"esito\": \"NOTHING TO READ — no «rete-quic» line in this \""}
+{"file": "banchi/09-b70-ritmo.py", "prima": "print(json.dumps({\"esito\": \"NON HO NIENTE DA GIUDICARE — the trace does not \"", "dopo": "print(json.dumps({\"esito\": \"I HAVE NOTHING TO JUDGE — the trace does not \""}
+{"file": "banchi/09-b70-ritmo.py", "prima": "n[\"esito\"] = (\"NON HO NIENTE DA GIUDICARE — no frame in the \"", "dopo": "n[\"esito\"] = (\"I HAVE NOTHING TO JUDGE — no frame in the \""}
+{"file": "banchi/09-b70-ritmo.py", "prima": "n[\"esito\"] = (\"NON HO NIENTE DA GIUDICARE — %d frames at steady state, \"", "dopo": "n[\"esito\"] = (\"I HAVE NOTHING TO JUDGE — %d frames at steady state, \""}
+{"file": "banchi/09-b70-ritmo.py", "prima": "n[\"esito\"] = \"NON HO NIENTE DA GIUDICARE — zero steady-state duration\"", "dopo": "n[\"esito\"] = \"I HAVE NOTHING TO JUDGE — zero steady-state duration\""}
+{"file": "banchi/09-b70-ritmo.py", "prima": "n_muta[\"esito\"] = \"NON HO NIENTE DA GIUDICARE — trace not read\"", "dopo": "n_muta[\"esito\"] = \"I HAVE NOTHING TO JUDGE — trace not read\""}
+{"file": "banchi/09-b70-ritmo.py", "prima": "n[\"esito\"] = \"NON HO NIENTE DA GIUDICARE — \" + muta", "dopo": "n[\"esito\"] = \"I HAVE NOTHING TO JUDGE — \" + muta"}
+{"file": "banchi/09-b70-ritmo.py", "prima": "coppia[etichetta] = {\"esito\": \"NON HO NIENTE DA GIUDICARE — \"", "dopo": "coppia[etichetta] = {\"esito\": \"I HAVE NOTHING TO JUDGE — \""}
+{"file": "banchi/09-b70-ritmo.py", "prima": "print(json.dumps({\"esito\": \"NON GIUDICO — the trace's clock is not \"", "dopo": "print(json.dumps({\"esito\": \"I DO NOT JUDGE — the trace's clock is not \""}
+{"file": "banchi/09-b70-ritmo.py", "prima": "fuori[\"esito_video\"] = \"NIENTE DA LEGGERE — no video «final count»\"", "dopo": "fuori[\"esito_video\"] = \"NOTHING TO READ — no video «final count»\""}
+{"file": "banchi/09-b70-ritmo.py", "prima": "fuori[\"cattura\"] = {\"esito\": \"NIENTE DA LEGGERE — fewer than two \"", "dopo": "fuori[\"cattura\"] = {\"esito\": \"NOTHING TO READ — fewer than two \""}
+{"file": "banchi/09-b79-cure.py", "prima": "**«NIENTE DA LEGGERE»** instead of reporting the neighbour's number — which is the", "dopo": "**«NOTHING TO READ»** instead of reporting the neighbour's number — which is the"}
+{"file": "banchi/09-b79-cure.py", "prima": "return {\"esito\": \"NIENTE DA LEGGERE — no «rete-quic» line in this run\"}", "dopo": "return {\"esito\": \"NOTHING TO READ — no «rete-quic» line in this run\"}"}
+{"file": "banchi/09-b79-cure.py", "prima": "voce[\"esito\"] = \"IL BRACCIO NON E' IN VIGORE\"", "dopo": "voce[\"esito\"] = \"THE ARM IS NOT IN FORCE\""}
+{"file": "banchi/09-b79-cure.py", "prima": "voce[\"esito\"] = \"LA REGOLA INSTALLATA NON E' QUELLA CHIESTA\"", "dopo": "voce[\"esito\"] = \"THE INSTALLED RULE IS NOT THE ONE REQUESTED\""}
+{"file": "banchi/09-b79-cure.py", "prima": "voce[\"esito\"] = \"LA SCENA NON E' PARTITA\"", "dopo": "voce[\"esito\"] = \"THE SCENE DID NOT START\""}
+{"file": "banchi/09-b79-cure.py", "prima": "voce[\"esito\"] = \"LA SESSIONE D'INNESCO NON SI APRE\"", "dopo": "voce[\"esito\"] = \"THE TRIGGER SESSION DOES NOT OPEN\""}
+{"file": "banchi/09-b84-audio-silenzio.py", "prima": "\"esito\": \"NON GIUDICATO — Opus samples cannot be read without \"", "dopo": "\"esito\": \"NOT JUDGED — Opus samples cannot be read without \""}
+{"file": "banchi/09-b84-audio-silenzio.py", "prima": "None: \"NON GIUDICATO\"}[passa], perche))", "dopo": "None: \"NOT JUDGED\"}[passa], perche))"}
+{"file": "banchi/09-b84-audio-silenzio.py", "prima": "return {\"esito\": \"NIENTE DA LEGGERE — %d «rete-quic» lines in this \"", "dopo": "return {\"esito\": \"NOTHING TO READ — %d «rete-quic» lines in this \""}
+{"file": "banchi/09-b84-audio-silenzio.py", "prima": "return {\"esito\": \"NIENTE DA LEGGERE — no «final count»\"}", "dopo": "return {\"esito\": \"NOTHING TO READ — no «final count»\"}"}
+{"file": "banchi/18-scheda/18-decodifica-chrome.sh", "prima": "print(f\"NON PROVATO {prova}: Chrome does not decode {b.get('codec')} here (it needs the GPU)\"); non_provati += 1; continue", "dopo": "print(f\"NOT TESTED {prova}: Chrome does not decode {b.get('codec')} here (it needs the GPU)\"); non_provati += 1; continue"}
+{"file": "banchi/19-vulkan/19-decodifica-chrome.sh", "prima": "print(f\"NON PROVATO {prova}: Chrome does not decode {b.get('codec')} here (the GPU is needed)\"); non_provati += 1; continue", "dopo": "print(f\"NOT TESTED {prova}: Chrome does not decode {b.get('codec')} here (the GPU is needed)\"); non_provati += 1; continue"}

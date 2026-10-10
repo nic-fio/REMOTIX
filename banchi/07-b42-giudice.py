@@ -38,7 +38,7 @@ def giudica(campioni):
     """
     m = len(campioni)
     if m == 0:
-        return {"esito": "NIENTE DA GIUDICARE", "campioni": 0}
+        return {"esito": "NOTHING TO JUDGE", "campioni": 0}
     rms = math.sqrt(sum(x * x for x in campioni) / m)
     picco, hz, somma = 0.0, 0, 0.0
     for f in range(100, 2001):
@@ -119,7 +119,7 @@ def main():
         salta = min(4800, len(campioni) // 4)
         g = giudica(campioni[salta:])
     else:
-        g = {"esito": "NON GIUDICABILE QUI",
+        g = {"esito": "NOT JUDGEABLE HERE",
              "perche": "Opus packets are judged by the BROWSER, which has the "
                        "decoder: here they would be judged with a different one "
                        "from the user's (error form E10)"}
