@@ -1,1708 +1,1708 @@
-# SPECIFICHE — che cosa è REMOTIX, e che cosa promette
+# SPECIFICHE — what REMOTIX is, and what it promises
 
-*Riscritta il 9 agosto 2026, incorporando le 44 decisioni prese l'8 e il 9 agosto.*
+*Rewritten on 9 Aug 2026, incorporating the 44 decisions taken on 8 and 9 Aug.*
 
-> **Come si legge questo documento.** Qui c'è **che cosa** il prodotto fa. Il **perché** di ogni
-> scelta, con la data e chi l'ha presa, sta in [`DECISIONI.md`](DECISIONI.md), e ogni paragrafo
-> rimanda alla voce corrispondente. Il **come si misura** sta in [`LEZIONI.md`](LEZIONI.md); le
-> regole di chi scrive e di chi revisiona in [`CODER.md`](CODER.md) e [`REVIEWER.md`](REVIEWER.md).
+> **How to read this document.** Here is **what** the product does. The **why** of every
+> choice, with the date and who made it, is in [`DECISIONI.md`](DECISIONI.md), and every paragraph
+> refers to the corresponding entry. The **how it is measured** is in [`LEZIONI.md`](LEZIONI.md); the
+> rules of whoever writes and whoever reviews in [`CODER.md`](CODER.md) and [`REVIEWER.md`](REVIEWER.md).
 >
-> Le marche sono quelle di `CODER.md` §5: `[M]` misurato da noi, `[R]` letto nel codice,
-> `[S]` letto in una specifica, `[?]` ipotizzato e non ancora verificato. **Una riga senza marca
-> è una decisione di prodotto, non un fatto tecnico.**
+> The marks are those of `CODER.md` §5: `[M]` measured by us, `[R]` read in the code,
+> `[S]` read in a specification, `[?]` hypothesised and not yet verified. **A line without a mark
+> is a product decision, not a technical fact.**
 
 ---
 
-## 1. Che cos'è
+## 1. What it is
 
-REMOTIX è un sistema di **desktop remoto per Linux**, composto da un server e da **una pagina
-web**, che parlano un protocollo nostro chiamato **RCP** — *Remotix Control Protocol*.
+REMOTIX is a **remote desktop system for Linux**, made of a server and **a web
+page**, which speak a protocol of ours called **RCP** — *Remotix Control Protocol*.
 
 | | |
 |---|---|
-| **server** | esclusivamente Linux |
-| **client** | ⭐ **nessuno da installare: un browser moderno**. Il server serve la pagina, la pagina parla RCP su **WebTransport** |
-| **Windows come server** | ⛔ **fuori**, ed è la leva di §1.1 |
-| **Windows come posto da cui ci si collega** | ✅ **dentro, e gratis**: un browser su Windows non è codice nostro. Vale per macOS, iPhone, iPad, Chromebook e qualunque altra cosa abbia un browser |
+| **server** | Linux only |
+| **client** | ⭐ **nothing to install: a modern browser**. The server serves the page, the page speaks RCP over **WebTransport** |
+| **Windows as a server** | ⛔ **out**, and it is the lever of §1.1 |
+| **Windows as the place one connects from** | ✅ **in, and for free**: a browser on Windows is not our code. The same goes for macOS, iPhone, iPad, Chromebook and anything else that has a browser |
 
-⭐ **Niente client dedicati** *(deciso il 9 agosto 2026, `DECISIONI.md` §1.6)*. Sparisce il client
-Android — con esso cinque fasi di piano — e sparisce il client Linux. Restano **un server e una
-pagina**.
+⭐ **No dedicated clients** *(decided on 9 Aug 2026, `DECISIONI.md` §1.6)*. The Android client
+disappears — and with it five phases of the plan — and the Linux client disappears. What remains is **a server and a
+page**.
 
-⚠ **E il protocollo non è cambiato di una riga.** WebTransport porta a un browser esattamente i
-mattoni su cui RCP era stato disegnato: stream QUIC indipendenti, l'abbandono di un fotogramma,
-i datagram per l'audio. Se il filo fosse stato progettato su TCP, questa decisione sarebbe costata
-il protocollo intero.
+⚠ **And the protocol has not changed by a single line.** WebTransport brings to a browser exactly the
+building blocks RCP had been designed on: independent QUIC streams, dropping a frame,
+datagrams for audio. Had the wire been designed on TCP, this decision would have cost
+the whole protocol.
 
-È l'evoluzione di REMOTIX v1, che si è fermato alla fase 11 dopo aver servito GNOME e KDE
-parlando RDP. Il patrimonio di v1 — 17.481 righe di C, 4.563 righe di banchi, cinque studi dei
-desktop e il registro delle lezioni — sta sotto `fondamenta/` ed è la base su cui V2 poggia
+It is the evolution of REMOTIX v1, which stopped at phase 11 after serving GNOME and KDE
+speaking RDP. v1's heritage — 17,481 lines of C, 4,563 lines of benches, five studies of the
+desktops and the register of lessons — is under `fondamenta/` and is the base V2 rests on
 (`DECISIONI.md` §6).
 
-### 1.1 Perché RDP muore, in una riga
+### 1.1 Why RDP dies, in one line
 
-I tre muri contro cui v1 si è fermato — il tetto a H.264, il client Android che decodificava in
-software, il colore pieno irraggiungibile — **erano tutti e tre di RDP, non del problema**. La
-riga «niente Windows» è la leva che li toglie insieme. Il prezzo, accettato: il protocollo va
-progettato oltre che scritto, e i client vanno scritti da zero. (`DECISIONI.md` §1.1)
+The three walls v1 stopped against — the H.264 ceiling, the Android client decoding in
+software, full colour out of reach — **were all three RDP's, not the problem's**. The
+line «no Windows» is the lever that removes them together. The price, accepted: the protocol must be
+designed as well as written, and the clients must be written from scratch. (`DECISIONI.md` §1.1)
 
-⭐ **E metà di quel prezzo è stato restituito il 9 agosto 2026**: i client da scrivere non sono più
-due, è **una pagina sola** (§1). Resta intero il primo pezzo — il protocollo va progettato — ed è
-il motivo per cui `RCP.md` esiste prima del codice.
-
----
-
-## 2. I principi guida
-
-1. **Rilevare le capacità, non la distribuzione.** All'avvio si verifica cosa c'è, si sceglie il
-   percorso migliore e si **dichiara** cosa manca.
-2. **Degradare, non fallire.** Ogni dipendenza mancante ha un ripiego. Il servizio funziona
-   comunque, con meno — ma il ripiego si dichiara nel registro: uno silenzioso produce due
-   comportamenti sotto la stessa etichetta.
-3. **Dipendere, non riscrivere.** Ogni componente che scriviamo è un componente da mantenere per
-   sempre.
-4. ⭐ **Si dipende dal compositore, non dal suo contorno.** Il compositore si insegue per forza:
-   solo lui consegna i fotogrammi e accetta l'input. Blocca-schermo, demoni di inattività,
-   gestori dell'energia e display manager fanno la stessa cosa in quattro modi diversi, con
-   quattro configurazioni che si riscrivono da sole: quelli **non** si inseguono.
-   (`DECISIONI.md` §0.1 — è il principio che ha prodotto diverse delle scelte che seguono)
-5. **Parlare direttamente al compositore**, mai attraverso portali che chiedano autorizzazione a
-   video: un servizio non presidiato non ha nessuno che clicchi.
-6. ⭐ ⛔ **Sullo schermo dell'utente c'è il suo desktop e nient'altro.** *«Come se fosse davanti al
-   monitor del PC»* — nessun artefatto, nessuna marca, nessun riquadro di servizio. ⛔ E non nella
-   forma *«spento per predefinito»*: quel che serve a noi per misurare **non entra nel binario che
-   si installa** (`DECISIONI.md` §7.16, dall'utente l'11 agosto 2026; la pulizia si fa e **si
-   misura** alla fase 13). ⚠ *Aggiunto quando la prima funzione di banco ha chiesto il permesso di
-   dipingere: il principio non c'era, e la risposta è stata più larga della domanda.*
+⭐ **And half of that price was given back on 9 Aug 2026**: the clients to write are no longer
+two, it is **a single page** (§1). The first part remains whole — the protocol must be designed — and it is
+the reason why `RCP.md` exists before the code.
 
 ---
 
-## 3. I tre numeri
+## 2. The guiding principles
 
-Sono i numeri che l'utente pone e a cui la tecnica si adegua, non il contrario. Ogni scelta
-tecnica si giustifica mostrando che avvicina uno di questi. (`CODER.md` §1 e §1-bis)
+1. **Detect capabilities, not the distribution.** At start-up we check what is there, choose the
+   best path and **declare** what is missing.
+2. **Degrade, do not fail.** Every missing dependency has a fallback. The service works
+   anyway, with less — but the fallback is declared in the log: a silent one produces two
+   behaviours under the same label.
+3. **Depend, do not rewrite.** Every component we write is a component to maintain
+   forever.
+4. ⭐ **We depend on the compositor, not on its surroundings.** The compositor has to be chased:
+   only it delivers the frames and accepts input. Screen lockers, idle daemons,
+   power managers and display managers do the same thing in four different ways, with
+   four configurations that rewrite themselves: those are **not** chased.
+   (`DECISIONI.md` §0.1 — it is the principle that produced several of the choices that follow)
+5. **Talk directly to the compositor**, never through portals that ask for authorisation on
+   screen: an unattended service has nobody to click.
+6. ⭐ ⛔ **On the user's screen there is their desktop and nothing else.** *«Come se fosse davanti al
+   monitor del PC»* — no artefacts, no marks, no service boxes. ⛔ And not in the
+   form *«off by default»*: what we need in order to measure **does not go into the binary that
+   gets installed** (`DECISIONI.md` §7.16, from the user on 11 Aug 2026; the clean-up is done and **is
+   measured** in phase 13). ⚠ *Added when the first bench feature asked for permission to
+   paint: the principle was not there, and the answer was wider than the question.*
 
-⚠ **Obiettivi di progetto, non promesse misurate** *(decisione dell'utente, 30 set 2026)*: le prove di
-prestazione sono state tolte (troppo dipendenti dall'hardware) e le misure con loro; le soglie di questo
-capitolo — e le altre del documento — restano come **direzione** delle scelte tecniche, non come garanzia.
-I parametri che il prodotto usa davvero (banda minima, tetto delle sessioni, orologi, ban) sono
-configurazione e valgono come scritti.
+---
 
-⭐ **E tutti e tre misurano il pezzo che è nostro** *(`DECISIONI.md` §2.7, 9 agosto 2026)*: REMOTIX
-promette quel che **produce e consegna sulla linea**. Che cosa il dispositivo dall'altra parte
-riesca a decodificare e dipingere **si misura e si dichiara, non si promette** — non è codice
-nostro. ⚠ Con un confine: un client che non tiene il minimo va **detto**, con la ragione. Un
-ripiego silenzioso resta vietato anche quando la colpa non è nostra.
+## 3. The three numbers
 
-### 3.1 Qualità dell'immagine
+They are the numbers the user sets and that technology adapts to, not the other way round. Every technical
+choice is justified by showing that it brings one of these closer. (`CODER.md` §1 and §1-bis)
+
+⚠ **Project goals, not measured promises** *(decision of the user, 30 Sep 2026)*: the performance
+tests were removed (too dependent on the hardware) and the measurements with them; the thresholds of this
+chapter — and the others in the document — remain as the **direction** of the technical choices, not as a guarantee.
+The parameters the product really uses (minimum bandwidth, session ceiling, clocks, ban) are
+configuration and apply as written.
+
+⭐ **And all three measure the piece that is ours** *(`DECISIONI.md` §2.7, 9 Aug 2026)*: REMOTIX
+promises what it **produces and delivers onto the line**. What the device on the other side
+manages to decode and paint **is measured and declared, not promised** — it is not our
+code. ⚠ With one boundary: a client that does not hold the minimum must be **told**, with the reason. A
+silent fallback stays forbidden even when the fault is not ours.
+
+### 3.1 Image quality
 
 | | |
 |---|---|
-| **MINIMO** | 480p · 25 fps · 24 bit |
-| **DESIDERATO** | 4K · 60 fps · **10 bit per canale** |
+| **MINIMUM** | 480p · 25 fps · 24 bit |
+| **DESIRED** | 4K · 60 fps · **10 bit per channel** |
 
-⭐ **Il minimo è una garanzia, non un traguardo.** Non è un'asticella da inseguire — v1 la
-superava già `[M]` — ma **il livello sotto cui non si scende e non si stacca**, per quanto brutta
-sia la linea. Nasce dal caso della rete mobile (§8), non da una rinuncia sulla qualità.
+⭐ **The minimum is a guarantee, not a goal.** It is not a bar to chase — v1 already
+exceeded it `[M]` — but **the level below which we do not go and do not disconnect**, however bad
+the line is. It comes from the mobile-network case (§8), not from giving up on quality.
 (`DECISIONI.md` §2.1)
 
-**Il desiderato è a 10 bit, non a «32 bit».** Trentadue bit non sono una grandezza esistente: sono
-24 di colore più 8 di trasparenza, e la trasparenza non si trasmette. Dietro l'intenzione
-«massima qualità» stavano due leve distinte, e ne è stata scelta una:
+**The desired is at 10 bit, not at «32 bit».** Thirty-two bits are not an existing quantity: they are
+24 of colour plus 8 of transparency, and transparency is not transmitted. Behind the intention
+«massima qualità» there were two distinct levers, and one of them was chosen:
 
-| Leva | Cura | Prezzo |
+| Lever | Cure | Price |
 |---|---|---|
-| **10 bit per canale** ✅ | le strisce sulle sfumature | quasi nulla, e in hardware ovunque — decoder Android compreso |
-| 4:4:4 `[?]` | il testo colorato sfrangiato `[M]` v1 | molta più banda, e **nessun decoder Android in hardware** |
+| **10 bit per channel** ✅ | banding on gradients | almost nothing, and in hardware everywhere — Android decoder included |
+| 4:4:4 `[?]` | fringed coloured text `[M]` v1 | much more bandwidth, and **no Android decoder in hardware** |
 
-Il 4:4:4 resta una `[?]` da misurare, non una promessa: sarebbe un'opzione per il solo client
-Linux su GPU capaci, e nessuno ha ancora misurato quanto si veda la differenza.
+4:4:4 remains a `[?]` to measure, not a promise: it would be an option for the Linux client
+only, on capable GPUs, and nobody has yet measured how much the difference shows.
 (`DECISIONI.md` §2.2-2.3)
 
-### 3.2 Il ritardo
+### 3.2 The delay
 
-| | Dall'input che arriva al fotogramma che parte |
+| | From the input arriving to the frame leaving |
 |---|---|
-| **TETTO** | 50 ms |
-| **TRAGUARDO** | 40 ms |
+| **CEILING** | 50 ms |
+| **TARGET** | 40 ms |
 
-⛔ **Si misura solo il pezzo che è nostro.** La rete non è nostra e cambia da un minuto all'altro:
-un requisito «100 ms end-to-end» si fallirebbe stando fermi, per colpa di una galleria — e un
-requisito che si può fallire senza aver sbagliato niente **non viene misurato da nessuno**. Il
-totale che l'utente sente è questo più la rete: si **dichiara**, non si promette.
+⛔ **Only the piece that is ours is measured.** The network is not ours and changes from one minute to the next:
+a «100 ms end-to-end» requirement would be failed while standing still, because of a tunnel — and a
+requirement that can be failed without having done anything wrong **is measured by nobody**. The
+total the user feels is this plus the network: it is **declared**, not promised.
 
-⚠ **Il ritardo pesa più dei fotogrammi**: 30 al secondo con 40 ms si usano benissimo, 60 con
-200 ms sono insopportabili. Una scelta che alza il ritmo peggiorando il ritardo non si fa — ed è
-uno scambio che si presenta di continuo, perché **ogni memoria intermedia compra fluidità e vende
-risposta**. (`DECISIONI.md` §2.4)
+⚠ **The delay weighs more than the frames**: 30 per second with 40 ms are perfectly usable, 60 with
+200 ms are unbearable. A choice that raises the rate while worsening the delay is not made — and it is
+a trade that comes up all the time, because **every intermediate buffer buys smoothness and sells
+responsiveness**. (`DECISIONI.md` §2.4)
 
-### 3.2-bis ⭐⭐ LA SPECIFICA DELL'ESPERIENZA — dettata dall'utente il 22 agosto 2026
+### 3.2-bis ⭐⭐ THE SPECIFICATION OF THE EXPERIENCE — dictated by the user on 22 Aug 2026
 
 > *«Non pretendo un comportamento allineato al nanosecondo rispetto a una situazione locale, ma che
 > gli si avvicini molto. La mia specifica è avere un'esperienza utente il più vicina possibile a una
 > situazione locale, ma non identica: quello è impossibile.»*
 
-⭐ **È il metro della fase 8**, e differisce dai tre numeri di §3 in una cosa sola ma decisiva: §3.2
-promette **il pezzo che è nostro** (input → fotogramma che parte), questa dice **che cosa deve
-sentire l'utente**. Le due non si sostituiscono: la prima è collaudabile da un banco, la seconda è
-il giudizio a cui la prima serve.
+⭐ **It is the yardstick of phase 8**, and it differs from the three numbers of §3 in one thing only but a decisive one: §3.2
+promises **the piece that is ours** (input → frame leaving), this one says **what the user must
+feel**. The two do not replace each other: the first can be acceptance-tested by a bench, the second is
+the judgement the first serves.
 
-> ✅ **Il giudizio dell'utente, 10 ottobre 2026** — prova a mano da **Windows con Chrome**, sulle scatole del
-> server (binario delle campagne `716e35b`, Intel UHD 770): *«Gnome, XFCE e LXQt funzionano in modo spettacolare»*;
-> *«su windows l'esperienza d'uso è fantastica: sembra davvero di essere davanti al PC»*. ⇒ La specifica qui sopra,
-> per quei tre desktop, è **raggiunta**. ⚠ KDE no: il desktop compare a mezza altezza nel browser (anche a un
-> secondo utente, client Zorin OS), in esame lo stesso giorno.
+> ✅ **The user's verdict, 10 Oct 2026** — manual test from **Windows with Chrome**, on the server's
+> boxes (campaign binary `716e35b`, Intel UHD 770): *«Gnome, XFCE e LXQt funzionano in modo spettacolare»*;
+> *«su windows l'esperienza d'uso è fantastica: sembra davvero di essere davanti al PC»*. ⇒ The specification above,
+> for those three desktops, is **reached**. ⚠ KDE not: the desktop appears at half height in the browser (also for a
+> second user, Zorin OS client), under examination the same day.
 
-#### ⭐ La scena su cui è stata dettata, e il numero che l'utente ha prodotto con l'occhio
+#### ⭐ The scene on which it was dictated, and the number the user produced by eye
 
-22 agosto 2026, dal video dell'utente: una finestra di terminale trascinata a mano dentro la
-sessione.
+22 Aug 2026, from the user's video: a terminal window dragged by hand inside the
+session.
 
-⭐ **E l'utente ha misurato a occhio la cosa che conta**: la distanza fra la freccia del mouse e la
-finestra che la insegue è **«la metà della larghezza della barra del titolo»**. ⇒ Le velocità della
-mano e i conti su quella scena stanno in `fasi/08-l-anello.md`.
+⭐ **And the user measured by eye the thing that counts**: the distance between the mouse arrow and the
+window chasing it is **«la metà della larghezza della barra del titolo»**. ⇒ The speeds of the
+hand and the calculations on that scene are in `fasi/08-l-anello.md`.
 
-#### ⛔ Perché è un ELASTICO, e perché l'utente lo chiama «fluidità» invece che «ritardo»
+#### ⛔ Why it is an ELASTIC, and why the user calls it «fluidità» rather than «ritardo»
 
-`[R]` Nel modo classico la freccia la muove **il browser**, alla velocità della mano (§7.1 e
-`pagina.html`: il cursore di sistema *e* la freccia disegnata, sovrapposti, tutt'e due locali). La
-finestra invece la insegue con **tutto** il ritardo dell'anello. ⇒
+`[R]` In the classic mode the arrow is moved by **the browser**, at the speed of the hand (§7.1 and
+`pagina.html`: the system cursor *and* the drawn arrow, overlapping, both local). The
+window instead chases it with **all** the delay of the link. ⇒
 
 ```
-distacco = velocità della mano × ritardo dell'anello
+gap = speed of the hand × delay of the link
 ```
 
-⛔ **Il distacco non è costante: cresce quando si accelera e si richiude quando si rallenta.** In
-locale è **zero a qualunque velocità**. ⇒ La finestra *nuota* rispetto alla mano, e questo si
-percepisce come **mancanza di fluidità**, non come lentezza — che è esattamente la parola che
-l'utente ha usato per primo, prima che ne conoscessimo la causa.
+⛔ **The gap is not constant: it grows when accelerating and closes again when slowing down.** Locally
+it is **zero at any speed**. ⇒ The window *swims* relative to the hand, and this is
+perceived as **lack of smoothness**, not as slowness — which is exactly the word
+the user used first, before we knew its cause.
 
-⭐⭐ **E il conto va nei due versi**: nota il distacco in pixel, si ricava il ritardo — ma il
-risultato cambia molto secondo la velocità della mano. ⏳ `[?]` **A quale velocità l'utente stia
-guardando non è deducibile**: va misurato l'anello, non chiesto a lui.
+⭐⭐ **And the calculation goes both ways**: knowing the gap in pixels, the delay can be derived — but the
+result changes a lot depending on the speed of the hand. ⏳ `[?]` **At what speed the user is
+looking cannot be deduced**: the link must be measured, not asked of him.
 
-#### ⛔ E il limite si dichiara, perché la specifica dice «non identica»
+#### ⛔ And the limit is declared, because the specification says «non identica»
 
-Un anello di rete **non può avere distacco zero**: c'è un fotogramma del compositore, uno della
-pagina, e il filo in mezzo. ⇒ Il distacco **si dimezza o meglio, non si toglie**. Chi promettesse
-di farlo sparire prometterebbe una cosa che non esiste — ed è precisamente la parte che l'utente ha
-messo nella specifica da sé: *«ma non identica: quello è impossibile»*.
+A network link **cannot have zero gap**: there is a frame of the compositor, one of the
+page, and the wire in between. ⇒ The gap **is halved or better, it is not removed**. Whoever promised
+to make it disappear would promise something that does not exist — and it is precisely the part the user
+put into the specification himself: *«ma non identica: quello è impossibile»*.
 
-⏳ **Il traguardo in numeri non si scrive qui finché l'anello non è rimisurato** sulla scena vera. Va
-scritto **nell'unità dell'utente** — frazioni di barra del titolo a una velocità dichiarata — perché
-è quella che lui può giudicare senza strumenti.
+⏳ **The target in numbers is not written here until the link is re-measured** on the real scene. It must be
+written **in the user's unit** — fractions of a title bar at a declared speed — because
+that is the one he can judge without instruments.
 
-#### ⭐ E lo scambio che questa specifica vieta era GIÀ vietato qui sopra
+#### ⭐ And the trade this specification forbids was ALREADY forbidden above
 
-§3.2 lo dice dal principio: *«ogni memoria intermedia compra fluidità e vende risposta»*, e *«una
-scelta che alza il ritmo peggiorando il ritardo non si fa»*. ⇒ ⛔ **Mettere l'anello in parallelo**
-— codificare l'N mentre si cattura l'N+1 — comprerebbe fotogrammi al secondo pagandoli in ritardo:
-**peggiorerebbe l'elastico**, cioè proprio la cosa che l'utente vede. È **fuori**, e non per una
-misura nuova: per una riga che stava scritta da prima che il difetto avesse un nome.
+§3.2 says it from the start: *«every intermediate buffer buys smoothness and sells responsiveness»*, and *«a
+choice that raises the rate while worsening the delay is not made»*. ⇒ ⛔ **Putting the link in parallel**
+— encoding frame N while capturing N+1 — would buy frames per second paying for them in delay:
+**it would make the elastic worse**, that is exactly the thing the user sees. It is **out**, and not because of a
+new measurement: because of a line that was written before the defect had a name.
 
-### ⚠ Le misure del ritardo sono storiche
+### ⚠ The delay measurements are historical
 
-*13 agosto 2026, fase 3 step 5*: il ritardo cattura → vetro è stato misurato sul ferro di allora,
-con la codifica del prodotto di allora. ⇒ I numeri, il loro spezzettamento tratto per tratto e la
-discussione sul compositore stanno in `STUDI.md` §gnome §8.2 e §13 e in `DECISIONI.md` §2.5: valgono
-per quella macchina e per quel prodotto, **non sono garanzie** *(decisione dell'utente del 30
-settembre 2026)*.
+*13 Aug 2026, phase 3 step 5*: the capture → glass delay was measured on the hardware of the time,
+with the product's encoding of the time. ⇒ The numbers, their breakdown stretch by stretch and the
+discussion of the compositor are in `STUDI.md` §gnome §8.2 and §13 and in `DECISIONI.md` §2.5: they apply
+to that machine and that product, **they are not guarantees** *(decision of the user of 30
+Sep 2026)*.
 
-⛔ **Resta la regola di metodo**: il ritardo si misura fino al **disegno finito**, non al richiamo del
-decodificatore — tagliare prima vuol dire regalarsi un pezzo del tetto (`CODER.md` §1-bis). ⚠ E il
-pezzo cieco dello schermo dell'utente non esiste su Xvfb (`STUDI.md` §web §8).
+⛔ **The method rule remains**: the delay is measured up to the **finished drawing**, not to the
+decoder callback — cutting earlier means giving yourself a piece of the ceiling (`CODER.md` §1-bis). ⚠ And the
+blind piece of the user's screen does not exist on Xvfb (`STUDI.md` §web §8).
 
 ---
 
-## 4. Il protocollo RCP
+## 4. The RCP protocol
 
 ```
 librcp.so
 rcp_frame_t · rcp_connect() · rcp_session_t
-stretta di mano:  RCP/1
+handshake:  RCP/1
 ```
 
-Il nome dice *Control*, non *Display*: il protocollo non porta solo pixel — porta input, appunti,
-geometria, congedo e stato della sessione, e il video è **uno** dei suoi canali.
+The name says *Control*, not *Display*: the protocol does not carry only pixels — it carries input, clipboard,
+geometry, farewell and session state, and video is **one** of its channels.
 
 | | |
 |---|---|
-| **trasporto** | **WebTransport su HTTP/3**, cioè QUIC con TLS 1.3 obbligatorio — **porta 7447** di serie, configurabile |
-| **codec video** | **H.264** e **HEVC**, **solo sulla scheda** — si negozia col browser (`DECISIONI.md` §1.13); ⛔ niente codifica sul processore (§11.4, `DECISIONI.md` §10.27) |
-| **audio** | Opus, con PCM come base sempre disponibile |
-| **canali** | video · audio · input · cursore · appunti · controllo |
+| **transport** | **WebTransport over HTTP/3**, that is QUIC with mandatory TLS 1.3 — **port 7447** by default, configurable |
+| **video codecs** | **H.264** and **HEVC**, **only on the graphics card** — negotiated with the browser (`DECISIONI.md` §1.13); ⛔ no encoding on the processor (§11.4, `DECISIONI.md` §10.27) |
+| **audio** | Opus, with PCM as an always-available base |
+| **channels** | video · audio · input · cursor · clipboard · control |
 
-⚠ **Il server ascolta su due porte con lo stesso numero**: **TCP** per consegnare la pagina, **UDP**
-per HTTP/3 e WebTransport. ⭐ *Corretto il 9 agosto 2026 dalla misura S1*: le due cose sono
-**indipendenti** — WebTransport non passa da `Alt-Svc`, apre la sua connessione da sé — e questo
-toglie di mezzo il ripiego silenzioso su TCP che avevo dichiarato come pericolo.
+⚠ **The server listens on two ports with the same number**: **TCP** to deliver the page, **UDP**
+for HTTP/3 and WebTransport. ⭐ *Corrected on 9 Aug 2026 by measurement S1*: the two things are
+**independent** — WebTransport does not go through `Alt-Svc`, it opens its own connection by itself — and this
+removes the silent fallback onto TCP that I had declared as a danger.
 
-⚠ **Il protocollo non è un dettaglio implementativo: è l'arbitro.** In v1 l'oracolo era `mstsc` —
-se disegnava, era giusto. In V2 client e server sono nostri, e **due programmi scritti dalla
-stessa mano che vanno d'accordo non confermano niente**: ripetono lo stesso presupposto. Da cui
-tre obblighi: `RCP.md` si scrive **prima** del codice e abbastanza preciso da poter dare torto a
-qualcuno; client e server si collaudano **contro la specifica**, non l'uno contro l'altro; e dove
-si può, serve un validatore che legga il filo.
+⚠ **The protocol is not an implementation detail: it is the arbiter.** In v1 the oracle was `mstsc` —
+if it drew, it was right. In V2 client and server are ours, and **two programs written by the
+same hand that agree confirm nothing**: they repeat the same assumption. Hence
+three obligations: `RCP.md` is written **before** the code and precise enough to be able to prove
+someone wrong; client and server are acceptance-tested **against the specification**, not against each other; and where
+possible, a validator that reads the wire is needed.
 
-### 4.1 La fiducia — due livelli, e non di più
+### 4.1 Trust — two levels, and no more
 
-*Posti dall'utente il 9 agosto 2026: «Abbiamo 2 livelli per la sicurezza: il trasporto e l'accesso».*
+*Set by the user on 9 Aug 2026: «Abbiamo 2 livelli per la sicurezza: il trasporto e l'accesso».*
 
-| Livello | Che cos'è | Come si risolve |
+| Level | What it is | How it is solved |
 |---|---|---|
-| **il trasporto** | che nessuno legga o riscriva quel che passa | **TLS**, sempre e senza alternative. Il certificato **se lo fa il server**, e la pagina passa al browser la sua impronta |
-| **l'accesso** | chi è ammesso a quella macchina | **indirizzo, porta, utente e password**. Niente altro — §4.2 |
+| **the transport** | that nobody reads or rewrites what passes | **TLS**, always and with no alternatives. The certificate **is made by the server itself**, and the page passes its fingerprint to the browser |
+| **the access** | who is admitted to that machine | **address, port, user and password**. Nothing else — §4.2 |
 
-⛔ **Non c'è un terzo livello, ed è una decisione**: niente autorità da installare, niente impronte
-da confrontare a mano, niente servizio nostro in mezzo. Le strade che aggiungevano un livello sono
-state guardate e **scartate**, con le ragioni in `DECISIONI.md` §1.7.
+⛔ **There is no third level, and it is a decision**: no authority to install, no fingerprints
+to compare by hand, no service of ours in between. The roads that added a level were
+looked at and **discarded**, with the reasons in `DECISIONI.md` §1.7.
 
-**Che cosa vede l'utente**: apre `https://indirizzo:7447`, **clicca l'avviso la prima volta su
-quel dispositivo**, digita utente e password. ⭐ Tutto il resto — rigenerare il certificato prima
-che scada, pubblicarne l'impronta nella pagina — sta **dentro il server** e non si vede.
+**What the user sees**: they open `https://indirizzo:7447`, **click through the warning the first time on
+that device**, type user and password. ⭐ Everything else — regenerating the certificate before
+it expires, publishing its fingerprint in the page — is **inside the server** and is not seen.
 
-⚠ **Il clic resta, ed è il prezzo dichiarato di non avere un dominio.** Chi ne ha uno mette un
-**certificato vero** — una riga di configurazione, non una strada diversa — e l'avviso non compare
-mai, iPhone compreso.
+⚠ **The click remains, and it is the declared price of not having a domain.** Whoever has one puts in a
+**real certificate** — a configuration line, not a different road — and the warning never
+appears, iPhone included.
 
-**La password non parte prima** che il server abbia dimostrato di essere quello di ieri —
-l'invariante I3 applicata all'ordine della stretta di mano.
+**The password does not leave** before the server has proved it is the same as yesterday —
+invariant I3 applied to the order of the handshake.
 
-⚠ La prima connessione **su ogni dispositivo** resta scoperta a un uomo-in-mezzo. **Rischio
-valutato e accettato** per lo scenario previsto: server proprio, rete propria o VPN. ⛔ E con il
-client web la **conseguenza** di quel rischio è più grossa — chi si mette in mezzo non intercetta
-la pagina, **la riscrive**. (`DECISIONI.md` §1.3 e §1.7)
+⚠ The first connection **on each device** remains exposed to a man-in-the-middle. **Risk
+assessed and accepted** for the intended scenario: own server, own network or VPN. ⛔ And with the
+web client the **consequence** of that risk is bigger — whoever gets in the middle does not intercept
+the page, **they rewrite it**. (`DECISIONI.md` §1.3 and §1.7)
 
-⏳ **Rinviato per decisione dell'utente**: la messa in sicurezza vera — MFA e quel che la tecnologia
-offre — è **un'evoluzione da fare a progetto completato**, non un pezzo di questo. Sta in evidenza
-in `DECISIONI.md` §1.7, con le tre voci da rileggere quel giorno.
+⏳ **Deferred by decision of the user**: real hardening — MFA and whatever the technology
+offers — is **an evolution to do once the project is complete**, not a piece of this one. It is highlighted
+in `DECISIONI.md` §1.7, with the three items to reread that day.
 
-### 4.2 L'autenticazione
+### 4.2 Authentication
 
-**PAM locale**, servizio `remotix`, con il **ban dell'indirizzo** dopo tre tentativi falliti.
+**Local PAM**, service `remotix`, with the **address ban** after three failed attempts.
 
-⭐ ✅ **Tre autenticazioni fallite dallo stesso indirizzo entro 5 minuti, e quell'indirizzo è fuori
-per 12 ore** *(deciso dall'utente il 10 agosto 2026 — `DECISIONI.md` §1.9, `RCP.md` §4.4-bis)*. Il
-**nome utente non conta**: tre nomi diversi contano tre. Un accesso riuscito azzera il conto.
+⭐ ✅ **Three failed authentications from the same address within 5 minutes, and that address is out
+for 12 hours** *(decided by the user on 10 Aug 2026 — `DECISIONI.md` §1.9, `RCP.md` §4.4-bis)*. The
+**user name does not count**: three different names count three. A successful sign-in resets the count.
 
 | | |
 |---|---|
-| **che cosa conta** | ⛔ **solo** l'autenticazione fallita — utente inesistente e parola sbagliata sono la stessa cosa, come §4.1 impone. Non gli errori di protocollo, non i tempi scaduti, **e non il rifiuto della seconda connessione** (§5.1), che è quel che riceve il secondo dispositivo dello stesso utente |
-| **che cosa vede chi è bannato** | la pagina **si carica lo stesso** e dice che i tentativi sono esauriti. ⛔ Mai un silenzio: chi è bannato per errore è quasi sempre il proprietario |
-| **come si esce** | ⭐ **le 12 ore che passano, oppure un comando di sblocco sul server** — che chiede l'accesso alla macchina, cioè l'unica chiave che quel caso ammette. Il ban **sopravvive al riavvio** |
+| **what counts** | ⛔ **only** failed authentication — non-existent user and wrong password are the same thing, as §4.1 requires. Not protocol errors, not timeouts, **and not the refusal of the second connection** (§5.1), which is what the same user's second device receives |
+| **what whoever is banned sees** | the page **loads all the same** and says the attempts are used up. ⛔ Never a silence: whoever is banned by mistake is almost always the owner |
+| **how one gets out** | ⭐ **the 12 hours passing, or an unblock command on the server** — which requires access to the machine, that is the only key that case admits. The ban **survives a restart** |
 
-⚠ **Il prezzo, dichiarato**: dietro un NAT gli indirizzi si condividono, quindi tre errori di una
-persona chiudono la porta a tutti gli altri per dodici ore — ed è il caso per cui la forma
-precedente aveva un secondo contatore, **tolto sapendolo**. E il primo a inciamparci è chi digita
-una parola lunga sulla tastiera di un telefono.
+⚠ **The price, declared**: behind a NAT addresses are shared, so three mistakes by one
+person close the door to everyone else for twelve hours — and it is the case for which the
+previous form had a second counter, **removed knowingly**. And the first to trip over it is whoever types
+a long password on a phone keyboard.
 
-> ⛔ *Riscritta il 10 agosto 2026. Questa sezione diceva: «cinque tentativi falliti in cinque minuti,
-> poi un'attesa che parte da 30 secondi e raddoppia fino a un tetto di 15 minuti, con due contatori
-> — uno per nome utente e uno per indirizzo». Era 🔸, cioè scritta da me e mai pronunciata; adesso è
-> ✅ e più dura.*
+> ⛔ *Rewritten on 10 Aug 2026. This section said: «five failed attempts in five minutes,
+> then a wait that starts at 30 seconds and doubles up to a ceiling of 15 minutes, with two counters
+> — one per user name and one per address». It was 🔸, that is written by me and never spoken; now it is
+> ✅ and harsher.*
 
-⭐ **E un secondo fisso di ritardo su ogni risposta, anche quando è «ammesso».** Non serve a
-rallentare chi indovina: serve a togliere il **tempismo** come canale. Senza, «utente inesistente»
-risponde in un millisecondo e «password sbagliata» in cinquanta — e la distinzione che il
-protocollo vieta di scrivere nel motivo la si legge col cronometro.
+⭐ **And one fixed second of delay on every answer, even when it is «admitted».** It does not serve to
+slow down whoever is guessing: it serves to remove **timing** as a channel. Without it, «non-existent user»
+answers in a millisecond and «wrong password» in fifty — and the distinction the
+protocol forbids writing in the reason can be read with a stopwatch.
 
 ---
 
-## 5. La sessione
+## 5. The session
 
-### 5.1 Una sola sessione grafica per utente
+### 5.1 A single graphical session per user
 
-Un utente può avere **innumerevoli** sessioni testuali (ssh, tty) contemporaneamente, ma **una
-sola** grafica — locale o remota. Testuali e grafiche convivono.
+A user can have **countless** text sessions (ssh, tty) at the same time, but **only
+one** graphical one — local or remote. Text and graphical sessions coexist.
 
-| Situazione | Esito |
+| Situation | Outcome |
 |---|---|
-| ha una sessione grafica **locale** attiva e apre una remota | ⛔ la remota è **rifiutata**, con messaggio esplicito |
-| ha una sessione grafica **remota** attiva e ne apre una locale | ⛔ **la locale vince**: la remota viene chiusa |
-| ⭐ ha una remota **attiva e viva** e si collega da un **secondo dispositivo** | ⛔ **la seconda connessione è rifiutata** *(deciso il 9 agosto 2026)* — è l'invariante I2, e il motivo è `GIA_ATTIVA_REMOTA` |
-| ha una remota il cui client **tace da 30 secondi** | quel client è **staccato** (§5.3): non tiene il posto, e il nuovo dispositivo **entra** |
+| has an active **local** graphical session and opens a remote one | ⛔ the remote one is **refused**, with an explicit message |
+| has an active **remote** graphical session and opens a local one | ⛔ **the local one wins**: the remote one is closed |
+| ⭐ has a remote one **active and alive** and connects from a **second device** | ⛔ **the second connection is refused** *(decided on 9 Aug 2026)* — it is invariant I2, and the reason is `GIA_ATTIVA_REMOTA` |
+| has a remote one whose client **has been silent for 30 seconds** | that client is **detached** (§5.3): it does not hold the seat, and the new device **gets in** |
 
-⚠ **Le ultime due righe non si contraddicono, e il discrimine è l'orologio del silenzio**: un client
-vivo occupa, un client muto no. ⛔ Il prezzo, dichiarato: se il portatile si spegne di colpo senza
-congedarsi, dal telefono si entra **dopo trenta secondi**, non subito.
+⚠ **The last two rows do not contradict each other, and the deciding factor is the silence clock**: a live
+client occupies, a mute client does not. ⛔ The price, declared: if the laptop switches off suddenly without
+saying farewell, from the phone you get in **after thirty seconds**, not at once.
 
-### 5.2 La sessione sopravvive al client
+### 5.2 The session survives the client
 
-Il palco — cattura, controllo e schermo virtuale — **appartiene alla sessione, non alla
-connessione**. Si chiude il client e la sessione resta viva; ci si ricollega, anche da un altro
-dispositivo, e si ritrova tutto. È l'invariante I4, ed è il difetto che in v1 rendeva la sessione
-inutilizzabile dopo il primo distacco. (`DECISIONI.md` §4.1)
+The stage — capture, control and virtual screen — **belongs to the session, not to the
+connection**. The client is closed and the session stays alive; you reconnect, even from another
+device, and find everything again. It is invariant I4, and it is the defect that in v1 made the session
+unusable after the first detachment. (`DECISIONI.md` §4.1)
 
-> ### ⛔⛔ MA NON SOPRAVVIVE AL **SERVER** — `[M]` 25 agosto 2026
+> ### ⛔⛔ BUT IT DOES NOT SURVIVE THE **SERVER** — `[M]` 25 Aug 2026
 >
-> ⭐ *«Sopravvive al client»* è vero e misurato. ⛔ **«Sopravvive al server» non lo è, e non era mai
-> stato scritto da nessuna parte.**
+> ⭐ *«It survives the client»* is true and measured. ⛔ **«It survives the server» is not, and it had never
+> been written anywhere.**
 >
-> ⭐⭐ **SMENTITO DALLA MISURA DEL 29 SETTEMBRE 2026** (`fasi/17-l-installatore.md` §5.2, T2): dieci
-> prove con Firefox vero sui quattro desktop — fermare l'unità (`KillMode=mixed`), uccidere il solo
-> padre, uccidere il solo figlio — **nessun desktop muore**: muoiono padre, aiutante PAM e figlio; il
-> palco (partito con `setsid --fork`, fuori dall'unità), la sessione e i programmi sopravvivono, e al
-> riattacco torna lo stesso compositore con le finestre. Il fatto del 25 agosto oggi non si riproduce.
+> ⭐⭐ **DISPROVED BY THE MEASUREMENT OF 29 SEP 2026** (`fasi/17-l-installatore.md` §5.2, T2): ten
+> tests with real Firefox on the four desktops — stopping the unit (`KillMode=mixed`), killing only the
+> parent, killing only the child — **no desktop dies**: parent, PAM helper and child die; the
+> stage (started with `setsid --fork`, outside the unit), the session and the programs survive, and on
+> reattaching the same compositor comes back with the windows. The fact of 25 Aug does not reproduce today.
 >
-> `[M]` Fermando l'unità del server alle **18:14:29** per aggiornarlo, **la sessione dell'utente è
-> morta con lei** — le sue finestre comprese; alle **18:14:44** ne è nata una **nuova e vuota**. La
-> ragione è che la sessione grafica vive **nell'albero di processi del server**, e l'unità ha
+> `[M]` Stopping the server's unit at **18:14:29** to update it, **the user's session
+> died with it** — its windows included; at **18:14:44** a **new and empty** one was born. The
+> reason is that the graphical session lives **in the server's process tree**, and the unit has
 > `KillMode=mixed`.
 >
-> ⇒ ⛔⛔ **Oggi aggiornare il server significa buttare fuori tutti** — ed è lo stesso danno che
-> `DECISIONI.md` §4.7 vieta a chiunque di provocare spegnendo la macchina, ⚠ **fatto però da chi
-> amministra, e senza che nessuno l'avesse dichiarato.**
+> ⇒ ⛔⛔ **Today updating the server means throwing everyone out** — and it is the same damage that
+> `DECISIONI.md` §4.7 forbids anyone to cause by shutting down the machine, ⚠ **done however by whoever
+> administers, and without anyone having declared it.**
 >
-> ⭐ **Non è una promessa rotta: è un confine che non era tracciato.** Sta qui perché il giorno in cui
-> il prodotto diventerà un servizio da aggiornare senza fermare nessuno — **fase 15** (era la 14 fino al 21 set 2026) — questo è il
-> punto da cui si riparte.
+> ⭐ **It is not a broken promise: it is a boundary that had not been drawn.** It is here because the day
+> the product becomes a service to update without stopping anyone — **phase 15** (it was 14 until 21 Sep 2026) — this is the
+> point to start again from.
 >
-> ⚠ **E oggi non costa niente, e va detto**: *«nessuno sta lavorando sul server, REMOTIX è
-> ancora in sviluppo»* — l'utente, 25 agosto 2026. ⇒ ⭐ **Non è un'emergenza: è un confine
-> scritto adesso perché il giorno in cui ci sarà qualcuno dentro, si sappia già.**
+> ⚠ **And today it costs nothing, and that must be said**: *«nessuno sta lavorando sul server, REMOTIX è
+> ancora in sviluppo»* — the user, 25 Aug 2026. ⇒ ⭐ **It is not an emergency: it is a boundary
+> written now so that the day someone is inside, it is already known.**
 
-### 5.2-bis ⭐ E finisce quando l'utente esce — le due uscite non sono la stessa
+### 5.2-bis ⭐ And it ends when the user logs out — the two exits are not the same
 
-*Deciso dall'utente il 15 agosto 2026 (`DECISIONI.md` §4.1-ter e §4.1-quater).*
+*Decided by the user on 15 Aug 2026 (`DECISIONI.md` §4.1-ter and §4.1-quater).*
 
-| il gesto dell'utente | che cosa succede |
+| the user's gesture | what happens |
 |---|---|
-| chiude la scheda, chiude il browser, **spegne o riavvia il proprio PC**, perde il campo | ⭐ **un caso solo**: il filo cade, la **sessione resta viva**, e chi torna ritrova tutto (§5.2). ⛔ Il PC dell'utente non è un attore del modello: non c'è niente da distinguere |
-| sceglie **«Esci/logout»** dal menu di sistema del desktop | ⛔ **la sessione finisce**, e con lei si chiudono tutti i programmi che l'utente aveva in esecuzione. La pagina torna al **modulo di accesso** con la riga *«la sessione è terminata»*, e il motivo sul filo è `SESSIONE_TERMINATA` (`RCP.md` §8.2 `0x10`) |
+| closes the tab, closes the browser, **shuts down or restarts their own PC**, loses signal | ⭐ **a single case**: the wire drops, the **session stays alive**, and whoever comes back finds everything (§5.2). ⛔ The user's PC is not an actor of the model: there is nothing to tell apart |
+| chooses **«Log Out»** from the desktop's system menu | ⛔ **the session ends**, and with it all the programs the user had running are closed. The page goes back to the **sign-in form** with the line *«the session has ended»*, and the reason on the wire is `SESSIONE_TERMINATA` (`RCP.md` §8.2 `0x10`) |
 
-⭐ **È l'unico gesto che dichiara «ho finito»**, e per questo la voce «Esci…» deve **esserci**: su
-GNOME va accesa esplicitamente, perché con un utente e una sessione sola la shell non la mostra.
+⭐ **It is the only gesture that declares «I am done»**, and that is why the «Log Out…» entry must **be there**: on
+GNOME it must be switched on explicitly, because with one user and a single session the shell does not show it.
 
-**E si raggiunge in due modi** *(deciso dall'utente il 15 agosto 2026, `DECISIONI.md`
+**And it can be reached in two ways** *(decided by the user on 15 Aug 2026, `DECISIONI.md`
 §4.1-quinquies)*:
 
 | | |
 |---|---|
-| la voce **«Esci…»** nel menu di sistema del desktop | la strada normale, e ⭐ **basta a sé stessa**: si raggiunge col puntatore e col dito, quindi c'è **su ogni dispositivo**, tastiera o no |
-| ⭐ la scorciatoia **`Ctrl+Alt+Fine`** | la gestisce **la pagina**, non il desktop: una sola volta per tutti e quattro i desktop, e funziona **anche se il desktop non risponde più**. ⛔ La pagina se la tiene, quindi nella sessione remota quella combinazione **non arriva mai**. ⛔ **Chiede conferma** — *«terminare la sessione?»* — perché chiude tutti i programmi aperti e costa un gesto solo, dove il menu ne costa tre |
+| the **«Log Out…»** entry in the desktop's system menu | the normal road, and ⭐ **it is enough on its own**: it can be reached with the pointer and with a finger, so it is there **on every device**, keyboard or not |
+| ⭐ the shortcut **`Ctrl+Alt+Fine`** | it is handled by **the page**, not the desktop: once for all four desktops, and it works **even if the desktop no longer responds**. ⛔ The page keeps it for itself, so in the remote session that combination **never arrives**. ⛔ **It asks for confirmation** — *«end the session?»* — because it closes all open programs and costs a single gesture, where the menu costs three |
 
-⛔ **E nessun bottone a schermo per il logout** *(deciso dall'utente il 15 agosto 2026)*: il bottone
-di §7.3-bis esiste per `Ctrl+Alt+Canc`, che **non ha nessuna voce di menu**. Il logout ce l'ha.
+⛔ **And no on-screen button for logging out** *(decided by the user on 15 Aug 2026)*: the button
+of §7.3-bis exists for `Ctrl+Alt+Canc`, which **has no menu entry**. Logging out has one.
 
-### 5.3 I tre orologi
+### 5.3 The three clocks
 
-| Orologio | Quanto | Che cosa scatta |
+| Clock | How long | What triggers |
 |---|---|---|
-| **silenzio del client** | 30 secondi | il client si considera **staccato**, e il codificatore si libera |
-| **inattività dell'utente** | 30 minuti senza input | REMOTIX **stacca** il client: per rientrare servono utente e password |
-| **abbandono della sessione** | ⭐ **60 minuti senza input** | la sessione si **chiude**, **con congedo pulito** (`0x03`) |
+| **client silence** | 30 seconds | the client is considered **detached**, and the encoder is freed |
+| **user inactivity** | 30 minutes without input | REMOTIX **detaches** the client: user and password are needed to get back in |
+| **session abandonment** | ⭐ **60 minutes without input** | the session is **closed**, **with a clean farewell** (`0x03`) |
 
-Sono in scala: secondi, minuti, minuti. Il secondo e il terzo sono **configurabili**, con quei
-valori come predefiniti, e ⛔ **il valore in vigore si scrive nel registro all'avvio** — un tetto da
-un'ora non lo verifica nessuno aspettando un'ora.
+They are in scale: seconds, minutes, minutes. The second and third are **configurable**, with those
+values as defaults, and ⛔ **the value in force is written in the log at start-up** — a one-hour
+ceiling is not verified by anyone waiting an hour.
 
-> ### ⛔ Il terzo orologio è cambiato — deciso dall'utente il **16 agosto 2026**
+> ### ⛔ The third clock has changed — decided by the user on **16 Aug 2026**
 >
-> Diceva ~~«**6 ore** senza alcun **attacco**»~~. ⇒ *«Niente timeout delle 6 ore: se dopo 60 minuti
+> It said ~~«**6 hours** without any **attach**»~~. ⇒ *«Niente timeout delle 6 ore: se dopo 60 minuti
 > non c'è traccia di input la sessione viene killata.»*
 >
-> ⚠ **Cambiano due cose, non una**: il tetto (6 ore → 60 minuti) e **il criterio** — non più «nessuno
-> si è attaccato», ma «nessuno ha toccato niente». Uno che si attacca e resta a **guardare** non
-> rinnova più niente: il tetto si nutre degli stessi cinque gesti di §7.3 che nutrono l'orologio dei
-> 30 minuti.
+> ⚠ **Two things change, not one**: the ceiling (6 hours → 60 minutes) and **the criterion** — no longer «nobody
+> has attached», but «nobody has touched anything». Someone who attaches and stays **watching** no
+> longer renews anything: the ceiling feeds on the same five gestures of §7.3 that feed the
+> 30-minute clock.
 >
-> ⭐ **E la decisione è venuta da una misura chiesta apposta**: una sessione abbandonata tiene
-> memoria e quasi niente processore, e **non cresce** nel tempo. Non è una perdita, è un costo
-> fisso — e l'utente ha scelto di pagarlo per un'ora invece che per sei. Il ragionamento intero, con
-> la misura, è in `DECISIONI.md` §4.8.
+> ⭐ **And the decision came from a measurement asked for on purpose**: an abandoned session holds
+> memory and almost no processor, and **does not grow** over time. It is not a leak, it is a fixed
+> cost — and the user chose to pay it for one hour instead of six. The whole reasoning, with
+> the measurement, is in `DECISIONI.md` §4.8.
 
-⭐ **Un client che tace è un client che si è staccato**, e nessuna connessione «tiene il posto».
-Chi arriva entra, senza timeout da aspettare: sparisce il caso «il telefono è morto in galleria e
-ora non posso rientrare nella mia sessione». (`DECISIONI.md` §4.4)
+⭐ **A client that is silent is a client that has detached**, and no connection «holds the seat».
+Whoever arrives gets in, with no timeout to wait for: the case «the phone died in a tunnel and
+now I cannot get back into my session» disappears. (`DECISIONI.md` §4.4)
 
-⚠ Con QUIC il passaggio WiFi → LTE **non** conta come silenzio: la connessione si porta dietro il
-cambio di indirizzo. I 30 secondi coprono solo le interruzioni vere.
+⚠ With QUIC the WiFi → LTE switch does **not** count as silence: the connection carries the
+change of address with it. The 30 seconds cover only real interruptions.
 
-⛔ **E una cosa che il client web aggiunge, dichiarata invece che scoperta** *(9 agosto 2026,
-`STUDI.md` §web §1.2 D)*: una **scheda in secondo piano viene congelata dal browser dopo circa cinque
-minuti** `[S]`. Una scheda congelata tace, quindi **si stacca**, e la sessione resta viva ad
-aspettare — che è il comportamento giusto, ma va detto all'utente invece di sembrare un difetto.
-⚠ L'esenzione documentata richiede un canale che WebTransport da solo non fornisce: chi volesse
-tenere viva la scheda dovrebbe aggiungere **un secondo meccanismo di rete solo per quello**, e non
-si fa senza una ragione misurata.
+⛔ **And one thing the web client adds, declared instead of discovered** *(9 Aug 2026,
+`STUDI.md` §web §1.2 D)*: a **background tab is frozen by the browser after about five
+minutes** `[S]`. A frozen tab is silent, so **it detaches**, and the session stays alive
+waiting — which is the right behaviour, but it must be told to the user instead of looking like a defect.
+⚠ The documented exemption requires a channel that WebTransport alone does not provide: whoever wanted to
+keep the tab alive would have to add **a second network mechanism just for that**, and it is not
+done without a measured reason.
 
-⚠ «Input» è quel che l'utente manda, non quel che guarda: chi resta mezz'ora a guardare un video
-senza toccare nulla viene staccato. Il costo è piccolo — riattaccarsi è rapido.
+⚠ «Input» is what the user sends, not what they watch: whoever spends half an hour watching a video
+without touching anything is detached. The cost is small — reattaching is quick.
 
-### 5.4 Il blocco è di REMOTIX, non del desktop
+### 5.4 The lock belongs to REMOTIX, not to the desktop
 
-⛔ **Il blocca-schermo dei desktop resta spento**, com'era in v1. Non è una svista ereditata: è
-una dipendenza, e ha una ragione misurata. Bloccando davvero, su GNOME Mutter **revoca** cattura
-e input `[R]`; su KDE si apre la catena che spegne lo schermo e monta un output fittizio **con un
-filtro che inghiotte tutto l'input** `[R]`; su XFCE e LXQt le cure sarebbero righe di
-configurazione, e su LXQt il demone ne riscrive una da sé.
+⛔ **The desktops' screen lockers stay off**, as they were in v1. It is not an inherited oversight: it is
+a dependency, and it has a measured reason. Really locking, on GNOME Mutter **revokes** capture
+and input `[R]`; on KDE the chain starts that switches off the screen and mounts a dummy output **with a
+filter that swallows all input** `[R]`; on XFCE and LXQt the cures would be configuration
+lines, and on LXQt the daemon rewrites one of them by itself.
 
-La sicurezza è la stessa: l'unica strada per quel desktop passa da RCP, e RCP passa da PAM.
+Security is the same: the only road to that desktop goes through RCP, and RCP goes through PAM.
 (`DECISIONI.md` §4.3)
 
-⏳ **Con una scadenza dichiarata**: quel ragionamento regge **finché la password è l'unica
-chiave**. Chi un giorno aggiungesse un'autenticazione più forte deve rileggere questa scelta,
-perché allora il blocco del desktop tornerebbe a difendere qualcosa.
+⏳ **With a declared expiry**: that reasoning holds **as long as the password is the only
+key**. Whoever one day added a stronger authentication must reread this choice,
+because then the desktop lock would go back to defending something.
 
 ### 5.5 Multi-tenant
 
-Più utenti possono avere ciascuno la propria sessione grafica remota, indipendenti.
+Several users can each have their own remote graphical session, independent.
 
-**Tetto predefinito: 10 sessioni**, configurabile. ⛔ Ma il limite vero non è un conteggio: è un
-**budget** di pixel al secondo, e lo pone il codificatore. Con lo stesso ferro le stesse dieci
-sessioni sono facilissime o impossibili secondo la qualità che ciascuna chiede.
+**Default ceiling: 10 sessions**, configurable. ⛔ But the real limit is not a count: it is a
+**budget** of pixels per second, and it is set by the encoder. With the same hardware the same ten
+sessions are very easy or impossible depending on the quality each one asks for.
 
-⭐ **Quante sessioni reggano dipende dal ferro e dalla scena**, e non si promette: le misure della
-fase 10 sul ferro di allora stanno in `fasi/10-multi-tenant-e-il-budget.md` §6.
+⭐ **How many sessions hold depends on the hardware and the scene**, and it is not promised: the measurements of
+phase 10 on the hardware of the time are in `fasi/10-multi-tenant-e-il-budget.md` §6.
 
-**Quando il budget è pieno si rifiuta, dichiarando il motivo.** Non si fa degradare chi sta già
-lavorando per far entrare chi arriva: sarebbe una discesa non nata da una misura della linea,
-cioè ciò che I1 vieta. (`DECISIONI.md` §4.6)
+**When the budget is full we refuse, declaring the reason.** We do not degrade whoever is already
+working to let in whoever arrives: it would be a drop not born from a measurement of the line,
+that is what I1 forbids. (`DECISIONI.md` §4.6)
 
-> ### ⭐⭐⭐ LA MONETA DEL BUDGET — fase 10, 24 agosto 2026
+> ### ⭐⭐⭐ THE CURRENCY OF THE BUDGET — phase 10, 24 Aug 2026
 >
-> ⛔ **La fase 10 ha smentito che il collo fosse il codificatore**: a saturarsi per primo, su quel
-> ferro, era il motore che **compone** — lavoro del compositore, non nostro — e il dirupo cadeva su
-> **quanto si sta componendo**, non sul numero di sessioni. ⇒ Le misure stanno in
-> `fasi/10-multi-tenant-e-il-budget.md` e `DECISIONI.md` §4.6-nonies; sono storiche.
+> ⛔ **Phase 10 disproved that the bottleneck was the encoder**: the first to saturate, on that
+> hardware, was the engine that **composes** — the compositor's work, not ours — and the cliff fell on
+> **how much is being composed**, not on the number of sessions. ⇒ The measurements are in
+> `fasi/10-multi-tenant-e-il-budget.md` and `DECISIONI.md` §4.6-nonies; they are historical.
 >
-> ⇒ ⭐⭐ **È per questo che il budget si può calcolare PRIMA di accettare**: la moneta è il pixel
-> composto, e il costo di una sessione si conosce dalla sua tela. ⛔ **Ma il pixel da solo non
-> basta**: si guarda anche **il ritardo di chi è già dentro**, con una soglia
-> (`BUDGET_RITARDO_AFFANNO_MS`, **22,9 ms**, in `src/budget.h`) tarata sulla macchina della fase 10.
+> ⇒ ⭐⭐ **That is why the budget can be computed BEFORE accepting**: the currency is the composed
+> pixel, and the cost of a session is known from its canvas. ⛔ **But the pixel alone is not
+> enough**: we also look at **the delay of whoever is already inside**, with a threshold
+> (`BUDGET_RITARDO_AFFANNO_MS`, **22.9 ms**, in `src/budget.h`) tuned on the phase 10 machine.
 >
-> ### La regola, per intero
+> ### The rule, in full
 >
 > ```
-> regge(dentro, nuovo)  ⟺  domanda(dentro) + costo(nuovo)  ≤  C × tolleranza
->                           E  il ritardo di chi è dentro sta sotto la soglia
+> holds(inside, new)  ⟺  demand(inside) + cost(new)  ≤  C × tolerance
+>                           AND  the delay of whoever is inside stays below the threshold
 > ```
 >
-> **Tre manopole**, `src/budget.c`:
+> **Three knobs**, `src/budget.c`:
 >
-> | | predefinito | |
+> | | default | |
 > |---|---|---|
-> | `--budget-mpixel-s N` | ⛔ **0, cioè SPENTO** | ⭐ perché **I6**: quel che cambia ciò che l'utente vede nasce spento |
-> | `--tetto-sessioni N` | **10** | e da qui scendono `MAX_ATTACCATE`, `MAX_FIGLI`, `QUANTI_PRESENTI`, `WT_PALCHI` — ⭐ **il ripiego dei `#define` a 16 è finito** |
-> | `--riserva F` | **0,5** | quanto si tiene da parte per chi è già dentro |
+> | `--budget-mpixel-s N` | ⛔ **0, that is OFF** | ⭐ because of **I6**: what changes what the user sees is born off |
+> | `--tetto-sessioni N` | **10** | and from here descend `MAX_ATTACCATE`, `MAX_FIGLI`, `QUANTI_PRESENTI`, `WT_PALCHI` — ⭐ **the fallback of the `#define`s at 16 is over** |
+> | `--riserva F` | **0.5** | how much is kept aside for whoever is already inside |
 >
-> ⭐ **E `BUDGET_PIENO 0x06` adesso parte davvero** — con la frase che dice *perché*, non un rifiuto
-> muto. Fino alla fase 10 era dichiarato in `src/rcp.h` e in `RCP.md` §8.2 **e nessuna riga lo
-> mandava mai**.
+> ⭐ **And `BUDGET_PIENO 0x06` now really leaves** — with the sentence that says *why*, not a mute
+> refusal. Until phase 10 it was declared in `src/rcp.h` and in `RCP.md` §8.2 **and no line ever
+> sent it**.
 >
-> ⚠ **Il giudizio dell'utente sulla capacità misurata allora è `DECISIONI.md` §4.6-septies.**
+> ⚠ **The user's verdict on the capacity measured then is `DECISIONI.md` §4.6-septies.**
 
-> ### ⛔ Alla fase 1 questa riga NON è onorata, ed è un ripiego dichiarato
+> ### ⛔ In phase 1 this line is NOT honoured, and it is a declared fallback
 >
-> *Scritto qui l'11 agosto 2026, rilievo **R12C.17**: il ripiego era dichiarato **solo** in un
-> commento di `src/main.c`, cioè dove non lo legge nessuno che non stia leggendo quel file — mentre
-> questa sezione promette dieci sessioni insieme senza una riga che dica il contrario.*
+> *Written here on 11 Aug 2026, finding **R12C.17**: the fallback was declared **only** in a
+> comment of `src/main.c`, that is where nobody reads it who is not reading that file — while
+> this section promises ten sessions together without a line saying otherwise.*
 >
-> ### ⭐⭐ E DEI DUE RIPIEGHI, IL PRIMO È STATO CURATO — 12 agosto 2026
+> ### ⭐⭐ AND OF THE TWO FALLBACKS, THE FIRST HAS BEEN CURED — 12 Aug 2026
 >
-> *`DECISIONI.md` §1.10, misurato dal banco `banchi/02-pam-*` e scritto in
-> `fasi/rapporti/PAM-filo-unico.md`.* ⛔ **La verifica PAM non blocca più il filo**: la interroga un
-> **processo aiutante** (`src/aiutante.c`), e il ciclo `poll` torna al suo lavoro mentre PAM pensa.
+> *`DECISIONI.md` §1.10, measured by the bench `banchi/02-pam-*` and written in
+> `fasi/rapporti/PAM-filo-unico.md`.* ⛔ **The PAM check no longer blocks the wire**: it is queried by a
+> **helper process** (`src/aiutante.c`), and the `poll` loop goes back to its work while PAM thinks.
 >
-> ⭐ Chi **non** si sta autenticando non aspetta più PAM, e la stretta di mano di chi arriva non si
-> ferma; chi si autentica aspetta quanto decide PAM, e non doveva cambiare. Le misure prima/dopo
-> stanno in `fasi/rapporti/PAM-filo-unico.md`.
+> ⭐ Whoever is **not** authenticating no longer waits for PAM, and the handshake of whoever arrives does not
+> stop; whoever authenticates waits as long as PAM decides, and that was not supposed to change. The before/after measurements
+> are in `fasi/rapporti/PAM-filo-unico.md`.
 >
-> ### ⭐⭐ E IL SECONDO RIPIEGO È FINITO — 24 agosto 2026, fase 10
+> ### ⭐⭐ AND THE SECOND FALLBACK IS OVER — 24 Aug 2026, phase 10
 >
-> ⛔ *Diceva: «`src/rcp.c` tiene **16** sessioni attaccate in una tabella fissa in compilazione
-> (`MAX_ATTACCATE`), dove qui il tetto è dieci configurabile».* ⭐ **Adesso il tetto è uno solo,
-> `RCP_TETTO_SESSIONI`, vale dieci, e si cambia a caldo con `--tetto-sessioni N`.**
+> ⛔ *It said: «`src/rcp.c` keeps **16** attached sessions in a table fixed at compile time
+> (`MAX_ATTACCATE`), where here the ceiling is ten, configurable».* ⭐ **Now there is only one ceiling,
+> `RCP_TETTO_SESSIONI`, it is ten, and it is changed on the fly with `--tetto-sessioni N`.**
 >
-> ⚠ Le copie a mano erano **cinque**, non una: `MAX_ATTACCATE` (`rcp.c`), `MAX_FIGLI` (`figlio.c`),
-> `QUANTI_PRESENTI` (`main.c`), `WT_PALCHI` (`webtransport.c`, era **8** — cioè **un sesto numero
-> ancora diverso**). ⭐ Tutte scendono dal tetto.
+> ⚠ The hand-made copies were **five**, not one: `MAX_ATTACCATE` (`rcp.c`), `MAX_FIGLI` (`figlio.c`),
+> `QUANTI_PRESENTI` (`main.c`), `WT_PALCHI` (`webtransport.c`, it was **8** — that is **a sixth number
+> different again**). ⭐ They all descend from the ceiling.
 >
-> ⛔ **E una è stata lasciata separata apposta**: `MAX_IN_VOLO` (`src/aiutante.c`) **non è** il numero
-> delle sessioni — è quante verifiche PAM stanno in volo insieme. ⇒ ⭐ *unificare per simmetria quel
-> che non è la stessa quantità è un difetto nuovo, non una cura.*
-> Il confine per intero sta in `FASI.md` §01-filo-nudo, «Che cosa è stato sviluppato».
+> ⛔ **And one was left separate on purpose**: `MAX_IN_VOLO` (`src/aiutante.c`) **is not** the number
+> of sessions — it is how many PAM checks are in flight together. ⇒ ⭐ *unifying for symmetry what
+> is not the same quantity is a new defect, not a cure.*
+> The boundary in full is in `FASI.md` §01-filo-nudo, «What was developed».
 >
-> ### ⭐ E i due ripieghi hanno una scadenza, decisa dall'utente l'11 agosto 2026
+> ### ⭐ And the two fallbacks have an expiry, decided by the user on 11 Aug 2026
 >
-> ⛔ *Non si copia qui che cosa è stato deciso: si rimanda dove le decisioni vivono.*
+> ⛔ *What was decided is not copied here: we refer to where decisions live.*
 >
 > | | |
 > |---|---|
-> | **il filo** | ✅ **CURATO il 12 agosto 2026** — **`DECISIONI.md` §1.10**, con un **processo aiutante** come deciso. ⭐ La misura che ha spostato la decisione l'ha presa **B8**: il filo restava fermo per secondi a ogni tentativo, ⛔ e **a metterlo era PAM**. ⭐ E dopo la cura chi *non* si sta autenticando non aspetta più (`banchi/02-pam-fermo.py`, `fasi/rapporti/PAM-filo-unico.md`) |
-> | **il tetto** | **`DECISIONI.md` §1.11** — ⛔ **resta 16 fisso fino alla fase 3**, di proposito: qui sopra è scritto che *«il limite vero non è un conteggio, è un budget di pixel al secondo»*, quindi qualunque numero di oggi è un segnaposto e cambiarlo adesso vuol dire cambiarlo due volte. ⚠ **E il prezzo è questa riga**: per due fasi il codice dice **16** e questa sezione dice **dieci**, ed è la stessa forma che ha prodotto il difetto della finestra di cinque minuti (R12C.5) |
+> | **the wire** | ✅ **CURED on 12 Aug 2026** — **`DECISIONI.md` §1.10**, with a **helper process** as decided. ⭐ The measurement that moved the decision was taken by **B8**: the wire stayed still for seconds at every attempt, ⛔ and **it was PAM putting it there**. ⭐ And after the cure whoever is *not* authenticating no longer waits (`banchi/02-pam-fermo.py`, `fasi/rapporti/PAM-filo-unico.md`) |
+> | **the ceiling** | **`DECISIONI.md` §1.11** — ⛔ **it stays fixed at 16 until phase 3**, on purpose: above it is written that *«the real limit is not a count, it is a budget of pixels per second»*, so any number today is a placeholder and changing it now means changing it twice. ⚠ **And the price is this line**: for two phases the code says **16** and this section says **ten**, and it is the same form that produced the defect of the five-minute window (R12C.5) |
 
 ---
 
-### 5.9 ⭐⭐ LA SCALETTA DI UNA SESSIONE, PASSO PER PASSO
+### 5.9 ⭐⭐ THE RUNNING ORDER OF A SESSION, STEP BY STEP
 
-> #### ⛔ Perché questa scaletta sta QUI, e da dove viene
+> #### ⛔ Why this running order is HERE, and where it comes from
 >
-> *Era un documento suo, `SESSIONE.md`, nato il 16 agosto 2026 dal suggerimento dell'utente:
+> *It was a document of its own, `SESSIONE.md`, born on 16 Aug 2026 from the user's suggestion:
 > «prepara una nota in cui riporti la scaletta punto per punto di cosa deve avvenire per il
-> corretto set-up di una sessione». ⭐ È entrata qui il 16 agosto 2026, in §5, perché **descrive
-> il prodotto**, non una fase: dice che cosa deve essere vero perché una sessione esista.*
+> corretto set-up di una sessione». ⭐ It came in here on 16 Aug 2026, in §5, because **it describes
+> the product**, not a phase: it says what must be true for a session to exist.*
 >
-> ⚠ **E il resto di quel documento non è venuto qui**: erano le misure del 16 agosto, e stanno
-> in `FASI.md` §05-la-sessione, dove vivono le misure di quella fase.
+> ⚠ **And the rest of that document did not come here**: it was the measurements of 16 Aug, and they are
+> in `FASI.md` §05-la-sessione, where the measurements of that phase live.
 
 
-> ⛔ **Perché questo documento esiste, e perché non esisteva prima.**
+> ⛔ **Why this document exists, and why it did not exist before.**
 >
-> La mattina del **16 agosto 2026** l'utente ha provato cinque volte la stessa scena — collegati,
-> esci, ricollegati — e ogni volta ha trovato un difetto diverso: bande nere, desktop «rotto»,
-> nessun input, il desktop che compare dopo molti secondi. ⛔ Ogni volta si curava **il sintomo che
-> il registro mostrava**, e si tornava a provare.
+> On the morning of **16 Aug 2026** the user tried the same scene five times — connect,
+> log out, reconnect — and each time found a different defect: black bands, «broken» desktop,
+> no input, the desktop appearing after many seconds. ⛔ Each time we cured **the symptom that
+> the log showed**, and went back to trying.
 >
-> ⭐ Erano **quasi tutti lo stesso difetto**, visto da facce diverse: un passo di questa scaletta
-> che non era mai stato scritto, e quindi nemmeno verificato.
+> ⭐ They were **almost all the same defect**, seen from different faces: a step of this running order
+> that had never been written, and therefore never verified either.
 >
 > ⇒ *«Prepara una nota in cui riporti la scaletta punto per punto di cosa deve avvenire per il
-> corretto set-up di una sessione»* — **suggerimento dell'utente**, ed è il documento che avrebbe
-> risparmiato quella mattina.
+> corretto set-up di una sessione»* — **the user's suggestion**, and it is the document that would have
+> saved that morning.
 
-⚠ **Come si legge**: la colonna «se manca» è quella che serve quando qualcosa non va. Si parte dal
-sintomo, si trova il passo, e si guarda **chi** doveva farlo. ⛔ Non si parte mai dal codice.
+⚠ **How to read it**: the «if missing» column is the one needed when something goes wrong. Start from the
+symptom, find the step, and look at **who** had to do it. ⛔ Never start from the code.
 
 ---
 
-### Parte A — quel che dev'essere vero PRIMA, e non lo fa il prodotto
+### Part A — what must be true BEFORE, and is not done by the product
 
-*Sta in `src/provisiona.sh`, e si verifica con `sudo bash src/provisiona.sh verifica`.*
+*It is in `src/provisiona.sh`, and is verified with `sudo bash src/provisiona.sh verifica`.*
 
-| # | che cosa | chi | se manca |
+| # | what | who | if missing |
 |---|---|---|---|
-| A1 | l'**utente esiste** e ha una parola d'ordine | provisioning | PAM rifiuta: «utente o parola d'ordine non corretti» — e la diagnosi punta sulla parola |
-| A2 | ⛔ l'utente è nei gruppi **`video`** e **`render`** | provisioning | ⚠ **il sintomo è «lento», non «rotto»**: senza seat non arrivano le ACL di `uaccess`, Mesa ripiega su **llvmpipe** e il compositore disegna in software: anche un comando nel terminale risponde con un ritardo che si vede |
-| A3 | `/etc/pam.d/remotix` esiste **e chiama `pam_systemd`** | provisioning | nessuna sessione logind ⇒ il compositore **non parte affatto** (vedi B3) |
-| A4 | la regola **polkit** (12 azioni) e `logind.conf` | provisioning | un utente remoto può spegnere la macchina e portarla via a tutti (`DECISIONI.md` §4.7) |
-| A5 | la regola **udev** della scheda | provisioning | il compositore sceglie la GPU **a caso**; le misure valgono per quel ferro e non per il prodotto (§4.6-quinquies) |
-| A6 | ⛔ **il server NON gira dentro una sessione utente** | chi avvia il servizio | `pam_systemd`, se chi chiama sta già in una sessione, **non ne crea una seconda e non lo dice**: i figli restano senza runtime, senza bus e senza desktop. ⚠ In produzione non capita (unità di sistema); **capita solo in prova**, cioè dove si studia |
+| A1 | the **user exists** and has a password | provisioning | PAM refuses: «wrong user or password» — and the diagnosis points at the password |
+| A2 | ⛔ the user is in the groups **`video`** and **`render`** | provisioning | ⚠ **the symptom is «slow», not «broken»**: without a seat the `uaccess` ACLs do not arrive, Mesa falls back to **llvmpipe** and the compositor draws in software: even a command in the terminal answers with a visible delay |
+| A3 | `/etc/pam.d/remotix` exists **and calls `pam_systemd`** | provisioning | no logind session ⇒ the compositor **does not start at all** (see B3) |
+| A4 | the **polkit** rule (12 actions) and `logind.conf` | provisioning | a remote user can shut down the machine and take it away from everyone (`DECISIONI.md` §4.7) |
+| A5 | the **udev** rule for the graphics card | provisioning | the compositor picks the GPU **at random**; the measurements apply to that hardware and not to the product (§4.6-quinquies) |
+| A6 | ⛔ **the server does NOT run inside a user session** | whoever starts the service | `pam_systemd`, if the caller is already in a session, **does not create a second one and does not say so**: the children are left without runtime, without bus and without desktop. ⚠ In production it does not happen (system unit); **it happens only in testing**, that is where we study |
 
-> ### ⛔⛔ A6, la trappola dentro la trappola: `setsid` **non basta**
+> ### ⛔⛔ A6, the trap inside the trap: `setsid` **is not enough**
 >
-> `[M]` **16 agosto 2026.** Il server era stato riavviato via `ssh`, e
-> `riavvia-7700.sh` lo lanciava con `setsid` — messo lì per un'altra ragione giusta (`sudo` con
-> `use_pty` stronca quel che resta nel suo pseudo-terminale).
+> `[M]` **16 Aug 2026.** The server had been restarted via `ssh`, and
+> `riavvia-7700.sh` launched it with `setsid` — put there for another right reason (`sudo` with
+> `use_pty` kills whatever remains in its pseudo-terminal).
 >
-> ⇒ ⚠ **`setsid` stacca dal terminale, non dalla sessione di logind.** Il processo resta nel cgroup
-> della sessione `ssh` di chi ha dato il comando, e da lì A6 scatta in pieno: `[M]` `loginctl` non
-> mostrava **nessuna** sessione per `prova`, `/run/user/1001` non esisteva, e il registro ripeteva
-> *«NON ho il bus di sessione: Could not connect: No such file or directory»*. **Otto giri di banco
-> falliti su otto**, e la faccia del difetto era la solita: «il desktop non parte».
+> ⇒ ⚠ **`setsid` detaches from the terminal, not from the logind session.** The process stays in the cgroup
+> of the `ssh` session of whoever gave the command, and from there A6 triggers fully: `[M]` `loginctl`
+> showed **no** session for `prova`, `/run/user/1001` did not exist, and the log repeated
+> *«NON ho il bus di sessione: Could not connect: No such file or directory»*. **Eight bench rounds
+> failed out of eight**, and the face of the defect was the usual one: «the desktop does not start».
 >
-> ⭐ **La cura è farlo partire dove starebbe in produzione**: `systemd-run --unit=…`, cioè un'unità
-> di sistema transitoria in `system.slice`. ⛔ E **si verifica**, perché A6 è silenzioso per
-> costruzione: `riavvia-7700.sh` legge `/proc/PID/cgroup` del processo vivo e **rifiuta di dare
-> l'OK** se ci trova `user@` o `session-`.
+> ⭐ **The cure is to start it where it would be in production**: `systemd-run --unit=…`, that is a transient
+> system unit in `system.slice`. ⛔ And **it is verified**, because A6 is silent by
+> construction: `riavvia-7700.sh` reads `/proc/PID/cgroup` of the live process and **refuses to give
+> the OK** if it finds `user@` or `session-` there.
 >
-> ⚠ E c'era un secondo insegnamento nello stesso file: ⛔ **lo script che avvia il prodotto non era
-> nel deposito** — viveva solo sulla macchina di prova. Le sue trappole erano scritte solo dentro se
-> stesso, nessuna revisione le ha mai lette, e quella nuova è costata un'ora di diagnosi su un
-> difetto che *questa tabella aveva già scritto*. ⇒ Adesso sta in `src/riavvia-7700.sh`.
+> ⚠ And there was a second lesson in the same file: ⛔ **the script that starts the product was not
+> in the repository** — it lived only on the test machine. Its traps were written only inside
+> itself, no review ever read them, and the new one cost an hour of diagnosis on a
+> defect that *this table had already written*. ⇒ Now it is in `src/riavvia-7700.sh`.
 
 ---
 
-### Parte B — quel che fa il prodotto, in quest'ordine
+### Part B — what the product does, in this order
 
-| # | che cosa | dove | se manca / se va storto |
+| # | what | where | if missing / if it goes wrong |
 |---|---|---|---|
-| B1 | **PAM autentica** (asincrono, l'aiutante) | `aiutante.c` | il filo si ferma per secondi (§1.10) |
-| B2 | nasce il **figlio**: gruppi → gid → uid, e si verifica col nucleo | `figlio.c` | un processo che gira come chi non deve |
-| B3 | ⛔⭐ il figlio **apre la sessione PAM**: `XDG_SESSION_TYPE=wayland`, `XDG_SESSION_CLASS=user`, `PAM_RHOST`, **nessun `XDG_SEAT`** | `figlio.c`, passo 2-bis | ⛔ Mutter chiede `sd_pid_get_session()`, riceve **ENXIO** e muore con *«Failed to find any matching session»*. ⚠ Il **linger** non basta: dà runtime e bus, ma mette i processi in uno scope di classe `manager` |
-| B4 | le variabili **`XDG_*`** si **leggono** da `pam_getenvlist`, non si inventano | `figlio.c` | un valore *dichiarato* al posto di uno *avuto*: regge finché regge |
-| B5 | il client **ATTACCA dichiarando la tela = la finestra** | `pagina.html` | ⛔ la sessione nasce con la tela sbagliata e va **ridimensionata**, e il ridimensionamento è una gara: bande nere, desktop «rotto», input nel posto sbagliato |
-| B6 | ⛔ il server **dice al palco la tela** nell'istante in cui la concede | `rcp.c`, dopo `SESSIONE` | il palco nasce a una misura che nessuno ha chiesto, e ogni fotogramma si butta |
-| B7 | ⛔ **la sessione precedente dev'essere FINITA** — il gestore d'utente **e** `gnome-session-restart-dbus.service` | `sessione.c` | ⛔ la sessione nuova nasce dentro quella che muore e **muore con lei senza scrivere una riga**: `[M]` il suo registro resta a **zero byte** |
-| B8 | si scrivono le **impostazioni**: `Ctrl+Alt+F*` svuotate, «Esci…» acceso, sospensione automatica spenta, blocca-schermo spento | `sessione.c` | il logout non ha una voce; la macchina si addormenta sotto una sessione viva |
-| B9 | si scrive il **drop-in** della Shell (`--headless --no-x11`, ⛔ **senza `--virtual-monitor`**) | `sessione.c` | con un monitor suo la sessione è «sana» per v1 e **nera** per noi |
-| B10 | si **avvia** `gnome-session`, e ⛔ **non si aspetta**: la risposta è il fotogramma | `sessione.c` + il ciclo di ri-tentativi | un figlio che aspetta 40 s è un figlio che non risponde al padre |
-| B11 | il figlio **dice «ATTENDI»** finché il palco non c'è, e riprova subito | `figlio.c` | il padre **deduce** un fallimento dal silenzio e risponde `NON_ORA`: da lì i due lati non si rimettono più d'accordo |
-| B12 | monta il **palco**: `RecordVirtual` → PipeWire → il monitor | `mutter.c`, `cattura.c` | nessun pixel |
-| B13 | apre il **canale di input** (`libei`) sulla tela | `input.c` | il desktop si vede e non si comanda |
-| B14 | **inibisce** sospensione e inattività (`SUSPEND\|IDLE`, ⛔ mai `LOGOUT`) | `sessione.c` | la notifica «Automatic Suspend», e la macchina che si addormenta |
-| B15 | ⭐ **verifica**: la sessione non ha seat, e da qui non si spegne | `figlio.c` + `sentinella.c` | «scritto non è in vigore» (E1). ⛔ E la fa **il figlio**: root si sente rispondere «yes» perché logind guarda `CAP_SYS_BOOT` prima di polkit |
+| B1 | **PAM authenticates** (asynchronous, the helper) | `aiutante.c` | the wire stops for seconds (§1.10) |
+| B2 | the **child** is born: groups → gid → uid, and it is verified with the kernel | `figlio.c` | a process running as someone it should not |
+| B3 | ⛔⭐ the child **opens the PAM session**: `XDG_SESSION_TYPE=wayland`, `XDG_SESSION_CLASS=user`, `PAM_RHOST`, **no `XDG_SEAT`** | `figlio.c`, step 2-bis | ⛔ Mutter asks `sd_pid_get_session()`, gets **ENXIO** and dies with *«Failed to find any matching session»*. ⚠ **Linger** is not enough: it gives runtime and bus, but puts the processes in a scope of class `manager` |
+| B4 | the **`XDG_*`** variables are **read** from `pam_getenvlist`, not invented | `figlio.c` | a *declared* value in place of an *obtained* one: it holds as long as it holds |
+| B5 | the client **ATTACHES declaring canvas = window** | `pagina.html` | ⛔ the session is born with the wrong canvas and must be **resized**, and resizing is a race: black bands, «broken» desktop, input in the wrong place |
+| B6 | ⛔ the server **tells the stage the canvas** at the instant it grants it | `rcp.c`, after `SESSIONE` | the stage is born at a size nobody asked for, and every frame is thrown away |
+| B7 | ⛔ **the previous session must be FINISHED** — the user manager **and** `gnome-session-restart-dbus.service` | `sessione.c` | ⛔ the new session is born inside the one that is dying and **dies with it without writing a line**: `[M]` its log stays at **zero bytes** |
+| B8 | the **settings** are written: `Ctrl+Alt+F*` emptied, «Log Out…» on, automatic suspend off, screen locker off | `sessione.c` | logging out has no entry; the machine falls asleep under a live session |
+| B9 | the Shell's **drop-in** is written (`--headless --no-x11`, ⛔ **without `--virtual-monitor`**) | `sessione.c` | with a monitor of its own the session is «healthy» for v1 and **black** for us |
+| B10 | `gnome-session` is **started**, and ⛔ **not waited for**: the answer is the frame | `sessione.c` + the retry loop | a child that waits 40 s is a child that does not answer the parent |
+| B11 | the child **says «ATTENDI»** until the stage is there, and retries at once | `figlio.c` | the parent **deduces** a failure from the silence and answers `NON_ORA`: from there the two sides never agree again |
+| B12 | it mounts the **stage**: `RecordVirtual` → PipeWire → the monitor | `mutter.c`, `cattura.c` | no pixels |
+| B13 | it opens the **input channel** (`libei`) on the canvas | `input.c` | the desktop is seen and cannot be controlled |
+| B14 | it **inhibits** suspend and idleness (`SUSPEND\|IDLE`, ⛔ never `LOGOUT`) | `sessione.c` | the «Automatic Suspend» notification, and the machine falling asleep |
+| B15 | ⭐ **verifies**: the session has no seat, and cannot shut down from here | `figlio.c` + `sentinella.c` | «written is not in force» (E1). ⛔ And it is done by **the child**: root gets the answer «yes» because logind looks at `CAP_SYS_BOOT` before polkit |
 
 ---
 
-### Parte C — l'uscita, che è l'altra metà
+### Part C — the exit, which is the other half
 
-| # | che cosa | se va storto |
+| # | what | if it goes wrong |
 |---|---|---|
-| C1 | il **filo che cade** (scheda chiusa, PC spento, campo perso) ⇒ il posto si libera, **la sessione resta viva** (I4) | si perde il lavoro di chi voleva solo cambiare stanza |
-| C2 | **«Esci»** — dal menu o con `Ctrl+Alt+Fine` ⇒ la sessione finisce e i programmi si chiudono | — |
-| C3 | ⛔ il congedo **`0x10`** parte **PRIMA** che la sessione muoia, e va a **tutti** i client di quell'utente | chi guarda resta su uno schermo fermo per trenta secondi e legge «errore di rete» (rilievo B-7) |
-| C4 | ⛔ il figlio **non** rifà la sessione dopo un'uscita: aspetta un attacco nuovo | il desktop che l'utente ha appena chiuso **ricompare da solo** |
-| C5 | la pagina torna al **modulo di accesso**, e si rispoglia: via `data-schermo`, via la Pointer Lock, via lo schermo intero | un modulo di accesso dentro il vestito del desktop, col mouse ancora catturato |
+| C1 | the **wire dropping** (tab closed, PC off, signal lost) ⇒ the seat is freed, **the session stays alive** (I4) | the work of whoever only wanted to change room is lost |
+| C2 | **«Log Out»** — from the menu or with `Ctrl+Alt+Fine` ⇒ the session ends and the programs are closed | — |
+| C3 | ⛔ the farewell **`0x10`** leaves **BEFORE** the session dies, and goes to **all** the clients of that user | whoever is watching stays on a frozen screen for thirty seconds and reads «network error» (finding B-7) |
+| C4 | ⛔ the child does **not** redo the session after a logout: it waits for a new attach | the desktop the user has just closed **reappears by itself** |
+| C5 | the page goes back to the **sign-in form**, and undresses again: away `data-schermo`, away the Pointer Lock, away full screen | a sign-in form inside the desktop's clothes, with the mouse still captured |
 
 ---
 
-### Parte D — dal sintomo al passo
+### Part D — from the symptom to the step
 
-⭐ **È la tabella da leggere per prima quando qualcosa non va.**
+⭐ **It is the table to read first when something goes wrong.**
 
-| il sintomo | il passo |
+| the symptom | the step |
 |---|---|
-| «il desktop non compare» | B3 · B7 · A6 |
-| «compare dopo molti secondi» | B7 (l'avvio fallito si recupera, ma dopo qualche secondo) · B10 |
-| «bande nere ai lati» | B5 · B6 |
-| «il desktop è rotto» | B5 · B6 (la tela e il palco non combaciano) |
-| «nessun input» | B13 · **B6** (la regione del puntatore segue la tela: se la tela balla, i clic finiscono altrove) |
-| «va lento» | **A2** (llvmpipe) · A5 (scheda sbagliata) |
-| «il terminale resta congelato finché non muovo il mouse» | la coda della raffica in `cattura.c` (`LEZIONI.md` §6.5) |
-| «si può spegnere la macchina» | A4 · B15 |
-| «stavo leggendo e mi si è **congelato lo schermo**» · «qualcun altro mi ha preso il desktop» | ✅ **l'orologio del silenzio**, `FASI.md` §05-la-sessione §6-bis — riparato il 16 agosto. ⚠ Se ricompare, cerca nel registro *«il margine si sta assottigliando»* |
-| «un tasto è rimasto premuto dopo che è caduta la linea» | ⭐ non succede: il server rilascia tutto al distacco (`RCP.md` §7.3) — `FASI.md` §05-la-sessione §6 |
+| «the desktop does not appear» | B3 · B7 · A6 |
+| «it appears after many seconds» | B7 (the failed start is recovered, but after a few seconds) · B10 |
+| «black bands on the sides» | B5 · B6 |
+| «the desktop is broken» | B5 · B6 (the canvas and the stage do not match) |
+| «no input» | B13 · **B6** (the pointer region follows the canvas: if the canvas wobbles, clicks end up elsewhere) |
+| «it is slow» | **A2** (llvmpipe) · A5 (wrong card) |
+| «the terminal stays frozen until I move the mouse» | the tail of the burst in `cattura.c` (`LEZIONI.md` §6.5) |
+| «the machine can be shut down» | A4 · B15 |
+| «I was reading and my **screen froze**» · «someone else took my desktop» | ✅ **the silence clock**, `FASI.md` §05-la-sessione §6-bis — fixed on 16 Aug. ⚠ If it comes back, look in the log for *«il margine si sta assottigliando»* |
+| «a key stayed pressed after the line dropped» | ⭐ it does not happen: the server releases everything on detachment (`RCP.md` §7.3) — `FASI.md` §05-la-sessione §6 |
 
 ---
 
-## 6. La geometria: la tela e la vista
+## 6. The geometry: the canvas and the view
 
-Sono due cose distinte, ed è la separazione che tiene in piedi sia il riaggancio da dispositivi
-diversi sia il futuro multi-monitor.
+They are two distinct things, and it is the separation that holds up both reattaching from different
+devices and the future multi-monitor.
 
-| | Di chi è | Quanto cambia |
+| | Whose it is | How much it changes |
 |---|---|---|
-| **la tela** — la misura del desktop, quella che le finestre vedono | della **sessione** | si fissa a ogni attacco, e non si muove finché il client resta |
-| **la vista** — che cosa di quella tela vede questo client, e quanto grande | della **connessione** | liberamente |
+| **the canvas** — the size of the desktop, the one the windows see | the **session**'s | it is fixed at every attach, and does not move as long as the client stays |
+| **the view** — what of that canvas this client sees, and how large | the **connection**'s | freely |
 
-### 6.1 Il modello
+### 6.1 The model
 
-| Momento | Chi decide la misura |
+| Moment | Who decides the size |
 |---|---|
-| **attacco** | il client: la sessione legge la sua risoluzione e usa quella. È 1:1 |
-| **durante la sessione** | nessuno: se l'utente ridimensiona la finestra, **il client riscala l'immagine** |
-| **riattacco** da un altro dispositivo | il nuovo client, con la sua risoluzione |
+| **attach** | the client: the session reads its resolution and uses it. It is 1:1 |
+| **during the session** | nobody: if the user resizes the window, **the client rescales the image** |
+| **reattach** from another device | the new client, with its resolution |
 
-⭐ Il caso mobile viene giusto da solo: il telefono si attacca e la tela nasce della forma del
-telefono — pixel veri, niente bande, niente scalatura.
+⭐ The mobile case comes out right by itself: the phone attaches and the canvas is born in the shape of the
+phone — real pixels, no bands, no scaling.
 
-### 6.1 ✅ ⭐⭐ ATTUATA il 15 agosto 2026 — e questa tabella adesso descrive il prodotto
+### 6.1 ✅ ⭐⭐ IMPLEMENTED on 15 Aug 2026 — and this table now describes the product
 
-*Fino a quella notte era il modello che si voleva; da lì è quel che il codice fa, misurato sulla
-macchina di prova e giudicato dall'utente su due client («sia su Linux sia su Android è tutto
+*Until that night it was the model we wanted; from then on it is what the code does, measured on the
+test machine and judged by the user on two clients («sia su Linux sia su Android è tutto
 perfetto»).*
 
-| momento | che cosa succede davvero | `[M]` |
+| moment | what really happens | `[M]` |
 |---|---|---|
-| **attacco** | la pagina manda `ADATTA_TELA` con la misura della propria finestra, e la tela diventa quella | tela **1264×800** in una finestra 1265×800, scala di disegno **1,000** |
-| **durante la sessione** | ⛔ il client riscala, e il desktop **non si tocca mai** — dal 17 agosto 2026 non c'è più nemmeno l'interruttore che lo faceva (`DECISIONI.md` §5.1-bis) | ~~il ridimensionamento a caldo~~ — misurato, e uscito lo stesso: costava poco su Mutter e **non si poteva fare** su KWin ≤ 6.7.4 |
-| **riattacco da un altro dispositivo** | `SESSIONE` concede **la tela che il palco ha già** (§4.5), così i pixel arrivano subito, e poi la pagina chiede la sua | **0 fotogrammi scartati** |
+| **attach** | the page sends `ADATTA_TELA` with the size of its own window, and the canvas becomes that | canvas **1264×800** in a 1265×800 window, drawing scale **1.000** |
+| **during the session** | ⛔ the client rescales, and the desktop **is never touched** — since 17 Aug 2026 there is not even the switch that did it any more (`DECISIONI.md` §5.1-bis) | ~~hot resizing~~ — measured, and removed all the same: it cost little on Mutter and **could not be done** on KWin ≤ 6.7.4 |
+| **reattach from another device** | `SESSIONE` grants **the canvas the stage already has** (§4.5), so the pixels arrive at once, and then the page asks for its own | **0 frames discarded** |
 
-⛔ **E la riga «È 1:1» è diventata vera in un senso più stretto di quel che sembrava**: non «un
-pixel del desktop per un pixel dello schermo», ma **un pixel del desktop per un pixel della
-finestra** — vedi §6.1-bis, che è stata corretta quella stessa notte.
+⛔ **And the line «It is 1:1» became true in a narrower sense than it seemed**: not «one
+desktop pixel per screen pixel», but **one desktop pixel per window
+pixel** — see §6.1-bis, which was corrected that same night.
 
-### 6.1-bis ⛔ «La risoluzione del client», quando il client è una finestra
+### 6.1-bis ⛔ «The client's resolution», when the client is a window
 
-*Chiarito il 9 agosto 2026. Il modello di §6.1 diceva «la sessione legge la risoluzione del
-client», e con un programma a schermo intero non c'era altro da dire. **Un browser è una finestra
-dentro uno schermo**, e le due misure sono diverse — a volte molto.*
+*Clarified on 9 Aug 2026. The model of §6.1 said «the session reads the client's
+resolution», and with a full-screen program there was nothing else to say. **A browser is a window
+inside a screen**, and the two sizes are different — sometimes very.*
 
-| | Che cosa è | Chi la usa |
+| | What it is | Who uses it |
 |---|---|---|
-| **la tela** | ⛔ ~~lo schermo del dispositivo~~ → ⭐ **la FINESTRA, in pixel fisici** — corretto il 15 agosto 2026, vedi il riquadro qui sotto | si fissa **all'attacco e al riattacco**, con `ADATTA_TELA`, e ⛔ **non cambia più per tutta la sessione** (§5.1-bis, 17 agosto 2026) |
-| **la vista** | **la finestra**, cioè quanto la pagina ha davvero da disegnare, sempre in pixel fisici | si rinegozia a ogni ridimensionamento |
+| **the canvas** | ⛔ ~~the device's screen~~ → ⭐ **the WINDOW, in physical pixels** — corrected on 15 Aug 2026, see the box below | it is fixed **at attach and at reattach**, with `ADATTA_TELA`, and ⛔ **no longer changes for the whole session** (§5.1-bis, 17 Aug 2026) |
+| **the view** | **the window**, that is how much the page really has to draw, always in physical pixels | it is renegotiated at every resize |
 
-> ## ⛔⛔ CORRETTA IL 15 AGOSTO 2026 — la tela è la FINESTRA, non lo schermo
+> ## ⛔⛔ CORRECTED ON 15 AUG 2026 — the canvas is the WINDOW, not the screen
 >
-> *Questa tabella diceva: la tela è **lo schermo del dispositivo**, «non la finestra», e «si fissa
-> all'attacco e non si muove». ⇒ Con quella regola tela e vista sono **quasi sempre diverse**, e da
-> lì discendono le bande, la scala ≠ 1 e la conversione delle coordinate.*
+> *This table said: the canvas is **the device's screen**, «not the window», and «it is fixed
+> at attach and does not move». ⇒ With that rule canvas and view are **almost always different**, and from
+> there come the bands, scale ≠ 1 and the conversion of coordinates.*
 >
-> ⛔ **L'ha rovesciata `DECISIONI.md` §5.0-sexies**, decisa dall'utente il 14 agosto 2026 dopo due
-> giorni in cui il mouse sul DeX è rimasto inutilizzabile: *«abbiamo due tele, quella del server e
+> ⛔ **It was overturned by `DECISIONI.md` §5.0-sexies**, decided by the user on 14 Aug 2026 after two
+> days in which the mouse on DeX stayed unusable: *«abbiamo due tele, quella del server e
 > quella del client… se i compositori sanno dare la misura esatta, non servono nemmeno le
-> conversioni»*. ⇒ La tela prende la misura della **finestra**, e con lei spariscono insieme
-> **quattro sintomi**: bande nere, testo interpolato, ri-attacco a misura diversa e i quattro
-> secondi fra login e desktop.
+> conversioni»*. ⇒ The canvas takes the size of the **window**, and with it **four symptoms** disappear
+> together: black bands, interpolated text, reattach at a different size and the four
+> seconds between login and desktop.
 >
-> ⚠ **E la ragione che questo paragrafo dava per scegliere lo schermo non è stata ignorata, è stata
-> pagata**: *«un desktop grande quanto la finestra che avevi aperto per caso resterebbe tale per
-> tutta la sessione — piccolo per sempre»*. ⛔ Era vero **finché la tela non si poteva cambiare**.
-> Adesso si cambia **a ogni attacco e a ogni riattacco** — ⚠ *durante* la sessione no, e dal 17
-> agosto 2026 nemmeno dietro un interruttore (`DECISIONI.md` §5.1-bis). La frase «piccolo per
-> sempre» non descrive più niente lo stesso: bastava riattaccarsi.
+> ⚠ **And the reason this paragraph gave for choosing the screen was not ignored, it was
+> paid for**: *«a desktop as large as the window you happened to have open would stay so for
+> the whole session — small forever»*. ⛔ It was true **as long as the canvas could not be changed**.
+> Now it changes **at every attach and every reattach** — ⚠ *during* the session no, and since 17
+> Aug 2026 not even behind a switch (`DECISIONI.md` §5.1-bis). The sentence «small
+> forever» no longer describes anything all the same: reattaching was enough.
 >
-> ⭐ **E il «appena vai a schermo intero torna 1:1 e nitido» è diventato la condizione NORMALE**, non
-> il premio dello schermo intero: `[M]` scala **1,000** e `image-rendering: pixelated` in una
-> finestra qualunque.
+> ⭐ **And the «as soon as you go full screen it goes back to 1:1 and sharp» has become the NORMAL condition**, not
+> the reward of full screen: `[M]` scale **1.000** and `image-rendering: pixelated` in any
+> window.
 
-⭐ **Perché lo schermo e non la finestra**, che era l'altra scelta possibile: la tela è **il desktop**,
-e un desktop grande quanto la finestra che avevi aperta per caso al primo collegamento resterebbe
-tale per tutta la sessione — piccolo per sempre, e morbido appena ingrandisci (§6.3 ne dichiara già
-il prezzo). Prendendo lo schermo, la finestra piccola mostra il desktop **rimpicciolito e intero**,
-e appena vai a schermo intero torna **1:1 e nitido**.
+⭐ **Why the screen and not the window**, which was the other possible choice: the canvas is **the desktop**,
+and a desktop as large as the window you happened to have open at the first connection would stay
+so for the whole session — small forever, and soft as soon as you enlarge it (§6.3 already declares
+the price). Taking the screen, the small window shows the desktop **shrunk and whole**,
+and as soon as you go full screen it goes back to **1:1 and sharp**.
 
-⭐ **E c'è una seconda ragione, che arriva dalla tastiera**: la Keyboard Lock esiste **solo a schermo
-intero** (§7.3-bis). Cioè il modo in cui questo prodotto si usa davvero *è* lo schermo intero — ed è
-esattamente la condizione in cui vista e tela coincidono e non si scala niente.
+⭐ **And there is a second reason, which comes from the keyboard**: the Keyboard Lock exists **only in full
+screen** (§7.3-bis). That is, the way this product is really used *is* full screen — and it is
+exactly the condition in which view and canvas coincide and nothing is scaled.
 
-⚠ **Quel che si accetta, dichiarato:**
+⚠ **What is accepted, declared:**
 
 | | |
 |---|---|
-| il telefono in mano, in verticale | la tela nasce **alta e stretta**, che come desktop è strano. È il ripiego d'emergenza (§7.2), e il caso primario è DeX con uno schermo vero |
-| **ruotare il telefono** dopo l'attacco | ⛔ la tela **non gira**: si vedono le bande, e il client riscala impaginando (§6.2). ⚠ Ed è il comportamento **dichiarato**, non un difetto da curare: l'interruttore che la faceva girare è uscito il 17 agosto 2026 (`DECISIONI.md` §5.1-bis). ⭐ Per riavere la misura giusta ci si **riattacca** |
-| uno schermo 4K | la tela nasce 4K, e sono **quattro volte i pixel** di 1080p da codificare per ogni sessione: pesa sul budget di §5.5, non sulla cattura (`LEZIONI.md` §6.4) |
-| ⭐ **la tela al massimo 4096×2304** (dal 1 ottobre 2026, decisione dell'utente: *«4096 max di larghezza va benissimo, non ho mai preteso di più»*) — uno schermo 5K, 8K o ultralargo | la tela **non si rifiuta**: il lato che sfora si porta al massimo e l'altro resta (5120×2880 → **4096×2304**, 5120×1440 → **4096×1440**), e la pagina la impagina a scala 1 con le bande intorno (§6.2), come ogni tela più piccola della finestra. ⚠ Perché: H.264 sulla scheda Intel si ferma a **4096 px per lato**, e Firefox su Linux riceve solo H.264 — una tela più larga avrebbe avuto video solo su Chrome. 2304 è il 16:9 a 4096 (ci sta il DCI 4096×2160). Il limite è del protocollo, `RCP.md` §4.5; il minimo resta **320×240** |
+| the phone in hand, upright | the canvas is born **tall and narrow**, which is strange as a desktop. It is the emergency fallback (§7.2), and the primary case is DeX with a real screen |
+| **rotating the phone** after attach | ⛔ the canvas **does not rotate**: the bands show, and the client rescales by letterboxing (§6.2). ⚠ And it is the **declared** behaviour, not a defect to cure: the switch that made it rotate was removed on 17 Aug 2026 (`DECISIONI.md` §5.1-bis). ⭐ To get the right size back you **reattach** |
+| a 4K screen | the canvas is born 4K, and that is **four times the pixels** of 1080p to encode for each session: it weighs on the budget of §5.5, not on capture (`LEZIONI.md` §6.4) |
+| ⭐ **the canvas at most 4096×2304** (since 1 Oct 2026, decision of the user: *«4096 max di larghezza va benissimo, non ho mai preteso di più»*) — a 5K, 8K or ultrawide screen | the canvas **is not refused**: the side that exceeds is brought to the maximum and the other stays (5120×2880 → **4096×2304**, 5120×1440 → **4096×1440**), and the page lays it out at scale 1 with bands around (§6.2), like any canvas smaller than the window. ⚠ Why: H.264 on the Intel card stops at **4096 px per side**, and Firefox on Linux receives only H.264 — a wider canvas would have had video only on Chrome. 2304 is 16:9 at 4096 (DCI 4096×2160 fits). The limit is the protocol's, `RCP.md` §4.5; the minimum stays **320×240** |
 
-`[?]` **Tre cose che nessuno ha misurato, e che vanno nella sonda del browser**, perché tutte e tre
-cambiano il numero che il client dichiara:
+`[?]` **Three things nobody has measured, which go into the browser probe**, because all three
+change the number the client declares:
 
-1. ⛔ **lo zoom della pagina falsa il conto — MISURATO, e la formula qui sopra non regge.**
-   ⚠ *Questa riga diceva* «*Va misurato quanto e su quali motori*»: **è misurato**, e la risposta è
-   *«su uno dei due, del 50 %»* — banco **S5**, `[M]` 10 agosto 2026, dettaglio in
-   `web/rapporti/S-esiti-sonda.md` §3 e in `DECISIONI.md` §5.0-quater. Corretta l'11 agosto 2026,
-   rilievo **R12C.8**.
+1. ⛔ **page zoom skews the count — MEASURED, and the formula above does not hold.**
+   ⚠ *This line said* «*It must be measured by how much and on which engines*»: **it is measured**, and the answer is
+   *«on one of the two, by 50 %»* — bench **S5**, `[M]` 10 Aug 2026, detail in
+   `web/rapporti/S-esiti-sonda.md` §3 and in `DECISIONI.md` §5.0-quater. Corrected on 11 Aug 2026,
+   finding **R12C.8**.
 
-   | Motore | zoom 100 % | zoom 150 % | la tela che questa formula darebbe |
+   | Engine | zoom 100 % | zoom 150 % | the canvas this formula would give |
    |---|---|---|---|
-   | **Chrome 151.0.7922.108** | `screen` 1920×1080, `dpr` 1 | `screen` **1920×1080**, `dpr` 1,5 | ⛔ **2880×1620** |
-   | **Firefox 140.13.0esr** | `screen` 1920×1080, `dpr` 1 | `screen` **1280×720**, `dpr` 1,5 | ✅ 1920×1080 |
+   | **Chrome 151.0.7922.108** | `screen` 1920×1080, `dpr` 1 | `screen` **1920×1080**, `dpr` 1.5 | ⛔ **2880×1620** |
+   | **Firefox 140.13.0esr** | `screen` 1920×1080, `dpr` 1 | `screen` **1280×720**, `dpr` 1.5 | ✅ 1920×1080 |
 
-   ⛔ **Su Chrome `screen.width` non cambia con lo zoom di pagina**, quindi
-   `screen.width × devicePixelRatio` dà `risoluzione × zoom`: un utente che ha premuto `Ctrl +`
-   prima di collegarsi dichiara una tela **del 50 % più grande di quella che esiste**, e se la tiene
-   per tutta la sessione. ⚠ **E non si aggiusta con una riga**: lo zoom di pagina non è leggibile da
-   JavaScript in modo portabile, e nessuna delle due misure da sola dice quale sia quella vera.
-   ⛔ **Finché la formula non è rivista, quel che questo documento prescrive produce un numero
-   sbagliato su un motore su due** — e va scritto qui invece di essere scoperto alla fase 2, quando
-   il sintomo sarà *«il desktop remoto è più grande dello schermo»*. La misura su **DeX** manca (la
-   macchina non c'era): il verso in cui sbaglia un telefono non lo sa nessuno;
-2. **su DeX, `screen` risponde con lo schermo esterno o con quello del telefono?** È l'uso primario,
-   e la risposta decide se la tela nasce giusta o grande quanto un telefono;
-3. i browser **arrotondano** queste misure per non far riconoscere il dispositivo: quanto, e se
-   l'arrotondamento possa produrre un numero **dispari** — che `RCP.md` §4.5 rifiuta.
+   ⛔ **On Chrome `screen.width` does not change with page zoom**, so
+   `screen.width × devicePixelRatio` gives `resolution × zoom`: a user who pressed `Ctrl +`
+   before connecting declares a canvas **50 % larger than the one that exists**, and keeps it
+   for the whole session. ⚠ **And it is not fixed with one line**: page zoom is not readable from
+   JavaScript in a portable way, and neither of the two measurements alone says which one is the real one.
+   ⛔ **Until the formula is revised, what this document prescribes produces a wrong
+   number on one engine out of two** — and it must be written here instead of being discovered in phase 2, when
+   the symptom will be *«the remote desktop is larger than the screen»*. The measurement on **DeX** is missing (the
+   machine was not there): which way a phone gets it wrong nobody knows;
+2. **on DeX, does `screen` answer with the external screen or with the phone's?** It is the primary use,
+   and the answer decides whether the canvas is born right or as large as a phone;
+3. browsers **round** these measurements so as not to let the device be recognised: by how much, and whether
+   rounding can produce an **odd** number — which `RCP.md` §4.5 refuses.
 
-**Ridimensionare la finestra del client non tocca mai il desktop**, su nessuno dei quattro
-compositori. Le ragioni, in ordine di peso: su KDE 6.3.6 — cioè Debian stabile — **non si può**
-`[M]`; la correzione a monte esiste ma Debian non aggiorna Plasma; e ⛔ **anche dove funziona fa
-una cosa peggiore**, perché ridimensionare un output **ridispone le finestre dell'utente** `[R]`.
-La versione «giusta» scompiglia il lavoro, quella «rotta» lo lascia fermo. (`DECISIONI.md` §5.1)
+**Resizing the client window never touches the desktop**, on any of the four
+compositors. The reasons, in order of weight: on KDE 6.3.6 — that is Debian stable — **it cannot be done**
+`[M]`; the upstream fix exists but Debian does not update Plasma; and ⛔ **even where it works it does
+something worse**, because resizing an output **rearranges the user's windows** `[R]`.
+The «right» version messes up the work, the «broken» one leaves it still. (`DECISIONI.md` §5.1)
 
-### 6.2 Le proporzioni
+### 6.2 The proportions
 
-**Si impagina, non si stira.** Se la finestra ha proporzioni diverse dalla tela si conservano le
-proporzioni e si mettono le bande: allungare deforma il testo e lo rende illeggibile.
+**We letterbox, we do not stretch.** If the window has proportions different from the canvas, the
+proportions are kept and bands are added: stretching deforms the text and makes it unreadable.
 
-Il caso è raro per costruzione — all'attacco le proporzioni **combaciano sempre** — e resta solo
-quando la finestra cambia misura dopo l'attacco (si riscala, `DECISIONI.md` §5.1-bis) e nel ripiego di §6.3. Sul telefono in verticale la banda sarebbe
-enorme: lì serve lo zoom con scorrimento, che è nel ventaglio dei gesti (§7.2).
+The case is rare by construction — at attach the proportions **always match** — and remains only
+when the window changes size after the attach (it is rescaled, `DECISIONI.md` §5.1-bis) and in the fallback of §6.3. On the phone held upright the band would be
+huge: there, zoom with scrolling is needed, which is in the range of gestures (§7.2).
 
-### 6.3 Il ripiego su KDE, dichiarato
+### 6.3 The fallback on KDE, declared
 
-Al riattacco a misura diversa su KWin < 6.8 la tela **non può** cambiare. Si tiene quella vecchia
-e riscala il client — e non costa una riga in più, perché è lo stesso codice del punto
-«durante la sessione». **Il ripiego si dichiara nel registro.**
+On reattach at a different size on KWin < 6.8 the canvas **cannot** change. The old one is kept
+and the client rescales — and it does not cost one more line, because it is the same code as the point
+«during the session». **The fallback is declared in the log.**
 
-### 6.4 ~~«Adatta il desktop a questa finestra»~~ — ⛔ uscita dal prodotto (`DECISIONI.md` §5.1-bis)
+### 6.4 ~~«Fit the desktop to this window»~~ — ⛔ removed from the product (`DECISIONI.md` §5.1-bis)
 
-~~Il ridimensionamento vero della tela si fa nella forma della **negoziazione PipeWire** — una strada
-sola per GNOME, wlroots e KDE ≥ 6.8, che su KDE si accende da sé all'aggiornamento.~~
-⇒ La misura nuova si prende **solo ricollegandosi** (riattacco, F-018). Riconfermato dall'utente il
-2 ottobre 2026, dopo la sua prova a mano.
+~~Real resizing of the canvas is done in the form of **PipeWire negotiation** — a single road
+for GNOME, wlroots and KDE ≥ 6.8, which on KDE switches on by itself at the update.~~
+⇒ The new size is taken **only by reconnecting** (reattach, F-018). Reconfirmed by the user on
+2 Oct 2026, after his manual test.
 
-> ### ⛔ CORRETTA IL 15 AGOSTO 2026 — «mai come automatismo» non è più vero, e la ragione è una decisione dell'utente
+> ### ⛔ CORRECTED ON 15 AUG 2026 — «never as an automatism» is no longer true, and the reason is a decision of the user
 >
-> *Questo paragrafo diceva: «Il ridimensionamento vero della tela resta come **scelta esplicita
-> dell'utente**, mai come automatismo. Dove il compositore non lo sa fare la voce è **spenta**».*
+> *This paragraph said: «Real resizing of the canvas remains as an **explicit choice
+> of the user**, never as an automatism. Where the compositor cannot do it the entry is **off**».*
 >
-> ⛔ **La prima metà è stata rovesciata da `DECISIONI.md` §5.0-sexies** (14 agosto 2026, decisa
-> dall'utente): *«la tela del server si chiede della misura della tela del client»*, e quella misura
-> si chiede **all'attacco di ogni sessione**, senza che nessuno prema niente. ⇒ All'attacco è un
-> automatismo, ed è il punto: senza, tornano le bande nere, il testo interpolato, la conversione
-> delle coordinate e i quattro secondi di attesa fra il login e il desktop.
+> ⛔ **The first half was overturned by `DECISIONI.md` §5.0-sexies** (14 Aug 2026, decided
+> by the user): *«la tela del server si chiede della misura della tela del client»*, and that size
+> is asked **at the attach of every session**, without anyone pressing anything. ⇒ At attach it is an
+> automatism, and that is the point: without it, the black bands, the interpolated text, the conversion
+> of coordinates and the four seconds of waiting between login and desktop come back.
 >
-> ⛔ **La seconda metà vale ancora, e dal 17 agosto 2026 vale in modo più netto**: durante la
-> sessione viva la tela **non si tocca mai**, e non c'è più nemmeno l'interruttore per farlo
-> (`DECISIONI.md` §5.1-bis — *«non voglio mettere delle eccezioni nel progetto»*). Su KWin ≤ 6.7.4
-> ridimensionare un output non si può affatto, e dove si può ridispone le finestre dell'utente.
+> ⛔ **The second half still applies, and since 17 Aug 2026 it applies more sharply**: during the
+> live session the canvas **is never touched**, and there is not even the switch to do it any more
+> (`DECISIONI.md` §5.1-bis — *«non voglio mettere delle eccezioni nel progetto»*). On KWin ≤ 6.7.4
+> resizing an output cannot be done at all, and where it can it rearranges the user's windows.
 >
-> ⚠ **E «dove il compositore non lo sa fare la voce è spenta» vale per intero**: il server risponde
-> `TELA(RIFIUTATA, COMPOSITORE_INCAPACE)` e il client **DEVE** mostrarla spenta (`RCP.md` §7.1).
-> Non si finge che sia riuscito.
+> ⚠ **And «where the compositor cannot do it the entry is off» applies in full**: the server answers
+> `TELA(RIFIUTATA, COMPOSITORE_INCAPACE)` and the client **MUST** show it off (`RCP.md` §7.1).
+> We do not pretend it succeeded.
 
 ### 6.5 Multi-monitor
 
-**Fuori scope come funzione**, ma l'implementazione resta parametrica su N: una tela più grande di
-quel che un singolo schermo mostra **è già** la forma del multi-monitor — due viste sulla stessa
-tela invece di una.
+**Out of scope as a feature**, but the implementation stays parametric on N: a canvas larger than
+what a single screen shows **already is** the form of multi-monitor — two views on the same
+canvas instead of one.
 
 ---
 
-## 7. L'input
+## 7. Input
 
-### 7.1 Il puntatore lo disegna il client
+### 7.1 The pointer is drawn by the client
 
-Il dito trascina un puntatore **disegnato dal client**. Non è il tocco diretto, dove il dito è il
-puntatore: è il trackpad, e si vede dove si sta per cliccare **prima** di cliccare.
+The finger drags a pointer **drawn by the client**. It is not direct touch, where the finger is the
+pointer: it is the trackpad, and you see where you are about to click **before** clicking.
 
-Tre problemi chiusi insieme: ⭐ **la latenza percepita** — il puntatore si muove alla velocità del
-dito, non della rete; **le scie e le posizioni vecchie**, che nascono dal puntatore che viaggia
-dentro il video; e **la precisione**, perché un dito è largo ~10 mm e i bersagli ~4.
+Three problems closed together: ⭐ **perceived latency** — the pointer moves at the speed of the
+finger, not of the network; **trails and old positions**, which come from the pointer travelling
+inside the video; and **precision**, because a finger is ~10 mm wide and targets ~4.
 
-⛔ **Da cui un obbligo**: il cursore del desktop **non deve mai finire nell'immagine catturata**,
-altrimenti se ne vedono due. Su GNOME è già escluso; su KDE e wlroots ci finisce `[M]`, e la cura
-è un tema con un cursore 1×1 a trasparenza piena.
+⛔ **Hence an obligation**: the desktop's cursor **must never end up in the captured image**,
+otherwise you see two. On GNOME it is already excluded; on KDE and wlroots it ends up there `[M]`, and the cure
+is a theme with a 1×1 fully transparent cursor.
 
-⚠ **E va verificata, non sperata**: su wlroots un tema che carica **zero** cursori fa ripiegare la
-libreria su uno **incorporato e visibile** `[R]`. L'esito si controlla dopo l'avvio della
-sessione. (`DECISIONI.md` §5-bis.1-2)
+⚠ **And it must be verified, not hoped for**: on wlroots a theme that loads **zero** cursors makes the
+library fall back to a **built-in and visible** one `[R]`. The outcome is checked after the session
+starts. (`DECISIONI.md` §5-bis.1-2)
 
-**Nella pagina**: il puntatore è disegnato sopra il video, quello del browser si nasconde
-(`cursor: none`), e il mouse fisico arriva da **Pointer Lock** — che è l'equivalente esatto del
-*Pointer Capture* di Android e ha lo stesso motivo: senza, se ne vedrebbero **due**.
+**In the page**: the pointer is drawn over the video, the browser's is hidden
+(`cursor: none`), and the physical mouse comes in through **Pointer Lock** — which is the exact equivalent of
+Android's *Pointer Capture* and has the same reason: without it, you would see **two**.
 
-### 7.2 I gesti — per il telefono in mano
+### 7.2 Gestures — for the phone in hand
 
-⚠ **Su Android l'uso primario è Samsung DeX**, con mouse e tastiera veri: là vale §7.4, e questi
-gesti non si usano. Servono al telefono in mano, che è il ripiego d'emergenza.
+⚠ **On Android the primary use is Samsung DeX**, with a real mouse and keyboard: there §7.4 applies, and these
+gestures are not used. They serve the phone in hand, which is the emergency fallback.
 
-| Gesto | Effetto |
+| Gesture | Effect |
 |---|---|
-| 1 dito trascina | muove il puntatore |
-| 1 dito tap | clic sinistro |
-| 2 dita tap | clic destro |
-| 2 dita trascina | rotella / scorrimento |
-| tap-e-mezzo | trascinamento e selezione |
-| 3 dita tap | clic centrale |
-| pizzico | ingrandisce la **vista** del client |
-| tocco sul bottoncino **⌨** in alto a destra | apre la tastiera del telefono; un altro tocco (o «indietro») la chiude |
+| 1 finger drag | moves the pointer |
+| 1 finger tap | left click |
+| 2 finger tap | right click |
+| 2 finger drag | wheel / scroll |
+| tap-and-a-half | drag and select |
+| 3 finger tap | middle click |
+| pinch | enlarges the client's **view** |
+| touch on the small **⌨** button at the top right | opens the phone's keyboard; another touch (or «back») closes it |
 
-⭐ **La tastiera a schermo si apre solo a richiesta** (`DECISIONI.md` §10.28): col telefono in mano non si
-apre da sola, perché coprirebbe metà del desktop. Il bottoncino ⌨ c'è **solo** in questa disposizione — sul
-computer e sul DeX col mouse non esiste — e non toglie niente al desktop: il dito clicca dove sta il puntatore,
-non dove cade (§7.1). Sta in alto perché la tastiera aperta copre il basso.
+⭐ **The on-screen keyboard opens only on request** (`DECISIONI.md` §10.28): with the phone in hand it does not
+open by itself, because it would cover half the desktop. The small ⌨ button is there **only** in this layout — on the
+computer and on DeX with a mouse it does not exist — and it takes nothing away from the desktop: the finger clicks where the pointer is,
+not where it lands (§7.1). It is at the top because the open keyboard covers the bottom.
 
-⭐ **È un punto di partenza dichiarato, non un impegno.** I gesti si giudicano usandoli, non
-leggendoli: chi trova questa tabella diversa fra sei mesi non ha trovato un difetto.
+⭐ **It is a declared starting point, not a commitment.** Gestures are judged by using them, not by
+reading them: whoever finds this table different six months from now has not found a defect.
 
-### 7.3 La tastiera
+### 7.3 The keyboard
 
-**Le lettere viaggiano come lettere; i tasti che lettere non sono viaggiano come posizioni.**
+**Letters travel as letters; keys that are not letters travel as positions.**
 
-| Che cosa | Come |
+| What | How |
 |---|---|
-| lettere, numeri, segni | **come lettere** |
-| Invio, Tab, Esc, frecce, F1-F12, Ctrl, Alt, Maiusc, Super | **come posizioni** — stanno nello stesso posto su ogni tastiera |
+| letters, numbers, symbols | **as letters** |
+| Enter, Tab, Esc, arrows, F1-F12, Ctrl, Alt, Shift, Super | **as positions** — they are in the same place on every keyboard |
 
-Il motivo: una tastiera fisica non manda lettere, manda **posizioni**, ed è il desktop a decidere
-che lettera sia. Se sul filo viaggiassero le posizioni, un client con tastiera americana attaccato
-a una sessione italiana produrrebbe **le lettere sbagliate**. E su Android una tastiera non ha
-posizioni affatto: è un metodo di inserimento che produce testo.
+The reason: a physical keyboard does not send letters, it sends **positions**, and it is the desktop that decides
+which letter it is. If positions travelled on the wire, a client with an American keyboard attached
+to an Italian session would produce **the wrong letters**. And on Android a keyboard has no
+positions at all: it is an input method that produces text.
 
-**Sul telefono in mano** vale la stessa regola: quel che si scrive con la tastiera a schermo (aperta col
-bottoncino ⌨, §7.2) arriva come **lettere**, correzioni automatiche comprese — la parola corretta si riscrive
-cancellando quel che era cambiato; Invio e Cancella arrivano come **posizioni**.
+**On the phone in hand** the same rule applies: what is written with the on-screen keyboard (opened with the
+small ⌨ button, §7.2) arrives as **letters**, autocorrections included — the corrected word is rewritten
+by deleting what had changed; Enter and Delete arrive as **positions**.
 
-⛔ **Con una precisazione**: `Ctrl+C` non è testo, è un comando. Una battuta viaggia come lettera
-quando **scrive del testo**; quando è premuto un modificatore di comando — Ctrl, Alt, Super —
-viaggia come posizione. Maiusc e AltGr non contano: servono a *fare* la lettera.
+⛔ **With one clarification**: `Ctrl+C` is not text, it is a command. A keystroke travels as a letter
+when it **writes text**; when a command modifier is pressed — Ctrl, Alt, Super —
+it travels as a position. Shift and AltGr do not count: they serve to *make* the letter.
 
-**La disposizione della sessione si rinegozia a ogni attacco e riattacco**, come la risoluzione —
-e serve a due cose: rendere *raggiungibili* i caratteri, e far combaciare le posizioni delle
-scorciatoie (su una tastiera tedesca la Z sta dove da noi sta la Y).
+**The session's layout is renegotiated at every attach and reattach**, like the resolution —
+and it serves two things: making characters *reachable*, and making the positions of
+shortcuts match (on a German keyboard Z is where Y is for us).
 
-⚠ **Quel che non è scrivibile viene dichiarato, non falsificato.** Se un carattere non esiste su
-nessun tasto della disposizione — un'emoji, un alfabeto diverso — non esce **niente**, e il server
-lo scrive nel registro: mai una lettera diversa, mai un silenzio. (`DECISIONI.md` §5-bis.6-7)
+⚠ **What cannot be typed is declared, not faked.** If a character does not exist on
+any key of the layout — an emoji, a different alphabet — **nothing** comes out, and the server
+writes it in the log: never a different letter, never a silence. (`DECISIONI.md` §5-bis.6-7)
 
-### 7.3-bis Le scorciatoie che il browser si tiene — molto meno di quanto sembrava
+### 7.3-bis The shortcuts the browser keeps for itself — far fewer than it seemed
 
-> ⛔ **Riscritta la sera del 9 agosto 2026 dalla misura S3** (`STUDI.md` §web §5). Questa sezione diceva
-> che la Keyboard Lock esiste *«solo su Chrome ed Edge»* e che `F11` e `Ctrl+Shift+I` sono perduti.
-> **Era sbagliata su tre punti**, e in meglio.
+> ⛔ **Rewritten on the evening of 9 Aug 2026 by measurement S3** (`STUDI.md` §web §5). This section said
+> that the Keyboard Lock exists *«only on Chrome and Edge»* and that `F11` and `Ctrl+Shift+I` are lost.
+> **It was wrong on three points**, and for the better.
 
 | | |
 |---|---|
-| **la leva** | ⭐ **non è più solo di Chrome**: `keyboardLock` è entrato nello standard WHATWG l'**8 maggio 2026** e l'hanno spedito Safari 26.4 e Firefox 151 `[S]`. Chrome ed Edge restano sulla forma vecchia — ⚠ **la pagina deve saperle entrambe** |
-| **quanto si perde** | ⭐ **`[M]` 14 agosto 2026 — MISURATO, ed era `[R]`.** Su **Chrome 151** la tesi regge: a schermo intero **con la Keyboard Lock** le riservate del browser passano da **8 a 0** — restano esattamente `F11` ed `Escape`. ⛔ **E su Firefox 140 ESR è FALSA, in modo che non avremmo indovinato: a schermo intero PEGGIORA** (5 → **7**), e non ha **nessuna delle due forme** della lock. ⚠ Safari **non provato**, e resta `[?]`: non si deduce dagli altri |
-| ⭐ **e in una PWA installata è vuota** | tutte le scorciatoie arrivano alla sessione. ⛔ **Ma una PWA vuole un certificato fidato**: dietro l'eccezione di §4.1 il Service Worker non si installa `[R]`. **Chi ha un dominio non compra solo l'assenza dell'avviso: compra la tastiera intera** (`STUDI.md` §web §1.2 B) |
+| **the lever** | ⭐ **it is no longer Chrome's alone**: `keyboardLock` entered the WHATWG standard on **8 May 2026** and Safari 26.4 and Firefox 151 shipped it `[S]`. Chrome and Edge stay on the old form — ⚠ **the page must know both** |
+| **how much is lost** | ⭐ **`[M]` 14 Aug 2026 — MEASURED, and it was `[R]`.** On **Chrome 151** the thesis holds: in full screen **with the Keyboard Lock** the browser's reserved ones go from **8 to 0** — exactly `F11` and `Escape` remain. ⛔ **And on Firefox 140 ESR it is FALSE, in a way we would not have guessed: in full screen it gets WORSE** (5 → **7**), and it has **neither of the two forms** of the lock. ⚠ Safari **not tested**, and it stays `[?]`: it is not deduced from the others |
+| ⭐ **and in an installed PWA it is empty** | all shortcuts reach the session. ⛔ **But a PWA wants a trusted certificate**: behind the exception of §4.1 the Service Worker does not install `[R]`. **Whoever has a domain does not buy only the absence of the warning: they buy the whole keyboard** (`STUDI.md` §web §1.2 B) |
 
-⛔ **Gli stati sono tre, non due**, e il secondo è il peggiore *(`STUDI.md` §web §8-bis, O8)*:
-
-| | |
-|---|---|
-| **consegnata** | arriva alla sessione remota, e basta |
-| ⛔ **consegnata *e* riservata** | la sessione remota riceve la battuta **e** il browser esegue il suo comando. ⛔⭐ **E lo stato esiste, è MISURATO ed è LARGO**: `[M]` 14 agosto 2026, **18 combinazioni su 42** su Chrome in finestra ⇒ *una prova che guardasse solo il lato della sessione le avrebbe dichiarate **tutte verdi**.* ⭐ **E si spegne con `preventDefault()`**: 18 → 0 su Chrome, 15 → 0 su Firefox. ⚠ **L'esempio che c'era qui era sbagliato**: `Ctrl+Tab` di Firefox **non** è in questo stato — misurato, sta nel **terzo**, e la pagina non ne vede nemmeno il `keydown` |
-| **non consegnata** | il browser se la tiene |
-
-⚠ **Da cui la misura non è «arriva?» ma «arriva *e basta*?»** — una prova che guarda solo il lato
-della sessione dichiara verde proprio il caso peggiore.
-
-**Quel che si perde davvero, e non si recupera:**
+⛔ **The states are three, not two**, and the second is the worst *(`STUDI.md` §web §8-bis, O8)*:
 
 | | |
 |---|---|
-| `Ctrl+Alt+Canc` | ⭐ **non dal filo, ma dall'interfaccia**: si dà all'utente un **bottone a schermo**. Tre riferimenti maturi su tre lo fanno, ed è **un requisito, non un ripiego di fortuna** *(O7)* |
-| l'uscita da schermo intero | ovunque, per costruzione: è la via di fuga dell'utente |
-| ⛔ **su iPhone, tutto** | lo schermo intero è **parziale in tutte le versioni** `[S]`, e senza schermo intero **non c'è keyboard lock** *(O9)*. Su iPhone si perde l'intera partita della tastiera, non qualche scorciatoia |
-| ⛔ **su macOS, tutte le scorciatoie di sistema** | non esiste un aggancio: la funzione che dovrebbe fornirlo **restituisce `nullptr`** `[R]` |
-| ⛔ **su Android e DeX, ogni combinazione con Meta** | per regola AOSP — ⚠ e DeX è l'uso primario (`DECISIONI.md` §5-bis.0) |
+| **delivered** | it reaches the remote session, and that is all |
+| ⛔ **delivered *and* reserved** | the remote session receives the keystroke **and** the browser runs its command. ⛔⭐ **And the state exists, it is MEASURED and it is WIDE**: `[M]` 14 Aug 2026, **18 combinations out of 42** on Chrome in a window ⇒ *a test that looked only at the session side would have declared them **all green**.* ⭐ **And it is switched off with `preventDefault()`**: 18 → 0 on Chrome, 15 → 0 on Firefox. ⚠ **The example that was here was wrong**: Firefox's `Ctrl+Tab` is **not** in this state — measured, it is in the **third**, and the page does not even see its `keydown` |
+| **not delivered** | the browser keeps it |
 
-⛔ **Che cosa si fa**: la pagina **dichiara** quali scorciatoie non può consegnare su quel browser.
-NON si finge che funzionino, e non si inventa una scorciatoia sostitutiva senza dirlo.
+⚠ **Hence the measurement is not «does it arrive?» but «does it arrive *and nothing else*?»** — a test that looks only at the
+session side declares green exactly the worst case.
 
-⚠ **Due trappole della lock, e la seconda morde dove fa più male** *(O10)*: non esiste se lo
-schermo intero è stato aperto con `F11` — **e non lo dice** — e **si spegne da sola quando la pagina
-perde il fuoco**, cioè esattamente nell'istante in cui un modificatore resta premuto. ⭐ La cura non
-tocca il protocollo: **la pagina rilascia tutto quel che ha premuto quando perde il fuoco**, e al
-riattacco ci pensa `RCP.md` §7.3, che obbliga il server a rilasciare tutto al distacco.
+**What is really lost, and cannot be recovered:**
 
-`[?]` **Restano due domande, e sono le due che pesano di più**: se la Keyboard Lock funzioni su
-**DeX**, e se la PWA valga anche su **Chrome per Android**.
+| | |
+|---|---|
+| `Ctrl+Alt+Canc` | ⭐ **not from the wire, but from the interface**: the user is given an **on-screen button**. Three mature references out of three do it, and it is **a requirement, not a makeshift fallback** *(O7)* |
+| leaving full screen | everywhere, by construction: it is the user's escape route |
+| ⛔ **on iPhone, everything** | full screen is **partial in all versions** `[S]`, and without full screen **there is no keyboard lock** *(O9)*. On iPhone the whole keyboard game is lost, not just a few shortcuts |
+| ⛔ **on macOS, all system shortcuts** | there is no hook: the function that should provide it **returns `nullptr`** `[R]` |
+| ⛔ **on Android and DeX, every combination with Meta** | by AOSP rule — ⚠ and DeX is the primary use (`DECISIONI.md` §5-bis.0) |
 
-### 7.4 Mouse e tastiera fisici — su Android è la strada principale
+⛔ **What is done**: the page **declares** which shortcuts it cannot deliver on that browser.
+We do NOT pretend they work, and we do not invent a replacement shortcut without saying so.
 
-Il mouse passa da *Pointer Capture*: il cursore di Android sparisce — altrimenti se ne vedrebbero
-due — e i suoi spostamenti muovono **lo stesso puntatore che muove il dito**. Una freccia sola,
-due modi di spingerla. L'accelerazione la applica il **client**: applicata da entrambi si
-sommerebbe.
+⚠ **Two traps of the lock, and the second bites where it hurts most** *(O10)*: it does not exist if
+full screen was opened with `F11` — **and it does not say so** — and **it switches off by itself when the page
+loses focus**, that is exactly at the instant a modifier stays pressed. ⭐ The cure does not
+touch the protocol: **the page releases everything it has pressed when it loses focus**, and on
+reattach `RCP.md` §7.3 takes care of it, obliging the server to release everything on detachment.
 
-> ⛔ **Superato dal 14-15 agosto 2026**: la cattura del puntatore non scatta più da sola (resta a
-> mano, `REMOTIX.input_classico.aggancia()`), il puntatore è **assoluto** e ogni evento porta la
-> propria posizione (`DECISIONI.md` §5.0-sexies). ⭐ **Dal 2 ottobre 2026 anche i clic** vengono dai
-> pointer events (`pointerdown`/`pointerup`), come i movimenti: su Chrome per Android i `mousedown`
-> di compatibilità nascono solo dopo un tocco riconosciuto, e un clic lungo o un trascinamento non
-> arrivava (prova a mano dell'utente; verificato col DeX lo stesso giorno: *«i clic funzionano»*).
+`[?]` **Two questions remain, and they are the two that weigh most**: whether the Keyboard Lock works on
+**DeX**, and whether the PWA also holds on **Chrome for Android**.
+
+### 7.4 Physical mouse and keyboard — on Android it is the main road
+
+The mouse goes through *Pointer Capture*: Android's cursor disappears — otherwise you would see
+two — and its movements move **the same pointer the finger moves**. One arrow,
+two ways of pushing it. Acceleration is applied by the **client**: applied by both it would
+add up.
+
+> ⛔ **Superseded since 14-15 Aug 2026**: pointer capture no longer triggers by itself (it stays
+> manual, `REMOTIX.input_classico.aggancia()`), the pointer is **absolute** and every event carries
+> its own position (`DECISIONI.md` §5.0-sexies). ⭐ **Since 2 Oct 2026 clicks too** come from
+> pointer events (`pointerdown`/`pointerup`), like movements: on Chrome for Android the compatibility `mousedown`s
+> are born only after a recognised touch, and a long click or a drag did not
+> arrive (the user's manual test; verified with DeX the same day: *«i clic funzionano»*).
 >
-> ⚠ **Limite dichiarato, non nostro:** sui Samsung (DeX compreso) Chrome **non consegna i movimenti
-> a pulsanti alzati** (noVNC #1727, aperto dal 2022, lo stesso su moonlight-android #573, che è
-> un'app nativa). ⇒ Puntare, cliccare e trascinare colpiscono giusto; **manca l'anteprima**: la forma
-> del puntatore sui bordi delle finestre, i pulsanti che si illuminano, i suggerimenti. Riconfermato
-> dall'utente col DeX il 2 ottobre 2026.
+> ⚠ **Declared limit, not ours:** on Samsungs (DeX included) Chrome **does not deliver movements
+> with buttons up** (noVNC #1727, open since 2022, the same on moonlight-android #573, which is
+> a native app). ⇒ Pointing, clicking and dragging hit right; **the preview is missing**: the shape
+> of the pointer on window edges, buttons that light up, tooltips. Reconfirmed
+> by the user with DeX on 2 Oct 2026.
 
-### 7.5 Che cosa porta il canale di input
+### 7.5 What the input channel carries
 
 | | |
 |---|---|
-| puntatore **assoluto** | sì — è l'unico percorso del puntatore |
-| **posizioni** di tasto | sì |
-| **lettere** | sì, ed è la strada principale |
-| tocco multi-dito | **posto riservato**, non implementato `[?]` |
-| stilo (pressione, inclinazione) | fuori |
+| **absolute** pointer | yes — it is the pointer's only path |
+| key **positions** | yes |
+| **letters** | yes, and it is the main road |
+| multi-finger touch | **reserved slot**, not implemented `[?]` |
+| stylus (pressure, tilt) | out |
 
 ---
 
-## 8. La rete e la degradazione
+## 8. The network and degradation
 
-### 8.1 Gli scenari da servire — e il pavimento
+### 8.1 The scenarios to serve — and the floor
 
-⭐ **La rete minima del prodotto è 30 Mbit/s**, ed è un **pavimento dichiarato**: sotto, REMOTIX
-non promette niente e non misura niente come requisito. *«Al di sotto di questo limite l'utente
-nemmeno riesce a navigare, figuriamoci usare remotix»* — l'utente, 23 agosto 2026
+⭐ **The product's minimum network is 30 Mbit/s**, and it is a **declared floor**: below it, REMOTIX
+promises nothing and measures nothing as a requirement. *«Al di sotto di questo limite l'utente
+nemmeno riesce a navigare, figuriamoci usare remotix»* — the user, 23 Aug 2026
 (`DECISIONI.md` §3.1-bis).
 
-Sopra il pavimento il requisito resta **l'adattamento**, non una seconda soglia:
+Above the floor the requirement remains **adaptation**, not a second threshold:
 
-| Collegamento | Banda | Ritardo e perdita | Che cosa fa il server |
+| Connection | Bandwidth | Delay and loss | What the server does |
 |---|---|---|---|
-| fisso buono | **30+ Mbps** | bassi | punta al desiderato |
-| ⭐ **il pavimento** | **30 Mbps** | medi | **spende tutto quel che c'è**, e tiene il minimo |
-| ⚠ sotto il pavimento | < 30 Mbps | qualsiasi | **fuori dal promesso**: degrada e non stacca, ma non è un requisito |
+| good fixed line | **30+ Mbps** | low | aims at the desired |
+| ⭐ **the floor** | **30 Mbps** | medium | **spends everything there is**, and holds the minimum |
+| ⚠ below the floor | < 30 Mbps | any | **outside what is promised**: degrades and does not disconnect, but it is not a requirement |
 
-⚠ **Il divieto di staccare (§8.3) non si indebolisce**: vale anche sotto il pavimento. Quel che
-sotto il pavimento non c'è più è la **promessa**, non il comportamento.
+⚠ **The ban on disconnecting (§8.3) is not weakened**: it applies below the floor too. What
+is no longer there below the floor is the **promise**, not the behaviour.
 
-> ⛔ **IL NUMERO ERA 20, ED È DIVENTATO 30 la notte del 23 agosto 2026** (`DECISIONI.md` §3.1-sexies):
-> *«ho già detto che il pavimento, per quanto riguarda la banda, è a 30 mbps»*. ⚠ Le misure della
-> fase 9 sono tarate su 20 e **non si riscrivono**: stanno in `fasi/09-la-qualita-e-la-degradazione.md`,
-> e sono storiche.
+> ⛔ **THE NUMBER WAS 20, AND IT BECAME 30 on the night of 23 Aug 2026** (`DECISIONI.md` §3.1-sexies):
+> *«ho già detto che il pavimento, per quanto riguarda la banda, è a 30 mbps»*. ⚠ The measurements of
+> phase 9 are tuned on 20 and **are not rewritten**: they are in `fasi/09-la-qualita-e-la-degradazione.md`,
+> and they are historical.
 
-> ### ⛔⭐⭐ E LA BANDA NON È LA GRANDEZZA CHE DECIDE — `DECISIONI.md` §3.1-ter
+> ### ⛔⭐⭐ AND BANDWIDTH IS NOT THE QUANTITY THAT DECIDES — `DECISIONI.md` §3.1-ter
 >
 > *«30 mbps sono una connessione da metà anni 90. La vera sfida è misurare performance con reti che
-> perdono pacchetti o pacchetti fuori sequenza, o presentano fenomeni di jitter»* — 23 agosto 2026.
+> perdono pacchetti o pacchetti fuori sequenza, o presentano fenomeni di jitter»* — 23 Aug 2026.
 >
-> ⛔ E la fase 9 l'ha mostrato: a banda libera il caso peggiore reggeva, ma **la spirale di chiavi
-> partiva al primo pacchetto perso**, molto prima del calo che l'utente **vede**
-> (`fasi/09-la-qualita-e-la-degradazione.md`). ⇒ **Il pavimento di banda è una premessa, non un
-> requisito mordente**: il requisito mordente è il comportamento su una linea **sporca**.
+> ⛔ And phase 9 showed it: with free bandwidth the worst case held, but **the keyframe spiral
+> started at the first lost packet**, long before the drop the user **sees**
+> (`fasi/09-la-qualita-e-la-degradazione.md`). ⇒ **The bandwidth floor is a premise, not a
+> biting requirement**: the biting requirement is the behaviour on a **dirty** line.
 >
-> ⛔ E una linea che perde **a raffiche** si dichiara morta (§3.1-quater): 10 s senza pacchetti, o
-> una perdita copiosa dentro 1-2 s. ⚠ Non contraddice §8.3 — non si stacca *invece di degradare*: si
-> dichiara rotto un filo che **non porta più niente**, e l'utente rientra a mano.
+> ⛔ And a line that loses **in bursts** is declared dead (§3.1-quater): 10 s without packets, or
+> heavy loss within 1-2 s. ⚠ It does not contradict §8.3 — it does not disconnect *instead of degrading*: it
+> declares broken a wire that **no longer carries anything**, and the user gets back in by hand.
 
-### 8.2 La regola dell'adattamento — invariante I1
+### 8.2 The adaptation rule — invariant I1
 
-> **Il ritmo non cala mai per prudenza, per risparmio o perché la scena è ferma. Cala solo quando
-> la misura dimostra che la linea non porta, e ogni discesa è dichiarata nel registro.**
+> **The rate never drops out of caution, to save, or because the scene is still. It drops only when
+> the measurement shows that the line does not carry, and every drop is declared in the log.**
 
-Vietata l'euristica prudente, obbligatorio l'adattamento misurato. Il risparmio di banda **non è
-un obiettivo di questo prodotto**: la banda non spesa non torna utile a nessuno, e la qualità
-persa si vede.
+The cautious heuristic is forbidden, measured adaptation is mandatory. Saving bandwidth **is not
+a goal of this product**: unspent bandwidth is no use to anyone, and lost
+quality shows.
 
-### 8.3 Sotto il minimo
+### 8.3 Below the minimum
 
-**Si calano i fotogrammi. Mai sgranare l'immagine, mai staccare.**
+**Frames are dropped. Never blur the image, never disconnect.**
 
-Su un desktop degradare nel tempo è meglio che degradare nello spazio: a pochi fotogrammi al
-secondo ognuno resta nitido e il testo si legge — è lento ma ci si lavora. Sgranando, il testo
-diventa illeggibile. E a ritmo basso si possono spendere più bit su ciascun fotogramma.
+On a desktop degrading in time is better than degrading in space: at a few frames per
+second each one stays sharp and the text can be read — it is slow but you can work. Blurring, the text
+becomes unreadable. And at a low rate more bits can be spent on each frame.
 
-⭐ È l'utente a decidere quando chiudere il client; la sessione resta e si riprende quando la
-linea migliora.
+⭐ It is the user who decides when to close the client; the session stays and resumes when the
+line improves.
 
 ### 8.4 QUIC
 
-Oltre alla cifratura, due cose che il trasporto regala e che vanno sfruttate: la **misura
-continua** di quanto porta la linea, che in v1 andava ricavata a mano; e la **migrazione della
-connessione**, che tiene viva la sessione quando il telefono passa da WiFi a rete mobile.
+Besides encryption, two things the transport gives for free and that must be exploited: the **continuous
+measurement** of how much the line carries, which in v1 had to be derived by hand; and **connection
+migration**, which keeps the session alive when the phone moves from WiFi to the mobile network.
 
 ---
 
-## 9. Gli appunti
+## 9. The clipboard
 
-**Solo testo, nei due versi.** Si copia sul desktop remoto e si incolla sul dispositivo in mano, e
-viceversa — ed è il secondo verso quello che si usa di più.
+**Text only, both ways.** You copy on the remote desktop and paste on the device in hand, and
+vice versa — and it is the second direction that is used most.
 
-Niente immagini, niente file, niente formati ricchi: il testo copre quasi tutti gli usi, costa
-pochi byte e non ha negoziazione, mentre le immagini aprono la questione dei formati e soprattutto
-di **chi paga la banda** quando si copia una schermata da 8 MB su un collegamento che stiamo
-faticando a tenere al minimo. (`DECISIONI.md` §5-ter)
+No images, no files, no rich formats: text covers almost all uses, costs
+a few bytes and has no negotiation, while images open the question of formats and above all
+of **who pays for the bandwidth** when an 8 MB screenshot is copied over a link we are
+struggling to keep at the minimum. (`DECISIONI.md` §5-ter)
 
-**Dalla parte del browser gli appunti non sono nostri**, il che tocca proprio il verso più usato —
-ma meno di quanto si temeva *(misura S3, 9 agosto 2026, `STUDI.md` §web §5.3)*:
+**On the browser side the clipboard is not ours**, which touches exactly the most-used direction —
+but less than was feared *(measurement S3, 9 Aug 2026, `STUDI.md` §web §5.3)*:
 
 | | |
 |---|---|
-| ⭐ **si può sorvegliare, su Chrome** | l'evento `clipboardchange` è arrivato con **Chrome 144**, il 13 gennaio 2026 — e la motivazione scritta nella proposta sono **i client di desktop remoto** `[S]`. Porta i soli tipi MIME, e vuole il fuoco |
-| ⛔ **su Firefox e Safari no** | verificato, non dedotto. Là ogni lettura costa il menu «Incolla», con un secondo di attesa |
+| ⭐ **it can be watched, on Chrome** | the `clipboardchange` event arrived with **Chrome 144**, on 13 Jan 2026 — and the motivation written in the proposal is **remote desktop clients** `[S]`. It carries only the MIME types, and wants focus |
+| ⛔ **on Firefox and Safari no** | verified, not deduced. There every read costs the «Paste» menu, with a one-second wait |
 
-⚠ E una trappola che **tutti e tre** i riferimenti letti disinnescano a mano: la corsa fra `Ctrl+V`
-e la lettura degli appunti. Xpra la risolve ritardando **ogni battuta di 100 ms** `[R]` — ⛔ per noi
-sono **due volte il tetto del ritardo**: quella cura non si copia, si sostituisce.
+⚠ And a trap that **all three** references read defuse by hand: the race between `Ctrl+V`
+and reading the clipboard. Xpra solves it by delaying **every keystroke by 100 ms** `[R]` — ⛔ for us
+that is **twice the delay ceiling**: that cure is not copied, it is replaced.
 
-La regola resta quella di sempre: **si dichiara quel che non si può fare**, non si fa finta.
+The rule stays the usual one: **what cannot be done is declared**, we do not pretend.
 
-⚠ **Su tutti e tre gli stack gli appunti appartengono al compositore**, e ci sono anche senza di
-noi. Su GNOME la sessione remota non li possiede: possiede solo **la porta** per raggiungerli
-(`EnableClipboard`). *Corretto il 9 agosto 2026 da `STUDI.md` §gnome §10 `[R]`; questa riga diceva il
-contrario, ed è la stessa correzione di `DECISIONI.md` §5-ter.3 e `LEZIONI.md` §3 domanda 14.*
+⚠ **On all three stacks the clipboard belongs to the compositor**, and it is there even without
+us. On GNOME the remote session does not own it: it owns only **the door** to reach it
+(`EnableClipboard`). *Corrected on 9 Aug 2026 by `STUDI.md` §gnome §10 `[R]`; this line said the
+opposite, and it is the same correction as `DECISIONI.md` §5-ter.3 and `LEZIONI.md` §3 question 14.*
 
 ---
 
-## 10. L'audio
+## 10. Audio
 
 | | |
 |---|---|
-| **uscita** | **Opus**, con **PCM** come base sempre disponibile |
-| **microfono** | dal client alla sessione — **non urgente**, e può slittare |
-| sorgente e destinazione | **PipeWire** |
+| **output** | **Opus**, with **PCM** as an always-available base |
+| **microphone** | from the client to the session — **not urgent**, and it can slip |
+| source and destination | **PipeWire** |
 
-⚠ Invariante I5: **il volume appartiene alla sessione.** Chi si collega trova il livello al
-massimo; un cursore lasciato in basso non sopravvive alla riconnessione.
+⚠ Invariant I5: **the volume belongs to the session.** Whoever connects finds the level at
+maximum; a slider left low does not survive reconnection.
 
-⚠ E una trappola misurata da v1: un nodo audio applica il volume **a valle della presa del
-monitor**, quindi chi cattura il monitor riceve il segnale a fondo scala qualunque cosa dica il
-cursore, **muto compreso**. La proprietà che sposta la presa esiste ma è spenta di suo.
+⚠ And a trap measured by v1: an audio node applies the volume **downstream of the monitor
+tap**, so whoever captures the monitor receives the signal at full scale whatever the
+slider says, **mute included**. The property that moves the tap exists but is off by default.
 
-### 10.1 ⛔⭐⭐ Quando la finestra si stringe, **l'audio passa davanti al video** — *24 agosto 2026*
+### 10.1 ⛔⭐⭐ When the window narrows, **audio goes ahead of video** — *24 Aug 2026*
 
-⚠ **Questa riga arriva tardi**: la decisione era presa **nel codice** dall'inizio (`wt_scrivi()`) e
-**non era scritta da nessuna parte** — né qui, né in `RCP.md` §6.3, né in `DECISIONI.md`, né in
-`CODER.md`. È stata trovata cercando la causa dell'audio rifiutato su rete cattiva
-(`fasi/09` §20.2-quater), ed è precisamente il genere di cosa che una fase di misura esiste per
-scoprire: **una politica del prodotto che nessun documento dichiarava.**
+⚠ **This line comes late**: the decision was taken **in the code** from the start (`wt_scrivi()`) and
+**was written nowhere** — not here, not in `RCP.md` §6.3, not in `DECISIONI.md`, not in
+`CODER.md`. It was found while looking for the cause of audio refused on a bad network
+(`fasi/09` §20.2-quater), and it is precisely the kind of thing a measurement phase exists to
+discover: **a product policy that no document declared.**
 
-> ⛔ **In ogni passata di scrittura i datagram entrano nel pacchetto PRIMA dei byte di video**, e su
-> una finestra da due o tre pacchetti *«prima»* vuol dire **«invece»**.
+> ⛔ **In every write pass the datagrams go into the packet BEFORE the video bytes**, and on
+> a window of two or three packets *«before»* means **«instead»**.
 
-⭐ **La ragione è che i due carichi non si degradano allo stesso modo:**
+⭐ **The reason is that the two loads do not degrade in the same way:**
 
-- un blocco d'**audio** in ritardo **non serve più a nessuno** — §6.3: nessuna ritrasmissione,
-  nessun riordino, e chi ascolta ha un cuscino di 250 ms e poi **un buco che si sente**;
-- un fotogramma in ritardo **è ancora un fotogramma**: gli stream sono affidabili, e i suoi byte
-  partono la passata dopo.
+- a late block of **audio** **is of no use to anyone any more** — §6.3: no retransmission,
+  no reordering, and whoever listens has a 250 ms cushion and then **a gap you can hear**;
+- a late frame **is still a frame**: streams are reliable, and its bytes
+  leave in the next pass.
 
-⚠ **Il prezzo, dichiarato**: è banda tolta al video **proprio quando ce n'è poca**. ⭐ Ed è limitato
-**per costruzione**: la coda dei datagram è lunga **otto**, quindi al massimo otto pacchetti passano
-davanti.
+⚠ **The price, declared**: it is bandwidth taken from video **exactly when there is little of it**. ⭐ And it is limited
+**by construction**: the datagram queue is **eight** long, so at most eight packets go
+ahead.
 
-*(La decisione è scritta per esteso, alternativa scartata compresa, nel riquadro di `wt_scrivi()`.)*
+*(The decision is written in full, discarded alternative included, in the box of `wt_scrivi()`.)*
 
 ---
 
-## 11. I desktop e il sistema
+## 11. The desktops and the system
 
-### 11.1 Wayland, e le applicazioni X11
+### 11.1 Wayland, and X11 applications
 
-**Solo sessioni Wayland.** Le applicazioni scritte per X11 restano supportate **via XWayland**.
-I desktop X11 come tipo di sessione sono fuori scope.
+**Wayland sessions only.** Applications written for X11 remain supported **via XWayland**.
+X11 desktops as a session type are out of scope.
 
-### 11.2 I desktop supportati, in ordine
+### 11.2 The supported desktops, in order
 
-| | Stato |
+| | Status |
 |---|---|
-| **GNOME** | servito in v1 `[M]` |
-| **KDE Plasma** | servito in v1 `[M]` |
-| **XFCE** (labwc) | studiato, non ancora servito — ⛔ **e non è lo stesso caso di LXQt**, vedi sotto |
-| **LXQt** (labwc) | studiato, non ancora servito |
+| **GNOME** | served in v1 `[M]` |
+| **KDE Plasma** | served in v1 `[M]` |
+| **XFCE** (labwc) | studied, not yet served — ⛔ **and it is not the same case as LXQt**, see below |
+| **LXQt** (labwc) | studied, not yet served |
 
-> ### ⛔ «XFCE (labwc)» e «LXQt (labwc)» **non** sono la stessa riga — corretto il 14 agosto 2026
+> ### ⛔ «XFCE (labwc)» and «LXQt (labwc)» are **not** the same row — corrected on 14 Aug 2026
 >
-> Le due voci qui sopra hanno lo stesso compositore fra parentesi, e da quel giorno in poi sono
-> state lette come **un caso solo**. `[R]` **Non lo sono**, e la differenza morde proprio dove
-> serve la tela su misura (`DECISIONI.md` §5.0-sexies):
+> The two entries above have the same compositor in brackets, and from that day on they were
+> read as **a single case**. `[R]` **They are not**, and the difference bites exactly where
+> the made-to-measure canvas is needed (`DECISIONI.md` §5.0-sexies):
 >
 > | | |
 > |---|---|
-> | **XFCE** | ha `xfsettingsd`, **primo client della sessione**, che riscrive tutti gli output e **per impostazione predefinita spegne ogni output nuovo** (`displays-wayland.c:526-529`). ⚠ Il rischio **non è la misura** — il modo su misura sopravvive alle sue riapplicazioni — è `enabled = FALSE` |
-> | **LXQt** | **non ha niente di simile**: `lxqt-config-monitor` passa da KScreen, muore con `exit(1)`, e l'osservatore udev è dentro un ramo `if (isX11)` |
+> | **XFCE** | it has `xfsettingsd`, **first client of the session**, which rewrites all the outputs and **by default switches off every new output** (`displays-wayland.c:526-529`). ⚠ The risk **is not the size** — the made-to-measure mode survives its re-applications — it is `enabled = FALSE` |
+> | **LXQt** | **has nothing similar**: `lxqt-config-monitor` goes through KScreen, dies with `exit(1)`, and the udev watcher is inside an `if (isX11)` branch |
 >
-> ⚠ `[R]`, **non `[M]`**: né XFCE né LXQt sono installati sulle nostre macchine. La misura che
-> chiude la domanda è se `xfsettingsd` ci spenga davvero l'output, e se un output presente
-> **prima** del suo avvio conti come «nuovo» — se non conta, la cura è l'ordine di avvio.
-| **Cinnamon** | 📖 **studiato il 9 agosto, ultimo della fila** — vedi [`STUDI.md` §cinnamon](STUDI.md#cinnamon) |
+> ⚠ `[R]`, **not `[M]`**: neither XFCE nor LXQt is installed on our machines. The measurement that
+> closes the question is whether `xfsettingsd` really switches the output off for us, and whether an output present
+> **before** it starts counts as «new» — if it does not count, the cure is the start-up order.
+| **Cinnamon** | 📖 **studied on 9 Aug, last in line** — see [`STUDI.md` §cinnamon](STUDI.md#cinnamon) |
 
-⛔ **Su Cinnamon tre cose non esistono a monte**: `RecordVirtual`, libei, e **gli appunti** — né la
-via di GNOME né quella di wlroots. La fattibilità dipende da una misura sola, e la decisione
-«dentro o fuori» si prende su quella, non sullo studio. (`DECISIONI.md` §7.13)
+⛔ **On Cinnamon three things do not exist upstream**: `RecordVirtual`, libei, and **the clipboard** — neither
+GNOME's road nor wlroots'. Feasibility depends on a single measurement, and the decision
+«in or out» is taken on that, not on the study. (`DECISIONI.md` §7.13)
 
-### 11.3 Il sistema attorno
+### 11.3 The system around
 
 | | |
 |---|---|
 | **init** | systemd |
-| **distribuzioni** | rilevamento delle capacità e degradazione dichiarata; **Debian e Ubuntu** come riferimento |
-| ⛔ **spegnimento, riavvio, sospensione, ibernazione** | ⭐ **tolti a tutti** — *deciso dall'utente il 15 agosto 2026, `DECISIONI.md` §4.7*. ⛔ **Non solo alla sessione remota**: nemmeno chi è fisicamente davanti alla macchina, perché spegnere è l'unico gesto che porta via **tutte** le sessioni insieme e chi lo compie non vede chi c'è collegato. ⭐ **Dentro il desktop remoto l'utente ha un solo gesto che finisce qualcosa: il logout** (§5.2-bis); quel che fa sul **proprio** PC è affar suo, e per noi è il filo che cade. ⚠ Resta possibile a **root**, e deve restare: la macchina va amministrata, e i client attaccati lo vengono a sapere con `SERVER_IN_CHIUSURA` (`RCP.md` §8.2 `0x0C`) |
-| **GPU** | scelta per **id PCI** con una regola udev. ⚠ Negare il nodo lo nega a **tutta la sessione dell'utente**: chi usa l'altra scheda per altro va messo nel gruppo della regola |
+| **distributions** | capability detection and declared degradation; **Debian and Ubuntu** as reference |
+| ⛔ **shutdown, restart, suspend, hibernate** | ⭐ **taken away from everyone** — *decided by the user on 15 Aug 2026, `DECISIONI.md` §4.7*. ⛔ **Not only from the remote session**: not even from whoever is physically in front of the machine, because shutting down is the only gesture that takes away **all** sessions together and whoever does it does not see who is connected. ⭐ **Inside the remote desktop the user has a single gesture that ends something: logging out** (§5.2-bis); what they do on **their own** PC is their business, and for us it is the wire dropping. ⚠ It stays possible for **root**, and it must stay so: the machine must be administered, and the attached clients learn about it with `SERVER_IN_CHIUSURA` (`RCP.md` §8.2 `0x0C`) |
+| **GPU** | chosen by **PCI id** with a udev rule. ⚠ Denying the node denies it to **the user's whole session**: whoever uses the other card for something else must be put in the rule's group |
 
-### 11.4 L'accelerazione hardware
+### 11.4 Hardware acceleration
 
-**La codifica passa dalla scheda, attraverso VA-API** — `libva` usata direttamente, senza strati
-in mezzo: REMOTIX imposta i parametri, gestisce i buffer e scrive da sé le intestazioni del flusso.
-La scala:
+**Encoding goes through the graphics card, via VA-API** — `libva` used directly, without layers
+in between: REMOTIX sets the parameters, manages the buffers and writes the stream headers itself.
+The ladder:
 
-1. **sulla scheda**, con `libva`: **H.264** e **HEVC** — l'unica strada. Sulla copia zero anche la
-   **conversione dei colori** si fa sulla scheda (VPP di VA-API); sulla strada «dalla memoria» i
-   colori si convertono sul processore e i piani salgono sulla scheda, dove si codificano
-2. ⛔ **Niente codifica sul processore** — *decisione dell'utente, 1 ottobre 2026* (`DECISIONI.md`
-   §10.27): *«niente cpu senza scheda»*. Il ripiego in software (OpenH264, SVT-AV1) è **uscito** dal
-   prodotto, dai pacchetti e dall'installatore. Senza una scheda capace di codificare:
-   - il **server** lo dichiara all'avvio nel registro (*«QUESTO SERVER NON SA CODIFICARE VIDEO»*,
-     con la ragione di ogni codec) e l'`ECCOMI` non offre codec: ogni `CIAO` finisce in
-     `NIENTE_IN_COMUNE`, col motivo;
-   - `remotix --prova-codifica` esce con **3** (*nessuna scheda sa codificare*), distinto da 0
-     (la scheda codifica), 1 (si apre ma il fotogramma non esce) e 2 (errore d'uso);
-   - l'**installatore** rifiuta già nel controllo preliminare, con la ragione: **RX-GPU-003**
-     nessuna scheda · **RX-GPU-004** solo NVIDIA col driver proprietario **senza il suo driver
-     Vulkan** (l'ICD `nvidia`: con quello la strada Vulkan Video la prende) · **RX-GPU-005**
-     nessuna scheda Intel, AMD o NVIDIA (virtio, VMware, nouveau) · **RX-GPU-006** una scheda che su
-     questa distribuzione non codifica né in VA-API né in Vulkan e non ha un driver da aggiungere
-     (oggi AMD su Alma: la Mesa di RHEL è costruita senza H.264, in VA-API e in RADV). Il driver
-     Vulkan della scheda AMD, dove quello della distribuzione codifica (Debian, Ubuntu, Arch), lo
-     installa l'installatore (su Arch è solo un pacchetto facoltativo). Una scheda che codifica col driver di un deposito di
-     terzi resta un avviso col consenso (D5). ⚠ Il controllo preliminare non apre la scheda: legge i
-     driver VA e gli ICD Vulkan sul disco; la prova vera è `--prova-codifica` dopo l'installazione
-3. ⛔ **Nessuna dipendenza GPL**: tutte le librerie del server sono permissive (MIT, BSD, Apache),
-   condizione della licenza (`DECISIONI.md` §10.22)
+1. **on the graphics card**, with `libva`: **H.264** and **HEVC** — the only road. On zero-copy the
+   **colour conversion** too is done on the card (VA-API VPP); on the «from memory» road the
+   colours are converted on the processor and the planes go up to the card, where they are encoded
+2. ⛔ **No encoding on the processor** — *decision of the user, 1 Oct 2026* (`DECISIONI.md`
+   §10.27): *«niente cpu senza scheda»*. The software fallback (OpenH264, SVT-AV1) is **out** of the
+   product, the packages and the installer. Without a card able to encode:
+   - the **server** declares it at start-up in the log (*«QUESTO SERVER NON SA CODIFICARE VIDEO»*,
+     with the reason for each codec) and `ECCOMI` offers no codecs: every `CIAO` ends in
+     `NIENTE_IN_COMUNE`, with the reason;
+   - `remotix --prova-codifica` exits with **3** (*no card can encode*), distinct from 0
+     (the card encodes), 1 (it opens but the frame does not come out) and 2 (usage error);
+   - the **installer** already refuses in the preliminary check, with the reason: **RX-GPU-003**
+     no card · **RX-GPU-004** only NVIDIA with the proprietary driver **without its Vulkan
+     driver** (the `nvidia` ICD: with that one the Vulkan Video road takes it) · **RX-GPU-005**
+     no Intel, AMD or NVIDIA card (virtio, VMware, nouveau) · **RX-GPU-006** a card that on
+     this distribution encodes neither in VA-API nor in Vulkan and has no driver to add
+     (today AMD on Alma: RHEL's Mesa is built without H.264, in VA-API and in RADV). The Vulkan
+     driver of the AMD card, where the distribution's one encodes (Debian, Ubuntu, Arch), is
+     installed by the installer (on Arch it is only an optional package). A card that encodes with the driver of a third-party
+     repository stays a warning with consent (D5). ⚠ The preliminary check does not open the card: it reads the
+     VA drivers and the Vulkan ICDs on disk; the real test is `--prova-codifica` after installation
+3. ⛔ **No GPL dependencies**: all the server's libraries are permissive (MIT, BSD, Apache),
+   a condition of the licence (`DECISIONI.md` §10.22)
 
-⭐ La strada **Vulkan Video** (AMD, NVIDIA) è la fase 19 (`fasi/19-nvidia.md`), ✅ innestata il
-1 ott 2026: si sceglie per capacità all'apertura di ogni codificatore (`h264_scheda`/`hevc_scheda`,
-`src/codificatore.c`), Vulkan prima e VA-API dove Vulkan non c'è; `--codifica vulkan|vaapi` la forza
-per le prove, e `--prova-codifica` dice quale ha codificato (`strada`). `[M]` 1 ott 2026 sul server:
-Intel UHD 770 → `vaapi` (H.264 e HEVC), Radeon RX 6800 → `vulkan` (H.264 e HEVC).
+⭐ The **Vulkan Video** road (AMD, NVIDIA) is phase 19 (`fasi/19-nvidia.md`), ✅ grafted in on
+1 Oct 2026: it is chosen by capability when each encoder opens (`h264_scheda`/`hevc_scheda`,
+`src/codificatore.c`), Vulkan first and VA-API where Vulkan is not there; `--codifica vulkan|vaapi` forces it
+for tests, and `--prova-codifica` says which one encoded (`strada`). `[M]` 1 Oct 2026 on the server:
+Intel UHD 770 → `vaapi` (H.264 and HEVC), Radeon RX 6800 → `vulkan` (H.264 and HEVC).
 
-⚠ Sul ferro di riferimento **nessuna delle due schede codifica AV1** `[M]` 9 agosto: il desiderato
-a 10 bit passa da **HEVC Main10**, che tutt'e due codificano in hardware.
+⚠ On the reference hardware **neither of the two cards encodes AV1** `[M]` 9 Aug: the desired
+at 10 bit goes through **HEVC Main10**, which both encode in hardware.
 
-⚠ **AV1 in hardware non è nella scala** *(`STUDI.md` §web §8-bis, O2)*: in decodifica non porta
-niente che HEVC non dia già, e chi lo volesse aggiungere deve misurare entrambi i lati. ⛔ E dalla
-fase 19 AV1 non c'è nemmeno in software: è uscito col ripiego.
+⚠ **AV1 in hardware is not on the ladder** *(`STUDI.md` §web §8-bis, O2)*: in decoding it brings
+nothing HEVC does not already give, and whoever wanted to add it must measure both sides. ⛔ And since
+phase 19 AV1 is not there even in software: it went out with the fallback.
 
-⛔ **Si codifica in BT.709, e l'HDR non si promette** `[S]` *(O3)*: BT.2020/PQ fa cadere il percorso
-a zero copie nel browser, e quello a una copia converte con un risultato slavato. È una scelta del
-**server**, non del client, e va scritta qui perché nessuno la prenda per una dimenticanza.
+⛔ **We encode in BT.709, and HDR is not promised** `[S]` *(O3)*: BT.2020/PQ drops the
+zero-copy path in the browser, and the one-copy path converts with a washed-out result. It is a choice of the
+**server**, not of the client, and it must be written here so that nobody takes it for an oversight.
 
-⚠ **E due parametri che il server deve emettere e che nessuno indovina** *(O12)*: la stringa di
-livello per il traguardo è **5.1**, non 5.0, e oltre i 40 Mbit/s serve il **tier High**. Un livello
-dichiarato troppo basso non dà un errore: **fa rifiutare la configurazione dal decodificatore**, e
-il sintomo è «il browser non apre il flusso».
+⚠ **And two parameters the server must emit and that nobody guesses** *(O12)*: the
+level string for the target is **5.1**, not 5.0, and above 40 Mbit/s the **High tier** is needed. A level
+declared too low does not give an error: **it makes the decoder refuse the configuration**, and
+the symptom is «the browser does not open the stream».
 
-⛔ **E la parentesi «RDNA2 e Alder Lake lo decodificano soltanto» era sbagliata a metà**, corretta
-lo stesso giorno con `vainfo` sui due nodi: la Radeon RX 6800 decodifica AV1 (`AV1Profile0`,
-`VLD`), **l'Intel UHD 730 non espone alcun profilo AV1 — nemmeno in decodifica**. Il dettaglio
-delle capacità delle due schede sta in `DECISIONI.md` §4.6.
+⛔ **And the parenthesis «RDNA2 and Alder Lake only decode it» was half wrong**, corrected
+the same day with `vainfo` on the two nodes: the Radeon RX 6800 decodes AV1 (`AV1Profile0`,
+`VLD`), **the Intel UHD 730 exposes no AV1 profile — not even in decoding**. The detail
+of the two cards' capabilities is in `DECISIONI.md` §4.6.
 
-### 11.4-bis Dove la scheda codifica: distribuzioni, schede, depositi
+### 11.4-bis Where the card encodes: distributions, cards, repositories
 
-*Decisioni dell'utente del 1 ottobre 2026 (`DECISIONI.md` §10.27): la codifica è **sempre** sulla scheda; i
-driver con i codec, quando una distribuzione li toglie per i brevetti, si chiedono all'amministratore (D5): *«il
-problema delle licenze è di chi installa remotix, non del progetto»*. REMOTIX non distribuisce codec.*
+*Decisions of the user of 1 Oct 2026 (`DECISIONI.md` §10.27): encoding is **always** on the card; the
+drivers with the codecs, when a distribution removes them because of patents, are asked of the administrator (D5): *«il
+problema delle licenze è di chi installa remotix, non del progetto»*. REMOTIX does not distribute codecs.*
 
-| distribuzione | Intel | AMD | NVIDIA (driver proprietario) | desktop |
+| distribution | Intel | AMD | NVIDIA (proprietary driver) | desktops |
 |---|---|---|---|---|
-| Debian 13 | ✅ depositi ufficiali | ✅ depositi ufficiali | ⚠ Vulkan Video, non provata | i 4 |
-| Ubuntu 26.04 | ✅ depositi ufficiali (universe) | ✅ depositi ufficiali | ⚠ Vulkan Video, non provata | i 4 |
-| Fedora 44 | ✅ con **RPM Fusion** (nonfree) | ✅ con **RPM Fusion** (`mesa-va-drivers-freeworld`) | ⚠ Vulkan Video, non provata | i 4 |
-| Red Hat / Alma / Rocky 10 | ✅ con **RPM Fusion EL** + **EPEL** | ⛔ **non supportata**: nessun deposito rimette la codifica AMD | ⚠ Vulkan Video, non provata | ⛔ **solo GNOME e KDE** |
-| openSUSE Leap 16, Tumbleweed | ✅ depositi ufficiali | ✅ con **Packman** | ⚠ Vulkan Video, non provata | i 4 |
-| Arch | ✅ depositi ufficiali | ✅ depositi ufficiali | ⚠ Vulkan Video, non provata | i 4 |
+| Debian 13 | ✅ official repositories | ✅ official repositories | ⚠ Vulkan Video, not tested | all 4 |
+| Ubuntu 26.04 | ✅ official repositories (universe) | ✅ official repositories | ⚠ Vulkan Video, not tested | all 4 |
+| Fedora 44 | ✅ with **RPM Fusion** (nonfree) | ✅ with **RPM Fusion** (`mesa-va-drivers-freeworld`) | ⚠ Vulkan Video, not tested | all 4 |
+| Red Hat / Alma / Rocky 10 | ✅ with **RPM Fusion EL** + **EPEL** | ⛔ **not supported**: no repository puts AMD encoding back | ⚠ Vulkan Video, not tested | ⛔ **GNOME and KDE only** |
+| openSUSE Leap 16, Tumbleweed | ✅ official repositories | ✅ with **Packman** | ⚠ Vulkan Video, not tested | all 4 |
+| Arch | ✅ official repositories | ✅ official repositories | ⚠ Vulkan Video, not tested | all 4 |
 
-- La famiglia Red Hat si prova su **Alma**, che ne fa le veci (Red Hat è a pagamento).
-- Un «no» al deposito dei driver **blocca** l'installazione (D5): senza, su quella macchina la scheda non codifica.
-- ⚠ **NVIDIA**: la strada è scritta (Vulkan Video) ma nessuno l'ha vista funzionare su una NVIDIA vera — il
-  laboratorio non ne ha. Resta «non provata» finché non si prova (macchina a noleggio o un utente con la scheda).
-- Senza una scheda capace: REMOTIX non si installa (§11.4). Le macchine virtuali vanno solo con la scheda
-  passata alla macchina (passthrough, vGPU).
-- La tela è al massimo **4096×2304** (§6.1-bis): una finestra più grande riceve la tela ridotta.
+- The Red Hat family is tested on **Alma**, which stands in for it (Red Hat is paid).
+- A «no» to the drivers' repository **blocks** the installation (D5): without it, on that machine the card does not encode.
+- ⚠ **NVIDIA**: the road is written (Vulkan Video) but nobody has seen it work on a real NVIDIA — the
+  lab has none. It stays «not tested» until it is tested (a rented machine or a user with the card).
+- Without a capable card: REMOTIX does not install (§11.4). Virtual machines work only with the card
+  passed to the machine (passthrough, vGPU).
+- The canvas is at most **4096×2304** (§6.1-bis): a larger window receives the reduced canvas.
 
-### 11.5 I browser serviti, e perché vanno dichiarati
+### 11.5 The browsers served, and why they must be declared
 
-| browser | dove | codec | stato |
+| browser | where | codec | status |
 |---|---|---|---|
-| Chrome (e i Blink: Edge…) | Linux, Windows | HEVC, se il dispositivo lo decodifica; altrimenti H.264 | ✅ supportato |
-| Chrome | **Android** | HEVC o H.264 | ✅ supportato (`DECISIONI.md` §7.19) |
-| Firefox | Linux | **H.264** (Firefox su Linux non decodifica HEVC) | ✅ supportato |
-| Firefox | Windows | — | mai provato: né supportato né escluso |
-| Firefox | **Android** | — | ⛔ **fuori dal progetto** (`DECISIONI.md` §7.18) |
-| Safari | macOS, iOS | — | mai provato |
+| Chrome (and the Blink ones: Edge…) | Linux, Windows | HEVC, if the device decodes it; otherwise H.264 | ✅ supported |
+| Chrome | **Android** | HEVC or H.264 | ✅ supported (`DECISIONI.md` §7.19) |
+| Firefox | Linux | **H.264** (Firefox on Linux does not decode HEVC) | ✅ supported |
+| Firefox | Windows | — | never tested: neither supported nor excluded |
+| Firefox | **Android** | — | ⛔ **out of the project** (`DECISIONI.md` §7.18) |
+| Safari | macOS, iOS | — | never tested |
 
 
-⭐ **La regola dei tre client non decade con il client unico: cambia forma** (`LEZIONI.md` §2.1).
-Una pagina gira su **tre motori scritti da tre squadre che non ci conoscono** — Blink (Chrome,
-Edge, Samsung Internet), WebKit (Safari), Gecko (Firefox) — e questo ci restituisce un pezzo
-dell'arbitro esterno perso con `mstsc`: quando due sono d'accordo e il terzo no, il difetto si
-dichiara da solo.
+⭐ **The three-client rule does not lapse with the single client: it changes form** (`LEZIONI.md` §2.1).
+A page runs on **three engines written by three teams that do not know us** — Blink (Chrome,
+Edge, Samsung Internet), WebKit (Safari), Gecko (Firefox) — and this gives us back a piece
+of the external arbiter lost with `mstsc`: when two agree and the third does not, the defect
+declares itself.
 
 | | |
 |---|---|
-| **il minimo tecnico** | WebTransport **e** WebCodecs. `[S]` Entrambi presenti su Chrome/Edge, Firefox e Safari 26+ — WebTransport è Baseline da marzo 2026 |
-| **si collauda su** | ⛔ **almeno due motori diversi**, sempre. Un solo motore è un client solo, cioè il caso che questa regola vieta |
-| **si dichiara** | quali browser sono serviti, e **che cosa si perde su ciascuno** — le scorciatoie (§7.3-bis), gli appunti (§9), il certificato su Safari (`DECISIONI.md` §1.7) |
+| **the technical minimum** | WebTransport **and** WebCodecs. `[S]` Both present on Chrome/Edge, Firefox and Safari 26+ — WebTransport has been Baseline since March 2026 |
+| **it is acceptance-tested on** | ⛔ **at least two different engines**, always. A single engine is a single client, that is the case this rule forbids |
+| **it is declared** | which browsers are served, and **what is lost on each** — the shortcuts (§7.3-bis), the clipboard (§9), the certificate on Safari (`DECISIONI.md` §1.7) |
 
-⛔ **E come la pagina viene servita è un vincolo di prodotto, non un dettaglio** *(`STUDI.md` §web §8-bis,
-O11)*: va consegnata **isolata fra origini** — le due intestazioni che il browser pretende per dare
-alla pagina i cronometri a piena risoluzione e la memoria condivisa. ⚠ Non è una taratura del banco:
-**cambia come il server serve ogni risorsa della pagina**, e deciderlo dopo significa riscrivere il
-modo in cui la pagina è confezionata.
+⛔ **And how the page is served is a product constraint, not a detail** *(`STUDI.md` §web §8-bis,
+O11)*: it must be delivered **cross-origin isolated** — the two headers the browser demands to give
+the page full-resolution timers and shared memory. ⚠ It is not a bench tuning:
+**it changes how the server serves every resource of the page**, and deciding it later means rewriting the
+way the page is packaged.
 
-⚠ **E le versioni contano più che sui desktop**: qui il pavimento non lo pone Debian, lo pone il
-dispositivo dell'utente. Un telefono fermo a una versione vecchia di Chrome non ha WebCodecs, e
-il sintomo va detto in una frase — non «non funziona».
+⚠ **And versions count more than on desktops**: here the floor is not set by Debian, it is set by the
+user's device. A phone stuck on an old version of Chrome has no WebCodecs, and
+the symptom must be told in one sentence — not «it does not work».
 
-> ### ⏳ A fine fase 3: i **mattoni** stanno su due motori, i **numeri** stanno su uno
+> ### ⏳ At the end of phase 3: the **building blocks** stand on two engines, the **numbers** stand on one
 >
-> *13 agosto 2026, e va scritto qui perché la riga «si collauda su almeno due motori» non venga
-> data per soddisfatta guardando il posto sbagliato.*
+> *13 Aug 2026, and it must be written here so that the line «it is acceptance-tested on at least two engines» is not
+> taken as satisfied by looking in the wrong place.*
 >
 > | | |
 > |---|---|
-> | ✅ **i mattoni** | il comportamento del decodificatore al cambio di tela è `[M]` **su Chrome e su Firefox**, in tutt'e due i versi — 8 celle su 8, HEVC e AV1 (`RCP.md` §5.2) |
-> | ⚠ **i numeri** | le misure di prestazione di allora erano **su Chrome 151 e basta**. ⛔ Dal 30 settembre 2026 non sono più una verifica del prodotto: *«eliminiamo i test di performance, sono troppo dipendenti dall'hardware»* — l'utente |
+> | ✅ **the building blocks** | the decoder's behaviour at a canvas change is `[M]` **on Chrome and on Firefox**, in both directions — 8 cells out of 8, HEVC and AV1 (`RCP.md` §5.2) |
+> | ⚠ **the numbers** | the performance measurements of the time were **on Chrome 151 only**. ⛔ Since 30 Sep 2026 they are no longer a verification of the product: *«eliminiamo i test di performance, sono troppo dipendenti dall'hardware»* — the user |
 
 ---
 
-## 12. Fuori scope
+## 12. Out of scope
 
-Il paragrafo che protegge il progetto dallo scivolamento. Ciascuna riga è **esclusa
-deliberatamente**, non dimenticata.
+The paragraph that protects the project from creep. Each row is **excluded
+deliberately**, not forgotten.
 
-| Che cosa | Perché |
+| What | Why |
 |---|---|
-| **Windows come server** | è la leva di §1.1. ⚠ *Corretta il 9 agosto 2026*: questa riga diceva «come server **e come client**», e la seconda metà è decaduta con §1.6 — non scriviamo un client per Windows, ma **chi ha Windows si collega dal suo browser**, e non ci costa niente |
-| **applicazioni da installare**, su qualunque sistema | §1: il client è la pagina. Un'applicazione nativa sarebbe un secondo prodotto da mantenere per sempre, per guadagnare quel che il browser già dà |
-| **desktop X11** come tipo di sessione | le applicazioni X11 restano, via XWayland |
-| **redirezione di dischi, stampanti, porte seriali, smart card** | non serve al mestiere di questo prodotto. ⚠ *10 ott 2026*: la stampa diventa una voce del «dopo», **una tecnologia sola per ogni stampante** — PDF dal server alla finestra di stampa del browser di chi è collegato, che stampa dove sa stampare il suo dispositivo (`MASTERPLAN.md` M6, `DECISIONI.md` §10.41) |
-| **trasferimento file** | idem — e la clipboard testuale copre il caso frequente |
-| **immagini e file negli appunti** | §9 |
-| **multi-monitor** come funzione | §6.5: predisposizione sì, funzione no |
-| **stilo** con pressione e inclinazione | §7.5 |
-| **tocco nativo multi-dito** | posto riservato nel protocollo, non implementato |
-| **registrazione della sessione** su file | mai chiesto |
-| **compatibilità con client RDP, VNC o SPICE** | è il contrario di §1.1 |
+| **Windows as a server** | it is the lever of §1.1. ⚠ *Corrected on 9 Aug 2026*: this row said «as a server **and as a client**», and the second half lapsed with §1.6 — we do not write a client for Windows, but **whoever has Windows connects from their browser**, and it costs us nothing |
+| **applications to install**, on any system | §1: the client is the page. A native application would be a second product to maintain forever, to gain what the browser already gives |
+| **X11 desktops** as a session type | X11 applications remain, via XWayland |
+| **redirection of disks, printers, serial ports, smart cards** | it does not serve this product's job. ⚠ *10 Oct 2026*: printing becomes an entry for «afterwards», **one technology for every printer** — PDF from the server to the print dialog of the browser of whoever is connected, which prints where their device knows how to print (`MASTERPLAN.md` M6, `DECISIONI.md` §10.41) |
+| **file transfer** | likewise — and the text clipboard covers the frequent case |
+| **images and files in the clipboard** | §9 |
+| **multi-monitor** as a feature | §6.5: groundwork yes, feature no |
+| **stylus** with pressure and tilt | §7.5 |
+| **native multi-finger touch** | reserved slot in the protocol, not implemented |
+| **session recording** to file | never asked for |
+| **compatibility with RDP, VNC or SPICE clients** | it is the opposite of §1.1 |
 
 ---
 
-## 13. Le questioni aperte
+## 13. The open questions
 
-Quel che **non** è deciso, elencato perché non si perda. Il dettaglio e lo stato stanno in
+What is **not** decided, listed so that it does not get lost. The detail and the status are in
 `DECISIONI.md` §7.
 
 | | |
 |---|---|
-| ✅ **la licenza** | ⭐ **niente licenze: REMOTIX è gratuito** (`DECISIONI.md` §10.33, 10 ott 2026, che supera §10.30). Codice visibile con la licenza in stile Phonestra (bozza in `LICENSE.md`, da approvare). Resta il vincolo di §11.4: nessuna dipendenza GPL |
-| 📖 **Cinnamon** | studiato, da misurare — §11.2 |
-| `[?]` **il 4:4:4** | §3.1 |
-| ✅ ~~la forma della limitazione dei tentativi PAM~~ | **chiusa il 9 agosto** e ⭐ **riaperta e richiusa dall'utente il 10**: non è una limitazione di frequenza, è un **ban** — tre tentativi, dodici ore (§4.2, `DECISIONI.md` §1.9) |
-| `[?]` **il tocco nativo multi-dito** | §7.5 |
-| `[?]` **il puntatore relativo** per le applicazioni che catturano il puntatore | segnalato dal server, non dal client |
-| `[?]` **l'eccezione del certificato copre WebTransport?** | §4.1 — è la misura che decide se il predefinito «un clic» funziona ovunque o solo su Chrome e Firefox |
-| `[?]` **quanto si perde delle scorciatoie**, motore per motore | §7.3-bis |
-| `[?]` **gli appunti nel verso dispositivo → sessione** senza gesto dell'utente | §9 |
-| `[?]` **HEVC Main10 in hardware nel browser del telefono** | `[S]` documentato da Chrome 108; da misurare sul dispositivo vero — e con §3 non è più un muro, è una cosa da dichiarare |
-| ⏳ **la sicurezza forte (MFA)** | rinviata a progetto completato, per decisione dell'utente — `DECISIONI.md` §1.7 |
-| `[?]` **codificare più piccolo quando la finestra è piccola** | oggi il server codifica la **tela** e il client riscala. Ridurre anche la misura codificata è `DECISIONI.md` §5.0-ter, volutamente fuori dal modello finché nessuno ha misurato quanto pesa |
+| ✅ **the licence** | ⭐ **no licences: REMOTIX is free of charge** (`DECISIONI.md` §10.33, 10 Oct 2026, which supersedes §10.30). Visible code with the Phonestra-style licence (draft in `LICENSE.md`, to be approved). The constraint of §11.4 remains: no GPL dependencies |
+| 📖 **Cinnamon** | studied, to be measured — §11.2 |
+| `[?]` **4:4:4** | §3.1 |
+| ✅ ~~the form of the limitation of PAM attempts~~ | **closed on 9 Aug** and ⭐ **reopened and closed again by the user on the 10th**: it is not a rate limit, it is a **ban** — three attempts, twelve hours (§4.2, `DECISIONI.md` §1.9) |
+| `[?]` **native multi-finger touch** | §7.5 |
+| `[?]` **the relative pointer** for applications that capture the pointer | signalled by the server, not by the client |
+| `[?]` **does the certificate exception cover WebTransport?** | §4.1 — it is the measurement that decides whether the «one click» default works everywhere or only on Chrome and Firefox |
+| `[?]` **how much of the shortcuts is lost**, engine by engine | §7.3-bis |
+| `[?]` **the clipboard in the device → session direction** without a user gesture | §9 |
+| `[?]` **HEVC Main10 in hardware in the phone's browser** | `[S]` documented since Chrome 108; to be measured on the real device — and with §3 it is no longer a wall, it is something to declare |
+| ⏳ **strong security (MFA)** | deferred until the project is complete, by decision of the user — `DECISIONI.md` §1.7 |
+| `[?]` **encoding smaller when the window is small** | today the server encodes the **canvas** and the client rescales. Reducing the encoded size too is `DECISIONI.md` §5.0-ter, deliberately outside the model until someone has measured how much it weighs |
 
 ---
 
-## 14. Il modo di lavorare
+## 14. The way of working
 
-Lo sviluppo è portato avanti da due tipi di agenti, con le regole scritte nei loro documenti:
+Development is carried out by two kinds of agents, with the rules written in their documents:
 
 | | |
 |---|---|
-| [`CODER.md`](CODER.md) | che cosa costruire e come — con i tre numeri, gli invarianti e le regole di misura |
-| [`REVIEWER.md`](REVIEWER.md) | come si cercano le **contraddizioni**. Il verdetto è sempre «questo contraddice X», mai «questo è giusto» |
-| [`LEZIONI.md`](LEZIONI.md) | il fondamento condiviso: come si misura, come si prova, come si impara. **Si legge prima di tutto** |
-| [`DECISIONI.md`](DECISIONI.md) | che cosa è stato deciso, quando, da chi, e con che grado di certezza |
+| [`CODER.md`](CODER.md) | what to build and how — with the three numbers, the invariants and the measurement rules |
+| [`REVIEWER.md`](REVIEWER.md) | how **contradictions** are looked for. The verdict is always «this contradicts X», never «this is right» |
+| [`LEZIONI.md`](LEZIONI.md) | the shared foundation: how to measure, how to test, how to learn. **It is read before anything else** |
+| [`DECISIONI.md`](DECISIONI.md) | what was decided, when, by whom, and with what degree of certainty |
 
-⛔ **E la regola che tiene insieme tutto**: quando una misura contraddice questo documento, lo si
-aggiorna **nello stesso momento**, con la data e la marca della fonte. Un riferimento che
-invecchia in silenzio è peggio di nessun riferimento.
+⛔ **And the rule that holds everything together**: when a measurement contradicts this document, it is
+updated **at the same moment**, with the date and the mark of the source. A reference that
+ages silently is worse than no reference.
 
 ---
 
-## 15. La licenza
+## 15. The licence
 
-> ⛔ **Abolito il 10 ottobre 2026** (`DECISIONI.md` §10.33): niente licenze, REMOTIX è gratuito. Il capitolo resta
-> come storia del sistema che era stato deciso; **nessuna regola qui sotto è in vigore**.
+> ⛔ **Abolished on 10 Oct 2026** (`DECISIONI.md` §10.33): no licences, REMOTIX is free of charge. The chapter remains
+> as the history of the system that had been decided; **no rule below is in force**.
 
-*Scritto il **9 ottobre 2026**, su richiesta dell'utente: *«meglio creare un documento dove viene messo nero su
+*Written on **9 Oct 2026**, at the user's request: *«meglio creare un documento dove viene messo nero su
 bianco la logica di funzionamento delle licenze; se ci dimentichiamo qualche particolare quel documento diventa
-oro»*. ⭐ **Questo capitolo è il riferimento**: contiene solo le regole **in vigore**. Il perché, le date e le
-scelte superate stanno in `DECISIONI.md` §10.30; come si costruisce, i passi e le ore in
-`fasi/21-la-licenza.md` (⚠ il piano va riallineato a questa riscrittura prima di approvarlo); la spiegazione con schemi e tabelle in `licenze/come-funziona.html`. ⛔ Se una decisione
-nuova cambia una regola, si corregge **qui e nella pagina**, nello stesso momento. Il codice non c'è ancora: ogni
-riga è una decisione di prodotto.*
+oro»*. ⭐ **This chapter is the reference**: it contains only the rules **in force**. The why, the dates and the
+superseded choices are in `DECISIONI.md` §10.30; how it is built, the steps and the hours in
+`fasi/21-la-licenza.md` (⚠ the plan must be realigned to this rewrite before approving it); the explanation with diagrams and tables in `licenze/come-funziona.html`. ⛔ If a new
+decision changes a rule, it is corrected **here and in the page**, at the same moment. The code does not exist yet: every
+line is a product decision.*
 
-*⭐ **Riscritto la sera del 9 ottobre**, dopo la semplificazione decisa dall'utente: *«la complessità di un sistema
-aumenta la probabilità di introdurre punti di vulnerabilità e di perdita di controllo del processo»*. Tolti la firma
-dell'installazione (`INSTALL_KEY`), l'impronta dell'hardware (`HW_FINGERPRINT`), il numero di licenza, il recupero
-con conferma via email e l'upgrade con chiave nuova. Il confronto con ChatGPT (stessa sera) ha confermato che firma
-e impronta non proteggevano niente che il biglietto non coprisse già. ⭐ Poco dopo, ancora più semplice (utente: *«abbiamo
+*⭐ **Rewritten on the evening of 9 Oct**, after the simplification decided by the user: *«la complessità di un sistema
+aumenta la probabilità di introdurre punti di vulnerabilità e di perdita di controllo del processo»*. Removed: the signature
+of the installation (`INSTALL_KEY`), the hardware fingerprint (`HW_FINGERPRINT`), the licence number, recovery
+with confirmation by email and upgrade with a new key. The comparison with ChatGPT (same evening) confirmed that signature
+and fingerprint protected nothing the ticket did not already cover. ⭐ Shortly afterwards, simpler still (user: *«abbiamo
 complicato il processo. Il cliente acquista la licenza, inserisce il codice e REMOTIX parte. Installa REMOTIX,
-inserisce lo stesso codice e qui si verifica il caso del doppione»*): tolta anche la conferma delle installazioni.
-Ogni installazione parte subito; una seconda è uno sdoppiamento, e si sceglie come per un clone.*
+inserisce lo stesso codice e qui si verifica il caso del doppione»*): the confirmation of installations was removed too.
+Every installation starts at once; a second one is a duplication, and is chosen as for a clone.*
 
-### 15.0 Gli elementi, in breve — da leggere per primi
+### 15.0 The elements, in brief — to be read first
 
-⭐ **Una licenza risponde a due domande** (osservazione dell'utente, 9 ott: *«il 90% dell'attività si riduce alla
+⭐ **A licence answers two questions** (the user's observation, 9 Oct: *«il 90% dell'attività si riduce alla
 gestione dei cloni/doppioni»*):
-- **dove**: su quale server gira. Primo acquisto, cambio server, server rifatto, clone, backup, chiave prestata
-  sono tutti la stessa domanda, e hanno la stessa risposta: il biglietto scopre il doppione, l'acquirente sceglie
+- **where**: on which server it runs. First purchase, server change, rebuilt server, clone, backup, lent key
+  are all the same question, and have the same answer: the ticket discovers the duplicate, the buyer chooses
   (§15.8);
-- **fino a quando**: scadenza, rinnovo, tolleranza (§15.6).
-Tutto il resto (sito, pannello, chiave madre, pagamento) serve a rispondere a queste due in modo affidabile.
+- **until when**: expiry, renewal, tolerance (§15.6).
+Everything else (site, panel, master key, payment) serves to answer these two reliably.
 
-**Il sistema poggia su due elementi**, e su nient'altro dal lato del cliente; più **un gesto** dell'acquirente:
+**The system rests on two elements**, and on nothing else on the customer's side; plus **one gesture** by the buyer:
 
-| elemento | che cos'è | chi lo crea | a che serve |
+| element | what it is | who creates it | what it is for |
 |---|---|---|---|
-| **`LICENSE_KEY`** | stringa lunga casuale (≥ 128 bit) con il prefisso della classe (`RXT-…` trial, `RXF-…` full, `RXG-…` gold) | il servizio | dice **quale** licenza. È l'**unico identificativo**: serve a ogni installazione |
-| **biglietto** | token casuale **usa e getta**, cambia a ogni controllo orario | il servizio | dice **quale copia** è quella viva: un clone presenta un biglietto già consumato e si scopre |
-| *il gesto:* **scelta della copia** | nell'area cliente, quando la licenza gira su due server | l'acquirente | dice **quale server** tiene la licenza. È l'unico gesto per tutti i casi: clone, backup, cambio server, server rifatto (§15.8, §15.9) |
+| **`LICENSE_KEY`** | long random string (≥ 128 bit) with the class prefix (`RXT-…` trial, `RXF-…` full, `RXG-…` gold) | the service | says **which** licence. It is the **only identifier**: it serves every installation |
+| **ticket** | **single-use** random token, changes at every hourly check | the service | says **which copy** is the live one: a clone presents an already-consumed ticket and is discovered |
+| *the gesture:* **choice of the copy** | in the customer area, when the licence runs on two servers | the buyer | says **which server** keeps the licence. It is the only gesture for all cases: clone, backup, server change, rebuilt server (§15.8, §15.9) |
 
-- ✅ **Un solo identificativo** (utente, 9 ott: *«c'è un dato di troppo … lasciamo solo LICENSE_KEY»*): niente
-  numero di licenza a parte. Fuori dall'area cliente (fatture, assistenza, pannello, email) la chiave si mostra
-  **mascherata**: classe e ultime 4 lettere, `RXF-…-6YRB`. Intera la vede solo l'acquirente nella sua area.
-- ✅ **Una chiave non si riassegna mai** a un'altra licenza (supera «una `LICENSE_KEY` si usa una volta»: la chiave
-  serve a ogni installazione, e una seconda installazione con la stessa chiave è uno sdoppiamento).
-- ⚠ **Dichiarato**: chi presta o perde la chiave dà a un altro **al massimo 7 giorni lavorativi** di uso, poi la
-  licenza si blocca per tutti e due finché l'acquirente non sceglie (§15.8); con 3 sdoppiamenti in 90 giorni la
-  licenza va a chi vende. Il rischio resta a carico dell'azienda che ha fatto uscire la chiave.
-- La chiave **sul server** serve solo fino al primo biglietto: dopo l'attivazione il prodotto la **cancella dal
-  disco** e va avanti coi biglietti. Per reinstallare la si prende dall'area cliente.
-- Chi vende può **rigenerare** una chiave dal pannello, su richiesta: la vecchia smette di valere, la copia attiva
-  continua coi suoi biglietti. ⛔ Nessun pulsante per il cliente: la custodia delle chiavi è dell'azienda (utente,
-  9 ott: *«non vorrei che REMOTIX debba entrare in aree che non sono di sua competenza»*).
+- ✅ **A single identifier** (user, 9 Oct: *«c'è un dato di troppo … lasciamo solo LICENSE_KEY»*): no separate
+  licence number. Outside the customer area (invoices, support, panel, email) the key is shown
+  **masked**: class and last 4 letters, `RXF-…-6YRB`. Only the buyer sees it in full, in their area.
+- ✅ **A key is never reassigned** to another licence (supersedes «a `LICENSE_KEY` is used once»: the key
+  serves every installation, and a second installation with the same key is a duplication).
+- ⚠ **Declared**: whoever lends or loses the key gives someone else **at most 7 working days** of use, then the
+  licence is blocked for both until the buyer chooses (§15.8); with 3 duplications in 90 days the
+  licence goes to the seller. The risk stays with the company that let the key out.
+- The key **on the server** serves only until the first ticket: after activation the product **deletes it from
+  disk** and goes on with tickets. To reinstall, it is taken from the customer area.
+- The seller can **regenerate** a key from the panel, on request: the old one stops being valid, the active copy
+  goes on with its tickets. ⛔ No button for the customer: the custody of keys is the company's (user,
+  9 Oct: *«non vorrei che REMOTIX debba entrare in aree che non sono di sua competenza»*).
 
-**Chi garantisce che cosa**, nello scambio fra REMOTIX e il servizio:
+**Who guarantees what**, in the exchange between REMOTIX and the service:
 
-| che cosa | chi lo garantisce |
+| what | who guarantees it |
 |---|---|
-| nessuno legge i dati per strada | **HTTPS**, il lucchetto normale del web |
-| la copia che chiede è quella viva | il **biglietto** |
-| quale server tiene la licenza, se sono due | la **scelta dell'acquirente** nell'area cliente |
-| la risposta («valida fino al…») viene davvero dal servizio | la **chiave del VPS** (firma il servizio, REMOTIX verifica) |
-| la chiave del VPS è autentica, e si può revocare se rubata | la **chiave madre**, fuori linea sul portatile di chi vende (§15.11); ⚠ l'unica insostituibile: persa lei, serve un REMOTIX nuovo per tutti |
-| «rinnova» e «sospendi» vengono davvero dal pagamento | la **chiave del pagamento** |
+| nobody reads the data on the way | **HTTPS**, the normal padlock of the web |
+| the copy asking is the live one | the **ticket** |
+| which server keeps the licence, if there are two | the **buyer's choice** in the customer area |
+| the answer («valid until…») really comes from the service | the **VPS key** (the service signs, REMOTIX verifies) |
+| the VPS key is authentic, and can be revoked if stolen | the **master key**, offline on the seller's laptop (§15.11); ⚠ the only irreplaceable one: if it is lost, a new REMOTIX is needed for everyone |
+| «renew» and «suspend» really come from the payment | the **payment key** |
 
-- ⚠ **Dichiarato**: un proxy aziendale che apre l'HTTPS potrebbe leggere un biglietto in transito. Il proxy è
-  dell'azienda del cliente, dentro il suo perimetro come root: non è una minaccia da cui REMOTIX difende.
-- ⚠ **Dichiarato**: chi ha root e vuole davvero aggirare il controllo modificando il programma può farlo. Il sistema
-  tiene onesti gli onesti, gestisce pagamenti e scadenze, e scopre le copie fatte per errore.
+- ⚠ **Declared**: a corporate proxy that opens HTTPS could read a ticket in transit. The proxy belongs to
+  the customer's company, inside its perimeter like root: it is not a threat REMOTIX defends against.
+- ⚠ **Declared**: whoever has root and really wants to get around the check by modifying the program can do it. The system
+  keeps honest people honest, handles payments and expiries, and discovers copies made by mistake.
 
-### 15.1 I tre tipi di licenza
+### 15.1 The three types of licence
 
-| tipo | utenti | durata | chi la ottiene |
+| type | users | duration | who gets it |
 |---|---|---|---|
-| **trial** | illimitati | **14 giorni** | chi ha un account sul sito: **una per account** (§15.7) |
-| **full** | illimitati | **1 anno**; rinnovo **a scelta del cliente** (§15.6) | ⭐ **l'unica in vendita** |
-| **gold** | illimitati | nessuna scadenza | ⛔ non in vendita: uso privato di chi vende, sue macchine e macchine di prova (le **4 scatole** e il server di prova: senza, i banchi si fermerebbero alla trial) |
+| **trial** | unlimited | **14 days** | whoever has an account on the site: **one per account** (§15.7) |
+| **full** | unlimited | **1 year**; renewal **at the customer's choice** (§15.6) | ⭐ **the only one on sale** |
+| **gold** | unlimited | no expiry | ⛔ not on sale: private use of the seller, their machines and test machines (the **4 boxes** and the test server: without it, the benches would stop at the trial) |
 
-- Ogni licenza vale per **una macchina**: un server fisico **oppure** una macchina virtuale.
-- **Il programma non conta gli utenti** per nessuna licenza. Quanti utenti regge una macchina lo dice la tabella
-  pubblica delle prestazioni, non la licenza.
-- Una **full scaduta** si comporta come una **trial scaduta**: REMOTIX smette di funzionare.
-- Gli **aggiornamenti** sono compresi finché la licenza è attiva.
-- ⛔ **Un programma solo**: niente versione speciale senza controllo, nemmeno per la gold (un binario senza
-  controllo, se esce, è la versione sbloccata per tutti). La gold passa dalla **stessa strada** del cliente ed è
-  **revocabile**.
-- ✅ **La gold si rilascia con una funzione dedicata** del servizio, **non dal pannello** né da nessuna strada «normale»
-  (utente, 9 ott). 🔸 Un comando sul VPS, solo via ssh. ⇒ Chi viola il pannello non crea gold. (La «stessa strada» qui
-  sopra riguarda il **programma**: una gold, una volta inserita, si controlla come le altre.)
-- Finché il pagamento non c'è, le **full si creano a mano** dal pannello.
-- ⭐ **La gold è il caso semplice** (utente, 9 ott: *«i controlli sono ancora più ridotti … ma conserva il limite di
+- Every licence is valid for **one machine**: a physical server **or** a virtual machine.
+- **The program does not count users** for any licence. How many users a machine holds is said by the public
+  performance table, not by the licence.
+- An **expired full** behaves like an **expired trial**: REMOTIX stops working.
+- **Updates** are included as long as the licence is active.
+- ⛔ **A single program**: no special version without the check, not even for gold (a binary without
+  the check, if it gets out, is the unlocked version for everyone). Gold goes through the **same road** as the customer and is
+  **revocable**.
+- ✅ **Gold is issued with a dedicated function** of the service, **not from the panel** nor from any «normal» road
+  (user, 9 Oct). 🔸 A command on the VPS, only via ssh. ⇒ Whoever breaks into the panel does not create gold. (The «same road» above
+  concerns the **program**: a gold, once entered, is checked like the others.)
+- Until payment exists, **full licences are created by hand** from the panel.
+- ⭐ **Gold is the simple case** (user, 9 Oct: *«i controlli sono ancora più ridotti … ma conserva il limite di
   una licenza per macchina»*):
 
   | | gold |
   |---|---|
-  | scadenza, avvisi, rinnovo | **nessuno** |
-  | una per macchina | **sì**: resta il controllo orario, che serve solo a questo e alla revoca |
-  | se la rete manca | **14 giorni**, come le altre (utente, 9 ott) |
-  | due copie attive | **avviso a chi vende**, che **disabilita una delle due** dal pannello; la copia tenuta continua coi suoi biglietti. Nessuna pagina di scelta, nessuna fermata automatica |
-  | revoca | da chi vende |
+  | expiry, warnings, renewal | **none** |
+  | one per machine | **yes**: the hourly check remains, which serves only this and revocation |
+  | if the network is missing | **14 days**, like the others (user, 9 Oct) |
+  | two active copies | **warning to the seller**, who **disables one of the two** from the panel; the copy kept goes on with its tickets. No choice page, no automatic stop |
+  | revocation | by the seller |
 
-- ⭐ **Come si contano i tempi**: ogni periodo si conta **in ore esatte dal momento dell'evento**, in tempo
-  universale (14 giorni = 336 ore): niente ambiguità di fusi orari o di «fine giornata». Alle persone si mostra
-  nell'ora locale. I periodi in **giorni solari** (sabati, domeniche e festivi contano): i 14 giorni della trial,
-  i 14 di tolleranza, i 30 fra uno scambio e l'altro. I periodi in **giorni lavorativi** (dal lunedì al venerdì,
-  uguali in tutto il mondo, senza festivi nazionali): gli avvisi prima della scadenza (§15.6) e i 7 e 15 giorni
-  della scelta fra due copie (§15.8).
+- ⭐ **How times are counted**: every period is counted **in exact hours from the moment of the event**, in
+  universal time (14 days = 336 hours): no ambiguity of time zones or of «end of day». People are shown it
+  in local time. The periods in **calendar days** (Saturdays, Sundays and holidays count): the trial's 14 days,
+  the 14 of tolerance, the 30 between one exchange and the next. The periods in **working days** (Monday to Friday,
+  the same all over the world, without national holidays): the warnings before expiry (§15.6) and the 7 and 15 days
+  of the choice between two copies (§15.8).
 
-### 15.2 Le quattro parti
+### 15.2 The four parts
 
-| parte | dove | che cosa fa |
+| part | where | what it does |
 |---|---|---|
-| **il prodotto** | il server del cliente | si attiva, controlla ogni ora, mostra avvisi e stati nella pagina, si ferma a licenza scaduta |
-| **il servizio di licenze** | il VPS di chi vende (OVH, Debian 13), `https://remotix.nicfio.it/licenze/v1/` | tiene il registro, consegna e consuma i biglietti, scopre gli sdoppiamenti, manda le email, ospita il **sito** (vetrina pubblica e **area cliente**, dove si chiedono trial e full e si sceglie fra due copie) |
-| **il pannello di chi vende** | ✅ una **pagina web** del servizio (utente, 9 ott); la chiave madre resta fuori, sul portatile | crea le full a mano (la gold no: ha la sua funzione, §15.1), sceglie fra due copie di una gold, revoca, rigenera una chiave su richiesta, sblocca i limiti, guarda gli sdoppiamenti, **sblocca o cancella** le licenze bloccate |
-| **l'ingresso del pagamento** | il servizio | «rinnova» e «sospendi» una licenza; ⏳ il processore di pagamento non è scelto |
+| **the product** | the customer's server | activates, checks every hour, shows warnings and states in the page, stops when the licence has expired |
+| **the licence service** | the seller's VPS (OVH, Debian 13), `https://remotix.nicfio.it/licenze/v1/` | keeps the register, delivers and consumes tickets, discovers duplications, sends emails, hosts the **site** (public showcase and **customer area**, where trial and full are requested and a choice is made between two copies) |
+| **the seller's panel** | ✅ a **web page** of the service (user, 9 Oct); the master key stays outside, on the laptop | creates full licences by hand (not gold: it has its own function, §15.1), chooses between two copies of a gold, revokes, regenerates a key on request, unlocks the limits, looks at duplications, **unblocks or deletes** blocked licences |
+| **the payment entrance** | the service | «renew» and «suspend» a licence; ⏳ the payment processor has not been chosen |
 
-⛔ **Non esiste l'attivazione senza rete.** Il prodotto esce anche da un **proxy** aziendale.
+⛔ **Activation without network does not exist.** The product also gets out through a corporate **proxy**.
 
-### 15.3 Chiedere la licenza e attivarla
+### 15.3 Requesting the licence and activating it
 
-1. ✅ **Trial e full si chiedono solo dall'area cliente del sito, dopo l'accesso** (utente, 9 ott: *«serve un sito web
+1. ✅ **Trial and full are requested only from the site's customer area, after signing in** (user, 9 Oct: *«serve un sito web
    dove il cliente inserisce i dati e ottiene poi per email il codice»*; *«l'acquisto può essere fatto solo dalla
    sezione privata dopo essersi loggati al sito»*; *«facciamola semplice: anche la trial la si chiede dall'area
-   privata»*). «Prova gratis» e «Acquista» sulla vetrina di `remotix.nicfio.it` portano all'accesso, poi alla
-   richiesta. ⇒ Un percorso solo; l'email è verificata prima di qualunque chiave; la licenza nasce già
-   nell'account, e il passaggio da trial a full parte da lì. La `LICENSE_KEY` compare nell'area e arriva anche per
+   privata»*). «Free trial» and «Buy» on the `remotix.nicfio.it` showcase lead to sign-in, then to the
+   request. ⇒ A single path; the email is verified before any key; the licence is born already
+   in the account, and the move from trial to full starts from there. The `LICENSE_KEY` appears in the area and also arrives by
    email.
-2. ✅ **Due strade per entrare, e niente email usa e getta** (utente, 9 ott): nell'area cliente si entra con il
-   **link mandato all'email** (l'accesso conferma l'indirizzo) oppure con **«Accedi con Google»**; nessuna delle due
-   è obbligatoria. Il servizio **rifiuta le email dei domini temporanei** (mailinator, 10minutemail…) con un
-   elenco pubblico aggiornato ogni giorno, e risponde *«use your work email»*. ⚠ Dichiarato: ferma la gran parte,
-   non i domini nati oggi.
-3. ✅ **I dati** (utente, 9 ott): **email** (obbligatoria), **nome** e **azienda** (facoltativi). Chi chiede una
-   trial diventa l'**acquirente** di quella licenza: riceve le email della scadenza e degli sdoppiamenti come la
+2. ✅ **Two roads to get in, and no disposable emails** (user, 9 Oct): the customer area is entered with the
+   **link sent to the email** (signing in confirms the address) or with **«Sign in with Google»**; neither of the two
+   is mandatory. The service **refuses emails from temporary domains** (mailinator, 10minutemail…) with a
+   public list updated every day, and answers *«use your work email»*. ⚠ Declared: it stops most of them,
+   not the domains born today.
+3. ✅ **The data** (user, 9 Oct): **email** (mandatory), **name** and **company** (optional). Whoever requests a
+   trial becomes the **buyer** of that licence: they receive the expiry and duplication emails like the
    full.
-4. ✅ **L'installazione**, da root (utente, 9 ott: *«il cliente acquista la licenza, inserisce il codice e REMOTIX
-   parte»*): l'installatore chiede **solo la `LICENSE_KEY`** (nessun dato personale) e, a chi non ce l'ha, mostra
-   l'indirizzo del sito. Il servizio risponde con un **attestato firmato** (tipo, scadenza commerciale, fine della
-   tolleranza, «valido fino a») e il **primo biglietto**, e REMOTIX **parte subito**. Poi il prodotto cancella la
-   chiave dal disco.
-5. ✅ **La stessa chiave su un secondo server** parte subito anche lei, ed è uno **sdoppiamento** (§15.8): le due
-   copie funzionano, l'acquirente sceglie quale tenere. Così si cambia server senza un minuto di fermo.
-6. ✅ **Ogni licenza parte dal momento in cui la sua chiave entra nel primo server** (*«la full come la trial parte da
-   quando si installa»*). Chiederla e installare giorni dopo non costa niente. 🔸 Una trial **mai attivata scade
-   dopo 30 giorni** (pulizia).
-7. 🔸 ⇒ La pagina d'accesso **non ha il campo della chiave**: mostra lo stato, la chiave la mette root.
-8. ✅ **Da trial a full, e a gold** (utente, 9 ott: *«ci dev'essere una funzione di upgrade per passare da trial a
-   full»*; *«la scala di upgrade è trial -> full -> gold»*): si compra la full **sulla stessa licenza** dall'area
-   cliente; la chiave resta la stessa (cambia la classe nel servizio, e il prefisso mostrato) e il server se ne
-   accorge **al controllo dell'ora dopo**, senza comandi e senza scollegare nessuno. L'anno della full parte
-   **dall'acquisto** (chi compra al 10° giorno di prova non perde 10 giorni). Si sale e basta, anche saltando un
-   gradino (trial → gold, da chi vende); mai scendere; una full portata a gold perde la scadenza.
-9. Il **rinnovo** di una full non cambia niente sul server: si paga dall'area cliente e la scadenza si sposta (§15.6).
-10. 🔸 **Il comando della licenza**, da root, per quel che l'installatore non fa: `remotix licenza stato` ·
-    `attiva <chiave>` (se all'installazione la rete mancava, o per cambiare server) · `controlla` (un controllo
-    subito). È lo stesso programma `remotix`, non l'installatore.
+4. ✅ **The installation**, as root (user, 9 Oct: *«il cliente acquista la licenza, inserisce il codice e REMOTIX
+   parte»*): the installer asks **only for the `LICENSE_KEY`** (no personal data) and, to whoever does not have it, shows
+   the site's address. The service answers with a **signed attestation** (type, commercial expiry, end of the
+   tolerance, «valid until») and the **first ticket**, and REMOTIX **starts at once**. Then the product deletes the
+   key from disk.
+5. ✅ **The same key on a second server** starts at once too, and it is a **duplication** (§15.8): the two
+   copies work, the buyer chooses which one to keep. That way the server is changed without a minute of downtime.
+6. ✅ **Every licence starts from the moment its key enters the first server** (*«la full come la trial parte da
+   quando si installa»*). Requesting it and installing days later costs nothing. 🔸 A trial **never activated expires
+   after 30 days** (clean-up).
+7. 🔸 ⇒ The sign-in page **has no key field**: it shows the state, root puts in the key.
+8. ✅ **From trial to full, and to gold** (user, 9 Oct: *«ci dev'essere una funzione di upgrade per passare da trial a
+   full»*; *«la scala di upgrade è trial -> full -> gold»*): the full is bought **on the same licence** from the customer
+   area; the key stays the same (the class in the service changes, and the prefix shown) and the server
+   notices **at the next hourly check**, without commands and without disconnecting anyone. The year of the full starts
+   **from the purchase** (whoever buys on the 10th day of the trial does not lose 10 days). You only go up, even skipping a
+   step (trial → gold, by the seller); never down; a full brought to gold loses its expiry.
+9. The **renewal** of a full changes nothing on the server: you pay from the customer area and the expiry moves (§15.6).
+10. 🔸 **The licence command**, as root, for what the installer does not do: `remotix licenza stato` ·
+    `attiva <chiave>` (if the network was missing at installation, or to change server) · `controlla` (a check
+    right away). It is the same `remotix` program, not the installer.
 
-### 15.4 Il controllo, ogni 60 minuti
+### 15.4 The check, every 60 minutes
 
-- Ogni ora il prodotto presenta al servizio il **biglietto** dell'ultima volta. Il servizio verifica che sia
-  l'ultimo emesso per quella copia, lo **consuma** e ne consegna uno nuovo insieme all'attestato.
-  ⇒ Due copie della stessa installazione (un clone, un backup ripristinato) partono con lo stesso biglietto:
-  una va avanti, l'altra arriva con un biglietto già consumato e lo **sdoppiamento è scoperto** (§15.8).
-- ⛔ **Un guasto non fa mai un falso clone**: ogni richiesta porta un **codice casuale** suo, e il prodotto la
-  scrive su disco **prima** di spedirla. Se la risposta non arriva la rispedisce **identica**, e il servizio ridà
-  **la stessa risposta**. Stesso biglietto con lo stesso codice = ripetizione; stesso biglietto con un codice
-  diverso = due copie.
-- ⚠ Dichiarato: il biglietto scopre le copie che vanno avanti **ciascuna per conto suo** (cloni, backup, VM accese
-  per errore). Copie coordinate apposta da chi ha root restano fuori dalla portata di qualunque controllo locale.
-- Solo il servizio REMOTIX tocca lo stato della licenza; «controlla ora» passa da lui.
-- **L'orologio**: il prodotto ricorda l'ora più recente vista (sua e del servizio); se l'orologio della macchina
-  torna indietro vale la più recente, così spostarlo non allunga una licenza.
-- La licenza segue la **storia dell'installazione**, non il ferro: chi **sposta il server intero** (la VM su un
-  altro host, il disco su una macchina nuova) e spegne il vecchio continua senza fare niente, perché la cartella
-  della licenza viaggia col sistema.
+- Every hour the product presents to the service the **ticket** from the last time. The service verifies that it is
+  the last one issued for that copy, **consumes** it and delivers a new one together with the attestation.
+  ⇒ Two copies of the same installation (a clone, a restored backup) start with the same ticket:
+  one goes on, the other arrives with an already-consumed ticket and the **duplication is discovered** (§15.8).
+- ⛔ **A fault never makes a false clone**: every request carries its own **random code**, and the product
+  writes it to disk **before** sending it. If the answer does not arrive it resends it **identical**, and the service gives
+  back **the same answer**. Same ticket with the same code = repetition; same ticket with a different
+  code = two copies.
+- ⚠ Declared: the ticket discovers copies that go on **each on its own** (clones, backups, VMs switched on
+  by mistake). Copies coordinated on purpose by whoever has root stay out of reach of any local check.
+- Only the REMOTIX service touches the state of the licence; «check now» goes through it.
+- **The clock**: the product remembers the most recent time seen (its own and the service's); if the machine's clock
+  goes back, the most recent one applies, so moving it does not lengthen a licence.
+- The licence follows the **history of the installation**, not the hardware: whoever **moves the whole server** (the VM to another
+  host, the disk to a new machine) and switches off the old one goes on without doing anything, because the licence
+  folder travels with the system.
 
-### 15.5 Quando il servizio non risponde
+### 15.5 When the service does not answer
 
-- Il prodotto continua a funzionare per **14 giorni dall'ultimo controllo riuscito**.
-- L'amministratore viene avvisato **al primo controllo fallito**, poi **una volta al giorno** (registro e pagina
-  d'accesso), con i giorni che restano.
-- ⛔ Nessun attestato vale più di **14 giorni**, **gold compresa** (utente, 9 ott): un valore solo per tutte.
+- The product keeps working for **14 days from the last successful check**.
+- The administrator is warned **at the first failed check**, then **once a day** (log and sign-in
+  page), with the days that remain.
+- ⛔ No attestation is valid for more than **14 days**, **gold included** (user, 9 Oct): a single value for all.
 
-### 15.6 Scadenza, rinnovo, avvisi
+### 15.6 Expiry, renewal, warnings
 
-- ⭐ **Il rinnovo lo sceglie il cliente** (utente, 9 ott: *«addebitare centinaia o migliaia di euro automaticamente
+- ⭐ **Renewal is chosen by the customer** (user, 9 Oct: *«addebitare centinaia o migliaia di euro automaticamente
   sui conti degli acquirenti non è così simpatico … il cliente sceglie il rinnovo automatico o meno»*):
-  - **manuale, ed è il predefinito**: il cliente paga dall'area cliente; il servizio sposta in avanti la scadenza e
-    il server se ne accorge al controllo dell'ora dopo. ✅ Nessuna chiave nuova (utente, 9 ott, dopo la domanda
-    «non sarebbe meglio un codice nuovo?»: una chiave nuova a ogni rinnovo non aggiunge sicurezza, toglie il
-    rinnovo automatico e blocca chi dimentica di inserirla);
-  - **automatico, solo se il cliente lo attiva**: l'addebito lo fa il processore di pagamento, che chiama
-    «rinnova»; **email all'acquirente 7 giorni prima dell'addebito** con l'importo, e il rinnovo automatico si
-    spegne in qualunque momento;
-  - ✅ **una licenza scaduta e non rinnovata si blocca dopo 14 giorni solari** (utente, 9 ott), trial compresa.
-- ⭐ **Trial e full si comportano allo stesso modo; cambia solo la durata** (utente, 9 ott: *«ho unificato il
-  comportamento di trial e full: di fatto l'unica differenza è la validità»*). Quel che segue vale per tutte e due.
-- **Il calendario** (processo dell'utente, 9 ott):
+  - **manual, and it is the default**: the customer pays from the customer area; the service moves the expiry forward and
+    the server notices at the next hourly check. ✅ No new key (user, 9 Oct, after the question
+    «wouldn't a new code be better?»: a new key at every renewal adds no security, removes automatic
+    renewal and blocks whoever forgets to enter it);
+  - **automatic, only if the customer turns it on**: the charge is made by the payment processor, which calls
+    «renew»; **email to the buyer 7 days before the charge** with the amount, and automatic renewal can be
+    turned off at any moment;
+  - ✅ **an expired and not renewed licence is blocked after 14 calendar days** (user, 9 Oct), trial included.
+- ⭐ **Trial and full behave in the same way; only the duration changes** (user, 9 Oct: *«ho unificato il
+  comportamento di trial e full: di fatto l'unica differenza è la validità»*). What follows applies to both.
+- **The calendar** (the user's process, 9 Oct):
 
-  | quando | l'acquirente | gli utenti |
+  | when | the buyer | the users |
   |---|---|---|
-  | **3° giorno lavorativo** prima della scadenza | 1 email: la licenza sta per scadere, invito a rinnovare (o a comprare la full) | un **avviso sul desktop** da confermare con «ho letto» |
-  | **2° giorno lavorativo** prima | 1 email | un avviso con «ho letto» |
-  | **giorno lavorativo** prima | **2 email** | un avviso con «ho letto» |
-  | **scadenza → 14 giorni solari** (tolleranza) | 1 email al giorno alle 11 | la **pagina di avviso «licenza scaduta»** col tempo che manca al blocco; **sopra il desktop, si continua a lavorare** |
-  | **dopo i 14 giorni** | — | REMOTIX si ferma (sotto) |
+  | **3rd working day** before expiry | 1 email: the licence is about to expire, invitation to renew (or to buy the full) | a **warning on the desktop** to confirm with «I have read» |
+  | **2nd working day** before | 1 email | a warning with «I have read» |
+  | **working day** before | **2 emails** | a warning with «I have read» |
+  | **expiry → 14 calendar days** (tolerance) | 1 email a day at 11 | the **«licence expired» warning page** with the time left before the block; **over the desktop, work goes on** |
+  | **after the 14 days** | — | REMOTIX stops (below) |
 
-  - l'ora delle email: **alle 11**, e la seconda dell'ultimo giorno **alle 16**, ora locale dell'acquirente
-    (fuso orario del suo server o del suo paese);
-  - tutto si ferma **appena il cliente rinnova**; chi ha il rinnovo automatico riceve solo l'avviso dell'addebito;
-  - ⛔ niente avvisi all'amministratore 7 giorni prima, né 3 messaggi al giorno: un avviso al giorno.
-- **«La fine»** è il momento in cui REMOTIX si ferma davvero: **14 giorni solari dopo la scadenza** (trial e
-  full), o dopo l'ultimo controllo riuscito se la rete manca.
-- **Alla fine**:
-  - ⭐ si ferma **solo REMOTIX**; ⛔ **mai** l'accesso al server (ssh, login locale, PAM del sistema restano intatti);
-  - i **collegamenti** si chiudono, i **desktop restano vivi** col lavoro dentro;
-  - al ricollegamento compare la finestra della licenza;
-  - dopo il rinnovo ognuno rientra e trova il suo desktop com'era.
+  - the time of the emails: **at 11**, and the second of the last day **at 16**, the buyer's local time
+    (time zone of their server or of their country);
+  - everything stops **as soon as the customer renews**; whoever has automatic renewal receives only the notice of the charge;
+  - ⛔ no warnings to the administrator 7 days before, nor 3 messages a day: one warning a day.
+- **«The end»** is the moment REMOTIX really stops: **14 calendar days after expiry** (trial and
+  full), or after the last successful check if the network is missing.
+- **At the end**:
+  - ⭐ **only REMOTIX** stops; ⛔ **never** access to the server (ssh, local login, the system's PAM stay intact);
+  - the **connections** are closed, the **desktops stay alive** with the work inside;
+  - on reconnecting the licence window appears;
+  - after renewal everyone gets back in and finds their desktop as it was.
 
-### 15.7 La trial
+### 15.7 The trial
 
-- **14 giorni, utenti illimitati**, chiesta dall'area cliente (§15.3).
-- ✅ **Una trial per account** (9 ott: con l'email di lavoro verificata e le email usa e getta rifiutate; supera
-  «una per macchina», che si reggeva sull'impronta dell'hardware, tolta). ⚠ Dichiarato: chi crea account nuovi con
-  altre email di lavoro può ottenere altre trial; deve però rifare il server ogni 14 giorni, e si accetta.
-- ✅ **I 14 giorni partono dall'installazione** (utente, 9 ott), cioè da quando la chiave entra nel primo server, all'ora esatta.
-- Reinstallare durante la trial non allunga niente: la licenza è la stessa, la data di fine pure.
-- **Due copie attive**: come la full (§15.8).
+- **14 days, unlimited users**, requested from the customer area (§15.3).
+- ✅ **One trial per account** (9 Oct: with the work email verified and disposable emails refused; supersedes
+  «one per machine», which rested on the hardware fingerprint, removed). ⚠ Declared: whoever creates new accounts with
+  other work emails can get more trials; but they must rebuild the server every 14 days, and that is accepted.
+- ✅ **The 14 days start from installation** (user, 9 Oct), that is from when the key enters the first server, at the exact hour.
+- Reinstalling during the trial lengthens nothing: the licence is the same, and so is the end date.
+- **Two active copies**: like the full (§15.8).
 
-### 15.8 Due copie attive (trial e full): sceglie il cliente
+### 15.8 Two active copies (trial and full): the customer chooses
 
-*Vale per **tutte** le copie in più, nate da sole (un clone, un backup rimesso in piedi, una VM accesa due volte) o
-volute (lo stesso server reinstallato altrove, un server nuovo, §15.9): il gesto è sempre la scelta.*
+*It applies to **all** extra copies, born by themselves (a clone, a backup put back up, a VM switched on twice) or
+wanted (the same server reinstalled elsewhere, a new server, §15.9): the gesture is always the choice.*
 
-1. **Lo sdoppiamento** si scopre al controllo orario (§15.4), quindi entro un'ora.
-2. Ogni copia riceve un **nome breve** («copia A · 4F7K»), mostrato anche sulla sua pagina d'accesso.
-3. Il servizio manda **subito un'email all'acquirente** (e un avviso a chi vende): *«la licenza RXF-…-6YRB gira su
-   due server: scegli quale tenere»*, con il link all'area cliente. ⛔ Nessun dato tecnico nell'email.
-4. L'**area cliente** mostra per ogni copia: nome breve, **nome della macchina**, **IP pubblico** (con fornitore e
-   paese), ora della scoperta e dell'ultimo contatto. La scelta si **conferma con un pulsante**.
-5. **1 email al giorno per i 7 giorni lavorativi** dopo la scoperta (utente, 9 ott). Nel frattempo le due copie
-   funzionano.
-6. **Scelta fatta**: la copia tenuta continua coi suoi biglietti, l'altra si ferma (i suoi desktop restano vivi fino
-   allo spegnimento).
-7. **Nessuna scelta nei 7 giorni lavorativi**: **la licenza si blocca**, **tutte e due le copie** si fermano e gli
-   utenti vedono la pagina **«sistema bloccato»**. La scelta, fatta in qualunque momento, **sblocca** la copia scelta.
-8. ✅ **Dopo 15 giorni lavorativi** senza scelta la licenza **resta bloccata** e va a chi vende, che decide se
-   **sbloccarla** o **cancellarla definitivamente** (utente, 9 ott: *«lasciamo le licenze bloccate; poi sarò io a
-   decidere se una licenza bloccata si sblocca o viene cancellata»*). ⛔ Nessuna cancellazione automatica.
-9. **Uno scambio ogni 30 giorni** (scelte e cambi di server insieme); chi vende può sbloccarlo a mano.
-   **3 sdoppiamenti in 90 giorni** sulla stessa licenza ⇒ la licenza va a chi vende, che guarda e decide se revocarla.
-10. Cambiare un disco, una scheda di rete o la memoria **non** crea uno sdoppiamento: decide il biglietto, non il ferro.
+1. **The duplication** is discovered at the hourly check (§15.4), so within an hour.
+2. Each copy receives a **short name** («copy A · 4F7K»), also shown on its sign-in page.
+3. The service **immediately sends an email to the buyer** (and a warning to the seller): *«the licence RXF-…-6YRB runs on
+   two servers: choose which one to keep»*, with the link to the customer area. ⛔ No technical data in the email.
+4. The **customer area** shows for each copy: short name, **machine name**, **public IP** (with provider and
+   country), time of discovery and of last contact. The choice is **confirmed with a button**.
+5. **1 email a day for the 7 working days** after the discovery (user, 9 Oct). Meanwhile the two copies
+   work.
+6. **Choice made**: the copy kept goes on with its tickets, the other stops (its desktops stay alive until
+   shutdown).
+7. **No choice within the 7 working days**: **the licence is blocked**, **both copies** stop and the
+   users see the **«system blocked»** page. The choice, made at any moment, **unblocks** the chosen copy.
+8. ✅ **After 15 working days** without a choice the licence **stays blocked** and goes to the seller, who decides whether to
+   **unblock it** or **delete it permanently** (user, 9 Oct: *«lasciamo le licenze bloccate; poi sarò io a
+   decidere se una licenza bloccata si sblocca o viene cancellata»*). ⛔ No automatic deletion.
+9. **One exchange every 30 days** (choices and server changes together); the seller can unlock it by hand.
+   **3 duplications in 90 days** on the same licence ⇒ the licence goes to the seller, who looks and decides whether to revoke it.
+10. Changing a disk, a network card or the memory does **not** create a duplication: the ticket decides, not the hardware.
 
-### 15.9 Cambiare server
+### 15.9 Changing server
 
-| situazione | che cosa fa il cliente | che cosa succede |
+| situation | what the customer does | what happens |
 |---|---|---|
-| **il server intero si sposta** (VM su un altro host, disco copiato su una macchina nuova) | niente | la cartella della licenza viaggia col sistema; si spegne il vecchio e si continua (§15.4) |
-| **server nuovo installato da zero**, col vecchio vivo o morto | root dà la `LICENSE_KEY` all'installatore (o `remotix licenza attiva <chiave>`) e poi sceglie il nuovo nell'area cliente | il nuovo parte subito; se il vecchio è vivo è uno sdoppiamento (§15.8): funzionano tutti e due finché l'acquirente non sceglie il nuovo, poi il vecchio si ferma. **Nessun minuto di fermo** durante il trasloco |
-| **clone o backup rimesso in piedi** per sbaglio | sceglie quale tenere | §15.8 |
+| **the whole server moves** (VM to another host, disk copied to a new machine) | nothing | the licence folder travels with the system; the old one is switched off and work goes on (§15.4) |
+| **new server installed from scratch**, with the old one alive or dead | root gives the `LICENSE_KEY` to the installer (or `remotix licenza attiva <chiave>`) and then chooses the new one in the customer area | the new one starts at once; if the old one is alive it is a duplication (§15.8): both work until the buyer chooses the new one, then the old one stops. **No minute of downtime** during the move |
+| **clone or backup put back up** by mistake | chooses which one to keep | §15.8 |
 
-- ✅ (utente, 9 ott: *«invece di complicare le cose … dopo 1 ora il sistema rileva l'anomalia e si procede come nel
-  caso del clone»*) ⛔ Supera il recupero con «Recupera» e conferma via email, lo spostamento volontario con la firma
-  del rilascio e la regola delle 72 ore.
-- Se il server nuovo non va, finché la scelta non è fatta il vecchio funziona ancora; dopo, si **sceglie di nuovo il vecchio** (reinstallando la chiave se si era fermato); conta come scambio (§15.8 punto 9), e
-  chi vende può sbloccare il limite.
-- La **copia rimasta indietro** (un backup rimesso su, la copia non scelta) non viene allungata: lavora fino al suo
-  «valido fino a» e mostra all'amministratore un messaggio **neutro** (*«questa installazione risulta una copia più
-  vecchia, forse un backup ripristinato»*).
-- ⛔ Chi deve scegliere, e come l'azienda si organizza quando l'acquirente non c'è, **non è materia di REMOTIX**
-  (utente, 9 ott: *«un'azienda che si affida a un singolo è un'azienda mal gestita … non vorrei che REMOTIX debba
-  entrare in aree che non sono di sua competenza»*). Niente deleghe, ruoli, conferme o attivazioni provvisorie.
+- ✅ (user, 9 Oct: *«invece di complicare le cose … dopo 1 ora il sistema rileva l'anomalia e si procede come nel
+  caso del clone»*) ⛔ It supersedes the recovery with «Recover» and confirmation by email, the voluntary move with the signature
+  of the release and the 72-hour rule.
+- If the new server does not work, until the choice is made the old one still works; afterwards, you **choose the old one again** (reinstalling the key if it had stopped); it counts as an exchange (§15.8 point 9), and
+  the seller can unlock the limit.
+- The **copy left behind** (a backup put back up, the copy not chosen) is not lengthened: it works until its
+  «valid until» and shows the administrator a **neutral** message (*«this installation appears to be an older
+  copy, perhaps a restored backup»*).
+- ⛔ Who must choose, and how the company organises itself when the buyer is not there, **is not REMOTIX's matter**
+  (user, 9 Oct: *«un'azienda che si affida a un singolo è un'azienda mal gestita … non vorrei che REMOTIX debba
+  entrare in aree che non sono di sua competenza»*). No delegations, roles, confirmations or provisional activations.
 
-### 15.10 La pagina d'accesso
+### 15.10 The sign-in page
 
-| stato | prima delle credenziali | dopo utente e parola d'ordine giuste |
+| state | before the credentials | after the right user and password |
 |---|---|---|
-| **trial** | «Trial version — restano N giorni» | si entra |
-| **licenza valida** | niente | si entra |
-| **scaduta** (dopo i 14 giorni di tolleranza) | niente (chi non ha un account non scopre lo stato) | la finestra della licenza: stato, «Acquista», e che la chiave la mette l'amministratore (`remotix licenza`) |
-| **bloccata per due copie** (§15.8) | niente | la pagina **«sistema bloccato»** e il rimando all'email della scelta |
-| **sospesa** (dal pagamento) o **revocata** (da chi vende) | niente | la finestra della licenza, **come una scaduta**, con la frase che spiega la sospensione o la revoca |
-| **mai attivata** (primo avvio senza rete) | niente | *«il server non ha ancora potuto attivare la licenza: serve l'accesso a internet»* |
+| **trial** | «Trial version — N days left» | you get in |
+| **valid licence** | nothing | you get in |
+| **expired** (after the 14 days of tolerance) | nothing (whoever has no account does not discover the state) | the licence window: state, «Buy», and that the administrator puts in the key (`remotix licenza`) |
+| **blocked for two copies** (§15.8) | nothing | the **«system blocked»** page and the pointer to the choice email |
+| **suspended** (by the payment) or **revoked** (by the seller) | nothing | the licence window, **like an expired one**, with the sentence explaining the suspension or revocation |
+| **never activated** (first start without network) | nothing | *«the server has not yet been able to activate the licence: Internet access is needed»* |
 
-In più, quando servono: l'avviso dei giorni che restano, il nome breve della copia, il messaggio della copia
-rimasta indietro.
+In addition, when needed: the warning of the days that remain, the short name of the copy, the message of the copy
+left behind.
 
-### 15.11 Le chiavi di chi vende, e la rete
+### 15.11 The seller's keys, and the network
 
-- Una **chiave madre fuori linea** (mai sul VPS) autorizza la **chiave del VPS**, che firma **solo gli attestati**.
-- Indirizzi del servizio, chiavi valide e revoche stanno in un **elenco firmato dalla chiave madre**. Il prodotto
-  ha dentro **due indirizzi** di partenza. ⇒ Una chiave del VPS rubata si revoca senza ricompilare il prodotto;
-  un **dominio nuovo** non obbliga i clienti ad aggiornare.
-- HTTPS con i certificati del sistema, **niente pinning** (i proxy aziendali devono funzionare); l'autenticità
-  delle risposte la dà la firma del servizio, in un **formato binario fisso e firmato**.
-- Il servizio: operazioni a transazione, **copie cifrate fuori dal VPS ogni giorno**, registro di ogni operazione
-  (chi, quando, che cosa). Se il VPS torna a un salvataggio vecchio, si rimette in pari **solo** con prove firmate
-  da lui stesso, mai con numeri dichiarati dal cliente.
-- **Le email** partono dal VPS (Postfix solo in uscita, SPF/DKIM/DMARC). ⚠ Condizione: OVH deve lasciare aperta la
-  porta 25 e permettere il nome inverso; altrimenti serve un inoltro (decisione dell'utente).
-- ✅ VPS e dominio non hanno un fornitore di riserva (utente, 9 ott): OVH avvisa delle scadenze, la spesa è piccola,
-  e un guasto di OVH si risolve ben dentro i 14 giorni di §15.5.
+- An **offline master key** (never on the VPS) authorises the **VPS key**, which signs **only the attestations**.
+- Service addresses, valid keys and revocations are in a **list signed by the master key**. The product
+  has **two starting addresses** inside it. ⇒ A stolen VPS key is revoked without recompiling the product;
+  a **new domain** does not oblige customers to update.
+- HTTPS with the system's certificates, **no pinning** (corporate proxies must work); the authenticity
+  of the answers is given by the service's signature, in a **fixed, signed binary format**.
+- The service: transactional operations, **encrypted copies off the VPS every day**, log of every operation
+  (who, when, what). If the VPS goes back to an old backup, it catches up **only** with proofs signed
+  by itself, never with numbers declared by the customer.
+- **Emails** leave from the VPS (Postfix outgoing only, SPF/DKIM/DMARC). ⚠ Condition: OVH must leave
+  port 25 open and allow the reverse name; otherwise a relay is needed (decision of the user).
+- ✅ VPS and domain have no backup provider (user, 9 Oct): OVH warns of expiries, the cost is small,
+  and an OVH fault is solved well within the 14 days of §15.5.
 
-### 15.12 La riservatezza
+### 15.12 Privacy
 
-- **Che cosa arriva al servizio**: il biglietto, il **nome della macchina** e l'**IP pubblico** da cui si collega.
-  Nient'altro: niente hardware, niente IP interni, niente impronte. Il servizio tiene **solo l'ultimo** di ogni
-  voce, salvo gli sdoppiamenti.
-- **Quanto si tengono** (tetti, non minimi):
+- **What reaches the service**: the ticket, the **machine name** and the **public IP** it connects from.
+  Nothing else: no hardware, no internal IPs, no fingerprints. The service keeps **only the last** of each
+  item, except for duplications.
+- **How long they are kept** (ceilings, not minimums):
 
-  | dati | per quanto |
+  | data | for how long |
   |---|---|
-  | email dell'acquirente, licenze, registro delle operazioni | **2 anni** dalla fine del rapporto |
-  | dati di uno sdoppiamento (nomi delle macchine, IP pubblici) | **6 mesi** dalla scelta, poi solo «sdoppiamento del giorno X, risolto così» |
+  | buyer's email, licences, register of operations | **2 years** from the end of the relationship |
+  | data of a duplication (machine names, public IPs) | **6 months** from the choice, then only «duplication of day X, resolved like this» |
 
-- I dati di una copia si vedono nell'area cliente **anche quando la copia è di altri**: si fa per prevenire le frodi
-  e va scritto nell'**informativa**, da far controllare a un legale prima di vendere.
+- The data of a copy can be seen in the customer area **even when the copy belongs to someone else**: it is done to prevent fraud
+  and must be written in the **privacy notice**, to be checked by a lawyer before selling.
 
-### 15.13 Che cosa NON c'è
+### 15.13 What is NOT there
 
-- ⛔ attivazione senza rete · conteggio degli utenti · firma dell'installazione · impronta dell'hardware · TPM ·
-  integrazioni coi cloud (AWS, Google, Azure) · cancellazione automatica di una licenza · blocco dell'accesso al
-  server · deleghe, ruoli o attivazioni provvisorie per l'acquirente · conferma delle installazioni o copie in
-  attesa · rigenerazione della chiave da parte del cliente.
-- ⏳ **Sospesi**: il processore di pagamento e il **contratto di vendita** della full (si decidono insieme).
-  Quando si sceglierà il processore, il servizio dovrà riconoscere gli avvisi ripetuti (un rinnovo mandato due
-  volte non aggiunge due anni) e gestire rimborsi e storni.
-- ⚠ **Il contratto della trial**: §10.30 indicava la PolyForm Free Trial 1.0.0, che prevede **32 giorni**; la trial
-  ora dura **14**. Da decidere insieme al contratto della full.
+- ⛔ activation without network · counting users · installation signature · hardware fingerprint · TPM ·
+  cloud integrations (AWS, Google, Azure) · automatic deletion of a licence · blocking access to the
+  server · delegations, roles or provisional activations for the buyer · confirmation of installations or copies
+  waiting · regeneration of the key by the customer.
+- ⏳ **Suspended**: the payment processor and the **sales contract** of the full (they are decided together).
+  When the processor is chosen, the service will have to recognise repeated notices (a renewal sent twice
+  does not add two years) and handle refunds and chargebacks.
+- ⚠ **The trial contract**: §10.30 indicated the PolyForm Free Trial 1.0.0, which provides **32 days**; the trial
+  now lasts **14**. To be decided together with the contract of the full.
 
-### 15.14 Le due scatole nere: che cosa entra e che cosa esce
+### 15.14 The two black boxes: what goes in and what comes out
 
-✅ (utente, 9 ott: *«immaginiamo il cliente e il server di gestione delle licenze come 2 blackbox: dalle 2 scatole
-nere entrano ed escono dati, quello che succede dentro ogni scatola resta nascosto nella scatola»*). ⇒ **Il contratto
-fra REMOTIX e il servizio è tutto qui.** Ognuna delle due scatole si costruisce, si prova e si cambia dentro senza
-toccare l'altra, finché questi messaggi restano uguali; un messaggio nuovo o un campo nuovo si decide **qui** prima
-del codice. Tutto viaggia in HTTPS; le risposte del servizio sono **firmate** con la chiave del VPS.
+✅ (user, 9 Oct: *«immaginiamo il cliente e il server di gestione delle licenze come 2 blackbox: dalle 2 scatole
+nere entrano ed escono dati, quello che succede dentro ogni scatola resta nascosto nella scatola»*). ⇒ **The contract
+between REMOTIX and the service is all here.** Each of the two boxes is built, tested and changed inside without
+touching the other, as long as these messages stay the same; a new message or a new field is decided **here** before
+the code. Everything travels over HTTPS; the service's answers are **signed** with the VPS key.
 
-| # | da REMOTIX al servizio | dal servizio a REMOTIX | quando |
+| # | from REMOTIX to the service | from the service to REMOTIX | when |
 |---|---|---|---|
-| 1 | **ATTIVA**: `LICENSE_KEY`, nome della macchina | **ATTESTATO** firmato + primo biglietto (e, se la licenza gira già altrove, il nome breve della copia: è uno sdoppiamento) · oppure **RIFIUTATA** col motivo (chiave sconosciuta o revocata) | all'installazione, o con `remotix licenza attiva` |
-| 2 | **CONTROLLO**: biglietto, codice della richiesta, nome della macchina | **ATTESTATO** firmato (tipo, stato, scadenza, fine della tolleranza, «valido fino a», avvisi da mostrare) + biglietto nuovo · oppure **FERMATI** (copia sostituita o non scelta) · **SDOPPIATA** (biglietto già consumato) | ogni ora, e con `remotix licenza controlla` |
-| 3 | chiede l'**elenco** | **ELENCO** firmato dalla chiave madre: indirizzi del servizio, chiavi del VPS valide, revoche | all'avvio e una volta al giorno |
+| 1 | **ATTIVA**: `LICENSE_KEY`, machine name | signed **ATTESTATO** + first ticket (and, if the licence already runs elsewhere, the short name of the copy: it is a duplication) · or **RIFIUTATA** with the reason (unknown or revoked key) | at installation, or with `remotix licenza attiva` |
+| 2 | **CONTROLLO**: ticket, request code, machine name | signed **ATTESTATO** (type, state, expiry, end of tolerance, «valid until», warnings to show) + new ticket · or **FERMATI** (copy replaced or not chosen) · **SDOPPIATA** (ticket already consumed) | every hour, and with `remotix licenza controlla` |
+| 3 | asks for the **list** | **ELENCO** signed by the master key: service addresses, valid VPS keys, revocations | at start-up and once a day |
 
-- **Dentro REMOTIX**, nascosto: dove tiene il biglietto, come mostra gli avvisi, come chiude i collegamenti. Fuori
-  esce solo quel che sta nella colonna di sinistra.
-- **Dentro il servizio**, nascosto: il registro, l'area cliente, il pannello, il pagamento, le email. A REMOTIX
-  arrivano solo le risposte della colonna di destra. Le persone (acquirente, chi vende) e il processore di
-  pagamento entrano nel servizio da porte **sue** (sito, pannello, ingresso del pagamento), che REMOTIX non vede.
-- ⛔ Nessun altro dato esce da REMOTIX: niente hardware, niente IP interni, niente utenti o sessioni.
+- **Inside REMOTIX**, hidden: where it keeps the ticket, how it shows the warnings, how it closes the connections. Only what
+  is in the left column comes out.
+- **Inside the service**, hidden: the register, the customer area, the panel, the payment, the emails. Only the
+  answers of the right column reach REMOTIX. People (buyer, seller) and the payment processor
+  enter the service through **its own** doors (site, panel, payment entrance), which REMOTIX does not see.
+- ⛔ No other data leaves REMOTIX: no hardware, no internal IPs, no users or sessions.

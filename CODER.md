@@ -156,9 +156,9 @@ would be tuning on a case the product **no longer serves**.
 > with the blind piece makes **90-115 ms** on the user's screen. ⛔⛔ **And 78 % is ours**:
 > Mutter gets 22 %, the rest is almost all in the software encoder (`SPECIFICHE.md` §3.2).
 >
-> ### ⭐⭐ And on 15 Aug 2026 it turned out there was a SECOND ring, and nobody was measuring it
+> ### ⭐⭐ And on 15 Aug 2026 it turned out there was a SECOND link, and nobody was measuring it
 >
-> The number above is **capture → glass** on a **moving** scene. ⛔ The ring the user
+> The number above is **capture → glass** on a **moving** scene. ⛔ The link the user
 > feels when they **click** is another one — *input received → frame leaving* — and it is measured on a
 > **still** scene, which is the condition in which one clicks. No bench was looking at it.
 >
@@ -167,8 +167,8 @@ would be tuning on a case the product **no longer serves**.
 > the frame wait, and whatever arrives during the wait pays all of it.
 > ⇒ Brought to 8 ms: **median 41 ms, worst 47** — inside the ceiling.
 >
-> ⚠ **The lesson is about method, not numbers**: a wait sized for one ring becomes the
-> delay of every other ring passing through the same loop (`LEZIONI.md` §6.2-bis, `REVIEWER.md`
+> ⚠ **The lesson is about method, not numbers**: a wait sized for one link becomes the
+> delay of every other link passing through the same loop (`LEZIONI.md` §6.2-bis, `REVIEWER.md`
 > **E13**). And the log line that explained it — *«3 attese a vuoto al secondo»* — had been printed for
 > a day (§6.2-ter).
 
@@ -221,8 +221,8 @@ on a measurement that did not measure what we believed. (`LEZIONI.md` §10.) The
 the rules that prevent it. They are recalled here because the coder measures while
 developing; the detail and the price of each are in `LEZIONI.md` §1 and §2.
 
-### 3.1 Before optimising a ring, measure how much enters the chain
-A ring faster than what reaches it produces nothing. The 18 frames that
+### 3.1 Before optimising a link, measure how much enters the chain
+A link faster than what reaches it produces nothing. The 18 frames that
 seemed a limit of the machine were a constant written in our code.
 Measure the delivery, not only the processing.
 
@@ -287,7 +287,7 @@ The first frames are the start-up, when everything is repainted. The distributio
 damage in the steady state is different from that at start-up. Measure in the steady state.
 
 ### 3.6 Isolate ONE function only, and call it from outside
-When the chain is already narrowed to two rings, do not do another bench run:
+When the chain is already narrowed to two links, do not do another bench round:
 write the minimal program that calls only the suspect function on a known input.
 It costs less and closes sooner.
 
@@ -384,7 +384,7 @@ not only its number. (`LEZIONI.md` §2.2.)
 
 ## 4-bis. ⭐ The two traps of SCRIPTS, and both got through `bash -n`
 
-*Written on 25 Aug 2026, and each of them cost a run in phase 10.*
+*Written on 25 Aug 2026, and each of them cost a round in phase 10.*
 
 ### ⛔⛔ No apostrophes inside `${…:?…}` and inside double-quoted strings
 

@@ -69,7 +69,7 @@ taken**, with the defaults in force.
 
 **What it costs if it is NEVER done.** ⭐ **On a single user, nothing**: the regulator already does its
 job, and phase 10 argued it. ⛔ The doubt concerns **ten together on a real wire**, and
-that run has not been done: in phase 10 the clients ran inside the machine, so **the wire was
+that round has not been done: in phase 10 the clients ran inside the machine, so **the wire was
 counted, not tested**.
 
 **What is needed first.** Ten clients **on a real network**, not inside the machine. ⚠ It is a test that
@@ -91,7 +91,7 @@ tried it and it was fine: we never tried it.
 ⚠ On healthy networks it would probably change nothing; the suspicion concerns **dirty networks**, which
 are the theme on which the user corrected the target of phase 9.
 
-**What is needed first.** An option that exposes it, and two runs on the same dirty wire.
+**What is needed first.** An option that exposes it, and two rounds on the same dirty wire.
 
 **How much it weighs.** `[?]` The work is small, the payoff **uncertain**.
 
