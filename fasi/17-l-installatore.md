@@ -1060,6 +1060,15 @@ sha256, rifiuto di un file guasto, `check`).
    anche `/dev/fb*` e le webcam), da misurare sui quattro desktop; per ora la logica è com'era;
 6. ⏳ **punto aperto**: le licenze dei componenti di terzi (THIRD-PARTY-LICENSES) le scriveva l'archivio
    (`packaging/archivio/sbom.py`, `licenze.py`): vanno rimesse nel .run.
+7. ✅ **TUI rifatta sul mockup approvato** (`grafica/tui-mockup/index.html`), commit `facc27a`: cornice fissa
+   larga quanto il terminale (almeno 80 colonne; sotto, una riga che lo dice), Check › Plan › Install › Ready,
+   corpo che scorre dentro la cornice, tasti in fondo; `remotix-install tui --preview 80` disegna ogni schermata
+   con dati d'esempio. Non dal motore, quindi non mostrate: la **dimensione** dei pacchetti (la simulazione del
+   gestore non la dà) e la **sospensione automatica** come riga del check (il motore non la rileva).
+8. ✅ **labwc, wlr-randr, il carattere scalabile e breeze6-wallpapers sono dipendenze di REMOTIX** (utente,
+   10 ott; `DECISIONI.md` §10.36), commit `facc27a`: il motore li aggiunge ai pacchetti, il piano li mostra in
+   «Dependencies of REMOTIX» col desktop che li chiede; `17-amministratore.sh` non li prepara più. Da provare sul
+   ferro: che la simulazione e l'installazione li prendano dagli archivi di ogni distribuzione.
 
 ---
 

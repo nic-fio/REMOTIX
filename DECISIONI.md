@@ -6610,6 +6610,14 @@ REMOTIX) e le parti di §10.12, §10.21 e §10.23 che contraddicono quel che seg
 - ✅ **Fatto il 10 ott 2026** (commit `2e16f8f` motore, `8bcb881` il .run, `623ea90` banchi):
   `fasi/17-l-installatore.md` §6.6.16. Restano da provare sul ferro (la campagna sulle distribuzioni) e due
   punti aperti: solo `render` nei gruppi della scheda, e le licenze dei componenti di terzi nel .run.
+- ✅ **I pezzi dei desktop sono dipendenze di REMOTIX, non mancanze** (utente, 10 ott 2026: *«trattiamo i 3
+  componenti come normali dipendenze di remotix. basta che l'installer li mostri come tali nella sezione piano»*):
+  labwc e wlr-randr per XFCE e LXQt, e un carattere scalabile se la macchina non ne ha, li aggiunge il motore ai
+  pacchetti da installare; il gestore li prende dagli archivi della distribuzione come le altre dipendenze e la
+  simulazione li mostra nel piano, nel gruppo «Dependencies of REMOTIX» con «needed by REMOTIX for XFCE». Lo stesso
+  vale per l'altro pezzo del catalogo, breeze6-wallpapers (KDE su Tumbleweed). Se la distribuzione non ha il
+  pacchetto, la simulazione fallisce e lì si ferma (RX-PACCHETTI-005). Il carattere per famiglia torna nel catalogo
+  (`carattere_scalabile`, 2026.10.10.14). Fatto il 10 ott, commit `facc27a` (con la TUI rifatta: fasi/17 §6.6.16).
 
 ---
 
