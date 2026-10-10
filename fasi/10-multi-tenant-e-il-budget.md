@@ -84,7 +84,7 @@ machine is full, a message that **says why**.
 ⇒ ⛔ **What saturates `rcs0` is the COMPOSITOR, and it alone is enough** — that is, something that **is not ours**, and that
 the budget can only **count**, not reduce.
 
-⭐⭐ **And the cost has TWO terms, not one** (§6.11): `[M]` `rcs0 % ≈ 7.1 % fixed + 0.053 % per
+⭐⭐ **And the cost has TWO terms, not one** (§6.11): `[M]` `rcs0 % ≈ 7,1 % fisso + 0,053 % per
 Mpixel/s` ⇒ **half the cost is a toll for merely being a live desktop at 60 Hz**, and 6.5 times
 the change costs **1.68** times. It is the fixed term that decides how many quiet sessions fit.
 
@@ -388,7 +388,7 @@ the measurement nobody guarantees — the lock is the only part that lasts.
 ## §3 · ⭐⭐ THE DESIGN — where the budget lives, read in the code *(24 Aug 2026)*
 
 > ⛔ **Reading, not code**: the product is touched after the numbers. But when the numbers arrive,
-> this says **exactly** where to put them. Every line carries `file:line` **and** the name of the
+> this says **exactly** where to put them. Every line carries `file:riga` **and** the name of the
 > function, because a line number ages silently.
 
 ### 3.1 ⛔⛔ The admission border — and today the no arrives **after the login**
@@ -563,7 +563,7 @@ a reason*, that is exactly the defect for which `posto_prendi()` had already bee
 | ⛔⛔ **R10-A2** | **The ban is per ADDRESS and ten tenants behind a NAT are one single address.** `rcp.c` · `posto_prendi()` declares it: *«IL NOME UTENTE NON CONTA. Tre nomi diversi contano tre»*. Three **different** tenants who get it wrong once each within five minutes **ban the address**: the other seven stay out for **12 hours** without having got anything wrong, and the only way out is the command socket, which is `0600` of **root** | `rcp.c:1052-1055`, `rcp_chiave_indirizzo()` `:1159`, check `:2364` | ⛔ **10 users in an office**. ⭐ **Q6 confirmed** |
 | ⛔ **R10-A2-bis** | **A successful login removes the ban from memory but NOT from the file: the restart resurrects it.** `azzera_falliti()` does a `memset` of the whole entry, `bannato_fino` included, and ⛔ **does not call `salva_ban()`** — where its twin `rcp_sblocca()` does call it | `rcp.c` · `salva_ban()` vs `rcp.c` · `segna_fallito()` | ⚠ it does not break at once, **it lies later**: two truths about the same fact (**I7**) |
 | ⛔⛔ **R10-A3** | **Ten tenants multiply the logind wait, and the DEAD LINE detaches them all.** `wt_sorveglia_locali()` loops over **all** sessions and for each one makes a **synchronous** D-Bus call, **inside the same `poll` that delivers the frames**; `ATTESA_MS` is 300. With one tenant the worst is 300 ms every 2 s; ⛔ **with ten it is 3 s every 2 s**. While the loop is stopped, `lm_usciti` does not rise for **any** session and `lm_offerti` keeps rising ⇒ past 5 s **`linea_morta_scatta()` throws out all ten**, each with the sentence *«la linea è MORTA»* — which **blames the user's network for a defect of the machine** | `webtransport.c` · `video_a_una()`, `main.c` · `ABBANDONO_PREDEFINITO_MS`, `sentinella.c` · `ATTESA_MS`, `webtransport.c` · `WT_RETE_PERDE` | ⛔ **10 users**, ⚠ **conditional** on a slow logind — but what triggers the condition is **the number of tenants** |
-| ⛔ **R10-A4** | **The log does not say whose it is.** `gancio_registra()` receives the session context and **throws it away** (`(void)ctx;`); the format is `time + area` and that is all — no pid, no user; the children **do not redirect `stderr`** and all ten append to the same file, with the **same area**. `[M]` static census: **79 %** of the lines of `rcp.c`, **63 %** of `webtransport.c`, **64 %** of `figlio.c` and ⛔ **100 %** of `codificatore.c` **without an identifier** | `webtransport.c` · `gancio_manda()`, `registro.c` · `riga()`, `figlio.c` · `diventa_ed_esegui()`, `figlio.h` · `REG_FIGLIO` | ⛔ **2 users**, unreadable at 10. ⭐ **Q10 confirmed, and with a number** |
+| ⛔ **R10-A4** | **The log does not say whose it is.** `gancio_registra()` receives the session context and **throws it away** (`(void)ctx;`); the format is `ora + area` and that is all — no pid, no user; the children **do not redirect `stderr`** and all ten append to the same file, with the **same area**. `[M]` static census: **79 %** of the lines of `rcp.c`, **63 %** of `webtransport.c`, **64 %** of `figlio.c` and ⛔ **100 %** of `codificatore.c` **without an identifier** | `webtransport.c` · `gancio_manda()`, `registro.c` · `riga()`, `figlio.c` · `diventa_ed_esegui()`, `figlio.h` · `REG_FIGLIO` | ⛔ **2 users**, unreadable at 10. ⭐ **Q10 confirmed, and with a number** |
 | ⛔ **R10-A5** | **The bandwidth cap is PER TENANT, and nobody adds up**: `--tetto-banda-mbit 30` with ten tenants is not a cap of 30, it is a cap of **300**. In the whole of `src/` **there is no aggregate counter of the bytes sent out** | `main.c` · `consegna_verdetto()` → `:1544` → `figlio.c:1215-1217` | ⚠ today it does not break; it is **point 5 of the phase**, confirmed by the code |
 | ⚠ **R10-A6** | **`WT_PALCHI` is EIGHT and the phase aims at ten**: the ninth and the tenth do not enter the table and at re-attach they receive the canvas **as the client asks for it** instead of as the stage has it. ⛔ And the fallback is declared **only once** (`palchi_pieni_detto`): the ninth and the tenth lose it **silently** | `webtransport.c` · `rete_ciclo()`, `palco_misura_segna()` `:5238` | ⚠ **9** — ugly, does not detach |
 | ⚠ **R10-A7** | **`MAX_IN_VOLO` is 16 by copy, not by construction**, and the comment declares a link that does not exist. The day the cap goes up, the seventeenth who authenticates **at the same moment** receives `CREDENZIALI_ERRATE` — **indistinguishable from a wrong password** | `aiutante.c` · `rcp_autentica()` | ⚠ not today, ⛔ **on the day of the budget** |
@@ -2194,619 +2194,619 @@ eight times the one on the side that costs one user**, which is the right direct
 ⛔ and **the phase 9 regulator cannot remedy it**: it lives in the parent and stops frames **already
 encoded** (§3.2). ⭐ The 50 % reserve limits the overshoot to **2×**.
 
-#### ⭐⭐ 4 · Il meccanismo del dirupo — la pista dei buffer è **verificata e CORRETTA**
+#### ⭐⭐ 4 · The mechanism of the cliff — the buffer lead is **verified and CORRECTED**
 
-Verificato sul codice: `cattura.c` · `parametri_di_consumo()` chiede `RANGE(6, 4, 8)` · `cattura.c` · `parametri_di_consumo()` *«al massimo DUE»* ·
-`cattura.h` · `REMOTIX_CATTURA_H` `buffer_distinti` **si conta già** · `codificatore.c` · `converti_sulla_gpu()` `vaSyncSurface`, che il
-commento accanto chiama *«il rilascio»*.
+Verified on the code: `cattura.c` · `parametri_di_consumo()` asks for `RANGE(6, 4, 8)` · `cattura.c` · `parametri_di_consumo()` *«al massimo DUE»* ·
+`cattura.h` · `REMOTIX_CATTURA_H` `buffer_distinti` **is already counted** · `codificatore.c` · `converti_sulla_gpu()` `vaSyncSurface`, which the
+comment next to it calls *«il rilascio»*.
 
-⛔ **E la previsione dedotta dai tempi è SMENTITA**: si era dedotto `buffer_distinti ∈ {3,4}`; `[M]`
-letto nel registro della salita a undici: **6 in 524 righe, 8 in 65**. ⚠ *(Confronto non cieco: quel
-registro è più vecchio del sigillo — vale come **controllo**, non come verifica in avanti.)*
+⛔ **And the prediction deduced from the timings is REFUTED**: it had been deduced that `buffer_distinti ∈ {3,4}`; `[M]`
+read in the log of the climb to eleven: **6 in 524 lines, 8 in 65**. ⚠ *(Not a blind comparison: that
+log is older than the seal — it counts as a **check**, not as a forward verification.)*
 
-⭐ **Col valore vero il conto migliora**: pista = (6 − 2) × 16,67 = **66,7 ms** · `[M]` ultimo gradino
-**sotto** la pista è il **7** (39,9 ms) · primo **sopra** è l'**8** (654,3 ms) ⇒ ⭐⭐ **la pista si
-attraversa esattamente al dirupo.**
+⭐ **With the real value the account improves**: lead = (6 − 2) × 16.67 = **66.7 ms** · `[M]` last step
+**below** the lead is the **7** (39.9 ms) · first **above** is the **8** (654.3 ms) ⇒ ⭐⭐ **the lead is
+crossed exactly at the cliff.**
 
-⛔⛔ **Ma NON spiega il primo peggioramento** (gradino 7, che sta **sotto** la pista): quello è
-**contesa**, e lo spiega il conto sui pixel. ⇒ ⭐⭐ **Sono DUE meccanismi su DUE gradini diversi**, e
-confonderli farebbe accusare l'uno del danno dell'altro.
-⚠ E il vincolo è **largo**: i dati ammettono qualunque pista fra 4,4 e 41,3 buffer ⇒ **compatibile
-con l'aritmetica, non la conferma**.
-⛔⛔ **E `buffer_distinti` non è lo stesso per tutti**: 6 per l'89 %, 8 per l'11 % ⇒ **due sessioni
-dello stesso giro hanno piste diverse del 50 %, e il prodotto non lo sa.**
+⛔⛔ **But it does NOT explain the first worsening** (step 7, which sits **below** the lead): that is
+**contention**, and the count on pixels explains it. ⇒ ⭐⭐ **They are TWO mechanisms on TWO different steps**, and
+confusing them would make one blamed for the damage of the other.
+⚠ And the constraint is **loose**: the data admit any lead between 4.4 and 41.3 buffers ⇒ **compatible
+with the arithmetic, not a confirmation of it**.
+⛔⛔ **And `buffer_distinti` is not the same for everyone**: 6 for 89 %, 8 for 11 % ⇒ **two sessions
+of the same round have leads differing by 50 %, and the product does not know it.**
 
-> ##### ⛔ E il rilascio del buffer è **DOPO TUTTA la codifica**, non dopo la conversione — *correzione*
+> ##### ⛔ And the buffer release is **AFTER THE WHOLE encoding**, not after the conversion — *correction*
 >
-> Il primo racconto diceva, sulla fede del commento di `codificatore.c` · `converti_sulla_gpu()`, che il buffer di Mutter
-> torna appena la conversione ha finito. ⛔ **Il codice dice un'altra cosa**: il rilascio è a
-> **`figlio.c`**, **dopo `codifica_e_manda()` per intero** — e il commento accanto lo vuole lì
-> apposta: *«si chiama DOPO la codifica… spostarla di due righe più in su rimetterebbe in piedi le due
+> The first account said, on the faith of the comment of `codificatore.c` · `converti_sulla_gpu()`, that Mutter's buffer
+> comes back as soon as the conversion has finished. ⛔ **The code says something else**: the release is at
+> **`figlio.c`**, **after `codifica_e_manda()` in full** — and the comment next to it wants it there
+> on purpose: *«si chiama DOPO la codifica… spostarla di due righe più in su rimetterebbe in piedi le due
 > schermate che si alternano»*.
 >
-> ⇒ ⭐ **La finestra in cui il buffer del compositore è NOSTRO non è la sola conversione: è
-> conversione + codifica + SPEDIZIONE** — e la spedizione è un `send()` **bloccante**
-> (`figlio.c` · `figli_spegni()`). ⇒ La soglia è **più facile da sfondare** di come era stata raccontata, e — cosa
-> che conta di più — è fatta delle **tre voci del TRATTO che il banco già legge**: ⭐ **i due lati
-> della disuguaglianza si misurano nello stesso giro.**
+> ⇒ ⭐ **The window in which the compositor's buffer is OURS is not the conversion alone: it is
+> conversion + encoding + SENDING** — and the sending is a **blocking** `send()`
+> (`figlio.c` · `figli_spegni()`). ⇒ The threshold is **easier to break through** than it had been told, and — what
+> matters more — it is made of **the three TRATTO entries the bench already reads**: ⭐ **the two sides
+> of the inequality are measured in the same round.**
 >
-> ⭐⭐ **E i due «due» sono letti dalla struttura, non dai commenti**: `cattura->posto` è **una casella
-> sola** e chi arriva rende subito quel che trova (`cattura.c:1160-1165`); `cattura_prendi()` porta
-> via il fotogramma (`:2054`) e chi consuma lo rende in `cattura_fermo_libera()` (`:2197`) ⇒ **uno
-> nella casella, uno in mano a chi legge**. E i 6 di `cattura.c` · `parametri_di_consumo()` sono un **minimo chiesto**, non
-> un ordine: quanti ne dia il produttore lo dice `buffer_distinti`, che si **conta**.
+> ⭐⭐ **And the two «two»s are read from the structure, not from the comments**: `cattura->posto` is **one single
+> box** and whoever arrives returns at once what it finds (`cattura.c:1160-1165`); `cattura_prendi()` takes
+> away the frame (`:2054`) and whoever consumes returns it in `cattura_fermo_libera()` (`:2197`) ⇒ **one
+> in the box, one in the hand of the reader**. And the 6 of `cattura.c` · `parametri_di_consumo()` are a **requested minimum**, not
+> an order: how many the producer gives is said by `buffer_distinti`, which is **counted**.
 >
-> ⇒ ⭐⭐⭐ **soglia = (buffer − 2) × periodo**, e la taratura mostra la cosa che vale: `[M]` con 6
-> buffer **66,67 ms**, ⭐ **con 4 buffer soli 33,33 ms** — cioè **il dirupo si sposta col numero dei
-> BUFFER, non col numero delle sessioni**. È precisamente la grandezza che il prodotto sa calcolare:
-> buffer negoziati, buffer trattenuti, cadenza chiesta.
+> ⇒ ⭐⭐⭐ **threshold = (buffers − 2) × period**, and the calibration shows the thing that counts: `[M]` with 6
+> buffers **66.67 ms**, ⭐ **with only 4 buffers 33.33 ms** — that is **the cliff moves with the number of
+> BUFFERS, not with the number of sessions**. It is precisely the quantity the product can compute:
+> buffers negotiated, buffers held, cadence requested.
 
-#### 5 · Il pezzo pratico — ⭐ **non serve nessun canale nuovo, tranne uno**
+#### 5 · The practical piece — ⭐ **no new channel is needed, except one**
 
-Otto predicati verificati sul `src/` vero, **non ripetuti da §3.2**:
+Eight predicates verified on the real `src/`, **not repeated from §3.2**:
 
-- ⭐ `main.c:394 deposita_fotogramma()` riceve **ogni** fotogramma con larghezza, altezza, istante e
-  byte; `figlio.c` lo chiama **senza guardie** su «qualcuno guarda» ⇒ **il padre vede anche i
-  fantasmi** di §3.2;
-- ⭐ il tetto del nuovo c'è già **al `CIAO`** (`video.misura_massima` → `rcp.c` · `MAX_ACCUMULO`), ⛔ **ma non è
-  esposto da `rcp.h`**;
-- `main.c` · `aiuto()` il verdetto ha in mano trasporto e figli, e da lì si risale alla sessione RCP del
-  nuovo ⇒ ⭐ **il no si può dire dove va detto**;
-- ⛔ nessun contatore di pixel/s esiste in `src/`; `us_codifica` non esce dal figlio — ⭐ **e non
-  serve**.
+- ⭐ `main.c:394 deposita_fotogramma()` receives **every** frame with width, height, instant and
+  bytes; `figlio.c` calls it **without guards** on «someone is watching» ⇒ **the parent sees the
+  ghosts too** of §3.2;
+- ⭐ the newcomer's ceiling is already there **at `CIAO`** (`video.misura_massima` → `rcp.c` · `MAX_ACCUMULO`), ⛔ **but it is not
+  exposed by `rcp.h`**;
+- `main.c` · `aiuto()` the verdict has transport and children in hand, and from there one goes back up to the newcomer's RCP
+  session ⇒ ⭐ **the no can be said where it must be said**;
+- ⛔ no pixels/s counter exists in `src/`; `us_codifica` does not leave the child — ⭐ **and it is not
+  needed**.
 
-⇒ ⭐ **Il minimo**: un **accumulatore** in `deposita_fotogramma()` e un **accessore** in `rcp.h`.
-⛔⛔ **L'unico numero nuovo è `buffer_distinti`**, che vive in `cattura.c`, cioè **nel figlio**: senza
-di lui la pista non si calcola.
+⇒ ⭐ **The minimum**: an **accumulator** in `deposita_fotogramma()` and an **accessor** in `rcp.h`.
+⛔⛔ **The only new number is `buffer_distinti`**, which lives in `cattura.c`, that is **in the child**: without
+it the lead cannot be computed.
 
-#### ⛔ 6 · E il fatto che ridimensiona tutto: **la composizione non è osservabile dal prodotto**
+#### ⛔ 6 · And the fact that scales everything down: **compositing is not observable by the product**
 
-`[M]` I compositori disegnano **60,0 fot/s** con una sessione e **41,96** con undici: perdono il
-**30 %** mentre la nostra catena perde il **98 %**. ⇒ Al gradino 11 si compongono ancora **~958
-Mpixel/s** e se ne consegnano **21,6**.
-⭐⭐ **La «capacità» di 480 Mpixel/s è quel che AVANZA dopo i compositori — e la loro fetta cresce col
-numero.** ⇒ Il budget del prodotto governa **la propria metà**, non la macchina.
+`[M]` The compositors draw **60.0 fps** with one session and **41.96** with eleven: they lose
+**30 %** while our chain loses **98 %**. ⇒ At step 11 **~958
+Mpixel/s** are still being composited and **21.6** are delivered.
+⭐⭐ **The «capacity» of 480 Mpixel/s is what is LEFT OVER after the compositors — and their slice grows with the
+number.** ⇒ The product's budget governs **its own half**, not the machine.
 
-#### I guasti innestati — **86 casi, 0 rossi**
+#### The injected faults — **86 cases, 0 reds**
 
-Metro dimezzato · dati di un'**altra catena**, di un **altro ferro**, del codificatore **nudo** ⇒
-**«non so»** · sessione senza tela ⇒ «non so», mai zero · quaranta ferme più una ⇒ le tre regole
-danno tre risposte diverse · pista con 6/4/3/8 buffer, `buffer_distinti` non letto ⇒ `None`, tutti
-trattenuti ⇒ **zero e non «non so»** · ⭐ **misura più vecchia dell'àncora, àncora tolta, previsioni
-ritoccate dopo il sigillo, sigillo inesistente** ⇒ **non confronto** · macchina finta col tetto a 11
-⇒ 6 falsi NO, col tetto a 3 ⇒ falsi SÌ · ⛔ **capacità del codificatore nudo travasata sui desktop
-veri** ⇒ ammetterebbe **~22** sessioni dove ne stanno 6 · salita che non fa mai cedere ⇒ soffitto
-**non visto** · porta del ritardo tolta ⇒ falso SÌ su otto strozzate · ⭐ una macchina che spende
-**fotogrammi** ⇒ la prova della moneta risponde «fotogramma» (**il controllo negativo**) · e sui
-sorgenti: contatore già presente ⇒ rosso, `us_codifica` fuori dal figlio ⇒ rosso.
+Meter halved · data from **another chain**, from **other hardware**, from the **bare** encoder ⇒
+**«I don't know»** · session without a canvas ⇒ «I don't know», never zero · forty still ones plus one ⇒ the three rules
+give three different answers · lead with 6/4/3/8 buffers, `buffer_distinti` not read ⇒ `None`, all
+held ⇒ **zero and not «I don't know»** · ⭐ **measurement older than the anchor, anchor removed, predictions
+retouched after the seal, non-existent seal** ⇒ **no comparison** · fake machine with the cap at 11
+⇒ 6 false NOs, with the cap at 3 ⇒ false YESes · ⛔ **bare encoder capacity transferred onto the real
+desktops** ⇒ it would admit **~22** sessions where 6 fit · climb that never makes it give way ⇒ ceiling
+**not seen** · latency gate removed ⇒ false YES on eight throttled · ⭐ a machine that spends
+**frames** ⇒ the currency test answers «frame» (**the negative control**) · and on the
+sources: counter already present ⇒ red, `us_codifica` out of the child ⇒ red.
 
-⭐⭐ **E tre difetti li ha trovati la certificazione nel predittore stesso**: (a) il conto sui pixel
-dava **falsi SÌ dopo il dirupo** — curato con la porta del ritardo; (b) la soglia rifiutava per
-**arrotondamento** uno stato che aveva retto; (c) ⛔ **il controllo della pista era una TAUTOLOGIA**
-(confrontava il gradino della pista con «l'ultimo sotto più uno») — riscritto contro il dirupo, che è
-un fatto indipendente, **e adesso sa dire no**.
+⭐⭐ **And three defects were found by the certification in the predictor itself**: (a) the count on pixels
+gave **false YESes after the cliff** — cured with the latency gate; (b) the threshold refused by
+**rounding** a state that had held; (c) ⛔ **the lead check was a TAUTOLOGY**
+(it compared the lead step with «the last below plus one») — rewritten against the cliff, which is
+an independent fact, **and now it can say no**.
 
-#### Le `[?]`
+#### The `[?]`
 
-⛔ **La verifica in avanti alla cieca non è ancora avvenuta**: `[M]` in tre ore il lucchetto è passato
-per sette turni e **il suo pilota non ha mai vinto la corsa**. Le quattro previsioni restano
-**sigillate** con l'impronta, e chiunque vinca un turno può farle giudicare in cieco ·
-⛔ **la capacità è verificata su UNA sola tela** (1920×1080): fuori di lì il predittore **dichiara di
-estrapolare** · ⚠ la soglia dei 22,9 ms è **di questa scena**, e il ritardo del padre è un
-**maggiorante** del tempo di ritenuta ⇒ prudente nel verso giusto, ma non è la grandezza del
-meccanismo.
+⛔ **The blind forward verification has not happened yet**: `[M]` in three hours the lock passed
+through seven turns and **its pilot never won the race**. The four predictions stay
+**sealed** with the fingerprint, and whoever wins a turn can have them judged blind ·
+⛔ **the capacity is verified on ONE canvas only** (1920×1080): outside it the predictor **declares that it
+extrapolates** · ⚠ the threshold of 22.9 ms is **of this scene**, and the parent's latency is an
+**upper bound** of the holding time ⇒ cautious in the right direction, but it is not the quantity of the
+mechanism.
 
-⇒ ⭐⭐⭐ **La forma del prodotto che ne esce**: `--budget-mpixel-s N` **con una funzione dietro**
-(regola «riserva», con la manopola `--riserva`), il no detto in `consegna_verdetto()` **prima** di
-`figli_assicura()`, e `--tetto-sessioni` che resta **solo tetto amministrativo, non limite**.
-⛔ E una cosa che il prodotto **non** può fare: `--budget-mpixel-s` **non si auto-tara** — prima che
-la macchina abbia ceduto una volta, la capacità è **un limite inferiore, non un soffitto**.
+⇒ ⭐⭐⭐ **The shape of the product that comes out of it**: `--budget-mpixel-s N` **with a function behind it**
+(rule «reserve», with the knob `--riserva`), the no said in `consegna_verdetto()` **before**
+`figli_assicura()`, and `--tetto-sessioni` remaining **only an administrative cap, not a limit**.
+⛔ And one thing the product **cannot** do: `--budget-mpixel-s` **does not self-calibrate** — before
+the machine has given way once, the capacity is **a lower bound, not a ceiling**.
 
-### 6.10 ⭐⭐⭐⭐ HEVC E QVBR — e ⛔ **il prodotto preferisce HEVC, non H.264**
+### 6.10 ⭐⭐⭐⭐ HEVC AND QVBR — and ⛔ **the product prefers HEVC, not H.264**
 
-`banchi/10-b88-saturatore.py` (esteso) + `10-b94-ferro-carico.py` (esteso), `[M]` 24 agosto 2026,
-scena sintetica, copia zero da DMA-BUF, `EncSliceLP` **verificato sul driver**, sotto lucchetto,
-⭐ **estranei sul motore video `0,0 %` in ogni riga**.
+`banchi/10-b88-saturatore.py` (extended) + `10-b94-ferro-carico.py` (extended), `[M]` 24 Aug 2026,
+synthetic scene, zero copy from DMA-BUF, `EncSliceLP` **verified on the driver**, under the lock,
+⭐ **strangers on the video engine `0,0 %` in every row**.
 
-#### ⛔⛔ Il fatto che riordina le colonne: **il prodotto negozia HEVC per primo**
+#### ⛔⛔ The fact that reorders the columns: **the product negotiates HEVC first**
 
-`rcp.c:1829 NOSTRO_CODEC "hevc,h264"` · `RCP.md` §4.3 sceglie **nell'ordine del client** ·
+`rcp.c:1829 NOSTRO_CODEC "hevc,h264"` · `RCP.md` §4.3 chooses **in the client's order** ·
 `pagina.html:831 PREFERENZA = ["hevc","h264"]`.
-⇒ ⭐ **Su ogni browser che decodifica HEVC il prodotto manda HEVC**; **H.264 è il ripiego**.
-⚠ L'intestazione del saturatore diceva *«il codec è H.264, quello che il prodotto negozia davvero»*:
-è **vera a metà**, ed è stata corretta.
-⭐ **E la profondità negoziata è 8, cioè HEVC Main — non Main10**: `[M]` i due costano uguale (83,0
-contro 83,1 %), quindi il budget non cambia, ⛔ **ma cambia che cosa va scritto nei documenti**.
+⇒ ⭐ **On every browser that decodes HEVC the product sends HEVC**; **H.264 is the fallback**.
+⚠ The saturator's header said *«il codec è H.264, quello che il prodotto negozia davvero»*:
+it is **half true**, and it was corrected.
+⭐ **And the negotiated depth is 8, that is HEVC Main — not Main10**: `[M]` the two cost the same (83.0
+against 83.1 %), so the budget does not change, ⛔ **but what must be written in the documents changes**.
 
-#### ⭐⭐ Il soffitto in HEVC: **2,33 Gpixel/s contro 1,86** — il **+25 %**
+#### ⭐⭐ The ceiling in HEVC: **2.33 Gpixel/s against 1.86** — **+25 %**
 
-| cella (15 s) | H.264 High | HEVC Main10 | HEVC Main |
+| cell (15 s) | H.264 High | HEVC Main10 | HEVC Main |
 |---|---|---|---|
-| 4K60 N=2 | 995,5 Mpx/s · **52,1 %** | 995,6 · **41,5 %** | 995,5 · **41,4 %** |
-| 4K60 N=4 | 1865,8 · 99,7 % ⛔ **cede** | 1990,4 · **83,1 %** ✅ | 1990,3 · **83,0 %** ✅ |
-| 4K60 N=6 | — | **2322,0** · 98,7 % ⛔ cede | **2344,8** · 98,7 % ⛔ cede |
-| 1080p30 N=24 | 1494,7 · **79,7 %** | 1494,9 · **63,0 %** | — |
-| 1080p30 N=32 | 1855,9 · 99,5 % ⛔ **cede** | 1992,9 · **84,2 %** ✅ | — |
+| 4K60 N=2 | 995.5 Mpx/s · **52.1 %** | 995.6 · **41.5 %** | 995.5 · **41.4 %** |
+| 4K60 N=4 | 1865.8 · 99.7 % ⛔ **gives way** | 1990.4 · **83.1 %** ✅ | 1990.3 · **83.0 %** ✅ |
+| 4K60 N=6 | — | **2322.0** · 98.7 % ⛔ gives way | **2344.8** · 98.7 % ⛔ gives way |
+| 1080p30 N=24 | 1494.7 · **79.7 %** | 1494.9 · **63.0 %** | — |
+| 1080p30 N=32 | 1855.9 · 99.5 % ⛔ **gives way** | 1992.9 · **84.2 %** ✅ | — |
 
-`[M]` **A ogni cella comune HEVC costa ~21 % meno tempo di motore** a parità di pixel — e i due conti
-tornano fra loro: −21 % di tempo ⟺ +25 % di soffitto. ⭐ **E il doppio dei flussi 4K sostenuti**:
-quattro contro due.
-⛔ **Ancora un dirupo, non un ginocchio**: a 4K60 il ritardo mediano passa da **5,4 ms** (N=4) a
+`[M]` **At every common cell HEVC costs ~21 % less engine time** for the same pixels — and the two accounts
+agree with each other: −21 % of time ⟺ +25 % of ceiling. ⭐ **And twice the sustained 4K streams**:
+four against two.
+⛔ **Again a cliff, not a knee**: at 4K60 the median latency goes from **5.4 ms** (N=4) to
 **1 716 ms** (N=6).
 
-⛔ **E le due colonne restano SEPARATE**: stessa scena, stesso QP, 1080p30 N=1 → H.264 **8,976**
-contro HEVC **9,804 Mbit/s** (**1,09×**). ⭐ **HEVC costa meno GPU e più bit**, e il rapporto **non è
-una costante** — è la ferita che la fase 9 aveva già pagato.
-⚠ **Discordanza dichiarata e non forzata** (`LEZIONI.md` §1.28): §6.6 aveva un confronto più piccolo
-su `ffmpeg` con `hwupload` **dalla memoria** e in fot/s *(misura tolta dopo la fase 18)*; qui è **21 %**,
-sul codificatore del prodotto **con copia zero** e in tempo di motore **a saturazione**. **Due grandezze
-diverse, stessa direzione.**
+⛔ **And the two columns stay SEPARATE**: same scene, same QP, 1080p30 N=1 → H.264 **8.976**
+against HEVC **9.804 Mbit/s** (**1.09×**). ⭐ **HEVC costs less GPU and more bits**, and the ratio **is not
+a constant** — it is the wound phase 9 had already paid for.
+⚠ **Discrepancy declared and not forced** (`LEZIONI.md` §1.28): §6.6 had a smaller comparison
+on `ffmpeg` with `hwupload` **from memory** and in fps *(measurement removed after phase 18)*; here it is **21 %**,
+on the product's encoder **with zero copy** and in engine time **at saturation**. **Two different
+quantities, same direction.**
 
-#### ⛔⛔ QVBR: c'è, funziona — **e nessuno lo accende**
+#### ⛔⛔ QVBR: it is there, it works — **and nobody switches it on**
 
-`[M]` Letto in `src/codificatore.c` · `modo_bitrate_voluto()`: due modi, chiesti **per nome**, mai `auto`. ⛔ **Il
-predefinito è CQP**: `main.c:657 tetto_banda_mbit = 0` (invariante **I6**), e il tetto **non è fra le
-cinque cure accese** di `CODER.md` §2-bis.
-⇒ ⛔ **Oggi il prodotto QVBR non lo usa.** ⭐ La cura di banda della fase 9 **esiste, funziona, e non
-è accesa da nessuno.**
+`[M]` Read in `src/codificatore.c` · `modo_bitrate_voluto()`: two modes, asked **by name**, never `auto`. ⛔ **The
+default is CQP**: `main.c:657 tetto_banda_mbit = 0` (invariant **I6**), and the cap **is not among the
+five cures on** of `CODER.md` §2-bis.
+⇒ ⛔ **Today the product does not use QVBR.** ⭐ The bandwidth cure of phase 9 **exists, works, and is not
+switched on by anyone**.
 
-`[M]` **QVBR obbedisce**, 1080p30, metro tarato:
+`[M]` **QVBR obeys**, 1080p30, calibrated meter:
 
-| scena | CQP 26 | QVBR pav. 10 | pav. 20 | pav. 40 |
+| scene | CQP 26 | QVBR floor 10 | floor 20 | floor 40 |
 |---|---|---|---|---|
-| **dura** (grana) | ⛔ **162,643** Mbit/s | **5,717** | **11,423** | **21,989** |
-| **facile** (tinta) | 0,017 | 0,020 | 0,020 | 0,020 |
+| **hard** (grain) | ⛔ **162.643** Mbit/s | **5.717** | **11.423** | **21.989** |
+| **easy** (flat colour) | 0.017 | 0.020 | 0.020 | 0.020 |
 
-⭐ **Punta al PUNTO DI LAVORO, non al filo**: 95 · 95 · 92 % del punto, e due richieste note danno
-×2,00 e ×1,92 contro un ×2,00 chiesto. ⛔ **Non è un CBR travestito**: a scena facile spende **×1,18
-del CQP**, non i 12 Mbit/s che un CBR avrebbe speso.
-⭐ **E il QP sotto QVBR conta**: da 20 a 44 il flusso va da **15,010 a 1,713 Mbit/s** — **8,8×**.
-⇒ **La scala di degradazione della fase 9 non è un no-op.**
+⭐ **It aims at the OPERATING POINT, not at the wire**: 95 · 95 · 92 % of the point, and two known requests give
+×2.00 and ×1.92 against a ×2.00 asked. ⛔ **It is not a CBR in disguise**: on the easy scene it spends **×1.18
+of CQP**, not the 12 Mbit/s a CBR would have spent.
+⭐ **And the QP under QVBR counts**: from 20 to 44 the stream goes from **15.010 to 1.713 Mbit/s** — **8.8×**.
+⇒ **The phase 9 degradation ladder is not a no-op.**
 
-**Sotto carico**: ⭐⭐ **13 flussi su 13 identici** — impronta, byte e fotogrammi — **anche in QVBR**;
-e su `ffmpeg` 12 su 12. ⇒ **Nemmeno in QVBR decide qualcuno al posto nostro.**
-⭐ E un numero nuovo: a ×8, CQP **876,8** fot/s, QVBR **816,0**, CBR **812,8** ⇒ **un modo regolato
-costa ~7 % di ritmo**.
+**Under load**: ⭐⭐ **13 streams out of 13 identical** — fingerprint, bytes and frames — **even in QVBR**;
+and on `ffmpeg` 12 out of 12. ⇒ **Not even in QVBR does anyone decide in our place.**
+⭐ And a new number: at ×8, CQP **876.8** fps, QVBR **816.0**, CBR **812.8** ⇒ **a regulated mode
+costs ~7 % of rate**.
 
-#### I guasti innestati — **11/11 + 11/11 + 30/30 predicati**
+#### The injected faults — **11/11 + 11/11 + 30/30 predicates**
 
-giro HEVC contato come H.264 ⇒ ROSSO *«è il flusso a dire il codec»*, e il contrario · modo chiesto e
-non ottenuto ⇒ ROSSO *«CHIESTO QVBR (5), il contesto rilegge CQP (1)»* · bersaglio mancato ⇒ ROSSO
-**col numero** · filo QVBR sforato · `avcodec_open2` che fallisce.
-⛔ **E l'àncora**: codec, profondità e modo si leggono **dal flusso prodotto** (composti sull'SPS) e
-dal contesto **riletto**, ⭐ **mai dal comando dato**.
+HEVC round counted as H.264 ⇒ RED *«è il flusso a dire il codec»*, and the reverse · mode asked and
+not obtained ⇒ RED *«CHIESTO QVBR (5), il contesto rilegge CQP (1)»* · target missed ⇒ RED
+**with the number** · QVBR wire overshot · `avcodec_open2` failing.
+⛔ **And the anchor**: codec, depth and mode are read **from the stream produced** (composed on the SPS) and
+from the **re-read** context, ⭐ **never from the command given**.
 
-#### ⛔ I tre difetti di banco pagati, e il primo è quello che conta
+#### ⛔ The three bench defects paid for, and the first is the one that counts
 
-1. ⭐ **Il primo rosso era del banco, non del prodotto**: su tinta piatta i tre QP davano tutti
-   `0,0200` perché il flusso era **sul fondo**. ⇒ Il banco stava per **dichiarare un difetto del
-   prodotto che era una scelta di scena**; ora ha il **terzo esito** (`None`, con scritto **quale**
-   rifacimento serve) e rifatto su scena di mezzo dà **8,8×**;
-2. `rampa` chiamava il controllo del terreno con `LUCCHETTO_MIO=1` **prima** di prendere il lucchetto
-   ⇒ **rosso garantito su una cosa vera ma sbagliata**;
-3. ⚠ **Sul lucchetto, cinque secondi perdono contro uno**: `prendi()` ritenta ogni **5 s** mentre
-   altri pilota ritentano ogni secondo ⇒ una finestra da 45 minuti persa. È la **corsa** di §7.3, con
-   un'asimmetria in più.
+1. ⭐ **The first red belonged to the bench, not to the product**: on a flat colour the three QPs all gave
+   `0,0200` because the stream was **at the bottom**. ⇒ The bench was about to **declare a product
+   defect that was a choice of scene**; now it has the **third outcome** (`None`, with written **which**
+   redo is needed) and redone on a middle scene it gives **8.8×**;
+2. `rampa` called the ground check with `LUCCHETTO_MIO=1` **before** taking the lock
+   ⇒ **guaranteed red on something true but wrong**;
+3. ⚠ **On the lock, five seconds lose against one**: `prendi()` retries every **5 s** while
+   other pilots retry every second ⇒ a 45-minute window lost. It is the **race** of §7.3, with
+   one more asymmetry.
 
-#### Le `[?]`
+#### The `[?]`
 
-⛔ **Il soffitto a 1080p30 in HEVC non è stato raggiunto**: N=32 tiene all'84,2 % — si è fermata la
-**scala del banco**, non il ferro · **QVBR su HEVC**: il driver lo dichiara, la prova sul flusso non
-è stata fatta · ⛔⛔ **QVBR con un desktop VERO dietro**: la «scena facile» è una tinta piatta, **non
-un desktop** — ⚠ *ed è proprio la scena su cui la fase 10 di v1 fu azzerata* · il metro del bitrate è
-tarato su `ffmpeg` in CBR, perché **il prodotto non sa fare CBR** e non può darsi un bersaglio noto ·
-scena sintetica ⇒ i Mbit/s **non sono quelli del prodotto** · nessuna durata lunga su questa colonna.
+⛔ **The ceiling at 1080p30 in HEVC was not reached**: N=32 holds at 84.2 % — what stopped was the
+**bench's scale**, not the hardware · **QVBR on HEVC**: the driver declares it, the test on the stream was not
+done · ⛔⛔ **QVBR with a REAL desktop behind**: the «easy scene» is a flat colour, **not
+a desktop** — ⚠ *and it is precisely the scene on which phase 10 of v1 was reset* · the bitrate meter is
+calibrated on `ffmpeg` in CBR, because **the product cannot do CBR** and cannot give itself a known target ·
+synthetic scene ⇒ the Mbit/s **are not those of the product** · no long duration on this column.
 
-⚠⚠ **E una dichiarazione di onestà sul terreno**: la rampa **HEVC Main10 è girata col terreno ROSSO**
-(server di altri banchi accesi, più il difetto d'ordine sul lucchetto) — ⭐ gli estranei sul motore
-video erano `0,0 %` in ogni riga, **ma la macchina non era scarica**. ⭐ **Lo studio QVBR e la rampa
-HEVC Main sono girati col terreno 21 su 21 VERDE.**
+⚠⚠ **And a declaration of honesty about the ground**: the **HEVC Main10 ramp ran with the ground RED**
+(servers of other benches on, plus the order defect on the lock) — ⭐ the strangers on the video
+engine were `0,0 %` in every row, **but the machine was not idle**. ⭐ **The QVBR study and the HEVC
+Main ramp ran with the ground 21 out of 21 GREEN.**
 
-### 6.11 ⭐⭐⭐⭐⭐ IL SOFFITTO DELLA COMPOSIZIONE — **0,97 Gpixel/s**, e il numero che la fase cercava
+### 6.11 ⭐⭐⭐⭐⭐ THE COMPOSITING CEILING — **0.97 Gpixel/s**, and the number the phase was looking for
 
-`banchi/10-b95-composizione.py`, `[M]` 25 agosto 2026, i5-13500T · **Intel UHD 730 integrata**,
-terreno `10-b0` **21 su 21**, lucchetto in mano, scena che **danneggia tutta la superficie a ogni
-fotogramma**.
+`banchi/10-b95-composizione.py`, `[M]` 25 Aug 2026, i5-13500T · **integrated Intel UHD 730**,
+ground `10-b0` **21 out of 21**, lock in hand, a scene that **damages the whole surface at every
+frame**.
 
-| N | `rcs0` | composto Mpixel/s | GT | RC6 |
+| N | `rcs0` | composited Mpixel/s | GT | RC6 |
 |---|---|---|---|---|
-| 1 | 14,59 % | 124,4 | 1267 | 66,5 % |
-| 6 | 89,53 % | 746,3 | 1374 | 3,1 % |
-| ⚠ 7 | **99,21 %** | 870,9 | 1454 | 0,0 % |
-| ⭐ 8 | 99,71 % | **992,1** | **1542** | 0,0 % |
-| 11 | 99,53 % | 957,7 | 1542 | 0,0 % |
+| 1 | 14.59 % | 124.4 | 1267 | 66.5 % |
+| 6 | 89.53 % | 746.3 | 1374 | 3.1 % |
+| ⚠ 7 | **99.21 %** | 870.9 | 1454 | 0.0 % |
+| ⭐ 8 | 99.71 % | **992.1** | **1542** | 0.0 % |
+| 11 | 99.53 % | 957.7 | 1542 | 0.0 % |
 
-⭐⭐ **E il §CLOCK qui non ha ambiguità**: a saturazione la GT si **inchioda a 1542-1550 MHz (RP0)** e
-RC6 va a **0,0 %** ⇒ il soffitto è letto **al massimo dell'orologio**.
+⭐⭐ **And here the §CLOCK has no ambiguity**: at saturation the GT **nails itself at 1542-1550 MHz (RP0)** and
+RC6 goes to **0.0 %** ⇒ the ceiling is read **at the clock's maximum**.
 
-⛔⛔ **Il collo è questo, non il codificatore**: **0,97 contro 1,86 Gpixel/s** — la composizione cede
-per prima, con un fattore **1,9**.
-⭐⭐⭐ **E il conto torna con quel che ha visto l'utente**: un desktop 1080p a 60 Hz vale **124,4
-Mpixel/s** ⇒ **7,8 ci stanno**, e `rcs0` passa il 99 % **al settimo**. ⇒ **Sei stanno comodi** — ⭐ **la
-stessa risposta di §6.5, per una grandezza completamente diversa e con un banco diverso.**
+⛔⛔ **The bottleneck is this, not the encoder**: **0.97 against 1.86 Gpixel/s** — compositing gives way
+first, by a factor of **1.9**.
+⭐⭐⭐ **And the account matches what the user saw**: a 1080p desktop at 60 Hz is worth **124.4
+Mpixel/s** ⇒ **7.8 fit**, and `rcs0` passes 99 % **at the seventh**. ⇒ **Six fit comfortably** — ⭐ **the
+same answer as §6.5, for a completely different quantity and with a different bench.**
 
-**La legge** (rampa N=1..6): `rcs0 % = 0,12068 · cambio[Mpx/s] − 0,842`, rms **0,304 punti**,
-**R² 0,99986**, intercetta **zero entro l'errore**.
-⭐ **E la retta non si estrapola, con la conferma dentro**: 100/0,12068 darebbe 835,6 Mpixel/s, il
-ferro ne fa **992** ⇒ 992/835,6 = **1,187** contro 1542/1342 = **1,149**, che **tornano entro il
-3,3 %**. ⇒ È la prova indipendente che `drm-engine-*` misura **tempo × frequenza**.
+**The law** (ramp N=1..6): `rcs0 % = 0,12068 · cambio[Mpx/s] − 0,842`, rms **0.304 points**,
+**R² 0.99986**, intercept **zero within the error**.
+⭐ **And the line does not extrapolate, with the confirmation inside**: 100/0.12068 would give 835.6 Mpixel/s, the
+hardware does **992** ⇒ 992/835.6 = **1.187** against 1542/1342 = **1.149**, which **agree within
+3.3 %**. ⇒ It is the independent proof that `drm-engine-*` measures **time × frequency**.
 
-#### ⭐⭐⭐ La scomposizione — e **la conversione di colore del prodotto NON sta sulle EU**
+#### ⭐⭐⭐ The breakdown — and **the product's colour conversion is NOT on the EUs**
 
-| padrone | motore | `[M]` |
+| owner | engine | `[M]` |
 |---|---|---|
-| compositore + cattura | `rcs0` | **14,54 %** (GT 1337) |
-| compositore solo, nessuno collegato | `rcs0` | 28,37 % (⚠ GT 612) |
-| ⭐ **conversione di colore** | `rcs0` | ⭐ **0,00 %** |
-| ⭐ **conversione di colore** | `vecs0` | **14,53 %** (55,9 % a cinque) |
-| codifica | `vcs` | 8,47 % su **200** |
+| compositor + capture | `rcs0` | **14.54 %** (GT 1337) |
+| compositor alone, nobody connected | `rcs0` | 28.37 % (⚠ GT 612) |
+| ⭐ **colour conversion** | `rcs0` | ⭐ **0.00 %** |
+| ⭐ **colour conversion** | `vecs0` | **14.53 %** (55.9 % at five) |
+| encoding | `vcs` | 8.47 % out of **200** |
 
-> ##### ✅⛔ E QUESTO CORREGGE §6.6 — *due scene diverse, e quella del prodotto è l'altra*
+> ##### ✅⛔ AND THIS CORRECTS §6.6 — *two different scenes, and the product's is the other one*
 >
-> §6.6 aveva trovato la conversione **su `rcs0`**, non su `vecs0`, con un calo di ritmo e più watt
-> *(numeri tolti dopo la fase 18)*. ⚠ **Ma quello era `ffmpeg` con `hwupload`, 8 MB per
-> fotogramma.** ⭐ **Il prodotto importa un dmabuf a copia zero**: `[M]` **zero sul motore di
-> rendering, tutto sul VEBOX** — che **non è mai il collo**.
-> ⇒ ⭐ Il `[?]` che l'incarico segnava con la stella è **chiuso**, e nel verso buono: **la nostra
-> conversione non ruba niente al compositore.** ⛔ **A saturare `rcs0` è il COMPOSITORE, e basta lui.**
+> §6.6 had found the conversion **on `rcs0`**, not on `vecs0`, with a drop in rate and more watts
+> *(numbers removed after phase 18)*. ⚠ **But that was `ffmpeg` with `hwupload`, 8 MB per
+> frame.** ⭐ **The product imports a dmabuf at zero copy**: `[M]` **zero on the render
+> engine, everything on the VEBOX** — which **is never the bottleneck**.
+> ⇒ ⭐ The `[?]` the assignment marked with the star is **closed**, and in the good direction: **our
+> conversion steals nothing from the compositor.** ⛔ **What saturates `rcs0` is the COMPOSITOR, and it alone is enough.**
 
-#### ⭐⭐⭐ E il costo **non è proporzionale: c'è un gradino**
+#### ⭐⭐⭐ And the cost **is not proportional: there is a step**
 
-`[M]` A ~1350 MHz, un desktop solo: **19,0 Mpixel/s → `rcs0` 8,13 %** · **124,4 Mpixel/s → 13,69 %**.
-⇒ **6,5 volte il cambiamento costa 1,68 volte.**
+`[M]` At ~1350 MHz, one desktop alone: **19.0 Mpixel/s → `rcs0` 8.13 %** · **124.4 Mpixel/s → 13.69 %**.
+⇒ **6.5 times the change costs 1.68 times.**
 
 ```
 rcs0 %  ≈  7,1 %  (fisso, per desktop che compone)  +  0,053 % per Mpixel/s
 ```
 
-⇒ ⭐⭐ **Metà del costo è un pedaggio fisso per il solo essere un desktop vivo a 60 Hz.**
-⇒ ⛔ **Il budget si può calcolare in anticipo, ma con DUE termini, non uno** — e il termine fisso è
-quello che decide quante sessioni «tranquille» ci stanno.
-⚠ `[?]` **Due punti soli, presi in due fasi diverse**: il modo che lo chiuderebbe (`ritmi`) esiste ed
-è corretto, ⛔ ma il suo giro **non ha mai vinto la corsa al lucchetto**.
+⇒ ⭐⭐ **Half the cost is a fixed toll for merely being a live desktop at 60 Hz.**
+⇒ ⛔ **The budget can be computed in advance, but with TWO terms, not one** — and the fixed term is
+the one that decides how many «quiet» sessions fit.
+⚠ `[?]` **Only two points, taken in two different phases**: the mode that would close it (`ritmi`) exists and
+is correct, ⛔ but its round **never won the race for the lock**.
 
-#### ⛔⛔ E il difetto della linea morta, visto una **seconda volta** — e **più largo** di com'era
+#### ⛔⛔ And the dead-line defect, seen a **second time** — and **wider** than it was
 
-`[M]` `causa=silenzio silenzio_ms=10044 persi=0`, su una sessione **sana** che un attimo prima
-consegnava **60 commit/s e 5 524 byte per fotogramma**.
-⇒ ⛔⛔ **Non è il «desktop fermo» di §6.3: bastano DIECI SECONDI di buco fra due scene.**
-⭐ E il banco **non spegne la cura per passare**: toglie il buco.
+`[M]` `causa=silenzio silenzio_ms=10044 persi=0`, on a **healthy** session that a moment earlier
+was delivering **60 commits/s and 5 524 bytes per frame**.
+⇒ ⛔⛔ **It is not the «still desktop» of §6.3: TEN SECONDS of gap between two scenes are enough.**
+⭐ And the bench **does not switch off the cure to pass**: it removes the gap.
 
-⚠ E un secondo rilievo di contorno: **il figlio non se ne va quando il cliente sparisce** — dopo 90 s
-è ancora lì. ⭐ Ma sulla GPU è a **zero** (`rcs0` 0,00, `vcs` 0,00): **tiene la casella, non lavora**
-— che è la metà buona del fantasma di §3.2.
+⚠ And a second side finding: **the child does not go away when the client disappears** — after 90 s
+it is still there. ⭐ But on the GPU it is at **zero** (`rcs0` 0.00, `vcs` 0.00): **it holds the slot, it does not work**
+— which is the good half of the ghost of §3.2.
 
-#### I guasti innestati — **52 su 52**, e ⭐ **otto controlli negativi**
+#### The injected faults — **52 out of 52**, and ⭐ **eight negative controls**
 
-I cinque chiesti, ciascuno girato: schermo fermo dichiarato come scena che cambia (⭐ **dal ritmo E
-dai byte**) · metro che attribuisce a `gnome-shell` un altro cliente DRM · platea che cambia ⇒ `None`
-· GT che si muove fra i gradini ⇒ **confronto nullo** · gradino letto dal precedente.
-⭐⭐ **E il rosso è stato visto davvero**: togliendo **una guardia per volta** la certificazione scende
-a 48/49/51/51/51/51/51/51 su 52 — **otto guardie, otto cali**.
+The five requested, each one run: still screen declared as a changing scene (⭐ **by the rate AND
+by the bytes**) · meter attributing another DRM client to `gnome-shell` · changing population ⇒ `None`
+· GT moving between steps ⇒ **null comparison** · step read from the previous one.
+⭐⭐ **And the red was really seen**: removing **one guard at a time** the certification drops
+to 48/49/51/51/51/51/51/51 out of 52 — **eight guards, eight drops**.
 
-⚠ **Tre difetti erano del banco, trovati misurando**: (a) la media della GT contava i campioni a
-**0 MHz** ⇒ rispondeva a *«quanto è stata sveglia»*, non a *«a che frequenza ha lavorato»*; (b) il
-rifiuto su **qualunque** ricambio di clienti DRM — `[M]` 8 spariti in 3 s, nessuno suo: rifiutarsi lì
-vorrebbe dire **non misurare mai**; (c) rosso su ogni `gnome-shell` non suo ⇒ **rosso su codice
-giusto**.
-⭐ **E uno è stato evitato pensandoci prima**: alla rampa i commit crollano per saturazione, e il
-predicato dello «schermo fermo» avrebbe dato **rosso al risultato che la rampa cerca**.
+⚠ **Three defects belonged to the bench, found while measuring**: (a) the GT mean counted the samples at
+**0 MHz** ⇒ it answered *«how long it was awake»*, not *«at what frequency it worked»*; (b) the
+refusal on **any** turnover of DRM clients — `[M]` 8 vanished in 3 s, none of them its own: refusing there
+would mean **never measuring**; (c) red on every `gnome-shell` not its own ⇒ **red on correct
+code**.
+⭐ **And one was avoided by thinking about it beforehand**: at the ramp the commits collapse from saturation, and the
+«still screen» predicate would have given **red to the result the ramp is looking for**.
 
-#### Le `[?]`
+#### The `[?]`
 
-⛔ **La cattura non si isola**: Mutter consegna i fotogrammi **dentro `gnome-shell`** ⇒ sulla GPU è lo
-**stesso cliente DRM**, e la differenza fra i due gradini aveva la GT a **612 contro 1337 MHz** —
-⭐ **il banco si è rifiutato di sottrarre** · ⛔ **i gradini «senza codifica» non esistono in questo
-prodotto**: nessuna opzione accende la sessione senza il codificatore, e il figlio costruisce cattura,
-conversione e codifica **in un tratto solo** — dichiarato, non stimato · ⛔ **il gradino del costo sta
-su due punti** · ⚠ il caso è quello **duro** ⇒ il numero è **un pavimento**, non una previsione per
-dieci utenti che leggono la posta.
+⛔ **Capture cannot be isolated**: Mutter delivers the frames **inside `gnome-shell`** ⇒ on the GPU it is the
+**same DRM client**, and the difference between the two steps had the GT at **612 against 1337 MHz** —
+⭐ **the bench refused to subtract** · ⛔ **«no encoding» steps do not exist in this
+product**: no option switches on the session without the encoder, and the child builds capture,
+conversion and encoding **in one single stretch** — declared, not estimated · ⛔ **the cost step rests
+on two points** · ⚠ the case is the **hard** one ⇒ the number is **a floor**, not a prediction for
+ten users reading their mail.
 
-⭐ E una conferma della trappola di §7.3, dall'ennesimo capo: `pgrep -c -f "remotix.*--porta 8110"` ha
-risposto **3** su una macchina dove non c'era nessun suo processo — combaciava con **la riga di
-comando della shell che lo eseguiva**. Col modello `--porta 811[0]`: **nessuno**.
+⭐ And a confirmation of the trap of §7.3, from yet another end: `pgrep -c -f "remotix.*--porta 8110"`
+answered **3** on a machine where there was none of its processes — it matched **the command line
+of the shell running it**. With the pattern `--porta 811[0]`: **none**.
 
-### 6.12 ⭐⭐⭐⭐⭐ LA SALITA SUL **DESKTOP VERO** — **ne stanno UNDICI, e non c'è nessun dirupo**
+### 6.12 ⭐⭐⭐⭐⭐ THE CLIMB ON THE **REAL DESKTOP** — **ELEVEN fit, and there is no cliff**
 
-`banchi/10-b92-dieci.py` esteso (3 011 → 4 608 righe) + `10-b92-scene.py`, `[M]` 24-25 agosto 2026,
-undici utenti veri con GNOME headless vero, gradini da **45 s a regime**, sotto lucchetto, cure
-accese.
+`banchi/10-b92-dieci.py` extended (3 011 → 4 608 lines) + `10-b92-scene.py`, `[M]` 24-25 Aug 2026,
+eleven real users with real headless GNOME, steps of **45 s at steady state**, under the lock, cures
+on.
 
-#### ⭐⭐⭐ Prima l'àncora: **la scena satura ritrova il SEI**
+#### ⭐⭐⭐ First the anchor: **the saturated scene finds the SIX again**
 
-`[M]` Rifatta riga per riga: **6**, identico a §6.5, col dirupo **all'ottavo** (27,63 → 1,62 fot/s).
-⇒ ⭐ **Il confronto fra le tre scene ha un metro**, e quel che segue vale.
+`[M]` Redone row by row: **6**, identical to §6.5, with the cliff **at the eighth** (27.63 → 1.62 fps).
+⇒ ⭐ **The comparison among the three scenes has a meter**, and what follows counts.
 
-#### E poi il fatto che riordina la fase
+#### And then the fact that reorders the phase
 
-| | **ferma** (11) | ⭐ **vero** (11) | **satura** (6) | **satura** (11) |
+| | **still** (11) | ⭐ **real** (11) | **saturated** (6) | **saturated** (11) |
 |---|---|---|---|---|
-| fot/s a testa | 0,02 | **9,79** | 38,54 | ⛔ 0,97 |
-| byte/fotogramma | 203-389 | **4 824** | 5 591 | 4 909 |
-| **ritardo mediano** | 9-12 ms | ⭐ **8,0 ms** | 11,2 ms | ⛔ **1 134,7 ms** |
-| GPU **render** | **0,0 %** | **22,3 %** | 88,8 % | 99,6 % |
-| GPU **VEBOX** | 0,0 % | ⚠ **24,1 %** | 52,6 % | 0,9 % |
-| GPU video | 0,0 % | 11,4 % | 26,9 % | 1,3 % |
-| CPU (20 nuclei) | 4,8 % | 10,8 % | 19,1 % | 18,2 % |
-| PSS totale | **2 028 MiB** | 3 382 MiB | 1 257 MiB | 2 209 MiB |
+| fps each | 0.02 | **9.79** | 38.54 | ⛔ 0.97 |
+| bytes/frame | 203-389 | **4 824** | 5 591 | 4 909 |
+| **median latency** | 9-12 ms | ⭐ **8.0 ms** | 11.2 ms | ⛔ **1 134.7 ms** |
+| GPU **render** | **0.0 %** | **22.3 %** | 88.8 % | 99.6 % |
+| GPU **VEBOX** | 0.0 % | ⚠ **24.1 %** | 52.6 % | 0.9 % |
+| GPU video | 0.0 % | 11.4 % | 26.9 % | 1.3 % |
+| CPU (20 cores) | 4.8 % | 10.8 % | 19.1 % | 18.2 % |
+| total PSS | **2 028 MiB** | 3 382 MiB | 1 257 MiB | 2 209 MiB |
 
-- ⭐⭐ `[M]` **La prima sessione va da 10,61 a 9,79 fot/s dall'una all'undicesima: −7,7 %**, sotto la
-  tolleranza. ⇒ ⛔ **ZERO violazioni di I1 sul desktop vero**, contro le **37** della scena satura.
-- ⭐ **Il ritardo non si muove**: 8,4 → 8,0 ms. Sulla satura va da 9,9 a **1 134,7**.
-- `[M]` **Zero chiavi** su tutti e tre i bracci, anche dentro il crollo — ⭐ conferma `LEZIONI.md`
-  §1.34: **la colonna che avvisa, qui, è il ritardo**.
-- ⭐ `[M]` **Undici desktop FERMI costano GPU ZERO**: 0,0 % su tutti e quattro i motori, RC6 **100 %**,
-  GT **0 MHz**, 0,11 Mbit/s in tutto. ⇒ **Lì il vincolo è la memoria** (2 028 MiB), non la scheda.
-- ⭐ E la scena «vero» è **la stessa definizione di §6.4-bis**: `[M]` **4 824-5 375 B/fotogramma**
-  contro i **5 130** misurati là. **Le due misure combaciano**, e sono di due banchi diversi.
+- ⭐⭐ `[M]` **The first session goes from 10.61 to 9.79 fps from the first to the eleventh: −7.7 %**, under the
+  tolerance. ⇒ ⛔ **ZERO violations of I1 on the real desktop**, against the **37** of the saturated scene.
+- ⭐ **The latency does not move**: 8.4 → 8.0 ms. On the saturated one it goes from 9.9 to **1 134.7**.
+- `[M]` **Zero keyframes** on all three arms, even inside the collapse — ⭐ it confirms `LEZIONI.md`
+  §1.34: **the column that warns, here, is the latency**.
+- ⭐ `[M]` **Eleven STILL desktops cost ZERO GPU**: 0.0 % on all four engines, RC6 **100 %**,
+  GT **0 MHz**, 0.11 Mbit/s in all. ⇒ **There the constraint is memory** (2 028 MiB), not the card.
+- ⭐ And the «vero» scene is **the same definition as §6.4-bis**: `[M]` **4 824-5 375 B/frame**
+  against the **5 130** measured there. **The two measurements match**, and they come from two different benches.
 
-> ### ⇒ ⭐⭐⭐⭐ **IL «SEI» ERA IL NUMERO DI UNA SCENA CHE NESSUN UTENTE PRODUCE**
+> ### ⇒ ⭐⭐⭐⭐ **THE «SIX» WAS THE NUMBER OF A SCENE NO USER PRODUCES**
 >
-> ⛔ E il soffitto del desktop vero **non è stato trovato**: `[M]` sono finiti **gli utenti, non la
-> macchina** — undici sessioni stanno al **22-24 %** della GPU. ⚠ L'estrapolazione direbbe `[?]`
-> ~46 sessioni, **ed è quattro volte fuori dal misurato: non si riferisce come numero.**
+> ⛔ And the ceiling of the real desktop **was not found**: `[M]` it was **the users that ran out, not the
+> machine** — eleven sessions sit at **22-24 %** of the GPU. ⚠ Extrapolation would say `[?]`
+> ~46 sessions, **and that is four times outside what was measured: it is not reported as a number.**
 >
-> ⭐ Il giudizio del regista (`fasi/10-multi-tenant-e-il-budget.md` §S.2) — *«sei su un'integrata modesta non è un cattivo
-> risultato»* — ne esce **rafforzato**, non smentito: sulla scena in cui vive l'utente ne stanno
-> **almeno undici, senza che il primo se ne accorga**.
+> ⭐ The director's judgement (`fasi/10-multi-tenant-e-il-budget.md` §S.2) — *«sei su un'integrata modesta non è un cattivo
+> risultato»* — comes out **strengthened**, not refuted: on the scene in which the user lives
+> **at least eleven fit, without the first one noticing**.
 
-#### ⭐⭐⭐ La legge del costo — **proporzionale, senza gradini**
+#### ⭐⭐⭐ The law of the cost — **proportional, without steps**
 
-Misurata **due volte per due strade indipendenti**, con l'ingresso preso dal contatore dei **disegni
-della scena**, non dai fotogrammi consegnati:
+Measured **twice by two independent routes**, with the input taken from the counter of the **scene's
+draws**, not from the frames delivered:
 
-| strada | legge | R² | errore max |
+| route | law | R² | max error |
 |---|---|---|---|
-| salita **satura**, 6 punti | render % = **−0,675 + 0,1196 ×** Mpx ridisegnati/s | **0,9999** | 0,7 % |
-| **manopola a una sessione**, 4 punti | render % = **+0,024 + 0,1172 ×** | **1,0000** | 0,4 % |
-| salita **vero**, 11 punti | render % = **+0,264 + 0,1494 ×** | **0,9999** | 1,1 % |
+| **saturated** climb, 6 points | render % = **−0.675 + 0.1196 ×** Mpx redrawn/s | **0.9999** | 0.7 % |
+| **knob on one session**, 4 points | render % = **+0.024 + 0.1172 ×** | **1.0000** | 0.4 % |
+| **real** climb, 11 points | render % = **+0.264 + 0.1494 ×** | **0.9999** | 1.1 % |
 
-⇒ ⭐ **Il budget si può calcolare**: nessun gradino, intercetta ≈ 0, pendenze a **2 %** l'una
-dall'altra. ⛔ E il costo cresce **fin dentro il dirupo**: al settimo gradino saturo la domanda (871
-Mpx/s) supera il soffitto (≈ 842 dalla retta), e da lì **il prodotto smette di consegnare**.
+⇒ ⭐ **The budget can be computed**: no step, intercept ≈ 0, slopes within **2 %** of each
+other. ⛔ And the cost grows **right into the cliff**: at the seventh saturated step the demand (871
+Mpx/s) exceeds the ceiling (≈ 842 from the line), and from there **the product stops delivering**.
 
-⭐ **E il costo NON è proporzionale all'area cambiata**: le due pendenze differiscono del **25 %** fra
-schermo intero e finestra. Risolvendo sui due bracci:
+⭐ **And the cost is NOT proportional to the changed area**: the two slopes differ by **25 %** between
+full screen and window. Solving on the two arms:
 
 ```
 render %  =  0,145 × (disegni/s)  +  0,0494 × (Mpixel ridisegnati/s)
 ```
 
-⇒ a 1080p **il 59 % del costo di un ridisegno è FISSO**, indipendente da quanti pixel sono cambiati.
-⚠ **Soluzione a due punti, non una retta con errore**: ipotesi coerente con tutt'e due i bracci, **non
-legge validata**. ⭐ **Ed è lo stesso capo che §6.11 ha preso dall'altro lato** — là `7,1 % fisso +
-0,053 % per Mpixel/s`, qui `0,145 per disegno + 0,0494 per Mpixel`: **due banchi, due strade, la
-stessa forma a due termini.**
+⇒ at 1080p **59 % of the cost of a redraw is FIXED**, independent of how many pixels changed.
+⚠ **A two-point solution, not a line with an error**: a hypothesis consistent with both arms, **not a
+validated law**. ⭐ **And it is the same end §6.11 took from the other side** — there `7,1 % fisso +
+0,053 % per Mpixel/s`, here `0,145 per disegno + 0,0494 per Mpixel`: **two benches, two routes, the
+same two-term shape.**
 
-#### ⛔⭐ E il metro del progetto era sbagliato per questa scena
+#### ⛔⭐ And the project's meter was wrong for this scene
 
-`[M]` **Il pavimento di 25 fot/s** (`SPECIFICHE.md` §2.1) **ha dato ROSSO con UNA sola sessione e la
-GPU al 2,2 %**: una scena a **strappi** non produce 25 fotogrammi al secondo, e non deve.
-⇒ ⛔ **Tutti e 66 i rossi del braccio «vero» erano quello; ZERO erano del prodotto.**
+`[M]` **The floor of 25 fps** (`SPECIFICHE.md` §2.1) **gave RED with ONE single session and the
+GPU at 2.2 %**: a scene of **tears** does not produce 25 frames per second, and it must not.
+⇒ ⛔ **All 66 reds of the «vero» arm were that; ZERO belonged to the product.**
 
-⭐⭐ Il metro è stato sostituito con la **resa** — quanti dei disegni della scena **arrivano**: `[M]`
-**0,64-0,73 a macchina scarica**, e sulla scena satura crolla a **0,42-0,46 esattamente al gradino
-7**. ⇒ ⭐ **Il metro nuovo ritrova il sei da solo, per una strada diversa da I1.**
+⭐⭐ The meter was replaced with the **yield** — how many of the scene's draws **arrive**: `[M]`
+**0.64-0.73 on an idle machine**, and on the saturated scene it collapses to **0.42-0.46 exactly at step
+7**. ⇒ ⭐ **The new meter finds the six by itself, by a route different from I1.**
 
-#### ⭐ Le altre quattro cose che non ci si aspettava
+#### ⭐ The other four things nobody expected
 
-1. ⭐⭐ **Il motore che finisce per primo CAMBIA con la scena**: sulla satura è il `render`; sul
-   desktop vero, a undici, **passa avanti il VEBOX** (24,1 % contro 22,3 %) — ⛔ **e i VEBOX sono
-   UNO**, i VDBOX due. ⇒ Conferma la previsione di §6.4-bis, che era stata presa **da sola**.
-2. ⭐ **La memoria di un desktop vero costa il 60 % in più**: **307 MiB** PSS a sessione contro 190
-   della satura e 184 del fermo — sono le applicazioni aperte.
-3. ⛔ **`--certifica` andava a bussare alla macchina di prova** mentre dichiarava di non farlo — ⭐
-   trovato **guardando l'orologio** (0,23 s contro molti secondi), non il codice.
-4. ⛔ Il caso che dimostra perché **l'ordine delle colonne conta**: la scena congelata faceva **1 368
-   byte/fotogramma**, cioè **sopra** il pavimento di 600 ⇒ **i soli byte le avrebbero dato verde**.
-   È **E15** riprodotto, e lo prende il contatore dei **disegni**.
+1. ⭐⭐ **The engine that runs out first CHANGES with the scene**: on the saturated one it is `render`; on the
+   real desktop, at eleven, **the VEBOX overtakes** (24.1 % against 22.3 %) — ⛔ **and the VEBOXes are
+   ONE**, the VDBOXes two. ⇒ It confirms the prediction of §6.4-bis, which had been taken **from one alone**.
+2. ⭐ **The memory of a real desktop costs 60 % more**: **307 MiB** PSS per session against 190
+   for the saturated and 184 for the still — they are the open applications.
+3. ⛔ **`--certifica` went knocking at the test machine** while declaring it did not — ⭐
+   found **by looking at the clock** (0.23 s against many seconds), not the code.
+4. ⛔ The case that shows why **the order of the columns matters**: the frozen scene made **1 368
+   bytes/frame**, that is **above** the floor of 600 ⇒ **the bytes alone would have given it green**.
+   It is **E15** reproduced, and the **draws** counter catches it.
 
-#### I guasti innestati — **75 casi, 0 rossi** (erano 42)
+#### The injected faults — **75 cases, 0 reds** (they were 42)
 
-I 42 vecchi rifatti girare **intatti**, più 33 nuovi: «desktop vero» congelato ⇒ rosso **sui disegni**
-· scena che disegna 14/s e ne arrivano 1,5 ⇒ rosso · disegni non letti ⇒ `None` · «ferma» che consegna
-25 fot/s ⇒ rosso che **nomina** salvaschermo, orologio, notifica · ⛔ **l'àncora che ne ritrova 5 e
-che ne ritrova 8** ⇒ il banco **rifiuta il confronto** · ⭐ la capienza che scende da 8 a 4 per un I1
-rosso **che il ritmo non vedeva** · costo a gradino ⇒ l'errore lo denuncia · retta su due punti ⇒
-`None` · lettore dello shm **tarato con valori noti iniettati**.
+The 42 old ones run again **intact**, plus 33 new: frozen «real desktop» ⇒ red **on the draws**
+· scene that draws 14/s and 1.5 arrive ⇒ red · draws not read ⇒ `None` · «still» that delivers
+25 fps ⇒ a red that **names** screensaver, clock, notification · ⛔ **the anchor that finds 5 and
+the one that finds 8** ⇒ the bench **refuses the comparison** · ⭐ the capacity dropping from 8 to 4 for an I1
+red **the rate did not see** · step cost ⇒ the error denounces it · line on two points ⇒
+`None` · shm reader **calibrated with known injected values**.
 
-#### Le `[?]`
+#### The `[?]`
 
-⛔ **Dove sia il soffitto del desktop vero** — sono finiti gli utenti · ⛔ **il dirupo sulla scena
-vera**: dentro undici **non esiste**, a che numero ci sia non si sa · ⛔ **la rete vera**: i clienti
-girano sulla stessa macchina ⇒ il filo è **contato, non provato** · ⛔ **l'immagine**: il banco non
-dice *«si vede peggio»* — ⭐ **quello lo dice il regista**.
+⛔ **Where the ceiling of the real desktop is** — the users ran out · ⛔ **the cliff on the real
+scene**: within eleven **it does not exist**, at what number it is nobody knows · ⛔ **the real network**: the clients
+run on the same machine ⇒ the wire is **counted, not tested** · ⛔ **the image**: the bench does not
+say *«si vede peggio»* — ⭐ **that is said by the director**.
 
-### 6.13 ⭐⭐⭐ IL GUARDIANO DI LOGIND — **il difetto è vero, il moltiplicatore no**, e morde molto prima di staccare
+### 6.13 ⭐⭐⭐ THE LOGIND GUARDIAN — **the defect is real, the multiplier is not**, and it bites long before detaching
 
-`banchi/10-b97-guardiano.py` (+ `10-b97-terreno.sh`, `10-b97-innesta.py`), `[M]` 25 agosto 2026, con
-il **guardiano finto** innestato solo sull'adattatore che `main.c` · `ABBANDONO_PREDEFINITO_MS` dichiara di aver messo apposta
-per questo. ⛔ `src/` del repository **non toccato**, i due `md5` dichiarati.
+`banchi/10-b97-guardiano.py` (+ `10-b97-terreno.sh`, `10-b97-innesta.py`), `[M]` 25 Aug 2026, with
+the **fake guardian** injected only on the adapter that `main.c` · `ABBANDONO_PREDEFINITO_MS` declares it put there on purpose
+for this. ⛔ The repository's `src/` **not touched**, the two `md5`s declared.
 
-#### ⭐ Il difetto **si riproduce**, con la firma dedotta leggendo
+#### ⭐ The defect **reproduces**, with the signature deduced by reading
 
-`[M]` `causa=stallo stallo_ms=6004 offerti=52 usciti_byte=0 persi=0 permille=0` — il palco produceva,
-**non usciva niente**, la linea era **pulita**, e il prodotto ha detto all'utente *«la linea è
+`[M]` `causa=stallo stallo_ms=6004 offerti=52 usciti_byte=0 persi=0 permille=0` — the stage was producing,
+**nothing went out**, the line was **clean**, and the product told the user *«la linea è
 MORTA»*.
 
-#### ⛔ Ma **il moltiplicatore non è quello che il rilievo nominava**
+#### ⛔ But **the multiplier is not the one the finding named**
 
-`[M]` **`ListSessions` NON cresce col numero di sessioni logind**: da 63 a 72 sessioni le mediane
-vanno **2,58 → 2,27 ms**, pendenza **−34,6 µs a sessione** — piatta, dentro il rumore. La chiamata
-peggiore vista ovunque è **13,14 ms**, contro una soglia di stallo di **5 000**: ⇒ ne servirebbero
-**380 in un ripasso solo**.
+`[M]` **`ListSessions` does NOT grow with the number of logind sessions**: from 63 to 72 sessions the medians
+go **2.58 → 2.27 ms**, slope **−34.6 µs per session** — flat, within the noise. The worst
+call seen anywhere is **13.14 ms**, against a stall threshold of **5 000**: ⇒ one would need
+**380 in a single pass**.
 
-⇒ ⭐ **Il moltiplicatore di R10-A3 è reale, ma è il numero degli INQUILINI ATTACCATI, non delle
-sessioni di logind.** Il ciclo fa una chiamata **per sessione servita**, e quello è il conto che
-cresce.
-`[?]` **Il basso non è misurabile su questa macchina**: c'è un **pavimento di 63 sessioni** in
-`linger` che appartengono agli altri banchi.
+⇒ ⭐ **The multiplier of R10-A3 is real, but it is the number of ATTACHED TENANTS, not of logind
+sessions.** The loop makes one call **per session served**, and that is the count that
+grows.
+`[?]` **The low end cannot be measured on this machine**: there is a **floor of 63 sessions** in
+`linger` that belong to the other benches.
 
-#### ⭐⭐ E la metà che conta: **il ritardo arriva molto prima dello sfratto**
+#### ⭐⭐ And the half that counts: **the latency arrives long before the eviction**
 
-`[M]` Con **un solo** inquilino:
+`[M]` With **one single** tenant:
 
-| guardiano lento di | fot/s | ritardo mediano | p95 | **scatti** |
+| guardian slow by | fps | median latency | p95 | **triggers** |
 |---|---|---|---|---|
-| — (0) | **39,78** | 9,9 ms | 11,5 ms | 0 |
-| **1 000 ms** | ⛔ **20,85** | 11,3 ms | **77,3 ms** | ⭐ **0** |
-| **2 000 ms** | ⛔ **1,90** | 31,9 ms | ⛔ **2 028 ms** | ⭐ **0** |
+| — (0) | **39.78** | 9.9 ms | 11.5 ms | 0 |
+| **1 000 ms** | ⛔ **20.85** | 11.3 ms | **77.3 ms** | ⭐ **0** |
+| **2 000 ms** | ⛔ **1.90** | 31.9 ms | ⛔ **2 028 ms** | ⭐ **0** |
 
-⇒ ⛔⛔ **Un inquilino solo con un guardiano da un secondo perde METÀ dei fotogrammi, e non viene
-staccato nessuno.** A due secondi il desktop è inservibile — **sempre zero sfratti**.
-⭐ **È il difetto che morde come RITARDO molto prima di mordere come sfratto**, ed è la forma che
-`CODER.md` §1-bis dice pesare più dei fotogrammi.
+⇒ ⛔⛔ **One single tenant with a one-second guardian loses HALF of the frames, and nobody gets
+detached.** At two seconds the desktop is unusable — **still zero evictions**.
+⭐ **It is the defect that bites as LATENCY long before it bites as eviction**, and it is the shape that
+`CODER.md` §1-bis says weighs more than frames.
 
-#### ⭐⭐⭐ La superficie a più inquilini — **e il danno arriva DENTRO la tolleranza che il codice si concede**
+#### ⭐⭐⭐ The surface with several tenants — **and the damage arrives WITHIN the tolerance the code allows itself**
 
-`[M]` 30 s per cella, sotto lucchetto:
+`[M]` 30 s per cell, under the lock:
 
-| N | D | **P = N×D** | chiamate per ripasso | fot/s a sessione | p95 | **scatti** |
+| N | D | **P = N×D** | calls per pass | fps per session | p95 | **triggers** |
 |---|---|---|---|---|---|---|
-| 1 | 0 | 0 | 1 | 39,50 | 11,5 ms | 0 |
-| 1 | 1000 | 1000 | 1 | 21,42 | 78,0 ms | 0 |
-| 1 | 2000 | 2000 | 1 | 1,84 | 2 036 ms | 0 |
-| **3** | 0 | 0 | ⭐ **3** | 37,4 / 37,6 | ~11,7 ms | 0 |
-| **3** | **333** | 999 | ⭐ **3** | ⛔ **20,8 / 20,6** | ~34 ms | ⭐ **0** |
-| **3** | 667 | 2001 | ⭐ **3** | ⛔ **1,77 / 1,87** | ~2 014 ms | ⭐ **0** |
+| 1 | 0 | 0 | 1 | 39.50 | 11.5 ms | 0 |
+| 1 | 1000 | 1000 | 1 | 21.42 | 78.0 ms | 0 |
+| 1 | 2000 | 2000 | 1 | 1.84 | 2 036 ms | 0 |
+| **3** | 0 | 0 | ⭐ **3** | 37.4 / 37.6 | ~11.7 ms | 0 |
+| **3** | **333** | 999 | ⭐ **3** | ⛔ **20.8 / 20.6** | ~34 ms | ⭐ **0** |
+| **3** | 667 | 2001 | ⭐ **3** | ⛔ **1.77 / 1.87** | ~2 014 ms | ⭐ **0** |
 
-Tre cose adesso stabilite **per misura invece che per deduzione**:
+Three things now established **by measurement instead of by deduction**:
 
-1. ⭐ **Il ripasso costa esattamente N chiamate**: `[M]` **48 chiamate in 30 s a N=3** contro **16** a
-   N=1. Il tempo bloccato è **N × D**, lineare negli inquilini — **come il rilievo diceva**;
-2. ⭐⭐ **A governare il danno è `P = N×D`, non D**: N=3 con D=333 e N=1 con D=1000 danno **lo stesso
-   ~21 fot/s**; N=3 con D=667 e N=1 con D=2000 danno **lo stesso ~1,8**;
-3. ⛔⛔ **E il danno arriva DENTRO la tolleranza che il codice si concede**: a **D = 333 ms** — cioè
-   **appena sopra i 300 ms che `sentinella.c` stesso mette in bilancio per logind** — **tre inquilini
-   perdono già metà dei fotogrammi**, ⛔ **e il prodotto non dice niente, perché non stacca nessuno.**
+1. ⭐ **The pass costs exactly N calls**: `[M]` **48 calls in 30 s at N=3** against **16** at
+   N=1. The blocked time is **N × D**, linear in the tenants — **as the finding said**;
+2. ⭐⭐ **What governs the damage is `P = N×D`, not D**: N=3 with D=333 and N=1 with D=1000 give **the same
+   ~21 fps**; N=3 with D=667 and N=1 with D=2000 give **the same ~1.8**;
+3. ⛔⛔ **And the damage arrives WITHIN the tolerance the code allows itself**: at **D = 333 ms** — that is
+   **just above the 300 ms that `sentinella.c` itself budgets for logind** — **three tenants
+   already lose half of the frames**, ⛔ **and the product says nothing, because it detaches nobody.**
 
-#### ⭐⭐⭐ La frontiera si **restringe come 1/N**, e taglia quel che il codice già permette **a quattro inquilini**
+#### ⭐⭐⭐ The frontier **narrows as 1/N**, and cuts what the code already allows **at four tenants**
 
-| N | D che **dimezza** il ritmo | contro i **300 ms** che `sentinella.c` mette in bilancio |
+| N | D that **halves** the rate | against the **300 ms** `sentinella.c` budgets |
 |---|---|---|
-| 1 | 1 000 ms | molto sopra |
-| 3 | 333 ms | **sul filo** |
-| **5** | ⛔ **200 ms** | ⛔ **SOTTO** |
+| 1 | 1 000 ms | well above |
+| 3 | 333 ms | **on the edge** |
+| **5** | ⛔ **200 ms** | ⛔ **BELOW** |
 
-⇒ ⛔⛔ **Intorno ai quattro inquilini, la tolleranza che il prodotto si concede da sé basta a
-dimezzare il ritmo di tutti.** E `[M]` le chiamate per ripasso sono **1 · 3 · 5 · 7** a N = 1/3/5/7:
-**lineare, misurato**.
+⇒ ⛔⛔ **Around four tenants, the tolerance the product allows itself is enough to
+halve everyone's rate.** And `[M]` the calls per pass are **1 · 3 · 5 · 7** at N = 1/3/5/7:
+**linear, measured**.
 
-⛔⛔⛔ **E il caso che chiude**: `[M]` a **N=7 con D=286 ms — cioè esattamente quel bilancio — OGNI
-desktop crolla a ~1,3 fot/s con un p95 di due secondi, e non viene scritta una riga**, perché non
-viene staccato nessuno. Già a **metà** del bilancio (143 ms) se ne va il **40 %** dei fotogrammi.
+⛔⛔⛔ **And the case that closes it**: `[M]` at **N=7 with D=286 ms — that is exactly that budget — EVERY
+desktop collapses to ~1.3 fps with a p95 of two seconds, and not one line is written**, because
+nobody is detached. Already at **half** the budget (143 ms) **40 %** of the frames go.
 
-`[M]` **Venti celle, N da 1 a 7**, e il prodotto `P` governa il danno mentre la sua composizione è
-irrilevante: a P = 1000 → 21,4 · 15,2 · 14,2 · **12,3** fot/s; a P = 2000 → 1,84 · 1,82 · 1,21 ·
-**1,26**.
+`[M]` **Twenty cells, N from 1 to 7**, and the product `P` governs the damage while its composition is
+irrelevant: at P = 1000 → 21.4 · 15.2 · 14.2 · **12.3** fps; at P = 2000 → 1.84 · 1.82 · 1.21 ·
+**1.26**.
 
-#### ⚠⭐ E il rilievo R10-A3 va **corretto dove esagerava**: lo sfratto **non è l'esito normale**
+#### ⚠⭐ And finding R10-A3 must be **corrected where it exaggerated**: eviction **is not the normal outcome**
 
-`[M]` **Zero scatti di linea morta in TUTTE E VENTI le celle**, N da 1 a 7, P fino a **5 001 ms**.
-⇒ Lo sfratto è stato riprodotto **una volta**, con la firma dedotta esatta, ⛔ **ma solo come
-TRANSITORIO**: un palco che **comincia** a produrre mentre il ciclo era **già** bloccato.
+`[M]` **Zero dead-line triggers in ALL TWENTY cells**, N from 1 to 7, P up to **5 001 ms**.
+⇒ The eviction was reproduced **once**, with the exact deduced signature, ⛔ **but only as a
+TRANSIENT**: a stage that **starts** producing while the loop was **already** blocked.
 
-⭐ **Quel che R10-A3 azzecca è il meccanismo e la linearità; quel che sopravvaluta è lo sfratto come
-conseguenza ordinaria.** ⛔ **La conseguenza ordinaria è il degrado SILENZIOSO** — e per `CODER.md`
-§1-bis quello **pesa più dei fotogrammi**.
+⭐ **What R10-A3 gets right is the mechanism and the linearity; what it overestimates is eviction as the
+ordinary consequence.** ⛔ **The ordinary consequence is SILENT degradation** — and for `CODER.md`
+§1-bis that **weighs more than frames**.
 
-`[?]` **Un danno che sopravvive alla sua causa**: due sessioni restano a **7-9 fot/s con 200-270 ms**
-di ritardo **mentre il guardiano è a zero e le loro scene disegnano**. Non spiegato, e riferito come
-**osservazione** — ⭐ ed è la ragione per cui questi riferimenti vanno letti **per sessione**, non in
-media.
+`[?]` **Damage that survives its cause**: two sessions stay at **7-9 fps with 200-270 ms**
+of latency **while the guardian is at zero and their scenes are drawing**. Not explained, and reported as an
+**observation** — ⭐ and it is the reason these reports must be read **per session**, not as an
+average.
 
-#### ⭐ E un rilievo di prodotto trovato per sbaglio
+#### ⭐ And a product finding found by mistake
 
-⛔ **Col guardiano lento un inquilino nuovo non riesce a collegarsi affatto**: la stretta di mano
-scade. ⇒ Non è che rallenta chi è già dentro: **chiude la porta a chi arriva**.
+⛔ **With the slow guardian a new tenant cannot connect at all**: the handshake
+expires. ⇒ It is not that it slows down whoever is already inside: **it closes the door on whoever arrives**.
 
-⚠ E un difetto di contorno, già nominato: **`sentinella_conti()` non ha nessun chiamante in `src/`**.
-È il contatore che l'intestazione dichiara di aver messo perché la scelta di interrogare logind **in
-modo sincrono** si potesse **rimisurare invece che credere** — ⛔ e oggi non lo emette nessuno.
+⚠ And a side defect, already named: **`sentinella_conti()` has no caller in `src/`**.
+It is the counter the header declares it put in so that the choice of querying logind
+**synchronously** could be **re-measured instead of believed** — ⛔ and today nobody emits it.
 
-### 6.14 ⭐⭐⭐ IL CASO DURO IN BYTE — **la discordanza è sciolta: il 44,6 era vero**
+### 6.14 ⭐⭐⭐ THE HARD CASE IN BYTES — **the discrepancy is resolved: the 44.6 was true**
 
-`banchi/10-b90-filo.py` esteso (+ `10-b90-firefox.sh`), `[M]` 25 agosto 2026, 2560×1080, H.264, 30 s,
-sotto lucchetto.
+`banchi/10-b90-filo.py` extended (+ `10-b90-firefox.sh`), `[M]` 25 Aug 2026, 2560×1080, H.264, 30 s,
+under the lock.
 
-#### Da dove veniva il 44,6 — letto, con la citazione
+#### Where the 44.6 came from — read, with the quotation
 
 | | |
 |---|---|
-| **la scena** | il *«film con la GRANA»*: la scena dell'utente con `noise=alls=30` ⇒ `[M]` VP8, 2560×1080, 30,3 fot/s, **58,2 Mbit/s di sorgente**. **È rumore: ogni pixel cambia ogni fotogramma** |
-| **il metro** | la colonna *«carico video»* erano **i byte del carico utile e basta** — niente QUIC, ACK, ritrasmissioni, audio. ⚠ La colonna confrontabile col metro di oggi è *«filo `lo`»*, **48,42** — ⛔ **il che PEGGIORA la discordanza**: contro 4,478 fa **undici** volte |
-| **le cure** | ⛔ **SPENTE**: in fase 9 nascevano spente (**I6**), sono diventate predefinite **il 24 agosto** |
-| ⭐ **il lettore** | **firefox-esr** con la pagina stirata sulla tela; la fase 10 usa `mpv --fullscreen` ⇒ **due immagini diverse dello stesso file** |
+| **the scene** | the *«film con la GRANA»*: the user's scene with `noise=alls=30` ⇒ `[M]` VP8, 2560×1080, 30.3 fps, **58.2 Mbit/s of source**. **It is noise: every pixel changes every frame** |
+| **the meter** | the *«carico video»* column was **the payload bytes and nothing else** — no QUIC, ACK, retransmissions, audio. ⚠ The column comparable with today's meter is *«filo `lo`»*, **48.42** — ⛔ **which WORSENS the discrepancy**: against 4.478 it makes **eleven** times |
+| **the cures** | ⛔ **OFF**: in phase 9 they were born off (**I6**), they became defaults **on 24 Aug** |
+| ⭐ **the player** | **firefox-esr** with the page stretched over the canvas; phase 10 uses `mpv --fullscreen` ⇒ **two different images of the same file** |
 
-#### `[M]` La rimisura — **quattro bracci, una variabile per volta**
+#### `[M]` The re-measurement — **four arms, one variable at a time**
 
-| braccio | scena | lettore | cure | media sul filo | carico utile | byte/fot |
+| arm | scene | player | cures | mean on the wire | payload | bytes/fr |
 |---|---|---|---|---|---|---|
-| A1 | grana | firefox | spente | 2,427 | ⛔ 0,000 | ⛔ **0 fotogrammi** |
-| ⭐ **A2** | grana | mpv | spente | **51,506** | **46,931** | 263 427 |
-| A3 | grana | mpv | **accese** | 49,627 | 47,209 | 266 132 |
-| A4 | duro | mpv | accese | 9,647 | 8,990 | 37 420 |
+| A1 | grain | firefox | off | 2.427 | ⛔ 0.000 | ⛔ **0 frames** |
+| ⭐ **A2** | grain | mpv | off | **51.506** | **46.931** | 263 427 |
+| A3 | grain | mpv | **on** | 49.627 | 47.209 | 266 132 |
+| A4 | hard | mpv | on | 9.647 | 8.990 | 37 420 |
 
-⭐⭐⭐ **Le due misure CONCORDANO**: A2 contro fase 9 §14.2 — carico utile **46,931 contro 44,574**
-(1,05×), filo **51,506 contro 48,42** (1,06×), byte/fotogramma **1,10×**. ⇒ Altro giorno, altro banco,
-altro metro: **il 6 %**.
-⇒ ⛔ **Non c'è niente da correggere** in `CODER.md` §1-bis né in `DECISIONI.md`: **il 44,6 era vero.**
+⭐⭐⭐ **The two measurements AGREE**: A2 against phase 9 §14.2 — payload **46.931 against 44.574**
+(1.05×), wire **51.506 against 48.42** (1.06×), bytes/frame **1.10×**. ⇒ Another day, another bench,
+another meter: **6 %**.
+⇒ ⛔ **There is nothing to correct** in `CODER.md` §1-bis nor in `DECISIONI.md`: **the 44.6 was true.**
 
-**Come si spartiscono le undici volte**: ⛔ **non le cure** (0,96×, tolgono il 4 %) · ⭐ **la scena,
-5,1×** — il «duro» si comprime **cinque volte meglio** della grana pura · ⚠ **e 2,2× è di §6.3
-stessa**.
+**How the eleven times divide up**: ⛔ **not the cures** (0.96×, they remove 4 %) · ⭐ **the scene,
+5.1×** — the «hard» one compresses **five times better** than pure grain · ⚠ **and 2.2× belongs to §6.3
+itself**.
 
-> ##### ⚠ ⛔ E QUESTO CORREGGE §6.3 — il numero anomalo era il suo
+> ##### ⚠ ⛔ AND THIS CORRECTS §6.3 — the anomalous number was its own
 >
-> `[M]` A4 dà **9,647 Mbit/s e 37 420 byte/fotogramma** dove §6.3 dava **4,478 e 16 884**, sulla
-> **stessa scena, stesse cure, stesso prodotto**. ⭐ E i 37 420 **ritrovano i 37 081** che uno
-> strumento della fase 9 aveva già scritto. ⇒ **Il numero da guardare con sospetto è quello di §6.3.**
-> ⚠ *La conclusione di §6.3 — «il filo non è il vincolo» — **non cambia**: cambia di un fattore due il
-> costo della scena dura.*
+> `[M]` A4 gives **9.647 Mbit/s and 37 420 bytes/frame** where §6.3 gave **4.478 and 16 884**, on the
+> **same scene, same cures, same product**. ⭐ And the 37 420 **find again the 37 081** that a
+> phase 9 tool had already written. ⇒ **The number to look at with suspicion is the one of §6.3.**
+> ⚠ *The conclusion of §6.3 — «il filo non è il vincolo» — **does not change**: what changes by a factor of two is the
+> cost of the hard scene.*
 
-#### ⭐ Il caso peggiore VERO — otto scene, **nessuna media**
+#### ⭐ The REAL worst case — eight scenes, **no average**
 
-| scena | entropia | media sul filo | picco | byte/fot |
+| scene | entropy | mean on the wire | peak | bytes/fr |
 |---|---|---|---|---|
-| ⛔ **rumore** (casuale puro) | sì | ⛔ **225,0** | **315,3** | **1 555 098** |
-| grana (fase 9) | sì | 49,6 | 65,0 | 265 957 |
-| frattale | sì | 18,9 | 24,2 | 74 340 |
-| Conway | sì | 12,5 | 29,7 | 49 068 |
-| duro | sì | 9,9 | 47,5 | 38 609 |
-| **desktop vero** | — | **0,53** | 0,86 | 1 873 |
-| ⛔ bandiera | **SMASCHERATA** | 0,48 | 0,53 | 250 |
-| ⛔ **testo che scorre** | **SMASCHERATA** | 0,37 | 0,38 | ⭐ **87** |
+| ⛔ **noise** (pure random) | yes | ⛔ **225.0** | **315.3** | **1 555 098** |
+| grain (phase 9) | yes | 49.6 | 65.0 | 265 957 |
+| fractal | yes | 18.9 | 24.2 | 74 340 |
+| Conway | yes | 12.5 | 29.7 | 49 068 |
+| hard | yes | 9.9 | 47.5 | 38 609 |
+| **real desktop** | — | **0.53** | 0.86 | 1 873 |
+| ⛔ flag | **UNMASKED** | 0.48 | 0.53 | 250 |
+| ⛔ **scrolling text** | **UNMASKED** | 0.37 | 0.38 | ⭐ **87** |
 
-**La riga che chiude**: caso peggiore **225 Mbit/s per sessione** ⇒ **×10 = 2 250** (3 153 in picco)
-contro il filo `[M]` misurato a 11 900 ⇒ ⭐ **il filo non è il vincolo nemmeno così** — ⚠ **ma il
-margine è 5×, non 200×**.
-⛔⛔ **E contro `--tetto-banda-mbit` è il 1 125 % da solo**, con la statica che vive **nel figlio** e
-**nessun contatore aggregato in tutto `src/`**: dieci figli lo pagano dieci volte (§3.5).
+**The row that closes it**: worst case **225 Mbit/s per session** ⇒ **×10 = 2 250** (3 153 at peak)
+against the wire `[M]` measured at 11 900 ⇒ ⭐ **the wire is not the constraint even so** — ⚠ **but the
+margin is 5×, not 200×**.
+⛔⛔ **And against `--tetto-banda-mbit` it is 1 125 % on its own**, with the static that lives **in the child** and
+**no aggregate counter in the whole of `src/`**: ten children pay it ten times (§3.5).
 
-#### ⭐ Le tre cose che non ci si aspettava
+#### ⭐ The three things nobody expected
 
-1. ⭐⭐ **Il testo fitto che scorre costa 87 byte per fotogramma — VENTIDUE VOLTE MENO di un desktop
-   fermo** (1 873). I vettori di movimento si mangiano uno scorrimento uniforme. ⇒ *«Il caso che
-   l'utente fa davvero»* è **la scena più facile del banco**, ed era stata scelta come dura.
-2. ⚠ Il numero di §6.3 sulla scena dura, corretto qui sopra.
-3. ⛔ **Un difetto del banco andato bene**: l'ago che cercava lo stato di una cura prendeva **l'ultima
-   riga** che la nominava, e con le cure accese ce ne sono **due** ⇒ *IGNOTA* su una cura accesissima,
-   e il banco **si è rifiutato di misurare due bracci su quattro**. ⭐ **Rosso su prodotto sano,
-   rumoroso: è il verso giusto in cui sbagliare.**
+1. ⭐⭐ **Dense scrolling text costs 87 bytes per frame — TWENTY-TWO TIMES LESS than a still
+   desktop** (1 873). Motion vectors eat up a uniform scroll. ⇒ *«Il caso che
+   l'utente fa davvero»* is **the easiest scene of the bench**, and it had been chosen as hard.
+2. ⚠ The number of §6.3 on the hard scene, corrected above.
+3. ⛔ **A bench defect that turned out well**: the needle looking for the state of a cure took **the last
+   line** naming it, and with the cures on there are **two** ⇒ *IGNOTA* on a cure very much on,
+   and the bench **refused to measure two arms out of four**. ⭐ **Red on a healthy product,
+   noisy: it is the right direction in which to be wrong.**
 
-#### Le `[?]`
+#### The `[?]`
 
-⛔ **Il lettore di fase 9 non si rifà**: A1 rimette Firefox riga per riga e dà **0 fotogrammi in
-30 s** — ⚠ **Firefox è rotto su quella macchina per tutti** (fase 9 §20.1-ter, e **non è nostro**)
-⇒ il rapporto di A2 col 44,6 esce marcato `[?]` **condizionato**, mai `[M]`: l'argomento è che il
-filmato è **grande quanto la tela**, quindi i due lettori mostrano gli stessi pixel senza scalare —
-⭐ **argomento, non misura** · **il lettore paga sulla stessa GPU**: i 17,6 fot/s del rumore sono in
-parte **contesa col decodificatore**, non separata · ⚠ **è il caso peggiore SINTETICO**: la fase 9
-misurava la grana col browser vero a **21,5-23,1** Mbit/s, **metà** del banco ⇒ questi sono un
-**limite superiore**.
+⛔ **The phase 9 player cannot be redone**: A1 puts Firefox back line by line and gives **0 frames in
+30 s** — ⚠ **Firefox is broken on that machine for everyone** (phase 9 §20.1-ter, and **it is not ours**)
+⇒ the ratio of A2 to the 44.6 comes out marked `[?]` **conditional**, never `[M]`: the argument is that the
+film is **as big as the canvas**, so the two players show the same pixels without scaling —
+⭐ **an argument, not a measurement** · **the player pays on the same GPU**: the 17.6 fps of the noise are partly
+**contention with the decoder**, not separated · ⚠ **it is the SYNTHETIC worst case**: phase 9
+measured the grain with the real browser at **21.5-23.1** Mbit/s, **half** of the bench ⇒ these are an
+**upper bound**.
 
-⭐ E due scene che erano state scelte come dure sono state **smascherate dal banco stesso**
-(§1.30): la bandiera e **il testo che scorre**.
+⭐ And two scenes that had been chosen as hard were **unmasked by the bench itself**
+(§1.30): the flag and **the scrolling text**.
 
 ### 6.15 ⭐⭐⭐⭐⭐ IL MECCANISMO DEL DIRUPO — **non cade sul numero di sessioni: cade sul carico di composizione**
 
