@@ -2,63 +2,63 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-11-c18 — ⭐ «I GRUPPI DELLA SCHEDA LI METTE IL PRODOTTO»
+11-c18 — ⭐ «THE PRODUCT SETS THE CARD GROUPS»
 ===========================================================================
 
     python3 11-c18-i-gruppi-li-mette-il-prodotto.py --porta 8511
     python3 11-c18-i-gruppi-li-mette-il-prodotto.py --porta 8511 --senza-usermod
     python3 11-c18-i-gruppi-li-mette-il-prodotto.py --certifica
 
-    che cosa deve essere vero : un utente NUOVO, che nei gruppi dei nodi
-                                `/dev/dri` non c'e', si collega — e **il
-                                prodotto ce lo mette**, da solo, alla prima
-                                connessione (`DECISIONI.md` §7.21, deciso
-                                dall'utente il 20 settembre 2026)
-    da dove parte             : un inquilino nuovo, ⛔ **SENZA** i gruppi
-    che cosa guarda           : tre fatti, ciascuno col suo nome
-      G  prima      `id -nG` NON contiene i gruppi dei nodi della scheda
-      I  durante    il registro del server dice «PRIMA CONNESSIONE … ce lo
-                    METTO io» col nome di QUESTO inquilino
-      D  dopo       `id -nG` adesso LI contiene, e il registro dice
-                    «e' nei gruppi della scheda … puo' vedere in hardware»
-    come so che sa dare rosso : `--senza-usermod` — per la durata del giro
-                                `usermod` si sposta di nome: il prodotto non
-                                puo' iscrivere nessuno ⇒ **I e D rossi**
+    what must be true         : a NEW user, who is not in the groups of the
+                                `/dev/dri` nodes, connects — and **the
+                                product puts them there**, by itself, at the first
+                                connection (`DECISIONI.md` §7.21, decided
+                                by the user on 20 September 2026)
+    where it starts from      : a new tenant, ⛔ **WITHOUT** the groups
+    what it looks at          : three facts, each with its own name
+      G  before     `id -nG` does NOT contain the groups of the card's nodes
+      I  during     the server log says «FIRST CONNECTION … I am PUTTING
+                    it there» with the name of THIS tenant
+      D  after      `id -nG` now CONTAINS them, and the log says
+                    «is in the card's groups … can see in hardware»
+    how I know it can give red: `--senza-usermod` — for the length of the run
+                                `usermod` is moved to another name: the product cannot
+                                enrol anyone ⇒ **I and D red**
 
-⛔⛔ PERCHE' QUESTA MAGLIA ESISTE, ed e' un buco che si e' visto solo oggi.
+⛔⛔ WHY THIS MESH EXISTS, and it is a hole that was seen only today.
 
-    Il fatto che copre e' l'unico del prodotto che **tutte le altre maglie
-    nascondono**: ogni maglia chiama `garantisci_i_gruppi(chi)` PRIMA di
-    collegarsi (`11-c1`, e da li' C3, C4, C7, C9, C17…), cioe' mette i gruppi
-    all'inquilino **con le sue mani**.  ⇒ Quando il cliente arriva, il prodotto
-    non ha piu' niente da iscrivere, la sua riga non esce mai, e ⛔ **la rete
-    intera puo' essere verde con quel pezzo di prodotto rotto**.
-    ⚠ E non e' un difetto di quelle maglie: loro devono misurare altro, e un
-      inquilino cieco le farebbe uscire con un «non ho potuto guardare» (§1.51).
-      ⇒ Il buco si chiude aggiungendo una maglia, non cambiando le loro.
+    The fact it covers is the only one of the product that **all the other meshes
+    hide**: every mesh calls `garantisci_i_gruppi(chi)` BEFORE
+    connecting (`11-c1`, and from there C3, C4, C7, C9, C17…), that is it gives the groups
+    to the tenant **with its own hands**.  ⇒ When the client arrives, the product
+    has nothing left to enrol, its line never comes out, and ⛔ **the whole net
+    can be green with that piece of the product broken**.
+    ⚠ And it is not a defect of those meshes: they must measure something else, and a
+      blind tenant would make them exit with an «I could not look» (§1.51).
+      ⇒ The hole is closed by adding a mesh, not by changing theirs.
 
-⭐⭐ E VALE SU TUTTI I DESKTOP, non solo su kde — ed e' il punto dell'utente
-    del 21 settembre 2026: *«deve funzionare per tutti i DE, non solo per
-    KDE»*.  Il codice che iscrive (`src/figlio.c`, `iscrivi_ai_gruppi_della_
-    scheda`) sta nel **padre**, gira da root **dopo PAM** e **prima del fork**:
-    non sa nemmeno quale compositore nascera'.  ⇒ Non c'e' un ramo per
-    desktop da provare — c'e' una cosa sola, e va provata **su ogni scatola**.
-    `[M]` 22 set 2026, con browser VERI e finestra vera, inquilini senza gruppi:
-      · gnome  Firefox 140 PASS · Chrome 153 PASS ⇒ `sgruppig`/`sgruppic` da
-        «solo se stesso» a «video render», primo fotogramma in 1,6 s e 1,2 s
+⭐⭐ AND IT HOLDS ON ALL DESKTOPS, not only on kde — and it is the user's point
+    of 21 September 2026: *«it must work for all the DEs, not only for
+    KDE»*.  The code that enrols (`src/figlio.c`, `iscrivi_ai_gruppi_della_
+    scheda`) lives in the **parent**, runs as root **after PAM** and **before the fork**:
+    it does not even know which compositor will be born.  ⇒ There is no branch per
+    desktop to test — there is one thing only, and it must be tested **on every box**.
+    `[M]` 22 Sep 2026, with REAL browsers and a real window, tenants without groups:
+      · gnome  Firefox 140 PASS · Chrome 153 PASS ⇒ `sgruppig`/`sgruppic` from
+        «only itself» to «video render», first frame in 1,6 s and 1,2 s
       · xfce   Firefox 140 PASS · Chrome 153 PASS ⇒ `sgruppix`/`sgruppiy`
-        idem, 0,6 s e 0,9 s
-      · kde    gia' `[M]` il 20 set 2026 (`DECISIONI.md` §7.21, utente
-        `senzagr`: col binario di prima zero fotogrammi, con quello nuovo 105)
+        likewise, 0,6 s and 0,9 s
+      · kde    already `[M]` on 20 Sep 2026 (`DECISIONI.md` §7.21, user
+        `senzagr`: with the previous binary zero frames, with the new one 105)
 
-⛔ QUESTA MAGLIA NON GIUDICA I FOTOGRAMMI.  Che la sessione veda e' il mestiere
-   di C1 e C3; qui i fotogrammi si stampano come RILIEVO, perche' chi legge il
-   registro deve poter distinguere «iscritto e vede» da «iscritto e non vede».
-   ⚠ Giudicarli qui vorrebbe dire due maglie che danno rosso per lo stesso
-     fatto, e il giorno che quel rosso arrivasse nessuno saprebbe di chi e'.
+⛔ THIS MESH DOES NOT JUDGE THE FRAMES.  That the session sees is the job
+   of C1 and C3; here the frames are printed as a FINDING, because whoever reads the
+   log must be able to tell «enrolled and sees» from «enrolled and does not see».
+   ⚠ Judging them here would mean two meshes giving red for the same
+     fact, and the day that red arrived nobody would know whose it is.
 
-Esiti: 0 verde · 1 rosso · 3 non ho potuto guardare (⛔ NON e' un rosso).
-⛔ Con `--senza-usermod` si legge AL CONTRARIO: 0 = il guasto e' stato VISTO.
+Outcomes: 0 green · 1 red · 3 I could not look (⛔ it is NOT a red).
+⛔ With `--senza-usermod` it reads THE OTHER WAY ROUND: 0 = the fault was SEEN.
 """
 import argparse
 import os
@@ -73,30 +73,30 @@ CLIENTE = os.path.join(QUI, "01-b3-cliente.py")
 REGISTRO = "/var/lib/rete11/registro.log"
 PAROLA = "provanic2026"
 
-# ⛔ Il gruppo in cui `gpu-udev.sh` mette la scheda ESCLUSA: nessuno ci deve
-#    stare dentro, ⇒ non conta fra i gruppi che il prodotto deve dare.
-#    ⚠ E' la stessa regola di `src/provisiona.sh`: la scheda esclusa esiste
-#    perche' le misure si facciano sempre sulla stessa (`gid_della_scheda`).
+# ⛔ The group in which `gpu-udev.sh` puts the EXCLUDED card: nobody must
+#    be in it, ⇒ it does not count among the groups the product must give.
+#    ⚠ It is the same rule as `src/provisiona.sh`: the excluded card exists
+#    so that the measurements are always made on the same one (`gid_della_scheda`).
 GRUPPO_ESCLUSO = "remotix-nogpu"
 
-# ⭐ Le due righe del prodotto che questa maglia legge, e stanno in un posto
-#    solo perche' se il prodotto le cambia si cambia QUI (§1.47).
-#    `[R]` `src/figlio.c`, `iscrivi_ai_gruppi_della_scheda` e `gruppi_della_scheda`.
-RIGA_ISCRIZIONE = "PRIMA CONNESSIONE"
-RIGA_VEDE = "nei gruppi della scheda"
-RIGA_CIECO = "NON E' NEL GRUPPO DELLA SCHEDA"
-# ⚠ Il registro e' in UTF-8 e il prodotto scrive apostrofi dritti: la riga
-#   «NON E' NEL GRUPPO» si cerca cosi' com'e', senza normalizzare niente.
+# ⭐ The two product lines this mesh reads, and they are in one place
+#    only because if the product changes them they are changed HERE (§1.47).
+#    `[R]` `src/figlio.c`, `iscrivi_ai_gruppi_della_scheda` and `gruppi_della_scheda`.
+RIGA_ISCRIZIONE = "FIRST CONNECTION"
+RIGA_VEDE = "in the card's groups"
+RIGA_CIECO = "IS NOT IN THE CARD'S GROUP"
+# ⚠ The log is in UTF-8 and the product writes straight apostrophes: the line
+#   «IS NOT IN THE CARD'S GROUP» is searched as it is, without normalising anything.
 
-# ⛔ I due posti in cui il prodotto cerca `usermod` (`src/figlio.c`,
-#    `comando_da_root`): il guasto innestato li deve nascondere TUTTI E DUE, o
-#    il prodotto trova il secondo e il guasto non morde.
+# ⛔ The two places where the product looks for `usermod` (`src/figlio.c`,
+#    `comando_da_root`): the injected fault must hide BOTH of them, or
+#    the product finds the second and the fault does not bite.
 POSTI_USERMOD = ("/usr/sbin/usermod", "/sbin/usermod")
 CODA_NASCOSTO = ".c18-nascosto"
 
 
 def corri(argv, tempo=30, **kw):
-    """Un comando, o `None` se il tempo e' scaduto.  ⛔ Non solleva mai."""
+    """A command, or `None` if the time ran out.  ⛔ It never raises."""
     try:
         return subprocess.run(argv, capture_output=True, text=True,
                               timeout=tempo, **kw)
@@ -105,13 +105,13 @@ def corri(argv, tempo=30, **kw):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐ I GRUPPI SI CHIEDONO AI NODI — e questa e' la regola del progetto, non
-#     una comodita'.  `video` e `render` sono i nomi di UNA distribuzione;
-#     quel che conta e' il **gid** che il nucleo e udev hanno messo su
-#     `/dev/dri/cardN` e `/dev/dri/renderDN` di QUESTA macchina.
+# ⭐⭐ THE GROUPS ARE ASKED OF THE NODES — and this is the project's rule, not
+#     a convenience.  `video` and `render` are the names of ONE distribution;
+#     what counts is the **gid** that the kernel and udev put on
+#     `/dev/dri/cardN` and `/dev/dri/renderDN` of THIS machine.
 #     `[R]` `src/provisiona.sh`, `gid_della_scheda()`; `src/figlio.c`,
-#     `raccogli_gruppi_scheda()`.  ⛔ Tre posti che leggono la stessa cosa
-#     nello stesso modo: se divergono, diverge il giudizio.
+#     `raccogli_gruppi_scheda()`.  ⛔ Three places that read the same thing
+#     in the same way: if they diverge, the judgement diverges.
 # ═══════════════════════════════════════════════════════════════════════════
 def gid_escluso():
     r = corri(["getent", "group", GRUPPO_ESCLUSO], 10)
@@ -122,14 +122,14 @@ def gid_escluso():
 
 
 def gruppi_dei_nodi(cartella="/dev/dri"):
-    """⭐ (nomi, perche') — i NOMI dei gruppi dei nodi della scheda.
+    """⭐ (nomi, perche') — the NAMES of the groups of the card's nodes.
 
-    ⛔ Lista vuota e un perche' quando non si puo' sapere: senza i nodi questa
-       maglia non ha niente da guardare, ed e' un **3**, non un rosso — una
-       macchina senza scheda non e' un prodotto rotto.
+    ⛔ Empty list and a reason when it cannot be known: without the nodes this
+       mesh has nothing to look at, and it is a **3**, not a red — a
+       machine without a card is not a broken product.
     """
     if not os.path.isdir(cartella):
-        return [], "non c'e' %s: questa scatola non ha nodi della scheda" % cartella
+        return [], "%s is not there: this box has no nodes of the card" % cartella
     escluso = gid_escluso()
     gid = []
     for nome in sorted(os.listdir(cartella)):
@@ -144,14 +144,14 @@ def gruppi_dei_nodi(cartella="/dev/dri"):
         if g not in gid:
             gid.append(g)
     if not gid:
-        return [], ("nessun nodo `cardN`/`renderDN` leggibile in %s: non so "
-                    "quali gruppi il prodotto dovrebbe dare" % cartella)
+        return [], ("no readable `cardN`/`renderDN` node in %s: I do not know "
+                    "which groups the product should give" % cartella)
     nomi = []
     for g in gid:
         r = corri(["getent", "group", g], 10)
         if r is None or r.returncode != 0 or not (r.stdout or "").strip():
-            return [], ("il gid %s dei nodi non ha un nome in /etc/group: "
-                        "nemmeno il prodotto ci potrebbe iscrivere nessuno" % g)
+            return [], ("the gid %s of the nodes has no name in /etc/group: "
+                        "not even the product could enrol anyone in it" % g)
         n = r.stdout.split(":")[0]
         if n not in nomi:
             nomi.append(n)
@@ -159,7 +159,7 @@ def gruppi_dei_nodi(cartella="/dev/dri"):
 
 
 def gruppi_di(chi):
-    """I gruppi dell'utente ADESSO, letti dal sistema.  `None` = non lo so."""
+    """The user's groups NOW, read from the system.  `None` = I do not know."""
     r = corri(["id", "-nG", chi], 10)
     if r is None or r.returncode != 0:
         return None
@@ -167,28 +167,28 @@ def gruppi_di(chi):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐ IL GIUDIZIO — funzione PURA, cosi' `--certifica` la attraversa senza
-#   toccare ne' la macchina ne' il prodotto.
+# ⭐ THE JUDGEMENT — a PURE function, so `--certifica` goes through it without
+#   touching either the machine or the product.
 # ═══════════════════════════════════════════════════════════════════════════
 def giudizio(attesi, prima, dopo, fetta, chi):
-    """⭐ (esito, faccia_g, faccia_i, faccia_d, perche) dai FATTI.
+    """⭐ (esito, faccia_g, faccia_i, faccia_d, perche) from the FACTS.
 
-    `attesi` i nomi che il prodotto deve dare · `prima`/`dopo` i gruppi
-    dell'inquilino · `fetta` le righe di registro di QUESTO giro.
-    ⛔ Nessuna lettura di file qui dentro: solo fatti gia' raccolti.
+    `attesi` the names the product must give · `prima`/`dopo` the tenant's
+    groups · `fetta` the log lines of THIS run.
+    ⛔ No file reading in here: only facts already gathered.
     """
     if not attesi:
-        return 3, "?", "?", "?", "non so quali gruppi il prodotto dovrebbe dare"
+        return 3, "?", "?", "?", "I do not know which groups the product should give"
     if prima is None or dopo is None:
-        return 3, "?", "?", "?", "non ho potuto leggere i gruppi dell'inquilino"
+        return 3, "?", "?", "?", "I could not read the tenant's groups"
 
-    # ── G: prima NON ci deve stare, o questa maglia sta guardando altro ──
+    # ── G: before it must NOT be there, or this mesh is looking at something else ──
     gia = [g for g in attesi if g in prima]
     if gia:
         return 3, "NO", "?", "?", (
-            "«%s» era GIA' nei gruppi %s prima di collegarsi: qualcuno ce l'ha "
-            "messo (lo scheletro di `useradd`? un'altra maglia?) ⇒ il prodotto "
-            "non aveva niente da iscrivere e questo giro non prova niente"
+            "«%s» was ALREADY in the groups %s before connecting: someone put it "
+            "there (the `useradd` skeleton? another mesh?) ⇒ the product "
+            "had nothing to enrol and this run proves nothing"
             % (chi, ", ".join(gia)))
 
     righe_mie = [r for r in fetta if ("[%s]" % chi) in r]
@@ -197,51 +197,51 @@ def giudizio(attesi, prima, dopo, fetta, chi):
     cieco = any(RIGA_CIECO in r for r in righe_mie)
     mancanti = [g for g in attesi if g not in dopo]
 
-    # ⛔ Nessuna riga di questo inquilino ⇒ il cliente non e' mai arrivato
-    #    fino al figlio: non e' un rosso del prodotto, e' un giro non fatto.
+    # ⛔ No line of this tenant ⇒ the client never reached
+    #    the child: it is not a red of the product, it is a run not done.
     if not righe_mie:
         return 3, "SI", "?", "?", (
-            "nel registro non c'e' nessuna riga di «%s»: il cliente non e' "
-            "arrivato al figlio, e senza sessione non c'e' iscrizione da "
-            "guardare" % chi)
+            "in the log there is no line of «%s»: the client did not "
+            "reach the child, and without a session there is no enrolment to "
+            "look at" % chi)
 
     faccia_i = "SI" if iscritto else "NO"
     faccia_d = "SI" if (not mancanti and vede) else "NO"
     if iscritto and not mancanti and vede:
         return 0, "SI", faccia_i, faccia_d, (
-            "«%s» e' arrivato senza i gruppi, il prodotto ce l'ha messo "
-            "(%s) e la sessione puo' vedere in hardware"
+            "«%s» arrived without the groups, the product put it there "
+            "(%s) and the session can see in hardware"
             % (chi, ", ".join(attesi)))
 
     perche = []
     if not iscritto:
-        perche.append("nel registro manca «%s»: il prodotto NON ha provato a "
-                      "iscriverlo" % RIGA_ISCRIZIONE)
+        perche.append("«%s» is missing from the log: the product did NOT try to "
+                      "enrol it" % RIGA_ISCRIZIONE)
     if mancanti:
-        perche.append("dopo la connessione «%s» NON e' nei gruppi %s (ha: %s)"
-                      % (chi, ", ".join(mancanti), " ".join(dopo) or "niente"))
+        perche.append("after the connection «%s» is NOT in the groups %s (has: %s)"
+                      % (chi, ", ".join(mancanti), " ".join(dopo) or "nothing"))
     if cieco:
-        perche.append("il prodotto dichiara la sessione CIECA («%s»)" % RIGA_CIECO)
+        perche.append("the product declares the session BLIND («%s»)" % RIGA_CIECO)
     elif not vede:
-        perche.append("manca la riga «%s»: il prodotto non dichiara che questa "
-                      "sessione veda" % RIGA_VEDE)
+        perche.append("the line «%s» is missing: the product does not declare that this "
+                      "session sees" % RIGA_VEDE)
     return 1, "SI", faccia_i, faccia_d, "; ".join(perche)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⛔⛔ IL GUASTO INNESTATO — e si innesta sulla MACCHINA, non sul prodotto.
+# ⛔⛔ THE INJECTED FAULT — and it is injected into the MACHINE, not the product.
 #
-# ⭐ Nascondere `usermod` e' il modo piu' onesto di togliere al prodotto la
-#   possibilita' di iscrivere: non si tocca il binario, non si tocca il
-#   registro, non si tocca l'inquilino.  ⇒ Il prodotto fa esattamente quel che
-#   farebbe, e fallisce dove deve fallire.
-# ⚠ E si RIMETTE A POSTO SEMPRE, anche se il giro muore a meta': il `finally`
-#   di `main`, piu' una rimessa in ordine all'inizio del giro dopo — perche' un
-#   `usermod` lasciato nascosto renderebbe cieche tutte le maglie che vengono
-#   dopo, ed e' precisamente il difetto che questa rete e' fatta per non avere.
+# ⭐ Hiding `usermod` is the most honest way to take from the product the
+#   possibility of enrolling: the binary is not touched, the log is not
+#   touched, the tenant is not touched.  ⇒ The product does exactly what it
+#   would do, and fails where it must fail.
+# ⚠ And it is ALWAYS PUT BACK, even if the run dies half-way: the `finally`
+#   of `main`, plus a tidy-up at the start of the next run — because a
+#   `usermod` left hidden would make blind all the meshes that come
+#   after, and that is precisely the defect this net is made not to have.
 # ═══════════════════════════════════════════════════════════════════════════
 def nascondi_usermod():
-    """⛔ Torna l'elenco di quel che ha spostato (da rimettere)."""
+    """⛔ Returns the list of what it moved (to be put back)."""
     spostati = []
     for p in POSTI_USERMOD:
         if os.path.exists(p) and not os.path.islink(p):
@@ -251,7 +251,7 @@ def nascondi_usermod():
 
 
 def rimetti_usermod():
-    """⭐ Sempre, e senza chiedere: quel che trova nascosto lo rimette."""
+    """⭐ Always, and without asking: what it finds hidden it puts back."""
     rimessi = []
     for p in POSTI_USERMOD:
         if os.path.exists(p + CODA_NASCOSTO):
@@ -280,55 +280,55 @@ def leggi(percorso):
 
 
 def certifica():
-    """⛔ La maglia sa dare rosso? Si prova sul GIUDIZIO, senza macchina."""
+    """⛔ Can the mesh give red? It is tested on the JUDGEMENT, without a machine."""
     guai = 0
     casi = [
-        ("⭐ senza gruppi prima, iscritto e nei gruppi dopo ⇒ VERDE",
+        ("⭐ no groups before, enrolled and in the groups after ⇒ GREEN",
          (["video", "render"], ["c18u1"], ["c18u1", "video", "render"],
-          ["figlio  [c18u1] ⭐ PRIMA CONNESSIONE: «c18u1» non e' nei gruppi",
-           "figlio  [c18u1] ⭐ e' nei gruppi della scheda (render, video)"]), 0),
-        ("⛔ il prodotto non prova nemmeno a iscriverlo ⇒ ROSSO",
+          ["figlio  [c18u1] ⭐ FIRST CONNECTION: «c18u1» is not in the card's groups",
+           "figlio  [c18u1] ⭐ is in the card's groups (render, video)"]), 0),
+        ("⛔ the product does not even try to enrol it ⇒ RED",
          (["video", "render"], ["c18u1"], ["c18u1"],
-          ["figlio  [c18u1] ⛔⛔ «c18u1» NON E' NEL GRUPPO DELLA SCHEDA «video»"]), 1),
-        ("⛔ ci prova e non ci riesce (usermod nascosto) ⇒ ROSSO",
+          ["figlio  [c18u1] ⛔⛔ «c18u1» IS NOT IN THE CARD'S GROUP «video»"]), 1),
+        ("⛔ it tries and does not succeed (usermod hidden) ⇒ RED",
          (["video", "render"], ["c18u1"], ["c18u1"],
-          ["figlio  [c18u1] ⭐ PRIMA CONNESSIONE: «c18u1» non e' nei gruppi",
-           "figlio  [c18u1] ⛔ non ho potuto iscrivere «c18u1»"]), 1),
-        ("⛔ iscritto a meta' (uno dei due gruppi manca) ⇒ ROSSO",
+          ["figlio  [c18u1] ⭐ FIRST CONNECTION: «c18u1» is not in the card's groups",
+           "figlio  [c18u1] ⛔ I could not enrol «c18u1»"]), 1),
+        ("⛔ half enrolled (one of the two groups is missing) ⇒ RED",
          (["video", "render"], ["c18u1"], ["c18u1", "video"],
-          ["figlio  [c18u1] ⭐ PRIMA CONNESSIONE: «c18u1» non e' nei gruppi"]), 1),
-        ("⚠ era GIA' nei gruppi prima ⇒ 3, ⛔ mai verde (non prova niente)",
+          ["figlio  [c18u1] ⭐ FIRST CONNECTION: «c18u1» is not in the card's groups"]), 1),
+        ("⚠ it was ALREADY in the groups before ⇒ 3, ⛔ never green (proves nothing)",
          (["video", "render"], ["c18u1", "video", "render"],
           ["c18u1", "video", "render"],
-          ["figlio  [c18u1] ⭐ e' nei gruppi della scheda (render, video)"]), 3),
-        ("⚠ nessuna riga dell'inquilino nel registro ⇒ 3, ⛔ mai rosso",
+          ["figlio  [c18u1] ⭐ is in the card's groups (render, video)"]), 3),
+        ("⚠ no line of the tenant in the log ⇒ 3, ⛔ never red",
          (["video", "render"], ["c18u1"], ["c18u1"],
-          ["figlio  [altro] ⭐ PRIMA CONNESSIONE: «altro» non e' nei gruppi"]), 3),
-        ("⚠ nodi della scheda non leggibili ⇒ 3, ⛔ mai rosso",
+          ["figlio  [altro] ⭐ FIRST CONNECTION: «altro» is not in the card's groups"]), 3),
+        ("⚠ card nodes not readable ⇒ 3, ⛔ never red",
          ([], ["c18u1"], ["c18u1"], []), 3),
-        ("⚠ i gruppi dell'inquilino non si leggono ⇒ 3",
+        ("⚠ the tenant's groups cannot be read ⇒ 3",
          (["video"], None, None, []), 3),
     ]
-    print("== C18 — certificazione del giudizio (⛔ senza toccare la macchina)")
+    print("== C18 — certification of the judgement (⛔ without touching the machine)")
     for nome, argomenti, atteso in casi:
         attesi, prima, dopo, fetta = argomenti
         e = giudizio(attesi, prima, dopo, fetta, "c18u1")[0]
         segno = "OK " if e == atteso else "NO "
         if e != atteso:
             guai += 1
-        print("  %s %-62s esito %s (atteso %s)" % (segno, nome, e, atteso))
-    # ⭐ E i due attrezzi del guasto si provano per NOME, non per fiducia: un
-    #   `usermod` che non si rimette e' una scatola rotta per tutte le maglie.
+        print("  %s %-62s outcome %s (expected %s)" % (segno, nome, e, atteso))
+    # ⭐ And the fault's two tools are tested by NAME, not by trust: a
+    #   `usermod` that is not put back is a broken box for all the meshes.
     print("  %s %-62s %s"
           % ("OK " if len(POSTI_USERMOD) == 2 else "NO ",
-             "⛔ il guasto nasconde TUTTI i posti di `usermod`",
+             "⛔ the fault hides ALL the places of `usermod`",
              " ".join(POSTI_USERMOD)))
     print()
     if guai:
-        print("⛔ %d casi del giudizio NON danno quel che devono" % guai)
+        print("⛔ %d cases of the judgement do NOT give what they must" % guai)
         return 1
-    print("⭐ il giudizio da' verde, rosso e «non lo so» dove deve — e il caso "
-          "vero (arrivato senza gruppi, uscito con) e' il primo")
+    print("⭐ the judgement gives green, red and «I do not know» where it must — and the real "
+          "case (arrived without groups, left with them) is the first")
     return 0
 
 
@@ -336,66 +336,66 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--porta", type=int, default=0)
     p.add_argument("--senza-usermod", action="store_true",
-                   help="⛔ IL GUASTO INNESTATO: `usermod` sparisce per la "
-                        "durata del giro ⇒ il prodotto non puo' iscrivere")
+                   help="⛔ THE INJECTED FAULT: `usermod` disappears for the "
+                        "length of the run ⇒ the product cannot enrol")
     p.add_argument("--registro", default=REGISTRO)
     p.add_argument("--resta", type=float, default=12.0)
     p.add_argument("--attesa", type=float, default=45.0,
-                   help="quanto si aspetta la riga del figlio nel registro")
+                   help="how long the child's line in the log is waited for")
     p.add_argument("--certifica", action="store_true")
     a = p.parse_args()
 
     if a.certifica:
         return certifica()
     if not a.porta:
-        print("⛔ vuole `--porta` ⇒ non ho potuto guardare")
+        print("⛔ it wants `--porta` ⇒ I could not look")
         return 3
     if os.geteuid() != 0:
-        print("⛔ vuole l'amministratore (crea un inquilino) ⇒ non ho potuto guardare")
+        print("⛔ it wants the administrator (it creates a tenant) ⇒ I could not look")
         return 3
 
     chi = "c18u%d" % random.randint(100, 999)
-    innestato = " ⛔ GUASTO INNESTATO: --senza-usermod" if a.senza_usermod else ""
-    print("== C18 — i gruppi della scheda li mette il PRODOTTO (%s, porta %d)%s"
+    innestato = " ⛔ INJECTED FAULT: --senza-usermod" if a.senza_usermod else ""
+    print("== C18 — the card groups are set by the PRODUCT (%s, port %d)%s"
           % (chi, a.porta, innestato))
 
-    # ⭐ Prima di tutto: se un giro morto ha lasciato `usermod` nascosto, lo si
-    #    rimette PRIMA di misurare — altrimenti questo giro misurerebbe il
-    #    residuo del giro di ieri e lo chiamerebbe difetto del prodotto.
+    # ⭐ First of all: if a dead run left `usermod` hidden, it is
+    #    put back BEFORE measuring — otherwise this run would measure the
+    #    leftover of yesterday's run and call it a defect of the product.
     rimessi = rimetti_usermod()
     if rimessi:
-        print("   ⚠ un giro precedente aveva lasciato nascosto %s: rimesso"
+        print("   ⚠ a previous run had left %s hidden: put back"
               % ", ".join(rimessi))
 
     attesi, perche_nodi = gruppi_dei_nodi()
     if not attesi:
-        print("   ⛔ %s ⇒ non ho potuto guardare" % perche_nodi)
+        print("   ⛔ %s ⇒ I could not look" % perche_nodi)
         return 3
-    print("   i gruppi dei nodi della scheda, LETTI ADESSO: %s" % ", ".join(attesi))
+    print("   the groups of the card's nodes, READ NOW: %s" % ", ".join(attesi))
 
     sgombera(chi)
     fatto = corri(["/bin/sh", "-c",
                    "useradd -m -s /bin/bash %s && printf '%s:%s\\n' | chpasswd"
                    % (chi, chi, PAROLA)], 60)
     if fatto is None or fatto.returncode != 0:
-        print("   ⛔ non ho potuto creare l'inquilino ⇒ non ho potuto guardare")
+        print("   ⛔ I could not create the tenant ⇒ I could not look")
         return 3
 
     spostati = []
     try:
         prima = gruppi_di(chi)
-        print("   G  prima:  %s" % (" ".join(prima) if prima else "non lo so"))
+        print("   G  before: %s" % (" ".join(prima) if prima else "I do not know"))
 
         if a.senza_usermod:
             spostati = nascondi_usermod()
             if not spostati:
-                print("   ⛔ non ho potuto nascondere `usermod`: il guasto non "
-                      "e' innestato ⇒ non ho potuto guardare")
+                print("   ⛔ I could not hide `usermod`: the fault is not "
+                      "injected ⇒ I could not look")
                 return 3
-            print("   ⛔ nascosto: %s" % ", ".join(spostati))
+            print("   ⛔ hidden: %s" % ", ".join(spostati))
 
-        # ⛔ Si segna DOVE siamo nel registro PRIMA di collegarsi: il giudizio
-        #    guarda solo la fetta di QUESTO giro (la lezione della fase 9).
+        # ⛔ We mark WHERE we are in the log BEFORE connecting: the judgement
+        #    looks only at the slice of THIS run (the lesson of phase 9).
         righe = leggi(a.registro)
         segno = len(righe) if righe is not None else 0
 
@@ -404,11 +404,11 @@ def main():
                    "--parola", PAROLA, "--resta", str(a.resta)],
                   max(90, a.resta * 6))
         if r is None:
-            print("   ⛔ il cliente non ha finito in tempo ⇒ non ho potuto guardare")
+            print("   ⛔ the client did not finish in time ⇒ I could not look")
             return 3
 
-        # ⭐ Si aspetta l'EVENTO, non l'orologio: la riga del figlio esce quando
-        #   il padre l'ha generato, e quanto ci mette non lo decidiamo noi.
+        # ⭐ We wait for the EVENT, not the clock: the child's line comes out when
+        #   the parent has spawned it, and how long it takes is not up to us.
         fetta, scadenza = [], time.time() + a.attesa
         while time.time() < scadenza:
             dopo_righe = leggi(a.registro)
@@ -420,50 +420,50 @@ def main():
             time.sleep(0.5)
 
         dopo = gruppi_di(chi)
-        print("   D  dopo:   %s" % (" ".join(dopo) if dopo else "non lo so"))
+        print("   D  after:  %s" % (" ".join(dopo) if dopo else "I do not know"))
         esito, fg, fi, fd, perche = giudizio(attesi, prima, dopo, fetta, chi)
 
-        # ⭐ Il RILIEVO dei fotogrammi: si stampa, ⛔ non si giudica (vedi in testa).
+        # ⭐ The FINDING on frames: it is printed, ⛔ not judged (see at the top).
         fot = None
         for riga in fetta:
-            m = re.search(r"spediti (\d+)", riga)
+            m = re.search(r"sent (\d+)", riga)
             if ("[%s]" % chi) in riga and m:
                 fot = int(m.group(1))
         print("   G %-3s I %-3s D %-3s" % (fg, fi, fd))
-        print("   ⚠ RILIEVO, non verdetto: fotogrammi spediti a «%s»: %s"
-              % (chi, "non lo so" if fot is None else fot))
+        print("   ⚠ FINDING, not verdict: frames sent to «%s»: %s"
+              % (chi, "I do not know" if fot is None else fot))
         for riga in fetta:
             if ("[%s]" % chi) in riga and (RIGA_ISCRIZIONE in riga or
                                            RIGA_VEDE in riga or RIGA_CIECO in riga):
-                print("   registro: %s" % riga.strip()[:150])
+                print("   log: %s" % riga.strip()[:150])
 
         print()
         if a.senza_usermod:
-            # ⛔ Al contrario, e si dice a voce: qui lo 0 e' la buona notizia.
+            # ⛔ The other way round, and it is said out loud: here 0 is the good news.
             if esito == 1:
-                print("⭐ IL GUASTO INNESTATO E' STATO VISTO — questa maglia SA "
-                      "dare rosso,\n   ⭐ e per la ragione giusta: %s" % perche)
+                print("⭐ THE INJECTED FAULT WAS SEEN — this mesh CAN "
+                      "give red,\n   ⭐ and for the right reason: %s" % perche)
                 return 0
             if esito == 3:
-                print("⚠ col guasto innestato NON ho potuto guardare: %s\n"
-                      "   ⇒ esito 3, non un verde" % perche)
+                print("⚠ with the injected fault I could NOT look: %s\n"
+                      "   ⇒ outcome 3, not a green" % perche)
                 return 3
-            print("⛔⛔ IL GUASTO INNESTATO NON E' STATO VISTO: `usermod` era "
-                  "nascosto e la maglia\n   ha detto verde lo stesso.")
+            print("⛔⛔ THE INJECTED FAULT WAS NOT SEEN: `usermod` was "
+                  "hidden and the mesh\n   said green all the same.")
             return 1
         if esito == 0:
-            print("⭐ VERDE — %s" % perche)
+            print("⭐ GREEN — %s" % perche)
         elif esito == 1:
-            print("⛔⛔ ROSSO — %s" % perche)
+            print("⛔⛔ RED — %s" % perche)
         else:
-            print("⚠ non ho potuto guardare — %s" % perche)
+            print("⚠ I could not look — %s" % perche)
         return esito
     finally:
-        # ⛔ Nell'ordine: prima `usermod` torna al suo posto (serve a `userdel`?
-        #    no, ma serve a CHIUNQUE venga dopo), poi si sgombera l'inquilino.
+        # ⛔ In order: first `usermod` goes back to its place (does `userdel` need it?
+        #    no, but ANYONE who comes after does), then the tenant is cleared out.
         rimetti_usermod()
         if spostati:
-            print("   ⭐ `usermod` rimesso al suo posto")
+            print("   ⭐ `usermod` put back in its place")
         sgombera(chi)
 
 

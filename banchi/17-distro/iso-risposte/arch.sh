@@ -1,12 +1,12 @@
 #!/bin/bash
-# REMOTIX fase 17 — Arch dall'ISO ufficiale: archinstall con file di configurazione.
-# Lo lancia l'ISO stessa (parametro «script=» del kernel, sulla tty1 in accesso
-# automatico). L'uscita va anche sulla seriale, che 17-vm.sh scrive in console.log.
-# Segnaposti riempiti da 17-vm.sh: @WEB@
+# REMOTIX phase 17 — Arch from the official ISO: archinstall with a configuration file.
+# The ISO itself launches it ("script=" kernel parameter, on tty1 with automatic
+# login). The output also goes to the serial port, which 17-vm.sh writes to console.log.
+# Placeholders filled in by 17-vm.sh: @WEB@
 exec > >(tee -a /dev/ttyS0 /root/rx-installa.log) 2>&1
-echo "RX-ARCH: inizio $(date)"
+echo "RX-ARCH: start $(date)"
 archinstall --version 2>/dev/null || pacman -Q archinstall
-# la rete e l'orologio, prima di tutto
+# the network and the clock, first of all
 for i in $(seq 60); do curl -fsS -o /dev/null https://archlinux.org && break; sleep 5; done
 timedatectl set-ntp true
 archinstall --config-url @WEB@/config.json --creds-url @WEB@/creds.json --silent

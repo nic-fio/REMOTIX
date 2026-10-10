@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""racc.py — serve la sonda e raccoglie il suo esito.  Banco, non prodotto."""
+"""racc.py — serves the probe and collects its outcome.  Bench, not product."""
 import json, sys
 from datetime import datetime
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -16,12 +16,12 @@ class H(SimpleHTTPRequestHandler):
         except Exception as e: d = {"esito": "ILLEGGIBILE", "dettaglio": str(e)}
         d["ora"] = datetime.now().isoformat(timespec="seconds")
         with REG.open("a") as f: f.write(json.dumps(d, ensure_ascii=False) + "\n")
-        print("=== esito:", d.get("esito"), "|", (d.get("motore") or "?")[:80], flush=True)
+        print("=== outcome:", d.get("esito"), "|", (d.get("motore") or "?")[:80], flush=True)
         print("    ", d.get("dettaglio"), flush=True)
         for r in (d.get("righe") or []): print("      .", r, flush=True)
         self.send_response(204); self.end_headers()
-    def log_message(self, f, *a): print("richiesta:", f % a, flush=True)
+    def log_message(self, f, *a): print("request:", f % a, flush=True)
 if __name__ == "__main__":
     p = int(sys.argv[1]) if len(sys.argv) > 1 else 8898
-    print(f"raccoglitore su 127.0.0.1:{p}", flush=True)
+    print(f"collector on 127.0.0.1:{p}", flush=True)
     ThreadingHTTPServer(("127.0.0.1", p), H).serve_forever()

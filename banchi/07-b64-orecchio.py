@@ -1,38 +1,38 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-07-b64-orecchio — IL GIUDICE CHE SENTE GLI SCOPPIETTII.
+07-b64-orecchio — THE JUDGE THAT HEARS THE CRACKLES.
 
-⛔ `07-b42` sa dire se quel che arriva e' **un tono** (frequenza, ampiezza,
-   purezza).  ⚠ Non sa dire se quel tono ha dentro un **buco**: mezzo secondo
-   di segnale saltato in mezzo a otto secondi sposta la purezza di un'inezia, e
-   il verdetto resta verde.  ⇒ E' esattamente il difetto che R26 descrive —
-   *«audio che scoppietta quando il desktop lavora»* — e nessuno strumento del
-   progetto lo vedeva.
+⛔ `07-b42` can tell whether what arrives is **a tone** (frequency, amplitude,
+   purity).  ⚠ It cannot tell whether that tone has a **gap** inside: half a second
+   of signal skipped in the middle of eight seconds moves the purity by a trifle, and
+   the verdict stays green.  ⇒ It is exactly the defect R26 describes —
+   *«audio that crackles when the desktop works»* — and no tool of the
+   project could see it.
 
-⭐ COME SI SENTE UNO SCOPPIETTIO, e non e' un conteggio.
+⭐ HOW A CRACKLE IS HEARD, and it is not a count.
 
-   Un seno puro obbedisce a una ricorrenza di secondo ordine ESATTA:
+   A pure sine obeys an EXACT second-order recurrence:
 
         x[n] = 2·cos(ω)·x[n-1] − x[n-2]          ω = 2π·f/48000
 
-   ⇒ Il **residuo** r[n] = x[n] − 2cos(ω)x[n-1] + x[n-2] vale zero su un tono
-   perfetto, e vale **solo** dove la forma d'onda si spezza: un salto di fase
-   (campioni persi e ricuciti), un silenzio che comincia, un ripieno a zero.
-   ⛔ Non conta blocchi e non conta byte: guarda i CAMPIONI, che e' la regola
-   (a) di `07-b43` e la prima riga di `LEZIONI.md` §2.2.
+   ⇒ The **residual** r[n] = x[n] − 2cos(ω)x[n-1] + x[n-2] is zero on a perfect
+   tone, and is nonzero **only** where the waveform breaks: a phase jump
+   (samples lost and stitched back), a silence that begins, a zero fill.
+   ⛔ It does not count blocks and does not count bytes: it looks at the SAMPLES, which is rule
+   (a) of `07-b43` and the first row of `LEZIONI.md` §2.2.
 
-   ⚠ Il rumore di quantizzazione a 16 bit da' |r| di pochi LSB — con ampiezza
-   0,5 (picco 16383) sono ~0,00025 dell'ampiezza.  La soglia sta a **0,02**,
-   ottanta volte sopra: non si accende sul rumore, e si accende su un salto di
-   fase di poco piu' di un grado.
+   ⚠ 16-bit quantisation noise gives |r| of a few LSB — with amplitude
+   0.5 (peak 16383) that is ~0.00025 of the amplitude.  The threshold is at **0.02**,
+   eighty times above: it does not fire on noise, and it fires on a phase jump
+   of little more than one degree.
 
-⛔ E IL CONTROLLO POSITIVO STA DENTRO QUESTO FILE (`--certifica`): si fabbrica
-   un tono perfetto, gli si tolgono 137 campioni nel mezzo, e si pretende che
-   il giudice veda **quel** buco e **solo** quello.  Un giudice che non sa
-   vedere il difetto che cerca non ha diritto al verde (`PIANO.md` §0.3.4).
+⛔ AND THE POSITIVE CONTROL LIVES INSIDE THIS FILE (`--certifica`): we build
+   a perfect tone, remove 137 samples from the middle, and demand that
+   the judge sees **that** gap and **only** that.  A judge that cannot
+   see the defect it looks for has no right to green (`PIANO.md` §0.3.4).
 
-Uso:
+Usage:
     python3 07-b64-orecchio.py --certifica
     python3 07-b64-orecchio.py giro.jsonl [--rif giro.rif.wav] [--hz 440]
 """
@@ -40,55 +40,55 @@ import argparse, base64, json, math, os, struct, sys, wave
 
 FREQUENZA = 48000
 CANALI = 2
-PASSO_PCM_US = 5000          # §5.3: il blocco PCM e' di 5 ms
-SOGLIA = 0.02                # frazione dell'ampiezza di picco
+PASSO_PCM_US = 5000          # §5.3: the PCM block is 5 ms
+SOGLIA = 0.02                # fraction of the peak amplitude
 
-# ⛔⛔ IL PICCO MINIMO, ED E' LA CURA DEL RILIEVO R7 — 22 agosto 2026.
+# ⛔⛔ THE MINIMUM PEAK, AND IT IS THE CURE FOR FINDING R7 — 22 August 2026.
 #
-#      La riga era `picco = max(abs(x) ...) or 1.0`, e su campioni **tutti
-#      zero** il picco diventava **1,0**: la soglia scendeva a 0,02, i residui
-#      erano zero, e il giudice rispondeva `scoppiettii 0`.
-#      ⇒ **Il giudice dell'orecchio dava il voto massimo al silenzio**, che e'
-#      la forma d'errore che questa fase esiste per non commettere
-#      (`LEZIONI.md` §2.2: il banco restava verde mentre l'audio era rotto).
+#      The line was `picco = max(abs(x) ...) or 1.0`, and on samples that were **all
+#      zero** the peak became **1.0**: the threshold dropped to 0.02, the residuals
+#      were zero, and the judge answered `scoppiettii 0`.
+#      ⇒ **The ear judge gave top marks to silence**, which is
+#      the error form this phase exists not to commit
+#      (`LEZIONI.md` §2.2: the bench stayed green while the audio was broken).
 #
-# ⭐ La cura non e' un `or` piu' furbo: e' che sotto un certo segnale il giudice
-#    **rifiuta di giudicare**.  Il residuo di quantizzazione di un segnale a 16
-#    bit vale ~4 LSB; perche' la soglia (2 % del picco) stia sopra quel rumore
-#    serve un picco di almeno ~400.  Sotto, il rivelatore non distingue piu'
-#    niente da niente, e dirlo e' l'unica risposta onesta (`CODER.md` §3.10).
-PICCO_MINIMO = 400           # ~1,2 % del fondo scala a 16 bit
+# ⭐ The cure is not a smarter `or`: it is that below a certain signal the judge
+#    **refuses to judge**.  The quantisation residual of a 16-bit signal
+#    is ~4 LSB; for the threshold (2 % of the peak) to sit above that noise
+#    a peak of at least ~400 is needed.  Below it, the detector can no longer tell
+#    nothing from nothing, and saying so is the only honest answer (`CODER.md` §3.10).
+PICCO_MINIMO = 400           # ~1.2 % of 16-bit full scale
 
-# ⛔⛔⛔ IL BUCO CIECO, E SI DICHIARA QUI PERCHE' NON SI PUO' TOGLIERE.
+# ⛔⛔⛔ THE BLIND GAP, AND IT IS DECLARED HERE BECAUSE IT CANNOT BE REMOVED.
 #
-#       Un taglio di N campioni si ricuce **in fase** — cioe' invisibile al
-#       residuo — quando N x f / 48000 e' un numero intero di cicli.  Con il
-#       tono a **440 Hz** e i blocchi PCM da **240 campioni** (5 ms):
+#       A cut of N samples stitches back **in phase** — that is, invisible to the
+#       residual — when N x f / 48000 is a whole number of cycles.  With the
+#       tone at **440 Hz** and PCM blocks of **240 samples** (5 ms):
 #
-#           1200 campioni = 5 blocchi = **11,000 cicli esatti** → invisibile
-#           2400 campioni = 10 blocchi = 22,000 cicli          → invisibile
-#           1201 campioni                = 11,009 cicli        → visto
+#           1200 samples = 5 blocks = **11.000 exact cycles** → invisible
+#           2400 samples = 10 blocks = 22.000 cycles          → invisible
+#           1201 samples                = 11.009 cycles       → seen
 #
-#       `[M]` 22 agosto 2026, riprodotto sul giudice di ieri: 25 ms e 50 ms di
-#       audio spariti danno **scoppiettii 0**.
+#       `[M]` 22 August 2026, reproduced on yesterday's judge: 25 ms and 50 ms of
+#       vanished audio give **scoppiettii 0**.
 #
-# ⭐ Non si cura dentro il rivelatore — su un seno perfetto quel taglio **non
-#    lascia traccia nei campioni**, e nessun algoritmo puo' vederlo.  Si cura
-#    con una SECONDA GAMBA che non guarda la forma d'onda ma il **conto**: i
-#    campioni arrivati contro quelli attesi.  ⇒ `scoppiettii()` accetta
-#    `attesi`, e il verdetto composto guarda tutt'e due.
+# ⭐ It is not cured inside the detector — on a perfect sine that cut **leaves
+#    no trace in the samples**, and no algorithm can see it.  It is cured
+#    with a SECOND LEG that does not look at the waveform but at the **count**: the
+#    samples arrived against those expected.  ⇒ `scoppiettii()` accepts
+#    `attesi`, and the combined verdict looks at both.
 #
-# ⭐⭐ E PER LE SCENE FUTURE C'E' UNA CURA CHE COSTA UNA CIFRA: un tono che con
-#     il blocco non va mai a numero intero.  A **443 Hz** un taglio di k blocchi
-#     vale 2,215 k cicli, e il primo intero arriva a **200 blocchi = 1 secondo**
-#     invece che a cinque.  ⚠ Il 440 resta finche' le misure vecchie servono a
-#     confronto: cambiarlo adesso renderebbe incomparabili i numeri di ieri.
-BLOCCO_PCM_CAMPIONI = 240    # 5 ms su un canale
+# ⭐⭐ AND FOR FUTURE SCENES THERE IS A CURE THAT COSTS ONE DIGIT: a tone that
+#     never comes to a whole number with the block.  At **443 Hz** a cut of k blocks
+#     is 2.215 k cycles, and the first whole number comes at **200 blocks = 1 second**
+#     instead of five.  ⚠ The 440 stays as long as the old measurements serve for
+#     comparison: changing it now would make yesterday's numbers incomparable.
+BLOCCO_PCM_CAMPIONI = 240    # 5 ms on one channel
 
 
 # ══════════════════════════════════════════════════════════════════════════
 def residui(campioni, hz):
-    """La ricorrenza di secondo ordine.  Torna il residuo, campione per campione."""
+    """The second-order recurrence.  Returns the residual, sample by sample."""
     w = 2.0 * math.cos(2.0 * math.pi * hz / FREQUENZA)
     fuori = [0.0, 0.0]
     for n in range(2, len(campioni)):
@@ -97,22 +97,22 @@ def residui(campioni, hz):
 
 
 def scoppiettii(campioni, hz, soglia=SOGLIA, attesi=None):
-    """⛔ Gli eventi, non i campioni: uno strappo dura qualche campione e
-       conterebbe per tre o quattro.  Si raggruppa quel che sta entro 5 ms.
+    """⛔ The events, not the samples: a tear lasts a few samples and
+       would count for three or four.  What lies within 5 ms is grouped.
 
-    ⛔ `attesi` e' la SECONDA GAMBA (R7): quanti campioni avrebbero dovuto
-       esserci.  Il residuo non vede un taglio multiplo di 1200 campioni; il
-       conto si'.  ⚠ Se non lo si passa, il giudizio vale solo per quel che la
-       forma d'onda sa dire, e questo esito lo dichiara."""
+    ⛔ `attesi` is the SECOND LEG (R7): how many samples there should have
+       been.  The residual does not see a cut that is a multiple of 1200 samples; the
+       count does.  ⚠ If it is not passed, the judgement holds only for what the
+       waveform can tell, and this outcome declares it."""
     if len(campioni) < 64:
         return {"esito": "NIENTE DA GIUDICARE", "campioni": len(campioni)}
     picco = max(abs(x) for x in campioni)
     if picco < PICCO_MINIMO:
-        # ⛔ R7: qui prima usciva `scoppiettii 0`, cioe' il massimo dei voti.
+        # ⛔ R7: here `scoppiettii 0` used to come out, that is top marks.
         return {"esito": "SILENZIO O QUASI — NON GIUDICO",
-                "perche": "picco %d sotto il minimo di %d: la soglia del "
-                          "rivelatore finirebbe sotto il rumore di "
-                          "quantizzazione, e ogni risposta sarebbe inventata"
+                "perche": "peak %d below the minimum of %d: the detector's "
+                          "threshold would end up below the quantisation "
+                          "noise, and every answer would be made up"
                           % (picco, PICCO_MINIMO),
                 "campioni": len(campioni), "picco": picco}
     r = residui(campioni, hz)
@@ -130,17 +130,17 @@ def scoppiettii(campioni, hz, soglia=SOGLIA, attesi=None):
     for e in eventi:
         e["salto"] = round(e["salto"], 4)
         del e["fine"]
-    # ⭐ Il residuo tipico, che dice se la soglia e' lontana o appiccicata
+    # ⭐ The typical residual, which tells whether the threshold is far or stuck close
     ordinati = sorted(abs(v) for v in r)
-    # ⭐ LA SECONDA GAMBA: il conto, che vede quel che il residuo non puo'.
+    # ⭐ THE SECOND LEG: the count, which sees what the residual cannot.
     manca = None
     cieco = None
     if attesi:
         manca = int(attesi) - len(campioni)
         if manca > 0:
-            # ⚠ E si dice se quel buco sarebbe stato invisibile al residuo: e'
-            #   l'informazione che spiega un «zero scoppiettii» accanto a un
-            #   ammanco vero, invece di lasciarli contraddirsi in silenzio.
+            # ⚠ And we say whether that gap would have been invisible to the residual: it is
+            #   the information that explains a «zero crackles» next to a
+            #   real shortfall, instead of letting them contradict each other in silence.
             cieco = abs(manca * hz / FREQUENZA
                         - round(manca * hz / FREQUENZA)) < 0.01
     return {"esito": "GIUDICATO", "campioni": len(campioni),
@@ -158,8 +158,8 @@ def scoppiettii(campioni, hz, soglia=SOGLIA, attesi=None):
 
 # ══════════════════════════════════════════════════════════════════════════
 def da_jsonl(percorso):
-    """I blocchi PCM del cliente → i campioni del canale sinistro, e i BUCHI
-       dichiarati dagli `istante` (§6.3: l'orologio del server, non il nostro)."""
+    """The client's PCM blocks → the samples of the left channel, and the GAPS
+       declared by the `istante` (§6.3: the server's clock, not ours)."""
     campioni, istanti = [], []
     for r in open(percorso):
         r = r.strip()
@@ -167,7 +167,7 @@ def da_jsonl(percorso):
             continue
         d = json.loads(r)
         if d.get("codec") != 2:
-            continue                       # ⛔ solo PCM: l'Opus lo giudica il browser
+            continue                       # ⛔ PCM only: Opus is judged by the browser
         b = base64.b64decode(d["byte"])
         n = len(b) // (2 * CANALI)
         v = struct.unpack("<%dh" % (n * CANALI), b[:n * CANALI * 2])
@@ -196,27 +196,27 @@ def da_wav(percorso):
 
 # ══════════════════════════════════════════════════════════════════════════
 def giudizio_completo(dati, hz, finestra_s):
-    """⛔ La finestra del Goertzel dev'essere un numero INTERO di secondi, o il
-       giudice di `07-b42` boccia un tono perfetto (§2.1, il riquadro)."""
+    """⛔ The Goertzel window must be a WHOLE number of seconds, or the
+       judge of `07-b42` fails a perfect tone (§2.1, the box)."""
     c = dati["campioni"]
     r = {"blocchi": dati["blocchi"],
          "durata_dichiarata_s": dati["durata_dichiarata_s"],
          "durata_campioni_s": dati["durata_campioni_s"],
          "buchi_istante": len(dati["buchi_istante"]),
          "buchi_istante_dove": dati["buchi_istante"][:20]}
-    # ⭐ La deriva: quanti campioni MANCANO rispetto al tempo dichiarato.  Se il
-    #    grafo salta un ciclo, i campioni non arrivano affatto e gli `istante`
-    #    non se ne accorgono — questo numero si'.
+    # ⭐ The drift: how many samples are MISSING relative to the declared time.  If the
+    #    graph skips a cycle, the samples do not arrive at all and the `istante`
+    #    do not notice — this number does.
     if dati["durata_dichiarata_s"]:
         atteso = dati["durata_dichiarata_s"] * FREQUENZA
         r["campioni_mancanti"] = int(atteso - len(c))
         r["resa_campioni"] = round(len(c) / atteso, 5) if atteso else None
-    # ⛔ `attesi` viene dagli `istante` del server (§6.3), non dal nostro
-    #    orologio: e' l'unico numero che dica quanti campioni ci dovevano essere.
+    # ⛔ `attesi` comes from the server's `istante` (§6.3), not from our
+    #    clock: it is the only number that says how many samples there should have been.
     attesi = (int(round(dati["durata_dichiarata_s"] * FREQUENZA))
               if dati["durata_dichiarata_s"] else None)
     r.update({"scoppiettii": scoppiettii(c, hz, attesi=attesi)})
-    # Il giudice certificato di 07-b42, su una finestra intera nel mezzo.
+    # The certified judge of 07-b42, on a whole window in the middle.
     n = finestra_s * FREQUENZA
     if len(c) >= n:
         i = (len(c) - n) // 2
@@ -229,26 +229,26 @@ def giudizio_completo(dati, hz, finestra_s):
         r["tono"] = g42.giudica([x / 32768.0 for x in c[i:i + n]])
     else:
         r["tono"] = {"esito": "NIENTE DA GIUDICARE",
-                     "perche": "meno di %d s di campioni" % finestra_s}
+                     "perche": "less than %d s of samples" % finestra_s}
     return r
 
 
 # ══════════════════════════════════════════════════════════════════════════
 def certifica(hz=440):
-    """⛔ Il controllo positivo, e adesso sono SETTE casi.
+    """⛔ The positive control, and now there are SEVEN cases.
 
-    ⛔⛔ I due che mancavano li ha trovati il revisore (R7), non io, e sono
-         proprio i due che rendevano credibile un verde falso:
+    ⛔⛔ The two that were missing were found by the reviewer (R7), not me, and they are
+         exactly the two that made a false green credible:
 
-           · **il silenzio**, che prendeva il voto massimo;
-           · **il taglio da 1200 campioni**, invisibile al residuo perche' e'
-             un numero intero di cicli (11,000 esatti a 440 Hz).
+           · **silence**, which got top marks;
+           · **the 1200-sample cut**, invisible to the residual because it is
+             a whole number of cycles (exactly 11.000 at 440 Hz).
 
-    ⭐ E il caso cieco NON si dichiara verde perche' il residuo tace: si
-       dichiara verde solo se la SECONDA GAMBA — il conto dei campioni — lo
-       vede.  Un banco che non sa vedere il difetto che cerca non ha diritto al
-       verde (`PIANO.md` §0.3.4), e un banco che lo sa vedere solo con un altro
-       strumento deve dire quale.
+    ⭐ And the blind case is NOT declared green because the residual is quiet: it is
+       declared green only if the SECOND LEG — the sample count — sees
+       it.  A bench that cannot see the defect it looks for has no right to
+       green (`PIANO.md` §0.3.4), and a bench that can see it only with another
+       tool must say which.
     """
     import random
     amp = 0.5 * 32767
@@ -264,13 +264,13 @@ def certifica(hz=440):
         return sano[:FREQUENZA * 2] + seno(FREQUENZA * 2 + quanti,
                                            FREQUENZA * 2 - quanti)
 
-    #  (nome, campioni, attesi, scoppiettii attesi, chi lo deve vedere)
-    casi.append(("0-sano — un tono perfetto di 4 s", sano, None, 0, "nessuno: e' sano"))
-    casi.append(("1-buco — 137 campioni (2,9 ms) tolti e ricuciti",
-                 taglia(137), None, 1, "il residuo"))
-    casi.append(("2-silenzio in mezzo — 10 ms di zeri",
+    #  (name, samples, expected, expected crackles, who must see it)
+    casi.append(("0-healthy — a perfect 4 s tone", sano, None, 0, "nobody: it is healthy"))
+    casi.append(("1-gap — 137 samples (2.9 ms) removed and stitched back",
+                 taglia(137), None, 1, "the residual"))
+    casi.append(("2-silence in the middle — 10 ms of zeros",
                  sano[:FREQUENZA * 2] + [0] * 480 + sano[FREQUENZA * 2 + 480:],
-                 None, 2, "il residuo"))
+                 None, 2, "the residual"))
 
     random.seed(7)
     posti = sorted(random.sample(range(FREQUENZA // 2, FREQUENZA * 7 // 2), 10))
@@ -279,20 +279,20 @@ def certifica(hz=440):
         tanti += seno(prima + salto, p - prima)
         prima, salto = p, salto + 61
     tanti += seno(prima + salto, len(sano) - prima)
-    casi.append(("3-dieci strappi da 61 campioni", tanti, None, 10, "il residuo"))
+    casi.append(("3-ten tears of 61 samples", tanti, None, 10, "the residual"))
 
-    # ⛔ R7a — IL SILENZIO.  Prima dava `scoppiettii 0`, cioe' il massimo.
-    casi.append(("4-⛔ R7a: quattro secondi di ZERI", [0] * (FREQUENZA * 4),
-                 None, "SILENZIO O QUASI — NON GIUDICO", "il rifiuto"))
+    # ⛔ R7a — SILENCE.  It used to give `scoppiettii 0`, that is top marks.
+    casi.append(("4-⛔ R7a: four seconds of ZEROS", [0] * (FREQUENZA * 4),
+                 None, "SILENZIO O QUASI — NON GIUDICO", "the refusal"))
 
-    # ⛔ R7b — IL BUCO CIECO.  Il residuo non lo vede e non puo' vederlo: 1200
-    #    campioni sono 11,000 cicli esatti.  Lo deve vedere IL CONTO.
-    casi.append(("5-⛔ R7b: 1200 campioni tolti (25 ms = 11,000 cicli)",
-                 taglia(1200), FREQUENZA * 4, 0, "⭐ il CONTO (1200 mancanti)"))
-    casi.append(("6-⛔ R7b: 2400 campioni tolti (50 ms = 22,000 cicli)",
-                 taglia(2400), FREQUENZA * 4, 0, "⭐ il CONTO (2400 mancanti)"))
+    # ⛔ R7b — THE BLIND GAP.  The residual does not see it and cannot see it: 1200
+    #    samples are exactly 11.000 cycles.  THE COUNT must see it.
+    casi.append(("5-⛔ R7b: 1200 samples removed (25 ms = 11.000 cycles)",
+                 taglia(1200), FREQUENZA * 4, 0, "⭐ the COUNT (1200 missing)"))
+    casi.append(("6-⛔ R7b: 2400 samples removed (50 ms = 22.000 cycles)",
+                 taglia(2400), FREQUENZA * 4, 0, "⭐ the COUNT (2400 missing)"))
 
-    print("⭐ CERTIFICAZIONE DEL GIUDICE — l'atteso e' scritto PRIMA\n")
+    print("⭐ CERTIFICATION OF THE JUDGE — the expected outcome is written FIRST\n")
     verde = True
     for nome, c, attesi, atteso, chi in casi:
         e = scoppiettii(c, hz, attesi=attesi)
@@ -302,24 +302,24 @@ def certifica(hz=440):
         else:
             visto = e.get("scoppiettii")
             buono = (visto == atteso)
-            # ⛔ E per i due casi ciechi il verde non basta che il residuo
-            #    taccia: il conto DEVE dire quanto manca, o il banco e' cieco.
+            # ⛔ And for the two blind cases it is not enough for green that the residual
+            #    is quiet: the count MUST say how much is missing, or the bench is blind.
             if attesi is not None:
                 manca = e.get("campioni_mancanti")
                 if not manca or manca != attesi - len(c):
                     buono = False
-                    visto = "%s (conto: %s)" % (visto, manca)
+                    visto = "%s (count: %s)" % (visto, manca)
                 else:
-                    visto = "%s, e il conto vede %d mancanti (invisibile al "\
-                            "residuo: %s)" % (visto, manca,
+                    visto = "%s, and the count sees %d missing (invisible to the "\
+                            "residual: %s)" % (visto, manca,
                                               e.get("ammanco_invisibile_al_residuo"))
         verde = verde and buono
-        print("  %-52s atteso %-6s · %s\n      %s  chi lo vede: %s"
+        print("  %-52s expected %-6s · %s\n      %s  who sees it: %s"
               % (nome, atteso, visto, "OK" if buono else "⛔ NO", chi))
     print()
-    # ⭐ E il controllo del CONTROLLO: a 443 Hz il buco cieco non c'e' piu'.
-    #    ⚠ Non e' una cura da applicare oggi (renderebbe incomparabili le misure
-    #    di ieri): e' la prova che la diagnosi del buco cieco e' giusta.
+    # ⭐ And the control of the CONTROL: at 443 Hz the blind gap is gone.
+    #    ⚠ It is not a cure to apply today (it would make yesterday's measurements
+    #    incomparable): it is the proof that the diagnosis of the blind gap is right.
     rotto443 = ([int(amp * math.sin(2 * math.pi * 443 * k / FREQUENZA))
                  for k in range(FREQUENZA * 2)]
                 + [int(amp * math.sin(2 * math.pi * 443 * (k + FREQUENZA * 2 + 1200)
@@ -328,23 +328,23 @@ def certifica(hz=440):
     e443 = scoppiettii(rotto443, 443)
     ok443 = e443.get("scoppiettii") == 1
     verde = verde and ok443
-    print("  %-52s atteso %-6s · %s  %s"
-          % ("7-⭐ lo stesso taglio a 443 Hz (11,075 cicli)", 1,
+    print("  %-52s expected %-6s · %s  %s"
+          % ("7-⭐ the same cut at 443 Hz (11.075 cycles)", 1,
              e443.get("scoppiettii"), "OK" if ok443 else "⛔ NO"))
-    print("      ⇒ il buco cieco e' del TONO, non del rivelatore: a 443 Hz sparisce")
+    print("      ⇒ the blind gap belongs to the TONE, not to the detector: at 443 Hz it disappears")
     print()
     if verde:
-        print("⭐ sette casi su sette: il giudice sa vedere il difetto che cerca,")
-        print("   e dove NON puo' vederlo dice quale altro strumento lo vede.")
+        print("⭐ seven cases out of seven: the judge can see the defect it looks for,")
+        print("   and where it CANNOT see it, it says which other tool sees it.")
     else:
-        print("⛔ IL GIUDICE E' CIECO: non si crede a un suo verde.")
+        print("⛔ THE JUDGE IS BLIND: none of its greens is to be believed.")
     return 0 if verde else 3
 
 
 def principale():
     p = argparse.ArgumentParser()
     p.add_argument("jsonl", nargs="?")
-    p.add_argument("--rif", default="", help="il wav dell'arbitro indipendente (pw-record)")
+    p.add_argument("--rif", default="", help="the wav of the independent referee (pw-record)")
     p.add_argument("--hz", type=int, default=440)
     p.add_argument("--finestra", type=int, default=1)
     p.add_argument("--certifica", action="store_true")
@@ -352,17 +352,17 @@ def principale():
     if a.certifica:
         return certifica(a.hz)
     if not a.jsonl:
-        print("⛔ serve il JSONL, o --certifica", file=sys.stderr); return 2
+        print("⛔ the JSONL is needed, or --certifica", file=sys.stderr); return 2
     fuori = {"file": a.jsonl}
     if not os.path.exists(a.jsonl) or os.path.getsize(a.jsonl) == 0:
-        # ⛔ CODER.md §3.10: «non ho letto niente» e' un esito SUO, non uno zero.
-        fuori["esito"] = "NIENTE DA GIUDICARE — il JSONL non c'e' o e' vuoto"
+        # ⛔ CODER.md §3.10: «I read nothing» is an outcome of ITS OWN, not a zero.
+        fuori["esito"] = "NIENTE DA GIUDICARE — the JSONL is missing or empty"
         print(json.dumps(fuori, ensure_ascii=False, indent=1)); return 2
     fuori["nostro"] = giudizio_completo(da_jsonl(a.jsonl), a.hz, a.finestra)
     if a.rif and os.path.exists(a.rif) and os.path.getsize(a.rif) > 1000:
         fuori["arbitro_pw_record"] = giudizio_completo(da_wav(a.rif), a.hz, a.finestra)
     elif a.rif:
-        fuori["arbitro_pw_record"] = "NIENTE DA GIUDICARE — il wav non c'e' o e' vuoto"
+        fuori["arbitro_pw_record"] = "NIENTE DA GIUDICARE — the wav is missing or empty"
     print(json.dumps(fuori, ensure_ascii=False, indent=1))
     return 0
 

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-11-c2 — ⭐⭐ «UNA FINESTRA SI APRE»
+11-c2 — ⭐⭐ «A WINDOW OPENS»
 ===========================================================================
 
     python3 11-c2-una-finestra-si-apre.py --porta 8511
@@ -10,210 +10,210 @@
     python3 11-c2-una-finestra-si-apre.py --porta 8511 --finestra-che-non-si-apre
     python3 11-c2-una-finestra-si-apre.py --certifica
 
-E' la riga **C2** di `fasi/11-la-rete-di-sicurezza.md` §4.1, alla lettera:
+It is line **C2** of `fasi/11-la-rete-di-sicurezza.md` §4.1, to the letter:
 
-    che cosa deve essere vero : una finestra si apre
-    da dove parte             : ⛔ da zero, sessione NUOVA
-    che cosa guarda           : ⛔ **IL PIXEL** — la finestra si deve VEDERE,
-                                non si conta il processo
-    come so che sa dare rosso : un'applicazione che muore subito ⇒ rosso.
-                                ⚠ E il controllo che il conto dei processi
-                                **non** basta: `[M]` diceva 1 in tutt'e due
-                                i casi
-
----------------------------------------------------------------------------
-⭐⭐ PERCHE' QUESTA MAGLIA ADESSO SI PUO' SCRIVERE — *era «bloccata» fino a ieri*
----------------------------------------------------------------------------
-
-`fasi/11…` §4.1 la elencava fra le quattro **bloccate** dalle «sessioni che
-nascono cieche»: guardano un pixel, e non c'era un pixel da guardare.
-
-⭐ Il 27 agosto 2026 il difetto e' stato **capito**, e cambia tutto:
-
-  1. `[R]` `src/mutter.c:697` — la sessione di cattura si avvia, ⛔ **e il
-     monitor virtuale NON esiste ancora**: lo cerca `mutter_monitor_cerca()`
-     *quando il flusso consegna*.  ⇒ ⭐ **il `wl_output` di una sessione
-     headless nasce quando un consumatore si aggancia al flusso, mai prima.**
-  2. ⇒ ⭐⭐ **Mentre un cliente e' attaccato, lo schermo c'e'.**  E' esattamente
-     la condizione in cui lavora questa maglia.
-  3. ⛔ Ma il monitor **muore con il figlio**, e il figlio muore col cliente ⇒
-     *«il desktop ha uno schermo solo mentre qualcuno lo guarda»*.  ⚠ Non e'
-     affare di C2 (e' C6), ⭐ **ma detta l'ordine delle mosse**: il cliente si
-     attacca **PRIMA** di pretendere di vedere qualcosa, e resta attaccato
-     fino alla fine.  ⛔ Una maglia che aprisse l'applicazione prima
-     giudicherebbe un desktop che non ha ancora uno schermo, e darebbe rosso
-     al prodotto per una cosa che il prodotto non ha fatto.
-  4. ⚠ Dentro la scatola GNOME una sessione ha impiegato `[M]` **~97 s** a
-     diventare utile, per un difetto della **scatola** (`polkit` che non
-     parte, `Contenitore.gnome` §6-bis).  ⛔ Percio' **qui non ci sono tetti
-     inchiodati**: sono argomenti, con un valore prudente, e ⇒ **vanno
-     ritarati sul vero** (vedi «I TETTI», piu' sotto).
+    what must be true         : a window opens
+    where it starts from      : ⛔ from zero, NEW session
+    what it looks at          : ⛔ **THE PIXEL** — the window must be SEEN,
+                                the process is not counted
+    how I know it can say red : an application that dies at once ⇒ red.
+                                ⚠ And the check that the process count
+                                is **not** enough: `[M]` it said 1 in both
+                                cases
 
 ---------------------------------------------------------------------------
-⛔⛔ IL METRO — e da dove viene, numero per numero
+⭐⭐ WHY THIS MESH CAN BE WRITTEN NOW — *it was «blocked» until yesterday*
 ---------------------------------------------------------------------------
 
-⛔ **Il conto dei processi non e' un metro**, e questa maglia lo dimostra
-   invece di affermarlo.  `fasi/10…` §7.4, la riga che apre C2:
+`fasi/11…` §4.1 listed it among the four **blocked** by the «sessions that
+are born blind»: they look at a pixel, and there was no pixel to look at.
 
-     *«E il conto dei processi diceva **1** in tutt'e due i casi — finestra o
-       non finestra, lo stesso numero.»*
+⭐ On 27 August 2026 the defect was **understood**, and it changes everything:
 
-⇒ ⭐ Il metro e' **il pixel**: si apre un'applicazione su una pagina di un
-  **colore dichiarato**, e si guarda **quanto schermo e' diventato di quel
-  colore**, con una **tolleranza dichiarata** (§4.3, rilievo di Gemini
-  accolto: i compositori applicano profili di colore e la catena passa per una
-  codifica H.264 in 4:2:0, che sottocampiona proprio il croma).
-
-E si guarda **PRIMA e DOPO**, non solo dopo — tre numeri, non uno:
-
-    prima  : il **primo** fotogramma della presa — il desktop nudo.
-             ⛔ Dev'essere «disegnato» per il giudice di `10-f1-testimone.py`,
-             o non si giudica affatto: un desktop nero non testimonia su una
-             finestra, come un desktop nero non testimonia su un browser
-             (e' la stessa guardia di C8, e per la stessa ragione).
-    dopo   : l'**ultimo** fotogramma della presa — il desktop con la finestra.
-    margine: ⭐ `frazione_dopo - frazione_prima`.  ⛔ Senza, una finestra
-             **rimasta accesa dal giro prima** darebbe verde a un'applicazione
-             che non e' nemmeno partita.
-
-⚠ **E il «prima» e' il primo fotogramma della presa, non l'istante prima di
-  aprire l'applicazione** — questo va detto, perche' fra i due c'e' tutto il
-  giro.  ⭐ Ed e' il motivo per cui il verdetto **non** e' *«lo schermo e'
-  cambiato»* (che cambia anche per l'orologio di GNOME) ma *«il COLORE
-  DICHIARATO e' comparso»*: una grandezza che non si muove da sola.
+  1. `[R]` `src/mutter.c:697` — the capture session starts, ⛔ **and the
+     virtual monitor does NOT exist yet**: `mutter_monitor_cerca()` looks for it
+     *when the stream delivers*.  ⇒ ⭐ **the `wl_output` of a headless
+     session is born when a consumer hooks onto the stream, never before.**
+  2. ⇒ ⭐⭐ **While a client is attached, the screen is there.**  It is exactly
+     the condition in which this mesh works.
+  3. ⛔ But the monitor **dies with the child**, and the child dies with the client ⇒
+     *«the desktop has a screen only while someone is looking at it»*.  ⚠ It is not
+     C2's business (it is C6), ⭐ **but it dictates the order of the moves**: the client
+     attaches **BEFORE** claiming to see anything, and stays attached
+     until the end.  ⛔ A mesh that opened the application first
+     would judge a desktop that does not have a screen yet, and would give red
+     to the product for something the product did not do.
+  4. ⚠ Inside the GNOME box a session took `[M]` **~97 s** to
+     become useful, because of a defect of the **box** (`polkit` that does not
+     start, `Contenitore.gnome` §6-bis).  ⛔ That is why **there are no nailed-down
+     ceilings here**: they are arguments, with a prudent value, and ⇒ **they must be
+     recalibrated on the real thing** (see «THE CEILINGS», further below).
 
 ---------------------------------------------------------------------------
-⛔ COME SO CHE SA DARE ROSSO — **due** guasti innestati, e sono diversi
+⛔⛔ THE YARDSTICK — and where it comes from, number by number
 ---------------------------------------------------------------------------
 
-  `--applicazione-che-muore`     l'applicazione parte e viene uccisa dopo
-                                 `--muore-dopo` secondi.  ⇒ nessuna finestra,
-                                 **e nessun processo**.
-  `--finestra-che-non-si-apre`   ⭐⭐ IL CASO CHE VALE: l'applicazione parte
-                                 **senza testa** (`--headless`), cioe' resta
-                                 **VIVA** e non dipinge niente.  ⇒ il conto
-                                 dei processi dice **≥ 1**, esattamente come
-                                 nel caso sano, ⛔ **e il pixel dice NO**.
-                                 ⇒ E' la dimostrazione, misurata da questa
-                                 maglia e non citata da un documento, che
-                                 **contare i processi non basta**.
+⛔ **The process count is not a yardstick**, and this mesh proves it
+   instead of claiming it.  `fasi/10…` §7.4, the line that opens C2:
 
-⛔⛔ **E OGNI GUASTO INNESTATO PORTA CON SE' IL SUO CONTROLLO SANO.**
-`LEZIONI.md` §1.52: *non basta il colore del verdetto — una maglia deve
-distinguere «il guasto ha morso» da «era gia' rosso per conto suo»*.
-⇒ Col guasto innestato questa maglia apre **DUE** inquilini:
+     *«And the process count said **1** in both cases — window or
+       no window, the same number.»*
 
-    inquilino 1  sano      ⇒ **deve essere VERDE**
-    inquilino 2  guastato  ⇒ **deve essere ROSSO**
+⇒ ⭐ The yardstick is **the pixel**: an application is opened on a page of a
+  **declared colour**, and we look at **how much of the screen has turned that
+  colour**, with a **declared tolerance** (§4.3, Gemini's finding
+  accepted: compositors apply colour profiles and the chain goes through an
+  H.264 encoding in 4:2:0, which subsamples precisely the chroma).
 
-e pretende **tutt'e tre** le cose insieme:
+And we look **BEFORE and AFTER**, not only after — three numbers, not one:
 
-    · il controllo sano e' verde                         (o non si sta
-      misurando il guasto, si sta misurando un rosso proprio — e' la guardia
-      «ha fallito anche il PRIMO» di C8)
-    · l'inquilino guastato e' rosso
-    · ⭐ la frazione dell'inquilino guastato **scende sotto una QUOTA** di
-      quella del sano (`QUOTA_GUASTO`, un terzo) — cioe' una differenza
-      MISURABILE, non un cambio di colore del verdetto.  ⚠ Una quota e non
-      una differenza in punti: §1.45, un numero assoluto e' un numero preso
-      da una condizione
+    before : the **first** frame of the grab — the bare desktop.
+             ⛔ It must be «drawn» for the judge of `10-f1-testimone.py`,
+             or it is not judged at all: a black desktop does not testify about a
+             window, just as a black desktop does not testify about a browser
+             (it is the same guard as C8, and for the same reason).
+    after  : the **last** frame of the grab — the desktop with the window.
+    margin : ⭐ `frazione_dopo - frazione_prima`.  ⛔ Without it, a window
+             **left open from the previous round** would give green to an application
+             that has not even started.
 
-⚠ E ciascun guasto pretende anche **la propria firma**, o non e' quel guasto:
-
-    `--applicazione-che-muore`    processi dopo l'uccisione = **0**
-    `--finestra-che-non-si-apre`  processi = **≥ 1** (⛔ se fosse 0 staremmo
-                                  provando l'altro guasto senza accorgercene)
-
-⛔⛔ E se la firma manca, l'esito e' **3**, non un rosso: una maglia che non ha
-   potuto innestare il guasto non ha ne' visto ne' mancato niente, e scrivere
-   *«il guasto NON e' stato visto»* sarebbe **un'accusa a una prova che non e'
-   girata**.  ⇒ E' la stessa cura che `11-gancio.sh` si e' data il 27 agosto
-   2026 sul proprio `3`.
+⚠ **And the «before» is the first frame of the grab, not the instant before
+  opening the application** — this must be said, because the whole round lies
+  between the two.  ⭐ And it is the reason why the verdict is **not** *«the screen
+  changed»* (which changes also because of the GNOME clock) but *«the DECLARED
+  COLOUR appeared»*: a quantity that does not move by itself.
 
 ---------------------------------------------------------------------------
-⛔ I TETTI — sono argomenti, e vanno RITARATI SUL VERO
+⛔ HOW I KNOW IT CAN SAY RED — **two** grafted faults, and they are different
 ---------------------------------------------------------------------------
 
-`LEZIONI.md` §1.45: *ogni attesa ha un nome suo e un valore suo, e il valore
-si giustifica con quel che si sta aspettando.*  ⛔ Qui **nessun numero e'
-stato misurato da chi ha scritto questo file**: sono valori prudenti,
-dichiarati, con scritto da dove vengono.
+  `--applicazione-che-muore`     the application starts and is killed after
+                                 `--muore-dopo` seconds.  ⇒ no window,
+                                 **and no process**.
+  `--finestra-che-non-si-apre`   ⭐⭐ THE CASE THAT COUNTS: the application starts
+                                 **headless** (`--headless`), i.e. it stays
+                                 **ALIVE** and paints nothing.  ⇒ the process
+                                 count says **≥ 1**, exactly as
+                                 in the healthy case, ⛔ **and the pixel says NO**.
+                                 ⇒ It is the proof, measured by this
+                                 mesh and not quoted from a document, that
+                                 **counting processes is not enough**.
 
-  `--attesa-palco 60`    quanto si aspetta che il compositore annunci un
-                         `wl_output`.  ⇒ `[M]` (misura di C1, 27 agosto 2026,
-                         **non mia**) dentro la scatola GNOME: 98,0 · 101,0 ·
-                         95,5 s, massimo 101,0.  C1 ne ricava 152 s.
-                         ⛔ Qui e' 200 perche' C2 deve poi ancora **aprire una
-                         finestra**, e un tetto che scade in mezzo produce un
-                         «non lo so» che sembra un difetto del prodotto.
-                         ⭐ E QUEL RITARDO E' DELLA SCATOLA, non del prodotto:
-                         quando la cura di `polkit` (`Contenitore.gnome`
-                         §6-bis) e' in vigore il palco nasce in ~2 s, come
-                         nelle altre tre scatole ⇒ ⛔ **allora questo tetto
-                         va rimesso a ~20 s**, e il giro costa un quarto.
-                         ⚠ La maglia STAMPA sempre quanto ci ha messo davvero:
-                         cosi' il tetto si ritara con un numero, non con
-                         un'opinione.
-  `--attesa-finestra 40` quanto si da' all'applicazione per dipingere.
-                         ⛔ `[?]`: il primo avvio di Firefox in una scatola
-                         fredda passa i 25 s (`[M]` C8, 26 agosto 2026, dove
-                         il tetto e' 120 s **per lo scatto da solo**), ⚠ ma
-                         qui il profilo dell'inquilino e' gia' nato durante
-                         l'attesa del palco.  ⇒ Da ritarare.
-  `--muore-dopo 1.5`     quanto vive l'applicazione nel guasto «muore subito».
+⛔⛔ **AND EVERY GRAFTED FAULT CARRIES ITS OWN HEALTHY CONTROL.**
+`LEZIONI.md` §1.52: *the colour of the verdict is not enough — a mesh must
+distinguish «the fault bit» from «it was already red on its own»*.
+⇒ With the grafted fault this mesh opens **TWO** tenants:
 
----------------------------------------------------------------------------
-⛔ QUEL CHE QUESTA MAGLIA **NON** GUARDA — dichiarato, o qualcuno se ne fida
----------------------------------------------------------------------------
+    tenant 1  healthy  ⇒ **must be GREEN**
+    tenant 2  faulted  ⇒ **must be RED**
 
-  · ⛔ **Non guarda se la finestra e' BELLA, ne' dove sta, ne' quanto e'
-    grande.**  Guarda che un colore dichiarato copra una frazione dichiarata
-    dello schermo.  §4.3: *nessuno sa che aspetto abbia un desktop*.
-  · ⛔ **Non distingue «l'applicazione ha aperto una finestra» da «qualcosa ha
-    dipinto quel colore»**.  E' il prezzo del metro povero, ed e' voluto.
-  · ⚠ **Non e' cieca al programma**: oggi l'applicazione predefinita e'
-    `firefox-esr`, perche' e' l'unico programma della scatola che sappia
-    dipingere **un colore che decidiamo noi** (`Contenitore.gnome` §4-ter).
-    ⛔ Cosi' C2 e la meta' B di C8 guardano attraverso lo **stesso programma**:
-    un difetto di Firefox le farebbe rosse tutt'e due, e chi legge potrebbe
-    credere a due conferme indipendenti.  ⇒ ⭐ `--applicazione` e
-    `--argomenti` esistono apposta: il giorno in cui nella scatola c'e' un
-    cliente Wayland minimo che dipinge un colore dichiarato (`weston-simple-shm`
-    non lo fa: i suoi colori sono suoi), **C2 va spostata su quello**.
-  · ⛔ **Non guarda l'input** (e' C4) ne' il riattacco (e' C6).
+and demands **all three** things together:
+
+    · the healthy control is green                       (or we are not
+      measuring the fault, we are measuring a red of its own — it is the
+      «the FIRST one failed too» guard of C8)
+    · the faulted tenant is red
+    · ⭐ the fraction of the faulted tenant **drops below a SHARE** of
+      that of the healthy one (`QUOTA_GUASTO`, a third) — i.e. a
+      MEASURABLE difference, not a change of colour of the verdict.  ⚠ A share and not
+      a difference in points: §1.45, an absolute number is a number taken
+      from one condition
+
+⚠ And each fault also demands **its own signature**, or it is not that fault:
+
+    `--applicazione-che-muore`    processes after the kill = **0**
+    `--finestra-che-non-si-apre`  processes = **≥ 1** (⛔ if it were 0 we would be
+                                  testing the other fault without noticing)
+
+⛔⛔ And if the signature is missing, the outcome is **3**, not a red: a mesh that could not
+   graft the fault has neither seen nor missed anything, and writing
+   *«the fault was NOT seen»* would be **an accusation against a test that did not
+   run**.  ⇒ It is the same cure `11-gancio.sh` gave itself on 27 August
+   2026 for its own `3`.
 
 ---------------------------------------------------------------------------
-⭐ E DUE COSE CHE QUESTA MAGLIA FA APPOSTA DIVERSAMENTE DA C1
+⛔ THE CEILINGS — they are arguments, and they must be RECALIBRATED ON THE REAL THING
 ---------------------------------------------------------------------------
 
-  1. ⛔ **Non legge il registro del PRODOTTO per sapere se lo schermo c'e'.**
-     Lo chiede al **compositore**, con `wayland-info` (che sta nella ricetta
-     apposta, `Contenitore.gnome` §4).  ⚠ Un banco che chiede al prodotto se
-     il prodotto ha funzionato crede a quel che sta provando.
-     ⭐ E c'e' una seconda ragione, piu' concreta: `[R]` la riga *«⛔ ZERO
-     MONITOR»* di `src/sessione.c:345-348` **il prodotto la scrive anche
-     durante una nascita che riuscira'** — perche' a quel punto il monitor non
-     e' ancora comparso (`src/mutter.c:697`).  ⇒ Prenderla per una prova di
-     cecita' e' un errore, e questa maglia non lo fa.
-  2. ⭐ **Un giro solo, non otto.**  C1 ne fa otto perche' il guasto che
-     insegue e' intermittente; C2 insegue una cosa deterministica — *si vede o
-     non si vede* — e ogni giro costa una nascita di sessione.
-     ⚠ `--giri` c'e' lo stesso, per chi vuole insistere.
+`LEZIONI.md` §1.45: *every wait has its own name and its own value, and the value
+is justified by what is being waited for.*  ⛔ Here **no number has
+been measured by whoever wrote this file**: they are prudent values,
+declared, with where they come from written down.
+
+  `--attesa-palco 60`    how long to wait for the compositor to announce a
+                         `wl_output`.  ⇒ `[M]` (C1's measurement, 27 August 2026,
+                         **not mine**) inside the GNOME box: 98.0 · 101.0 ·
+                         95.5 s, maximum 101.0.  C1 derives 152 s from it.
+                         ⛔ Here it is 200 because C2 must then still **open a
+                         window**, and a ceiling that expires halfway produces an
+                         «I do not know» that looks like a product defect.
+                         ⭐ AND THAT DELAY IS THE BOX'S, not the product's:
+                         when the `polkit` cure (`Contenitore.gnome`
+                         §6-bis) is in force the stage is born in ~2 s, as
+                         in the other three boxes ⇒ ⛔ **then this ceiling
+                         must be put back to ~20 s**, and the round costs a quarter.
+                         ⚠ The mesh always PRINTS how long it really took:
+                         so the ceiling is recalibrated with a number, not with
+                         an opinion.
+  `--attesa-finestra 40` how long the application is given to paint.
+                         ⛔ `[?]`: the first start of Firefox in a cold
+                         box exceeds 25 s (`[M]` C8, 26 August 2026, where
+                         the ceiling is 120 s **for the screenshot alone**), ⚠ but
+                         here the tenant's profile was already born during
+                         the wait for the stage.  ⇒ To be recalibrated.
+  `--muore-dopo 1.5`     how long the application lives in the «dies at once» fault.
 
 ---------------------------------------------------------------------------
-GLI ESITI (§4.5 del documento di fase)
+⛔ WHAT THIS MESH DOES **NOT** LOOK AT — declared, or someone will trust it
 ---------------------------------------------------------------------------
 
-  0  ⭐ ho guardato: la finestra si VEDE
-     (col guasto innestato: ⭐ **il guasto e' stato visto**)
-  1  ho guardato: la finestra NON si vede                       ⇒ rosso
-     (col guasto innestato: ⛔ il guasto NON e' stato visto, oppure il
-      controllo sano era gia' rosso per conto suo)
-  3  ⛔ non ho potuto guardare — il palco non e' nato, il desktop era nero
-     prima ancora dell'applicazione, nessun fotogramma e' arrivato, il giudice
-     non c'e'.  ⛔ E NON e' un rosso
-  2  il terreno non regge, o l'uso e' sbagliato
+  · ⛔ **It does not look at whether the window is PRETTY, nor where it is, nor how
+    big it is.**  It looks at a declared colour covering a declared fraction
+    of the screen.  §4.3: *nobody knows what a desktop looks like*.
+  · ⛔ **It does not distinguish «the application opened a window» from «something
+    painted that colour»**.  It is the price of the poor yardstick, and it is intended.
+  · ⚠ **It is not blind to the program**: today the default application is
+    `firefox-esr`, because it is the only program in the box that can
+    paint **a colour we decide** (`Contenitore.gnome` §4-ter).
+    ⛔ So C2 and half B of C8 look through the **same program**:
+    a Firefox defect would make both of them red, and whoever reads might
+    believe in two independent confirmations.  ⇒ ⭐ `--applicazione` and
+    `--argomenti` exist on purpose: the day the box has a
+    minimal Wayland client that paints a declared colour (`weston-simple-shm`
+    does not: its colours are its own), **C2 must be moved onto that**.
+  · ⛔ **It does not look at input** (that is C4) nor at re-attach (that is C6).
+
+---------------------------------------------------------------------------
+⭐ AND TWO THINGS THIS MESH DOES DIFFERENTLY FROM C1 ON PURPOSE
+---------------------------------------------------------------------------
+
+  1. ⛔ **It does not read the PRODUCT log to know whether the screen is there.**
+     It asks the **compositor**, with `wayland-info` (which is in the recipe
+     on purpose, `Contenitore.gnome` §4).  ⚠ A bench that asks the product whether
+     the product worked believes what it is testing.
+     ⭐ And there is a second, more concrete reason: `[R]` the line *«⛔ ZERO
+     MONITOR»* of `src/sessione.c:345-348` **the product writes also
+     during a birth that will succeed** — because at that point the monitor has not
+     appeared yet (`src/mutter.c:697`).  ⇒ Taking it as a proof of
+     blindness is an error, and this mesh does not make it.
+  2. ⭐ **A single round, not eight.**  C1 does eight because the fault it
+     chases is intermittent; C2 chases a deterministic thing — *it is seen or
+     it is not seen* — and every round costs a session birth.
+     ⚠ `--giri` is there anyway, for whoever wants to insist.
+
+---------------------------------------------------------------------------
+THE OUTCOMES (§4.5 of the phase document)
+---------------------------------------------------------------------------
+
+  0  ⭐ I looked: the window IS SEEN
+     (with the grafted fault: ⭐ **the fault was seen**)
+  1  I looked: the window is NOT seen                           ⇒ red
+     (with the grafted fault: ⛔ the fault was NOT seen, or the
+      healthy control was already red on its own)
+  3  ⛔ I could not look — the stage was not born, the desktop was black
+     even before the application, no frame arrived, the judge
+     is not there.  ⛔ And it is NOT a red
+  2  the terrain does not hold, or the usage is wrong
 ===========================================================================
 """
 import argparse
@@ -229,136 +229,136 @@ import time
 QUI = os.path.dirname(os.path.abspath(__file__))
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⛔ IL METRO, DICHIARATO QUI E STAMPATO IN OGNI ESITO — perche' «la finestra
-#    si vede» e' un verdetto, e un verdetto senza il suo metro e' un'opinione.
+# ⛔ THE YARDSTICK, DECLARED HERE AND PRINTED IN EVERY OUTCOME — because «the window
+#    is seen» is a verdict, and a verdict without its yardstick is an opinion.
 # ═══════════════════════════════════════════════════════════════════════════
 
-# ⭐ Il colore della pagina bersaglio.  ⛔ CIANO, e non il magenta di C8:
-#    due maglie che girano nella stessa scatola devono poter distinguere la
-#    PROPRIA finestra da quella rimasta accesa dall'altra.  ⚠ Non e' pignoleria:
-#    C8 lascia `/tmp/mozilla` e delle finestre in giro, e un colore condiviso
-#    farebbe passare per «finestra di C2» una finestra di C8.
+# ⭐ The colour of the target page.  ⛔ CYAN, and not C8's magenta:
+#    two meshes running in the same box must be able to tell their
+#    OWN window from the one left open by the other.  ⚠ It is not pedantry:
+#    C8 leaves `/tmp/mozilla` and windows around, and a shared colour
+#    would make a C8 window pass for «C2's window».
 COLORE = (0x00, 0xFF, 0xFF)
 
-# ⛔ La tolleranza per canale.  ⚠ E' lo stesso valore di C8, e questo NON e' un
-#    tetto preso in prestito (`LEZIONI.md` §1.45): governa **la stessa
-#    grandezza** — lo scostamento per canale di un colore dichiarato dopo lo
-#    stesso identico percorso (compositore → cattura → H.264 4:2:0 → cliente).
-#    ⭐ E `--certifica` la attraversa **al bordo**, un livello sopra e uno sotto:
-#      spostato di ±48 dev'essere ancora VERDE, di ±49 ROSSO.
-#    ⛔⛔ MA QUESTO NON E' UNA TARATURA, e dirlo sarebbe §1.50.  Le immagini
-#      della certificazione sono sintetiche e ⚠ **non hanno mai attraversato la
-#      codifica in 4:2:0 ne' un profilo di colore**: si prova che il confronto
-#      cade dove dice di cadere, ⛔ non che 48 basti dopo il percorso vero.
-#      ⇒ Resta una `[?]`, e si tara guardando la frazione stampata dal primo
-#        giro verde.
+# ⛔ The tolerance per channel.  ⚠ It is the same value as C8, and this is NOT a
+#    borrowed ceiling (`LEZIONI.md` §1.45): it governs **the same
+#    quantity** — the per-channel deviation of a declared colour after the
+#    very same path (compositor → capture → H.264 4:2:0 → client).
+#    ⭐ And `--certifica` crosses it **at the edge**, one level above and one below:
+#      shifted by ±48 it must still be GREEN, by ±49 RED.
+#    ⛔⛔ BUT THIS IS NOT A CALIBRATION, and saying so would be §1.50.  The images
+#      of the certification are synthetic and ⚠ **have never gone through the
+#      4:2:0 encoding nor a colour profile**: it tests that the comparison
+#      falls where it says it falls, ⛔ not that 48 is enough after the real path.
+#      ⇒ It stays a `[?]`, and it is calibrated by looking at the fraction printed by the first
+#        green round.
 TOLLERANZA = 48
 
-# ⛔ Quanto schermo dev'essere di quel colore perche' si dica «c'e' una finestra».
-# ⚠ `[?]`, e va ritarato sul vero: 0,25 e' il valore che C8 usa per un browser a
-#   schermo intero **fotografato da se'**; qui il percorso e' un altro (la stessa
-#   finestra vista ATTRAVERSO il prodotto, che e' la meta' B di C8, ⛔ mai
-#   misurata).  ⇒ Fra la barra di GNOME, i bordi e le decorazioni una finestra a
-#   schermo intero non copre mai tutto; 0,25 e' prudente in basso apposta,
-#   perche' una soglia alta si romperebbe al primo desktop con una barra piu'
-#   larga — cioe' alla fase 12, che e' quel che questa fase esiste per evitare.
+# ⛔ How much of the screen must be that colour for us to say «there is a window».
+# ⚠ `[?]`, and it must be recalibrated on the real thing: 0.25 is the value C8 uses for a
+#   full-screen browser **photographed by itself**; here the path is another one (the same
+#   window seen THROUGH the product, which is half B of C8, ⛔ never
+#   measured).  ⇒ Between the GNOME bar, the borders and the decorations a full-screen
+#   window never covers everything; 0.25 is prudent on the low side on purpose,
+#   because a high threshold would break at the first desktop with a wider
+#   bar — i.e. at phase 12, which is what this phase exists to avoid.
 FRAZIONE_MINIMA = 0.25
 
-# ⭐ Il MARGINE: quanto dev'essere cresciuta la frazione fra il primo e l'ultimo
-#   fotogramma.  ⛔ Senza, una finestra **gia' aperta** (un residuo del giro
-#   prima, o di un'altra maglia) darebbe verde a un'applicazione che non e'
-#   nemmeno partita.  ⚠ `[?]`, prudente: 0,20 sta sotto a `FRAZIONE_MINIMA`
-#   perche' un po' di quel colore potrebbe esserci gia' per caso.
+# ⭐ The MARGIN: how much the fraction must have grown between the first and the last
+#   frame.  ⛔ Without it, a window **already open** (a leftover of the previous
+#   round, or of another mesh) would give green to an application that has
+#   not even started.  ⚠ `[?]`, prudent: 0.20 sits below `FRAZIONE_MINIMA`
+#   because a bit of that colour could already be there by chance.
 MARGINE = 0.20
 
-# ⭐ Col guasto innestato: quanto deve CROLLARE la frazione fra il controllo sano
-#   e l'inquilino guastato perche' si possa dire «il guasto ha MORSO».
-#   ⛔ `LEZIONI.md` §1.52: non si misura il colore del verdetto, si misura la
-#      differenza.
-# ⚠⚠ Ed e' una QUOTA, non una differenza in punti — e la ragione e' §1.45.
-#    Una differenza assoluta (per esempio «20 punti») e' un numero preso da una
-#    condizione: il giorno in cui una finestra a schermo intero coprisse il 30 %
-#    invece dell'85 % (una barra piu' larga, un desktop diverso, la fase 12),
-#    ⛔ il collaudo comincerebbe a dire «il guasto non ha morso» su un guasto
-#    che ha morso benissimo.  ⇒ Una quota si porta dietro la sua scala.
+# ⭐ With the grafted fault: how much the fraction must COLLAPSE between the healthy control
+#   and the faulted tenant for us to be able to say «the fault BIT».
+#   ⛔ `LEZIONI.md` §1.52: we do not measure the colour of the verdict, we measure the
+#      difference.
+# ⚠⚠ And it is a SHARE, not a difference in points — and the reason is §1.45.
+#    An absolute difference (for example «20 points») is a number taken from one
+#    condition: the day a full-screen window covered 30 %
+#    instead of 85 % (a wider bar, a different desktop, phase 12),
+#    ⛔ the acceptance test would start saying «the fault did not bite» on a fault
+#    that bit perfectly well.  ⇒ A share carries its own scale.
 QUOTA_GUASTO = 0.33
 
-# ⛔ Quanti `wl_output` bastano.  Uno: la domanda e' «c'e' uno schermo?», non
-#    «quanti schermi ci sono».
+# ⛔ How many `wl_output` are enough.  One: the question is «is there a screen?», not
+#    «how many screens are there».
 OUTPUT_MINIMI = 1
 
-# `wayland-info` elenca le interfacce cosi':
+# `wayland-info` lists the interfaces like this:
 #     interface: 'wl_output', version: 4, name: 42
-# ⚠ Si cerca la riga intera ancorata al nome fra apici, non la parola dentro un
-#   testo (`CODER.md` §3.3-bis: «wl_output» compare anche in «wl_output_manager»).
+# ⚠ We look for the whole line anchored to the name between quotes, not the word inside a
+#   text (`CODER.md` §3.3-bis: «wl_output» also appears in «wl_output_manager»).
 FIRMA_OUTPUT = re.compile(r"interface:\s*'wl_output'")
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⛔⛔ E LA FIRMA DELL'AMMISSIONE E' UNA RIGA INTERA, NON UNA PAROLA.
+# ⛔⛔ AND THE ADMISSION SIGNATURE IS A WHOLE LINE, NOT A WORD.
 #
-# `[R]` `01-b3-cliente.py:1615` scrive, quando va bene:  «   AMMESSO dopo 1023 ms»
-#       e quando va male:  «⛔ RuntimeError: CONGEDO invece di AMMESSO: motivo …»
-#                          «⛔ RuntimeError: atteso AMMESSO, arrivato …»
-#       ⛔ e li stampa tutt'e tre sullo **stdout** (`01-b3-cliente.py:2560`).
+# `[R]` `01-b3-cliente.py:1615` writes, when it goes well:  «   AMMESSO after 1023 ms»
+#       and when it goes badly:  «⛔ RuntimeError: CONGEDO instead of AMMESSO: reason …»
+#                                «⛔ RuntimeError: expected AMMESSO, arrived …»
+#       ⛔ and it prints all three on **stdout** (`01-b3-cliente.py:2560`).
 #
-# ⇒ ⛔ `"AMMESSO" in testo` e' **VERO IN TUTT'E TRE I CASI**: sarebbe un predicato
-#   che non puo' dire «non ammesso», cioe' `LEZIONI.md` §1.44 — e proprio nel
-#   caso che esiste per prendere.  ⚠ Il ramo che porta il MOTIVO accanto al
-#   sintomo (§1.9) non scatterebbe mai, e un rifiuto di credenziali uscirebbe
-#   come *«nessun fotogramma e' arrivato dal filo»*: un'accusa al filo.
+# ⇒ ⛔ `"AMMESSO" in testo` is **TRUE IN ALL THREE CASES**: it would be a predicate
+#   that cannot say «not admitted», i.e. `LEZIONI.md` §1.44 — and precisely in the
+#   case it exists to catch.  ⚠ The branch that carries the REASON next to the
+#   symptom (§1.9) would never fire, and a credentials refusal would come out
+#   as *«no frame arrived from the wire»*: an accusation against the wire.
 #
-# ⭐⭐ E DAL 27 AGOSTO 2026 LA REGOLA STA IN UN POSTO SOLO: `11-c1…py`, che la
-#     serve a tutte e nove le maglie.  ⚠ Il difetto di famiglia (C1, C5, C6, C7,
-#     C9) e' stato curato copiando **questa** riga; ⇒ tenerne qui una seconda
-#     copia, ancorche' giusta, sarebbe un secondo posto da cui divergere il
-#     giorno che il cliente cambia la frase (§1.47).
+# ⭐⭐ AND SINCE 27 AUGUST 2026 THE RULE LIVES IN ONE PLACE ONLY: `11-c1…py`, which
+#     serves it to all nine meshes.  ⚠ The family defect (C1, C5, C6, C7,
+#     C9) was cured by copying **this** line; ⇒ keeping a second
+#     copy here, even a right one, would be a second place to diverge from the
+#     day the client changes the sentence (§1.47).
 # ═══════════════════════════════════════════════════════════════════════════
 
 
 def e_stato_ammesso(coda):
-    """⭐ `True` ammesso · `False` **RESPINTO** · `None` non ha detto niente.
+    """⭐ `True` admitted · `False` **TURNED AWAY** · `None` said nothing.
 
-    ⛔⛔ E DAL 27 AGOSTO 2026 IL PREDICATO NON E' PIU' QUI: sta in C1, e ci sta
-        **una volta sola** per tutte e nove le maglie (§1.47).  ⚠ Questa maglia
-        e C3 ce l'avevano giusto ma in copia propria; C1, C5, C6, C7 e C9 ce
-        l'avevano SBAGLIATO — cinque volte la stessa riga, cinque volte lo
-        stesso difetto.  ⇒ Due copie giuste sono comunque due posti da cui
-        divergere il giorno che il cliente cambia la frase.
-    ⛔ `False` non e' un rosso del prodotto: un cliente respinto e' un cliente
-       respinto, e chi chiama esce **3**.
+    ⛔⛔ AND SINCE 27 AUGUST 2026 THE PREDICATE IS NO LONGER HERE: it lives in C1, and it lives there
+        **only once** for all nine meshes (§1.47).  ⚠ This mesh
+        and C3 had it right but in their own copy; C1, C5, C6, C7 and C9 had
+        it WRONG — five times the same line, five times the same
+        defect.  ⇒ Two right copies are still two places to
+        diverge from the day the client changes the sentence.
+    ⛔ `False` is not a product red: a client turned away is a client
+       turned away, and the caller exits **3**.
     """
     return casa_di_c1().e_stato_ammesso(coda)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐ I GIUDICI SI IMPORTANO, NON SI RISCRIVONO — `banchi/10-f1-testimone.py`
+# ⭐ THE JUDGES ARE IMPORTED, NOT REWRITTEN — `banchi/10-f1-testimone.py`
 #
-# ⛔ Due giudici che possono divergere in silenzio sono peggio di uno: il giorno
-#    che divergono, il rosso lo darebbe quello sbagliato.  ⇒ Qui se ne importano
-#    **due**, e nessuno dei due e' scritto in questo file:
+# ⛔ Two judges that can diverge silently are worse than one: the day
+#    they diverge, the red would be given by the wrong one.  ⇒ Here **two** are
+#    imported, and neither of them is written in this file:
 #
-#      `10-f1-testimone.py`   `giudica()` — dice se un'immagine e' nera,
-#                             quasi-nera, di tinta unita o disegnata.  ⭐ E'
-#                             tarato sul vero (25 agosto 2026, desktop nero
-#                             misurato, soglia messa in mezzo al vuoto fra i
-#                             due mondi).
-#      `11-c8-…py`            `frazione_del_colore()` — dice quanta parte di
-#                             un'immagine e' di un colore dato, entro una
-#                             tolleranza.  ⭐ E' gia' certificato (8 casi su 8,
-#                             26 agosto 2026) e prende il colore e la tolleranza
-#                             come ARGOMENTI: quindi si usa con i numeri di C2
-#                             senza ereditare quelli di C8.
+#      `10-f1-testimone.py`   `giudica()` — says whether an image is black,
+#                             near-black, solid colour or drawn.  ⭐ It is
+#                             calibrated on the real thing (25 August 2026, black desktop
+#                             measured, threshold put in the middle of the gap between the
+#                             two worlds).
+#      `11-c8-…py`            `frazione_del_colore()` — says how much of
+#                             an image is of a given colour, within a
+#                             tolerance.  ⭐ It is already certified (8 cases of 8,
+#                             26 August 2026) and takes the colour and the tolerance
+#                             as ARGUMENTS: so it is used with C2's numbers
+#                             without inheriting C8's.
 #
-# ⛔ Se uno dei due manca, questa maglia esce **3**: non si ripiega su un
-#    giudizio piu' povero senza dirlo.
+# ⛔ If one of the two is missing, this mesh exits **3**: we do not fall back on a
+#    poorer judgement without saying so.
 # ═══════════════════════════════════════════════════════════════════════════
 def _carica(nome_file, mestieri):
-    """Carica un modulo accanto a me (o un piano sopra) e ne pretende i mestieri.
+    """Loads a module next to me (or one level up) and demands its trades.
 
-    ⚠ «un piano sopra» serve al portatile: nella scatola tutto sta in
-      `/opt/remotix`, ma nel deposito `10-f1-testimone.py` sta in `banchi/` e
-      questa maglia in `banchi/11-scatole/`.  ⛔ Senza, `--certifica` non
-      potrebbe girare dove il documento di fase dice che deve girare.
+    ⚠ «one level up» serves the laptop: in the box everything is in
+      `/opt/remotix`, but in the repository `10-f1-testimone.py` is in `banchi/` and
+      this mesh in `banchi/11-scatole/`.  ⛔ Without it, `--certifica` could not
+      run where the phase document says it must run.
     """
     for base in (QUI, os.path.dirname(QUI)):
         perc = os.path.join(base, nome_file)
@@ -371,9 +371,9 @@ def _carica(nome_file, mestieri):
             spec.loader.exec_module(m)
         except Exception:
             return None, perc
-        # ⛔ E si VERIFICA che ci sia quel che serve, invece di fidarsi del nome
-        #    del file: `CODER.md` §3.9 — chiedi il pezzo per nome, e verifica
-        #    che l'abbia obbedito.
+        # ⛔ And we VERIFY that what is needed is there, instead of trusting the name
+        #    of the file: `CODER.md` §3.9 — ask for the piece by name, and verify
+        #    that it obeyed.
         for mestiere in mestieri:
             if not callable(getattr(m, mestiere, None)):
                 return None, perc
@@ -390,19 +390,19 @@ def lettore_del_colore():
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐ C8 E' ANCHE LA CASA DELLA PROVVISTA — e da li' vengono TRE mestieri
+# ⭐⭐ C8 IS ALSO THE HOME OF THE PROVISIONING — and THREE trades come from there
 #
-# ⛔ Non se ne fa una copia qui: la regola di `/tmp/mozilla` scritta in due
-#    posti e' due posti da cui divergere, ed e' precisamente l'errore che il
-#    27 agosto 2026 e' costato un giro intero.  ⇒ Si importa.
+# ⛔ No copy is made here: the `/tmp/mozilla` rule written in two
+#    places is two places to diverge from, and it is precisely the error that on
+#    27 August 2026 cost a whole round.  ⇒ It is imported.
 #
-#   · `applica_la_cura(chi)`          — le righe di `src/provisiona.sh`: una
-#        `~/.cache` VERA all'inquilino che creiamo noi.  ⭐ E' questa che rende
-#        la maglia immune, non uno sgombero.
-#   · `sa_scrivere_nella_cache(chi)`  — E1: non si dichiara la cura, si PROVA a
-#        scrivere in `~/.cache/mozilla`.
-#   · `sgombra_il_posto_condiviso(b)` — toglie `/tmp/mozilla` ⛔ soltanto se e'
-#        di un inquilino della base `b`, cioe' MIO.
+#   · `applica_la_cura(chi)`          — the lines of `src/provisiona.sh`: a
+#        REAL `~/.cache` for the tenant we create.  ⭐ It is this that makes
+#        the mesh immune, not a cleanup.
+#   · `sa_scrivere_nella_cache(chi)`  — E1: the cure is not declared, we TRY to
+#        write into `~/.cache/mozilla`.
+#   · `sgombra_il_posto_condiviso(b)` — removes `/tmp/mozilla` ⛔ only if it
+#        belongs to a tenant of base `b`, i.e. MINE.
 # ═══════════════════════════════════════════════════════════════════════════
 _MESTIERI_C8 = ("applica_la_cura", "sa_scrivere_nella_cache",
                 "sgombra_il_posto_condiviso")
@@ -410,7 +410,7 @@ _C8 = None
 
 
 def casa_di_c8():
-    """⭐ Il modulo di C8, o `None`.  ⛔ Qui non si esce: chi chiama decide."""
+    """⭐ C8's module, or `None`.  ⛔ We do not exit here: the caller decides."""
     global _C8
     if _C8 is None:
         _C8, _ = _carica("11-c8-il-secondo-apre-il-browser.py", _MESTIERI_C8)
@@ -418,21 +418,21 @@ def casa_di_c8():
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐ C1 E' LA CASA DEI DUE PASSI COMUNI A TUTTE E NOVE LE MAGLIE — §1.47
+# ⭐⭐ C1 IS THE HOME OF THE TWO STEPS COMMON TO ALL NINE MESHES — §1.47
 #
-# ⛔ Non e' comodita': e' che una riga ripetuta in nove file e' **nove posti da
-#    cui divergere**, ed erano gia' divergiti.  Da `11-c1-nasce-e-si-vede.py`
-#    vengono:
+# ⛔ It is not convenience: it is that a line repeated in nine files is **nine places
+#    to diverge from**, and they had already diverged.  From `11-c1-nasce-e-si-vede.py`
+#    come:
 #
-#   · `e_stato_ammesso(coda)`   — «il cliente e' stato AMMESSO?», che ⛔ non e'
-#        la parola dentro un testo: il cliente la stampa anche nei DUE messaggi
-#        di rifiuto, e sullo stdout (`01-b3-cliente.py:1315`, `:1322`, `:2560`).
-#   · `garantisci_i_gruppi(chi)` — i gruppi dei nodi `/dev/dri`, ⛔ senza i
-#        quali `[M]` la sessione nasce CIECA (0 su 4, zero fotogrammi,
-#        `fasi/10-…` §7.4) e questa maglia misurerebbe il buio.
+#   · `e_stato_ammesso(coda)`   — «was the client ADMITTED?», which ⛔ is not
+#        the word inside a text: the client prints it also in the TWO refusal
+#        messages, and on stdout (`01-b3-cliente.py:1315`, `:1322`, `:2560`).
+#   · `garantisci_i_gruppi(chi)` — the groups of the `/dev/dri` nodes, ⛔ without
+#        which `[M]` the session is born BLIND (0 of 4, zero frames,
+#        `fasi/10-…` §7.4) and this mesh would measure the darkness.
 #
-# ⛔ Se C1 non si carica si esce **3** e lo si dice: ⛔ non si ripiega in
-#    silenzio su un giudizio piu' povero.
+# ⛔ If C1 does not load we exit **3** and say so: ⛔ we do not silently fall back
+#    on a poorer judgement.
 # ═══════════════════════════════════════════════════════════════════════════
 _MESTIERI_C1 = ("e_stato_ammesso", "certifica_ammissione",
                 "garantisci_i_gruppi", "verdetto_gruppi", "certifica_gruppi")
@@ -444,144 +444,144 @@ def casa_di_c1():
     if _C1 is None:
         _C1, _perc = _carica("11-c1-nasce-e-si-vede.py", _MESTIERI_C1)
     if _C1 is None:
-        print("⛔ non trovo `11-c1-nasce-e-si-vede.py` accanto a me, e da li'")
-        print("   vengono il predicato dell'ammissione e la garanzia dei")
-        print("   gruppi della scheda — che stanno in un posto solo (§1.47).")
-        print("⇒ non ho potuto guardare — ⛔ e NON e' un rosso (§4.5).")
+        print("⛔ I cannot find `11-c1-nasce-e-si-vede.py` next to me, and from there")
+        print("   come the admission predicate and the guarantee of the")
+        print("   card's groups — which live in one place only (§1.47).")
+        print("⇒ I could not look — ⛔ and it is NOT a red (§4.5).")
         sys.exit(3)
     return _C1
 
 
 def garantisci_i_gruppi(chi, prefisso="   "):
-    """⭐⭐ I GRUPPI DELLA SCHEDA — `(esito, perche)`; `0` = si puo' misurare.
+    """⭐⭐ THE CARD'S GROUPS — `(esito, perche)`; `0` = it can be measured.
 
-    ⛔ Fino al 27 agosto 2026 questa maglia creava l'inquilino con
-       `usermod -aG video,render` **e non rileggeva**: due nomi inchiodati (che
-       sono di UNA distribuzione) e nessuna verifica — E1, «scritto non e' in
-       vigore».  ⭐ Il lavoro lo fa `attrezzi-gruppi-scheda.sh`, che legge i gid
-       dai NODI e rilegge confrontando i numeri.  ⛔ Non se ne fa una copia qui.
+    ⛔ Until 27 August 2026 this mesh created the tenant with
+       `usermod -aG video,render` **and did not read back**: two nailed-down names (which
+       belong to ONE distribution) and no verification — E1, «written is not in
+       force».  ⭐ The work is done by `attrezzi-gruppi-scheda.sh`, which reads the gids
+       from the NODES and reads back comparing the numbers.  ⛔ No copy of it is made here.
     """
     return casa_di_c1().garantisci_i_gruppi(chi, prefisso)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐ IL GIUDIZIO — e sta in una funzione PURA, cosi' `--certifica` puo'
-#    farlo girare su immagini finte senza accendere niente.
+# ⭐⭐ THE JUDGEMENT — and it lives in a PURE function, so `--certifica` can
+#    run it on fake images without switching anything on.
 # ═══════════════════════════════════════════════════════════════════════════
 def giudica_il_giro(primo, ultimo, giudica, frazione, processi,
                     frazione_minima=FRAZIONE_MINIMA, margine=MARGINE):
-    """Dati il PRIMO e l'ULTIMO fotogramma della presa, dice se la finestra si vede.
+    """Given the FIRST and the LAST frame of the grab, says whether the window is seen.
 
-    `giudica`  = `10-f1-testimone.py:giudica`  (nero / quasi-nero / disegnato)
-    `frazione` = una funzione (percorso) -> frazione del colore, oppure `None`
-    `processi` = quanti processi dell'applicazione erano vivi.  ⛔⛔ **NON entra
-                 nel verdetto**: viene riportato e basta.  E' precisamente la
-                 grandezza che `fasi/10…` §7.4 ha misurato uguale (1) nei due
-                 casi opposti, ⇒ farla decidere qui vorrebbe dire rifare
-                 l'errore che questa maglia esiste per non ripetere.
+    `giudica`  = `10-f1-testimone.py:giudica`  (black / near-black / drawn)
+    `frazione` = a function (path) -> fraction of the colour, or `None`
+    `processi` = how many processes of the application were alive.  ⛔⛔ **It does NOT enter
+                 the verdict**: it is only reported.  It is precisely the
+                 quantity that `fasi/10…` §7.4 measured equal (1) in the two
+                 opposite cases, ⇒ letting it decide here would mean repeating
+                 the error this mesh exists not to repeat.
 
-    Torna un dizionario con `stato` fra:
-        "vista"     ⭐ la finestra si vede            ⇒ verde
-        "non-vista"    la finestra NON si vede       ⇒ rosso
-        "non-lo-so" ⛔ non ho potuto guardare         ⇒ ne' verde ne' rosso
+    Returns a dictionary with `stato` among:
+        "vista"     ⭐ the window is seen             ⇒ green
+        "non-vista"    the window is NOT seen        ⇒ red
+        "non-lo-so" ⛔ I could not look               ⇒ neither green nor red
     """
     esito = {"stato": "non-lo-so", "perche": "", "frazione_prima": None,
              "frazione_dopo": None, "desktop_prima": None, "processi": processi}
 
     g = giudica(primo) if primo else None
     if g is None:
-        esito["perche"] = ("il PRIMO fotogramma non si e' lasciato guardare "
-                           "(non c'e', e' vuoto, o non e' un'immagine)")
+        esito["perche"] = ("the FIRST frame could not be looked at "
+                           "(it is not there, it is empty, or it is not an image)")
         return esito
     esito["desktop_prima"] = g["verdetto"]
-    # ⛔ La guardia che vale piu' di tutte, ed e' la stessa di C8: **un desktop
-    #    nero non testimonia su una finestra.**  Chiamare «rosso di C2» uno
-    #    schermo che era nero prima ancora che l'applicazione esistesse vorrebbe
-    #    dire dare la colpa all'applicazione di una cosa successa prima di lei.
+    # ⛔ The guard that is worth more than all the others, and it is the same as C8: **a black
+    #    desktop does not testify about a window.**  Calling «C2's red» a
+    #    screen that was black even before the application existed would
+    #    mean blaming the application for something that happened before it.
     if g["verdetto"] in ("nero", "quasi-nero"):
-        esito["perche"] = ("il desktop era «%s» PRIMA dell'applicazione: la "
-                           "sessione non aveva niente da mostrare, e questo non "
-                           "e' un giudizio su C2" % g["verdetto"])
+        esito["perche"] = ("the desktop was «%s» BEFORE the application: the "
+                           "session had nothing to show, and this is not "
+                           "a judgement on C2" % g["verdetto"])
         return esito
 
     fp = frazione(primo)
     fd = frazione(ultimo) if ultimo else None
     esito["frazione_prima"], esito["frazione_dopo"] = fp, fd
     if fp is None or fd is None:
-        esito["perche"] = ("non ho potuto leggere %s fotogramma"
-                           % ("il PRIMO" if fp is None else "l'ULTIMO"))
+        esito["perche"] = ("I could not read %s frame"
+                           % ("the FIRST" if fp is None else "the LAST"))
         return esito
 
     if fd < frazione_minima:
         esito["stato"] = "non-vista"
-        esito["perche"] = ("il colore dichiarato copre il %.1f%% dello schermo, "
-                           "sotto il %.0f%% preteso" % (fd * 100, frazione_minima * 100))
+        esito["perche"] = ("the declared colour covers %.1f%% of the screen, "
+                           "below the %.0f%% demanded" % (fd * 100, frazione_minima * 100))
         return esito
     if fd - fp < margine:
-        # ⭐ Il caso che il margine esiste per prendere: il colore c'era GIA'.
+        # ⭐ The case the margin exists to catch: the colour was ALREADY there.
         esito["stato"] = "non-vista"
-        esito["perche"] = ("il colore copre il %.1f%%, ⛔ ma ne copriva gia' il "
-                           "%.1f%% PRIMA: cresciuto di %.1f punti, sotto i %.0f "
-                           "pretesi ⇒ questa finestra non l'ha aperta la mia "
-                           "applicazione" % (fd * 100, fp * 100, (fd - fp) * 100,
-                                             margine * 100))
+        esito["perche"] = ("the colour covers %.1f%%, ⛔ but it already covered "
+                           "%.1f%% BEFORE: grown by %.1f points, below the %.0f "
+                           "demanded ⇒ this window was not opened by my "
+                           "application" % (fd * 100, fp * 100, (fd - fp) * 100,
+                                            margine * 100))
         return esito
     esito["stato"] = "vista"
-    esito["perche"] = ("il colore dichiarato copre il %.1f%% dello schermo "
-                       "(ne copriva il %.1f%% prima: +%.1f punti)"
+    esito["perche"] = ("the declared colour covers %.1f%% of the screen "
+                       "(it covered %.1f%% before: +%.1f points)"
                        % (fd * 100, fp * 100, (fd - fp) * 100))
     return esito
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⛔ LA CERTIFICAZIONE — si dimostra che il giudice sa dare VERDE, ROSSO e
-#    «NON LO SO», e che le soglie sono attraversate nei DUE versi.
+# ⛔ THE CERTIFICATION — it proves that the judge can give GREEN, RED and
+#    «I DO NOT KNOW», and that the thresholds are crossed in BOTH directions.
 # ═══════════════════════════════════════════════════════════════════════════
 def certifica():
-    """⚠ E si dichiara che cosa copre e che cosa no.
+    """⚠ And it declares what it covers and what it does not.
 
-    COPRE tre cose, e la terza e' quella che si dimentica:
-      1. **il giudice** — il colore ritrovato quando c'e' e non quando non c'e';
-         una finestra gia' aperta che non passa per una nuova; un desktop nero
-         PRIMA che da' «non lo so» e non rosso; ⭐ e le tre soglie attraversate
-         **al bordo**, un livello sopra e uno sotto;
-      2. ⭐ che **il conto dei processi non decida niente** — nei due versi:
-         conti uguali con verdetti opposti, e conti diversissimi con lo stesso
-         verdetto;
-      3. ⭐⭐⭐ **il GIUNTO**: il codice d'uscita col guasto innestato, che e'
-         **invertito** e da cui C13 ricava se la rete sa ancora dare rosso.
-         ⛔ E' il pezzo che `LEZIONI.md` §1.52 e' nata per, e che nessuna delle
-         due certificazioni di allora copriva.
-    ⛔ NON COPRE, e va detto perche' e' la meta' che conta:
-      · che l'applicazione parta davvero dentro la sessione, ne' che il palco
-        nasca — quello lo dicono i guasti innestati **sul vero**;
-      · ⚠⚠ **che `TOLLERANZA = 48` sia il numero giusto DOPO IL PERCORSO VERO.**
-        Qui le immagini sono sintetiche e non hanno mai attraversato ne' la
-        codifica H.264 in 4:2:0 ne' un profilo di colore.  ⇒ Questa
-        certificazione prova che il confronto **cade dove dice di cadere**, non
-        che 48 basti.  ⛔ Quello si tara sul vero, e finche' non e' fatto la
-        tolleranza resta una `[?]`.
+    It COVERS three things, and the third is the one that gets forgotten:
+      1. **the judge** — the colour found when it is there and not when it is not;
+         a window already open that does not pass for a new one; a black desktop
+         BEFORE that gives «I do not know» and not red; ⭐ and the three thresholds crossed
+         **at the edge**, one level above and one below;
+      2. ⭐ that **the process count decides nothing** — in both directions:
+         equal counts with opposite verdicts, and very different counts with the same
+         verdict;
+      3. ⭐⭐⭐ **the JOINT**: the exit code with the grafted fault, which is
+         **inverted** and from which C13 derives whether the net can still say red.
+         ⛔ It is the piece `LEZIONI.md` §1.52 was born for, and which neither of the
+         two certifications of the time covered.
+    ⛔ It DOES NOT COVER, and it must be said because it is the half that matters:
+      · that the application really starts inside the session, nor that the stage
+        is born — that is said by the grafted faults **on the real thing**;
+      · ⚠⚠ **that `TOLLERANZA = 48` is the right number AFTER THE REAL PATH.**
+        Here the images are synthetic and have never gone through either the
+        H.264 encoding in 4:2:0 or a colour profile.  ⇒ This
+        certification proves that the comparison **falls where it says it falls**, not
+        that 48 is enough.  ⛔ That is calibrated on the real thing, and until it is done the
+        tolerance stays a `[?]`.
     """
     try:
         import numpy as np
         from PIL import Image
     except ImportError:
-        print("⛔ mancano numpy o Pillow: non posso nemmeno certificarmi")
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ numpy or Pillow is missing: I cannot even certify myself")
+        print("   ⇒ I could not look")
         return 3
     import tempfile
 
     giudice, dove_g = giudice_del_desktop()
     lettore, dove_l = lettore_del_colore()
     if giudice is None:
-        print("⛔ non trovo (o non regge) il giudice delle immagini "
+        print("⛔ I cannot find (or it does not hold up) the image judge "
               "10-f1-testimone.py%s" % (" in %s" % dove_g if dove_g else ""))
-        print("   ⇒ non ho potuto guardare")
+        print("   ⇒ I could not look")
         return 3
     if lettore is None:
-        print("⛔ non trovo (o non regge) il lettore del colore di C8%s"
+        print("⛔ I cannot find (or it does not hold up) C8's colour reader%s"
               % (" in %s" % dove_l if dove_l else ""))
-        print("   ⇒ non ho potuto guardare")
+        print("   ⇒ I could not look")
         return 3
 
     def frazione(p):
@@ -590,12 +590,12 @@ def certifica():
     lav = tempfile.mkdtemp(prefix="c2cert-")
 
     def dipingi_righe(nome, fondo, finestra, righe, disegno=True):
-        """⭐ La finestra si dipinge per RIGHE ESATTE, non per quota.
+        """⭐ The window is painted by EXACT ROWS, not by share.
 
-        ⛔ Serve ad attraversare le soglie **al bordo**: con una quota tonda si
-           prova solo il verso del confronto, non il punto in cui cade — e un
-           numero che si puo' cambiare di venti punti senza che la
-           certificazione se ne accorga non e' tarato, e' solo scritto
+        ⛔ It serves to cross the thresholds **at the edge**: with a round share one
+           tests only the direction of the comparison, not the point where it falls — and a
+           number that can be changed by twenty points without the
+           certification noticing is not calibrated, it is only written
            (`LEZIONI.md` §1.50).
         """
         a = np.zeros((216, 384, 3), dtype="uint8")
@@ -610,17 +610,17 @@ def certifica():
         return p
 
     def dipingi(nome, fondo, finestra=None, quota=1.0, disegno=True):
-        """Un desktop finto: un fondo, un po' di roba sopra, e forse una finestra.
+        """A fake desktop: a background, a bit of stuff on top, and maybe a window.
 
-        ⚠ `disegno=True` mette del rumore ordinato sopra il fondo — serve
-          perche' il giudice di 10-f1 dichiara «tinta unita» uno schermo di un
-          colore solo, e un desktop vero non lo e' mai.
+        ⚠ `disegno=True` puts ordered noise over the background — it is needed
+          because the 10-f1 judge declares «solid colour» a screen of a
+          single colour, and a real desktop never is.
         """
         a = np.zeros((216, 384, 3), dtype="uint8")
         a[:, :] = fondo
         if disegno:
             a[::7, ::5] = (210, 214, 220)
-            a[0:12, :] = (30, 32, 36)          # la barra in alto
+            a[0:12, :] = (30, 32, 36)          # the bar at the top
         if finestra is not None and quota > 0:
             righe = max(1, int(216 * quota))
             a[216 - righe:, :] = finestra
@@ -631,13 +631,13 @@ def certifica():
     FONDO = (58, 62, 70)
     nudo = dipingi("nudo", FONDO)
     nero = dipingi("nero", (0, 0, 0), disegno=False)
-    # ⭐ «quasi-nero»: nero con la barra di GNOME accesa — e' il caso vero
-    #   misurato da 10-f1 il 25 agosto 2026, non un'invenzione: `[M]` desktop col
-    #   fondo a `#000000`, la barra in alto porta l'orologio e le icone ⇒ accesi
-    #   **0,00121** (appena sopra la soglia del nero) e media **0,28** (sotto la
-    #   soglia del quasi-nero).  ⛔ I pochi pixel accesi qui sotto sono tarati per
-    #   riprodurre quei due numeri, non messi a occhio: con troppa roba accesa
-    #   l'immagine diventa «disegnata» e il caso non proverebbe piu' niente.
+    # ⭐ «near-black»: black with the GNOME bar on — it is the real case
+    #   measured by 10-f1 on 25 August 2026, not an invention: `[M]` desktop with
+    #   background `#000000`, the top bar carries the clock and the icons ⇒ lit
+    #   **0.00121** (just above the black threshold) and mean **0.28** (below the
+    #   near-black threshold).  ⛔ The few lit pixels below are calibrated to
+    #   reproduce those two numbers, not put in by eye: with too much stuff lit
+    #   the image becomes «drawn» and the case would no longer prove anything.
     quasinero = dipingi("quasinero", (0, 0, 0), disegno=False)
     _q = np.asarray(Image.open(quasinero).convert("RGB")).copy()
     _q[0:5, ::20] = (200, 200, 200)
@@ -648,48 +648,48 @@ def certifica():
     troppo = tuple(min(255, max(0, c + s))
                    for c, s in zip(COLORE, (+120, -120, -120)))
 
-    # (nome, primo, ultimo, processi, stato atteso)
+    # (name, first, last, processes, expected state)
     casi = [
-        ("la finestra si apre",
+        ("the window opens",
          nudo, dipingi("piena", FONDO, COLORE, 0.85), 1, "vista"),
-        ("nessuna finestra: lo schermo e' quello di prima",
+        ("no window: the screen is the one from before",
          nudo, dipingi("uguale", FONDO), 0, "non-vista"),
-        # ⭐⭐ IL CASO CHE VALE PIU' DI TUTTI, ed e' la riga di §4.1:
-        #    stesso conto dei processi, verdetti opposti.
-        ("⭐ processo VIVO e nessuna finestra (il caso di fasi/10 §7.4)",
+        # ⭐⭐ THE CASE WORTH MORE THAN ALL OTHERS, and it is the line of §4.1:
+        #    same process count, opposite verdicts.
+        ("⭐ process ALIVE and no window (the case of fasi/10 §7.4)",
          nudo, dipingi("viva-cieca", FONDO), 1, "non-vista"),
-        ("⭐ colore SPOSTATO di %s: dev'essere VERDE" % (spostato,),
+        ("⭐ colour SHIFTED by %s: must be GREEN" % (spostato,),
          nudo, dipingi("spostata", FONDO, spostato, 0.85), 1, "vista"),
-        ("colore spostato TROPPO %s: dev'essere ROSSO" % (troppo,),
+        ("colour shifted TOO MUCH %s: must be RED" % (troppo,),
          nudo, dipingi("troppo", FONDO, troppo, 0.85), 1, "non-vista"),
-        ("una macchia piccola non e' una finestra",
+        ("a small spot is not a window",
          nudo, dipingi("macchia", FONDO, COLORE, 0.05), 1, "non-vista"),
-        # ⛔ Il caso del MARGINE: la finestra c'era gia' prima.
-        ("⛔ la finestra c'era GIA' prima (residuo di un altro giro)",
+        # ⛔ The MARGIN case: the window was already there before.
+        ("⛔ the window was ALREADY there before (leftover of another round)",
          dipingi("gia-aperta", FONDO, COLORE, 0.85),
          dipingi("ancora-aperta", FONDO, COLORE, 0.87), 1, "non-vista"),
-        # ⛔ E i due «non lo so», che NON sono rossi.
-        ("⛔ il desktop era NERO prima ⇒ non lo so",
+        # ⛔ And the two «I do not know», which are NOT reds.
+        ("⛔ the desktop was BLACK before ⇒ I do not know",
          nero, dipingi("dopo-nero", FONDO, COLORE, 0.85), 1, "non-lo-so"),
-        ("⛔ il desktop era QUASI-NERO prima ⇒ non lo so",
+        ("⛔ the desktop was NEAR-BLACK before ⇒ I do not know",
          quasinero, dipingi("dopo-qn", FONDO, COLORE, 0.85), 1, "non-lo-so"),
-        ("⛔ il primo fotogramma non c'e' ⇒ non lo so",
+        ("⛔ the first frame is not there ⇒ I do not know",
          os.path.join(lav, "manca.png"),
          dipingi("dopo-manca", FONDO, COLORE, 0.85), 1, "non-lo-so"),
     ]
-    # un file vuoto: «non ho guardato», non «era nero»
+    # an empty file: «I did not look», not «it was black»
     vuoto = os.path.join(lav, "vuoto.png")
     open(vuoto, "wb").close()
-    casi.append(("⛔ il primo fotogramma e' vuoto ⇒ non lo so",
+    casi.append(("⛔ the first frame is empty ⇒ I do not know",
                  vuoto, dipingi("dopo-vuoto", FONDO, COLORE, 0.85), 1, "non-lo-so"))
-    casi.append(("⛔ l'ultimo fotogramma non c'e' ⇒ non lo so",
+    casi.append(("⛔ the last frame is not there ⇒ I do not know",
                  nudo, os.path.join(lav, "manca2.png"), 1, "non-lo-so"))
 
-    print("== certificazione del giudice di C2 ==")
-    print("   giudice del desktop : %s" % dove_g)
-    print("   lettore del colore  : %s" % dove_l)
-    print("   colore %s · tolleranza ±%d per canale · almeno il %.0f%% dello "
-          "schermo · margine %.0f punti"
+    print("== certification of C2's judge ==")
+    print("   desktop judge : %s" % dove_g)
+    print("   colour reader : %s" % dove_l)
+    print("   colour %s · tolerance ±%d per channel · at least %.0f%% of the "
+          "screen · margin %.0f points"
           % (COLORE, TOLLERANZA, FRAZIONE_MINIMA * 100, MARGINE * 100))
     print()
     guai = 0
@@ -697,16 +697,16 @@ def certifica():
         e = giudica_il_giro(primo, ultimo, giudice.giudica, frazione, proc)
         ok = e["stato"] == atteso
         guai += 0 if ok else 1
-        print("  %s  %-56s  processi=%s  ⇒ %-10s (atteso %s)"
+        print("  %s  %-56s  processes=%s  ⇒ %-10s (expected %s)"
               % ("OK " if ok else "NO ", nome, proc, e["stato"], atteso))
         if not ok:
-            print("        ⛔ ha detto: %s" % e["perche"])
+            print("        ⛔ it said: %s" % e["perche"])
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ⭐⭐ E LA DIMOSTRAZIONE ESPLICITA, con un numero invece che con una frase:
-    #    **due giri con LO STESSO conto dei processi e verdetti OPPOSTI.**
-    # ⛔ Senza questo, «il conto dei processi non basta» resterebbe una citazione
-    #    di un documento; con questo e' un fatto che la maglia produce da se'.
+    # ⭐⭐ AND THE EXPLICIT PROOF, with a number instead of a sentence:
+    #    **two rounds with THE SAME process count and OPPOSITE verdicts.**
+    # ⛔ Without this, «the process count is not enough» would remain a quotation
+    #    from a document; with this it is a fact the mesh produces by itself.
     # ═══════════════════════════════════════════════════════════════════════
     print()
     a = giudica_il_giro(nudo, dipingi("dim-si", FONDO, COLORE, 0.85),
@@ -716,202 +716,202 @@ def certifica():
     dimostrato = (a["stato"] == "vista" and b["stato"] == "non-vista"
                   and a["processi"] == b["processi"] == 1)
     guai += 0 if dimostrato else 1
-    print("  %s  ⭐ IL CONTO DEI PROCESSI NON BASTA: processi 1 e 1, "
-          "verdetti «%s» e «%s»"
+    print("  %s  ⭐ THE PROCESS COUNT IS NOT ENOUGH: processes 1 and 1, "
+          "verdicts «%s» and «%s»"
           % ("OK " if dimostrato else "NO ", a["stato"], b["stato"]))
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ⭐ E LA LETTURA DEL COMPOSITORE: `wayland-info` dice o non dice che c'e'
-    #   uno schermo.  ⛔ Un «non lo so» e uno «zero schermi» non sono la stessa
-    #   cosa (`LEZIONI.md` §1.47), e qui si certifica che non si somigliano.
+    # ⭐ AND THE COMPOSITOR READING: `wayland-info` says or does not say that there is
+    #   a screen.  ⛔ An «I do not know» and a «zero screens» are not the same
+    #   thing (`LEZIONI.md` §1.47), and here it is certified that they do not look alike.
     # ═══════════════════════════════════════════════════════════════════════
     print()
     letture = [
-        ("due schermi annunciati",
+        ("two screens announced",
          "interface: 'wl_compositor', version: 6, name: 1\n"
          "interface: 'wl_output', version: 4, name: 42\n"
          "interface: 'wl_output', version: 4, name: 43\n", 2),
-        ("uno schermo annunciato",
+        ("one screen announced",
          "interface: 'wl_output', version: 4, name: 42\n", 1),
-        ("⛔ nessuno schermo: il compositore c'e' e non ha uscite",
+        ("⛔ no screen: the compositor is there and has no outputs",
          "interface: 'wl_compositor', version: 6, name: 1\n"
          "interface: 'wl_seat', version: 9, name: 5\n", 0),
-        ("⚠ un nome che CONTIENE wl_output non e' wl_output",
+        ("⚠ a name that CONTAINS wl_output is not wl_output",
          "interface: 'zwlr_wl_output_manager_v1', version: 1, name: 7\n", 0),
     ]
     for nome, testo, atteso in letture:
         n = quanti_schermi(testo)
         ok = n == atteso
         guai += 0 if ok else 1
-        print("  %s  %-56s  schermi=%s (atteso %s)"
+        print("  %s  %-56s  screens=%s (expected %s)"
               % ("OK " if ok else "NO ", nome, n, atteso))
     n = quanti_schermi(None)
     ok = n is None
     guai += 0 if ok else 1
-    print("  %s  %-56s  schermi=%s (atteso «non lo so»)"
-          % ("OK " if ok else "NO ", "⛔ wayland-info non ha parlato ⇒ non lo so",
-             "non lo so" if n is None else n))
+    print("  %s  %-56s  screens=%s (expected «I do not know»)"
+          % ("OK " if ok else "NO ", "⛔ wayland-info did not speak ⇒ I do not know",
+             "unknown" if n is None else n))
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ⭐⭐ «IL CLIENTE E' STATO AMMESSO?» — e la parola dentro un testo NON basta.
+    # ⭐⭐ «WAS THE CLIENT ADMITTED?» — and the word inside a text is NOT enough.
     #
-    # ⛔ `[R]` `01-b3-cliente.py` scrive «AMMESSO» in tutt'e tre i casi: quando
-    #    e' stato ammesso, quando ha ricevuto un CONGEDO al posto dell'AMMESSO,
-    #    e quando ne aspettava uno e ne e' arrivato un altro.  ⇒ `"AMMESSO" in
-    #    testo` sarebbe **vero anche sui due rifiuti**, cioe' un predicato che
-    #    non puo' dire di no (`LEZIONI.md` §1.44) — proprio nei casi che il
-    #    controllo esiste per prendere.
+    # ⛔ `[R]` `01-b3-cliente.py` writes «AMMESSO» in all three cases: when
+    #    it was admitted, when it received a CONGEDO in place of the AMMESSO,
+    #    and when it was waiting for one and another arrived.  ⇒ `"AMMESSO" in
+    #    testo` would be **true also on the two refusals**, i.e. a predicate that
+    #    cannot say no (`LEZIONI.md` §1.44) — precisely in the cases the
+    #    check exists to catch.
     # ═══════════════════════════════════════════════════════════════════════
     print()
     ammissioni = [
-        ("la riga vera del cliente ammesso",
-         "   ← ECCOMI\n   AMMESSO dopo 1023 ms (ritardo fisso §4.4-bis)\n", True),
-        ("⛔ CONGEDO invece di AMMESSO — la parola c'e' e il senso e' opposto",
-         "   ⛔ RuntimeError: CONGEDO invece di AMMESSO: motivo 0x03\n", False),
-        ("⛔ «atteso AMMESSO, arrivato …» — idem",
-         "   ⛔ RuntimeError: atteso AMMESSO, arrivato CONGEDO\n", False),
-        ("⚠ una riga che NOMINA l'ammissione senza esserlo",
-         "   [reg] in attesa di AMMESSO\n", False),
-        ("il cliente non e' partito affatto",
+        ("the real line of the admitted client",
+         "   ← ECCOMI\n   AMMESSO after 1023 ms (fixed delay §4.4-bis)\n", True),
+        ("⛔ CONGEDO instead of AMMESSO — the word is there and the sense is opposite",
+         "   ⛔ RuntimeError: CONGEDO instead of AMMESSO: reason 0x03\n", False),
+        ("⛔ «expected AMMESSO, arrived …» — likewise",
+         "   ⛔ RuntimeError: expected AMMESSO, arrived CONGEDO\n", False),
+        ("⚠ a line that NAMES the admission without being it",
+         "   [reg] waiting for AMMESSO\n", False),
+        ("the client did not start at all",
          "Traceback (most recent call last):\n  ImportError: aioquic\n", False),
     ]
     for nome, testo, atteso in ammissioni:
         got = e_stato_ammesso(testo)
         ok = got is atteso
         guai += 0 if ok else 1
-        print("  %s  %-56s  ⇒ %s (atteso %s)"
+        print("  %s  %-56s  ⇒ %s (expected %s)"
               % ("OK " if ok else "NO ", nome, got, atteso))
     got = e_stato_ammesso("")
     ok = got is None
     guai += 0 if ok else 1
-    print("  %s  %-56s  ⇒ %s (atteso «non lo so»)"
-          % ("OK " if ok else "NO ", "⛔ il cliente non ha detto NIENTE",
-             "non lo so" if got is None else got))
+    print("  %s  %-56s  ⇒ %s (expected «I do not know»)"
+          % ("OK " if ok else "NO ", "⛔ the client said NOTHING",
+             "unknown" if got is None else got))
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ⭐⭐ LE TRE SOGLIE, ATTRAVERSATE **AL BORDO** — e non da lontano.
+    # ⭐⭐ THE THREE THRESHOLDS, CROSSED **AT THE EDGE** — and not from afar.
     #
-    # ⛔ Prima qui c'erano solo casi lontani: colore spostato di 30 contro 120,
-    #    frazione 0,85 contro 0,05, margine 0,85 contro 0,02.  ⚠ Con quelli si
-    #    poteva mettere `TOLLERANZA` a qualunque valore fra 31 e 119 e la
-    #    certificazione restava verde: si attraversava **il verso** del
-    #    confronto, non **la soglia**.  E siccome i tre numeri sono dichiarati
-    #    `[?]` da ritarare, e' proprio il posto in cui la trappola morde.
-    # ⇒ ⭐ Adesso ogni soglia e' provata a **un livello sopra e uno sotto**: se
-    #   qualcuno la cambia di un solo passo, un caso diventa rosso.
+    # ⛔ Before, there were only distant cases here: colour shifted by 30 against 120,
+    #    fraction 0.85 against 0.05, margin 0.85 against 0.02.  ⚠ With those one
+    #    could set `TOLLERANZA` to any value between 31 and 119 and the
+    #    certification stayed green: it crossed **the direction** of the
+    #    comparison, not **the threshold**.  And since the three numbers are declared
+    #    `[?]` to be recalibrated, it is exactly the place where the trap bites.
+    # ⇒ ⭐ Now every threshold is tested at **one level above and one below**: if
+    #   someone changes it by a single step, a case turns red.
     # ═══════════════════════════════════════════════════════════════════════
     print()
     bordo = []
     al_limite = (min(255, COLORE[0] + TOLLERANZA), COLORE[1], COLORE[2])
     oltre = (min(255, COLORE[0] + TOLLERANZA + 1), COLORE[1], COLORE[2])
-    bordo.append(("⭐ colore spostato di ESATTAMENTE ±%d ⇒ ancora VERDE" % TOLLERANZA,
+    bordo.append(("⭐ colour shifted by EXACTLY ±%d ⇒ still GREEN" % TOLLERANZA,
                   nudo, dipingi("bordo-t1", FONDO, al_limite, 0.85), "vista"))
-    bordo.append(("colore spostato di ±%d ⇒ ROSSO" % (TOLLERANZA + 1),
+    bordo.append(("colour shifted by ±%d ⇒ RED" % (TOLLERANZA + 1),
                   nudo, dipingi("bordo-t2", FONDO, oltre, 0.85), "non-vista"))
-    # la frazione: 55/216 = 0,2546 (sopra 0,25) · 53/216 = 0,2454 (sotto)
-    bordo.append(("⭐ la finestra copre il 25,5%% ⇒ VERDE (soglia %.0f%%)"
+    # the fraction: 55/216 = 0.2546 (above 0.25) · 53/216 = 0.2454 (below)
+    bordo.append(("⭐ the window covers 25.5%% ⇒ GREEN (threshold %.0f%%)"
                   % (FRAZIONE_MINIMA * 100),
                   nudo, dipingi_righe("bordo-f1", FONDO, COLORE, 55), "vista"))
-    bordo.append(("la finestra copre il 24,5% ⇒ ROSSO",
+    bordo.append(("the window covers 24.5% ⇒ RED",
                   nudo, dipingi_righe("bordo-f2", FONDO, COLORE, 53), "non-vista"))
-    # il margine: prima 65/216 = 0,3009 · dopo 111 ⇒ +0,2130 · dopo 106 ⇒ +0,1898
+    # the margin: before 65/216 = 0.3009 · after 111 ⇒ +0.2130 · after 106 ⇒ +0.1898
     gia_aperta = dipingi_righe("bordo-m0", FONDO, COLORE, 65)
-    bordo.append(("⭐ il colore cresce di 21,3 punti ⇒ VERDE (margine %.0f)"
+    bordo.append(("⭐ the colour grows by 21.3 points ⇒ GREEN (margin %.0f)"
                   % (MARGINE * 100),
                   gia_aperta, dipingi_righe("bordo-m1", FONDO, COLORE, 111), "vista"))
-    bordo.append(("il colore cresce di 19,0 punti ⇒ ROSSO",
+    bordo.append(("the colour grows by 19.0 points ⇒ RED",
                   gia_aperta, dipingi_righe("bordo-m2", FONDO, COLORE, 106),
                   "non-vista"))
     for nome, primo, ultimo, atteso in bordo:
         e = giudica_il_giro(primo, ultimo, giudice.giudica, frazione, 1)
         ok = e["stato"] == atteso
         guai += 0 if ok else 1
-        print("  %s  %-56s  ⇒ %-10s (atteso %s)"
+        print("  %s  %-56s  ⇒ %-10s (expected %s)"
               % ("OK " if ok else "NO ", nome, e["stato"], atteso))
         if not ok:
-            print("        ⛔ ha detto: %s" % e["perche"])
+            print("        ⛔ it said: %s" % e["perche"])
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ⭐ E CHE IL CONTO DEI PROCESSI NON ENTRI NEL VERDETTO — provato, non detto.
-    # ⛔ Sopra si dimostra che due conti uguali danno verdetti opposti; qui il
-    #    rovescio, che e' la meta' che mancava: **conti diversissimi sulle
-    #    stesse immagini danno lo stesso verdetto**.
+    # ⭐ AND THAT THE PROCESS COUNT DOES NOT ENTER THE VERDICT — tested, not said.
+    # ⛔ Above it is shown that two equal counts give opposite verdicts; here the
+    #    reverse, which is the half that was missing: **very different counts on the
+    #    same images give the same verdict**.
     # ═══════════════════════════════════════════════════════════════════════
     print()
     piena = dipingi("proc-si", FONDO, COLORE, 0.85)
     vuota = dipingi("proc-no", FONDO)
-    for nome, ultimo, atteso in (("con la finestra", piena, "vista"),
-                                 ("senza la finestra", vuota, "non-vista")):
+    for nome, ultimo, atteso in (("with the window", piena, "vista"),
+                                 ("without the window", vuota, "non-vista")):
         visti = set()
         for proc in (0, 1, 7, None):
             visti.add(giudica_il_giro(nudo, ultimo, giudice.giudica,
                                       frazione, proc)["stato"])
         ok = visti == {atteso}
         guai += 0 if ok else 1
-        print("  %s  ⭐ processi 0/1/7/«non lo so» %-30s ⇒ sempre «%s»"
+        print("  %s  ⭐ processes 0/1/7/«unknown» %-30s ⇒ always «%s»"
               % ("OK " if ok else "NO ", nome, ", ".join(sorted(visti))))
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ⭐⭐⭐ IL GIUNTO — il codice d'uscita col guasto innestato, nei due versi.
+    # ⭐⭐⭐ THE JOINT — the exit code with the grafted fault, in both directions.
     #
-    # ⛔ E' il pezzo che `LEZIONI.md` §1.52 e' nata per: la certificazione di C9
-    #    provava il giudice, quella di C13 la lettura del registro, ⛔ e il
-    #    difetto stava **in mezzo**, nel codice d'uscita, che non e' di nessuno
-    #    dei due mestieri.  ⇒ Qui il codice d'uscita si prova.
+    # ⛔ It is the piece `LEZIONI.md` §1.52 was born for: C9's certification
+    #    tested the judge, C13's the reading of the log, ⛔ and the
+    #    defect was **in between**, in the exit code, which belongs to neither
+    #    of the two trades.  ⇒ Here the exit code is tested.
     # ═══════════════════════════════════════════════════════════════════════
     print()
 
-    def giro(stato, frazione_dopo, processi, ucciso=None, perche="(finto)"):
+    def giro(stato, frazione_dopo, processi, ucciso=None, perche="(fake)"):
         return {"stato": stato, "frazione_dopo": frazione_dopo,
                 "processi": processi, "ucciso": ucciso, "perche": perche}
 
     giunti = [
-        ("cieca: sano verde + guasto rosso + processo vivo ⇒ 0 (visto)",
+        ("cieca: healthy green + fault red + process alive ⇒ 0 (seen)",
          "cieca", giro("vista", 0.85, 3), giro("non-vista", 0.00, 2), 0),
-        ("muore: sano verde + guasto rosso + processi 0 ⇒ 0 (visto)",
+        ("muore: healthy green + fault red + processes 0 ⇒ 0 (seen)",
          "muore", giro("vista", 0.85, 3), giro("non-vista", 0.00, 0, True), 0),
-        ("⛔ il guasto NON morde: la finestra si vede lo stesso ⇒ 1",
+        ("⛔ the fault does NOT bite: the window is seen anyway ⇒ 1",
          "cieca", giro("vista", 0.85, 3), giro("vista", 0.84, 2), 1),
-        ("⛔ morde troppo poco: 0,85 ⇒ 0,40, sopra la quota ⇒ 1",
+        ("⛔ it bites too little: 0.85 ⇒ 0.40, above the share ⇒ 1",
          "cieca", giro("vista", 0.85, 3), giro("non-vista", 0.40, 2), 1),
-        # ⭐⭐ IL CASO CHE VALE PIU' DI TUTTI, ed e' una correzione:
-        ("⭐ il CONTROLLO SANO e' rosso ⇒ 3, ⛔ NON 1 (non si accusa la rete)",
+        # ⭐⭐ THE CASE WORTH MORE THAN ALL OTHERS, and it is a correction:
+        ("⭐ the HEALTHY CONTROL is red ⇒ 3, ⛔ NOT 1 (the net is not accused)",
          "cieca", giro("non-vista", 0.01, 3), giro("non-vista", 0.00, 2), 3),
-        ("il sano non ha potuto guardare ⇒ 3",
+        ("the healthy one could not look ⇒ 3",
          "cieca", giro("non-lo-so", None, None), giro("non-vista", 0.0, 2), 3),
-        ("il guastato non ha potuto guardare ⇒ 3",
+        ("the faulted one could not look ⇒ 3",
          "cieca", giro("vista", 0.85, 3), giro("non-lo-so", None, None), 3),
-        ("⚠ firma mancante: «muore» e il processo e' ancora vivo ⇒ 3",
+        ("⚠ signature missing: «muore» and the process is still alive ⇒ 3",
          "muore", giro("vista", 0.85, 3), giro("non-vista", 0.0, 2), 3),
-        ("⚠ firma mancante: «cieca» e non c'e' nessun processo ⇒ 3",
+        ("⚠ signature missing: «cieca» and there is no process ⇒ 3",
          "cieca", giro("vista", 0.85, 3), giro("non-vista", 0.0, 0), 3),
-        ("⚠ firma mancante: `pkill` non ha trovato niente ⇒ 3",
+        ("⚠ signature missing: `pkill` found nothing ⇒ 3",
          "muore", giro("vista", 0.85, 3), giro("non-vista", 0.0, 0, False), 3),
     ]
     for nome, quale, sano, rotto, atteso in giunti:
         e, _righe = collauda_il_guasto(quale, sano, rotto)
         ok = e == atteso
         guai += 0 if ok else 1
-        print("  %s  %-62s  ⇒ esito %s (atteso %s)"
+        print("  %s  %-62s  ⇒ outcome %s (expected %s)"
               % ("OK " if ok else "NO ", nome, e, atteso))
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ⭐⭐ I GRUPPI DELLA SCHEDA — ⛔ il caso che oggi non c'era.
+    # ⭐⭐ THE CARD'S GROUPS — ⛔ the case that was missing before today.
     #
-    # ⛔ Un inquilino fuori dai gruppi dei nodi `/dev/dri` fa nascere una
-    #    sessione CIECA (`[M]` 0 su 4, zero fotogrammi, `fasi/10-…` §7.4) ⇒
-    #    questa maglia misurerebbe il buio.  ⭐ Si pretende che dica «non ho
-    #    potuto guardare», ⛔ e MAI rosso: e' un guasto del BANCO (§1.51).
-    # ⚠ I casi vivono in C1, col passo che certificano: ⛔ una copia qui
-    #   sarebbe un secondo posto da cui divergere (§1.47).
+    # ⛔ A tenant outside the groups of the `/dev/dri` nodes makes a
+    #    BLIND session be born (`[M]` 0 of 4, zero frames, `fasi/10-…` §7.4) ⇒
+    #    this mesh would measure the darkness.  ⭐ It is demanded that it says «I could
+    #    not look», ⛔ and NEVER red: it is a fault of the BENCH (§1.51).
+    # ⚠ The cases live in C1, with the step they certify: ⛔ a copy here
+    #   would be a second place to diverge from (§1.47).
     # ═══════════════════════════════════════════════════════════════════════
     print()
     guai_gr, _quanti_gr = casa_di_c1().certifica_gruppi("C2")
     guai += guai_gr
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ⭐⭐⭐ LA PROVVISTA CONDIVISA — ⛔ il caso che il 27 agosto 2026 non c'era,
-    #    ed e' costato un giro intero letto al contrario.
+    # ⭐⭐⭐ THE SHARED PROVISIONING — ⛔ the case that on 27 August 2026 was missing,
+    #    and it cost a whole round read backwards.
     # ═══════════════════════════════════════════════════════════════════════
     print()
     guai_pr, quanti_pr = certifica_la_provvista("C2", "c2u")
@@ -919,47 +919,47 @@ def certifica():
 
     print()
     if guai:
-        print("⛔ il giudice di C2 NON e' affidabile: %d casi sbagliati" % guai)
+        print("⛔ C2's judge is NOT reliable: %d cases wrong" % guai)
         return 1
-    print("⭐ il giudice vede la finestra quando c'e' e non quando non c'e', le "
-          "tre soglie cadono dove dicono,")
-    print("   ⭐ il conto dei processi non entra nel verdetto in nessuno dei due "
-          "versi, «AMMESSO» e' una riga e non una parola,")
-    print("   ⭐⭐ e il GIUNTO — il codice d'uscita col guasto innestato — dice 0, "
-          "1 e 3 dove deve (LEZIONI.md §1.52)")
-    print("   ⭐ e i GRUPPI DELLA SCHEDA: un inquilino che non vede fa dire "
-          "«non ho potuto guardare», ⛔ mai rosso")
-    # ⛔ E la riga della provvista si stampa SOLO se i casi veri sono girati:
-    #    dire «coperta» dopo averli saltati sarebbe la §1.50 in una riga.
+    print("⭐ the judge sees the window when it is there and not when it is not, the "
+          "three thresholds fall where they say,")
+    print("   ⭐ the process count does not enter the verdict in either "
+          "direction, «AMMESSO» is a line and not a word,")
+    print("   ⭐⭐ and the JOINT — the exit code with the grafted fault — says 0, "
+          "1 and 3 where it must (LEZIONI.md §1.52)")
+    print("   ⭐ and the CARD'S GROUPS: a tenant that cannot see makes it say "
+          "«I could not look», ⛔ never red")
+    # ⛔ And the provisioning line is printed ONLY if the real cases ran:
+    #    saying «covered» after skipping them would be §1.50 in one line.
     if quanti_pr >= 4:
-        print("   ⭐⭐ e LA PROVVISTA: un /tmp/mozilla di un'altra maglia non lo "
-              "tocco, e il mio inquilino scrive lo stesso — ⛔ mai rosso")
+        print("   ⭐⭐ and THE PROVISIONING: a /tmp/mozilla of another mesh I do not "
+              "touch, and my tenant writes anyway — ⛔ never red")
     else:
-        print("   ⚠ e LA PROVVISTA e' coperta SOLO a meta': i casi veri "
-              "chiedono l'amministratore, e qui non li ho girati")
-    print("⚠ e questa certificazione copre I GIUDICI E IL GIUNTO, ⛔ non "
-          "l'apertura vera della finestra ne' che ±%d basti dopo la codifica "
-          "(vedi in testa)" % TOLLERANZA)
+        print("   ⚠ and THE PROVISIONING is covered ONLY halfway: the real cases "
+              "need the administrator, and here I did not run them")
+    print("⚠ and this certification covers THE JUDGES AND THE JOINT, ⛔ not "
+          "the real opening of the window nor that ±%d is enough after the encoding "
+          "(see the top)" % TOLLERANZA)
     return 0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# IL TERRENO E LE MOSSE
+# THE TERRAIN AND THE MOVES
 # ═══════════════════════════════════════════════════════════════════════════
 def sh(comando, secondi=120):
     try:
         return subprocess.run(["/bin/sh", "-c", comando],
                               capture_output=True, text=True, timeout=secondi)
     except subprocess.TimeoutExpired:
-        return subprocess.CompletedProcess(comando, 124, "", "scaduto")
+        return subprocess.CompletedProcess(comando, 124, "", "expired")
 
 
 def quanti_schermi(testo):
-    """Quanti `wl_output` annuncia il compositore.  ⛔ `None` = non lo so.
+    """How many `wl_output` the compositor announces.  ⛔ `None` = I do not know.
 
-    ⚠ `None` e `0` sono due cose diverse e non devono somigliarsi: *«non ho
-      potuto chiedere»* e *«ho chiesto e non ce n'e' nessuno»* portano a due
-      esiti opposti (3 contro un'attesa che continua).  `LEZIONI.md` §1.47.
+    ⚠ `None` and `0` are two different things and must not look alike: *«I could
+      not ask»* and *«I asked and there is none»* lead to two
+      opposite outcomes (3 against a wait that goes on).  `LEZIONI.md` §1.47.
     """
     if testo is None:
         return None
@@ -967,154 +967,154 @@ def quanti_schermi(testo):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐⭐ LA PROVVISTA CONDIVISA — `/tmp/mozilla`, e perche' la cura sta QUI
+# ⭐⭐⭐ THE SHARED PROVISIONING — `/tmp/mozilla`, and why the cure lives HERE
 #
-# `[M]` 27 agosto 2026, giro `--famiglia tutto` su tutt'e quattro le scatole,
-#   binario `aa950804fed7`: C2 ⛔ 1 («il colore copre lo 0,0% dello schermo»),
-#   C3 ⛔ 3, C4 ⛔ 3.  ⚠ E l'immagine giudicata diceva tutt'altro: la sessione
-#   GNOME era **viva e dipinta** — pannello, dock, sfondo, Firefox acceso — ⛔ ma
-#   Firefox stava fermo sulla **finestra di scelta del profilo**.
+# `[M]` 27 August 2026, round `--famiglia tutto` on all four boxes,
+#   binary `aa950804fed7`: C2 ⛔ 1 («the colour covers 0.0% of the screen»),
+#   C3 ⛔ 3, C4 ⛔ 3.  ⚠ And the judged image said something else entirely: the GNOME
+#   session was **alive and painted** — panel, dock, background, Firefox on — ⛔ but
+#   Firefox was stuck on the **profile chooser window**.
 #
-# ⇒ LA CAUSA, letta dentro la scatola:
-#     /home/c2u1/.cache/mozilla -> /tmp/mozilla   (lo scheletro della macchina
-#                                                  vera, che C8 riproduce e
-#                                                  ⛔ NON disfa)
-#     /tmp/mozilla        di «c8u1», modo 0700
-#   cioe' il posto condiviso era rimasto al PRIMO inquilino che l'aveva preso —
-#   quello di C8/C8b, che in `famiglia tutto` gira PRIMA di me.  ⛔ Nessuno dei
-#   due banchi sbaglia da solo: e' l'ORDINE a romperli.
+# ⇒ THE CAUSE, read inside the box:
+#     /home/c2u1/.cache/mozilla -> /tmp/mozilla   (the skeleton of the real
+#                                                  machine, which C8 reproduces and
+#                                                  ⛔ does NOT undo)
+#     /tmp/mozilla        of «c8u1», mode 0700
+#   i.e. the shared place had stayed with the FIRST tenant that took it —
+#   the one of C8/C8b, which in `famiglia tutto` runs BEFORE me.  ⛔ Neither of the
+#   two benches is wrong on its own: it is the ORDER that breaks them.
 #
-# ⛔⛔ E LA CURA NON PUO' STARE IN CHI MI ACCENDE.  Per un giorno e' stata in
-#     `11-accendi.sh`; ⚠ ma una maglia che ha bisogno di essere «preparata da
-#     fuori» e', lanciata a mano o da un altro gancio, una maglia che da' un
-#     **rosso falso** — ed e' il difetto che in questa rete si paga di piu'.
+# ⛔⛔ AND THE CURE CANNOT LIVE IN WHOEVER SWITCHES ME ON.  For a day it was in
+#     `11-accendi.sh`; ⚠ but a mesh that needs to be «prepared from
+#     outside» is, when launched by hand or by another hook, a mesh that gives a
+#     **false red** — and it is the defect that costs the most in this net.
 #
-# ⭐⭐ E NON E' UNO SGOMBERO.  `src/provisiona.sh` ha gia' detto la regola —
-#     *«non si tocca `/tmp/mozilla` di chi ce l'ha gia': non e' nostro e non si
-#     sa chi lo usa»* — e ⛔ vale anche fra maglie: in parallelo (C14) l'altra
-#     maglia ci sta DENTRO, e cancellarglielo la farebbe cadere.  ⇒ La cura e'
-#     la stessa del prodotto: **una `~/.cache` vera all'inquilino che creo io**.
-#     Con quella, di chi sia `/tmp/mozilla` non m'importa piu': non lo guardo.
+# ⭐⭐ AND IT IS NOT A CLEANUP.  `src/provisiona.sh` already stated the rule —
+#     *«do not touch the `/tmp/mozilla` of whoever already has it: it is not ours and
+#     we do not know who uses it»* — and ⛔ it holds also between meshes: in parallel (C14) the other
+#     mesh is INSIDE it, and deleting it would make it fall.  ⇒ The cure is
+#     the same as the product's: **a real `~/.cache` for the tenant I create**.
+#     With that, I no longer care whose `/tmp/mozilla` is: I do not look at it.
 #
-# ⚠ Resta un solo sgombero legittimo, e riguarda soltanto ME: il `/tmp/mozilla`
-#   che un MIO inquilino di un giro precedente ha lasciato li'.  ⛔ Quello lo
-#   toglie `sgombra_il_posto_condiviso()` di C8, importata, e ⛔ non tocca
-#   nient'altro.
+# ⚠ Only one legitimate cleanup remains, and it concerns only ME: the `/tmp/mozilla`
+#   that one of MY tenants of a previous round left there.  ⛔ That one is
+#   removed by C8's `sgombra_il_posto_condiviso()`, imported, and ⛔ it touches
+#   nothing else.
 #
-# ⛔ E se la cura non regge NON si da' rosso: si esce **3** dicendo perche'
-#   (`crea` torna `(False, perche)`), perche' un browser fermo sulla scelta del
-#   profilo e' un difetto del BANCO e non del prodotto.
+# ⛔ And if the cure does not hold we do NOT give red: we exit **3** saying why
+#   (`crea` returns `(False, perche)`), because a browser stuck on the profile
+#   chooser is a defect of the BENCH and not of the product.
 # ═══════════════════════════════════════════════════════════════════════════
 IL_POSTO_CONDIVISO = "/tmp/mozilla"
 
 
 def padrone_del_posto_condiviso():
-    """Di chi e' `/tmp/mozilla` — `""` se non c'e'.  Serve solo a DIRLO."""
+    """Whose `/tmp/mozilla` is — `""` if it is not there.  It serves only to SAY it."""
     return sh("stat -c %%U %s 2>/dev/null" % IL_POSTO_CONDIVISO).stdout.strip()
 
 
 def sgombra_il_mio_rimasuglio(mio_base):
-    """Toglie `/tmp/mozilla` ⛔ soltanto se e' rimasto a un inquilino MIO.
+    """Removes `/tmp/mozilla` ⛔ only if it was left to one of MY tenants.
 
-    ⛔ La regola non si riscrive: e' `sgombra_il_posto_condiviso()` di C8,
-       importata — *«si toglie solo quel che e' di un inquilino di QUESTA
-       prova»*.  ⇒ Se e' di un'altra maglia, o di un estraneo, quella funzione
-       dice «NON lo tocco» e non tocca niente, che e' quel che voglio.
-    ⚠ Torna una riga da stampare, o `None` se non c'e' niente da dire.
+    ⛔ The rule is not rewritten: it is C8's `sgombra_il_posto_condiviso()`,
+       imported — *«only what belongs to a tenant of THIS
+       test is removed»*.  ⇒ If it belongs to another mesh, or to a stranger, that function
+       says «I do NOT touch it» and touches nothing, which is what I want.
+    ⚠ Returns a line to print, or `None` if there is nothing to say.
     """
     c8 = casa_di_c8()
     if c8 is None:
-        return "⚠ non trovo C8: non ho nemmeno guardato %s" % IL_POSTO_CONDIVISO
+        return "⚠ I cannot find C8: I did not even look at %s" % IL_POSTO_CONDIVISO
     return c8.sgombra_il_posto_condiviso(mio_base)
 
 
 def cura_della_provvista(chi):
-    """⭐⭐ (fatto, perche') — la cura di `src/provisiona.sh`, e la sua PROVA.
+    """⭐⭐ (done, why) — the cure of `src/provisiona.sh`, and its PROOF.
 
-    ⛔ E1: non basta applicarla, si prova a scrivere davvero in
-       `~/.cache/mozilla` — che col collegamento a `/tmp` e' il posto che morde.
-       ⚠ Scrivere in `~/.cache` non proverebbe niente: col collegamento e'
-       `/tmp`, che e' scrivibile da chiunque (modo 1777).
+    ⛔ E1: applying it is not enough, we really try to write into
+       `~/.cache/mozilla` — which with the link to `/tmp` is the place that bites.
+       ⚠ Writing into `~/.cache` would prove nothing: with the link it is
+       `/tmp`, which is writable by anyone (mode 1777).
     """
     c8 = casa_di_c8()
     if c8 is None:
-        return False, ("non trovo `11-c8-il-secondo-apre-il-browser.py` accanto "
-                       "a me: da li' viene la cura di `src/provisiona.sh`, e "
-                       "⛔ non se ne fa una copia qui (§1.47)")
+        return False, ("I cannot find `11-c8-il-secondo-apre-il-browser.py` next "
+                       "to me: the cure of `src/provisiona.sh` comes from there, and "
+                       "⛔ no copy of it is made here (§1.47)")
     c8.applica_la_cura(chi)
     if c8.sa_scrivere_nella_cache(chi):
         return True, ""
     padrone = padrone_del_posto_condiviso()
-    return False, ("«%s» non riesce a scrivere in ~/.cache/mozilla (%s e' di "
-                   "«%s»): Firefox resterebbe sulla scelta del profilo e questa "
-                   "maglia misurerebbe il BANCO, non il prodotto"
-                   % (chi, IL_POSTO_CONDIVISO, padrone or "nessuno"))
+    return False, ("«%s» cannot write into ~/.cache/mozilla (%s belongs to "
+                   "«%s»): Firefox would stay on the profile chooser and this "
+                   "mesh would measure the BENCH, not the product"
+                   % (chi, IL_POSTO_CONDIVISO, padrone or "nobody"))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐ LA CERTIFICAZIONE DELLA PROVVISTA — e sta in UN POSTO SOLO (§1.47)
+# ⭐⭐ THE CERTIFICATION OF THE PROVISIONING — and it lives in ONE PLACE ONLY (§1.47)
 #
-# ⚠ Sta qui, in C2, e non in C8, perche' C8 non e' mia da modificare oggi.  ⭐ Il
-#   giorno che lo sara', questa funzione va con `applica_la_cura`, che e' il
-#   pezzo che certifica.  C3 e C4 la chiamano da qui, ⛔ non se ne fanno una
-#   copia — tre copie sono tre posti da cui divergere, ed e' esattamente
-#   l'errore che questa cura e' nata per riparare.
+# ⚠ It lives here, in C2, and not in C8, because C8 is not mine to modify today.  ⭐ The
+#   day it is, this function goes with `applica_la_cura`, which is the
+#   piece it certifies.  C3 and C4 call it from here, ⛔ they do not make a
+#   copy of it — three copies are three places to diverge from, and it is exactly
+#   the error this cure was born to repair.
 #
-# ⛔⛔ E NON ISPEZIONA NIENTE (E1): fa un `/tmp/mozilla` di un altro inquilino,
-#     con un inquilino vero e lo scheletro vero, e poi GUARDA che cosa succede.
+# ⛔⛔ AND IT INSPECTS NOTHING (E1): it makes a `/tmp/mozilla` of another tenant,
+#     with a real tenant and the real skeleton, and then LOOKS at what happens.
 # ═══════════════════════════════════════════════════════════════════════════
 def certifica_la_provvista(nome_maglia, mia_base):
-    """⭐ Torna `(guai, quanti_casi_provati)`.
+    """⭐ Returns `(guai, quanti_casi_provati)`.
 
-    I casi, e sono tre:
-      1. ⛔ la cura NON puo' riuscire ⇒ `(False, perche')`, cioe' la maglia si
-         ferma dicendo perche' (esito **3**) — ⛔ e MAI un rosso;
-      2. ⛔ `/tmp/mozilla` e' di un inquilino di UN'ALTRA maglia ⇒ non lo tocco,
-         ⭐ e il mio inquilino scrive lo stesso in `~/.cache/mozilla`;
-      3. ⭐ `/tmp/mozilla` e' di un inquilino MIO, rimasto dal giro prima ⇒ lo
-         sgombro.
-    ⚠ Il 2 e il 3 chiedono l'amministratore.  ⛔ Senza, si DICE che non sono
-      stati provati: una certificazione che tace la meta' che conta e' peggio di
-      una che manca.
+    The cases, and there are three:
+      1. ⛔ the cure CANNOT succeed ⇒ `(False, perche')`, i.e. the mesh
+         stops saying why (outcome **3**) — ⛔ and NEVER a red;
+      2. ⛔ `/tmp/mozilla` belongs to a tenant of ANOTHER mesh ⇒ I do not touch it,
+         ⭐ and my tenant writes anyway into `~/.cache/mozilla`;
+      3. ⭐ `/tmp/mozilla` belongs to one of MY tenants, left from the previous round ⇒ I
+         clear it.
+    ⚠ 2 and 3 need the administrator.  ⛔ Without it, we SAY that they were not
+      tested: a certification that keeps quiet about the half that matters is worse than
+      one that is missing.
     """
     guai = 0
     quanti = 0
-    print("  ── la provvista condivisa di %s (%s) ──"
+    print("  ── the shared provisioning of %s (%s) ──"
           % (nome_maglia, IL_POSTO_CONDIVISO))
     if casa_di_c8() is None:
-        print("  NO   ⛔ non trovo C8: la cura di src/provisiona.sh non e' "
-              "importabile, e ⛔ non se ne fa una copia")
+        print("  NO   ⛔ I cannot find C8: the cure of src/provisiona.sh cannot be "
+              "imported, and ⛔ no copy of it is made")
         return 1, 1
 
-    # ── 1 · e non serve nessun permesso ────────────────────────────────────
+    # ── 1 · and no permission is needed ────────────────────────────────────
     quanti += 1
     fatto, perche = cura_della_provvista("non-esiste-%s-x" % mia_base)
     ok = (fatto is False) and bool(perche)
     guai += 0 if ok else 1
-    print("  %s  ⛔ la cura non puo' riuscire ⇒ si ferma DICENDO PERCHE' "
-          "(esito 3), ⛔ mai un rosso" % ("OK " if ok else "NO "))
+    print("  %s  ⛔ the cure cannot succeed ⇒ it stops SAYING WHY "
+          "(outcome 3), ⛔ never a red" % ("OK " if ok else "NO "))
     if not ok:
-        print("        ⛔ ha detto: (%s, %r)" % (fatto, perche))
+        print("        ⛔ it said: (%s, %r)" % (fatto, perche))
 
-    # ── 2 e 3 · i casi VERI ────────────────────────────────────────────────
+    # ── 2 and 3 · the REAL cases ───────────────────────────────────────────
     if os.geteuid() != 0:
-        print("  ⚠   i due casi VERI chiedono l'amministratore: ⛔ NON li ho "
-              "provati, e cosi' questa certificazione non copre la cura")
+        print("  ⚠   the two REAL cases need the administrator: ⛔ I did NOT "
+              "test them, and so this certification does not cover the cure")
         return guai, quanti
     if os.path.exists(IL_POSTO_CONDIVISO):
-        print("  ⚠   %s c'e' gia' ed e' di «%s»: ⛔ non lo tocco per farci una "
-              "prova — i due casi VERI NON li ho provati"
+        print("  ⚠   %s is already there and belongs to «%s»: ⛔ I do not touch it to run a "
+              "test on it — the two REAL cases I did NOT test"
               % (IL_POSTO_CONDIVISO, padrone_del_posto_condiviso()))
         return guai, quanti
 
-    estraneo = "c99u9"          # un inquilino della rete, ⛔ ma di un'altra maglia
+    estraneo = "c99u9"          # a tenant of the net, ⛔ but of another mesh
     mio = "%s9" % mia_base
 
     def scheletro_della_macchina_vera(chi):
-        """`~/.cache` come collegamento a `/tmp`, ⛔ solo su questo inquilino.
+        """`~/.cache` as a link to `/tmp`, ⛔ only on this tenant.
 
-        ⚠ Non si tocca `/etc/skel`: qui il terreno si riproduce a mano, su due
-          utenti che nascono e muoiono dentro questa funzione.
+        ⚠ `/etc/skel` is not touched: here the terrain is reproduced by hand, on two
+          users that are born and die inside this function.
         """
         sh("rm -rf /home/%s/.cache && ln -s /tmp /home/%s/.cache && "
            "chown -h %s:%s /home/%s/.cache" % (chi, chi, chi, chi, chi))
@@ -1126,8 +1126,8 @@ def certifica_la_provvista(nome_maglia, mia_base):
               IL_POSTO_CONDIVISO, IL_POSTO_CONDIVISO))
 
     def via(chi):
-        # ⛔ Il collegamento si toglie PRIMA di `userdel -r`: e' un puntamento a
-        #    `/tmp`, e non gli si da' occasione di seguirlo.
+        # ⛔ The link is removed BEFORE `userdel -r`: it is a pointer to
+        #    `/tmp`, and it is given no chance to follow it.
         sh("rm -f /home/%s/.cache; userdel -r %s 2>/dev/null; rm -rf /home/%s"
            % (chi, chi, chi))
 
@@ -1137,50 +1137,50 @@ def certifica_la_provvista(nome_maglia, mia_base):
         for chi in (estraneo, mio):
             r = sh("useradd -m -s /bin/bash %s" % chi)
             if r.returncode != 0:
-                print("  ⚠   non sono riuscito a creare «%s»: %s ⇒ ⛔ i due "
-                      "casi VERI NON li ho provati"
+                print("  ⚠   I could not create «%s»: %s ⇒ ⛔ the two "
+                      "REAL cases I did NOT test"
                       % (chi, (r.stderr or "").strip()[:80]))
                 return guai, quanti
             scheletro_della_macchina_vera(chi)
 
-        # ── 2 · il posto e' di un'ALTRA maglia ─────────────────────────────
+        # ── 2 · the place belongs to ANOTHER mesh ──────────────────────────
         il_posto_e_di(estraneo)
         detto = sgombra_il_mio_rimasuglio(mia_base)
         quanti += 1
         ok = padrone_del_posto_condiviso() == estraneo
         guai += 0 if ok else 1
-        print("  %s  ⛔ %s e' di «%s» (un'altra maglia) ⇒ NON lo tocco"
+        print("  %s  ⛔ %s belongs to «%s» (another mesh) ⇒ I do NOT touch it"
               % ("OK " if ok else "NO ", IL_POSTO_CONDIVISO, estraneo))
         if detto:
-            print("        dice: %s" % detto)
+            print("        says: %s" % detto)
 
-        # ⭐ …e la cura mi rende immune LO STESSO: e' questo il caso che
-        #   dimostra che il rosso del 27 agosto non tornerebbe.
+        # ⭐ …and the cure makes me immune ANYWAY: this is the case that
+        #   proves that the red of 27 August would not come back.
         quanti += 1
         fatto, perche = cura_della_provvista(mio)
         ancora = padrone_del_posto_condiviso() == estraneo
         ok = bool(fatto) and ancora
         guai += 0 if ok else 1
-        print("  %s  ⭐ e «%s» scrive lo stesso in ~/.cache/mozilla, con %s "
-              "ancora di «%s»" % ("OK " if ok else "NO ", mio,
-                                  IL_POSTO_CONDIVISO, estraneo))
+        print("  %s  ⭐ and «%s» writes anyway into ~/.cache/mozilla, with %s "
+              "still belonging to «%s»" % ("OK " if ok else "NO ", mio,
+                                           IL_POSTO_CONDIVISO, estraneo))
         if not ok:
-            print("        ⛔ ha detto: (%s, %s) · adesso e' di «%s»"
+            print("        ⛔ it said: (%s, %s) · now it belongs to «%s»"
                   % (fatto, perche, padrone_del_posto_condiviso()))
 
-        # ── 3 · il posto e' MIO, rimasto dal giro prima ────────────────────
-        scheletro_della_macchina_vera(mio)      # la cura gli aveva dato la sua
+        # ── 3 · the place is MINE, left from the previous round ────────────
+        scheletro_della_macchina_vera(mio)      # the cure had given it its own
         il_posto_e_di(mio)
         detto = sgombra_il_mio_rimasuglio(mia_base)
         quanti += 1
         ok = not os.path.exists(IL_POSTO_CONDIVISO)
         guai += 0 if ok else 1
-        print("  %s  ⭐ %s e' di «%s» (MIO, dal giro prima) ⇒ lo sgombro"
+        print("  %s  ⭐ %s belongs to «%s» (MINE, from the previous round) ⇒ I clear it"
               % ("OK " if ok else "NO ", IL_POSTO_CONDIVISO, mio))
         if detto:
-            print("        dice: %s" % detto)
+            print("        says: %s" % detto)
     finally:
-        # ⛔ Si toglie SOLO quel che ha fatto questa funzione.
+        # ⛔ ONLY what this function made is removed.
         sh("rm -rf %s" % IL_POSTO_CONDIVISO)
         via(estraneo)
         via(mio)
@@ -1188,24 +1188,24 @@ def certifica_la_provvista(nome_maglia, mia_base):
 
 
 def crea(chi, parola):
-    """Crea l'inquilino **da zero**, e ⛔ lo cancella PRIMA di crearlo.
+    """Creates the tenant **from zero**, and ⛔ deletes it BEFORE creating it.
 
-    ⚠ `[M]` (C1, 26 agosto 2026): un `id -u X || useradd X` rende l'utente nuovo
-      **soltanto la prima volta che il banco gira in vita sua**.  ⇒ «da zero»
-      comprende anche «da zero rispetto a me stesso di ieri».
+    ⚠ `[M]` (C1, 26 August 2026): an `id -u X || useradd X` makes the user new
+      **only the first time the bench runs in its life**.  ⇒ «from zero»
+      also includes «from zero with respect to myself of yesterday».
     """
     sh("loginctl terminate-user %s 2>/dev/null; pkill -KILL -u %s 2>/dev/null; "
        "userdel -r %s 2>/dev/null; rm -rf /home/%s" % (chi, chi, chi, chi))
-    # ⛔⛔ I GRUPPI DELLA SCHEDA NON STANNO PIU' DENTRO IL `useradd`.
-    #     `usermod -aG video,render` inchiodava due nomi — che sono di UNA
-    #     distribuzione — e ⛔ **non rileggeva**: `usermod` riuscito non vuol
-    #     dire «ci sta dentro» (E1, «scritto non e' in vigore»).
-    # ⭐ Li da' `attrezzi-gruppi-scheda.sh`, che li LEGGE dai nodi `/dev/dri` e
-    #   poi VERIFICA confrontando i numeri.  ⇒ Qui non c'e' piu' nessun nome di
-    #   gruppo e nessun numero.
-    # ⛔ E senza, `[M]` la sessione nasce CIECA (0 su 4, zero fotogrammi,
-    #   `fasi/10-…` §7.4): questa maglia misurerebbe il buio e lo chiamerebbe
-    #   difetto del prodotto.  ⇒ Non si misura: chi chiama esce **3**.
+    # ⛔⛔ THE CARD'S GROUPS ARE NO LONGER INSIDE THE `useradd`.
+    #     `usermod -aG video,render` nailed down two names — which belong to ONE
+    #     distribution — and ⛔ **did not read back**: a successful `usermod` does not
+    #     mean «it is in there» (E1, «written is not in force»).
+    # ⭐ They are given by `attrezzi-gruppi-scheda.sh`, which READS them from the `/dev/dri` nodes and
+    #   then VERIFIES comparing the numbers.  ⇒ Here there is no longer any group
+    #   name and no number.
+    # ⛔ And without them, `[M]` the session is born BLIND (0 of 4, zero frames,
+    #   `fasi/10-…` §7.4): this mesh would measure the darkness and call it
+    #   a product defect.  ⇒ We do not measure: the caller exits **3**.
     r = sh("useradd -m -s /bin/bash %s && "
            "printf '%s:%s\n' | chpasswd" % (chi, chi, parola))
     if r.returncode != 0:
@@ -1213,9 +1213,9 @@ def crea(chi, parola):
     e_gr, perche_gr = garantisci_i_gruppi(chi, prefisso="      ")
     if e_gr != 0:
         return False, perche_gr
-    # ⭐⭐ E LA PROVVISTA, subito dopo il `useradd -m` che copia lo scheletro:
-    #    e' li' che l'inquilino nasce con `~/.cache` puntata a `/tmp`, ⇒ e' li'
-    #    che gli si da' la sua.  ⛔ Prima di accendere qualunque cosa.
+    # ⭐⭐ AND THE PROVISIONING, right after the `useradd -m` that copies the skeleton:
+    #    it is there that the tenant is born with `~/.cache` pointing at `/tmp`, ⇒ it is there
+    #    that it is given its own.  ⛔ Before switching anything on.
     fatto_cura, perche_cura = cura_della_provvista(chi)
     if not fatto_cura:
         return False, perche_cura
@@ -1223,11 +1223,11 @@ def crea(chi, parola):
 
 
 def sgombra(chi, attesa):
-    """⛔ Si aspetta che se ne sia andato DAVVERO, non mezzo secondo a orologio.
+    """⛔ We wait for it to be REALLY gone, not half a second by the clock.
 
-    `[M]` (C1, 26 agosto 2026): senza questa attesa i giri si alternavano
-    «non lo so» / giudizio, perche' il giro dopo partiva mentre il precedente
-    stava ancora morendo.
+    `[M]` (C1, 26 August 2026): without this wait the rounds alternated
+    «I do not know» / judgement, because the next round started while the previous one
+    was still dying.
     """
     sh("loginctl terminate-user %s 2>/dev/null" % chi)
     time.sleep(1.0)
@@ -1243,11 +1243,11 @@ def sgombra(chi, attesa):
 
 
 def il_socket_di(chi):
-    """Dove parla il compositore di questo inquilino.  ⛔ Si CERCA, non si indovina.
+    """Where this tenant's compositor talks.  ⛔ It is SEARCHED for, not guessed.
 
-    ⚠ Inchiodare `wayland-0` vorrebbe dire una maglia che funziona su un desktop
-      e tace sugli altri — cioe' esattamente il difetto che questa fase esiste
-      per non introdurre (§3.7).
+    ⚠ Nailing down `wayland-0` would mean a mesh that works on one desktop
+      and stays silent on the others — i.e. exactly the defect this phase exists
+      not to introduce (§3.7).
     """
     uid = sh("id -u %s" % chi).stdout.strip()
     if not uid:
@@ -1257,109 +1257,108 @@ def il_socket_di(chi):
     d = soc.stdout.strip()
     return (rtd, d) if d else (rtd, None)
 
-
 def chiedi_al_compositore(chi):
-    """⭐ Si chiede al COMPOSITORE se c'e' uno schermo, non al prodotto.
+    """⭐ We ask the COMPOSITOR whether there is a screen, not the product.
 
-    ⛔ Un banco che chiede al prodotto se il prodotto ha funzionato crede a quel
-       che sta provando.  ⚠ E c'e' una ragione concreta in piu': `[R]` la riga
-       *«⛔ ZERO MONITOR»* di `src/sessione.c:345-348` il prodotto la scrive
-       **anche durante una nascita che riuscira'**, perche' a quel punto il
-       monitor non e' ancora comparso (`src/mutter.c:697`).
+    ⛔ A bench that asks the product whether the product worked believes what
+       it is testing.  ⚠ And there is one more concrete reason: `[R]` the line
+       *«⛔ ZERO MONITOR»* of `src/sessione.c:345-348` the product writes
+       **also during a birth that will succeed**, because at that point the
+       monitor has not appeared yet (`src/mutter.c:697`).
 
-    Torna (quanti_schermi | None, motivo).
+    Returns (quanti_schermi | None, motivo).
     """
     rtd, display = il_socket_di(chi)
     if rtd is None:
-        return None, ("non so l'uid di «%s»: non esiste, o `id` non ha "
-                      "risposto" % chi)
+        return None, ("I do not know the uid of «%s»: it does not exist, or `id` did not "
+                      "answer" % chi)
     if display is None:
-        return None, ("in %s non c'e' nessun socket wayland: il compositore "
-                      "non e' (ancora) nato" % rtd)
+        return None, ("in %s there is no wayland socket: the compositor "
+                      "has not been born (yet)" % rtd)
     r = sh("runuser -u %s -- env XDG_RUNTIME_DIR=%s WAYLAND_DISPLAY=%s "
            "wayland-info" % (chi, rtd, display), secondi=60)
     if r.returncode != 0 and not r.stdout:
-        return None, ("wayland-info non ha parlato: %s"
+        return None, ("wayland-info did not speak: %s"
                       % ((r.stderr or "").strip().replace("\n", " ")[:90]))
     return quanti_schermi(r.stdout), ""
 
 
 def accendi_l_applicazione(chi, applicazione, argomenti, pagina):
-    """Accende l'applicazione DENTRO la sessione dell'inquilino.
+    """Switches on the application INSIDE the tenant's session.
 
-    ⚠ `HOME` esplicito e non ereditato: il profilo del programma vive dentro
-      `$HOME`, e una maglia che guardasse la home sbagliata direbbe una cosa
-      per un'altra.
-    ⛔ E il registro del programma finisce in un file SUO, non nella cartella di
-       lavoro del banco: `[M]` (C8, 26 agosto 2026) la cartella del banco e' di
-       `root` a modo 0755 e il programma gira da UTENTE ⇒ non poteva scriverci,
-       e il banco leggeva il proprio difetto come un difetto del prodotto.
+    ⚠ `HOME` explicit and not inherited: the program's profile lives inside
+      `$HOME`, and a mesh that looked at the wrong home would say one thing
+      for another.
+    ⛔ And the program's log ends up in a file of ITS OWN, not in the bench's working
+       folder: `[M]` (C8, 26 August 2026) the bench's folder belongs to
+       `root` with mode 0755 and the program runs as a USER ⇒ it could not write there,
+       and the bench read its own defect as a product defect.
     """
     rtd, display = il_socket_di(chi)
     if display is None:
-        return None, ("in %s non c'e' nessun socket wayland: non c'e' un "
-                      "compositore a cui l'applicazione possa parlare"
-                      % (rtd or "(uid ignoto)"))
+        return None, ("in %s there is no wayland socket: there is no "
+                      "compositor the application can talk to"
+                      % (rtd or "(unknown uid)"))
     try:
         args = argomenti % {"pagina": pagina}
     except (ValueError, KeyError) as sbaglio:
-        # ⛔ Un `%` letterale dentro `--argomenti` farebbe esplodere questa riga
-        #    con una traccia di Python al posto di un messaggio.  ⇒ Uso sbagliato.
-        return None, ("non riesco a costruire gli argomenti da «%s»: %s ⇒ nel "
-                      "modello si scrive `%%(pagina)s`, e un `%%` letterale va "
-                      "raddoppiato" % (argomenti, sbaglio))
+        # ⛔ A literal `%` inside `--argomenti` would blow up this line
+        #    with a Python traceback instead of a message.  ⇒ Wrong usage.
+        return None, ("I cannot build the arguments from «%s»: %s ⇒ in the "
+                      "template one writes `%%(pagina)s`, and a literal `%%` must be "
+                      "doubled" % (argomenti, sbaglio))
     comando = (
-        # ⛔ `setsid` + stdin chiuso: senza, il browser finisce in un gruppo di
-        #    processi di SFONDO del terminale che ha lanciato la rete e il primo
-        #    `tcsetattr` se lo prende un SIGTTOU ⇒ resta in stato `T` dal primo
-        #    istante (22 set 2026, visto in C3 su tutte e tre le scatole).
+        # ⛔ `setsid` + stdin closed: without it, the browser ends up in a BACKGROUND
+        #    process group of the terminal that launched the net and the first
+        #    `tcsetattr` gets it a SIGTTOU ⇒ it stays in state `T` from the first
+        #    instant (22 Sep 2026, seen in C3 on all three boxes).
         "setsid runuser -u %s -- env XDG_RUNTIME_DIR=%s WAYLAND_DISPLAY=%s "
         "MOZ_ENABLE_WAYLAND=1 XDG_SESSION_TYPE=wayland HOME=/home/%s "
         "%s %s < /dev/null > %s 2>&1 &"
         % (chi, rtd, display, chi, applicazione, args, registro_applicazione(chi)))
     r = sh(comando, secondi=30)
     if r.returncode != 0:
-        # ⛔ E il risultato NON si butta.  `LEZIONI.md` §1.46: un comando che
-        #    puo' non essere eseguito affatto, e di cui nessuno guarda l'esito,
-        #    e' un banco che accusa il prodotto di quel che non ha fatto lui.
-        return None, ("il lancio non e' partito (esito %d): %s"
+        # ⛔ And the result is NOT thrown away.  `LEZIONI.md` §1.46: a command that
+        #    may not be run at all, and whose outcome nobody looks at,
+        #    is a bench that accuses the product of what it did not do itself.
+        return None, ("the launch did not start (outcome %d): %s"
                       % (r.returncode,
                          ((r.stderr or "") + (r.stdout or "")).strip()[:120]))
     return display, ""
 
 
 def registro_applicazione(chi):
-    """⭐ Dove l'applicazione scrive quel che dice — e ⛔ **si legge**.
+    """⭐ Where the application writes what it says — and ⛔ **it is read**.
 
-    `[M]` (C8, 26 agosto 2026) la cartella di lavoro del banco e' di `root` a
-    modo 0755 e l'applicazione gira da UTENTE ⇒ non potrebbe scriverci.  Quindi
-    scrive in casa sua.  ⚠ Ma un registro che nessuno legge e' peggio di
-    nessun registro: da' l'impressione che qualcuno guardi.
+    `[M]` (C8, 26 August 2026) the bench's working folder belongs to `root` with
+    mode 0755 and the application runs as a USER ⇒ it could not write there.  So
+    it writes in its own home.  ⚠ But a log nobody reads is worse than
+    no log: it gives the impression that someone is looking.
     """
     return "/home/%s/.c2-applicazione.log" % chi
 
 
 def ultima_riga_detta(chi):
-    """L'ultima riga che l'applicazione ha detto, o «» se non ha detto niente."""
+    """The last line the application said, or «» if it said nothing."""
     r = sh("tail -n 5 %s 2>/dev/null" % registro_applicazione(chi))
     righe = [x.strip() for x in (r.stdout or "").splitlines() if x.strip()]
     return righe[-1][:160] if righe else ""
 
 
 def aspetta_che_parta(chi, applicazione, attesa):
-    """⛔ Si aspetta che l'applicazione ESISTA prima di pretendere una finestra.
+    """⛔ We wait for the application to EXIST before demanding a window.
 
-    ⚠ Serve a due cose, e la seconda vale piu' della prima:
-      1. se non parte affatto (PAM, gruppo, `$HOME` non scrivibile) l'esito e'
-         **«non ho potuto guardare»**, non un rosso al prodotto;
-      2. ⛔⛔ il guasto «muore subito» uccide **per nome e per utente**, e a 1,5
-         secondi dal lancio la catena `runuser` → `env` → programma potrebbe non
-         aver ancora fatto il cambio d'utente: il `pkill` non troverebbe niente,
-         il programma partirebbe DOPO, dipingerebbe, e la maglia direbbe *«il
-         guasto NON e' stato visto»* ⇒ ⛔ il gancio scriverebbe
-         `ha_visto_il_guasto: false` e **C13 comincerebbe a dire che la rete non
-         sa piu' dare rosso** mentre sta benissimo (`LEZIONI.md` §1.52).
-      ⇒ Si uccide quel che si e' visto vivo, non quel che si spera esista.
+    ⚠ It serves two things, and the second is worth more than the first:
+      1. if it does not start at all (PAM, group, `$HOME` not writable) the outcome is
+         **«I could not look»**, not a red for the product;
+      2. ⛔⛔ the «dies at once» fault kills **by name and by user**, and at 1.5
+         seconds from the launch the chain `runuser` → `env` → program may not
+         have switched user yet: the `pkill` would find nothing,
+         the program would start AFTERWARDS, paint, and the mesh would say *«the
+         fault was NOT seen»* ⇒ ⛔ the hook would write
+         `ha_visto_il_guasto: false` and **C13 would start saying that the net can
+         no longer say red** while it is perfectly fine (`LEZIONI.md` §1.52).
+      ⇒ We kill what we saw alive, not what we hope exists.
     """
     scadenza = time.time() + attesa
     while time.time() < scadenza:
@@ -1371,20 +1370,20 @@ def aspetta_che_parta(chi, applicazione, attesa):
 
 
 def quanti_processi(chi, applicazione):
-    """Quanti processi dell'applicazione sono vivi.
+    """How many processes of the application are alive.
 
-    ⛔⛔ E QUESTO NUMERO NON DECIDE NIENTE.  E' la grandezza che `fasi/10…` §7.4
-         ha misurato **uguale (1) nei due casi opposti**; sta qui perche' la
-         maglia la RIFERISCA, e perche' col guasto «finestra che non si apre»
-         serve a dire che il guasto e' quello giusto — non perche' giudichi.
-    ⚠ `None` = non ho potuto contare.
+    ⛔⛔ AND THIS NUMBER DECIDES NOTHING.  It is the quantity that `fasi/10…` §7.4
+         measured **equal (1) in the two opposite cases**; it is here so that the
+         mesh REPORTS it, and because with the «window that does not open» fault
+         it serves to say that the fault is the right one — not to judge.
+    ⚠ `None` = I could not count.
     """
-    # ⛔⛔ E NON SI CONTA CON `wc -l`, che ESCE SEMPRE 0 E STAMPA SEMPRE UN
-    #     NUMERO: con quello «non ho potuto contare» e «zero processi»
-    #     diventerebbero lo stesso `0` — `LEZIONI.md` §1.47 — e lo zero e'
-    #     proprio la condizione con cui si riconosce il guasto «muore subito».
-    # ⭐ `pgrep` invece li distingue da se': 0 = ne ho trovati, 1 = nessuno,
-    #   ≥2 = non ho potuto cercare.
+    # ⛔⛔ AND WE DO NOT COUNT WITH `wc -l`, WHICH ALWAYS EXITS 0 AND ALWAYS PRINTS A
+    #     NUMBER: with it «I could not count» and «zero processes»
+    #     would become the same `0` — `LEZIONI.md` §1.47 — and zero is
+    #     exactly the condition by which the «dies at once» fault is recognised.
+    # ⭐ `pgrep` instead tells them apart by itself: 0 = I found some, 1 = none,
+    #   ≥2 = I could not search.
     r = sh("pgrep -u %s -f %s" % (chi, applicazione))
     if r.returncode == 1:
         return 0
@@ -1394,16 +1393,16 @@ def quanti_processi(chi, applicazione):
 
 
 def i_fotogrammi_di_prima(flusso, dove, quanti, tetto):
-    """I PRIMI `quanti` fotogrammi del flusso — ⛔ e non uno solo.
+    """The FIRST `quanti` frames of the stream — ⛔ and not just one.
 
-    ⚠ La prima stesura ne prendeva uno.  ⛔ Ma il primo fotogramma di una presa
-      e' il candidato naturale a essere nero o mezzo disegnato: il palco e'
-      appena nato e il desktop si sta ancora dipingendo.  ⇒ Se il giudice lo
-      chiamasse «nero», questa maglia uscirebbe **3 per sempre** — cioe' il
-      cugino del rosso perpetuo di `LEZIONI.md` §1.49, quello che non si puo'
-      far diventare verde.
-    ⭐ Con piu' fotogrammi si prende **il primo che il giudice chiama
-      disegnato**, e se non lo e' nessuno si DICE quanti se ne sono guardati.
+    ⚠ The first draft took one.  ⛔ But the first frame of a grab
+      is the natural candidate to be black or half drawn: the stage has
+      just been born and the desktop is still painting itself.  ⇒ If the judge
+      called it «black», this mesh would exit **3 forever** — i.e. the
+      cousin of the perpetual red of `LEZIONI.md` §1.49, the one that cannot
+      be made green.
+    ⭐ With more frames we take **the first one the judge calls
+      drawn**, and if none is we SAY how many were looked at.
     """
     fuori = os.path.join(dove, "prima")
     if os.path.isdir(fuori):
@@ -1416,17 +1415,17 @@ def i_fotogrammi_di_prima(flusso, dove, quanti, tetto):
 
 
 def l_ultimo_fotogramma(flusso, dove, tetto):
-    """L'ULTIMO fotogramma del flusso — quel che il desktop mostra alla fine.
+    """The LAST frame of the stream — what the desktop shows at the end.
 
-    ⛔ `-update 1` riscrive lo stesso file a ogni fotogramma decodificato: alla
-       fine resta l'ultimo.  ⚠⚠ **E per questo il tetto qui MORDE in modo
-       traditore**: se scade a meta', il file c'e' lo stesso ed e' un fotogramma
-       **di mezzo** — che ha esattamente l'aspetto dell'ultimo.
-    ⇒ ⛔ Percio' qui il codice d'uscita **si guarda**, e una scadenza diventa
-      «non ho potuto guardare».  ⚠ E' il rovescio di `LEZIONI.md` §1.50: la'
-      il codice d'uscita andava ignorato perche' il lavoro era **compiuto**
-      (il PNG c'era ed era giusto); qui il lavoro e' stato **interrotto**, e il
-      PNG c'e' ed e' un altro.
+    ⛔ `-update 1` rewrites the same file at every decoded frame: at the
+       end the last one remains.  ⚠⚠ **And for this reason the ceiling here BITES in a
+       treacherous way**: if it expires halfway, the file is there anyway and it is a frame
+       **from the middle** — which looks exactly like the last one.
+    ⇒ ⛔ That is why here the exit code **is looked at**, and an expiry becomes
+      «I could not look».  ⚠ It is the reverse of `LEZIONI.md` §1.50: there
+      the exit code had to be ignored because the work was **done**
+      (the PNG was there and was right); here the work was **interrupted**, and the
+      PNG is there and it is another one.
     """
     ultimo = os.path.join(dove, "ultimo.png")
     if os.path.exists(ultimo):
@@ -1441,9 +1440,9 @@ def l_ultimo_fotogramma(flusso, dove, tetto):
 
 
 def scegli_il_prima(elenco, giudica):
-    """⭐ Il primo fotogramma che il giudice chiama «disegnato».
+    """⭐ The first frame the judge calls «drawn».
 
-    Torna (percorso|None, quanti_guardati, verdetti).
+    Returns (path|None, how_many_looked_at, verdicts).
     """
     verdetti = []
     for p in elenco:
@@ -1455,10 +1454,10 @@ def scegli_il_prima(elenco, giudica):
 
 
 def quanti_fotogrammi(coda):
-    """Quanti fotogrammi il cliente dice di aver preso dal filo.  `None` = non lo so."""
+    """How many frames the client says it took from the wire.  `None` = I do not know."""
     quanti = None
     for riga in coda.splitlines():
-        if "[vid]" in riga and "nessun fotogramma" not in riga:
+        if "[vid]" in riga and "no frame" not in riga:
             try:
                 quanti = int(riga.split("[vid]", 1)[1].strip().split()[0])
             except Exception:
@@ -1467,35 +1466,35 @@ def quanti_fotogrammi(coda):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# UN GIRO — un inquilino nuovo, una sessione nuova, una finestra
+# ONE ROUND — a new tenant, a new session, a window
 # ═══════════════════════════════════════════════════════════════════════════
 def un_giro(chi, modo, a, giudice, lettore):
-    """Torna un dizionario col verdetto di questo inquilino.
+    """Returns a dictionary with the verdict of this tenant.
 
     `modo` = None | "muore" | "cieca"
 
-    ⛔⛔ L'ORDINE DELLE MOSSE NON E' UN DETTAGLIO, ed e' la ragione per cui
-         questa maglia oggi si puo' scrivere:
+    ⛔⛔ THE ORDER OF THE MOVES IS NOT A DETAIL, and it is the reason why
+         this mesh can be written today:
 
-           1. si crea l'inquilino
-           2. ⭐ **si attacca il cliente, e ci si RESTA** — il `wl_output` di
-              una sessione headless nasce quando un consumatore si aggancia al
-              flusso (`src/mutter.c:697` `[R]`) e muore col figlio
-           3. si aspetta che il COMPOSITORE annunci uno schermo
-           4. **solo allora** si apre l'applicazione
-           5. il cliente finisce il suo tempo e scrive il flusso
-           6. si giudicano il primo e l'ultimo fotogramma
+           1. the tenant is created
+           2. ⭐ **the client attaches, and STAYS there** — the `wl_output` of
+              a headless session is born when a consumer hooks onto the
+              stream (`src/mutter.c:697` `[R]`) and dies with the child
+           3. we wait for the COMPOSITOR to announce a screen
+           4. **only then** is the application opened
+           5. the client finishes its time and writes the stream
+           6. the first and the last frame are judged
 
-        ⇒ Invertire 2 e 4 vorrebbe dire aprire una finestra su una sessione che
-          non ha ancora uno schermo, ⛔ e dare la colpa all'applicazione.
+        ⇒ Swapping 2 and 4 would mean opening a window on a session that
+          does not have a screen yet, ⛔ and blaming the application.
     """
     esito = {"chi": chi, "modo": modo or "sano", "stato": "non-lo-so",
              "perche": "", "frazione_prima": None, "frazione_dopo": None,
-             # ⚠ DUE conti, e non uno: quello all'apertura della finestra e
-             #   quello alla fine.  ⛔ Il fotogramma che si giudica e' l'ultimo,
-             #   e contare i processi due minuti prima vorrebbe dire accostare
-             #   due grandezze prese in momenti diversi e chiamarle un
-             #   confronto.  ⇒ La firma del guasto usa quello **finale**.
+             # ⚠ TWO counts, and not one: the one at the opening of the window and
+             #   the one at the end.  ⛔ The frame that is judged is the last one,
+             #   and counting the processes two minutes earlier would mean putting side by side
+             #   two quantities taken at different moments and calling them a
+             #   comparison.  ⇒ The fault signature uses the **final** one.
              "processi": None, "processi_apertura": None,
              "fotogrammi": None, "palco_s": None, "avvio_s": None,
              "schermi": None, "desktop_prima": None, "detto": "",
@@ -1504,7 +1503,7 @@ def un_giro(chi, modo, a, giudice, lettore):
 
     fatto, perche = crea(chi, a.parola)
     if not fatto:
-        esito["perche"] = "non sono riuscito a creare «%s»: %s" % (chi, perche)
+        esito["perche"] = "I could not create «%s»: %s" % (chi, perche)
         return esito
 
     lavoro = os.path.join(a.lavoro, chi)
@@ -1513,22 +1512,22 @@ def un_giro(chi, modo, a, giudice, lettore):
     if os.path.exists(flusso):
         os.unlink(flusso)
 
-    # ── 2. il cliente si attacca, e ci resta ────────────────────────────────
-    # ⛔ Il tempo si calcola, non si inchioda: dev'essere abbastanza per la
-    #    nascita del palco PIU' l'apertura della finestra PIU' una coda.  ⚠ Se
-    #    il palco nasce presto si spreca l'avanzo: e' il prezzo del fatto che
-    #    `--resta` si decide al lancio e non si puo' accorciare dopo.
+    # ── 2. the client attaches, and stays there ─────────────────────────────
+    # ⛔ The time is computed, not nailed down: it must be enough for the
+    #    birth of the stage PLUS the opening of the window PLUS a tail.  ⚠ If
+    #    the stage is born early the surplus is wasted: it is the price of the fact that
+    #    `--resta` is decided at launch and cannot be shortened later.
     resta = a.attesa_palco + a.attesa_finestra + a.coda
     partito = time.time()
-    # ⛔⛔ E L'USCITA DEL CLIENTE VA IN UN FILE, NON IN UNA PIPE — e non e' uno
-    #     stile: e' un guasto evitato.  Questo cliente resta acceso per minuti
-    #     **mentre il banco fa altro**, e con `-u` scrive senza risparmio.  Una
-    #     pipe che nessuno svuota si riempie (64 KB su Linux) e ⛔ **blocca chi
-    #     scrive**: il cliente si fermerebbe a meta' di una `print`, smetterebbe
-    #     di tenere viva la sessione, e il banco leggerebbe «nessun fotogramma»
-    #     dando la colpa al prodotto.
-    # ⚠ Gli esemplari non hanno questo problema perche' usano `subprocess.run`,
-    #   che svuota le pipe mentre aspetta.  Qui non si aspetta: si lavora.
+    # ⛔⛔ AND THE CLIENT'S OUTPUT GOES INTO A FILE, NOT INTO A PIPE — and it is not
+    #     style: it is a fault avoided.  This client stays on for minutes
+    #     **while the bench does other things**, and with `-u` it writes without restraint.  A
+    #     pipe nobody empties fills up (64 KB on Linux) and ⛔ **blocks the
+    #     writer**: the client would stop halfway through a `print`, would stop
+    #     keeping the session alive, and the bench would read «no frame»
+    #     blaming the product.
+    # ⚠ The examples do not have this problem because they use `subprocess.run`,
+    #   which empties the pipes while it waits.  Here we do not wait: we work.
     detto_file = os.path.join(lavoro, "cliente.log")
     detto_fd = open(detto_file, "w")
     cliente = subprocess.Popen(
@@ -1539,10 +1538,10 @@ def un_giro(chi, modo, a, giudice, lettore):
         stdout=detto_fd, stderr=subprocess.STDOUT, text=True)
 
     def chiudi_il_cliente(scadenza):
-        """Aspetta che il cliente finisca, e torna quel che ha detto.
+        """Waits for the client to finish, and returns what it said.
 
-        ⛔ Torna sempre una stringa: se il file non si lascia leggere e' un
-           «non ho potuto guardare», e chi chiama lo vede come «non AMMESSO».
+        ⛔ It always returns a string: if the file cannot be read it is an
+           «I could not look», and the caller sees it as «not AMMESSO».
         """
         try:
             cliente.wait(timeout=scadenza)
@@ -1556,13 +1555,13 @@ def un_giro(chi, modo, a, giudice, lettore):
         except OSError:
             return ""
 
-    # ── 3. si aspetta che il COMPOSITORE annunci uno schermo ────────────────
+    # ── 3. we wait for the COMPOSITOR to announce a screen ──────────────────
     schermi = None
-    motivo = "non ho mai potuto chiedere"
+    motivo = "I was never able to ask"
     scadenza = time.time() + a.attesa_palco
     while time.time() < scadenza:
         if cliente.poll() is not None:
-            motivo = "il cliente se n'e' andato prima che nascesse uno schermo"
+            motivo = "the client went away before a screen was born"
             break
         schermi, motivo = chiedi_al_compositore(chi)
         if schermi is not None and schermi >= OUTPUT_MINIMI:
@@ -1573,73 +1572,73 @@ def un_giro(chi, modo, a, giudice, lettore):
     esito["schermi"] = schermi
 
     if schermi is None or schermi < OUTPUT_MINIMI:
-        # ⛔ E NON e' un rosso: e' «non ho potuto guardare».  Una finestra non
-        #    puo' aprirsi dove non c'e' uno schermo, e accusare l'applicazione
-        #    vorrebbe dire accusarla di una cosa successa prima di lei.
-        esito["perche"] = ("in %.0f s il compositore non ha annunciato nessuno "
-                           "schermo (%s) ⇒ nessuna applicazione poteva aprire "
-                           "una finestra" % (a.attesa_palco, motivo or "?"))
+        # ⛔ And it is NOT a red: it is «I could not look».  A window cannot
+        #    open where there is no screen, and accusing the application
+        #    would mean accusing it of something that happened before it.
+        esito["perche"] = ("in %.0f s the compositor did not announce any "
+                           "screen (%s) ⇒ no application could open "
+                           "a window" % (a.attesa_palco, motivo or "?"))
         cliente.kill()
         chiudi_il_cliente(30)
         sgombra(chi, a.attesa_sgombero)
         return esito
 
-    # ── 4. l'applicazione ───────────────────────────────────────────────────
+    # ── 4. the application ──────────────────────────────────────────────────
     argomenti = a.argomenti_ciechi if modo == "cieca" else a.argomenti
     display, err = accendi_l_applicazione(chi, a.applicazione, argomenti, a.pagina)
     if display is None:
-        esito["perche"] = "non ho potuto accendere l'applicazione: %s" % err
+        esito["perche"] = "I could not switch on the application: %s" % err
         cliente.kill()
         chiudi_il_cliente(30)
         sgombra(chi, a.attesa_sgombero)
         return esito
 
-    # ⛔⛔ E PRIMA DI OGNI ALTRA COSA SI ASPETTA CHE ESISTA — vedi
-    #     `aspetta_che_parta`: se non parte affatto l'esito e' «non ho potuto
-    #     guardare», non un rosso al prodotto; e il guasto «muore subito» deve
-    #     uccidere quel che ha VISTO vivo, non quel che spera esista.
+    # ⛔⛔ AND BEFORE ANYTHING ELSE WE WAIT FOR IT TO EXIST — see
+    #     `aspetta_che_parta`: if it does not start at all the outcome is «I could not
+    #     look», not a red for the product; and the «dies at once» fault must
+    #     kill what it SAW alive, not what it hopes exists.
     vivi, esito["avvio_s"] = aspetta_che_parta(chi, a.applicazione, a.attesa_avvio)
     if not vivi:
         detta = ultima_riga_detta(chi)
-        esito["perche"] = ("l'applicazione «%s» non e' mai partita in %.0f s%s "
-                           "⇒ non e' il prodotto a non avermi mostrato una "
-                           "finestra: non c'era nessuno a disegnarla"
+        esito["perche"] = ("the application «%s» never started in %.0f s%s "
+                           "⇒ it is not the product that failed to show me a "
+                           "window: there was nobody to draw it"
                            % (a.applicazione, a.attesa_avvio,
-                              (": dice «%s»" % detta) if detta else
-                              " (e non ha detto niente)"))
+                              (": it says «%s»" % detta) if detta else
+                              " (and it said nothing)"))
         cliente.kill()
         chiudi_il_cliente(30)
         sgombra(chi, a.attesa_sgombero)
         return esito
 
     if modo == "muore":
-        # ⛔ IL GUASTO: l'applicazione muore subito.  ⚠ E si uccide PER NOME e
-        #    PER UTENTE, mai con un modello globale — fase 10 §7.3, dove un
-        #    `pkill -f` globale ha rischiato di uccidere il lavoro di un'altra
-        #    prova che stava misurando.
-        # ⭐ E L'ESITO DEL `pkill` SI GUARDA: e' la differenza fra «ho ucciso» e
-        #   «non c'era niente da uccidere», ed e' quel che distingue un guasto
-        #   innestato da un'iniezione andata a vuoto (`LEZIONI.md` §1.46).
+        # ⛔ THE FAULT: the application dies at once.  ⚠ And it is killed BY NAME and
+        #    BY USER, never with a global pattern — phase 10 §7.3, where a
+        #    global `pkill -f` risked killing the work of another
+        #    test that was measuring.
+        # ⭐ AND THE OUTCOME OF THE `pkill` IS LOOKED AT: it is the difference between «I killed» and
+        #   «there was nothing to kill», and it is what distinguishes a grafted
+        #   fault from an injection that went nowhere (`LEZIONI.md` §1.46).
         time.sleep(a.muore_dopo)
         r = sh("pkill -KILL -u %s -f %s" % (chi, a.applicazione))
         esito["ucciso"] = (r.returncode == 0)
         if r.returncode != 0:
-            esito["perche"] = ("ho chiesto di uccidere «%s» e `pkill` non ha "
-                               "trovato niente da uccidere (esito %d): "
-                               "l'iniezione non ha preso"
+            esito["perche"] = ("I asked to kill «%s» and `pkill` found "
+                               "nothing to kill (outcome %d): "
+                               "the injection did not take"
                                % (a.applicazione, r.returncode))
             cliente.kill()
             chiudi_il_cliente(30)
             sgombra(chi, a.attesa_sgombero)
             return esito
 
-    # ── 5. si aspetta che dipinga ───────────────────────────────────────────
+    # ── 5. we wait for it to paint ──────────────────────────────────────────
     time.sleep(a.attesa_finestra)
     esito["processi_apertura"] = quanti_processi(chi, a.applicazione)
 
-    # ── 6. il cliente finisce e scrive il flusso ────────────────────────────
-    # ⛔ E I PROCESSI SI RICONTANO QUI, accanto all'ultimo fotogramma: e' quello
-    #    che si giudica, e un conto preso due minuti prima non gli sta accanto.
+    # ── 6. the client finishes and writes the stream ────────────────────────
+    # ⛔ AND THE PROCESSES ARE COUNTED AGAIN HERE, next to the last frame: it is the one
+    #    that is judged, and a count taken two minutes earlier does not sit next to it.
     coda = chiudi_il_cliente(int(resta) + 180)
     esito["processi"] = quanti_processi(chi, a.applicazione)
     esito["fotogrammi"] = quanti_fotogrammi(coda or "")
@@ -1647,48 +1646,48 @@ def un_giro(chi, modo, a, giudice, lettore):
     ammesso = e_stato_ammesso(coda)
 
     if ammesso is not True:
-        # ⛔ «Non ammesso» da solo e' un silenzio: nasconde tre cose diverse.
-        #    ⇒ Si porta il MOTIVO accanto al sintomo (`LEZIONI.md` §1.9).
+        # ⛔ «Not admitted» on its own is a silence: it hides three different things.
+        #    ⇒ The REASON is carried next to the symptom (`LEZIONI.md` §1.9).
         ultimo = "?"
         for riga in reversed((coda or "").strip().splitlines()):
             riga = riga.strip()
             if riga and not riga.startswith("=="):
                 ultimo = riga[:90]
                 break
-        esito["perche"] = ("il cliente %s: %s"
-                           % ("non e' stato AMMESSO" if ammesso is False
-                              else "non ha detto NIENTE", ultimo))
+        esito["perche"] = ("the client %s: %s"
+                           % ("was not ADMITTED" if ammesso is False
+                              else "said NOTHING", ultimo))
         sgombra(chi, a.attesa_sgombero)
         return esito
     if not esito["fotogrammi"]:
-        # ⚠ E si distingue «zero» da «non lo so», che qui hanno cause opposte.
+        # ⚠ And «zero» is told apart from «I do not know», which here have opposite causes.
         esito["perche"] = (
-            "%s ⇒ non ho niente da guardare (ultima riga del cliente: «%s»)"
-            % ("nessun fotogramma e' arrivato dal filo"
+            "%s ⇒ I have nothing to look at (last line of the client: «%s»)"
+            % ("no frame arrived from the wire"
                if esito["fotogrammi"] == 0 else
-               "il cliente non ha detto quanti fotogrammi ha preso", ultimo_detto(coda)))
+               "the client did not say how many frames it took", ultimo_detto(coda)))
         sgombra(chi, a.attesa_sgombero)
         return esito
 
-    # ── 7. il giudizio, nel pixel ───────────────────────────────────────────
-    # ⛔ I tetti di ffmpeg SEGUONO il lavoro che governano, invece di stare
-    #    fermi mentre `--attesa-palco` cresce: `LEZIONI.md` §1.17 — un numero
-    #    che dipende da un altro e non lo sa e' un numero che mentira'.
+    # ── 7. the judgement, in the pixel ──────────────────────────────────────
+    # ⛔ The ffmpeg ceilings FOLLOW the work they govern, instead of standing
+    #    still while `--attesa-palco` grows: `LEZIONI.md` §1.17 — a number
+    #    that depends on another and does not know it is a number that will lie.
     tetto = max(300.0, resta * 2.0)
     prima_tutti, scaduto_p = i_fotogrammi_di_prima(
         flusso, lavoro, a.fotogrammi_prima, tetto)
     ultimo, scaduto_u = l_ultimo_fotogramma(flusso, lavoro, tetto)
     if scaduto_u:
-        esito["perche"] = ("il decodificatore non ha finito in %.0f s: quel che "
-                           "ha lasciato NON e' l'ultimo fotogramma ma uno di "
-                           "mezzo, e non lo giudico" % tetto)
+        esito["perche"] = ("the decoder did not finish in %.0f s: what it "
+                           "left is NOT the last frame but one from the "
+                           "middle, and I do not judge it" % tetto)
         sgombra(chi, a.attesa_sgombero)
         return esito
     if not prima_tutti:
-        esito["perche"] = ("%d fotogrammi sono arrivati ma il decodificatore "
-                           "non ne ha fatto nessuna immagine%s"
+        esito["perche"] = ("%d frames arrived but the decoder "
+                           "made no image of any of them%s"
                            % (esito["fotogrammi"],
-                              " (ed e' scaduto)" if scaduto_p else ""))
+                              " (and it expired)" if scaduto_p else ""))
         sgombra(chi, a.attesa_sgombero)
         return esito
 
@@ -1696,9 +1695,9 @@ def un_giro(chi, modo, a, giudice, lettore):
     esito["guardati_prima"] = guardati
     esito["png_prima"], esito["png_dopo"] = primo, ultimo
     if primo is None:
-        esito["perche"] = ("i primi %d fotogrammi sono tutti neri o quasi (%s): "
-                           "il desktop non aveva niente da mostrare PRIMA "
-                           "dell'applicazione, e questo non e' un giudizio su C2"
+        esito["perche"] = ("the first %d frames are all black or nearly (%s): "
+                           "the desktop had nothing to show BEFORE "
+                           "the application, and this is not a judgement on C2"
                            % (guardati, ", ".join(verdetti[:6])))
         sgombra(chi, a.attesa_sgombero)
         return esito
@@ -1711,9 +1710,9 @@ def un_giro(chi, modo, a, giudice, lettore):
     esito.update({k: g[k] for k in ("stato", "perche", "frazione_prima",
                                     "frazione_dopo", "desktop_prima")})
     if esito["stato"] == "non-vista" and esito["detto"]:
-        # ⭐ Il motivo accanto al sintomo: «non si vede» da solo nasconde
-        #   «l'applicazione si e' lamentata», e il suo registro lo dice.
-        esito["perche"] += " ⚠ (l'applicazione dice: «%s»)" % esito["detto"]
+        # ⭐ The reason next to the symptom: «it is not seen» alone hides
+        #   «the application complained», and its log says so.
+        esito["perche"] += " ⚠ (the application says: «%s»)" % esito["detto"]
     sgombra(chi, a.attesa_sgombero)
     return esito
 
@@ -1727,156 +1726,156 @@ def ultimo_detto(coda):
 
 
 def _n(x):
-    return "non lo so" if x is None else x
+    return "unknown" if x is None else x
 
 
 def stampa(e):
-    faccia = {"vista": "SI ", "non-vista": "NO ", "non-lo-so": "?  "}[e["stato"]]
+    faccia = {"vista": "YES", "non-vista": "NO ", "non-lo-so": "?  "}[e["stato"]]
     print("  %-8s %-6s %s  %s" % (e["chi"], e["modo"], faccia, e["perche"]))
-    print("           schermi annunciati: %s · palco in %s s · applicazione viva "
-          "dopo %s s · fotogrammi: %s"
+    print("           screens announced: %s · stage in %s s · application alive "
+          "after %s s · frames: %s"
           % (_n(e["schermi"]), _n(e["palco_s"]), _n(e["avvio_s"]),
              _n(e["fotogrammi"])))
-    print("           ⚠ processi (NON decidono): %s all'apertura, %s alla fine · "
-          "fotogrammi guardati per il «prima»: %s"
+    print("           ⚠ processes (they do NOT decide): %s at the opening, %s at the end · "
+          "frames looked at for the «before»: %s"
           % (_n(e["processi_apertura"]), _n(e["processi"]),
              _n(e["guardati_prima"])))
-    # ⭐ E I DUE PNG GIUDICATI SI DICONO SEMPRE: su un rosso, senza il percorso,
-    #   non c'e' niente da guardare senza sapere gia' dove cercare.
+    # ⭐ AND THE TWO JUDGED PNGs ARE ALWAYS STATED: on a red, without the path,
+    #   there is nothing to look at without already knowing where to search.
     if e["png_prima"] or e["png_dopo"]:
-        print("           le due immagini giudicate: %s  ·  %s"
+        print("           the two judged images: %s  ·  %s"
               % (e["png_prima"] or "—", e["png_dopo"] or "—"))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐⭐ IL GIUNTO — e sta in una funzione PURA perche' `--certifica` lo provi.
+# ⭐⭐⭐ THE JOINT — and it lives in a PURE function so that `--certifica` tests it.
 #
-# ⛔⛔ E' il pezzo che `LEZIONI.md` §1.52 e' nata per: *«la certificazione di C9
-#     provava il giudice, quella di C13 provava la lettura del registro; il
-#     difetto stava nel GIUNTO fra le due — nel codice d'uscita, che non e' di
-#     nessuno dei due mestieri»*.  ⇒ Qui il codice d'uscita col guasto innestato
-#     e' **invertito** (`0` = il guasto e' stato visto), e da lui `11-gancio.sh`
-#     ricava `ha_visto_il_guasto`, da cui C13 dice se la rete sa ancora dare
-#     rosso.  ⛔ Un giunto cosi' non si lascia non certificato.
+# ⛔⛔ It is the piece `LEZIONI.md` §1.52 was born for: *«C9's certification
+#     tested the judge, C13's tested the reading of the log; the
+#     defect was in the JOINT between the two — in the exit code, which belongs to
+#     neither of the two trades»*.  ⇒ Here the exit code with the grafted fault
+#     is **inverted** (`0` = the fault was seen), and from it `11-gancio.sh`
+#     derives `ha_visto_il_guasto`, from which C13 says whether the net can still say
+#     red.  ⛔ A joint like that is not left uncertified.
 # ═══════════════════════════════════════════════════════════════════════════
 def collauda_il_guasto(guasto, sano, rotto, frazione_minima=FRAZIONE_MINIMA,
                        quota=QUOTA_GUASTO):
-    """Torna `(esito, [righe da stampare])`.  ⛔ L'esito si legge AL CONTRARIO.
+    """Returns `(esito, [lines to print])`.  ⛔ The outcome is read BACKWARDS.
 
-        0  ⭐ il guasto E' STATO VISTO — la maglia sa dare rosso
-        1  ⛔ il guasto NON e' stato visto, o ha morso troppo poco
-        3  ⚠ non ho potuto innestarlo o non ho potuto guardare
-           ⇒ ne' una certificazione ne' un'accusa
+        0  ⭐ the fault WAS SEEN — the mesh can say red
+        1  ⛔ the fault was NOT seen, or it bit too little
+        3  ⚠ I could not graft it or I could not look
+           ⇒ neither a certification nor an accusation
     """
     r = []
-    r.append("  controllo sano  : %-10s (colore %s · processi %s)"
+    r.append("  healthy control : %-10s (colour %s · processes %s)"
              % (sano["stato"],
-                "non lo so" if sano["frazione_dopo"] is None
+                "unknown" if sano["frazione_dopo"] is None
                 else "%.1f%%" % (sano["frazione_dopo"] * 100),
                 _n(sano["processi"])))
-    r.append("  con il guasto   : %-10s (colore %s · processi %s)"
+    r.append("  with the fault  : %-10s (colour %s · processes %s)"
              % (rotto["stato"],
-                "non lo so" if rotto["frazione_dopo"] is None
+                "unknown" if rotto["frazione_dopo"] is None
                 else "%.1f%%" % (rotto["frazione_dopo"] * 100),
                 _n(rotto["processi"])))
     r.append("")
 
     if sano["stato"] == "non-lo-so" or rotto["stato"] == "non-lo-so":
-        r.append("⚠ non ho potuto giudicare: non posso dire se il guasto si "
-                 "sarebbe visto")
-        r.append("   ⇒ e questo NON accusa la maglia (§4.5: il gancio lo scrive "
-                 "come «innesto non giudicato»)")
+        r.append("⚠ I could not judge: I cannot say whether the fault "
+                 "would have been seen")
+        r.append("   ⇒ and this does NOT accuse the mesh (§4.5: the hook writes it "
+                 "as «graft not judged»)")
         return 3, r
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ⛔⛔ IL CONTROLLO SANO ROSSO ESCE **3**, E NON 1 — ed e' una correzione.
+    # ⛔⛔ THE RED HEALTHY CONTROL EXITS **3**, AND NOT 1 — and it is a correction.
     #
-    # La prima stesura usciva **1**.  ⚠ Ma `11-gancio.sh` legge un giro innestato
-    # AL CONTRARIO: `1` ⇒ `ha_visto_il_guasto: false`.  ⇒ ⛔ Una regressione VERA
-    # del prodotto, capitata proprio durante il giro col guasto innestato,
-    # avrebbe fatto scrivere a C13 *«la rete non sa piu' dare rosso»* — che e'
-    # esattamente il difetto di §1.52, prodotto dalla cura di §1.52.
-    # ⭐ Il rosso vero c'e' gia' e lo da' il giro SENZA guasto, che nella
-    #   famiglia gira subito prima: qui non serve ripeterlo, serve non mentire.
+    # The first draft exited **1**.  ⚠ But `11-gancio.sh` reads a grafted round
+    # BACKWARDS: `1` ⇒ `ha_visto_il_guasto: false`.  ⇒ ⛔ A REAL regression
+    # of the product, happening precisely during the round with the grafted fault,
+    # would have made C13 write *«the net can no longer say red»* — which is
+    # exactly the defect of §1.52, produced by the cure of §1.52.
+    # ⭐ The real red is already there and it is given by the round WITHOUT the fault, which in the
+    #   family runs right before: here there is no need to repeat it, there is a need not to lie.
     # ═══════════════════════════════════════════════════════════════════════
     if sano["stato"] != "vista":
-        r.append("⛔⛔ IL CONTROLLO SANO E' ROSSO: %s" % sano["perche"])
-        r.append("    ⇒ questo giro NON misura il guasto — misura un rosso che")
-        r.append("      c'e' gia' per conto suo (LEZIONI.md §1.45).")
-        r.append("    ⚠ E l'esito e' 3 e non 1: dire «il guasto non e' stato "
-                 "visto» sarebbe")
-        r.append("      un'accusa alla rete per una regressione del PRODOTTO. "
-                 "⇒ Il rosso vero")
-        r.append("      lo da' il giro senza guasto, che gira subito prima.")
+        r.append("⛔⛔ THE HEALTHY CONTROL IS RED: %s" % sano["perche"])
+        r.append("    ⇒ this round does NOT measure the fault — it measures a red that")
+        r.append("      is already there on its own (LEZIONI.md §1.45).")
+        r.append("    ⚠ And the outcome is 3 and not 1: saying «the fault was not "
+                 "seen» would be")
+        r.append("      an accusation against the net for a regression of the PRODUCT. "
+                 "⇒ The real red")
+        r.append("      is given by the round without the fault, which runs right before.")
         return 3, r
 
     if rotto["stato"] != "non-vista":
-        r.append("⛔⛔ IL GUASTO INNESTATO NON E' STATO VISTO: la finestra si "
-                 "vede lo stesso.")
-        r.append("    ⇒ o il guasto non morde, o questa maglia non guarda nel "
-                 "posto giusto —")
-        r.append("      e in tutt'e due i casi non ci si puo' fidare di lei.")
+        r.append("⛔⛔ THE GRAFTED FAULT WAS NOT SEEN: the window is "
+                 "seen anyway.")
+        r.append("    ⇒ either the fault does not bite, or this mesh does not look in "
+                 "the right place —")
+        r.append("      and in both cases it cannot be trusted.")
         return 1, r
 
-    # ⚠ E OGNI GUASTO PRETENDE LA PROPRIA FIRMA, o non e' quel guasto.
-    #   ⛔ E se la firma manca l'esito e' **3**: una maglia che non ha potuto
-    #      innestare il guasto non ha ne' visto ne' mancato niente.
+    # ⚠ AND EVERY FAULT DEMANDS ITS OWN SIGNATURE, or it is not that fault.
+    #   ⛔ And if the signature is missing the outcome is **3**: a mesh that could not
+    #      graft the fault has neither seen nor missed anything.
     proc = rotto["processi"]
     if guasto == "muore":
         if proc is None or proc > 0:
-            r.append("⚠ il guasto chiesto era «l'applicazione muore subito», ⛔ "
-                     "ma alla fine i processi sono %s: l'iniezione non ha preso."
+            r.append("⚠ the fault asked for was «the application dies at once», ⛔ "
+                     "but at the end the processes are %s: the injection did not take."
                      % _n(proc))
-            r.append("   ⇒ non ho innestato quel guasto (esito 3, non un rosso).")
+            r.append("   ⇒ I did not graft that fault (outcome 3, not a red).")
             return 3, r
         if rotto.get("ucciso") is False:
-            r.append("⚠ `pkill` non ha trovato niente da uccidere: l'iniezione "
-                     "non ha preso (esito 3, non un rosso).")
+            r.append("⚠ `pkill` found nothing to kill: the injection "
+                     "did not take (outcome 3, not a red).")
             return 3, r
     else:
         if proc is None or proc < 1:
-            r.append("⚠ il guasto chiesto era «la finestra non si apre e il "
-                     "processo RESTA VIVO», ⛔ ma i processi sono %s." % _n(proc))
-            r.append("   ⇒ senza un processo vivo starei provando l'altro "
-                     "guasto (esito 3, non un rosso).")
+            r.append("⚠ the fault asked for was «the window does not open and the "
+                     "process STAYS ALIVE», ⛔ but the processes are %s." % _n(proc))
+            r.append("   ⇒ without a live process I would be testing the other "
+                     "fault (outcome 3, not a red).")
             return 3, r
 
-    # ⭐ E ADESSO LA DIFFERENZA MISURABILE, che e' quel che §1.52 pretende.
+    # ⭐ AND NOW THE MEASURABLE DIFFERENCE, which is what §1.52 demands.
     fs = sano["frazione_dopo"] or 0.0
     fr = rotto["frazione_dopo"] or 0.0
-    r.append("  ⭐ differenza misurabile: il colore passa dal %.1f%% al %.1f%% "
-             "⇒ %.1f punti, cioe' il %.0f%% del sano (ne ammetto al piu' il "
+    r.append("  ⭐ measurable difference: the colour goes from %.1f%% to %.1f%% "
+             "⇒ %.1f points, i.e. %.0f%% of the healthy one (I allow at most "
              "%.0f%%)"
              % (fs * 100, fr * 100, (fs - fr) * 100,
                 (fr / fs * 100) if fs else 0.0, quota * 100))
     if fs <= 0 or fr > fs * quota:
-        r.append("⛔ il verdetto e' cambiato ma il NUMERO quasi no: il guasto ha "
-                 "morso poco o niente,")
-        r.append("   e un collaudo cosi' non certifica la rete.")
+        r.append("⛔ the verdict changed but the NUMBER hardly did: the fault "
+                 "bit little or not at all,")
+        r.append("   and an acceptance test like this does not certify the net.")
         return 1, r
 
     if guasto == "muore":
-        r.append("  ⭐ e la firma del guasto c'e': processi = 0 alla fine "
-                 "(l'applicazione e' morta davvero)")
+        r.append("  ⭐ and the fault's signature is there: processes = 0 at the end "
+                 "(the application really died)")
     else:
-        # ⭐⭐ LA DIMOSTRAZIONE, con due numeri invece che con una citazione.
-        # ⚠ E si dice quel che dimostra DAVVERO: non che i due conti siano
-        #   uguali (Firefox in kiosk fa piu' processi che senza testa), ⛔ ma
-        #   che **in tutt'e due i casi c'e' almeno un processo vivo** — cioe'
-        #   che il conto, qualunque sia, non separa i due mondi.  Il pixel si'.
-        r.append("  ⭐⭐ E QUESTA E' LA DIMOSTRAZIONE, con due numeri invece che "
-                 "con una citazione:")
-        r.append("     l'applicazione e' VIVA in tutt'e due i giri — %s processi "
-                 "col sano, %s col guasto —"
+        # ⭐⭐ THE PROOF, with two numbers instead of a quotation.
+        # ⚠ And it states what it REALLY proves: not that the two counts are
+        #   equal (Firefox in kiosk makes more processes than headless), ⛔ but
+        #   that **in both cases there is at least one live process** — i.e.
+        #   that the count, whatever it is, does not separate the two worlds.  The pixel does.
+        r.append("  ⭐⭐ AND THIS IS THE PROOF, with two numbers instead of "
+                 "a quotation:")
+        r.append("     the application is ALIVE in both rounds — %s processes "
+                 "with the healthy one, %s with the fault —"
                  % (_n(sano["processi"]), _n(rotto["processi"])))
-        r.append("     e i verdetti sono OPPOSTI.  ⇒ ⛔ il conto dei processi non "
-                 "separa i due mondi; il pixel si'.")
-        r.append("     E' il rilievo di `fasi/11…` §4.1 (`[M]` diceva 1 in "
-                 "tutt'e due i casi), misurato qui.")
+        r.append("     and the verdicts are OPPOSITE.  ⇒ ⛔ the process count does not "
+                 "separate the two worlds; the pixel does.")
+        r.append("     It is the finding of `fasi/11…` §4.1 (`[M]` it said 1 in "
+                 "both cases), measured here.")
 
     r.append("")
-    r.append("⭐ IL GUASTO INNESTATO E' STATO VISTO — questa maglia SA dare rosso.")
+    r.append("⭐ THE GRAFTED FAULT WAS SEEN — this mesh CAN say red.")
     return 0, r
 
 
@@ -1884,101 +1883,101 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--utente-base", default="c2u")
     p.add_argument("--giri", type=int, default=1,
-                   help="⚠ uno basta: «si vede o non si vede» e' deterministico, "
-                        "e ogni giro costa una nascita di sessione")
+                   help="⚠ one is enough: «it is seen or it is not seen» is deterministic, "
+                        "and every round costs a session birth")
     p.add_argument("--parola", default="provanic2026")
     p.add_argument("--porta", type=int, default=8511)
     p.add_argument("--indirizzo", default="127.0.0.1")
     p.add_argument("--cliente", default="/opt/remotix/01-b3-cliente.py")
     p.add_argument("--pagina", default="/opt/remotix/11-c2-finestra.html")
     p.add_argument("--applicazione", default="firefox-esr",
-                   help="⚠ oggi il browser, perche' e' l'unico programma della "
-                        "scatola che dipinga un colore DICHIARATO. ⛔ Va "
-                        "spostata su un cliente Wayland minimo appena ce n'e' "
-                        "uno che sappia farlo (vedi in testa)")
+                   help="⚠ today the browser, because it is the only program in the "
+                        "box that paints a DECLARED colour. ⛔ It must be "
+                        "moved onto a minimal Wayland client as soon as there is "
+                        "one that can do it (see the top)")
     p.add_argument("--argomenti", default="--kiosk file://%(pagina)s",
-                   help="come si chiede all'applicazione di aprire la pagina")
+                   help="how the application is asked to open the page")
     p.add_argument("--argomenti-ciechi", default="--headless file://%(pagina)s",
-                   help="⛔ IL GUASTO «finestra che non si apre»: l'applicazione "
-                        "resta VIVA e non dipinge niente")
+                   help="⛔ THE «window that does not open» FAULT: the application "
+                        "stays ALIVE and paints nothing")
     p.add_argument("--lavoro", default="/var/lib/rete11/c2")
-    # ⭐ 60 s, e il numero viene da una MISURA: `[M]` 27 agosto 2026, dentro la
-    #   scatola GNOME curata il palco nasce in **2,1÷4,2 s** ⇒ 60 s sono piu'
-    #   di dieci volte il peggiore misurato.  ⛔ I 200 s di prima erano un
-    #   numero prudente scelto quando il fenomeno sembrava durare ~97 s — che
-    #   era un guasto della scatola, poi curato (`LEZIONI.md` §1.54).
-    # ⚠ E qui non e' una scadenza ma un ADDENDO di `--resta`: ogni secondo di
-    #   troppo e' un secondo buttato per ogni inquilino, non un margine.
+    # ⭐ 60 s, and the number comes from a MEASUREMENT: `[M]` 27 August 2026, inside the
+    #   cured GNOME box the stage is born in **2.1÷4.2 s** ⇒ 60 s are more
+    #   than ten times the worst measured.  ⛔ The 200 s of before were a
+    #   prudent number chosen when the phenomenon seemed to last ~97 s — which
+    #   was a fault of the box, later cured (`LEZIONI.md` §1.54).
+    # ⚠ And here it is not a deadline but an ADDEND of `--resta`: every second
+    #   too many is a second thrown away for every tenant, not a margin.
     p.add_argument("--attesa-palco", type=float, default=60.0,
-                   help="⛔ TETTO DA RITARARE. [M] (C1, 27 ago 2026, non mia) il "
-                        "palco nella scatola GNOME nasce in 95-101 s per un "
-                        "difetto della SCATOLA (polkit); curato quello, ~2 s ⇒ "
-                        "rimettere a ~20")
+                   help="⛔ CEILING TO RECALIBRATE. [M] (C1, 27 Aug 2026, not mine) the "
+                        "stage in the GNOME box is born in 95-101 s because of a "
+                        "defect of the BOX (polkit); with that cured, ~2 s ⇒ "
+                        "put back to ~20")
     p.add_argument("--attesa-avvio", type=float, default=30.0,
-                   help="⛔ quanto si aspetta che l'applicazione ESISTA (un "
-                        "processo suo). Scaduto: «non ho potuto guardare», mai "
-                        "un rosso — e il guasto «muore subito» uccide solo quel "
-                        "che ha visto vivo")
+                   help="⛔ how long to wait for the application to EXIST (a "
+                        "process of its own). Expired: «I could not look», never "
+                        "a red — and the «dies at once» fault kills only what "
+                        "it saw alive")
     p.add_argument("--attesa-finestra", type=float, default=120.0,
-                   help="⛔ TETTO DA RITARARE: quanto si da' all'applicazione "
-                        "per DIPINGERE, dopo che e' partita. ⚠ 120 come C8, e "
-                        "per la stessa ragione MISURATA: [M] il primo avvio di "
-                        "Firefox in una scatola fredda passa i 25 s, e qui la "
-                        "scatola e' fredda davvero — `crea()` fa `userdel -r`, "
-                        "quindi nessun profilo esiste")
-    # ⭐ FASE 12 (19 set 2026): da 12 a 240.  `[M]` Su KDE la schermata
-    #   d'avvio di Plasma dura ~2,4 s e manda ~140 fotogrammi neri: con 12 il
-    #   «prima» su KDE era «non lo so» per sempre.  Su GNOME il primo
-    #   disegnato arriva comunque fra i primi, e la scelta non cambia.
+                   help="⛔ CEILING TO RECALIBRATE: how long the application is given "
+                        "to PAINT, after it has started. ⚠ 120 like C8, and "
+                        "for the same MEASURED reason: [M] the first start of "
+                        "Firefox in a cold box exceeds 25 s, and here the "
+                        "box is really cold — `crea()` does `userdel -r`, "
+                        "so no profile exists")
+    # ⭐ PHASE 12 (19 Sep 2026): from 12 to 240.  `[M]` On KDE the Plasma
+    #   splash screen lasts ~2.4 s and sends ~140 black frames: with 12 the
+    #   «before» on KDE was «I do not know» forever.  On GNOME the first
+    #   drawn one arrives among the first anyway, and the choice does not change.
     #
-    # ⛔⛔ E 240 NON BASTAVA — 20 settembre 2026, baseline della fase 13.
+    # ⛔⛔ AND 240 WAS NOT ENOUGH — 20 September 2026, baseline of phase 13.
     #
-    # `[M]` Dentro il giro completo C2(kde) e' uscita **3** tre volte su tre
-    # («i primi 240 fotogrammi sono tutti neri o quasi»), ⛔ e non era il
-    # prodotto: la finestra si era aperta e copriva il 98,7 % dello schermo —
-    # l'immagine «dopo» e' quella giusta.  Il banco non aveva il **termine di
-    # paragone**, quindi si e' astenuto.
+    # `[M]` Inside the complete round C2(kde) exited **3** three times out of three
+    # («the first 240 frames are all black or nearly»), ⛔ and it was not the
+    # product: the window had opened and covered 98.7 % of the screen —
+    # the «after» image is the right one.  The bench did not have the **term of
+    # comparison**, so it abstained.
     #
-    # `[M]` Rimisurato subito dopo, sulla stessa scatola, **tre volte**:
-    #   186 · 186 (scatola rifatta da zero) · 189 (⭐ e con la cache
-    #   dell'ospite svuotata, `drop_caches`, per togliere di mezzo il sospetto
-    #   che fosse il disco freddo).  ⇒ Il numero vero sta intorno a **187**,
-    #   ed e' **stabile**: il margine su 240 era di 54 fotogrammi, il 29 %.
+    # `[M]` Re-measured right afterwards, on the same box, **three times**:
+    #   186 · 186 (box rebuilt from zero) · 189 (⭐ and with the host's
+    #   cache emptied, `drop_caches`, to rule out the suspicion
+    #   that it was the cold disk).  ⇒ The real number is around **187**,
+    #   and it is **stable**: the margin on 240 was 54 frames, 29 %.
     #
-    # `[?]` Perche' dentro il giro completo ne servano di piu' (379 fotogrammi
-    #   in tutto contro 249) non e' misurato.  Il sospetto sta scritto:
-    #   `PIANO.md` — fra due banchi sullo stesso posto **il posto di prima
-    #   resta attaccato una ventina di secondi**, e C2(kde) nel giro viene
-    #   subito dopo C9(kde), che di sessioni ne ha fatte due.
+    # `[?]` Why more are needed inside the complete round (379 frames
+    #   in all against 249) is not measured.  The suspicion is written down:
+    #   `PIANO.md` — between two benches on the same seat **the previous seat
+    #   stays attached for about twenty seconds**, and C2(kde) in the round comes
+    #   right after C9(kde), which made two sessions.
     #
-    # ⭐ E la cura giusta e' un tetto che **non morda**, non un tetto ritarato
-    #   al pelo: cercare il «prima» si **ferma al primo fotogramma disegnato**
-    #   (`scegli_il_prima`), quindi alzarlo non costa niente quando il desktop
-    #   dipinge presto — costa solo a ffmpeg qualche PNG in piu' da estrarre,
-    #   e solo nel caso in cui senza di essi la maglia direbbe «non lo so».
-    #   ⇒ 900: piu' di quanti ne abbia mai avuti il flusso (379), cioe'
-    #     «guardali tutti».  ⛔ Il giudizio non cambia di una virgola: il
-    #     metro resta il colore che cresce di 20 punti e copre il 25 %.
+    # ⭐ And the right cure is a ceiling that **does not bite**, not a ceiling recalibrated
+    #   to a hair: searching for the «before» **stops at the first drawn frame**
+    #   (`scegli_il_prima`), so raising it costs nothing when the desktop
+    #   paints early — it only costs ffmpeg a few more PNGs to extract,
+    #   and only in the case in which without them the mesh would say «I do not know».
+    #   ⇒ 900: more than the stream has ever had (379), i.e.
+    #     «look at them all».  ⛔ The judgement does not change one bit: the
+    #     yardstick remains the colour that grows by 20 points and covers 25 %.
     p.add_argument("--fotogrammi-prima", type=int, default=900,
-                   help="quanti fotogrammi iniziali si guardano per trovare il "
-                        "«prima» disegnato. ⛔ Uno solo darebbe «non lo so» per "
-                        "sempre se il primo fosse nero (LEZIONI.md §1.49); 12 "
-                        "non bastano alla schermata d'avvio di Plasma")
+                   help="how many initial frames are looked at to find the drawn "
+                        "«before». ⛔ A single one would give «I do not know» "
+                        "forever if the first were black (LEZIONI.md §1.49); 12 "
+                        "are not enough for the Plasma splash screen")
     p.add_argument("--coda", type=float, default=15.0,
-                   help="quanto il cliente resta attaccato DOPO che la finestra "
-                        "e' stata giudicata pronta, per portarsi via i fotogrammi")
+                   help="how long the client stays attached AFTER the window "
+                        "has been judged ready, to carry away the frames")
     p.add_argument("--attesa-sgombero", type=float, default=60.0)
     p.add_argument("--muore-dopo", type=float, default=1.5,
-                   help="quanto vive l'applicazione nel guasto «muore subito»")
+                   help="how long the application lives in the «dies at once» fault")
     p.add_argument("--frazione-minima", type=float, default=FRAZIONE_MINIMA)
     p.add_argument("--margine", type=float, default=MARGINE)
     p.add_argument("--applicazione-che-muore", action="store_true",
-                   help="⛔ GUASTO INNESTATO: l'applicazione parte e muore subito. "
-                        "L'esito si legge AL CONTRARIO (0 = il guasto e' stato visto)")
+                   help="⛔ GRAFTED FAULT: the application starts and dies at once. "
+                        "The outcome is read BACKWARDS (0 = the fault was seen)")
     p.add_argument("--finestra-che-non-si-apre", action="store_true",
-                   help="⛔ GUASTO INNESTATO: l'applicazione resta VIVA e non "
-                        "dipinge. ⭐ E' il caso che dimostra che contare i "
-                        "processi non basta")
+                   help="⛔ GRAFTED FAULT: the application stays ALIVE and does not "
+                        "paint. ⭐ It is the case that proves that counting the "
+                        "processes is not enough")
     p.add_argument("--certifica", action="store_true")
     a = p.parse_args()
 
@@ -1986,102 +1985,102 @@ def main():
         sys.exit(certifica())
 
     if a.applicazione_che_muore and a.finestra_che_non_si_apre:
-        print("⛔ un guasto per volta: se se ne innestano due non si sa piu' "
-              "quale ha morso")
+        print("⛔ one fault at a time: if two are grafted one no longer knows "
+              "which one bit")
         sys.exit(2)
     # ═══════════════════════════════════════════════════════════════════════
-    # ⛔⛔ LE GUARDIE SUI NUMERI, e non sono pignoleria: sono `LEZIONI.md` §1.44.
+    # ⛔⛔ THE GUARDS ON THE NUMBERS, and they are not pedantry: they are `LEZIONI.md` §1.44.
     #
-    #   `--giri 0`            ⇒ nessun giro, nessun rosso, nessun «non lo so»
-    #                           ⇒ ⛔ **VERDE con zero misure sotto**
-    #   `--frazione-minima 0` ⇒ qualunque immagine passa ⇒ un predicato che non
-    #                           puo' fallire, chiesto dalla riga di comando
-    # ⚠ E `--certifica` non se ne accorgerebbe: certifica le COSTANTI, non gli
-    #   argomenti.  ⇒ La guardia va qui, dove gli argomenti arrivano.
+    #   `--giri 0`            ⇒ no round, no red, no «I do not know»
+    #                           ⇒ ⛔ **GREEN with zero measurements underneath**
+    #   `--frazione-minima 0` ⇒ any image passes ⇒ a predicate that cannot
+    #                           fail, asked for from the command line
+    # ⚠ And `--certifica` would not notice: it certifies the CONSTANTS, not the
+    #   arguments.  ⇒ The guard goes here, where the arguments arrive.
     # ═══════════════════════════════════════════════════════════════════════
     if a.giri < 1:
-        print("⛔ --giri %d: un giro che non gira non e' un verde, e' un uso "
-              "sbagliato" % a.giri)
+        print("⛔ --giri %d: a round that does not run is not a green, it is wrong "
+              "usage" % a.giri)
         sys.exit(2)
     if a.frazione_minima <= 0 or a.frazione_minima > 1:
-        print("⛔ --frazione-minima %s: con 0 (o meno) questa maglia non "
-              "potrebbe piu' dare rosso, e sopra 1 non potrebbe dare verde"
+        print("⛔ --frazione-minima %s: with 0 (or less) this mesh could no "
+              "longer give red, and above 1 it could not give green"
               % a.frazione_minima)
         sys.exit(2)
     if a.margine < 0 or a.margine > 1:
-        print("⛔ --margine %s: fuori da 0..1 non governa piu' niente"
+        print("⛔ --margine %s: outside 0..1 it no longer governs anything"
               % a.margine)
         sys.exit(2)
     if os.geteuid() != 0:
-        print("⛔ va eseguita da amministratore: deve creare inquilini nuovi")
+        print("⛔ it must be run as administrator: it has to create new tenants")
         sys.exit(2)
 
-    # ── il terreno: senza uno di questi non si giudica, e si dice quale ─────
+    # ── the terrain: without one of these we do not judge, and we say which ──
     giudice, dove_g = giudice_del_desktop()
     if giudice is None:
-        print("⛔ non trovo il giudice delle immagini (10-f1-testimone.py) accanto a me")
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ I cannot find the image judge (10-f1-testimone.py) next to me")
+        print("   ⇒ I could not look")
         sys.exit(3)
     lettore, dove_l = lettore_del_colore()
     if lettore is None:
-        print("⛔ non trovo il lettore del colore (11-c8-…py) accanto a me")
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ I cannot find the colour reader (11-c8-…py) next to me")
+        print("   ⇒ I could not look")
         sys.exit(3)
-    for che, dove in (("il cliente di prova", a.cliente),
-                      ("la pagina bersaglio", a.pagina)):
+    for che, dove in (("the test client", a.cliente),
+                      ("the target page", a.pagina)):
         if not os.path.exists(dove):
-            print("⛔ non trovo %s: %s" % (che, dove))
-            print("   ⇒ non ho potuto guardare")
+            print("⛔ I cannot find %s: %s" % (che, dove))
+            print("   ⇒ I could not look")
             sys.exit(3)
     for programma in (a.applicazione, "ffmpeg", "wayland-info", "runuser"):
         if sh("command -v %s" % programma).returncode != 0:
-            print("⛔ nella scatola non c'e' %s" % programma)
-            print("   ⇒ non ho potuto guardare")
+            print("⛔ the box does not have %s" % programma)
+            print("   ⇒ I could not look")
             sys.exit(3)
     try:
         import numpy, PIL  # noqa: F401
     except ImportError:
-        print("⛔ mancano numpy o Pillow: il giudice non puo' leggere un'immagine")
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ numpy or Pillow is missing: the judge cannot read an image")
+        print("   ⇒ I could not look")
         sys.exit(3)
 
     os.makedirs(a.lavoro, exist_ok=True)
     guasto = ("muore" if a.applicazione_che_muore else
               "cieca" if a.finestra_che_non_si_apre else None)
 
-    # ⭐ PRIMA di ogni `crea`: `crea` fa `userdel -r`, e da quel momento il
-    #   padrone di `/tmp/mozilla` sarebbe un NUMERO invece di un nome — cioe'
-    #   non lo riconoscerei piu' come mio.
+    # ⭐ BEFORE any `crea`: `crea` does `userdel -r`, and from that moment the
+    #   owner of `/tmp/mozilla` would be a NUMBER instead of a name — i.e.
+    #   I would no longer recognise it as mine.
     resto = sgombra_il_mio_rimasuglio(a.utente_base)
 
-    print("== C2 — una finestra si apre ==")
-    print("   porta %d · applicazione «%s» · pagina %s"
+    print("== C2 — a window opens ==")
+    print("   port %d · application «%s» · page %s"
           % (a.porta, a.applicazione, os.path.basename(a.pagina)))
-    print("   metro: colore %s ±%d per canale, almeno il %.0f%% dello schermo, "
-          "cresciuto di almeno %.0f punti"
+    print("   yardstick: colour %s ±%d per channel, at least %.0f%% of the screen, "
+          "grown by at least %.0f points"
           % (COLORE, TOLLERANZA, a.frazione_minima * 100, a.margine * 100))
-    print("   giudici importati: %s · %s"
+    print("   imported judges: %s · %s"
           % (os.path.basename(dove_g), os.path.basename(dove_l)))
-    print("   provvista: la cura di src/provisiona.sh, importata da C8, a ogni "
-          "inquilino che creo")
+    print("   provisioning: the cure of src/provisiona.sh, imported from C8, for every "
+          "tenant I create")
     if resto:
         print("   %s" % resto)
-    print("   tetti (⛔ da ritarare sul vero): palco %.0f s · finestra %.0f s · "
-          "coda %.0f s" % (a.attesa_palco, a.attesa_finestra, a.coda))
+    print("   ceilings (⛔ to recalibrate on the real thing): stage %.0f s · window %.0f s · "
+          "tail %.0f s" % (a.attesa_palco, a.attesa_finestra, a.coda))
     if guasto:
-        print("   ⛔ GUASTO INNESTATO: «%s» — e l'esito si legge AL CONTRARIO"
-              % ("l'applicazione muore subito" if guasto == "muore"
-                 else "l'applicazione resta VIVA e non dipinge"))
-        print("   ⭐ e con lui gira un CONTROLLO SANO, o non si potrebbe "
-              "distinguere «il guasto ha morso» da «era gia' rosso»")
-    print("   ⛔ il conto dei processi viene riportato e NON decide niente: "
-          "[M] fasi/10 §7.4 diceva 1 in tutt'e due i casi")
+        print("   ⛔ GRAFTED FAULT: «%s» — and the outcome is read BACKWARDS"
+              % ("the application dies at once" if guasto == "muore"
+                 else "the application stays ALIVE and does not paint"))
+        print("   ⭐ and with it runs a HEALTHY CONTROL, or one could not "
+              "distinguish «the fault bit» from «it was already red»")
+    print("   ⛔ the process count is reported and decides NOTHING: "
+          "[M] fasi/10 §7.4 said 1 in both cases")
     print()
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ⭐⭐ COL GUASTO INNESTATO SI APRONO DUE INQUILINI, e non uno.
-    #    `LEZIONI.md` §1.52: il guasto non si misura sul colore del verdetto, si
-    #    misura sulla DIFFERENZA rispetto al giro senza guasto.
+    # ⭐⭐ WITH THE GRAFTED FAULT TWO TENANTS ARE OPENED, and not one.
+    #    `LEZIONI.md` §1.52: the fault is not measured on the colour of the verdict, it is
+    #    measured on the DIFFERENCE with respect to the round without the fault.
     # ═══════════════════════════════════════════════════════════════════════
     gambe = []
     if guasto:
@@ -2103,21 +2102,21 @@ def main():
         viste = sum(1 for e in esiti if e["stato"] == "vista")
         no = sum(1 for e in esiti if e["stato"] == "non-vista")
         ignoti = sum(1 for e in esiti if e["stato"] == "non-lo-so")
-        print("  finestre viste: %d   ⛔ NON viste: %d   non giudicate: %d"
+        print("  windows seen: %d   ⛔ NOT seen: %d   not judged: %d"
               % (viste, no, ignoti))
         if no:
-            print("\n  ⛔⛔ ROSSO — %d sessioni su %d non hanno mostrato nessuna "
-                  "finestra." % (no, len(esiti)))
+            print("\n  ⛔⛔ RED — %d sessions out of %d showed no "
+                  "window." % (no, len(esiti)))
             sys.exit(1)
         if ignoti:
-            print("\n  ⚠ NON GIUDICO — %d giri non hanno potuto parlare." % ignoti)
-            print("     ⛔ E questo non e' un verde: e' un esito suo (§4.5).")
+            print("\n  ⚠ NOT JUDGING — %d rounds could not speak." % ignoti)
+            print("     ⛔ And this is not a green: it is an outcome of its own (§4.5).")
             sys.exit(3)
-        print("\n  ⭐ VERDE — la finestra si vede in tutte e %d le sessioni."
+        print("\n  ⭐ GREEN — the window is seen in all %d sessions."
               % len(esiti))
         sys.exit(0)
 
-    # ── il collaudo del guasto innestato ────────────────────────────────────
+    # ── the acceptance test of the grafted fault ────────────────────────────
     esito, righe = collauda_il_guasto(guasto, esiti[0], esiti[1],
                                       a.frazione_minima)
     for riga in righe:

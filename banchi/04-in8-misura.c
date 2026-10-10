@@ -1,20 +1,20 @@
 /*
- * misura.c — banco di STUDIO F4-IN-8: che misura accetta Mutter per un monitor
- * virtuale di `RecordVirtual`, e che cosa succede se ne chiediamo una strana.
+ * misura.c — STUDY bench F4-IN-8: which size Mutter accepts for a virtual
+ * monitor of `RecordVirtual`, and what happens if we ask for a strange one.
  *
- * ⛔ Non tocca `src/`: e' un file a se', si compila da solo.
+ * ⛔ It does not touch `src/`: it is a file of its own, it compiles by itself.
  *
  *   misura <L> <A> [<L2> <A2>] [secondi]
  *
- * Fa la sequenza di `src/mutter.c` (RemoteDesktop + ScreenCast + RecordVirtual),
- * poi apre un flusso PipeWire chiedendo la misura ESATTA <L>x<A> (rettangolo
- * fisso, non intervallo), e STAMPA:
+ * Runs the sequence of `src/mutter.c` (RemoteDesktop + ScreenCast + RecordVirtual),
+ * then opens a PipeWire stream asking for the EXACT size <L>x<A> (fixed
+ * rectangle, not a range), and PRINTS:
  *
- *   - la misura che PipeWire ha concordato (quella vera dei pixel);
- *   - lo stato del monitor secondo Mutter (DisplayConfig.GetCurrentState):
- *     modo corrente e SCALA del monitor logico;
- *   - se sono dati <L2> <A2>: rifa' `pw_stream_update_params` a sessione aperta
- *     e misura il BUCO fra l'ultimo fotogramma vecchio e il primo nuovo.
+ *   - the size PipeWire agreed (the real one of the pixels);
+ *   - the monitor state according to Mutter (DisplayConfig.GetCurrentState):
+ *     current mode and SCALE of the logical monitor;
+ *   - if <L2> <A2> are given: redoes `pw_stream_update_params` with the session
+ *     open and measures the HOLE between the last old frame and the first new one.
  */
 #include <gio/gio.h>
 #include <gio/gunixfdlist.h>
@@ -66,7 +66,7 @@ static void su_nodo(GDBusConnection *b, const char *m, const char *p, const char
 }
 static gboolean sveglia(gpointer d) { return G_SOURCE_CONTINUE; }
 
-/* ---- lo stato dei monitor secondo Mutter ------------------------------ */
+/* ---- the state of the monitors according to Mutter ------------------- */
 static void stampa_stato(const char *quando)
 {
 	GVariant *r = chiama(NOME_DISPLAY, PERCORSO_DISPLAY, IFACE_DISPLAY, "GetCurrentState",
@@ -75,7 +75,7 @@ static void stampa_stato(const char *quando)
 	GVariantIter it;
 	if (!r) return;
 
-	printf("\n== stato dei monitor (%s) ==\n", quando);
+	printf("\n== monitor state (%s) ==\n", quando);
 	monitors = g_variant_get_child_value(r, 1);
 	logicals = g_variant_get_child_value(r, 2);
 
@@ -107,8 +107,8 @@ static void stampa_stato(const char *quando)
 					gsize n = 0;
 					const gdouble *ss = g_variant_get_fixed_array(scale_supp, &n,
 					                                              sizeof(gdouble));
-					printf("  monitor %-10s «%s» modo %s  %dx%d @%.2f  pref=%d  "
-					       "scale ammesse:", conn, pro, id, w, h, rr, preferito);
+					printf("  monitor %-10s «%s» mode %s  %dx%d @%.2f  pref=%d  "
+					       "allowed scales:", conn, pro, id, w, h, rr, preferito);
 					for (gsize k = 0; k < n; k++) printf(" %.4f", ss[k]);
 					printf("\n");
 				}
@@ -134,7 +134,7 @@ static void stampa_stato(const char *quando)
 			GVariant *ms;
 			g_variant_get(l, "(iidub@a(ssss)@a{sv})", &x, &y, &scala, &trasf, &primario,
 			              &mons, &props);
-			printf("  LOGICO  a (%d,%d)  SCALA %.6f  trasf %u  primario %d  ->", x, y,
+			printf("  LOGICAL  at (%d,%d)  SCALE %.6f  transf %u  primary %d  ->", x, y,
 			       scala, trasf, primario);
 			g_variant_iter_init(&mi, mons);
 			while ((ms = g_variant_iter_next_value(&mi))) {
@@ -155,7 +155,7 @@ static void stampa_stato(const char *quando)
 	fflush(stdout);
 }
 
-/* ---- il flusso PipeWire ---------------------------------------------- */
+/* ---- the PipeWire stream ---------------------------------------------- */
 struct banco {
 	struct pw_main_loop *loop;
 	struct pw_stream *flusso;
@@ -164,11 +164,11 @@ struct banco {
 	uint32_t chiesta_l, chiesta_a;
 	uint32_t nuova_l, nuova_a;
 	gint64 t0;
-	gint64 t_richiesta_2;   /* quando ho chiesto la misura nuova */
+	gint64 t_richiesta_2;   /* when I asked for the new size */
 	gint64 t_ultimo_vecchio;
 	int fotogrammi;
 	int fotogrammi_dopo;
-	int fase;               /* 0 = prima misura, 1 = ho chiesto la seconda */
+	int fase;               /* 0 = first size, 1 = I asked for the second */
 	int secondi;
 };
 static struct banco B;
@@ -199,13 +199,13 @@ static void su_parametri(void *d, uint32_t id, const struct spa_pod *param)
 	if (!param || id != SPA_PARAM_Format) return;
 	if (spa_format_video_raw_parse(param, &B.formato) < 0) return;
 
-	printf("[%6.3f s] FORMATO CONCORDATO: %ux%u  (chiesto %ux%u)  %s\n",
+	printf("[%6.3f s] AGREED FORMAT: %ux%u  (asked %ux%u)  %s\n",
 	       (ora() - B.t0) / 1e6, B.formato.size.width, B.formato.size.height,
 	       B.fase == 0 ? B.chiesta_l : B.nuova_l, B.fase == 0 ? B.chiesta_a : B.nuova_a,
 	       (B.formato.size.width == (B.fase == 0 ? B.chiesta_l : B.nuova_l) &&
 	        B.formato.size.height == (B.fase == 0 ? B.chiesta_a : B.nuova_a))
-	           ? "⭐ ESATTO"
-	           : "⛔ DIVERSO — arrotondato in silenzio");
+	           ? "⭐ EXACT"
+	           : "⛔ DIFFERENT — rounded silently");
 	if (B.fase == 1 && B.formato.size.width == B.nuova_l && B.formato.size.height == B.nuova_a)
 		raffica_concordate++;
 	fflush(stdout);
@@ -224,18 +224,18 @@ static void su_parametri(void *d, uint32_t id, const struct spa_pod *param)
 static void su_stato(void *d, enum pw_stream_state vecchio, enum pw_stream_state nuovo,
                      const char *errore)
 {
-	printf("[%6.3f s] stato: %s -> %s%s%s\n", (ora() - B.t0) / 1e6,
+	printf("[%6.3f s] state: %s -> %s%s%s\n", (ora() - B.t0) / 1e6,
 	       pw_stream_state_as_string(vecchio), pw_stream_state_as_string(nuovo),
-	       errore ? "  errore: " : "", errore ? errore : "");
+	       errore ? "  error: " : "", errore ? errore : "");
 	fflush(stdout);
 	if (nuovo == PW_STREAM_STATE_ERROR) pw_main_loop_quit(B.loop);
 }
 
 /*
- * ⭐ LA DOMANDA VERA: il desktop dipinge TUTTA la superficie strana, o ne
- *    dipinge un pezzo e lascia bande nere?  Si guarda una griglia 8x4 di
- *    luminanza media, piu' l'ULTIMA colonna e l'ULTIMA riga separate — che sono
- *    il posto dove una banda nera si vedrebbe.
+ * ⭐ THE REAL QUESTION: does the desktop paint the WHOLE strange surface, or
+ *    does it paint a piece and leave black bands?  We look at an 8x4 grid of
+ *    mean luminance, plus the LAST column and the LAST row separately — which are
+ *    the place where a black band would show.
  */
 static void griglia(const uint8_t *dati, uint32_t l, uint32_t a, int passo)
 {
@@ -262,12 +262,12 @@ static void griglia(const uint8_t *dati, uint32_t l, uint32_t a, int passo)
 			if (y >= a - 4) ultima_rig += v;
 		}
 	}
-	printf("  pixel non neri: %.2f%%   ultime 4 colonne: luminanza media %.1f   "
-	       "ultime 4 righe: %.1f\n",
+	printf("  non-black pixels: %.2f%%   last 4 columns: mean luminance %.1f   "
+	       "last 4 rows: %.1f\n",
 	       100.0 * non_nero / (double) totale, ultima_col / (double) (4.0 * a),
 	       ultima_rig / (double) (4.0 * l));
 	for (i = 0; i < GY; i++) {
-		printf("  griglia:");
+		printf("  grid:");
 		for (j = 0; j < GX; j++)
 			printf(" %5.1f", conta[i][j] ? somma[i][j] / (double) conta[i][j] : -1.0);
 		printf("\n");
@@ -287,15 +287,15 @@ static void su_processo(void *d)
 			B.fotogrammi++;
 			B.t_ultimo_vecchio = ora();
 			if (B.fotogrammi <= 3)
-				printf("[%6.3f s] fotogramma %d: %u byte, passo %d\n",
+				printf("[%6.3f s] frame %d: %u bytes, stride %d\n",
 				       (ora() - B.t0) / 1e6, B.fotogrammi,
 				       b->buffer->datas[0].chunk->size,
 				       b->buffer->datas[0].chunk->stride);
 		} else {
 			B.fotogrammi_dopo++;
 			if (B.fotogrammi_dopo <= 3)
-				printf("[%6.3f s] fotogramma NUOVO %d: %u byte, passo %d  "
-				       "(buco dalla richiesta: %.1f ms; dall'ultimo vecchio: %.1f ms)\n",
+				printf("[%6.3f s] NEW frame %d: %u bytes, stride %d  "
+				       "(hole since the request: %.1f ms; since the last old one: %.1f ms)\n",
 				       (ora() - B.t0) / 1e6, B.fotogrammi_dopo,
 				       b->buffer->datas[0].chunk->size,
 				       b->buffer->datas[0].chunk->stride,
@@ -314,8 +314,8 @@ static const struct pw_stream_events eventi = {
     .process = su_processo,
 };
 
-/* ⭐ LA RAFFICA: venti misure diverse in due secondi, come farebbe una finestra
- *    di browser trascinata.  Domanda: Mutter regge, o si perde per strada? */
+/* ⭐ THE BURST: twenty different sizes in two seconds, as a dragged browser
+ *    window would do.  Question: does Mutter hold up, or does it get lost on the way? */
 static void alla_raffica(void *d, uint64_t espirazioni)
 {
 	uint8_t sp[1024];
@@ -343,28 +343,28 @@ static void al_tempo(void *d, uint64_t espirazioni)
 
 	passo++;
 	if (passo == 1) {
-		printf("\n[%6.3f s] === dopo %d s: %d fotogrammi alla prima misura ===\n",
+		printf("\n[%6.3f s] === after %d s: %d frames at the first size ===\n",
 		       (ora() - B.t0) / 1e6, B.secondi, B.fotogrammi);
-		stampa_stato("prima misura");
+		stampa_stato("first size");
 		if (raffica_quante > 0) {
-			printf("[%6.3f s] raffica: %d chieste, %d concordate ESATTE\n",
+			printf("[%6.3f s] burst: %d asked, %d agreed EXACT\n",
 			       (ora() - B.t0) / 1e6, raffica_fatte, raffica_concordate);
 			return;
 		}
 		if (B.nuova_l == 0) { pw_main_loop_quit(B.loop); return; }
-		printf("\n[%6.3f s] === CAMBIO A CALDO: chiedo %ux%u ===\n", (ora() - B.t0) / 1e6,
+		printf("\n[%6.3f s] === HOT CHANGE: asking %ux%u ===\n", (ora() - B.t0) / 1e6,
 		       B.nuova_l, B.nuova_a);
 		B.fase = 1;
 		B.t_richiesta_2 = ora();
 		par[0] = proposta(&b, B.nuova_l, B.nuova_a);
 		pw_stream_update_params(B.flusso, par, 1);
 	} else if (passo == 2) {
-		printf("\n[%6.3f s] === dopo il cambio: %d fotogrammi nuovi ===\n",
+		printf("\n[%6.3f s] === after the change: %d new frames ===\n",
 		       (ora() - B.t0) / 1e6, B.fotogrammi_dopo);
 		if (raffica_quante > 0)
-			printf("[%6.3f s] raffica FINALE: %d chieste, %d concordate ESATTE\n",
+			printf("[%6.3f s] FINAL burst: %d asked, %d agreed EXACT\n",
 			       (ora() - B.t0) / 1e6, raffica_fatte, raffica_concordate);
-		stampa_stato("seconda misura");
+		stampa_stato("second size");
 		pw_main_loop_quit(B.loop);
 	}
 	fflush(stdout);
@@ -385,7 +385,7 @@ int main(int argc, char **argv)
 	char nodo_s[32];
 
 	if (argc < 3) {
-		fprintf(stderr, "uso: %s <L> <A> [<L2> <A2>] [secondi]\n", argv[0]);
+		fprintf(stderr, "usage: %s <L> <A> [<L2> <A2>] [seconds]\n", argv[0]);
 		return 2;
 	}
 	B.chiesta_l = (uint32_t) atoi(argv[1]);
@@ -403,7 +403,7 @@ int main(int argc, char **argv)
 	bus = g_bus_get_sync(G_BUS_TYPE_SESSION, NULL, &e);
 	if (!bus) { fprintf(stderr, "⛔ bus: %s\n", e->message); return 3; }
 
-	stampa_stato("PRIMA di tutto");
+	stampa_stato("BEFORE everything");
 
 	r = chiama(NOME_REMOTE, PERCORSO_REMOTE, IFACE_REMOTE, "CreateSession", NULL,
 	           G_VARIANT_TYPE("(o)"));
@@ -446,7 +446,7 @@ int main(int argc, char **argv)
 	if (!r) return 8;
 	g_variant_get(r, "(o)", &p_flusso);
 	g_variant_unref(r);
-	printf("flusso: %s\n", p_flusso);
+	printf("stream: %s\n", p_flusso);
 
 	{
 		GMainContext *c = g_main_context_new();
@@ -466,15 +466,15 @@ int main(int argc, char **argv)
 		while (nodo == 0 && ora() < sc) g_main_context_iteration(c, TRUE);
 		g_main_context_pop_thread_default(c);
 	}
-	if (!nodo) { fprintf(stderr, "⛔ nessun nodo\n"); return 10; }
-	printf("nodo PipeWire: %u\n", nodo);
+	if (!nodo) { fprintf(stderr, "⛔ no node\n"); return 10; }
+	printf("PipeWire node: %u\n", nodo);
 	fflush(stdout);
 
 	pw_init(NULL, NULL);
 	B.loop = pw_main_loop_new(NULL);
 	ctx = pw_context_new(pw_main_loop_get_loop(B.loop), NULL, 0);
 	core = pw_context_connect(ctx, NULL, 0);
-	if (!core) { fprintf(stderr, "⛔ PipeWire non risponde\n"); return 11; }
+	if (!core) { fprintf(stderr, "⛔ PipeWire does not answer\n"); return 11; }
 
 	snprintf(nodo_s, sizeof nodo_s, "%u", nodo);
 	B.flusso = pw_stream_new(core, "misura-f4in8",
@@ -503,10 +503,10 @@ int main(int argc, char **argv)
 
 	pw_main_loop_run(B.loop);
 
-	printf("\n== riepilogo ==\n  chiesti %ux%u -> ottenuti %ux%u, %d fotogrammi\n",
+	printf("\n== summary ==\n  asked %ux%u -> got %ux%u, %d frames\n",
 	       B.chiesta_l, B.chiesta_a, B.formato.size.width, B.formato.size.height, B.fotogrammi);
 	if (B.nuova_l)
-		printf("  poi chiesti %ux%u -> %d fotogrammi nuovi\n", B.nuova_l, B.nuova_a,
+		printf("  then asked %ux%u -> %d new frames\n", B.nuova_l, B.nuova_a,
 		       B.fotogrammi_dopo);
 	pw_stream_destroy(B.flusso);
 	pw_context_destroy(ctx);

@@ -2,71 +2,71 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-11-c16 — ⭐⭐ «I DOCUMENTI NON MENTONO» — la maglia che guarda LE CARTE
+11-c16 — ⭐⭐ «THE DOCUMENTS DO NOT LIE» — the mesh that looks at THE PAPERS
 ===========================================================================
 
     python3 11-c16-i-documenti-non-mentono.py
     python3 11-c16-i-documenti-non-mentono.py --certifica
-    python3 11-c16-i-documenti-non-mentono.py --radice /altro/deposito
+    python3 11-c16-i-documenti-non-mentono.py --radice /other/repository
 
-⛔ Questa maglia non prova il prodotto e non prova la rete: prova che **i
-   documenti dicano ancora la verita' sul deposito in cui vivono**.
-
----------------------------------------------------------------------------
-⛔⛔ IL GUASTO CHE PRENDE — *la coordinata che marcisce da sola*
----------------------------------------------------------------------------
-
-Il 28 agosto 2026 e' venuto fuori questo, ed e' il motivo per cui la maglia
-esiste.  `MASTERPLAN.md` citava `src/figlio.c:3290` con la marca `[M]` e la
-data.  ⭐ **Il 25 agosto alle 15:18 `MOVIMENTO_FPS` era davvero alla riga
-3290** — verificato commit per commit.  Poi il 27 il codice si e' mosso, e la
-coordinata e' diventata falsa **senza che nessuno l'avesse toccata**.
-
-⇒ ⛔ E' la forma peggiore di documento sbagliato: **nessuno ha fatto niente di
-  male**.  Non c'e' un commit da incolpare, non c'e' una svista, non c'e' una
-  riga scritta con leggerezza.  Il documento e' rimasto fermo e la verita' si e'
-  spostata.  ⭐ Ogni altra affermazione di questo progetto ha qualcosa che la
-  sorveglia — una misura, un banco, una certificazione.  Le carte no.
+⛔ This mesh tests neither the product nor the net: it tests that **the
+   documents still tell the truth about the repository they live in**.
 
 ---------------------------------------------------------------------------
-⭐ LE QUATTRO COSE CHE GUARDA
+⛔⛔ THE FAULT IT CATCHES — *the coordinate that rots by itself*
 ---------------------------------------------------------------------------
 
-  1  ⛔ **nessuna coordinata di riga** verso il nostro codice (`src/x.c:123`).
-     Non «e' sbagliata»: **c'e'**.  Una coordinata giusta oggi e' una
-     coordinata sbagliata la settimana prossima, e non si puo' distinguere.
-     ⇒ Si cita il NOME (`src/figlio.c` · `MOVIMENTO_FPS`), che si muove col
-     codice.
+On 28 August 2026 this came out, and it is the reason the mesh
+exists.  `MASTERPLAN.md` cited `src/figlio.c:3290` with the mark `[M]` and the
+date.  ⭐ **On 25 August at 15:18 `MOVIMENTO_FPS` really was at line
+3290** — checked commit by commit.  Then on the 27th the code moved, and the
+coordinate became false **without anybody having touched it**.
 
-  2  ogni **percorso citato** esiste nel deposito — o porta una marca che dice
-     perche' no: `⟨v1⟩` (le carte del prodotto superato), `⟨mutter⟩`/`⟨gnome⟩`/
-     `⟨lsquic⟩`… (alberi di altri, in `.gitignore`).
-
-  3  nessun **link markdown** `[testo](percorso)` che non porta da nessuna
-     parte.  ⚠ Un link rotto e' peggio di una citazione: promette di aprirsi.
-
-  4  ⛔ **una sola** intestazione «DA QUI SI RIPRENDE» in tutta la
-     documentazione.  Ne aveva sei, con sei date diverse.
+⇒ ⛔ It is the worst form of wrong document: **nobody did anything
+  wrong**.  There is no commit to blame, no oversight, no
+  line written lightly.  The document stood still and the truth
+  moved.  ⭐ Every other statement of this project has something that
+  watches it — a measurement, a bench, a certification.  The papers do not.
 
 ---------------------------------------------------------------------------
-⚠ QUEL CHE QUESTA MAGLIA **NON** SA FARE, e va detto
+⭐ THE FOUR THINGS IT LOOKS AT
 ---------------------------------------------------------------------------
 
-⛔ **Non sa se un documento dica il vero.**  Sa solo se i suoi *rimandi*
-   reggono.  Una misura sbagliata, una data inventata, una conclusione che il
-   codice contraddice: ⭐ **passano tutte di qui senza che se ne accorga**.
-   ⇒ Chi legge un verde di C16 sappia che vuol dire «gli indirizzi tengono»,
-   non «le carte sono giuste».  E' il rovescio di `LEZIONI.md` §1.3 applicato
-   ai documenti.
+  1  ⛔ **no line coordinate** towards our code (`src/x.c:123`).
+     Not «it is wrong»: **it is there**.  A coordinate right today is a
+     coordinate wrong next week, and the two cannot be told apart.
+     ⇒ The NAME is cited (`src/figlio.c` · `MOVIMENTO_FPS`), which moves with the
+     code.
+
+  2  every **cited path** exists in the repository — or carries a mark that says
+     why not: `⟨v1⟩` (the papers of the superseded product), `⟨mutter⟩`/`⟨gnome⟩`/
+     `⟨lsquic⟩`… (other people's trees, in `.gitignore`).
+
+  3  no **markdown link** `[text](path)` that leads
+     nowhere.  ⚠ A broken link is worse than a citation: it promises to open.
+
+  4  ⛔ **one single** «DA QUI SI RIPRENDE» heading in the whole
+     documentation.  It had six, with six different dates.
 
 ---------------------------------------------------------------------------
-GLI ESITI (§4.5 del documento di fase)
+⚠ WHAT THIS MESH CANNOT DO, and it must be said
 ---------------------------------------------------------------------------
 
-  0  ⭐ i quattro controlli reggono
-  1  ⛔ almeno uno non regge ⇒ rosso
-  3  ⛔ non ho potuto guardare (la radice non e' un deposito git)
-  2  il terreno non regge, o l'uso e' sbagliato
+⛔ **It does not know whether a document tells the truth.**  It only knows whether its *references*
+   hold.  A wrong measurement, an invented date, a conclusion the
+   code contradicts: ⭐ **they all pass through here without it noticing**.
+   ⇒ Whoever reads a green from C16 should know that it means «the addresses hold»,
+   not «the papers are right».  It is the reverse of `LEZIONI.md` §1.3 applied
+   to documents.
+
+---------------------------------------------------------------------------
+THE OUTCOMES (§4.5 of the phase document)
+---------------------------------------------------------------------------
+
+  0  ⭐ the four checks hold
+  1  ⛔ at least one does not hold ⇒ red
+  3  ⛔ I could not look (the root is not a git repository)
+  2  the terrain does not hold, or the usage is wrong
 ===========================================================================
 """
 import argparse
@@ -78,14 +78,14 @@ import tempfile
 
 MARCHE_ESTERNE = ("⟨v1⟩", "⟨mutter⟩", "⟨gnome⟩", "⟨lsquic⟩", "⟨quiche⟩",
                   "⟨ngtcp2⟩", "⟨kwin⟩", "⟨xrdp⟩", "⟨esterno⟩")
-# le carte storiche: fotografie di quel che era, non si rincorrono
+# the historical papers: photographs of what was, they are not chased
 ESCLUSE = ("fondamenta/", "memoria/")
 
-# ⭐ I RAPPORTI TOLTI APPOSTA — 94 file, usciti il 16 agosto 2026 per decisione
-#    dell'utente, e ⛔ **non persi**: vivono in `0c85e5c` e `FASI.md` §0 ha la
-#    ricetta per tirarne fuori uno.  ⇒ Citarli e' PROVENIENZA e si tiene: dice
-#    da dove viene una misura.  ⛔ **Linkarli** no: un link promette di aprirsi.
-#    Per questo stanno qui e non nel controllo 3, che i link li prende lo stesso.
+# ⭐ THE REPORTS REMOVED ON PURPOSE — 94 files, taken out on 16 August 2026 by the user's
+#    decision, and ⛔ **not lost**: they live in `0c85e5c` and `FASI.md` §0 has the
+#    recipe to get one out.  ⇒ Citing them is PROVENANCE and it is kept: it says
+#    where a measurement comes from.  ⛔ **Linking them** is not: a link promises to open.
+#    That is why they are here and not in check 3, which catches the links anyway.
 TOLTI_APPOSTA = ("fasi/rapporti/", "web/rapporti/")
 
 ECCEZIONI = os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -93,7 +93,7 @@ ECCEZIONI = os.path.join(os.path.dirname(os.path.abspath(__file__)),
 
 
 def eccezioni_dichiarate(percorso=ECCEZIONI):
-    """⛔ le eccezioni stanno in un file, non nel codice: cosi' si CONTANO"""
+    """⛔ the exceptions live in a file, not in the code: so they are COUNTED"""
     fuori = []
     try:
         with open(percorso, encoding="utf-8") as f:
@@ -108,15 +108,15 @@ def eccezioni_dichiarate(percorso=ECCEZIONI):
         return []
     return fuori
 
-# ⛔ La prima stesura chiedeva il prefisso `src/`, e ⭐ **si e' lasciata sfuggire
-#    222 coordinate su 272** — quelle scritte `figlio.c:1145`, senza cartella.
-#    ⇒ Adesso prende qualunque `nome.ext:numero`, e a decidere se conta e' se il
-#    file **esiste e si muove** (vedi CONGELATO qui sotto).
+# ⛔ The first draft asked for the `src/` prefix, and ⭐ **let 222 coordinates
+#    out of 272 slip** — those written `figlio.c:1145`, without a folder.
+#    ⇒ Now it takes any `name.ext:number`, and what decides whether it counts is whether the
+#    file **exists and moves** (see CONGELATO below).
 RX_RIGA  = re.compile(r'`([A-Za-z0-9_./-]+\.(?:c|h|py|sh|html)):([0-9]+)`')
 
-# ⭐ IL CODICE CONGELATO — `fondamenta/` e' il prodotto v1, chiuso e fermo.
-#    Una coordinata li' dentro **non invecchia**, perche' non c'e' niente che la
-#    muova.  ⇒ Vietare anche quelle sarebbe una regola senza un difetto dietro.
+# ⭐ THE FROZEN CODE — `fondamenta/` is the v1 product, closed and still.
+#    A coordinate in there **does not age**, because there is nothing that
+#    moves it.  ⇒ Forbidding those too would be a rule without a defect behind it.
 CONGELATO = ("fondamenta/",)
 RX_PERC  = re.compile(r'`([A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:c|h|py|sh|md|html|json|jsonl|pam|rs))`')
 RX_LINK  = re.compile(r'\[[^\]]+\]\(([A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:md|png|jpg|sh|py|c|h))\)')
@@ -140,7 +140,7 @@ def elenco_file(radice):
 
 
 def guarda(radice, eccezioni=None):
-    """torna (coordinate, percorsi_morti, link_rotti, riprese) — ognuno una lista"""
+    """returns (coordinate, percorsi_morti, link_rotti, riprese) — each a list"""
     scusati = eccezioni if eccezioni is not None else eccezioni_dichiarate()
     docs = documenti(radice)
     if docs is None:
@@ -165,7 +165,7 @@ def guarda(radice, eccezioni=None):
                     coord.append(f"{d}:{n}  {m.group(0)}")
             if RX_RIPR.search(riga) and riga.lstrip("> ").startswith("#"):
                 riprese.append(f"{d}:{n}")
-            # i percorsi marcati ⟨…⟩ sono dichiarati di altri: non si rincorrono
+            # the paths marked ⟨…⟩ are declared as other people's: they are not chased
             ripulita = riga
             for marca in MARCHE_ESTERNE:
                 ripulita = re.sub(re.escape(marca) + r'\s*[A-Za-z0-9_./-]+', "", ripulita)
@@ -201,7 +201,7 @@ def stampa(nome, brutti, tetto, spiega):
     for b in brutti[:tetto]:
         print(f"        {b}")
     if len(brutti) > tetto:
-        print(f"        … e altri {len(brutti) - tetto}")
+        print(f"        … and {len(brutti) - tetto} more")
     return False
 
 
@@ -209,77 +209,77 @@ def giro(radice, silenzioso=False, eccezioni=None):
     visto = guarda(radice, eccezioni)
     if visto is None:
         if not silenzioso:
-            print("  ⛔ non ho potuto guardare: la radice non e' un deposito git")
+            print("  ⛔ I could not look: the root is not a git repository")
         return 3
     coord, morti, rotti, riprese = visto
     if silenzioso:
         return 1 if (coord or morti or rotti or len(riprese) > 1) else 0
-    print("== C16 — i documenti non mentono ==")
+    print("== C16 — the documents do not lie ==")
     verdi = [
-        stampa("nessuna coordinata di riga verso il nostro codice", coord, 8,
-               "una coordinata giusta oggi e' sbagliata la settimana prossima: si cita il NOME"),
-        stampa("ogni percorso citato esiste (o porta la marca ⟨…⟩)", morti, 8,
-               "il documento manda a un file che nel deposito non c'e'"),
-        stampa("nessun link markdown rotto", rotti, 8,
-               "un link rotto e' peggio di una citazione: promette di aprirsi"),
-        stampa("una sola intestazione «DA QUI SI RIPRENDE»",
+        stampa("no line coordinate towards our code", coord, 8,
+               "a coordinate right today is wrong next week: the NAME is cited"),
+        stampa("every cited path exists (or carries the ⟨…⟩ mark)", morti, 8,
+               "the document points to a file that is not in the repository"),
+        stampa("no broken markdown link", rotti, 8,
+               "a broken link is worse than a citation: it promises to open"),
+        stampa("one single «DA QUI SI RIPRENDE» heading",
                riprese if len(riprese) > 1 else [], 8,
-               "piu' d'una, e chi riapre non sa quale valga"),
+               "more than one, and whoever reopens does not know which one holds"),
     ]
     print()
     if all(verdi):
-        print("  ⭐ i quattro controlli reggono.")
-        print("  ⚠ e questa maglia dice che gli INDIRIZZI tengono, ⛔ non che le")
-        print("    carte siano giuste: una misura sbagliata passa di qui intatta.")
+        print("  ⭐ the four checks hold.")
+        print("  ⚠ and this mesh says the ADDRESSES hold, ⛔ not that the")
+        print("    papers are right: a wrong measurement passes through here intact.")
         return 0
     return 1
 
 
 def certifica():
-    """⛔ una maglia che non e' mai stata vista fallire non e' una maglia"""
-    print("== certificazione di C16 — sa dare rosso? ==\n")
-    # ⚠ 28 ago 2026: il terreno del primo guasto deve contenere DAVVERO `src/main.c`.
-    #    ⛔ Quando il controllo 1 e' passato da «qualunque coordinata» a «solo verso
-    #    file che esistono e si muovono», il guasto finto ha smesso di essere visto
-    #    — e ⭐ **la certificazione se n'e' accorta subito**: e' esattamente il suo
-    #    mestiere, ed e' la ragione per cui non si scrive una maglia senza.
+    """⛔ a mesh that has never been seen failing is not a mesh"""
+    print("== certification of C16 — can it give red? ==\n")
+    # ⚠ 28 Aug 2026: the terrain of the first fault must REALLY contain `src/main.c`.
+    #    ⛔ When check 1 went from «any coordinate» to «only towards
+    #    files that exist and move», the fake fault stopped being seen
+    #    — and ⭐ **the certification noticed at once**: it is exactly its
+    #    job, and it is the reason a mesh is not written without one.
     guasti = {
-        "una coordinata di riga":      ("g1.md", "vedi `src/main.c:111` per il resto.\n"),
-        "un percorso che non esiste":  ("g2.md", "sta in `src/inventato_dal_nulla.c`.\n"),
-        "un link markdown rotto":      ("g3.md", "il rapporto e' [qui](fasi/rapporti/mai-esistito.md).\n"),
-        "due «DA QUI SI RIPRENDE»":    ("g4.md", "# DA QUI SI RIPRENDE — ieri\n\n# DA QUI SI RIPRENDE — oggi\n"),
+        "a line coordinate":           ("g1.md", "see `src/main.c:111` for the rest.\n"),
+        "a path that does not exist":  ("g2.md", "it is in `src/inventato_dal_nulla.c`.\n"),
+        "a broken markdown link":      ("g3.md", "the report is [here](fasi/rapporti/mai-esistito.md).\n"),
+        "two «DA QUI SI RIPRENDE»":    ("g4.md", "# DA QUI SI RIPRENDE — ieri\n\n# DA QUI SI RIPRENDE — oggi\n"),
     }
     esiti = []
     for nome, (file, testo) in guasti.items():
         with tempfile.TemporaryDirectory() as t:
             subprocess.run(["git", "-C", t, "init", "-q"], check=True)
             with open(os.path.join(t, "sano.md"), "w", encoding="utf-8") as f:
-                f.write("Un documento onesto: cita `sano.md` e basta.\n")
+                f.write("An honest document: it cites `sano.md` and that is all.\n")
             os.makedirs(os.path.join(t, "src"), exist_ok=True)
             with open(os.path.join(t, "src", "main.c"), "w", encoding="utf-8") as f:
                 f.write("int main(void) { return 0; }\n" * 200)
             subprocess.run(["git", "-C", t, "add", "sano.md", "src/main.c"], check=True)
             if giro(t, silenzioso=True, eccezioni=[]) != 0:
-                print(f"  ⛔ il terreno SANO non e' verde: la certificazione non vale")
+                print(f"  ⛔ the HEALTHY terrain is not green: the certification is not valid")
                 return 2
             with open(os.path.join(t, file), "w", encoding="utf-8") as f:
                 f.write(testo)
             subprocess.run(["git", "-C", t, "add", file], check=True)
             rosso = giro(t, silenzioso=True, eccezioni=[]) == 1
             esiti.append(rosso)
-            print(f"  {'✓ VISTO ' if rosso else '⛔ NON VISTO'}  {nome}")
+            print(f"  {'✓ SEEN    ' if rosso else '⛔ NOT SEEN'}  {nome}")
     print()
     if all(esiti):
-        print("  ⭐ C16 sa dare rosso su tutt'e quattro i guasti, e il terreno")
-        print("    sano resta verde. ⇒ Un suo verde vuol dire qualcosa.")
+        print("  ⭐ C16 can give red on all four faults, and the healthy")
+        print("    terrain stays green. ⇒ A green of it means something.")
         return 0
-    print("  ⛔ almeno un guasto innestato NON e' stato visto: la maglia tace.")
+    print("  ⛔ at least one injected fault was NOT seen: the mesh is silent.")
     return 1
 
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--radice", default=None, help="il deposito da guardare")
+    p.add_argument("--radice", default=None, help="the repository to look at")
     p.add_argument("--certifica", action="store_true")
     a = p.parse_args()
     if a.certifica:
@@ -288,7 +288,7 @@ def main():
         ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True
     ).stdout.strip()
     if not radice:
-        print("  ⛔ non sono dentro un deposito git, e --radice non e' stata data")
+        print("  ⛔ I am not inside a git repository, and --radice was not given")
         return 2
     return giro(radice)
 

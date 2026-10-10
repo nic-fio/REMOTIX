@@ -2,72 +2,72 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-11-c12 — ⭐⭐ «IL GANCIO E' VIVO» — la maglia che guarda LA RETE
+11-c12 — ⭐⭐ «THE HOOK IS ALIVE» — the mesh that looks at THE NET
 ===========================================================================
 
     python3 11-c12-il-gancio-e-vivo.py
     python3 11-c12-il-gancio-e-vivo.py --certifica
     python3 11-c12-il-gancio-e-vivo.py --giorni 3
 
-⛔ Questa maglia **non prova il prodotto**.  Non prova nemmeno la rete: prova
-   che la rete **stia ancora girando**.
+⛔ This mesh **does not test the product**.  It does not even test the net: it tests
+   that the net **is still running**.
 
 ---------------------------------------------------------------------------
-⛔⛔ IL GUASTO CHE PRENDE — *il gancio spento in silenzio*
+⛔⛔ THE FAULT IT CATCHES — *the hook switched off silently*
 ---------------------------------------------------------------------------
 
-`fasi/11…` §4.2 lo chiama con nome e cognome: ⛔ **«il modo in cui muoiono
-queste reti»**.
+`fasi/11…` §4.2 calls it by its full name: ⛔ **«the way these
+nets die»**.
 
-E vale la pena di dire come muore davvero, perche' non muore con un errore:
+And it is worth saying how it really dies, because it does not die with an error:
 
-  · qualcuno rifa' il deposito, e la cartella dei ganci di git **non si copia**;
-  · qualcuno ha una giornata storta, commenta la riga e si dimentica;
-  · il gancio c'e', e' installato, ⛔ **e non gira da tre settimane** perche' il
-    file installato punta a un percorso che non esiste piu'.
+  · someone redoes the repository, and git's hooks folder **is not copied**;
+  · someone has a bad day, comments out the line and forgets;
+  · the hook is there, it is installed, ⛔ **and it has not run for three weeks** because the
+    installed file points to a path that no longer exists.
 
-⇒ ⭐ In tutt'e tre i casi la rete **ha esattamente lo stesso aspetto di prima**:
-  i file ci sono, le maglie sono scritte, `--certifica` passa.  ⛔ E non gira
-  piu' niente.
-
----------------------------------------------------------------------------
-⭐ LE CINQUE COSE CHE GUARDA — e nessuna e' «il file c'e'» e basta
----------------------------------------------------------------------------
-
-  1  il gancio **esiste** al percorso dichiarato
-  2  il gancio si puo' **eseguire**
-  3  e' **installato** come gancio di git — ⛔ e il file installato NOMINA il
-     gancio: un gancio installato che punta altrove e' peggio di nessuno
-  4  c'e' **traccia** che abbia girato: il registro esiste e ha almeno un giro
-  5  ⛔⛔ e l'ultimo giro **NON e' un giro a vuoto**
-
-⚠⚠ Il quinto merita due righe, perche' senza di lui questa maglia sarebbe una
-   di quelle che non danno mai rosso.  Il gancio sa girare `--secco`, cioe' dire
-   che cosa farebbe senza farlo.  ⛔ Se un giro a vuoto contasse come traccia,
-   **basterebbe un `--secco` a far dire a questa maglia «il gancio e' vivo» per
-   una settimana** — mentre non gira niente.  ⇒ Le righe con `"secco": true` si
-   buttano, e ⭐ **quel caso e' dentro `--certifica`**: e' provato, non promesso.
+⇒ ⭐ In all three cases the net **looks exactly the same as before**:
+  the files are there, the meshes are written, `--certifica` passes.  ⛔ And nothing
+  runs any more.
 
 ---------------------------------------------------------------------------
-⚠ LA SOGLIA, dichiarata e stampata in ogni esito
+⭐ THE FIVE THINGS IT LOOKS AT — and none is «the file is there» and that is all
 ---------------------------------------------------------------------------
 
-`[?]` **7 giorni.**  ⛔ E' scelta, non misurata: nessuno ha ancora osservato
-ogni quanto questo deposito viene toccato.  ⇒ Va sostituita con un `[M]` appena
-il registro avra' abbastanza righe per dire ogni quanto il gancio scatta
-davvero.  ⚠ Fino ad allora, un rosso su questa soglia va **letto** prima di
-essere creduto.
+  1  the hook **exists** at the declared path
+  2  the hook can be **executed**
+  3  it is **installed** as a git hook — ⛔ and the installed file NAMES the
+     hook: an installed hook that points elsewhere is worse than none
+  4  there is a **trace** that it ran: the log exists and has at least one run
+  5  ⛔⛔ and the last run is **NOT a dry run**
+
+⚠⚠ The fifth deserves two lines, because without it this mesh would be one
+   of those that never give red.  The hook can run `--secco`, that is say
+   what it would do without doing it.  ⛔ If a dry run counted as a trace,
+   **one `--secco` would be enough to make this mesh say «the hook is alive» for
+   a week** — while nothing runs.  ⇒ The lines with `"secco": true` are
+   thrown away, and ⭐ **that case is inside `--certifica`**: it is proven, not promised.
 
 ---------------------------------------------------------------------------
-GLI ESITI (§4.5 del documento di fase)
+⚠ THE THRESHOLD, declared and printed in every outcome
 ---------------------------------------------------------------------------
 
-  0  ⭐ il gancio c'e', e' installato, ed e' girato davvero e di recente
-  1  ⛔ una delle cinque cose non regge ⇒ rosso
-  3  ⛔ non ho potuto guardare — il registro c'e' ma non si lascia leggere
-     (⛔ e NON e' un rosso: «il registro non c'e'» invece **lo e'**, perche'
-      vuol dire che il gancio non ha mai girato)
-  2  il terreno non regge, o l'uso e' sbagliato
+`[?]` **7 days.**  ⛔ It is chosen, not measured: nobody has yet observed
+how often this repository is touched.  ⇒ It must be replaced with an `[M]` as soon as
+the log has enough lines to say how often the hook really
+fires.  ⚠ Until then, a red on this threshold must be **read** before
+being believed.
+
+---------------------------------------------------------------------------
+THE OUTCOMES (§4.5 of the phase document)
+---------------------------------------------------------------------------
+
+  0  ⭐ the hook is there, it is installed, and it really ran recently
+  1  ⛔ one of the five things does not hold ⇒ red
+  3  ⛔ I could not look — the log is there but cannot be read
+     (⛔ and it is NOT a red: «the log is not there» instead **is**, because
+      it means the hook has never run)
+  2  the terrain does not hold, or the usage is wrong
 ===========================================================================
 """
 import argparse
@@ -79,9 +79,9 @@ import time
 
 QUI = os.path.dirname(os.path.abspath(__file__))
 
-# ⛔ I percorsi sono DICHIARATI qui: il gancio e' «definito per percorso, non
-#    per buona volonta'» (§5.1), e questa maglia guarda esattamente quel
-#    percorso — non uno che si va a cercare.
+# ⛔ The paths are DECLARED here: the hook is «defined by path, not
+#    by good will» (§5.1), and this mesh looks at exactly that
+#    path — not one it goes looking for.
 GANCIO = os.path.join(QUI, "11-gancio.sh")
 REGISTRO = os.path.join(QUI, "11-gancio-registro.jsonl")
 
@@ -89,12 +89,12 @@ GIORNI_PREDEFINITI = 7
 
 
 def leggi_il_registro(percorso):
-    """Torna (giri, guaio).
+    """Returns (giri, guaio).
 
-    ⛔ E i tre casi sono TRE, non due, ed e' tutta la differenza:
-       (None, "assente")     il file non c'e'   ⇒ ⛔ e' un ROSSO: mai girato
-       (None, "illeggibile") c'e' e non si apre ⇒ «non ho potuto guardare»
-       ([...], None)         i giri, in ordine di scrittura
+    ⛔ And the cases are THREE, not two, and that is the whole difference:
+       (None, "assente")     the file is not there ⇒ ⛔ it is a RED: never ran
+       (None, "illeggibile") it is there and does not open ⇒ «I could not look»
+       ([...], None)         the runs, in order of writing
     """
     if not os.path.exists(percorso):
         return None, "assente"
@@ -113,77 +113,77 @@ def leggi_il_registro(percorso):
             giri.append(json.loads(r))
         except ValueError:
             storte += 1
-    # ⚠ Qualche riga storta capita (un giro interrotto a meta' scrittura) e non
-    #   e' un guasto.  ⛔ TUTTE storte invece vuol dire che non sto leggendo un
-    #   registro: e' «non ho potuto guardare», non «non e' mai girato».
+    # ⚠ Some malformed line happens (a run interrupted half-way through writing) and it is not
+    #   a fault.  ⛔ ALL malformed instead means I am not reading a
+    #   log: it is «I could not look», not «it never ran».
     if not giri and storte:
         return None, "illeggibile"
     return giri, None
 
 
 def giudica(stato, giorni):
-    """Dato lo stato, dice che cosa NON regge.
+    """Given the state, says what does NOT hold.
 
-    `stato` e' un dizionario:
-       c_e            il file del gancio esiste
-       eseguibile     lo si puo' eseguire
-       installato     l'elenco dei ganci di git che NOMINANO il nostro gancio
-       giri           l'elenco dei giri letti dal registro, o None
+    `stato` is a dictionary:
+       c_e            the hook file exists
+       eseguibile     it can be executed
+       installato     the list of git hooks that NAME our hook
+       giri           the list of runs read from the log, or None
        guaio          «assente» · «illeggibile» · None
-       adesso         l'istante, in secondi
+       adesso         the instant, in seconds
 
-    ⛔ Torna `None` per «non ho potuto guardare», e una LISTA (magari vuota)
-       quando ha guardato.  ⚠ `None` non e' la lista vuota: «non ho guardato» e
-       «ho guardato e va tutto bene» sono due cose diverse, e questo progetto ha
-       gia' pagato per averle confuse.
+    ⛔ Returns `None` for «I could not look», and a LIST (possibly empty)
+       when it looked.  ⚠ `None` is not the empty list: «I did not look» and
+       «I looked and everything is fine» are two different things, and this project has
+       already paid for confusing them.
     """
     if stato.get("guaio") == "illeggibile":
         return None
 
     guai = []
     if not stato.get("c_e"):
-        guai.append("il gancio non c'e' al percorso dichiarato")
-        # ⛔ E si torna subito: senza il file, «non e' eseguibile» e «non e'
-        #    installato» sono conseguenze, non guasti in piu'.  Un elenco che
-        #    conta tre volte lo stesso guasto fa sembrare grave quel che e'
-        #    semplice, e viceversa.
+        guai.append("the hook is not at the declared path")
+        # ⛔ And we return at once: without the file, «not executable» and «not
+        #    installed» are consequences, not extra faults.  A list that
+        #    counts the same fault three times makes what is simple look serious,
+        #    and vice versa.
         return guai
     if not stato.get("eseguibile"):
-        guai.append("il gancio c'e' ma non si puo' eseguire")
+        guai.append("the hook is there but cannot be executed")
     if not stato.get("installato"):
-        guai.append("il gancio NON e' installato fra i ganci di git: "
-                    "non lo fara' partire nessuno")
+        guai.append("the hook is NOT installed among git's hooks: "
+                    "nobody will start it")
 
     giri = stato.get("giri")
     if giri is None or not giri:
-        guai.append("nessuna traccia: il gancio non ha MAI girato")
+        guai.append("no trace: the hook has NEVER run")
         return guai
 
-    # ⛔⛔ E QUI SI BUTTANO I GIRI A VUOTO.  Un `--secco` non e' un giro: se
-    #    contasse, questa maglia direbbe «vivo» mentre non gira niente.
+    # ⛔⛔ AND HERE THE DRY RUNS ARE THROWN AWAY.  A `--secco` is not a run: if it
+    #    counted, this mesh would say «alive» while nothing runs.
     veri = [g for g in giri if not g.get("secco")]
     if not veri:
-        guai.append("ci sono %d giri, ⛔ ma sono TUTTI a vuoto (--secco): "
-                    "il gancio non ha mai misurato niente" % len(giri))
+        guai.append("there are %d runs, ⛔ but they are ALL dry (--secco): "
+                    "the hook has never measured anything" % len(giri))
         return guai
 
     ultimo = veri[-1]
     quando = ultimo.get("istante")
     eta = eta_in_giorni(quando, stato.get("adesso"))
     if eta is None:
-        # ⚠ Un istante che non si lascia leggere non e' «vecchio»: e' «non lo
-        #   so».  ⛔ E qui si sceglie di dirlo come guasto del REGISTRO, non
-        #   come gancio morto — perche' non e' la stessa cosa.
-        guai.append("l'ultimo giro non porta un istante leggibile (%r): "
-                    "il registro e' storto" % (quando,))
+        # ⚠ An instant that cannot be read is not «old»: it is «I do not
+        #   know».  ⛔ And here we choose to say it as a fault of the LOG, not
+        #   as a dead hook — because it is not the same thing.
+        guai.append("the last run does not carry a readable instant (%r): "
+                    "the log is malformed" % (quando,))
     elif eta > giorni:
-        guai.append("l'ultimo giro vero e' di %.1f giorni fa, e la soglia "
-                    "dichiarata e' %d" % (eta, giorni))
+        guai.append("the last real run is from %.1f days ago, and the declared "
+                    "threshold is %d" % (eta, giorni))
     return guai
 
 
 def eta_in_giorni(istante, adesso):
-    """⛔ Torna `None` se non sa dirlo — mai zero, mai un numero inventato."""
+    """⛔ Returns `None` if it cannot tell — never zero, never an invented number."""
     if not istante or adesso is None:
         return None
     try:
@@ -197,35 +197,35 @@ def eta_in_giorni(istante, adesso):
 
 
 def ganci_installati():
-    """Quali ganci di git NOMINANO il nostro gancio.
+    """Which git hooks NAME our hook.
 
-    ⛔ Non basta che il file `pre-push` esista: dev'essere il NOSTRO.  Un gancio
-       di qualcun altro allo stesso nome farebbe dire «installato» a questa
-       maglia mentre la rete non parte.
+    ⛔ It is not enough that the `pre-push` file exists: it must be OURS.  Someone
+       else's hook with the same name would make this mesh say «installed»
+       while the net does not start.
     """
     try:
         p = subprocess.run(["git", "-C", QUI, "rev-parse", "--git-path", "hooks"],
                            capture_output=True, text=True, timeout=30)
-    # ⛔ `subprocess.TimeoutExpired` NON discende da `OSError`: senza nominarla,
-    #    un `git` che si pianta faceva una traccia ⇒ Python usciva **1** ⇒ il
-    #    gancio leggeva ROSSO su un guasto del BANCO (`LEZIONI.md` §1.51).
-    #    E' la stessa cura che C10 ha gia' in `radice_del_deposito()`.
+    # ⛔ `subprocess.TimeoutExpired` does NOT descend from `OSError`: without naming it,
+    #    a `git` that hangs produced a traceback ⇒ Python exited **1** ⇒ the
+    #    hook read RED on a fault of the BENCH (`LEZIONI.md` §1.51).
+    #    It is the same cure C10 already has in `radice_del_deposito()`.
     except (OSError, subprocess.SubprocessError):
         return None
     if p.returncode != 0:
         return None
     cartella = p.stdout.strip()
-    # ⛔⛔ E QUI C'ERA UN DIFETTO CHE AVREBBE RESO QUESTA MAGLIA INUTILE PER
-    #    SEMPRE — `[M]` 26 agosto 2026, preso dal banco di prova.
+    # ⛔⛔ AND HERE THERE WAS A DEFECT THAT WOULD HAVE MADE THIS MESH USELESS FOR
+    #    EVER — `[M]` 26 August 2026, caught by the test bench.
     #
-    # `git --git-path` torna un percorso **relativo alla cartella data a `-C`**,
-    # non alla radice del deposito: da `banchi/11-scatole` risponde
-    # `../../.git/hooks`.  ⚠ La prima stesura lo incollava alla RADICE, e ne
-    # usciva un percorso che non esiste ⇒ ⛔ **«il gancio NON e' installato»,
-    # sempre, qualunque cosa si facesse.**
-    # ⇒ E un rosso che non si puo' far diventare verde e' peggio di nessuna
-    #   maglia: §1.3 — «una rete che da' rosso a vuoto viene spenta da chi
-    #   lavora».
+    # `git --git-path` returns a path **relative to the folder given to `-C`**,
+    # not to the root of the repository: from `banchi/11-scatole` it answers
+    # `../../.git/hooks`.  ⚠ The first draft glued it to the ROOT, and out came
+    # a path that does not exist ⇒ ⛔ **«the hook is NOT installed»,
+    # always, whatever one did.**
+    # ⇒ And a red that cannot be turned green is worse than no
+    #   mesh: §1.3 — «a net that gives red for nothing gets switched off by whoever
+    #   works».
     if not os.path.isabs(cartella):
         cartella = os.path.normpath(os.path.join(QUI, cartella))
     trovati = []
@@ -245,7 +245,7 @@ def ganci_installati():
 
 # ═══════════════════════════════════════════════════════════════════════════
 def certifica():
-    """⛔ Si dimostra che il giudice SA dare rosso, verde, e «non lo so»."""
+    """⛔ We prove that the judge CAN give red, green, and «I do not know»."""
     import datetime
     adesso = time.time()
 
@@ -261,40 +261,40 @@ def certifica():
         return s
 
     casi = [
-        ("il gancio c'e', e' installato, ed e' girato ieri",
+        ("the hook is there, it is installed, and it ran yesterday",
          sano(), 0),
-        ("⛔ il gancio non c'e'",
+        ("⛔ the hook is not there",
          sano(c_e=False, eseguibile=False, installato=[]), 1),
-        ("⛔ c'e' ma non e' eseguibile",
+        ("⛔ it is there but is not executable",
          sano(eseguibile=False), 1),
-        ("⛔⛔ c'e' ed e' girato, ma NON e' installato — il gancio spento in silenzio",
+        ("⛔⛔ it is there and it ran, but it is NOT installed — the hook switched off silently",
          sano(installato=[]), 1),
-        ("⛔ nessun registro: non ha mai girato",
+        ("⛔ no log: it has never run",
          sano(giri=None, guaio="assente"), 1),
-        ("⛔ registro vuoto: non ha mai girato",
+        ("⛔ empty log: it has never run",
          sano(giri=[]), 1),
-        # ⭐⭐ IL CASO CHE VALE PIU' DI TUTTI: la traccia c'e' ma non conta.
-        ("⭐⭐ l'unico giro e' A VUOTO (--secco) ⇒ deve dare ROSSO",
+        # ⭐⭐ THE CASE THAT MATTERS MOST: the trace is there but does not count.
+        ("⭐⭐ the only run is DRY (--secco) ⇒ it must give RED",
          sano(giri=[{"istante": istante(0.1), "secco": True}]), 1),
-        ("⭐ un giro a vuoto DOPO uno vero e recente ⇒ resta VERDE",
+        ("⭐ a dry run AFTER a real and recent one ⇒ stays GREEN",
          sano(giri=[{"istante": istante(0.5), "secco": False},
                     {"istante": istante(0.1), "secco": True}]), 0),
-        ("⛔ l'ultimo giro vero e' di venti giorni fa (soglia 7)",
+        ("⛔ the last real run is from twenty days ago (threshold 7)",
          sano(giri=[{"istante": istante(20), "secco": False}]), 1),
-        ("⚠ l'istante non si lascia leggere: e' il registro a essere storto",
-         sano(giri=[{"istante": "ieri mattina", "secco": False}]), 1),
-        # ⛔ E il terzo esito, che non e' un rosso.
-        ("⛔ il registro c'e' e non si lascia leggere ⇒ «non lo so», non rosso",
+        ("⚠ the instant cannot be read: it is the log that is malformed",
+         sano(giri=[{"istante": "yesterday morning", "secco": False}]), 1),
+        # ⛔ And the third outcome, which is not a red.
+        ("⛔ the log is there and cannot be read ⇒ «I do not know», not red",
          sano(guaio="illeggibile"), None),
     ]
 
-    print("== certificazione del giudice di C12 ==")
-    print("   soglia in vigore: %d giorni · e i giri a vuoto NON contano"
+    print("== certification of the C12 judge ==")
+    print("   threshold in force: %d days · and dry runs do NOT count"
           % GIORNI_PREDEFINITI)
     guai = 0
     for nome, stato, atteso in casi:
         r = giudica(stato, GIORNI_PREDEFINITI)
-        # atteso: 0 = verde · 1 = almeno un guasto · None = non lo so
+        # expected: 0 = green · 1 = at least one fault · None = I do not know
         if atteso is None:
             ottenuto = None
         else:
@@ -302,24 +302,24 @@ def certifica():
             if r is None:
                 ottenuto = None
         ok = ottenuto == atteso
-        print("  %s  %-62s  ⇒ %s (atteso %s)"
+        print("  %s  %-62s  ⇒ %s (expected %s)"
               % ("OK " if ok else "NO ", nome,
-                 "non lo so" if ottenuto is None
-                 else ("verde" if ottenuto == 0 else "ROSSO"),
-                 "non lo so" if atteso is None
-                 else ("verde" if atteso == 0 else "ROSSO")))
+                 "I do not know" if ottenuto is None
+                 else ("green" if ottenuto == 0 else "RED"),
+                 "I do not know" if atteso is None
+                 else ("green" if atteso == 0 else "RED")))
         if not ok:
             guai += 1
-            print("        (il giudice ha detto: %r)" % (r,))
+            print("        (the judge said: %r)" % (r,))
 
     print()
     if guai:
-        print("⛔ il giudice NON e' affidabile: %d casi sbagliati" % guai)
+        print("⛔ the judge is NOT reliable: %d wrong cases" % guai)
         return 1
-    print("⭐ il giudice vede il gancio morto, vede il gancio scollegato,")
-    print("   ⭐⭐ e ⛔ NON si lascia ingannare da un giro a vuoto")
-    print("⚠ e questa certificazione copre IL GIUDIZIO, non il gancio: che il")
-    print("  gancio faccia davvero girare le maglie lo dice C13, non io")
+    print("⭐ the judge sees the dead hook, sees the disconnected hook,")
+    print("   ⭐⭐ and ⛔ is NOT fooled by a dry run")
+    print("⚠ and this certification covers THE JUDGEMENT, not the hook: that the")
+    print("  hook really runs the meshes is told by C13, not by me")
     return 0
 
 
@@ -329,8 +329,8 @@ def main():
     p.add_argument("--gancio", default=GANCIO)
     p.add_argument("--registro", default=REGISTRO)
     p.add_argument("--giorni", type=int, default=GIORNI_PREDEFINITI,
-                   help="da quanti giorni al massimo il gancio puo' non aver "
-                        "girato. `[?]` scelta, non misurata")
+                   help="for how many days at most the hook may not have "
+                        "run. `[?]` chosen, not measured")
     p.add_argument("--certifica", action="store_true")
     a = p.parse_args()
 
@@ -339,18 +339,18 @@ def main():
 
     installati = ganci_installati()
     if installati is None:
-        print("⛔ non sono dentro un deposito git: non so nemmeno dove")
-        print("   guardare i ganci")
-        print("   ⇒ il terreno non regge")
+        print("⛔ I am not inside a git repository: I do not even know where")
+        print("   to look for the hooks")
+        print("   ⇒ the terrain does not hold")
         sys.exit(2)
 
     giri, guaio = leggi_il_registro(a.registro)
     stato = {
         "c_e": os.path.isfile(a.gancio),
-        # ⚠ «eseguibile» qui vuol dire due cose insieme: il bit sul file OPPURE
-        #   la possibilita' di leggerlo (il progetto lo chiama con `bash …`).
-        #   ⛔ Quel che DEVE avere il bit e' il file installato dentro `.git`,
-        #   e quello si guarda a parte, sotto.
+        # ⚠ «executable» here means two things together: the bit on the file OR
+        #   the possibility of reading it (the project calls it with `bash …`).
+        #   ⛔ What MUST have the bit is the file installed inside `.git`,
+        #   and that is looked at separately, below.
         "eseguibile": os.access(a.gancio, os.X_OK) or os.access(a.gancio, os.R_OK),
         "installato": installati,
         "giri": giri,
@@ -358,52 +358,52 @@ def main():
         "adesso": time.time(),
     }
 
-    print("== C12 — il gancio e' vivo? ==")
-    print("   ⛔ il guasto che cerca: il gancio spento in silenzio — il modo in")
-    print("      cui muoiono queste reti (§4.2)")
-    print("   soglia dichiarata: ultimo giro entro %d giorni  `[?]`" % a.giorni)
-    print("   ⛔ e i giri a VUOTO (--secco) non contano come traccia\n")
+    print("== C12 — is the hook alive? ==")
+    print("   ⛔ the fault it looks for: the hook switched off silently — the way")
+    print("      these nets die (§4.2)")
+    print("   declared threshold: last run within %d days  `[?]`" % a.giorni)
+    print("   ⛔ and DRY runs (--secco) do not count as a trace\n")
 
-    print("   gancio      : %s  %s" % (a.gancio, "c'e'" if stato["c_e"] else "⛔ NON C'E'"))
+    print("   hook        : %s  %s" % (a.gancio, "is there" if stato["c_e"] else "⛔ IS NOT THERE"))
     if installati:
         for quale, dove, esec in installati:
-            print("   installato  : %-11s %s%s"
-                  % (quale, dove, "" if esec else "  ⛔ non eseguibile"))
+            print("   installed   : %-11s %s%s"
+                  % (quale, dove, "" if esec else "  ⛔ not executable"))
     else:
-        print("   installato  : ⛔ da nessuna parte")
+        print("   installed   : ⛔ nowhere")
     if guaio == "assente":
-        print("   registro    : ⛔ NON C'E' — il gancio non ha mai girato")
+        print("   log         : ⛔ IS NOT THERE — the hook has never run")
     elif guaio == "illeggibile":
-        print("   registro    : ⚠ c'e' e non si lascia leggere")
+        print("   log         : ⚠ it is there and cannot be read")
     else:
         veri = [g for g in giri if not g.get("secco")]
-        print("   registro    : %d giri (%d veri, %d a vuoto)"
+        print("   log         : %d runs (%d real, %d dry)"
               % (len(giri), len(veri), len(giri) - len(veri)))
         if veri:
             eta = eta_in_giorni(veri[-1].get("istante"), stato["adesso"])
-            print("   ultimo giro : %s  (%s)"
+            print("   last run    : %s  (%s)"
                   % (veri[-1].get("istante"),
-                     "eta ignota" if eta is None else "%.1f giorni fa" % eta))
+                     "age unknown" if eta is None else "%.1f days ago" % eta))
     print()
 
     r = giudica(stato, a.giorni)
     if r is None:
-        print("⛔ il registro c'e' e non si lascia leggere.")
-        print("   ⇒ non ho potuto guardare — ⛔ e NON e' un rosso")
+        print("⛔ the log is there and cannot be read.")
+        print("   ⇒ I could not look — ⛔ and it is NOT a red")
         return 3
     if r:
-        print("⛔⛔ ROSSO — il gancio non e' vivo:")
+        print("⛔⛔ RED — the hook is not alive:")
         for g in r:
             print("   · %s" % g)
         print()
-        print("   ⇒ ⛔ e finche' e' cosi', **tutto il resto della rete non serve**:")
-        print("     le maglie possono essere perfette, se non le fa partire")
-        print("     nessuno non prendono niente.")
+        print("   ⇒ ⛔ and as long as it is like this, **all the rest of the net is useless**:")
+        print("     the meshes can be perfect, if nobody starts them")
+        print("     they catch nothing.")
         return 1
-    print("⭐ il gancio c'e', e' installato, ed e' girato davvero entro %d giorni"
+    print("⭐ the hook is there, it is installed, and it really ran within %d days"
           % a.giorni)
-    print("⚠ e questa maglia dice che il gancio GIRA, ⛔ non che la rete sappia")
-    print("  ancora dare rosso: quello e' C13.")
+    print("⚠ and this mesh says the hook RUNS, ⛔ not that the net can")
+    print("  still give red: that is C13.")
     return 0
 
 

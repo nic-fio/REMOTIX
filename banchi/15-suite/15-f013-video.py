@@ -1,37 +1,37 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-f013 — F-013 VIDEO: un video in un'applicazione della sessione, IMMAGINE CONTINUA e SUONO
+15-f013 — F-013 VIDEO: a video in an application of the session, CONTINUOUS IMAGE and SOUND
 
     python3 15-f013-video.py --scatola gnome --browser firefox [--guasto] [--ascolto-s 40] [--video-s 60]
 
-LA SCENA.  Nella scatola, ffmpeg genera un file vero (H.264 + AAC, 1280x720,
-30 quadri/s, 150 s): fondo a TINTA UNIFORME che ruota (47°/s) con una MIRA
-bianca che si muove, e un tono continuo a 660 Hz.  Lo riproduce `ffplay`
-(lettore vero: decodifica il file, finestra Wayland, audio verso il sink
-predefinito) dentro la sessione dell'inquilino.
+THE SCENE.  In the box, ffmpeg generates a real file (H.264 + AAC, 1280x720,
+30 frames/s, 150 s): a UNIFORM-COLOUR background that rotates (47°/s) with a white
+TARGET that moves, and a continuous tone at 660 Hz.  `ffplay` plays it
+(a real player: it decodes the file, Wayland window, audio to the default
+sink) inside the tenant's session.
 
-IL GIUDIZIO — dalla FOTOGRAFIA della tela e dall'ORECCHIO della pagina, in due
-  finestre di seguito sullo stesso video che gira:
-  A suono   `--ascolto-s` (40 s) SENZA fotografare: l'`AnalyserNode` passante di
-            `15-g4-comune.py`, udibile >= 95 % dei campioni, picco 660 ± 12 Hz,
-            nessun buco di silenzio piu' lungo di 1 s.
-            ⛔ Senza foto perche' `[M]` 24 set, KDE/Firefox: la foto 4K di
-            Firefox ferma il thread principale della pagina (fino a 7 s), che e'
-            lo stesso che programma l'audio ⇒ durante le foto 84 % udibile, senza
-            foto 96,5 %.  I buchi li faceva la macchina fotografica del banco.
-            Il suono DURANTE le foto si registra lo stesso, come diagnostica.
-  B immagine `--video-s` (60 s), una foto al secondo: la finestra del video si
-            trova per differenza (e' l'unica cosa che cambia sempre); ogni quadro
-            deve avere il fondo saturo uniforme con la mira (niente mosaico:
-            tessere di un altro colore oltre la mira ⇒ rosso; niente nero/grigio),
-            due foto consecutive DIVERSE (>= 90 %), nessun blocco oltre 4 s.
-  Il browser e' a 4K (Sessione).  Il contesto audio si sveglia con un CLIC
-  VERO sulla tela, fuori dalla finestra del video.
+THE JUDGMENT — from the PHOTO of the canvas and from the page's EAR, in two
+  windows in a row on the same video running:
+  A sound   `--ascolto-s` (40 s) WITHOUT photographing: the pass-through `AnalyserNode` of
+            `15-g4-comune.py`, audible >= 95 % of the samples, peak 660 ± 12 Hz,
+            no silence gap longer than 1 s.
+            ⛔ Without photos because `[M]` 24 Sep, KDE/Firefox: Firefox's 4K photo
+            stops the page's main thread (up to 7 s), which is
+            the same one that schedules the audio ⇒ during the photos 84 % audible, without
+            photos 96.5 %.  The gaps were made by the bench's camera.
+            The sound DURING the photos is recorded anyway, as a diagnostic.
+  B image   `--video-s` (60 s), one photo per second: the video window is
+            found by difference (it is the only thing that always changes); every frame
+            must have the saturated uniform background with the target (no mosaic:
+            tiles of another colour beyond the target ⇒ red; no black/grey),
+            two consecutive photos DIFFERENT (>= 90 %), no freeze beyond 4 s.
+  The browser is at 4K (Sessione).  The audio context wakes up with a REAL
+  CLICK on the canvas, outside the video window.
 
-GUASTO (stessa sessione): il lettore si FERMA (SIGSTOP a ffplay: immagine
-  ferma e suono muto, come una pausa) ⇒ per 20 s l'immagine deve risultare
-  FERMA (FAIL) e il suono SILENZIO (FAIL).  Visto = tutt'e due rossi.
+FAULT (same session): the player STOPS (SIGSTOP to ffplay: image
+  still and sound mute, like a pause) ⇒ for 20 s the image must turn out
+  STILL (FAIL) and the sound SILENCE (FAIL).  Seen = both red.
 """
 import importlib.util as _iu
 import os
@@ -58,9 +58,9 @@ def certifica():
 
 def extra(a):
     a.add_argument("--video-s", type=float, default=60.0,
-                   help="quanto si fotografa il video nella passata sana")
+                   help="how long the video is photographed in the healthy pass")
     a.add_argument("--ascolto-s", type=float, default=40.0,
-                   help="quanto si ascolta, senza foto, prima di fotografare")
+                   help="how long it listens, without photos, before photographing")
 
 
 def prepara_video(s):
@@ -87,7 +87,7 @@ def segnale(s, sig):
 
 
 def fuori_dal_video(box, im):
-    """Un punto della tela (frazioni) fuori dalla finestra del video, lontano dai bordi."""
+    """A point of the canvas (fractions) outside the video window, far from the edges."""
     w, h = im.size
     x0, y0, x1, y1 = box[0] / w, box[1] / h, box[2] / w, box[3] / h
     for fx, fy in ((0.86, 0.5), (0.14, 0.5), (0.5, 0.82), (0.5, 0.2), (0.86, 0.25), (0.14, 0.75)):
@@ -97,25 +97,25 @@ def fuori_dal_video(box, im):
 
 
 def guarda(s, o, box, secondi, nome, salva_ogni=6, minimo=6, tetto=90.0):
-    """Foto per `secondi` (e almeno `minimo` foto, entro `tetto` s):
-    [(t, crop)], [percorsi salvati].
-    ⚠ `[M]` 24 set: con la pagina FERMA Chrome fotografa in ~8 s l'una ⇒ un
-    video bloccato (il guasto, o un difetto vero) darebbe 3 foto e un BLOCKED
-    invece di un rosso: si continua fino a `minimo` foto."""
+    """Photos for `secondi` (and at least `minimo` photos, within `tetto` s):
+    [(t, crop)], [saved paths].
+    ⚠ `[M]` 24 Sep: with the page STILL Chrome photographs in ~8 s each ⇒ a
+    frozen video (the fault, or a real defect) would give 3 photos and a BLOCKED
+    instead of a red: it continues until `minimo` photos."""
     quadri, salvate = [], []
     t0 = time.time()
     k = 0
     while (time.time() - t0 < secondi or len(quadri) < minimo) and time.time() - t0 < tetto:
-        # ⚠ una foto al secondo al piu': Chrome fotografa ogni 0,15 s, e a
-        #   quel passo due foto uguali vogliono dire «nessun quadro nuovo in
-        #   150 ms», non «immagine ferma» (`[M]` 24 set, GNOME/Chrome: 87 %)
+        # ⚠ one photo per second at most: Chrome photographs every 0.15 s, and at
+        #   that pace two equal photos mean «no new frame in
+        #   150 ms», not «still image» (`[M]` 24 Sep, GNOME/Chrome: 87 %)
         prossima = t0 + k * 1.0
         if time.time() < prossima:
             time.sleep(prossima - time.time())
         im, _png, perche = G4.foto_ridotta(s.g, 0.5)
         t = time.time() - t0
         if im is None:
-            print("   ⚠ foto %d: %s" % (k, perche), flush=True)
+            print("   ⚠ photo %d: %s" % (k, perche), flush=True)
             time.sleep(0.5)
             continue
         quadri.append((t, G4.ritaglia(im, box)))
@@ -125,7 +125,7 @@ def guarda(s, o, box, secondi, nome, salva_ogni=6, minimo=6, tetto=90.0):
             salvate.append(p)
         k += 1
     if o.evidenze and quadri:
-        # tutti i ritagli, in una striscia: si vede a occhio se cammina
+        # all the crops, in a strip: you can see by eye whether it moves
         from PIL import Image
         col = 10
         righe = (len(quadri) + col - 1) // col
@@ -147,13 +147,13 @@ def corpo(o, E):
             raise S.Bloccata(m)
         ok, m = prepara_video(s)
         if not ok:
-            raise S.Bloccata("il video non si genera nella scatola: " + m)
+            raise S.Bloccata("the video is not generated in the box: " + m)
         segno = s.segno_registro()
         c, t = accendi_video(s)
         if c != 0:
-            raise S.Bloccata("ffplay non parte nella sessione: " + t[-200:])
+            raise S.Bloccata("ffplay does not start in the session: " + t[-200:])
         time.sleep(4)
-        # la finestra del video, per differenza
+        # the video window, by difference
         box, desc, prime = None, "", []
         fine = time.time() + 40
         while time.time() < fine and box is None:
@@ -174,32 +174,32 @@ def corpo(o, E):
             _c, vivo = segnale(s, "0")
             ev.append(s.salva_testo("ffplay-f013.txt", log))
             if "morto" in vivo:
-                raise S.Bloccata("ffplay e' morto nella sessione: " + log[-300:])
-            E.metti("F-013", S.FAIL, "ffplay gira nella sessione ma nella tela non si vede "
-                    "un video che si muove: " + desc, atteso="video visibile che cammina",
+                raise S.Bloccata("ffplay died in the session: " + log[-300:])
+            E.metti("F-013", S.FAIL, "ffplay runs in the session but in the canvas no "
+                    "moving video is seen: " + desc, atteso="visible video that moves",
                     osservato=desc, evidenze=ev + [s.salva_console()])
             return
-        print("   video trovato: %s" % desc, flush=True)
-        # il gesto: un clic vero fuori dalla finestra del video
+        print("   video found: %s" % desc, flush=True)
+        # the gesture: a real click outside the video window
         note = []
         stato, conti = G4.aspetta_contesto(s.g, 20)
-        note.append("contesto audio «%s»" % stato)
+        note.append("audio context «%s»" % stato)
         fx, fy = fuori_dal_video(box, prime[-1])
         note.append(G4.clic_vero(s, fx, fy))
         time.sleep(1.5)
         stato2, _ = G4.aspetta_contesto(s.g, 5)
-        note.append("dopo il clic «%s»" % stato2)
+        note.append("after the click «%s»" % stato2)
 
-        # A — il SUONO, ascoltato senza fotografare: `[M]` 24 set, la foto 4K di
-        #     Firefox ferma il thread principale della pagina, che e' lo stesso
-        #     che programma l'audio (cuscino 250 ms) ⇒ i buchi li faceva il banco.
+        # A — the SOUND, listened to without photographing: `[M]` 24 Sep, Firefox's 4K
+        #     photo stops the page's main thread, which is the same one
+        #     that schedules the audio (250 ms cushion) ⇒ the gaps were made by the bench.
         ta = G4.ora_pagina(s.g)
         time.sleep(o.ascolto_s)
         r = G4.leggi_orecchio(s.g, ta) or {}
         es, ds, ns = G4.giudica_suono(r.get("campioni") or [], TONO_HZ, min_frazione=0.95,
                                       max_buco_s=1.0, min_campioni=int(o.ascolto_s * 3))
-        # B — l'IMMAGINE, una foto al secondo; il suono di questa finestra e' solo
-        #     diagnostica (sente anche il prezzo delle foto)
+        # B — the IMAGE, one photo per second; the sound of this window is only
+        #     a diagnostic (it also hears the price of the photos)
         tb = G4.ora_pagina(s.g)
         quadri, salvate = guarda(s, o, box, o.video_s, "sano")
         rb = G4.leggi_orecchio(s.g, tb) or {}
@@ -208,26 +208,26 @@ def corpo(o, E):
         ei, di, ni = G4.giudica_immagine(quadri)
         esb, dsb, nsb = G4.giudica_suono(rb.get("campioni") or [], TONO_HZ, min_frazione=0.95,
                                          max_buco_s=1.0, min_campioni=10)
-        note.append("suono DURANTE le foto (diagnostica, non giudica): %s %s" % (esb, dsb))
+        note.append("sound DURING the photos (diagnostic, does not judge): %s %s" % (esb, dsb))
         ev += [s.salva_testo("server-f013.txt", s.registro_da(segno) if segno else []),
                s.salva_console()]
-        atteso = ("suono: per %.0f s tono 660 Hz udibile >=95%%, buco <=1 s; poi immagine per "
-                  "%.0f s che cammina (>=90%% foto diverse, blocco <=4 s, quadri senza mosaico)"
+        atteso = ("sound: for %.0f s 660 Hz tone audible >=95%%, gap <=1 s; then image for "
+                  "%.0f s that moves (>=90%% different photos, freeze <=4 s, frames without mosaic)"
                   % (o.ascolto_s, o.video_s))
-        oss = "%s · IMMAGINE %s · SUONO %s" % ("; ".join(note), di, ds)
+        oss = "%s · IMAGE %s · SOUND %s" % ("; ".join(note), di, ds)
         num = {"immagine": ni, "suono": ns, "suono_durante_foto": nsb, "finestra": desc}
         if "BLOCKED" in (ei, es) and "FAIL" not in (ei, es):
-            E.metti("F-013", S.BLOCKED, "non ho potuto guardare: immagine «%s» · suono «%s»"
+            E.metti("F-013", S.BLOCKED, "I could not look: image «%s» · sound «%s»"
                     % (di, ds), atteso=atteso, osservato=oss, evidenze=ev, numeri=num)
         elif ei == "PASS" and es == "PASS":
-            E.metti("F-013", S.PASS, "video continuo e suono presente: %s · %s" % (di, ds),
+            E.metti("F-013", S.PASS, "continuous video and sound present: %s · %s" % (di, ds),
                     atteso=atteso, osservato=oss, evidenze=ev, numeri=num)
         else:
             male = []
             if ei != "PASS":
-                male.append("immagine: " + di)
+                male.append("image: " + di)
             if es != "PASS":
-                male.append("suono: " + ds)
+                male.append("sound: " + ds)
             E.metti("F-013", S.FAIL, " · ".join(male), atteso=atteso, osservato=oss,
                     evidenze=ev, numeri=num)
 
@@ -244,11 +244,11 @@ def corpo(o, E):
             segnale(s, "KILL")
             evg = sg + [G4.salva_json(o, "f013-orecchio-guasto.json", rg)]
             if "BLOCKED" in (eig, esg):
-                E.guasto("F-013", None, "lettore fermo: immagine %s «%s» · suono %s «%s»"
+                E.guasto("F-013", None, "player stopped: image %s «%s» · sound %s «%s»"
                          % (eig, dig, esg, dsg), evidenze=evg)
             else:
                 E.guasto("F-013", eig == "FAIL" and esg == "FAIL",
-                         "lettore fermato (SIGSTOP, %s): immagine ⇒ %s «%s» · suono ⇒ %s «%s»"
+                         "player stopped (SIGSTOP, %s): image ⇒ %s «%s» · sound ⇒ %s «%s»"
                          % (v.strip()[-10:], eig, dig, esg, dsg), evidenze=evg)
 
 

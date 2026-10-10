@@ -1,69 +1,69 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>B2 — la sonda della sessione WebTransport</title>
+<title>B2 — the WebTransport session probe</title>
 <!--
-  01-b2-sonda.html — la pagina del banco B2 della fase 1.
+  01-b2-sonda.html — the page of bench B2 of phase 1.
 
-  ⛔ SI SERVE DA localhost, E NON E' UN DETTAGLIO DI COMODO.
+  ⛔ IT IS SERVED FROM localhost, AND IT IS NOT A DETAIL OF CONVENIENCE.
 
-  Una pagina che apre WebTransport dev'essere in «contesto sicuro».  Le due
-  strade sono `https://` con un certificato, oppure `http://localhost`, che
-  la specifica considera sicuro per costruzione.
+  A page that opens WebTransport must be in a "secure context".  The two
+  roads are `https://` with a certificate, or `http://localhost`, which
+  the specification considers secure by construction.
 
-  Servendola da localhost non c'e' nessun avviso di certificato da concedere
-  — e quindi quel che questo banco misura e' **la sessione**, non il clic
-  dell'utente.  Le due cose sono separate apposta: l'eccezione sul
-  certificato della pagina e' un'altra misura (S1b), e mescolarle darebbe due
-  cause per lo stesso rosso.
+  Serving it from localhost there is no certificate warning to grant
+  — and so what this bench measures is **the session**, not the user's
+  click.  The two things are kept separate on purpose: the exception on the
+  page certificate is another measurement (S1b), and mixing them would give two
+  causes for the same red.
 
-  ⚠ Il certificato della SESSIONE resta autofirmato: lo si fa accettare con
-    `serverCertificateHashes`, che e' la strada normale del prodotto
-    (`RCP.md` §4.1-bis) — non una scorciatoia da banco.
-
-  ---------------------------------------------------------------------------
-  ⭐ IL CRITERIO DI B2, RISCRITTO IL 10 AGOSTO 2026 SUL SERVER CHE ABBIAMO
-
-  «La sessione si apre **E** il server risponde sul filo.»
-
-  Fino a questa mattina la seconda meta' era un'eco: la pagina apriva uno
-  stream, ci scriveva la parola `ciao` e aspettava che tornasse indietro.
-  Era vera quando sotto c'era il solo strato WebTransport di B2, quando il
-  server non parlava ancora RCP.
-
-  ⛔ Oggi il server parla RCP, e quel primo stream bidirezionale **e' il
-     canale di controllo** (`RCP.md` §4.2).  `ciao` non e' un messaggio
-     valido: il server ne aspetta il resto e non risponde mai, la pagina
-     resta appesa e il banco non registra niente.  `[M]` 10 agosto 2026,
-     quinto giro di B3: 200 nel registro del raccoglitore e nessun esito in
-     40 secondi, su tutt'e due i motori.
-
-  ⭐ Quindi adesso la sonda dice una frase vera: un `CIAO` conforme (§4.3,
-     §6.1, §7.1) sul canale di controllo, e aspetta l'`ECCOMI`.
-
-  ⚠ **E si ferma li', di proposito.**  La stretta di mano intera —
-    `CREDENZIALI`, `AMMESSO`, `ATTACCA`, `SESSIONE` — non serve a quel che
-    questo banco prova, che e' il **modello di fiducia**: il certificato
-    della sessione, la sua impronta, la sua rotazione (§4.1-bis).  Il
-    PROTOCOLLO lo provano altri tre banchi, che esistono apposta — B3 (il
-    filo intero), B5 (le violazioni verso il server), B11 (le violazioni
-    verso la pagina).  Rifarne qui un quarto pezzo darebbe due misure diverse
-    sotto la stessa etichetta, che e' `CODER.md` §3.9.
-
-  ⚠ Per la stessa ragione la pagina NON giudica il contenuto dell'`ECCOMI` —
-    versione, capacita', byte avanzati — e non manda `CONGEDO` alla fine: lo
-    fa B11, riga per riga.  Qui l'`ECCOMI` conta come **prova che il filo
-    porta nei due versi**, e basta.
+  ⚠ The SESSION certificate stays self-signed: it is made acceptable with
+    `serverCertificateHashes`, which is the normal road of the product
+    (`RCP.md` §4.1-bis) — not a bench shortcut.
 
   ---------------------------------------------------------------------------
-  ⛔ E LA SONDA REGISTRA SEMPRE, ANCHE QUANDO NON SUCCEDE NIENTE
+  ⭐ THE CRITERION OF B2, REWRITTEN ON 10 AUG 2026 ON THE SERVER WE HAVE
 
-  Il difetto di stamattina non e' stato solo l'eco: e' stato il **silenzio**.
-  Senza una riga nel registro, il banco non sa distinguere «il browser non e'
-  partito» da «la sessione non si e' aperta» da «il server non ha risposto» —
-  tre cause opposte con lo stesso aspetto (`CODER.md` §3.10).
+  "The session opens **AND** the server answers on the wire."
 
-  Ogni attesa ha adesso un tetto dichiarato, e a ogni scadenza parte lo
-  stesso la riga, con la causa scritta dentro.
+  Until this morning the second half was an echo: the page opened a
+  stream, wrote the word `ciao` on it and waited for it to come back.
+  It was true when underneath there was only the WebTransport layer of B2, when the
+  server did not speak RCP yet.
+
+  ⛔ Today the server speaks RCP, and that first bidirectional stream **is the
+     control channel** (`RCP.md` §4.2).  `ciao` is not a valid
+     message: the server waits for the rest of it and never answers, the page
+     stays hung and the bench records nothing.  `[M]` 10 Aug 2026,
+     fifth round of B3: 200 in the collector's log and no outcome in
+     40 seconds, on both engines.
+
+  ⭐ So now the probe says a true sentence: a conforming `CIAO` (§4.3,
+     §6.1, §7.1) on the control channel, and waits for the `ECCOMI`.
+
+  ⚠ **And it stops there, on purpose.**  The whole handshake —
+    `CREDENZIALI`, `AMMESSO`, `ATTACCA`, `SESSIONE` — is not needed for what
+    this bench tests, which is the **trust model**: the session
+    certificate, its fingerprint, its rotation (§4.1-bis).  The
+    PROTOCOL is tested by three other benches, which exist for that — B3 (the
+    whole wire), B5 (the violations towards the server), B11 (the violations
+    towards the page).  Redoing a fourth piece of it here would give two different
+    measurements under the same label, which is `CODER.md` §3.9.
+
+  ⚠ For the same reason the page does NOT judge the content of the `ECCOMI` —
+    version, capabilities, leftover bytes — and does not send `CONGEDO` at the end:
+    B11 does that, line by line.  Here the `ECCOMI` counts as **proof that the wire
+    carries in both directions**, and that is all.
+
+  ---------------------------------------------------------------------------
+  ⛔ AND THE PROBE ALWAYS RECORDS, EVEN WHEN NOTHING HAPPENS
+
+  This morning's defect was not only the echo: it was the **silence**.
+  Without a line in the log, the bench cannot tell "the browser did not
+  start" from "the session did not open" from "the server did not answer" —
+  three opposite causes with the same look (`CODER.md` §3.10).
+
+  Every wait now has a declared cap, and at every expiry the line
+  leaves all the same, with the cause written inside.
 -->
 <style>
   :root { color-scheme: light dark; }
@@ -78,63 +78,63 @@
   .no   { border-left: 4px solid #c33; }
 </style>
 
-<h1>B2 — la sessione WebTransport si apre, e il server risponde?</h1>
-<p>Banco della fase 1. Misura <b>una cosa sola</b>: se il motore di questo browser
-stabilisce una sessione WebTransport con il server indicato, accettandone il
-certificato tramite l'impronta pubblicata qui dentro — e se su quella sessione
-il server <b>risponde</b>, cioè se al <code>CIAO</code> sul canale di controllo
-torna un <code>ECCOMI</code> (<code>RCP.md</code> §4.2, §4.3). Il resto della
-stretta di mano è di B3, B5 e B11: qui si prova il <b>modello di fiducia</b>,
-non il protocollo.</p>
+<h1>B2 — does the WebTransport session open, and does the server answer?</h1>
+<p>Bench of phase 1. It measures <b>one thing only</b>: whether the engine of this browser
+establishes a WebTransport session with the given server, accepting its
+certificate through the fingerprint published here — and whether on that session
+the server <b>answers</b>, that is whether the <code>CIAO</code> on the control channel
+gets back an <code>ECCOMI</code> (<code>RCP.md</code> §4.2, §4.3). The rest of the
+handshake belongs to B3, B5 and B11: here the <b>trust model</b> is tested,
+not the protocol.</p>
 
-<label>Indirizzo della sessione</label>
+<label>Session address</label>
 <input id="url" value="https://192.168.0.2:7447/rcp/1">
 
-<label>Impronta SHA-256 del certificato della sessione (base64)</label>
+<label>SHA-256 fingerprint of the session certificate (base64)</label>
 <input id="impronta" value="">
 
-<button id="vai">Apri la sessione</button>
-<div id="esito">in attesa.</div>
+<button id="vai">Open the session</button>
+<div id="esito">waiting.</div>
 
 <script>
 const $ = (id) => document.getElementById(id);
 const esito = $("esito");
 
-// ⛔ I TETTI D'ATTESA — dichiarati qui, e ripetuti dentro l'esito.
+// ⛔ THE WAIT CAPS — declared here, and repeated inside the outcome.
 //
-//    Sono NOSTRI, e va detto: `RCP.md` §4.6 fissa tre tetti alla stretta di
-//    mano e sono tutti sul CLIENT («`CIAO` ricevuto» entro 5 s, e cosi' via);
-//    al server non impone nessun tempo di risposta.  Quindi alla scadenza la
-//    pagina **non accusa il server di aver violato niente**: scrive «entro N
-//    secondi non e' arrivato nulla», che e' un fatto della misura.
+//    They are OURS, and it must be said: `RCP.md` §4.6 sets three caps on the
+//    handshake and they are all on the CLIENT ("`CIAO` received" within 5 s, and so on);
+//    on the server it imposes no response time.  So at expiry the
+//    page **does not accuse the server of violating anything**: it writes "within N
+//    seconds nothing arrived", which is a fact of the measurement.
 //
-// ⚠ I numeri sono scelti sul conduttore, non a caso.  `01-b2-lancia-sonda.sh`
-//   aspetta la riga per **40 secondi**: 10 + 10 di attesa, piu' la rete di
-//   sicurezza a 25, stanno dentro quella finestra con la POST compresa.  I
-//   32 s di B11 — scelti li' per stare appena sopra il `max_idle_timeout` di
-//   §2.2, cosi' a parlare per primo e' il trasporto — qui non ci starebbero
-//   due volte, e il banco tornerebbe al silenzio che questa pagina cura.
-const TETTO_APERTURA = 10000;   // `wt.ready`: ne' aperta ne' rifiutata
-const TETTO_ECCOMI   = 10000;   // dal `CIAO` spedito all'`ECCOMI` completo
-const TETTO_TOTALE   = 25000;   // la rete di sicurezza: oltre questo si registra comunque
+// ⚠ The numbers are chosen on the conductor, not at random.  `01-b2-lancia-sonda.sh`
+//   waits for the line for **40 seconds**: 10 + 10 of waiting, plus the safety
+//   net at 25, fit inside that window with the POST included.  The
+//   32 s of B11 — chosen there to be just above the `max_idle_timeout` of
+//   §2.2, so that the transport is the first to speak — would not fit here
+//   twice, and the bench would go back to the silence this page cures.
+const TETTO_APERTURA = 10000;   // `wt.ready`: neither opened nor refused
+const TETTO_ECCOMI   = 10000;   // from the `CIAO` sent to the complete `ECCOMI`
+const TETTO_TOTALE   = 25000;   // the safety net: beyond this, it records anyway
 
-// ⛔ La versione che questa pagina sa parlare, scritta una volta sola: §2.2
-//    vuole che quella del percorso `/rcp/<n>` e quella del `CIAO` coincidano.
-// ⚠ Qui NON si confrontano — l'indirizzo arriva dalla query e il banco lo
-//   prende com'e'.  Il confronto e' un controllo di protocollo, e sta in
-//   `01-b11-pagina.html` (rilievo R6.19), non in un banco sul certificato.
+// ⛔ The version this page can speak, written once only: §2.2
+//    wants the one of the path `/rcp/<n>` and the one of the `CIAO` to match.
+// ⚠ Here they are NOT compared — the address comes from the query and the bench
+//   takes it as it is.  The comparison is a protocol check, and it is in
+//   `01-b11-pagina.html` (finding R6.19), not in a bench on the certificate.
 const VERSIONE = 1;
 
 const T = { CIAO: 0x0001, ECCOMI: 0x0002, CREDENZIALI: 0x0003, AMMESSO: 0x0004,
             RESPINTO: 0x0005, SESSIONE: 0x0007, CONGEDO: 0x000C };
 const NOME_T = Object.fromEntries(Object.entries(T).map(([k, v]) => [v, k]));
 
-// ⛔ I nomi dei motivi di §8.2, perche' «motivo 9» non e' una diagnosi: se il
-//    server si congeda invece di rispondere, l'esito deve dire PERCHE'.
-// ⚠ Qui ci sono i soli NOMI.  §8.2 vuole anche una frase comprensibile per
-//   l'utente, costruita dal client: quella tabella e' in `01-b11-pagina.html`,
-//   ed e' li' che si misura che ci sia.  Questa pagina scrive in un registro,
-//   non parla a nessuno.
+// ⛔ The names of the reasons of §8.2, because "reason 9" is not a diagnosis: if the
+//    server says farewell instead of answering, the outcome must say WHY.
+// ⚠ Here there are only the NAMES.  §8.2 also wants a sentence understandable to
+//   the user, built by the client: that table is in `01-b11-pagina.html`,
+//   and that is where its presence is measured.  This page writes into a log,
+//   it does not talk to anyone.
 const MOTIVO = { 0x01: "CHIUSO_DALL_UTENTE", 0x02: "INATTIVITA",
   0x03: "SESSIONE_ABBANDONATA", 0x04: "SESSIONE_LOCALE_PREVALSA",
   0x05: "GIA_ATTIVA_LOCALE", 0x06: "BUDGET_PIENO", 0x07: "CREDENZIALI_ERRATE",
@@ -142,16 +142,16 @@ const MOTIVO = { 0x01: "CHIUSO_DALL_UTENTE", 0x02: "INATTIVITA",
   0x0B: "ERRORE_PROTOCOLLO", 0x0C: "SERVER_IN_CHIUSURA", 0x0D: "TEMPO_SCADUTO",
   0x0E: "SESSIONE_NON_SERVIBILE", 0x0F: "GIA_ATTIVA_REMOTA" };
 
-// ⭐ Le capacita' di questa pagina.  ⛔ `pcm` in `audio.codec` e `8` in
-//    `video.profondita` non sono decorazioni: §4.3 li impone a ENTRAMBI i
-//    lati, e il server congeda con `NIENTE_IN_COMUNE` — non con un errore di
-//    protocollo — chi non li dichiara.  Un `CIAO` senza di essi darebbe un
-//    congedo al posto dell'`ECCOMI`, e questo banco stamperebbe rosso su un
-//    difetto suo.
+// ⭐ The capabilities of this page.  ⛔ `pcm` in `audio.codec` and `8` in
+//    `video.profondita` are not decorations: §4.3 imposes them on BOTH
+//    sides, and the server dismisses with `NIENTE_IN_COMUNE` — not with a
+//    protocol error — whoever does not declare them.  A `CIAO` without them would give a
+//    farewell in place of the `ECCOMI`, and this bench would print red on a
+//    defect of its own.
 const NOSTRE = [["video.codec", "hevc,av1"], ["video.profondita", "8,10"],
                 ["audio.codec", "opus,pcm"], ["client.nome", "sonda-b2 0.1.0"]];
 
-// ── i byte (§6.0, §6.1) ────────────────────────────────────────────────────
+// ── the bytes (§6.0, §6.1) ─────────────────────────────────────────────────
 function u16(n) { const a = new Uint8Array(2); new DataView(a.buffer).setUint16(0, n); return a; }
 function str(t) {
   const b = new TextEncoder().encode(t);
@@ -170,7 +170,7 @@ function inquadra(tipo, corpo) {
   const t = new Uint8Array(6);
   const v = new DataView(t.buffer);
   v.setUint16(0, tipo);
-  v.setUint32(2, corpo.length);   // ⛔ §6.1: il numero ESATTO dei byte del corpo
+  v.setUint32(2, corpo.length);   // ⛔ §6.1: the EXACT number of bytes of the body
   return unisci([t, corpo]);
 }
 function corpo_ciao() {
@@ -178,20 +178,20 @@ function corpo_ciao() {
                  ...NOSTRE.flatMap(([n, v]) => [str(n), str(v)])]);
 }
 
-// ── l'attesa con il tetto ──────────────────────────────────────────────────
-// ⛔ Una promessa senza tetto e' il difetto del 10 agosto 2026 in una riga:
-//    `await r.read()` su un server che non risponde non torna mai, e da li'
-//    in poi la pagina non fa piu' niente — nemmeno dire che non fa niente.
+// ── the wait with the cap ──────────────────────────────────────────────────
+// ⛔ A promise without a cap is the defect of 10 Aug 2026 in one line:
+//    `await r.read()` on a server that does not answer never returns, and from there
+//    on the page does nothing any more — not even say that it does nothing.
 class Scaduto extends Error {
   constructor(cosa, ms) {
-    super(cosa + ": niente entro " + (ms / 1000).toFixed(0) + " s");
+    super(cosa + ": nothing within " + (ms / 1000).toFixed(0) + " s");
     this.cosa = cosa; this.ms = ms;
   }
 }
-// ⭐ La scadenza si fissa UNA volta per tutta l'attesa, non a ogni pezzo.  Un
-//    tetto rimesso a zero a ogni pezzo ricevuto non scade mai davanti a un
-//    server che manda un byte al secondo — cioe' proprio il caso in cui
-//    serve.
+// ⭐ The deadline is set ONCE for the whole wait, not at every piece.  A
+//    cap reset to zero at every piece received never expires in front of a
+//    server that sends one byte a second — that is, precisely the case in which it
+//    is needed.
 function attesa(tetto, cosa) {
   const fine = performance.now() + tetto;
   return (promessa) => Promise.race([
@@ -202,10 +202,10 @@ function attesa(tetto, cosa) {
   ]);
 }
 
-// ⛔ Legge UN messaggio inquadrato dal canale di controllo (§6.1), dentro la
-//    scadenza che gli si passa.  ⚠ Un pezzo ricevuto non e' un messaggio: si
-//    accumula finche' i 6 byte d'intestazione e i `lunghezza` byte di corpo
-//    non ci sono tutti.
+// ⛔ Reads ONE framed message from the control channel (§6.1), within the
+//    deadline passed to it.  ⚠ A piece received is not a message: it
+//    accumulates until the 6 header bytes and the `lunghezza` body bytes
+//    are all there.
 async function leggi_messaggio(r, entro) {
   let arrivati = new Uint8Array(0);
   for (;;) {
@@ -217,19 +217,19 @@ async function leggi_messaggio(r, entro) {
     if (arrivati.length < 6) continue;
     const v = new DataView(arrivati.buffer, arrivati.byteOffset);
     const tipo = v.getUint16(0), lung = v.getUint32(2);
-    // ⛔ §6.1: il tetto e' 1 MiB, «e la lunghezza si controlla PRIMA di
-    //    allocare».  Qui non si alloca niente, ma la riga vale lo stesso:
-    //    senza, la pagina aspetterebbe per sempre un corpo che non arrivera'.
+    // ⛔ §6.1: the cap is 1 MiB, "and the length is checked BEFORE
+    //    allocating".  Here nothing is allocated, but the line holds all the same:
+    //    without it, the page would wait forever for a body that will never arrive.
     if (lung > 1024 * 1024) return { tipo, troppo_lungo: lung };
     if (arrivati.length < 6 + lung) continue;
     return { tipo, corpo: arrivati.slice(6, 6 + lung) };
   }
 }
 
-// L'impronta puo' arrivare dalla query: cosi' il banco si lancia con un
-// indirizzo solo e non si copia niente a mano — che e' la regola della fase 0
-// («le righe di comando si copiano da un banco che funziona, non si
-// ricordano»).
+// The fingerprint can arrive from the query: this way the bench is launched with a
+// single address and nothing is copied by hand — which is the rule of phase 0
+// ("command lines are copied from a bench that works, they are not
+// remembered").
 const q = new URLSearchParams(location.search);
 if (q.get("impronta")) $("impronta").value = q.get("impronta");
 if (q.get("url")) $("url").value = q.get("url");
@@ -239,19 +239,19 @@ function scrivi(testo, buono) {
   esito.className = buono === undefined ? "" : (buono ? "ok" : "no");
 }
 
-// ⛔ L'esito lo registra il banco, non chi guarda.
+// ⛔ The outcome is recorded by the bench, not by whoever watches.
 //
-//    Prima finiva negli occhi di chi premeva il bottone, che poi lo
-//    ricopiava: e' quel che la regola B0.4 vieta, ed e' il difetto 11 della
-//    fase 0 (un numero confrontato a memoria con la colonna sbagliata).
-//    ⚠ E soprattutto: la VERSIONE ESATTA DEL BROWSER e' il campo che una
-//      trascrizione a mano dimentica sempre, e senza quella «fra sei mesi il
-//      risultato non vale niente» (S1 §4.5).  Qui parte da sola.
+//    Before, it ended up in the eyes of whoever pressed the button, who then
+//    copied it: it is what rule B0.4 forbids, and it is defect 11 of
+//    phase 0 (a number compared from memory against the wrong column).
+//    ⚠ And above all: the EXACT BROWSER VERSION is the field that a
+//      hand transcription always forgets, and without it "six months from now the
+//      result is worth nothing" (S1 §4.5).  Here it leaves on its own.
 //
-// ⛔ E SI REGISTRA UNA VOLTA SOLA.  La rete di sicurezza qui sotto e il
-//    percorso normale possono arrivare tutt'e due in fondo; due righe per una
-//    esecuzione rimetterebbero il conduttore a indovinare quale sia la sua
-//    (rilievo R8.10, la strada (a)).
+// ⛔ AND IT IS RECORDED ONCE ONLY.  The safety net below and the
+//    normal path can both reach the end; two lines for one
+//    run would put the conductor back to guessing which one is its own
+//    (finding R8.10, road (a)).
 let registrato = false;
 async function registra(stato, dettaglio) {
   if (registrato) return;
@@ -268,17 +268,17 @@ async function registra(stato, dettaglio) {
         dettaglio: dettaglio,
       }),
     });
-    // ⚠ Con un 404 o un 500 `fetch` NON rifiuta: senza questo controllo la
-    //   pagina darebbe per consegnato un esito che nessuno ha scritto
-    //   (rilievo R6.15, trovato su `01-b11-pagina.html`).
+    // ⚠ With a 404 or a 500 `fetch` does NOT reject: without this check the
+    //   page would take as delivered an outcome that nobody wrote
+    //   (finding R6.15, found on `01-b11-pagina.html`).
     if (!r.ok) {
-      esito.textContent += "\n\n⚠ esito NON registrato: il raccoglitore ha " +
-                           "risposto " + r.status + " — quel che si vede qui " +
-                           "sopra non e' in b2-esiti.jsonl";
+      esito.textContent += "\n\n⚠ outcome NOT recorded: the collector " +
+                           "answered " + r.status + " — what is seen here " +
+                           "above is not in b2-esiti.jsonl";
     }
   } catch (e) {
-    // ⚠ Se il raccoglitore non c'e', il banco NON deve fingere: si dice.
-    esito.textContent += "\n\n⚠ esito NON registrato (raccoglitore assente): " + e;
+    // ⚠ If the collector is not there, the bench must NOT pretend: it says so.
+    esito.textContent += "\n\n⚠ outcome NOT recorded (collector absent): " + e;
   }
 }
 
@@ -295,59 +295,59 @@ $("vai").onclick = async () => {
   const righe = [];
   const t0 = performance.now();
 
-  righe.push("motore:   " + navigator.userAgent);
-  righe.push("indirizzo: " + url);
-  // ⛔ Si DICHIARA nell'esito, non solo nel codice: una proprieta'
-  //    affermata dal sorgente e non dal registro e' una proprieta'
-  //    che nessuno ha visto (LEZIONI.md §1.9).
+  righe.push("engine:   " + navigator.userAgent);
+  righe.push("address:  " + url);
+  // ⛔ It is DECLARED in the outcome, not only in the code: a property
+  //    asserted by the source and not by the log is a property
+  //    that nobody has seen (LEZIONI.md §1.9).
   righe.push("allowPooling: false   (RCP.md §4.1-bis)");
-  righe.push("tetti d'attesa di QUESTA sonda: apertura " + TETTO_APERTURA / 1000 +
-             " s · ECCOMI " + TETTO_ECCOMI / 1000 + " s · rete di sicurezza " +
-             TETTO_TOTALE / 1000 + " s   (⚠ nostri, non di RCP: §4.6 non da' " +
-             "nessun tetto al server)");
+  righe.push("wait caps of THIS probe: opening " + TETTO_APERTURA / 1000 +
+             " s · ECCOMI " + TETTO_ECCOMI / 1000 + " s · safety net " +
+             TETTO_TOTALE / 1000 + " s   (⚠ ours, not RCP's: §4.6 gives " +
+             "no cap to the server)");
 
-  // ⛔ LA RETE DI SICUREZZA, e si arma PRIMA di qualunque altra cosa.
+  // ⛔ THE SAFETY NET, and it is armed BEFORE anything else.
   //
-  //    I due tetti qui sotto coprono le attese che conosciamo.  Questo copre
-  //    quelle che non conosciamo: un `createBidirectionalStream()` che non
-  //    torna, una `write` che resta accodata, un guasto del motore.  ⭐ La
-  //    proprieta' da tenere e' una sola e non ammette eccezioni: **una
-  //    esecuzione, una riga nel registro**.  Se manca la riga, la causa e'
-  //    fuori dalla pagina — il browser non e' partito, o non ha nemmeno
-  //    chiesto il file — e il conduttore lo sa distinguere dal registro del
-  //    raccoglitore.
+  //    The two caps below cover the waits we know.  This one covers
+  //    those we do not know: a `createBidirectionalStream()` that does not
+  //    return, a `write` that stays queued, an engine fault.  ⭐ The
+  //    property to keep is only one and admits no exceptions: **one
+  //    run, one line in the log**.  If the line is missing, the cause is
+  //    outside the page — the browser did not start, or did not even
+  //    request the file — and the conductor can tell that from the
+  //    collector's log.
   setTimeout(() => {
     if (registrato) return;
     righe.push("");
-    righe.push("⛔ SILENZIO: la sonda non e' arrivata in fondo entro " +
-               TETTO_TOTALE / 1000 + " s, e nessuno dei tetti dichiarati e'" +
-               " scattato.  L'attesa e' rimasta in un punto che questa pagina" +
-               " non prevede: la riga parte lo stesso, perche' «nessuna riga»" +
-               " e' l'unico esito che non si sa leggere.");
+    righe.push("⛔ SILENCE: the probe did not reach the end within " +
+               TETTO_TOTALE / 1000 + " s, and none of the declared caps" +
+               " fired.  The wait stayed at a point this page" +
+               " does not foresee: the line leaves all the same, because \"no line\"" +
+               " is the only outcome that cannot be read.");
     scrivi(righe.join("\n"), false);
     registra("SILENZIO", righe.join("\n"));
   }, TETTO_TOTALE);
 
   if (!("WebTransport" in window)) {
     righe.push("");
-    righe.push("⛔ questo motore non espone WebTransport affatto.");
+    righe.push("⛔ this engine does not expose WebTransport at all.");
     scrivi(righe.join("\n"), false);
     await registra("NIENTE-WEBTRANSPORT", righe.join("\n"));
     return;
   }
 
-  // ⛔ `allowPooling: false` — RCP.md §4.1-bis lo mette fra i vincoli, accanto
-  //    al certificato di meno di 14 giorni e alla chiave P-256.
+  // ⛔ `allowPooling: false` — RCP.md §4.1-bis puts it among the constraints, next
+  //    to the certificate of less than 14 days and the P-256 key.
   //
-  //    Con `serverCertificateHashes` la sessione ha verificato il certificato
-  //    per IMPRONTA, non per catena: riusare quella connessione per un'altra
-  //    origine significherebbe estendere a quell'origine una fiducia che
-  //    nessuno le ha dato.  ⚠ Metterlo a `true` non darebbe nessun sintomo
-  //    visibile qui — la sessione si aprirebbe uguale — ed e' per questo che
-  //    il vincolo va SCRITTO e non lasciato al valore predefinito del motore.
+  //    With `serverCertificateHashes` the session verified the certificate
+  //    by FINGERPRINT, not by chain: reusing that connection for another
+  //    origin would mean extending to that origin a trust that
+  //    nobody gave it.  ⚠ Setting it to `true` would give no visible
+  //    symptom here — the session would open just the same — and that is why
+  //    the constraint must be WRITTEN and not left to the engine's default value.
   //
-  // ⚠ Mancava fino al 10 agosto 2026: la pagina misurava la sessione e non
-  //   questo, e i due browser avevano gia' dato verde senza di lui.
+  // ⚠ It was missing until 10 Aug 2026: the page measured the session and not
+  //   this, and the two browsers had already given green without it.
   let opzioni = { allowPooling: false };
   if (b64) {
     try {
@@ -355,163 +355,163 @@ $("vai").onclick = async () => {
         allowPooling: false,
         serverCertificateHashes: [{ algorithm: "sha-256", value: base64ToBytes(b64) }],
       };
-      righe.push("impronta:  pubblicata (" + b64.slice(0, 12) + "…)");
+      righe.push("fingerprint: published (" + b64.slice(0, 12) + "…)");
     } catch (e) {
-      // ⛔ E ANCHE QUI SI REGISTRA.  Questo ramo usciva in silenzio: chi
-      //    lanciava il banco vedeva «non ha registrato niente in 40 secondi»
-      //    — la stessa frase del browser che non parte — per un'impronta
-      //    scritta male, cioe' un difetto del conduttore, non del server.
+      // ⛔ AND HERE TOO IT IS RECORDED.  This branch exited silently: whoever
+      //    launched the bench saw "it recorded nothing in 40 seconds"
+      //    — the same sentence as the browser that does not start — for a fingerprint
+      //    written badly, that is a defect of the conductor, not of the server.
       righe.push("");
-      righe.push("⛔ l'impronta non e' base64 valido: " + e);
+      righe.push("⛔ the fingerprint is not valid base64: " + e);
       scrivi(righe.join("\n"), false);
       await registra("IMPRONTA-ILLEGGIBILE", righe.join("\n"));
       return;
     }
   } else {
-    righe.push("impronta:  NESSUNA — si conta sull'eccezione del certificato");
+    righe.push("fingerprint: NONE — relying on the certificate exception");
   }
-  scrivi(righe.join("\n") + "\n\napertura in corso…");
+  scrivi(righe.join("\n") + "\n\nopening…");
 
   try {
-    // ── 1. la sessione ────────────────────────────────────────────────────
+    // ── 1. the session ────────────────────────────────────────────────────
     const wt = new WebTransport(url, opzioni);
     try {
-      await attesa(TETTO_APERTURA, "apertura della sessione")(wt.ready);
+      await attesa(TETTO_APERTURA, "opening of the session")(wt.ready);
     } catch (e) {
       righe.push("");
       if (e instanceof Scaduto) {
-        // ⛔ «NE' APERTA NE' RIFIUTATA» E' UN TERZO ESITO, e porta un nome
-        //    suo.  Chiamarlo `NON-APERTA` lo renderebbe indistinguibile dal
-        //    rifiuto del certificato — e il controllo negativo del quinto
-        //    giro di B3, che pretende `NON-APERTA`, passerebbe con un motore
-        //    appeso invece che con un motore che confronta l'impronta: il
-        //    verde falso esatto che quel controllo esiste per non produrre.
-        righe.push("⛔ SILENZIO all'apertura: " + e.message);
-        righe.push("   la sessione non si e' aperta e nemmeno e' stata rifiutata.");
-        righe.push("   ⚠ e' l'aspetto tipico dell'UDP buttato via senza risposta:");
-        righe.push("      i pacchetti partono, non torna niente, e nessuno dice no.");
+        // ⛔ "NEITHER OPENED NOR REFUSED" IS A THIRD OUTCOME, and carries a name
+        //    of its own.  Calling it `NON-APERTA` would make it indistinguishable from the
+        //    certificate refusal — and the negative control of the fifth
+        //    round of B3, which demands `NON-APERTA`, would pass with a hung
+        //    engine instead of with an engine that compares the fingerprint: the
+        //    exact false green that check exists not to produce.
+        righe.push("⛔ SILENCE at opening: " + e.message);
+        righe.push("   the session did not open and was not refused either.");
+        righe.push("   ⚠ it is the typical look of UDP thrown away without an answer:");
+        righe.push("      the packets leave, nothing comes back, and nobody says no.");
         scrivi(righe.join("\n"), false);
         await registra("SILENZIO", righe.join("\n"));
         return;
       }
-      righe.push("⛔ NON si apre: " + e);
-      // Il motivo vero sta spesso nella chiusura, non nell'eccezione.
+      righe.push("⛔ does NOT open: " + e);
+      // The real reason is often in the closing, not in the exception.
       righe.push("");
-      righe.push("⚠ tre cause con lo stesso aspetto, e vanno distinte a mano:");
-      righe.push("   1. UDP filtrato (il TCP risponde lo stesso)");
-      righe.push("   2. l'impronta non e' quella del certificato servito");
-      righe.push("   3. il certificato della sessione supera i 14 giorni");
+      righe.push("⚠ three causes with the same look, and they must be told apart by hand:");
+      righe.push("   1. UDP filtered (TCP answers all the same)");
+      righe.push("   2. the fingerprint is not that of the certificate served");
+      righe.push("   3. the session certificate exceeds 14 days");
       scrivi(righe.join("\n"), false);
       await registra("NON-APERTA", righe.join("\n"));
       return;
     }
     const ms = (performance.now() - t0).toFixed(1);
     righe.push("");
-    righe.push("⭐ SESSIONE APERTA in " + ms + " ms");
-    scrivi(righe.join("\n") + "\n\nCIAO spedito, si aspetta ECCOMI…");
+    righe.push("⭐ SESSION OPEN in " + ms + " ms");
+    scrivi(righe.join("\n") + "\n\nCIAO sent, waiting for ECCOMI…");
 
-    // ── 2. il filo porta? ─────────────────────────────────────────────────
-    // ⛔ «ready» non basta: si manda un messaggio VERO e si aspetta la
-    //    risposta.  Una sessione che si apre e non trasporta niente e' la
-    //    forma di verde che questo banco esiste per non produrre — ed e'
-    //    esattamente il difetto che il controllo P3 di S1a cerca su un altro
-    //    piano.
+    // ── 2. does the wire carry? ───────────────────────────────────────────
+    // ⛔ "ready" is not enough: a REAL message is sent and the
+    //    answer is awaited.  A session that opens and carries nothing is the
+    //    form of green this bench exists not to produce — and it is
+    //    exactly the defect that check P3 of S1a looks for on another
+    //    level.
     try {
       const s = await wt.createBidirectionalStream();
       const w = s.writable.getWriter();
       const r = s.readable.getReader();
       await w.write(inquadra(T.CIAO, corpo_ciao()));
-      // ⛔ E IL WRITER NON SI CHIUDE.  Qui c'era `await w.close()`, ereditato
-      //    da quando lo stream era un'eco: oggi quel FIN sul primo stream
-      //    bidirezionale **e' la fine della sessione** (§4.2, «un FIN su
-      //    quello stream, da una qualunque delle due parti, chiude la
-      //    sessione»).  Si chiuderebbe la porta nel secondo esatto in cui si
-      //    aspetta che ne esca qualcuno.
-      const m = await leggi_messaggio(r, attesa(TETTO_ECCOMI, "risposta del server"));
+      // ⛔ AND THE WRITER IS NOT CLOSED.  Here there was `await w.close()`, inherited
+      //    from when the stream was an echo: today that FIN on the first
+      //    bidirectional stream **is the end of the session** (§4.2, "a FIN on
+      //    that stream, from either side, closes the
+      //    session").  It would close the door at the exact second in which we
+      //    wait for someone to come out of it.
+      const m = await leggi_messaggio(r, attesa(TETTO_ECCOMI, "answer from the server"));
       if (m.fine) {
-        righe.push("⛔ il canale di controllo si e' chiuso (FIN) senza rispondere:");
-        righe.push("   §4.2 — quel FIN E' la fine della sessione.");
+        righe.push("⛔ the control channel closed (FIN) without answering:");
+        righe.push("   §4.2 — that FIN IS the end of the session.");
       } else if (m.troppo_lungo) {
-        righe.push("⛔ il server annuncia un messaggio di " + m.troppo_lungo +
-                   " byte: oltre il tetto di 1 MiB di §6.1");
+        righe.push("⛔ the server announces a message of " + m.troppo_lungo +
+                   " bytes: beyond the 1 MiB cap of §6.1");
       } else if (m.tipo === T.ECCOMI) {
         const v = new DataView(m.corpo.buffer, m.corpo.byteOffset);
         const versione = m.corpo.length >= 2 ? v.getUint16(0) : -1;
         const quante   = m.corpo.length >= 4 ? v.getUint16(2) : -1;
-        // ⚠ Versione e capacita' si RIPORTANO e non si giudicano: §9 e §4.3
-        //   sono controlli di protocollo, e li fa B11 riga per riga.  Qui
-        //   servono a rendere leggibile l'esito, non a dare un verdetto.
-        righe.push("risposta sul canale di controllo: ECCOMI (0x0002), " +
-                   m.corpo.length + " byte — versione " + versione +
-                   ", capacita' dichiarate " + quante);
-        // ⛔ QUESTA FRASE LA CERCA IL CONDUTTORE, ALLA LETTERA.
+        // ⚠ Version and capabilities are REPORTED and not judged: §9 and §4.3
+        //   are protocol checks, and B11 does them line by line.  Here
+        //   they serve to make the outcome readable, not to give a verdict.
+        righe.push("answer on the control channel: ECCOMI (0x0002), " +
+                   m.corpo.length + " bytes — version " + versione +
+                   ", declared capabilities " + quante);
+        // ⛔ THIS SENTENCE IS SEARCHED FOR BY THE CONDUCTOR, LITERALLY.
         //
-        //    `01-b2-lancia-sonda.sh`, dentro `cerca_riga`: cerca «i byte
-        //    tornano identici» nel campo `dettaglio`, ed e' il controllo del
-        //    rilievo R8.7 — «APERTA non vuol dire che i byte tornano».  Le due
-        //    meta' del controllo stanno in due file: cambiare le parole qui
-        //    dentro fa diventare rosso un banco senza che niente sia
-        //    peggiorato, e il conduttore non si tocca.
+        //    `01-b2-lancia-sonda.sh`, inside `cerca_riga`: it looks for "the bytes
+        //    come back identical" in the `dettaglio` field, and it is the check of
+        //    finding R8.7 — "APERTA does not mean the bytes come back".  The two
+        //    halves of the check are in two files: changing the words in here
+        //    turns a bench red without anything having
+        //    got worse, and the conductor is not to be touched.
         //
-        // ⚠ «Identici» oggi vuol dire «identici a quel che §7.1 prescrive» —
-        //   il tipo 0x0002 — non «uguali a quel che abbiamo mandato»: quella
-        //   era l'eco, e l'eco non esiste piu'.  Il fatto provato e' lo
-        //   stesso di prima, e piu' forte: il filo porta nei due versi, e
-        //   dall'altra parte c'e' qualcuno che capisce quel che gli si dice.
-        righe.push("✅ i byte tornano identici a quel che §7.1 prescrive: " +
-                   "tipo 0x0002 = ECCOMI, in risposta al nostro CIAO");
+        // ⚠ "Identical" today means "identical to what §7.1 prescribes" —
+        //   type 0x0002 — not "equal to what we sent": that
+        //   was the echo, and the echo no longer exists.  The fact proved is the
+        //   same as before, and stronger: the wire carries in both directions, and
+        //   on the other side there is someone who understands what is said to them.
+        righe.push("✅ the bytes come back identical to what §7.1 prescribes: " +
+                   "type 0x0002 = ECCOMI, in answer to our CIAO");
       } else if (m.tipo === T.CONGEDO) {
         const mot = m.corpo.length >= 1 ? m.corpo[0] : -1;
-        righe.push("⛔ il server si e' CONGEDATO invece di rispondere: motivo " +
-                   mot + " = " + (MOTIVO[mot] || "fuori da §8.2"));
-        righe.push("   ⚠ e' una risposta, quindi il filo porta — ma non e'" +
-                   " l'ECCOMI che B2 pretende: la causa e' nel CIAO di questa" +
-                   " pagina o nel server, e la nomina il registro del server.");
+        righe.push("⛔ the server said FAREWELL instead of answering: reason " +
+                   mot + " = " + (MOTIVO[mot] || "outside §8.2"));
+        righe.push("   ⚠ it is an answer, so the wire carries — but it is not" +
+                   " the ECCOMI that B2 demands: the cause is in the CIAO of this" +
+                   " page or in the server, and the server log names it.");
       } else {
-        righe.push("⛔ sul canale di controllo e' tornato " +
-                   (NOME_T[m.tipo] || "il tipo 0x" + m.tipo.toString(16).padStart(4, "0")) +
-                   " invece di ECCOMI");
+        righe.push("⛔ on the control channel came back " +
+                   (NOME_T[m.tipo] || "type 0x" + m.tipo.toString(16).padStart(4, "0")) +
+                   " instead of ECCOMI");
       }
     } catch (e) {
       if (e instanceof Scaduto) {
-        // ⛔ IL DIFETTO DEL 10 AGOSTO, ADESSO DETTO AD ALTA VOCE.  La sessione
-        //    e' aperta — e l'esito resta `APERTA`, perche' e' un fatto — ma
-        //    la frase che il conduttore cerca NON viene scritta: la riga sara'
-        //    rossa per il controllo R8.7, con questa causa sotto gli occhi.
-        righe.push("⛔ nessun ECCOMI: " + e.message);
-        righe.push("   la sessione E' aperta, il CIAO e' partito, e il server tace.");
-        righe.push("   ⚠ non e' una violazione di RCP: §4.6 non da' nessun" +
-                   " tetto alla risposta del server.  E' il tetto di questo banco.");
+        // ⛔ THE DEFECT OF 10 AUG, NOW SAID OUT LOUD.  The session
+        //    is open — and the outcome stays `APERTA`, because it is a fact — but
+        //    the sentence the conductor looks for is NOT written: the line will be
+        //    red for check R8.7, with this cause in plain sight.
+        righe.push("⛔ no ECCOMI: " + e.message);
+        righe.push("   the session IS open, the CIAO left, and the server is silent.");
+        righe.push("   ⚠ it is not a violation of RCP: §4.6 gives no" +
+                   " cap to the server's answer.  It is this bench's cap.");
       } else {
-        righe.push("⚠ sessione aperta ma il canale di controllo non ha funzionato: " + e);
+        righe.push("⚠ session open but the control channel did not work: " + e);
       }
     }
 
-    // ⚠ Qui la sonda si ferma: nessun `CONGEDO`, nessuna chiusura ordinata.
-    //   §3.1 e §8.1 sono obblighi di un client vero, e li misura B11; questa
-    //   pagina si ferma prima delle credenziali, quindi non ha preso nessun
-    //   posto nel registro delle sessioni del server (§4.5) e non ne lascia
-    //   occupato nessuno al motore che gira dopo di lei.
+    // ⚠ Here the probe stops: no `CONGEDO`, no orderly closing.
+    //   §3.1 and §8.1 are obligations of a real client, and B11 measures them; this
+    //   page stops before the credentials, so it has taken no
+    //   slot in the server's session register (§4.5) and leaves none
+    //   occupied for the engine that runs after it.
     scrivi(righe.join("\n"), true);
     await registra("APERTA", righe.join("\n"));
   } catch (e) {
-    // ⛔ E se a rompersi e' la sonda, lo dice la sonda.  Un guasto della
-    //    pagina che uscisse in silenzio tornerebbe a somigliare a «il browser
-    //    non e' partito», che e' la confusione curata oggi.
+    // ⛔ And if what breaks is the probe, the probe says so.  A fault of the
+    //    page that exited silently would go back to looking like "the browser
+    //    did not start", which is the confusion cured today.
     righe.push("");
-    righe.push("⛔ GUASTO DELLA SONDA (non del server): " + e);
+    righe.push("⛔ FAULT OF THE PROBE (not of the server): " + e);
     scrivi(righe.join("\n"), false);
     await registra("GUASTO-SONDA", righe.join("\n"));
   }
 };
 
-// ⭐ L'avvio automatico: `?avvia=1` fa partire la prova senza che nessuno
-//    prema niente.
+// ⭐ The automatic start: `?avvia=1` starts the test without anyone
+//    pressing anything.
 //
-// ⛔ Non e' una comodita': un banco che ha bisogno di una mano **non si puo'
-//    rifare uguale**, e rifarlo uguale e' l'unico modo di sapere se una
-//    misura e' cambiata perche' e' cambiato il server.  Il 9 agosto questa
-//    pagina ha misurato due browser contro `aioquic`; il 10 deve misurarli
-//    contro `ngtcp2`, e le due misure valgono solo se la mano e' la stessa.
+// ⛔ It is not a convenience: a bench that needs a hand **cannot be
+//    redone the same**, and redoing it the same is the only way of knowing whether a
+//    measurement changed because the server changed.  On 9 Aug this
+//    page measured two browsers against `aioquic`; on the 10th it must measure them
+//    against `ngtcp2`, and the two measurements count only if the hand is the same.
 if (q.get("avvia")) $("vai").click();
 </script>

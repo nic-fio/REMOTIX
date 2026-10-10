@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Un cliente minimo di Marionette — il protocollo che Firefox parla da se',
-senza geckodriver.  Serve a UNA cosa: guidare il Firefox VERO dell'utente
-(140 ESR) contro il prodotto, ed estrarre quel che la pagina ha in mano.
+"""A minimal Marionette client — the protocol Firefox speaks by itself,
+without geckodriver.  It serves ONE purpose: driving the user's REAL Firefox
+(140 ESR) against the product, and extracting what the page has in hand.
 
-⛔ Non e' un banco: e' uno strumento di diagnosi.  Il verdetto lo da' il
-   confronto fra quel che la pagina DIPINGE e quel che il filo PORTA."""
+⛔ It is not a bench: it is a diagnosis tool.  The verdict comes from the
+   comparison between what the page PAINTS and what the wire CARRIES."""
 import json, os, shutil, socket, subprocess, tempfile, time
 
 
@@ -14,9 +14,9 @@ class Marionette:
         self.s.settimeout(180)
         self.buf = b""
         self.n = 0
-        self._leggi()                      # il saluto del server
+        self._leggi()                      # the server's greeting
 
-    # il quadro e' «lunghezza:json»
+    # the frame is «length:json»
     def _leggi(self):
         while b":" not in self.buf:
             self.buf += self.s.recv(65536)
@@ -63,31 +63,31 @@ class Marionette:
 
 
 def schermo_in_primo_piano():
-    """⭐ Chi e' davanti allo schermo?  Torna `(va_bene, spiegazione)`.
+    """⭐ Who is in front of the screen?  Returns `(va_bene, spiegazione)`.
 
-    ⛔ Su Wayland una finestra NUOVA non si mappa se la sessione grafica in
-       primo piano sul posto non e' la nostra: Firefox parte, apre la porta
-       Marionette, e poi **non risponde piu'** — `WebDriver:NewSession` resta
-       appeso fino al tetto del socket (180 s).
+    ⛔ On Wayland a NEW window is not mapped if the graphical session in
+       the foreground on the seat is not ours: Firefox starts, opens the
+       Marionette port, and then **stops answering** — `WebDriver:NewSession` stays
+       hung until the socket ceiling (180 s).
 
-    `[M]` 23 settembre 2026, portatile CHUWI, due condizioni a confronto nello
-    stesso quarto d'ora, Firefox 140.16 ESR:
-      · sessione di `nicfio` in primo piano  →  NewSession in **1,39 s**;
-      · sessione di un ALTRO utente in primo piano →  **3 tentativi su 3 in
-        timeout**, e nel frattempo lo stesso Firefox `--headless` rispondeva in
-        1,40 s e lo stesso Firefox VISIBILE su `Xvfb :99` in **1,63 s**.
-    ⇒ Non e' Firefox, non e' la memoria: e' lo schermo.
+    `[M]` 23 September 2026, CHUWI laptop, two conditions compared in the
+    same quarter of an hour, Firefox 140.16 ESR:
+      · `nicfio`'s session in the foreground  →  NewSession in **1.39 s**;
+      · ANOTHER user's session in the foreground →  **3 attempts out of 3
+        timed out**, and meanwhile the same Firefox `--headless` answered in
+        1.40 s and the same VISIBLE Firefox on `Xvfb :99` in **1.63 s**.
+    ⇒ It is not Firefox, it is not memory: it is the screen.
 
-    ⚠ Il confronto e' sull'UTENTE, non sul numero di sessione: un banco lanciato
-      da `ssh` sta in una sessione senza posto, e il numero non combacerebbe
-      mai.  Nel dubbio si dice di si', per non fermare chi funzionava.
+    ⚠ The comparison is on the USER, not on the session number: a bench launched
+      from `ssh` sits in a session without a seat, and the number would never
+      match.  When in doubt we say yes, so as not to stop what was working.
 
-    ⭐ E col compositore ANNIDATO la domanda non ha oggetto: `[M]` 23 set 2026,
-      notte, un `labwc` senza schermo (`WLR_BACKENDS=headless`) sul tablet
-      mentre in primo piano c'era l'utente «user» — quattro sessioni da 20
-      minuti con Firefox e Chrome VISIBILI dentro di lui, finestre mappate e
-      contatori pieni.  ⇒ Chi lancia lo DICHIARA con
-      `REMOTIX_SCHERMO_ANNIDATO=1` (e `WAYLAND_DISPLAY` sul suo socket)."""
+    ⭐ And with the NESTED compositor the question has no object: `[M]` 23 Sep 2026,
+      night, a `labwc` without a screen (`WLR_BACKENDS=headless`) on the tablet
+      while the user «user» was in the foreground — four 20-minute sessions
+      with Firefox and Chrome VISIBLE inside it, windows mapped and
+      counters full.  ⇒ Whoever launches DECLARES it with
+      `REMOTIX_SCHERMO_ANNIDATO=1` (and `WAYLAND_DISPLAY` on its socket)."""
     if os.environ.get("REMOTIX_SCHERMO_ANNIDATO") == "1" and os.environ.get("WAYLAND_DISPLAY"):
         return True, ""
     try:
@@ -103,34 +103,34 @@ def schermo_in_primo_piano():
         if not di_chi or di_chi == str(os.getuid()):
             return True, ""
         nome = _chiedi("show-session", attiva, "-p", "Name") or di_chi
-        return False, ("in primo piano c'e' la sessione %s dell'utente «%s», "
-                       "non la tua" % (attiva, nome))
+        return False, ("in the foreground is session %s of user «%s», "
+                       "not yours" % (attiva, nome))
     except Exception:                          # noqa: BLE001
-        return True, ""                        # non so dirlo: non ostacolo
+        return True, ""                        # I cannot tell: I do not get in the way
 
 
 def accendi(profilo_prefs=None, headless=True, porta=2828, largo=1400, alto=1000,
             schermo=None):
-    """⭐ `schermo=":99"` accende un Firefox VERO su uno schermo virtuale.
+    """⭐ `schermo=":99"` starts a REAL Firefox on a virtual screen.
 
-    ⛔ Serve perche' `--headless` NON e' un browser vero dove conta: `[M]` 20
-    agosto 2026, l'evento `paste` arriva in headless anche senza un elemento
-    modificabile a fuoco, e su un browser con schermo NO.  ⇒ Un difetto della
-    clipboard che l'utente vede si puo' misurare solo qui."""
-    """Accende un Firefox con un profilo nuovo e Marionette aperta."""
-    # ⭐ Il banco si guarda la scena PRIMA di accendere: una finestra vera sul
-    #   desktop dell'utente vuole quel desktop in primo piano.  Meglio un
-    #   verdetto in zero secondi che tre minuti di attesa cieca.
+    ⛔ It is needed because `--headless` is NOT a real browser where it matters: `[M]` 20
+    August 2026, the `paste` event arrives in headless even without an editable
+    element in focus, and on a browser with a screen it does NOT.  ⇒ A clipboard
+    defect the user sees can only be measured here."""
+    """Starts a Firefox with a new profile and Marionette open."""
+    # ⭐ The bench looks at the scene BEFORE starting: a real window on the
+    #   user's desktop wants that desktop in the foreground.  Better a
+    #   verdict in zero seconds than three minutes of blind waiting.
     if not headless and not schermo:
         ok, perche = schermo_in_primo_piano()
         if not ok:
             raise RuntimeError(
-                "⛔ Firefox VISIBILE non puo' partire: %s.  Su Wayland la "
-                "finestra non si mappa e `WebDriver:NewSession` non risponde "
-                "(tetto 180 s).  ⇒ tre strade: torna sulla tua sessione "
-                "grafica; oppure accendi uno schermo virtuale (`Xvfb :99 "
-                "-screen 0 1600x1200x24` e poi `schermo=\":99\"`); oppure "
-                "`headless=True` dove basta." % perche)
+                "⛔ VISIBLE Firefox cannot start: %s.  On Wayland the "
+                "window is not mapped and `WebDriver:NewSession` does not answer "
+                "(ceiling 180 s).  ⇒ three roads: go back to your graphical "
+                "session; or start a virtual screen (`Xvfb :99 "
+                "-screen 0 1600x1200x24` and then `schermo=\":99\"`); or "
+                "`headless=True` where it is enough." % perche)
     profilo = tempfile.mkdtemp(prefix="remotix-ff-")
     prefs = {
         "browser.startup.homepage_override.mstone": "ignore",
@@ -138,23 +138,23 @@ def accendi(profilo_prefs=None, headless=True, porta=2828, largo=1400, alto=1000
         "browser.aboutwelcome.enabled": False,
         "browser.shell.checkDefaultBrowser": False,
         "marionette.port": porta,
-        # ⚠ il registro della console: serve a raccogliere i guasti del
-        #   decodificatore che la pagina non porta al server
+        # ⚠ the console log: it serves to collect the decoder
+        #   faults the page does not carry to the server
         "devtools.console.stdout.content": True,
     }
     prefs.update(profilo_prefs or {})
-    # ⭐ `REMOTIX_FF_PREFS='{"pref": valore}'`: preferenze in piu' per il Firefox
-    #   del banco, senza toccare le guide (es. `media.hardware-video-decoding.
-    #   enabled` per confrontare decodifica hardware e software, fase 16).
-    #   Vuota o assente: nessun effetto.
+    # ⭐ `REMOTIX_FF_PREFS='{"pref": valore}'`: extra preferences for the bench's
+    #   Firefox, without touching the guides (e.g. `media.hardware-video-decoding.
+    #   enabled` to compare hardware and software decoding, phase 16).
+    #   Empty or absent: no effect.
     prefs.update(json.loads(os.environ.get("REMOTIX_FF_PREFS") or "{}"))
     with open(os.path.join(profilo, "user.js"), "w") as f:
         for k, v in prefs.items():
             f.write('user_pref("%s", %s);\n' % (k, json.dumps(v)))
-    # ⭐ `-remote-allow-system-access` apre il contesto **chrome** a Marionette:
-    #   serve a chi deve guardare — o cliccare — quel che Firefox disegna FUORI
-    #   dal documento, per esempio il bottoncino «Incolla» di §9 (`07-b56`).
-    #   ⚠ E' una bandiera del BANCO: nessun Firefox di utente parte cosi'.
+    # ⭐ `-remote-allow-system-access` opens the **chrome** context to Marionette:
+    #   it serves whoever has to look at — or click — what Firefox draws OUTSIDE
+    #   the document, for example the little «Paste» button of §9 (`07-b56`).
+    #   ⚠ It is a BENCH flag: no user's Firefox starts like this.
     cmd = ["firefox", "--marionette", "--no-remote", "-remote-allow-system-access",
            "--profile", profilo, "--width", str(largo), "--height", str(alto)]
     if headless:
@@ -163,8 +163,8 @@ def accendi(profilo_prefs=None, headless=True, porta=2828, largo=1400, alto=1000
     amb = dict(os.environ)
     if schermo:
         amb["DISPLAY"] = schermo
-        # ⛔ Su una sessione Wayland, `DISPLAY` da solo non basta: Firefox
-        #    prenderebbe comunque Wayland e ignorerebbe lo schermo virtuale.
+        # ⛔ On a Wayland session, `DISPLAY` alone is not enough: Firefox
+        #    would take Wayland anyway and ignore the virtual screen.
         amb.pop("WAYLAND_DISPLAY", None)
         amb["MOZ_ENABLE_WAYLAND"] = "0"
     p = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, env=amb)
@@ -175,7 +175,7 @@ def accendi(profilo_prefs=None, headless=True, porta=2828, largo=1400, alto=1000
         except OSError:
             time.sleep(0.5)
     p.kill()
-    raise RuntimeError("Marionette non ha aperto la porta %d" % porta)
+    raise RuntimeError("Marionette did not open port %d" % porta)
 
 
 def spegni(p, profilo):

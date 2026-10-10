@@ -1,37 +1,37 @@
 #!/bin/bash
-# Applica al contenitore VIVO il passo 5-bis di provision.sh (R12-A.44).
+# Applies step 5-bis of provision.sh to the LIVE container (R12-A.44).
 #
 # ---------------------------------------------------------------------------
-# ⛔ LA PAROLA D'ORDINE NON PASSA PIU' DALLA RIGA DI COMANDO — difetto **D12**,
-#    curato il 12 agosto 2026.
+# ⛔ THE PASSWORD NO LONGER GOES THROUGH THE COMMAND LINE — defect **D12**,
+#    cured on 12 Aug 2026.
 #
-# ⛔ QUI C'ERA `bash $E --root "printf '%s:%s\n' '$1' '$3' | chpasswd"`, e la
-#    parola `$3` finiva **dentro la stringa** che `bash` riceve come argomento:
-#    cioe' nell'`argv` di `bash`, in quello di `sudo` e in quello della shell
-#    lanciata dentro il contenitore.  `/proc/<pid>/cmdline` su Linux e'
-#    leggibile da chiunque, e un `ps` durante il giro la stampava per intero.
+# ⛔ HERE THERE WAS `bash $E --root "printf '%s:%s\n' '$1' '$3' | chpasswd"`, and the
+#    password `$3` ended up **inside the string** that `bash` receives as an argument:
+#    i.e. in the `argv` of `bash`, in that of `sudo` and in that of the shell
+#    launched inside the container.  `/proc/<pid>/cmdline` on Linux is
+#    readable by anyone, and a `ps` during the round printed it in full.
 #
-# ⛔⛔ E non era la parola pubblica dei banchi: la riga «crea prova2 …» passava
-#    la parola **generata** di `prova2` — quella che `01-b10-lancia.sh` tratta
-#    come non compromettibile, e che per questo motivo li' passa da un file
-#    `0600`.  ⇒ Lo strumento che la CREA la mostrava a chiunque, mentre lo
-#    strumento che la USA la proteggeva.  Delle due, quella che contava era
-#    questa: una parola nata in `ps` e' gia' compromessa quando B10 la legge.
+# ⛔⛔ And it was not the public password of the benches: the «crea prova2 …» line passed
+#    the **generated** password of `prova2` — the one that `01-b10-lancia.sh` treats
+#    as not to be compromised, and that for this reason goes through a `0600`
+#    file there.  ⇒ The tool that CREATES it showed it to anyone, while the
+#    tool that USES it protected it.  Of the two, the one that mattered was
+#    this one: a password born in `ps` is already compromised when B10 reads it.
 #
-# ⭐ LA STRADA E' QUELLA GIA' IN CASA (`banchi/01-b10-lancia.sh`): un file
-#    `0600` scritto con `printf`, che e' un **builtin** della shell — nemmeno
-#    la scrittura passa per un processo con la parola in `argv` — letto da
-#    `chpasswd` con una redirezione **dentro** le virgolette, e cancellato
-#    subito, piu' una `trap` per il caso in cui il giro muoia a meta'.
+# ⭐ THE ROAD IS THE ONE ALREADY IN THE HOUSE (`banchi/01-b10-lancia.sh`): a `0600`
+#    file written with `printf`, which is a shell **builtin** — not even
+#    the writing goes through a process with the password in `argv` — read by
+#    `chpasswd` with a redirection **inside** the quotes, and deleted
+#    right away, plus a `trap` for the case where the round dies halfway.
 #
-# ⚠ Resta una copia in chiaro su disco per la durata di una `chpasswd`, ed e'
-#   dichiarata: e' il prezzo per non averla in `ps`, dove la vede chiunque.
-#   Il file e' `0600` e sta sotto `$FUORI/tmp`, non in `/tmp`.
+# ⚠ A plaintext copy remains on disk for the duration of one `chpasswd`, and it is
+#   declared: it is the price for not having it in `ps`, where anyone sees it.
+#   The file is `0600` and lives under `$FUORI/tmp`, not in `/tmp`.
 #
-# ⛔ E la redirezione sta DENTRO le virgolette, mai attorno a `enter.sh`: fuori
-#    si porterebbe via la richiesta di parola d'ordine di `sudo`, e lo script
-#    resterebbe appeso per sempre in silenzio (`FASI.md` §00-ambiente B3.3,
-#    pagata quattro volte).
+# ⛔ And the redirection goes INSIDE the quotes, never around `enter.sh`: outside
+#    it would carry away the `sudo` password prompt, and the script
+#    would hang forever in silence (`FASI.md` §00-ambiente B3.3,
+#    paid for four times).
 # ---------------------------------------------------------------------------
 set -uo pipefail
 E=/media/REMOTIX/enter.sh
@@ -42,9 +42,9 @@ ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf() { printf '    --  %s\n' "$*"; }
 
-# ⛔ Un nome tutto suo: `01-b10-lancia.sh` usa `sera-b10-parola`, e due
-#    strumenti che scrivono lo stesso file si cancellerebbero la parola a
-#    vicenda — la stessa forma che ha fatto nascere il `PREFISSO` di
+# ⛔ A name of its own: `01-b10-lancia.sh` uses `sera-b10-parola`, and two
+#    tools writing the same file would delete each other's
+#    password — the same shape that gave birth to the `PREFISSO` of
 #    `01-p5-accendi.sh`.
 PAROLA_FUORI=$FUORI/tmp/attrezzi-utenti-chpasswd
 PAROLA_DENTRO=$DENTRO/tmp/attrezzi-utenti-chpasswd
@@ -53,104 +53,104 @@ ripulisci() { rm -f "$PAROLA_FUORI"; }
 trap ripulisci EXIT
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⛔⛔⭐ QUESTO ATTREZZO CREAVA `prova` E `prova2` **CIECHI** — e non lo diceva
+# ⛔⛔⭐ THIS TOOL CREATED `prova` AND `prova2` **BLIND** — and did not say so
 #
-# ⛔ La `useradd` qui sotto non dava nessun gruppo, mentre `src/provisiona.sh`
-#    li dava: due posti che creano la stessa cosa, e sono divergiti.  Chi
-#    preparava la macchina con l'uno otteneva inquilini che vedono, con l'altro
-#    inquilini che non vedranno mai niente — `[M]` 0 sessioni su 4, zero
-#    fotogrammi in 90 s (fase 10 §7.4).
+# ⛔ The `useradd` below gave no group, while `src/provisiona.sh`
+#    gave them: two places that create the same thing, and they diverged.  Whoever
+#    prepared the machine with one got tenants that see, with the other
+#    tenants that will never see anything — `[M]` 0 sessions out of 4, zero
+#    frames in 90 s (phase 10 §7.4).
 #
-# ⭐ LA CURA STA IN UN FILE SOLO, `attrezzi-gruppi-scheda.sh`.  ⚠ Ma qui i
-#    comandi girano DENTRO il chroot di `enter.sh`, dove quel file non c'e':
-#    quindi il file **si stampa** (`--testo`) e il testo si infila nella
-#    stringa.  ⇒ La logica resta UNA, e non ce n'e' una copia scritta a mano.
+# ⭐ THE CURE LIVES IN ONE FILE, `attrezzi-gruppi-scheda.sh`.  ⚠ But here the
+#    commands run INSIDE the `enter.sh` chroot, where that file does not exist:
+#    so the file **prints itself** (`--testo`) and the text goes into the
+#    string.  ⇒ The logic stays ONE, and there is no hand-written copy of it.
 #
-# ⚠ E il chroot ha `/dev` in rbind ma un `/etc/group` tutto suo: leggere il
-#   **gid dal nodo** e chiedere il nome li' dentro e' proprio quel che serve —
-#   un `render` inchiodato di fuori potrebbe non esistere di dentro.
+# ⚠ And the chroot has `/dev` in rbind but an `/etc/group` all of its own: reading the
+#   **gid from the node** and asking for the name in there is exactly what is needed —
+#   a `render` hard-coded from outside might not exist inside.
 # ═══════════════════════════════════════════════════════════════════════════
 GRUPPI_SCHEDA_SH=${GRUPPI_SCHEDA_SH:-$(cd "$(dirname "$0")" && pwd)/attrezzi-gruppi-scheda.sh}
-[ -f "$GRUPPI_SCHEDA_SH" ] || { ko "⛔ manca $GRUPPI_SCHEDA_SH: gli inquilini nascerebbero CIECHI"; exit 2; }
-# ⚠ Il testo entra in `"$GRUPPI_SCHEDA_TESTO"`, e la shell NON riespande il
-#   risultato di un'espansione: i `$` di la' dentro arrivano intatti.
+[ -f "$GRUPPI_SCHEDA_SH" ] || { ko "⛔ $GRUPPI_SCHEDA_SH is missing: the tenants would be born BLIND"; exit 2; }
+# ⚠ The text goes into `"$GRUPPI_SCHEDA_TESTO"`, and the shell does NOT re-expand the
+#   result of an expansion: the `$`s in there arrive intact.
 GRUPPI_SCHEDA_TESTO=$(bash "$GRUPPI_SCHEDA_SH" --testo)
-[ -n "$GRUPPI_SCHEDA_TESTO" ] || { ko "⛔ $GRUPPI_SCHEDA_SH --testo non ha stampato niente"; exit 2; }
+[ -n "$GRUPPI_SCHEDA_TESTO" ] || { ko "⛔ $GRUPPI_SCHEDA_SH --testo printed nothing"; exit 2; }
 
-mkdir -p "$FUORI/tmp" || { ko "⛔ non si crea $FUORI/tmp"; exit 2; }
+mkdir -p "$FUORI/tmp" || { ko "⛔ cannot create $FUORI/tmp"; exit 2; }
 
-crea() # $1 nome  $2 uid  $3 parola
+crea() # $1 name  $2 uid  $3 password
 {
   local stato
   if bash $E --root "id -u $1 >/dev/null 2>&1"; then
-    ok "utente '$1' gia' presente"
+    ok "user '$1' already present"
   else
-    bash $E --root "useradd -u $2 -m -s /bin/bash $1" && ok "utente '$1' creato (uid $2)"
+    bash $E --root "useradd -u $2 -m -s /bin/bash $1" && ok "user '$1' created (uid $2)"
   fi
-  # ⛔ D12: la riga «utente:parola» che `chpasswd` mangia si scrive in un file
-  #    `0600`, non in una riga di comando.
-  # ⛔ `umask` IN UNA SOTTOSHELL — la riga che B10 ha pagato con un giro
-  #    intero: `umask 077` nudo resta addosso a tutto quel che viene dopo,
-  #    compresi i comandi mandati dentro il contenitore.
-  ( umask 077; : > "$PAROLA_FUORI" ) || { ko "⛔ non si scrive $PAROLA_FUORI"; return 2; }
+  # ⛔ D12: the «user:password» line that `chpasswd` eats is written to a
+  #    `0600` file, not to a command line.
+  # ⛔ `umask` IN A SUBSHELL — the line B10 paid for with a whole
+  #    round: a bare `umask 077` sticks to everything that comes after,
+  #    including the commands sent inside the container.
+  ( umask 077; : > "$PAROLA_FUORI" ) || { ko "⛔ cannot write $PAROLA_FUORI"; return 2; }
   chmod 600 "$PAROLA_FUORI" || return 2
-  # ⛔ `printf` e' un builtin: nessun processo con la parola in `argv`.
+  # ⛔ `printf` is a builtin: no process with the password in `argv`.
   printf '%s:%s\n' "$1" "$3" > "$PAROLA_FUORI"
   bash $E --root "chpasswd < $PAROLA_DENTRO; s=\$?; rm -f $PAROLA_DENTRO; exit \$s"
   stato=$?
-  # ⛔ E si cancella SUBITO, non alla fine dello script: la finestra in cui il
-  #    file esiste dev'essere quella della `chpasswd` e non tutto il giro.  La
-  #    `trap` e' la rete per quando il giro muore, non la cancellazione normale.
+  # ⛔ And it is deleted RIGHT AWAY, not at the end of the script: the window in which the
+  #    file exists must be that of the `chpasswd` and not the whole round.  The
+  #    `trap` is the net for when the round dies, not the normal deletion.
   rm -f "$PAROLA_FUORI"
   if [ "$stato" -eq 0 ]; then
-    ok "parola di '$1' impostata da un file 0600 — mai in una riga di comando"
+    ok "password of '$1' set from a 0600 file — never on a command line"
   else
-    ko "⛔ chpasswd per '$1' esce $stato: la parola NON e' stata impostata"
+    ko "⛔ chpasswd for '$1' exits $stato: the password was NOT set"
     return "$stato"
   fi
-  # ⭐⭐ I GRUPPI DELLA SCHEDA, LETTI DAI NODI DENTRO IL CHROOT.
-  # ⛔ E se non ci entra, questo attrezzo si FERMA: un `prova` cieco manda a
-  #    zero fotogrammi ogni banco che parte da qui, e nessuno se ne accorge.
+  # ⭐⭐ THE CARD GROUPS, READ FROM THE NODES INSIDE THE CHROOT.
+  # ⛔ And if it does not get in, this tool STOPS: a blind `prova` sends
+  #    every bench that starts from here to zero frames, and nobody notices.
   bash $E --root "$GRUPPI_SCHEDA_TESTO
 gruppi_scheda_dai_a $1"
   stato=$?
-  [ "$stato" -eq 0 ] || ko "⛔⛔ '$1' NON e' nei gruppi della scheda (uscita $stato): NON usare questo utente per misurare"
+  [ "$stato" -eq 0 ] || ko "⛔⛔ '$1' is NOT in the card groups (exit $stato): do NOT use this user to measure"
   return "$stato"
 }
 
-# ⛔ E se 'prova' non nasce sano si esce: proseguire vorrebbe dire lasciare
-#    in giro un inquilino che i banchi useranno credendolo buono.
+# ⛔ And if 'prova' is not born healthy we exit: going on would mean leaving
+#    around a tenant that the benches will use believing it good.
 crea prova 1001 parola-di-prova || exit 3
 
 if [ -f "$CRED" ] && grep -q '^prova2:' "$CRED" 2>/dev/null; then
   P2=$(sed -n 's/^prova2:[[:space:]]*//p' "$CRED" | head -1)
-  inf "parola di 'prova2' riletta da $CRED"
+  inf "password of 'prova2' read back from $CRED"
 else
-  # ⚠ `head -c 18 /dev/urandom | base64` — nessuno dei tre vede la parola in
-  #   `argv`: `base64` la riceve sullo stdin, non come argomento.
+  # ⚠ `head -c 18 /dev/urandom | base64` — none of the three sees the password in
+  #   `argv`: `base64` receives it on stdin, not as an argument.
   P2=$(head -c 18 /dev/urandom | base64 | tr -d '/+=' | head -c 20)
   touch "$CRED"; chmod 600 "$CRED"
   printf 'prova2: %s\n' "$P2" >> "$CRED"
-  ok "parola di 'prova2' generata e scritta in $CRED (0600)"
+  ok "password of 'prova2' generated and written to $CRED (0600)"
 fi
-# ⛔ `crea` e' una FUNZIONE, non un programma: questa chiamata non crea nessun
-#    `argv`, e la parola non esce dalla shell.
+# ⛔ `crea` is a FUNCTION, not a program: this call creates no
+#    `argv`, and the password does not leave the shell.
 crea prova2 1002 "$P2" || exit 3
 
 echo
 for u in prova prova2; do
   if bash $E --root "getent shadow $u | cut -d: -f2 | grep -q '^\\\$'"; then
-    ok "$u: parola d'ordine cifrata presente in /etc/shadow"
+    ok "$u: encrypted password present in /etc/shadow"
   else
-    ko "⛔ $u: NON ha una parola utilizzabile — PAM lo rifiutera'"
+    ko "⛔ $u: has NO usable password — PAM will reject it"
   fi
 done
-# ⭐ E si RILEGGE dal di dentro, che e' l'unico posto che conta (E1).
+# ⭐ And it is READ BACK from inside, which is the only place that counts (E1).
 bash $E --root "$GRUPPI_SCHEDA_TESTO
 for u in prova prova2; do
   m=\$(gruppi_scheda_mancanti \$u)
-  if [ -z \"\$m\" ]; then echo \"    OK  ⭐ \$u e' nei gruppi dei nodi della scheda: \$(id -nG \$u)\"
-  else echo \"    NO  ⛔⛔ \$u NON e' nei gruppi \$m: la sua sessione NASCE CIECA\"; fi
+  if [ -z \"\$m\" ]; then echo \"    OK  ⭐ \$u is in the groups of the card nodes: \$(id -nG \$u)\"
+  else echo \"    NO  ⛔⛔ \$u is NOT in the groups \$m: its session IS BORN BLIND\"; fi
 done"
 bash $E --root "getent passwd prova prova2"
 ls -l "$CRED"

@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 #
-# ⛔ STORIA (10 ott 2026, DECISIONI §10.36): questo banco prova un installatore che non c'è più —
-#   piano/approva/applica separati, archivio firmato e install.sh, archivi di terzi, firewall e
-#   cinture messi dal motore, file di risposte. Oggi: un .run, `install` con la domanda [y/N], e
-#   REMOTIX che non modifica il sistema. Resta come storia delle prove del 29 set - 1 ott 2026; il giro
-#   vero è banchi/17-distro/17-t10.sh. Non si lancia.
-# t6-porta.sh — porta sul server il banco di T6, il motore e i pacchetti.
+# ⛔ HISTORY (10 Oct 2026, DECISIONI §10.36): this bench tests an installer that no longer exists —
+#   separate plan/approve/apply, signed archive and install.sh, third-party repositories, firewall and
+#   belts set by the engine, answer files. Today: one .run, `install` with the [y/N] question, and
+#   REMOTIX that does not modify the system. It stays as the history of the tests of 29 Sep - 1 Oct 2026; the real
+#   run is banchi/17-distro/17-t10.sh. It is not launched.
+# t6-porta.sh — brings the T6 bench, the engine and the packages to the server.
 #
-#   (sul portatile)   bash banchi/17-t6/t6-porta.sh [cartella-pacchetti]
+#   (on the laptop)   bash banchi/17-t6/t6-porta.sh [packages-folder]
 #
-#   /media/REMOTIX/vm17/t6/              t6-vm.sh, t6-leggi-pam.sh, 17-t1c-guarda.sh (con T1C_UTENTE),
+#   /media/REMOTIX/vm17/t6/              t6-vm.sh, t6-leggi-pam.sh, 17-t1c-guarda.sh (with T1C_UTENTE),
 #                                        17-t1c-browser.py, remotix-install
-#   /media/REMOTIX/vm17/t6/pacchetti/    i pacchetti (.rpm, .deb, .pkg.tar.zst), una cartella per bersaglio
+#   /media/REMOTIX/vm17/t6/pacchetti/    the packages (.rpm, .deb, .pkg.tar.zst), one folder per target
 set -euo pipefail
 QUI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ALBERO=$(cd "$QUI/../.." && pwd)

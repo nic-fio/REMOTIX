@@ -1,15 +1,15 @@
-# Contenitore.ubuntu2604 — fase 17: la scatola «cliente» di Ubuntu 26.04 LTS col desktop DESKTOP
-# (gnome = ubuntu-desktop, kde = kubuntu-desktop, xfce = xubuntu-desktop, lxqt = lubuntu-desktop: gli
-# stessi di 17-vm.sh vesti). Il resto come Contenitore.debian13.
-# ⚠ Una differenza dichiarata dalla macchina vera: in una scatola snapd non gira (niente squashfs né
-#   apparmor), e i pacchetti «di passaggio» che installano uno snap (firefox, thunderbird) falliscono
-#   nel loro preinst. Si tengono FUORI con una preferenza di apt (priorità -1): il browser del giro sta
-#   fuori dalla scatola, e REMOTIX non dipende da loro.
+# Contenitore.ubuntu2604 — phase 17: the "customer" box of Ubuntu 26.04 LTS with the desktop DESKTOP
+# (gnome = ubuntu-desktop, kde = kubuntu-desktop, xfce = xubuntu-desktop, lxqt = lubuntu-desktop: the
+# same as 17-vm.sh vesti). The rest as in Contenitore.debian13.
+# ⚠ A declared difference from the real machine: in a box snapd does not run (no squashfs nor
+#   apparmor), and the "transitional" packages that install a snap (firefox, thunderbird) fail
+#   in their preinst. They are kept OUT with an apt preference (priority -1): the round's browser is
+#   outside the box, and REMOTIX does not depend on them.
 FROM docker.io/library/ubuntu:26.04
 ARG DESKTOP
 ARG PORTA_SSH=8600
 ENV DEBIAN_FRONTEND=noninteractive
-RUN case "$DESKTOP" in gnome|kde|xfce|lxqt) ;; *) echo "DESKTOP=«$DESKTOP»: gnome|kde|xfce|lxqt" >&2; exit 2 ;; esac
+RUN case "$DESKTOP" in gnome|kde|xfce|lxqt) ;; *) echo "DESKTOP=\"$DESKTOP\": gnome|kde|xfce|lxqt" >&2; exit 2 ;; esac
 RUN printf 'Package: firefox thunderbird chromium-browser\nPin: release *\nPin-Priority: -1\n' > /etc/apt/preferences.d/t17-niente-snap
 RUN apt-get update && apt-get install -y --no-install-recommends \
         systemd systemd-sysv dbus dbus-user-session libpam-systemd \

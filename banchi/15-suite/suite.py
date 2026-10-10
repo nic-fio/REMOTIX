@@ -2,49 +2,49 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-15-suite — LA BASE COMUNE DELLE PROVE DELLA SUITE FUNZIONALE (fase 15)
+15-suite — THE COMMON BASE OF THE FUNCTIONAL SUITE TESTS (phase 15)
 ===========================================================================
 
-Ogni prova della suite e' uno script `15-fNNN-<nome>.py` in questa cartella.
-Puo' guardare UNA funzione o un gruppo (una sessione, piu' funzioni in fila,
-come un utente vero).  Tutte parlano la stessa lingua:
+Each test of the suite is a script `15-fNNN-<name>.py` in this folder.
+It can look at ONE function or a group (one session, several functions in a row,
+like a real user).  They all speak the same language:
 
-  riga di comando (`argomenti()`):
-      --scatola gnome|kde|xfce|lxqt   --browser firefox|chrome   (UNO solo)
-      --guasto        dopo la passata sana, la passata col GUASTO INNESTATO
-                      nella stessa sessione (esito al rovescio: visto = bene)
-      --certifica     solo le funzioni pure (niente scatola, niente browser)
-      --evidenze DIR  dove mettere foto, console, registro (la crea)
-      --porte-base N  porte di debug dei browser (Firefox N, Chrome N+1):
-                      ⛔ diverse per ogni desktop che gira in parallelo
-      --host, --largo, --alto (4K di default: le specifiche sono 4K)
+  command line (`argomenti()`):
+      --scatola gnome|kde|xfce|lxqt   --browser firefox|chrome   (ONE only)
+      --guasto        after the healthy pass, the pass with the INJECTED FAULT
+                      in the same session (outcome reversed: seen = good)
+      --certifica     only the pure functions (no box, no browser)
+      --evidenze DIR  where to put photos, console, log (creates it)
+      --porte-base N  debug ports of the browsers (Firefox N, Chrome N+1):
+                      ⛔ different for each desktop running in parallel
+      --host, --largo, --alto (4K by default: the specifications are 4K)
 
-  uscita: una riga per funzione guardata, che il giro raccoglie nel registro
+  output: one line per function looked at, which the round collects in the register
 
       SUITE {"funzione": "F-004", "passata": "sana"|"guasto",
              "esito": "PASS"|"FAIL"|"BLOCKED", "ragione": "...",
              "atteso": "...", "osservato": "...", "guasto_visto": true|false|null,
              "evidenze": ["percorso", ...], "versione": "Firefox 140.x"}
 
-  codice d'uscita: 0 tutte PASS (e i guasti visti) · 1 almeno un FAIL
-                   (o un guasto NON visto) · 3 almeno un BLOCKED e nessun FAIL
+  exit code: 0 all PASS (and the faults seen) · 1 at least one FAIL
+                   (or a fault NOT seen) · 3 at least one BLOCKED and no FAIL
 
-⛔ LE REGOLE DELLA SUITE (fasi/15-suite-funzionale.md):
-  - BROWSER VERI (Firefox con Marionette, Chrome con CDP), finestre vere nel
-    labwc senza schermo del server a 3840x2160; il cliente Python non certifica;
-  - il giudizio viene dalla FOTOGRAFIA o dal valore di un CAMPO, mai da un
-    contatore («un fotogramma sbagliato conta come uno giusto»);
-  - BLOCKED = non ho potuto guardare, CON LA RAGIONE: un BLOCKED non e' un PASS;
-  - ogni prova ha il suo GUASTO INNESTATO: una prova che non ha mai dato rosso
-    non e' una prova;
-  - ogni prova < 10 minuti;
-  - l'inquilino si chiama `c15<nnn>u<n>` (C19 e lo sgombero lo riconoscono:
-    `^c[0-9]+b?u[0-9]+$`) e si sgombera SEMPRE, anche se la prova cade.
+⛔ THE RULES OF THE SUITE (fasi/15-suite-funzionale.md):
+  - REAL BROWSERS (Firefox with Marionette, Chrome with CDP), real windows in
+    the server's screenless labwc at 3840x2160; the Python client does not certify;
+  - the judgment comes from the PHOTO or from the value of a FIELD, never from a
+    counter («a wrong frame counts as a right one»);
+  - BLOCKED = I could not look, WITH THE REASON: a BLOCKED is not a PASS;
+  - every test has its INJECTED FAULT: a test that has never given red
+    is not a test;
+  - every test < 10 minutes;
+  - the tenant is named `c15<nnn>u<n>` (C19 and the clear-out recognise it:
+    `^c[0-9]+b?u[0-9]+$`) and is ALWAYS cleared out, even if the test falls over.
 
-Si appoggia (importati, non copiati) a `12-client-veri.py` (le guide dei
-browser, `Prova`: apri/entra/primo_fotogramma), `12-c20-veri.py` (`Scatola`:
-comandi dentro la scatola, registro del server, crea/sgombera inquilini) e
-`11-c21-…` (foto a piena risoluzione, finestra nota, conversioni di coordinate).
+It relies on (imported, not copied) `12-client-veri.py` (the browser
+drivers, `Prova`: apri/entra/primo_fotogramma), `12-c20-veri.py` (`Scatola`:
+commands inside the box, server log, create/clear out tenants) and
+`11-c21-…` (full-resolution photo, known window, coordinate conversions).
 """
 import argparse
 import importlib.util as _iu
@@ -74,10 +74,10 @@ VERDE, ROSSO, CIECO = C21.VERDE, C21.ROSSO, C21.CIECO
 PORTE = dict(C20V.PORTE)
 
 
-# ⭐ SUL SERVER i comandi dentro le scatole vanno con `sudo podman exec` LOCALE,
-#   non per ssh verso il server stesso: `[M]` 24 set 2026, dieci agenti insieme,
-#   sshd ne troncava una parte («Connection closed … port 22») ⇒ inquilini non
-#   creati, BLOCKED che non erano del prodotto (rilievo del gruppo G7).
+# ⭐ ON THE SERVER the commands inside the boxes go with LOCAL `sudo podman exec`,
+#   not over ssh to the server itself: `[M]` 24 Sep 2026, ten agents together,
+#   sshd cut off some of them («Connection closed … port 22») ⇒ tenants not
+#   created, BLOCKED that were not the product's (finding of group G7).
 def _dentro_locale(self, riga, secondi=90):
     import subprocess
     try:
@@ -85,7 +85,7 @@ def _dentro_locale(self, riga, secondi=90):
                             "sh", "-c", riga], input=_parola_sudo(), capture_output=True,
                            text=True, errors="replace", timeout=secondi)
     except subprocess.TimeoutExpired:
-        return None, "(nessuna risposta in %d s)" % secondi
+        return None, "(no answer in %d s)" % secondi
     return r.returncode, (r.stdout + r.stderr).strip()
 
 
@@ -98,9 +98,9 @@ DA_CODICE = {VERDE: PASS, ROSSO: FAIL, CIECO: BLOCKED}
 
 
 def _parola_sudo():
-    """La parola di sudo del server: da REMOTIX_PAROLA_SUDO, o dalla riga «pass:» di
-    ~/SERVER.ssh (lo stesso file di fondamenta/strumenti/sshpw.py). ⛔ Mai scritta
-    nei banchi: sono nel deposito."""
+    """The server's sudo password: from REMOTIX_PAROLA_SUDO, or from the «pass:» line of
+    ~/SERVER.ssh (the same file as fondamenta/strumenti/sshpw.py). ⛔ Never written
+    in the benches: they are in the repository."""
     p = os.environ.get("REMOTIX_PAROLA_SUDO")
     if p is None:
         try:
@@ -114,24 +114,24 @@ def _parola_sudo():
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA RIGA DI COMANDO
+#  THE COMMAND LINE
 # ═══════════════════════════════════════════════════════════════════════════
 def argomenti(doc, extra=None):
-    """Le opzioni comuni.  `extra(a)` aggiunge quelle della prova."""
+    """The common options.  `extra(a)` adds those of the test."""
     a = argparse.ArgumentParser(description=doc,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     a.add_argument("--scatola", choices=DESKTOP)
-    # ⭐ «telefono» = Chrome sul telefono VERO dell'utente (fase 19 §5), comandato dal
-    #   portatile: `banchi/19-android/` (la guida e' `telefono.py`)
+    # ⭐ «telefono» = Chrome on the user's REAL phone (phase 19 §5), driven from the
+    #   laptop: `banchi/19-android/` (the driver is `telefono.py`)
     a.add_argument("--browser", choices=("firefox", "chrome", "telefono"), default="firefox")
     a.add_argument("--guasto", action="store_true",
-                   help="anche la passata col guasto innestato, nella stessa sessione")
+                   help="also the pass with the injected fault, in the same session")
     a.add_argument("--certifica", action="store_true",
-                   help="solo le funzioni pure: niente scatola, niente browser")
+                   help="only the pure functions: no box, no browser")
     a.add_argument("--evidenze", default="")
     a.add_argument("--host", default="192.168.0.2")
     a.add_argument("--porta", type=int, default=0,
-                   help="un server diverso da quello della scatola (orologi corti, ban)")
+                   help="a server other than the box's (short clocks, ban)")
     a.add_argument("--porte-base", type=int, default=0)
     a.add_argument("--visibile", action="store_true", default=True)
     a.add_argument("--headless", dest="visibile", action="store_false")
@@ -142,27 +142,27 @@ def argomenti(doc, extra=None):
         extra(a)
     o = a.parse_args()
     if not o.certifica and not o.scatola:
-        a.error("serve --scatola (o --certifica)")
+        a.error("--scatola is needed (or --certifica)")
     if not o.porte_base:
-        # ⛔ una coppia di porte per desktop: i quattro girano insieme
+        # ⛔ one pair of ports per desktop: the four run together
         o.porte_base = 3100 + 10 * DESKTOP.index(o.scatola or "gnome")
     if o.evidenze:
         os.makedirs(o.evidenze, exist_ok=True)
-    # i campi che le guide e `Prova` di 12-client-veri si aspettano
+    # the fields that the drivers and `Prova` of 12-client-veri expect
     o.url = "https://%s:%d/" % (o.host, o.porta or PORTE.get(o.scatola or "gnome"))
     o.scena, o.continuita_s, o.registro_cmd = "viva", 8, ""
     o.lascia_acceso = False
     o.salva = ""
     if o.browser == "telefono":
-        o.largo = 0          # la misura la fa il telefono: niente finestra da dimensionare
+        o.largo = 0          # the phone does the sizing: no window to size
     return o
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  GLI ESITI
+#  THE OUTCOMES
 # ═══════════════════════════════════════════════════════════════════════════
 class Esiti:
-    """Raccoglie e stampa le righe SUITE; da' il codice d'uscita."""
+    """Collects and prints the SUITE lines; gives the exit code."""
 
     def __init__(self, o):
         self.o = o
@@ -175,7 +175,7 @@ class Esiti:
             esito = DA_CODICE[esito]
         assert esito in (PASS, FAIL, BLOCKED), esito
         if esito in (FAIL, BLOCKED) and not ragione:
-            ragione = "(nessuna ragione data: difetto del banco)"
+            ragione = "(no reason given: bench defect)"
         r = {"funzione": funzione, "passata": passata, "esito": esito,
              "ragione": ragione, "atteso": atteso, "osservato": osservato,
              "guasto_visto": guasto_visto, "evidenze": list(evidenze or []),
@@ -188,15 +188,15 @@ class Esiti:
         return r
 
     def guasto(self, funzione, visto, ragione, **k):
-        """⭐ La passata col guasto: `visto` True = la prova ha dato rosso sul
-        guasto (bene) ⇒ PASS; False ⇒ FAIL (la prova non sa dare rosso);
-        None ⇒ BLOCKED (non si e' potuto innestare o guardare)."""
+        """⭐ The fault pass: `visto` True = the test gave red on the
+        fault (good) ⇒ PASS; False ⇒ FAIL (the test cannot give red);
+        None ⇒ BLOCKED (it could not be injected or looked at)."""
         esito = BLOCKED if visto is None else (PASS if visto else FAIL)
         return self.metti(funzione, esito, ragione, passata="guasto",
                           guasto_visto=visto, **k)
 
     def bloccate(self, funzioni, ragione, passata="sana"):
-        """Tutte le funzioni non ancora giudicate diventano BLOCKED."""
+        """All the functions not yet judged become BLOCKED."""
         fatte = {(r["funzione"], r["passata"]) for r in self.righe}
         for f in funzioni:
             if (f, passata) not in fatte:
@@ -210,20 +210,20 @@ class Esiti:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA SESSIONE: inquilino, browser, accesso, primo fotogramma
+#  THE SESSION: tenant, browser, login, first frame
 # ═══════════════════════════════════════════════════════════════════════════
 class Sessione:
     """
-        with Sessione(o, "004", esiti) as s:      # crea c15004u<n>, accende il browser
-            ok, perche = s.entra()                # pagina, modulo, ammissione, 1a immagine
-            ...  s.g (guida), s.pr (Prova), s.sc (Scatola), s.chi, s.parola
-    All'uscita chiude il browser e SGOMBERA l'inquilino (anche se la prova cade).
-    `inquilino=False` non crea nessuno (prove negative: utente inesistente).
+        with Sessione(o, "004", esiti) as s:      # creates c15004u<n>, starts the browser
+            ok, perche = s.entra()                # page, form, admission, 1st image
+            ...  s.g (driver), s.pr (Prova), s.sc (Scatola), s.chi, s.parola
+    On exit it closes the browser and CLEARS OUT the tenant (even if the test falls over).
+    `inquilino=False` creates nobody (negative tests: nonexistent user).
     """
 
     def __init__(self, o, nnn, esiti, inquilino=True, chi=None, parola=None):
-        # ⚠ REMOTIX_NNN: le tre cifre dell'inquilino imposte da fuori, per gli
-        #   agenti che girano in parallelo sulla stessa scatola (c15<nnn>u<n>).
+        # ⚠ REMOTIX_NNN: the tenant's three digits imposed from outside, for the
+        #   agents running in parallel on the same box (c15<nnn>u<n>).
         nnn = os.environ.get("REMOTIX_NNN") or nnn
         self.o, self.nnn, self.esiti = o, nnn, esiti
         self.sc = C20V.Scatola(o.scatola)
@@ -235,18 +235,18 @@ class Sessione:
         self.pr = None
         self._foto = 0
 
-    # -- ciclo di vita --------------------------------------------------------
+    # -- life cycle -----------------------------------------------------------
     def __enter__(self):
         self.o.utente = self.chi
         if self.crea_inquilino:
             self.sc.sgombera(self.chi)
             c, t = self.sc.crea(self.chi, self.parola)
             if c != 0:
-                raise Bloccata("non ho potuto creare l'inquilino %s: %s" % (self.chi, t[-200:]))
-            # ⛔ la `~/.cache` VERA (src/provisiona.sh, 25 ago 2026): nella scatola
-            #   gnome `/etc/skel/.cache` punta a /tmp, e il primo inquilino che apre
-            #   firefox-esr si prende /tmp/mozilla a modo 0700 ⇒ per gli altri
-            #   «Your Firefox profile cannot be loaded» (rilievo G5, 25 set 2026)
+                raise Bloccata("I could not create the tenant %s: %s" % (self.chi, t[-200:]))
+            # ⛔ the REAL `~/.cache` (src/provisiona.sh, 25 Aug 2026): in the gnome
+            #   box `/etc/skel/.cache` points to /tmp, and the first tenant that opens
+            #   firefox-esr takes /tmp/mozilla with mode 0700 ⇒ for the others
+            #   «Your Firefox profile cannot be loaded» (finding G5, 25 Sep 2026)
             self.sc.dentro("h=/home/%s; [ -L $h/.cache ] && rm -f $h/.cache; "
                            "install -d -o %s -g %s -m 700 $h/.cache" % (
                                self.chi, self.chi, self.chi), 30)
@@ -259,7 +259,7 @@ class Sessione:
             try:
                 self.sc.sgombera(self.chi)
             except Exception as e:               # noqa: BLE001
-                print("   ⚠ sgombero di %s: %s" % (self.chi, e))
+                print("   ⚠ clear-out of %s: %s" % (self.chi, e))
         return False
 
     def accendi_browser(self):
@@ -269,7 +269,7 @@ class Sessione:
             else:
                 self.g = VERI.accendi_guida(self.o.browser, self.o)
         except Exception as e:                   # noqa: BLE001
-            raise Bloccata("il browser non si e' acceso: %s" % str(e)[:300])
+            raise Bloccata("the browser did not start: %s" % str(e)[:300])
         try:
             self.esiti.versione = self.g.palco()
         except Exception:                        # noqa: BLE001
@@ -287,39 +287,39 @@ class Sessione:
             try:
                 self.g.chiudi()
             except Exception as e:               # noqa: BLE001
-                print("   ⚠ chiusura del browser: %s" % e)
+                print("   ⚠ closing the browser: %s" % e)
             self.g = None
 
-    # -- l'accesso ------------------------------------------------------------
+    # -- the login ------------------------------------------------------------
     def entra(self, parola=None, apri=True):
-        """(True, motivo) se: pagina aperta, modulo, ammesso, primo fotogramma
-        non degenere.  Altrimenti (False, motivo)."""
+        """(True, reason) if: page open, form, admitted, first frame
+        not degenerate.  Otherwise (False, reason)."""
         if apri:
             ok, m = self.pr.apri()
             if not ok:
-                return False, "la pagina non si apre: " + m
+                return False, "the page does not open: " + m
         e, m, _s = self.pr.entra(parola or self.parola)
         if e != VERDE:
-            return False, "l'accesso: " + m
+            return False, "the login: " + m
         e, m, s = self.pr.primo_fotogramma()
         e, m = C20V.desktop_scuro_ma_vivo(e, m, s)
         if e != VERDE:
-            return False, "il primo fotogramma: " + m
+            return False, "the first frame: " + m
         return True, m
 
     def stato(self):
         return self.pr.stato()
 
-    # -- le fotografie --------------------------------------------------------
+    # -- the photos -----------------------------------------------------------
     def foto(self, nome):
-        """⭐ La tela a PIENA risoluzione: (png | None, percorso | motivo).
-        Salvata nelle evidenze se ce ne sono."""
+        """⭐ The canvas at FULL resolution: (png | None, path | reason).
+        Saved in the evidence if there is any."""
         try:
             png = C21.foto_piena(self.g)
         except Exception as e:                   # noqa: BLE001
-            return None, "fotografia fallita: %s" % str(e)[:200]
+            return None, "photo failed: %s" % str(e)[:200]
         if not png:
-            return None, "la tela non c'e' o non ha area visibile"
+            return None, "the canvas is not there or has no visible area"
         self._foto += 1
         percorso = ""
         if self.o.evidenze:
@@ -329,10 +329,10 @@ class Sessione:
         return png, percorso
 
     def geometria(self):
-        """La geometria della tela nel vetro (C21.JS_GEOMETRIA)."""
+        """The geometry of the canvas in the glass (C21.JS_GEOMETRIA)."""
         return self.g.js(C21.JS_GEOMETRIA)
 
-    # -- il server ------------------------------------------------------------
+    # -- the server -----------------------------------------------------------
     def segno_registro(self):
         return self.sc.righe_registro()
 
@@ -348,43 +348,43 @@ class Sessione:
         return p
 
     def salva_console(self):
-        """Gli errori JS e di rete del browser, nelle evidenze."""
+        """The browser's JS and network errors, in the evidence."""
         try:
             js, rete, _ = self.g.errori_fuori()
         except Exception as e:                   # noqa: BLE001
-            js, rete = ["(non letti: %s)" % e], []
+            js, rete = ["(not read: %s)" % e], []
         return self.salva_testo("console-%s.txt" % self.o.browser, js + rete)
 
     def come_utente(self, comando, secondi=60):
         return self.sc.come_utente(self.chi, comando, secondi)
 
     def nella_sessione(self, comando, secondi=60, fondo=True):
-        """Lancia `comando` come l'inquilino DENTRO la sua sessione grafica
-        (WAYLAND_DISPLAY del suo compositore, bus di sessione).  `fondo` lo
-        stacca (setsid … &) e torna subito."""
+        """Runs `comando` as the tenant INSIDE their graphical session
+        (WAYLAND_DISPLAY of their compositor, session bus).  `fondo` detaches
+        it (setsid … &) and returns at once."""
         amb = ("u=$(id -u %(c)s); d=$(ls /run/user/$u 2>/dev/null | grep -E '^wayland-[0-9]+$' "
-               "| head -1); [ -n \"$d\" ] || { echo 'nessun socket wayland'; exit 2; }; "
+               "| head -1); [ -n \"$d\" ] || { echo 'no wayland socket'; exit 2; }; "
                % {"c": self.chi})
         corpo = ("runuser -u %(c)s -- env XDG_RUNTIME_DIR=/run/user/$u WAYLAND_DISPLAY=$d "
                  "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$u/bus MOZ_ENABLE_WAYLAND=1 "
                  "XDG_SESSION_TYPE=wayland HOME=/home/%(c)s sh -c %(q)s"
                  % {"c": self.chi, "q": _q(comando)})
         if fondo:
-            corpo = "setsid %s < /dev/null > /home/%s/.c15-%s.log 2>&1 & echo lanciato" % (
+            corpo = "setsid %s < /dev/null > /home/%s/.c15-%s.log 2>&1 & echo launched" % (
                 corpo, self.chi, re.sub(r"\W", "", comando.split()[0])[:20])
         return self.sc.dentro(amb + corpo, secondi)
 
 
 class Bloccata(Exception):
-    """La prova non ha potuto guardare: diventa BLOCKED con questa ragione."""
+    """The test could not look: it becomes BLOCKED with this reason."""
 
 
 _TELEFONO = []
 
 
 def telefono():
-    """Il modulo della guida del telefono vero (`banchi/19-android/telefono.py`),
-    caricato una volta sola e solo da chi lo usa."""
+    """The module of the real phone's driver (`banchi/19-android/telefono.py`),
+    loaded only once and only by whoever uses it."""
     if not _TELEFONO:
         _TELEFONO.append(_carica("telefono", os.path.join(BANCHI, "19-android", "telefono.py")))
     return _TELEFONO[0]
@@ -395,19 +395,19 @@ def _q(s):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  IL CORPO DI OGNI PROVA
+#  THE BODY OF EVERY TEST
 # ═══════════════════════════════════════════════════════════════════════════
 def esegui(doc, funzioni, corpo, certifica=None, extra=None):
-    """Il `main` di ogni prova.
+    """The `main` of every test.
 
-    funzioni   le F-NNN che la prova guarda (per i BLOCKED d'ufficio)
-    corpo(o, esiti)       la prova vera: mette gli esiti con `esiti.metti`
-    certifica()           le funzioni pure: torna 0 se tutte giuste
+    funzioni   the F-NNN the test looks at (for the automatic BLOCKEDs)
+    corpo(o, esiti)       the real test: puts the outcomes with `esiti.metti`
+    certifica()           the pure functions: returns 0 if all right
     """
     o = argomenti(doc, extra)
     if o.certifica:
         if not certifica:
-            print("⚠ questa prova non ha funzioni pure da certificare")
+            print("⚠ this test has no pure functions to certify")
             return 0
         return certifica()
     esiti = Esiti(o)
@@ -423,12 +423,12 @@ def esegui(doc, funzioni, corpo, certifica=None, extra=None):
     except Exception as e:                       # noqa: BLE001
         tb = traceback.format_exc()
         print(tb)
-        esiti.bloccate(funzioni, "il banco e' caduto: %r" % e)
+        esiti.bloccate(funzioni, "the bench fell over: %r" % e)
         if o.guasto:
-            esiti.bloccate(funzioni, "il banco e' caduto: %r" % e, passata="guasto")
-    esiti.bloccate(funzioni, "la prova non ha dato un giudizio (difetto del banco)")
+            esiti.bloccate(funzioni, "the bench fell over: %r" % e, passata="guasto")
+    esiti.bloccate(funzioni, "the test gave no judgment (bench defect)")
     if o.guasto:
-        esiti.bloccate(funzioni, "la passata col guasto non ha dato un giudizio",
+        esiti.bloccate(funzioni, "the fault pass gave no judgment",
                        passata="guasto")
     print("⏱ %.0f s · codice %d" % (time.time() - t0, esiti.codice()), flush=True)
     return esiti.codice()

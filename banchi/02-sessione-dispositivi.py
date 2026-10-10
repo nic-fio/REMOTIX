@@ -1,89 +1,90 @@
 #!/usr/bin/env python3
-"""02-sessione-dispositivi.py — QUANDO nasce il puntatore virtuale, e chi se ne
-accorge.
+"""02-sessione-dispositivi.py — WHEN the virtual pointer is born, and who
+notices.
 
   python3 02-sessione-dispositivi.py --traccia /run/user/1000/f21-seat.log
 
 ===========================================================================
-⛔ PERCHE' ESISTE — la domanda che `PIANO.md` porta dentro la fase 2
+⛔ WHY IT EXISTS — the question `PIANO.md` carries into phase 2
 ===========================================================================
 
-`[M]` 10 agosto 2026, sonda S7 (`web/rapporti/S-esiti-sonda.md` §8, voce S.4):
-in una sessione GNOME senza dispositivi di input fisici, se il client parte
-**prima** che il puntatore virtuale esista non riceve nulla — ne' rotella, ne'
-bottoni, **ne' il movimento**.  Se parte **dopo**, riceve tutto.  E' l'ORDINE a
-essere misurato; la CAUSA e' `[?]`.
+`[M]` 10 Aug 2026, probe S7 (`web/rapporti/S-esiti-sonda.md` §8, item S.4):
+in a GNOME session without physical input devices, if the client starts
+**before** the virtual pointer exists it receives nothing — no wheel, no
+buttons, **not even motion**.  If it starts **after**, it receives everything.
+It is the ORDER that is measured; the CAUSE is `[?]`.
 
-⇒ ⛔ Il banco della fase 2 deve aprire l'applicazione DOPO, o misura una scena
-  che il prodotto non avra' mai.
-
-===========================================================================
-⭐ E LEGGENDO MUTTER 48.7 LA REGOLA E' PIU' STRETTA DI COME IL PIANO LA SCRIVE
-===========================================================================
-
-`ensure_virtual_device()` e' chiamata dai gestori di `NotifyPointerMotion*` e
-`NotifyPointerButton(pressed)`, **non** da `Start()`
-(`meta-remote-desktop-session.c:290-321`, `:780-800`, `:940-960` — letto il
-12 agosto 2026 `[R]`).
-
-⇒ Il puntatore **non nasce quando la sessione RemoteDesktop parte: nasce al
-  PRIMO MOVIMENTO INIETTATO.**  Un banco che aprisse l'applicazione dopo
-  `Start()` ma prima del primo movimento crederebbe di aver rispettato l'ordine
-  e misurerebbe la scena sbagliata.
+⇒ ⛔ The phase 2 bench must open the application AFTER, or it measures a scene
+  the product will never have.
 
 ===========================================================================
-⛔ IL DIFETTO DI BANCO CHE QUESTO FILE ESISTE PER NON RIFARE — 12 ago 2026
+⭐ AND READING MUTTER 48.7 THE RULE IS STRICTER THAN THE PLAN WRITES IT
 ===========================================================================
 
-La prima stesura faceva i tre passi con tre `gdbus call` di fila.  ⛔ Non
-funziona, e **non funziona in silenzio**: la sessione di `org.gnome.Mutter.
-RemoteDesktop` e' legata alla CONNESSIONE che l'ha creata, e `gdbus` apre una
-connessione nuova a ogni invocazione e la chiude uscendo.  Risultato misurato:
+`ensure_virtual_device()` is called by the handlers of `NotifyPointerMotion*` and
+`NotifyPointerButton(pressed)`, **not** by `Start()`
+(`meta-remote-desktop-session.c:290-321`, `:780-800`, `:940-960` — read on
+12 Aug 2026 `[R]`).
 
-    CreateSession → '/org/gnome/Mutter/RemoteDesktop/Session/u1'   (uscita 0)
-    Start         → UnknownMethod: Object does not exist at path   (uscita 1)
-
-⇒ Il puntatore non nasceva **mai**, e il passo dopo — «il client partito prima
-  ha ricevuto un secondo annuncio?» — rispondeva NO e sembrava una conferma
-  della spiegazione del piano.  ⭐ Era un rosso su una scena mai avvenuta: la
-  forma d'errore piu' cara, perche' **conferma** quel che ci si aspettava.
-  Se ne e' accorto solo perche' lo stato d'uscita di ogni `gdbus` era guardato
-  (`REVIEWER.md` §1 punto 4).
-
-⇒ Qui la connessione al bus e' **una sola** e resta viva per tutta la misura.
+⇒ The pointer **is not born when the RemoteDesktop session starts: it is born at
+  the FIRST INJECTED MOTION.**  A bench that opened the application after
+  `Start()` but before the first motion would believe it had respected the order
+  and would measure the wrong scene.
 
 ===========================================================================
-⭐ IL CONTROLLO POSITIVO DEL PASSO CHE CONTA
+⛔ THE BENCH DEFECT THIS FILE EXISTS NOT TO REPEAT — 12 Aug 2026
 ===========================================================================
 
-«Ho iniettato un movimento» non e' «Mutter l'ha ricevuto».  Il controllo e'
-`org.gnome.Mutter.IdleMonitor.GetIdletime`, che **crolla** quando un evento
-arriva davvero — l'input che iniettiamo non e' marcato SYNTHETIC
-(`STUDI.md` §gnome §7, `core/events.c:126-138`).  Se l'inattivita' non crolla, il
-movimento non e' arrivato e **tutto quel che segue non vale**: l'esito diventa
-`[?] scena mai avvenuta`, non un no.
+The first draft did the three steps with three `gdbus call` in a row.  ⛔ It does
+not work, and **it fails silently**: the session of `org.gnome.Mutter.
+RemoteDesktop` is tied to the CONNECTION that created it, and `gdbus` opens a
+new connection at every invocation and closes it on exit.  Measured result:
+
+    CreateSession → '/org/gnome/Mutter/RemoteDesktop/Session/u1'   (exit 0)
+    Start         → UnknownMethod: Object does not exist at path   (exit 1)
+
+⇒ The pointer was **never** born, and the next step — «did the client started
+  before receive a second announcement?» — answered NO and looked like a
+  confirmation of the plan's explanation.  ⭐ It was a red on a scene that never
+  happened: the most expensive form of error, because it **confirms** what was
+  expected.  It was noticed only because the exit status of every `gdbus` was
+  checked (`REVIEWER.md` §1 point 4).
+
+⇒ Here the bus connection is **a single one** and stays alive for the whole
+  measurement.
 
 ===========================================================================
-GLI ATTESI, SCRITTI PRIMA DEL GIRO
+⭐ THE POSITIVE CONTROL OF THE STEP THAT COUNTS
 ===========================================================================
 
-  passo 1  un client Wayland vivo vede  wl_seat.capabilities(0)   — niente
-           puntatore, niente tastiera.  `[M]` gia' visto il 12 ago 2026
-  passo 2  dopo il primo movimento iniettato l'inattivita' crolla sotto i 5 s
-  passo 3  quel MEDESIMO client riceve — o non riceve — un secondo
-           `wl_seat.capabilities` con il bit del puntatore:
-             · NON lo riceve ⇒ la spiegazione del piano regge, e la `[?]`
-               diventa `[M]`
-             · lo riceve     ⇒ la spiegazione e' sbagliata, la causa e' altrove
-                               e va cercata nel client, non nel compositore
-  passo 4  un client NUOVO, nato dopo, vede capabilities col puntatore — e' il
-           caso opposto, e senza di lui il passo 3 non distingue «non gliel'ha
-           detto» da «lo strumento non sa leggere le capacita'»
+«I injected a motion» is not «Mutter received it».  The control is
+`org.gnome.Mutter.IdleMonitor.GetIdletime`, which **collapses** when an event
+really arrives — the input we inject is not marked SYNTHETIC
+(`STUDI.md` §gnome §7, `core/events.c:126-138`).  If the idle time does not
+collapse, the motion did not arrive and **everything that follows is void**: the
+outcome becomes `[?] scene never happened`, not a no.
 
-  uscita 0  misurato, e il client di prima NON riceve niente (piano confermato)
-  uscita 1  misurato, e il client di prima RICEVE (piano da riscrivere)
-  uscita 2  ⛔ scena mai avvenuta: il puntatore non e' nato, non giudico
-  uscita 3  ⛔ lo strumento e' cieco: nemmeno il client nuovo vede il puntatore
+===========================================================================
+THE EXPECTATIONS, WRITTEN BEFORE THE ROUND
+===========================================================================
+
+  step 1  a live Wayland client sees  wl_seat.capabilities(0)   — no
+          pointer, no keyboard.  `[M]` already seen on 12 Aug 2026
+  step 2  after the first injected motion the idle time collapses below 5 s
+  step 3  that SAME client receives — or does not receive — a second
+          `wl_seat.capabilities` with the pointer bit:
+            · it does NOT receive it ⇒ the plan's explanation holds, and the `[?]`
+              becomes `[M]`
+            · it receives it         ⇒ the explanation is wrong, the cause is elsewhere
+                                       and must be looked for in the client, not in the compositor
+  step 4  a NEW client, born after, sees capabilities with the pointer — it is the
+          opposite case, and without it step 3 cannot tell «nobody told it»
+          from «the tool cannot read the capabilities»
+
+  exit 0  measured, and the earlier client receives NOTHING (plan confirmed)
+  exit 1  measured, and the earlier client RECEIVES (plan to be rewritten)
+  exit 2  ⛔ scene never happened: the pointer was not born, I do not judge
+  exit 3  ⛔ the tool is blind: not even the new client sees the pointer
 """
 
 import argparse
@@ -125,15 +126,15 @@ def titolo(t):
 
 
 def capacita(traccia):
-    """Le righe `wl_seat#N.capabilities(X)` viste finora nella traccia.
+    """The `wl_seat#N.capabilities(X)` lines seen so far in the trace.
 
-    ⛔ Ritorna la LISTA, non il conteggio: due eventi con lo stesso valore e un
-       evento solo sono due fatti diversi, e un conteggio li confonderebbe."""
+    ⛔ Returns the LIST, not the count: two events with the same value and a
+       single event are two different facts, and a count would mix them up."""
     try:
         with open(traccia) as f:
             testo = f.read()
     except OSError as err:
-        raise RuntimeError(f"non leggo la traccia {traccia}: {err}")
+        raise RuntimeError(f"cannot read the trace {traccia}: {err}")
     return re.findall(r"wl_seat#\d+\.capabilities\((\d+)\)", testo)
 
 
@@ -147,41 +148,41 @@ def idletime(conn):
 def principale():
     p = argparse.ArgumentParser()
     p.add_argument("--traccia", required=True,
-                   help="la traccia WAYLAND_DEBUG del client tenuto vivo")
+                   help="the WAYLAND_DEBUG trace of the client kept alive")
     p.add_argument("--attesa-crollo", type=int, default=5000,
-                   help="sotto quanti ms deve cadere l'inattivita' (atteso, "
-                        "scritto prima)")
+                   help="below how many ms the idle time must fall (expected, "
+                        "written beforehand)")
     p.add_argument("--esiti", default=None)
     a = p.parse_args()
     fatti = {"traccia": a.traccia}
 
-    titolo("Gli attesi, SCRITTI PRIMA")
-    inf("passo 1: il client vivo vede capabilities(0) — niente puntatore")
-    inf(f"passo 2: dopo il primo movimento l'inattivita' scende sotto "
+    titolo("The expectations, WRITTEN BEFOREHAND")
+    inf("step 1: the live client sees capabilities(0) — no pointer")
+    inf(f"step 2: after the first motion the idle time falls below "
         f"{a.attesa_crollo} ms")
-    inf("passo 3: e il MEDESIMO client riceve, o non riceve, un secondo annuncio")
+    inf("step 3: and the SAME client receives, or does not receive, a second announcement")
 
-    titolo("1. Che cosa ha visto finora il client partito PRIMA")
+    titolo("1. What the client started BEFORE has seen so far")
     try:
         prima = capacita(a.traccia)
     except RuntimeError as err:
         no(f"⛔ {err}")
-        scrivi_esito(a, fatti, 3, '[?] strumento cieco')
+        scrivi_esito(a, fatti, 3, '[?] blind tool')
         return 3
-    inf(f"annunci wl_seat.capabilities finora: {prima}")
+    inf(f"wl_seat.capabilities announcements so far: {prima}")
     fatti["capacita_prima"] = prima
     if not prima:
-        no("⛔ ZERO annunci nella traccia.  ⛔ Non e' «capacita' zero»: e' «non ho")
-        no("   letto niente».  Lo strumento e' cieco, non giudico.")
-        scrivi_esito(a, fatti, 3, '[?] strumento cieco')
+        no("⛔ ZERO announcements in the trace.  ⛔ It is not «zero capabilities»: it is «I")
+        no("   read nothing».  The tool is blind, I do not judge.")
+        scrivi_esito(a, fatti, 3, '[?] blind tool')
         return 3
     if prima[-1] != "0":
-        att(f"⚠ l'ultimo annuncio dice {prima[-1]}, non 0: in questa sessione un "
-            "puntatore c'e' gia', e la scena non e' quella che volevo")
+        att(f"⚠ the last announcement says {prima[-1]}, not 0: in this session a "
+            "pointer is already there, and the scene is not the one I wanted")
 
-    titolo("2. Faccio nascere il puntatore — UNA connessione sola, dal principio alla fine")
+    titolo("2. I make the pointer be born — ONE single connection, from start to end")
     conn = Gio.bus_get_sync(Gio.BusType.SESSION, None)
-    inf(f"la mia connessione: {conn.get_unique_name()}  ⛔ e resta viva fino in fondo")
+    inf(f"my connection: {conn.get_unique_name()}  ⛔ and it stays alive to the end")
 
     r = conn.call_sync(RD, "/org/gnome/Mutter/RemoteDesktop", RD,
                        "CreateSession", None, None, Gio.DBusCallFlags.NONE,
@@ -191,87 +192,87 @@ def principale():
 
     conn.call_sync(RD, percorso, RD + ".Session", "Start", None, None,
                    Gio.DBusCallFlags.NONE, 15000, None)
-    ok("Start riuscita")
+    ok("Start succeeded")
 
-    # ⛔ E QUI, e non prima, nasce il puntatore: `ensure_virtual_device()` sta
-    #    dentro il gestore di NotifyPointerMotionRelative.
+    # ⛔ AND HERE, and not before, the pointer is born: `ensure_virtual_device()` is
+    #    inside the handler of NotifyPointerMotionRelative.
     idle_prima = idletime(conn)
-    inf(f"inattivita' prima del movimento: {idle_prima} ms")
+    inf(f"idle time before the motion: {idle_prima} ms")
     conn.call_sync(RD, percorso, RD + ".Session", "NotifyPointerMotionRelative",
                    GLib.Variant("(dd)", (7.0, 5.0)), None,
                    Gio.DBusCallFlags.NONE, 15000, None)
-    ok("NotifyPointerMotionRelative(7,5) accettata")
+    ok("NotifyPointerMotionRelative(7,5) accepted")
     time.sleep(1.0)
     idle_dopo = idletime(conn)
-    inf(f"inattivita' dopo il movimento:  {idle_dopo} ms")
+    inf(f"idle time after the motion:  {idle_dopo} ms")
     fatti["idle_prima_ms"] = idle_prima
     fatti["idle_dopo_ms"] = idle_dopo
 
     esito = 0
     if idle_dopo >= a.attesa_crollo:
-        no(f"⛔ l'inattivita' NON e' crollata ({idle_dopo} ms ≥ {a.attesa_crollo}):")
-        no("   il movimento non e' arrivato a Mutter, quindi il puntatore non e'")
-        no("   nato e la scena che volevo misurare NON E' MAI AVVENUTA.")
-        no("   ⛔ Non giudico: un no su una scena mai avvenuta e' peggio di niente.")
+        no(f"⛔ the idle time did NOT collapse ({idle_dopo} ms ≥ {a.attesa_crollo}):")
+        no("   the motion did not reach Mutter, so the pointer was not")
+        no("   born and the scene I wanted to measure NEVER HAPPENED.")
+        no("   ⛔ I do not judge: a no on a scene that never happened is worse than nothing.")
         esito = 2
     else:
-        ok(f"⭐ controllo positivo passato: {idle_prima} → {idle_dopo} ms.  Mutter")
-        ok("   il movimento l'ha ricevuto davvero, quindi il puntatore c'e'.")
+        ok(f"⭐ positive control passed: {idle_prima} → {idle_dopo} ms.  Mutter")
+        ok("   really received the motion, so the pointer is there.")
 
     time.sleep(3.0)
 
-    titolo("3. Lo stesso client di prima: gli e' arrivato un secondo annuncio?")
+    titolo("3. The same client as before: did it get a second announcement?")
     dopo = capacita(a.traccia)
-    inf(f"annunci ora: {dopo} (erano {prima})")
+    inf(f"announcements now: {dopo} (they were {prima})")
     fatti["capacita_dopo"] = dopo
     riceve = len(dopo) > len(prima)
     if esito == 2:
-        att("⚠ la scena non e' avvenuta: quel che segue non e' un verdetto")
+        att("⚠ the scene did not happen: what follows is not a verdict")
     elif riceve:
-        ok(f"⭐ IL CLIENT PARTITO PRIMA RICEVE l'annuncio: {prima[-1]} → {dopo[-1]}")
-        ok("   ⇒ la spiegazione del piano — «non si iscrive mai» — NON regge,")
-        ok("     e la causa di S.4 va cercata altrove.")
+        ok(f"⭐ THE CLIENT STARTED BEFORE RECEIVES the announcement: {prima[-1]} → {dopo[-1]}")
+        ok("   ⇒ the plan's explanation — «it never subscribes» — does NOT hold,")
+        ok("     and the cause of S.4 must be looked for elsewhere.")
         esito = 1
     else:
-        no("⛔ NIENTE di nuovo: il client partito prima non viene informato che")
-        no("   adesso c'e' un puntatore.  ⇒ La spiegazione del piano regge, e la")
-        no("   `[?]` sulla causa diventa `[M]`.")
+        no("⛔ NOTHING new: the client started before is not told that")
+        no("   there is now a pointer.  ⇒ The plan's explanation holds, and the")
+        no("   `[?]` on the cause becomes `[M]`.")
 
-    titolo("4. Il caso opposto: un client NUOVO, nato DOPO il puntatore")
+    titolo("4. The opposite case: a NEW client, born AFTER the pointer")
     traccia2 = a.traccia + ".dopo"
     with open(traccia2, "w") as f:
         amb = dict(os.environ, WAYLAND_DEBUG="1", WAYLAND_DISPLAY="wayland-0")
         subprocess.run(["timeout", "25", "foot", "-e", "sleep", "6"],
                        stdout=f, stderr=subprocess.STDOUT, env=amb)
     nuovo = capacita(traccia2)
-    inf(f"annunci del client nuovo: {nuovo}")
+    inf(f"announcements of the new client: {nuovo}")
     fatti["capacita_client_nuovo"] = nuovo
     if not nuovo:
-        no("⛔ zero annunci anche per il client nuovo: lo strumento non vede il")
-        no("   seat, e il confronto del passo 3 non distingue niente.")
-        scrivi_esito(a, fatti, 3, '[?] strumento cieco')
+        no("⛔ zero announcements for the new client too: the tool does not see the")
+        no("   seat, and the comparison of step 3 tells nothing apart.")
+        scrivi_esito(a, fatti, 3, '[?] blind tool')
         return 3
     if nuovo[-1] == "0":
-        no(f"⛔ anche il client NUOVO vede capabilities({nuovo[-1]}): allora non")
-        no("   e' l'ordine — il puntatore non compare nel seat di Wayland affatto.")
-        no("   ⇒ Il confronto del passo 3 non e' un confronto: non giudico.")
-        scrivi_esito(a, fatti, 3, '[?] strumento cieco')
+        no(f"⛔ the NEW client too sees capabilities({nuovo[-1]}): then it is not")
+        no("   the order — the pointer does not appear in the Wayland seat at all.")
+        no("   ⇒ The comparison of step 3 is not a comparison: I do not judge.")
+        scrivi_esito(a, fatti, 3, '[?] blind tool')
         return 3
-    ok(f"⭐ il client nuovo vede capabilities({nuovo[-1]}): il puntatore nel seat")
-    ok("   c'e', e quindi il passo 3 sta confrontando due cose vere")
+    ok(f"⭐ the new client sees capabilities({nuovo[-1]}): the pointer in the seat")
+    ok("   is there, and so step 3 is comparing two real things")
 
-    # ⛔ La sessione RemoteDesktop si chiude qui, sulla connessione che l'ha
-    #    creata: lasciarla addosso alla sessione grafica cambierebbe lo stato
-    #    per chi misura dopo.
+    # ⛔ The RemoteDesktop session is closed here, on the connection that
+    #    created it: leaving it on the graphical session would change the state
+    #    for whoever measures next.
     conn.call_sync(RD, percorso, RD + ".Session", "Stop", None, None,
                    Gio.DBusCallFlags.NONE, 10000, None)
-    inf("sessione RemoteDesktop chiusa")
+    inf("RemoteDesktop session closed")
 
-    titolo("Il verdetto")
-    frase = {0: "il client partito PRIMA non riceve niente — il piano regge",
-             1: "il client partito PRIMA riceve — il piano va riscritto",
-             2: "[?] scena mai avvenuta",
-             3: "[?] strumento cieco"}[esito]
+    titolo("The verdict")
+    frase = {0: "the client started BEFORE receives nothing — the plan holds",
+             1: "the client started BEFORE receives — the plan must be rewritten",
+             2: "[?] scene never happened",
+             3: "[?] blind tool"}[esito]
     inf(frase)
     scrivi_esito(a, fatti, esito, frase)
     return esito

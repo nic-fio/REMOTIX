@@ -2,153 +2,153 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-11-c10 — ⭐ «LE DUE COPIE GEMELLE DEL PROTOCOLLO COMBACIANO»
+11-c10 — ⭐ «THE TWO TWIN COPIES OF THE PROTOCOL MATCH»
 ===========================================================================
 
     python3 11-c10-le-copie-gemelle.py
-    python3 11-c10-le-copie-gemelle.py --radice /altro/deposito
+    python3 11-c10-le-copie-gemelle.py --radice /other/repository
     python3 11-c10-le-copie-gemelle.py --certifica
 
-⭐ **E' l'unica maglia della lista che non ha bisogno di una scatola.**  Non
-   accende niente, non chiede la scheda grafica, non vuole podman: legge dei
-   FILE.  ⇒ Gira sul portatile, sulla macchina di prova, dentro una scatola,
-   dentro un gancio — `fasi/11…` §4.1, colonna «dove gira»: **ovunque**.
-   ⚠ E gira **prima di compilare**, che e' l'altra meta' della riga C10: e'
-     esattamente il momento in cui il difetto si puo' ancora fermare a costo
-     zero.
+⭐ **It is the only mesh of the list that does not need a box.**  It
+   starts nothing, does not ask for the graphics card, does not want podman: it reads
+   FILES.  ⇒ It runs on the laptop, on the test machine, inside a box,
+   inside a hook — `fasi/11…` §4.1, column «where it runs»: **anywhere**.
+   ⚠ And it runs **before compiling**, which is the other half of the C10 row: it is
+     exactly the moment when the defect can still be stopped at zero
+     cost.
 
 ---------------------------------------------------------------------------
-⭐ PERCHE' ESISTONO DUE COPIE — e non e' una svista da ripulire
+⭐ WHY TWO COPIES EXIST — and it is not an oversight to clean up
 ---------------------------------------------------------------------------
 
-`rcp.c`, `rcp.h` e `autenticazione.c` stanno in **due cartelle** di questo
-deposito, e ci stanno **apposta**:
+`rcp.c`, `rcp.h` and `autenticazione.c` live in **two folders** of this
+repository, and they are there **on purpose**:
 
-  `src/`         il modulo montato sul **server di prodotto**
-  `banchi/rcp/`  lo stesso modulo montato sull'**innesto dentro l'esempio di
-                 ngtcp2** (`bsslserver`), che e' il banco con cui il protocollo
-                 e' stato provato a QUIC nudo
+  `src/`         the module mounted on the **product server**
+  `banchi/rcp/`  the same module mounted on the **graft inside the ngtcp2
+                 example** (`bsslserver`), which is the bench with which the protocol
+                 was tested on bare QUIC
 
-⇒ ⭐ **Sono lo stesso modulo montato su due ospiti** — `src/Makefile`, riquadro
-  «LE TRE COPIE CHE DEVONO ESSERE UNA» (rilievo R12.3, notte del 10 agosto
-  2026), e `DECISIONI.md` §1.12 riquadro «il posto muto», dove la casella di
-  `RCP.md` §0-bis dichiara che le due copie sono **identiche byte per byte**.
+⇒ ⭐ **They are the same module mounted on two hosts** — `src/Makefile`, box
+  «THE THREE COPIES THAT MUST BE ONE» (finding R12.3, night of 10 August
+  2026), and `DECISIONI.md` §1.12 box «the silent place», where the cell of
+  `RCP.md` §0-bis declares that the two copies are **identical byte for byte**.
 
-⛔ **E fino a quella notte erano identiche PER FORTUNA, non per costruzione**:
-   nessun file del deposito le confrontava.  Il caso concreto che nessuno
-   avrebbe visto, scritto nel Makefile: si cambia `BAN_DURATA` in `src/rcp.c`
-   da dodici ore a una.  Il prodotto banna un'ora; `01-b6-lancia.sh` resta
-   verde perche' confronta `banchi/rcp/` con la copia compilata dentro
-   `examples/`; B8 resta verde perche' accende `bsslserver`.
-   ⇒ ⛔ **Il difetto non cambia colore a niente.**
-
----------------------------------------------------------------------------
-⛔⛔ CHE COSA DEVE COMBACIARE — **il file intero, byte per byte**
----------------------------------------------------------------------------
-
-⚠ Questa e' la decisione vera di questa maglia, e non si poteva prendere
-  leggendo un commento («scritto non e' in vigore», E1): un `diff` secco su due
-  file legittimamente diversi darebbe **rosso per sempre**, e un rosso perpetuo
-  non e' prudenza, e' rumore (`LEZIONI.md` §1.49).
-
-⭐ Quindi e' stata **guardata prima di essere dichiarata**.  `[M]` 26 agosto
-  2026, su questo deposito:
-
-      rcp.c              identici   md5 8ddf04859e60…   7 691 righe
-      rcp.h              identici   md5 432d06e909c7…   1 297 righe
-      autenticazione.c   identici   md5 86451cd1c8bb…     202 righe
-
-  ⇒ Non c'e' **nessun** punto legittimamente diverso fra le due copie: non e'
-    una «copia del cliente» contro una «copia del server», e' **lo stesso
-    file**.  ⭐ Percio' il metro e' il piu' severo possibile — **byte per
-    byte** — e puo' esserlo perche' oggi e' verde: la controprova di §1.49
-    («prova a farla diventare verde») e' gia' fatta, ed e' il giro vero.
+⛔ **And until that night they were identical BY LUCK, not by construction**:
+   no file of the repository compared them.  The concrete case nobody
+   would have seen, written in the Makefile: `BAN_DURATA` in `src/rcp.c` is changed
+   from twelve hours to one.  The product bans for one hour; `01-b6-lancia.sh` stays
+   green because it compares `banchi/rcp/` with the copy compiled inside
+   `examples/`; B8 stays green because it starts `bsslserver`.
+   ⇒ ⛔ **The defect changes the colour of nothing.**
 
 ---------------------------------------------------------------------------
-⭐⭐ E QUEL CHE QUESTA MAGLIA AGGIUNGE A QUEL CHE C'ERA GIA'
+⛔⛔ WHAT MUST MATCH — **the whole file, byte for byte**
 ---------------------------------------------------------------------------
 
-Il confronto **c'era gia'**, in due posti, e la riga C10 lo dice: *«c'e' gia',
-e va solo agganciata»*.  ⛔ Ma i due posti che c'erano hanno tutt'e due lo
-stesso buco, e non e' il confronto:
+⚠ This is the real decision of this mesh, and it could not be taken
+  by reading a comment («written is not in force», E1): a plain `diff` on two
+  legitimately different files would give **red for ever**, and a perpetual red
+  is not caution, it is noise (`LEZIONI.md` §1.49).
 
-  `src/Makefile`, bersaglio `impronte`
-      ⭐ ferma la costruzione se divergono, e stampa il `diff`.
-      ⛔ Ma vuole `make`, un compilatore, `pkg-config`, ngtcp2 e le librerie
-        della fase 4: gira **dove si compila**, non ovunque.
+⭐ So it was **looked at before being declared**.  `[M]` 26 August
+  2026, on this repository:
 
-  `banchi/04-b23-lancia.sh`, primo blocco
-      fa lo stesso confronto in bash.
-      ⛔ Ma tiene la **sua** copia dell'elenco, inchiodata nel `for`:
-        `for f in rcp.c rcp.h autenticazione.c`.  ⇒ Due elenchi in due file
-        che possono allontanarsi senza che nessuno se ne accorga.
+      rcp.c              identical  md5 8ddf04859e60…   7 691 lines
+      rcp.h              identical  md5 432d06e909c7…   1 297 lines
+      autenticazione.c   identical  md5 86451cd1c8bb…     202 lines
 
-⛔⛔ **E IL BUCO COMUNE: nessuno dei due si accorge di una COPPIA NUOVA.**
-
-    L'elenco dei gemelli e' `GEMELLATI` dentro `src/Makefile`, e sono tre nomi
-    scritti a mano.  Il giorno in cui nasce un quarto file gemello — mettiamo
-    `ban.c` in `src/` e in `banchi/rcp/` — e nessuno tocca quella riga:
-
-      · il Makefile confronta i tre di sempre e dice **OK**
-      · `04-b23` confronta i tre di sempre e dice **✅**
-      · ⛔ **il quarto diverge per mesi, e non e' rosso da nessuna parte**
-
-    ⇒ ⭐⭐ E' **esattamente** `LEZIONI.md` §1.47: un controllo verde che non ha
-      guardato niente, con la stessa faccia di quando guardava davvero.
-
-⭐ Percio' questa maglia fa **tre cose**, e la terza e' la ragione per cui vale
-  la pena scriverla invece di limitarsi ad agganciare il Makefile:
-
-  1. **confronta** le copie dichiarate, byte per byte;
-  2. ⛔ **non tiene un elenco suo**: `GEMELLATI` lo **LEGGE** da `src/Makefile`.
-     ⚠ Un elenco ricopiato qui sarebbe stato il **terzo**, e la terza copia di
-       una lista e' il terzo posto da cui puo' divergere.  ⛔ E se non riesce a
-       leggerlo **non ripiega su una lista inchiodata**: dice «non ho potuto
-       guardare» — una lista di ripiego che sostituisce in silenzio quella vera
-       e' la bugia piu' comoda che questa maglia potesse raccontare;
-  3. ⭐ **verifica che l'elenco COPRA la cartella**: ogni sorgente che sta in
-     `banchi/rcp/` **e anche** in `src/` e' un gemello di fatto, e se non e'
-     dichiarato in `GEMELLATI` questa maglia da' **rosso** — anche se i tre
-     dichiarati combaciano perfettamente.
+  ⇒ There is **no** legitimately different point between the two copies: it is not
+    a «client copy» against a «server copy», it is **the same
+    file**.  ⭐ So the yardstick is the strictest possible — **byte for
+    byte** — and it can be because today it is green: the counter-proof of §1.49
+    («try to make it turn green») is already done, and it is the real run.
 
 ---------------------------------------------------------------------------
-⛔ QUEL CHE C10 **NON** GUARDA — o qualcuno se ne fidera' troppo
+⭐⭐ AND WHAT THIS MESH ADDS TO WHAT WAS ALREADY THERE
 ---------------------------------------------------------------------------
 
-  · ⛔ **se `rcp.c` sia GIUSTO.**  C10 dice che le due copie sono d'accordo,
-    non che abbiano ragione.  Due copie identiche dello stesso difetto passano;
-  · ⛔ **il binario.**  C10 gira PRIMA di compilare: non sa se il `remotix` che
-    sta girando da qualche parte e' stato costruito da questi file.  ⇒ Quello e'
-    il bersaglio **C11** (`md5` del binario, uguale in tutte le scatole);
-  · **le copie di lavoro fuori dal deposito**: `src/rcp-gemello`, `/srv/src/rcp`
-    sulla macchina di prova, e la copia innestata dentro `examples/` di ngtcp2.
-    Sono **destinazioni**, non gemelli del deposito: `src/costruisci.sh` sceglie
-    quale usare, e questa maglia guarda solo la coppia che sta in git;
-  · **gli altri «gemelli» del progetto che non sono codice**: la tabella gemella
-    di `SPECIFICHE.md` §8.1, e le copie **schierate** che `11-accendi.sh` mette
-    dentro le scatole (`prodotto/pagina.html`, `prodotto/remotix`).  ⚠ Quelle
-    sono destinazioni di una copia, non un modulo montato su due ospiti — e chi
-    le guarda e' **C11**, con l'`md5` del binario;
-  · **i file di `banchi/rcp/` che non hanno un fratello in `src/`.**  Oggi non
-    ce ne sono; se ce ne fossero, C10 li **nomina** e ⛔ non li giudica: un file
-    che vive in un posto solo non ha nessuno con cui combaciare, e chiamarlo
-    rosso sarebbe un rosso che non si puo' far diventare verde (§1.49).
+The comparison **was already there**, in two places, and the C10 row says so: *«it is already
+there, and only needs hooking up»*.  ⛔ But the two places that existed both have the
+same hole, and it is not the comparison:
+
+  `src/Makefile`, target `impronte`
+      ⭐ stops the build if they diverge, and prints the `diff`.
+      ⛔ But it wants `make`, a compiler, `pkg-config`, ngtcp2 and the libraries
+        of phase 4: it runs **where one compiles**, not anywhere.
+
+  `banchi/04-b23-lancia.sh`, first block
+      does the same comparison in bash.
+      ⛔ But it keeps **its own** copy of the list, pinned in the `for`:
+        `for f in rcp.c rcp.h autenticazione.c`.  ⇒ Two lists in two files
+        that can drift apart without anyone noticing.
+
+⛔⛔ **AND THE COMMON HOLE: neither of the two notices a NEW PAIR.**
+
+    The list of twins is `GEMELLATI` inside `src/Makefile`, and it is three names
+    written by hand.  The day a fourth twin file is born — say
+    `ban.c` in `src/` and in `banchi/rcp/` — and nobody touches that line:
+
+      · the Makefile compares the usual three and says **OK**
+      · `04-b23` compares the usual three and says **✅**
+      · ⛔ **the fourth diverges for months, and it is red nowhere**
+
+    ⇒ ⭐⭐ It is **exactly** `LEZIONI.md` §1.47: a green check that has not
+      looked at anything, with the same face as when it really looked.
+
+⭐ So this mesh does **three things**, and the third is the reason why it is worth
+  writing it instead of just hooking up the Makefile:
+
+  1. it **compares** the declared copies, byte for byte;
+  2. ⛔ it **does not keep a list of its own**: it **READS** `GEMELLATI` from `src/Makefile`.
+     ⚠ A list copied here would have been the **third**, and the third copy of
+       a list is the third place it can diverge from.  ⛔ And if it cannot
+       read it **it does not fall back on a pinned list**: it says «I could not
+       look» — a fallback list silently replacing the real one
+       is the most convenient lie this mesh could tell;
+  3. ⭐ it **checks that the list COVERS the folder**: every source that lives in
+     `banchi/rcp/` **and also** in `src/` is a de facto twin, and if it is not
+     declared in `GEMELLATI` this mesh gives **red** — even if the three
+     declared ones match perfectly.
 
 ---------------------------------------------------------------------------
-GLI ESITI (§4.5 del documento di fase)
+⛔ WHAT C10 DOES **NOT** LOOK AT — or someone will trust it too much
 ---------------------------------------------------------------------------
 
-  0  ⭐ le copie gemelle combaciano, e l'elenco copre tutta la cartella
-  1  ⛔ ROSSO: almeno una coppia diverge, **oppure** un gemello di fatto non e'
-     dichiarato in `GEMELLATI` (cioe' nessuno lo sta guardando)
-  3  ⛔ non ho potuto guardare: `GEMELLATI` illeggibile o vuoto, la cartella
-     gemella non c'e', un file dichiarato manca da una parte
-     — ⛔ **e non e' un rosso**
-  2  il terreno non regge, o l'uso e' sbagliato — ⭐ e ci sta anche **«questa
-     macchina non e' il deposito»** (la macchina di prova: niente git, niente
-     `src/Makefile`).  ⛔ Non e' un 3: un 3 dice «avrei dovuto guardare e non
-     ci sono riuscito», e qui non c'e' niente da guardare per costruzione.
-     ⇒ E' la stessa cosa che dicono C12, C15 e C16 nello stesso posto.
+  · ⛔ **whether `rcp.c` is RIGHT.**  C10 says the two copies agree,
+    not that they are right.  Two identical copies of the same defect pass;
+  · ⛔ **the binary.**  C10 runs BEFORE compiling: it does not know whether the `remotix` that
+    is running somewhere was built from these files.  ⇒ That is
+    target **C11** (`md5` of the binary, the same in all the boxes);
+  · **the working copies outside the repository**: `src/rcp-gemello`, `/srv/src/rcp`
+    on the test machine, and the copy grafted inside ngtcp2's `examples/`.
+    They are **destinations**, not twins of the repository: `src/costruisci.sh` chooses
+    which to use, and this mesh only looks at the pair that is in git;
+  · **the other «twins» of the project that are not code**: the twin table
+    of `SPECIFICHE.md` §8.1, and the **deployed** copies that `11-accendi.sh` puts
+    inside the boxes (`prodotto/pagina.html`, `prodotto/remotix`).  ⚠ Those
+    are destinations of a copy, not a module mounted on two hosts — and who
+    looks at them is **C11**, with the binary's `md5`;
+  · **the files of `banchi/rcp/` that have no sibling in `src/`.**  Today there are
+    none; if there were, C10 **names** them and ⛔ does not judge them: a file
+    that lives in one place only has nobody to match, and calling it
+    red would be a red that cannot be turned green (§1.49).
+
+---------------------------------------------------------------------------
+THE OUTCOMES (§4.5 of the phase document)
+---------------------------------------------------------------------------
+
+  0  ⭐ the twin copies match, and the list covers the whole folder
+  1  ⛔ RED: at least one pair diverges, **or** a de facto twin is not
+     declared in `GEMELLATI` (that is nobody is looking at it)
+  3  ⛔ I could not look: `GEMELLATI` unreadable or empty, the twin folder
+     is not there, a declared file is missing on one side
+     — ⛔ **and it is not a red**
+  2  the terrain does not hold, or the usage is wrong — ⭐ and this also covers **«this
+     machine is not the repository»** (the test machine: no git, no
+     `src/Makefile`).  ⛔ It is not a 3: a 3 says «I should have looked and did not
+     manage to», and here there is nothing to look at by construction.
+     ⇒ It is the same thing C12, C15 and C16 say in the same place.
 ===========================================================================
 """
 import argparse
@@ -160,74 +160,74 @@ import subprocess
 import sys
 import tempfile
 
-# ⛔ I DUE PERCORSI, dichiarati qui e stampati in ogni esito: «combaciano» e'
-#    un verdetto, e un verdetto senza il suo metro e' un'opinione.
+# ⛔ THE TWO PATHS, declared here and printed in every outcome: «they match» is
+#    a verdict, and a verdict without its yardstick is an opinion.
 CASA = "src"
 GEMELLA = "banchi/rcp"
 MAKEFILE = "src/Makefile"
 
-# ⚠ Quali file della cartella gemella sono CODICE, cioe' quali possono essere
-#   un gemello.  ⛔ L'elenco e' dichiarato invece che dedotto: un `README.md`
-#   messo un giorno in `banchi/rcp/` non deve diventare un rosso perpetuo.
+# ⚠ Which files of the twin folder are CODE, that is which can be
+#   a twin.  ⛔ The list is declared instead of deduced: a `README.md`
+#   put one day in `banchi/rcp/` must not become a perpetual red.
 SUFFISSI_SORGENTE = (".c", ".h")
 
 
 # ---------------------------------------------------------------------------
 def senza_commento(riga):
-    """⛔⛔ In un Makefile un `#` apre un commento fino a fine riga.
+    """⛔⛔ In a Makefile a `#` opens a comment up to the end of the line.
 
-    ⚠ Difetto vero di questa maglia, trovato il 27 ago 2026 da un agente
-      mandato a smentirla.  Senza questa riga:
+    ⚠ A real defect of this mesh, found on 27 Aug 2026 by an agent
+      sent to refute it.  Without this line:
 
         GEMELLATI := rcp.c rcp.h autenticazione.c  # i tre di sempre
-        ⇒ elenco: ['rcp.c','rcp.h','autenticazione.c','#','i','tre','di','sempre']
-        ⇒ esito 3, ⛔ **e per sempre** — che e' §1.49 con l'aria di prudenza,
-          e la maglia stessa dice piu' sotto che *«un 3 ripetuto non e' un
-          esito: e' un guasto del banco»*.
+        ⇒ list: ['rcp.c','rcp.h','autenticazione.c','#','i','tre','di','sempre']
+        ⇒ outcome 3, ⛔ **and for ever** — which is §1.49 with an air of caution,
+          and the mesh itself says further down that *«a repeated 3 is not an
+          outcome: it is a fault of the bench»*.
 
-    ⛔⛔ E c'e' un secondo verso, peggiore: se il commento NOMINA un file
-        (`# e un giorno ban.c`), quel nome entrava nell'elenco **come
-        dichiarato** ⇒ la guardia *«e' un gemello che nessuno sta guardando»*
-        non scattava piu'.  ⇒ Il rosso piu' prezioso di C10 — quello che
-        nessun altro qui faceva — si spegneva con un carattere.
+    ⛔⛔ And there is a second direction, worse: if the comment NAMES a file
+        (`# e un giorno ban.c`), that name entered the list **as
+        declared** ⇒ the guard *«it is a twin nobody is looking at»*
+        no longer fired.  ⇒ C10's most precious red — the one that
+        nobody else here gave — went out with one character.
     """
     return riga.split("#", 1)[0]
 
 
 def elenco_dichiarato(percorso_makefile):
-    """⭐ Legge `GEMELLATI` da `src/Makefile`.
+    """⭐ Reads `GEMELLATI` from `src/Makefile`.
 
-    ⛔ Torna `None` se non l'ha trovato, e ⛔ **non ripiega su un elenco
-       inchiodato**: «non ho letto l'elenco» e «l'elenco e' quello di sempre»
-       sono due fatti diversi, e il secondo con l'aria del primo e' un
-       controllo spento che sembra acceso (`src/Makefile`, R12.3).
-    ⚠ E `None` non e' la lista vuota: la lista vuota vuol dire «il Makefile
-      dichiara zero gemelli», che e' un altro fatto ancora — e passerebbe il
-      confronto senza aver guardato niente (`LEZIONI.md` §1.47).
+    ⛔ Returns `None` if it did not find it, and ⛔ **does not fall back on a pinned
+       list**: «I did not read the list» and «the list is the usual one»
+       are two different facts, and the second with the air of the first is a
+       check switched off that looks switched on (`src/Makefile`, R12.3).
+    ⚠ And `None` is not the empty list: the empty list means «the Makefile
+      declares zero twins», which is yet another fact — and it would pass the
+      comparison without having looked at anything (`LEZIONI.md` §1.47).
     """
     try:
         with open(percorso_makefile, "r", encoding="utf-8", errors="replace") as f:
             testo = f.read()
     except OSError:
         return None
-    # ⚠ Si prendono le ASSEGNAZIONI, non una riga qualunque che nomini la
-    #   variabile: `$(GEMELLATI)` compare anche nel corpo della regola.
+    # ⚠ The ASSIGNMENTS are taken, not any line that names the
+    #   variable: `$(GEMELLATI)` also appears in the body of the rule.
     #
-    # ⛔ E si prendono TUTTE, `+=` compresa.  ⚠ La prima stesura di questa
-    #    maglia si fermava alla prima: il giorno in cui qualcuno avesse
-    #    aggiunto un quarto gemello con `GEMELLATI += ban.c`, C10 non lo
-    #    avrebbe visto nell'elenco e lo avrebbe accusato di **non essere
-    #    dichiarato** ⇒ un rosso falso su una dichiarazione corretta, cioe'
-    #    la forma d'errore di `LEZIONI.md` §1.49.
+    # ⛔ And ALL of them are taken, `+=` included.  ⚠ The first draft of this
+    #    mesh stopped at the first one: the day someone had
+    #    added a fourth twin with `GEMELLATI += ban.c`, C10 would not have
+    #    seen it in the list and would have accused it of **not being
+    #    declared** ⇒ a false red on a correct declaration, that is
+    #    the error shape of `LEZIONI.md` §1.49.
     #
-    # ⛔ E le righe si RICUCISCONO se finiscono con la barra rovescia: un
-    #    elenco spezzato su due righe e' normalissimo in un Makefile, e
-    #    leggerne solo la prima meta' avrebbe lo stesso effetto di sopra.
+    # ⛔ And the lines are STITCHED BACK if they end with a backslash: a
+    #    list split over two lines is perfectly normal in a Makefile, and
+    #    reading only its first half would have the same effect as above.
     #
-    # ⛔⛔ E IL COMMENTO IN CODA SI TAGLIA — difetto vero, trovato il 27 ago
-    #    2026 (vedi `senza_commento`).  ⚠ La certificazione aveva il caso del
-    #    commento a riga INTERA e non quello in CODA, che e' la cosa piu'
-    #    normale del mondo dentro un Makefile.
+    # ⛔⛔ AND THE TRAILING COMMENT IS CUT — a real defect, found on 27 Aug
+    #    2026 (see `senza_commento`).  ⚠ The certification had the case of the
+    #    WHOLE-line comment and not the TRAILING one, which is the most
+    #    normal thing in the world inside a Makefile.
     righe = []
     continua = False
     for riga in testo.splitlines():
@@ -260,18 +260,18 @@ def leggi(percorso):
 
 
 def impronta(percorso):
-    """⚠ L'impronta serve a STAMPARE, non a giudicare: il confronto e' fatto
-       sui byte (vedi `guarda`).  ⛔ «byte per byte» dev'essere vero alla
-       lettera, non «uguale a meno di un'impronta»."""
+    """⚠ The fingerprint serves to PRINT, not to judge: the comparison is made
+       on the bytes (see `guarda`).  ⛔ «byte for byte» must be true
+       literally, not «equal up to a fingerprint»."""
     dati = leggi(percorso)
     return None if dati is None else hashlib.md5(dati).hexdigest()
 
 
 # ---------------------------------------------------------------------------
 def guarda(radice):
-    """Raccoglie i FATTI.  ⛔ Non giudica: giudicare e' un altro mestiere, e
-       tenerli separati e' quel che permette di certificare il giudice su casi
-       sintetici senza toccare i file veri."""
+    """Gathers the FACTS.  ⛔ It does not judge: judging is another job, and
+       keeping them separate is what allows certifying the judge on
+       synthetic cases without touching the real files."""
     f = {
         "radice": radice,
         "makefile": os.path.join(radice, MAKEFILE),
@@ -282,7 +282,7 @@ def guarda(radice):
     f["gemella_c_e"] = os.path.isdir(f["gemella"])
     f["casa_c_e"] = os.path.isdir(f["casa"])
 
-    # ⭐ Le coppie dichiarate, una per una.
+    # ⭐ The declared pairs, one by one.
     f["coppie"] = []
     for nome in (f["elenco"] or []):
         a = os.path.join(f["casa"], nome)
@@ -295,19 +295,19 @@ def guarda(radice):
         elif not ci_b:
             stato = "manca-nel-gemello"
         else:
-            # ⛔ Byte per byte, e alla lettera: si confrontano i BYTE, non le
-            #    righe e nemmeno le impronte.  Un file che differisce solo per
-            #    un fine-riga e' un file diverso, e il compilatore lo sa anche
-            #    se `diff` in certi modi non lo mostra.
+            # ⛔ Byte for byte, and literally: the BYTES are compared, not the
+            #    lines and not even the fingerprints.  A file that differs only by
+            #    a line ending is a different file, and the compiler knows it even
+            #    if `diff` in certain modes does not show it.
             da, db = leggi(a), leggi(b)
             stato = "identici" if (da is not None and da == db) else "divergono"
         f["coppie"].append({"nome": nome, "stato": stato,
                             "md5": impronta(a) or impronta(b)})
 
-    # ⭐⭐ E ADESSO LA PARTE CHE NESSUNO FACEVA: l'elenco copre la cartella?
-    f["non_dichiarati"] = []   # sta in tutt'e due le cartelle, ma non in GEMELLATI
-    f["solo_nel_banco"] = []   # sta solo in `banchi/rcp/`: non ha un gemello
-    f["estranei"] = []         # non e' un sorgente: si nomina e non si giudica
+    # ⭐⭐ AND NOW THE PART NOBODY DID: does the list cover the folder?
+    f["non_dichiarati"] = []   # it is in both folders, but not in GEMELLATI
+    f["solo_nel_banco"] = []   # it is only in `banchi/rcp/`: it has no twin
+    f["estranei"] = []         # it is not a source: it is named and not judged
     if f["gemella_c_e"]:
         for nome in sorted(os.listdir(f["gemella"])):
             if not os.path.isfile(os.path.join(f["gemella"], nome)):
@@ -326,64 +326,64 @@ def guarda(radice):
 
 # ---------------------------------------------------------------------------
 def giudica(f):
-    """Dai fatti al verdetto.  Torna `(esito, motivi)`.
+    """From the facts to the verdict.  Returns `(esito, motivi)`.
 
-    ⛔ L'ordine non e' un dettaglio: un ROSSO trovato e' un giudizio gia' dato,
-       e non si annacqua in «non ho potuto guardare» perche' un ALTRO file
-       mancava.  ⇒ prima il rosso, poi il 3, poi il verde.
+    ⛔ The order is not a detail: a RED found is a judgement already given,
+       and it is not watered down into «I could not look» because ANOTHER file
+       was missing.  ⇒ first the red, then the 3, then the green.
     """
     motivi = []
 
-    # ── 3 · non c'e' niente da confrontare, e va detto ─────────────────────
+    # ── 3 · there is nothing to compare, and it must be said ───────────────
     if f["elenco"] is None:
-        return 3, ["⛔ non ho letto `GEMELLATI` da %s: non so che cosa dovrebbe "
-                   "combaciare" % MAKEFILE]
+        return 3, ["⛔ I did not read `GEMELLATI` from %s: I do not know what should "
+                   "match" % MAKEFILE]
     if not f["elenco"]:
-        return 3, ["⛔ `GEMELLATI` e' VUOTO: zero coppie da confrontare — e "
-                   "«zero differenze su zero coppie» sarebbe un verde che non ha "
-                   "guardato niente (LEZIONI.md §1.47)"]
+        return 3, ["⛔ `GEMELLATI` is EMPTY: zero pairs to compare — and "
+                   "«zero differences on zero pairs» would be a green that has not "
+                   "looked at anything (LEZIONI.md §1.47)"]
     if not f["gemella_c_e"]:
-        return 3, ["⛔ la cartella gemella «%s» NON C'E': non e' «le copie "
-                   "combaciano», e' «non ho potuto guardare»" % GEMELLA]
+        return 3, ["⛔ the twin folder «%s» IS NOT THERE: it is not «the copies "
+                   "match», it is «I could not look»" % GEMELLA]
     if not f["casa_c_e"]:
-        return 3, ["⛔ la cartella «%s» NON C'E'" % CASA]
+        return 3, ["⛔ the folder «%s» IS NOT THERE" % CASA]
 
-    # ── 1 · i rossi ────────────────────────────────────────────────────────
+    # ── 1 · the reds ───────────────────────────────────────────────────────
     divergono = [c["nome"] for c in f["coppie"] if c["stato"] == "divergono"]
     for nome in divergono:
-        motivi.append("⛔ %s DIVERGE fra %s/ e %s/" % (nome, CASA, GEMELLA))
+        motivi.append("⛔ %s DIVERGES between %s/ and %s/" % (nome, CASA, GEMELLA))
     for nome in f["non_dichiarati"]:
-        motivi.append("⛔ «%s» sta in tutt'e due le cartelle ma NON e' in "
-                      "`GEMELLATI`: e' un gemello che nessuno sta guardando"
+        motivi.append("⛔ «%s» is in both folders but is NOT in "
+                      "`GEMELLATI`: it is a twin nobody is looking at"
                       % nome)
     if divergono or f["non_dichiarati"]:
         return 1, motivi
 
-    # ── 3 · ho guardato, e un pezzo non ha potuto parlare ──────────────────
+    # ── 3 · I looked, and a piece could not speak ──────────────────────────
     mancanti = [c for c in f["coppie"] if c["stato"] != "identici"]
     if mancanti:
         for c in mancanti:
             motivi.append("⛔ %s: %s" % (c["nome"], c["stato"].replace("-", " ")))
-        motivi.append("⇒ «non ho trovato differenze» e «non ho potuto guardare» "
-                      "hanno la stessa faccia: questo e' il secondo")
+        motivi.append("⇒ «I found no differences» and «I could not look» "
+                      "have the same face: this is the second")
         return 3, motivi
 
     # ── 0 ──────────────────────────────────────────────────────────────────
-    return 0, ["⭐ le %d coppie dichiarate combaciano byte per byte, e "
-               "l'elenco copre tutta la cartella gemella" % len(f["coppie"])]
+    return 0, ["⭐ the %d declared pairs match byte for byte, and "
+               "the list covers the whole twin folder" % len(f["coppie"])]
 
 
 # ---------------------------------------------------------------------------
-# ⭐ LA CERTIFICAZIONE — §3.6: «ogni prova ha il suo guasto innestato, e quel
-#    caso va fatto girare, non immaginato».
+# ⭐ THE CERTIFICATION — §3.6: «every test has its injected fault, and that
+#    case must be run, not imagined».
 #
-# ⛔ E si fa su copie SINTETICHE in una cartella temporanea: i file veri del
-#    deposito non si toccano nemmeno per un istante.  ⚠ Un banco che innesta un
-#    guasto sui file veri e' un banco che, se muore a meta', lascia il deposito
-#    guasto — e il guasto ha l'aria di essere del prodotto.
+# ⛔ And it is done on SYNTHETIC copies in a temporary folder: the real files of the
+#    repository are not touched even for an instant.  ⚠ A bench that injects a
+#    fault into the real files is a bench that, if it dies half-way, leaves the repository
+#    broken — and the fault looks like the product's.
 # ---------------------------------------------------------------------------
 MAKEFILE_FINTO = (
-    "# Makefile sintetico della certificazione di C10\n"
+    "# Synthetic Makefile of the C10 certification\n"
     "SORGENTI := main.c rcp.c\n"
     "GEMELLATI := rcp.c rcp.h autenticazione.c\n"
     "tutto: impronte\n"
@@ -392,7 +392,7 @@ MAKEFILE_FINTO = (
 
 
 def scena(dove, elenco_makefile=MAKEFILE_FINTO, contenuti=None, gemello=None):
-    """Costruisce un deposito finto: `src/`, `banchi/rcp/`, `src/Makefile`."""
+    """Builds a fake repository: `src/`, `banchi/rcp/`, `src/Makefile`."""
     contenuti = contenuti or {"rcp.c": b"protocollo\n",
                               "rcp.h": b"intestazioni\n",
                               "autenticazione.c": b"pam\n"}
@@ -416,8 +416,8 @@ def scena(dove, elenco_makefile=MAKEFILE_FINTO, contenuti=None, gemello=None):
 def certifica():
     sano = {"rcp.c": b"protocollo\n", "rcp.h": b"intestazioni\n",
             "autenticazione.c": b"pam\n"}
-    # ⛔ Un BYTE, non una riga: se il giudice prendesse solo le differenze
-    #    grosse, la taratura di `BAN_DURATA` da 12 a 1 gli sfuggirebbe.
+    # ⛔ One BYTE, not one line: if the judge only took the big
+    #    differences, the tuning of `BAN_DURATA` from 12 to 1 would escape it.
     un_byte = dict(sano, **{"rcp.c": b"protocollo\r\n"})
     senza_uno = {k: v for k, v in sano.items() if k != "rcp.h"}
     quarto_uguale = dict(sano, **{"ban.c": b"ban\n"})
@@ -425,95 +425,95 @@ def certifica():
     quarto_diverso_gem = dict(sano, **{"ban.c": b"ban UNA ora\n"})
 
     casi = [
-        # (nome, come si costruisce la scena, esito atteso)
-        ("le tre copie sono identiche ⇒ VERDE",
+        # (name, how the scene is built, expected outcome)
+        ("the three copies are identical ⇒ GREEN",
          dict(contenuti=sano), 0),
 
-        ("⛔ UN BYTE cambiato in una copia ⇒ ROSSO",
+        ("⛔ ONE BYTE changed in a copy ⇒ RED",
          dict(contenuti=sano, gemello=un_byte), 1),
 
-        ("⛔ e la controprova di §1.49: tolto il byte, torna VERDE",
+        ("⛔ and the counter-proof of §1.49: byte removed, back to GREEN",
          dict(contenuti=sano, gemello=sano), 0),
 
-        ("⛔ una copia gemella MANCA ⇒ 3, non ho potuto guardare",
+        ("⛔ a twin copy is MISSING ⇒ 3, I could not look",
          dict(contenuti=sano, gemello=senza_uno), 3),
 
-        ("⛔ la cartella gemella non c'e' affatto ⇒ 3",
+        ("⛔ the twin folder is not there at all ⇒ 3",
          dict(contenuti=sano, gemello=False), 3),
 
-        ("⛔ `GEMELLATI` illeggibile (niente Makefile) ⇒ 3",
+        ("⛔ `GEMELLATI` unreadable (no Makefile) ⇒ 3",
          dict(contenuti=sano, elenco_makefile=None), 3),
 
-        ("⛔ `GEMELLATI` VUOTO ⇒ 3 — zero coppie non e' un verde",
+        ("⛔ `GEMELLATI` EMPTY ⇒ 3 — zero pairs is not a green",
          dict(contenuti=sano,
               elenco_makefile="GEMELLATI :=\n"), 3),
 
-        ("⭐⭐ un QUARTO gemello non dichiarato, e IDENTICO ⇒ ROSSO lo stesso",
+        ("⭐⭐ a FOURTH undeclared twin, and IDENTICAL ⇒ RED all the same",
          dict(contenuti=quarto_uguale, gemello=quarto_uguale), 1),
 
-        ("⭐⭐ …e infatti eccolo DIVERSO: era rosso perche' nessuno lo guardava",
+        ("⭐⭐ …and indeed here it is DIFFERENT: it was red because nobody watched it",
          dict(contenuti=quarto_diverso_src, gemello=quarto_diverso_gem), 1),
 
-        ("⚠ un file solo nel banco (nessun fratello in src/) NON e' un rosso",
+        ("⚠ a file only in the bench (no sibling in src/) is NOT a red",
          dict(contenuti=sano,
               gemello=dict(sano, **{"innesto-solo-banco.c": b"x\n"})), 0),
 
-        ("⚠ un file non-sorgente in banchi/rcp/ NON e' un rosso",
+        ("⚠ a non-source file in banchi/rcp/ is NOT a red",
          dict(contenuti=sano,
               gemello=dict(sano, **{"APPUNTI.md": b"note\n"})), 0),
 
-        # ⛔ I DUE CASI CHE PRENDONO UN DIFETTO DI QUESTA MAGLIA STESSA, non del
-        #    prodotto: un quarto gemello DICHIARATO in un modo che la prima
-        #    stesura non sapeva leggere ⇒ lo avrebbe accusato di non essere
-        #    dichiarato.  ⭐ Un rosso falso su una dichiarazione corretta e'
-        #    esattamente §1.49, e qui e' innestato e provato.
-        ("⛔ dichiarato con `GEMELLATI += ban.c` ⇒ VERDE, non un rosso falso",
+        # ⛔ THE TWO CASES THAT CATCH A DEFECT OF THIS MESH ITSELF, not of the
+        #    product: a fourth twin DECLARED in a way the first
+        #    draft could not read ⇒ it would have accused it of not being
+        #    declared.  ⭐ A false red on a correct declaration is
+        #    exactly §1.49, and here it is injected and tested.
+        ("⛔ declared with `GEMELLATI += ban.c` ⇒ GREEN, not a false red",
          dict(contenuti=quarto_uguale, gemello=quarto_uguale,
               elenco_makefile="GEMELLATI := rcp.c rcp.h autenticazione.c\n"
                               "GEMELLATI += ban.c\n"), 0),
 
-        ("⛔ dichiarato su DUE righe con la barra rovescia ⇒ VERDE",
+        ("⛔ declared on TWO lines with the backslash ⇒ GREEN",
          dict(contenuti=quarto_uguale, gemello=quarto_uguale,
               elenco_makefile="GEMELLATI := rcp.c rcp.h \\\n"
                               "             autenticazione.c ban.c\n"), 0),
 
-        ("⛔ …e con la barra rovescia il quarto DIVERGE ⇒ ROSSO lo stesso",
+        ("⛔ …and with the backslash the fourth DIVERGES ⇒ RED all the same",
          dict(contenuti=quarto_diverso_src, gemello=quarto_diverso_gem,
               elenco_makefile="GEMELLATI := rcp.c rcp.h \\\n"
                               "             autenticazione.c ban.c\n"), 1),
 
-        ("⚠ una riga di COMMENTO che nomina GEMELLATI non e' una dichiarazione",
+        ("⚠ a COMMENT line that names GEMELLATI is not a declaration",
          dict(contenuti=sano,
               elenco_makefile="# GEMELLATI := tutto quel che vuoi\n"
                               "GEMELLATI := rcp.c rcp.h autenticazione.c\n"), 0),
 
         # ═══════════════════════════════════════════════════════════════════
-        # ⛔⛔ I CASI CHE OGGI NON C'ERANO — 27 ago 2026.  ⚠ Il caso qui sopra
-        #     ha il commento a riga INTERA; ⛔ quello in CODA e' la cosa piu'
-        #     normale del mondo, e non era certificato.  `[D]` Prima della cura
-        #     il primo di questi tre dava **3 per sempre** e il secondo
-        #     **spegneva il rosso piu' prezioso di C10**.
+        # ⛔⛔ THE CASES THAT WERE NOT THERE TODAY — 27 Aug 2026.  ⚠ The case above
+        #     has the WHOLE-line comment; ⛔ the TRAILING one is the most
+        #     normal thing in the world, and it was not certified.  `[D]` Before the cure
+        #     the first of these three gave **3 for ever** and the second
+        #     **switched off C10's most precious red**.
         # ═══════════════════════════════════════════════════════════════════
-        ("⛔⛔ un `#` in CODA alla riga non avvelena l'elenco ⇒ VERDE",
+        ("⛔⛔ a TRAILING `#` on the line does not poison the list ⇒ GREEN",
          dict(contenuti=sano,
               elenco_makefile="GEMELLATI := rcp.c rcp.h autenticazione.c"
                               "  # i tre di sempre\n"), 0),
 
-        ("⛔⛔ un commento che NOMINA un file NON lo dichiara ⇒ ROSSO",
+        ("⛔⛔ a comment that NAMES a file does NOT declare it ⇒ RED",
          dict(contenuti=quarto_uguale, gemello=quarto_uguale,
               elenco_makefile="GEMELLATI := rcp.c rcp.h autenticazione.c"
                               "  # e un giorno ban.c\n"), 1),
 
-        ("⛔ e il commento in coda a una riga RICUCITA con la barra rovescia",
+        ("⛔ and the trailing comment on a line STITCHED with the backslash",
          dict(contenuti=quarto_uguale, gemello=quarto_uguale,
               elenco_makefile="GEMELLATI := rcp.c rcp.h \\\n"
                               "             autenticazione.c ban.c  # i quattro\n"),
          0),
     ]
 
-    print("== certificazione del giudice di C10 ==")
-    print("   ⛔ su copie SINTETICHE in una cartella temporanea: i file veri")
-    print("      del deposito non si toccano.\n")
+    print("== certification of the C10 judge ==")
+    print("   ⛔ on SYNTHETIC copies in a temporary folder: the real files")
+    print("      of the repository are not touched.\n")
     guai = 0
     for nome, come, atteso in casi:
         dove = tempfile.mkdtemp(prefix="c10-cert-")
@@ -525,45 +525,45 @@ def certifica():
         bene = esito == atteso
         if not bene:
             guai += 1
-        print("  %s %-62s  esito=%s (atteso %s)"
+        print("  %s %-62s  outcome=%s (expected %s)"
               % ("OK " if bene else "NO ", nome, esito, atteso))
         if not bene:
             for m in motivi:
                 print("        %s" % m)
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ⭐⭐ LA SECONDA META' — e il GUASTO INNESTATO si certifica anche lui.
+    # ⭐⭐ THE SECOND HALF — and the INJECTED FAULT is certified too.
     #
-    # ⛔ Prima del 27 ago 2026 `--guasto-innestato` girava una volta sola, sul
-    #    deposito vero, e non era certificato in nessun modo: la
-    #    certificazione copriva `giudica` e basta.  ⇒ Il fatto che
-    #    l'iniezione non guardasse la scena PRIMA di guastarla non poteva
-    #    saltar fuori qui.
-    # ⚠ Adesso `innesta_e_giudica` prende una cartella qualunque, ⇒ si prova
-    #   con le scene sintetiche come tutto il resto.
+    # ⛔ Before 27 Aug 2026 `--guasto-innestato` ran once only, on the
+    #    real repository, and it was not certified in any way: the
+    #    certification covered `giudica` and nothing else.  ⇒ The fact that
+    #    the injection did not look at the scene BEFORE breaking it could not
+    #    come out here.
+    # ⚠ Now `innesta_e_giudica` takes any folder, ⇒ it is tested
+    #   with the synthetic scenes like everything else.
     # ═══════════════════════════════════════════════════════════════════════
     casi_guasto = [
-        ("⭐ scena VERDE ⇒ il byte morde ⇒ 0 (il guasto e' stato visto)",
+        ("⭐ GREEN scene ⇒ the byte bites ⇒ 0 (the fault was seen)",
          dict(contenuti=sano), 0),
 
-        # ⛔⛔ IL CASO CHE AVREBBE PRESO IL DIFETTO: la scena e' gia' rossa —
-        #     cioe' i due `rcp.c` divergono, che e' **il difetto per cui C10
-        #     esiste**.  Prima della cura qui usciva **0**, ⇒ il gancio
-        #     scriveva `ha_visto_il_guasto: true` su un rosso del PRODOTTO.
-        ("⛔⛔ scena GIA' rossa (le copie divergono) ⇒ 3, ⛔ NON 0",
+        # ⛔⛔ THE CASE THAT WOULD HAVE CAUGHT THE DEFECT: the scene is already red —
+        #     that is the two `rcp.c` diverge, which is **the defect C10
+        #     exists for**.  Before the cure here it came out **0**, ⇒ the hook
+        #     wrote `ha_visto_il_guasto: true` on a red of the PRODUCT.
+        ("⛔⛔ scene ALREADY red (the copies diverge) ⇒ 3, ⛔ NOT 0",
          dict(contenuti=sano, gemello=un_byte), 3),
 
-        ("⛔⛔ gia' rossa per un gemello non dichiarato ⇒ 3, ⛔ NON 0",
+        ("⛔⛔ already red because of an undeclared twin ⇒ 3, ⛔ NOT 0",
          dict(contenuti=quarto_uguale, gemello=quarto_uguale), 3),
 
-        ("⛔ una copia gemella manca (esito 3 gia' prima) ⇒ 3",
+        ("⛔ a twin copy is missing (outcome 3 already before) ⇒ 3",
          dict(contenuti=sano, gemello=senza_uno), 3),
 
-        ("⛔ `GEMELLATI` illeggibile ⇒ 3: non c'e' niente da innestare",
+        ("⛔ `GEMELLATI` unreadable ⇒ 3: there is nothing to inject",
          dict(contenuti=sano, elenco_makefile=None), 3),
     ]
     print()
-    print("  ⛔ e il guasto innestato si giudica PRIMA di essere innestato (§1.52):")
+    print("  ⛔ and the injected fault is judged BEFORE being injected (§1.52):")
     for nome, come, atteso in casi_guasto:
         dove = tempfile.mkdtemp(prefix="c10-cert-guasto-")
         try:
@@ -574,7 +574,7 @@ def certifica():
         bene = esito == atteso
         if not bene:
             guai += 1
-        print("  %s %-62s  esito=%s (atteso %s)"
+        print("  %s %-62s  outcome=%s (expected %s)"
               % ("OK " if bene else "NO ", nome, esito, atteso))
         if not bene:
             for r in righe:
@@ -582,166 +582,166 @@ def certifica():
 
     quanti = len(casi) + len(casi_guasto)
     print()
-    print("  %d casi su %d" % (quanti - guai, quanti))
+    print("  %d cases out of %d" % (quanti - guai, quanti))
     if guai:
-        print("⛔ il giudice NON e' affidabile: %d casi sbagliati" % guai)
+        print("⛔ the judge is NOT reliable: %d wrong cases" % guai)
         return 1
-    print("⭐ il giudice sa dire VERDE, sa dire ROSSO, e sa dire «non lo so» —")
-    print("   ⛔ e sa dare rosso anche a un gemello che nessuno aveva dichiarato,")
-    print("   che e' l'unica cosa che qui non faceva nessuno (LEZIONI.md §1.47).")
-    print("⛔ E il guasto innestato non si certifica su una scena gia' rossa.")
+    print("⭐ the judge can say GREEN, can say RED, and can say «I do not know» —")
+    print("   ⛔ and it can give red even to a twin nobody had declared,")
+    print("   which is the only thing nobody did here (LEZIONI.md §1.47).")
+    print("⛔ And the injected fault is not certified on a scene that is already red.")
     return 0
 
 
 # ---------------------------------------------------------------------------
 def git_dice_la_radice(qui):
-    """⭐ La radice secondo git, o None se git non sa rispondere."""
+    """⭐ The root according to git, or None if git cannot answer."""
     try:
         p = subprocess.run(["git", "-C", qui, "rev-parse", "--show-toplevel"],
                            capture_output=True, text=True, timeout=30)
         if p.returncode == 0 and p.stdout.strip():
             return p.stdout.strip()
-    # ⛔ `subprocess.TimeoutExpired` NON discende da `OSError`: senza nominarla,
-    #    un `git` che si pianta faceva una traccia ⇒ Python usciva **1** ⇒ il
-    #    gancio leggeva ROSSO su un guasto del banco (`LEZIONI.md` §1.51).
+    # ⛔ `subprocess.TimeoutExpired` does NOT descend from `OSError`: without naming it,
+    #    a `git` that hangs produced a traceback ⇒ Python exited **1** ⇒ the
+    #    hook read RED on a fault of the bench (`LEZIONI.md` §1.51).
     except (OSError, subprocess.SubprocessError):
         pass
     return None
 
 
 def radice_del_deposito(qui):
-    """⚠ Si chiede a git, e se git non c'e' si sale di due cartelle — questo
-       file sta in `banchi/11-scatole/`.  ⛔ Non e' un ripiego silenzioso: il
-       percorso scelto si STAMPA, e se le cartelle non ci sono l'esito e' 3."""
+    """⚠ Git is asked, and if git is not there we go up two folders — this
+       file lives in `banchi/11-scatole/`.  ⛔ It is not a silent fallback: the
+       chosen path is PRINTED, and if the folders are not there the outcome is 3."""
     return git_dice_la_radice(qui) or os.path.abspath(
         os.path.join(qui, "..", ".."))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐ IL TERRENO — «questa macchina e' il deposito?», e si chiede PRIMA.
+# ⭐⭐ THE TERRAIN — «is this machine the repository?», and it is asked FIRST.
 #
-# ⛔ 23 set 2026, e lo ha tirato fuori la rete intera: sulla macchina di prova
-#    C10 usciva **3, «non ho potuto guardare»** — la maglia compariva fra
-#    quelle che NON HANNO GUARDATO, accanto a un vero guasto, e chi leggeva
-#    doveva indovinare che li' non c'era niente da guardare per costruzione.
-#    `[M]` Il deposito su quella macchina non c'e' affatto: niente `src/`,
-#    niente `banchi/rcp/`, e la radice indovinata veniva fuori `/media`.
+# ⛔ 23 Sep 2026, and the whole net brought it out: on the test machine
+#    C10 exited **3, «I could not look»** — the mesh appeared among
+#    those that DID NOT LOOK, next to a real fault, and whoever read
+#    had to guess that there was nothing to look at there by construction.
+#    `[M]` The repository on that machine is not there at all: no `src/`,
+#    no `banchi/rcp/`, and the guessed root came out as `/media`.
 #
-# ⭐ Le tre sorelle che vivono la stessa vita — C12, C15, C16 — lo dicono da
-#   sempre nel modo giusto: *«non sono dentro un deposito git ⇒ il terreno non
-#   regge»*, ed escono **2**.  ⇒ C10 era l'unica rimasta indietro, e adesso
-#   dice la stessa cosa nello stesso modo (`DECISIONI.md` §4.6-novemdecies:
-#   decidere vuole il deposito, far girare vuole le scatole).
+# ⭐ The three sisters that live the same life — C12, C15, C16 — have always said it
+#   the right way: *«I am not inside a git repository ⇒ the terrain does not
+#   hold»*, and they exit **2**.  ⇒ C10 was the only one left behind, and now
+#   it says the same thing in the same way (`DECISIONI.md` §4.6-novemdecies:
+#   deciding needs the repository, running needs the boxes).
 #
-# ⛔⛔ E LA DISTINZIONE CHE NON VA PERSA: il **2** si da' SOLO quando git non
-#     sa dire dove sia il deposito **e** nel posto indovinato non c'e' il
-#     `Makefile`.  Se git risponde — cioe' sul portatile — un `GEMELLATI`
-#     illeggibile resta un **3**: la' e' un guasto vero, ed e' quello che il 3
-#     serve a gridare.  ⇒ Questo non fa tacere nessun difetto: sposta soltanto
-#     il caso in cui non c'e', per costruzione, niente da guardare.
+# ⛔⛔ AND THE DISTINCTION THAT MUST NOT BE LOST: the **2** is given ONLY when git cannot
+#     say where the repository is **and** in the guessed place there is no
+#     `Makefile`.  If git answers — that is on the laptop — an unreadable `GEMELLATI`
+#     stays a **3**: there it is a real fault, and it is what the 3
+#     serves to shout.  ⇒ This silences no defect: it only moves
+#     the case in which there is, by construction, nothing to look at.
 # ═══════════════════════════════════════════════════════════════════════════
 def qui_c_e_il_deposito(qui, radice):
-    """⭐ (c'e', perche') — e il «perche'» e' quel che si stampa."""
+    """⭐ (it is there, why) — and the «why» is what gets printed."""
     if git_dice_la_radice(qui):
         return True, ""
     if os.path.isfile(os.path.join(radice, MAKEFILE)):
-        # ⚠ Un deposito senza `.git` (una copia, un archivio scompattato) e'
-        #   un deposito lo stesso: quel che conta e' che ci sia da guardare.
+        # ⚠ A repository without `.git` (a copy, an unpacked archive) is
+        #   a repository all the same: what counts is that there is something to look at.
         return True, ""
-    return False, ("non sono dentro un deposito git, e in «%s» non c'e' "
-                   "nemmeno %s" % (radice, MAKEFILE))
+    return False, ("I am not inside a git repository, and in «%s» there is "
+                   "not even %s" % (radice, MAKEFILE))
 
 
 # ---------------------------------------------------------------------------
-# ⭐⭐ IL GUASTO INNESTATO, e gira nel GANCIO — non solo nella certificazione
+# ⭐⭐ THE INJECTED FAULT, and it runs in the HOOK — not only in the certification
 #
-# ⛔ La certificazione dimostra che il giudice sa dire rosso; ⭐ questo dimostra
-#    che **la rete in esercizio** sa ancora dirlo, ed e' un'altra domanda (C13).
+# ⛔ The certification proves the judge can say red; ⭐ this proves
+#    that **the net in service** can still say it, and it is another question (C13).
 #
-# ⚠ La meta' del gancio che vive sul portatile fa girare C10, C12 e C13 — e
-#   ⛔ nessuna delle tre innesta un guasto.  ⇒ Senza questa modalita', C13 su
-#   quella meta' NON POTREBBE MAI diventare verde: direbbe per sempre «nessun
-#   guasto e' mai stato iniettato», che dall esterno somiglia a una rete rotta.
+# ⚠ The half of the hook that lives on the laptop runs C10, C12 and C13 — and
+#   ⛔ none of the three injects a fault.  ⇒ Without this mode, C13 on
+#   that half COULD NEVER turn green: it would say for ever «no
+#   fault was ever injected», which from outside looks like a broken net.
 #
-# ⭐ E si innesta sui file VERI, copiati in una cartella temporanea: e' il caso
-#   che conta (i sintetici li fa gia' `--certifica`), e ⛔ i file del deposito
-#   non si toccano nemmeno per un istante.
+# ⭐ And it is injected into the REAL files, copied to a temporary folder: it is the case
+#   that counts (the synthetic ones are already done by `--certifica`), and ⛔ the repository files
+#   are not touched even for an instant.
 #
-# ⛔ La convenzione del gancio si legge AL CONTRARIO: qui `0` vuol dire «il
-#    guasto E' STATO VISTO».  ⇒ `esegui_maglia … true …` scrive nel registro
-#    `ha_visto_il_guasto`, e C13 legge quello.
+# ⛔ The hook's convention reads THE OTHER WAY ROUND: here `0` means «the
+#    fault WAS SEEN».  ⇒ `esegui_maglia … true …` writes in the log
+#    `ha_visto_il_guasto`, and C13 reads that.
 #
-# ⛔⛔ E SI GIUDICA LA SCENA **PRIMA** DI GUASTARLA — §1.52, cura del 27 ago
-#     2026.  ⚠ Fino a quel giorno qui non c'era nessun `giudica` prima
-#     dell'iniezione: se `src/rcp.c` e `banchi/rcp/rcp.c` divergessero gia' —
-#     ⛔ cioe' **esattamente il difetto per cui C10 esiste** — la copia
-#     temporanea nascerebbe gia' rossa, il byte cambiato non aggiungerebbe
-#     niente, e C10 uscirebbe **0** ⇒ il gancio scriverebbe
+# ⛔⛔ AND THE SCENE IS JUDGED **BEFORE** BREAKING IT — §1.52, cure of 27 Aug
+#     2026.  ⚠ Until that day there was no `giudica` here before
+#     the injection: if `src/rcp.c` and `banchi/rcp/rcp.c` already diverged —
+#     ⛔ that is **exactly the defect C10 exists for** — the temporary
+#     copy would be born already red, the changed byte would add
+#     nothing, and C10 would exit **0** ⇒ the hook would write
 #     `ha_visto_il_guasto: true`.
-# ⇒ ⭐ Il giorno in cui morde e' **precisamente il giorno del rosso**: il giro
-#   in cui C10 finalmente prende il difetto e' anche il giro in cui il suo
-#   guasto innestato smetterebbe di significare qualcosa.  ⛔ La rete si
-#   certificherebbe su un difetto del prodotto.
+# ⇒ ⭐ The day it bites is **precisely the day of the red**: the run
+#   in which C10 finally catches the defect is also the run in which its
+#   injected fault would stop meaning anything.  ⛔ The net would
+#   certify itself on a defect of the product.
 # ---------------------------------------------------------------------------
 def innesta_e_giudica(dove):
-    """⭐ Il guasto innestato, e ⛔ **gira su una scena qualunque**.
+    """⭐ The injected fault, and ⛔ **it runs on any scene**.
 
-    ⚠ Sta scritto cosi' apposta: prendendo la cartella come argomento, questo
-      pezzo si puo' certificare su scene sintetiche invece di essere provato
-      una volta sola sul deposito vero.  ⇒ E' come `--certifica` prova il
-      giudice: chiamandolo.
+    ⚠ It is written this way on purpose: by taking the folder as an argument, this
+      piece can be certified on synthetic scenes instead of being tested
+      once only on the real repository.  ⇒ It is how `--certifica` tests the
+      judge: by calling it.
 
-    Torna `(esito, righe)`.  ⛔ Si legge AL CONTRARIO: `0` = il guasto e' stato
-    visto.  `3` = non ho potuto innestare niente.
+    Returns `(esito, righe)`.  ⛔ It reads THE OTHER WAY ROUND: `0` = the fault was
+    seen.  `3` = I could not inject anything.
     """
     righe = []
     f = guarda(dove)
     if f["elenco"] is None or not f["elenco"]:
-        return 3, ["⛔ non ho letto `GEMELLATI`: non posso nemmeno innestare "
-                   "il guasto ⇒ non ho potuto guardare"]
+        return 3, ["⛔ I did not read `GEMELLATI`: I cannot even inject "
+                   "the fault ⇒ I could not look"]
 
-    # ⛔⛔ PRIMA IL GIUDIZIO, POI IL GUASTO (§1.52).
+    # ⛔⛔ FIRST THE JUDGEMENT, THEN THE FAULT (§1.52).
     prima, motivi_prima = giudica(f)
     if prima != 0:
-        righe.append("⛔⛔ la scena era GIA' rossa PRIMA del guasto (esito %d):"
+        righe.append("⛔⛔ the scene was ALREADY red BEFORE the fault (outcome %d):"
                      % prima)
         righe += ["   " + m for m in motivi_prima]
-        righe.append("⇒ un guasto innestato su una scena gia' rossa non "
-                     "dimostra niente: il rosso ci sarebbe stato lo stesso.")
-        righe.append("⛔ E questo NON e' «il guasto non e' stato visto»: e'")
-        righe.append("  «non ho potuto innestare niente» ⇒ esito 3 (§1.52).")
+        righe.append("⇒ a fault injected into a scene already red "
+                     "proves nothing: the red would have been there anyway.")
+        righe.append("⛔ And this is NOT «the fault was not seen»: it is")
+        righe.append("  «I could not inject anything» ⇒ outcome 3 (§1.52).")
         return 3, righe
-    righe.append("⭐ la scena era VERDE prima del guasto: l'iniezione ha di "
-                 "che mordere")
+    righe.append("⭐ the scene was GREEN before the fault: the injection has something "
+                 "to bite")
 
-    # ⛔ UN BYTE, non una riga: se il giudice prendesse solo le differenze
-    #    grosse, una costante spostata gli sfuggirebbe.
+    # ⛔ ONE BYTE, not one line: if the judge only took the big
+    #    differences, a shifted constant would escape it.
     bersaglio = os.path.join(dove, GEMELLA, f["elenco"][0])
     if not os.path.isfile(bersaglio):
-        righe.append("⛔ la copia gemella di «%s» non c'e': non ho un bersaglio "
-                     "da guastare ⇒ non ho potuto guardare" % f["elenco"][0])
+        righe.append("⛔ the twin copy of «%s» is not there: I have no target "
+                     "to break ⇒ I could not look" % f["elenco"][0])
         return 3, righe
     dati = bytearray(leggi(bersaglio) or b"")
     if not dati:
-        righe.append("⛔ la copia gemella e' vuota: non ho un bersaglio")
+        righe.append("⛔ the twin copy is empty: I have no target")
         return 3, righe
     meta = len(dati) // 2
     dati[meta] = (dati[meta] + 1) % 256
     with open(bersaglio, "wb") as h:
         h.write(bytes(dati))
-    righe.append("guasto: un byte cambiato in %s/%s (posizione %d di %d)"
+    righe.append("fault: one byte changed in %s/%s (position %d of %d)"
                  % (GEMELLA, f["elenco"][0], meta, len(dati)))
 
     dopo, motivi = giudica(guarda(dove))
     righe += ["   " + m for m in motivi]
     if dopo == 1:
-        righe.append("⭐ IL GUASTO E' STATO VISTO — C10 sa ancora dare rosso,")
-        righe.append("  ⭐ e il rosso viene DAL GUASTO: prima era verde (§1.52).")
+        righe.append("⭐ THE FAULT WAS SEEN — C10 can still give red,")
+        righe.append("  ⭐ and the red comes FROM THE FAULT: before it was green (§1.52).")
         return 0, righe
-    righe.append("⛔⛔ IL GUASTO **NON** E' STATO VISTO (la maglia ha detto %d)."
+    righe.append("⛔⛔ THE FAULT WAS **NOT** SEEN (the mesh said %d)."
                  % dopo)
-    righe.append("⇒ C10 non e' piu' capace di dare rosso, e una maglia cosi'")
-    righe.append("  ha lo stesso aspetto di una che non trova niente.")
+    righe.append("⇒ C10 is no longer able to give red, and a mesh like that")
+    righe.append("  looks the same as one that finds nothing.")
     return 1, righe
 
 
@@ -749,13 +749,13 @@ def guasto_innestato(radice):
     import shutil
     import tempfile
 
-    print("== C10 — IL GUASTO INNESTATO (§3.6) ==")
-    print("   ⛔ si legge AL CONTRARIO: 0 = il rosso e' stato VISTO\n")
+    print("== C10 — THE INJECTED FAULT (§3.6) ==")
+    print("   ⛔ it reads THE OTHER WAY ROUND: 0 = the red was SEEN\n")
 
     vero = guarda(radice)
     if vero["elenco"] is None or not vero["elenco"]:
-        print("⛔ non ho letto `GEMELLATI` dal deposito vero: non posso")
-        print("   nemmeno innestare il guasto ⇒ non ho potuto guardare")
+        print("⛔ I did not read `GEMELLATI` from the real repository: I cannot")
+        print("   even inject the fault ⇒ I could not look")
         return 3
 
     dove = tempfile.mkdtemp(prefix="c10-guasto-")
@@ -763,10 +763,10 @@ def guasto_innestato(radice):
         os.makedirs(os.path.join(dove, CASA))
         os.makedirs(os.path.join(dove, GEMELLA))
         shutil.copy2(os.path.join(radice, MAKEFILE), os.path.join(dove, MAKEFILE))
-        # ⛔ Si copia TUTTA la cartella gemella, non solo i dichiarati: la
-        #    terza domanda di C10 e' «l'elenco copre la cartella?», e copiando
-        #    solo i dichiarati la scena sarebbe verde per costruzione ⇒ il
-        #    giudizio «prima» non avrebbe niente da giudicare.
+        # ⛔ The WHOLE twin folder is copied, not only the declared ones: the
+        #    third question of C10 is «does the list cover the folder?», and copying
+        #    only the declared ones the scene would be green by construction ⇒ the
+        #    «before» judgement would have nothing to judge.
         for nome in sorted(os.listdir(os.path.join(radice, GEMELLA))):
             for cartella in (CASA, GEMELLA):
                 a = os.path.join(radice, cartella, nome)
@@ -789,14 +789,14 @@ def guasto_innestato(radice):
 
 def main():
     p = argparse.ArgumentParser(
-        description="C10 — le due copie gemelle del protocollo combaciano")
+        description="C10 — the two twin copies of the protocol match")
     p.add_argument("--radice", default=None,
-                   help="la radice del deposito (predefinito: quella di questo file)")
+                   help="the root of the repository (default: the one of this file)")
     p.add_argument("--certifica", action="store_true",
-                   help="dimostra che il giudice sa dare verde, rosso e «non lo so»")
+                   help="proves that the judge can give green, red and «I do not know»")
     p.add_argument("--guasto-innestato", action="store_true",
-                   help="⛔ innesta un guasto sui file VERI copiati e pretende "
-                        "il rosso — l'esito si legge al contrario (0 = visto)")
+                   help="⛔ injects a fault into the REAL copied files and demands "
+                        "red — the outcome reads the other way round (0 = seen)")
     a = p.parse_args()
 
     if a.certifica:
@@ -805,43 +805,43 @@ def main():
     qui = os.path.dirname(os.path.abspath(__file__))
     radice = a.radice or radice_del_deposito(qui)
 
-    # ⭐⭐ IL TERRENO PRIMA DI TUTTO — e ⛔ `--radice` lo scavalca apposta: chi
-    #    lo passa sta dicendo dove guardare, e se sbaglia deve vedere un 3.
+    # ⭐⭐ THE TERRAIN FIRST OF ALL — and ⛔ `--radice` overrides it on purpose: whoever
+    #    passes it is saying where to look, and if they are wrong they must see a 3.
     if not a.radice:
         c_e, perche = qui_c_e_il_deposito(qui, radice)
         if not c_e:
             print("⛔ %s." % perche)
-            print("   ⇒ se questa e' la macchina di prova, qui le due copie")
-            print("     gemelle NON CI SONO: non c'e' niente da confrontare, e")
-            print("     non e' «non ho potuto guardare» — e' «questa domanda")
-            print("     non si fa qui».")
-            print("   ⭐ Il deposito sta sul portatile, e li' va fatta girare")
+            print("   ⇒ if this is the test machine, the two twin copies")
+            print("     are NOT HERE: there is nothing to compare, and")
+            print("     it is not «I could not look» — it is «this question")
+            print("     is not asked here».")
+            print("   ⭐ The repository lives on the laptop, and that is where it must run")
             print("     (DECISIONI.md §4.6-novemdecies).")
-            print("   ⇒ il terreno non regge")
+            print("   ⇒ the terrain does not hold")
             return 2
 
     if a.guasto_innestato:
         return guasto_innestato(radice)
 
-    print("== C10 — le due copie gemelle del protocollo combaciano? ==")
-    print("   deposito : %s" % radice)
-    print("   le due   : %s/  e  %s/" % (CASA, GEMELLA))
-    print("   l'elenco : `GEMELLATI` LETTO da %s — ⛔ non ricopiato qui" % MAKEFILE)
-    print("   il metro : ⛔ **il file intero, byte per byte** — e non e' un")
-    print("              eccesso: le due copie sono lo stesso modulo montato su")
-    print("              due ospiti, non due varianti (src/Makefile, R12.3)\n")
+    print("== C10 — do the two twin copies of the protocol match? ==")
+    print("   repository: %s" % radice)
+    print("   the two   : %s/  and  %s/" % (CASA, GEMELLA))
+    print("   the list  : `GEMELLATI` READ from %s — ⛔ not copied here" % MAKEFILE)
+    print("   yardstick : ⛔ **the whole file, byte for byte** — and it is not an")
+    print("              excess: the two copies are the same module mounted on")
+    print("              two hosts, not two variants (src/Makefile, R12.3)\n")
 
     f = guarda(radice)
 
     if f["elenco"] is None:
-        print("   ⛔ `GEMELLATI` non letto.")
+        print("   ⛔ `GEMELLATI` not read.")
     else:
-        print("   coppie dichiarate: %d  ⇒  %s"
-              % (len(f["elenco"]), " ".join(f["elenco"]) or "(nessuna)"))
+        print("   declared pairs: %d  ⇒  %s"
+              % (len(f["elenco"]), " ".join(f["elenco"]) or "(none)"))
     print()
 
-    # ⭐ La tabella si stampa SEMPRE, verde o rossa: e' quel che va guardato, e
-    #   chi legge deve poterlo vedere senza rilanciare niente.
+    # ⭐ The table is ALWAYS printed, green or red: it is what must be looked at, and
+    #   whoever reads must be able to see it without relaunching anything.
     if f["coppie"]:
         largh = max(len(c["nome"]) for c in f["coppie"])
         for c in f["coppie"]:
@@ -851,20 +851,20 @@ def main():
                      (c["md5"] or "?")[:12]))
         print()
 
-    # ⛔⛔ E QUI LA PARTE CHE NON FACEVA NESSUNO: l'elenco copre la cartella?
+    # ⛔⛔ AND HERE THE PART NOBODY DID: does the list cover the folder?
     if f["gemella_c_e"]:
-        print("   ⭐ e l'elenco copre tutta la cartella gemella?")
+        print("   ⭐ and does the list cover the whole twin folder?")
         if f["non_dichiarati"]:
             for n in f["non_dichiarati"]:
-                print("     ⛔ %s — sta in tutt'e due, e NON e' dichiarato" % n)
+                print("     ⛔ %s — it is in both, and it is NOT declared" % n)
         else:
-            print("     OK  nessun sorgente di %s/ e' rimasto fuori da `GEMELLATI`"
+            print("     OK  no source of %s/ was left out of `GEMELLATI`"
                   % GEMELLA)
         for n in f["solo_nel_banco"]:
-            print("     ⚠  %s — sta SOLO nel banco: non ha un gemello, non lo "
-                  "giudico" % n)
+            print("     ⚠  %s — it is ONLY in the bench: it has no twin, I do not "
+                  "judge it" % n)
         for n in f["estranei"]:
-            print("     ⚠  %s — non e' un sorgente (%s): non lo giudico"
+            print("     ⚠  %s — it is not a source (%s): I do not judge it"
                   % (n, "/".join(SUFFISSI_SORGENTE)))
         print()
 
@@ -874,17 +874,17 @@ def main():
     print()
 
     if esito == 0:
-        print("⭐ VERDE — e vale la pena dire che cosa NON vuol dire: che `rcp.c`")
-        print("   sia giusto.  ⛔ Due copie identiche dello stesso difetto passano")
-        print("   di qui senza fare rumore.")
+        print("⭐ GREEN — and it is worth saying what it does NOT mean: that `rcp.c`")
+        print("   is right.  ⛔ Two identical copies of the same defect pass")
+        print("   through here without making noise.")
     elif esito == 1:
-        print("⛔⛔ ROSSO — §5.2: si ripara PRIMA di andare avanti.")
-        print("   ⇒ Finche' e' cosi', il protocollo del prodotto e quello dei")
-        print("     banchi sono DUE, e ogni banco che dice verde sull'innesto")
-        print("     non sta dicendo niente sul prodotto.")
+        print("⛔⛔ RED — §5.2: it is repaired BEFORE going on.")
+        print("   ⇒ As long as it is like this, the product's protocol and the")
+        print("     benches' are TWO, and every bench that says green on the graft")
+        print("     is saying nothing about the product.")
     elif esito == 3:
-        print("⛔ NON HO POTUTO GUARDARE (esito 3) — ⛔ e non e' un rosso (§4.5).")
-        print("   ⚠ E un 3 ripetuto non e' un esito: e' un guasto del banco.")
+        print("⛔ I COULD NOT LOOK (outcome 3) — ⛔ and it is not a red (§4.5).")
+        print("   ⚠ And a repeated 3 is not an outcome: it is a fault of the bench.")
     return esito
 
 

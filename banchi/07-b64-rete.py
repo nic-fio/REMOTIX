@@ -1,66 +1,66 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-07-b64-rete — IL DATAGRAM QUANDO LA RETE NON E' IDEALE.
+07-b64-rete — THE DATAGRAM WHEN THE NETWORK IS NOT IDEAL.
 
-⛔ Che cosa era aperto (`fasi/07-audio-e-appunti.md` §8): *«1024/1214 byte sono
-   presi **su cavo**; il giudizio dell'utente e' su **rete di casa**, e vale per
-   quella»*.
+⛔ What was open (`fasi/07-audio-e-appunti.md` §8): *«1024/1214 bytes are
+   taken **on cable**; the user's judgement is on the **home network**, and holds for
+   that»*.
 
-⭐ Qui ci sono due misure, e sono diverse:
+⭐ Here there are two measurements, and they are different:
 
-   1. **`casa`** — il cliente di prova gira SUL PORTATILE, che sta in **WiFi**
-      (`wlo1`, 192.168.0.3), e il server e' sulla macchina di prova, in cavo.
-      ⇒ Il datagram attraversa davvero l'aria: e' la «rete di casa», non una
-      simulazione.  ⛔ Nessun `tc`, nessuna regola: si guarda e basta.
+   1. **`casa`** — the test client runs ON THE LAPTOP, which is on **WiFi**
+      (`wlo1`, 192.168.0.3), and the server is on the test machine, on cable.
+      ⇒ The datagram really crosses the air: it is the «home network», not a
+      simulation.  ⛔ No `tc`, no rule: we just look.
 
-   2. **`netem`** — la rete si guasta APPOSTA, a gradini, per trovare il punto
-      in cui l'esperienza si rompe.  ⛔ E qui c'e' un vincolo che vale piu' della
-      misura: **la regola non deve toccare ne' la sessione ssh ne' la 7730
-      dell'utente**.
-      ⇒ Il guasto si mette su **`lo`** della macchina di prova (il cliente gira
-        dentro il contenitore, quindi il suo traffico passa di li'), con un
-        `prio` a quattro bande e **due filtri `u32` sulla sola porta 7801**:
-        tutto il resto del traffico locale resta nelle bande predefinite.
-        ⛔ `enp7s0` — che porta l'ssh e la 7730 — **non si tocca mai**.
-      ⚠ E si dichiara il prezzo di questa scelta: su `lo` la MTU e' 65536, ⇒
-        **questa meta' NON rimisura «quanti byte porta un datagram»**.  Quella
-        domanda la puo' chiudere solo un cliente vero su una rete vera, ed e' la
-        misura 1.
+   2. **`netem`** — the network is broken ON PURPOSE, in steps, to find the point
+      where the experience breaks.  ⛔ And here there is a constraint worth more than the
+      measurement: **the rule must touch neither the ssh session nor the user's
+      7730**.
+      ⇒ The fault is put on **`lo`** of the test machine (the client runs
+        inside the container, so its traffic goes through there), with a
+        four-band `prio` and **two `u32` filters on port 7801 only**:
+        all the rest of the local traffic stays in the default bands.
+        ⛔ `enp7s0` — which carries ssh and the 7730 — **is never touched**.
+      ⚠ And the price of this choice is declared: on `lo` the MTU is 65536, ⇒
+        **this half does NOT remeasure «how many bytes a datagram carries»**.  That
+        question can only be closed by a real client on a real network, and it is
+        measurement 1.
 
-⛔ IL DISINNESCO E' AUTOMATICO: prima di applicare qualunque regola si lancia un
-   guardiano staccato che, dopo N secondi, toglie la disciplina **anche se
-   questo copione muore o l'ssh cade**.  Una macchina lasciata con `netem` su
-   `lo` e' un guasto che il prossimo banco attribuirebbe al prodotto.
-   ⚠ E per otto profili su nove **questo file non lo rispettava**: vedi il
-     riquadro di `rimetti`, cura del 23 agosto 2026.
+⛔ THE DEFUSING IS AUTOMATIC: before applying any rule a detached
+   guardian is launched which, after N seconds, removes the qdisc **even if
+   this script dies or ssh drops**.  A machine left with `netem` on
+   `lo` is a fault the next bench would attribute to the product.
+   ⚠ And for eight profiles out of nine **this file did not respect it**: see the
+     box of `rimetti`, cure of 23 August 2026.
 
-⛔⛔ QUATTRO DIFETTI CURATI IL 23 AGOSTO 2026, e sono tutti e quattro della
-    stessa forma — **silenzio invece di rosso**, cioe' un numero plausibile e
-    falso al posto di un «non ho letto» o di un rosso:
-      1. `rimetti()` disarmava il guardiano dal gradino `0-liscio`, il PRIMO
-         ⇒ gli otto dopo giravano scoperti.  ⇒ `rimetti(dillo, disarma)`.
-      2. `a_non_si_apre` (`ricevuti == 0`) non poteva dare rosso: il cliente
-         stampa `[audio] ricevuti 0` anche dal ramo `except`.  ⇒ sostituito da
-         `a_resa_sul_filo`, che guarda i DUE capi.  E il `[M]` che ci stava
-         appeso era falso (`banchi/09-b78-apertura.py`).
-      3. `spediti_dal_server` a `None` («non ho letto il registro») filava al
-         predicato come se fosse tutto a posto ⇒ adesso e' MUTO.
-      4. La chiusura di una sessione e' LENTA (`[M]` fino a 29 s in piu' col
-         pacer in coda) ⇒ il conto del server era **di un altro giro**, e il
-         posto di §4.4-bis era ancora occupato.  ⇒ `registro_posato()`.
-    ⚠ R13 era stato dichiarato chiuso su questo file, e ne sono usciti altri
-      quattro casi: la forma non e' un difetto, e' un'abitudine del banco.
+⛔⛔ FOUR DEFECTS CURED ON 23 AUGUST 2026, and all four have the
+    same form — **silence instead of red**, that is a plausible and
+    false number in place of an «I did not read» or a red:
+      1. `rimetti()` disarmed the guardian from step `0-liscio`, the FIRST
+         ⇒ the eight after it ran uncovered.  ⇒ `rimetti(dillo, disarma)`.
+      2. `a_non_si_apre` (`ricevuti == 0`) could not give red: the client
+         prints `[audio] ricevuti 0` even from the `except` branch.  ⇒ replaced by
+         `a_resa_sul_filo`, which looks at BOTH ends.  And the `[M]` hanging
+         on it was false (`banchi/09-b78-apertura.py`).
+      3. `spediti_dal_server` at `None` («I did not read the log») went through to the
+         predicate as if everything were fine ⇒ now it is MUTE.
+      4. Closing a session is SLOW (`[M]` up to 29 s more with the
+         pacer queued) ⇒ the server's count was **from another run**, and the
+         slot of §4.4-bis was still taken.  ⇒ `registro_posato()`.
+    ⚠ R13 had been declared closed on this file, and four more cases came
+      out of it: the form is not a defect, it is a habit of the bench.
 
-⭐ `[M]` 23 agosto 2026, giro intero dopo le cure — **9 gradini, 0 rossi, 0
-   muti**, e il gradino della perdita adesso misura il filo:
-   `7-perdita-10` ⇒ ricevuti **4 077** / spediti dal server **4 504** =
-   **0,905**, contro `1-p` = 0,901 con `p` = **9,91 %** letta da `tc -s qdisc`.
+⭐ `[M]` 23 August 2026, full run after the cures — **9 steps, 0 red, 0
+   mute**, and the loss step now measures the wire:
+   `7-perdita-10` ⇒ received **4 077** / sent by the server **4 504** =
+   **0.905**, against `1-p` = 0.901 with `p` = **9.91 %** read from `tc -s qdisc`.
 
-Uso (dal portatile):
+Usage (from the laptop):
     python3 banchi/07-b64-rete.py casa   [--secondi 30]
     python3 banchi/07-b64-rete.py netem  [--secondi 25]
-    python3 banchi/07-b64-rete.py rimetti          # ⛔ e si verifica
+    python3 banchi/07-b64-rete.py rimetti          # ⛔ and it is checked
 """
 import argparse, json, os, subprocess, sys, time
 
@@ -78,22 +78,22 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 FUORI = os.environ.get("FUORI", "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX/"
                                 "84687524-93d6-4003-8cd1-1ed07aa63454/scratchpad/r7")
 
-# ⛔ L'interfaccia che NON si tocca, scritta qui perche' si veda:
-VIETATA = "enp7s0"          # ci passano l'ssh e la 7730 dell'utente
-DEV = "lo"                  # ci passa solo il traffico locale, cioe' il mio
+# ⛔ The interface that is NOT touched, written here so it can be seen:
+VIETATA = "enp7s0"          # ssh and the user's 7730 go through it
+DEV = "lo"                  # only local traffic goes through it, that is mine
 
-# I gradini, dal piu' mite al piu' cattivo.  ⭐ L'atteso e' scritto PRIMA.
-# ⛔⛔ R13 — GLI «ATTESO» ERANO PROSA: stampati, archiviati, MAI confrontati.
-#      Nove frasi che descrivevano quel che sarebbe dovuto succedere, e nessuna
-#      riga che verificasse se era successo.  ⚠ Un banco cosi' non puo' dare
-#      rosso: qualunque numero esca, la frase accanto resta vera «a leggerla».
+# The steps, from the mildest to the nastiest.  ⭐ The expectation is written FIRST.
+# ⛔⛔ R13 — THE «EXPECTED» WERE PROSE: printed, archived, NEVER compared.
+#      Nine sentences describing what should have happened, and not one
+#      line checking whether it had.  ⚠ A bench like that cannot give
+#      red: whatever number comes out, the sentence next to it stays true «on reading».
 #
-# ⭐ Adesso ogni gradino porta un PREDICATO — una funzione che riceve i numeri
-#    e torna `(passa, perche)` — e il verdetto del banco e' la loro somma.
-#    L'uscita del copione e' 0 solo se tutti passano.
+# ⭐ Now every step carries a PREDICATE — a function that receives the numbers
+#    and returns `(passa, perche)` — and the bench's verdict is their sum.
+#    The script's exit is 0 only if all pass.
 #
-# ⛔ E i predicati sono scritti PRIMA di girare, come gli attesi di `07-b43`:
-#    sono la predizione, e quando sbagliano si vede (`LEZIONI.md` §1.11).
+# ⛔ And the predicates are written BEFORE running, like the expectations of `07-b43`:
+#    they are the prediction, and when they are wrong it shows (`LEZIONI.md` §1.11).
 
 
 def _p(cond, perche):
@@ -101,134 +101,134 @@ def _p(cond, perche):
 
 
 def a_pulito(n):
-    """Il denominatore: quasi tutto arriva, niente si scarta, il tono e' puro."""
+    """The denominator: almost everything arrives, nothing is discarded, the tone is pure."""
     return _p(n["resa"] is not None and n["resa"] >= 0.99
               and n["vecchi"] == 0 and (n["purezza"] or 0) >= 0.80,
-              "resa >= 0,99 · vecchi 0 · purezza >= 0,80")
+              "yield >= 0.99 · stale 0 · purity >= 0.80")
 
 
 def a_come_pulito(n):
-    """Il ritardo fisso non riordina: dev'essere indistinguibile dal liscio."""
+    """A fixed delay does not reorder: it must be indistinguishable from the smooth one."""
     return a_pulito(n)
 
 
 def a_sorpassi(minimo):
-    """Il jitter fa sorpassare i datagram, e §6.3 li butta: «vecchi» DEVE salire."""
+    """Jitter makes datagrams overtake each other, and §6.3 throws them away: «stale» MUST rise."""
     def f(n):
         return _p(n["vecchi"] >= minimo,
-                  "vecchi >= %d (il jitter riordina e §6.3 scarta)" % minimo)
+                  "stale >= %d (jitter reorders and §6.3 discards)" % minimo)
     return f
 
 
 def a_perdita(frazione, tolleranza=0.5):
-    """La perdita si vede nella resa, e in proporzione a quel che netem toglie."""
+    """Loss shows in the yield, and in proportion to what netem removes."""
     def f(n):
         if n["resa"] is None:
-            return _p(False, "nessuna resa da confrontare")
+            return _p(False, "no yield to compare")
         atteso = 1.0 - frazione
         return _p(abs(n["resa"] - atteso) <= tolleranza * frazione + 0.02,
-                  "resa ~ %.3f (perdita %.0f%%), vista %.3f"
+                  "yield ~ %.3f (loss %.0f%%), seen %.3f"
                   % (atteso, frazione * 100, n["resa"]))
     return f
 
 
 def a_resa_sul_filo(frazione, tolleranza=0.35):
-    """LA RESA MISURATA SUI DUE CAPI: quanti ne ha spediti il SERVER, quanti ne
-    ha ricevuti il CLIENTE — e il confronto e' con la perdita che `netem` ha
-    **davvero** applicato, letta da `tc -s qdisc`, non con quella chiesta.
+    """THE YIELD MEASURED AT BOTH ENDS: how many the SERVER sent, how many
+    the CLIENT received — and the comparison is with the loss `netem`
+    **really** applied, read from `tc -s qdisc`, not with the one requested.
 
-    ⛔⛔ QUESTO PREDICATO SOSTITUISCE `a_non_si_apre`, CHE NON POTEVA DARE
-       ROSSO.  Era:
+    ⛔⛔ THIS PREDICATE REPLACES `a_non_si_apre`, WHICH COULD NOT GIVE
+       RED.  It was:
 
            def a_non_si_apre(n): return _p(n["ricevuti"] == 0, ...)
 
-       e `banchi/01-b3-cliente.py:1466` (`scrivi_audio`) stampa
-       `[audio] ricevuti 0` **anche dal ramo `except`**, prima di rilanciare.
-       ⇒ **Ogni** modo di fallire — un `CONGEDO`, un tetto scaduto, un
-       `NameError` del banco — dava «ricevuti 0» e faceva passare il gradino di
-       **verde**.  Non misurava *«non si apre»*: misurava *«non ho ricevuto»*,
-       e le due cose hanno la stessa faccia (`LEZIONI.md` §1.9).
-    ⛔ E il `[M]` che ci stava appeso — *«la sessione non si apre affatto in
-       25 s»* — era **falso**.  `[M]` 23 agosto 2026, `banchi/09-b78-apertura.py`:
-       al 10 % di perdita la sessione si apre **10 volte su 10 in 1,1 s**
-       (mediana), al 25 % 10/10 in 1,3 s; la rete costa **285 ms** fra lo 0 e
-       il 25 %, e il secondo che si vedeva era il ritardo fisso di §4.4-bis.
+       and `banchi/01-b3-cliente.py:1466` (`scrivi_audio`) prints
+       `[audio] ricevuti 0` **even from the `except` branch**, before re-raising.
+       ⇒ **Every** way of failing — a `CONGEDO`, an expired ceiling, a
+       `NameError` in the bench — gave «ricevuti 0» and passed the step as
+       **green**.  It did not measure *«it does not open»*: it measured *«I did not receive»*,
+       and the two look the same (`LEZIONI.md` §1.9).
+    ⛔ And the `[M]` hanging on it — *«the session does not open at all in
+       25 s»* — was **false**.  `[M]` 23 August 2026, `banchi/09-b78-apertura.py`:
+       at 10 % loss the session opens **10 times out of 10 in 1.1 s**
+       (median), at 25 % 10/10 in 1.3 s; the network costs **285 ms** between 0 and
+       25 %, and the second that could be seen was the fixed delay of §4.4-bis.
 
-    ⚠⚠ E IL CONTO DELLA PERDITA ATTESA NON E' QUELLO CHE SEMBRA — chi lo
-       ritara senza questa nota lo ritara nel verso sbagliato.
-       I due filtri `u32` di `guasta()` prendono i **due versi** (`sport` e
-       `dport`), quindi:
-         · un **giro** di rete (andata + ritorno) paga `1-(1-p)²`
-           ⇒ il **19 %** quando `p` = 10 %;
-         · un **datagram**, che fa **un verso solo**, paga `p`
-           ⇒ il **10 %** quando `p` = 10 %.
-       Qui si guarda un datagram, non un giro: la resa attesa e' **`1-p`**.
-       `[M]` 23 agosto 2026 a `p` = 10 %: ricevuti **3 235**, spediti dal
-       server **3 607** ⇒ resa **0,897**, che e' `1-p` (0,90), **non**
-       `1-(1-p)²` (0,81).
+    ⚠⚠ AND THE EXPECTED-LOSS CALCULATION IS NOT WHAT IT SEEMS — whoever
+       retunes it without this note retunes it the wrong way.
+       The two `u32` filters of `guasta()` take **both directions** (`sport` and
+       `dport`), so:
+         · a network **round trip** (there and back) pays `1-(1-p)²`
+           ⇒ **19 %** when `p` = 10 %;
+         · a **datagram**, which goes **one way only**, pays `p`
+           ⇒ **10 %** when `p` = 10 %.
+       Here we look at a datagram, not a round trip: the expected yield is **`1-p`**.
+       `[M]` 23 August 2026 at `p` = 10 %: received **3 235**, sent by the
+       server **3 607** ⇒ yield **0.897**, which is `1-p` (0.90), **not**
+       `1-(1-p)²` (0.81).
 
-    ⚠ E questa resa NON e' `resa_campioni` del giudice: quella ci mette dentro
-      anche i blocchi che il server non ha **mai** spedito (finestra chiusa —
-      `[M]` 391 su 3 607 al 10 %), e cosi' somma «perso sul filo» e «mai
-      spedito», che sono due fatti.  Qui il denominatore e' `spediti`.
+    ⚠ And this yield is NOT the judge's `resa_campioni`: that one also counts
+      the blocks the server **never** sent (window closed —
+      `[M]` 391 out of 3 607 at 10 %), and so it adds up «lost on the wire» and «never
+      sent», which are two facts.  Here the denominator is `spediti`.
     """
     def f(n):
         ric, sped = n.get("ricevuti"), n.get("spediti_dal_server")
-        # ⛔ `CODER.md` §3.10: «non ho letto» non e' «zero», ed e' rosso.
+        # ⛔ `CODER.md` §3.10: «I did not read» is not «zero», and it is red.
         if ric is None or not sped:
-            return _p(False, "manca un capo del conto: ricevuti=%s · "
-                             "spediti dal server=%s" % (ric, sped))
+            return _p(False, "one end of the count is missing: received=%s · "
+                             "sent by the server=%s" % (ric, sped))
         resa = ric / float(sped)
         vera = n.get("perdita_vera")
         p = vera if vera is not None else frazione
         atteso = 1.0 - p
         larghezza = tolleranza * p + 0.02
         return _p(abs(resa - atteso) <= larghezza,
-                  "resa sul filo %d/%d = %.3f · attesa 1-p = %.3f "
+                  "yield on the wire %d/%d = %.3f · expected 1-p = %.3f "
                   "(p %s = %.3f, ±%.3f)"
                   % (ric, sped, resa, atteso,
-                     "letta da tc" if vera is not None else "CHIESTA (tc muto)",
+                     "read from tc" if vera is not None else "REQUESTED (tc mute)",
                      p, larghezza))
     return f
 
 
 PROFILI = [
-    ("0-liscio", [], "nessun guasto: e' il denominatore, e deve essere pulito",
+    ("0-liscio", [], "no fault: it is the denominator, and it must be clean",
      a_pulito),
     ("1-ritardo-30", ["delay", "30ms"],
-     "30 ms fissi, senza jitter: arrivano tardi ma in ordine -- non deve cambiare niente",
+     "30 ms fixed, no jitter: they arrive late but in order -- nothing must change",
      a_come_pulito),
     ("2-jitter-2", ["delay", "20ms", "2ms", "distribution", "normal"],
-     "jitter 2 ms, meno di un blocco PCM (5 ms): i sorpassi devono gia' esserci",
+     "jitter 2 ms, less than one PCM block (5 ms): overtakes must already be there",
      a_sorpassi(100)),
     ("3-jitter-5", ["delay", "20ms", "5ms", "distribution", "normal"],
-     "jitter 5 ms = un blocco: i sorpassi crescono",
+     "jitter 5 ms = one block: overtakes grow",
      a_sorpassi(500)),
     ("4-jitter-10", ["delay", "20ms", "10ms", "distribution", "normal"],
-     "jitter 10 ms = due blocchi", a_sorpassi(1000)),
+     "jitter 10 ms = two blocks", a_sorpassi(1000)),
     ("5-jitter-15", ["delay", "30ms", "15ms", "distribution", "normal"],
-     "jitter 15 ms = tre blocchi: qui l ascolto e' gia' rotto",
+     "jitter 15 ms = three blocks: here listening is already broken",
      a_sorpassi(1500)),
-    ("6-perdita-1", ["loss", "1%"], "1 datagram su 100 perso",
+    ("6-perdita-1", ["loss", "1%"], "1 datagram out of 100 lost",
      a_perdita(0.01)),
-    # ⛔ LA PROSA DI QUESTO GRADINO ERA FALSA e va letta come un avvertimento:
-    #    diceva «10 %: `[M]` la sessione non si apre affatto in 25 s».
-    #    `[M]` 23 agosto 2026 (`banchi/09-b78-apertura.py`): la sessione si apre
-    #    **10 volte su 10, mediana 1,1 s**; al 25 % 10/10 in 1,3 s.  Il `[M]`
-    #    vecchio era il riflesso di un predicato che non poteva dare rosso.
+    # ⛔ THE PROSE OF THIS STEP WAS FALSE and must be read as a warning:
+    #    it said «10 %: `[M]` the session does not open at all in 25 s».
+    #    `[M]` 23 August 2026 (`banchi/09-b78-apertura.py`): the session opens
+    #    **10 times out of 10, median 1.1 s**; at 25 % 10/10 in 1.3 s.  The old
+    #    `[M]` was the reflection of a predicate that could not give red.
     ("7-perdita-10", ["loss", "10%"],
-     "10 %: `[M]` 23 ago 2026 la sessione SI APRE (10/10, mediana 1,1 s) e il "
-     "filo rende 1-p ~ 0,90 — ricevuti/spediti sui due capi, non 1-(1-p)²",
+     "10 %: `[M]` 23 Aug 2026 the session DOES OPEN (10/10, median 1.1 s) and the "
+     "wire yields 1-p ~ 0.90 — received/sent at both ends, not 1-(1-p)²",
      a_resa_sul_filo(0.10)),
     ("8-casa-cattiva", ["delay", "40ms", "20ms", "distribution", "normal",
                         "loss", "2%"],
-     "il misto che somiglia a una casa col WiFi lontano", a_sorpassi(500)),
+     "the mix that resembles a home with distant WiFi", a_sorpassi(500)),
 ]
 
 
 def rem(comando, tetto=120):
-    """⛔ Niente redirezione ATTORNO a ssh: la richiesta di sudo va sullo stderr
-       e un redirect la mangerebbe — il comando resterebbe appeso in silenzio."""
+    """⛔ No redirection AROUND ssh: the sudo prompt goes to stderr
+       and a redirect would eat it — the command would hang in silence."""
     p = subprocess.run(["ssh", "-o", "BatchMode=yes", MACCHINA, comando],
                        capture_output=True, timeout=tetto)
     return (p.returncode, p.stdout.decode("utf-8", "replace"),
@@ -244,16 +244,16 @@ def qdisc():
 
 
 def perdita_vera():
-    """⛔ LA PERDITA CHE `netem` HA DAVVERO APPLICATO, **letta** e non dedotta.
+    """⛔ THE LOSS `netem` REALLY APPLIED, **read** and not deduced.
 
-    ⚠ «Ho chiesto il 10 %» e «ne ha buttati il 10 %» sono due fatti diversi:
-      `netem` butta a caso, e su qualche migliaio di pacchetti la frazione vera
-      si scosta.  Il predicato si tara su QUESTA, o darebbe rosso alla rete
-      invece che al prodotto.
-    ⛔ Si legge PRIMA di passare al gradino dopo: il `tc qdisc del` con cui si
-       apre il profilo successivo azzera i contatori.
-    Torna `None` quando non c'e' nessun `netem` (gradino liscio) o quando la
-    riga non si legge — ⛔ e `None` NON e' zero.
+    ⚠ «I asked for 10 %» and «it threw away 10 %» are two different facts:
+      `netem` drops at random, and over a few thousand packets the true fraction
+      drifts.  The predicate is tuned on THIS one, or it would give red to the network
+      instead of the product.
+    ⛔ It is read BEFORE moving to the next step: the `tc qdisc del` with which
+       the next profile opens resets the counters.
+    Returns `None` when there is no `netem` (smooth step) or when the
+    line cannot be read — ⛔ and `None` is NOT zero.
     """
     rc, out, _ = root("/usr/sbin/tc -s qdisc show dev %s" % DEV)
     import re as _re
@@ -276,26 +276,26 @@ def perdita_vera():
 
 
 
-# ── ⛔ IL GUARDIANO SI ARMA E SI DISARMA PER PID, NON PER MOTIVO ───────────
+# ── ⛔ THE GUARDIAN IS ARMED AND DISARMED BY PID, NOT BY PATTERN ─────────
 GUARDIANO = LAV + "/.guardiano.pid"
 
 
 def guardiano_arma(secondi):
-    """Nasce con `setsid`: e' capo del suo gruppo, e il gruppo si uccide intero."""
+    """Born with `setsid`: it leads its own group, and the group is killed whole."""
     guardiano_disarma()
-    # ⛔ Il `&` e l'`echo $!` devono girare DENTRO la shell di root, o il
-    #    redirect verso `$LAV` (che e' di root) fallisce e il pid non si scrive:
-    #    `[M]` il primo giro stampava «pid ?», cioe' un guardiano che non si
-    #    sarebbe potuto disarmare per pid — la cura senza la sua meta'.
+    # ⛔ The `&` and the `echo $!` must run INSIDE root's shell, or the
+    #    redirect to `$LAV` (which belongs to root) fails and the pid is not written:
+    #    `[M]` the first run printed «pid ?», that is a guardian that could not
+    #    have been disarmed by pid — the cure without its other half.
     root('bash -c "setsid sh -c \'sleep %d; /usr/sbin/tc qdisc del dev %s root\' '
          '>/dev/null 2>&1 & echo \\$! > %s"' % (secondi, DEV, GUARDIANO))
     rc, out, _ = root("cat %s 2>/dev/null" % GUARDIANO)
-    print("   OK  guardiano armato per %d s (pid %s): la rete torna com'era "
-          "ANCHE se muoio" % (secondi, out.strip() or "?"))
+    print("   OK  guardian armed for %d s (pid %s): the network goes back as it was "
+          "EVEN if I die" % (secondi, out.strip() or "?"))
 
 
 def guardiano_disarma():
-    """⛔ Si uccide il GRUPPO, cosi' `sh` non arriva mai alla riga del `tc`."""
+    """⛔ The GROUP is killed, so `sh` never reaches the `tc` line."""
     rc, out, _ = root("cat %s 2>/dev/null || true" % GUARDIANO)
     p = out.strip()
     if p.isdigit():
@@ -304,76 +304,76 @@ def guardiano_disarma():
 
 
 def rimetti(dillo=True, disarma=True):
-    """⛔ E si VERIFICA: «ho tolto» e «non c'e' piu'» sono due fatti diversi.
+    """⛔ And it is CHECKED: «I removed it» and «it is no longer there» are two different facts.
 
-    ⛔⭐ `disarma` NON E' UNA COMODITA', ED ECCO PERCHE' ESISTE — chi lo legge
-       senza la ragione lo toglie, e il difetto torna.
-       `[M]` 23 agosto 2026, rileggendo: il profilo `0-liscio` e' il **primo**
-       della griglia, e per «guastare con nessuna regola» chiamava
-       `rimetti(False)` — che disarmava il guardiano armato **due righe prima**
-       in `principale()`.  ⇒ Gli **otto profili successivi** giravano senza
-       rete di sicurezza: una morte del copione (o un ssh caduto) da li' in poi
-       lasciava la macchina col `netem` addosso, e il prossimo banco avrebbe
-       attribuito **al prodotto** un guasto mio.  E' scritto nell'intestazione
-       di questo stesso file (§«IL DISINNESCO E' AUTOMATICO»), e il file non lo
-       rispettava: silenzio invece di rosso, come i predicati di R13.
-       ⇒ Chi toglie la disciplina **dentro** un giro passa `disarma=False`;
-         solo chi chiude il giro (il `finally`, e il passo `rimetti` da riga di
-         comando) disarma davvero.
-    ⚠ La firma resta compatibile: `rimetti()` e `rimetti(dillo=False)` — le due
-      forme che usano `09-b70`, `09-b76` e `09-b79` — si comportano come prima.
+    ⛔⭐ `disarma` IS NOT A CONVENIENCE, AND HERE IS WHY IT EXISTS — whoever reads it
+       without the reason removes it, and the defect comes back.
+       `[M]` 23 August 2026, rereading: the profile `0-liscio` is the **first**
+       of the grid, and to «break with no rule» it called
+       `rimetti(False)` — which disarmed the guardian armed **two lines earlier**
+       in `principale()`.  ⇒ The **eight following profiles** ran without a
+       safety net: a death of the script (or a dropped ssh) from there on
+       left the machine with `netem` on it, and the next bench would have
+       attributed **to the product** a fault of mine.  It is written in the header
+       of this very file (§«THE DEFUSING IS AUTOMATIC»), and the file did not
+       respect it: silence instead of red, like the predicates of R13.
+       ⇒ Whoever removes the qdisc **inside** a run passes `disarma=False`;
+         only whoever closes the run (the `finally`, and the `rimetti` step from the
+         command line) really disarms.
+    ⚠ The signature stays compatible: `rimetti()` and `rimetti(dillo=False)` — the two
+      forms used by `09-b70`, `09-b76` and `09-b79` — behave as before.
     """
-    # ⛔ Prima si disarma il guardiano, POI si toglie la disciplina: al
-    #    contrario resterebbe una finestra in cui il guardiano puo' scattare su
-    #    un `netem` che nel frattempo ha messo qualcun altro.
+    # ⛔ First the guardian is disarmed, THEN the qdisc is removed: the
+    #    other way round would leave a window in which the guardian can fire on
+    #    a `netem` that someone else has put there in the meantime.
     if disarma:
         guardiano_disarma()
     root("/usr/sbin/tc qdisc del dev %s root 2>/dev/null; true" % DEV)
     q = qdisc()
     ok = "netem" not in q
     if dillo:
-        print("   %s la disciplina di «%s» adesso e': %s"
-              % ("OK " if ok else "NO ", DEV, q or "(nessuna)"))
-        # ⛔ E si dichiara che l'interfaccia vietata non e' MAI stata toccata.
+        print("   %s the qdisc of «%s» is now: %s"
+              % ("OK " if ok else "NO ", DEV, q or "(none)"))
+        # ⛔ And we declare that the forbidden interface was NEVER touched.
         print("   --  %s (ssh + 7730): %s"
               % (VIETATA, root("/usr/sbin/tc qdisc show dev %s" % VIETATA)[1].split("\n")[0]))
     return ok
 
 
 def guasta(regole):
-    """Il guasto, e SOLO sul mio traffico."""
+    """The fault, and ONLY on my traffic."""
     if not regole:
-        # ⛔ `disarma=False`: siamo DENTRO il giro, e il guardiano e' di tutto
-        #    il giro (vedi il riquadro di `rimetti`).  Con `rimetti(False)` il
-        #    gradino `0-liscio` scopriva gli otto gradini dopo di se'.
+        # ⛔ `disarma=False`: we are INSIDE the run, and the guardian belongs to the whole
+        #    run (see the box of `rimetti`).  With `rimetti(False)` the
+        #    step `0-liscio` uncovered the eight steps after it.
         rimetti(False, disarma=False)
-        return True, "(nessun guasto)"
+        return True, "(no fault)"
     passi = [
         "/usr/sbin/tc qdisc del dev %s root 2>/dev/null; true" % DEV,
         "/usr/sbin/tc qdisc add dev %s root handle 1: prio bands 4" % DEV,
         "/usr/sbin/tc qdisc add dev %s parent 1:4 handle 40: netem %s"
         % (DEV, " ".join(regole)),
-        # ⛔ DUE filtri, e la porta e' la MIA: uno per i datagram che scendono
-        #    (sport 7801) e uno per quel che risale (dport 7801).
+        # ⛔ TWO filters, and the port is MINE: one for the datagrams going down
+        #    (sport 7801) and one for what comes back up (dport 7801).
         "/usr/sbin/tc filter add dev %s protocol ip parent 1:0 prio 1 u32 "
         "match ip protocol 17 0xff match ip sport %d 0xffff flowid 1:4" % (DEV, PORTA),
         "/usr/sbin/tc filter add dev %s protocol ip parent 1:0 prio 1 u32 "
         "match ip protocol 17 0xff match ip dport %d 0xffff flowid 1:4" % (DEV, PORTA),
     ]
-    # (il guardiano si arma UNA volta sola, in `principale`: vedi la nota li')
+    # (the guardian is armed ONCE only, in `principale`: see the note there)
     for c in passi:
         rc, out, err = root(c)
         if rc != 0 and "del dev" not in c:
             rimetti()
-            return False, "⛔ tc ha rifiutato «%s»: %s" % (c[-60:], err[:200])
+            return False, "⛔ tc refused «%s»: %s" % (c[-60:], err[:200])
     return True, qdisc()
 
 
 def innesca_sessione(secondi=8):
-    """⛔ Il sink «remotix» lo crea il FIGLIO, e il figlio nasce quando un
-       cliente entra: su un server appena acceso `pw-play --target remotix` non
-       si lega a niente.  ⇒ Si apre una sessione corta apposta; il palco e il
-       sink le sopravvivono (I4)."""
+    """⛔ The «remotix» sink is created by the CHILD, and the child is born when a
+       client comes in: on a freshly started server `pw-play --target remotix` binds
+       to nothing.  ⇒ A short session is opened on purpose; the stage and the
+       sink outlive it (I4)."""
     dentro = ("python3 -u %s/banchi/01-b3-cliente.py --indirizzo %s --porta %d "
               "--utente %s --parola-file %s/parola --audio-codec pcm --resta %d"
               % (DENTRO_ALB, IND, PORTA, UTENTE, DENTRO_LAV, secondi))
@@ -383,9 +383,9 @@ def innesca_sessione(secondi=8):
 
 
 def tono_fabbrica(hz=440, secondi=70, ampiezza=0.5):
-    """⛔ Il tono si fabbrica QUI se manca, e l'ampiezza e' NOTA: l'RMS atteso
-       e' un conto (A/sqrt2), non una stima.  ⚠ E il file dev'essere leggibile
-       dall'utente della sessione, che non e' root."""
+    """⛔ The tone is built HERE if missing, and the amplitude is KNOWN: the expected RMS
+       is a calculation (A/sqrt2), not an estimate.  ⚠ And the file must be readable
+       by the session's user, who is not root."""
     f = "%s/tono-%d.wav" % (LAV, hz)
     rc, out, _ = root("test -s %s && stat -c %%s %s || echo 0" % (f, f))
     if out.strip().isdigit() and int(out.strip()) > 48000 * secondi * 2:
@@ -404,16 +404,16 @@ def tono_fabbrica(hz=440, secondi=70, ampiezza=0.5):
 
 def tono_accendi():
     tono_fabbrica()
-    """⛔ Il tono deve suonare DENTRO la sessione, o il giudice misura silenzio
-       e il banco riferisce «rms 0» come se fosse un guasto della rete.
-       ⚠ E' successo al primo giro di «casa»: 5993 datagram perfetti e rms 0,0.
-       ⭐ E «acceso» non e' «suona»: si controlla che il grafo abbia i legami."""
-    # ⛔ IL TONO SI RIPETE IN UN CICLO, e la prima stesura no.
-    #   Il file dura ~55 s; il giro dei profili ne dura trecento.  Dal secondo
-    #   profilo in poi il giudice leggeva rms 0,0 e purezza nulla -- cioe'
-    #   "silenzio" -- accanto a contatori di trasporto perfetti.  Il numero
-    #   della RETE restava buono, ma la meta' che ASCOLTA era sparita senza
-    #   dirlo, che e' precisamente la trappola 1 di questa fase.
+    """⛔ The tone must play INSIDE the session, or the judge measures silence
+       and the bench reports «rms 0» as if it were a network fault.
+       ⚠ It happened on the first «casa» run: 5993 perfect datagrams and rms 0.0.
+       ⭐ And «started» is not «playing»: we check that the graph has the links."""
+    # ⛔ THE TONE REPEATS IN A LOOP, and the first draft did not.
+    #   The file lasts ~55 s; the run of the profiles lasts three hundred.  From the second
+    #   profile on the judge read rms 0.0 and zero purity -- that is
+    #   "silence" -- next to perfect transport counters.  The NETWORK number
+    #   stayed good, but the half that LISTENS had vanished without
+    #   saying so, which is precisely trap 1 of this phase.
     root("setsid nohup setpriv --reuid=%d --regid=%d --init-groups env -i "
          "HOME=/home/%s USER=%s LANG=C.UTF-8 PATH=/usr/local/bin:/usr/bin:/bin "
          "XDG_RUNTIME_DIR=/run/user/%d DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/%d/bus "
@@ -433,15 +433,15 @@ def tono_accendi():
 
 
 def tono_spegni():
-    # ⛔ si uccide anche il CICLO, non solo il lettore: uccidere pw-play
-    #   dentro un `while :` lo fa ripartire subito, ed e' la stessa forma del
-    #   difetto di 07-b43 (`kill` sull'involucro invece che sul lettore).
+    # ⛔ the LOOP is killed too, not only the player: killing pw-play
+    #   inside a `while :` makes it restart at once, and it is the same form as the
+    #   defect of 07-b43 (`kill` on the wrapper instead of on the player).
     root("pkill -u %d -f 'while :; do pw-play'; pkill -u %d -x pw-play; true"
          % (UID_B, UID_B))
 
 
 def cliente(nome, dove, secondi):
-    """dove = 'portatile' (WiFi vero) oppure 'contenitore' (loopback + netem)."""
+    """dove = 'portatile' (real WiFi) or 'contenitore' (loopback + netem)."""
     j = os.path.join(FUORI, nome + ".jsonl")
     t = os.path.join(FUORI, nome + ".txt")
     for f in (j, t, os.path.join(FUORI, nome + ".segnale")):
@@ -450,7 +450,7 @@ def cliente(nome, dove, secondi):
     if dove == "portatile":
         pf = os.path.join(FUORI, ".parola")
         if not os.path.exists(pf):
-            print("⛔ manca %s (0600, con la parola di %s): NON la metto in argv (D12)"
+            print("⛔ %s is missing (0600, with the password of %s): I do NOT put it in argv (D12)"
                   % (pf, UTENTE))
             return None
         cmd = [os.environ.get("PY", "python3"), "-u",
@@ -472,21 +472,21 @@ def cliente(nome, dove, secondi):
                             secondi + 180)
         uscita = out + err
         open(t, "w").write(uscita)
-        # si riporta il JSONL
+        # the JSONL is brought back
         subprocess.run("ssh -o BatchMode=yes %s \"printf '%%s\\n' '%s' | sudo -S -p '' "
                        "cat %s/rete-%s.jsonl\" > %s"
                        % (MACCHINA, PAROLA_SUDO, LAV, nome, j), shell=True)
     conti = {}
     for r in uscita.splitlines():
-        if "[audio] ricevuti" in r or "[audio] scartati" in r:
+        if "[audio] received" in r or "[audio] discarded" in r:
             conti[r.strip()[:9]] = r.strip()
     return {"uscita_coda": uscita[-1200:], "conti": conti,
             "jsonl": j, "byte_jsonl": os.path.getsize(j) if os.path.exists(j) else 0}
 
 
 def conta_conti_finali():
-    """Quante righe «audio di …, conto finale» ci sono ADESSO nel registro."""
-    rc, out, _ = root("grep -ac 'audio di .*conto finale' %s/registro.log || true"
+    """How many «audio of …, final count» lines there are NOW in the log."""
+    rc, out, _ = root("grep -ac 'audio of .*final count' %s/registro.log || true"
                       % LAV)
     try:
         return int(out.strip())
@@ -495,34 +495,34 @@ def conta_conti_finali():
 
 
 def registro_posato(tetto=90.0, quiete=3.0):
-    """⛔⛔ SI ASPETTA CHE LA SESSIONE DI PRIMA ABBIA FINITO DI CHIUDERSI, e
-       sono due guasti in uno quelli che questo evita — `[M]` 23 agosto 2026,
-       trovati facendo girare il banco dopo le cure di stasera:
+    """⛔⛔ WE WAIT FOR THE PREVIOUS SESSION TO HAVE FINISHED CLOSING, and
+       this avoids two faults in one — `[M]` 23 August 2026,
+       found by running the bench after tonight's cures:
 
-       1. **IL CONTO DEL SERVER ERA DI UN ALTRO GIRO.**  La chiusura di una
-          sessione e' LENTA quando il pacer ha una coda (`[M]` il profilo
-          `7-perdita-10` ci ha messo **29 s** in piu' degli altri a scrivere il
-          suo «conto finale»).  ⇒ `riga0` del giro dopo veniva presa PRIMA che
-          la riga del giro prima fosse scritta, e `conti_del_server` — che
-          prende l'ULTIMA riga dopo `riga0` — leggeva quella **del giro
-          precedente**.  `[M]` i profili 6, 7 e 8 hanno riferito tutt'e tre
-          «spediti 4999 · rifiutati 3 · rimandati 7410», che era il conto del
-          **6**; il conto vero del 7 era 4632.  ⚠ E il predicato ci ha dato
-          rosso su un denominatore altrui: 4152/4999 = 0,831 (rosso) contro
-          4152/4632 = **0,896** (verde, ed e' `1-p`).  ⛔ E' la stessa forma
-          dei difetti curati stasera — un numero plausibile e falso al posto di
-          un «non ho letto».
-       2. **IL POSTO ERA ANCORA OCCUPATO.**  Finche' la sessione di prima non
-          si e' chiusa, §4.4-bis rifiuta la nuova con
+       1. **THE SERVER'S COUNT WAS FROM ANOTHER RUN.**  Closing a
+          session is SLOW when the pacer has a queue (`[M]` the profile
+          `7-perdita-10` took **29 s** more than the others to write its
+          «final count»).  ⇒ `riga0` of the next run was taken BEFORE
+          the line of the previous run was written, and `conti_del_server` — which
+          takes the LAST line after `riga0` — read the one **of the previous
+          run**.  `[M]` profiles 6, 7 and 8 all three reported
+          «sent 4999 · refused 3 · deferred 7410», which was the count of
+          **6**; the true count of 7 was 4632.  ⚠ And the predicate gave us
+          red on someone else's denominator: 4152/4999 = 0.831 (red) against
+          4152/4632 = **0.896** (green, and it is `1-p`).  ⛔ It is the same form
+          as the defects cured tonight — a plausible and false number in place of
+          an «I did not read».
+       2. **THE SLOT WAS STILL TAKEN.**  Until the previous session has
+          closed, §4.4-bis refuses the new one with
           `CONGEDO 0x0F GIA_ATTIVA_REMOTA` (`banchi/09-b78-apertura.py` §4:
-          la serratura dura fino a `SILENZIO` = 30 s).  `[M]` il profilo
-          `8-casa-cattiva` e' morto cosi', e l'`[audio] ricevuti 0` che ne
-          usciva e' esattamente il numero che il vecchio `a_non_si_apre`
-          avrebbe chiamato **verde**.
+          the lock lasts until `SILENZIO` = 30 s).  `[M]` the profile
+          `8-casa-cattiva` died like that, and the `[audio] ricevuti 0` that came
+          out of it is exactly the number the old `a_non_si_apre`
+          would have called **green**.
 
-    ⇒ Si aspetta che il conto delle righe «conto finale» stia FERMO per
-      `quiete` secondi, e si torna quel conto: e' il `n0` da cui il giro nuovo
-      pretende una riga **sua**.
+    ⇒ We wait until the count of «final count» lines stays STILL for
+      `quiete` seconds, and that count is returned: it is the `n0` from which the new run
+      demands a line **of its own**.
     """
     n = conta_conti_finali()
     fermo, scade = 0.0, time.time() + tetto
@@ -535,54 +535,54 @@ def registro_posato(tetto=90.0, quiete=3.0):
 
 
 def conti_del_server(riga0, n0=None, tetto=90.0):
-    """⛔⛔ R13 — SENZA QUESTO IL BANCO ERA CIECO PER COSTRUZIONE.
+    """⛔⛔ R13 — WITHOUT THIS THE BENCH WAS BLIND BY CONSTRUCTION.
 
-       Il cliente sa dire quanti datagram ha ricevuto; **non** sa dire quanti
-       ne sono partiti.  ⇒ «la rete l ha perso» e «il server non l ha mai
-       spedito» davano lo stesso numero, e in un banco che guasta la RETE
-       apposta e' la distinzione che serve piu' di ogni altra:
-       senza, un difetto del server verrebbe attribuito al `netem`.
+       The client can say how many datagrams it received; it can **not** say how many
+       left.  ⇒ «the network lost it» and «the server never
+       sent it» gave the same number, and in a bench that breaks the NETWORK
+       on purpose it is the distinction that matters more than any other:
+       without it, a server defect would be attributed to `netem`.
 
-       ⭐ Il conto ce l ha gia' il prodotto, alla chiusura della sessione:
-       «N blocchi spediti, N buttati, N rifiutati da ngtcp2, N rimandati».
-       Qui si legge, e si legge SOLO da `riga0` in poi, cosi' e' di questo
-       giro e non di quello prima.
+       ⭐ The product already has the count, when the session closes:
+       «N blocks sent, N dropped, N refused by ngtcp2, N deferred».
+       Here it is read, and read ONLY from `riga0` on, so it belongs to this
+       run and not to the one before.
 
-       ⛔⛔ E «DOPO `riga0`» NON BASTA: vedi il riquadro di `registro_posato`.
-          Se la sessione del giro PRIMA scrive il suo «conto finale» dopo che
-          `riga0` e' stata presa, quella riga cade dentro la finestra e viene
-          letta come se fosse mia.  ⇒ `n0` = quante righe di «conto finale»
-          c'erano quando questo giro e' cominciato, e qui si **aspetta** che ne
-          compaia una in piu'.  Se non compare, «NIENTE DA LEGGERE» — che ora
-          e' MUTO, non verde."""
+       ⛔⛔ AND «AFTER `riga0`» IS NOT ENOUGH: see the box of `registro_posato`.
+          If the session of the PREVIOUS run writes its «final count» after
+          `riga0` has been taken, that line falls inside the window and is
+          read as if it were mine.  ⇒ `n0` = how many «final count» lines
+          there were when this run began, and here we **wait** for one more
+          to appear.  If it does not appear, «NIENTE DA LEGGERE» — which is now
+          MUTE, not green."""
     if n0 is not None:
         scade = time.time() + tetto
         while conta_conti_finali() <= n0:
             if time.time() >= scade:
-                return {"esito": "NIENTE DA LEGGERE — in %d s questo giro non ha "
-                                 "scritto nessun «conto finale» suo (sessione "
-                                 "rifiutata? ancora in chiusura?)" % int(tetto)}
+                return {"esito": "NIENTE DA LEGGERE — in %d s this run wrote "
+                                 "no «final count» of its own (session "
+                                 "refused? still closing?)" % int(tetto)}
             time.sleep(1.0)
-    rc, out, _ = root("tail -n +%d %s/registro.log | grep -a 'audio di .*conto finale' "
+    rc, out, _ = root("tail -n +%d %s/registro.log | grep -a 'audio of .*final count' "
                       "| tail -1" % (riga0 + 1, LAV))
     r = out.strip()
     if not r:
-        # ⛔ `CODER.md` §3.10: «non ho letto» non e' «zero».
-        return {"esito": "NIENTE DA LEGGERE — nessun «conto finale» in questo giro"}
+        # ⛔ `CODER.md` §3.10: «I did not read» is not «zero».
+        return {"esito": "NIENTE DA LEGGERE — no «final count» in this run"}
     import re as _re
-    m = _re.search(r"(\d+) blocchi spediti, (\d+) buttati.*?(\d+) rifiutati.*?"
-                   r"(\d+) RIMANDATI", r)
+    m = _re.search(r"(\d+) blocks sent, (\d+) dropped.*?(\d+) refused.*?"
+                   r"(\d+) DEFERRED", r)
     if not m:
-        return {"esito": "riga trovata ma illeggibile", "riga": r[:160]}
+        return {"esito": "line found but unreadable", "riga": r[:160]}
     fuori = {"spediti": int(m.group(1)), "buttati": int(m.group(2)),
              "rifiutati": int(m.group(3)), "rimandati": int(m.group(4))}
-    # ⭐ E gia' che il registro e' aperto, si legge anche il conto del VIDEO:
-    #    e' la riga che il prodotto ha imparato a scrivere il 22 agosto, e
-    #    porta i due numeri che prima si confondevano.
-    rc, out2, _ = root("tail -n +%d %s/registro.log | grep -a 'video di .*conto finale' "
+    # ⭐ And since the log is open, the VIDEO count is read too:
+    #    it is the line the product learned to write on 22 August, and
+    #    it carries the two numbers that used to be confused.
+    rc, out2, _ = root("tail -n +%d %s/registro.log | grep -a 'video of .*final count' "
                        "| tail -1" % (riga0 + 1, LAV))
-    m2 = _re.search(r"(\d+) fotogrammi consegnati.*?(\d+) NON SPEDITI.*?"
-                    r"(\d+) spediti sul filo.*?(\d+) abbandonati.*?e (\d+) ANNUNCI",
+    m2 = _re.search(r"(\d+) frames delivered.*?(\d+) NOT SENT.*?"
+                    r"(\d+) sent on the wire.*?(\d+) abandoned.*?and (\d+) ANNOUNCEMENTS",
                     out2.strip())
     if m2:
         fuori["video"] = {"consegnati": int(m2.group(1)),
@@ -604,13 +604,13 @@ def righe_registro():
 def giudica(nome):
     j = os.path.join(FUORI, nome + ".jsonl")
     if not os.path.exists(j) or os.path.getsize(j) == 0:
-        return {"esito": "NIENTE DA GIUDICARE — nessun blocco"}
+        return {"esito": "NIENTE DA GIUDICARE — no blocks"}
     p = subprocess.run(["python3", os.path.join(QUI, "07-b64-orecchio.py"), j,
                         "--hz", "440"], capture_output=True)
     try:
         d = json.loads(p.stdout.decode())["nostro"]
     except Exception as e:
-        return {"esito": "il giudice non ha risposto: %s" % e}
+        return {"esito": "the judge did not answer: %s" % e}
     s = d["scoppiettii"]
     return {"blocchi": d["blocchi"], "resa_campioni": d.get("resa_campioni"),
             "buchi_istante": d["buchi_istante"], "scoppiettii": s["scoppiettii"],
@@ -621,29 +621,29 @@ def principale():
     p = argparse.ArgumentParser()
     p.add_argument("passo", choices=["casa", "netem", "rimetti", "stato"])
     p.add_argument("--secondi", type=int, default=25)
-    p.add_argument("--solo", default="", help="un profilo solo, per nome")
+    p.add_argument("--solo", default="", help="one profile only, by name")
     p.add_argument("--controllo-rosso", action="store_true",
-                   help="⭐ il controllo positivo DEL VERDETTO: al gradino "
-                        "«0-liscio» (rete perfetta) si appiccica l'atteso del "
-                        "jitter, che su una linea pulita NON puo' passare.  "
-                        "⛔ Se il banco resta verde, il banco e' cieco e non si "
-                        "crede a nessun altro suo verde")
+                   help="⭐ the positive control OF THE VERDICT: the jitter "
+                        "expectation is stuck onto step «0-liscio» (perfect network), "
+                        "and on a clean line it CANNOT pass.  "
+                        "⛔ If the bench stays green, the bench is blind and none "
+                        "of its other greens is to be believed")
     a = p.parse_args()
     os.makedirs(FUORI, exist_ok=True)
 
     if a.passo in ("rimetti", "stato"):
-        print("== la rete della macchina di prova")
+        print("== the test machine's network")
         return 0 if rimetti() else 2
 
     if a.passo == "casa":
-        print("== 1 · LA RETE DI CASA VERA — il cliente gira sul portatile, in WiFi")
-        print("   --  portatile 192.168.0.3 (wlo1) → server %s:%d (cavo)" % (IND, PORTA))
-        print("   ⛔ nessuna regola di tc: non si simula niente")
+        print("== 1 · THE REAL HOME NETWORK — the client runs on the laptop, on WiFi")
+        print("   --  laptop 192.168.0.3 (wlo1) → server %s:%d (cable)" % (IND, PORTA))
+        print("   ⛔ no tc rule: nothing is simulated")
         if not tono_accendi():
-            print("   NO  il tono NON sta suonando dentro la sessione: mi fermo,"
-                  " invece di misurare silenzio e chiamarlo rete")
+            print("   NO  the tone is NOT playing inside the session: I stop,"
+                  " instead of measuring silence and calling it network")
             tono_spegni(); return 2
-        print("   OK  il tono suona: il grafo ha i legami in ingresso al sink")
+        print("   OK  the tone plays: the graph has incoming links to the sink")
         try:
             c = cliente("casa", "portatile", a.secondi)
         finally:
@@ -655,87 +655,87 @@ def principale():
         print("   ", json.dumps(giudica("casa"), ensure_ascii=False))
         return 0
 
-    print("== 2 · LA RETE GUASTATA APPOSTA — netem su «%s», solo porta %d" % (DEV, PORTA))
-    print("   ⛔ «%s» (ssh + 7730 dell utente) NON si tocca" % VIETATA)
+    print("== 2 · THE NETWORK BROKEN ON PURPOSE — netem on «%s», port %d only" % (DEV, PORTA))
+    print("   ⛔ «%s» (ssh + the user's 7730) is NOT touched" % VIETATA)
     prima = qdisc()
-    print("   --  «%s» prima: %s" % (DEV, prima or "(nessuna)"))
-    # ⛔⛔ IL GUARDIANO SI ARMA UNA VOLTA SOLA, E PER TUTTO IL GIRO.
+    print("   --  «%s» before: %s" % (DEV, prima or "(none)"))
+    # ⛔⛔ THE GUARDIAN IS ARMED ONCE ONLY, AND FOR THE WHOLE RUN.
     #
-    #     La prima stesura ne armava uno **per profilo**, ciascuno con la sua
-    #     attesa: il guardiano del primo profilo sarebbe scattato **in mezzo al
-    #     terzo**, togliendo il netem senza dirlo.  ⇒ Avrei misurato una rete
-    #     sana credendola guasta, e scritto «il 10 % di perdita non si sente».
-    #     ⚠ E' la forma peggiore di difetto di banco: fa apparire buono il
-    #     prodotto.  Trovato rileggendo, prima di girare.
+    #     The first draft armed one **per profile**, each with its own
+    #     wait: the guardian of the first profile would have fired **in the middle of the
+    #     third**, removing netem without saying so.  ⇒ I would have measured a healthy
+    #     network believing it broken, and written «10 % loss cannot be heard».
+    #     ⚠ It is the worst form of bench defect: it makes the product look
+    #     good.  Found by rereading, before running.
     totale = (a.secondi + 120) * len(PROFILI) + 300
     guardiano_arma(totale)
     esiti = []
     if a.controllo_rosso:
-        # ⛔ Si sostituisce l'atteso del primo gradino con uno che su rete
-        #    pulita e' impossibile: «almeno 100 datagram scartati perche'
-        #    sorpassati» dove non c'e' nessun guasto.
+        # ⛔ The expectation of the first step is replaced with one that is impossible on a clean
+        #    network: «at least 100 datagrams discarded because
+        #    overtaken» where there is no fault at all.
         for i, (nome, regole, testo, _pred) in enumerate(PROFILI):
             if nome.startswith("0-"):
                 PROFILI[i] = (nome, regole,
-                              "⛔ CONTROLLO ROSSO: atteso impossibile apposta "
-                              "(100 sorpassi su una rete senza guasti)",
+                              "⛔ RED CONTROL: impossible expectation on purpose "
+                              "(100 overtakes on a network without faults)",
                               a_sorpassi(100))
-        print("   ⛔ CONTROLLO ROSSO acceso: il gradino «0-liscio» DEVE fallire")
-    print("   --  apro una sessione corta per far nascere il palco e il sink")
+        print("   ⛔ RED CONTROL on: step «0-liscio» MUST fail")
+    print("   --  opening a short session to bring the stage and the sink to life")
     if not innesca_sessione():
-        print("   NO  la sessione non si apre: non misuro")
+        print("   NO  the session does not open: I do not measure")
         rimetti(); return 2
     if not tono_accendi():
-        print("   NO  il tono non suona: non misuro")
+        print("   NO  the tone does not play: I do not measure")
         tono_spegni(); rimetti(); return 2
-    print("   OK  il tono suona dentro la sessione")
+    print("   OK  the tone plays inside the session")
     try:
         for nome, regole, atteso, predicato in PROFILI:
             if a.solo and a.solo not in nome:
                 continue
             print("\n-- %s · %s" % (nome, atteso))
-            # ⛔ PRIMA DI TUTTO: la sessione del giro prima dev'essere chiusa
-            #    davvero, o si legge il suo conto e si prende il suo posto in
-            #    faccia (`CONGEDO 0x0F`).  Vedi il riquadro di `registro_posato`.
+            # ⛔ FIRST OF ALL: the session of the previous run must really be closed,
+            #    or we read its count and get its slot slammed in our
+            #    face (`CONGEDO 0x0F`).  See the box of `registro_posato`.
             n0 = registro_posato()
             riga0 = righe_registro()
             ok, q = guasta(regole)
             if not ok:
-                # ⛔ R13: il `break` usciva e il copione tornava 0 lo stesso.
+                # ⛔ R13: the `break` exited and the script returned 0 all the same.
                 print("   ", q)
                 esiti.append({"profilo": nome, "passa": False,
-                              "perche": "tc ha rifiutato la regola"})
+                              "perche": "tc refused the rule"})
                 break
-            # ⛔ M3 si riverifica a OGNI profilo.  "Il tono suonava
-            #   all'inizio" non e' "il tono sta suonando adesso".
+            # ⛔ M3 is rechecked at EVERY profile.  "The tone was playing
+            #   at the start" is not "the tone is playing now".
             rc, out, _ = root("env UTENTE=%s UID_B=%d LAV=%s python3 %s/banchi/"
                               "07-b64-scena.py grafo" % (UTENTE, UID_B, LAV, ALB))
             try:
                 leg = json.loads(out).get("legami_in_ingresso", 0)
             except Exception:
                 leg = -1
-            print("    M3: legami in ingresso al sink = %s" % leg)
+            print("    M3: incoming links to the sink = %s" % leg)
             if leg <= 0:
-                print("   NO  il tono non suona piu': NON giudico questo profilo")
+                print("   NO  the tone no longer plays: I do NOT judge this profile")
                 esiti.append({"profilo": nome, "passa": None,
-                              "esito": "NIENTE DA GIUDICARE, il tono taceva"})
+                              "esito": "NIENTE DA GIUDICARE, the tone was silent"})
                 continue
             print("    tc:", " ".join(q.split("\n")[:2])[:160])
             c = cliente(nome, "contenitore", a.secondi)
-            # ⛔ La perdita VERA si legge ADESSO: il gradino dopo azzera i
-            #    contatori del `netem` con il suo `tc qdisc del`.
+            # ⛔ The TRUE loss is read NOW: the next step resets the
+            #    `netem` counters with its `tc qdisc del`.
             pv = perdita_vera()
             g = giudica(nome)
             sv = conti_del_server(riga0, n0)
             for r in (c or {}).get("conti", {}).values():
                 print("   ", r)
             print("    SERVER:", json.dumps(sv, ensure_ascii=False))
-            print("    giudizio:", json.dumps(g, ensure_ascii=False))
+            print("    judgement:", json.dumps(g, ensure_ascii=False))
 
-            # ⭐ E QUI L'ATTESO SMETTE DI ESSERE PROSA: si confronta.
-            #    ⚠ I numeri che il predicato guarda vengono da DUE lati — il
-            #    cliente e il server — cosi' «perso sul filo» e «mai spedito»
-            #    non si confondono.
+            # ⭐ AND HERE THE EXPECTATION STOPS BEING PROSE: it is compared.
+            #    ⚠ The numbers the predicate looks at come from TWO sides — the
+            #    client and the server — so «lost on the wire» and «never sent»
+            #    are not confused.
             conti = (c or {}).get("conti", {})
             import re as _re
 
@@ -747,38 +747,38 @@ def principale():
                 return None
 
             numeri = {
-                "ricevuti": daconti("ricevuti", r"ricevuti (\d+)"),
-                "vecchi": daconti("scartati", r"vecchi (\d+)"),
+                "ricevuti": daconti("received", r"received (\d+)"),
+                "vecchi": daconti("discarded", r"old (\d+)"),
                 "resa": g.get("resa_campioni"),
                 "purezza": (g.get("tono") or {}).get("purezza"),
                 "spediti_dal_server": sv.get("spediti"),
-                # ⚠ La perdita LETTA da `tc -s qdisc`, non quella chiesta:
-                #   `a_resa_sul_filo` si tara su questa (vedi il suo riquadro).
+                # ⚠ The loss READ from `tc -s qdisc`, not the one requested:
+                #   `a_resa_sul_filo` is tuned on this one (see its box).
                 "perdita_vera": pv,
             }
-            print("    netem: perdita davvero applicata = %s"
+            print("    netem: loss really applied = %s"
                   % ("%.2f %%" % (pv * 100) if pv is not None
-                     else "(nessuna disciplina, o non letta)"))
-            # ⛔⛔ E SE IL CONTO DEL SERVER NON SI E' LETTO, IL GRADINO E' MUTO.
-            #     `[M]` 23 agosto 2026 — terzo caso della stessa forma dei due
-            #     curati stasera: `sv.get("spediti")` torna `None` quando il
-            #     «conto finale» non e' nel registro, `None == 0` e' **falso**,
-            #     e il gradino filava dritto al predicato.  ⇒ I predicati che
-            #     non guardano il server (`a_pulito`, `a_sorpassi`) davano
-            #     **verde** su un giro in cui il capo del server non era stato
-            #     letto affatto.  `CODER.md` §3.10: «non ho letto» non e'
-            #     «zero», e qui non e' nemmeno «verde».
+                     else "(no qdisc, or not read)"))
+            # ⛔⛔ AND IF THE SERVER'S COUNT WAS NOT READ, THE STEP IS MUTE.
+            #     `[M]` 23 August 2026 — third case of the same form as the two
+            #     cured tonight: `sv.get("spediti")` returns `None` when the
+            #     «final count» is not in the log, `None == 0` is **false**,
+            #     and the step went straight to the predicate.  ⇒ The predicates that
+            #     do not look at the server (`a_pulito`, `a_sorpassi`) gave
+            #     **green** on a run in which the server's end had not been
+            #     read at all.  `CODER.md` §3.10: «I did not read» is not
+            #     «zero», and here it is not even «green».
             if numeri["spediti_dal_server"] is None:
-                passa, perche = None, ("NIENTE DA GIUDICARE: il conto del SERVER "
-                                       "non si e' letto (%s)"
+                passa, perche = None, ("NIENTE DA GIUDICARE: the SERVER's count "
+                                       "was not read (%s)"
                                        % sv.get("esito", "?"))
             elif numeri["spediti_dal_server"] == 0:
-                # ⛔ E se il server non ha spedito, il rosso NON e' della rete.
-                passa, perche = False, ("il SERVER non ha spedito niente: il rosso "
-                                        "non e' della rete guastata, e' nostro")
+                # ⛔ And if the server sent nothing, the red is NOT the network's.
+                passa, perche = False, ("the SERVER sent nothing: the red "
+                                        "does not belong to the broken network, it is ours")
             else:
                 passa, perche = predicato(numeri)
-            print("    %s ATTESO: %s"
+            print("    %s EXPECTED: %s"
                   % ("OK " if passa else ("⚠ MUTO" if passa is None else "⛔ NO"),
                      perche))
             esiti.append({"profilo": nome, "regole": regole, "atteso": atteso,
@@ -787,18 +787,18 @@ def principale():
                           "esito": perche if passa is None else None})
     finally:
         tono_spegni()
-        print("\n== ⛔ LA RETE SI RIMETTE COM'ERA")
+        print("\n== ⛔ THE NETWORK IS PUT BACK AS IT WAS")
         guardiano_disarma()
         rimetti()
     json.dump(esiti, open(os.path.join(FUORI, "rete-esiti.json"), "w"),
               ensure_ascii=False, indent=1)
 
-    # ⛔⛔ R13 — E L'ESITO SI PROPAGA.  Prima `principale()` tornava 0 in ogni
-    #      caso, `break` compreso: un banco che non puo' dare rosso non e' un
-    #      banco, e' un rapporto.
+    # ⛔⛔ R13 — AND THE OUTCOME PROPAGATES.  Before, `principale()` returned 0 in every
+    #      case, `break` included: a bench that cannot give red is not a
+    #      bench, it is a report.
     rossi = [e for e in esiti if e.get("passa") is False]
     muti = [e for e in esiti if e.get("passa") is None]
-    print("\n== IL VERDETTO — %d gradini, %d rossi, %d non giudicati"
+    print("\n== THE VERDICT — %d steps, %d red, %d not judged"
           % (len(esiti), len(rossi), len(muti)))
     for e in rossi:
         print("   ⛔ %s: %s" % (e["profilo"], e.get("perche")))
@@ -807,8 +807,9 @@ def principale():
     if rossi:
         return 1
     if muti:
-        return 2      # ⚠ «non ho misurato» e' un esito SUO, non un verde
-    print("   ⭐ tutti i gradini hanno fatto quel che era scritto prima")
+        return 2      # ⚠ «I did not measure» is an outcome of ITS OWN, not a green
+    print("   ⭐ all the steps did what was written beforehand")
+
     return 0
 
 

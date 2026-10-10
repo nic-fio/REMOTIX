@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-f032 — F-032 IL TERMINALE APRE LA SHELL DELL'UTENTE (D-022, fase 16)
+15-f032 — F-032 THE TERMINAL OPENS THE USER'S SHELL (D-022, phase 16)
 
     python3 15-f032-la-shell-dell-utente.py --scatola lxqt --browser firefox [--guasto]
     python3 15-f032-la-shell-dell-utente.py --certifica
 
-ATTESO: fuori da GNOME la sessione porta `SHELL` = la shell della riga di passwd
-        dell'utente (letta nell'ambiente del pannello del desktop); su GNOME
-        `SHELL` e' VUOTA di proposito (la trappola di `gnome-session`, `src/sessione.c`).
-        ⭐ Su LXQt, dove il difetto si vedeva: `qterminal` lanciato nella sessione
-        fa partire come figlio la shell di passwd (`bash`), non `sh`/`dash`.
+EXPECTED: outside GNOME the session carries `SHELL` = the shell of the user's passwd
+        line (read in the environment of the desktop's panel); on GNOME
+        `SHELL` is EMPTY on purpose (the `gnome-session` trap, `src/sessione.c`).
+        ⭐ On LXQt, where the defect showed: `qterminal` launched in the session
+        starts as a child the passwd shell (`bash`), not `sh`/`dash`.
 
-PERCHE' (anomalia A2 della fase 16, D-022): `[M]` 27-28 set 2026 le sessioni
-        XFCE e LXQt nascevano SENZA `SHELL`; qtermwidget ripiegava su `/bin/sh`.
+WHY (anomaly A2 of phase 16, D-022): `[M]` 27-28 Sep 2026 the XFCE and LXQt
+        sessions were born WITHOUT `SHELL`; qtermwidget fell back on `/bin/sh`.
 
-GUASTO: lo stesso giudice con l'atteso sbagliato — fuori da GNOME la shell attesa
-        `/bin/sh` al posto di quella di passwd, su GNOME il giudice di XFCE (che vuole
-        la shell piena): sui fatti letti nella passata sana deve dare ROSSO.
+FAULT: the same judge with the wrong expectation — outside GNOME the expected shell
+        `/bin/sh` instead of the passwd one, on GNOME XFCE's judge (which wants
+        the full shell): on the facts read in the healthy pass it must give RED.
 """
 import os
 import sys
@@ -33,18 +33,18 @@ PANNELLO = {"gnome": "gnome-shell", "kde": "plasmashell", "xfce": "xfce4-panel",
 
 
 def giudica(desktop, shell_passwd, amb_shell, figlio_terminale):
-    """(esito, ragione).  `amb_shell` None = variabile ASSENTE; `figlio_terminale`
-    None = non guardato (desktop diverso da LXQt)."""
+    """(outcome, reason).  `amb_shell` None = variable ABSENT; `figlio_terminale`
+    None = not looked at (desktop other than LXQt)."""
     if desktop == "gnome":
         if amb_shell == "":
-            return S.PASS, "GNOME: SHELL vuota, come vuole la cura della trappola di gnome-session"
-        return S.FAIL, "GNOME: SHELL=%r, attesa VUOTA (trappola di gnome-session)" % (amb_shell,)
+            return S.PASS, "GNOME: SHELL empty, as the cure of the gnome-session trap wants"
+        return S.FAIL, "GNOME: SHELL=%r, expected EMPTY (gnome-session trap)" % (amb_shell,)
     if amb_shell != shell_passwd:
-        return S.FAIL, "SHELL della sessione %r, passwd dice %r" % (amb_shell, shell_passwd)
+        return S.FAIL, "the session's SHELL %r, passwd says %r" % (amb_shell, shell_passwd)
     if figlio_terminale is not None and figlio_terminale != os.path.basename(shell_passwd):
-        return S.FAIL, "qterminal ha aperto %r, passwd dice %r" % (figlio_terminale, shell_passwd)
+        return S.FAIL, "qterminal opened %r, passwd says %r" % (figlio_terminale, shell_passwd)
     return S.PASS, "SHELL=%s%s" % (shell_passwd, "" if figlio_terminale is None
-                                   else ", qterminal apre %s" % figlio_terminale)
+                                   else ", qterminal opens %s" % figlio_terminale)
 
 
 def certifica():
@@ -63,7 +63,7 @@ def certifica():
         ok = e == atteso
         ko += not ok
         print("  %s %s → %s (%s)" % ("✅" if ok else "⛔", a, e, r))
-    print("CERTIFICA %s — %d su %d" % ("PASS" if not ko else "FAIL", len(casi) - ko, len(casi)))
+    print("CERTIFICA %s — %d of %d" % ("PASS" if not ko else "FAIL", len(casi) - ko, len(casi)))
     return 1 if ko else 0
 
 
@@ -71,26 +71,26 @@ def corpo(o, E):
     with S.Sessione(o, "032", E) as s:
         ok, perche = s.entra()
         if not ok:
-            raise S.Bloccata("la sessione non e' nata: %s" % perche)
+            raise S.Bloccata("the session was not born: %s" % perche)
         c, t = s.sc.dentro("getent passwd %s | cut -d: -f7" % s.chi, 30)
         shell = t.strip()
         if c != 0 or not shell:
-            raise S.Bloccata("la riga di passwd dell'inquilino non si legge: %s" % t[-200:])
+            raise S.Bloccata("the tenant's passwd line cannot be read: %s" % t[-200:])
         processo = PANNELLO[o.scatola]
         amb = {}
-        for _ in range(30):                     # il pannello nasce qualche secondo dopo
+        for _ in range(30):                     # the panel is born a few seconds later
             amb = G1B.ambiente_di(s, processo)
             if amb:
                 break
             time.sleep(1)
         if not amb:
-            raise S.Bloccata("nessun processo «%s» dell'inquilino da leggere" % processo)
+            raise S.Bloccata("no «%s» process of the tenant to read" % processo)
         amb_shell = amb.get("SHELL")
         figlio = None
         if o.scatola == "lxqt":
-            # ⛔ come dal MENU: qterminal con l'ambiente del pannello (il processo da cui
-            #    l'utente lo lancia), non con quello di `nella_sessione` — che e' del banco
-            #    e avrebbe misurato il banco (la prima versione di questa prova lo faceva).
+            # ⛔ as from the MENU: qterminal with the panel's environment (the process from which
+            #    the user launches it), not with that of `nella_sessione` — which is the bench's
+            #    and would have measured the bench (the first version of this test did so).
             s.sc.dentro("p=$(pgrep -u %(c)s -x lxqt-panel | head -1); [ -n \"$p\" ] || exit 4; "
                         "setsid runuser -u %(c)s -- xargs -0 -a /proc/$p/environ "
                         "sh -c 'exec env -i \"$@\" qterminal' sh </dev/null >/dev/null 2>&1 &"
@@ -106,22 +106,22 @@ def corpo(o, E):
             s.foto("qterminal")
             s.sc.dentro("pkill -u %s -x qterminal" % s.chi, 30)
             if figlio is None:
-                raise S.Bloccata("qterminal non ha aperto nessun processo figlio in 20 s")
+                raise S.Bloccata("qterminal did not open any child process in 20 s")
         esito, ragione = giudica(o.scatola, shell, amb_shell, figlio)
         E.metti("F-032", esito, ragione if esito != S.PASS else "",
-                atteso="SHELL della sessione = passwd (%s) fuori da GNOME, vuota su GNOME; "
-                       "su LXQt qterminal apre %s" % (shell, os.path.basename(shell)),
+                atteso="the session's SHELL = passwd (%s) outside GNOME, empty on GNOME; "
+                       "on LXQt qterminal opens %s" % (shell, os.path.basename(shell)),
                 osservato=ragione, evidenze=[s.salva_console()])
         if o.guasto:
-            # il guasto: il giudice con l'atteso sbagliato — /bin/sh fuori da GNOME, e su
-            # GNOME il giudice di un altro desktop (che vuole la shell, non la vuota)
+            # the fault: the judge with the wrong expectation — /bin/sh outside GNOME, and on
+            # GNOME another desktop's judge (which wants the shell, not the empty one)
             if o.scatola == "gnome":
                 eg, rg = giudica("xfce", shell, amb_shell, figlio)
             else:
                 eg, rg = giudica(o.scatola, "/bin/sh", amb_shell, figlio)
             E.guasto("F-032", eg == S.FAIL,
-                     "col giudice sbagliato: %s — %s" % (eg, rg),
-                     atteso="rosso", osservato=eg)
+                     "with the wrong judge: %s — %s" % (eg, rg),
+                     atteso="red", osservato=eg)
 
 
 if __name__ == "__main__":

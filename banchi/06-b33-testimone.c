@@ -1,53 +1,53 @@
 /*
- * 06-b33-testimone.c — ⭐ IL LATO CHE RICEVE, senza browser.  Sottofase 6.1.
+ * 06-b33-testimone.c — ⭐ THE RECEIVING SIDE, without a browser.  Sub-phase 6.1.
  *
  *   ./06-b33-testimone [--misura 1264x800]
  *
- * ⛔ E' `04-b24-testimone.c` COPIATO, con **una** aggiunta e non una riga di
- *    meno: la riga `RITELA`, che dice quando la finestra cambia misura sotto di
- *    se'.  Serve perche' in questa sottofase la misura della tela cambia AL
- *    RIATTACCO, e senza quella riga «il compositore ha ridimensionato lo
- *    schermo» e «non e' successo niente» hanno lo stesso aspetto — dal LATO CHE
- *    RICEVE, che e' l'unico che conta (`CODER.md` §3.8).
+ * ⛔ It is `04-b24-testimone.c` COPIED, with **one** addition and not one line
+ *    fewer: the `RITELA` line, which says when the window changes size under
+ *    it.  It is needed because in this sub-phase the canvas size changes ON
+ *    REATTACH, and without that line «the compositor resized the
+ *    screen» and «nothing happened» look the same — from the RECEIVING
+ *    SIDE, which is the only one that counts (`CODER.md` §3.8).
  *
- * ⚠ Il resto e' di B24 e ha gia' pagato il suo prezzo (il browser che non
- *   chiedeva la pagina, il monitor scelto per nome e non sperato): non si
- *   riscrive.
+ * ⚠ The rest is B24's and has already paid its price (the browser that did not
+ *   ask for the page, the monitor chosen by name and not hoped for): it is not
+ *   rewritten.
  *
- * Apre una finestra a schermo intero **sul monitor della misura chiesta**, si
- * mette in ascolto di `wl_pointer` e `wl_keyboard`, e stampa una riga JSON per
- * ogni evento che il compositore le consegna.  Niente altro.
- *
- * ---------------------------------------------------------------------------
- * ⛔ PERCHE' NON IL BROWSER, CHE ERA LO STRUMENTO GIA' CERTIFICATO (S7)
- *
- * `[M]` 14 agosto 2026, macchina di prova, utente `prova`: Firefox `--kiosk`
- * nella sessione headless **parte e non chiede mai la pagina**.  Misurato tre
- * volte: processo vivo, stato `S`, ⛔ **zero richieste HTTP dopo 149 secondi**,
- * registro di Firefox vuoto.  Con un profilo nuovo, con uno riusato, con e
- * senza terminale.  ⚠ La causa NON e' stata trovata, e non si e' fatta finta di
- * niente: e' scritta nel rapporto come cosa che non ha funzionato.
- *
- * ⇒ Serviva un altro lato-che-riceve, e questo e' **piu' vicino alla verita'**,
- *   non un ripiego peggiore: fra `libei` e la pagina ci sono Mutter *e* il
- *   browser; qui c'e' solo Mutter.  Quel che questa finestra vede e'
- *   esattamente quel che il compositore consegna a una finestra qualunque.
- *
- * ⚠ E QUEL CHE SI PERDE, detto invece che taciuto: `RCP.md` §7.3 ha misurato il
- *   segno su `deltaY` di un evento `wheel`, cioe' un piano piu' in alto.  Il
- *   ponte fra i due e' la convenzione di `wl_pointer.axis`, che la specifica
- *   fissa: *«the value is positive in the direction the content moves»* — cioe'
- *   `axis` positivo ⇔ il contenuto scende ⇔ `deltaY` positivo.  Il ponte e'
- *   `[S]`, non `[M]`: chi vuole la catena intera rifaccia S7 con la pagina.
+ * It opens a fullscreen window **on the monitor of the requested size**,
+ * listens to `wl_pointer` and `wl_keyboard`, and prints one JSON line for
+ * every event the compositor delivers to it.  Nothing else.
  *
  * ---------------------------------------------------------------------------
- * ⭐ E IL MONITOR SI SCEGLIE PER NOME, NON SI SPERA — forma E2
+ * ⛔ WHY NOT THE BROWSER, WHICH WAS THE INSTRUMENT ALREADY CERTIFIED (S7)
  *
- * `xdg_toplevel_set_fullscreen(NULL)` lascia scegliere al compositore, e con
- * due monitor in sessione la finestra puo' finire su quello che non e' nostro:
- * l'iniezione andrebbe altrove e questo programma stamperebbe un silenzio che
- * si legge come «l'input non arriva».  ⇒ Si scandiscono i `wl_output`, si
- * prende quello della misura chiesta, e ⛔ **se non c'e' si esce dicendolo**.
+ * `[M]` 14 Aug 2026, test machine, user `prova`: Firefox `--kiosk`
+ * in the headless session **starts and never asks for the page**.  Measured three
+ * times: process alive, state `S`, ⛔ **zero HTTP requests after 149 seconds**,
+ * Firefox log empty.  With a new profile, with a reused one, with and
+ * without a terminal.  ⚠ The cause was NOT found, and nobody pretended
+ * otherwise: it is written in the report as something that did not work.
+ *
+ * ⇒ Another receiving side was needed, and this one is **closer to the truth**,
+ *   not a worse fallback: between `libei` and the page there are Mutter *and* the
+ *   browser; here there is only Mutter.  What this window sees is
+ *   exactly what the compositor delivers to any window.
+ *
+ * ⚠ AND WHAT IS LOST, said instead of kept quiet: `RCP.md` §7.3 measured the
+ *   sign on `deltaY` of a `wheel` event, that is one floor higher.  The
+ *   bridge between the two is the convention of `wl_pointer.axis`, which the
+ *   specification fixes: *«the value is positive in the direction the content moves»* — that is
+ *   positive `axis` ⇔ the content goes down ⇔ positive `deltaY`.  The bridge is
+ *   `[S]`, not `[M]`: whoever wants the whole chain should redo S7 with the page.
+ *
+ * ---------------------------------------------------------------------------
+ * ⭐ AND THE MONITOR IS CHOSEN BY NAME, NOT HOPED FOR — form E2
+ *
+ * `xdg_toplevel_set_fullscreen(NULL)` lets the compositor choose, and with
+ * two monitors in the session the window can end up on the one that is not ours:
+ * the injection would go elsewhere and this program would print a silence that
+ * reads as «the input does not arrive».  ⇒ We scan the `wl_output`s, we
+ * take the one of the requested size, and ⛔ **if there is none we exit saying so**.
  */
 #define _GNU_SOURCE
 #include <errno.h>
@@ -87,14 +87,14 @@ static uint32_t voluta_l = 1600, voluta_a = 900;
 static int scelto = -1;
 static bool configurata;
 static int32_t larghezza = 1600, altezza = 900;
-/* La misura DICHIARATA nell'ultima riga: serve a scrivere `RITELA` solo quando
- * cambia davvero, e non a ogni `configure`. */
+/* The size DECLARED in the last line: it serves to write `RITELA` only when
+ * it really changes, and not at every `configure`. */
 static int32_t vista_l, vista_a;
 static unsigned long contatore;
 
-/* ⛔ Una riga per evento, e SEMPRE con `n` crescente: e' il denominatore.
- *    «Non e' arrivato niente» e «non ho stampato» hanno lo stesso aspetto
- *    senza un contatore che cresce. */
+/* ⛔ One line per event, and ALWAYS with a growing `n`: it is the denominator.
+ *    «Nothing arrived» and «I did not print» look the same
+ *    without a counter that grows. */
 static void riga(const char *forma, ...)
 {
 	va_list a;
@@ -108,7 +108,7 @@ static void riga(const char *forma, ...)
 }
 
 /* ------------------------------------------------------------------ *
- *  Il puntatore
+ *  The pointer
  * ------------------------------------------------------------------ */
 static void p_entra(void *d, struct wl_pointer *p, uint32_t s, struct wl_surface *sup,
                     wl_fixed_t x, wl_fixed_t y)
@@ -122,18 +122,18 @@ static void p_esce(void *d, struct wl_pointer *p, uint32_t s, struct wl_surface 
 }
 static void p_muove(void *d, struct wl_pointer *p, uint32_t t, wl_fixed_t x, wl_fixed_t y)
 {
-	/* ⛔ Coordinate LOCALI ALLA SUPERFICIE: con una finestra a schermo intero
-	 *    sono la posizione sul monitor, cioe' esattamente quel che abbiamo
-	 *    chiesto a `input_puntatore`.  Il confronto e' diretto. */
+	/* ⛔ Coordinates LOCAL TO THE SURFACE: with a fullscreen window
+	 *    they are the position on the monitor, that is exactly what we
+	 *    asked of `input_puntatore`.  The comparison is direct. */
 	riga("\"tipo\":\"PUNTATORE\",\"x\":%.1f,\"y\":%.1f", wl_fixed_to_double(x),
 	     wl_fixed_to_double(y));
 }
 static void p_bottone(void *d, struct wl_pointer *p, uint32_t s, uint32_t t, uint32_t bottone,
                       uint32_t stato)
 {
-	/* ⭐ `wl_pointer.button` porta il codice **evdev**: `BTN_LEFT` = 0x110 =
-	 *    272, lo stesso numero che abbiamo mandato.  Nessuna traduzione in
-	 *    mezzo, quindi il confronto e' fra la stessa grandezza. */
+	/* ⭐ `wl_pointer.button` carries the **evdev** code: `BTN_LEFT` = 0x110 =
+	 *    272, the same number we sent.  No translation in
+	 *    between, so the comparison is between the same quantity. */
 	riga("\"tipo\":\"BOTTONE\",\"bottone\":%u,\"premuto\":%u", bottone, stato);
 }
 static void p_asse(void *d, struct wl_pointer *p, uint32_t t, uint32_t asse, wl_fixed_t valore)
@@ -152,8 +152,8 @@ static void p_discreto(void *d, struct wl_pointer *p, uint32_t asse, int32_t pas
 }
 static void p_120(void *d, struct wl_pointer *p, uint32_t asse, int32_t v120)
 {
-	/* ⭐⭐ QUESTA E' LA MISURA DEL SEGNO, e nella stessa unita' del protocollo:
-	 *     `RCP.md` §7.3 conta in unita' da 120, e `axis_value120` porta 120. */
+	/* ⭐⭐ THIS IS THE MEASUREMENT OF THE SIGN, and in the same unit as the protocol:
+	 *     `RCP.md` §7.3 counts in units of 120, and `axis_value120` carries 120. */
 	riga("\"tipo\":\"ASSE_120\",\"asse\":%u,\"v120\":%d", asse, v120);
 }
 static void p_direzione(void *d, struct wl_pointer *p, uint32_t asse, uint32_t dir) {}
@@ -173,7 +173,7 @@ static const struct wl_pointer_listener ascolto_puntatore = {
 };
 
 /* ------------------------------------------------------------------ *
- *  La tastiera
+ *  The keyboard
  * ------------------------------------------------------------------ */
 static void t_keymap(void *d, struct wl_keyboard *k, uint32_t formato, int32_t fd, uint32_t misura)
 {
@@ -192,8 +192,8 @@ static void t_esce(void *d, struct wl_keyboard *k, uint32_t s, struct wl_surface
 static void t_tasto(void *d, struct wl_keyboard *k, uint32_t s, uint32_t t, uint32_t tasto,
                     uint32_t stato)
 {
-	/* ⛔ `wl_keyboard.key` porta il codice **evdev**, lo stesso che abbiamo
-	 *    mandato a `input_posizione`.  `KEY_A` = 30 di qua e di la'. */
+	/* ⛔ `wl_keyboard.key` carries the **evdev** code, the same one we
+	 *    sent to `input_posizione`.  `KEY_A` = 30 on both sides. */
 	riga("\"tipo\":\"TASTO\",\"codice\":%u,\"premuto\":%u", tasto, stato);
 }
 static void t_modificatori(void *d, struct wl_keyboard *k, uint32_t s, uint32_t premuti,
@@ -214,28 +214,28 @@ static const struct wl_keyboard_listener ascolto_tastiera = {
 };
 
 /*
- * ⛔⛔⛔ E LA CAPACITA' SE NE VA E TORNA — difetto del TESTIMONE trovato il 21
- *       agosto 2026, e ha reso muto lo strumento senza dire una parola.
+ * ⛔⛔⛔ AND THE CAPABILITY GOES AWAY AND COMES BACK — defect of the WITNESS found on 21
+ *       Aug 2026, and it made the instrument mute without saying a word.
  *
- * Questa funzione agganciava `wl_pointer` **una volta sola** (`&& !puntatore`) e
- * non lo mollava mai.  ⇒ Quando il posto perde la capacita' e la riprende, il
- * compositore ha distrutto il suo puntatore: il nostro oggetto resta li',
- * ⛔ **non riceve piu' niente e non da' nessun errore**, e al ritorno il
- * `!puntatore` e' falso quindi non ci si riaggancia mai piu'.
+ * This function hooked `wl_pointer` **only once** (`&& !puntatore`) and
+ * never let go of it.  ⇒ When the seat loses the capability and gets it back, the
+ * compositor has destroyed its pointer: our object stays there,
+ * ⛔ **receives nothing more and gives no error**, and on the return
+ * `!puntatore` is false so we never hook again.
  *
- * ⚠ E' **lo stesso difetto** che `STUDI.md` §gnome §9 descrive per `libei` —
- *   *«il puntatore al dispositivo vecchio smette di funzionare senza errore»* —
- *   ma dal lato Wayland, e nello strumento invece che nel prodotto.  ⭐ E' il
- *   modo peggiore in cui un banco puo' rompersi: il testimone dice «non ho
- *   visto niente», e chi legge accusa il prodotto.
+ * ⚠ It is **the same defect** that `STUDI.md` §gnome §9 describes for `libei` —
+ *   *«the pointer to the old device stops working without an error»* —
+ *   but on the Wayland side, and in the instrument instead of the product.  ⭐ It is the
+ *   worst way a bench can break: the witness says «I saw
+ *   nothing», and whoever reads it blames the product.
  *
- * `[M]` Si e' visto curando la cura «C»: al riattacco del canale EIS il posto
- *       passa **3 → 1 → 0 → 1 → 3** (sulla sessione senza monitor i nostri
- *       dispositivi virtuali sono gli UNICI del posto), e da li' in poi il
- *       testimone non ha piu' visto un solo evento.
+ * `[M]` It was seen while working on cure «C»: on reattach of the EIS channel the seat
+ *       goes **3 → 1 → 0 → 1 → 3** (on the session without a monitor our
+ *       virtual devices are the ONLY ones of the seat), and from then on the
+ *       witness did not see a single event.
  *
- * ⇒ Si molla quando la capacita' cade, e ci si riaggancia quando torna.  E'
- *   anche quel che un cliente Wayland scritto bene deve fare.
+ * ⇒ We let go when the capability drops, and hook again when it returns.  It is
+ *   also what a well-written Wayland client must do.
  */
 static void posto_capacita(void *d, struct wl_seat *s, uint32_t cap)
 {
@@ -251,8 +251,8 @@ static void posto_capacita(void *d, struct wl_seat *s, uint32_t cap)
 	{
 		wl_pointer_release(puntatore);
 		puntatore = NULL;
-		/* ⛔ E si SCRIVE: senza questa riga «il posto ha perso il puntatore» e
-		 *    «non e' arrivato niente» hanno lo stesso aspetto nel file. */
+		/* ⛔ And it is WRITTEN: without this line «the seat lost the pointer» and
+		 *    «nothing arrived» look the same in the file. */
 		riga("\"tipo\":\"POSTO_PUNTATORE\",\"stato\":\"mollato\"");
 	}
 
@@ -273,7 +273,7 @@ static void posto_nome(void *d, struct wl_seat *s, const char *nome) {}
 static const struct wl_seat_listener ascolto_posto = { posto_capacita, posto_nome };
 
 /* ------------------------------------------------------------------ *
- *  Gli schermi
+ *  The screens
  * ------------------------------------------------------------------ */
 static void o_geometria(void *d, struct wl_output *o, int32_t x, int32_t y, int32_t lf, int32_t af,
                         int32_t sub, const char *venditore, const char *modello, int32_t trasf)
@@ -302,7 +302,7 @@ static const struct wl_output_listener ascolto_output = { o_geometria, o_modo,  
 	                                                      o_scala,     o_nome, o_descrizione };
 
 /* ------------------------------------------------------------------ *
- *  Il guscio
+ *  The shell
  * ------------------------------------------------------------------ */
 static void guscio_ping(void *d, struct xdg_wm_base *g, uint32_t s)
 {
@@ -368,14 +368,14 @@ static void sup_configura(void *d, struct xdg_surface *s, uint32_t serie)
 		     altezza, scelto >= 0 ? schermi[scelto].nome : "?");
 	}
 	/*
-	 * ⭐⭐ L'UNICA AGGIUNTA A B24 — e si scrive dal lato che RICEVE.
+	 * ⭐⭐ THE ONLY ADDITION TO B24 — and it is written from the side that RECEIVES.
 	 *
-	 * ⛔ Il registro del server dice «tela 1264x800 → 1000x640»: dice che
-	 *    abbiamo CHIESTO.  Questa riga dice che il compositore ha davvero
-	 *    ridimensionato lo schermo sotto una finestra **gia' aperta**, che e' la
-	 *    scena del punto 3 del mandato.  ⚠ E si scrive SOLO quando cambia: una
-	 *    riga per ogni `configure` renderebbe indistinguibile un
-	 *    ridimensionamento da un ridisegno.
+	 * ⛔ The server log says «canvas 1264x800 → 1000x640»: it says that we
+	 *    ASKED.  This line says that the compositor really
+	 *    resized the screen under a window **already open**, which is the
+	 *    scene of point 3 of the mandate.  ⚠ And it is written ONLY when it changes: one
+	 *    line for every `configure` would make a resize
+	 *    indistinguishable from a redraw.
 	 */
 	else if (larghezza != vista_l || altezza != vista_a)
 	{
@@ -407,7 +407,7 @@ static const struct xdg_toplevel_listener ascolto_fin = { fin_configura, fin_chi
 	                                                      fin_stati };
 
 /* ------------------------------------------------------------------ *
- *  Il registro globale
+ *  The global registry
  * ------------------------------------------------------------------ */
 static void registro_globale(void *d, struct wl_registry *r, uint32_t nome, const char *interfaccia,
                              uint32_t versione)
@@ -423,10 +423,10 @@ static void registro_globale(void *d, struct wl_registry *r, uint32_t nome, cons
 	}
 	else if (!strcmp(interfaccia, wl_seat_interface.name))
 	{
-		/* ⛔ Versione 8: e' quella che porta `axis_value120`, cioe' l'unita' in
-		 *    cui `RCP.md` §7.3 conta la rotella.  Con una versione piu' bassa il
-		 *    segno si potrebbe misurare solo sull'asse liscio, che e' un'altra
-		 *    grandezza. */
+		/* ⛔ Version 8: it is the one that carries `axis_value120`, that is the unit in
+		 *    which `RCP.md` §7.3 counts the wheel.  With a lower version the
+		 *    sign could be measured only on the smooth axis, which is another
+		 *    quantity. */
 		uint32_t v = versione < 8 ? versione : 8;
 
 		posto = wl_registry_bind(r, nome, &wl_seat_interface, v);
@@ -457,21 +457,21 @@ int main(int argc, char **argv)
 	schermo = wl_display_connect(NULL);
 	if (!schermo)
 	{
-		riga("\"tipo\":\"ERRORE\",\"perche\":\"nessun compositore Wayland\"");
+		riga("\"tipo\":\"ERRORE\",\"perche\":\"no Wayland compositor\"");
 		return 2;
 	}
 	registro = wl_display_get_registry(schermo);
 	wl_registry_add_listener(registro, &ascolto_registro, NULL);
 	wl_display_roundtrip(schermo);
-	wl_display_roundtrip(schermo); /* il secondo giro porta i modi degli output */
+	wl_display_roundtrip(schermo); /* the second round brings the modes of the outputs */
 
 	if (!compositore || !memoria || !guscio)
 	{
-		riga("\"tipo\":\"ERRORE\",\"perche\":\"il compositore non espone shell o memoria\"");
+		riga("\"tipo\":\"ERRORE\",\"perche\":\"the compositor does not expose shell or memory\"");
 		return 2;
 	}
 
-	/* ⛔ IL MONITOR SI SCEGLIE, e se non c'e' si esce dicendolo. */
+	/* ⛔ THE MONITOR IS CHOSEN, and if there is none we exit saying so. */
 	for (int i = 0; i < quanti_schermi; i++)
 	{
 		riga("\"tipo\":\"SCHERMO\",\"i\":%d,\"l\":%d,\"a\":%d,\"nome\":\"%s\"", i, schermi[i].l,
@@ -481,7 +481,7 @@ int main(int argc, char **argv)
 	}
 	if (scelto < 0)
 	{
-		riga("\"tipo\":\"ERRORE\",\"perche\":\"nessuno schermo %ux%u fra i %d annunciati\"",
+		riga("\"tipo\":\"ERRORE\",\"perche\":\"no %ux%u screen among the %d announced\"",
 		     voluta_l, voluta_a, quanti_schermi);
 		return 3;
 	}
@@ -493,7 +493,7 @@ int main(int argc, char **argv)
 	xdg_surface_add_listener(xdg_sup, &ascolto_sup, NULL);
 	finestra = xdg_surface_get_toplevel(xdg_sup);
 	xdg_toplevel_add_listener(finestra, &ascolto_fin, NULL);
-	xdg_toplevel_set_title(finestra, "B33 testimone");
+	xdg_toplevel_set_title(finestra, "B33 witness");
 	xdg_toplevel_set_app_id(finestra, "remotix.b33");
 	xdg_toplevel_set_fullscreen(finestra, schermi[scelto].output);
 	wl_surface_commit(superficie);

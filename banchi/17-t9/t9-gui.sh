@@ -1,28 +1,28 @@
 #!/bin/bash
 #
-# ⛔ STORIA: la GUI dell'installatore è stata tolta il 10 ott 2026 (DECISIONI §10.31). Questo banco ha
-# provato R36/R37 il 30 set e non gira più (manca remotix-install-gui); resta come documento della prova.
+# ⛔ HISTORY: the installer's GUI was removed on 10 Oct 2026 (DECISIONI §10.31). This bench
+# tested R36/R37 on 30 Sep and no longer runs (remotix-install-gui is missing); it stays as a record of the test.
 #
-# t9-gui.sh — fase 17, T9: la FINESTRA dell'installatore sul desktop vero di una VM «cliente»
-# (lo schermo virtuale di QEMU, la schermata d'accesso della distribuzione, il desktop dell'utente,
-# il dialogo di polkit), guidata dal monitor di QEMU: tavoletta assoluta per i clic, sendkey per i
-# tasti, screendump per le foto. Un passo per chiamata; le foto in /media/REMOTIX/vm17/t9-gui/<m>/.
+# t9-gui.sh — phase 17, T9: the installer's WINDOW on the real desktop of a "customer" VM
+# (QEMU's virtual screen, the distribution's login screen, the user's desktop,
+# the polkit dialog), driven through the QEMU monitor: absolute tablet for clicks, sendkey for
+# keys, screendump for photos. One step per call; photos in /media/REMOTIX/vm17/t9-gui/<m>/.
 #
-#   (sul server, come nicfio)   sg kvm -c 'bash t9-gui.sh <macchina> <passo> [argomenti]'
+#   (on the server, as nicfio)   sg kvm -c 'bash t9-gui.sh <machine> <step> [arguments]'
 #
-#   accendi               foto «cliente», accensione con la tavoletta; la password di nicfio
-#                         (l'amministratore che installa) = $PAROLA
-#   accedi                dalla schermata d'accesso al desktop di nicfio (tastiera)
-#   password              scrive la password nel dialogo di polkit, e Invio
-#   foto <nome>           lo schermo in <nome>.png
-#   clic <x> <y>          un clic sinistro al pixel x,y (schermo 1280×800)
-#   scrivi <testo>        il testo, tasto per tasto
-#   tasto <tasto>         un tasto (ret, tab, esc, ctrl-alt-t…)
-#   terminale [nome]      apre il terminale del desktop (Super, «terminal», Invio)
-#   finestra [lingua]     scrive nel terminale «LANG=… sh install.sh --finestra» e Invio
-#                         (LANG della lingua: it_IT.UTF-8 · en_US.UTF-8 · de_DE.UTF-8)
-#   processi              chi gira: la finestra (uid) e la parte da root (R37)
-#   spegni                spegne e torna a «cliente»
+#   accendi               "cliente" snapshot, power on with the tablet; nicfio's password
+#                         (the administrator who installs) = $PAROLA
+#   accedi                from the login screen to nicfio's desktop (keyboard)
+#   password              types the password in the polkit dialog, and Enter
+#   foto <name>           the screen into <name>.png
+#   clic <x> <y>          a left click at pixel x,y (screen 1280×800)
+#   scrivi <text>         the text, key by key
+#   tasto <key>           one key (ret, tab, esc, ctrl-alt-t…)
+#   terminale [name]      opens the desktop's terminal (Super, "terminal", Enter)
+#   finestra [language]   types in the terminal "LANG=… sh install.sh --finestra" and Enter
+#                         (LANG of the language: it_IT.UTF-8 · en_US.UTF-8 · de_DE.UTF-8)
+#   processi              who runs: the window (uid) and the root part (R37)
+#   spegni                powers off and goes back to "cliente"
 set -uo pipefail
 m=${1:?macchina}; passo=${2:?passo}; shift 2
 R=/media/REMOTIX/vm17
@@ -32,9 +32,9 @@ ARCH=http://10.0.2.2:8727
 PAROLA=${REMOTIX_PAROLA_PROVA:-prova2026}
 mkdir -p "$F"
 vm() { $V ssh "$m" "$@"; }
-# i comandi del monitor di QEMU, tutti in UNA connessione (uno per riga di stdin; «attendi S»
-# aspetta S secondi): un tasto per chiamata di 17-vm.sh costava un secondo e mezzo a carattere
-monitor() { # ⚠ i comandi arrivano da stdin: il programma va in -c, non in un heredoc (che è stdin)
+# the QEMU monitor commands, all in ONE connection (one per stdin line; "attendi S"
+# waits S seconds): one key per 17-vm.sh call cost a second and a half per character
+monitor() { # ⚠ the commands come from stdin: the program goes in -c, not in a heredoc (which is stdin)
 	python3 -c '
 import socket, sys, time
 s = socket.socket(socket.AF_UNIX); s.settimeout(3); s.connect(sys.argv[1])
@@ -49,7 +49,7 @@ for riga in sys.stdin.read().splitlines():
     s.sendall((riga + "\n").encode()); leggi()
 ' "$R/$m/monitor.sock"
 }
-# i caratteri in nomi di tasti (qcode; tastiera USA)
+# characters into key names (qcode; US keyboard)
 tasti_di() {
 	python3 -c '
 import sys
@@ -62,22 +62,22 @@ for c in sys.argv[1]:
 
 case $passo in
 accendi)
-	[ "$(pgrep -c '^qemu-system')" -lt 4 ] || { echo "⛔ già 4 VM accese"; exit 2; }
+	[ "$(pgrep -c '^qemu-system')" -lt 4 ] || { echo "⛔ 4 VMs already running"; exit 2; }
 	$V torna "$m" cliente >/dev/null || exit 1
 	RX_VM_TAVOLETTA=1 $V avvia "$m" >"$F/avvia.log" 2>&1 || { tail "$F/avvia.log"; exit 1; }
-	# la password di nicfio (entra nel desktop) e quella di root: l'«amministratore» che il dialogo
-	# di polkit chiede dove nicfio non è nel gruppo sudo/wheel (le immagini cloud: sudo senza gruppo)
+	# nicfio's password (logs into the desktop) and root's: the "administrator" the polkit
+	# dialog asks for where nicfio is not in the sudo/wheel group (the cloud images: sudo without group)
 	vm "echo 'nicfio:$PAROLA' | sudo chpasswd; echo 'root:$PAROLA' | sudo chpasswd; id nicfio; systemctl is-active display-manager"
 	;;
 accedi)
-	# dalla schermata d'accesso, con la tastiera: Invio sul primo utente, la password, Invio; poi
-	# Esc chiude il benvenuto della distribuzione
+	# from the login screen, with the keyboard: Enter on the first user, the password, Enter; then
+	# Esc closes the distribution's welcome
 	printf 'sendkey ret\nattendi 2\n' | monitor
 	tasti_di "$PAROLA" | monitor
 	printf 'sendkey ret\nattendi 15\nsendkey esc\nattendi 1\nsendkey esc\n' | monitor
 	;;
 password)
-	# il dialogo di polkit: la password, Invio
+	# the polkit dialog: the password, Enter
 	tasti_di "$PAROLA" | monitor
 	echo "sendkey ret" | monitor
 	;;
@@ -85,7 +85,7 @@ foto)
 	$V schermo "$m" "$F/${1:?nome}.png" >/dev/null && echo "$F/$1.png"
 	;;
 clic)
-	# QMP: posizione assoluta (0..32767 su tutto lo schermo, 1280×800) e il tasto sinistro
+	# QMP: absolute position (0..32767 over the whole screen, 1280×800) and the left button
 	python3 -c '
 import json, socket, sys, time
 x, y, w, h = map(int, sys.argv[2:6])
@@ -112,25 +112,25 @@ tasto)
 	echo "sendkey $1" | monitor
 	;;
 terminale)
-	# come farebbe una persona: il tasto Super, «terminal», Invio (GNOME; su KDE: «konsole»)
+	# as a person would: the Super key, "terminal", Enter (GNOME; on KDE: "konsole")
 	printf 'sendkey meta_l\nattendi 1.5\n' | monitor
 	tasti_di "${1:-terminal}" | monitor
 	printf 'attendi 1.5\nsendkey ret\n' | monitor
 	;;
 finestra)
-	# la finestra lanciata DAL TERMINALE DEL DESKTOP (dev'essere in primo piano): è lì che polkit
-	# trova l'agente della sessione grafica. ⚠ Da ssh no: «No authentication agent found» (`[M]`)
+	# the window launched FROM THE DESKTOP'S TERMINAL (it must be in the foreground): that is where polkit
+	# finds the graphical session's agent. ⚠ Not from ssh: "No authentication agent found" (`[M]`)
 	case ${1:-it} in it) L=it_IT.UTF-8 ;; en) L=en_US.UTF-8 ;; de) L=de_DE.UTF-8 ;; *) L=$1 ;; esac
 	vm "curl -s -o /tmp/install.sh $ARCH/install.sh && chmod 644 /tmp/install.sh" || exit 1
 	tasti_di "LANG=$L LANGUAGE= sh /tmp/install.sh --archivio $ARCH --finestra" | monitor
 	echo "sendkey ret" | monitor
 	;;
 processi)
-	# R37: la finestra (uid dell'utente) e la parte da root (l'unità transitoria di systemd)
+	# R37: the window (the user's uid) and the root part (the systemd transient unit)
 	vm "ps -eo uid,user,pid,ppid,unit,args | grep -E '[r]emotix-install|[g]ui-prova' | cut -c1-220" | tee -a "$F/processi.txt"
 	;;
 spegni)
-	$V ferma "$m" >/dev/null 2>&1; $V torna "$m" cliente >/dev/null 2>&1; echo "   $m spenta, tornata a «cliente»"
+	$V ferma "$m" >/dev/null 2>&1; $V torna "$m" cliente >/dev/null 2>&1; echo "   $m powered off, back to \"cliente\""
 	;;
 *) sed -n 3,24p "$0"; exit 2 ;;
 esac

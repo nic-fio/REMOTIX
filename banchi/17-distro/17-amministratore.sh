@@ -1,32 +1,33 @@
 #!/bin/bash
 #
-# 17-amministratore.sh — quel che l'AMMINISTRATORE fa prima di installare REMOTIX (DECISIONI §10.36:
-# REMOTIX non modifica il sistema, `check` dice cosa manca e provvede lui). Gira DENTRO la macchina,
-# da root, mandato da 17-t10.sh:
+# 17-amministratore.sh — what the ADMINISTRATOR does before installing REMOTIX (DECISIONI §10.36:
+# REMOTIX does not modify the system, `check` says what is missing and he provides it). Runs INSIDE the
+# machine, as root, sent by 17-t10.sh:
 #
 #     ssh … 'sudo bash -s <macchina> <porta>' < 17-amministratore.sh
-#        es. fedora44-xfce 7447
+#        e.g. fedora44-xfce 7447
 #
-# Che cosa mette, e da dove viene la ricetta: sono i comandi che il motore eseguiva o suggeriva fino
-# al catalogo 2026.10.10.12 (git show 890f133:installatore/catalogo/catalogo.json), spostati qui.
-# ⛔ Non è parte del prodotto: è il banco che fa la parte della persona.
-#   - gli archivi di terzi e i driver con H.264 della scheda di questa macchina (Fedora: RPM Fusion,
-#     Intel intel-media-driver, AMD mesa-va-drivers-freeworld; Alma: EPEL con CRB, e RPM Fusion per
-#     Intel; openSUSE con AMD: la Mesa di Packman);
-#   - il driver Vulkan delle AMD dove la RADV ufficiale codifica (Debian, Ubuntu, Arch);
-#   (labwc, wlr-randr, breeze6-wallpapers e il carattere scalabile NON li mette lui: sono dipendenze di
-#   REMOTIX, li installa il gestore insieme a REMOTIX — utente, 10 ott 2026, DECISIONI §10.36);
-#   - la porta di REMOTIX nel firewall, TCP e UDP (firewalld o ufw, se acceso).
-# Ogni comando si scrive prima di farlo: il giornale è la prova di che cosa l'amministratore ha fatto.
+# What it puts in, and where the recipe comes from: these are the commands the engine ran or suggested
+# up to catalogue 2026.10.10.12 (git show 890f133:installatore/catalogo/catalogo.json), moved here.
+# ⛔ It is not part of the product: it is the bench playing the person.
+#   - the third-party repositories and the H.264 drivers for this machine's card (Fedora: RPM Fusion,
+#     Intel intel-media-driver, AMD mesa-va-drivers-freeworld; Alma: EPEL with CRB, and RPM Fusion for
+#     Intel; openSUSE with AMD: the Packman Mesa);
+#   - the AMD Vulkan driver where the official RADV encodes (Debian, Ubuntu, Arch);
+#   (labwc, wlr-randr, breeze6-wallpapers and the scalable font are NOT put in by him: they are
+#   dependencies of REMOTIX, the package manager installs them together with REMOTIX — user,
+#   10 Oct 2026, DECISIONI §10.36);
+#   - the REMOTIX port in the firewall, TCP and UDP (firewalld or ufw, if on).
+# Every command is written before it is run: the journal is the proof of what the administrator did.
 set -uo pipefail
-m=${1:?macchina}; porta=${2:-7447}
+m=${1:?machine}; porta=${2:-7447}
 distro=${m%%-*}; desktop=${m#*-}; desktop=${desktop%-iso}
 fai() { echo "+ $*"; "$@"; }
 forn=""
 for v in /sys/class/drm/renderD*/device/vendor; do
 	case $(cat "$v" 2>/dev/null) in 0x8086) forn="$forn Intel" ;; 0x1002) forn="$forn AMD" ;; 0x10de) forn="$forn NVIDIA" ;; esac
 done
-echo "== $m · schede:${forn:- nessuna} · porta $porta"
+echo "== $m · cards:${forn:- none} · port $porta"
 ha() { case " $forn " in *" $1 "*) return 0 ;; esac; return 1; }
 comp=""
 case $distro in
@@ -63,7 +64,7 @@ arch)
 	ha AMD && comp="$comp vulkan-radeon"
 	[ -n "$comp" ] && fai pacman -S --needed --noconfirm $comp
 	;;
-*) echo "⛔ macchina sconosciuta: $m"; exit 2 ;;
+*) echo "⛔ unknown machine: $m"; exit 2 ;;
 esac
 if systemctl is-active -q firewalld 2>/dev/null; then
 	fai firewall-cmd --permanent --add-port="$porta/tcp" --add-port="$porta/udp"
@@ -72,4 +73,4 @@ elif command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q 'Status:
 	fai ufw allow "$porta/tcp"
 	fai ufw allow "$porta/udp"
 fi
-echo "== fatto"
+echo "== done"

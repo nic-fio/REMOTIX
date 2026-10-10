@@ -1,56 +1,56 @@
 #!/bin/bash
 #
-# attrezzi-gruppi-scheda.sh — ⭐ L'UNICO POSTO in cui un banco mette un
-# inquilino nei gruppi della scheda, e ⭐ L'UNICO in cui VERIFICA che ci sia.
+# attrezzi-gruppi-scheda.sh — ⭐ THE ONLY PLACE where a bench puts a
+# tenant into the card's groups, and ⭐ THE ONLY ONE where it VERIFIES they are there.
 #
-#   . banchi/attrezzi-gruppi-scheda.sh      # e poi: gruppi_scheda_dai_a UTENTE
-#   bash banchi/attrezzi-gruppi-scheda.sh UTENTE        # come programma
-#   bash banchi/attrezzi-gruppi-scheda.sh --testo       # ⭐ si STAMPA, per chi
-#                                                       #   gira altrove
+#   . banchi/attrezzi-gruppi-scheda.sh      # and then: gruppi_scheda_dai_a USER
+#   bash banchi/attrezzi-gruppi-scheda.sh USER        # as a program
+#   bash banchi/attrezzi-gruppi-scheda.sh --testo       # ⭐ it PRINTS itself, for whoever
+#                                                       #   runs elsewhere
 #
 # ---------------------------------------------------------------------------
-# ⛔⛔⭐ IL DIFETTO CHE QUESTO FILE CURA — «la sessione che nasce cieca»
+# ⛔⛔⭐ THE DEFECT THIS FILE CURES — «the session that is born blind»
 #
-# `fasi/10-multi-tenant-e-il-budget.md` §7.4: nessuna applicazione riesce ad
-# aprire una finestra, zero fotogrammi, mai — `provanic4/5/6` su **98 · 55 · 50**
-# tentativi.  Ha bloccato cinque prove della rete anti-regressione e rinviato
-# una fase intera.
+# `fasi/10-multi-tenant-e-il-budget.md` §7.4: no application manages to
+# open a window, zero frames, ever — `provanic4/5/6` on **98 · 55 · 50**
+# attempts.  It blocked five tests of the anti-regression net and postponed
+# a whole phase.
 #
-# ⭐ LA CAUSA, misurata sulla macchina vera il 27 agosto 2026: l'inquilino non
-#    sta nei gruppi dei nodi `/dev/dri` (qui `video` e `render`).
+# ⭐ THE CAUSE, measured on the real machine on 27 Aug 2026: the tenant is not
+#    in the groups of the `/dev/dri` nodes (here `video` and `render`).
 #
-#   | inquilini CON i due gruppi | `[M]` **17 su 17** vedono (1,92-2,10 s) |
-#   | SENZA                      | `[M]` **0 su 4**, mai in 90 s, zero fotogrammi |
-#   | ⭐ controprova             | dati i gruppi allo stesso inquilino ⇒ 2,04 s |
+#   | tenants WITH the two groups | `[M]` **17 out of 17** see (1.92-2.10 s) |
+#   | WITHOUT                     | `[M]` **0 out of 4**, never in 90 s, zero frames |
+#   | ⭐ counter-test             | groups given to the same tenant ⇒ 2.04 s |
 #
-# ⛔⛔ E I BANCHI CREAVANO INQUILINI CIECHI PER CONTO LORO.  Un banco che misura
-#    una sessione che non vede, credendola sana, e' PEGGIO di un banco che non
-#    gira: scrive un numero e non dichiara di che prodotto sia.
+# ⛔⛔ AND THE BENCHES CREATED BLIND TENANTS ON THEIR OWN.  A bench that measures
+#    a session that does not see, believing it healthy, is WORSE than a bench that does not
+#    run: it writes a number and does not declare which product it belongs to.
 #
-# ⭐ PERCHE' UN FILE SOLO, E NON UNA RIGA IN OGNI TERRENO (`LEZIONI.md` §1.47):
-#    dieci copie della stessa riga sono dieci posti da cui divergere, ed erano
-#    gia' divergiti — `src/provisiona.sh` dava i gruppi, `attrezzi-utenti.sh`
-#    no, e nessuno dei due lo diceva.
+# ⭐ WHY ONE FILE, AND NOT A LINE IN EVERY TERRAIN (`LEZIONI.md` §1.47):
+#    ten copies of the same line are ten places to diverge from, and they had
+#    already diverged — `src/provisiona.sh` gave the groups, `attrezzi-utenti.sh`
+#    did not, and neither of the two said so.
 #
-# ⛔ IL GRUPPO SI LEGGE DAL NODO, MAI DA UN NOME INCHIODATO.  `video` e `render`
-#    sono i nomi di QUESTA distribuzione: dentro il chroot di `enter.sh` (che
-#    ha `/dev` in rbind ma un `/etc/group` tutto suo) lo stesso gid puo' avere
-#    un altro nome, o nessuno.  ⇒ si parte dal **gid** dello `stat`, e il nome
-#    si CHIEDE a `getent`.
+# ⛔ THE GROUP IS READ FROM THE NODE, NEVER FROM A HARD-CODED NAME.  `video` and `render`
+#    are the names of THIS distribution: inside the `enter.sh` chroot (which
+#    has `/dev` in rbind but an `/etc/group` all of its own) the same gid may have
+#    another name, or none.  ⇒ we start from the **gid** of the `stat`, and the name
+#    is ASKED of `getent`.
 #
-# ⚠ E SI SCORRONO TUTTI I NODI, non `renderD128`: `renderD128` e `renderD129`
-#   si scambiano fra due avvii (lo dice gia' `src/provisiona.sh`), e `cardN` e
-#   `renderDN` hanno gruppi DIVERSI che servono tutt'e due.
+# ⚠ AND ALL THE NODES ARE SCANNED, not `renderD128`: `renderD128` and `renderD129`
+#   swap between two boots (`src/provisiona.sh` already says so), and `cardN` and
+#   `renderDN` have DIFFERENT groups that are both needed.
 #
-# ⭐ E LA VERIFICA CONFRONTA I NUMERI, non i nomi (E1, «scritto non e' in
-#   vigore»): il vecchio `id -nG | grep -qw render` avrebbe detto OK su una
-#   macchina dove il nodo appartiene a un altro gruppo.
+# ⭐ AND THE VERIFICATION COMPARES THE NUMBERS, not the names (E1, «written is not in
+#   force»): the old `id -nG | grep -qw render` would have said OK on a
+#   machine where the node belongs to another group.
 # ---------------------------------------------------------------------------
 
-# ═══ CORPO-INIZIO ═══  ⛔ Da qui a CORPO-FINE e' quel che `--testo` stampa:
-#     niente qui dentro deve dipendere da questo file o da questa macchina.
+# ═══ CORPO-INIZIO ═══  ⛔ From here to CORPO-FINE is what `--testo` prints:
+#     nothing in here must depend on this file or on this machine.
 
-# I gid dei nodi della scheda, uno per riga, senza doppioni.
+# The gids of the card's nodes, one per line, without duplicates.
 gruppi_scheda_gid() {
 	_gs_n=; _gs_g=
 	for _gs_n in /dev/dri/card[0-9]* /dev/dri/renderD[0-9]*; do
@@ -60,10 +60,10 @@ gruppi_scheda_gid() {
 	done | sort -un
 }
 
-# Il nome di un gid, o vuoto se in /etc/group non ce n'e' uno.
+# The name of a gid, or empty if /etc/group has none.
 gruppi_scheda_nome() { getent group "$1" 2>/dev/null | cut -d: -f1; }
 
-# Quale nodo ha quel gid — serve solo a scrivere un messaggio che si capisce.
+# Which node has that gid — needed only to write a message that makes sense.
 gruppi_scheda_nodo() {
 	_gs_n=
 	for _gs_n in /dev/dri/card[0-9]* /dev/dri/renderD[0-9]*; do
@@ -73,7 +73,7 @@ gruppi_scheda_nodo() {
 	printf '/dev/dri'
 }
 
-# L'inquilino sta nel gruppo di quel gid?  ⭐ Si confrontano i NUMERI.
+# Is the tenant in the group of that gid?  ⭐ The NUMBERS are compared.
 gruppi_scheda_ci_sta() {
 	_gs_x=
 	for _gs_x in $(id -G "$1" 2>/dev/null); do
@@ -82,7 +82,7 @@ gruppi_scheda_ci_sta() {
 	return 1
 }
 
-# I gid dei nodi che all'inquilino MANCANO, separati da spazio.
+# The gids of the nodes that the tenant is MISSING, separated by spaces.
 gruppi_scheda_mancanti() {
 	_gs_g=; _gs_m=
 	for _gs_g in $(gruppi_scheda_gid); do
@@ -91,94 +91,94 @@ gruppi_scheda_mancanti() {
 	printf '%s' "$_gs_m"
 }
 
-# ⭐⭐ IL LAVORO: mette l'inquilino nei gruppi dei nodi e VERIFICA che ci sia.
+# ⭐⭐ THE WORK: puts the tenant into the nodes' groups and VERIFIES they are there.
 #
-#   0  ⭐ c'e' dentro davvero (o non c'e' niente da fare)
-#   3  ⛔ NON c'e' dentro dopo il tentativo — chi chiama DEVE fermarsi
-#   4  ⛔ i gruppi sono stati aggiunti ma il gestore d'utente era GIA' VIVO:
-#         scritti si', in vigore no — chi chiama DEVE fermarsi
-#   5  ⛔ un gid dei nodi non ha nessun nome in /etc/group
+#   0  ⭐ really in (or nothing to do)
+#   3  ⛔ NOT in after the attempt — the caller MUST stop
+#   4  ⛔ the groups were added but the user manager was ALREADY ALIVE:
+#         written yes, in force no — the caller MUST stop
+#   5  ⛔ a gid of the nodes has no name in /etc/group
 #
-# ⛔ Non spegne niente da sola: `loginctl terminate-user` butta giu' anche il
-#    figlio del server, e in fase 10/11 gli inquilini sono CONDIVISI fra banchi
-#    che stanno misurando (I2).  ⇒ lo DICE, e si ferma.
+# ⛔ It does not shut anything down by itself: `loginctl terminate-user` also takes down the
+#    server's child, and in phase 10/11 tenants are SHARED among benches
+#    that are measuring (I2).  ⇒ it SAYS so, and stops.
 gruppi_scheda_dai_a() {
 	_gs_u=$1
 	_gs_pref=${GRUPPI_SCHEDA_PREFISSO:-    }
 	_gs_gid=$(gruppi_scheda_gid)
 
 	if [ -z "$_gs_gid" ]; then
-		printf '%s\033[1;31m⛔\033[0m  nessun nodo `cardN`/`renderDN` in /dev/dri: su questa\n' "$_gs_pref"
-		printf '%s    macchina il compositore disegnera in SOFTWARE, e nessun gruppo\n' "$_gs_pref"
-		printf '%s    puo rimediare.  ⚠ Il numero che questo banco misurera NON e\n' "$_gs_pref"
-		printf '%s    quello del prodotto in hardware.\n' "$_gs_pref"
+		printf '%s\033[1;31m⛔\033[0m  no `cardN`/`renderDN` node in /dev/dri: on this\n' "$_gs_pref"
+		printf '%s    machine the compositor will draw in SOFTWARE, and no group\n' "$_gs_pref"
+		printf '%s    can fix that.  ⚠ The number this bench will measure is NOT\n' "$_gs_pref"
+		printf '%s    that of the product in hardware.\n' "$_gs_pref"
 		return 0
 	fi
 
-	# 1. I nomi. ⛔ Un gid senza nome non si inventa e non si crea da qui.
+	# 1. The names. ⛔ A gid without a name is not invented and not created from here.
 	_gs_nomi=
 	for _gs_g in $_gs_gid; do
 		_gs_nome=$(gruppi_scheda_nome "$_gs_g")
 		if [ -z "$_gs_nome" ]; then
-			printf '%s\033[1;31m⛔⛔\033[0m il gid %s (di %s) NON ha nessun nome in /etc/group qui:\n' \
+			printf '%s\033[1;31m⛔⛔\033[0m gid %s (of %s) has NO name in /etc/group here:\n' \
 				"$_gs_pref" "$_gs_g" "$(gruppi_scheda_nodo "$_gs_g")"
-			printf '%s    l inquilino «%s» non ci puo entrare, e la sua sessione NASCERA\n' "$_gs_pref" "$_gs_u"
-			printf '%s    CIECA.  ⭐ La cura, da root: `groupadd -g %s scheda%s`\n' "$_gs_pref" "$_gs_g" "$_gs_g"
+			printf '%s    the tenant «%s» cannot join it, and their session WILL BE BORN\n' "$_gs_pref" "$_gs_u"
+			printf '%s    BLIND.  ⭐ The cure, as root: `groupadd -g %s scheda%s`\n' "$_gs_pref" "$_gs_g" "$_gs_g"
 			return 5
 		fi
 		case " $_gs_nomi " in *" $_gs_nome "*) continue ;; esac
 		_gs_nomi="${_gs_nomi:+$_gs_nomi }$_gs_nome"
 	done
 
-	# 2. Che cosa manca PRIMA — serve a sapere se stiamo cambiando qualcosa.
+	# 2. What is missing BEFORE — needed to know whether we are changing something.
 	_gs_prima=$(gruppi_scheda_mancanti "$_gs_u")
 
 	if [ -n "$_gs_prima" ]; then
-		# ⚠ `usermod -aG` vuole i nomi separati da virgola.
+		# ⚠ `usermod -aG` wants the names separated by commas.
 		_gs_virgole=$(printf '%s' "$_gs_nomi" | tr ' ' ',')
 		usermod -aG "$_gs_virgole" "$_gs_u" || {
-			printf '%s\033[1;31m⛔\033[0m  `usermod -aG %s %s` NON e riuscito\n' \
+			printf '%s\033[1;31m⛔\033[0m  `usermod -aG %s %s` did NOT succeed\n' \
 				"$_gs_pref" "$_gs_virgole" "$_gs_u"
 			return 3; }
 	fi
 
-	# 3. ⭐ SI RILEGGE — E1: scritto non e' in vigore.
+	# 3. ⭐ READ IT BACK — E1: written is not in force.
 	_gs_dopo=$(gruppi_scheda_mancanti "$_gs_u")
 	if [ -n "$_gs_dopo" ]; then
 		for _gs_g in $_gs_dopo; do
-			printf '%s\033[1;31m⛔⛔\033[0m «%s» NON E NEL GRUPPO DELLA SCHEDA «%s» (gid %s, il gruppo\n' \
+			printf '%s\033[1;31m⛔⛔\033[0m «%s» IS NOT IN THE CARD GROUP «%s» (gid %s, the group\n' \
 				"$_gs_pref" "$_gs_u" "$(gruppi_scheda_nome "$_gs_g")" "$_gs_g"
-			printf '%s    di %s)\n' "$_gs_pref" "$(gruppi_scheda_nodo "$_gs_g")"
+			printf '%s    of %s)\n' "$_gs_pref" "$(gruppi_scheda_nodo "$_gs_g")"
 		done
-		printf '%s    ⛔ LA SUA SESSIONE NASCEREBBE E NON VEDREBBE NIENTE: zero fotogrammi,\n' "$_gs_pref"
-		printf '%s    nessuna finestra si apre, e il ciclo gira in tondo fra «ZERO MONITOR»\n' "$_gs_pref"
-		printf '%s    e «monitor virtuale montato» (fase 10 §7.4 — [M] 0 su 4 senza, 17 su 17 con).\n' "$_gs_pref"
-		printf '%s    ⛔ QUESTO BANCO NON DEVE MISURARE: misurerebbe un prodotto che non esiste.\n' "$_gs_pref"
+		printf '%s    ⛔ ITS SESSION WOULD BE BORN AND SEE NOTHING: zero frames,\n' "$_gs_pref"
+		printf '%s    no window opens, and the loop goes round and round between «ZERO MONITOR»\n' "$_gs_pref"
+		printf '%s    and «virtual monitor mounted» (phase 10 §7.4 — [M] 0 out of 4 without, 17 out of 17 with).\n' "$_gs_pref"
+		printf '%s    ⛔ THIS BENCH MUST NOT MEASURE: it would measure a product that does not exist.\n' "$_gs_pref"
 		return 3
 	fi
 
 	if [ -z "$_gs_prima" ]; then
-		printf '%s\033[1;32mOK\033[0m  ⭐ «%s» era gia nei gruppi dei nodi della scheda (%s): la sua\n' \
+		printf '%s\033[1;32mOK\033[0m  ⭐ «%s» was already in the groups of the card nodes (%s): their\n' \
 			"$_gs_pref" "$_gs_u" "$_gs_nomi"
-		printf '%s    sessione puo vedere in hardware\n' "$_gs_pref"
+		printf '%s    session can see in hardware\n' "$_gs_pref"
 		return 0
 	fi
 
-	printf '%s\033[1;32mOK\033[0m  ⭐ «%s» messo nei gruppi LETTI DAI NODI: %s (gid %s)\n' \
+	printf '%s\033[1;32mOK\033[0m  ⭐ «%s» put into the groups READ FROM THE NODES: %s (gid %s)\n' \
 		"$_gs_pref" "$_gs_u" "$_gs_nomi" "$(printf '%s' "$_gs_gid" | tr '\n' ' ')"
 
-	# 4. ⛔⛔ SCRITTI SI', IN VIGORE NO — e questo e' il caso che inganna.
-	#    I gruppi arrivano al compositore solo quando RINASCE il gestore
-	#    d'utente: se ce n'era gia' uno vivo, la sessione che sta girando e'
-	#    ancora cieca, e un banco che misurasse adesso misurerebbe il buio.
+	# 4. ⛔⛔ WRITTEN YES, IN FORCE NO — and this is the misleading case.
+	#    The groups reach the compositor only when the user manager is
+	#    BORN AGAIN: if one was already alive, the session that is running is
+	#    still blind, and a bench measuring now would measure darkness.
 	if pgrep -u "$_gs_u" >/dev/null 2>&1; then
-		printf '%s\033[1;31m⛔⛔\033[0m i gruppi sono stati AGGIUNTI ADESSO, ma «%s» aveva gia dei\n' \
+		printf '%s\033[1;31m⛔⛔\033[0m the groups were ADDED JUST NOW, but «%s» already had\n' \
 			"$_gs_pref" "$_gs_u"
-		printf '%s    processi vivi: un processo tiene i gruppi che aveva quando e NATO.\n' "$_gs_pref"
-		printf '%s    ⇒ La sessione che sta girando e ANCORA CIECA.\n' "$_gs_pref"
-		printf '%s    ⭐ La cura, da root, e poi si rifa questo passo:\n' "$_gs_pref"
+		printf '%s    live processes: a process keeps the groups it had when it was BORN.\n' "$_gs_pref"
+		printf '%s    ⇒ The session that is running is STILL BLIND.\n' "$_gs_pref"
+		printf '%s    ⭐ The cure, as root, and then redo this step:\n' "$_gs_pref"
 		printf '%s        loginctl terminate-user %s\n' "$_gs_pref" "$_gs_u"
-		printf '%s    ⚠ NON lo faccio io: butterebbe giu anche la sessione di un altro banco (I2).\n' "$_gs_pref"
+		printf '%s    ⚠ I do NOT do it: it would also take down the session of another bench (I2).\n' "$_gs_pref"
 		return 4
 	fi
 	return 0
@@ -186,31 +186,31 @@ gruppi_scheda_dai_a() {
 # ═══ CORPO-FINE ═══
 
 # ---------------------------------------------------------------------------
-# ⭐ COME PROGRAMMA — e ⭐ `--testo`, che e' quel che tiene UNO il posto della
-#    cura anche per chi non puo' fare `.` su questo file:
+# ⭐ AS A PROGRAM — and ⭐ `--testo`, which is what keeps the cure in ONE
+#    place even for whoever cannot `.` this file:
 #
-#   · `banchi/attrezzi-utenti.sh` manda i comandi DENTRO il chroot con
-#     `enter.sh --root "…"`, e li' dentro questo file non c'e';
-#   · `banchi/07-b63-terreno.sh` spedisce un copione alla macchina di prova.
+#   · `banchi/attrezzi-utenti.sh` sends the commands INSIDE the chroot with
+#     `enter.sh --root "…"`, and in there this file does not exist;
+#   · `banchi/07-b63-terreno.sh` ships a script to the test machine.
 #
-#   ⚠ Il testo si infila in una stringa gia' espansa (`"$TESTO"`, `$(cat …)`):
-#     la shell NON riespande il risultato di un'espansione, quindi i `$` che
-#     stanno qui dentro arrivano di la' intatti.
+#   ⚠ The text goes into an already expanded string (`"$TESTO"`, `$(cat …)`):
+#     the shell does NOT re-expand the result of an expansion, so the `$`s that
+#     are in here arrive over there intact.
 # ---------------------------------------------------------------------------
-# ⚠ Il controllo sul nome di `$0` distingue «eseguito» da «sorgente con `.`»:
-#   quando un terreno fa `. attrezzi-gruppi-scheda.sh`, `$0` resta il nome del
-#   TERRENO, e qui sotto non succede niente — nemmeno se il terreno era stato
-#   chiamato lui con un argomento.
+# ⚠ The check on the name of `$0` tells «executed» from «sourced with `.`»:
+#   when a terrain does `. attrezzi-gruppi-scheda.sh`, `$0` stays the name of the
+#   TERRAIN, and nothing happens below — not even if the terrain had been
+#   called itself with an argument.
 if [ "$(basename "$0")" = "attrezzi-gruppi-scheda.sh" ]; then
 	case "${1:-}" in
 	--testo)
 		sed -n '/^# ═══ CORPO-INIZIO/,/^# ═══ CORPO-FINE/p' "$0"
 		exit 0 ;;
 	"")
-		printf 'uso: bash %s UTENTE   |   bash %s --testo\n' "$0" "$0"
+		printf 'usage: bash %s USER   |   bash %s --testo\n' "$0" "$0"
 		exit 2 ;;
 	*)
-		[ "$(id -u)" -eq 0 ] || { printf '    ⛔ va lanciato DA ROOT\n'; exit 2; }
+		[ "$(id -u)" -eq 0 ] || { printf '    ⛔ must be run AS ROOT\n'; exit 2; }
 		gruppi_scheda_dai_a "$1"
 		exit $? ;;
 	esac

@@ -1,109 +1,109 @@
 #!/usr/bin/env python3
-"""02-sessione-stato.py — lo strumento di F2.1: dice in che stato e' la sessione
-grafica, e lo dice con un numero d'uscita diverso per ogni stato.
+"""02-sessione-stato.py — the F2.1 tool: it says which state the graphical
+session is in, and says it with a different exit code for each state.
 
   python3 02-sessione-stato.py --attesa 1920x1080 --dal-bus
   python3 02-sessione-stato.py --attesa 1920x1080 --da-scena scene/nera.json
   python3 02-sessione-stato.py --attesa 1920x1080 --dal-bus --registra scene/x.json
 
 ===========================================================================
-⛔ PERCHE' ESISTE — il difetto che questo strumento impedisce
+⛔ WHY IT EXISTS — the defect this tool prevents
 ===========================================================================
 
-Una sessione GNOME headless senza `--virtual-monitor` parte **viva, completa e
-nera** (`STUDI.md` §gnome §3.1: in headless `needs_outputs=false`).  Viva vuol dire
-proprio viva: `IsSessionRunning` risponde `true`, il bus ha cinquanta nomi,
-Nautilus e il Terminale ci sono.  Manca una cosa sola — un monitor — e siccome
-manca in silenzio, chi misura la CATTURA su quella sessione legge zero
-fotogrammi e va a cercare il difetto dentro PipeWire.  `PIANO.md` fase 2: *«si
-cerca per mezza giornata dalla parte sbagliata»*.
+A headless GNOME session without `--virtual-monitor` starts **alive, complete and
+black** (`STUDI.md` §gnome §3.1: in headless `needs_outputs=false`).  Alive means
+really alive: `IsSessionRunning` answers `true`, the bus has fifty names,
+Nautilus and the Terminal are there.  Only one thing is missing — a monitor — and
+since it is missing silently, whoever measures CAPTURE on that session reads zero
+frames and goes looking for the defect inside PipeWire.  `PIANO.md` phase 2: *«you
+search for half a day on the wrong side»*.
 
-⭐ Non e' un timore: il 12 agosto 2026, aprendo questo giro, la sessione GNOME
-   viva su NIC-OS da due giorni era **esattamente quella** — `GetCurrentState`
-   rispondeva con zero monitor e zero monitor logici.  `[M]`
+⭐ It is not a fear: on 12 Aug 2026, opening this round, the GNOME session alive
+   on NIC-OS for two days was **exactly that one** — `GetCurrentState`
+   answered with zero monitors and zero logical monitors.  `[M]`
 
 ===========================================================================
-⛔ LE QUATTRO DOMANDE, E CIASCUNA COL SUO CASO OPPOSTO
+⛔ THE FOUR QUESTIONS, EACH WITH ITS OPPOSITE CASE
 ===========================================================================
 
-| la domanda                          | il caso opposto, scritto prima          |
+| the question                        | the opposite case, written beforehand   |
 |-------------------------------------|-----------------------------------------|
-| la sessione e' viva?                | c'e' il processo ma il bus non risponde |
-| ha il monitor della misura CHIESTA? | ne ha uno che si e' scelto da se' (E2)  |
-| e' viva e nera?                     | ha un monitor, e allora nera non e'     |
-| la SHELL e' vuota?                  | gnome-session e' ripartito in una shell |
+| is the session alive?               | the process is there but the bus is mute|
+| does it have the monitor of the     | it has one it chose by itself (E2)      |
+| REQUESTED size?                     |                                         |
+| is it alive and black?              | it has a monitor, so it is not black    |
+| is SHELL empty?                     | gnome-session restarted inside a shell  |
 
 ===========================================================================
-⛔ I NUMERI D'USCITA, SCRITTI PRIMA DEL GIRO (`PIANO.md` §0.3 punto 4)
+⛔ THE EXIT CODES, WRITTEN BEFORE THE ROUND (`PIANO.md` §0.3 point 4)
 ===========================================================================
 
-  0  SANA                  un monitor solo, prodotto «MetaVirtualMonitor»,
-                           della misura chiesta, e la riga di comando la chiede
-  1  NERA: ZERO MONITOR    viva, e zero monitor: e' il guasto di M9
-  2  MISURA SBAGLIATA      un monitor, ma non della misura chiesta
-  3  MONITOR SCELTO DA SE  prodotto «Virtual remote monitor» (creato da Mutter
-                           per uno ScreenCast), oppure piu' di uno       ← E2
-  4  SESSIONE MORTA        nessun gnome-shell, o il bus non risponde
-  5  LETTURA IGNOTA        non ho potuto leggere: negata, o illeggibile  ← E8
-  6  DISACCORDO            la riga di comando e il bus non dicono lo stesso ← E1
-  7  SHELL NON VUOTA       gnome-session si e' ri-eseguito in una shell di login
+  0  HEALTHY                    a single monitor, product «MetaVirtualMonitor»,
+                                of the requested size, and the command line asks for it
+  1  BLACK: ZERO MONITORS       alive, and zero monitors: it is the M9 fault
+  2  WRONG SIZE                 one monitor, but not of the requested size
+  3  MONITOR CHOSEN BY ITSELF   product «Virtual remote monitor» (created by Mutter
+                                for a ScreenCast), or more than one          ← E2
+  4  SESSION DEAD               no gnome-shell, or the bus does not answer
+  5  UNKNOWN READING            I could not read: denied, or unreadable      ← E8
+  6  DISAGREEMENT               the command line and the bus do not say the same ← E1
+  7  SHELL NOT EMPTY            gnome-session re-executed itself inside a login shell
 
-⛔ La precedenza, dichiarata perche' due stati possono valere insieme:
+⛔ The precedence, declared because two states can hold at once:
 
        5 > 4 > 7 > 3 > 2 > 1 > 6 > 0
 
-   · «Non ho potuto leggere» (5) vince su tutto: se lo strumento e' cieco non
-     ha diritto di dare un verdetto sul soggetto;
-   · ⛔ **il DISACCORDO (6) sta in fondo, ed e' una correzione pagata**.  Nella
-     prima stesura stava in alto, subito sotto 7 — e il 12 agosto 2026 la
-     certificazione sulle scene ha mostrato che cosi' **due verdetti su otto
-     non si potevano raggiungere mai**: una misura sbagliata (2) e un monitor
-     che Mutter si e' scelto da se' (3) fanno *anche* discordare la riga di
-     comando dal bus, quindi uscivano tutt'e due come 6.  ⇒ Il disaccordo e'
-     il verdetto **residuo**: si da' solo quando nessuna spiegazione piu'
-     precisa regge.  Se non l'avesse trovato la certificazione, la forma E2 —
-     il monitor scelto da se', che e' proprio quel che questo banco esiste per
-     vedere — sarebbe stata invisibile sotto un'etichetta generica.
+   · «I could not read» (5) beats everything: if the tool is blind it has no
+     right to give a verdict on the subject;
+   · ⛔ **DISAGREEMENT (6) sits at the bottom, and it is a paid-for correction**.  In
+     the first draft it sat high, right under 7 — and on 12 Aug 2026 the
+     certification on the scenes showed that this way **two verdicts out of eight
+     could never be reached**: a wrong size (2) and a monitor that Mutter chose
+     by itself (3) *also* make the command line disagree with the bus, so both
+     came out as 6.  ⇒ Disagreement is the **residual** verdict: it is given only
+     when no more precise explanation holds.  Had the certification not found
+     it, the E2 form — the monitor chosen by itself, which is exactly what this
+     bench exists to see — would have been invisible under a generic label.
 
 ===========================================================================
-⛔ ZERO E FALLIMENTO SONO DUE COSE DIVERSE  (`REVIEWER.md` §1 punto 4)
+⛔ ZERO AND FAILURE ARE TWO DIFFERENT THINGS  (`REVIEWER.md` §1 point 4)
 ===========================================================================
 
-Niente `2>/dev/null` e niente `gdbus | grep`.  Si chiama D-Bus da `Gio` e si
-prendono i dati TIPATI: «la risposta e' una lista vuota» e «la chiamata e'
-fallita» arrivano per due strade diverse e finiscono in due codici diversi
-(1 e 5).  ⛔ Il 12 agosto 2026 la differenza si e' pagata subito: sulla stessa
-sessione `org.gnome.Shell.Introspect.GetWindows` e `Shell.Screenshot` rispondono
-**AccessDenied** a un chiamante qualunque `[M]` — un banco che avesse letto
-«zero finestre» avrebbe scritto «sessione vuota» dove il vero fatto era «non mi
-hanno fatto guardare».
+No `2>/dev/null` and no `gdbus | grep`.  D-Bus is called from `Gio` and the
+TYPED data are taken: «the answer is an empty list» and «the call failed»
+arrive by two different roads and end up in two different codes
+(1 and 5).  ⛔ On 12 Aug 2026 the difference paid off at once: on the same
+session `org.gnome.Shell.Introspect.GetWindows` and `Shell.Screenshot` answer
+**AccessDenied** to an arbitrary caller `[M]` — a bench that had read
+«zero windows» would have written «empty session» where the real fact was «they
+did not let me look».
 
 ===========================================================================
-⛔ E LA RIGA DI COMANDO NON BASTA, E NEMMENO IL BUS DA SOLO
+⛔ AND THE COMMAND LINE IS NOT ENOUGH, NOR IS THE BUS ALONE
 ===========================================================================
 
-Che l'opzione sia SCRITTA non e' che sia IN VIGORE (E1: necessario preso per
-sufficiente).  Quindi si leggono tutt'e due — `/proc/<pid>/cmdline` e
-`GetCurrentState` — e **il disaccordo e' un verdetto suo** (6), non un
-arrotondamento verso l'uno o verso l'altro.
+That the option is WRITTEN does not mean it is IN FORCE (E1: necessary taken for
+sufficient).  So both are read — `/proc/<pid>/cmdline` and
+`GetCurrentState` — and **disagreement is a verdict of its own** (6), not a
+rounding toward one or the other.
 
 ===========================================================================
-⭐ IL CONTROLLO POSITIVO, IN CODA A OGNI ESECUZIONE
+⭐ THE POSITIVE CONTROL, AT THE END OF EVERY RUN
 ===========================================================================
 
-Due, e servono a due cose diverse:
+Two, and they serve two different purposes:
 
-  1. **il parser sa leggere**: nella risposta di `GetCurrentState` ci dev'essere
-     la proprieta' `layout-mode`, che c'e' SEMPRE (`meta-monitor-manager.c`).
-     Se manca, e' rotto il parser, non la sessione — e lo strumento lo dice
-     invece di stampare «zero monitor»;
-  2. **il filo col compositore e' vivo adesso**: `IdleMonitor.GetIdletime`
-     chiamato due volte a distanza deve dare due numeri DIVERSI e crescenti.
-     Uno strumento che legge una risposta congelata darebbe lo stesso numero.
+  1. **the parser can read**: the answer of `GetCurrentState` must contain
+     the property `layout-mode`, which is ALWAYS there (`meta-monitor-manager.c`).
+     If it is missing, the parser is broken, not the session — and the tool says
+     so instead of printing «zero monitors»;
+  2. **the line to the compositor is alive now**: `IdleMonitor.GetIdletime`
+     called twice some time apart must give two DIFFERENT, growing numbers.
+     A tool reading a frozen answer would give the same number.
 
-⛔ Se un controllo positivo fallisce, l'uscita diventa 5 qualunque cosa dicesse
-   il verdetto: e' la regola «uno strumento che non ha mai trovato niente non e'
-   pulito, e' non certificato» applicata a se stesso.
+⛔ If a positive control fails, the exit becomes 5 whatever the verdict said:
+   it is the rule «a tool that has never found anything is not clean, it is
+   uncertified» applied to itself.
 """
 
 import argparse
@@ -119,26 +119,26 @@ import gi
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio, GLib  # noqa: E402
 
-# Il prodotto che Mutter mette al monitor persistente chiesto con
-# `--virtual-monitor` (`meta-context-main.c:592-597`, letto il 12 ago 2026 [R]).
+# The product Mutter gives the persistent monitor requested with
+# `--virtual-monitor` (`meta-context-main.c:592-597`, read on 12 Aug 2026 [R]).
 PRODOTTO_CHIESTO = "MetaVirtualMonitor"
-# E quello che si mette da se' quando uno ScreenCast virtuale ne vuole uno
-# (`meta-screen-cast-virtual-stream-src.c:606-609` [R]).  Sono DUE stringhe
-# diverse, ed e' l'unica cosa che distingue «il mio» da «il suo»: la misura no,
-# perche' puo' coincidere.
+# And the one it sets by itself when a virtual ScreenCast wants one
+# (`meta-screen-cast-virtual-stream-src.c:606-609` [R]).  They are TWO different
+# strings, and it is the only thing that tells «mine» from «its own»: the size
+# does not, because it can coincide.
 PRODOTTO_DA_SE = "Virtual remote monitor"
 
 MARCHE = {
-    0: "SANA",
-    1: "NERA: ZERO MONITOR",
-    2: "MISURA SBAGLIATA",
-    3: "MONITOR SCELTO DA SE",
-    4: "SESSIONE MORTA",
-    5: "LETTURA IGNOTA",
-    6: "DISACCORDO",
-    7: "SHELL NON VUOTA",
+    0: "HEALTHY",
+    1: "BLACK: ZERO MONITORS",
+    2: "WRONG SIZE",
+    3: "MONITOR CHOSEN BY ITSELF",
+    4: "SESSION DEAD",
+    5: "UNKNOWN READING",
+    6: "DISAGREEMENT",
+    7: "SHELL NOT EMPTY",
 }
-# Dal piu' forte al piu' debole.  ⛔ Il 6 sta in fondo apposta: vedi in testa.
+# From strongest to weakest.  ⛔ The 6 sits at the bottom on purpose: see the header.
 PRECEDENZA = [5, 4, 7, 3, 2, 1, 6, 0]
 
 VERDE = "\033[1;32m"
@@ -168,24 +168,24 @@ def titolo(t):
 
 
 # ---------------------------------------------------------------------------
-# La raccolta dei fatti.  Ogni fatto ha tre esiti possibili — c'e', non c'e',
-# non l'ho potuto leggere — e il terzo non si confonde col secondo.
+# Gathering the facts.  Every fact has three possible outcomes — it is there,
+# it is not there, I could not read it — and the third is not mistaken for the second.
 # ---------------------------------------------------------------------------
 class Ignota(Exception):
-    """Non ho potuto leggere.  ⛔ Non e' «non c'e'»."""
+    """I could not read.  ⛔ It is not «it is not there»."""
 
 
 def processi_shell():
-    """I pid di gnome-shell.  ⛔ `pgrep -x`: `comm` e' troncato a 15 caratteri
-    (`FASI.md` §00-ambiente B3.1), e «gnome-shell» ne ha 11 — ci sta.  Ma lo
-    stato d'uscita si guarda: 0 trovato, 1 nessuno, 2+ ERRORE."""
+    """The pids of gnome-shell.  ⛔ `pgrep -x`: `comm` is truncated to 15 characters
+    (`FASI.md` §00-ambiente B3.1), and «gnome-shell» has 11 — it fits.  But the
+    exit status is checked: 0 found, 1 none, 2+ ERROR."""
     e = subprocess.run(["pgrep", "-u", str(os.getuid()), "-x", "gnome-shell"],
                        capture_output=True, text=True)
     if e.returncode == 0:
         return [int(r) for r in e.stdout.split()]
     if e.returncode == 1:
         return []
-    raise Ignota(f"pgrep e' uscito con {e.returncode}: {e.stderr.strip()!r}")
+    raise Ignota(f"pgrep exited with {e.returncode}: {e.stderr.strip()!r}")
 
 
 def riga_comando(pid):
@@ -194,7 +194,7 @@ def riga_comando(pid):
             return [a.decode("utf-8", "replace")
                     for a in f.read().split(b"\0") if a]
     except OSError as err:
-        raise Ignota(f"non leggo /proc/{pid}/cmdline: {err}")
+        raise Ignota(f"cannot read /proc/{pid}/cmdline: {err}")
 
 
 def ambiente_di(pid):
@@ -202,7 +202,7 @@ def ambiente_di(pid):
         with open(f"/proc/{pid}/environ", "rb") as f:
             grezzo = f.read()
     except OSError as err:
-        raise Ignota(f"non leggo /proc/{pid}/environ: {err}")
+        raise Ignota(f"cannot read /proc/{pid}/environ: {err}")
     amb = {}
     for voce in grezzo.split(b"\0"):
         if b"=" in voce:
@@ -218,22 +218,22 @@ def pid_gnome_session():
         return int(e.stdout.split()[0])
     if e.returncode == 1:
         return None
-    raise Ignota(f"pgrep gnome-session-binary e' uscito con {e.returncode}")
+    raise Ignota(f"pgrep gnome-session-binary exited with {e.returncode}")
 
 
 def bus():
     try:
         return Gio.bus_get_sync(Gio.BusType.SESSION, None)
     except GLib.Error as err:
-        raise Ignota(f"non mi collego al bus di sessione: {err.message}")
+        raise Ignota(f"cannot connect to the session bus: {err.message}")
 
 
 def chiama(conn, dest, path, iface, metodo, args=None, tetto=15000):
-    """Ritorna (valore, None) oppure (None, messaggio d'errore).
+    """Returns (value, None) or (None, error message).
 
-    ⛔ L'errore NON si perde e NON diventa un valore vuoto: chi chiama decide
-       se e' «non c'e'» o «non ho potuto guardare», e i due casi finiscono in
-       due codici d'uscita diversi."""
+    ⛔ The error is NOT lost and does NOT become an empty value: the caller decides
+       whether it is «it is not there» or «I could not look», and the two cases end
+       up in two different exit codes."""
     try:
         r = conn.call_sync(dest, path, iface, metodo, args, None,
                            Gio.DBusCallFlags.NONE, tetto, None)
@@ -243,15 +243,15 @@ def chiama(conn, dest, path, iface, metodo, args=None, tetto=15000):
 
 
 def leggi_monitor(conn):
-    """I monitor secondo `org.gnome.Mutter.DisplayConfig.GetCurrentState`.
+    """The monitors according to `org.gnome.Mutter.DisplayConfig.GetCurrentState`.
 
-    La firma della risposta e'
+    The signature of the answer is
       (u serial, a((ssss) a(siiddada{sv}) a{sv}) monitors,
                  a(iiduba(ssss)a{sv}) logical, a{sv} props)
-    dove `(ssss)` e' (connector, vendor, product, serial)
-    e ogni modo e' (id, larghezza, altezza, refresh, scala-preferita,
-                    scale-supportate, proprieta') — e il modo IN USO porta
-    `is-current` fra le proprieta'."""
+    where `(ssss)` is (connector, vendor, product, serial)
+    and every mode is (id, width, height, refresh, preferred-scale,
+                       supported-scales, properties) — and the mode IN USE carries
+    `is-current` among its properties."""
     r, errore = chiama(conn, "org.gnome.Mutter.DisplayConfig",
                        "/org/gnome/Mutter/DisplayConfig",
                        "org.gnome.Mutter.DisplayConfig", "GetCurrentState")
@@ -275,11 +275,11 @@ def leggi_monitor(conn):
 
 # ---------------------------------------------------------------------------
 def raccogli_dal_bus():
-    """Compone la SCENA: tutti i fatti grezzi, senza giudicarli.
+    """Builds the SCENE: all the raw facts, without judging them.
 
-    ⭐ Separare la raccolta dal giudizio non e' eleganza: e' la sola cosa che
-       permette di certificare il giudizio su scene REGISTRATE, senza dover
-       rompere una macchina vera per ogni caso opposto."""
+    ⭐ Separating gathering from judging is not elegance: it is the only thing that
+       lets the judgement be certified on RECORDED scenes, without having to
+       break a real machine for every opposite case."""
     scena = {"quando": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
              "macchina": os.uname().nodename, "ignote": []}
 
@@ -297,11 +297,11 @@ def raccogli_dal_bus():
         scena["gnome_session_pid"] = p
         if p:
             amb = ambiente_di(p)
-            # ⛔ La trappola di `STUDI.md` §gnome §3.1: `gnome-session.in:3-14` si
-            #    ri-esegue dentro una shell di LOGIN se `$SHELL` sta in
-            #    /etc/shells.  Il controllo vero e' `[ -n "$SHELL" ]`, quindi
-            #    ASSENTE e VUOTA vanno tutt'e due bene: si registrano distinte
-            #    per non far credere che siano la stessa cosa.
+            # ⛔ The trap of `STUDI.md` §gnome §3.1: `gnome-session.in:3-14`
+            #    re-executes itself inside a LOGIN shell if `$SHELL` is in
+            #    /etc/shells.  The real check is `[ -n "$SHELL" ]`, so
+            #    ABSENT and EMPTY are both fine: they are recorded separately
+            #    so as not to suggest they are the same thing.
             scena["shell_var"] = amb.get("SHELL", None)
             scena["shell_var_presente"] = "SHELL" in amb
             scena["xdg_session_type"] = amb.get("XDG_SESSION_TYPE")
@@ -325,8 +325,8 @@ def raccogli_dal_bus():
 
     r, errore = chiama(conn, "org.gnome.SessionManager", "/org/gnome/SessionManager",
                        "org.gnome.SessionManager", "IsSessionRunning")
-    # ⛔ `ServiceUnknown` = la sessione non c'e' (fatto sul soggetto);
-    #    qualunque altro errore = non ho potuto guardare (fatto sullo strumento).
+    # ⛔ `ServiceUnknown` = the session is not there (a fact about the subject);
+    #    any other error = I could not look (a fact about the tool).
     if errore is None:
         scena["sessione_gira"] = bool(r.unpack()[0])
         scena["sessione_errore"] = None
@@ -349,7 +349,7 @@ def raccogli_dal_bus():
 
 
 def controllo_positivo(conn, scena):
-    """⭐ «Questo strumento sa trovare qualcosa che c'e' di sicuro?»"""
+    """⭐ «Can this tool find something that is surely there?»"""
     esito = {"layout_mode": None, "idletime_1": None, "idletime_2": None,
              "esito": False, "perche": ""}
 
@@ -368,24 +368,24 @@ def controllo_positivo(conn, scena):
         time.sleep(0.35)
 
     if esito["layout_mode"] is None:
-        esito["perche"] = ("nella risposta di GetCurrentState non c'e' «layout-mode», "
-                           "che c'e' sempre: e' rotto il parser, non la sessione")
+        esito["perche"] = ("the answer of GetCurrentState has no «layout-mode», "
+                           "which is always there: the parser is broken, not the session")
         return esito
     if esito["idletime_2"] is None or esito["idletime_1"] is None:
-        esito["perche"] = "IdleMonitor non ha risposto"
+        esito["perche"] = "IdleMonitor did not answer"
         return esito
     if esito["idletime_2"] <= esito["idletime_1"]:
-        esito["perche"] = (f"l'inattivita' non cresce ({esito['idletime_1']} → "
-                           f"{esito['idletime_2']}): sto leggendo una risposta ferma")
+        esito["perche"] = (f"the idle time does not grow ({esito['idletime_1']} → "
+                           f"{esito['idletime_2']}): I am reading a frozen answer")
         return esito
     esito["esito"] = True
     return esito
 
 
 # ---------------------------------------------------------------------------
-# Il giudizio: dalla scena al numero.  Nessuna lettura qui dentro — cosi' si
-# puo' far girare su una scena registrata, ed e' quel che rende certificabile
-# lo strumento senza rompere una macchina vera per ogni caso opposto.
+# The judgement: from the scene to the number.  No reading in here — so it can
+# run on a recorded scene, and that is what makes the tool certifiable
+# without breaking a real machine for every opposite case.
 # ---------------------------------------------------------------------------
 def giudica(scena, attesa_l, attesa_a):
     stati = set()
@@ -397,31 +397,31 @@ def giudica(scena, attesa_l, attesa_a):
     if scena.get("ignote"):
         stati.add(5)
         for i in scena["ignote"]:
-            dice(f"⛔ IGNOTA: {i}")
+            dice(f"⛔ UNKNOWN: {i}")
     cp = scena.get("controllo_positivo") or {}
     if not cp.get("esito"):
         stati.add(5)
-        dice(f"⛔ il controllo positivo NON e' passato: {cp.get('perche', 'ignoto')}")
+        dice(f"⛔ the positive control did NOT pass: {cp.get('perche', 'unknown')}")
 
     pids = scena.get("shell_pid")
     if not pids:
         stati.add(4)
-        dice("nessun processo gnome-shell")
+        dice("no gnome-shell process")
     if scena.get("sessione_gira") is False:
         stati.add(4)
-        dice("IsSessionRunning risponde no (o il nome non c'e' sul bus)")
+        dice("IsSessionRunning answers no (or the name is not on the bus)")
 
-    # ⛔ La SHELL, e i due modi giusti di averla: assente o vuota.
+    # ⛔ SHELL, and the two right ways of having it: absent or empty.
     if scena.get("gnome_session_pid"):
         if scena.get("shell_var_presente") and scena.get("shell_var"):
             stati.add(7)
-            dice(f"⛔ SHELL={scena['shell_var']!r} nell'ambiente di gnome-session: "
-                 "si e' ri-eseguito dentro una shell di login (STUDI.md §gnome §3.1)")
+            dice(f"⛔ SHELL={scena['shell_var']!r} in the environment of gnome-session: "
+                 "it re-executed itself inside a login shell (STUDI.md §gnome §3.1)")
         else:
-            dice("SHELL " + ("vuota" if scena.get("shell_var_presente") else "assente")
-                 + " nell'ambiente di gnome-session: la trappola §3.1 non ha morso")
+            dice("SHELL " + ("empty" if scena.get("shell_var_presente") else "absent")
+                 + " in the environment of gnome-session: the §3.1 trap did not bite")
 
-    # Quel che la RIGA DI COMANDO chiede.
+    # What the COMMAND LINE asks for.
     riga = scena.get("shell_riga") or []
     chiesto = None
     chiesto_headless = "--headless" in riga
@@ -437,73 +437,73 @@ def giudica(scena, attesa_l, attesa_a):
         if m:
             chiesto_wh = (int(m.group(1)), int(m.group(2)))
 
-    # Quel che il BUS dice.
+    # What the BUS says.
     d = scena.get("display")
     monitor = d["monitor"] if d else None
 
     if monitor is not None:
-        dice(f"il bus dichiara {len(monitor)} monitor e {d['logici']} monitor logici")
+        dice(f"the bus declares {len(monitor)} monitors and {d['logici']} logical monitors")
         if len(monitor) == 0:
             stati.add(1)
-            dice("⛔ ZERO monitor: la sessione puo' essere viva e completa, e "
-                 "non c'e' NIENTE da disegnare (STUDI.md §gnome §3.1)")
+            dice("⛔ ZERO monitors: the session can be alive and complete, and "
+                 "there is NOTHING to draw (STUDI.md §gnome §3.1)")
         elif len(monitor) > 1:
             stati.add(3)
-            dice(f"⛔ {len(monitor)} monitor: ne era stato chiesto uno solo")
-            # ⛔ E SI DICE CHI SONO, uno per uno.  La prima stesura si fermava
-            #    al conteggio, e il 12 agosto 2026 ha visto due monitor su una
-            #    sessione che ne aveva chiesto uno — senza poter dire QUALE
-            #    fosse quello di troppo, perche' il nome non l'aveva stampato.
-            #    Un banco che conta e non nomina manda a indovinare.
+            dice(f"⛔ {len(monitor)} monitors: only one had been requested")
+            # ⛔ AND IT SAYS WHO THEY ARE, one by one.  The first draft stopped
+            #    at the count, and on 12 Aug 2026 it saw two monitors on a
+            #    session that had requested one — without being able to say WHICH
+            #    was the extra one, because it had not printed the name.
+            #    A bench that counts and does not name sends you guessing.
             for i, m in enumerate(monitor):
-                dice(f"⛔   [{i}] connettore={m['connettore']!r} "
-                     f"prodotto={m['prodotto']!r} seriale={m['seriale']!r} "
-                     f"modo={m['modo_corrente']}")
+                dice(f"⛔   [{i}] connector={m['connettore']!r} "
+                     f"product={m['prodotto']!r} serial={m['seriale']!r} "
+                     f"mode={m['modo_corrente']}")
         else:
             m0 = monitor[0]
-            dice(f"monitor: connettore={m0['connettore']!r} fornitore={m0['fornitore']!r} "
-                 f"prodotto={m0['prodotto']!r} seriale={m0['seriale']!r}")
+            dice(f"monitor: connector={m0['connettore']!r} vendor={m0['fornitore']!r} "
+                 f"product={m0['prodotto']!r} serial={m0['seriale']!r}")
             if m0["prodotto"] == PRODOTTO_DA_SE:
                 stati.add(3)
-                dice(f"⛔ il prodotto e' «{PRODOTTO_DA_SE}»: questo monitor se l'e' "
-                     "creato Mutter per uno ScreenCast, non l'abbiamo chiesto noi "
-                     "(E2 — un componente che decide da se')")
+                dice(f"⛔ the product is «{PRODOTTO_DA_SE}»: Mutter created this monitor "
+                     "by itself for a ScreenCast, we did not request it "
+                     "(E2 — a component that decides by itself)")
             elif m0["prodotto"] != PRODOTTO_CHIESTO:
                 stati.add(3)
-                dice(f"⛔ prodotto inatteso {m0['prodotto']!r}: non e' ne' il nostro "
-                     f"«{PRODOTTO_CHIESTO}» ne' quello di ScreenCast")
+                dice(f"⛔ unexpected product {m0['prodotto']!r}: it is neither our "
+                     f"«{PRODOTTO_CHIESTO}» nor the ScreenCast one")
             mc = m0["modo_corrente"]
             if mc is None:
                 stati.add(2)
-                dice("⛔ il monitor non ha nessun modo corrente")
+                dice("⛔ the monitor has no current mode")
             elif (mc["larghezza"], mc["altezza"]) != (attesa_l, attesa_a):
                 stati.add(2)
-                dice(f"⛔ misura {mc['larghezza']}x{mc['altezza']}, attesa "
+                dice(f"⛔ size {mc['larghezza']}x{mc['altezza']}, expected "
                      f"{attesa_l}x{attesa_a}")
             else:
-                dice(f"misura {mc['larghezza']}x{mc['altezza']} a {mc['refresh']} Hz: "
-                     "e' quella chiesta")
+                dice(f"size {mc['larghezza']}x{mc['altezza']} at {mc['refresh']} Hz: "
+                     "it is the requested one")
 
-    # ⛔ IL DISACCORDO FRA LE DUE LETTURE — E1.
+    # ⛔ THE DISAGREEMENT BETWEEN THE TWO READINGS — E1.
     if riga and monitor is not None:
         nostro = [m for m in monitor if m["prodotto"] == PRODOTTO_CHIESTO]
         if chiesto_wh and not nostro:
-            dice(f"⚠ la riga di comando chiede --virtual-monitor {chiesto} e sul bus "
-                 f"un monitor «{PRODOTTO_CHIESTO}» non c'e'")
+            dice(f"⚠ the command line asks for --virtual-monitor {chiesto} and on the bus "
+                 f"there is no «{PRODOTTO_CHIESTO}» monitor")
             stati.add(6)
         if not chiesto_wh and nostro:
-            dice(f"⚠ sul bus c'e' un «{PRODOTTO_CHIESTO}» e la riga di comando NON lo "
-                 "chiede: qualcuno l'ha messo per un'altra strada")
+            dice(f"⚠ on the bus there is a «{PRODOTTO_CHIESTO}» and the command line does NOT "
+                 "ask for it: someone put it there by another road")
             stati.add(6)
         if chiesto_wh and nostro and nostro[0]["modo_corrente"]:
             mc = nostro[0]["modo_corrente"]
             if (mc["larghezza"], mc["altezza"]) != chiesto_wh:
-                dice(f"⚠ la riga chiede {chiesto_wh[0]}x{chiesto_wh[1]} e il bus dice "
+                dice(f"⚠ the line asks for {chiesto_wh[0]}x{chiesto_wh[1]} and the bus says "
                      f"{mc['larghezza']}x{mc['altezza']}")
                 stati.add(6)
         if not chiesto_headless:
-            dice("⚠ --headless NON e' sulla riga di comando: se l'headless c'e' e' "
-                 "per accidente (STUDI.md §gnome §1.2, DECISIONI.md §4.3-bis)")
+            dice("⚠ --headless is NOT on the command line: if headless is there it is "
+                 "by accident (STUDI.md §gnome §1.2, DECISIONI.md §4.3-bis)")
 
     if not stati:
         stati.add(0)
@@ -518,75 +518,75 @@ def principale():
     p = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--attesa", default="1920x1080",
-                   help="la misura CHIESTA, scritta prima del giro")
+                   help="the REQUESTED size, written before the round")
     p.add_argument("--dal-bus", action="store_true")
     p.add_argument("--da-scena", metavar="FILE")
     p.add_argument("--registra", metavar="FILE")
     p.add_argument("--esiti", metavar="FILE", default=None)
     p.add_argument("--etichetta", default="senza-nome",
-                   help="la SCENA dichiarata, che va accanto al numero")
+                   help="the declared SCENE, which goes next to the number")
     a = p.parse_args()
 
     m = re.match(r"^(\d+)x(\d+)$", a.attesa)
     if not m:
-        print(f"⛔ --attesa {a.attesa!r} non e' nella forma LARGHEZZAxALTEZZA")
+        print(f"⛔ --attesa {a.attesa!r} is not in the form WIDTHxHEIGHT")
         return 2
     attesa_l, attesa_a = int(m.group(1)), int(m.group(2))
 
     if a.da_scena and a.dal_bus:
-        print("⛔ o --dal-bus o --da-scena, non tutt'e due")
+        print("⛔ either --dal-bus or --da-scena, not both")
         return 2
 
-    titolo(f"L'atteso, SCRITTO PRIMA di guardare — scena «{a.etichetta}»")
-    inf(f"misura chiesta: {attesa_l}x{attesa_a}")
-    inf(f"prodotto atteso del monitor: «{PRODOTTO_CHIESTO}»")
-    inf(f"e quello che vorrebbe dire E2: «{PRODOTTO_DA_SE}»")
+    titolo(f"The expected, WRITTEN BEFORE looking — scene «{a.etichetta}»")
+    inf(f"requested size: {attesa_l}x{attesa_a}")
+    inf(f"expected product of the monitor: «{PRODOTTO_CHIESTO}»")
+    inf(f"and the one that would mean E2: «{PRODOTTO_DA_SE}»")
 
     if a.da_scena:
-        titolo(f"La scena, letta da {a.da_scena}")
+        titolo(f"The scene, read from {a.da_scena}")
         try:
             with open(a.da_scena) as f:
                 scena = json.load(f)
         except OSError as err:
-            no(f"⛔ non leggo la scena: {err}")
+            no(f"⛔ cannot read the scene: {err}")
             return 5
-        inf(f"registrata il {scena.get('quando')} su {scena.get('macchina')}")
+        inf(f"recorded on {scena.get('quando')} on {scena.get('macchina')}")
     else:
-        titolo("La scena, letta dal bus vivo")
+        titolo("The scene, read from the live bus")
         scena = raccogli_dal_bus()
 
     if a.registra:
         os.makedirs(os.path.dirname(os.path.abspath(a.registra)), exist_ok=True)
         with open(a.registra, "w") as f:
             json.dump(scena, f, indent=1, ensure_ascii=False)
-        inf(f"scena registrata in {a.registra}")
+        inf(f"scene recorded in {a.registra}")
 
-    titolo("I fatti, e il verdetto")
+    titolo("The facts, and the verdict")
     codice, tutti, detto = giudica(scena, attesa_l, attesa_a)
     for r in detto:
         (no if r.startswith("⛔") else att if r.startswith("⚠") else inf)(r)
 
     cp = scena.get("controllo_positivo") or {}
-    titolo("⭐ Il controllo positivo, in coda come vuole la casa")
-    # ⚠ Su una scena REGISTRATA il controllo positivo e' quello di quando la
-    #   scena fu presa, non di adesso: dirlo «vivo adesso» sarebbe una misura
-    #   scritta come se fosse stata fatta ora.  Si distingue.
-    quando = ("e' vivo adesso" if not a.da_scena
-              else f"era vivo quando la scena fu presa ({scena.get('quando')})")
+    titolo("⭐ The positive control, at the end as the house rule wants")
+    # ⚠ On a RECORDED scene the positive control is the one from when the
+    #   scene was taken, not from now: calling it «alive now» would be a measurement
+    #   written as if it had been made now.  The two are kept apart.
+    quando = ("is alive now" if not a.da_scena
+              else f"was alive when the scene was taken ({scena.get('quando')})")
     if cp.get("esito"):
-        ok(f"il parser trova «layout-mode» = {cp.get('layout_mode')}")
-        ok(f"e il filo col compositore {quando}: inattivita' "
-           f"{cp.get('idletime_1')} → {cp.get('idletime_2')} ms, cresce")
+        ok(f"the parser finds «layout-mode» = {cp.get('layout_mode')}")
+        ok(f"and the line to the compositor {quando}: idle time "
+           f"{cp.get('idletime_1')} → {cp.get('idletime_2')} ms, growing")
         if a.da_scena:
-            att("⚠ scena registrata: questo controllo positivo NON dice che il "
-                "compositore risponda in questo momento")
+            att("⚠ recorded scene: this positive control does NOT say that the "
+                "compositor is answering at this moment")
     else:
-        no(f"⛔ NON passato: {cp.get('perche', 'ignoto')}")
-        no("   ⇒ qualunque verdetto qui sopra vale come «non ho potuto leggere»")
+        no(f"⛔ NOT passed: {cp.get('perche', 'unknown')}")
+        no("   ⇒ any verdict above counts as «I could not read»")
 
-    titolo("Il verdetto")
-    inf(f"stati riconosciuti: {[MARCHE[c] for c in tutti]}")
-    riga = f"uscita {codice} — {MARCHE[codice]}"
+    titolo("The verdict")
+    inf(f"states recognised: {[MARCHE[c] for c in tutti]}")
+    riga = f"exit {codice} — {MARCHE[codice]}"
     print(f"    {VERDE if codice == 0 else ROSSO}{riga}{FINE}")
 
     if a.esiti:

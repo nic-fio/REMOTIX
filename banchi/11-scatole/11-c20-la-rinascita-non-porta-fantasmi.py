@@ -2,159 +2,159 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-11-c20 — ⭐⭐ «DOPO «ESCI» E UN NUOVO ACCESSO, LO SCHERMO NON LAMPEGGIA»
+11-c20 — ⭐⭐ «AFTER «LOG OUT» AND A NEW LOGIN, THE SCREEN DOES NOT FLICKER»
 ===========================================================================
 
     python3 11-c20-la-rinascita-non-porta-fantasmi.py --porta 8512
     python3 11-c20-la-rinascita-non-porta-fantasmi.py --porta 8512 --scena-che-lampeggia
     python3 11-c20-la-rinascita-non-porta-fantasmi.py --certifica
 
-    che cosa deve essere vero : l'utente esce dal menu del desktop e rientra
-                                ⇒ la sessione NUOVA si vede pulita: ⛔ niente
-                                fantasmi della sessione morta
-    da dove parte             : un inquilino nuovo, una sessione nata, il
-                                gesto vero dell'utente («Esci» dal menu), e
-                                nella sessione nuova ⭐ **una scena
-                                DICHIARATA** (`11-c20-scena.html`): si muove,
-                                e la sua luce non cambia
-    che cosa guarda           : due giudici, e il primo non chiede niente al
-                                prodotto
-      P  pixel     il video del SECONDO accesso si decodifica, e la luminanza
-                   media dei fotogrammi e' **UNA**.  Se alterna fra valori
-                   lontani, e' il lampeggio.
-      R  registro  dopo la rinascita il codificatore dice «butto le N
-                   superfici importate» per QUESTO inquilino
-    come so che sa dare rosso : `--scena-che-lampeggia` — al posto della scena
-                                dichiarata si accende quella di **C3**, che
-                                alterna il fondo fra blu (#0000FF) e giallo
-                                (#FFFF00) ⇒ ⭐ la luminanza media salta di
-                                ~197 livelli su 255, e il giudice dei PIXEL
-                                **deve** dare rosso
+    what must be true         : the user logs out from the desktop menu and comes back
+                                ⇒ the NEW session shows clean: ⛔ no
+                                ghosts of the dead session
+    where it starts from      : a new tenant, a session born, the
+                                user's real gesture («Log out» from the menu), and
+                                in the new session ⭐ **a DECLARED
+                                scene** (`11-c20-scena.html`): it moves,
+                                and its light does not change
+    what it looks at          : two judges, and the first asks nothing of the
+                                product
+      P  pixels    the video of the SECOND login is decoded, and the mean
+                   luminance of the frames is **ONE**.  If it alternates between
+                   distant values, it is the flicker.
+      R  log       after the rebirth the encoder says «throwing away the N
+                   imported surfaces» for THIS tenant
+    how I know it can give red: `--scena-che-lampeggia` — instead of the declared
+                                scene **C3**'s one is started, which
+                                alternates the background between blue (#0000FF) and yellow
+                                (#FFFF00) ⇒ ⭐ the mean luminance jumps by
+                                ~197 levels out of 255, and the PIXEL judge
+                                **must** give red
 
 ---------------------------------------------------------------------------
-⛔⛔ IL DIFETTO CHE QUESTA MAGLIA SORVEGLIA — 22 settembre 2026
+⛔⛔ THE DEFECT THIS MESH WATCHES — 22 September 2026
 ---------------------------------------------------------------------------
 
-La prova dell'utente su KDE con Chrome: dopo «Esci» e un nuovo accesso lo
-schermo alternava TRE immagini — il desktop, la schermata d'uscita della
-sessione di PRIMA, e il nero.
+The user's test on KDE with Chrome: after «Log out» and a new login the
+screen alternated THREE images — the desktop, the logout screen of the
+session BEFORE, and black.
 
-`[M]` La generazione dei buffer ripartiva da 0 con la cattura nuova, il
-codificatore (che **resta** vivo) non buttava la sua cache, e i descrittori
-riciclati ritrovavano le superfici della sessione morta.
-`[R]` `src/codificatore.c`, `butta_le_importate()`: *«una superficie che
-sopravvive al `pw_buffer` che descriveva punta a memoria di qualcun altro …
-il sintomo sarebbe un'immagine VECCHIA, senza nessun errore»*.
+`[M]` The buffer generation restarted from 0 with the new capture, the
+encoder (which **stays** alive) did not throw away its cache, and the recycled
+descriptors found again the surfaces of the dead session.
+`[R]` `src/codificatore.c`, `butta_le_importate()`: *«a surface that
+outlives the `pw_buffer` it described points to someone else's memory …
+the symptom would be an OLD picture, with no error at all»*.
 
-⇒ ⛔⛔ **«Senza nessun errore»** e' la ragione per cui serve una maglia e non
-  basta il registro: il prodotto non se ne accorge, il cliente non se ne
-  accorge, e ⭐ **l'unico che se ne accorge e' chi GUARDA**.  Questa maglia
-  guarda al posto suo.
-
----------------------------------------------------------------------------
-⭐⭐ DA `13-w4` A C20 — che cosa e' cambiato, e perche'
----------------------------------------------------------------------------
-
-Questa maglia nasce da `banchi/13-w4-rinascita-senza-fantasmi.sh` (22 set
-2026), che ha trovato il difetto e l'ha misurato.  ⭐ Entrando nella rete ha
-dovuto cambiare tre cose — e sono esattamente le tre che separano un banco
-scritto per una sera da una maglia che gira da sola per mesi:
-
-  1. ⛔⛔ **IL GUASTO INNESTATO, che non aveva.**  Senza, la maglia non prova
-     niente: il giorno che il giudice dei pixel smettesse di guardare
-     (un `ffmpeg` che cambia uscita, una soglia storta, un video vuoto letto
-     come «fermo») ⭐ direbbe VERDE per sempre, e nessuno lo saprebbe.
-     ⇒ `--scena-che-lampeggia` mette sullo schermo un lampeggio VERO e
-       pretende il rosso.  §3.6 della fase 11: *«ogni prova della lista ha,
-       obbligatoriamente, il suo guasto innestato, e quel caso va fatto
-       girare, non immaginato»*.
-
-  2. ⛔ **NON SA PIU' CHE COSA SIA PLASMA.**  `13-w4` aspettava `plasmashell`,
-     chiedeva `org.kde.Shutdown.logout` e guardava morire `kwin_wayland`:
-     tre nomi di UN desktop dentro la lista delle prove, che e' precisamente
-     quel che questa rete non ammette (`fasi/11…` §3.7).
-     ⇒ Adesso: la nascita si legge dal REGISTRO DEL PRODOTTO (`formato
-       negoziato`, la stessa riga di C1), la fine pure — ⚠ e in DUE forme,
-       perche' il prodotto ne ha due e quale delle due esca dipende da chi
-       muore col gesto (vedi `RIGHE_FINITA` e `giudica_il_registro`) — ⭐ e
-       il gesto «Esci» si
-       CHIEDE ALLA MACCHINA invece di indovinarlo — con la stessa domanda che
-       fa il prodotto (`src/sessione.c:285-310`: c'e' `startplasma-wayland`?
-       c'e' `gnome-session`? c'e' `xfce4-session`?).
-
-  3. ⛔ **L'INQUILINO HA UN NOME DELLA RETE.**  `13-w4` lo chiamava `w4u$$`:
-     fuori dallo spazio di nomi `c<n>[b]u<n>`, quindi ⛔ **il gancio non lo
-     sgomberava** e C19 non lo vedeva.  ⇒ Qui e' `c20u<n>`, e le due maglie
-     nuove si tengono in piedi a vicenda.
-
-⚠ `13-w4` resta nel deposito: e' il documento della misura del 22 settembre,
-  e la sua diagnosi (i tre fotogrammi alternati, i descrittori riciclati) non
-  sta scritta da nessun'altra parte.
+⇒ ⛔⛔ **«With no error at all»** is the reason a mesh is needed and the
+  log is not enough: the product does not notice, the client does not
+  notice, and ⭐ **the only one who notices is whoever LOOKS**.  This mesh
+  looks in their place.
 
 ---------------------------------------------------------------------------
-⚠ I DUE NUMERI DEL GIUDICE DEI PIXEL, e da dove vengono
+⭐⭐ FROM `13-w4` TO C20 — what changed, and why
 ---------------------------------------------------------------------------
 
-  · **8 livelli** e' quanto due fotogrammi consecutivi possono differire in
-    luminanza media senza che sia un lampeggio.  `[M]` 22 set 2026 su KDE: a
-    desktop fermo la coda del video sta su **un solo valore**, e il lampeggio
-    alternava fra valori lontanissimi.  ⚠ Il margine e' largo apposta: una
-    soglia stretta prenderebbe il rumore della codifica.
-  · **quanti salti si concedono dipende da quanto e' lunga la coda**: uno
-    ogni dieci fotogrammi, al massimo tre, ⭐ e **mai meno di uno**.  ⛔ Fra la
-    fine dell'avvio del desktop e la coda ci puo' stare un pannello che
-    finisce di disegnarsi, e un rosso su quello sarebbe un rosso falso.
-  · ⚠ **la META' dei fotogrammi non si guarda**: la scena si accende quando la
-    sessione e' gia' rinata, e `[M]` il primo avvio di Firefox in una scatola
-    passa i 25 s (`LEZIONI.md` §1.45).  ⇒ La prima parte del video e' il
-    desktop nudo che aspetta il browser, poi c'e' il gradino desktop→scena, e
-    solo dopo c'e' quel che questa maglia vuole guardare.  ⛔ «I primi 30
-    fotogrammi» non bastavano: su kde quel gradino cade intorno al millesimo.
-  · ⛔ Sotto i **40 fotogrammi decodificati** non si giudica: e' un **3**.
-  · ⛔⛔ E se la luminanza **mediana** della coda resta sotto **40** *e* lo
-    schermo e' FERMO, lo schermo e' NERO: la scena che la maglia ha acceso non
-    e' arrivata, ⇒ **3** e non un verde.  ⚠ E' la stessa domanda che si fa C3
-    (*«la scena che ho dichiarato e' davvero sullo schermo?»*), e la ragione e'
-    la stessa: ⭐ uno schermo nero e fermo passerebbe *«la luminanza e' una»* a
-    mani basse, cioe' la maglia regalerebbe un verde proprio quando non ha
-    visto niente.
-    ⛔⛔ E L'ORDINE DEI DUE CONTROLLI E' UNA DECISIONE: **prima il lampeggio,
-        poi il nero.**  `[M]` 23 set 2026, col verso opposto il guasto
-        innestato usciva **3** invece che rosso — la scena di C3 alterna blu
-        (29) e giallo (226), quindi la sua MEDIANA e' 17, e la maglia diceva
-        «lo schermo e' nero, non giudico» a uno schermo che le stava
-        lampeggiando sotto gli occhi.  ⇒ Uno schermo che ALTERNA non e' mai
-        ambiguo, per quanto scuro sia: il fantasma vero e' fatto proprio cosi'
-        (desktop · schermata d'uscita · nero).
+This mesh is born from `banchi/13-w4-rinascita-senza-fantasmi.sh` (22 Sep
+2026), which found the defect and measured it.  ⭐ Entering the net it had
+to change three things — and they are exactly the three that separate a bench
+written for one evening from a mesh that runs by itself for months:
 
-  ⛔⛔ E PERCHE' LA SCENA CI VUOLE — `[M]` 23 settembre 2026, ed e' la misura
-      che ha riscritto questa maglia.  Il secondo accesso, a desktop FERMO,
-      consegna:
+  1. ⛔⛔ **THE INJECTED FAULT, which it did not have.**  Without it, the mesh proves
+     nothing: the day the pixel judge stopped looking
+     (an `ffmpeg` that changes output, a crooked threshold, an empty video read
+     as «still») ⭐ it would say GREEN for ever, and nobody would know.
+     ⇒ `--scena-che-lampeggia` puts a REAL flicker on the screen and
+       demands red.  §3.6 of phase 11: *«every test of the list has,
+       mandatorily, its injected fault, and that case must be
+       run, not imagined»*.
 
-        | scatola | compositore | fotogrammi |
+  2. ⛔ **IT NO LONGER KNOWS WHAT PLASMA IS.**  `13-w4` waited for `plasmashell`,
+     asked for `org.kde.Shutdown.logout` and watched `kwin_wayland` die:
+     three names of ONE desktop inside the list of tests, which is precisely
+     what this net does not allow (`fasi/11…` §3.7).
+     ⇒ Now: the birth is read from the PRODUCT'S LOG (`negotiated
+       format`, the same line as C1), the end too — ⚠ and in TWO forms,
+       because the product has two and which of the two comes out depends on who
+       dies with the gesture (see `RIGHE_FINITA` and `giudica_il_registro`) — ⭐ and
+       the «Log out» gesture is
+       ASKED OF THE MACHINE instead of guessed — with the same question
+       the product asks (`src/sessione.c:285-310`: is there `startplasma-wayland`?
+       is there `gnome-session`? is there `xfce4-session`?).
+
+  3. ⛔ **THE TENANT HAS A NAME OF THE NET.**  `13-w4` called it `w4u$$`:
+     outside the `c<n>[b]u<n>` name space, so ⛔ **the hook did not clear it
+     out** and C19 did not see it.  ⇒ Here it is `c20u<n>`, and the two new
+     meshes hold each other up.
+
+⚠ `13-w4` stays in the repository: it is the document of the measurement of 22 September,
+  and its diagnosis (the three alternating frames, the recycled descriptors) is not
+  written anywhere else.
+
+---------------------------------------------------------------------------
+⚠ THE TWO NUMBERS OF THE PIXEL JUDGE, and where they come from
+---------------------------------------------------------------------------
+
+  · **8 levels** is how much two consecutive frames can differ in
+    mean luminance without it being a flicker.  `[M]` 22 Sep 2026 on KDE: with a
+    still desktop the tail of the video stays on **a single value**, and the flicker
+    alternated between very distant values.  ⚠ The margin is wide on purpose: a
+    tight threshold would catch the encoding noise.
+  · **how many jumps are allowed depends on how long the tail is**: one
+    every ten frames, at most three, ⭐ and **never fewer than one**.  ⛔ Between the
+    end of the desktop startup and the tail there can be a panel that
+    finishes drawing itself, and a red on that would be a false red.
+  · ⚠ **HALF of the frames is not looked at**: the scene starts when the
+    session has already been reborn, and `[M]` the first start of Firefox in a box
+    exceeds 25 s (`LEZIONI.md` §1.45).  ⇒ The first part of the video is the
+    bare desktop waiting for the browser, then there is the desktop→scene step, and
+    only after that there is what this mesh wants to look at.  ⛔ «The first 30
+    frames» were not enough: on kde that step falls around the thousandth.
+  · ⛔ Below **40 decoded frames** no judgement is made: it is a **3**.
+  · ⛔⛔ And if the **median** luminance of the tail stays below **40** *and* the
+    screen is STILL, the screen is BLACK: the scene the mesh started
+    did not arrive, ⇒ **3** and not a green.  ⚠ It is the same question C3 asks
+    itself (*«is the scene I declared really on the screen?»*), and the reason is
+    the same: ⭐ a black, still screen would pass *«the luminance is one»* with
+    flying colours, that is the mesh would give away a green exactly when it has not
+    seen anything.
+    ⛔⛔ AND THE ORDER OF THE TWO CHECKS IS A DECISION: **first the flicker,
+        then the black.**  `[M]` 23 Sep 2026, with the opposite order the injected
+        fault came out **3** instead of red — C3's scene alternates blue
+        (29) and yellow (226), so its MEDIAN is 17, and the mesh said
+        «the screen is black, I do not judge» to a screen that was
+        flickering under its eyes.  ⇒ A screen that ALTERNATES is never
+        ambiguous, however dark it is: the real ghost is made exactly like that
+        (desktop · logout screen · black).
+
+  ⛔⛔ AND WHY THE SCENE IS NEEDED — `[M]` 23 September 2026, and it is the measurement
+      that rewrote this mesh.  The second login, with the desktop STILL,
+      delivers:
+
+        | box | compositor | frames |
         |---|---|---|
         | **kde**  | KWin  | **1 800 in 45 s** |
         | **xfce** | labwc | ⛔ **7 in 60 s**  |
 
-      ⇒ KWin consegna anche senza danno; labwc, come ogni compositore della
-        famiglia wlroots, consegna solo sul DANNO (`fasi/09…` §3.1: 0,03
-        fotogrammi/s a scena ferma).  ⛔ Su un desktop fermo questa maglia
-        sarebbe stata **3 per sempre su xfce e su lxqt**, e un 3 che si ripete
-        e' il cugino del rosso perpetuo (`LEZIONI.md` §1.49).
-      ⭐ La cura e' quella di C3: **la scena la mette la maglia, e la
-        dichiara** — ma qui deve muoversi SENZA cambiare la luce, o il giudice
-        dei pixel accuserebbe la scena invece del fantasma.  Sta in
-        `11-c20-scena.html`, e li' c'e' scritto anche perche' le bande sono
-        due e non una.
+      ⇒ KWin delivers even without damage; labwc, like every compositor of the
+        wlroots family, delivers only on DAMAGE (`fasi/09…` §3.1: 0,03
+        frames/s with a still scene).  ⛔ On a still desktop this mesh
+        would have been **3 for ever on xfce and on lxqt**, and a 3 that repeats
+        is the cousin of the perpetual red (`LEZIONI.md` §1.49).
+      ⭐ The cure is C3's: **the mesh puts the scene there, and
+        declares it** — but here it must move WITHOUT changing the light, or the pixel
+        judge would accuse the scene instead of the ghost.  It is in
+        `11-c20-scena.html`, and there it is also written why the bands are
+        two and not one.
 
-⭐ E il lampeggio del guasto innestato e' DICHIARATO, non preso a prestito: la
-  scena e' `11-c3-scena.html`, che alterna il fondo fra `#0000FF` (luminanza
-  BT.601 ≈ 29) e `#FFFF00` (≈ 226).  ⇒ Il salto e' di ~197 livelli, cioe'
-  ⭐ **ventiquattro volte** la soglia: un guasto che passasse per un pelo non
-  proverebbe niente.
+⭐ And the flicker of the injected fault is DECLARED, not borrowed: the
+  scene is `11-c3-scena.html`, which alternates the background between `#0000FF` (BT.601
+  luminance ≈ 29) and `#FFFF00` (≈ 226).  ⇒ The jump is ~197 levels, that is
+  ⭐ **twenty-four times** the threshold: a fault that passed by a hair would
+  prove nothing.
 
-Esiti: 0 verde · 1 rosso · 3 non ho potuto guardare (⛔ NON e' un rosso).
-⛔ Con `--scena-che-lampeggia` si legge AL CONTRARIO: 0 = il guasto e' VISTO.
+Outcomes: 0 green · 1 red · 3 I could not look (⛔ it is NOT a red).
+⛔ With `--scena-che-lampeggia` it reads THE OTHER WAY ROUND: 0 = the fault is SEEN.
 """
 import argparse
 import importlib.util
@@ -170,84 +170,84 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 CLIENTE = os.path.join(QUI, "01-b3-cliente.py")
 REGISTRO = "/var/lib/rete11/registro.log"
 PAROLA = "provanic2026"
-# ⭐ LE DUE SCENE, e sono due apposta (vedi il riquadro dei numeri qui sotto).
-#   · la MIA si muove e la sua luce NON cambia   ⇒ il giro sano
-#   · quella di C3 alterna blu e giallo          ⇒ il GUASTO INNESTATO
+# ⭐ THE TWO SCENES, and they are two on purpose (see the numbers box below).
+#   · MINE moves and its light does NOT change   ⇒ the healthy run
+#   · C3's alternates blue and yellow           ⇒ the INJECTED FAULT
 SCENA_FERMA_DI_LUCE = os.path.join(QUI, "11-c20-scena.html")
 SCENA_CHE_LAMPEGGIA = os.path.join(QUI, "11-c3-scena.html")
 
-# ⭐ Le righe del prodotto che questa maglia legge, in un posto solo: se il
-#   prodotto le cambia, si cambia QUI (§1.47).
-RIGA_NASCITA = "formato negoziato"          # src/cattura.c
+# ⭐ The product lines this mesh reads, in one place only: if the
+#   product changes them, they are changed HERE (§1.47).
+RIGA_NASCITA = "negotiated format"          # src/cattura.c
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐ LA FINE DELLA SESSIONE GRAFICA IL PRODOTTO LA DICE IN DUE MODI — e
-#     quale dei due dipende da **chi muore col gesto «Esci»**, non dal nome
-#     del desktop.
+# ⭐⭐ THE PRODUCT SAYS THE END OF THE GRAPHICAL SESSION IN TWO WAYS — and
+#     which of the two depends on **who dies with the «Log out» gesture**, not on the name
+#     of the desktop.
 #
-#   · il figlio SOPRAVVIVE al gesto  (KDE, XFCE: muore il compositore, non la
-#     sessione di logind)  ⇒ se ne accorge LUI, «c'era e adesso non c'e' piu'»
-#         «la sessione grafica di «…» E' FINITA»          src/figlio.c:2134
-#   · il figlio MUORE col gesto  (GNOME: e' lui il processo GUIDA della
-#     sessione di logind — la apre con `pam_open_session` — e `gnome-session`
-#     se lo porta via col segnale 15)  ⇒ ⛔ non puo' riferire un fatto che lo
-#     uccide, e lo dice il PADRE nel momento in cui lo raccoglie
-#         «il palco di «…» se n'e' andato ⇒ la sessione grafica e' finita»
+#   · the child SURVIVES the gesture  (KDE, XFCE: the compositor dies, not the
+#     logind session)  ⇒ HE notices, «it was there and now it is not any more»
+#         «the graphical session of «…» IS OVER»            src/figlio.c:2134
+#   · the child DIES with the gesture  (GNOME: it is the LEADER process of the
+#     logind session — it opens it with `pam_open_session` — and `gnome-session`
+#     takes it away with signal 15)  ⇒ ⛔ it cannot report a fact that
+#     kills it, and the PARENT says it at the moment it reaps it
+#         «the stage of «…» has gone ⇒ the graphical session is over»
 #                                                          src/main.c:1418
 #
-# ⛔⛔ E LA SECONDA NON E' UN RIPIEGO PER FAR PASSARE GNOME: sta scritta nel
-#     prodotto, in `src/main.c:1384-1396`, che al logout il figlio muore col
-#     segnale 15 e che **per questo la riga del figlio «non e' mai scattata»**.
-#     ⇒ Chiederne una sola voleva dire pretendere che il prodotto dicesse la
-#       cosa nel modo di UN desktop — ed e' esattamente il difetto di `13-w4`
-#       che questa maglia era nata per non rifare (punto 2 in testa al file).
-# `[M]` 23 set 2026, rete11-gnome: il gesto risponde, il palco se ne va in
-#   0,1 s, il padre scrive la sua riga — e la maglia aspettava l'altra per
-#   120 s e usciva «non ho potuto guardare».
+# ⛔⛔ AND THE SECOND IS NOT A FALLBACK TO LET GNOME PASS: it is written in the
+#     product, in `src/main.c:1384-1396`, that at logout the child dies with
+#     signal 15 and that **for this reason the child's line «never fired»**.
+#     ⇒ Asking for only one meant demanding that the product said the
+#       thing in the way of ONE desktop — and it is exactly the defect of `13-w4`
+#       this mesh was born not to repeat (point 2 at the top of the file).
+# `[M]` 23 Sep 2026, rete11-gnome: the gesture answers, the stage goes away in
+#   0,1 s, the parent writes its line — and the mesh waited for the other one for
+#   120 s and exited «I could not look».
 # ═══════════════════════════════════════════════════════════════════════════
 RIGHE_FINITA = (
-    ("E' FINITA", "il figlio e' sopravvissuto e se n'e' accorto"),
-    ("se n'e' andato ⇒ la sessione grafica e' finita",
-     "⛔ il figlio e' morto col gesto, e l'ha detto il padre raccogliendolo"),
+    ("IS OVER", "the child survived and noticed"),
+    ("has gone ⇒ the graphical session is over",
+     "⛔ the child died with the gesture, and the parent said so while reaping it"),
 )
-RIGA_RINASCITA = "RIAVVIO LA CATTURA"       # src/figlio.c:8011
-RIGA_BUTTA = re.compile(r"butto le (\d+) superfici importate")  # src/codificatore.c
-# ⭐ Chi serve una sessione: «figlio generato per «X»: pid N … matricola M»
-#   (`src/figlio.c:1744`).  ⛔ Serve per DIRE, e non per dedurre, che il
-#   secondo accesso gira in un processo DIVERSO da quello del primo.
-RIGA_FIGLIO = re.compile(r"figlio generato per «([^»]+)»: pid (\d+).*?"
-                         r"matricola (\d+)")
+RIGA_RINASCITA = "RESTARTING THE CAPTURE"       # src/figlio.c:8011
+RIGA_BUTTA = re.compile(r"throwing away the (\d+) imported surfaces")  # src/codificatore.c
+# ⭐ Who serves a session: «child spawned for «X»: pid N … serial M»
+#   (`src/figlio.c:1744`).  ⛔ It serves to SAY, and not to deduce, that the
+#   second login runs in a process DIFFERENT from the first one's.
+RIGA_FIGLIO = re.compile(r"child spawned for «([^»]+)»: pid (\d+).*?"
+                         r"serial (\d+)")
 
-# ⚠ I numeri del giudice dei pixel — vedi il riquadro in testa.
+# ⚠ The numbers of the pixel judge — see the box at the top.
 SOGLIA_SALTO = 8
 FOTOGRAMMI_MINIMI = 40
-# ⛔ Sotto questa luminanza mediana lo schermo e' NERO, e non si giudica: un
-#    nero fermo e un'immagine congelata hanno lo stesso identico aspetto.
+# ⛔ Below this median luminance the screen is BLACK, and no judgement is made: a
+#    still black and a frozen picture look exactly the same.
 LUCE_MINIMA = 40
 LARGHEZZA, ALTEZZA = 64, 24
 
 
 def quanti_da_saltare(quanti):
-    """⭐ Il «prima» da non guardare: la META' dei fotogrammi.
+    """⭐ The «before» not to look at: HALF of the frames.
 
-    ⛔⛔ E la meta' non e' prudenza: la scena si accende QUANDO la sessione e'
-        gia' rinata, e `[M]` il primo avvio di Firefox in una scatola passa i
-        25 s (`LEZIONI.md` §1.45).  ⇒ La prima parte del video e' il desktop
-        nudo che aspetta il browser, poi c'e' il gradino desktop→scena, e solo
-        dopo c'e' quel che questa maglia vuole guardare.
-    ⚠ Tagliare «i primi 30 fotogrammi» non bastava: su kde quel gradino cade
-      intorno al millesimo.
+    ⛔⛔ And half is not caution: the scene starts WHEN the session has
+        already been reborn, and `[M]` the first start of Firefox in a box exceeds
+        25 s (`LEZIONI.md` §1.45).  ⇒ The first part of the video is the bare
+        desktop waiting for the browser, then there is the desktop→scene step, and only
+        after that there is what this mesh wants to look at.
+    ⚠ Cutting «the first 30 frames» was not enough: on kde that step falls
+      around the thousandth.
     """
     return max(4, quanti // 2)
 
 
 def salti_ammessi(quanti_coda):
-    """⭐ Quanti salti non sono ancora un lampeggio.
+    """⭐ How many jumps are not yet a flicker.
 
-    ⛔ Non un numero fisso: con una coda di 1 770 fotogrammi «3 salti» e'
-       severo, con una coda di 10 sarebbe permettere che un terzo dello
-       schermo alterni.  ⚠ Uno pero' si concede sempre: fra la fine
-       dell'avvio e la coda ci puo' stare un pannello che finisce di
-       disegnarsi, e un rosso su quello sarebbe un rosso falso.
+    ⛔ Not a fixed number: with a tail of 1 770 frames «3 jumps» is
+       strict, with a tail of 10 it would allow a third of the
+       screen to alternate.  ⚠ One however is always allowed: between the end
+       of the startup and the tail there can be a panel that finishes
+       drawing itself, and a red on that would be a false red.
     """
     return max(1, min(3, quanti_coda // 10))
 
@@ -280,18 +280,18 @@ def _carica(nome_file, mestieri):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐ IL GESTO «ESCI», CHIESTO ALLA MACCHINA — e non scritto per desktop.
+# ⭐⭐ THE «LOG OUT» GESTURE, ASKED OF THE MACHINE — and not written per desktop.
 #
-# ⛔ La domanda e' la STESSA del prodotto (`src/sessione.c:285-310`): quale
-#    sessione grafica c'e' in questa scatola?  Il prodotto la risolve guardando
-#    quali programmi esistono, e qui si fa uguale — ⇒ il giorno che una scatola
-#    cambia desktop, questa maglia lo segue senza che nessuno la tocchi.
-# ⚠ E il comando del gesto e' quello del MENU, non un `kill`: la maglia deve
-#   provare la strada dell'utente, non una scorciatoia che il prodotto vede in
-#   un altro modo (`loginctl terminate-user` non e' «Esci»).
+# ⛔ The question is the SAME as the product's (`src/sessione.c:285-310`): which
+#    graphical session is there in this box?  The product solves it by looking at
+#    which programs exist, and here it is done the same way — ⇒ the day a box
+#    changes desktop, this mesh follows it without anybody touching it.
+# ⚠ And the gesture's command is the MENU's, not a `kill`: the mesh must
+#   test the user's road, not a shortcut the product sees in
+#   another way (`loginctl terminate-user` is not «Log out»).
 # ═══════════════════════════════════════════════════════════════════════════
 DESKTOP_E_GESTO = (
-    # (nome, marcatore che DEVE esserci, marcatore che NON deve esserci, gesto)
+    # (name, marker that MUST be there, marker that must NOT be there, gesture)
     ("KDE Plasma", "startplasma-wayland", "gnome-session",
      "busctl --user call org.kde.Shutdown /Shutdown org.kde.Shutdown logout"),
     ("GNOME", "gnome-session", None,
@@ -299,28 +299,28 @@ DESKTOP_E_GESTO = (
      "org.gnome.SessionManager Logout u 1"),
     ("XFCE", "xfce4-session", None,
      "xfce4-session-logout --logout --fast"),
-    # ⭐ LXQt — 24 set 2026, fase 14.  `[R]` Il gesto e' il metodo D-Bus che il
-    #   menu «Esci» di LXQt raggiunge, pubblicato da `lxqt-session` 2.1.1
-    #   (quella di trixie, 2.1.1-1):
-    #     servizio `org.lxqt.session`, oggetto `/LXQtSession`
+    # ⭐ LXQt — 24 Sep 2026, phase 14.  `[R]` The gesture is the D-Bus method that the
+    #   LXQt «Log out» menu reaches, published by `lxqt-session` 2.1.1
+    #   (trixie's, 2.1.1-1):
+    #     service `org.lxqt.session`, object `/LXQtSession`
     #       https://github.com/lxqt/lxqt-session/blob/2.1.1/lxqt-session/src/sessionapplication.cpp
-    #     interfaccia `org.lxqt.session`, metodo `logout()` (Q_NOREPLY), che
-    #     chiama `m_manager->logout(true)`
+    #     interface `org.lxqt.session`, method `logout()` (Q_NOREPLY), which
+    #     calls `m_manager->logout(true)`
     #       https://github.com/lxqt/lxqt-session/blob/2.1.1/lxqt-session/src/sessiondbusadaptor.h
-    # ⛔ NON `lxqt-leave --logout`: apre una CONFERMA modale e aspetta un clic
-    #    che nessuno da' ⇒ la maglia uscirebbe 3 per un dialogo, non per il
-    #    prodotto.
-    # ⚠ L'ORDINE non e' un caso: sta IN CODA, cosi' le tre voci sopra si
-    #   provano come prima e scelgono come prima.  E i marcatori non si
-    #   pestano: nella scatola lxqt non c'e' `xfce4-session` (ne'
-    #   `gnome-session`, ne' `startplasma-wayland`), e nelle altre tre non
-    #   c'e' `lxqt-session` — ⇒ nessuna voce cattura il desktop di un'altra.
-    # ⚠ `--expect-reply=no`: il metodo e' `Q_NOREPLY`, e Qt risponde (se
-    #   risponde) solo DOPO che `logout(true)` ha fermato i moduli — cioe'
-    #   quando `lxqt-session` sta gia' uscendo.  `[?]` Aspettando la risposta,
-    #   busctl rischierebbe «Remote peer disconnected» e un codice ≠ 0 ⇒ C20
-    #   direbbe «il gesto non ha risposto» a un gesto riuscito.  Da misurare
-    #   sulla scatola.
+    # ⛔ NOT `lxqt-leave --logout`: it opens a modal CONFIRMATION and waits for a click
+    #    nobody gives ⇒ the mesh would exit 3 because of a dialog, not because of the
+    #    product.
+    # ⚠ The ORDER is not chance: it is AT THE END, so the three entries above are
+    #   tried as before and choose as before.  And the markers do not
+    #   clash: in the lxqt box there is no `xfce4-session` (nor
+    #   `gnome-session`, nor `startplasma-wayland`), and in the other three there is
+    #   no `lxqt-session` — ⇒ no entry captures another one's desktop.
+    # ⚠ `--expect-reply=no`: the method is `Q_NOREPLY`, and Qt answers (if
+    #   it answers) only AFTER `logout(true)` has stopped the modules — that is
+    #   when `lxqt-session` is already exiting.  `[?]` Waiting for the answer,
+    #   busctl would risk «Remote peer disconnected» and a code ≠ 0 ⇒ C20
+    #   would say «the gesture did not answer» to a gesture that succeeded.  To be measured
+    #   on the box.
     ("LXQt", "lxqt-session", None,
      "busctl --user --expect-reply=no call org.lxqt.session /LXQtSession "
      "org.lxqt.session logout"),
@@ -328,7 +328,7 @@ DESKTOP_E_GESTO = (
 
 
 def come_si_esce():
-    """⭐ (nome del desktop, comando del gesto) — o (None, perche')."""
+    """⭐ (desktop name, gesture command) — or (None, why)."""
     def c_e(programma):
         r = sh("command -v %s >/dev/null 2>&1" % programma, 15)
         return r is not None and r.returncode == 0
@@ -339,64 +339,64 @@ def come_si_esce():
         if non_ci_vuole and c_e(non_ci_vuole):
             continue
         return nome, gesto
-    return None, ("in questa scatola non c'e' ne' startplasma-wayland, ne' "
-                  "gnome-session, ne' xfce4-session, ne' lxqt-session: non "
-                  "so come si dice «Esci» qui dentro")
+    return None, ("in this box there is neither startplasma-wayland, nor "
+                  "gnome-session, nor xfce4-session, nor lxqt-session: I do not "
+                  "know how «Log out» is said in here")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐ I GIUDICI — funzioni PURE: `--certifica` le attraversa senza macchina.
+# ⭐ THE JUDGES — PURE functions: `--certifica` goes through them without a machine.
 # ═══════════════════════════════════════════════════════════════════════════
 def giudica_i_pixel(luminanze):
-    """⭐ (esito, salti, perche) dalla successione delle luminanze medie."""
+    """⭐ (esito, salti, perche) from the sequence of mean luminances."""
     if luminanze is None:
-        return 3, 0, "il video del secondo accesso non si e' decodificato"
+        return 3, 0, "the video of the second login was not decoded"
     if len(luminanze) < FOTOGRAMMI_MINIMI:
-        return 3, 0, ("solo %d fotogrammi decodificati (ne servono %d): non "
-                      "c'e' una coda da guardare"
+        return 3, 0, ("only %d frames decoded (%d are needed): there is "
+                      "no tail to look at"
                       % (len(luminanze), FOTOGRAMMI_MINIMI))
     coda = luminanze[quanti_da_saltare(len(luminanze)):]
     salti = sum(1 for a, b in zip(coda, coda[1:]) if abs(a - b) > SOGLIA_SALTO)
     ammessi = salti_ammessi(len(coda))
     valori = sorted(set(coda))
     mediana = sorted(coda)[len(coda) // 2]
-    # ⚠ E si stampano MINIMA, MEDIANA e MASSIMA oltre ai valori: `[M]` 23 set
-    #   2026 il primo giro stampava i soli otto valori piu' bassi, ⛔ e non si
-    #   poteva capire se lo schermo fosse nero o solo fermo — due cose che un
-    #   giudice «la luminanza e' una» tratta allo stesso modo.
+    # ⚠ And MINIMUM, MEDIAN and MAXIMUM are printed besides the values: `[M]` 23 Sep
+    #   2026 the first run printed only the eight lowest values, ⛔ and one
+    #   could not tell whether the screen was black or only still — two things that a
+    #   «the luminance is one» judge treats the same way.
     ordinata = sorted(coda)
-    dice = ("%d fotogrammi, coda di %d: %d salti oltre %d livelli (ne sono "
-            "ammessi %d) · luminanza min %d · mediana %d · max %d · %d valori "
-            "distinti %s"
+    dice = ("%d frames, tail of %d: %d jumps beyond %d levels (%d are "
+            "allowed) · luminance min %d · median %d · max %d · %d distinct "
+            "values %s"
             % (len(luminanze), len(coda), salti, SOGLIA_SALTO, ammessi,
                ordinata[0], mediana, ordinata[-1],
                len(valori), valori[:6]))
-    # ⛔⛔ E L'ORDINE DI QUESTI DUE CONTROLLI E' UNA DECISIONE, non un caso:
-    #     **prima il lampeggio, poi il nero** — `[M]` 23 set 2026, e col verso
-    #     opposto il guasto innestato usciva **3** invece che rosso.
-    #     La scena di C3 alterna blu (29) e giallo (226), ⇒ la sua MEDIANA e'
-    #     17: scura.  Col controllo del nero davanti, la maglia diceva «lo
-    #     schermo e' nero, non giudico» a uno schermo che stava lampeggiando
-    #     sotto i suoi occhi.
-    # ⇒ Uno schermo che ALTERNA non e' mai ambiguo, per quanto scuro sia: il
-    #   fantasma e' fatto cosi' (desktop · schermata d'uscita · nero).  ⭐ E'
-    #   il nero **FERMO** che non si sa distinguere da un'immagine congelata,
-    #   e solo quello diventa un «non ho potuto guardare».
+    # ⛔⛔ AND THE ORDER OF THESE TWO CHECKS IS A DECISION, not chance:
+    #     **first the flicker, then the black** — `[M]` 23 Sep 2026, and with the
+    #     opposite order the injected fault came out **3** instead of red.
+    #     C3's scene alternates blue (29) and yellow (226), ⇒ its MEDIAN is
+    #     17: dark.  With the black check in front, the mesh said «the
+    #     screen is black, I do not judge» to a screen that was flickering
+    #     under its eyes.
+    # ⇒ A screen that ALTERNATES is never ambiguous, however dark it is: the
+    #   ghost is made like that (desktop · logout screen · black).  ⭐ It is
+    #   the STILL black that cannot be told apart from a frozen picture,
+    #   and only that becomes an «I could not look».
     if salti > ammessi:
-        return 1, salti, ("lo schermo LAMPEGGIA dopo la rinascita — " + dice)
+        return 1, salti, ("the screen FLICKERS after the rebirth — " + dice)
     if mediana < LUCE_MINIMA:
-        return 3, salti, ("lo schermo e' NERO e FERMO (luminanza mediana %d, "
-                          "sotto %d): la scena che ho acceso non e' arrivata, "
-                          "e un nero fermo e un'immagine congelata hanno lo "
-                          "stesso aspetto — " % (mediana, LUCE_MINIMA) + dice)
-    return 0, salti, ("a desktop fermo la luminanza e' una — " + dice)
+        return 3, salti, ("the screen is BLACK and STILL (median luminance %d, "
+                          "below %d): the scene I started did not arrive, "
+                          "and a still black and a frozen picture look "
+                          "the same — " % (mediana, LUCE_MINIMA) + dice)
+    return 0, salti, ("with a still desktop the luminance is one — " + dice)
 
 
 def chi_serviva(fetta, chi):
-    """⭐ Il pid del figlio che serve «chi» in questa fetta di registro — o None.
+    """⭐ The pid of the child serving «chi» in this log slice — or None.
 
-    ⚠ Se ce n'e' piu' d'uno si prende l'ULTIMO: e' quello che sta servendo
-      adesso.
+    ⚠ If there is more than one the LAST is taken: it is the one serving
+      now.
     """
     if not fetta:
         return None
@@ -409,69 +409,69 @@ def chi_serviva(fetta, chi):
 
 
 def giudica_il_registro(fetta, chi, figlio_morto, pid_di_prima):
-    """⭐ (esito, quante, perche) dalle righe di registro di QUESTO inquilino.
+    """⭐ (esito, quante, perche) from the log lines of THIS tenant.
 
     ═══════════════════════════════════════════════════════════════════════
-    ⭐⭐ E LA DOMANDA E' DIVERSA NEI DUE CASI, perche' e' diverso il PERICOLO.
-    ⛔ Non e' una soglia allentata per far passare GNOME: e' la stessa prova
-       chiesta al fatto che c'e' davvero da provare.
+    ⭐⭐ AND THE QUESTION IS DIFFERENT IN THE TWO CASES, because the DANGER is different.
+    ⛔ It is not a threshold loosened to let GNOME pass: it is the same test
+       asked of the fact that really has to be tested.
 
-    `src/cattura.c:1318-1332`, la diagnosi del difetto vero (22 set 2026, la
-    prova dell'utente su KDE): *«dopo «Esci» e un nuovo accesso la sessione
-    rinasce NELLO STESSO figlio: la cattura e' nuova, il codificatore no»* —
-    ⇒ i descrittori riciclati ritrovavano le superfici della sessione morta.
+    `src/cattura.c:1318-1332`, the diagnosis of the real defect (22 Sep 2026, the
+    user's test on KDE): *«after «Log out» and a new login the session
+    is reborn IN THE SAME child: the capture is new, the encoder is not»* —
+    ⇒ the recycled descriptors found again the surfaces of the dead session.
 
-      · **il figlio e' SOPRAVVISSUTO** (KDE, XFCE) ⇒ il codificatore e' lo
-        STESSO OGGETTO di prima, e il pericolo c'e' tutto: si pretende che
-        abbia buttato la cache — «butto le N superfici importate».
-        ⛔ Se non l'ha buttata e' ROSSO, ed e' il difetto vero.
+      · **the child SURVIVED** (KDE, XFCE) ⇒ the encoder is the
+        SAME OBJECT as before, and the danger is all there: we demand that it
+        threw away the cache — «throwing away the N imported surfaces».
+        ⛔ If it did not throw it away it is RED, and it is the real defect.
 
-      · **il figlio e' MORTO col gesto** (GNOME: e' lui il processo guida
-        della sessione di logind) ⇒ il codificatore e' morto con lui, e ⛔ non
-        c'e' NESSUNA cache da buttare: le superfici della sessione di prima
-        stanno in un processo che non esiste piu'.
-        ⭐ Ma non basta dirlo: si PRETENDE LA PROVA, e cioe' che il secondo
-          accesso sia servito da un figlio col **pid diverso** da quello del
-          primo.  ⛔ Senza quel pid non si giudica (3), e se il pid fosse lo
-          stesso il figlio non sarebbe morto affatto — ⇒ 3, la premessa della
-          maglia non regge.
+      · **the child DIED with the gesture** (GNOME: it is the leader process
+        of the logind session) ⇒ the encoder died with it, and ⛔ there is
+        NO cache to throw away: the surfaces of the session before
+        are in a process that no longer exists.
+        ⭐ But saying it is not enough: we DEMAND THE PROOF, that is that the second
+          login is served by a child with a **different pid** from the
+          first one's.  ⛔ Without that pid no judgement (3), and if the pid were the
+          same the child would not have died at all — ⇒ 3, the premise of the
+          mesh does not hold.
 
-    ⛔⛔ E NON SI GUARDA «RIAVVIO LA CATTURA» NEL SECONDO CASO: `[M]` 23 set
-        2026 su rete11-gnome quella riga C'E' lo stesso — la scrive il figlio
-        NUOVO che al primo tentativo non trova il palco e al secondo si' —
-        ⇒ guardarla vorrebbe dire leggere un verde da una riga che parla
-        d'altro, che e' il modo esatto in cui una maglia smette di guardare.
+    ⛔⛔ AND «RESTARTING THE CAPTURE» IS NOT LOOKED AT IN THE SECOND CASE: `[M]` 23 Sep
+        2026 on rete11-gnome that line IS there anyway — the NEW child
+        writes it, which at the first attempt does not find the stage and at the second does —
+        ⇒ looking at it would mean reading a green from a line that talks about
+        something else, which is the exact way a mesh stops looking.
     ═══════════════════════════════════════════════════════════════════════
     """
     if fetta is None:
-        return 3, 0, "non ho potuto leggere il registro del server"
+        return 3, 0, "I could not read the server log"
 
     if figlio_morto:
         pid_adesso = chi_serviva(fetta, chi)
         if pid_adesso is None:
-            return 3, 0, ("il figlio di «%s» era morto col gesto «Esci» e nel "
-                          "registro del secondo accesso non ne nasce nessun "
-                          "altro: non so chi stia servendo questa sessione"
+            return 3, 0, ("the child of «%s» had died with the «Log out» gesture and in the "
+                          "log of the second login no other one is "
+                          "born: I do not know who is serving this session"
                           % chi)
         if pid_di_prima is None:
-            return 3, 0, ("non ho letto il pid del figlio del PRIMO accesso: "
-                          "senza non posso dire che questo (%s) sia un altro"
+            return 3, 0, ("I did not read the pid of the child of the FIRST login: "
+                          "without it I cannot say that this one (%s) is another"
                           % pid_adesso)
         if pid_adesso == pid_di_prima:
-            return 3, 0, ("il secondo accesso e' servito dallo STESSO figlio "
-                          "del primo (pid %s), e il prodotto aveva detto che "
-                          "era morto: la premessa non regge" % pid_adesso)
-        return 0, 0, ("il figlio e' morto col gesto e il secondo accesso gira "
-                      "in un figlio NUOVO (pid %s, prima %s): il codificatore "
-                      "della sessione morta non esiste piu', e le sue "
-                      "superfici nemmeno"
+            return 3, 0, ("the second login is served by the SAME child "
+                          "as the first (pid %s), and the product had said it "
+                          "was dead: the premise does not hold" % pid_adesso)
+        return 0, 0, ("the child died with the gesture and the second login runs "
+                      "in a NEW child (pid %s, before %s): the encoder "
+                      "of the dead session no longer exists, and neither do its "
+                      "surfaces"
                       % (pid_adesso, pid_di_prima))
 
     mie = [r for r in fetta if ("[%s]" % chi) in r]
     if not any(RIGA_RINASCITA in r for r in mie):
-        return 3, 0, ("nel registro non c'e' nessuna rinascita della cattura "
-                      "(«%s») per «%s»: la sessione nuova non e' nata da una "
-                      "vecchia, e non c'e' niente da giudicare"
+        return 3, 0, ("in the log there is no rebirth of the capture "
+                      "(«%s») for «%s»: the new session was not born from an "
+                      "old one, and there is nothing to judge"
                       % (RIGA_RINASCITA, chi))
     quante = 0
     for r in mie:
@@ -479,18 +479,18 @@ def giudica_il_registro(fetta, chi, figlio_morto, pid_di_prima):
         if m:
             quante += int(m.group(1))
     if quante > 0:
-        return 0, quante, ("dopo la rinascita il codificatore ha buttato %d "
-                           "superfici della sessione di prima" % quante)
-    return 1, 0, ("la cattura e' rinata ma il codificatore NON ha buttato la "
-                  "cache: le superfici della sessione morta sono ancora dentro")
+        return 0, quante, ("after the rebirth the encoder threw away %d "
+                           "surfaces of the session before" % quante)
+    return 1, 0, ("the capture was reborn but the encoder did NOT throw away the "
+                  "cache: the surfaces of the dead session are still inside")
 
 
 def giudizio(pixel, registro):
-    """⭐ L'esito della maglia dai due giudici.
+    """⭐ The mesh's outcome from the two judges.
 
-    ⛔ Un `3` di uno dei due non diventa MAI un rosso: `LEZIONI.md` §1.49 —
-       «non lo so» e «non regge» sono due cose, e confonderle e' il modo in cui
-       una rete comincia a gridare mentre il prodotto sta benissimo.
+    ⛔ A `3` from one of the two NEVER becomes a red: `LEZIONI.md` §1.49 —
+       «I do not know» and «it does not hold» are two things, and confusing them is the way
+       a net starts shouting while the product is perfectly fine.
     """
     ep, ip, _ = pixel
     er, ir, _ = registro
@@ -502,7 +502,7 @@ def giudizio(pixel, registro):
 
 
 def luminanze_dal_grezzo(dati):
-    """⭐ La media per fotogramma da un `rawvideo` gray 64x24."""
+    """⭐ The mean per frame from a gray 64x24 `rawvideo`."""
     n = LARGHEZZA * ALTEZZA
     if not dati or len(dati) < n:
         return None
@@ -512,8 +512,8 @@ def luminanze_dal_grezzo(dati):
 # ═══════════════════════════════════════════════════════════════════════════
 def sgombera(chi):
     sh("loginctl terminate-user %s >/dev/null 2>&1" % chi, 30)
-    # ⛔ `[c]20u4` e non `c20u4`: `pkill -f` pescherebbe il guscio che lo sta
-    #    eseguendo, e il guscio si ucciderebbe da solo (22 set 2026).
+    # ⛔ `[c]20u4` and not `c20u4`: `pkill -f` would catch the shell that is
+    #    running it, and the shell would kill itself (22 Sep 2026).
     sh("pkill -CONT -f 'runuser -u [%s]%s ' 2>/dev/null" % (chi[0], chi[1:]), 20)
     sh("pkill -KILL -f 'runuser -u [%s]%s ' 2>/dev/null" % (chi[0], chi[1:]), 20)
     sh("pkill -KILL -u %s >/dev/null 2>&1" % chi, 20)
@@ -532,13 +532,13 @@ def leggi(percorso):
 
 
 def aspetta_la_riga(percorso, segno, chi, pezzi, tetto):
-    """⭐ Si aspetta l'EVENTO, non l'orologio.  Torna (quale, fetta).
+    """⭐ We wait for the EVENT, not the clock.  Returns (quale, fetta).
 
-    ⚠ `pezzi` e' un pezzo di riga oppure un elenco di pezzi: il primo che si
-      vede vince, e si torna **quello** — cosi' chi chiama puo' DIRE quale
-      forma ha usato il prodotto invece di scrivere solo «l'ho visto».
-    ⛔ Un elenco non e' una soglia allentata: e' la stessa domanda posta al
-       prodotto nelle forme in cui il prodotto sa rispondere (RIGHE_FINITA).
+    ⚠ `pezzi` is a piece of a line or a list of pieces: the first one that is
+      seen wins, and **that one** is returned — so the caller can SAY which
+      form the product used instead of just writing «I saw it».
+    ⛔ A list is not a loosened threshold: it is the same question asked of the
+       product in the forms in which the product can answer (RIGHE_FINITA).
     """
     if isinstance(pezzi, str):
         pezzi = (pezzi,)
@@ -548,10 +548,10 @@ def aspetta_la_riga(percorso, segno, chi, pezzi, tetto):
         righe = leggi(percorso)
         fetta = righe[segno:] if righe is not None else []
         for pezzo in pezzi:
-            # ⚠ Il nome sta fra parentesi quadre nelle righe marcate per
-            #   inquilino, e fra virgolette basse in quelle del padre (la
-            #   riga «E' FINITA» e quella del palco che se ne va): si
-            #   guardano tutt'e due le forme.
+            # ⚠ The name is in square brackets in the lines tagged per
+            #   tenant, and in angle quotes in the parent's ones (the
+            #   «IS OVER» line and the one of the stage that goes away): both
+            #   forms are looked at.
             for r in fetta:
                 if pezzo in r and (("[%s]" % chi) in r or ("«%s»" % chi) in r):
                     return pezzo, fetta
@@ -560,13 +560,13 @@ def aspetta_la_riga(percorso, segno, chi, pezzi, tetto):
 
 
 def il_cliente_c_e(porta, chi):
-    """⛔⛔ `[c]20u2` E NON `c20u2`, e non e' un vezzo.
+    """⛔⛔ `[c]20u2` AND NOT `c20u2`, and it is not a whim.
 
-    La riga di comando del guscio che esegue questo `pgrep` contiene il nome
-    dell'inquilino ⇒ `pgrep -f` **pesca se stesso**, e l'attesa «finche' il
-    cliente c'e'» non finisce mai.  ⚠ E' la stessa trappola che il 22 set 2026
-    faceva uccidere il guscio da solo (`11-gancio.sh`, `sgombera_inquilini`).
-    ⭐ Le parentesi quadre valgono come espressione e non come testo.
+    The command line of the shell running this `pgrep` contains the name
+    of the tenant ⇒ `pgrep -f` **catches itself**, and the wait «as long as the
+    client is there» never ends.  ⚠ It is the same trap that on 22 Sep 2026
+    made the shell kill itself (`11-gancio.sh`, `sgombera_inquilini`).
+    ⭐ The square brackets count as an expression and not as text.
     """
     r = sh("pgrep -f 'porta %d --utente [%s]%s' >/dev/null 2>&1"
            % (porta, chi[0], chi[1:]), 15)
@@ -585,12 +585,12 @@ def aspetta_che_il_cliente_se_ne_vada(porta, chi, tetto):
 def coda_di(percorso, quante=3):
     righe = leggi(percorso)
     if not righe:
-        return "(niente)"
+        return "(nothing)"
     return " ⏎ ".join(r.strip()[:90] for r in righe[-quante:] if r.strip())
 
 
 def il_socket_di(chi):
-    """⛔ Il socket di Wayland si CERCA, non si indovina (§3.7)."""
+    """⛔ The Wayland socket is LOOKED FOR, not guessed (§3.7)."""
     r = sh("id -u %s" % chi, 15)
     uid = (r.stdout or "").strip() if r else ""
     if not uid:
@@ -602,51 +602,51 @@ def il_socket_di(chi):
 
 
 def accendi_la_scena(chi, scena, applicazione, come, prefisso="   "):
-    """⭐ Accende la scena DICHIARATA dentro la sessione appena rinata.
+    """⭐ Starts the DECLARED scene inside the freshly reborn session.
 
-    ⛔⛔ E SI ACCENDE IN TUTT'E DUE I GIRI, non solo in quello col guasto —
-        23 set 2026, ed e' la misura che l'ha deciso: il secondo accesso porta
-        **1 800 fotogrammi in 45 s su kde** e **7 in 60 s su xfce**.  KWin
-        consegna anche a desktop fermo, labwc (wlroots) consegna solo sul
-        DANNO.  ⇒ Senza una scena che si muova, su xfce e su lxqt questa
-        maglia non avrebbe **niente da guardare**, per sempre.
-    ⭐ La scena del giro sano (`11-c20-scena.html`) si muove e la sua luce NON
-      cambia: fotogrammi tutti diversi, luminanza media costante.  ⇒ E' quel
-      che il giudice vuole, ed e' dichiarato in quel file.
+    ⛔⛔ AND IT IS STARTED IN BOTH RUNS, not only in the one with the fault —
+        23 Sep 2026, and it is the measurement that decided it: the second login brings
+        **1 800 frames in 45 s on kde** and **7 in 60 s on xfce**.  KWin
+        delivers even with a still desktop, labwc (wlroots) delivers only on
+        DAMAGE.  ⇒ Without a scene that moves, on xfce and on lxqt this
+        mesh would have **nothing to look at**, for ever.
+    ⭐ The scene of the healthy run (`11-c20-scena.html`) moves and its light does NOT
+      change: all different frames, constant mean luminance.  ⇒ It is what
+      the judge wants, and it is declared in that file.
 
-    ⭐ `setsid` e stdin su `/dev/null`, come C3: senza, il browser prende
-      SIGTTOU dal terminale del banco e resta fermo in `T` — `[M]` 22 set 2026,
-      e sembrava un prodotto che non consegna.
+    ⭐ `setsid` and stdin on `/dev/null`, like C3: without it, the browser gets
+      SIGTTOU from the bench's terminal and stays stopped in `T` — `[M]` 22 Sep 2026,
+      and it looked like a product that does not deliver.
     """
     # ═══════════════════════════════════════════════════════════════════
-    # ⛔⛔ LA PROVVISTA DEL BROWSER, E COSTA UN GIRO INTERO — 23 set 2026.
+    # ⛔⛔ THE BROWSER'S PROVISION, AND IT COSTS A WHOLE RUN — 23 Sep 2026.
     #
-    # `[M]` Primo giro del guasto innestato su kde: `firefox-esr` partiva
-    # (`pgrep` lo trovava), ⛔ e sullo schermo non arrivava NIENTE — 1800
-    # fotogrammi, 0 salti, la maglia diceva «il guasto non e' stato visto».
-    # ⇒ La causa e' quella che C3 ha gia' pagato il 27 agosto 2026:
-    #   `~/.cache/mozilla` -> `/tmp/mozilla`, rimasto a un ALTRO inquilino a
-    #   modo 0700 ⇒ il browser si ferma sulla finestra di scelta del profilo
-    #   e non dipinge mai.  ⚠ Un guasto innestato che non morde per colpa del
-    #   banco e' peggio di nessun guasto: dice «la maglia e' rotta» mentre e'
-    #   il banco a non aver preparato la scena.
-    # ⭐ La cura sta in C2 (`cura_della_provvista`) e ⛔ NON se ne fa una copia
-    #   qui: la stessa regola in tre file sono tre posti da cui divergere.
+    # `[M]` First run of the injected fault on kde: `firefox-esr` started
+    # (`pgrep` found it), ⛔ and NOTHING arrived on the screen — 1800
+    # frames, 0 jumps, the mesh said «the fault was not seen».
+    # ⇒ The cause is the one C3 already paid for on 27 August 2026:
+    #   `~/.cache/mozilla` -> `/tmp/mozilla`, left to ANOTHER tenant with
+    #   mode 0700 ⇒ the browser stops on the profile choice window
+    #   and never paints.  ⚠ An injected fault that does not bite because of the
+    #   bench is worse than no fault: it says «the mesh is broken» while it is
+    #   the bench that has not prepared the scene.
+    # ⭐ The cure is in C2 (`cura_della_provvista`) and ⛔ NO copy of it is made
+    #   here: the same rule in three files is three places to diverge from.
     # ═══════════════════════════════════════════════════════════════════
     c2 = _carica("11-c2-una-finestra-si-apre.py",
                  ("cura_della_provvista", "sgombra_il_mio_rimasuglio"))
     if c2 is None:
-        return False, ("non trovo `11-c2-una-finestra-si-apre.py` accanto a me: "
-                       "da li' viene la cura della provvista del browser, e "
-                       "senza la scena non si accende")
+        return False, ("I cannot find `11-c2-una-finestra-si-apre.py` next to me: "
+                       "the cure of the browser's provision comes from there, and "
+                       "without it the scene does not start")
     fatto, perche_p = c2.cura_della_provvista(chi)
     if not fatto:
-        return False, "la provvista del browser non e' pronta: %s" % perche_p
+        return False, "the browser's provision is not ready: %s" % perche_p
 
     rtd, display = il_socket_di(chi)
     if display is None:
-        return False, ("in %s non c'e' nessun socket wayland: non c'e' un "
-                       "compositore a cui la scena possa parlare" % rtd)
+        return False, ("in %s there is no wayland socket: there is no "
+                       "compositor the scene can talk to" % rtd)
     sh("setsid runuser -u %s -- env XDG_RUNTIME_DIR=%s WAYLAND_DISPLAY=%s "
        "MOZ_ENABLE_WAYLAND=1 XDG_SESSION_TYPE=wayland HOME=/home/%s "
        "%s --kiosk file://%s < /dev/null > /home/%s/.c20-scena.log 2>&1 &"
@@ -654,130 +654,130 @@ def accendi_la_scena(chi, scena, applicazione, come, prefisso="   "):
     for _ in range(40):
         r = sh("pgrep -u %s -f %s >/dev/null 2>&1" % (chi, applicazione), 15)
         if r is not None and r.returncode == 0:
-            print("%s%s (%s su %s)"
+            print("%s%s (%s on %s)"
                   % (prefisso, come, applicazione, os.path.basename(scena)))
             return True, ""
         time.sleep(0.25)
-    return False, "la scena non si e' accesa: %s non si e' visto" % applicazione
+    return False, "the scene did not start: %s was not seen" % applicazione
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 def certifica():
-    """⛔ I due giudici sanno dire verde, rosso e «non lo so»?"""
+    """⛔ Can the two judges say green, red and «I do not know»?"""
     guai = 0
-    # ⭐ Il giro sano: prima il desktop nudo (scuro), poi il gradino della
-    #   scena che si accende, poi la scena — che si muove e la cui luce NON
-    #   cambia (~157, come dichiara `11-c20-scena.html`).
+    # ⭐ The healthy run: first the bare desktop (dark), then the step of the
+    #   scene starting, then the scene — which moves and whose light does NOT
+    #   change (~157, as `11-c20-scena.html` declares).
     sano = [20] * 100 + [157] * 100
-    # ⚠ Il rumore della codifica: ±3 livelli, sotto la soglia ⇒ non e' un salto.
+    # ⚠ The encoding noise: ±3 levels, below the threshold ⇒ it is not a jump.
     rumore = [20] * 100 + [157 + (i % 7) - 3 for i in range(100)]
-    # ⛔ Il lampeggio vero: blu (29) ⇄ giallo (226), come `11-c3-scena.html`.
+    # ⛔ The real flicker: blue (29) ⇄ yellow (226), like `11-c3-scena.html`.
     lampeggio = [20] * 100 + [29 if (i // 2) % 2 == 0 else 226
                               for i in range(100)]
-    # ⚠ Un assestamento solo DENTRO la coda: NON e' un lampeggio.
+    # ⚠ A single settling INSIDE the tail: it is NOT a flicker.
     assesta = [20] * 100 + [157] * 50 + [180] * 50
-    # ⭐ La coda corta di un compositore che consegna poco (xfce/lxqt): 80
-    #   fotogrammi in tutto, coda di 40.
+    # ⭐ The short tail of a compositor that delivers little (xfce/lxqt): 80
+    #   frames in all, tail of 40.
     corto_sano = [20] * 40 + [150] * 40
     corto_lampeggio = [20] * 40 + [29 if (i // 2) % 2 == 0 else 226
                                    for i in range(40)]
-    # ⛔⛔ E IL CASO CHE VALE PIU' DI TUTTI: lo schermo NERO e fermo.
+    # ⛔⛔ AND THE CASE THAT MATTERS MOST: the BLACK, still screen.
     nero = [6] * 200
-    # ⛔⛔ E IL SUO GEMELLO CATTIVO, che il 23 set 2026 usciva 3 invece che
-    #   rosso: uno schermo SCURO CHE ALTERNA.  E' la scena di C3 vista dalla
-    #   cattura (mediana 17) ed e' anche la forma del fantasma vero.
+    # ⛔⛔ AND ITS EVIL TWIN, which on 23 Sep 2026 came out 3 instead of
+    #   red: a DARK screen THAT ALTERNATES.  It is C3's scene seen by the
+    #   capture (median 17) and it is also the shape of the real ghost.
     nero_che_alterna = [20] * 100 + [29 if (i // 2) % 2 == 0 else 6
                                      for i in range(100)]
     casi_pixel = [
-        ("⭐ la scena dichiarata, luce UNA ⇒ VERDE", sano, 0),
-        ("⭐ rumore della codifica sotto la soglia ⇒ VERDE", rumore, 0),
-        ("⭐ un assestamento solo (1 salto) ⇒ VERDE, ⛔ non un rosso", assesta, 0),
-        ("⛔ il LAMPEGGIO (blu ⇄ giallo) ⇒ ROSSO", lampeggio, 1),
-        ("⭐ coda corta (xfce/lxqt), luce una ⇒ VERDE", corto_sano, 0),
-        ("⛔ coda corta che LAMPEGGIA ⇒ ROSSO lo stesso", corto_lampeggio, 1),
-        ("⛔⛔ schermo NERO e FERMO ⇒ 3 — ⛔ MAI un verde: la scena non e' "
-         "arrivata", nero, 3),
-        ("⛔⛔ schermo scuro che ALTERNA ⇒ ROSSO — ⛔ il lampeggio viene "
-         "PRIMA del nero", nero_che_alterna, 1),
-        ("⚠ video troppo corto (39 fotogrammi) ⇒ 3, ⛔ mai un rosso",
+        ("⭐ the declared scene, light ONE ⇒ GREEN", sano, 0),
+        ("⭐ encoding noise below the threshold ⇒ GREEN", rumore, 0),
+        ("⭐ a single settling (1 jump) ⇒ GREEN, ⛔ not a red", assesta, 0),
+        ("⛔ the FLICKER (blue ⇄ yellow) ⇒ RED", lampeggio, 1),
+        ("⭐ short tail (xfce/lxqt), light one ⇒ GREEN", corto_sano, 0),
+        ("⛔ short tail that FLICKERS ⇒ RED all the same", corto_lampeggio, 1),
+        ("⛔⛔ BLACK and STILL screen ⇒ 3 — ⛔ NEVER a green: the scene did not "
+         "arrive", nero, 3),
+        ("⛔⛔ dark screen that ALTERNATES ⇒ RED — ⛔ the flicker comes "
+         "BEFORE the black", nero_che_alterna, 1),
+        ("⚠ video too short (39 frames) ⇒ 3, ⛔ never a red",
          [157] * 39, 3),
-        ("⚠ ffmpeg non ha decodificato niente ⇒ 3", None, 3),
+        ("⚠ ffmpeg decoded nothing ⇒ 3", None, 3),
     ]
-    print("== C20 — certificazione dei giudizi (⛔ senza toccare la macchina)")
+    print("== C20 — certification of the judgements (⛔ without touching the machine)")
     for nome, dato, atteso in casi_pixel:
         e = giudica_i_pixel(dato)[0]
         if e != atteso:
             guai += 1
-        print("  %s PIXEL    %-62s esito %s (atteso %s)"
+        print("  %s PIXEL    %-62s outcome %s (expected %s)"
               % ("OK " if e == atteso else "NO ", nome, e, atteso))
 
-    buono = ["figlio  [c20u1] ⭐⭐ RIAVVIO LA CATTURA: il palco e' tornato",
-             "codifica [c20u1] ⭐ butto le 4 superfici importate: generazione"]
-    # ⭐ IL FIGLIO SOPRAVVISSUTO — KDE, XFCE: il codificatore e' lo stesso.
+    buono = ["figlio  [c20u1] ⭐⭐ RESTARTING THE CAPTURE: the stage came back",
+             "codifica [c20u1] ⭐ throwing away the 4 imported surfaces: generation"]
+    # ⭐ THE CHILD THAT SURVIVED — KDE, XFCE: the encoder is the same.
     casi_reg = [
-        ("⭐ rinata, e la cache buttata ⇒ VERDE", buono, 0),
-        ("⛔ rinata e la cache NON buttata ⇒ ROSSO", buono[:1], 1),
-        ("⚠ nessuna rinascita ⇒ 3, ⛔ mai un rosso", buono[1:], 3),
-        ("⚠ le righe sono di un ALTRO inquilino ⇒ 3",
+        ("⭐ reborn, and the cache thrown away ⇒ GREEN", buono, 0),
+        ("⛔ reborn and the cache NOT thrown away ⇒ RED", buono[:1], 1),
+        ("⚠ no rebirth ⇒ 3, ⛔ never a red", buono[1:], 3),
+        ("⚠ the lines belong to ANOTHER tenant ⇒ 3",
          [r.replace("c20u1", "c20u9") for r in buono], 3),
-        ("⚠ il registro non si legge ⇒ 3", None, 3),
+        ("⚠ the log cannot be read ⇒ 3", None, 3),
     ]
     for nome, dato, atteso in casi_reg:
         e = giudica_il_registro(dato, "c20u1", False, "111")[0]
         if e != atteso:
             guai += 1
-        print("  %s REGISTRO %-62s esito %s (atteso %s)"
+        print("  %s LOG      %-62s outcome %s (expected %s)"
               % ("OK " if e == atteso else "NO ", nome, e, atteso))
 
-    # ⭐⭐ IL FIGLIO MORTO COL GESTO — GNOME.  ⛔ Qui il verde NON si regala:
-    #     si pretende il pid di un figlio NUOVO, e senza quello e' 3.
-    nuovo = ["figlio  ⭐ figlio generato per «c20u1»: pid 222, uid 4014, gid "
-             "4014, matricola 3.  ⛔ Che sia DAVVERO quell'uid",
-             "figlio  [c20u1] ⭐⭐ RIAVVIO LA CATTURA: il palco e' tornato"]
+    # ⭐⭐ THE CHILD THAT DIED WITH THE GESTURE — GNOME.  ⛔ Here green is NOT given away:
+    #     the pid of a NEW child is demanded, and without it it is 3.
+    nuovo = ["figlio  ⭐ child spawned for «c20u1»: pid 222, uid 4014, gid "
+             "4014, serial 3.  ⛔ That it REALLY is that uid",
+             "figlio  [c20u1] ⭐⭐ RESTARTING THE CAPTURE: the stage came back"]
     casi_morto = [
-        ("⭐ figlio NUOVO (pid 222 ≠ 111) ⇒ VERDE", nuovo, "111", 0),
-        ("⛔ nessun figlio nuovo nel registro ⇒ 3, ⛔ non un verde",
+        ("⭐ NEW child (pid 222 ≠ 111) ⇒ GREEN", nuovo, "111", 0),
+        ("⛔ no new child in the log ⇒ 3, ⛔ not a green",
          nuovo[1:], "111", 3),
-        ("⛔ lo STESSO pid di prima ⇒ 3: non era morto affatto",
+        ("⛔ the SAME pid as before ⇒ 3: it had not died at all",
          nuovo, "222", 3),
-        ("⚠ non so il pid del primo accesso ⇒ 3", nuovo, None, 3),
-        ("⚠ il figlio nuovo e' di un ALTRO inquilino ⇒ 3",
+        ("⚠ I do not know the pid of the first login ⇒ 3", nuovo, None, 3),
+        ("⚠ the new child belongs to ANOTHER tenant ⇒ 3",
          [r.replace("c20u1", "c20u9") for r in nuovo], "111", 3),
-        ("⚠ il registro non si legge ⇒ 3", None, "111", 3),
+        ("⚠ the log cannot be read ⇒ 3", None, "111", 3),
     ]
     for nome, dato, prima, atteso in casi_morto:
         e = giudica_il_registro(dato, "c20u1", True, prima)[0]
         if e != atteso:
             guai += 1
-        print("  %s REG/MORTO %-61s esito %s (atteso %s)"
+        print("  %s LOG/DEAD  %-61s outcome %s (expected %s)"
               % ("OK " if e == atteso else "NO ", nome, e, atteso))
 
     casi_somma = [
-        ("⭐ tutt'e due verdi ⇒ VERDE", (0, 0, ""), (0, 4, ""), 0),
-        ("⛔ i pixel lampeggiano ⇒ ROSSO", (1, 60, ""), (0, 4, ""), 1),
-        ("⛔ la cache non buttata ⇒ ROSSO", (0, 0, ""), (1, 0, ""), 1),
-        ("⚠ un «non lo so» NON diventa un rosso", (3, 0, ""), (1, 0, ""), 3),
-        ("⚠ e nemmeno dall'altra parte", (1, 9, ""), (3, 0, ""), 3),
+        ("⭐ both green ⇒ GREEN", (0, 0, ""), (0, 4, ""), 0),
+        ("⛔ the pixels flicker ⇒ RED", (1, 60, ""), (0, 4, ""), 1),
+        ("⛔ the cache not thrown away ⇒ RED", (0, 0, ""), (1, 0, ""), 1),
+        ("⚠ an «I do not know» does NOT become a red", (3, 0, ""), (1, 0, ""), 3),
+        ("⚠ nor from the other side", (1, 9, ""), (3, 0, ""), 3),
     ]
     for nome, p, r, atteso in casi_somma:
         e = giudizio(p, r)
         if e != atteso:
             guai += 1
-        print("  %s SOMMA    %-62s esito %s (atteso %s)"
+        print("  %s SUM      %-62s outcome %s (expected %s)"
               % ("OK " if e == atteso else "NO ", nome, e, atteso))
 
-    # ⭐ E il gesto: la tavola dei desktop si prova per forma, non per fiducia.
-    print("  %s la tavola dei gesti «Esci» ha %d desktop: %s"
+    # ⭐ And the gesture: the table of desktops is tested by shape, not by trust.
+    print("  %s the table of «Log out» gestures has %d desktops: %s"
           % ("OK " if len(DESKTOP_E_GESTO) == 4 else "NO ",
              len(DESKTOP_E_GESTO),
              ", ".join(d[0] for d in DESKTOP_E_GESTO)))
     print()
     if guai:
-        print("⛔ %d casi dei giudizi NON danno quel che devono" % guai)
+        print("⛔ %d cases of the judgements do NOT give what they must" % guai)
         return 1
-    print("⭐ i due giudici danno verde, rosso e «non lo so» dove devono — e "
-          "⛔ il lampeggio\n   dichiarato (29 ⇄ 226) e' rosso, mentre un "
-          "assestamento solo non lo e'")
+    print("⭐ the two judges give green, red and «I do not know» where they must — and "
+          "⛔ the declared\n   flicker (29 ⇄ 226) is red, while a "
+          "single settling is not")
     return 0
 
 
@@ -785,33 +785,33 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--porta", type=int, default=0)
     p.add_argument("--scena-che-lampeggia", action="store_true",
-                   help="⛔ IL GUASTO INNESTATO: nel secondo accesso si accende "
-                        "la scena di C3 ⇒ lo schermo lampeggia davvero, e il "
-                        "giudice dei pixel DEVE dare rosso")
+                   help="⛔ THE INJECTED FAULT: in the second login C3's scene "
+                        "is started ⇒ the screen really flickers, and the "
+                        "pixel judge MUST give red")
     p.add_argument("--registro", default=REGISTRO)
     p.add_argument("--scena", default=SCENA_FERMA_DI_LUCE,
-                   help="la scena del GIRO SANO: si muove, e la sua luce non "
-                        "cambia")
+                   help="the scene of the HEALTHY RUN: it moves, and its light does not "
+                        "change")
     p.add_argument("--scena-guasta", default=SCENA_CHE_LAMPEGGIA,
-                   help="la scena del GUASTO INNESTATO: quella di C3, che "
-                        "alterna blu e giallo")
+                   help="the scene of the INJECTED FAULT: C3's, which "
+                        "alternates blue and yellow")
     p.add_argument("--applicazione", default="firefox-esr")
     p.add_argument("--primo", type=float, default=90.0,
-                   help="quanto resta collegato il PRIMO cliente (deve "
-                        "sopravvivere all'«Esci»: il figlio se ne accorge "
-                        "quando qualcuno GUARDA)")
-    # ⚠ 75 s, e il numero viene dal BROWSER: la scena si accende quando la
-    #   sessione e' gia' rinata, e `[M]` il primo avvio di Firefox in una
-    #   scatola passa i 25 s (`LEZIONI.md` §1.45).  ⇒ Il giudice butta via la
-    #   prima meta' del video, quindi la coda comincia intorno al 37° secondo:
-    #   una dozzina di secondi DOPO che la scena e' sullo schermo.
+                   help="how long the FIRST client stays connected (it must "
+                        "survive the «Log out»: the child notices "
+                        "when someone is WATCHING)")
+    # ⚠ 75 s, and the number comes from the BROWSER: the scene starts when the
+    #   session has already been reborn, and `[M]` the first start of Firefox in a
+    #   box exceeds 25 s (`LEZIONI.md` §1.45).  ⇒ The judge throws away the
+    #   first half of the video, so the tail starts around the 37th second:
+    #   a dozen seconds AFTER the scene is on the screen.
     p.add_argument("--secondo", type=float, default=75.0)
     p.add_argument("--attesa-nascita", type=float, default=120.0)
-    # ⚠ 120 s e non 60: `[M]` 23 set 2026, su **xfce** il gesto risponde subito
-    #   ma la sessione ci mette di piu' a finire davvero — un giro e' uscito 3
-    #   («il prodotto non ha dichiarato la sessione finita») e il giro dopo,
-    #   identico, l'ha dichiarata.  ⛔ Un tetto troppo stretto produce dei 3 che
-    #   sembrano del prodotto e sono del banco (§1.45).
+    # ⚠ 120 s and not 60: `[M]` 23 Sep 2026, on **xfce** the gesture answers at once
+    #   but the session takes longer to really end — one run came out 3
+    #   («the product did not declare the session over») and the next run,
+    #   identical, declared it.  ⛔ A ceiling too tight produces 3s that
+    #   look like the product's and are the bench's (§1.45).
     p.add_argument("--attesa-uscita", type=float, default=120.0)
     p.add_argument("--certifica", action="store_true")
     a = p.parse_args()
@@ -819,37 +819,37 @@ def main():
     if a.certifica:
         return certifica()
     if not a.porta:
-        print("⛔ vuole `--porta` ⇒ non ho potuto guardare")
+        print("⛔ it wants `--porta` ⇒ I could not look")
         return 3
     if os.geteuid() != 0:
-        print("⛔ vuole l'amministratore (crea un inquilino) ⇒ non ho potuto "
-              "guardare")
+        print("⛔ it wants the administrator (it creates a tenant) ⇒ I could not "
+              "look")
         return 3
 
     chi = "c20u%d" % random.randint(100, 999)
-    innestato = (" ⛔ GUASTO INNESTATO: --scena-che-lampeggia"
+    innestato = (" ⛔ INJECTED FAULT: --scena-che-lampeggia"
                  if a.scena_che_lampeggia else "")
-    print("== C20 — la rinascita dopo «Esci» non porta fantasmi (%s, porta "
+    print("== C20 — rebirth after «Log out» brings no ghosts (%s, port "
           "%d)%s" % (chi, a.porta, innestato))
 
     desktop, gesto = come_si_esce()
     if desktop is None:
-        print("   ⛔ %s ⇒ non ho potuto guardare" % gesto)
+        print("   ⛔ %s ⇒ I could not look" % gesto)
         return 3
-    print("   il desktop di questa scatola: %s — «Esci» si dice cosi':\n"
+    print("   the desktop of this box: %s — «Log out» is said like this:\n"
           "      %s" % (desktop, gesto))
     if leggi(a.registro) is None:
-        print("   ⛔ non leggo %s ⇒ non ho potuto guardare" % a.registro)
+        print("   ⛔ I cannot read %s ⇒ I could not look" % a.registro)
         return 3
-    # ⭐ La scena di questo giro: quella dichiarata, o quella di C3 se il
-    #   guasto e' innestato.  ⛔ Senza il file non si accende niente, e senza
-    #   scena questa maglia non ha di che giudicare ⇒ 3, non un verde.
+    # ⭐ The scene of this run: the declared one, or C3's if the
+    #   fault is injected.  ⛔ Without the file nothing starts, and without a
+    #   scene this mesh has nothing to judge ⇒ 3, not a green.
     scena = a.scena_guasta if a.scena_che_lampeggia else a.scena
-    come = ("⛔ il lampeggio e' acceso (#0000FF ⇄ #FFFF00)"
+    come = ("⛔ the flicker is on (#0000FF ⇄ #FFFF00)"
             if a.scena_che_lampeggia
-            else "⭐ la scena e' accesa: si muove, e la sua luce non cambia")
+            else "⭐ the scene is on: it moves, and its light does not change")
     if not os.path.exists(scena):
-        print("   ⛔ manca la scena %s ⇒ non ho potuto guardare" % scena)
+        print("   ⛔ the scene %s is missing ⇒ I could not look" % scena)
         return 3
 
     dove = tempfile.mkdtemp(prefix="c20.")
@@ -861,26 +861,26 @@ def main():
         r = sh("useradd -m -s /bin/bash %s && printf '%s:%s\\n' | chpasswd"
                % (chi, chi, PAROLA), 60)
         if r is None or r.returncode != 0:
-            print("   ⛔ non ho potuto creare l'inquilino ⇒ non ho potuto "
-                  "guardare")
+            print("   ⛔ I could not create the tenant ⇒ I could not "
+                  "look")
             return 3
-        # ⭐ I gruppi della scheda: senza, la sessione nasce cieca e questa
-        #   maglia direbbe «non ho potuto guardare» per colpa del banco.
-        #   ⛔ E non si riscrive qui: e' l'attrezzo che usano tutte (§1.47).
+        # ⭐ The card groups: without them, the session is born blind and this
+        #   mesh would say «I could not look» because of the bench.
+        #   ⛔ And it is not rewritten here: it is the tool they all use (§1.47).
         c1 = _carica("11-c1-nasce-e-si-vede.py", ("garantisci_i_gruppi",))
         if c1 is None:
-            print("   ⛔ non trovo `11-c1-nasce-e-si-vede.py` accanto a me: "
-                  "senza i gruppi della scheda\n      la sessione nasce cieca "
-                  "⇒ non ho potuto guardare")
+            print("   ⛔ I cannot find `11-c1-nasce-e-si-vede.py` next to me: "
+                  "without the card groups\n      the session is born blind "
+                  "⇒ I could not look")
             return 3
         eg, perche_g = c1.garantisci_i_gruppi(chi, "      ")
         if eg != 0:
-            print("   ⛔ %s ⇒ non ho potuto guardare" % perche_g)
+            print("   ⛔ %s ⇒ I could not look" % perche_g)
             return 3
 
-        # ── 1. IL PRIMO ACCESSO, e resta collegato durante «Esci» ──────────
-        # ⛔ `[M]` 22 set 2026: il figlio si accorge dell'uscita quando
-        #    qualcuno GUARDA.  Il gesto dell'utente era proprio questo.
+        # ── 1. THE FIRST LOGIN, and it stays connected during «Log out» ────
+        # ⛔ `[M]` 22 Sep 2026: the child notices the logout when
+        #    someone is WATCHING.  The user's gesture was exactly this.
         righe = leggi(a.registro)
         segno = len(righe) if righe is not None else 0
         sh("setsid python3 -u %s --indirizzo 127.0.0.1 --porta %d --utente %s "
@@ -889,21 +889,21 @@ def main():
         nato, fetta_uno = aspetta_la_riga(a.registro, segno, chi, RIGA_NASCITA,
                                           a.attesa_nascita)
         if not nato:
-            print("   ⛔ in %d s il registro non ha detto «%s» per «%s»: la "
-                  "sessione non e' nata\n      ⇒ non ho potuto guardare"
+            print("   ⛔ in %d s the log did not say «%s» for «%s»: the "
+                  "session was not born\n      ⇒ I could not look"
                   % (a.attesa_nascita, RIGA_NASCITA, chi))
             return 3
-        # ⭐ SI SEGNA CHI STA SERVENDO ADESSO, e serve dopo: se il gesto
-        #   «Esci» uccide il figlio (GNOME), l'unica prova che le superfici
-        #   della sessione morta non possono sopravvivere e' che il secondo
-        #   accesso giri in un processo con un pid DIVERSO da questo.
+        # ⭐ WE NOTE WHO IS SERVING NOW, and it is needed later: if the «Log out»
+        #   gesture kills the child (GNOME), the only proof that the surfaces
+        #   of the dead session cannot survive is that the second
+        #   login runs in a process with a pid DIFFERENT from this one.
         pid_di_prima = chi_serviva(fetta_uno, chi)
-        print("   ⭐ primo accesso: la sessione di «%s» e' nata, e il cliente "
-              "guarda (la serve il figlio pid %s)"
+        print("   ⭐ first login: the session of «%s» was born, and the client "
+              "is watching (served by child pid %s)"
               % (chi, pid_di_prima or "?"))
         time.sleep(10)
 
-        # ── 2. «ESCI», il gesto del menu ───────────────────────────────────
+        # ── 2. «LOG OUT», the menu gesture ─────────────────────────────────
         righe = leggi(a.registro)
         segno = len(righe) if righe is not None else 0
         rtd, _ = il_socket_di(chi)
@@ -911,44 +911,44 @@ def main():
                "DBUS_SESSION_BUS_ADDRESS=unix:path=%s/bus %s"
                % (chi, rtd, rtd, gesto), 60)
         if r is None or r.returncode != 0:
-            print("   ⛔ il gesto «Esci» di %s non ha risposto: %s ⇒ non ho "
-                  "potuto guardare"
+            print("   ⛔ the «Log out» gesture of %s did not answer: %s ⇒ I could "
+                  "not look"
                   % (desktop, ((r.stderr or r.stdout).strip().replace("\n", " ")[:120])
-                     if r else "nessuna risposta"))
+                     if r else "no answer"))
             return 3
         finita, _ = aspetta_la_riga(a.registro, segno, chi,
                                     [p for p, _d in RIGHE_FINITA],
                                     a.attesa_uscita)
         if not finita:
-            print("   ⛔ %d s dopo «Esci» il prodotto non ha dichiarato la "
-                  "sessione finita ⇒ non ho potuto guardare\n"
-                  "      e le ho aspettate tutt'e due: %s"
+            print("   ⛔ %d s after «Log out» the product did not declare the "
+                  "session over ⇒ I could not look\n"
+                  "      and I waited for both of them: %s"
                   % (a.attesa_uscita,
                      " · ".join("«%s»" % p for p, _d in RIGHE_FINITA)))
             return 3
-        # ⭐ Si DICE quale delle due forme ha usato il prodotto: e' la
-        #   differenza fra «il figlio e' vivo» e «il figlio e' morto col
-        #   gesto», e il giudice del registro qui sotto ne dipende.
+        # ⭐ We SAY which of the two forms the product used: it is the
+        #   difference between «the child is alive» and «the child died with the
+        #   gesture», and the log judge below depends on it.
         figlio_morto = (finita != RIGHE_FINITA[0][0])
-        print("   ⭐ «Esci»: il prodotto ha visto finire la sessione grafica "
+        print("   ⭐ «Log out»: the product saw the graphical session end "
               "— %s" % dict(RIGHE_FINITA)[finita])
-        # ⛔⛔ E QUI SI ASPETTA CHE IL PRIMO CLIENTE SE NE SIA ANDATO DAVVERO.
-        #    `[M]` 23 set 2026, primo giro: l'attesa era di 30 s fissi, il
-        #    cliente e' rimasto attaccato fino ai suoi `--resta`, ⇒ il secondo
-        #    accesso e' arrivato mentre il primo era ancora dentro e la
-        #    sessione nuova non e' nata: **esito 3, e non era del prodotto**.
-        #    ⚠ Il tetto e' legato a `--primo`, non preso a prestito: si sa
-        #      quando il primo cliente finirebbe comunque da se'.
+        # ⛔⛔ AND HERE WE WAIT FOR THE FIRST CLIENT TO HAVE REALLY LEFT.
+        #    `[M]` 23 Sep 2026, first run: the wait was a fixed 30 s, the
+        #    client stayed attached until its `--resta`, ⇒ the second
+        #    login arrived while the first was still inside and the
+        #    new session was not born: **outcome 3, and it was not the product's**.
+        #    ⚠ The ceiling is tied to `--primo`, not borrowed: one knows
+        #      when the first client would end by itself anyway.
         if not aspetta_che_il_cliente_se_ne_vada(a.porta, chi, a.primo + 30):
-            print("   ⛔ il primo cliente e' ancora attaccato dopo %d s ⇒ non "
-                  "ho potuto guardare\n      la sua ultima riga: %s"
+            print("   ⛔ the first client is still attached after %d s ⇒ I "
+                  "could not look\n      its last line: %s"
                   % (a.primo + 30, coda_di(os.path.join(dove, "uno.txt"))))
             return 3
-        print("   ⭐ il primo cliente se n'e' andato: %s"
+        print("   ⭐ the first client has left: %s"
               % coda_di(os.path.join(dove, "uno.txt"), 1))
         time.sleep(2)
 
-        # ── 3. IL NUOVO ACCESSO, col video scritto ─────────────────────────
+        # ── 3. THE NEW LOGIN, with the video written ───────────────────────
         righe = leggi(a.registro)
         segno = len(righe) if righe is not None else 0
         sh("setsid python3 -u %s --indirizzo 127.0.0.1 --porta %d --utente %s "
@@ -957,16 +957,16 @@ def main():
         rinato, _ = aspetta_la_riga(a.registro, segno, chi, RIGA_NASCITA,
                                     a.attesa_nascita)
         if not rinato:
-            print("   ⛔ in %d s la sessione nuova non e' nata ⇒ non ho potuto "
-                  "guardare\n      il secondo cliente dice: %s"
+            print("   ⛔ in %d s the new session was not born ⇒ I could not "
+                  "look\n      the second client says: %s"
                   % (a.attesa_nascita, coda_di(os.path.join(dove, "due.txt"))))
             return 3
         acceso, perche_s = accendi_la_scena(chi, scena, a.applicazione, come)
         if not acceso:
-            print("   ⛔ %s ⇒ non ho potuto guardare" % perche_s)
+            print("   ⛔ %s ⇒ I could not look" % perche_s)
             return 3
-        # ⚠ Si aspetta che il cliente abbia finito di scrivere: il video e' il
-        #   solo testimone, e leggerlo a meta' sarebbe una misura piu' corta.
+        # ⚠ We wait for the client to have finished writing: the video is the
+        #   only witness, and reading it half-way would be a shorter measurement.
         aspetta_che_il_cliente_se_ne_vada(a.porta, chi, a.secondo + 60)
 
         fetta = leggi(a.registro)
@@ -976,13 +976,13 @@ def main():
             t = leggi(os.path.join(dove, "due.txt"))
             if t:
                 coda = t[-1].strip()[:110]
-            print("   ⛔ il secondo accesso non ha scritto video (%s) ⇒ non ho "
-                  "potuto guardare" % coda)
+            print("   ⛔ the second login wrote no video (%s) ⇒ I could not "
+                  "look" % coda)
             return 3
-        print("   ⭐ secondo accesso: %d byte di video"
+        print("   ⭐ second login: %d bytes of video"
               % os.path.getsize(video))
 
-        # ── i giudici ──────────────────────────────────────────────────────
+        # ── the judges ─────────────────────────────────────────────────────
         r = sh("ffmpeg -v error -i %s -vf scale=%d:%d,format=gray -f rawvideo "
                "%s" % (video, LARGHEZZA, ALTEZZA, grezzo), 180)
         luminanze = None
@@ -1002,37 +1002,37 @@ def main():
 
         print()
         if a.scena_che_lampeggia:
-            # ⛔ Al contrario, e si dice a voce: qui lo 0 e' la buona notizia.
+            # ⛔ The other way round, and it is said out loud: here 0 is the good news.
             if esito == 1:
-                print("⭐ IL GUASTO INNESTATO E' STATO VISTO — questa maglia SA "
-                      "dare rosso,\n   ⭐ e per la ragione giusta: %s" % pixel[2])
+                print("⭐ THE INJECTED FAULT WAS SEEN — this mesh CAN "
+                      "give red,\n   ⭐ and for the right reason: %s" % pixel[2])
                 return 0
             if esito == 3:
-                print("⚠ col guasto innestato NON ho potuto guardare\n"
-                      "   ⇒ esito 3, non un verde")
+                print("⚠ with the injected fault I could NOT look\n"
+                      "   ⇒ outcome 3, not a green")
                 return 3
-            print("⛔⛔ IL GUASTO INNESTATO NON E' STATO VISTO: lo schermo "
-                  "lampeggiava davvero\n   (blu ⇄ giallo) e la maglia ha detto "
-                  "verde lo stesso.")
+            print("⛔⛔ THE INJECTED FAULT WAS NOT SEEN: the screen "
+                  "really flickered\n   (blue ⇄ yellow) and the mesh said "
+                  "green all the same.")
             return 1
         if esito == 0:
-            # ⚠ E il secondo giudice si cita con le SUE parole: dire «la cache
-            #   e' stata buttata» dove il figlio era morto col gesto sarebbe
-            #   raccontare un fatto che non e' successo (su GNOME non c'era
-            #   nessuna cache da buttare — ⭐ c'era un processo nuovo).
-            print("⭐ VERDE — dopo «Esci» e il nuovo accesso lo schermo e' "
-                  "pulito\n   ⭐ e %s" % registro[2])
+            # ⚠ And the second judge is quoted with ITS words: saying «the cache
+            #   was thrown away» where the child had died with the gesture would be
+            #   telling a fact that did not happen (on GNOME there was
+            #   no cache to throw away — ⭐ there was a new process).
+            print("⭐ GREEN — after «Log out» and the new login the screen is "
+                  "clean\n   ⭐ and %s" % registro[2])
         elif esito == 1:
-            print("⛔⛔ ROSSO — %s"
+            print("⛔⛔ RED — %s"
                   % (pixel[2] if pixel[0] == 1 else registro[2]))
         else:
-            print("⚠ non ho potuto guardare — %s"
+            print("⚠ I could not look — %s"
                   % (pixel[2] if pixel[0] == 3 else registro[2]))
         return esito
     finally:
-        # ⛔ Il `/tmp/mozilla` che la cura della provvista ha messo si toglie
-        #    SOLO se e' rimasto a un inquilino mio: cancellare quello di
-        #    un'altra maglia la farebbe cadere (C14, le scatole in parallelo).
+        # ⛔ The `/tmp/mozilla` that the provision cure put there is removed
+        #    ONLY if it was left to a tenant of mine: deleting the one of
+        #    another mesh would make it fall (C14, the boxes in parallel).
         c2 = _carica("11-c2-una-finestra-si-apre.py",
                      ("cura_della_provvista", "sgombra_il_mio_rimasuglio"))
         if c2 is not None:

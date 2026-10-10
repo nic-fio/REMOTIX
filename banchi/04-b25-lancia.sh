@@ -1,20 +1,20 @@
 #!/bin/bash
 #
-# 04-b25-lancia.sh — il banco della tastiera, e LA SUA CERTIFICAZIONE.
+# 04-b25-lancia.sh — the keyboard bench, and ITS CERTIFICATION.
 #
-# ⛔ Due lavori, e il secondo viene prima nell'ordine di fiducia:
+# ⛔ Two jobs, and the second comes first in the order of trust:
 #
-#   1. compila `src/tastiera.c` insieme al banco e lo esegue;
-#   2. ⛔ compila il banco contro TRE implementazioni sbagliate di proposito
-#      (`04-b25-guasti.c`) e PRETENDE che dica ROSSO su ciascuna, e ROSSO SULLA
-#      PROVA GIUSTA.  Un banco che non ha mai visto il difetto non e' una prova
+#   1. compiles `src/tastiera.c` together with the bench and runs it;
+#   2. ⛔ compiles the bench against THREE implementations wrong on purpose
+#      (`04-b25-guasti.c`) and DEMANDS that it says ROSSO on each, and ROSSO ON THE
+#      RIGHT TEST.  A bench that has never seen the defect is not a test
 #      (`CODER.md` §3.3, §3.4, §4.6).
 #
-# ⚠ Non serve ne' una sessione, ne' un compositore, ne' `libei`, ne' una porta:
-#   il modulo e' una funzione pura e si prova isolata (`CODER.md` §3.6).  Gira
-#   uguale sulla macchina di sviluppo e nel contenitore della macchina di prova.
+# ⚠ No session is needed, nor a compositor, nor `libei`, nor a port:
+#   the module is a pure function and is tested in isolation (`CODER.md` §3.6).  It runs
+#   the same on the development machine and in the test machine's container.
 #
-#   uso:  bash banchi/04-b25-lancia.sh          (dalla radice del deposito)
+#   usage:  bash banchi/04-b25-lancia.sh          (from the repository root)
 #
 set -u
 
@@ -29,7 +29,7 @@ XKB_CFLAGS="$(pkg-config --cflags xkbcommon 2>/dev/null)"
 XKB_LIBS="$(pkg-config --libs xkbcommon 2>/dev/null)"
 
 if [ -z "$XKB_LIBS" ]; then
-	echo "⛔ xkbcommon non c'e' (pkg-config): il banco non puo' misurare niente."
+	echo "⛔ xkbcommon is missing (pkg-config): the bench cannot measure anything."
 	echo "   Debian/Trixie: apt install libxkbcommon-dev"
 	exit 2
 fi
@@ -37,14 +37,14 @@ fi
 echo "== xkbcommon $(pkg-config --modversion xkbcommon)  ·  $(uname -n)  ·  $(date -Is)"
 
 # ---------------------------------------------------------------------------
-# 1. IL PRODOTTO
+# 1. THE PRODUCT
 # ---------------------------------------------------------------------------
 echo
-echo "———— 1. IL PRODOTTO — src/tastiera.c ————"
+echo "———— 1. THE PRODUCT — src/tastiera.c ————"
 # shellcheck disable=SC2086
 $CC $CFLAGS $XKB_CFLAGS -o "$FUORI/banco" \
 	banchi/04-b25-tastiera.c src/tastiera.c src/registro.c $XKB_LIBS || {
-	echo "⛔ il prodotto non compila"
+	echo "⛔ the product does not compile"
 	exit 2
 }
 
@@ -52,25 +52,25 @@ $CC $CFLAGS $XKB_CFLAGS -o "$FUORI/banco" \
 PRODOTTO=$?
 
 # ---------------------------------------------------------------------------
-# 2. LA CERTIFICAZIONE — il banco deve saper dire ROSSO
+# 2. THE CERTIFICATION — the bench must be able to say ROSSO
 # ---------------------------------------------------------------------------
 echo
-echo "———— 2. LA CERTIFICAZIONE — quattro difetti messi apposta ————"
-echo "     (se una di queste righe dicesse VERDE, il banco non proverebbe niente)"
+echo "———— 2. THE CERTIFICATION — four defects planted on purpose ————"
+echo "     (if one of these lines said VERDE, the bench would prove nothing)"
 echo
 
-# guasto → un pezzo della riga «prova» che DEVE risultare rossa
+# fault → a piece of the «prova» line that MUST come out red
 declare -A ATTESA=(
-	[1]='U+00E9) su «us»'
-	[2]='U+00E9) su «it»'
+	[1]='U+00E9) on «us»'
+	[2]='U+00E9) on «it»'
 	[3]='zz_non_esiste'
-	[4]='sessione «it» + negoziata «us»'
+	[4]='session «it» + negotiated «us»'
 )
 declare -A COSA=(
-	[1]='manda la «e» al posto della «é»'
-	[2]='dimentica i modificatori'
-	[3]='ripiega su «us» in silenzio'
-	[4]='si fida del nome negoziato, non della keymap della sessione'
+	[1]='sends the «e» instead of the «é»'
+	[2]='forgets the modifiers'
+	[3]='falls back to «us» silently'
+	[4]='trusts the negotiated name, not the keymap of the session'
 )
 
 CERTIFICATO=0
@@ -78,7 +78,7 @@ for G in 1 2 3 4; do
 	# shellcheck disable=SC2086
 	$CC $CFLAGS -DGUASTO=$G $XKB_CFLAGS -o "$FUORI/guasto$G" \
 		banchi/04-b25-tastiera.c banchi/04-b25-guasti.c $XKB_LIBS 2>"$FUORI/cc$G.txt" || {
-		echo "⛔ il guasto $G non compila:"
+		echo "⛔ fault $G does not compile:"
 		sed 's/^/     /' "$FUORI/cc$G.txt"
 		CERTIFICATO=1
 		continue
@@ -87,18 +87,18 @@ for G in 1 2 3 4; do
 	"$FUORI/guasto$G" "$FUORI/esiti-guasto$G.jsonl" >"$FUORI/uscita$G.txt" 2>&1
 	USCITA=$?
 
-	# ⛔ Non basta «ha detto rosso»: deve aver detto rosso SULLA PROVA GIUSTA.
-	#    Un banco che va rosso per un motivo qualunque non ha visto il difetto.
+	# ⛔ «it said red» is not enough: it must have said red ON THE RIGHT TEST.
+	#    A bench that goes red for any reason at all has not seen the defect.
 	RIGA=$(grep -F "${ATTESA[$G]}" "$FUORI/esiti-guasto$G.jsonl" 2>/dev/null | grep -c '"esito":"rosso"')
 
 	if [ "$USCITA" -eq 1 ] && [ "$RIGA" -ge 1 ]; then
-		printf '  ✅ guasto %d (%s) ⇒ il banco dice ROSSO, e sulla prova giusta\n' "$G" "${COSA[$G]}"
+		printf '  ✅ fault %d (%s) ⇒ the bench says ROSSO, and on the right test\n' "$G" "${COSA[$G]}"
 		grep -F "${ATTESA[$G]}" "$FUORI/esiti-guasto$G.jsonl" |
 			grep '"esito":"rosso"' | head -1 | sed 's/^/       /'
 	else
-		printf '  ⛔ guasto %d (%s) NON e'"'"' stato visto: uscita=%d, righe rosse attese=%d\n' \
+		printf '  ⛔ fault %d (%s) was NOT seen: exit=%d, expected red lines=%d\n' \
 			"$G" "${COSA[$G]}" "$USCITA" "$RIGA"
-		echo "     ⇒ IL BANCO NON E' CERTIFICATO: il suo verde non vale niente."
+		echo "     ⇒ THE BENCH IS NOT CERTIFIED: its green is worth nothing."
 		sed 's/^/       /' "$FUORI/uscita$G.txt" | tail -30
 		CERTIFICATO=1
 	fi
@@ -106,18 +106,18 @@ done
 
 # ---------------------------------------------------------------------------
 echo
-echo "———— L'ESITO ————"
+echo "———— THE OUTCOME ————"
 if [ "$CERTIFICATO" -ne 0 ]; then
-	echo "⛔ IL BANCO NON E' CERTIFICATO — non si crede al suo verde (CODER.md §3.3)."
-	echo "   i file: $FUORI"
+	echo "⛔ THE BENCH IS NOT CERTIFIED — its green is not believed (CODER.md §3.3)."
+	echo "   the files: $FUORI"
 	exit 2
 fi
-echo "✅ il banco e' CERTIFICATO: ha visto tutt'e quattro i difetti, ciascuno sulla sua prova."
+echo "✅ the bench is CERTIFIED: it saw all four defects, each on its own test."
 if [ "$PRODOTTO" -eq 0 ]; then
-	echo "✅ e src/tastiera.c passa: banchi/04-b25-esiti.jsonl"
+	echo "✅ and src/tastiera.c passes: banchi/04-b25-esiti.jsonl"
 	rm -rf "$FUORI"
 	exit 0
 fi
-echo "⛔ ma src/tastiera.c NON passa (uscita $PRODOTTO): banchi/04-b25-esiti.jsonl"
-echo "   i file del giro: $FUORI"
+echo "⛔ but src/tastiera.c does NOT pass (exit $PRODOTTO): banchi/04-b25-esiti.jsonl"
+echo "   the files of the run: $FUORI"
 exit 1

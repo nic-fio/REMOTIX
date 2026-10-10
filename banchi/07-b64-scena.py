@@ -1,32 +1,32 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-07-b64-scena — UN GIRO DI R26, sulla macchina di prova, DA ROOT.
+07-b64-scena — ONE RUN OF R26, on the test machine, AS ROOT.
 
-⛔ Che cosa misura, e perche' non basta guardare le politiche dei thread:
-   R26 dice che il `data-loop` di PipeWire, senza `SCHED_FIFO`, «raccoglie i
-   campioni a priorita' normale mentre nello stesso processo il codificatore
-   video si prende un core».  ⚠ La politica del thread e' meta' della frase:
-   l'altra meta' e' **quanto quel thread ha aspettato la CPU**, e sta in
-   `/proc/<pid>/task/<tid>/schedstat`, secondo campo — nanosecondi passati in
-   coda di esecuzione (`run_delay`).  ⇒ Qui si leggono tutt'e due, ogni secondo.
+⛔ What it measures, and why looking at thread policies is not enough:
+   R26 says that PipeWire's `data-loop`, without `SCHED_FIFO`, «collects the
+   samples at normal priority while in the same process the video encoder
+   takes a core».  ⚠ The thread's policy is half of the sentence:
+   the other half is **how long that thread waited for the CPU**, and it is in
+   `/proc/<pid>/task/<tid>/schedstat`, second field — nanoseconds spent in
+   the run queue (`run_delay`).  ⇒ Here both are read, every second.
 
-⛔ E il verdetto NON lo da' questo file: lui allestisce la scena e raccoglie.
-   Il giudizio e' di `07-b64-orecchio.py`, che ASCOLTA i campioni (regola (a)
-   di `07-b43`: si ascolta, non si contano i blocchi).
+⛔ And the verdict is NOT given by this file: it sets up the scene and collects.
+   The judgement belongs to `07-b64-orecchio.py`, which LISTENS to the samples (rule (a)
+   of `07-b43`: we listen, we do not count blocks).
 
-⭐ L'ARBITRO INDIPENDENTE: dentro la sessione gira anche un `pw-record` sul
-   monitor dello stesso sink.  Se un buco compare in tutt'e due le prese, e'
-   nato **prima** di REMOTIX (nel lettore o nel grafo); se compare solo nella
-   nostra, e' nostro.  ⚠ Non e' un arbitro perfetto — `pw-record` ha un suo
-   `data-loop`, soggetto allo stesso difetto — ma distingue i due imputati piu'
-   grossi, e senza di lui non si distinguono affatto.
+⭐ THE INDEPENDENT REFEREE: inside the session a `pw-record` also runs on the
+   monitor of the same sink.  If a gap appears in both captures, it
+   was born **before** REMOTIX (in the player or in the graph); if it appears only in
+   ours, it is ours.  ⚠ It is not a perfect referee — `pw-record` has its own
+   `data-loop`, subject to the same defect — but it separates the two biggest
+   suspects, and without it they cannot be separated at all.
 
-Uso (da root, sulla macchina di prova):
+Usage (as root, on the test machine):
     python3 07-b64-scena.py giro --nome 1-fermo --carico no  --rt come-sta
     python3 07-b64-scena.py giro --nome 2-lavora --carico si --rt come-sta
     python3 07-b64-scena.py giro --nome 3-lavora-rt --carico si --rt si
-    python3 07-b64-scena.py fotografia        # solo i thread, senza scena
+    python3 07-b64-scena.py fotografia        # only the threads, no scene
 """
 import argparse, json, os, signal, subprocess, sys, time
 
@@ -45,7 +45,7 @@ POLITICA = {0: "normale", 1: "FIFO", 2: "RR", 3: "batch", 5: "idle", 6: "deadlin
 HZ_TICK = os.sysconf("SC_CLK_TCK")
 
 
-# ── l'ambiente della sessione, composto da zero (CODER.md §4.5) ────────────
+# ── the session's environment, built from scratch (CODER.md §4.5) ──────────
 def come_utente(cmd, **kw):
     base = ["setpriv", "--reuid=%d" % UID_B, "--regid=%d" % UID_B, "--init-groups",
             "env", "-i",
@@ -63,10 +63,10 @@ def esegui(cmd, tetto=20):
         p = subprocess.run(cmd, capture_output=True, timeout=tetto)
         return p.returncode, p.stdout.decode("utf-8", "replace"), p.stderr.decode("utf-8", "replace")
     except subprocess.TimeoutExpired:
-        return 124, "", "⛔ scaduto dopo %d s" % tetto
+        return 124, "", "⛔ timed out after %d s" % tetto
 
 
-# ── /proc: la politica, la priorita' e L'ATTESA IN CODA ────────────────────
+# ── /proc: the policy, the priority and THE WAIT IN THE QUEUE ──────────────
 def thread_stat(pid, tid):
     try:
         d = open("/proc/%d/task/%d/stat" % (pid, tid)).read()
@@ -77,7 +77,7 @@ def thread_stat(pid, tid):
     c = d[b + 2:].split()
     utime, stime = int(c[11]), int(c[12])
     rtprio, policy = int(c[37]), int(c[38])
-    # ⭐ schedstat: [tempo sulla CPU ns, ATTESA IN CODA ns, quanti quanti]
+    # ⭐ schedstat: [time on the CPU ns, WAIT IN THE QUEUE ns, how many timeslices]
     attesa = eseguiti = 0
     try:
         s = open("/proc/%d/task/%d/schedstat" % (pid, tid)).read().split()
@@ -101,8 +101,8 @@ def limite_rt(pid):
 
 
 def processi_interessanti():
-    """Il figlio della sessione, i demoni di PipeWire dell'utente, il lettore e
-       l'arbitro.  ⛔ E il SERVER, che e' quello che porta il rlimit."""
+    """The session's child, the user's PipeWire daemons, the player and
+       the referee.  ⛔ And the SERVER, which is the one carrying the rlimit."""
     fuori = []
     for d in os.listdir("/proc"):
         if not d.isdigit():
@@ -121,7 +121,7 @@ def processi_interessanti():
 
 
 def fotografia():
-    """Chi ha il tempo reale e chi no — la fotografia di R26, per intero."""
+    """Who has real time and who does not — the snapshot of R26, in full."""
     r = []
     for p, uid, comm, cmd in sorted(processi_interessanti()):
         v = {"pid": p, "uid": uid, "comm": comm, "cmdline": cmd,
@@ -138,15 +138,15 @@ def fotografia():
     return r
 
 
-# ── il grafo di PipeWire, letto DENTRO la sessione ─────────────────────────
+# ── the PipeWire graph, read INSIDE the session ────────────────────────────
 def grafo():
     rc, out, err = esegui(come_utente(["pw-dump"]), 25)
     if rc != 0 or not out.strip():
-        return {"errore": "pw-dump non ha prodotto niente (rc %d): %s" % (rc, err[:200])}
+        return {"errore": "pw-dump produced nothing (rc %d): %s" % (rc, err[:200])}
     try:
         d = json.loads(out)
     except Exception as e:
-        return {"errore": "pw-dump illeggibile: %s" % e}
+        return {"errore": "pw-dump unreadable: %s" % e}
     r = {"sink_id": None, "legami_in_ingresso": 0, "sink_presenti": []}
     for o in d:
         info = o.get("info") or {}
@@ -164,7 +164,7 @@ def grafo():
     return r
 
 
-# ── il tono, scritto qui cosi' l'ampiezza e' NOTA ──────────────────────────
+# ── the tone, written here so the amplitude is KNOWN ───────────────────────
 def tono(hz, secondi, ampiezza=0.5):
     import math, struct, wave
     f = os.path.join(LAV, "tono-%d.wav" % hz)
@@ -180,34 +180,34 @@ def tono(hz, secondi, ampiezza=0.5):
     return f
 
 
-# ── il carico: il desktop che LAVORA ───────────────────────────────────────
+# ── the load: the desktop that WORKS ───────────────────────────────────────
 def monitor_catturato():
-    """⛔ Il nome del monitor NON si scrive a mano: lo dice il registro del MIO
-       prodotto.  Una scena accesa «da qualche parte» non carica il palco."""
+    """⛔ The monitor name is NOT written by hand: MY product's log
+       says it.  A scene started «somewhere» does not load the stage."""
     try:
         testo = open(os.path.join(LAV, "registro.log"), errors="replace").read()
     except Exception:
         return None
-    # ⛔ La forma e' quella di `04-b32-terreno.sh`, e non si reinventa: il
-    #    registro scrive `monitor «Meta-0»`.  ⚠ La prima stesura cercava una
-    #    parola qualsiasi con un trattino e un numero e non trovava niente: il
-    #    giro «il desktop lavora» girava SENZA la scena, e lo diceva soltanto in
-    #    un campo del JSON che nessuno guardava.
+    # ⛔ The form is the one of `04-b32-terreno.sh`, and it is not reinvented: the
+    #    log writes `monitor «Meta-0»`.  ⚠ The first draft looked for any
+    #    word with a dash and a number and found nothing: the
+    #    «the desktop works» run ran WITHOUT the scene, and said so only in
+    #    a JSON field nobody looked at.
     import re
     m = [x for x in re.findall(r"monitor \u00ab([^\u00bb]*)\u00bb", testo) if x]
     return m[-1] if m else None
 
 
 def monitor_atteso(tetto_s=25.0):
-    """⛔ IL NOME DEL MONITOR SI ASPETTA — e la prima stesura no.
+    """⛔ THE MONITOR NAME IS WAITED FOR — and the first draft did not.
 
-       `[M]` 21 agosto 2026: il registro scrive «monitor «Meta-0»» ~2,9 s dopo
-       l apertura della sessione, e M3 (il tono che suona) arriva prima.  ⇒ Chi
-       legge il registro a M3 non trova il nome, la scena non parte, e il giro
-       si chiama lo stesso «il desktop lavora».  ⚠ Nei giri di ieri il difetto
-       NON si vedeva perche' il registro conteneva ancora la riga della sessione
-       precedente: cioe' funzionava per un motivo sbagliato, ed e' la forma
-       peggiore — un banco che smette di funzionare quando lo si pulisce."""
+       `[M]` 21 August 2026: the log writes «monitor «Meta-0»» ~2.9 s after
+       the session opens, and M3 (the tone playing) comes earlier.  ⇒ Whoever
+       reads the log at M3 does not find the name, the scene does not start, and the run
+       is called «the desktop works» all the same.  ⚠ In yesterday's runs the defect
+       could NOT be seen because the log still contained the line of the previous
+       session: that is, it worked for a wrong reason, and that is the worst
+       form — a bench that stops working when you clean it."""
     fine = time.time() + tetto_s
     while time.time() < fine:
         u = monitor_catturato()
@@ -218,13 +218,13 @@ def monitor_atteso(tetto_s=25.0):
 
 
 def carico_accendi(quanti):
-    """⛔ Due carichi, e sono due cose diverse:
-         · la SCENA, che fa lavorare la cattura e il codificatore del figlio —
-           e' quella che R26 nomina;
-         · i BRUCIATORI, che tolgono la CPU a tutti — e' la condizione in cui
-           una priorita' serve a qualcosa.
-       ⚠ Si dichiara quale dei due e' partito: se la scena non parte, il giro
-         resta valido ma NON e' piu' «il desktop lavora», ed e' un'altra cosa."""
+    """⛔ Two loads, and they are two different things:
+         · the SCENE, which makes the child's capture and encoder work —
+           it is the one R26 names;
+         · the BURNERS, which take the CPU away from everyone — it is the condition in which
+           a priority is good for something.
+       ⚠ We declare which of the two started: if the scene does not start, the run
+         stays valid but is NO longer «the desktop works», and it is something else."""
     stato = {"scena": None, "bruciatori": 0, "scena_perche_no": None}
     usc = monitor_atteso()
     if os.access(SCENA_BIN, os.X_OK) and usc:
@@ -239,12 +239,12 @@ def carico_accendi(quanti):
                               capture_output=True).stdout.decode().split()
         stato["scena"] = usc if vivo else None
         if not vivo:
-            stato["scena_perche_no"] = "la scena e' partita e morta subito (vedi scena.log)"
+            stato["scena_perche_no"] = "the scene started and died at once (see scena.log)"
         stato["_p"] = p
     else:
-        stato["scena_perche_no"] = ("il binario %s non e' eseguibile" % SCENA_BIN
+        stato["scena_perche_no"] = ("the binary %s is not executable" % SCENA_BIN
                                     if not os.access(SCENA_BIN, os.X_OK)
-                                    else "non so quale monitor cattura il mio figlio")
+                                    else "I do not know which monitor my child captures")
     bruc = []
     for _ in range(quanti):
         bruc.append(subprocess.Popen(
@@ -264,21 +264,21 @@ def carico_spegni(stato):
     subprocess.run(["pkill", "-u", str(UID_B), "-f", "04-b30-scena"], capture_output=True)
 
 
-# ── ⭐⭐ IL COLLO DI BOTTIGLIA VERO DI R26: UN SOLO CORE ────────────────────
+# ── ⭐⭐ THE REAL BOTTLENECK OF R26: A SINGLE CORE ──────────────────────────
 #
-# R26 dice, parola per parola: «il suo `data-loop` resta a priorita' normale
-# **mentre nello stesso processo il codificatore video si prende un core per
-# decine di millisecondi**».  ⛔ Su venti core quella frase non ha modo di
-# avverarsi: il thread audio trova sempre un core libero, e infatti a carico 25
-# la sua attesa in coda e' di 6 us su un quanto di 5,33 ms.
+# R26 says, word for word: «its `data-loop` stays at normal priority
+# **while in the same process the video encoder takes a core for
+# tens of milliseconds**».  ⛔ On twenty cores that sentence has no way to
+# come true: the audio thread always finds a free core, and indeed at load 25
+# its wait in the queue is 6 us over a timeslice of 5.33 ms.
 #
-# ⇒ Per misurare R26 bisogna **costruire** la condizione che descrive: si
-#   stringe tutto il percorso audio (il figlio col suo codificatore, i demoni
-#   di PipeWire, il lettore e l'arbitro) su **un core solo**.
+# ⇒ To measure R26 one has to **build** the condition it describes: the
+#   whole audio path (the child with its encoder, the PipeWire
+#   daemons, the player and the referee) is squeezed onto **a single core**.
 #
-# ⭐ E ha un secondo pregio, che non e' secondario: sulla macchina lavorano
-#   altri nove banchi.  Un carico che satura venti core falserebbe le loro
-#   misure di tempo; questo ne occupa **uno**.
+# ⭐ And it has a second merit, which is not secondary: nine other benches work on
+#   the machine.  A load that saturates twenty cores would distort their
+#   time measurements; this one takes **one**.
 def stringi_su_un_core(cpu):
     fatti = []
     for v in fotografia():
@@ -298,11 +298,11 @@ def allarga(cpu_tutti):
     return fatti
 
 
-# ── il tempo reale, dato a mano — ⭐ e' l'A/B di R26 ───────────────────────
+# ── real time, given by hand — ⭐ it is the A/B of R26 ─────────────────────
 def rt_applica(prio):
-    """⛔ Non si «configura PipeWire»: si sposta la politica dei thread VIVI con
-       `chrt`, cosi' fra i due giri cambia UNA cosa sola.  ⚠ E si registra chi
-       e' stato spostato e chi ha rifiutato."""
+    """⛔ We do not «configure PipeWire»: the policy of the LIVE threads is moved with
+       `chrt`, so that between the two runs ONE thing only changes.  ⚠ And we record who
+       was moved and who refused."""
     fatti, falliti = [], []
     for v in fotografia():
         for t in v["thread"]:
@@ -314,18 +314,18 @@ def rt_applica(prio):
     return {"promossi": fatti, "falliti": falliti, "prio": prio}
 
 
-# ⛔⛔ E IL TEMPO REALE, SU QUESTA MACCHINA, NON SI PUO' AVERE AFFATTO.
+# ⛔⛔ AND REAL TIME, ON THIS MACHINE, CANNOT BE HAD AT ALL.
 #
-#     `[M]` 21 agosto 2026: `chrt -f 10 /bin/true` **fallisce da root** in
-#     qualunque cgroup che non sia la radice, e riesce nella radice.  Il
-#     kernel (7.0, NIC-OS) ha `CONFIG_RT_GROUP_SCHED` con cgroup v2 unificato:
-#     ogni processo che systemd mette in una slice o in uno scope — cioe' ogni
-#     processo della macchina — non puo' ottenere `SCHED_FIFO`, e il rifiuto
-#     arriva PRIMA che il kernel guardi `RLIMIT_RTPRIO`.
+#     `[M]` 21 August 2026: `chrt -f 10 /bin/true` **fails as root** in
+#     any cgroup that is not the root one, and succeeds in the root.  The
+#     kernel (7.0, NIC-OS) has `CONFIG_RT_GROUP_SCHED` with unified cgroup v2:
+#     every process systemd puts in a slice or a scope — that is every
+#     process on the machine — cannot obtain `SCHED_FIFO`, and the refusal
+#     comes BEFORE the kernel looks at `RLIMIT_RTPRIO`.
 #
-# Percio' l'A/B di R26 si fa con la LEVA CHE FUNZIONA, la cortesia (`nice`):
-#   e' l'altra meta' di quel che l'unita' concede (`LimitNICE=-11`), e nessuno
-#   la usa — `[M]` tutti i thread del percorso audio stanno a `nice 0`.
+# So the A/B of R26 is done with the LEVER THAT WORKS, niceness (`nice`):
+#   it is the other half of what the unit grants (`LimitNICE=-11`), and nobody
+#   uses it — `[M]` all the threads of the audio path sit at `nice 0`.
 def nice_applica(livello):
     fatti, falliti = [], []
     for v in fotografia():
@@ -358,28 +358,28 @@ def giro(a):
              "ora_macchina": time.strftime("%Y-%m-%d %H:%M:%S"),
              "carico_chiesto": a.carico, "rt_chiesto": a.rt}
     base = os.path.join(LAV, a.nome)
-    # ⚠ Quel che resta dal giro prima si SVUOTA (LEZIONI.md §2.3-quinquies).
+    # ⚠ What is left from the previous run is EMPTIED (LEZIONI.md §2.3-quinquies).
     for e in (".jsonl", ".segnale", ".txt", ".rif.wav", ".esito.json"):
         try: os.remove(base + e)
         except Exception: pass
 
     esiti["carico_prima"] = open("/proc/loadavg").read().split()[:3]
 
-    # ── il cliente parte per primo: e' lui che apre la sessione ────────────
-    # ⭐ `--codec opus` serve al mandato sui datagram: l Opus e' quel che gira
-    #    nelle sessioni vere, e costa 1/13 della banda del PCM.  ⚠ Il giudice
-    #    dell orecchio non lo sa decodificare — con Opus si conta il TRASPORTO,
-    #    e lo si dichiara invece di far finta di aver ascoltato.
+    # ── the client starts first: it is the one that opens the session ──────
+    # ⭐ `--codec opus` serves the mandate on datagrams: Opus is what runs
+    #    in real sessions, and it costs 1/13 of PCM's bandwidth.  ⚠ The ear
+    #    judge cannot decode it — with Opus the TRANSPORT is counted,
+    #    and we declare it instead of pretending to have listened.
     cmd = ("python3 -u %s/banchi/01-b3-cliente.py --indirizzo %s --porta %d "
            "--utente %s --parola-file %s/parola --audio-codec %s "
            "--audio-scrivi %s/%s.jsonl --segnale %s/%s.segnale "
            "%s --resta %d"
            % (DENTRO_ALB, IND, PORTA, UTENTE, DENTRO_LAV, a.codec,
               DENTRO_LAV, a.nome, DENTRO_LAV, a.nome,
-              # ⛔ SENZA `--adatta` IL VIDEO NON PARTE, e il giro misurerebbe
-              #    l audio da solo chiamandolo «audio contro video».  §6.6: il
-              #    server manda fotogrammi dopo l `ADATTA_TELA`, che la pagina
-              #    manda da se e il cliente di prova no.
+              # ⛔ WITHOUT `--adatta` THE VIDEO DOES NOT START, and the run would measure
+              #    the audio alone calling it «audio against video».  §6.6: the
+              #    server sends frames after the `ADATTA_TELA`, which the page
+              #    sends by itself and the test client does not.
               ("--adatta %s --video-scrivi %s/%s.265" % (a.tela, DENTRO_LAV, a.nome)
                if a.video == "si" else ""),
               a.secondi))
@@ -388,7 +388,7 @@ def giro(a):
                            stdout=fcli, stderr=fcli)
     t0 = time.time()
 
-    # M1 · il cliente ha aperto la sessione (un file scritto e chiuso e' un fatto)
+    # M1 · the client opened the session (a file written and closed is a fact)
     while time.time() - t0 < 90 and not os.path.exists(base + ".segnale"):
         if cli.poll() is not None:
             break
@@ -396,9 +396,9 @@ def giro(a):
     esiti["M1_sessione_aperta"] = os.path.exists(base + ".segnale")
     esiti["M1_dopo_s"] = round(time.time() - t0, 2)
     if not esiti["M1_sessione_aperta"]:
-        esiti["errore"] = ("⛔ M1 non e' arrivato: il cliente non ha aperto la "
-                           "sessione.  ⚠ NON e' «l'audio non arriva»: e' «la "
-                           "scena non e' stata allestita»")
+        esiti["errore"] = ("⛔ M1 did not arrive: the client did not open the "
+                           "session.  ⚠ It is NOT «the audio does not arrive»: it is «the "
+                           "scene was not set up»")
         try: cli.kill()
         except Exception: pass
         cli.wait()
@@ -408,7 +408,7 @@ def giro(a):
         print(json.dumps(esiti, ensure_ascii=False, indent=1))
         return 2
 
-    # M2 · il sink esiste nel grafo
+    # M2 · the sink exists in the graph
     g = {}
     for _ in range(60):
         g = grafo()
@@ -417,12 +417,12 @@ def giro(a):
         time.sleep(0.4)
     esiti["M2_grafo"] = g
 
-    # ── l'arbitro indipendente: una seconda presa dello stesso monitor ─────
+    # ── the independent referee: a second capture of the same monitor ──────
     rif = None
-    # ⛔ La cartella dell arbitro e SUA: `pw-record` gira come l utente della
-    #    sessione, e su $LAV (root 755) non puo creare niente.  ⚠ Il sintomo era
-    #    "Permission denied" dentro un file di stderr che nessuno guardava, e il
-    #    giro restava senza arbitro senza dirlo.
+    # ⛔ The referee's folder is ITS OWN: `pw-record` runs as the session's user,
+    #    and on $LAV (root 755) it cannot create anything.  ⚠ The symptom was
+    #    "Permission denied" inside a stderr file nobody looked at, and the
+    #    run was left without a referee without saying so.
     dir_rif = os.path.join(LAV, "rif")
     os.makedirs(dir_rif, exist_ok=True)
     os.chown(dir_rif, UID_B, UID_B)
@@ -434,7 +434,7 @@ def giro(a):
                          rifwav]),
             stdout=subprocess.DEVNULL, stderr=open(base + ".rif.txt", "wb"))
 
-    # M3 · il tono suona DAVVERO dentro il sink (lo dice il grafo, non pw-play)
+    # M3 · the tone REALLY plays inside the sink (the graph says so, not pw-play)
     f = tono(a.hz, a.secondi + 30)
     play = subprocess.Popen(come_utente(["pw-play", "--target", SINK, f]),
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -448,17 +448,17 @@ def giro(a):
     esiti["M3_legami_in_ingresso"] = leg
     esiti["M3_il_tono_suona"] = leg > 0
 
-    # ── il tempo reale, e i thread PRIMA ───────────────────────────────────
+    # ── real time, and the threads BEFORE ──────────────────────────────────
     esiti["fotografia_prima"] = fotografia()
     if a.nice is not None:
         esiti["nice_applicato"] = nice_applica(a.nice)
     if a.rt == "si":
         esiti["rt_applicato"] = rt_applica(a.prio)
     elif a.rt == "no":
-        esiti["rt_applicato"] = {"nota": "rimessi a politica normale"}
+        esiti["rt_applicato"] = {"nota": "put back to normal policy"}
         rt_rimetti()
 
-    # ── il carico ──────────────────────────────────────────────────────────
+    # ── the load ───────────────────────────────────────────────────────────
     car = {"scena": None, "bruciatori": 0}
     if a.carico == "si":
         car = carico_accendi(a.bruciatori)
@@ -467,7 +467,7 @@ def giro(a):
         time.sleep(1.0)
         esiti["stretti_su_core"] = {"cpu": a.cpu, "chi": stringi_su_un_core(a.cpu)}
 
-    # ── il campionamento, un secondo per volta ─────────────────────────────
+    # ── the sampling, one second at a time ─────────────────────────────────
     campioni = []
     prima = {}
     tprima = time.time()
@@ -486,12 +486,12 @@ def giro(a):
                 if p is None:
                     continue
                 cpu = (t["cpu_tick"] - p[0]) / HZ_TICK / dt * 100.0
-                att = (t["attesa_ns"] - p[1]) / 1e6           # ms attesi in coda
+                att = (t["attesa_ns"] - p[1]) / 1e6           # ms waited in the queue
                 qua = t["quanti"] - p[2]
-                # ⛔ I thread del PERCORSO AUDIO si scrivono SEMPRE, anche a
-                #    zero: sono quelli di cui parla R26, e con la sola soglia
-                #    sparivano proprio quando erano tranquilli — cioe' il caso
-                #    che serve come confronto (`CODER.md` §3.10).
+                # ⛔ The threads of the AUDIO PATH are ALWAYS written, even at
+                #    zero: they are the ones R26 talks about, and with the threshold alone
+                #    they vanished precisely when they were quiet — that is the case
+                #    that serves as comparison (`CODER.md` §3.10).
                 sempre = any(k in t["nome"] for k in
                              ("data-loop", "pw-data", "remotix-suono", "module-rt")) \
                     or v["comm"] in ("remotix", "pipewire", "pipewire-pulse",
@@ -509,7 +509,7 @@ def giro(a):
     esiti["fotografia_dopo"] = fotografia()
     esiti["carico_dopo"] = open("/proc/loadavg").read().split()[:3]
 
-    # ── si smonta tutto, e si VERIFICA che la scena sia zitta ──────────────
+    # ── everything is taken down, and we CHECK the scene is silent ─────────
     try: cli.wait(timeout=30)
     except Exception:
         cli.kill(); cli.wait()
@@ -526,14 +526,14 @@ def giro(a):
     subprocess.run(["pkill", "-u", str(UID_B), "-x", "pw-record"], capture_output=True)
     carico_spegni(car)
     if a.cpu >= 0:
-        # ⛔ SI RIMETTE COM'ERA, e si dichiara: una sessione lasciata su un core
-        #    solo sarebbe uno stato invisibile ereditato dal giro dopo.
+        # ⛔ IT IS PUT BACK AS IT WAS, and declared: a session left on a single
+        #    core would be an invisible state inherited by the next run.
         esiti["allargati_di_nuovo"] = allarga(a.cpu_tutti)
     if a.nice is not None:
         esiti["nice_rimesso"] = nice_applica(0)
     if a.rt == "si":
         esiti["rt_rimesso"] = rt_rimetti()
-    # ⛔ «Ho ucciso» non e' «non suona piu' nessuno»: lo dice il grafo.
+    # ⛔ «I killed» is not «nobody is playing any more»: the graph says so.
     for _ in range(20):
         gg = grafo()
         if gg.get("legami_in_ingresso", 1) == 0:
@@ -546,12 +546,12 @@ def giro(a):
         esiti["registro_audio"] = [r.strip() for r in
                                    open(os.path.join(LAV, "registro.log"), errors="replace")
                                    if "audio" in r or "R26" in r or "RTPRIO" in r
-                                   or "traboccat" in r or "datagram" in r
+                                   or "overflow" in r or "datagram" in r
                                    or "cwnd_left" in r][-40:]
     except Exception:
         pass
     json.dump(esiti, open(base + ".esito.json", "w"), ensure_ascii=False, indent=1)
-    print("⭐ giro «%s» finito — %s.esito.json · %s blocchi nel JSONL"
+    print("⭐ run «%s» finished — %s.esito.json · %s blocks in the JSONL"
           % (a.nome, base,
              sum(1 for _ in open(base + ".jsonl")) if os.path.exists(base + ".jsonl") else 0))
     return 0
@@ -569,21 +569,22 @@ def principale():
     g.add_argument("--hz", type=int, default=440)
     g.add_argument("--secondi", type=int, default=30)
     g.add_argument("--video", default="si", choices=["si", "no"],
-                   help="il cliente chiede la tela, cosi il video FLUISCE")
+                   help="the client asks for the canvas, so the video FLOWS")
     g.add_argument("--tela", default="1920x1080")
     g.add_argument("--codec", default="pcm", choices=["pcm", "opus"],
-                   help="che cosa il cliente dichiara in audio.codec")
+                   help="what the client declares in audio.codec")
     g.add_argument("--nice", type=int, default=None,
-                   help="rende il percorso audio piu cortese o meno (renice)")
+                   help="makes the audio path more or less nice (renice)")
     g.add_argument("--cpu", type=int, default=-1,
-                   help="stringe tutto il percorso audio su QUESTO core (-1 = no)")
+                   help="squeezes the whole audio path onto THIS core (-1 = no)")
     g.add_argument("--cpu-tutti", default="0-%d" % (os.cpu_count() - 1),
-                   help="a che cosa si rimette l affinita alla fine")
+                   help="what the affinity is put back to at the end")
     s.add_parser("fotografia")
     s.add_parser("grafo")
     a = p.parse_args()
     if os.geteuid() != 0:
-        print("⛔ va eseguito DA ROOT", file=sys.stderr); return 2
+        print("⛔ must be run AS ROOT", file=sys.stderr); return 2
+
     os.makedirs(LAV, exist_ok=True)
     if a.passo == "fotografia":
         print(json.dumps(fotografia(), ensure_ascii=False, indent=1)); return 0

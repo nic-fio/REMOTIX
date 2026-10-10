@@ -1,53 +1,53 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-f012b — F-012B AUDIO DOPO «ESCI»: si esce, si rientra subito, e un programma
-           PulseAudio si sente ancora nel browser
+15-f012b — F-012B AUDIO AFTER «EXIT»: you exit, you come back in at once, and a PulseAudio
+           program is still heard in the browser
 
     python3 15-f012b-audio-dopo-esci.py --scatola gnome --browser firefox [--guasto]
 
-IL DIFETTO CHE GUARDA (segnalazione dell'utente, 2 ott 2026, GNOME sulla Radeon,
-Firefox).  Dopo «Esci» e un nuovo accesso — il GESTORE D'UTENTE di systemd e'
-ancora vivo (resta finche' c'e' la sessione logind del figlio `remotix`) — la
-sessione di prima ferma pipewire, wireplumber e filter-chain ma NON
-`pipewire-pulse`; la sessione nuova accende un pipewire nuovo, e il
-`pipewire-pulse` vecchio resta attaccato al niente ⇒ i programmi che parlano
-PulseAudio (firefox-esr dentro la sessione) sono muti, e il nostro sink cattura
-solo silenzio digitale.  La cura sta in `src/sessione.c` («IL `pipewire-pulse`
-RIMASTO DALLA SESSIONE DI PRIMA»).
+THE DEFECT IT LOOKS AT (the user's report, 2 Oct 2026, GNOME on the Radeon,
+Firefox).  After «Exit» and a new login — the systemd USER MANAGER is
+still alive (it stays as long as the logind session of the `remotix` child exists) — the
+previous session stops pipewire, wireplumber and filter-chain but NOT
+`pipewire-pulse`; the new session starts a new pipewire, and the old
+`pipewire-pulse` stays attached to nothing ⇒ the programs that speak
+PulseAudio (firefox-esr inside the session) are mute, and our sink captures
+only digital silence.  The cure is in `src/sessione.c` («THE `pipewire-pulse`
+LEFT OVER FROM THE PREVIOUS SESSION»).
 
-⛔ PERCHE' NON `pw-play` (quello di F-012): e' un client PipeWire NATIVO, parla
-   al pipewire nuovo e si sente anche col difetto.  Qui suona un client
-   PulseAudio VERO: `libpulse-simple` (la stessa libreria che usano i
-   programmi PulseAudio) chiamata da python3 con ctypes — nelle quattro
-   scatole non c'e' `paplay` (pulseaudio-utils non e' installato) e ffmpeg e'
-   compilato senza l'uscita pulse.  Il tono e' quello di F-012 (440 Hz,
-   ampiezza 0,5, sink PREDEFINITO, nessun bersaglio).
+⛔ WHY NOT `pw-play` (F-012's): it is a NATIVE PipeWire client, it talks
+   to the new pipewire and is heard even with the defect.  Here a REAL
+   PulseAudio client plays: `libpulse-simple` (the same library the
+   PulseAudio programs use) called from python3 with ctypes — in the four
+   boxes there is no `paplay` (pulseaudio-utils is not installed) and ffmpeg is
+   compiled without the pulse output.  The tone is F-012's (440 Hz,
+   amplitude 0.5, DEFAULT sink, no target).
 
-LA SCENA (un inquilino, c15912u<n>):
-  1  accesso con l'orecchio di F-012 (`15-g4-comune.py`), il client pulse
-     suona ⇒ il tono DEVE arrivare (se no la prova non ha una base: BLOCKED);
-  2  «Esci» col gesto di F-021 (il metodo che la voce del menu raggiunge):
-     il prodotto dichiara la fine, la pagina torna al modulo;
-  3  SUBITO un nuovo accesso (pagina ricaricata, orecchio rimesso): il
-     registro dice «LA FACCIO NASCERE» (sessione nuova) e il gestore d'utente
-     e' lo STESSO di prima (stesso pid di `systemd --user`) — altrimenti la
-     scena del difetto non c'e' e non ho guardato niente (BLOCKED);
-  4  il client pulse suona di nuovo ⇒ il tono DEVE arrivare al browser.
+THE SCENE (one tenant, c15912u<n>):
+  1  login with F-012's ear (`15-g4-comune.py`), the pulse client
+     plays ⇒ the tone MUST arrive (if not, the test has no base: BLOCKED);
+  2  «Exit» with F-021's gesture (the method the menu entry reaches):
+     the product declares the end, the page goes back to the form;
+  3  AT ONCE a new login (page reloaded, ear put back): the
+     log says «I AM MAKING IT BE BORN» (new session) and the user manager
+     is the SAME as before (same pid of `systemd --user`) — otherwise the
+     scene of the defect is not there and I have looked at nothing (BLOCKED);
+  4  the pulse client plays again ⇒ the tone MUST reach the browser.
 
-F-012B  atteso: al punto 4, il giudice di F-012 (>= 80 % dei campioni
-        udibili, picco a 440 ± 12 Hz su 6 s) dice PASS, E `pipewire-pulse`
-        non e' piu' vecchio di `pipewire` (inizio letto da /proc/<pid>/stat,
-        tolleranza 2 s; pid e ora d'inizio di pipewire, pipewire-pulse,
-        wireplumber e del gestore d'utente si scrivono nelle evidenze ai
-        quattro momenti: suona, dopo «Esci», dopo il rientro, risuona).
+F-012B  expected: at point 4, F-012's judge (>= 80 % of the samples
+        audible, peak at 440 ± 12 Hz over 6 s) says PASS, AND `pipewire-pulse`
+        is not older than `pipewire` (start read from /proc/<pid>/stat,
+        tolerance 2 s; pid and start time of pipewire, pipewire-pulse,
+        wireplumber and of the user manager are written in the evidence at the
+        four moments: plays, after «Exit», after the re-entry, plays again).
 
-GUASTO (stessa sessione, dopo la passata sana): al punto 4 non suona NIENTE
-  g1  il client pulse ucciso ⇒ la stessa lettura dell'orecchio DEVE dire FAIL;
-  g2  i campioni veri del punto 4 contro un'ATTESA SBAGLIATA (660 Hz) ⇒ FAIL;
-  g3  la regola dei pid su una fotografia FINTA del difetto (pulse nato prima
-      di pipewire) ⇒ FAIL.
-  Visto = tutt'e tre rossi.
+FAULT (same session, after the healthy pass): at point 4 NOTHING plays
+  g1  the pulse client killed ⇒ the same reading of the ear MUST say FAIL;
+  g2  the real samples of point 4 against a WRONG EXPECTATION (660 Hz) ⇒ FAIL;
+  g3  the pid rule on a FAKE photo of the defect (pulse born before
+      pipewire) ⇒ FAIL.
+  Seen = all three red.
 """
 import os
 import re
@@ -65,14 +65,14 @@ FUNZIONI = ("F-012B",)
 CLIENT = "c15pulse.py"
 SEGNO_CLIENT = "c15pulse"
 TOLL_INIZIO_S = 2.0
-# le unita' del gestore d'utente che si fotografano; `systemd` nella init.scope
-# e' il gestore stesso
+# the units of the user manager that are photographed; `systemd` in the init.scope
+# is the manager itself
 UNITA = ("pipewire.service", "pipewire-pulse.service", "wireplumber.service",
          "filter-chain.service")
 
-# ⭐ Il client PulseAudio: libpulse-simple, il tono in giro finche' non lo si
-#   uccide.  Se il server pulse non risponde (o la scrittura cade) lo dice e
-#   riprova, come un lettore vero.
+# ⭐ The PulseAudio client: libpulse-simple, the tone in a loop until it is
+#   killed.  If the pulse server does not answer (or the write falls over) it says so and
+#   retries, like a real player.
 CLIENT_PY = r'''
 import ctypes, sys, time, wave
 pa = ctypes.CDLL("libpulse-simple.so.0")
@@ -95,16 +95,16 @@ while True:
     h = pa.pa_simple_new(None, b"c15pulse", 1, None, b"tono 440", ctypes.byref(spec),
                          None, None, ctypes.byref(err))      # 1 = PA_STREAM_PLAYBACK
     if not h:
-        print("pa_simple_new: errore %d" % err.value, flush=True)
+        print("pa_simple_new: error %d" % err.value, flush=True)
         time.sleep(1)
         continue
-    print("collegato al server pulse", flush=True)
+    print("connected to the pulse server", flush=True)
     vivo = True
     while vivo:
         for i in range(0, len(dati), pezzo):
             b = dati[i:i + pezzo]
             if pa.pa_simple_write(h, b, len(b), ctypes.byref(err)) < 0:
-                print("pa_simple_write: errore %d" % err.value, flush=True)
+                print("pa_simple_write: error %d" % err.value, flush=True)
                 vivo = False
                 break
     pa.pa_simple_free(h)
@@ -113,11 +113,11 @@ while True:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  I GIUDICI — puri
+#  THE JUDGES — pure
 # ═══════════════════════════════════════════════════════════════════════════
 def leggi_foto(testo):
-    """Le righe `@@p <comm> <pid> <inizio_tick> <unita'>` e `@@hz <n>` ⇒
-    {"hz": n, "proc": [{"comm", "pid", "inizio_s", "unita"}]} — pura."""
+    """The lines `@@p <comm> <pid> <start_tick> <unit>` and `@@hz <n>` ⇒
+    {"hz": n, "proc": [{"comm", "pid", "inizio_s", "unita"}]} — pure."""
     hz, proc = None, []
     for r in (testo or "").splitlines():
         p = r.split()
@@ -132,8 +132,8 @@ def leggi_foto(testo):
 
 
 def di(foto, unita):
-    """Il processo dell'unita' (o il gestore, `unita="init.scope"`), o None.
-    Se ce n'e' piu' d'uno: il PIU' VECCHIO (e' quello rimasto)."""
+    """The unit's process (or the manager, `unita="init.scope"`), or None.
+    If there is more than one: the OLDEST (it is the one left over)."""
     v = [x for x in (foto or {}).get("proc", []) if x["unita"] == unita
          and (unita != "init.scope" or x["comm"] == "systemd")]
     return min(v, key=lambda x: x["inizio_s"]) if v else None
@@ -144,45 +144,45 @@ def riassunto(foto):
     for u in ("init.scope",) + UNITA:
         x = di(foto, u)
         if x:
-            pezzi.append("%s pid %d da %.1f s" % (u.replace(".service", "").replace(
-                "init.scope", "gestore"), x["pid"], x["inizio_s"]))
-    return ", ".join(pezzi) or "(nessuno)"
+            pezzi.append("%s pid %d since %.1f s" % (u.replace(".service", "").replace(
+                "init.scope", "manager"), x["pid"], x["inizio_s"]))
+    return ", ".join(pezzi) or "(none)"
 
 
 def giudica_pid(prima, dopo):
-    """(esito, ragione) della regola: pipewire-pulse non piu' vecchio di
-    pipewire nella sessione nuova, col gestore d'utente sopravvissuto.
-    `prima` = foto della sessione 1, `dopo` = foto della sessione 2 che suona."""
+    """(outcome, reason) of the rule: pipewire-pulse not older than
+    pipewire in the new session, with the user manager survived.
+    `prima` = photo of session 1, `dopo` = photo of session 2 that plays."""
     g1, g2 = di(prima, "init.scope"), di(dopo, "init.scope")
     if not g1 or not g2:
-        return S.BLOCKED, "non vedo il gestore d'utente (prima %s, dopo %s)" % (g1, g2)
+        return S.BLOCKED, "I do not see the user manager (before %s, after %s)" % (g1, g2)
     if g1["pid"] != g2["pid"]:
-        return S.BLOCKED, ("il gestore d'utente NON e' sopravvissuto all'uscita (pid %d ⇒ %d): "
-                           "la scena del difetto non c'e'" % (g1["pid"], g2["pid"]))
+        return S.BLOCKED, ("the user manager did NOT survive the exit (pid %d ⇒ %d): "
+                           "the scene of the defect is not there" % (g1["pid"], g2["pid"]))
     pw, pp = di(dopo, "pipewire.service"), di(dopo, "pipewire-pulse.service")
     if not pw:
-        return S.FAIL, "nella sessione nuova non c'e' pipewire"
+        return S.FAIL, "in the new session there is no pipewire"
     if not pp:
-        return S.FAIL, "nella sessione nuova, col client pulse che suona, non c'e' pipewire-pulse"
+        return S.FAIL, "in the new session, with the pulse client playing, there is no pipewire-pulse"
     if pp["inizio_s"] < pw["inizio_s"] - TOLL_INIZIO_S:
         vecchio = di(prima, "pipewire-pulse.service")
-        return S.FAIL, ("pipewire-pulse (pid %d, da %.1f s) e' PIU' VECCHIO di pipewire "
-                        "(pid %d, da %.1f s)%s" % (
+        return S.FAIL, ("pipewire-pulse (pid %d, since %.1f s) is OLDER than pipewire "
+                        "(pid %d, since %.1f s)%s" % (
                             pp["pid"], pp["inizio_s"], pw["pid"],
-                            pw["inizio_s"], " — e' quello della sessione di prima"
+                            pw["inizio_s"], " — it is the one from the previous session"
                             if vecchio and vecchio["pid"] == pp["pid"] else ""))
-    return S.PASS, ("gestore vivo (pid %d); pipewire-pulse pid %d da %.1f s, pipewire pid %d "
-                    "da %.1f s" % (g2["pid"], pp["pid"], pp["inizio_s"], pw["pid"],
+    return S.PASS, ("manager alive (pid %d); pipewire-pulse pid %d since %.1f s, pipewire pid %d "
+                    "since %.1f s" % (g2["pid"], pp["pid"], pp["inizio_s"], pw["pid"],
                                    pw["inizio_s"]))
 
 
 def giudica(e_tono, d_tono, e_pid, d_pid):
-    """L'esito di F-012B: il tono al punto 4 e la regola dei pid."""
+    """The outcome of F-012B: the tone at point 4 and the pid rule."""
     if e_pid == S.BLOCKED:
         return S.BLOCKED, d_pid
     guai = []
     if e_tono != "PASS":
-        guai.append("dopo «Esci» e il rientro il programma PulseAudio NON si sente nel "
+        guai.append("after «Exit» and the re-entry the PulseAudio program is NOT heard in the "
                     "browser: %s" % d_tono)
     if e_pid != S.PASS:
         guai.append(d_pid)
@@ -190,7 +190,7 @@ def giudica(e_tono, d_tono, e_pid, d_pid):
         if e_tono == "BLOCKED" and e_pid == S.PASS:
             return S.BLOCKED, " · ".join(guai)
         return S.FAIL, " · ".join(guai)
-    return S.PASS, "dopo «Esci» e il rientro il tono si sente: %s · %s" % (d_tono, d_pid)
+    return S.PASS, "after «Exit» and the re-entry the tone is heard: %s · %s" % (d_tono, d_pid)
 
 
 def certifica():
@@ -200,58 +200,58 @@ def certifica():
         nonlocal guai
         ok = ottenuto == atteso
         guai += not ok
-        print("  %s %-62s %s (atteso %s)" % ("OK " if ok else "NO ", nome, ottenuto, atteso))
+        print("  %s %-62s %s (expected %s)" % ("OK " if ok else "NO ", nome, ottenuto, atteso))
 
     U = "user@4013.service"
     t1 = ("@@hz 100\n@@p systemd 700 1000 init.scope\n@@p pipewire 710 1100 pipewire.service\n"
           "@@p pipewire 711 1100 filter-chain.service\n"
           "@@p pipewire-pulse 712 1110 pipewire-pulse.service\n")
     prima = leggi_foto(t1)
-    p("⭐ la foto si legge (4 processi, hz 100)", (prima["hz"], len(prima["proc"])), (100, 4))
-    p("⭐ il pipewire e' quello di pipewire.service, non filter-chain",
+    p("⭐ the photo reads (4 processes, hz 100)", (prima["hz"], len(prima["proc"])), (100, 4))
+    p("⭐ the pipewire is pipewire.service's, not filter-chain",
       di(prima, "pipewire.service")["pid"], 710)
     sana = leggi_foto("@@hz 100\n@@p systemd 700 1000 init.scope\n"
                       "@@p pipewire 810 9000 pipewire.service\n"
                       "@@p pipewire-pulse 812 9050 pipewire-pulse.service\n")
-    p("⭐ sessione nuova, pulse nato dopo pipewire ⇒ PASS", giudica_pid(prima, sana)[0], S.PASS)
+    p("⭐ new session, pulse born after pipewire ⇒ PASS", giudica_pid(prima, sana)[0], S.PASS)
     difetto = leggi_foto("@@hz 100\n@@p systemd 700 1000 init.scope\n"
                          "@@p pipewire 810 9000 pipewire.service\n"
                          "@@p pipewire-pulse 712 1110 pipewire-pulse.service\n")
-    p("⛔ il pulse della sessione di prima resta ⇒ FAIL", giudica_pid(prima, difetto)[0], S.FAIL)
-    p("⛔ ⇒ e lo dice", "sessione di prima" in giudica_pid(prima, difetto)[1], True)
-    p("⭐ pulse nato 1 s prima (attivazione a socket) ⇒ PASS, tolleranza",
+    p("⛔ the pulse of the previous session stays ⇒ FAIL", giudica_pid(prima, difetto)[0], S.FAIL)
+    p("⛔ ⇒ and it says so", "previous session" in giudica_pid(prima, difetto)[1], True)
+    p("⭐ pulse born 1 s earlier (socket activation) ⇒ PASS, tolerance",
       giudica_pid(prima, leggi_foto("@@hz 100\n@@p systemd 700 1000 init.scope\n"
                                     "@@p pipewire 810 9000 pipewire.service\n"
                                     "@@p pipewire-pulse 812 8900 pipewire-pulse.service\n"))[0],
       S.PASS)
-    p("⚠ gestore rinato ⇒ BLOCKED (la scena non c'e')",
+    p("⚠ manager reborn ⇒ BLOCKED (the scene is not there)",
       giudica_pid(prima, leggi_foto("@@hz 100\n@@p systemd 900 8000 init.scope\n"
                                     "@@p pipewire 810 9000 pipewire.service\n"
                                     "@@p pipewire-pulse 812 9050 pipewire-pulse.service\n"))[0],
       S.BLOCKED)
-    p("⚠ foto non letta ⇒ BLOCKED, mai PASS", giudica_pid(prima, leggi_foto(""))[0], S.BLOCKED)
-    p("⛔ pulse assente col client che suona ⇒ FAIL",
+    p("⚠ photo not read ⇒ BLOCKED, never PASS", giudica_pid(prima, leggi_foto(""))[0], S.BLOCKED)
+    p("⛔ pulse absent with the client playing ⇒ FAIL",
       giudica_pid(prima, leggi_foto("@@hz 100\n@@p systemd 700 1000 init.scope\n"
                                     "@@p pipewire 810 9000 pipewire.service\n"))[0], S.FAIL)
-    p("⛔ un systemd non nella init.scope non e' il gestore",
+    p("⛔ a systemd not in the init.scope is not the manager",
       di(leggi_foto("@@p systemd 5 1 %s\n" % U), "init.scope"), None)
-    p("⭐ tono PASS e pid PASS ⇒ PASS", giudica("PASS", "x", S.PASS, "y")[0], S.PASS)
-    p("⛔ tono FAIL (silenzio) ⇒ FAIL", giudica("FAIL", "x", S.PASS, "y")[0], S.FAIL)
-    p("⛔ tono PASS ma pulse vecchio ⇒ FAIL", giudica("PASS", "x", S.FAIL, "y")[0], S.FAIL)
-    p("⚠ gestore rinato ⇒ BLOCKED anche col tono", giudica("PASS", "x", S.BLOCKED, "y")[0],
+    p("⭐ tone PASS and pid PASS ⇒ PASS", giudica("PASS", "x", S.PASS, "y")[0], S.PASS)
+    p("⛔ tone FAIL (silence) ⇒ FAIL", giudica("FAIL", "x", S.PASS, "y")[0], S.FAIL)
+    p("⛔ tone PASS but old pulse ⇒ FAIL", giudica("PASS", "x", S.FAIL, "y")[0], S.FAIL)
+    p("⚠ manager reborn ⇒ BLOCKED even with the tone", giudica("PASS", "x", S.BLOCKED, "y")[0],
       S.BLOCKED)
-    p("⚠ pochi campioni e pid in ordine ⇒ BLOCKED", giudica("BLOCKED", "x", S.PASS, "y")[0],
+    p("⚠ few samples and pids in order ⇒ BLOCKED", giudica("BLOCKED", "x", S.PASS, "y")[0],
       S.BLOCKED)
-    print("⛔ %d casi sbagliati" % guai if guai else "⭐ i giudici dicono quel che devono")
+    print("⛔ %d wrong cases" % guai if guai else "⭐ the judges say what they must")
     return 1 if guai else 0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA PROVA
+#  THE TEST
 # ═══════════════════════════════════════════════════════════════════════════
 def fotografa(s):
-    """Pid, inizio e unita' dei processi dell'inquilino che contano (pipewire,
-    pipewire-pulse, wireplumber, il gestore) ⇒ (foto, testo grezzo)."""
+    """Pid, start and unit of the tenant's processes that matter (pipewire,
+    pipewire-pulse, wireplumber, the manager) ⇒ (photo, raw text)."""
     def una():
         c, t = s.sc.dentro(
             "echo \"@@hz $(getconf CLK_TCK)\"; for p in $(pgrep -u %s); do "
@@ -290,22 +290,22 @@ def diario_client(s):
 
 
 def client_visto(s):
-    """Il client pulse e' visto dal pipewire della sessione? (diagnosi)"""
+    """Is the pulse client seen by the session's pipewire? (diagnosis)"""
     _c, t = s.come_utente("pw-cli ls Client 2>&1 | grep -c c15pulse", 30)
     return (t or "").strip()
 
 
 def entra_e_ascolta(s, nome, ev, note):
-    """Il client suona e l'orecchio ascolta FINESTRA_S ⇒ (esito, descr, numeri, r)."""
+    """The client plays and the ear listens for FINESTRA_S ⇒ (outcome, descr, numbers, r)."""
     c, t = suona_pulse(s)
     if c != 0:
-        raise S.Bloccata("il client pulse non parte nella sessione: " + (t or "")[-200:])
+        raise S.Bloccata("the pulse client does not start in the session: " + (t or "")[-200:])
     if not F12.sveglia(s, note):
-        return "FAIL", "nessun AudioContext nella pagina in 30 s", {}, {}
+        return "FAIL", "no AudioContext in the page in 30 s", {}, {}
     time.sleep(1.0)
     e, d, num, r = F12.ascolta(s, F12.FINESTRA_S)
     ev.append(G4.salva_json(s.o, "f012b-orecchio-%s.json" % nome, r))
-    note.append("%s: client «%s», visto da pipewire: %s" % (
+    note.append("%s: client «%s», seen by pipewire: %s" % (
         nome, diario_client(s).replace("\n", " | ")[-160:], client_visto(s)))
     return e, d, num, r
 
@@ -316,20 +316,20 @@ def corpo(o, E):
     with sess as s:
         desktop, gesto = s.sc.gesto_esci()
         if not gesto:
-            raise S.Bloccata("non so come si dice «Esci» in %s" % s.sc.contenitore)
-        print("   «Esci» (%s): %s" % (desktop, gesto), flush=True)
+            raise S.Bloccata("I do not know how to say «Exit» in %s" % s.sc.contenitore)
+        print("   «Exit» (%s): %s" % (desktop, gesto), flush=True)
         ok, m = F12.entra_con_orecchio(s)
         if not ok:
             raise S.Bloccata(m)
         ok, m = F12.prepara_tono_ffmpeg(s)
         if not ok:
-            print("   ⚠ il tono con ffmpeg: %s — lo scrive il banco" % m, flush=True)
+            print("   ⚠ the tone with ffmpeg: %s — the bench writes it" % m, flush=True)
             ok, m = F12.prepara_tono(s)
         if not ok:
-            raise S.Bloccata("il tono non si prepara nella scatola: " + m)
+            raise S.Bloccata("the tone does not get ready in the box: " + m)
         ok, m = prepara_client(s)
         if not ok:
-            raise S.Bloccata("il client pulse non si scrive nella scatola: " + m)
+            raise S.Bloccata("the pulse client cannot be written in the box: " + m)
         segno = s.segno_registro()
         ev, note, foto = [], [], {}
 
@@ -340,50 +340,50 @@ def corpo(o, E):
             print("      [%s] %s" % (nome, riassunto(f)), flush=True)
             return f
 
-        # 1 ── la prima sessione suona ───────────────────────────────────────
+        # 1 ── the first session plays ──────────────────────────────────────
         e1, d1, _n1, _r1 = entra_e_ascolta(s, "1-prima", ev, note)
         scatta("1-suona")
-        print("   1 prima di «Esci»: %s — %s" % (e1, d1), flush=True)
+        print("   1 before «Exit»: %s — %s" % (e1, d1), flush=True)
         if e1 != "PASS":
             ev.append(s.salva_testo("server-f012b.txt", s.registro_da(segno) if segno else []))
-            raise S.Bloccata("gia' PRIMA di «Esci» il client pulse non si sente (%s): non e' "
-                             "la scena di questa prova (vedi F-012)" % d1)
+            raise S.Bloccata("already BEFORE «Exit» the pulse client is not heard (%s): it is not "
+                             "the scene of this test (see F-012)" % d1)
         zittisci_pulse(s)
 
-        # 2 ── «Esci» come l'utente ───────────────────────────────────────────
+        # 2 ── «Exit» like the user ──────────────────────────────────────────
         segno_esci = F21._ritenta(s.segno_registro)
         c, t = F21.fai_il_gesto(s, gesto)
         if c != 0:
-            raise S.Bloccata("il gesto «Esci» non ha risposto (codice %s): %s" % (c, t[-200:]))
+            raise S.Bloccata("the «Exit» gesture did not answer (code %s): %s" % (c, t[-200:]))
         t0 = time.time()
         finita, _r = F21.aspetta_finita(s, segno_esci, F21.TETTO_FINITA)
         if not finita:
-            raise S.Bloccata("dopo «Esci» il prodotto non dichiara la sessione finita in %.0f s"
+            raise S.Bloccata("after «Exit» the product does not declare the session ended in %.0f s"
                              % F21.TETTO_FINITA)
         modulo, frase, _letta = F21.leggi_pagina(s, 30)
-        esci = "finita («%s») dopo %.1f s, pagina al modulo=%s «%s»" % (
+        esci = "ended («%s») after %.1f s, page at the form=%s «%s»" % (
             finita, time.time() - t0, modulo, frase[:60])
         print("   2 %s" % esci, flush=True)
         scatta("2-dopo-esci")
 
-        # 3 ── SUBITO dentro di nuovo ───────────────────────────────────────
+        # 3 ── inside again AT ONCE ─────────────────────────────────────────
         segno_rientro = F21._ritenta(s.segno_registro)
         t1 = time.time()
         ok, m = F12.entra_con_orecchio(s)
         if not ok:
-            raise S.Bloccata("il rientro dopo «Esci» non riesce: %s" % m)
+            raise S.Bloccata("the re-entry after «Exit» does not succeed: %s" % m)
         fetta = F21.registro(s, segno_rientro) or []
-        nuova = any("LA FACCIO NASCERE" in r and F21.e_di(r, s.chi) for r in fetta)
-        rientro = "rientro %.1f s dopo il modulo, sessione %s" % (
-            t1 - t0, "NUOVA («LA FACCIO NASCERE»)" if nuova else "NON nuova (ripresa?)")
+        nuova = any("I AM MAKING IT BE BORN" in r and F21.e_di(r, s.chi) for r in fetta)
+        rientro = "re-entry %.1f s after the form, session %s" % (
+            t1 - t0, "NEW («I AM MAKING IT BE BORN»)" if nuova else "NOT new (resumed?)")
         print("   3 %s" % rientro, flush=True)
         scatta("3-dopo-rientro")
         if not nuova:
             ev.append(s.salva_testo("server-f012b.txt", s.registro_da(segno) if segno else []))
-            raise S.Bloccata("il rientro non ha fatto nascere una sessione nuova: la scena "
-                             "del difetto non c'e' (%s)" % rientro)
+            raise S.Bloccata("the re-entry did not make a new session be born: the scene "
+                             "of the defect is not there (%s)" % rientro)
 
-        # 4 ── il client pulse risuona ──────────────────────────────────────
+        # 4 ── the pulse client plays again ─────────────────────────────────
         e4, d4, num4, r4 = entra_e_ascolta(s, "4-dopo-esci", ev, note)
         campioni4 = r4.get("campioni") or []
         dopo = scatta("4-risuona")
@@ -397,28 +397,28 @@ def corpo(o, E):
             ev.append(dove)
         oss = " · ".join([
             "1: %s" % d1, "2: %s" % esci, "3: %s" % rientro, "4: %s" % d4,
-            "sink predefinito «%s», %s" % (nome, tv),
+            "default sink «%s», %s" % (nome, tv),
             "pid 1: %s" % riassunto(foto["1-suona"]),
             "pid 2: %s" % riassunto(foto["2-dopo-esci"]),
             "pid 3: %s" % riassunto(foto["3-dopo-rientro"]),
             "pid 4: %s" % riassunto(dopo), "; ".join(note)])
         print("   4 %s — %s" % (esito, perche), flush=True)
         E.metti("F-012B", esito, perche,
-                atteso="dopo «Esci» e un rientro subito (gestore d'utente vivo) un client "
-                       "PulseAudio suona e il browser sente il tono 440 Hz (>=80%% udibile, "
-                       "picco 440±12 Hz); pipewire-pulse non piu' vecchio di pipewire "
-                       "(tolleranza %.0f s)" % TOLL_INIZIO_S,
+                atteso="after «Exit» and an immediate re-entry (user manager alive) a PulseAudio "
+                       "client plays and the browser hears the 440 Hz tone (>=80%% audible, "
+                       "peak 440±12 Hz); pipewire-pulse not older than pipewire "
+                       "(tolerance %.0f s)" % TOLL_INIZIO_S,
                 osservato=oss, evidenze=ev, numeri=num4, gesto=gesto)
 
         if not o.guasto:
             return
-        # ── il guasto: al punto 4 non suona niente ─────────────────────────
+        # ── the fault: at point 4 nothing plays ────────────────────────────
         zittisci_pulse(s)
         time.sleep(1.5)
         eg1, dg1, _x, rg1 = F12.ascolta(s, 4.0)
         evg = [G4.salva_json(o, "f012b-orecchio-guasto.json", rg1)]
         if not campioni4:
-            E.guasto("F-012B", None, "nessun campione sano al punto 4 per l'attesa sbagliata")
+            E.guasto("F-012B", None, "no healthy sample at point 4 for the wrong expectation")
             return
         eg2, dg2, _y = G4.giudica_suono(campioni4, 660)
         finto = leggi_foto("@@hz 100\n@@p systemd 1 10 init.scope\n"
@@ -429,8 +429,8 @@ def corpo(o, E):
                                finto)
         visto = eg1 == "FAIL" and eg2 == "FAIL" and eg3 == S.FAIL
         E.guasto("F-012B", visto,
-                 "al punto 4 nessun suono ⇒ %s «%s» · attesa 660 Hz sui campioni veri ⇒ %s "
-                 "«%s» · pulse piu' vecchio di pipewire (foto finta) ⇒ %s «%s»"
+                 "at point 4 no sound ⇒ %s «%s» · 660 Hz expectation on the real samples ⇒ %s "
+                 "«%s» · pulse older than pipewire (fake photo) ⇒ %s «%s»"
                  % (eg1, dg1, eg2, dg2, eg3, dg3), evidenze=evg)
 
 

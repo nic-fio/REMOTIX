@@ -2,30 +2,30 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<title>S7 — da che parte gira la rotella</title>
+<title>S7 — which way the wheel turns</title>
 <!--
-  ⛔ QUESTA PAGINA E' LO STRUMENTO DI MISURA, NON UNA DIMOSTRAZIONE.
+  ⛔ THIS PAGE IS THE MEASURING INSTRUMENT, NOT A DEMONSTRATION.
 
-  Gira dentro la sessione GNOME senza schermo, e nessuno la guarda: quel che
-  non spedisce al raccoglitore non e' successo per nessuno.
+  It runs inside the GNOME session without a screen, and nobody looks at it: what
+  it does not send to the collector did not happen for anybody.
 
-  Misura DUE cose sullo stesso scatto, con due strumenti diversi:
+  It measures TWO things on the same click, with two different instruments:
 
-    1. `deltaY` dell'evento `wheel`  — la convenzione che il browser dichiara.
-       ⭐ E' la stessa grandezza che il CLIENT di RCP legge quando l'utente
-       gira la rotella davvero, quindi il confronto e' fra due usi della
-       STESSA convenzione, non fra due mondi.
-    2. quanto e dove si e' spostato `scrollY` — che cosa e' successo davvero.
+    1. `deltaY` of the `wheel` event  — the convention the browser declares.
+       ⭐ It is the same quantity the RCP CLIENT reads when the user really
+       turns the wheel, so the comparison is between two uses of the SAME
+       convention, not between two worlds.
+    2. how much and where `scrollY` moved — what really happened.
 
-  ⛔ Perche' due e non una: `deltaY` puo' arrivare senza che la pagina si
-     muova (documento gia' in fondo), e la pagina puo' muoversi senza `wheel`
-     (barra, tastiera).  Presi da soli, ciascuno dei due ha un modo di dire
-     una cosa falsa; insieme non ce l'hanno.
+  ⛔ Why two and not one: `deltaY` can arrive without the page moving
+     (document already at the bottom), and the page can move without `wheel`
+     (scrollbar, keyboard).  Taken alone, each of the two has a way of saying
+     something false; together they do not.
 
-  ⛔ E LA PAGINA NASCE A META' DEL DOCUMENTO, non in cima.  Con `scrollY = 0`
-     uno scatto verso l'alto non muove niente — e «non si e' mossa» avrebbe
-     lo stesso aspetto di «il segno e' quello opposto».  Sono 20 000 pixel di
-     documento e si riparte sempre da 8 000.
+  ⛔ AND THE PAGE IS BORN HALFWAY DOWN THE DOCUMENT, not at the top.  With
+     `scrollY = 0` a click upwards moves nothing — and «it did not move» would
+     look the same as «the sign is the opposite one».  It is 20 000 pixels of
+     document and it always starts again from 8 000.
 -->
 <style>
   html, body { margin: 0; background: #101014; color: #d8d8e0;
@@ -37,34 +37,34 @@
 </style>
 </head>
 <body>
-<div id="targa">S7 — in attesa</div>
+<div id="targa">S7 — waiting</div>
 <div id="alto"></div>
 <script>
 "use strict";
 
-const CENTRO = 8000;        // da dove si riparte a ogni giro
-const ATTESA_LETTURA = 250; // ms fra lo scatto e la lettura di scrollY
+const CENTRO = 8000;        // where it starts again at every round
+const ATTESA_LETTURA = 250; // ms between the click and the reading of scrollY
 
-let numero = 0;             // cresce dentro QUESTO caricamento di pagina
+let numero = 0;             // grows inside THIS page load
 let inCorso = false;
 
-// ⛔ IL MARCHIO DEL GIRO, e nasce da un difetto vero.
+// ⛔ THE MARK OF THE ROUND, and it is born from a real defect.
 //
-//    `[M]` 10 agosto 2026: il contatore qui sopra riparte da 1 a ogni
-//    caricamento, e il banco cercava «la riga con n maggiore del segnaposto».
-//    Al secondo giro il registro conteneva gia' una riga n=1, il segnaposto
-//    valeva 1, e la riga NUOVA — anch'essa n=1 — non e' mai stata trovata: il
-//    banco ha stampato «la pagina non ha detto PRONTA in 45 s» **mentre il
-//    raccoglitore la stava scrivendo**.  Due cose diverse, un solo sintomo.
+//    `[M]` 10 Aug 2026: the counter above starts again from 1 at every
+//    load, and the bench looked for «the line with n greater than the placeholder».
+//    At the second round the log already contained a line n=1, the placeholder
+//    was 1, and the NEW line — also n=1 — was never found: the
+//    bench printed «the page did not say PRONTA in 45 s» **while the
+//    collector was writing it**.  Two different things, a single symptom.
 //
-//    Il numero da solo non basta a riconoscere un giro: ci vuole qualcosa che
-//    non si ripeta.  Questo.
+//    The number alone is not enough to recognise a round: something that does
+//    not repeat is needed.  This.
 const GIRO = Math.random().toString(36).slice(2, 10);
 
 function spedisci(dati) {
   dati.n = ++numero;
   dati.giro = GIRO;
-  dati.motore = navigator.userAgent;     // ⛔ B0.6: la versione, sempre
+  dati.motore = navigator.userAgent;     // ⛔ B0.6: the version, always
   dati.schermo = screen.width + "x" + screen.height;
   dati.finestra = innerWidth + "x" + innerHeight;
   dati.dpr = devicePixelRatio;
@@ -79,25 +79,25 @@ function targa(dati) {
     "  deltaY=" + dati.deltaY + "  scorrimento=" + dati.scorrimento;
 }
 
-// ⛔ Il `wheel` si ascolta in cattura e SENZA preventDefault: si vuole che lo
-//    scorrimento avvenga davvero, perche' e' il secondo strumento.
-// ⛔ IL RIFERIMENTO E' `base`, NON `scrollY` LETTO NEL GESTORE.
+// ⛔ The `wheel` is listened to in capture and WITHOUT preventDefault: one wants
+//    the scrolling to really happen, because it is the second instrument.
+// ⛔ THE REFERENCE IS `base`, NOT `scrollY` READ IN THE HANDLER.
 //
-//    `[M]` 10 agosto 2026: con un ascoltatore passivo Firefox scorre **prima**
-//    che il gestore giri (lo fa il thread di composizione, non quello di
-//    JavaScript).  Leggendo `scrollY` dentro il gestore e di nuovo 250 ms
-//    dopo, i due valori sono uguali e la differenza e' **zero**: il banco
-//    scriveva «la pagina non si e' mossa» mentre si era mossa di 114 pixel, e
-//    il numero giusto era gia' nel registro sotto un altro nome.
+//    `[M]` 10 Aug 2026: with a passive listener Firefox scrolls **before**
+//    the handler runs (the compositor thread does it, not the JavaScript
+//    one).  Reading `scrollY` inside the handler and again 250 ms
+//    later, the two values are equal and the difference is **zero**: the bench
+//    wrote «the page did not move» while it had moved by 114 pixels, and
+//    the right number was already in the log under another name.
 //
-//    Il riferimento giusto e' dove la pagina stava PRIMA dello scatto, cioe'
-//    l'ultima posizione ricentrata — che la pagina conosce perche' e' lei a
-//    metterla.  Cosi' la misura regge sia dove lo scorrimento e' asincrono
-//    sia dove non lo e'.
+//    The right reference is where the page was BEFORE the click, that is
+//    the last recentred position — which the page knows because it is the one
+//    putting it there.  This way the measurement holds both where scrolling is
+//    asynchronous and where it is not.
 let base = CENTRO;
 
 addEventListener("wheel", (e) => {
-  if (inCorso) return;      // un solo scatto per volta: i giri non si mescolano
+  if (inCorso) return;      // one click at a time: the rounds do not mix
   inCorso = true;
   const prima = Math.round(scrollY);
   setTimeout(() => {
@@ -108,26 +108,26 @@ addEventListener("wheel", (e) => {
       wheelDeltaY: e.wheelDeltaY,
       base: base, prima: prima, dopo: dopo, scorrimento: dopo - base
     });
-    // Si torna al centro per il giro dopo, e il riferimento si rifa' li'.
+    // Back to the centre for the next round, and the reference is redone there.
     scrollTo(0, CENTRO);
     setTimeout(() => { base = Math.round(scrollY); inCorso = false; }, 150);
   }, ATTESA_LETTURA);
 }, {capture: true, passive: true});
 
-// ⛔ IL DENOMINATORE DELLA MISURA, e non c'era al primo giro.
+// ⛔ THE DENOMINATOR OF THE MEASUREMENT, and it was not there at the first round.
 //
-//    «La pagina non ha visto lo scatto» ha almeno tre cause con lo stesso
-//    aspetto: l'iniezione non parte · parte e non arriva a nessuna finestra ·
-//    arriva e lo scorrimento e' l'unica cosa che si perde.  Il movimento del
-//    puntatore le separa: se la pagina vede muoversi il puntatore, la strada
-//    fino a lei e' aperta e il silenzio sullo scatto vuol dire qualcosa.
+//    «The page did not see the click» has at least three causes with the same
+//    look: the injection does not leave · it leaves and reaches no window ·
+//    it arrives and scrolling is the only thing that gets lost.  The movement of
+//    the pointer separates them: if the page sees the pointer move, the road
+//    to it is open and the silence on the click means something.
 //
-//    ⭐ E' `LEZIONI.md` §1.9 regola 2 — il controllo positivo sullo stesso
-//    strumento — messo dove serve invece che a parole.
+//    ⭐ It is `LEZIONI.md` §1.9 rule 2 — the positive control on the same
+//    instrument — put where it is needed instead of in words.
 let ultimoPuntatore = 0;
 addEventListener("pointermove", (e) => {
   const ora = performance.now();
-  if (ora - ultimoPuntatore < 400) return;   // non si allaga il registro
+  if (ora - ultimoPuntatore < 400) return;   // the log is not flooded
   ultimoPuntatore = ora;
   spedisci({tipo: "PUNTATORE", x: Math.round(e.clientX), y: Math.round(e.clientY),
             deltaY: null, scorrimento: null});

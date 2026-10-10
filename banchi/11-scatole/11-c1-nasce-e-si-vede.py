@@ -2,132 +2,132 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-11-c1 — ⭐⭐ LA PRIMA MAGLIA DELLA RETE: «la sessione nasce e si VEDE»
+11-c1 — ⭐⭐ THE FIRST MESH OF THE NET: «the session is born and is SEEN»
 ===========================================================================
 
     python3 11-c1-nasce-e-si-vede.py --giri 8
     python3 11-c1-nasce-e-si-vede.py --certifica
 
-⛔ E' anche il COLLAUDO A della fase 11: puntata contro il codice del 25
-   agosto 2026, questa maglia deve diventare ROSSA sulla «sessione che nasce
-   cieca» — senza che nessuno le abbia detto dove guardare.
+⛔ It is also ACCEPTANCE TEST A of phase 11: pointed at the code of 25
+   August 2026, this mesh must turn RED on the «session that is born
+   blind» — without anyone having told it where to look.
 
 ---------------------------------------------------------------------------
-⛔⛔ PERCHE' GIRA PIU' VOLTE, e non una sola
+⛔⛔ WHY IT RUNS SEVERAL TIMES, and not just once
 
-`fasi/10-multi-tenant-e-il-budget.md` §7.4: il guasto e' **INTERMITTENTE**.
-`[M]` 25 agosto 2026, sulla macchina vera:
+`fasi/10-multi-tenant-e-il-budget.md` §7.4: the fault is **INTERMITTENT**.
+`[M]` 25 August 2026, on the real machine:
 
-    utente        riuscito   fallito
+    user          succeeded  failed
     provanic3         2          6
     provanic4         0         98
     provanic5         0         55
 
-⇒ ⛔ **Una prova sola non e' una prova**: su `provanic3` avrebbe detto verde due
-   volte su otto.  ⭐ E' `LEZIONI.md` §1.32 — *«a volte succede» spesso vuol dire
-   «succede sempre, aspetta solo il momento»*.
+⇒ ⛔ **A single test is not a test**: on `provanic3` it would have said green two
+   times out of eight.  ⭐ It is `LEZIONI.md` §1.32 — *«it happens sometimes» often means
+   «it always happens, it is just waiting for the moment»*.
 
 ---------------------------------------------------------------------------
-⭐ CHE COSA GUARDA — e da dove parte
+⭐ WHAT IT LOOKS AT — and where it starts from
 
-  da dove parte : ⛔ DA ZERO, e «da zero» qui vuol dire **un UTENTE NUOVO** a
-                  ogni giro, non un attacco nuovo.
-                  ⚠⚠ E la ragione e' l'invariante I4: il palco appartiene alla
-                  SESSIONE, non alla connessione, e **sopravvive al distacco**.
-                  ⇒ Riattaccarsi con lo stesso utente NON fa nascere niente:
-                  ritrova il palco del giro prima, gia' vivo e gia' col
-                  monitor.  ⛔ Un banco cosi' direbbe verde otto volte
-                  guardando **una sola nascita** — che e' letteralmente
-                  l'errore di metodo per cui il guasto e' rimasto invisibile
-                  per giorni (`LEZIONI.md` §1.39).
-                  ⭐ Ed e' anche il modo in cui il guasto si e' manifestato sul
-                  ferro: utenti NUOVI, `provanic4/5/6`, 0 riusciti su 98/55/50.
-  che cosa guarda: ⛔ NON il conto dei processi, che diceva «1» sia con la
-                  finestra sia senza.  Guarda **se il monitor e' NATO**, e lo
-                  chiede a due testimoni indipendenti (qui sotto).
-
----------------------------------------------------------------------------
-⛔⛔⛔ IL DIFETTO PIU' GROSSO CHE QUESTA MAGLIA ABBIA AVUTO — 27 agosto 2026
-
-⚠ Sta in testa perche' e' il genere di difetto che si ripete, e perche' per
-  giorni ha tenuto ferme cinque prove e rinviato una fase intera.
-
-⛔⛔ **C1 non poteva dire verde, e non l'aveva mai detto.**  Le due righe su cui
-    giudicava erano tutt'e due sbagliate, e nel modo peggiore:
-
-  1. ⛔ leggeva `sessione [chi] ⛔ ZERO MONITOR` come **prova di cecita'**.
-     `[R]` Il prodotto la scrive nel passaggio **obbligatorio di una nascita
-     RIUSCITA** (`src/sessione.c:345-348`): dal 14 agosto *«zero monitor
-     propri»* e' lo stato **voluto**, e il monitor lo monta la CATTURA, dopo.
-     ⇒ La riga che C1 leggeva come il guasto era la riga della salute.
-  2. ⛔ e il ramo verde chiedeva `sessione [chi] monitor N/N: connettore`,
-     `[R]` che **non compare mai** in una nascita sana: `sessione_stato()` non
-     viene piu' chiamata dopo che il palco e' preso.  `[M]` 27 ago 2026, in
-     tutto il registro della scatola curata: **0 volte**.
-
-⇒ ⭐⭐ **Un rosso che non si puo' far diventare verde** — `LEZIONI.md` §1.49
-  nella sua forma peggiore.  E il verdetto non e' mai stato «C1 sbaglia»: e'
-  stato *«la sessione nasce cieca»*, per giorni, su cinque prove.
-
-⛔⛔ E LA CERTIFICAZIONE NON POTEVA PRENDERLO, perche' **imponeva il difetto
-    come requisito**: i suoi due casi «sani» usavano proprio la riga che il
-    prodotto non scrive.  ⇒ Passava, e passava perche' il giudice era rotto.
-  ⭐ La cura non e' solo il giudizio nuovo: e' che adesso esiste **un caso di
-    certificazione che parte da un registro SANO e finisce VERDE**.  Un giudice
-    che non ha un caso verde non e' un giudice severo: e' un giudice rotto, e
-    nessuno se ne accorge finche' qualcuno non prova a farlo passare.
+  where it starts: ⛔ FROM ZERO, and «from zero» here means **a NEW USER** at
+                  every round, not a new attach.
+                  ⚠⚠ And the reason is invariant I4: the stage belongs to the
+                  SESSION, not to the connection, and **it survives detach**.
+                  ⇒ Re-attaching with the same user does NOT make anything be born:
+                  it finds the stage of the previous round, already alive and already
+                  with its monitor.  ⛔ A bench like that would say green eight times
+                  while looking at **a single birth** — which is literally
+                  the method error for which the fault stayed invisible
+                  for days (`LEZIONI.md` §1.39).
+                  ⭐ And it is also the way the fault showed itself on the
+                  iron: NEW users, `provanic4/5/6`, 0 succeeded out of 98/55/50.
+  what it looks at: ⛔ NOT the process count, which said «1» both with the
+                  window and without.  It looks at **whether the monitor was BORN**, and
+                  asks two independent witnesses (below).
 
 ---------------------------------------------------------------------------
-⭐⭐ I TRE TESTIMONI — due giudicano, uno si stampa
+⛔⛔⛔ THE BIGGEST DEFECT THIS MESH HAS EVER HAD — 27 August 2026
 
-  ⭐ A · `cattura [chi] formato negoziato: LxA …`     (`src/cattura.c:686`)
-        E' **l'istante in cui il monitor nasce**: il `wl_output` compare solo
-        quando un consumatore PipeWire si aggancia al flusso.  `[M]` 27 ago
-        2026, scatola GNOME curata: **1,105 s · 0,998 s · 0,957 s** dalla riga
-        «sessione aperta», e compare **8 volte** in tutto il registro.
+⚠ It sits at the top because it is the kind of defect that repeats, and because for
+  days it held five tests still and postponed a whole phase.
 
-  ⭐ B · `⭐ il palco di «chi»: … monitor «Meta-0» (0 prima, 1 dopo), 1920x1080 …`
-        (`src/figlio.c:1826`, scritta dal PADRE).  ⛔ Vale come testimone solo
-        se dice **tutt'e due** le cose: che un monitor c'e' (**M ≥ 1**) **e** a
-        che misura.  ⚠ `monitor «» (0 prima, 2 dopo), 0x0` — il famoso «terzo
-        stato» del 25 agosto — non e' un monitor: e' un conteggio senza niente
-        sotto, ed e' esattamente il numero che per mesi e' stato letto come
-        «due monitor comparsi».
+⛔⛔ **C1 could not say green, and had never said it.**  The two lines it
+    judged on were both wrong, and in the worst way:
 
-  ⚠ C · `figlio [chi] ciclo: N fotogrammi consegnati` — ⛔ **si stampa e NON si
-        giudica**, e la ragione e' §1.45: nessuno ha mai misurato quanto ci
-        mette quella riga a comparire dopo la nascita.  ⇒ Metterla nel
-        verdetto vorrebbe dire tarare un tetto al buio.  ⭐ Quando manca a
-        monitor nato, si stampa un RILIEVO — cosi' si vede, e il giorno in cui
-        qualcuno la misurera' si potra' promuovere.
+  1. ⛔ it read `sessione [chi] ⛔ ZERO MONITOR` as **proof of blindness**.
+     `[R]` The product writes it in the **mandatory step of a SUCCESSFUL
+     birth** (`src/sessione.c:345-348`): since 14 August *«zero monitors of
+     its own»* is the **intended** state, and the monitor is mounted by CAPTURE, later.
+     ⇒ The line C1 read as the fault was the line of health.
+  2. ⛔ and the green branch asked for `sessione [chi] monitor N/N: connettore`,
+     `[R]` which **never appears** in a healthy birth: `sessione_stato()` is
+     no longer called after the stage is taken.  `[M]` 27 Aug 2026, in
+     the whole log of the cured box: **0 times**.
 
-⭐ E i due che giudicano sono INDIPENDENTI sul serio: A la scrive il FIGLIO, B
-  la scrive il PADRE.  ⇒ Il giorno in cui una delle due righe cambia forma, C1
-  non diventa cieca per conto suo — resta l'altra, e il conto lo dice.
+⇒ ⭐⭐ **A red that cannot be made green** — `LEZIONI.md` §1.49
+  in its worst form.  And the verdict was never «C1 is wrong»: it
+  was *«the session is born blind»*, for days, on five tests.
 
-⛔⛔ E UNA RIGA SI SCARTA, per nome: quelle del palco che finiscono con
-    *«— aspetto la tela del cliente»*.  `[M]` Su quel ramo (`src/figlio.c:5287`)
-    il prodotto spediva al padre una struttura **mai inizializzata** ⇒ i
-    conteggi li' dentro sono spazzatura, e si smascheravano da soli
-    (`stride 306537694`).  ⚠ La cura c'e' nel prodotto dal 27 agosto, ⛔ ma il
-    binario curato non e' ancora nelle scatole.  ⇒ Finche' non c'e', si
-    scartano — e ⭐ si CONTANO e si STAMPANO, che un'esclusione muta e'
-    un'esclusione di cui nessuno si accorge.
-
-⚠ E qui il metro e' il REGISTRO DEL PRODOTTO, non un'immagine — ⛔ e questo e'
-  un limite dichiarato, non un dettaglio: il prodotto potrebbe dire «monitor
-  1/1» e consegnare pixel neri.  ⭐ La maglia che guarda i pixel e' C2, e vuole
-  il testimone; questa guarda la NASCITA, che e' lo strato di sotto.
-  ⇒ `fasi/11-la-rete-di-sicurezza.md` §6, «quel che la rete non prende».
+⛔⛔ AND THE CERTIFICATION COULD NOT CATCH IT, because **it imposed the defect
+    as a requirement**: its two «healthy» cases used exactly the line the
+    product does not write.  ⇒ It passed, and it passed because the judge was broken.
+  ⭐ The cure is not only the new judgement: it is that there is now **a
+    certification case that starts from a HEALTHY log and ends GREEN**.  A judge
+    that has no green case is not a strict judge: it is a broken judge, and
+    nobody notices until someone tries to make it pass.
 
 ---------------------------------------------------------------------------
-GLI ESITI (§4.5 del documento di fase)
+⭐⭐ THE THREE WITNESSES — two judge, one is printed
 
-  0  ⭐ ho guardato: tutti i giri sono nati con un monitor
-  1  ho guardato: ALMENO UNO e' nato cieco          ⇒ rosso
-  3  ⛔ non ho potuto guardare (il server non c'era, il cliente non e' partito,
-     il registro non si e' fatto leggere) — ⛔ e NON e' un rosso
-  2  il terreno non regge / uso sbagliato
+  ⭐ A · `cattura [chi] negotiated format: WxH …`     (`src/cattura.c:686`)
+        It is **the instant the monitor is born**: the `wl_output` appears only
+        when a PipeWire consumer hooks onto the stream.  `[M]` 27 Aug
+        2026, cured GNOME box: **1.105 s · 0.998 s · 0.957 s** from the
+        «session opened» line, and it appears **8 times** in the whole log.
+
+  ⭐ B · `⭐ the stage of «chi»: … monitor «Meta-0» (0 before, 1 after), 1920x1080 …`
+        (`src/figlio.c:1826`, written by the PARENT).  ⛔ It counts as a witness only
+        if it says **both** things: that a monitor is there (**M ≥ 1**) **and** at
+        what size.  ⚠ `monitor «» (0 before, 2 after), 0x0` — the famous «third
+        state» of 25 August — is not a monitor: it is a count with nothing
+        underneath, and it is exactly the number that for months was read as
+        «two monitors appeared».
+
+  ⚠ C · `figlio [chi] loop: N frames delivered` — ⛔ **it is printed and NOT
+        judged**, and the reason is §1.45: nobody has ever measured how long
+        that line takes to appear after the birth.  ⇒ Putting it in the
+        verdict would mean calibrating a ceiling in the dark.  ⭐ When it is missing with
+        a monitor born, a FINDING is printed — so it is seen, and the day
+        someone measures it, it can be promoted.
+
+⭐ And the two that judge are INDEPENDENT for real: A is written by the CHILD, B
+  is written by the PARENT.  ⇒ The day one of the two lines changes form, C1
+  does not go blind on its own — the other one remains, and the count says so.
+
+⛔⛔ AND ONE LINE IS DISCARDED, by name: the stage lines that end with
+    *«— waiting for the client's canvas»*.  `[M]` On that branch (`src/figlio.c:5287`)
+    the product sent the parent a structure **never initialised** ⇒ the
+    counts in there are garbage, and they unmasked themselves
+    (`stride 306537694`).  ⚠ The cure has been in the product since 27 August, ⛔ but the
+    cured binary is not yet in the boxes.  ⇒ Until it is, they are
+    discarded — and ⭐ COUNTED and PRINTED, because a silent exclusion is
+    an exclusion nobody notices.
+
+⚠ And here the yardstick is the PRODUCT LOG, not an image — ⛔ and this is
+  a declared limit, not a detail: the product could say «monitor
+  1/1» and deliver black pixels.  ⭐ The mesh that looks at the pixels is C2, and it wants
+  the witness; this one looks at the BIRTH, which is the layer below.
+  ⇒ `fasi/11-la-rete-di-sicurezza.md` §6, «what the net does not catch».
+
+---------------------------------------------------------------------------
+THE OUTCOMES (§4.5 of the phase document)
+
+  0  ⭐ I looked: all rounds were born with a monitor
+  1  I looked: AT LEAST ONE was born blind          ⇒ red
+  3  ⛔ I could not look (the server was not there, the client did not start,
+     the log could not be read) — ⛔ and it is NOT a red
+  2  the terrain does not hold / wrong usage
 ===========================================================================
 """
 import argparse
@@ -138,113 +138,113 @@ import sys
 import time
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐ LE FIRME, prese ALLA LETTERA dal registro del prodotto.
+# ⭐⭐ THE SIGNATURES, taken LITERALLY from the product log.
 #
-# ⛔ Non si cerca una parola dentro un testo (`CODER.md` §3.3-bis, corollario 3:
-#    «ACCESA» e' vero anche in «nasce accesa, ed e' spenta»).  Si cercano righe
-#    intere, ancorate, e il nome dell'inquilino si CONFRONTA, non si contiene.
+# ⛔ We do not look for a word inside a text (`CODER.md` §3.3-bis, corollary 3:
+#    «ACCESA» is true also in «nasce accesa, ed e' spenta»).  We look for whole
+#    lines, anchored, and the tenant's name is COMPARED, not contained.
 #
-# ⛔⛔⛔ E QUESTE FIRME SONO STATE RIFATTE DA CAPO IL 27 AGOSTO 2026, perche'
-#       le vecchie facevano dire a C1 una cosa falsa.  La storia sta in testa
-#       al file, sotto «IL DIFETTO PIU' GROSSO CHE QUESTA MAGLIA ABBIA AVUTO».
+# ⛔⛔⛔ AND THESE SIGNATURES WERE REDONE FROM SCRATCH ON 27 AUGUST 2026, because
+#       the old ones made C1 say something false.  The story is at the top
+#       of the file, under «THE BIGGEST DEFECT THIS MESH HAS EVER HAD».
 # ═══════════════════════════════════════════════════════════════════════════
 
-# ⭐⭐ TESTIMONE A — `src/cattura.c:686`.  E' **l'istante in cui il monitor
-#     nasce**: il `wl_output` compare solo quando un consumatore PipeWire si
-#     aggancia al flusso, ⇒ questa riga non si puo' scrivere senza un monitor.
-#     `[M]` 27 ago 2026, scatola GNOME curata: compare **8 volte**, in
-#     1,105 s · 0,998 s · 0,957 s dalla riga «sessione aperta».
+# ⭐⭐ WITNESS A — `src/cattura.c:686`.  It is **the instant the monitor
+#     is born**: the `wl_output` appears only when a PipeWire consumer
+#     hooks onto the stream, ⇒ this line cannot be written without a monitor.
+#     `[M]` 27 Aug 2026, cured GNOME box: it appears **8 times**, at
+#     1.105 s · 0.998 s · 0.957 s from the «session opened» line.
 FIRMA_FORMATO = re.compile(
-    r"cattura +\[(?P<chi>[^\]]+)\] formato negoziato: (?P<l>\d+)x(?P<a>\d+)")
+    r"cattura +\[(?P<chi>[^\]]+)\] negotiated format: (?P<l>\d+)x(?P<a>\d+)")
 
-# ⭐⭐ TESTIMONE B — `src/figlio.c:1826`, la riga che il PADRE scrive quando il
-#     figlio gli manda `MSG_PALCO`.  ⚠ L'identita' sta nel CORPO («%s») e non
-#     nella parentesi, perche' la scrive il padre: e' la stessa ragione per cui
-#     C9 tiene quelle righe fuori dall'insieme obbligato.
-#     `[M]` 27 ago 2026, scatola curata: `monitor «Meta-0» (0 prima, 1 dopo),
+# ⭐⭐ WITNESS B — `src/figlio.c:1826`, the line the PARENT writes when the
+#     child sends it `MSG_PALCO`.  ⚠ The identity is in the BODY («%s») and not
+#     in the brackets, because the parent writes it: it is the same reason why
+#     C9 keeps those lines out of the mandatory set.
+#     `[M]` 27 Aug 2026, cured box: `monitor «Meta-0» (0 before, 1 after),
 #     1920x1080`.
 FIRMA_PALCO = re.compile(
-    r"il palco di «(?P<chi>[^»]+)»:.*?monitor «(?P<nome>[^»]*)» "
-    r"\((?P<prima>\d+) prima, (?P<dopo>\d+) dopo\), (?P<l>\d+)x(?P<a>\d+) stride")
+    r"the stage of «(?P<chi>[^»]+)»:.*?monitor «(?P<nome>[^»]*)» "
+    r"\((?P<prima>\d+) before, (?P<dopo>\d+) after\), (?P<l>\d+)x(?P<a>\d+) stride")
 
-# ⛔⛔ LA TRAPPOLA, ED E' MISURATA — `src/figlio.c:5287`.
+# ⛔⛔ THE TRAP, AND IT IS MEASURED — `src/figlio.c:5287`.
 #
-# Sul ramo «aspetto la tela del cliente» il prodotto spediva al padre una
-# struttura **mai inizializzata**: campo per campo, la memoria dello stack come
-# l'aveva lasciata la chiamata di prima.  ⇒ I conteggi di QUELLE righe sono
-# spazzatura, e si smascheravano da soli (`stride 306537694`).
-# ⚠ `[M]` 27 ago 2026 la cura c'e' nel prodotto (il `memset` e' salito prima di
-#   ogni via d'uscita), ⛔ **ma il binario curato non e' ancora nelle scatole**.
-# ⇒ Finche' non c'e', quelle righe si SCARTANO per nome — e ⭐ si CONTANO e si
-#   STAMPANO: un'esclusione che non si vede e' un'esclusione di cui nessuno si
-#   accorge.
-CODA_SPAZZATURA = "aspetto la tela del cliente"
+# On the «waiting for the client's canvas» branch the product sent the parent a
+# structure **never initialised**: field by field, the stack memory as
+# the previous call had left it.  ⇒ The counts of THOSE lines are
+# garbage, and they unmasked themselves (`stride 306537694`).
+# ⚠ `[M]` 27 Aug 2026 the cure is in the product (the `memset` moved up before
+#   every exit path), ⛔ **but the cured binary is not yet in the boxes**.
+# ⇒ Until it is, those lines are DISCARDED by name — and ⭐ COUNTED and
+#   PRINTED: an exclusion that cannot be seen is an exclusion nobody
+#   notices.
+CODA_SPAZZATURA = "waiting for the client's canvas"
 
-# ⭐ TESTIMONE C — i fotogrammi consegnati.  ⚠ Si stampa e NON si giudica:
-#   vedi «i tre testimoni» in testa al file, dove sta la ragione.
+# ⭐ WITNESS C — the frames delivered.  ⚠ It is printed and NOT judged:
+#   see «the three witnesses» at the top of the file, where the reason is.
 FIRMA_FOTOGRAMMI = re.compile(
-    r"figlio +\[(?P<chi>[^\]]+)\] ciclo: (?P<n>\d+) fotogrammi consegnati")
+    r"figlio +\[(?P<chi>[^\]]+)\] loop: (?P<n>\d+) frames delivered")
 
-# ⚠⚠ E QUESTA NON E' PIU' UNA PROVA DI CECITA' — `src/sessione.c:345-348`.
+# ⚠⚠ AND THIS IS NO LONGER A PROOF OF BLINDNESS — `src/sessione.c:345-348`.
 #
-# ⛔⛔ Fino al 27 agosto 2026 era **il rosso** di questa maglia.  `[R]` Il
-#     prodotto la scrive nel passaggio obbligatorio di una nascita **RIUSCITA**:
-#     dal 14 agosto *«zero monitor propri»* e' lo stato **voluto**, e il monitor
-#     lo monta la CATTURA, dopo.  ⇒ Si conta e si stampa — perche' e' la riga
-#     che per mesi e' stata letta al contrario, e vederla contata a zero
-#     giudizi e' quel che impedisce di ricascarci — ⛔ ma non decide niente.
+# ⛔⛔ Until 27 August 2026 it was **the red** of this mesh.  `[R]` The
+#     product writes it in the mandatory step of a **SUCCESSFUL** birth:
+#     since 14 August *«zero monitors of its own»* is the **intended** state, and the monitor
+#     is mounted by CAPTURE, later.  ⇒ It is counted and printed — because it is the line
+#     that for months was read backwards, and seeing it counted with zero
+#     judgements is what prevents falling into it again — ⛔ but it decides nothing.
 FIRMA_ZERO_MONITOR = re.compile(
     r"sessione \[(?P<chi>[^\]]+)\] .*ZERO MONITOR")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⛔⛔⛔ «IL CLIENTE E' STATO AMMESSO?» — ⭐ E QUESTA E' LA CASA, PER TUTTI.
+# ⛔⛔⛔ «WAS THE CLIENT ADMITTED?» — ⭐ AND THIS IS THE HOME, FOR EVERYONE.
 #
-# ⛔ La parola «AMMESSO» dentro l'uscita del cliente NON e' l'ammissione.
-#    `[R]` `01-b3-cliente.py` la scrive in **tre** casi, e due sono rifiuti —
-#    e tutt'e tre finiscono sullo **stdout**, perche' il rifiuto passa dal
-#    gestore in coda al file (`01-b3-cliente.py:2560`), che *stampa* l'errore:
+# ⛔ The word «AMMESSO» inside the client's output is NOT the admission.
+#    `[R]` `01-b3-cliente.py` writes it in **three** cases, and two are refusals —
+#    and all three end up on **stdout**, because the refusal goes through the
+#    handler at the end of the file (`01-b3-cliente.py:2560`), which *prints* the error:
 #
-#      · ammesso   `01-b3-cliente.py:1615`
-#            «   AMMESSO dopo 1023 ms   ⭐ il secondo fisso c'e'»
-#      · RIFIUTO 1 `01-b3-cliente.py:1315-1317` (`CONGEDO` al posto suo)
-#            «   ⛔ RuntimeError: CONGEDO invece di AMMESSO: motivo 0x03 = …»
-#      · RIFIUTO 2 `01-b3-cliente.py:1322` (e' arrivato un altro messaggio)
-#            «   ⛔ RuntimeError: atteso AMMESSO, arrivato CONGEDO»
+#      · admitted  `01-b3-cliente.py:1615`
+#            «   AMMESSO after 1023 ms   ⭐ the fixed second is there»
+#      · REFUSAL 1 `01-b3-cliente.py:1315-1317` (`CONGEDO` in its place)
+#            «   ⛔ RuntimeError: CONGEDO instead of AMMESSO: reason 0x03 = …»
+#      · REFUSAL 2 `01-b3-cliente.py:1322` (another message arrived)
+#            «   ⛔ RuntimeError: expected AMMESSO, arrived CONGEDO»
 #
-# ⇒ ⛔ `"AMMESSO" in uscita` e' **VERO IN TUTT'E TRE**: e' un predicato che non
-#   puo' dire di no, cioe' `LEZIONI.md` §1.44 — ⛔ e proprio nel caso che
-#   esiste per prendere.  ⚠ Una maglia cosi' crede di essere entrata **anche
-#   quando e' stata respinta**, poi guarda il buio che ne segue e lo chiama
-#   difetto del prodotto: un rifiuto di credenziali usciva come *«nessun
-#   fotogramma e' arrivato dal filo»* — un'accusa al filo.
+# ⇒ ⛔ `"AMMESSO" in uscita` is **TRUE IN ALL THREE**: it is a predicate that cannot
+#   say no, i.e. `LEZIONI.md` §1.44 — ⛔ and precisely in the case it
+#   exists to catch.  ⚠ A mesh like that believes it got in **even
+#   when it was turned away**, then looks at the darkness that follows and calls it
+#   a product defect: a credentials refusal came out as *«no
+#   frame arrived from the wire»* — an accusation against the wire.
 #
-# ⭐ La firma vera e' una RIGA INTERA — `^\s*AMMESSO dopo ` — e ⛔ non e' una
-#   sesta soluzione: e' **la stessa** che l'agente delle refutazioni ha messo in
-#   `11-c2-…py:311` e `11-c3-…py:331` il 27 agosto 2026.
+# ⭐ The true signature is a WHOLE LINE — `^\s*AMMESSO after ` — and ⛔ it is not a
+#   sixth solution: it is **the same** one the refutation agent put in
+#   `11-c2-…py:311` and `11-c3-…py:331` on 27 August 2026.
 #
-# ⭐⭐ E STA IN UN POSTO SOLO — §1.47.  Cinque copie della stessa riga sono
-#     cinque posti da cui divergere di nuovo.  ⇒ C5, C6, C7 e C9 la
-#     **importano da qui** e non la riscrivono; se non riescono a importarla
-#     escono **3** e lo dicono, ⛔ invece di ripiegare in silenzio sul
-#     predicato povero.
-#     ⚠ Perche' in C1 e non in un file nuovo: `11-accendi.sh` copia dentro la
-#       scatola i file **uno per uno, per nome** (righe 258-274), e un file
-#       nuovo non sarebbe copiato ⇒ le cinque maglie uscirebbero 3 in ogni
-#       scatola.  ⭐ C1 e' gia' copiata in tutte, e «una maglia che importa da
-#       un'altra maglia» e' gia' la forma del progetto (C2 e C3 importano
-#       `giudica()` da `10-f1-testimone.py` e `frazione_del_colore()` da C8).
+# ⭐⭐ AND IT LIVES IN ONE PLACE ONLY — §1.47.  Five copies of the same line are
+#     five places to diverge from again.  ⇒ C5, C6, C7 and C9
+#     **import it from here** and do not rewrite it; if they cannot import it
+#     they exit **3** and say so, ⛔ instead of silently falling back on the
+#     poor predicate.
+#     ⚠ Why in C1 and not in a new file: `11-accendi.sh` copies into the
+#       box the files **one by one, by name** (lines 258-274), and a new file
+#       would not be copied ⇒ the five meshes would exit 3 in every
+#       box.  ⭐ C1 is already copied into all of them, and «a mesh that imports from
+#       another mesh» is already the shape of the project (C2 and C3 import
+#       `giudica()` from `10-f1-testimone.py` and `frazione_del_colore()` from C8).
 # ═══════════════════════════════════════════════════════════════════════════
-FIRMA_AMMESSO = re.compile(r"^\s*AMMESSO dopo ", re.M)
+FIRMA_AMMESSO = re.compile(r"^\s*AMMESSO after ", re.M)
 
 
 def e_stato_ammesso(coda):
-    """⛔ TRE stati, e il terzo non e' un no.
+    """⛔ THREE states, and the third is not a no.
 
-    `True`  — c'e' la riga dell'ammissione.
-    `False` — il cliente ha parlato, e quella riga non c'e': **e' un
-              rifiuto**, ⛔ non un prodotto rotto ⇒ chi chiama esce **3**.
-    `None`  — il cliente non ha detto niente affatto: non lo so.
+    `True`  — the admission line is there.
+    `False` — the client spoke, and that line is not there: **it is a
+              refusal**, ⛔ not a broken product ⇒ the caller exits **3**.
+    `None`  — the client said nothing at all: I do not know.
     """
     if not coda or not coda.strip():
         return None
@@ -252,117 +252,117 @@ def e_stato_ammesso(coda):
 
 
 def certifica_ammissione(sigla):
-    """⭐ I casi dell'ammissione, gli stessi per tutte le maglie che la usano.
+    """⭐ The admission cases, the same for all the meshes that use it.
 
-    ⛔ Vive qui con il predicato: una certificazione che sta lontano dalla cosa
-       certificata e' una certificazione che un giorno non segue piu' la cosa.
-    Torna `(guai, quanti)`.
+    ⛔ It lives here with the predicate: a certification that sits far from the thing
+       certified is a certification that one day no longer follows the thing.
+    Returns `(guai, quanti)`.
     """
     casi = [
-        ("⭐ la riga VERA dell'ammissione ⇒ True",
+        ("⭐ the REAL admission line ⇒ True",
          "   → CIAO\n   ← ECCOMI\n"
-         "   AMMESSO dopo 1023 ms   ⭐ il secondo fisso c'e'\n", True),
-        ("⭐ ammesso ma sotto il secondo (§4.4-bis violata) ⇒ resta True",
-         "   AMMESSO dopo 4 ms   ⛔ MENO DI UN SECONDO: §4.4-bis violata\n",
+         "   AMMESSO after 1023 ms   ⭐ the fixed second is there\n", True),
+        ("⭐ admitted but under the second (§4.4-bis violated) ⇒ stays True",
+         "   AMMESSO after 4 ms   ⛔ LESS THAN ONE SECOND: §4.4-bis violated\n",
          True),
-        ("⛔ RIFIUTO 1 «CONGEDO invece di AMMESSO» — la parola c'e' ⇒ False",
+        ("⛔ REFUSAL 1 «CONGEDO instead of AMMESSO» — the word is there ⇒ False",
          "   → CREDENZIALI\n"
-         "   ⛔ RuntimeError: CONGEDO invece di AMMESSO: motivo 0x03 = "
-         "credenziali sbagliate\n", False),
-        ("⛔ RIFIUTO 2 «atteso AMMESSO, arrivato …» — idem ⇒ False",
-         "   ⛔ RuntimeError: atteso AMMESSO, arrivato CONGEDO\n", False),
-        ("⛔ «in attesa di AMMESSO»: aspettarlo non e' averlo ⇒ False",
-         "   [reg] in attesa di AMMESSO\n", False),
-        ("⛔ «AMMESSO» attaccato ad altro non e' la riga ⇒ False",
-         "   NON-AMMESSO dopo 12 ms\n", False),
-        ("⚠ il cliente non ha detto NIENTE ⇒ None, e non e' un «no»",
+         "   ⛔ RuntimeError: CONGEDO instead of AMMESSO: reason 0x03 = "
+         "wrong credentials\n", False),
+        ("⛔ REFUSAL 2 «expected AMMESSO, arrived …» — likewise ⇒ False",
+         "   ⛔ RuntimeError: expected AMMESSO, arrived CONGEDO\n", False),
+        ("⛔ «waiting for AMMESSO»: waiting for it is not having it ⇒ False",
+         "   [reg] waiting for AMMESSO\n", False),
+        ("⛔ «AMMESSO» stuck to something else is not the line ⇒ False",
+         "   NON-AMMESSO after 12 ms\n", False),
+        ("⚠ the client said NOTHING ⇒ None, and it is not a «no»",
          "", None),
-        ("⚠ solo spazi ⇒ None", "   \n\n  ", None),
-        ("⚠ `leggi()` ha fallito (None) ⇒ None", None, None),
+        ("⚠ only spaces ⇒ None", "   \n\n  ", None),
+        ("⚠ `leggi()` failed (None) ⇒ None", None, None),
     ]
     guai = 0
-    print("  ── «AMMESSO» e' una RIGA, non una parola (§1.44) "
-          "— il predicato di C1, importato da %s" % sigla)
+    print("  ── «AMMESSO» is a LINE, not a word (§1.44) "
+          "— C1's predicate, imported by %s" % sigla)
     for nome, testo, atteso in casi:
         avuto = e_stato_ammesso(testo)
         ok = avuto is atteso
         if not ok:
             guai += 1
-        print("  %s  %-62s  %-5s (atteso %s)"
+        print("  %s  %-62s  %-5s (expected %s)"
               % ("OK " if ok else "NO ", nome[:62], avuto, atteso))
     return guai, len(casi)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⛔⛔⭐ I GRUPPI DELLA SCHEDA — ⭐ E QUESTA E' LA CASA, PER TUTTE E CINQUE.
+# ⛔⛔⭐ THE CARD'S GROUPS — ⭐ AND THIS IS THE HOME, FOR ALL FIVE.
 #
-# ⛔ E' l'altra faccia dello stesso difetto di «AMMESSO»: non un controllo che
-#    non puo' fallire, ma **una condizione che non viene garantita** e di cui
-#    nessuno si accorge.  ⇒ La maglia misura una sessione CIECA e la chiama
-#    difetto del prodotto.
+# ⛔ It is the other face of the same defect as «AMMESSO»: not a check that
+#    cannot fail, but **a condition that is not guaranteed** and that
+#    nobody notices.  ⇒ The mesh measures a BLIND session and calls it
+#    a product defect.
 #
-# ⭐ `fasi/10-…` §7.4 — «la sessione nasce cieca», il difetto piu' vecchio del
-#    progetto — e' stato chiuso il 27 agosto 2026, e la causa e' esattamente
-#    questa: l'inquilino non nei gruppi dei nodi `/dev/dri`.
+# ⭐ `fasi/10-…` §7.4 — «the session is born blind», the oldest defect of the
+#    project — was closed on 27 August 2026, and the cause is exactly
+#    this: the tenant not in the groups of the `/dev/dri` nodes.
 #
-#      | inquilini CON i due gruppi | `[M]` **17 su 17** vedono, in ~2 s     |
-#      | SENZA                      | `[M]` **0 su 4**, mai in 90 s, 0 fotog.|
-#      | ⭐ controprova             | dati i gruppi allo stesso ⇒ **2,04 s** |
+#      | tenants WITH the two groups | `[M]` **17 of 17** see, in ~2 s       |
+#      | WITHOUT                     | `[M]` **0 of 4**, never in 90 s, 0 fr.|
+#      | ⭐ counter-test             | groups given to the same ⇒ **2.04 s** |
 #
-# ⛔⛔ E QUI DENTRO C'ERANO DUE FALLE, tutt'e due misurabili nel codice:
-#   1. `[R]` il ramo `--riusa-utente` **saltava del tutto** il passo dei
-#      gruppi: un giro di diagnosi poteva misurare un inquilino cieco;
-#   2. `[R]` il ramo che crea inchiodava `usermod -aG video,render` **e non
-#      rileggeva**: `video` e `render` sono i nomi di QUESTA distribuzione, e
-#      `usermod` riuscito non vuol dire «ci sta dentro» (⛔ E1, «scritto non e'
-#      in vigore»).  ⚠ La stessa falla stava in C5, C6, C7 e C9.
+# ⛔⛔ AND IN HERE THERE WERE TWO HOLES, both measurable in the code:
+#   1. `[R]` the `--riusa-utente` branch **skipped entirely** the groups
+#      step: a diagnosis round could measure a blind tenant;
+#   2. `[R]` the branch that creates nailed down `usermod -aG video,render` **and did not
+#      read back**: `video` and `render` are the names of THIS distribution, and
+#      a successful `usermod` does not mean «it is in there» (⛔ E1, «written is not
+#      in force»).  ⚠ The same hole was in C5, C6, C7 and C9.
 #
-# ⭐⭐ L'ATTREZZO C'E' GIA' E NON SI RISCRIVE — `banchi/attrezzi-gruppi-scheda.sh`
-#     (§1.47).  Legge il gid da ogni `card*`/`renderD*` con `stat -c %g`, chiede
-#     il nome a `getent`, mette dentro l'inquilino e **rilegge confrontando i
-#     numeri**.  ⛔ Percio' qui non c'e' nessun nome di gruppo e nessun numero.
-# ⛔ E se l'attrezzo non si trova NON si inventa una copia e NON si tira a
-#    indovinare con `video,render`: si esce **3** e si dice quale riga manca.
+# ⭐⭐ THE TOOL ALREADY EXISTS AND IS NOT REWRITTEN — `banchi/attrezzi-gruppi-scheda.sh`
+#     (§1.47).  It reads the gid from every `card*`/`renderD*` with `stat -c %g`, asks
+#     `getent` for the name, puts the tenant in and **reads back comparing the
+#     numbers**.  ⛔ That is why there is no group name and no number here.
+# ⛔ And if the tool is not found we do NOT invent a copy and do NOT try to
+#    guess with `video,render`: we exit **3** and say which line is missing.
 # ═══════════════════════════════════════════════════════════════════════════
 NOME_ATTREZZO_GRUPPI = "attrezzi-gruppi-scheda.sh"
 
-# ⭐ I codici dell'attrezzo, presi dal suo riquadro (`gruppi_scheda_dai_a`).
-#    ⛔ Nessuno di loro e' **1**: un inquilino cieco non e' un prodotto rotto.
+# ⭐ The tool's codes, taken from its box (`gruppi_scheda_dai_a`).
+#    ⛔ None of them is **1**: a blind tenant is not a broken product.
 CODICI_GRUPPI = {
-    0: (0, "⭐ l'inquilino e' nei gruppi dei nodi della scheda: puo' vedere"),
-    # ⚠ `2` e' l'attrezzo che dice «va lanciato DA ROOT»: non e' il prodotto e
-    #   non e' l'inquilino, e' l'USO ⇒ esito **2**, che ha il suo nome.
-    2: (2, "⛔ l'attrezzo dei gruppi va lanciato DA ROOT, e questo banco non "
-           "gira da root: e' uso sbagliato, non un difetto"),
-    3: (3, "⛔ NON e' nei gruppi dei nodi /dev/dri: la sua sessione nascerebbe "
-           "CIECA (`[M]` 0 su 4), e questo banco misurerebbe il buio"),
-    4: (3, "⛔ i gruppi sono stati scritti ADESSO ma l'inquilino aveva gia' "
-           "processi vivi: scritti si', IN VIGORE NO — la sessione che gira "
-           "e' ancora cieca"),
-    5: (3, "⛔ un gid dei nodi non ha nessun nome in /etc/group: l'inquilino "
-           "non ci puo' entrare"),
+    0: (0, "⭐ the tenant is in the groups of the card's nodes: it can see"),
+    # ⚠ `2` is the tool saying «must be run AS ROOT»: it is not the product and
+    #   not the tenant, it is the USAGE ⇒ outcome **2**, which has its own name.
+    2: (2, "⛔ the groups tool must be run AS ROOT, and this bench does not "
+           "run as root: it is wrong usage, not a defect"),
+    3: (3, "⛔ it is NOT in the groups of the /dev/dri nodes: its session would be born "
+           "BLIND (`[M]` 0 of 4), and this bench would measure the darkness"),
+    4: (3, "⛔ the groups were written JUST NOW but the tenant already had "
+           "live processes: written yes, IN FORCE NO — the running session "
+           "is still blind"),
+    5: (3, "⛔ a gid of the nodes has no name in /etc/group: the tenant "
+           "cannot join it"),
 }
 
 
 def verdetto_gruppi(codice):
-    """⭐ Dal codice dell'attrezzo all'esito di §4.5.  Torna `(esito, perche)`.
+    """⭐ From the tool's code to the outcome of §4.5.  Returns `(esito, perche)`.
 
-    ⛔ `0` vuol dire «si puo' misurare», non «verde».  ⛔ E non esiste un ramo
-       che dia **1**: che un inquilino sia cieco e' un guasto del BANCO (§1.51),
-       e accusarne il prodotto e' proprio l'errore che ha rinviato una fase.
+    ⛔ `0` means «it can be measured», not «green».  ⛔ And there is no branch
+       that gives **1**: a blind tenant is a fault of the BENCH (§1.51),
+       and blaming the product for it is exactly the error that postponed a phase.
     """
     if codice in CODICI_GRUPPI:
         return CODICI_GRUPPI[codice]
-    return 3, ("⛔ l'attrezzo dei gruppi e' uscito con un codice che non "
-               "conosco (%s): non so dire se l'inquilino veda" % codice)
+    return 3, ("⛔ the groups tool exited with a code I do not "
+               "know (%s): I cannot tell whether the tenant sees" % codice)
 
 
 def trova_attrezzo_gruppi():
-    """⛔ Il percorso dell'attrezzo, o `None`.  E' un CERCATORE, non un giudice.
+    """⛔ The path of the tool, or `None`.  It is a FINDER, not a judge.
 
-    ⚠ I posti: accanto a me (dentro la scatola tutto sta in `/opt/remotix`), un
-      piano piu' su (nel deposito e' `banchi/`), e `/rete11`, che e' il deposito
-      montato in sola lettura dentro la scatola.
+    ⚠ The places: next to me (inside the box everything is in `/opt/remotix`), one
+      level up (in the repository it is `banchi/`), and `/rete11`, which is the repository
+      mounted read-only inside the box.
     """
     qui = os.path.dirname(os.path.abspath(__file__))
     for base in (qui, os.path.dirname(qui), "/opt/remotix", "/rete11",
@@ -374,34 +374,34 @@ def trova_attrezzo_gruppi():
 
 
 def garantisci_i_gruppi(chi, prefisso="       "):
-    """⭐⭐ Mette l'inquilino nei gruppi della scheda e VERIFICA che ci sia.
+    """⭐⭐ Puts the tenant in the card's groups and VERIFIES it is there.
 
-    Torna `(esito, perche)`: `0` = si puo' misurare, `3` = ⛔ non si misura.
-    ⚠ Stampa quel che dice l'attrezzo, perche' un'esclusione che non si vede e'
-      un'esclusione di cui nessuno si accorge.
+    Returns `(esito, perche)`: `0` = it can be measured, `3` = ⛔ it is not measured.
+    ⚠ It prints what the tool says, because an exclusion that cannot be seen is
+      an exclusion nobody notices.
     """
     attrezzo = trova_attrezzo_gruppi()
     if attrezzo is None:
-        print("%s⛔⛔ non trovo `%s`, e senza di lui non posso GARANTIRE che"
+        print("%s⛔⛔ I cannot find `%s`, and without it I cannot GUARANTEE that"
               % (prefisso, NOME_ATTREZZO_GRUPPI))
-        print("%s    «%s» veda la scheda." % (prefisso, chi))
-        print("%s    ⛔ E non me lo riscrivo qui: dieci copie della stessa"
+        print("%s    «%s» sees the card." % (prefisso, chi))
+        print("%s    ⛔ And I do not rewrite it here: ten copies of the same"
               % prefisso)
-        print("%s    riga sono dieci posti da cui divergere (§1.47), e"
+        print("%s    line are ten places to diverge from (§1.47), and"
               % prefisso)
-        print("%s    `video,render` sono i nomi di UNA distribuzione."
+        print("%s    `video,render` are the names of ONE distribution."
               % prefisso)
-        print("%s    ⭐ La cura, una riga in `11-accendi.sh` accanto alle altre"
+        print("%s    ⭐ The cure, a line in `11-accendi.sh` next to the other"
               % prefisso)
-        print("%s    `cp` del passo «prodotto»:" % prefisso)
+        print("%s    `cp` lines of the «product» step:" % prefisso)
         print("%s        cp /rete11/%s /opt/remotix/"
               % (prefisso, NOME_ATTREZZO_GRUPPI))
-        print("%s    ⚠ e perche' `/rete11` lo abbia, una `cp` del deposito"
+        print("%s    ⚠ and for `/rete11` to have it, a `cp` from the repository"
               % prefisso)
-        print("%s    dentro `banchi/11-scatole/` — oppure il montaggio di"
+        print("%s    into `banchi/11-scatole/` — or the mount of"
               % prefisso)
-        print("%s    `banchi/` invece di `banchi/11-scatole/`." % prefisso)
-        return 3, "manca l'attrezzo dei gruppi della scheda"
+        print("%s    `banchi/` instead of `banchi/11-scatole/`." % prefisso)
+        return 3, "the card groups tool is missing"
     r = subprocess.run(["bash", attrezzo, chi], capture_output=True, text=True)
     for riga in (r.stdout or "").splitlines():
         if riga.strip():
@@ -414,86 +414,86 @@ def garantisci_i_gruppi(chi, prefisso="       "):
 
 
 def certifica_gruppi(sigla):
-    """⭐ I casi dei gruppi della scheda, gli stessi per tutte le maglie.
+    """⭐ The card groups cases, the same for all the meshes.
 
-    ⛔ Il caso che conta: un inquilino **senza** i gruppi ⇒ la maglia dice
-       «non ho potuto guardare» (**3**), ⛔ **mai rosso** — un inquilino cieco
-       non e' un prodotto rotto (§1.51).
-    Torna `(guai, quanti)`.
+    ⛔ The case that matters: a tenant **without** the groups ⇒ the mesh says
+       «I could not look» (**3**), ⛔ **never red** — a blind tenant
+       is not a broken product (§1.51).
+    Returns `(guai, quanti)`.
     """
     casi = [
-        ("⭐ l'attrezzo dice 0 (ci sta dentro davvero) ⇒ si misura", 0, 0),
-        ("⛔⛔ NON e' nei gruppi dei nodi ⇒ 3, ⛔ E MAI 1 (il caso vero)", 3, 3),
-        ("⚠ l'attrezzo dice «da root» ⇒ 2, uso sbagliato e ha il suo nome",
+        ("⭐ the tool says 0 (it really is in there) ⇒ we measure", 0, 0),
+        ("⛔⛔ NOT in the groups of the nodes ⇒ 3, ⛔ AND NEVER 1 (the real case)", 3, 3),
+        ("⚠ the tool says «as root» ⇒ 2, wrong usage and it has its own name",
          2, 2),
-        ("⛔ gruppi SCRITTI ma non in vigore (processi gia' vivi) ⇒ 3", 4, 3),
-        ("⛔ un gid dei nodi senza nome in /etc/group ⇒ 3", 5, 3),
-        ("⚠ un codice che non conosco ⇒ 3, ⛔ non si tira a indovinare", 7, 3),
-        ("⚠ `bash` non ha trovato l'attrezzo (127) ⇒ 3", 127, 3),
-        ("⚠ l'attrezzo ucciso da un segnale (-9) ⇒ 3", -9, 3),
+        ("⛔ groups WRITTEN but not in force (processes already alive) ⇒ 3", 4, 3),
+        ("⛔ a gid of the nodes with no name in /etc/group ⇒ 3", 5, 3),
+        ("⚠ a code I do not know ⇒ 3, ⛔ no guessing", 7, 3),
+        ("⚠ `bash` did not find the tool (127) ⇒ 3", 127, 3),
+        ("⚠ the tool killed by a signal (-9) ⇒ 3", -9, 3),
     ]
     guai = 0
-    print("  ── i gruppi della scheda: ⛔ senza, la sessione nasce CIECA "
-          "(`[M]` 0 su 4) — il passo di C1, importato da %s" % sigla)
+    print("  ── the card's groups: ⛔ without them, the session is born BLIND "
+          "(`[M]` 0 of 4) — C1's step, imported by %s" % sigla)
     for nome, codice, atteso in casi:
         e, perche = verdetto_gruppi(codice)
         ok = (e == atteso) and e != 1
         if not ok:
             guai += 1
-        print("  %s  %-62s  esito %d (atteso %d)"
+        print("  %s  %-62s  outcome %d (expected %d)"
               % ("OK " if ok else "NO ", nome[:62], e, atteso))
-    # ⛔⛔ E LA GUARDIA CHE TIENE ONESTA LA TABELLA: nessun codice, nemmeno uno
-    #     mai visto, deve poter dare **1**.  ⚠ Senza questa riga la tabella
-    #     sopra proverebbe solo i codici che ho scritto io.
+    # ⛔⛔ AND THE GUARD THAT KEEPS THE TABLE HONEST: no code, not even one
+    #     never seen, must be able to give **1**.  ⚠ Without this line the table
+    #     above would test only the codes I wrote myself.
     rossi = [c for c in list(range(-32, 256)) if verdetto_gruppi(c)[0] == 1]
     ok = not rossi
     if not ok:
         guai += 1
-    print("  %s  ⛔⛔ NESSUN codice fra -32 e 255 da' ROSSO (un inquilino "
-          "cieco non e' un prodotto rotto)" % ("OK " if ok else "NO "))
+    print("  %s  ⛔⛔ NO code between -32 and 255 gives RED (a blind "
+          "tenant is not a broken product)" % ("OK " if ok else "NO "))
     return guai, len(casi) + 1
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐ IL TETTO D'ATTESA — ed e' una MISURA, non un numero tondo (§1.45).
+# ⭐⭐ THE WAITING CEILING — and it is a MEASUREMENT, not a round number (§1.45).
 #
-# `[M]` **27 agosto 2026, scatola GNOME CURATA**, tre sessioni nuove: il
-# `formato negoziato` arriva in
+# `[M]` **27 August 2026, CURED GNOME box**, three new sessions: the
+# `negotiated format` arrives in
 #
-#         1,105 s        0,998 s        0,957 s        ⇒ massimo **1,105 s**
+#         1.105 s        0.998 s        0.957 s        ⇒ maximum **1.105 s**
 #
-# ⛔⛔ E PRIMA DI OGGI QUESTO NUMERO ERA 152 s, per una misura che non era del
-#     prodotto.  `[M]` I ~97 secondi di ritardo erano un guasto della SCATOLA:
-#     il §6 della ricetta spostava il gruppo `polkitd` da 991 a 1991 per dare
-#     991 a `render`, e `groupmod -g` **non si porta dietro i file** ⇒ `polkitd`
-#     non poteva piu' leggere `/etc/polkit-1/rules.d`, moriva, e `gnome-shell`
-#     incassava quattro scadenze da 25 s.  ⇒ ⚠ Un tetto tarato su quel numero
-#     sarebbe stato **cento volte** il fenomeno vero: ⛔ un tetto cosi' non
-#     protegge, **nasconde** — scaduto non ha piu' niente da dire.
+# ⛔⛔ AND BEFORE TODAY THIS NUMBER WAS 152 s, for a measurement that was not the
+#     product's.  `[M]` The ~97 seconds of delay were a fault of the BOX:
+#     §6 of the recipe moved the `polkitd` group from 991 to 1991 to give
+#     991 to `render`, and `groupmod -g` **does not carry the files along** ⇒ `polkitd`
+#     could no longer read `/etc/polkit-1/rules.d`, died, and `gnome-shell`
+#     took four 25 s timeouts.  ⇒ ⚠ A ceiling calibrated on that number
+#     would have been **a hundred times** the real phenomenon: ⛔ a ceiling like that does not
+#     protect, it **hides** — once expired it has nothing more to say.
 #
-# ⭐ IL MARGINE, E DA DOVE VIENE — e non e' il margine della dispersione di
-#   oggi (0,957-1,105 s, il 15 %), che sarebbe un margine misurato su una
-#   macchina sola e a riposo:
+# ⭐ THE MARGIN, AND WHERE IT COMES FROM — and it is not the margin of today's
+#   spread (0.957-1.105 s, 15 %), which would be a margin measured on a
+#   single machine at rest:
 #
-#     · il fenomeno sano, oggi                      `[M]`  1,105 s
-#     · ⚠ la nascita piu' lenta MAI misurata in
-#       questo progetto — 26 ago 2026, scatola
-#       carica, ed e' la riga che sta nel corpo
-#       di `main()` qui sotto                       `[M]` ~13 s
-#     · il margine dichiarato su QUELLA             **× 2**
+#     · the healthy phenomenon, today               `[M]`  1.105 s
+#     · ⚠ the slowest birth EVER measured in
+#       this project — 26 Aug 2026, loaded
+#       box, and it is the line that sits in the body
+#       of `main()` below                           `[M]` ~13 s
+#     · the margin declared on THAT one             **× 2**
 #                                                   ⇒ **26 s**
 #
-#   ⇒ 26 s sono **24 volte** il fenomeno sano e **due volte** il peggiore mai
-#     visto.  ⚠ Il margine sta sul peggiore apposta: la scatola puo' essere
-#     carica, e la macchina vera ha una **Intel UHD 730 integrata**, non una
-#     scheda potente.  ⛔ Stringere fino a 1 s vorrebbe dire tarare sulla
-#     macchina a riposo e chiamare «cieca» la macchina sotto carico.
+#   ⇒ 26 s are **24 times** the healthy phenomenon and **twice** the worst ever
+#     seen.  ⚠ The margin sits on the worst on purpose: the box can be
+#     loaded, and the real machine has an **integrated Intel UHD 730**, not a
+#     powerful card.  ⛔ Tightening down to 1 s would mean calibrating on the
+#     machine at rest and calling «blind» the machine under load.
 #
-# ⚠ E IL COSTO: `[S]` un giro sano costa ~30 s (20 s di `--resta` + ~1 s
-#   d'attesa + lo sgombero), un giro CIECO costa il tetto intero, ~55 s.
-#   ⇒ `COSTO_C1_GIRO = 74` nel gancio resta **prudente** e copre tutt'e due:
-#   non va cambiato, e i due giri della famiglia veloce (148 s) tornano a
-#   starci nei 180 s.
+# ⚠ AND THE COST: `[S]` a healthy round costs ~30 s (20 s of `--resta` + ~1 s
+#   of waiting + the cleanup), a BLIND round costs the whole ceiling, ~55 s.
+#   ⇒ `COSTO_C1_GIRO = 74` in the hook stays **prudent** and covers both:
+#   it must not be changed, and the two rounds of the fast family (148 s) fit
+#   again within the 180 s.
 TETTO_NASCITA = 26.0
 
 
@@ -506,27 +506,27 @@ def leggi(percorso):
 
 
 class Nascita(object):
-    """I fatti di UNA nascita, letti dalla fetta di registro di quel giro.
+    """The facts of ONE birth, read from the log slice of that round.
 
-    ⛔ `None` vuol dire «non l'ho visto», mai zero: sono due fatti diversi e non
-       devono avere la stessa faccia (§4.5, domanda 8).
+    ⛔ `None` means «I did not see it», never zero: they are two different facts and
+       must not have the same face (§4.5, question 8).
     """
 
     def __init__(self):
-        self.nominato = False       # il registro parla di questo inquilino
-        self.formato = None         # ⭐ testimone A: (larghezza, altezza)
-        self.monitor_dopo = None    # ⭐ testimone B: la M di «(N prima, M dopo)»
+        self.nominato = False       # the log talks about this tenant
+        self.formato = None         # ⭐ witness A: (width, height)
+        self.monitor_dopo = None    # ⭐ witness B: the M of «(N before, M after)»
         self.monitor_nome = None
-        self.monitor_misura = None  # la misura dichiarata dalla riga del palco
-        self.fotogrammi = None      # ⚠ testimone C: stampato, NON giudicato
-        self.palchi_scartati = 0    # ⛔ le righe «aspetto la tela»: contate
-        self.zero_monitor = 0       # ⚠ contata e stampata, NON giudicata
+        self.monitor_misura = None  # the size declared by the stage line
+        self.fotogrammi = None      # ⚠ witness C: printed, NOT judged
+        self.palchi_scartati = 0    # ⛔ the «waiting for the canvas» lines: counted
+        self.zero_monitor = 0       # ⚠ counted and printed, NOT judged
 
 
 def leggi_nascita(testo, chi):
-    """⭐ Il giudice, e non tocca niente: si certifica chiamandolo.
+    """⭐ The judge, and it touches nothing: it is certified by calling it.
 
-    ⛔ Torna `None` se non c'e' niente da guardare — e `None` non e' «cieca».
+    ⛔ Returns `None` if there is nothing to look at — and `None` is not «blind».
     """
     if not testo:
         return None
@@ -534,8 +534,8 @@ def leggi_nascita(testo, chi):
     marca, virgolette = "[%s]" % chi, "«%s»" % chi
 
     for riga in testo.splitlines():
-        # ⚠ L'omonimia si chiude coi delimitatori: «c1u1» non sta dentro
-        #   «c1u10», e `[c1u1]` non sta dentro `[c1u10]`.
+        # ⚠ Homonymy is closed off with the delimiters: «c1u1» is not inside
+        #   «c1u10», and `[c1u1]` is not inside `[c1u10]`.
         if marca in riga or virgolette in riga:
             n.nominato = True
 
@@ -545,8 +545,8 @@ def leggi_nascita(testo, chi):
 
         m = FIRMA_PALCO.search(riga)
         if m and m.group("chi") == chi:
-            # ⛔⛔ LA TRAPPOLA: su quel ramo i conteggi sono spazzatura.
-            #    ⭐ Si scarta, si CONTA e si dira' a voce alta.
+            # ⛔⛔ THE TRAP: on that branch the counts are garbage.
+            #    ⭐ It is discarded, COUNTED and will be said out loud.
             if CODA_SPAZZATURA in riga:
                 n.palchi_scartati += 1
             else:
@@ -565,288 +565,289 @@ def leggi_nascita(testo, chi):
 
 
 def monitor_nato(n):
-    """⭐ I due testimoni del monitor, e ne basta UNO — ma sono indipendenti.
+    """⭐ The two witnesses of the monitor, and ONE is enough — but they are independent.
 
-    ⚠ Indipendenti sul serio: l'uno lo scrive il FIGLIO (`cattura.c`), l'altro
-      il PADRE (`figlio.c`).  ⇒ Il giorno in cui una delle due righe cambiasse
-      forma, C1 non diventerebbe cieca: resterebbe l'altra, e il conto
-      stampato direbbe che ne parla una sola.
-    Torna la lista dei testimoni che hanno parlato.
+    ⚠ Independent for real: one is written by the CHILD (`cattura.c`), the other
+      by the PARENT (`figlio.c`).  ⇒ The day one of the two lines changed
+      form, C1 would not go blind: the other would remain, and the printed
+      count would say only one of them is speaking.
+    Returns the list of the witnesses that spoke.
     """
     if n is None:
         return []
     testimoni = []
     if n.formato is not None and n.formato[0] > 0 and n.formato[1] > 0:
-        testimoni.append("formato negoziato %dx%d" % n.formato)
-    # ⛔ E il palco vale come testimone solo se dice tutt'e due le cose: che un
-    #    monitor c'e' (M ≥ 1) **e** a che misura.  ⚠ `monitor «» (0 prima, 2
-    #    dopo), 0x0` — la riga vera del 25 agosto — non e' un monitor: e' un
-    #    conteggio senza niente sotto, ed e' proprio la riga che per mesi e'
-    #    stata letta come «due monitor comparsi».
+        testimoni.append("negotiated format %dx%d" % n.formato)
+    # ⛔ And the stage counts as a witness only if it says both things: that a
+    #    monitor is there (M ≥ 1) **and** at what size.  ⚠ `monitor «» (0 before, 2
+    #    after), 0x0` — the real line of 25 August — is not a monitor: it is a
+    #    count with nothing underneath, and it is exactly the line that for months
+    #    was read as «two monitors appeared».
     if (n.monitor_dopo is not None and n.monitor_dopo >= 1
             and n.monitor_misura is not None
             and n.monitor_misura[0] > 0 and n.monitor_misura[1] > 0):
-        testimoni.append("palco: monitor «%s» (%d dopo) %dx%d"
+        testimoni.append("stage: monitor «%s» (%d after) %dx%d"
                          % (n.monitor_nome, n.monitor_dopo,
                             n.monitor_misura[0], n.monitor_misura[1]))
     return testimoni
 
 
 def verdetto_giro(n):
-    """Dai fatti allo STATO del giro.  ⛔ Tre, e sono tre cose diverse:
+    """From the facts to the STATE of the round.  ⛔ Three, and they are three different things:
 
-      «NATA»       ⭐ il monitor c'e', e almeno un testimone lo dice
-      «CIECA»      ⛔ la sessione e' partita e il monitor NON e' nato  ⇒ rosso
-      «NON-LO-SO»  ⛔ il registro non parla di questo inquilino: non ho
-                   guardato niente — ⛔ e NON e' un rosso (§4.5)
+      «NATA»       ⭐ the monitor is there, and at least one witness says so
+      «CIECA»      ⛔ the session started and the monitor was NOT born  ⇒ red
+      «NON-LO-SO»  ⛔ the log does not talk about this tenant: I looked at
+                   nothing — ⛔ and it is NOT a red (§4.5)
     """
     testimoni = monitor_nato(n)
     if testimoni:
         return "NATA", " · ".join(testimoni)
     if n is None:
-        return "NON-LO-SO", "la fetta di registro e' vuota"
+        return "NON-LO-SO", "the log slice is empty"
     if not n.nominato:
-        return "NON-LO-SO", ("il registro non nomina «questo» inquilino nella "
-                             "fetta: la sessione non e' partita davvero")
-    return "CIECA", ("la sessione e' partita e NESSUNO dei due testimoni del "
-                     "monitor ha parlato")
+        return "NON-LO-SO", ("the log does not name «this» tenant in the "
+                             "slice: the session did not really start")
+    return "CIECA", ("the session started and NEITHER of the two witnesses of the "
+                     "monitor spoke")
 
 
 # ---------------------------------------------------------------------------
-# ⭐⭐ LA CERTIFICAZIONE — e la prima riga della lista e' la piu' importante.
+# ⭐⭐ THE CERTIFICATION — and the first line of the list is the most important.
 #
-# ⛔⛔ FINO AL 27 AGOSTO 2026 QUI NON C'ERA UN SOLO CASO CHE FINISSE VERDE
-#     PARTENDO DA UN REGISTRO SANO.  ⚠ I due casi «sessione sana» e «cieca dopo
-#     aver montato» usavano la riga `sessione [chi] monitor N/N: connettore`,
-#     ⛔ che il prodotto non scrive **mai** in una nascita riuscita — e cosi'
-#     la certificazione **imponeva il difetto come requisito**: passava, e
-#     passava proprio perche' il giudice era sbagliato.
-# ⇒ ⭐ E' `LEZIONI.md` §1.49 nella sua forma peggiore, ed e' la ragione per cui
-#   il difetto e' rimasto in piedi: **un giudice che non ha un caso verde non
-#   e' un giudice severo, e' un giudice rotto.**
+# ⛔⛔ UNTIL 27 AUGUST 2026 THERE WAS NOT A SINGLE CASE HERE THAT ENDED GREEN
+#     STARTING FROM A HEALTHY LOG.  ⚠ The two cases «healthy session» and «blind after
+#     mounting» used the line `sessione [chi] monitor N/N: connettore`,
+#     ⛔ which the product **never** writes in a successful birth — and so
+#     the certification **imposed the defect as a requirement**: it passed, and
+#     it passed precisely because the judge was wrong.
+# ⇒ ⭐ It is `LEZIONI.md` §1.49 in its worst form, and it is the reason why
+#   the defect stayed standing: **a judge that has no green case is not
+#   a strict judge, it is a broken judge.**
 # ---------------------------------------------------------------------------
 
-# ⭐ IL REGISTRO SANO, trascritto dalla scatola GNOME curata (`[M]` 27 ago
-#   2026).  ⛔ Non e' inventato: sono le righe che il prodotto scrive davvero,
-#   nell'ordine in cui le scrive.
-#   ⚠ E c'e' dentro anche `⛔ ZERO MONITOR`, apposta: in una nascita RIUSCITA
-#     quella riga c'e', ed e' il passaggio obbligatorio in cui la sessione non
-#     ha ancora monitor propri.  ⇒ Se qualcuno un giorno la rimettesse fra i
-#     rossi, questo caso diventerebbe rosso e lo direbbe.
+# ⭐ THE HEALTHY LOG, transcribed from the cured GNOME box (`[M]` 27 Aug
+#   2026).  ⛔ It is not invented: they are the lines the product really writes,
+#   in the order it writes them.
+#   ⚠ And `⛔ ZERO MONITOR` is in there too, on purpose: in a SUCCESSFUL birth
+#     that line is there, and it is the mandatory step in which the session does not
+#     yet have monitors of its own.  ⇒ If someone one day put it back among the
+#     reds, this case would turn red and say so.
+#   (10 Oct 2026: the lines follow the English text of the product, `english-migration/`.)
 SANO = (
     "20:07:42.262 rcp     [c1u1] ammesso utente=c1u1 da=[127.0.0.1]:58048\n"
-    "20:07:43.100 figlio  [c1u1] entro nel montaggio del palco (tela 1920x1080): "
-    "dico al padre di attendere\n"
-    "20:07:43.910 sessione [c1u1] ⛔ ZERO MONITOR, e la sessione e' viva: e' la "
-    "sessione «viva, completa e NERA» di STUDI.md §gnome §3.1 — non c'e' niente "
-    "da catturare\n"
-    "20:07:44.367 cattura [c1u1] formato negoziato: 1920x1080 BGRx (8 bit per "
-    "canale), modificatore 0x0\n"
-    "20:07:44.402 figlio  ⭐ il palco di «c1u1»: bus APERTO, sessione 1, presa 1, "
-    "monitor «Meta-0» (0 prima, 1 dopo), 1920x1080 stride 7680 a 32 bit, "
-    "1 flussi in consegna\n"
-    "20:07:45.100 figlio  [c1u1] ciclo: 37 fotogrammi consegnati (1 chiavi)\n")
+    "20:07:43.100 figlio  [c1u1] entering the stage mounting (canvas 1920x1080): "
+    "telling the parent to wait\n"
+    "20:07:43.910 sessione [c1u1] ⛔ ZERO MONITORS, and the session is alive: it is the "
+    "«alive, complete and BLACK» session of STUDI.md §gnome §3.1 — there is nothing "
+    "to capture\n"
+    "20:07:44.367 cattura [c1u1] negotiated format: 1920x1080 BGRx (8 bits per "
+    "channel), modifier 0x0\n"
+    "20:07:44.402 figlio  ⭐ the stage of «c1u1»: bus OPEN, session 1, grab 1, "
+    "monitor «Meta-0» (0 before, 1 after), 1920x1080 stride 7680 at 32 bits, "
+    "1 streams delivering\n"
+    "20:07:45.100 figlio  [c1u1] loop: 37 frames delivered (1 keyframes)\n")
 
-# ⛔ IL REGISTRO DEL GUASTO VERO — le righe del 25 agosto 2026, trascritte da
-#    `fasi/10-multi-tenant-e-il-budget.md` §7.4 e da `fasi/11…` §7-bis.
-#    ⚠ `(0 prima, 2 dopo)` e' il famoso «terzo stato»: ⛔ un conteggio senza
-#      niente sotto (`0x0`), che per mesi e' stato letto come «due monitor».
+# ⛔ THE LOG OF THE REAL FAULT — the lines of 25 August 2026, transcribed from
+#    `fasi/10-multi-tenant-e-il-budget.md` §7.4 and from `fasi/11…` §7-bis.
+#    ⚠ `(0 before, 2 after)` is the famous «third state»: ⛔ a count with
+#      nothing underneath (`0x0`), which for months was read as «two monitors».
 CIECO = (
     "22:42:14.100 rcp     [c1u1] ammesso utente=c1u1 da=[127.0.0.1]:58048\n"
-    "22:42:15.826 sessione [c1u1] ⛔ ZERO MONITOR, e la sessione e' viva: e' la "
-    "sessione «viva, completa e NERA» di STUDI.md §gnome §3.1\n"
-    "22:42:18.145 figlio  ⛔ il palco di «c1u1»: bus APERTO, sessione 1, presa 0, "
-    "monitor «» (0 prima, 2 dopo), 0x0 stride 0 a 0 bit, 0 flussi in consegna\n")
+    "22:42:15.826 sessione [c1u1] ⛔ ZERO MONITORS, and the session is alive: it is the "
+    "«alive, complete and BLACK» session of STUDI.md §gnome §3.1\n"
+    "22:42:18.145 figlio  ⛔ the stage of «c1u1»: bus OPEN, session 1, grab 0, "
+    "monitor «» (0 before, 2 after), 0x0 stride 0 at 0 bits, 0 streams delivering\n")
 
 
 def certifica():
-    """⛔ Si dimostra che il giudice sa dire VERDE, ROSSO e «non lo so».
+    """⛔ It proves that the judge can say GREEN, RED and «I do not know».
 
-    ⚠ E si dichiara che cosa copre e che cosa no.
-      COPRE: **la lettura del registro e la regola** — che i due testimoni del
-      monitor siano riconosciuti, che la riga della spazzatura sia scartata,
-      che «⛔ ZERO MONITOR» non decida niente, e ⭐ che un registro SANO
-      finisca VERDE.
-      ⛔ NON COPRE: che il registro dica la verita' sui pixel.  Quello e' C2, e
-      vuole il testimone.
-      ⇒ Una certificazione che si dichiara piu' larga di quel che e' vale meno
-        di nessuna certificazione.
+    ⚠ And it declares what it covers and what it does not.
+      COVERS: **the reading of the log and the rule** — that the two witnesses of the
+      monitor are recognised, that the garbage line is discarded,
+      that «⛔ ZERO MONITOR» decides nothing, and ⭐ that a HEALTHY log
+      ends GREEN.
+      ⛔ DOES NOT COVER: that the log tells the truth about the pixels.  That is C2, and
+      it wants the witness.
+      ⇒ A certification that declares itself wider than it is is worth less
+        than no certification.
     """
     casi = [
-        # (nome, testo, chi, stato atteso, controllo in piu' o None)
+        # (name, text, who, expected state, extra check or None)
 
         # ═══════════════════════════════════════════════════════════════════
-        # ⭐⭐⭐ IL CASO CHE NON ESISTEVA, ED E' QUELLO CHE CONTA: un registro
-        #      SANO deve finire VERDE.  ⛔ Senza di lui il verde di questa
-        #      maglia era irraggiungibile e nessuno se ne accorgeva.
+        # ⭐⭐⭐ THE CASE THAT DID NOT EXIST, AND IT IS THE ONE THAT MATTERS: a
+        #      HEALTHY log must end GREEN.  ⛔ Without it the green of this
+        #      mesh was unreachable and nobody noticed.
         # ═══════════════════════════════════════════════════════════════════
-        ("⭐⭐ IL REGISTRO SANO FINISCE VERDE (il caso che non c'era)",
+        ("⭐⭐ THE HEALTHY LOG ENDS GREEN (the case that was missing)",
          SANO, "c1u1", "NATA",
          lambda n: n.formato == (1920, 1080) and n.monitor_dopo == 1
                    and n.monitor_misura == (1920, 1080) and n.fotogrammi == 37),
 
-        # ⭐ E i due testimoni sono INDIPENDENTI: ne basta uno, e si prova
-        #   togliendo l'altro.  ⇒ Il giorno in cui una delle due righe cambia
-        #   forma, C1 non diventa cieca per conto suo.
-        ("⭐ col SOLO `formato negoziato` (niente riga del palco) ⇒ VERDE",
-         "20:07:43.100 figlio  [c1u1] entro nel montaggio del palco\n"
-         "20:07:44.367 cattura [c1u1] formato negoziato: 1920x1080 BGRx\n",
+        # ⭐ And the two witnesses are INDEPENDENT: one is enough, and it is tested
+        #   by removing the other.  ⇒ The day one of the two lines changes
+        #   form, C1 does not go blind on its own.
+        ("⭐ with ONLY `negotiated format` (no stage line) ⇒ GREEN",
+         "20:07:43.100 figlio  [c1u1] entering the stage mounting\n"
+         "20:07:44.367 cattura [c1u1] negotiated format: 1920x1080 BGRx\n",
          "c1u1", "NATA", lambda n: n.monitor_dopo is None),
 
-        ("⭐ con la SOLA riga del palco (niente `formato negoziato`) ⇒ VERDE",
-         "20:07:43.100 figlio  [c1u1] entro nel montaggio del palco\n"
-         "20:07:44.402 figlio  ⭐ il palco di «c1u1»: monitor «Meta-0» "
-         "(0 prima, 1 dopo), 1920x1080 stride 7680 a 32 bit, 1 flussi\n",
+        ("⭐ with ONLY the stage line (no `negotiated format`) ⇒ GREEN",
+         "20:07:43.100 figlio  [c1u1] entering the stage mounting\n"
+         "20:07:44.402 figlio  ⭐ the stage of «c1u1»: monitor «Meta-0» "
+         "(0 before, 1 after), 1920x1080 stride 7680 at 32 bits, 1 streams\n",
          "c1u1", "NATA", lambda n: n.formato is None),
 
         # ═══════════════════════════════════════════════════════════════════
-        # ⛔ E IL ROSSO — che e' ancora il guasto vero del 25 agosto.
+        # ⛔ AND THE RED — which is still the real fault of 25 August.
         # ═══════════════════════════════════════════════════════════════════
-        ("⛔ il guasto VERO del 25 agosto ⇒ CIECA",
+        ("⛔ the REAL fault of 25 August ⇒ CIECA",
          CIECO, "c1u1", "CIECA",
          lambda n: n.monitor_dopo == 2 and n.monitor_misura == (0, 0)
                    and n.zero_monitor == 1),
 
-        # ⭐ La meta' che si dimentica (§1.49): tolto il guasto, torna VERDE.
-        #   ⛔ E' lo stesso inquilino e la stessa forma di registro.
-        ("⭐ e tolto il guasto torna VERDE — la controprova di §1.49",
+        # ⭐ The half that gets forgotten (§1.49): with the fault removed, it is GREEN again.
+        #   ⛔ It is the same tenant and the same log shape.
+        ("⭐ and with the fault removed it is GREEN again — the counter-test of §1.49",
          SANO, "c1u1", "NATA", None),
 
         # ═══════════════════════════════════════════════════════════════════
-        # ⛔⛔ «⛔ ZERO MONITOR» NON DECIDE PIU' NIENTE — ed e' il difetto in
-        #     persona.  ⚠ Il registro sano ce l'ha dentro (vedi `SANO`): se
-        #     tornasse a essere un rosso, il primo caso della lista fallirebbe.
-        #     ⇒ Qui si prova il caso puro: SOLO quella riga, e nient'altro.
+        # ⛔⛔ «⛔ ZERO MONITOR» NO LONGER DECIDES ANYTHING — and it is the defect
+        #     in person.  ⚠ The healthy log has it inside (see `SANO`): if
+        #     it became a red again, the first case of the list would fail.
+        #     ⇒ Here the pure case is tested: ONLY that line, and nothing else.
         # ═══════════════════════════════════════════════════════════════════
-        ("⭐⭐ «ZERO MONITOR» + `formato negoziato` ⇒ VERDE (era il rosso!)",
-         "20:07:43.910 sessione [c1u1] ⛔ ZERO MONITOR, e la sessione e' viva\n"
-         "20:07:44.367 cattura [c1u1] formato negoziato: 1920x1080 BGRx\n",
+        ("⭐⭐ «ZERO MONITOR» + `negotiated format` ⇒ GREEN (it was the red!)",
+         "20:07:43.910 sessione [c1u1] ⛔ ZERO MONITORS, and the session is alive\n"
+         "20:07:44.367 cattura [c1u1] negotiated format: 1920x1080 BGRx\n",
          "c1u1", "NATA", lambda n: n.zero_monitor == 1),
 
-        # ⚠ E l'altro verso: da sola quella riga non e' un TESTIMONE del
-        #   monitor — non lo nega e non lo afferma.  ⇒ Qui il giro resta CIECA
-        #   perche' nessuno dei due testimoni ha parlato, ⛔ non perche' c'e'
-        #   scritto «ZERO MONITOR».
-        ("⛔ «ZERO MONITOR» da sola non e' un TESTIMONE ⇒ resta CIECA",
-         "20:07:43.910 sessione [c1u1] ⛔ ZERO MONITOR, e la sessione e' viva\n",
+        # ⚠ And the other direction: on its own that line is not a WITNESS of the
+        #   monitor — it neither denies nor affirms it.  ⇒ Here the round stays CIECA
+        #   because neither of the two witnesses spoke, ⛔ not because it
+        #   says «ZERO MONITOR».
+        ("⛔ «ZERO MONITOR» alone is not a WITNESS ⇒ stays CIECA",
+         "20:07:43.910 sessione [c1u1] ⛔ ZERO MONITORS, and the session is alive\n",
          "c1u1", "CIECA", lambda n: n.zero_monitor == 1),
 
         # ═══════════════════════════════════════════════════════════════════
-        # ⛔⛔ LA TRAPPOLA MISURATA: la riga del palco che finisce con
-        #     «— aspetto la tela del cliente» porta conteggi di SPAZZATURA.
-        #     ⚠ `stride 306537694` e' il numero vero che si smascherava da se'.
+        # ⛔⛔ THE MEASURED TRAP: the stage line that ends with
+        #     «— waiting for the client's canvas» carries GARBAGE counts.
+        #     ⚠ `stride 306537694` is the real number that unmasked itself.
         # ═══════════════════════════════════════════════════════════════════
-        ("⛔⛔ la riga «aspetto la tela» si SCARTA (i conteggi sono spazzatura)",
-         "20:07:43.100 figlio  [c1u1] entro nel montaggio del palco\n"
-         "20:07:43.200 figlio  ⛔ il palco di «c1u1»: monitor «\x01\x02» "
-         "(0 prima, 3 dopo), 1440x900 stride 306537694 a 32 bit, 0 flussi in "
-         "consegna — aspetto la tela del cliente\n",
+        ("⛔⛔ the «waiting for the canvas» line is DISCARDED (counts are garbage)",
+         "20:07:43.100 figlio  [c1u1] entering the stage mounting\n"
+         "20:07:43.200 figlio  ⛔ the stage of «c1u1»: monitor «\x01\x02» "
+         "(0 before, 3 after), 1440x900 stride 306537694 at 32 bits, 0 streams "
+         "delivering — waiting for the client's canvas\n",
          "c1u1", "CIECA",
          lambda n: n.palchi_scartati == 1 and n.monitor_dopo is None),
 
-        ("⭐ …e la riga BUONA che arriva dopo quella scartata vale lo stesso",
-         "20:07:43.200 figlio  ⛔ il palco di «c1u1»: monitor «x» (0 prima, "
-         "3 dopo), 1440x900 stride 306537694 a 32 bit, 0 flussi in consegna "
-         "— aspetto la tela del cliente\n"
-         "20:07:44.402 figlio  ⭐ il palco di «c1u1»: monitor «Meta-0» "
-         "(0 prima, 1 dopo), 1920x1080 stride 7680 a 32 bit, 1 flussi\n",
+        ("⭐ …and the GOOD line arriving after the discarded one still counts",
+         "20:07:43.200 figlio  ⛔ the stage of «c1u1»: monitor «x» (0 before, "
+         "3 after), 1440x900 stride 306537694 at 32 bits, 0 streams delivering "
+         "— waiting for the client's canvas\n"
+         "20:07:44.402 figlio  ⭐ the stage of «c1u1»: monitor «Meta-0» "
+         "(0 before, 1 after), 1920x1080 stride 7680 at 32 bits, 1 streams\n",
          "c1u1", "NATA", lambda n: n.palchi_scartati == 1),
 
         # ═══════════════════════════════════════════════════════════════════
-        # ⛔ «NON HO POTUTO GUARDARE» — e non e' un rosso (§4.5).
+        # ⛔ «I COULD NOT LOOK» — and it is not a red (§4.5).
         # ═══════════════════════════════════════════════════════════════════
-        ("⛔ registro muto ⇒ «non lo so», ⛔ NON cieca",
-         "20:07:42.000 avvio   ⭐ pronto: https://…\n", "c1u1", "NON-LO-SO",
+        ("⛔ silent log ⇒ «I do not know», ⛔ NOT blind",
+         "20:07:42.000 avvio   ⭐ ready: https://…\n", "c1u1", "NON-LO-SO",
          lambda n: not n.nominato),
 
-        ("⛔ la fetta e' VUOTA ⇒ «non lo so», e il giudice torna None",
+        ("⛔ the slice is EMPTY ⇒ «I do not know», and the judge returns None",
          "", "c1u1", "NON-LO-SO", None),
 
-        # ⚠ L'omonimia, nei due versi: «c1u1» non e' «c1u10», e nemmeno il
-        #   contrario.  ⛔ Un `in` senza delimitatori avrebbe scambiato i due.
-        ("⚠ il registro parla di un ALTRO inquilino ⇒ «non lo so»",
+        # ⚠ Homonymy, in both directions: «c1u1» is not «c1u10», nor the
+        #   reverse.  ⛔ An `in` without delimiters would have swapped the two.
+        ("⚠ the log talks about ANOTHER tenant ⇒ «I do not know»",
          SANO.replace("c1u1", "c1u2"), "c1u1", "NON-LO-SO",
          lambda n: not n.nominato),
 
-        ("⚠ «c1u1» non si confonde con «c1u10» (l'omonimia si chiude)",
+        ("⚠ «c1u1» is not confused with «c1u10» (homonymy is closed off)",
          SANO.replace("c1u1", "c1u10"), "c1u1", "NON-LO-SO",
          lambda n: not n.nominato),
 
-        # ⛔ Un monitor «nato» a misura zero non e' nato: e' un conteggio senza
-        #    niente sotto.  ⚠ E' il cuore del rosso del 25 agosto, isolato.
-        ("⛔ «(0 prima, 1 dopo), 0x0» NON e' un monitor ⇒ CIECA",
-         "20:07:43.100 figlio  [c1u1] entro nel montaggio del palco\n"
-         "20:07:44.402 figlio  ⛔ il palco di «c1u1»: monitor «» (0 prima, "
-         "1 dopo), 0x0 stride 0 a 0 bit, 0 flussi\n",
+        # ⛔ A monitor «born» at size zero was not born: it is a count with
+        #    nothing underneath.  ⚠ It is the heart of the red of 25 August, isolated.
+        ("⛔ «(0 before, 1 after), 0x0» is NOT a monitor ⇒ CIECA",
+         "20:07:43.100 figlio  [c1u1] entering the stage mounting\n"
+         "20:07:44.402 figlio  ⛔ the stage of «c1u1»: monitor «» (0 before, "
+         "1 after), 0x0 stride 0 at 0 bits, 0 streams\n",
          "c1u1", "CIECA", lambda n: n.monitor_dopo == 1),
 
-        # ⚠ I fotogrammi si LEGGONO e non decidono: si prova che un monitor
-        #   nato senza fotogrammi resta VERDE, e che il conto si vede.
-        ("⚠ monitor nato e ZERO fotogrammi ⇒ VERDE (i fotogrammi non giudicano)",
-         "20:07:44.367 cattura [c1u1] formato negoziato: 1920x1080 BGRx\n"
-         "20:07:45.100 figlio  [c1u1] ciclo: 0 fotogrammi consegnati (0 chiavi)\n",
+        # ⚠ The frames are READ and do not decide: it is tested that a monitor
+        #   born without frames stays GREEN, and that the count is visible.
+        ("⚠ monitor born and ZERO frames ⇒ GREEN (the frames do not judge)",
+         "20:07:44.367 cattura [c1u1] negotiated format: 1920x1080 BGRx\n"
+         "20:07:45.100 figlio  [c1u1] loop: 0 frames delivered (0 keyframes)\n",
          "c1u1", "NATA", lambda n: n.fotogrammi == 0),
     ]
 
-    print("== certificazione del giudice di C1 ==")
-    print("   ⛔ copre LA LETTURA E LA REGOLA, non i pixel (vedi in testa)\n")
+    print("== certification of C1's judge ==")
+    print("   ⛔ it covers THE READING AND THE RULE, not the pixels (see the top)\n")
     guai = 0
     for nome, testo, chi, atteso, extra in casi:
         n = leggi_nascita(testo, chi)
         stato, perche = verdetto_giro(n)
         ok = (stato == atteso) and (extra is None or (n is not None and extra(n)))
-        print("  %s  %-62s  %-10s (atteso %s)"
+        print("  %s  %-62s  %-10s (expected %s)"
               % ("OK " if ok else "NO ", nome[:62], stato, atteso))
         if not ok:
             guai += 1
-            print("        ⛔ perche': %s" % perche)
+            print("        ⛔ why: %s" % perche)
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ⭐⭐ E IL TETTO SI CERTIFICA COME UNA SOGLIA — ⛔ o e' un numero che
-    #     nessuno ricontrolla piu' (`LEZIONI.md` §1.45).
+    # ⭐⭐ AND THE CEILING IS CERTIFIED LIKE A THRESHOLD — ⛔ or it is a number that
+    #     nobody checks any more (`LEZIONI.md` §1.45).
     #
-    # ⚠ E il margine sta sul PEGGIORE mai misurato, non sulla dispersione di
-    #   oggi: la dispersione di tre misure su una macchina a riposo non dice
-    #   niente su una scatola carica.  ⇒ Vedi `TETTO_NASCITA` in testa.
+    # ⚠ And the margin sits on the WORST ever measured, not on today's
+    #   spread: the spread of three measurements on a machine at rest says
+    #   nothing about a loaded box.  ⇒ See `TETTO_NASCITA` at the top.
     # ═══════════════════════════════════════════════════════════════════════
-    # ⭐⭐ I CASI DELL'AMMISSIONE — ⛔ quelli che oggi non c'erano.
-    #    Il predicato vive in questo file e serve altre quattro maglie: si
-    #    certifica qui, una volta, per tutte.
+    # ⭐⭐ THE ADMISSION CASES — ⛔ the ones that were not there before today.
+    #    The predicate lives in this file and serves four other meshes: it is
+    #    certified here, once, for all.
     print()
     guai_amm, quanti_amm = certifica_ammissione("C1")
     guai += guai_amm
 
-    # ⭐⭐ E I CASI DEI GRUPPI DELLA SCHEDA — ⛔ l'altro caso che non c'era.
+    # ⭐⭐ AND THE CARD GROUPS CASES — ⛔ the other case that was missing.
     print()
     guai_gr, quanti_gr = certifica_gruppi("C1")
     guai += guai_gr
 
-    MISURE_SANE = (1.105, 0.998, 0.957)   # `[M]` 27 ago 2026, scatola curata
-    PEGGIORE_MAI_VISTA = 13.0             # `[M]` 26 ago 2026, scatola carica
+    MISURE_SANE = (1.105, 0.998, 0.957)   # `[M]` 27 Aug 2026, cured box
+    PEGGIORE_MAI_VISTA = 13.0             # `[M]` 26 Aug 2026, loaded box
     MARGINE = 2.0
     serve = PEGGIORE_MAI_VISTA * MARGINE
     tetto_ok = TETTO_NASCITA >= serve
     if not tetto_ok:
         guai += 1
     print()
-    print("  %s  il tetto copre la nascita piu' lenta MAI misurata: "
-          "%.0f s × %.0f = %.0f s ⇒ tetto %.0f s"
+    print("  %s  the ceiling covers the slowest birth EVER measured: "
+          "%.0f s × %.0f = %.0f s ⇒ ceiling %.0f s"
           % ("OK " if tetto_ok else "NO ", PEGGIORE_MAI_VISTA, MARGINE,
              serve, TETTO_NASCITA))
-    print("      ⇒ e sono %.0f volte il fenomeno sano di oggi (%.3f s)"
+    print("      ⇒ and that is %.0f times today's healthy phenomenon (%.3f s)"
           % (TETTO_NASCITA / max(MISURE_SANE), max(MISURE_SANE)))
 
     quanti = len(casi) + quanti_amm + quanti_gr + 1
     print()
     if guai:
-        print("⛔ il giudice NON e' affidabile: %d casi su %d sbagliati"
+        print("⛔ the judge is NOT reliable: %d cases out of %d wrong"
               % (guai, quanti))
         return 1
-    print("⭐ %d casi su %d: il giudice sa dire VERDE, sa dire ROSSO e sa dire"
+    print("⭐ %d cases out of %d: the judge can say GREEN, can say RED and can say"
           % (quanti, quanti))
-    print("   «non lo so» — ⭐ e **il verde e' raggiungibile**, che e' la cosa")
-    print("   che questa certificazione non provava e avrebbe dovuto provare.")
-    print("⚠ e copre la LETTURA, non i pixel (vedi in testa)")
+    print("   «I do not know» — ⭐ and **green is reachable**, which is the thing")
+    print("   this certification did not test and should have tested.")
+    print("⚠ and it covers the READING, not the pixels (see the top)")
     return 0
 
 
@@ -854,13 +855,13 @@ def certifica():
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--giri", type=int, default=8,
-                   help="quante sessioni NUOVE aprire (il guasto e' intermittente)")
+                   help="how many NEW sessions to open (the fault is intermittent)")
     p.add_argument("--utente-base", default="c1u",
-                   help="a ogni giro si crea «<base><n>»: un utente NUOVO, "
-                        "perche' riattaccarsi non fa nascere niente (I4)")
+                   help="at every round «<base><n>» is created: a NEW user, "
+                        "because re-attaching does not make anything be born (I4)")
     p.add_argument("--riusa-utente", default="",
-                   help="⛔ solo per diagnosi: un utente solo per tutti i giri. "
-                        "NON e' la prova — ritrova il palco gia' vivo")
+                   help="⛔ for diagnosis only: a single user for all rounds. "
+                        "It is NOT the test — it finds the stage already alive")
     p.add_argument("--parola", default="provanic2026")
     p.add_argument("--porta", type=int, default=8511)
     p.add_argument("--indirizzo", default="127.0.0.1")
@@ -868,16 +869,16 @@ def main():
     p.add_argument("--cliente", default="/opt/remotix/01-b3-cliente.py")
     p.add_argument("--resta", type=float, default=20.0)
     p.add_argument("--attesa-palco", type=float, default=TETTO_NASCITA,
-                   help="quanto si aspetta che uno dei due testimoni del "
-                        "monitor parli. ⭐ 26 s = la nascita piu' lenta MAI "
-                        "misurata (13 s, 26 ago) × 2, cioe' 24 volte il "
-                        "fenomeno sano di oggi (1,105 s) — vedi TETTO_NASCITA "
-                        "in testa. ⛔ Scaduto NON e' un verde: e' «cieca» se "
-                        "la sessione era partita, «non lo so» se non lo era")
+                   help="how long to wait for one of the two witnesses of the "
+                        "monitor to speak. ⭐ 26 s = the slowest birth EVER "
+                        "measured (13 s, 26 Aug) × 2, i.e. 24 times "
+                        "today's healthy phenomenon (1.105 s) — see TETTO_NASCITA "
+                        "at the top. ⛔ Expired is NOT a green: it is «blind» if "
+                        "the session had started, «I do not know» if it had not")
     p.add_argument("--attesa-sgombero", type=float, default=45.0,
-                   help="quanto si aspetta che l'inquilino del giro precedente "
-                        "sia sparito DAVVERO. ⛔ Senza, il giro dopo parte su un "
-                        "campo ancora occupato e non giudica")
+                   help="how long to wait for the tenant of the previous round "
+                        "to be REALLY gone. ⛔ Without it, the next round starts on a "
+                        "field still occupied and does not judge")
     p.add_argument("--certifica", action="store_true")
     a = p.parse_args()
 
@@ -885,44 +886,44 @@ def main():
         sys.exit(certifica())
 
     if not os.path.exists(a.cliente):
-        print("⛔ non trovo il cliente di prova: %s" % a.cliente)
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ I cannot find the test client: %s" % a.cliente)
+        print("   ⇒ I could not look")
         sys.exit(3)
     if leggi(a.registro) is None:
-        print("⛔ non riesco a leggere il registro del server: %s" % a.registro)
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ I cannot read the server log: %s" % a.registro)
+        print("   ⇒ I could not look")
         sys.exit(3)
 
-    print("== C1 — la sessione nasce e si vede ==")
-    print("   %d giri · %s · porta %d"
+    print("== C1 — the session is born and is seen ==")
+    print("   %d rounds · %s · port %d"
           % (a.giri,
-             ("⛔ UN SOLO utente «%s» (diagnosi, NON e\' la prova)" % a.riusa_utente)
+             ("⛔ ONE SINGLE user «%s» (diagnosis, it is NOT the test)" % a.riusa_utente)
              if a.riusa_utente else
-             ("un UTENTE NUOVO a ogni giro: «%s1»…«%s%d»"
+             ("a NEW USER at every round: «%s1»…«%s%d»"
               % (a.utente_base, a.utente_base, a.giri)),
              a.porta))
-    print("   ⛔ il guasto e' intermittente: un giro solo non sarebbe una prova\n")
+    print("   ⛔ the fault is intermittent: a single round would not be a test\n")
 
     esiti = []
     creati = []
     for giro in range(1, a.giri + 1):
-        # ⛔ L'utente NUOVO si crea qui, e si crea come lo creerebbe la
-        #    macchina: `useradd -m`, i due gruppi della scheda, la parola.
-        #    ⚠ Se questa parte fallisce l'esito e' «non lo so», MAI verde.
+        # ⛔ The NEW user is created here, and created the way the
+        #    machine would create it: `useradd -m`, the card's two groups, the password.
+        #    ⚠ If this part fails the outcome is «I do not know», NEVER green.
         #
-        # ⛔⛔ E SI CANCELLA PRIMA DI CREARLO — `[M]` 26 agosto 2026, e questa
-        #    riga vale piu' di quel che sembra.
-        #    La prima stesura faceva `id -u X || useradd X`: cioe' ⇒ **l'utente
-        #    era NUOVO soltanto la PRIMA volta che questo banco girava in vita
-        #    sua.**  Dal secondo giro in poi ritrovava «c1u1» com'era rimasto —
-        #    e con lui i suoi avanzi.
-        #    `[M]` Il sintomo: il gancio ha fatto girare C1 due volte di fila, e
-        #    la seconda il primo giro ha detto **«non lo so»** invece di
-        #    giudicare.  ⛔ Non un rosso: un giudizio in meno, che e' il modo
-        #    silenzioso in cui una prova smette di servire.
-        #    ⚠ E' la stessa forma d'errore di C8 col `/tmp/mozilla` rimasto dal
-        #      giro prima: ⭐ **«da zero» comprende anche «da zero rispetto a me
-        #      stesso di ieri»**.
+        # ⛔⛔ AND IT IS DELETED BEFORE CREATING IT — `[M]` 26 August 2026, and this
+        #    line is worth more than it looks.
+        #    The first draft did `id -u X || useradd X`: i.e. ⇒ **the user
+        #    was NEW only the FIRST time this bench ran in its
+        #    life.**  From the second round on it found «c1u1» as it had been left —
+        #    and with it its leftovers.
+        #    `[M]` The symptom: the hook ran C1 twice in a row, and
+        #    the second time the first round said **«I do not know»** instead of
+        #    judging.  ⛔ Not a red: one judgement fewer, which is the silent
+        #    way in which a test stops being useful.
+        #    ⚠ It is the same form of error as C8 with the `/tmp/mozilla` left over from the
+        #      previous round: ⭐ **«from zero» also includes «from zero with respect to
+        #      myself of yesterday»**.
         if a.riusa_utente:
             chi = a.riusa_utente
         else:
@@ -934,46 +935,46 @@ def main():
                  "userdel -r %s 2>/dev/null; rm -rf /home/%s"
                  % (chi, chi, chi, chi)],
                 capture_output=True, text=True)
-            # ⛔ E i gruppi della scheda NON stanno piu' qui dentro: li da'
-            #    l'attrezzo, che li LEGGE dai nodi e poi RILEGGE (vedi in
-            #    testa).  ⚠ `usermod -aG video,render` inchiodava due nomi e
-            #    non verificava niente.
+            # ⛔ And the card's groups are NO LONGER in here: they are given by
+            #    the tool, which READS them from the nodes and then READS BACK (see
+            #    the top).  ⚠ `usermod -aG video,render` nailed down two names and
+            #    verified nothing.
             fatto = subprocess.run(
                 ["/bin/sh", "-c",
                  "useradd -m -s /bin/bash %s && "
                  "printf '%s:%s\n' | chpasswd" % (chi, chi, a.parola)],
                 capture_output=True, text=True)
             if fatto.returncode != 0:
-                print("  giro %2d/%d  ?    non sono riuscito a creare «%s»: %s"
+                print("  round %2d/%d  ?    I could not create «%s»: %s"
                       % (giro, a.giri, chi, fatto.stderr.strip()[:80]))
                 esiti.append(("NON-LO-SO", None))
                 continue
             creati.append(chi)
 
         # ═══════════════════════════════════════════════════════════════════
-        # ⛔⛔ I GRUPPI DELLA SCHEDA — ⭐ SU TUTT'E DUE I RAMI, riuso compreso.
+        # ⛔⛔ THE CARD'S GROUPS — ⭐ ON BOTH BRANCHES, reuse included.
         #
-        # ⛔ Fino al 27 agosto 2026 il ramo `--riusa-utente` saltava questo
-        #    passo: ⇒ un giro di diagnosi poteva misurare un inquilino CIECO e
-        #    chiamarlo difetto del prodotto.  ⚠ E l'altro ramo li dava a nomi
-        #    inchiodati senza rileggere, che e' la stessa cosa piu' in piccolo.
-        # ⭐ Il passo sta QUI, fuori dall'`if`, cosi' non c'e' un ramo da cui
-        #    dimenticarselo di nuovo.
-        # ⛔ E se non si puo' garantire, il giro NON misura: «non lo so», ⛔ mai
-        #    rosso — un inquilino cieco e' un guasto del banco (§1.51).
+        # ⛔ Until 27 August 2026 the `--riusa-utente` branch skipped this
+        #    step: ⇒ a diagnosis round could measure a BLIND tenant and
+        #    call it a product defect.  ⚠ And the other branch gave them to nailed-down
+        #    names without reading back, which is the same thing on a smaller scale.
+        # ⭐ The step sits HERE, outside the `if`, so there is no branch in which to
+        #    forget it again.
+        # ⛔ And if it cannot be guaranteed, the round does NOT measure: «I do not know», ⛔ never
+        #    red — a blind tenant is a fault of the bench (§1.51).
         # ═══════════════════════════════════════════════════════════════════
         e_gr, perche_gr = garantisci_i_gruppi(chi)
         if e_gr != 0:
-            print("  giro %2d/%d  ?    «%s» non e' in condizione di vedere"
+            print("  round %2d/%d  ?    «%s» is not in a condition to see"
                   % (giro, a.giri, chi))
             print("       %s" % perche_gr)
             esiti.append(("NON-LO-SO", None))
             continue
 
-        # ⛔ Si segna DOVE siamo nel registro PRIMA di aprire, cosi' il giudizio
-        #    guarda solo la fetta di QUESTO giro.  Un banco che leggesse tutto
-        #    il file leggerebbe i giri precedenti — ed e' successo davvero in
-        #    questo progetto (fase 9: un banco leggeva i numeri del banco prima).
+        # ⛔ We mark WHERE we are in the log BEFORE opening, so the judgement
+        #    looks only at the slice of THIS round.  A bench that read the whole
+        #    file would read the previous rounds — and it really happened in
+        #    this project (phase 9: a bench read the numbers of the bench before).
         prima = leggi(a.registro)
         segno = len(prima) if prima is not None else 0
 
@@ -983,26 +984,26 @@ def main():
              "--utente", chi, "--parola", a.parola,
              "--resta", str(a.resta)],
             capture_output=True, text=True, timeout=max(60, a.resta * 4))
-        # ⛔ NON `"AMMESSO" in r.stdout`: la parola c'e' anche nei DUE rifiuti,
-        #    e ci arriva sullo stdout — vedi `e_stato_ammesso()` in testa.
-        #    `[M]` 26 ago 2026 e' proprio questa maglia che ha pagato il conto:
-        #    cinque giri dissero «NON-AMMESSO» e nessuno sapeva perche'.
-        # ⭐ Tre stati, e si tengono separati fino in fondo.
+        # ⛔ NOT `"AMMESSO" in r.stdout`: the word is also in the TWO refusals,
+        #    and it arrives on stdout — see `e_stato_ammesso()` at the top.
+        #    `[M]` 26 Aug 2026 it is exactly this mesh that paid the bill:
+        #    five rounds said «NON-AMMESSO» and nobody knew why.
+        # ⭐ Three states, and they are kept separate all the way.
         ammesso = e_stato_ammesso((r.stdout or "") + (r.stderr or ""))
 
-        # ⛔⛔ SI ASPETTA L'EVENTO, NON L'OROLOGIO.
+        # ⛔⛔ WE WAIT FOR THE EVENT, NOT FOR THE CLOCK.
         #
-        # `[M]` 26 agosto 2026: con un'attesa fissa di 1,5 s **sei giri su sei**
-        # hanno detto «non lo so» — non perche' qualcosa fosse rotto, ma perche'
-        # il palco nasce in ~13 s e il banco guardava dopo 1,5.
-        # ⇒ ⛔ Una scadenza a orologio e' una scadenza che scatta quando capita.
+        # `[M]` 26 August 2026: with a fixed wait of 1.5 s **six rounds out of six**
+        # said «I do not know» — not because something was broken, but because
+        # the stage is born in ~13 s and the bench looked after 1.5.
+        # ⇒ ⛔ A clock deadline is a deadline that fires whenever it happens.
         #
-        # ⭐⭐ E SI ESCE DAL CICLO SOLO SUL VERDE — 27 ago 2026.
-        #   ⛔ «Cieca» non e' una cosa che si vede: e' una cosa che NON si
-        #   vede, e per dire «non l'ho vista» bisogna aver aspettato tutto il
-        #   tempo dichiarato.  ⚠ Il ciclo vecchio usciva anche sul rosso, e su
-        #   un rosso che era la riga sbagliata — cioe' usciva subito e giudicava
-        #   una sessione che stava ancora nascendo.
+        # ⭐⭐ AND WE LEAVE THE LOOP ONLY ON GREEN — 27 Aug 2026.
+        #   ⛔ «Blind» is not something that is seen: it is something that is NOT
+        #   seen, and to say «I did not see it» one must have waited the whole
+        #   declared time.  ⚠ The old loop left also on red, and on
+        #   a red that was the wrong line — i.e. it left at once and judged
+        #   a session that was still being born.
         n = None
         istante = None
         scadenza = time.time() + a.attesa_palco
@@ -1020,12 +1021,12 @@ def main():
         fot = None if n is None else n.fotogrammi
 
         if ammesso is not True:
-            # ⛔ «Non ammesso» da solo e' un silenzio: nasconde tre cose
-            #    diverse — il cliente non e' partito, il server ha rifiutato,
-            #    il filo non c'era.  `[M]` 26 agosto 2026: cinque giri hanno
-            #    detto «NON-AMMESSO» e la causa vera era che nella scatola
-            #    mancava `aioquic`, cioe' il cliente non poteva nemmeno
-            #    provarci.  ⇒ Si porta il MOTIVO accanto al sintomo.
+            # ⛔ «Not admitted» on its own is a silence: it hides three different
+            #    things — the client did not start, the server refused,
+            #    the wire was not there.  `[M]` 26 August 2026: five rounds
+            #    said «NON-AMMESSO» and the real cause was that the box
+            #    was missing `aioquic`, i.e. the client could not even
+            #    try.  ⇒ The REASON is carried next to the symptom.
             coda = (r.stdout or "") + (r.stderr or "")
             motivo = "?"
             for riga in reversed(coda.strip().splitlines()):
@@ -1033,81 +1034,81 @@ def main():
                 if riga and not riga.startswith("=="):
                     motivo = riga[:70]
                     break
-            # ⭐ E i due «no» si dicono per nome: «respinto» e «non ha parlato»
-            #   non sono la stessa cosa, e mescolarli e' quel che rese muti i
-            #   cinque giri del 26 agosto.  ⚠ Contano tutt'e due fra i NON
-            #   GIUDICATI (esito 3): ⛔ un cliente respinto non e' un prodotto
-            #   rotto, e un cliente muto non e' un giudizio.
+            # ⭐ And the two «no»s are said by name: «turned away» and «did not speak»
+            #   are not the same thing, and mixing them is what made the
+            #   five rounds of 26 August silent.  ⚠ Both count among the NOT
+            #   JUDGED (outcome 3): ⛔ a client turned away is not a broken
+            #   product, and a silent client is not a judgement.
             stato = "NON-AMMESSO" if ammesso is False else "NON-LO-SO"
             perche = motivo
             faccia = "?"
-            print("       ⛔ %s — perche': %s"
-                  % ("RESPINTO dal server (non e' un rosso del prodotto)"
+            print("       ⛔ %s — why: %s"
+                  % ("TURNED AWAY by the server (not a product red)"
                      if ammesso is False
-                     else "il cliente non ha detto NIENTE", motivo))
+                     else "the client said NOTHING", motivo))
         elif stato == "NATA":
-            faccia = "SI"
+            faccia = "YES"
         elif stato == "CIECA":
             faccia = "NO"
         else:
             faccia = "?"
         esiti.append((stato, fot))
-        print("  giro %2d/%d  %-3s  %-10s  fotogrammi: %-9s %s"
+        print("  round %2d/%d  %-3s  %-10s  frames: %-9s %s"
               % (giro, a.giri, faccia, stato,
-                 "non lo so" if fot is None else fot,
+                 "unknown" if fot is None else fot,
                  ("in %.3f s" % istante) if istante is not None else ""))
-        # ⭐ E il TESTIMONE si dice per nome, verde o rosso: un verdetto senza
-        #   il suo metro e' un'opinione (C11).
+        # ⭐ And the WITNESS is named, green or red: a verdict without
+        #   its yardstick is an opinion (C11).
         print("       %s" % perche)
         if n is not None:
             if n.palchi_scartati:
-                print("       ⚠ %d righe del palco SCARTATE («%s»): i loro "
-                      "conteggi sono spazzatura" % (n.palchi_scartati,
-                                                    CODA_SPAZZATURA))
+                print("       ⚠ %d stage lines DISCARDED («%s»): their "
+                      "counts are garbage" % (n.palchi_scartati,
+                                              CODA_SPAZZATURA))
             if n.zero_monitor:
-                print("       ⚠ «⛔ ZERO MONITOR» ×%d — ⭐ e NON e' un rosso: e' "
-                      "il passaggio obbligatorio di una nascita riuscita"
+                print("       ⚠ «⛔ ZERO MONITOR» ×%d — ⭐ and it is NOT a red: it is "
+                      "the mandatory step of a successful birth"
                       % n.zero_monitor)
             if stato == "NATA" and not n.fotogrammi:
-                print("       ⚠ RILIEVO, non verdetto: il monitor e' nato e i "
-                      "fotogrammi sono %s — ⛔ questa maglia non li giudica "
-                      "(vedi in testa)"
-                      % ("zero" if n.fotogrammi == 0 else "non lo so"))
+                print("       ⚠ FINDING, not verdict: the monitor was born and the "
+                      "frames are %s — ⛔ this mesh does not judge them "
+                      "(see the top)"
+                      % ("zero" if n.fotogrammi == 0 else "unknown"))
 
-        # ⛔⛔ E ADESSO SI SGOMBRA, o il giro dopo non parte piu' da zero.
+        # ⛔⛔ AND NOW WE CLEAN UP, or the next round no longer starts from zero.
         #
-        # `[M]` 26 agosto 2026, primo giro vero di questa maglia: senza questo
-        # pezzo, i sei giri hanno lasciato **sei sessioni vive** che ritentavano
-        # tutte insieme (I4: il palco sopravvive al distacco), e dal secondo giro
-        # in poi il compositore non rispondeva piu' ⇒ ⛔ **cinque «non lo so» su
-        # sei**.  ⚠ Non erano rossi — il banco ha avuto la decenza di non
-        # giudicare — ma una prova che non giudica non serve a niente.
+        # `[M]` 26 August 2026, first real round of this mesh: without this
+        # piece, the six rounds left **six live sessions** retrying
+        # all together (I4: the stage survives detach), and from the second round
+        # on the compositor no longer answered ⇒ ⛔ **five «I do not know» out of
+        # six**.  ⚠ They were not reds — the bench had the decency not to
+        # judge — but a test that does not judge is useless.
         #
-        # ⭐ E lo sgombero e' DELLA PROPRIA cartella soltanto: si chiude l'utente
-        #   di QUESTO giro, per nome, mai un modello globale (fase 10 §7.3, dove
-        #   un `pkill -f` globale ha rischiato di uccidere il lavoro di un'altra
-        #   prova che stava misurando).
+        # ⭐ And the cleanup is of ONE'S OWN folder only: the user of THIS round
+        #   is closed, by name, never a global pattern (phase 10 §7.3, where
+        #   a global `pkill -f` risked killing the work of another
+        #   test that was measuring).
         if not a.riusa_utente:
             subprocess.run(["loginctl", "terminate-user", chi],
                            capture_output=True, text=True)
             time.sleep(1.0)
             subprocess.run(["pkill", "-KILL", "-u", chi],
                            capture_output=True, text=True)
-            # ⛔⛔ E ADESSO SI ASPETTA CHE SE NE SIA ANDATO DAVVERO, non mezzo
-            #    secondo a orologio.
+            # ⛔⛔ AND NOW WE WAIT FOR IT TO BE REALLY GONE, not half a
+            #    second by the clock.
             #
-            # `[M]` 26 agosto 2026, dieci giri: ⛔ **`? NO ? NO ? NO ? NO ? NO`**
-            # — un'alternanza PERFETTA fra «non lo so» e «cieca».  ⚠ Un'alternanza
-            # perfetta non e' un caso: e' **uno stato che sopravvive al giro**.
-            # ⇒ L'ipotesi che la spiega: lo sgombero torna SUBITO, e il giro dopo
-            #   parte mentre il precedente sta ancora morendo — il compositore
-            #   nuovo non riesce nemmeno a nascere, e il registro non dice ne'
-            #   «monitor» ne' «cieca» ⇒ «non lo so».  Il giro ancora dopo trova
-            #   il campo libero e giudica.
-            # ⛔ E una prova che giudica la META' delle volte vale la meta'.
-            #   ⭐ Si aspetta l'EVENTO — che l'utente non abbia piu' ne' sessione
-            #   ne' processi — e se non se ne va entro il tempo dichiarato, ⚠ si
-            #   DICE, invece di partire lo stesso fingendo di non saperlo.
+            # `[M]` 26 August 2026, ten rounds: ⛔ **`? NO ? NO ? NO ? NO ? NO`**
+            # — a PERFECT alternation between «I do not know» and «blind».  ⚠ A perfect
+            # alternation is not chance: it is **a state that survives the round**.
+            # ⇒ The hypothesis that explains it: the cleanup returns AT ONCE, and the next round
+            #   starts while the previous one is still dying — the new
+            #   compositor cannot even be born, and the log says neither
+            #   «monitor» nor «blind» ⇒ «I do not know».  The round after that finds
+            #   the field free and judges.
+            # ⛔ And a test that judges HALF the time is worth half.
+            #   ⭐ We wait for the EVENT — the user no longer having either session
+            #   or processes — and if it does not go away within the declared time, ⚠ we
+            #   SAY SO, instead of starting anyway pretending not to know.
             scadenza = time.time() + a.attesa_sgombero
             libero = False
             while time.time() < scadenza:
@@ -1120,39 +1121,39 @@ def main():
                     break
                 time.sleep(0.5)
             if not libero:
-                print("       ⚠ «%s» non se n'e' andato in %.0f s: il giro dopo "
-                      "NON parte da un campo libero" % (chi, a.attesa_sgombero))
+                print("       ⚠ «%s» did not go away in %.0f s: the next round "
+                      "does NOT start from a free field" % (chi, a.attesa_sgombero))
 
     print()
     ciechi = sum(1 for s, _ in esiti if s == "CIECA")
     ignoti = sum(1 for s, _ in esiti if s in ("NON-LO-SO", "NON-AMMESSO"))
     sani = sum(1 for s, _ in esiti if s == "NATA")
-    print("  nate con un monitor: %d   ⛔ CIECHE: %d   non giudicate: %d"
+    print("  born with a monitor: %d   ⛔ BLIND: %d   not judged: %d"
           % (sani, ciechi, ignoti))
-    print("  ⭐ il metro: il monitor e' nato se lo dice almeno uno dei due")
-    print("     testimoni — `cattura … formato negoziato: LxA` (src/cattura.c)")
-    print("     oppure `il palco di «chi»: … monitor «N» (x prima, M dopo), LxA`")
-    print("     con M ≥ 1 e una misura vera (src/figlio.c).")
-    print("  ⛔ e «⛔ ZERO MONITOR» NON e' un testimone: e' il passaggio")
-    print("     obbligatorio di una nascita riuscita (src/sessione.c:345).")
+    print("  ⭐ the yardstick: the monitor was born if at least one of the two")
+    print("     witnesses says so — `cattura … negotiated format: WxH` (src/cattura.c)")
+    print("     or `the stage of «chi»: … monitor «N» (x before, M after), WxH`")
+    print("     with M ≥ 1 and a real size (src/figlio.c).")
+    print("  ⛔ and «⛔ ZERO MONITOR» is NOT a witness: it is the mandatory")
+    print("     step of a successful birth (src/sessione.c:345).")
 
-    # ⛔⛔ E LA GUARDIA DI §1.44: zero giri giudicati non e' un verde.
-    #     ⚠ Senza, `--giri 0` — o otto giri tutti «non ammesso» — uscirebbero
-    #     **0** avendo guardato niente, con la faccia di quando guardano.
+    # ⛔⛔ AND THE GUARD OF §1.44: zero rounds judged is not a green.
+    #     ⚠ Without it, `--giri 0` — or eight rounds all «not admitted» — would exit
+    #     **0** having looked at nothing, with the face they have when they look.
     if sani == 0 and ciechi == 0:
-        print("\n  ⚠ NON GIUDICO — nessun giro ha guardato una nascita.")
-        print("     ⛔ E questo non e' un verde: e' un esito suo (§4.5, §1.44).")
+        print("\n  ⚠ NOT JUDGING — no round looked at a birth.")
+        print("     ⛔ And this is not a green: it is an outcome of its own (§4.5, §1.44).")
         sys.exit(3)
 
     if ciechi:
-        print("\n  ⛔⛔ ROSSO — %d sessioni su %d sono nate CIECHE." % (ciechi, len(esiti)))
-        print("     Nessuna applicazione puo' aprire una finestra su quelle sessioni.")
+        print("\n  ⛔⛔ RED — %d sessions out of %d were born BLIND." % (ciechi, len(esiti)))
+        print("     No application can open a window on those sessions.")
         sys.exit(1)
     if ignoti:
-        print("\n  ⚠ NON GIUDICO — %d giri non hanno parlato." % ignoti)
-        print("     ⛔ E questo non e' un verde: e' un esito suo (§4.5).")
+        print("\n  ⚠ NOT JUDGING — %d rounds did not speak." % ignoti)
+        print("     ⛔ And this is not a green: it is an outcome of its own (§4.5).")
         sys.exit(3)
-    print("\n  ⭐ VERDE — tutte e %d le sessioni sono nate con un monitor." % len(esiti))
+    print("\n  ⭐ GREEN — all %d sessions were born with a monitor." % len(esiti))
     sys.exit(0)
 
 

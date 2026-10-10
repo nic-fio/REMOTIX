@@ -1,22 +1,22 @@
 # ===========================================================================
-# 11-scatole/Contenitore.xfce — LA SCATOLA DI XFCE, per la rete di sicurezza
+# 11-scatole/Contenitore.xfce — THE XFCE BOX, for the safety net
 # ===========================================================================
 #
-# ⛔ Questa NON e' la scatola con cui si COMPILA (quella e' `src/Contenitore`).
-#    Questa e' la scatola in cui il prodotto GIRA, con dentro un desktop vero.
+# ⛔ This is NOT the box used to COMPILE (that one is `src/Contenitore`).
+#    This is the box in which the product RUNS, with a real desktop inside.
 #
-# ⭐ Serve al passo 0 della fase 11: rispondere alla domanda che blocca tutto —
-#    *dentro un contenitore, il pezzo di sistema che tiene il conto di chi e'
-#    collegato si comporta come sulla macchina vera?*
+# ⭐ It serves step 0 of phase 11: answering the question that blocks everything —
+#    *inside a container, does the piece of the system that keeps track of who is
+#    logged in behave as on the real machine?*
 #
 # ---------------------------------------------------------------------------
-# ⛔ R2 (§3.2 del documento di fase): LE VERSIONI SI DICHIARANO.
-#    «l'ultima disponibile» e' una data travestita da versione.  Qui la base e'
-#    inchiodata al digest, non al nome del ramo.
+# ⛔ R2 (§3.2 of the phase document): VERSIONS ARE DECLARED.
+#    «the latest available» is a date disguised as a version.  Here the base is
+#    pinned to the digest, not to the branch name.
 #
-#    debian:13 (trixie) — la stessa distribuzione della macchina di prova, e
-#    non per comodita': se la scatola avesse una distribuzione diversa, un
-#    numero peggiore direbbe «e' il desktop» quando invece e' «e' un'altra
+#    debian:13 (trixie) — the same distribution as the test machine, and
+#    not for convenience: if the box had a different distribution, a
+#    worse number would say «it is the desktop» when instead it is «it is another
 #    Debian».
 # ---------------------------------------------------------------------------
 FROM docker.io/library/debian:13
@@ -24,11 +24,11 @@ FROM docker.io/library/debian:13
 ENV DEBIAN_FRONTEND=noninteractive
 
 # ---------------------------------------------------------------------------
-# 1. IL SISTEMA — ⛔ e' il pezzo che il passo 0 deve mettere alla prova
+# 1. THE SYSTEM — ⛔ it is the piece step 0 must put to the test
 #
-#    `systemd` come primo processo, `dbus`, e `dbus-user-session` senza cui la
-#    sessione d'utente non ha un canale suo.  Se questi tre non reggono qui
-#    dentro, la scatola non rappresenta il prodotto e va detto (§3.5).
+#    `systemd` as the first process, `dbus`, and `dbus-user-session` without which the
+#    user session has no bus of its own.  If these three do not hold in
+#    here, the box does not represent the product and it must be said (§3.5).
 # ---------------------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
         systemd systemd-sysv dbus dbus-user-session \
@@ -36,60 +36,60 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------------------------
-# 2. IL DESKTOP — XFCE, che su Wayland NON PORTA UN COMPOSITORE SUO
+# 2. THE DESKTOP — XFCE, which on Wayland DOES NOT BRING A COMPOSITOR OF ITS OWN
 #
-# ⚠⚠ E QUESTA E' LA DIFFERENZA PIU' GROSSA fra questa scatola e le prime due.
-#    GNOME porta Mutter, KDE porta KWin; ⛔ XFCE 4.20 porta una SESSIONE e si
-#    appoggia a un compositore di famiglia `wlroots`.
+# ⚠⚠ AND THIS IS THE BIGGEST DIFFERENCE between this box and the first two.
+#    GNOME brings Mutter, KDE brings KWin; ⛔ XFCE 4.20 brings a SESSION and
+#    leans on a compositor of the `wlroots` family.
 #
-# ⇒ ⭐ La scelta e' **labwc**, ed e' DICHIARATA e non ovvia.  Non e' nuova di
-#     oggi: `DECISIONI.md` ha gia' misurato il ridimensionamento sotto
-#     l'etichetta **«labwc (XFCE, LXQt)»** — `[M]` 5,1 ms, 0 fotogrammi persi
-#     su 25, esatto anche a larghezza dispari.  ⛔ Cambiare compositore qui
-#     vorrebbe dire buttare quelle misure, quindi si cambia solo con una
-#     ragione scritta.
+# ⇒ ⭐ The choice is **labwc**, and it is DECLARED and not obvious.  It is not new
+#     today: `DECISIONI.md` has already measured resizing under
+#     the label **«labwc (XFCE, LXQt)»** — `[M]` 5,1 ms, 0 frames lost
+#     out of 25, exact even at odd width.  ⛔ Changing compositor here
+#     would mean throwing away those measurements, so it changes only with a
+#     written reason.
 #
-# ⚠ `xfce4-session` c'e' anche se al passo 0 basterebbe il compositore: la
-#   scatola deve somigliare al desktop VERO, e la sessione si tira dietro
-#   dipendenze che il compositore da solo non ha.  ⛔ Il contorno grafico
-#   (`xfce4-panel`, `thunar`) NO: entrera' quando entrera' il prodotto, e allora
-#   la ricetta crescera' dichiarando che cosa e' cambiato e quando (R2).
+# ⚠ `xfce4-session` is there even though step 0 would only need the compositor: the
+#   box must resemble the REAL desktop, and the session drags along
+#   dependencies the compositor alone does not have.  ⛔ The graphical surroundings
+#   (`xfce4-panel`, `thunar`) NO: they will come in when the product comes in, and then
+#   the recipe will grow declaring what changed and when (R2).
 # ---------------------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
         labwc xfce4-session xwayland \
     && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------------------------
-# 3. LA SCHEDA GRAFICA — i mestieri, non il ferro: il ferro e' quello vero,
-#    passato dentro con `--device /dev/dri`.
+# 3. THE GRAPHICS CARD — the software, not the iron: the iron is the real one,
+#    passed inside with `--device /dev/dri`.
 # ---------------------------------------------------------------------------
-# ⛔⛔ E I PACCHETTI SONO QUELLI CHE HA LA MACCHINA VERA, non quelli «giusti».
-#    `[M]` 25 agosto 2026: sull'ospite ci sono `va-driver-all 2.22.0-3` e
-#    `mesa-va-drivers 25.0.7-2+deb13u1`, e ⛔ **`intel-media-va-driver-non-free`
-#    NON c'e'**.  La prima stesura di questa ricetta lo chiedeva — cioe' avrebbe
-#    costruito una scatola con un codificatore diverso da quello misurato, e
-#    ogni numero ne sarebbe uscito incomparabile.  ⇒ E' la regola R2 applicata
-#    a un pacchetto invece che a una versione.
+# ⛔⛔ AND THE PACKAGES ARE THOSE THE REAL MACHINE HAS, not the «right» ones.
+#    `[M]` 25 August 2026: on the host there are `va-driver-all 2.22.0-3` and
+#    `mesa-va-drivers 25.0.7-2+deb13u1`, and ⛔ **`intel-media-va-driver-non-free`
+#    is NOT there**.  The first draft of this recipe asked for it — that is, it would have
+#    built a box with an encoder different from the one measured, and
+#    every number would have come out incomparable.  ⇒ It is rule R2 applied
+#    to a package instead of a version.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         mesa-va-drivers va-driver-all \
         vainfo libva-drm2 libva2 libdrm2 \
     && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------------------------
-# 4. GLI ATTREZZI DELLE PROVE — pochi, e ognuno con il suo mestiere
+# 4. THE TEST TOOLS — few, and each with its own job
 #
-#   `wayland-utils`  ⭐ da' `wayland-info`, che elenca quel che il compositore
-#                    ANNUNCIA.  ⛔ E' il metro esatto del guasto del 25 agosto:
-#                    la sessione che nasce senza nessun `wl_output`.
-#   `weston`         da' i clienti minimi (`weston-simple-shm`, `weston-terminal`):
-#                    servono per la prova «una finestra si apre», ⛔ che va
-#                    guardata nel PIXEL, non nel conto dei processi.
-#   `pipewire`       il percorso della cattura.
-#   `python3-aioquic` ⛔ IL CLIENTE DI PROVA, che e' il SECONDO LETTORE del
-#                    protocollo (`PIANO.md` §1.1) — l unica cosa capace di
-#                    accorgersi che server e pagina condividono lo stesso
-#                    fraintendimento.  Senza, nessuna maglia della rete puo'
-#                    attaccarsi a una sessione.
+#   `wayland-utils`  ⭐ gives `wayland-info`, which lists what the compositor
+#                    ANNOUNCES.  ⛔ It is the exact yardstick of the 25 August fault:
+#                    the session that is born without any `wl_output`.
+#   `weston`         gives the minimal clients (`weston-simple-shm`, `weston-terminal`):
+#                    they serve the test «a window opens», ⛔ which must be
+#                    looked at in the PIXEL, not in the count of processes.
+#   `pipewire`       the capture path.
+#   `python3-aioquic` ⛔ THE TEST CLIENT, which is the SECOND READER of the
+#                    protocol (`PIANO.md` §1.1) — the only thing able to
+#                    notice that server and page share the same
+#                    misunderstanding.  Without it, no mesh of the net can
+#                    attach to a session.
 # ---------------------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
         wayland-utils weston \
@@ -98,26 +98,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------------------------
-# 4-bis. ⛔⛔ LE LIBRERIE CHE IL PRODOTTO CHIEDE — dichiarate, non ereditate
+# 4-bis. ⛔⛔ THE LIBRARIES THE PRODUCT ASKS FOR — declared, not inherited
 #
-# `[M]` 26 agosto 2026, e vale la pena di scriverlo: senza questo blocco la
-# scatola funzionava lo stesso, perche' `gnome-shell` si tira dietro quasi
-# tutto quel che serve al prodotto.  ⛔ «Quasi»: mancava `libei1`, e il server
-# non partiva.
+# `[M]` 26 August 2026, and it is worth writing down: without this block the
+# box worked anyway, because `gnome-shell` drags along almost
+# everything the product needs.  ⛔ «Almost»: `libei1` was missing, and the server
+# did not start.
 #
-# ⚠ Ma il difetto vero non era il pacchetto mancante: era che **gli altri
-#   c'erano per caso**.  Il giorno in cui GNOME cambia una dipendenza, la
-#   scatola smette di avere una libreria che nessuno le aveva mai chiesto —
-#   e il guasto arriva mesi dopo, in una fase che non c'entra niente.
-# ⇒ Sono quelle del `Makefile`, riga per riga.  ⛔ `libngtcp2` e `libnghttp3`
-#   NON stanno qui: quelle si costruiscono e si copiano dentro con il prodotto
-#   (`11-accendi.sh prodotto`), perche' non sono in Debian.
-# ⭐ Fase 19 (1 ott 2026, `DECISIONI.md` §10.27): `libvulkan1` (il loader che il
-#   binario collega) e `mesa-vulkan-drivers` (gli ICD di Mesa: RADV per la
-#   Radeon — la strada Vulkan Video, provata PRIMA di VA-API; ANV per la Intel,
-#   che in Vulkan non codifica e resta a VA-API).  ⛔ Senza l'ICD il prodotto
-#   non vede Vulkan e scende a VA-API dicendolo: la rete anti-regressione
-#   «Radeon = Vulkan» misurerebbe VA-API con l'etichetta sbagliata.
+# ⚠ But the real defect was not the missing package: it was that **the others
+#   were there by chance**.  The day GNOME changes a dependency, the
+#   box stops having a library nobody had ever asked it for —
+#   and the fault arrives months later, in a phase that has nothing to do with it.
+# ⇒ They are those of the `Makefile`, line by line.  ⛔ `libngtcp2` and `libnghttp3`
+#   are NOT here: those are built and copied inside with the product
+#   (`11-accendi.sh prodotto`), because they are not in Debian.
+# ⭐ Phase 19 (1 Oct 2026, `DECISIONI.md` §10.27): `libvulkan1` (the loader the
+#   binary links) and `mesa-vulkan-drivers` (Mesa's ICDs: RADV for the
+#   Radeon — the Vulkan Video road, tried BEFORE VA-API; ANV for the Intel,
+#   which does not encode in Vulkan and stays on VA-API).  ⛔ Without the ICD the product
+#   does not see Vulkan and falls back to VA-API saying so: the anti-regression net
+#   «Radeon = Vulkan» would measure VA-API with the wrong label.
 # ---------------------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libglib2.0-0 libpipewire-0.3-0 libdrm2 \
@@ -127,54 +127,54 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------------------------
-# 4-ter. ⛔⛔ GLI ATTREZZI DI **C8**, la maglia piu' importante della lista
+# 4-ter. ⛔⛔ THE TOOLS OF **C8**, the most important mesh of the list
 #
-# ⭐ C8 e' *«il SECONDO utente apre il browser»*, e la risposta la deve dare
-#    **il pixel**: il browser rende una pagina, si' o no.  ⇒ Per rispondere
-#    servono quattro cose, e ognuna ha il suo mestiere:
+# ⭐ C8 is *«the SECOND user opens the browser»*, and the answer must be given by
+#    **the pixel**: the browser renders a page, yes or no.  ⇒ To answer
+#    four things are needed, and each has its own job:
 #
-#   `firefox-esr`     ⛔ IL BROWSER VERO, e non un programma qualunque.  Il
-#                     difetto del 25 agosto 2026 e' di Firefox e di nessun
-#                     altro: tiene il profilo locale sotto `$HOME/.cache/mozilla`,
-#                     e con `~/.cache` condivisa il primo utente se lo prende a
-#                     modo 0700.  ⇒ Provare con un altro programma vorrebbe dire
-#                     provare un'altra cosa.
-#   `ffmpeg`          i fotogrammi presi dal filo diventano un'immagine.  ⚠ Le
-#                     LIBRERIE c'erano gia' (§4-bis); il PROGRAMMA no, e sono
-#                     due cose diverse.
-#   `python3-numpy`   il giudice delle immagini di `10-f1-testimone.py`, che e'
-#   `python3-pil`     gia' tarato sul vero e ⛔ non si riscrive qui.  Senza,
-#                     C8 esce «non ho potuto guardare» invece di ripiegare su un
-#                     giudizio piu' povero senza dirlo.
-#   `fonts-dejavu-core` ⚠ senza un solo carattere Firefox disegna la pagina lo
-#                     stesso, ⛔ ma le scritte diventano rettangoli — e la pagina
-#                     bersaglio ha le scritte APPOSTA, per non essere «tinta
-#                     unita» agli occhi del giudice.
-#   `libpci3`         ⛔⛔ E QUESTA E' LA TESI DELLA FASE PER LA TERZA VOLTA.
-#                     `[M]` 26 agosto 2026: senza, Firefox dice `glxtest: libpci
-#                     missing` e **non produce nessuna immagine** — la prova A
-#                     dava ROSSO a tutti, con la cura e senza.
-#                     ⚠ E nella scatola di XFCE il difetto NON si vedeva:
-#                     `labwc` si tira dietro `libpci3`, `kwin-wayland` no.
-#                     ⇒ Lo stesso identico modo di sbagliare di `libei1` (§4-bis):
-#                     una libreria che c'era **per caso**, e un rosso che
-#                     sembrava del prodotto.
+#   `firefox-esr`     ⛔ THE REAL BROWSER, and not just any program.  The
+#                     defect of 25 August 2026 is Firefox's and nobody
+#                     else's: it keeps the local profile under `$HOME/.cache/mozilla`,
+#                     and with a shared `~/.cache` the first user takes it with
+#                     mode 0700.  ⇒ Testing with another program would mean
+#                     testing another thing.
+#   `ffmpeg`          the frames taken from the wire become an image.  ⚠ The
+#                     LIBRARIES were already there (§4-bis); the PROGRAM was not, and they are
+#                     two different things.
+#   `python3-numpy`   the image judge of `10-f1-testimone.py`, which is
+#   `python3-pil`     already calibrated on the real thing and ⛔ is not rewritten here.  Without them,
+#                     C8 exits «I could not look» instead of falling back on a
+#                     poorer judgement without saying so.
+#   `fonts-dejavu-core` ⚠ without a single font Firefox draws the page
+#                     anyway, ⛔ but the text becomes rectangles — and the target
+#                     page has text ON PURPOSE, so as not to be «flat
+#                     colour» to the judge's eyes.
+#   `libpci3`         ⛔⛔ AND THIS IS THE THESIS OF THE PHASE FOR THE THIRD TIME.
+#                     `[M]` 26 August 2026: without it, Firefox says `glxtest: libpci
+#                     missing` and **produces no image at all** — test A
+#                     gave RED to everyone, with the cure and without.
+#                     ⚠ And in the XFCE box the defect did NOT show:
+#                     `labwc` drags along `libpci3`, `kwin-wayland` does not.
+#                     ⇒ The very same way of going wrong as `libei1` (§4-bis):
+#                     a library that was there **by chance**, and a red that
+#                     looked like the product's.
 #
-# ⚠ E il prezzo si dichiara: questo blocco fa crescere ogni scatola di parecchie
-#   centinaia di megabyte.  ⭐ Sta in TUTT'E QUATTRO lo stesso, e non solo in
-#   quella di GNOME: se le ricette divergessero, il confronto fra desktop
-#   varrebbe meno — che e' il guasto che l'utente ha nominato per primo (D5) e
-#   che C11 va a cercare.
+# ⚠ And the price is declared: this block makes every box grow by several
+#   hundred megabytes.  ⭐ It is in ALL FOUR the same, and not only in
+#   the GNOME one: if the recipes diverged, the comparison between desktops
+#   would be worth less — which is the fault the user named first (D5) and
+#   that C11 goes looking for.
 # ---------------------------------------------------------------------------
-# ⭐ fase 18 (1 ott 2026): `firefox-esr` NON dal deposito ma dal .deb dell'OSPITE
-#   (`pacchetti/`, che `11-accendi.sh costruisci` prende da
-#   /media/REMOTIX/cache/apt-host).  `[M]` 30 set: il deposito di sicurezza di
-#   trixie e' passato alla 153.4.0esr mentre l'ospite, e le scatole di TUTTE le
-#   misure delle fasi 15-18, hanno la 140.16.0esr — e' la regola R2 (§3): la
-#   scatola ha i pacchetti della macchina vera, non quelli «giusti».
-#   `apt-mark hold` perche' un aggiornamento dentro la scatola non lo cambi in
-#   silenzio.  ⚠ La versione sta scritta qui apposta: quando l'ospite cambia
-#   Firefox, cambia questa riga, e lo si sa.
+# ⭐ phase 18 (1 Oct 2026): `firefox-esr` NOT from the repository but from the HOST's .deb
+#   (`pacchetti/`, which `11-accendi.sh costruisci` takes from
+#   /media/REMOTIX/cache/apt-host).  `[M]` 30 Sep: the trixie security repository
+#   moved to 153.4.0esr while the host, and the boxes of ALL the
+#   measurements of phases 15-18, have 140.16.0esr — it is rule R2 (§3): the
+#   box has the packages of the real machine, not the «right» ones.
+#   `apt-mark hold` so that an upgrade inside the box does not change it
+#   silently.  ⚠ The version is written here on purpose: when the host changes
+#   Firefox, this line changes, and it is known.
 COPY pacchetti/firefox-esr_140.16.0esr-1~deb13u1_amd64.deb /tmp/pacchetti/firefox-esr.deb
 RUN apt-get update && apt-get install -y --no-install-recommends \
         /tmp/pacchetti/firefox-esr.deb ffmpeg \
@@ -184,121 +184,121 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /tmp/pacchetti /var/lib/apt/lists/*
 
 # ---------------------------------------------------------------------------
-# 5. L'INQUILINO — il PRIMO, e con il gruppo `render` senza cui il compositore
-#    disegnerebbe in software.
+# 5. THE TENANT — the FIRST, and with the `render` group without which the compositor
+#    would draw in software.
 #
-# ⚠ «il primo» e non «l unico»: la D2 e' stata CORRETTA dall utente il 26 agosto
-#   2026 — *«per quanto mi riguarda un container puo anche avere 10 inquilini,
-#   e' un dato gia' misurato con GNOME»* (`DECISIONI.md` §4.6-terdecies).
-#   ⇒ Gli altri li crea la prova che ne ha bisogno (C8 ne vuole due), non la
-#     ricetta: qui sta solo quello che serve al passo 0.
+# ⚠ «the first» and not «the only»: D2 was CORRECTED by the user on 26 August
+#   2026 — *«as far as I am concerned a container can even have 10 tenants,
+#   it is a fact already measured with GNOME»* (`DECISIONI.md` §4.6-terdecies).
+#   ⇒ The others are created by the test that needs them (C8 wants two), not by the
+#     recipe: here there is only the one step 0 needs.
 #
-# ⚠ `provanic` e non `prova`: il nome dice a quale banco appartiene, cosi' una
-#   pulizia non puo' pestare i piedi a un altro (fase 10, §7.3).
+# ⚠ `provanic` and not `prova`: the name says which bench it belongs to, so that a
+#   cleanup cannot step on another's toes (phase 10, §7.3).
 # ---------------------------------------------------------------------------
-# ⛔⛔ E I DUE GRUPPI SI CREANO SE NON CI SONO — `[M]` 26 agosto 2026.
-#     Nella scatola di GNOME `render` esisteva gia': lo portava un pacchetto
-#     che `gnome-shell` si tira dietro.  ⛔ Nella scatola di PLASMA **non
-#     esiste**, e la ricetta moriva con `usermod: group 'render' does not exist`.
-# ⭐⭐ Ed e' la tesi di questa fase in miniatura, capitata al primo tentativo:
-#     **il secondo desktop ha fatto vedere subito una cosa che il primo teneva
-#     nascosta, e non perche' fosse rotto — perche' era generoso.**
+# ⛔⛔ AND THE TWO GROUPS ARE CREATED IF THEY ARE NOT THERE — `[M]` 26 August 2026.
+#     In the GNOME box `render` already existed: a package
+#     that `gnome-shell` drags along brought it.  ⛔ In the PLASMA box **it does not
+#     exist**, and the recipe died with `usermod: group 'render' does not exist`.
+# ⭐⭐ And it is the thesis of this phase in miniature, happening at the first attempt:
+#     **the second desktop immediately showed something the first kept
+#     hidden, and not because it was broken — because it was generous.**
 RUN groupadd -f video \
     && groupadd -f render \
     && useradd -u 4011 -m -s /bin/bash provanic \
     && usermod -aG video,render provanic \
     && printf 'provanic:provanic2026\n' | chpasswd
 
-# ⛔ E la `~/.cache` dev'essere SUA.  Sulla macchina di prova e' un collegamento
-#    a `/tmp` per scelta del proprietario (`DECISIONI.md` §4.6-undecies), e qui
-#    dentro non lo e' — ⚠ quindi questa riga oggi non serve, e c'e' lo stesso:
-#    la scatola deve creare l'inquilino come lo crea il PRODOTTO, o la prova
-#    proverebbe una cosa piu' facile di quella vera.
+# ⛔ And the `~/.cache` must be ITS OWN.  On the test machine it is a link
+#    to `/tmp` by the owner's choice (`DECISIONI.md` §4.6-undecies), and in
+#    here it is not — ⚠ so this line is not needed today, and it is there anyway:
+#    the box must create the tenant as the PRODUCT creates it, or the test
+#    would test something easier than the real one.
 RUN rm -f /home/provanic/.cache \
     && install -d -o provanic -g provanic -m 700 /home/provanic/.cache
 
 # ---------------------------------------------------------------------------
-# 6. ⛔⛔ IL GRUPPO DELLA SCHEDA GRAFICA SI ALLINEA A QUELLO DELL'OSPITE
+# 6. ⛔⛔ THE GRAPHICS CARD GROUP IS ALIGNED TO THE HOST'S
 #
-# `[M]` 25 agosto 2026, primo giro del passo 0 — ⭐ e non l'aveva previsto
-# nessuno dei due revisori.
+# `[M]` 25 August 2026, first run of step 0 — ⭐ and neither of the two
+# reviewers had foreseen it.
 #
-# Il nodo `/dev/dri/renderD128` entra nella scatola con il NUMERO di gruppo che
-# ha sull'ospite (991), ⛔ ma dentro Debian quel numero appartiene a un altro
-# gruppo (`polkitd`), e il gruppo `render` della scatola ne ha un altro.
-# ⇒ Risultato del primo giro: `root:polkitd 660`, l'inquilino fuori, e
-#   `[M]` **il compositore che ripiega su «surfaceless renderer without GPU»** —
-#   cioe' ⛔ **una scatola che misura la codifica in SOFTWARE credendo di
-#   misurare l'hardware.**  Nessun rosso da nessuna parte: solo numeri peggiori.
+# The node `/dev/dri/renderD128` enters the box with the group NUMBER it
+# has on the host (991), ⛔ but inside Debian that number belongs to another
+# group (`polkitd`), and the box's `render` group has another one.
+# ⇒ Result of the first run: `root:polkitd 660`, the tenant left out, and
+#   `[M]` **the compositor falling back on «surfaceless renderer without GPU»** —
+#   that is ⛔ **a box that measures SOFTWARE encoding believing it is
+#   measuring the hardware.**  No red anywhere: only worse numbers.
 #
-# ⚠ E il numero NON si inchioda qui: si LEGGE dal nodo all'avvio.  Inchiodare
-#   991 vorrebbe dire una scatola che funziona su questa macchina e tace su
-#   un'altra — e il silenzio e' precisamente quel che questa fase combatte.
+# ⚠ And the number is NOT pinned here: it is READ from the node at startup.  Pinning
+#   991 would mean a box that works on this machine and stays silent on
+#   another — and silence is precisely what this phase fights.
 #
 # ---------------------------------------------------------------------------
-# ⛔⛔ 6-BIS. E I FILE DEVONO SEGUIRE IL GRUPPO — `[M]` 27 agosto 2026
+# ⛔⛔ 6-BIS. AND THE FILES MUST FOLLOW THE GROUP — `[M]` 27 August 2026
 #
-# ⭐⭐ QUESTA CURA E' LA CURA DI UN DANNO CHE CI ERAMO FATTI DA SOLI, e vale la
-#     pena di scriverla per intero perche' e' il modo di sbagliare piu' caro
-#     della fase: **la riparazione di un guasto ne ha aperto un altro, in un
-#     posto che non c'entrava niente, e il secondo sembrava del prodotto.**
+# ⭐⭐ THIS CURE IS THE CURE OF A DAMAGE WE HAD DONE TO OURSELVES, and it is worth
+#     writing it in full because it is the most expensive way of going wrong
+#     of the phase: **the repair of one fault opened another, in a
+#     place that had nothing to do with it, and the second looked like the product's.**
 #
-# `groupmod -g` sposta il NUMERO del gruppo, ⛔ e NON tocca i file che quel
-# numero ce l'hanno gia' addosso.  ⇒ Qui sopra il gruppo `polkitd` viene
-# spostato da 991 a 1991 per far posto a `render`, e da quel momento:
-#   `[M]` `/etc/polkit-1/rules.d` resta `root:991 drwxr-x---`, cioe' passa
-#   **al gruppo `render`**, mentre `polkitd` gira col gruppo 1991 ⇒ ⛔ **non
-#   puo' piu' leggere la sua directory delle regole e muore con `status=1`**,
-#   in silenzio, senza una riga di spiegazione.
+# `groupmod -g` moves the group NUMBER, ⛔ and does NOT touch the files that already
+# carry that number.  ⇒ Above, the `polkitd` group is
+# moved from 991 to 1991 to make room for `render`, and from that moment:
+#   `[M]` `/etc/polkit-1/rules.d` stays `root:991 drwxr-x---`, that is it passes
+#   **to the `render` group**, while `polkitd` runs with group 1991 ⇒ ⛔ **it can
+#   no longer read its rules directory and dies with `status=1`**,
+#   silently, without a line of explanation.
 #
-# ⛔ E il conto di quel silenzio: `upower.service` muore dietro a `polkit`
-#    (**1 213 riavvii**), `gnome-shell` li chiama in modo SINCRONO all avvio e
-#    incassa **quattro scadenze da 25 000 ms in fila** ⇒ per **~97 secondi
-#    Mutter non risponde a niente**, ne' D-Bus ne' Wayland.
-# ⇒ ⭐⭐ **La sessione non nasceva cieca: nasceva in ritardo di ~97 s** — e
-#   cinque maglie della rete (C2, C3, C4, C6, C8b) risultavano «bloccate» da un
-#   difetto della SCATOLA travestito da difetto del PRODOTTO.
+# ⛔ And the bill for that silence: `upower.service` dies behind `polkit`
+#    (**1 213 restarts**), `gnome-shell` calls them SYNCHRONOUSLY at startup and
+#    takes **four 25 000 ms timeouts in a row** ⇒ for **~97 seconds
+#    Mutter answers nothing**, neither D-Bus nor Wayland.
+# ⇒ ⭐⭐ **The session was not born blind: it was born ~97 s late** — and
+#   five meshes of the net (C2, C3, C4, C6, C8b) showed as «blocked» by a
+#   defect of the BOX disguised as a defect of the PRODUCT.
 #
-# ⇒ La cura sta QUI e non altrove: chi sposta il numero si porta dietro i file.
-#   ⚠ `find / -xdev` e non `find /`: `/dev` e' un montaggio a parte, e il nodo
-#     `/dev/dri/renderD128` deve restare col gruppo 991 dell OSPITE — e' tutto
-#     il senso di questo blocco.
-# ⛔ E NON si e' curato allargando i permessi di `polkit` ne' togliendo pezzi
-#    dalla sua unita': quella sarebbe stata una catena diversa da quella
-#    consegnata, cioe' un simulacro (§3.5).
+# ⇒ The cure is HERE and not elsewhere: whoever moves the number brings the files along.
+#   ⚠ `find / -xdev` and not `find /`: `/dev` is a separate mount, and the node
+#     `/dev/dri/renderD128` must keep the HOST's group 991 — that is the whole
+#     point of this block.
+# ⛔ And it was NOT cured by widening `polkit`'s permissions nor by removing pieces
+#    from its unit: that would have been a chain different from the one
+#    delivered, that is a sham (§3.5).
 # ---------------------------------------------------------------------------
 RUN printf '%s\n' \
     '#!/bin/sh' \
-    '# Allinea il gruppo `render` della scatola a quello del NODO dell ospite.' \
+    '# Aligns the box render group to the one of the host NODE.' \
     'set -eu' \
     'N=/dev/dri/renderD128' \
-    '[ -e "$N" ] || { echo "rete11: $N non ce, la scheda non e entrata"; exit 0; }' \
+    '[ -e "$N" ] || { echo "rete11: $N is not there, the card did not get in"; exit 0; }' \
     'G=$(stat -c %g "$N")' \
     'A=$(getent group "$G" | cut -d: -f1 || true)' \
-    'if [ "$A" = render ]; then echo "rete11: render e gia $G"; else' \
+    'if [ "$A" = render ]; then echo "rete11: render is already $G"; else' \
     '  if [ -n "$A" ]; then' \
     '    groupmod -g "1$G" "$A" || true' \
     '    find / -xdev -gid "$G" -exec chgrp "1$G" {} + 2>/dev/null || true' \
-    '    echo "rete11: i file del gruppo $A hanno seguito il gruppo a 1$G"' \
+    '    echo "rete11: the files of group $A followed the group to 1$G"' \
     '  fi' \
     '  groupmod -g "$G" render 2>/dev/null || groupadd -g "$G" render' \
-    '  echo "rete11: render allineato a $G (era di ${A:-nessuno})"' \
+    '  echo "rete11: render aligned to $G (it belonged to ${A:-nobody})"' \
     'fi' \
     'usermod -aG render,video provanic' \
     'id provanic' \
     > /usr/local/sbin/rete11-allinea-gruppi && chmod 755 /usr/local/sbin/rete11-allinea-gruppi
 
-# ⛔⛔ E L'ORDINE E' PARTE DELLA CURA — `[M]` 27 agosto 2026, vista nel giornale:
-#     `polkit.service` partiva a `05:52:38.134`, moriva a `.199`, e il `chgrp`
-#     arrivava a `.296`.  ⇒ ⭐ **Novantasette millesimi di secondo di ritardo, e
-#     la scatola nasceva `degraded` con un servizio morto** — poi `gnome-shell`
-#     lo faceva risorgere dal bus e tutto andava, ma il rosso restava scritto.
-# ⇒ `Before=basic.target` mette QUESTA unita' prima di TUTTI i servizi normali,
-#   non solo prima di `logind`: chi sposta i numeri dei gruppi deve aver finito
-#   prima che qualcuno provi a leggere un file con quei numeri addosso.
+# ⛔⛔ AND THE ORDER IS PART OF THE CURE — `[M]` 27 August 2026, seen in the journal:
+#     `polkit.service` started at `05:52:38.134`, died at `.199`, and the `chgrp`
+#     arrived at `.296`.  ⇒ ⭐ **Ninety-seven milliseconds late, and
+#     the box was born `degraded` with a dead service** — then `gnome-shell`
+#     revived it from the bus and everything worked, but the red stayed written.
+# ⇒ `Before=basic.target` puts THIS unit before ALL the normal services,
+#   not only before `logind`: whoever moves the group numbers must have finished
+#   before anyone tries to read a file carrying those numbers.
 RUN printf '%s\n' \
     '[Unit]' \
-    'Description=rete11 — allinea il gruppo della scheda grafica a quello dellospite' \
+    'Description=rete11 — aligns the graphics card group to the host one' \
     'Before=systemd-logind.service' \
     'Before=basic.target' \
     'Before=polkit.service' \
@@ -314,51 +314,51 @@ RUN printf '%s\n' \
     && systemctl enable rete11-gruppi.service
 
 # ---------------------------------------------------------------------------
-# 6-bis. ⭐⭐ L'ADATTATORE DI QUESTO DESKTOP, allo stesso percorso di tutti
+# 6-bis. ⭐⭐ THE ADAPTER OF THIS DESKTOP, at the same path as all the others
 #
-# ⛔ E' la risposta alla domanda piu' difficile della fase: la lista delle prove
-#    e' UNA e non sa che desktop ha davanti; ogni scatola porta qui il suo
-#    «come si avvia e come si guarda».  ⇒ `fasi/11…` §3.7.
+# ⛔ It is the answer to the hardest question of the phase: the list of tests
+#    is ONE and does not know which desktop it has in front of it; every box brings here its own
+#    «how it is started and how it is watched».  ⇒ `fasi/11…` §3.7.
 # ---------------------------------------------------------------------------
 COPY adattatore.xfce.sh /usr/local/lib/rete11/adattatore.sh
 
 # ---------------------------------------------------------------------------
-# 7. IL PRIMO PROCESSO — `systemd`, ed e' il punto di tutta la scatola.
+# 7. THE FIRST PROCESS — `systemd`, and it is the point of the whole box.
 #
-# ⛔ Un contenitore che avviasse direttamente il desktop non risponderebbe alla
-#    domanda del passo 0: risponderebbe a una piu' comoda.
+# ⛔ A container that started the desktop directly would not answer the
+#    question of step 0: it would answer a more convenient one.
 #
-# ⚠⚠ E LA SCATOLA VUOLE DUE PERMESSI IN PIU', che NON sono un dettaglio:
+# ⚠⚠ AND THE BOX WANTS TWO EXTRA PERMISSIONS, which are NOT a detail:
 #     `--cap-add=AUDIT_WRITE --cap-add=AUDIT_CONTROL`.
-#     `[M]` Senza il secondo, `pam_loginuid.so` — che nella catena PAM di Debian
-#     e' `required` — fallisce con *«Cannot make/remove an entry for the
-#     specified session»*, ⛔ e **il gestore d'utente non parte affatto**: niente
-#     sessione, niente canale, niente desktop.
-#     ⭐ La strada scelta e' DARE il permesso, non togliere `pam_loginuid` dalla
-#     catena: togliendolo si proverebbe una catena PAM diversa da quella
-#     consegnata, cioe' si proverebbe un simulacro (§3.5).
-#     ⇒ I permessi stanno in `11-accendi.sh`, dichiarati riga per riga.
+#     `[M]` Without the second, `pam_loginuid.so` — which in Debian's PAM chain
+#     is `required` — fails with *«Cannot make/remove an entry for the
+#     specified session»*, ⛔ and **the user manager does not start at all**: no
+#     session, no bus, no desktop.
+#     ⭐ The road chosen is to GIVE the permission, not to remove `pam_loginuid` from the
+#     chain: removing it would test a PAM chain different from the one
+#     delivered, that is it would test a sham (§3.5).
+#     ⇒ The permissions are in `11-accendi.sh`, declared line by line.
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
-# ⭐ R6 — 20 settembre 2026, incremento 1 della fase 13: IL DESKTOP VERO.
+# ⭐ R6 — 20 September 2026, increment 1 of phase 13: THE REAL DESKTOP.
 #
-# ⛔ La §2 qui sopra diceva: *«il contorno grafico NO: entrera' quando entrera'
-#    il prodotto, e allora la ricetta crescera' dichiarando che cosa e' cambiato
-#    e quando»*.  ⇒ **E' adesso**: la fase 13 fa nascere una sessione XFCE, e
-#    una sessione senza pannello e senza scrivania non e' XFCE — e' un
-#    compositore con dentro niente.
+# ⛔ §2 above said: *«the graphical surroundings NO: they will come in when
+#    the product comes in, and then the recipe will grow declaring what changed
+#    and when»*.  ⇒ **It is now**: phase 13 brings an XFCE session to life, and
+#    a session without panel and without desktop is not XFCE — it is a
+#    compositor with nothing inside.
 #
-# ⚠ E non e' solo estetica: `[R]` `STUDI.md` §xfce §10.5 — `xfdesktop` esce con
-#   `exit(1)` se non trova `zwlr_layer_shell_v1`, e `xfce4-panel` esce senza far
-#   niente se `n_monitors == 0`.  ⇒ Senza di loro **quei due guasti non si
-#   possono nemmeno vedere**, e sono due dei modi in cui la nascita fallisce.
+# ⚠ And it is not just aesthetics: `[R]` `STUDI.md` §xfce §10.5 — `xfdesktop` exits with
+#   `exit(1)` if it does not find `zwlr_layer_shell_v1`, and `xfce4-panel` exits without doing
+#   anything if `n_monitors == 0`.  ⇒ Without them **those two faults cannot
+#   even be seen**, and they are two of the ways in which birth fails.
 #
-# ⭐ E la stessa coppia che l'utente ha chiesto su GNOME e su KDE — un terminale
-#   e un gestore di file, cioe' quel che serve per LAVORARE dentro la sessione
-#   invece di guardare uno sfondo: qui sono `xfce4-terminal` e `thunar`, e `nano`.
-#   ⛔ Sono del BANCO, non del prodotto: REMOTIX non li apre e non li nomina.
+# ⭐ And the same pair the user asked for on GNOME and on KDE — a terminal
+#   and a file manager, that is what is needed to WORK inside the session
+#   instead of looking at a wallpaper: here they are `xfce4-terminal` and `thunar`, and `nano`.
+#   ⛔ They belong to the BENCH, not to the product: REMOTIX does not open them and does not name them.
 #
-# ⚠ Ultimo strato apposta: gli strati sopra restano quelli di prima.
+# ⚠ Last layer on purpose: the layers above stay as they were.
 # ---------------------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
         xfce4-panel xfdesktop4 \
@@ -367,18 +367,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------------------------
-# ⭐ R7 — 21 settembre 2026, fase 13: GLI ARBITRI DEGLI APPUNTI, come su gnome
-#   e kde.  `wl-clipboard` (`wl-copy`, `wl-paste`) e `python3-gi`+GTK4 (per
-#   `appunti-gtk.py`) sono gli attrezzi con cui C17 guarda gli appunti DENTRO
-#   la sessione.  ⛔ Sono del BANCO, non del prodotto: REMOTIX non li usa.
-# ⛔ Senza, C17 su questa scatola non poteva guardare — e fino al 21 set lo
-#   diceva col colore sbagliato: ROSSO invece di 3 (`fasi/13-xfce.md`, «Il
-#   banco», punto 5).  ⚠ Messi qui anche se il prodotto su XFCE gli appunti
-#   non li da' ancora (incremento 5): la scatola si prepara
-#   PRIMA, come la macchina vera, non il giorno che serve.
-# ⭐ E li guarda C11 (`11-c11-allineamento.py`, `DEVE_COMBACIARE`): stessa
-#   versione in tutte e quattro le scatole.
-# ⚠ Ultimo strato apposta: gli strati sopra restano quelli di prima.
+# ⭐ R7 — 21 September 2026, phase 13: THE CLIPBOARD ARBITERS, as on gnome
+#   and kde.  `wl-clipboard` (`wl-copy`, `wl-paste`) and `python3-gi`+GTK4 (for
+#   `appunti-gtk.py`) are the tools with which C17 looks at the clipboard INSIDE
+#   the session.  ⛔ They belong to the BENCH, not to the product: REMOTIX does not use them.
+# ⛔ Without them, C17 on this box could not look — and until 21 Sep it
+#   said so with the wrong colour: RED instead of 3 (`fasi/13-xfce.md`, «The
+#   bench», point 5).  ⚠ Put here even though the product does not yet provide the clipboard
+#   on XFCE (increment 5): the box is prepared
+#   BEFORE, like the real machine, not on the day it is needed.
+# ⭐ And C11 looks at them (`11-c11-allineamento.py`, `DEVE_COMBACIARE`): same
+#   version in all four boxes.
+# ⚠ Last layer on purpose: the layers above stay as they were.
 # ---------------------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
         wl-clipboard \
@@ -386,14 +386,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------------------------
-# ⭐ L'INQUILINO DELL'UTENTE — 21 set 2026, chiesto dall'utente prima di LXQt:
-#   *«per non impazzire con nomi utente e password crea nei container l'utente
-#   nictest:nictest e inseriscilo nel gruppo sudo»*.  E' per le SUE prove a
-#   mano (Firefox, terminale, gestore di file sono gia' negli strati sopra).
-# ⚠ `video` e `render` come `provanic`: senza, la sessione non apre la scheda.
-# ⛔ Nessuna maglia lo usa: le maglie creano inquilini loro (`c1u…`, `c17u…`),
-#   cosi' le prove dell'utente e la rete non si pestano i piedi.
-# ⚠ Ultimo strato apposta: gli strati sopra restano quelli di prima.
+# ⭐ THE USER'S TENANT — 21 Sep 2026, asked by the user before LXQt:
+#   *«so as not to go crazy with user names and passwords create in the containers the user
+#   nictest:nictest and put it in the sudo group»*.  It is for HIS manual
+#   tests (Firefox, terminal, file manager are already in the layers above).
+# ⚠ `video` and `render` like `provanic`: without them, the session does not open the card.
+# ⛔ No mesh uses it: the meshes create their own tenants (`c1u…`, `c17u…`),
+#   so the user's tests and the net do not step on each other's toes.
+# ⚠ Last layer on purpose: the layers above stay as they were.
 # ---------------------------------------------------------------------------
 RUN useradd -m -s /bin/bash nictest \
     && usermod -aG sudo,video,render nictest \
@@ -403,12 +403,12 @@ STOPSIGNAL SIGRTMIN+3
 CMD ["/sbin/init"]
 
 # ---------------------------------------------------------------------------
-# ⭐ 6 ott 2026, fase 19 — ⛔ DIPENDENZA DEL PRODOTTO anche su XFCE: `avvia()`
-#   (src/sessione.c, `primario_misurato()`) fa nascere `xfce4-session` DOPO un
-#   `wlr-randr --custom-mode` alla misura del cliente — senza, `xfce4-panel`
-#   nato a 1280x720 puo' restare in un ciclo e ridisegnarsi a ogni fotogramma
-#   (`[M]` NVIDIA, labwc 0.9.3).  ⚠ Se manca, la sessione nasce lo stesso.
-# ⚠ Ultimo strato apposta, come R4 di LXQt.
+# ⭐ 6 Oct 2026, phase 19 — ⛔ PRODUCT DEPENDENCY on XFCE too: `avvia()`
+#   (src/sessione.c, `primario_misurato()`) brings `xfce4-session` to life AFTER a
+#   `wlr-randr --custom-mode` at the client's size — without it, `xfce4-panel`
+#   born at 1280x720 can stay in a loop and redraw itself at every frame
+#   (`[M]` NVIDIA, labwc 0.9.3).  ⚠ If it is missing, the session is born anyway.
+# ⚠ Last layer on purpose, like LXQt's R4.
 # ---------------------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
         wlr-randr \

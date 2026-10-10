@@ -1,103 +1,103 @@
 #!/usr/bin/env python3
-"""01-b5-violazioni.py — ⛔ B5: il rigore verso il server, provato violandolo.
+"""01-b5-violazioni.py — ⛔ B5: strictness towards the server, tested by violating it.
 
     python3 01-b5-violazioni.py --indirizzo 192.168.0.2 --porta 7447
-    python3 01-b5-violazioni.py --solo tela-1921          (un caso solo)
-    python3 01-b5-violazioni.py --elenco                  (le previsioni, senza misurare)
+    python3 01-b5-violazioni.py --solo tela-1921          (a single case)
+    python3 01-b5-violazioni.py --elenco                  (the predictions, without measuring)
 
-⚠ Gira DENTRO il contenitore: aioquic sta li'.
-
-===========================================================================
-⛔ PERCHE' QUESTO BANCO ESISTE
-
-`RCP.md` §3 e' la **regola di rigore**: quel che non si capisce non si ignora,
-la connessione cade, col motivo.  ⭐ Ma una regola di rigore **non si prova
-facendo le cose giuste**: un server che non controlla niente passa tutti i
-banchi di B3 e cade solo il giorno in cui qualcuno gli manda un byte storto —
-e quel giorno non c'e' un banco a guardare.
-
-⛔ *Un banco che non prova a violare il protocollo non prova il protocollo.*
+⚠ It runs INSIDE the container: aioquic lives there.
 
 ===========================================================================
-⛔ LE CINQUE COSE CHE OGNI CASO VERIFICA, E LE ULTIME DUE SI DIMENTICANO
+⛔ WHY THIS BENCH EXISTS
 
-  1. ⛔ **che la violazione sia DAVVERO partita.**  Un caso la cui
-     *preparazione* fallisce — l'`ATTACCA` fisso rifiutato, l'`ECCOMI` che non
-     arriva — non ha provato niente, e finche' il motivo si raschiava dal testo
-     dell'eccezione diventava **verde** proprio per quello (rilievo R7.1).  Qui
-     ogni caso porta `provocato`, e senza quello e' rosso;
-  2. **il motivo giusto**, letto DAL LATO CHE RICEVE (§8.1) — non dal registro
-     del server, che e' la stessa mano che ha scritto il codice, e ⛔ **non dal
-     testo di un'eccezione**: `raccogli` lo prende da un messaggio arrivato sul
-     filo, o non lo prende;
-  3. ⛔ **in quale MESSAGGIO** e' arrivato.  §11 lo dice per esteso:
-     `CREDENZIALI_ERRATE` e `TROPPI_TENTATIVI` viaggiano in `RESPINTO`, tutti
-     gli altri in `CONGEDO`, e §4.4 vieta di mandare tutt'e due.  Sono **due
-     macchine a stati diverse** — dopo `RESPINTO` il client non puo' riprovare
-     — e contarle sotto la stessa etichetta e' la forma E3 (rilievo R7.9);
-  4. **le due strade di §3.1**, e ⛔ **non sono facoltative allo stesso modo**:
-     il **punto 2** (il `CONGEDO`) e' condizionato — *«se il canale di
-     controllo e' ancora utilizzabile»* — il **punto 3** (il codice del motivo
-     nella chiusura della sessione WebTransport) e' un **DEVE incondizionato**,
-     ed e' quello che §3.1 chiama *«quello che salva le diagnosi»*.
-     ⚠ Il rilievo R3.3 diceva che pretenderle sempre tutt'e due darebbe rosso
-     sul codice giusto: vale per il punto 2, **non** per il punto 3, e averli
-     scambiati aveva reso facoltativo proprio l'ultimo appiglio (rilievo R7.3).
-     Qui il punto 3 si **conta**, con il suo denominatore, invece di essere
-     stampato;
-  5. ⛔ **e che il server sia ancora li' dopo** (B0.5).  Un server ucciso dal
-     nucleo *«fa cadere la connessione»* esattamente come uno che congeda —
-     e si porta via **tutte le sessioni degli altri utenti**.  Dopo ogni caso
-     si apre una connessione nuova e si arriva a `ECCOMI`: e' la meta' del
-     banco che nessuno scrive, ed e' quella che distingue il rigore dal
-     collasso.
+`RCP.md` §3 is the **strictness rule**: what is not understood is not ignored,
+the connection drops, with the reason.  ⭐ But a strictness rule **is not tested
+by doing the right things**: a server that checks nothing passes all the B3
+benches and falls only the day someone sends it a crooked byte — and that day
+there is no bench watching.
+
+⛔ *A bench that does not try to violate the protocol does not test the protocol.*
 
 ===========================================================================
-⭐ E I CASI CHE DEVONO PASSARE
+⛔ THE FIVE THINGS EVERY CASE VERIFIES, AND THE LAST TWO GET FORGOTTEN
 
-I casi con `atteso = None` sono ⭐ **verdi attesi**, e non sono riempitivo:
-sono il controllo che dice *no* a «questo server chiude tutto».
-
-  nome-con-trattino-basso    `video.misura_massima`: il `_` e' LECITO (§4.3)
-  capacita-sconosciuta       un NOME che non esiste si ignora (§3, eccezione 1)
-  hevc-e-vp9                 una voce sconosciuta DENTRO un elenco si SCARTA
-  vista-300x801              la vista non ha i vincoli della tela (§7.1, R4.10)
-  vista-1x1                  idem, al limite
-  disposizione-con-variante  `de(neo)`: la variante fra parentesi e' lecita
-  banco-spento               ⛔ `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)`, non
-                             una chiusura e non un silenzio (§7.5 regola 2)
-  banco-ritardo-20000        `RITARDO_FUORI_LIMITI`, e la sessione RESTA APERTA
-
-⛔ **E QUANTI SONO NON STA SCRITTO QUI.**  Il numero lo conta `conta()` e lo
-stampano `--elenco` e la riga finale, ciascuno con il suo denominatore.  Un
-numero scritto a mano in un commento e' il numero che nessuno ricalcola: il
-rilievo R7.14 ne ha trovati **tre** — «cinque casi qui dentro», «trentacinque
-verdi su trentacinque», «44 violazioni su 44» — e **nessuno dei tre tornava con
-il file**.  ⚠ Il terzo, per giunta, contava fra le violazioni anche i casi che
-DEVONO passare, su cui «il motivo giusto ogni volta» e' falso per costruzione:
-su quelli non deve arrivare nessun motivo.
+  1. ⛔ **that the violation REALLY left.**  A case whose *preparation* fails —
+     the fixed `ATTACCA` refused, the `ECCOMI` that does not arrive — has tested
+     nothing, and as long as the reason was scraped from the exception text it
+     became **green** precisely because of that (finding R7.1).  Here every
+     case carries `provocato`, and without it it is red;
+  2. **the right reason**, read FROM THE RECEIVING SIDE (§8.1) — not from the
+     server log, which is the same hand that wrote the code, and ⛔ **not from
+     the text of an exception**: `raccogli` takes it from a message that arrived
+     on the wire, or does not take it;
+  3. ⛔ **in which MESSAGE** it arrived.  §11 says it in full:
+     `CREDENZIALI_ERRATE` and `TROPPI_TENTATIVI` travel in `RESPINTO`, all the
+     others in `CONGEDO`, and §4.4 forbids sending both.  They are **two
+     different state machines** — after `RESPINTO` the client cannot retry —
+     and counting them under the same label is form E3 (finding R7.9);
+  4. **the two roads of §3.1**, and ⛔ **they are not optional in the same way**:
+     **point 2** (the `CONGEDO`) is conditional — *«if the control channel is
+     still usable»* — **point 3** (the reason code in the closing of the
+     WebTransport session) is an **unconditional MUST**, and it is the one §3.1
+     calls *«the one that saves the diagnoses»*.
+     ⚠ Finding R3.3 said that always demanding both would give red on the
+     right code: it holds for point 2, **not** for point 3, and having swapped
+     them had made optional precisely the last foothold (finding R7.3).
+     Here point 3 is **counted**, with its denominator, instead of being
+     printed;
+  5. ⛔ **and that the server is still there afterwards** (B0.5).  A server
+     killed by the kernel *«drops the connection»* exactly like one that says
+     farewell — and it takes away **all the other users' sessions**.  After every
+     case a new connection is opened and it gets as far as `ECCOMI`: it is the
+     half of the bench nobody writes, and it is the one that tells strictness
+     from collapse.
 
 ===========================================================================
-⛔ QUEL CHE QUESTO BANCO NON PROVA, E VA DETTO — rilievo R7.8
+⭐ AND THE CASES THAT MUST PASS
 
-`RCP.md` §3 dichiara **cinque** eccezioni alla regola di rigore e dice che
-«fuori da questo elenco non se ne inventano».  Qui se ne prova **una**: la
-prima, con `capacita-sconosciuta` e `hevc-e-vp9`.  Le altre quattro sono
-**tolleranze** — posti in cui il server DEVE *non* chiudere — e un server che
-chiudesse a ogni sorpresa passerebbe questo banco al completo.
+The cases with `atteso = None` are ⭐ **expected greens**, and they are not
+filler: they are the control that says *no* to «this server closes everything».
 
-| eccezione di §3 | il caso che manca | perche' non e' qui |
+  nome-con-trattino-basso    `video.misura_massima`: the `_` is LAWFUL (§4.3)
+  capacita-sconosciuta       a NAME that does not exist is ignored (§3, exception 1)
+  hevc-e-vp9                 an unknown entry INSIDE a list is DISCARDED
+  vista-300x801              the view does not have the canvas constraints (§7.1, R4.10)
+  vista-1x1                  likewise, at the limit
+  disposizione-con-variante  `de(neo)`: the variant in parentheses is lawful
+  banco-spento               ⛔ `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)`, not
+                             a closing and not a silence (§7.5 rule 2)
+  banco-ritardo-20000        `RITARDO_FUORI_LIMITI`, and the session STAYS OPEN
+
+⛔ **AND HOW MANY THERE ARE IS NOT WRITTEN HERE.**  The number is counted by
+`conta()` and printed by `--elenco` and by the final line, each with its
+denominator.  A number written by hand in a comment is the number nobody
+recomputes: finding R7.14 found **three** of them — «five cases in here»,
+«thirty-five greens out of thirty-five», «44 violations out of 44» — and **none
+of the three matched the file**.  ⚠ The third, what is more, counted among the
+violations also the cases that MUST pass, on which «the right reason every
+time» is false by construction: on those no reason must arrive.
+
+===========================================================================
+⛔ WHAT THIS BENCH DOES NOT TEST, AND IT MUST BE SAID — finding R7.8
+
+`RCP.md` §3 declares **five** exceptions to the strictness rule and says that
+«outside this list none are invented».  Here **one** is tested: the first, with
+`capacita-sconosciuta` and `hevc-e-vp9`.  The other four are **tolerances** —
+places where the server MUST *not* close — and a server that closed at every
+surprise would pass this bench in full.
+
+| exception of §3 | the missing case | why it is not here |
 |---|---|---|
-| 2 (§6.3) | un datagram di 4 byte, o con `tipo` != `0x0401`, si **scarta** | l'audio non esiste prima della **fase 7** |
-| 3 (§7.1) | il **secondo di grazia** sulle coordinate vecchie dopo `TELA(ADATTATA)` | `ADATTA_TELA` e l'input non esistono prima della **fase 6** |
-| 4 (§7.1) | una misura **fuori dai limiti** in `ADATTA_TELA` → `TELA(RIFIUTATA, MISURA_FUORI_LIMITI)` **con la sessione ancora aperta** | ⭐ **non è più vero dal 15 agosto 2026**: `ADATTA_TELA` è servito, e il caso è provato da `banchi/04-b31-tela.c` (casi 5 e 17). ⚠ E l'esempio che stava qui — `1921×1081` — **era sbagliato**: sta DENTRO i limiti di §4.5 ed è dispari, quindi si tronca a `1920×1080` e si concede. Fuori dai limiti è, per esempio, `1600×230` (l'altezza minima è 240) |
-| 5 (§5.2, §7.4) | due `RICHIEDI_CHIAVE` a meno di 200 ms: la seconda **si puo' ignorare** | `RICHIEDI_CHIAVE` non esiste prima della **fase 3** |
+| 2 (§6.3) | a 4-byte datagram, or one with `tipo` != `0x0401`, is **discarded** | audio does not exist before **phase 7** |
+| 3 (§7.1) | the **grace second** on the old coordinates after `TELA(ADATTATA)` | `ADATTA_TELA` and input do not exist before **phase 6** |
+| 4 (§7.1) | a size **out of bounds** in `ADATTA_TELA` → `TELA(RIFIUTATA, MISURA_FUORI_LIMITI)` **with the session still open** | ⭐ **no longer true since 15 Aug 2026**: `ADATTA_TELA` is served, and the case is tested by `banchi/04-b31-tela.c` (cases 5 and 17). ⚠ And the example that was here — `1921×1081` — **was wrong**: it is WITHIN the limits of §4.5 and odd, so it is truncated to `1920×1080` and granted. Out of bounds is, for example, `1600×230` (the minimum height is 240) |
+| 5 (§5.2, §7.4) | two `RICHIEDI_CHIAVE` less than 200 ms apart: the second **may be ignored** | `RICHIEDI_CHIAVE` does not exist before **phase 3** |
 
-⚠ **Scriverli qui oggi darebbe rosso su un messaggio che nessuno ha ancora
-scritto**, cioe' su una regola che il server non ha mai avuto occasione di
-applicare — il difetto che `01-b5-lancia.sh` dichiara di temere per l'innesto.
-Vanno nei banchi delle fasi 3, 6 e 7, e questa tabella e' il posto da cui
-riprenderli.
+⚠ **Writing them here today would give red on a message nobody has written
+yet**, that is on a rule the server never had the chance to apply — the
+defect `01-b5-lancia.sh` declares it fears for the graft.  They go into the
+benches of phases 3, 6 and 7, and this table is the place to pick them up
+from.
 """
 import argparse
 import asyncio
@@ -113,19 +113,20 @@ from aioquic.asyncio import connect
 
 QUI = os.path.dirname(os.path.abspath(__file__))
 
-# ⛔ Il cliente di B3 si IMPORTA, non si ricopia.  Dentro c'e' la riga che gli
-#    impedisce di dare gli eventi del canale di controllo allo strato HTTP/3 di
-#    aioquic — senza la quale la connessione muore per mano del CLIENT (10
-#    agosto 2026), e una copia divergente riporterebbe quel difetto qui dentro
-#    travestito da difetto del server.
+# ⛔ The B3 client is IMPORTED, not copied.  Inside it is the line that
+#    prevents it from handing the control-channel events to aioquic's HTTP/3
+#    layer — without which the connection dies at the hand of the CLIENT (10
+#    Aug 2026), and a diverging copy would bring that defect back in here
+#    disguised as a server defect.
 _spec = importlib.util.spec_from_file_location(
     "b3cliente", os.path.join(QUI, "01-b3-cliente.py"))
 b3 = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(b3)
 
-# ⛔ E il profilo del BERSAGLIO, per la stessa ragione: le differenze fra i due
-#    server stanno in un file solo, e quattro banchi le leggono invece di
-#    scoprirle da capo — o, peggio, di non scoprirle e dare rosso.
+# ⛔ And the TARGET's profile, for the same reason: the differences between the
+#    two servers are in a single file, and four benches read them instead of
+#    discovering them all over again — or, worse, not discovering them and
+#    giving red.
 _spec_b0 = importlib.util.spec_from_file_location(
     "b0bersaglio", os.path.join(QUI, "01-b0-bersaglio.py"))
 b0 = importlib.util.module_from_spec(_spec_b0)
@@ -141,29 +142,29 @@ TROPPI_TENTATIVI = 0x08
 CREDENZIALI_ERRATE = 0x07
 CONGEDO, RESPINTO, BANCO_ESITO = 0x000C, 0x0005, 0x0010
 
-# ⛔ IN QUALE MESSAGGIO DEVE ARRIVARE IL MOTIVO — `RCP.md` §11, riga «il
-#    congedo»: «`CREDENZIALI_ERRATE` e `TROPPI_TENTATIVI` viaggiano in
-#    `RESPINTO`», tutti gli altri in `CONGEDO`, e §4.4 vieta di far seguire
-#    `RESPINTO` da un `CONGEDO`.  ⚠ Non e' una formalita': dopo `RESPINTO` il
-#    client NON DEVE riprovare sulla stessa connessione (§4.4), dopo un
-#    `CONGEDO` la connessione e' finita e basta — due macchine a stati diverse
-#    sotto lo stesso numero (rilievo R7.9).
+# ⛔ IN WHICH MESSAGE THE REASON MUST ARRIVE — `RCP.md` §11, line «the
+#    farewell»: «`CREDENZIALI_ERRATE` and `TROPPI_TENTATIVI` travel in
+#    `RESPINTO`», all the others in `CONGEDO`, and §4.4 forbids following
+#    `RESPINTO` with a `CONGEDO`.  ⚠ It is not a formality: after `RESPINTO` the
+#    client MUST NOT retry on the same connection (§4.4), after a `CONGEDO` the
+#    connection is simply over — two different state machines under the same
+#    number (finding R7.9).
 PORTATORE = {CREDENZIALI_ERRATE: "RESPINTO", TROPPI_TENTATIVI: "RESPINTO"}
 
 
 class Cliente(b3.Cliente):
-    """Il cliente di B3, piu' quel che serve a violare (§2.5)."""
+    """The B3 client, plus what is needed to violate (§2.5)."""
 
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
-        # ⛔ GLI STREAM CHE APRE QUESTO BANCO, e vanno tenuti lontani dallo
-        #    strato HTTP/3 di aioquic: vedi `quic_event_received`.
+        # ⛔ THE STREAMS THIS BENCH OPENS, and they must be kept away from
+        #    aioquic's HTTP/3 layer: see `quic_event_received`.
         self.miei_stream = set()
         self.eco = {}
 
     def apri_uni(self):
-        # aioquic scrive da se' l'intestazione dello stream unidirezionale
-        # WebTransport: il tipo 0x54 e l'identificatore della sessione.
+        # aioquic writes by itself the header of the WebTransport
+        # unidirectional stream: the type 0x54 and the session identifier.
         s_id = self._http.create_webtransport_stream(
             self.sessione, is_unidirectional=True)
         self.miei_stream.add(s_id)
@@ -180,55 +181,56 @@ class Cliente(b3.Cliente):
         self.transmit()
 
     def quic_event_received(self, event):
-        # ⛔⭐ QUEL CHE TORNA SUGLI STREAM CHE ABBIAMO APERTO NOI NON VA DATO
-        #     AD AIOQUIC — ed e' un difetto DEL BANCO, misurato `[M]` il 10
-        #     agosto 2026 sul registro del server.
+        # ⛔⭐ WHAT COMES BACK ON THE STREAMS WE OPENED MUST NOT BE GIVEN TO
+        #     AIOQUIC — and it is a defect OF THE BENCH, measured `[M]` on 10
+        #     Aug 2026 on the server log.
         #
-        #     Il caso `secondo-bidirezionale` dava «chiusura-wt=(assente)»
-        #     mentre il server faceva tutto giusto.  Il registro, alle righe
-        #     32355-32359 di `b5-server.log`:
+        #     The case `secondo-bidirezionale` gave «chiusura-wt=(absent)»
+        #     while the server did everything right.  The log, at lines
+        #     32355-32359 of `b5-server.log`:
         #
         #       REMOTIX B5: ⛔ due stream bidirezionali dal client dentro la
         #                     sessione: il controllo e' il 4, e il 8 e' di troppo
         #       REMOTIX B3: congedo motivo=0x0b …
         #       REMOTIX B3: chiusura della sessione RIMANDATA, codice 0x0b
         #                   (in coda: 1; keep-alive a 100 ms …)
-        #       frm tx … STREAM id=0x4 len=71   ← il CONGEDO
-        #       frm tx … STREAM id=0x8 len=30   ← l'eco di B2 sullo stream di troppo
+        #       frm tx … STREAM id=0x4 len=71   ← the CONGEDO
+        #       frm tx … STREAM id=0x8 len=30   ← B2's echo on the extra stream
         #       frm rx … CONNECTION_CLOSE error_code=0x105
         #                reason=[DATA frame is not allowed in this state]
         #       ngtcp2_conn_read_pkt: ERR_DRAINING
         #
-        # ⛔ Il `CONNECTION_CLOSE` e' RICEVUTO dal server: ad andarsene e' il
-        #    CLIENTE, un pacchetto dopo il `CONGEDO` e mezzo secondo prima che
-        #    le cinque passate facciano maturare la capsula.  Il codice 0x105
-        #    e' `H3_FRAME_UNEXPECTED` di aioquic: i 30 byte tornati sullo
-        #    stream 8 finivano in `self._http.handle_event`, che di uno stream
-        #    WebTransport aperto da noi non sa niente e li legge come un frame
-        #    `DATA` su uno stream di richiesta.  ⚠ E' la stessa asimmetria gia'
-        #    misurata in `01-b3-cliente.py` — aioquic 1.2 sa CREARE uno stream
-        #    WebTransport e non sa RICONOSCERLO quando ci risponde — curata la'
-        #    per il canale di controllo e mai per gli stream che apre B5.
+        # ⛔ The `CONNECTION_CLOSE` is RECEIVED by the server: it is the CLIENT
+        #    that leaves, one packet after the `CONGEDO` and half a second
+        #    before the five passes let the capsule mature.  Code 0x105 is
+        #    aioquic's `H3_FRAME_UNEXPECTED`: the 30 bytes that came back on
+        #    stream 8 ended up in `self._http.handle_event`, which knows nothing
+        #    of a WebTransport stream opened by us and reads them as a `DATA`
+        #    frame on a request stream.  ⚠ It is the same asymmetry already
+        #    measured in `01-b3-cliente.py` — aioquic 1.2 can CREATE a
+        #    WebTransport stream and cannot RECOGNISE it when it answers us —
+        #    cured there for the control channel and never for the streams B5
+        #    opens.
         #
-        # ⭐ Quindi il banco misurava la propria fretta, non il server: un
-        #    browser vero quei byte li consegna alla pagina e resta collegato.
-        #    Qui si scartano, DICHIARANDOLI (§3: nessuna tolleranza silenziosa).
+        # ⭐ So the bench was measuring its own hurry, not the server: a real
+        #    browser hands those bytes to the page and stays connected.
+        #    Here they are discarded, DECLARING THEM (§3: no silent tolerance).
         if (type(event).__name__ == "StreamDataReceived"
                 and event.stream_id in self.miei_stream):
             if event.data and event.stream_id not in self.eco:
                 self.eco[event.stream_id] = len(event.data)
-                print(f"   [wt]   ⚠ {len(event.data)} byte tornati dal server "
-                      f"sullo stream {event.stream_id}, quello aperto per "
-                      f"violare: e' l'eco di B2 sui byte gia' in volo mentre "
-                      f"la sessione cade.  Il banco li scarta senza darli "
-                      f"allo strato HTTP/3 di aioquic, che ci ucciderebbe la "
-                      f"connessione con 0x105 prima della capsula di chiusura")
+                print(f"   [wt]   ⚠ {len(event.data)} bytes came back from the server "
+                      f"on stream {event.stream_id}, the one opened to "
+                      f"violate: it is B2's echo on the bytes already in flight while "
+                      f"the session drops.  The bench discards them without giving them "
+                      f"to aioquic's HTTP/3 layer, which would kill the "
+                      f"connection with 0x105 before the closing capsule")
             return
         super().quic_event_received(event)
 
 
 # ---------------------------------------------------------------------------
-# I corpi, scritti a mano perche' vanno storti apposta.
+# The bodies, written by hand because they go crooked on purpose.
 def capacita(voci, versione=1):
     out = struct.pack("!HH", versione, len(voci))
     for n, v in voci:
@@ -239,11 +241,11 @@ def capacita(voci, versione=1):
 BUONE = [("video.codec", "hevc,av1"), ("video.profondita", "8,10"),
          ("audio.codec", "opus,pcm"), ("client.nome", "banco-b5 0.1.0")]
 
-# ⛔ `BUONE` senza `client.nome`, per i casi che devono violare **una regola
-#    sola** su quel nome.  `BUONE + [("client.nome", ...)]` porta `client.nome`
-#    DUE VOLTE, e §4.3 da' due ragioni distinte per chiudere — il duplicato e
-#    il valore — quindi un server che implementasse solo la prima dava verde
-#    senza aver mai guardato la lunghezza di un valore (rilievo R7.6).
+# ⛔ `BUONE` without `client.nome`, for the cases that must violate **a single
+#    rule** on that name.  `BUONE + [("client.nome", ...)]` carries `client.nome`
+#    TWICE, and §4.3 gives two distinct reasons to close — the duplicate and
+#    the value — so a server that implemented only the first gave green
+#    without ever having looked at the length of a value (finding R7.6).
 SENZA_NOME = [v for v in BUONE if v[0] != "client.nome"]
 
 
@@ -260,47 +262,47 @@ def banco_marca(id_=1, colore=0x00FF0000, ritardo=0):
 
 
 async def banco_esito(cli, es, id_, esito, motivo):
-    """⛔ §7.5: `BANCO_ESITO` si verifica CAMPO PER CAMPO.
+    """⛔ §7.5: `BANCO_ESITO` is verified FIELD BY FIELD.
 
-    Un server che rispondesse `BANCO_ESITO(ACCETTATA)` a funzione spenta
-    passerebbe un banco che guarda solo «e' arrivata una risposta e la
-    sessione regge» — e dipingerebbe quadratini sul desktop di qualcuno.
+    A server that answered `BANCO_ESITO(ACCETTATA)` with the function off
+    would pass a bench that only looks at «an answer arrived and the session
+    holds» — and it would paint little squares on someone's desktop.
     """
     nome, corpo, _ = await b3.attendi(cli, None, attesa=6)
     if nome != "0x0010":
-        raise RuntimeError(f"atteso BANCO_ESITO, arrivato {nome}")
+        raise RuntimeError(f"expected BANCO_ESITO, arrived {nome}")
     if len(corpo) < 14:
-        raise RuntimeError(f"BANCO_ESITO di {len(corpo)} byte: §7.5 ne vuole 14")
+        raise RuntimeError(f"BANCO_ESITO of {len(corpo)} bytes: §7.5 wants 14")
     v_id, v_esito, v_motivo = struct.unpack("!IBB", corpo[:6])
     v_istante = struct.unpack("!Q", corpo[6:14])[0]
     es.banco = f"id={v_id} esito={v_esito} motivo={v_motivo} istante={v_istante}"
     if (v_id, v_esito, v_motivo) != (id_, esito, motivo):
         raise RuntimeError(
-            f"BANCO_ESITO {es.banco}, atteso id={id_} esito={esito} "
+            f"BANCO_ESITO {es.banco}, expected id={id_} esito={esito} "
             f"motivo={motivo}")
-    # ⛔ «`istante`: 0 se rifiutata, ed e' l'unico significato di *assente*
-    #    per questo campo» (§7.5, §6.0).
+    # ⛔ «`istante`: 0 if refused, and it is the only meaning of *absent*
+    #    for this field» (§7.5, §6.0).
     if v_esito == 2 and v_istante != 0:
-        raise RuntimeError(f"rifiutata, ma `istante` vale {v_istante} e non 0")
+        raise RuntimeError(f"refused, but `istante` is {v_istante} and not 0")
 
 
 # ---------------------------------------------------------------------------
 class Esito:
-    """Che cosa e' successo, dal lato che riceve."""
+    """What happened, from the receiving side."""
 
     def __init__(self):
-        self.motivo = None        # dal CONGEDO / RESPINTO — MAI dedotto
-        self.tipo_motivo = None   # ⛔ IN QUALE messaggio e' arrivato (§11, §4.4)
+        self.motivo = None        # from the CONGEDO / RESPINTO — NEVER deduced
+        self.tipo_motivo = None   # ⛔ IN WHICH message it arrived (§11, §4.4)
         self.dettaglio = ""
-        self.codice_wt = None     # dalla chiusura della sessione (§3.1 punto 3)
-        self.stato_http = None    # per il caso del percorso
-        self.messaggi = []        # i tipi arrivati, in ordine
-        self.viva = False         # la sessione e' ancora aperta alla fine
-        # ⛔ La violazione e' partita davvero?  Vedi il punto 1 del docstring:
-        #    senza questa marca un caso che cade nella PREPARAZIONE conta come
-        #    verde (rilievo R7.1).
+        self.codice_wt = None     # from the closing of the session (§3.1 point 3)
+        self.stato_http = None    # for the path case
+        self.messaggi = []        # the types that arrived, in order
+        self.viva = False         # the session is still open at the end
+        # ⛔ Did the violation really leave?  See point 1 of the docstring:
+        #    without this mark a case that falls in the PREPARATION counts as
+        #    green (finding R7.1).
         self.provocato = False
-        self.fase = "apertura"    # dove si e' fermato, se si e' fermato
+        self.fase = "opening"     # where it stopped, if it stopped
         self.errore = None
 
     def __str__(self):
@@ -308,26 +310,26 @@ class Esito:
         if self.stato_http and self.stato_http != "200":
             p.append(f":status={self.stato_http}")
         if not self.provocato:
-            p.append(f"⛔ violazione MAI SPEDITA (fermo in «{self.fase}»)")
+            p.append(f"⛔ violation NEVER SENT (stopped in «{self.fase}»)")
         if self.motivo is not None:
             p.append(f"motivo={self.motivo:#04x}={MOTIVI.get(self.motivo, '?')}"
                      f" in {self.tipo_motivo}")
         elif self.tipo_motivo is not None:
-            p.append(f"{self.tipo_motivo} senza motivo leggibile")
-        p.append("chiusura-wt=" + ("(assente)" if self.codice_wt is None
+            p.append(f"{self.tipo_motivo} without a readable reason")
+        p.append("chiusura-wt=" + ("(absent)" if self.codice_wt is None
                                    else f"{self.codice_wt:#04x}"))
         if self.viva:
-            p.append("sessione VIVA")
+            p.append("session ALIVE")
         if self.errore:
             p.append(f"errore={self.errore}")
-        return "  ".join(p) if p else "niente"
+        return "  ".join(p) if p else "nothing"
 
 
 async def raccogli(cli, es, attesa, grazia=1.5):
-    """Aspetta il congedo, o la fine dell'attesa se la sessione regge.
+    """Waits for the farewell, or for the end of the wait if the session holds.
 
-    ⛔ **Questo e' l'unico posto in cui `es.motivo` viene scritto**, e lo
-       scrive da un messaggio arrivato sul filo (§8.1: dal lato che riceve).
+    ⛔ **This is the only place where `es.motivo` is written**, and it writes it
+       from a message that arrived on the wire (§8.1: from the receiving side).
     """
     scadenza = asyncio.get_event_loop().time() + attesa
     while True:
@@ -343,17 +345,17 @@ async def raccogli(cli, es, attesa, grazia=1.5):
         tipo, corpo, _ = m
         es.messaggi.append(tipo)
         if tipo in (CONGEDO, RESPINTO):
-            # ⛔ Si ricorda QUALE dei due, perche' §4.4 e §11 li distinguono e
-            #    il verdetto lo chiede (rilievo R7.9).
+            # ⛔ It remembers WHICH of the two, because §4.4 and §11 tell them
+            #    apart and the verdict asks for it (finding R7.9).
             es.tipo_motivo = "CONGEDO" if tipo == CONGEDO else "RESPINTO"
-            # ⛔ E un corpo VUOTO non e' «nessun motivo»: §7.1 vuole `u8
-            #    motivo` (piu' `stringa dettaglio` nel `CONGEDO`) e §3.1 vieta
-            #    il codice 0.  Con `corpo[0] if corpo else None` un server che
-            #    chiude MALE era piu' facile da far passare di uno che chiude
-            #    bene, perche' lasciava `motivo = None` (rilievo R7.2).
+            # ⛔ And an EMPTY body is not «no reason»: §7.1 wants `u8
+            #    motivo` (plus `stringa dettaglio` in the `CONGEDO`) and §3.1
+            #    forbids code 0.  With `corpo[0] if corpo else None` a server that
+            #    closes BADLY was easier to let through than one that closes
+            #    well, because it left `motivo = None` (finding R7.2).
             if not corpo:
-                es.errore = (f"{es.tipo_motivo} con corpo VUOTO: §7.1 ne vuole "
-                             "almeno il byte del motivo")
+                es.errore = (f"{es.tipo_motivo} with an EMPTY body: §7.1 wants "
+                             "at least the reason byte")
                 break
             es.motivo = corpo[0]
             if tipo == CONGEDO and len(corpo) >= 3:
@@ -362,27 +364,27 @@ async def raccogli(cli, es, attesa, grazia=1.5):
             break
         if tipo == BANCO_ESITO:
             break
-    # ⛔ §3.1 PUNTO 3, E PERCHE' SI ASPETTA.
+    # ⛔ §3.1 POINT 3, AND WHY ONE WAITS.
     #
-    #    Il `CONGEDO` viaggia sul canale di controllo, la chiusura della
-    #    sessione e' una capsula sullo stream della sessione: sono due strade
-    #    diverse e arrivano in due momenti diversi.  Leggere `codice_chiusura`
-    #    nell'istante esatto in cui il `CONGEDO` e' stato letto misurerebbe
-    #    «la seconda strada non e' arrivata» ogni volta che il server la manda
-    #    un millisecondo dopo — cioe' misurerebbe la nostra fretta.
-    #    ⚠ La finestra e' DICHIARATA e limitata: se scade, il valore resta
-    #      `None` e il verdetto lo conta come mancato, non lo nasconde.
+    #    The `CONGEDO` travels on the control channel, the closing of the
+    #    session is a capsule on the session stream: they are two different
+    #    roads and they arrive at two different moments.  Reading
+    #    `codice_chiusura` at the exact instant the `CONGEDO` was read would
+    #    measure «the second road did not arrive» every time the server sends
+    #    it a millisecond later — that is it would measure our hurry.
+    #    ⚠ The window is DECLARED and bounded: if it expires, the value stays
+    #      `None` and the verdict counts it as missed, it does not hide it.
     if es.motivo is not None or es.errore is not None:
         fine = asyncio.get_event_loop().time() + grazia
         while (cli.codice_chiusura is None and not cli.finito
                and asyncio.get_event_loop().time() < fine):
             await asyncio.sleep(0.02)
     es.codice_wt = cli.codice_chiusura
-    # ⛔ «Viva» vuol dire viva.  Prima bastava che non fosse arrivato un
-    #    motivo, e un server che mandava `ECCOMI` e poi CHIUDEVA la sessione
-    #    senza congedo dava la riga «la sessione regge» mentre era morta
-    #    (rilievo R7.2): la chiusura WebTransport e il `FIN` sul canale di
-    #    controllo entrano nel giudizio, non solo nella stampa.
+    # ⛔ «Alive» means alive.  Before, it was enough that no reason had
+    #    arrived, and a server that sent `ECCOMI` and then CLOSED the session
+    #    without a farewell gave the line «the session holds» while it was dead
+    #    (finding R7.2): the WebTransport closing and the `FIN` on the control
+    #    channel enter the judgement, not only the printout.
     es.viva = (not cli.finito and es.motivo is None
                and es.codice_wt is None and es.errore is None)
 
@@ -420,9 +422,9 @@ async def fino_a_sessione(cli, a):
 
 
 # ===========================================================================
-# I CASI.  ⛔ Ciascuno dichiara la sua ATTESA prima di misurare (§1.11): la
-#          colonna «atteso» e' una PREVISIONE scritta nel file, non un
-#          commento sul risultato.
+# THE CASES.  ⛔ Each declares its EXPECTATION before measuring (§1.11): the
+#             «expected» column is a PREDICTION written in the file, not a
+#             comment on the result.
 # ===========================================================================
 CASI = []
 
@@ -434,24 +436,24 @@ def caso(nome, atteso, spiega, dove="prima"):
     return dec
 
 
-# ── L'inquadratura (§6.1) ──────────────────────────────────────────────────
+# ── The framing (§6.1) ─────────────────────────────────────────────────────
 @caso("tipo-sconosciuto", ERRORE_PROTOCOLLO,
-      "un tipo che non esiste sul canale di controllo: §3 vieta di ignorarlo")
+      "a type that does not exist on the control channel: §3 forbids ignoring it")
 async def _(cli, a, es):
     await fino_a_eccomi(cli)
     cli.manda(inquadra(0x00FF, b""))
 
 
 @caso("tipo-del-server", ERRORE_PROTOCOLLO,
-      "ECCOMI mandato DAL CLIENT: tipo conosciuto, verso sbagliato (§7.1)")
+      "ECCOMI sent BY THE CLIENT: known type, wrong direction (§7.1)")
 async def _(cli, a, es):
     await fino_a_eccomi(cli)
     cli.manda(inquadra(0x0002, capacita(BUONE)))
 
 
 @caso("lunghezza-in-piu", ERRORE_PROTOCOLLO,
-      "un CIAO buono con quattro byte di riempimento in coda (§6.0: nessun "
-      "riempimento)")
+      "a good CIAO with four bytes of padding at the end (§6.0: no "
+      "padding)")
 async def _(cli, a, es):
     corpo = capacita(BUONE) + b"\x00\x00\x00\x00"
     cli.apri_controllo()
@@ -459,79 +461,79 @@ async def _(cli, a, es):
 
 
 @caso("lunghezza-in-meno", ERRORE_PROTOCOLLO,
-      "una lunghezza piu' corta dei campi che il tipo prevede")
+      "a length shorter than the fields the type expects")
 async def _(cli, a, es):
     corpo = capacita(BUONE)
     cli.apri_controllo()
-    # si dichiara meta' corpo, e si mandano solo quei byte: l'elenco delle
-    # capacita' si tronca a meta' di una stringa
+    # half the body is declared, and only those bytes are sent: the list of
+    # capabilities is truncated halfway through a string
     cli.manda(struct.pack("!HI", 0x0001, len(corpo) // 2) + corpo[:len(corpo) // 2])
 
 
 @caso("lunghezza-4gib", ERRORE_PROTOCOLLO,
-      "⛔ una lunghezza annunciata di 4 GiB: §6.1 vieta di allocare prima di "
-      "controllare, e un server ucciso dal nucleo «fa cadere la connessione» "
-      "lo stesso — portandosi via le sessioni di tutti gli altri (R3.3)")
+      "⛔ an announced length of 4 GiB: §6.1 forbids allocating before "
+      "checking, and a server killed by the kernel «drops the connection» "
+      "all the same — taking away everyone else's sessions (R3.3)")
 async def _(cli, a, es):
     cli.apri_controllo()
     cli.manda(struct.pack("!HI", 0x0001, 0xFFFFFFFF))
 
 
 @caso("lunghezza-oltre-1mib", ERRORE_PROTOCOLLO,
-      "un messaggio che annuncia piu' di 1 MiB (§6.1)")
+      "a message announcing more than 1 MiB (§6.1)")
 async def _(cli, a, es):
     cli.apri_controllo()
     cli.manda(struct.pack("!HI", 0x0001, 2 * 1024 * 1024))
 
 
 @caso("stato-sbagliato", ERRORE_PROTOCOLLO,
-      "CREDENZIALI come primo messaggio, prima di CIAO")
+      "CREDENZIALI as the first message, before CIAO")
 async def _(cli, a, es):
     cli.apri_controllo()
     cli.manda(inquadra(0x0003, s(a.utente) + s(a.parola)))
 
 
 @caso("ciao-due-volte", ERRORE_PROTOCOLLO,
-      "un secondo CIAO dopo ECCOMI: lo stesso messaggio, lo stato sbagliato")
+      "a second CIAO after ECCOMI: the same message, the wrong state")
 async def _(cli, a, es):
     await fino_a_eccomi(cli)
     cli.manda(ciao())
 
 
-# ── La versione (§2.4, §9) ─────────────────────────────────────────────────
+# ── The version (§2.4, §9) ─────────────────────────────────────────────────
 @caso("versione-2", VERSIONE_INCOMPATIBILE,
-      "⛔ CIAO(versione=2) su /rcp/1: §2.4 dice che le due DEVONO coincidere. "
-      "⚠ §9 da sola direbbe ECCOMI(1) — e' una contraddizione di RCP.md")
+      "⛔ CIAO(versione=2) on /rcp/1: §2.4 says the two MUST coincide. "
+      "⚠ §9 alone would say ECCOMI(1) — it is a contradiction of RCP.md")
 async def _(cli, a, es):
     cli.apri_controllo()
     cli.manda(ciao(versione=2))
 
 
 @caso("versione-0", VERSIONE_INCOMPATIBILE,
-      "CIAO(versione=0) su /rcp/1: dall'altra parte dello stesso confine")
+      "CIAO(versione=0) on /rcp/1: on the other side of the same boundary")
 async def _(cli, a, es):
     cli.apri_controllo()
     cli.manda(ciao(versione=0))
 
 
-# ── Le capacita' (§4.3) ────────────────────────────────────────────────────
+# ── The capabilities (§4.3) ────────────────────────────────────────────────
 @caso("nome-maiuscolo", ERRORE_PROTOCOLLO,
-      "un nome di capacita' con le maiuscole: §4.3 ammette a-z 0-9 . _")
+      "a capability name with capitals: §4.3 allows a-z 0-9 . _")
 async def _(cli, a, es):
     cli.apri_controllo()
     cli.manda(ciao(BUONE + [("Video.Codec", "hevc")]))
 
 
 @caso("nome-65-byte", ERRORE_PROTOCOLLO,
-      "un nome da 65 byte: il limite di §4.3 e' 64")
+      "a 65-byte name: the limit of §4.3 is 64")
 async def _(cli, a, es):
     cli.apri_controllo()
     cli.manda(ciao(BUONE + [("x" * 65, "si")]))
 
 
 @caso("nome-con-trattino-basso", None,
-      "⭐ `video.misura_massima`: il trattino basso e' LECITO, ed e' la "
-      "contraddizione che il validatore di B4 ha trovato in §4.3 il 10 agosto")
+      "⭐ `video.misura_massima`: the underscore is LAWFUL, and it is the "
+      "contradiction the B4 validator found in §4.3 on 10 August")
 async def _(cli, a, es):
     cli.apri_controllo()
     cli.manda(ciao(BUONE + [("video.misura_massima", "3840x2160")]))
@@ -539,39 +541,39 @@ async def _(cli, a, es):
 
 
 @caso("valore-vuoto", ERRORE_PROTOCOLLO,
-      "un valore vuoto: «chi non ha niente da dire non manda la capacita'».  "
-      "⛔ UNA violazione sola: `client.nome` compare una volta e basta")
+      "an empty value: «whoever has nothing to say does not send the capability».  "
+      "⛔ ONE violation only: `client.nome` appears once and that is it")
 async def _(cli, a, es):
     cli.apri_controllo()
     cli.manda(ciao(SENZA_NOME + [("client.nome", "")]))
 
 
 @caso("valore-257-byte", ERRORE_PROTOCOLLO,
-      "un valore da 257 byte: il limite di §4.3 e' 256.  ⛔ UNA violazione "
-      "sola, per la stessa ragione del caso di sopra")
+      "a 257-byte value: the limit of §4.3 is 256.  ⛔ ONE violation "
+      "only, for the same reason as the case above")
 async def _(cli, a, es):
     cli.apri_controllo()
     cli.manda(ciao(SENZA_NOME + [("client.nome", "x" * 257)]))
 
 
 @caso("capacita-ripetuta", ERRORE_PROTOCOLLO,
-      "`video.codec` due volte: «vince l'ultimo» e «vince il primo» sono due "
-      "implementazioni dello stesso documento")
+      "`video.codec` twice: «the last one wins» and «the first one wins» are two "
+      "implementations of the same document")
 async def _(cli, a, es):
     cli.apri_controllo()
     cli.manda(ciao(BUONE + [("video.codec", "av1")]))
 
 
 @caso("capacita-del-lato-sbagliato", ERRORE_PROTOCOLLO,
-      "`banco.marca` mandata DAL CLIENT: §4.3 la dichiara del server, e il "
-      "nome e' conosciuto — l'eccezione dei nomi sconosciuti non la copre")
+      "`banco.marca` sent BY THE CLIENT: §4.3 declares it the server's, and the "
+      "name is known — the exception for unknown names does not cover it")
 async def _(cli, a, es):
     cli.apri_controllo()
     cli.manda(ciao(BUONE + [("banco.marca", "si")]))
 
 
 @caso("capacita-sconosciuta", None,
-      "⭐ un NOME che non esiste: si ignora e si prosegue — eccezione 1 di §3")
+      "⭐ a NAME that does not exist: it is ignored and one carries on — exception 1 of §3")
 async def _(cli, a, es):
     cli.apri_controllo()
     cli.manda(ciao(BUONE + [("questa.non.esiste", "boh")]))
@@ -579,8 +581,8 @@ async def _(cli, a, es):
 
 
 @caso("solo-vp9", NIENTE_IN_COMUNE,
-      "`video.codec = vp9` e basta: non ha sbagliato a scrivere, non ha di "
-      "che parlare — e il motivo NON e' ERRORE_PROTOCOLLO")
+      "`video.codec = vp9` and nothing else: it did not misspell, it has nothing "
+      "to talk about — and the reason is NOT ERRORE_PROTOCOLLO")
 async def _(cli, a, es):
     cli.apri_controllo()
     cli.manda(ciao([("video.codec", "vp9"), ("video.profondita", "8"),
@@ -588,8 +590,8 @@ async def _(cli, a, es):
 
 
 @caso("hevc-e-vp9", None,
-      "⭐ `video.codec = hevc,vp9`: si legge `hevc` e si prosegue, e lo "
-      "SCARTO si scrive nel registro del server (§4.3)")
+      "⭐ `video.codec = hevc,vp9`: `hevc` is read and one carries on, and the "
+      "DISCARD is written in the server log (§4.3)")
 async def _(cli, a, es):
     cli.apri_controllo()
     cli.manda(ciao([("video.codec", "hevc,vp9"), ("video.profondita", "8"),
@@ -598,8 +600,8 @@ async def _(cli, a, es):
 
 
 @caso("senza-pcm", NIENTE_IN_COMUNE,
-      "`audio.codec = opus` senza `pcm`: §4.3 lo impone a entrambi, e chi non "
-      "lo dichiara si congeda con NIENTE_IN_COMUNE — non con ERRORE_PROTOCOLLO")
+      "`audio.codec = opus` without `pcm`: §4.3 requires it of both, and whoever "
+      "does not declare it takes leave with NIENTE_IN_COMUNE — not with ERRORE_PROTOCOLLO")
 async def _(cli, a, es):
     cli.apri_controllo()
     cli.manda(ciao([("video.codec", "hevc"), ("video.profondita", "8"),
@@ -607,45 +609,45 @@ async def _(cli, a, es):
 
 
 @caso("senza-8", NIENTE_IN_COMUNE,
-      "`video.profondita = 10` senza `8`: idem")
+      "`video.profondita = 10` without `8`: likewise")
 async def _(cli, a, es):
     cli.apri_controllo()
     cli.manda(ciao([("video.codec", "hevc"), ("video.profondita", "10"),
                     ("audio.codec", "pcm")]))
 
 
-# ── Le credenziali (§4.4) ──────────────────────────────────────────────────
+# ── The credentials (§4.4) ─────────────────────────────────────────────────
 @caso("utente-vuoto", ERRORE_PROTOCOLLO,
-      "⛔ utente di zero byte: legale per §6.0, fuori intervallo per §4.4 — e "
-      "senza questo controllo un attaccante non muove nessun contatore")
+      "⛔ zero-byte user: legal for §6.0, out of range for §4.4 — and "
+      "without this check an attacker moves no counter")
 async def _(cli, a, es):
     await fino_a_eccomi(cli)
     cli.manda(inquadra(0x0003, s("") + s(a.parola)))
 
 
 @caso("parola-vuota", ERRORE_PROTOCOLLO,
-      "parola di zero byte: idem")
+      "zero-byte password: likewise")
 async def _(cli, a, es):
     await fino_a_eccomi(cli)
     cli.manda(inquadra(0x0003, s(a.utente) + s("")))
 
 
 @caso("utente-257-byte", ERRORE_PROTOCOLLO,
-      "utente da 257 byte: il limite di §4.4 e' 256")
+      "257-byte user: the limit of §4.4 is 256")
 async def _(cli, a, es):
     await fino_a_eccomi(cli)
     cli.manda(inquadra(0x0003, s("u" * 257) + s(a.parola)))
 
 
 @caso("parola-1025-byte", ERRORE_PROTOCOLLO,
-      "parola da 1025 byte: il limite di §4.4 e' 1024")
+      "1025-byte password: the limit of §4.4 is 1024")
 async def _(cli, a, es):
     await fino_a_eccomi(cli)
     cli.manda(inquadra(0x0003, s(a.utente) + s("p" * 1025)))
 
 
 @caso("credenziali-due-volte", ERRORE_PROTOCOLLO,
-      "§4.4: un solo tentativo per connessione")
+      "§4.4: a single attempt per connection")
 async def _(cli, a, es):
     await fino_ad_ammesso(cli, a)
     cli.manda(inquadra(0x0003, s(a.utente) + s(a.parola)))
@@ -653,28 +655,28 @@ async def _(cli, a, es):
 
 # ── ATTACCA (§4.5, §7.1) ───────────────────────────────────────────────────
 @caso("tela-1921x1080", ERRORE_PROTOCOLLO,
-      "tela dispari: il codificatore l'arrotonderebbe in silenzio — due misure "
-      "diverse sotto la stessa etichetta, la forma d'errore E2")
+      "odd canvas: the encoder would round it silently — two different sizes "
+      "under the same label, error form E2")
 async def _(cli, a, es):
     await fino_ad_ammesso(cli, a)
     cli.manda(attacca(tl=1921))
 
 
-@caso("tela-319x240", ERRORE_PROTOCOLLO, "tela sotto il minimo di §4.5")
+@caso("tela-319x240", ERRORE_PROTOCOLLO, "canvas below the minimum of §4.5")
 async def _(cli, a, es):
     await fino_ad_ammesso(cli, a)
     cli.manda(attacca(tl=319, ta=240))
 
 
-@caso("tela-7682x4320", ERRORE_PROTOCOLLO, "tela sopra il massimo di §4.5")
+@caso("tela-7682x4320", ERRORE_PROTOCOLLO, "canvas above the maximum of §4.5")
 async def _(cli, a, es):
     await fino_ad_ammesso(cli, a)
     cli.manda(attacca(tl=7682, ta=4320))
 
 
 @caso("vista-300x801", None,
-      "⭐ DEVE PASSARE: §7.1 dice che la vista non ha i vincoli della tela — "
-      "«qualunque misura da 1x1 in su e' legale, dispari compresa» (R1.17)")
+      "⭐ MUST PASS: §7.1 says the view does not have the canvas constraints — "
+      "«any size from 1x1 up is legal, odd included» (R1.17)")
 async def _(cli, a, es):
     await fino_ad_ammesso(cli, a)
     cli.manda(attacca(vl=300, va=801))
@@ -682,7 +684,7 @@ async def _(cli, a, es):
 
 
 @caso("vista-1x1", None,
-      "⭐ DEVE PASSARE: il limite inferiore dichiarato da §7.1, alla lettera")
+      "⭐ MUST PASS: the lower limit declared by §7.1, to the letter")
 async def _(cli, a, es):
     await fino_ad_ammesso(cli, a)
     cli.manda(attacca(vl=1, va=1))
@@ -690,33 +692,33 @@ async def _(cli, a, es):
 
 
 @caso("disposizione-malformata", ERRORE_PROTOCOLLO,
-      "`it!!` non e' un nome XKB: ha sbagliato a scrivere")
+      "`it!!` is not an XKB name: it misspelled")
 async def _(cli, a, es):
     await fino_ad_ammesso(cli, a)
     cli.manda(attacca(disp="it!!"))
 
 
 @caso("disposizione-sconosciuta", SESSIONE_NON_SERVIBILE,
-      "⛔ `zz` e' BEN FORMATA e la macchina non ce l'ha: §4.5 vuole DUE guasti "
-      "diversi, e il dettaglio DEVE stare nel corpo (§8.2)")
+      "⛔ `zz` is WELL FORMED and the machine does not have it: §4.5 wants TWO "
+      "different faults, and the detail MUST be in the body (§8.2)")
 async def _(cli, a, es):
     await fino_ad_ammesso(cli, a)
     cli.manda(attacca(disp="zz"))
 
 
 @caso("disposizione-con-variante", None,
-      "⭐ `de(neo)`: la forma con la variante fra parentesi e' lecita (§4.5)")
+      "⭐ `de(neo)`: the form with the variant in parentheses is lawful (§4.5)")
 async def _(cli, a, es):
     await fino_ad_ammesso(cli, a)
     cli.manda(attacca(disp="de(neo)"))
     await b3.attendi(cli, "SESSIONE")
 
 
-# ── La funzione di banco (§7.5) ────────────────────────────────────────────
+# ── The bench function (§7.5) ──────────────────────────────────────────────
 @caso("banco-spento", None,
-      "⛔ `BANCO_MARCA` a funzione spenta: DEVE arrivare "
-      "`BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` — non un silenzio e non una "
-      "chiusura.  E' lo stato PREDEFINITO di ogni server")
+      "⛔ `BANCO_MARCA` with the function off: there MUST arrive "
+      "`BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` — not a silence and not a "
+      "closing.  It is the DEFAULT state of every server")
 async def _(cli, a, es):
     await fino_a_sessione(cli, a)
     cli.manda(banco_marca(id_=1, ritardo=0))
@@ -724,9 +726,9 @@ async def _(cli, a, es):
 
 
 @caso("banco-ritardo-20000", None,
-      "`ritardo_ms = 20000`: `RITARDO_FUORI_LIMITI`, e ⛔ **non** "
-      "ERRORE_PROTOCOLLO — far cadere la sessione al banco che si sta tarando "
-      "e' la cattiva idea che §7.1 evita per le misure fuori limite")
+      "`ritardo_ms = 20000`: `RITARDO_FUORI_LIMITI`, and ⛔ **not** "
+      "ERRORE_PROTOCOLLO — dropping the session of the bench being calibrated "
+      "is the bad idea §7.1 avoids for out-of-bounds sizes")
 async def _(cli, a, es):
     await fino_a_sessione(cli, a)
     cli.manda(banco_marca(id_=7, ritardo=20000))
@@ -734,38 +736,39 @@ async def _(cli, a, es):
 
 
 @caso("banco-id-zero", ERRORE_PROTOCOLLO,
-      "`id = 0`, che §7.5 dichiara riservato.  ⚠ Il documento non dice l'esito: "
-      "qui si sceglie la caduta, perche' e' un messaggio malformato e non un "
-      "parametro di banco sbagliato")
+      "`id = 0`, which §7.5 declares reserved.  ⚠ The document does not say the outcome: "
+      "here the drop is chosen, because it is a malformed message and not a "
+      "wrong bench parameter")
 async def _(cli, a, es):
     await fino_a_sessione(cli, a)
     cli.manda(banco_marca(id_=0))
 
 
 @caso("banco-prima-di-sessione", ERRORE_PROTOCOLLO,
-      "`BANCO_MARCA` prima di `SESSIONE`: non c'e' nessun fotogramma su cui "
-      "dipingere")
+      "`BANCO_MARCA` before `SESSIONE`: there is no frame to "
+      "paint on")
 async def _(cli, a, es):
     await fino_ad_ammesso(cli, a)
     cli.manda(banco_marca())
 
 
-# ── Gli stream (§2.5) ──────────────────────────────────────────────────────
+# ── The streams (§2.5) ─────────────────────────────────────────────────────
 #
-# ⛔ QUI DENTRO IL CARICO E' BEN FORMATO APPOSTA, e non e' un dettaglio.
+# ⛔ IN HERE THE PAYLOAD IS WELL FORMED ON PURPOSE, and it is not a detail.
 #
-#    La violazione che questi quattro casi provano e' **lo stream**: quanti ce
-#    ne sono, in che verso va il canale, su che tipo di stream vive.  Se dentro
-#    ci si mette anche un messaggio storto — un `CIAO` con corpo di zero byte,
-#    un `tipo` che non esiste — un server che non conta gli stream congeda
-#    ugualmente, per l'altra ragione, e il caso e' **verde senza aver provato
-#    niente** (rilievo R7.7).  Ogni carico qui sotto e' legale *in se'* e nello
-#    stato in cui viene mandato: l'unica cosa storta e' lo stream.
+#    The violation these four cases test is **the stream**: how many there
+#    are, in which direction the channel goes, on which kind of stream it lives.
+#    If a crooked message is also put inside — a `CIAO` with a zero-byte body,
+#    a `tipo` that does not exist — a server that does not count the streams
+#    takes leave all the same, for the other reason, and the case is **green
+#    without having tested anything** (finding R7.7).  Every payload below is
+#    legal *in itself* and in the state in which it is sent: the only crooked
+#    thing is the stream.
 @caso("secondo-bidirezionale", ERRORE_PROTOCOLLO,
-      "⛔ «il client NON DEVE aprire stream bidirezionali oltre lo 0»: il "
-      "canale di controllo e' UNO SOLO per tutta la sessione.  Il carico e' "
-      "un CREDENZIALI ben formato, che dopo ECCOMI e' il messaggio giusto: "
-      "l'unica violazione e' lo stream in piu'")
+      "⛔ «the client MUST NOT open bidirectional streams beyond 0»: the "
+      "control channel is ONE ONLY for the whole session.  The payload is "
+      "a well-formed CREDENZIALI, which after ECCOMI is the right message: "
+      "the only violation is the extra stream")
 async def _(cli, a, es):
     await fino_a_eccomi(cli)
     altro = cli.apri_bidi()
@@ -773,10 +776,10 @@ async def _(cli, a, es):
 
 
 @caso("uni-controllo", ERRORE_PROTOCOLLO,
-      "il canale di CONTROLLO (byte alto 0x00) su uno stream unidirezionale: "
-      "«il controllo vive solo sullo stream 0» (§2.5).  ⚠ CREDENZIALI e non "
-      "CIAO: un secondo CIAO sarebbe anche uno stato sbagliato, cioe' una "
-      "seconda ragione per congedare")
+      "the CONTROL channel (high byte 0x00) on a unidirectional stream: "
+      "«control lives only on stream 0» (§2.5).  ⚠ CREDENZIALI and not "
+      "CIAO: a second CIAO would also be a wrong state, that is a "
+      "second reason to take leave")
 async def _(cli, a, es):
     await fino_a_eccomi(cli)
     u = cli.apri_uni()
@@ -784,22 +787,22 @@ async def _(cli, a, es):
 
 
 @caso("uni-video", ERRORE_PROTOCOLLO,
-      "il canale VIDEO (0x03) DAL CLIENT: verso sbagliato — il video va dal "
-      "server al client (§2.5).  ⛔ `0x0301` = fotogramma chiave, che §6.2 "
-      "dichiara LEGALE: con `0x0300` l'unica regola applicabile era «altri "
-      "valori: ERRORE_PROTOCOLLO», e il verso non veniva mai messo alla prova")
+      "the VIDEO channel (0x03) FROM THE CLIENT: wrong direction — video goes from "
+      "server to client (§2.5).  ⛔ `0x0301` = key frame, which §6.2 "
+      "declares LEGAL: with `0x0300` the only applicable rule was «other "
+      "values: ERRORE_PROTOCOLLO», and the direction was never put to the test")
 async def _(cli, a, es):
     await fino_a_eccomi(cli)
     u = cli.apri_uni()
-    # l'intestazione di 28 byte esatti di §6.2: tipo, codec, largh., altezza,
-    # numero, istante, input — tutti valori dentro i limiti
+    # the exact 28-byte header of §6.2: type, codec, width, height,
+    # number, instant, input — all values within the limits
     cli.manda_su(u, struct.pack("!HHIIIQI", 0x0301, 1, 1920, 1080, 1, 0, 0))
 
 
 @caso("uni-audio", ERRORE_PROTOCOLLO,
-      "il canale AUDIO (0x04) su uno STREAM: l'audio vive solo sui datagram "
-      "(§2.5, §6.3).  Il carico e' l'intestazione di §6.3 ben formata — "
-      "`tipo = 0x0401`, `codec = 2` (PCM): l'unica violazione e' lo stream")
+      "the AUDIO channel (0x04) on a STREAM: audio lives only on datagrams "
+      "(§2.5, §6.3).  The payload is the well-formed header of §6.3 — "
+      "`tipo = 0x0401`, `codec = 2` (PCM): the only violation is the stream")
 async def _(cli, a, es):
     await fino_a_eccomi(cli)
     u = cli.apri_uni()
@@ -807,7 +810,7 @@ async def _(cli, a, es):
 
 
 @caso("uni-byte-alto-ignoto", ERRORE_PROTOCOLLO,
-      "un byte alto che non e' nessuno dei cinque di §2.5")
+      "a high byte that is none of the five of §2.5")
 async def _(cli, a, es):
     await fino_a_eccomi(cli)
     u = cli.apri_uni()
@@ -822,38 +825,38 @@ async def gira_caso(a, nome, atteso, spiega, f):
         gestore, cli, stato = await apri(a)
         es.stato_http = stato
         if stato != "200":
-            es.errore = f"la CONNECT estesa ha risposto {stato}"
+            es.errore = f"the extended CONNECT answered {stato}"
             return es
-        es.fase = "preparazione+violazione"
+        es.fase = "preparation+violation"
         await f(cli, a, es)
-        # ⛔ QUI, E NON PRIMA.  Tutti i casi con un `atteso` finiscono con
-        #    l'invio del byte storto e non aspettano niente dopo: se `f` torna,
-        #    la violazione e' partita davvero.  Se invece si e' fermata prima —
-        #    l'`ATTACCA` fisso rifiutato, l'`ECCOMI` che non arriva, PAM che
-        #    dice di no — il caso non ha provato niente e `provocato` resta
-        #    falso, che e' quel che il verdetto guarda (rilievo R7.1).
+        # ⛔ HERE, AND NOT BEFORE.  All the cases with an `atteso` end with
+        #    sending the crooked byte and wait for nothing afterwards: if `f`
+        #    returns, the violation really left.  If instead it stopped earlier —
+        #    the fixed `ATTACCA` refused, the `ECCOMI` that does not arrive, PAM
+        #    saying no — the case tested nothing and `provocato` stays false,
+        #    which is what the verdict looks at (finding R7.1).
         es.provocato = True
-        es.fase = "raccolta"
-        # ⚠ Sui casi che DEVONO passare si aspetta lo stesso: «non e' caduta
-        #   subito» non e' «non e' caduta».
+        es.fase = "collection"
+        # ⚠ On the cases that MUST pass one waits anyway: «it did not drop
+        #   immediately» is not «it did not drop».
         await raccogli(cli, es, attesa=3.0 if atteso is None else 12.0)
-    except Exception as e:  # noqa: BLE001 — il tipo dell'errore E' la misura
+    except Exception as e:  # noqa: BLE001 — the error type IS the measurement
         es.errore = f"{type(e).__name__}: {e}"
-        # ⛔ E IL MOTIVO NON SI RASCHIA DAL TESTO DELL'ECCEZIONE.
+        # ⛔ AND THE REASON IS NOT SCRAPED FROM THE EXCEPTION TEXT.
         #
-        #    Qui c'era un giro su `MOTIVI` che cercava il nome di un motivo di
-        #    §8.2 dentro `str(e)` e lo prendeva per «motivo arrivato».  Il
-        #    difetto: `b3.attendi` solleva `RuntimeError("CONGEDO invece di
-        #    SESSIONE: motivo 0x0b = ERRORE_PROTOCOLLO")` anche quando a
-        #    cadere e' la PREPARAZIONE — e quella stringa contiene esattamente
-        #    il nome del motivo atteso.  R7.1 ne ha contati **dodici** che
-        #    potevano essere verdi col byte storto mai spedito, e ⚠ **si
-        #    richiudeva su se' stesso**: piu' il server era rotto a monte, piu'
-        #    quei casi diventavano verdi (rilievo R7.1, forme E6 ed E7).
+        #    Here there was a loop over `MOTIVI` that looked for the name of a
+        #    §8.2 reason inside `str(e)` and took it as «reason arrived».  The
+        #    defect: `b3.attendi` raises `RuntimeError("CONGEDO invece di
+        #    SESSIONE: motivo 0x0b = ERRORE_PROTOCOLLO")` even when what drops
+        #    is the PREPARATION — and that string contains exactly the name of
+        #    the expected reason.  R7.1 counted **twelve** that could be green
+        #    with the crooked byte never sent, and ⚠ **it closed in on
+        #    itself**: the more broken the server was upstream, the more those
+        #    cases became green (finding R7.1, forms E6 and E7).
         #
-        # ⭐ Il motivo lo legge `raccogli`, da un messaggio arrivato sul filo.
-        #    Il testo dell'eccezione resta quel che e': una diagnosi da
-        #    stampare, non un verdetto.
+        # ⭐ The reason is read by `raccogli`, from a message that arrived on the
+        #    wire.  The exception text stays what it is: a diagnosis to print,
+        #    not a verdict.
     finally:
         if gestore is not None:
             try:
@@ -864,11 +867,11 @@ async def gira_caso(a, nome, atteso, spiega, f):
 
 
 async def il_percorso(a):
-    """⛔ §2.2: una sessione WebTransport su un percorso diverso e' un 404.
+    """⛔ §2.2: a WebTransport session on a different path is a 404.
 
-    Sta a parte perche' non e' una violazione di RCP: e' §3 applicata **al
-    primo byte**, prima che RCP cominci — e infatti non c'e' nessun CONGEDO da
-    aspettare, perche' non c'e' nessun canale di controllo.
+    It stands apart because it is not an RCP violation: it is §3 applied **to
+    the first byte**, before RCP begins — and in fact there is no CONGEDO to
+    wait for, because there is no control channel.
     """
     fuori = []
     for percorso, atteso in (("/rcp/2", "404"), ("/", "404"),
@@ -877,7 +880,7 @@ async def il_percorso(a):
         try:
             gestore, cli, stato = await apri(a, percorso)
         except Exception as e:  # noqa: BLE001
-            stato = f"errore {type(e).__name__}"
+            stato = f"error {type(e).__name__}"
         finally:
             if gestore is not None:
                 try:
@@ -889,14 +892,14 @@ async def il_percorso(a):
 
 
 async def ancora_vivo(a):
-    """⛔ B0.5 — la meta' che nessuno scrive.
+    """⛔ B0.5 — the half nobody writes.
 
-    Non basta che la connessione sia caduta: **deve essere caduta la
-    connessione, non il server**.  Qui si apre una connessione nuova e si
-    arriva fino a `ECCOMI`.
-    ⚠ Non fino a `SESSIONE`: costerebbe il secondo fisso di §4.4-bis a ogni
-      caso, cioe' quaranta secondi di banco per una proprieta' che il giro
-      completo in coda verifica una volta e bene.
+    It is not enough that the connection dropped: **it must be the connection
+    that dropped, not the server**.  Here a new connection is opened and it
+    gets as far as `ECCOMI`.
+    ⚠ Not as far as `SESSIONE`: it would cost the fixed second of §4.4-bis at
+      every case, that is forty seconds of bench for a property the full run
+      at the end verifies once and well.
     """
     gestore = None
     try:
@@ -916,8 +919,8 @@ async def ancora_vivo(a):
 
 
 async def giro_completo(a):
-    """La stretta di mano buona, intera: il controllo che dice che il server
-    non e' rimasto in piedi ma inutile."""
+    """The good handshake, whole: the check that says the server did not stay
+    standing but useless."""
     gestore = None
     try:
         gestore, cli, stato = await apri(a)
@@ -936,23 +939,23 @@ async def giro_completo(a):
 
 
 async def limitatore(a):
-    """⛔ §4.4-bis, e le due meta' che si dimenticano.
+    """⛔ §4.4-bis, and the two halves that get forgotten.
 
-    a) i messaggi MALFORMATI non muovono nessun contatore: sei `CREDENZIALI`
-       fuori intervallo, e poi una buona che DEVE passare;
-    b) il contatore **per indirizzo** esiste davvero: sei tentativi falliti con
-       SEI NOMI DIVERSI dallo stesso indirizzo, e il settimo — ancora un nome
-       nuovo — deve ricevere `TROPPI_TENTATIVI`.
+    a) MALFORMED messages move no counter: six out-of-range `CREDENZIALI`,
+       and then a good one that MUST pass;
+    b) the **per-address** counter really exists: six failed attempts with
+       SIX DIFFERENT NAMES from the same address, and the seventh — again a new
+       name — must receive `TROPPI_TENTATIVI`.
 
-    ⚠ **Previsione scritta prima di misurare**: (b) sara' ROSSO.  La chiave del
-      contatore per indirizzo e' la `provenienza`, che contiene **la porta** —
-      e con un solo tentativo per connessione (§4.4) la porta cambia ogni
-      volta, quindi quel contatore vale sempre 1 e non blocca mai nessuno.  E'
-      la forma peggiore: codice presente, che sembra giusto, e che non fa
-      niente.
+    ⚠ **Prediction written before measuring**: (b) will be RED.  The key of
+      the per-address counter is the `provenienza`, which contains **the port** —
+      and with a single attempt per connection (§4.4) the port changes every
+      time, so that counter is always 1 and never blocks anyone.  It is the
+      worst shape: code present, that looks right, and that does
+      nothing.
     """
     fuori = {}
-    # (a) sei malformati, poi una buona
+    # (a) six malformed, then a good one
     for i in range(6):
         gestore, cli, _ = await apri(a)
         try:
@@ -966,7 +969,7 @@ async def limitatore(a):
     ok, perche = await giro_completo(a)
     fuori["malformati-non-contano"] = (ok, perche)
 
-    # (b) sette falliti con SETTE NOMI DIVERSI, dallo stesso indirizzo
+    # (b) seven failed with SEVEN DIFFERENT NAMES, from the same address
     motivi = []
     for i in range(7):
         gestore, cli, _ = await apri(a)
@@ -974,28 +977,27 @@ async def limitatore(a):
         try:
             await fino_a_eccomi(cli)
             cli.manda(inquadra(0x0003, s(f"nessuno{i}") + s("sbagliata")))
-            # ⚠ Si ASPETTA la risposta invece di dormire un tempo scelto a
-            #   occhio: PAM ha un suo ritardo sui fallimenti, e un `sleep`
-            #   troppo corto misurerebbe un contatore che non e' ancora stato
-            #   incrementato.
+            # ⚠ The answer is AWAITED instead of sleeping for a time chosen by
+            #   eye: PAM has its own delay on failures, and a `sleep` that is
+            #   too short would measure a counter that has not been
+            #   incremented yet.
             await raccogli(cli, es, attesa=15)
         except Exception:  # noqa: BLE001
             pass
         finally:
             await gestore.__aexit__(None, None, None)
         motivi.append(es.motivo)
-    # I primi cinque sono CREDENZIALI_ERRATE; dal sesto in poi la soglia di
-    # §4.4-bis e' passata, e il contatore PER INDIRIZZO deve parlare.
+    # The first five are CREDENZIALI_ERRATE; from the sixth on the threshold of
+    # §4.4-bis has passed, and the PER-ADDRESS counter must speak.
     fuori["contatore-per-indirizzo"] = (
         motivi[-1] == TROPPI_TENTATIVI,
-        "motivi: " + " ".join(
+        "reasons: " + " ".join(
             MOTIVI.get(m, str(m)) if m is not None else "-" for m in motivi))
 
-    # ⛔ E IL CONTROLLO CHE DISTINGUE UN CONTATORE DA UN BLOCCO: adesso la
-    #    parola d'ordine GIUSTA, dallo stesso indirizzo, DEVE ricevere
-    #    TROPPI_TENTATIVI lo stesso.  Un server che contasse senza bloccare
-    #    darebbe la stessa riga di sopra e lascerebbe entrare chiunque
-    #    indovinasse al sesto colpo.
+    # ⛔ AND THE CHECK THAT TELLS A COUNTER FROM A BLOCK: now the RIGHT
+    #    password, from the same address, MUST receive TROPPI_TENTATIVI all
+    #    the same.  A server that counted without blocking would give the same
+    #    line as above and let in anyone who guessed at the sixth try.
     gestore, cli, _ = await apri(a)
     es = Esito()
     try:
@@ -1008,7 +1010,7 @@ async def limitatore(a):
         await gestore.__aexit__(None, None, None)
     fuori["blocca-anche-la-parola-giusta"] = (
         es.motivo == TROPPI_TENTATIVI,
-        f"con le credenziali BUONE: {MOTIVI.get(es.motivo, es.motivo)}")
+        f"with the GOOD credentials: {MOTIVI.get(es.motivo, es.motivo)}")
     return fuori
 
 
@@ -1021,53 +1023,53 @@ def riga(ok, nome, testo):
 
 
 def esito_finale(conti, guasti, parziale, reg=None):
-    """⛔ Ogni conteggio con il suo denominatore, e il denominatore CALCOLATO.
+    """⛔ Every count with its denominator, and the denominator COMPUTED.
 
-    La riga vecchia stampava `N su N` — la stessa espressione due volte — e
-    solo quando `guasti == 0`, cioe' non portava nessuna informazione che il
-    colore non portasse gia' (rilievo R7.14).  ⚠ E un denominatore a **zero**
-    si dice, non si nasconde: «0 su 0» non e' un verde.
+    The old line printed `N su N` — the same expression twice — and only when
+    `guasti == 0`, that is it carried no information the colour did not already
+    carry (finding R7.14).  ⚠ And a denominator of **zero** is said, not
+    hidden: «0 out of 0» is not a green.
     """
     print()
-    print("    == quel che questo giro ha davvero guardato")
+    print("    == what this run really looked at")
     for che, (buoni, tot) in conti.items():
         if tot == 0:
-            # ⛔ Un denominatore zero si DICHIARA: «nessuno ha guardato» e
-            #    «tutti passati» hanno lo stesso aspetto se si tace.
-            print(f"    --  {che:44s} nessun caso lo ha sollecitato")
+            # ⛔ A zero denominator is DECLARED: «nobody looked» and «all
+            #    passed» look the same if one keeps quiet.
+            print(f"    --  {che:44s} no case triggered it")
             continue
         col = VERDE if buoni == tot else ROSSO
-        print(f"    {col}{buoni:3d} su {tot:3d}{GRIGIO}  {che}")
+        print(f"    {col}{buoni:3d} out of {tot:3d}{GRIGIO}  {che}")
     print()
-    # ⛔ E il verdetto va nel registro con dentro il bersaglio, o fra sei mesi
-    #    «B5 passa» non dira' contro quale dei due server.
+    # ⛔ And the verdict goes into the log with the target inside, or in six
+    #    months «B5 passes» will not say against which of the two servers.
     if reg is not None:
         reg.scrivi({"tipo": "verdetto", "guasti": guasti, "parziale": parziale,
                     "conti": {k: v for k, v in conti.items()}})
         print(f"    --  {reg.riassunto()}")
     if guasti:
-        print(f"    {ROSSO}⛔ B5: {guasti} punti non passano contro "
+        print(f"    {ROSSO}⛔ B5: {guasti} points do not pass against "
               f"«{reg.bersaglio if reg else '?'}»{GRIGIO}")
         return 1
     if parziale:
-        print(f"    {VERDE}⭐ i casi selezionati passano{GRIGIO} — ⚠ e questo "
-              f"NON e' «B5 passa»: il giro era parziale")
+        print(f"    {VERDE}⭐ the selected cases pass{GRIGIO} — ⚠ and this "
+              f"is NOT «B5 passes»: the run was partial")
         return 0
-    print(f"    {VERDE}⭐ B5 passa contro «{reg.bersaglio if reg else '?'}», e i "
-          f"numeri qui sopra dicono su che cosa{GRIGIO}")
-    print(f"    ⚠ e non e' «B5 passa»: l'altro bersaglio e' un altro programma, "
-          f"e questo giro non ne dice niente")
+    print(f"    {VERDE}⭐ B5 passes against «{reg.bersaglio if reg else '?'}», and the "
+          f"numbers above say on what{GRIGIO}")
+    print(f"    ⚠ and it is not «B5 passes»: the other target is another program, "
+          f"and this run says nothing about it")
     return 0
 
 
 def conta(casi):
-    """⛔ I due numeri, CALCOLATI — e sono due, non uno.
+    """⛔ The two numbers, COMPUTED — and they are two, not one.
 
-    «44 violazioni su 44» stampava la stessa espressione come numeratore e
-    come denominatore, e ci contava dentro anche gli otto casi che DEVONO
-    passare, su cui «il motivo giusto ogni volta» e' falso per costruzione
-    (rilievo R7.14).  Da qui in poi il numero lo produce questa funzione, e
-    nessun commento lo riscrive a mano.
+    «44 violations out of 44» printed the same expression as numerator and as
+    denominator, and counted in it also the eight cases that MUST pass, on
+    which «the right reason every time» is false by construction (finding
+    R7.14).  From here on the number is produced by this function, and no
+    comment rewrites it by hand.
     """
     violazioni = sum(1 for c in casi if c[1] is not None)
     return violazioni, len(casi) - violazioni
@@ -1077,109 +1079,108 @@ async def principale(a):
     casi = [c for c in CASI if not a.solo or a.solo in c[0]]
     tot_v, tot_verdi = conta(CASI)
     if a.elenco:
-        print(f"== B5: {len(CASI)} casi — {tot_v} violazioni e {tot_verdi} "
-              f"⭐ verdi attesi.  Ogni riga e' una PREVISIONE\n")
+        print(f"== B5: {len(CASI)} cases — {tot_v} violations and {tot_verdi} "
+              f"⭐ expected greens.  Every line is a PREDICTION\n")
         for nome, atteso, spiega, dove, _ in CASI:
             att = (f"{atteso:#04x} {MOTIVI.get(atteso, '?')}" if atteso
-                   else "⭐ DEVE PASSARE")
+                   else "⭐ MUST PASS")
             print(f"  {nome:26s} {att}")
             print(f"  {'':26s}   {spiega}")
         return 0
 
-    # ⛔ ZERO CASI NON E' «TUTTI PASSATI».
+    # ⛔ ZERO CASES IS NOT «ALL PASSED».
     #
-    #    `--solo pippo` non combaciava con nessun nome, il ciclo non girava, e
-    #    il banco stampava «0 violazioni su 0» e usciva 0: un errore di
-    #    battitura nel filtro era indistinguibile da un banco verde (rilievo
-    #    R7.15).  ⭐ Sono TRE esiti — non ho niente da misurare, non passa,
-    #    passa — e vogliono tre codici d'uscita diversi.
+    #    `--solo pippo` matched no name, the loop did not run, and the bench
+    #    printed «0 violations out of 0» and exited 0: a typo in the filter was
+    #    indistinguishable from a green bench (finding R7.15).  ⭐ They are THREE
+    #    outcomes — nothing to measure, does not pass, passes — and they want
+    #    three different exit codes.
     if not casi:
-        print(f"    {ROSSO}⛔ «--solo {a.solo}» ha selezionato ZERO casi su "
-              f"{len(CASI)}: non c'e' niente da misurare{GRIGIO}")
-        print("       Questo NON e' un verde.  I nomi si leggono con --elenco.")
+        print(f"    {ROSSO}⛔ «--solo {a.solo}» selected ZERO cases out of "
+              f"{len(CASI)}: there is nothing to measure{GRIGIO}")
+        print("       This is NOT a green.  The names are read with --elenco.")
         return 2
 
     sel_v, sel_verdi = conta(casi)
 
-    # ⛔ IL REGISTRO DEL GIRO, E LA PRIMA RIGA DICE CONTRO CHE COSA SI MISURA.
+    # ⛔ THE RUN'S LOG, AND THE FIRST LINE SAYS AGAINST WHAT ONE MEASURES.
     #
-    #    Fino all'11 agosto 2026 B5 non aveva **nessun** registro: girava, e
-    #    l'uscita era a schermo.  ⚠ Il che vuol dire che nessuno dei suoi
-    #    quarantaquattro esiti e' oggi riverificabile, e che il giorno in cui
-    #    due giri diranno cose diverse non ci sara' modo di sapere quale server
-    #    ha risposto a quale.
+    #    Until 11 Aug 2026 B5 had **no** log: it ran, and the output was on
+    #    screen.  ⚠ Which means that none of its forty-four outcomes is
+    #    re-verifiable today, and that the day two runs say different things
+    #    there will be no way of knowing which server answered which.
     a.reg = b0.Registro(a.uscita, a.bersaglio, a.porta, a.giro or None,
                         a.md5 or None)
     prof = a.reg.profilo
     a.reg.apri_giro(
-        "B5", "violazioni spedite su una connessione nuova per caso; il "
-              "server e' acceso da 01-b5-lancia.sh e non serve nessuna scena "
-              "in movimento",
+        "B5", "violations sent on a new connection per case; the "
+              "server is started by 01-b5-lancia.sh and no moving scene "
+              "is needed",
         extra={"casi_selezionati": len(casi), "casi_totali": len(CASI),
                "filtro": a.solo, "violazioni": sel_v, "verdi_attesi": sel_verdi,
-               # ⛔ L'ECO: sul prodotto non c'e', e la differenza si scrive
-               #    PRIMA di misurare.  `src/webtransport.c`
-               #    `scarta_stream_di_troppo()`: «i byte si buttano, e NON si
-               #    rimandano indietro».  ⚠ Un banco che l'aspettasse resterebbe
-               #    appeso, e il 10 agosto 2026 quel rosso e' stato diagnosticato
-               #    per ore come «difetto del certificato».  B5 non l'aspetta:
-               #    la scarta se arriva, e qui dichiara se doveva arrivare.
+               # ⛔ THE ECHO: on the product it is not there, and the difference
+               #    is written BEFORE measuring.  `src/webtransport.c`
+               #    `scarta_stream_di_troppo()`: «the bytes are thrown away, and
+               #    NOT sent back».  ⚠ A bench that waited for it would stay
+               #    hanging, and on 10 Aug 2026 that red was diagnosed for
+               #    hours as a «certificate defect».  B5 does not wait for it:
+               #    it discards it if it arrives, and here declares whether it
+               #    was supposed to arrive.
                "eco_attesa": prof["eco"]})
-    print(f"== B5 — le prove di violazione verso il server")
-    print(f"   ⛔ BERSAGLIO: {a.bersaglio} · porta {a.porta} · binario md5 "
-          f"{(a.md5 or 'ignota')[:12]}…")
+    print(f"== B5 — the violation tests against the server")
+    print(f"   ⛔ TARGET: {a.bersaglio} · port {a.porta} · binary md5 "
+          f"{(a.md5 or 'unknown')[:12]}…")
     print(f"      {prof['eseguibile']}")
-    print(f"   ⚠ l'eco di B2 sugli stream aperti dal banco: "
-          f"{'attesa' if prof['eco'] else '⛔ NON attesa su questo bersaglio'}")
-    print(f"   il registro di questo giro: {a.uscita or '⛔ NESSUNO'}")
-    print(f"   {len(casi)} casi su {len(CASI)} selezionati: {sel_v} violazioni "
-          f"e {sel_verdi} ⭐ verdi attesi")
-    print("   ⛔ ogni caso: la violazione spedita davvero, il motivo giusto nel "
-          "messaggio giusto,")
-    print("      le due strade di §3.1, e il server ancora vivo dopo\n")
+    print(f"   ⚠ B2's echo on the streams opened by the bench: "
+          f"{'expected' if prof['eco'] else '⛔ NOT expected on this target'}")
+    print(f"   this run's log: {a.uscita or '⛔ NONE'}")
+    print(f"   {len(casi)} cases out of {len(CASI)} selected: {sel_v} violations "
+          f"and {sel_verdi} ⭐ expected greens")
+    print("   ⛔ every case: the violation really sent, the right reason in the "
+          "right message,")
+    print("      the two roads of §3.1, and the server still alive afterwards\n")
     if a.solo:
-        print(f"    ⚠ GIRO PARZIALE.  Il percorso (§2.2), il giro completo e il")
-        print(f"      limitatore (§4.4-bis) NON si eseguono: non dipendono dai")
-        print(f"      casi selezionati, e girarli qui direbbe «passa» su una")
-        print(f"      parte del banco che nessuno ha chiesto di misurare.\n")
+        print(f"    ⚠ PARTIAL RUN.  The path (§2.2), the full run and the")
+        print(f"      limiter (§4.4-bis) are NOT run: they do not depend on the")
+        print(f"      selected cases, and running them here would say «passes» on a")
+        print(f"      part of the bench nobody asked to measure.\n")
 
-    # ⛔ OGNI CONTEGGIO CON IL SUO DENOMINATORE, e i denominatori sono diversi
-    #    perche' le proprieta' misurate sono diverse.
+    # ⛔ EVERY COUNT WITH ITS DENOMINATOR, and the denominators are different
+    #    because the measured properties are different.
     conti = {
-        "violazioni col motivo atteso": [0, 0],
-        "⭐ verdi attesi, sessione viva": [0, 0],
-        "§3.1 punto 3 — motivo nella chiusura WT": [0, 0],
-        "§11 — motivo nel messaggio giusto": [0, 0],
+        "violations with the expected reason": [0, 0],
+        "⭐ expected greens, session alive": [0, 0],
+        "§3.1 point 3 — reason in the WT closing": [0, 0],
+        "§11 — reason in the right message": [0, 0],
     }
     guasti, morto = 0, False
     for nome, atteso, spiega, dove, f in casi:
         es = await gira_caso(a, nome, atteso, spiega, f)
         if atteso is None:
-            conti["⭐ verdi attesi, sessione viva"][1] += 1
-            # ⛔ `viva` si CALCOLAVA e non si guardava: bastava che non fosse
-            #    arrivato un motivo, quindi un server che manda ECCOMI e poi
-            #    chiude la sessione WebTransport dava la riga «la sessione
-            #    regge» mentre la sessione era morta (rilievo R7.2).
+            conti["⭐ expected greens, session alive"][1] += 1
+            # ⛔ `viva` was COMPUTED and not looked at: it was enough that no
+            #    reason had arrived, so a server that sends ECCOMI and then
+            #    closes the WebTransport session gave the line «the session
+            #    holds» while the session was dead (finding R7.2).
             ok = es.viva and es.errore is None
-            testo = ("la sessione regge" if ok else str(es))
-            conti["⭐ verdi attesi, sessione viva"][0] += int(ok)
+            testo = ("the session holds" if ok else str(es))
+            conti["⭐ expected greens, session alive"][0] += int(ok)
         else:
-            conti["violazioni col motivo atteso"][1] += 1
+            conti["violations with the expected reason"][1] += 1
             atteso_in = PORTATORE.get(atteso, "CONGEDO")
-            # §11: «almeno una delle due strade» deve aver portato il motivo.
+            # §11: «at least one of the two roads» must have carried the reason.
             strade = []
             if es.motivo == atteso and es.tipo_motivo == atteso_in:
                 strade.append(atteso_in)
             if es.codice_wt == atteso:
                 strade.append("chiusura-WT")
             ok = es.provocato and bool(strade)
-            conti["violazioni col motivo atteso"][0] += int(ok)
+            conti["violations with the expected reason"][0] += int(ok)
             testo = str(es)
         riga(ok, nome, testo)
-        # ⛔ E il fatto va sul registro PRIMA di qualunque conclusione: un
-        #    caso che fa cadere il banco (il server che muore) deve aver
-        #    lasciato la propria riga, o il registro racconterebbe solo i giri
-        #    andati bene.
+        # ⛔ And the fact goes to the log BEFORE any conclusion: a case that
+        #    brings the bench down (the server dying) must have left its own
+        #    line, or the log would only tell about the runs that went well.
         a.reg.scrivi({"tipo": "caso", "nome": nome, "esito": bool(ok),
                       "atteso": atteso, "motivo": es.motivo,
                       "tipo_motivo": es.tipo_motivo, "codice_wt": es.codice_wt,
@@ -1188,105 +1189,105 @@ async def principale(a):
                       "viva": es.viva})
         if not ok:
             guasti += 1
-            print(f"        atteso: "
+            print(f"        expected: "
                   + (f"{atteso:#04x} {MOTIVI.get(atteso, '?')}" if atteso
-                     else "⭐ nessuna caduta"))
+                     else "⭐ no drop"))
             print(f"        {spiega}")
             if atteso is not None and not es.provocato:
-                print(f"        ⛔ e la violazione NON E' MAI PARTITA: il caso "
-                      f"si e' fermato in «{es.fase}».  Non e' una prova "
-                      f"fallita, e' una prova non fatta")
+                print(f"        ⛔ and the violation NEVER LEFT: the case "
+                      f"stopped in «{es.fase}».  It is not a failed test, "
+                      f"it is a test not done")
         if es.dettaglio:
-            print(f"        dettaglio dal corpo: «{es.dettaglio}»")
+            print(f"        detail from the body: «{es.dettaglio}»")
         if getattr(es, "banco", None):
             print(f"        BANCO_ESITO: {es.banco}")
         if atteso is not None and es.provocato:
-            # ⛔ §3.1 PUNTO 3 SI CONTA, NON SI STAMPA.
+            # ⛔ §3.1 POINT 3 IS COUNTED, NOT PRINTED.
             #
-            #    Qui c'era una riga che diceva «il motivo e' arrivato per
-            #    CONGEDO» anche quando la seconda strada non era arrivata
-            #    affatto — vera, e capace di far credere il contrario — e
-            #    `guasti` non veniva toccato in nessuno dei tre rami: R7.3 ha
-            #    mostrato che TUTTE le violazioni restavano verdi con il punto
-            #    3 mai implementato.
-            #    Il punto 3 e' un DEVE **incondizionato**: la condizione di
-            #    §3.1 sta sul punto 2, ed e' il punto 3 che il documento chiama
-            #    «quello che salva le diagnosi».
-            conti["§3.1 punto 3 — motivo nella chiusura WT"][1] += 1
+            #    Here there was a line that said «the reason arrived via
+            #    CONGEDO» even when the second road had not arrived at all —
+            #    true, and capable of making one believe the opposite — and
+            #    `guasti` was not touched in any of the three branches: R7.3
+            #    showed that ALL the violations stayed green with point 3
+            #    never implemented.
+            #    Point 3 is an **unconditional** MUST: the condition of §3.1
+            #    is on point 2, and it is point 3 that the document calls
+            #    «the one that saves the diagnoses».
+            conti["§3.1 point 3 — reason in the WT closing"][1] += 1
             if es.codice_wt == atteso:
-                conti["§3.1 punto 3 — motivo nella chiusura WT"][0] += 1
+                conti["§3.1 point 3 — reason in the WT closing"][0] += 1
             else:
                 guasti += 1
-                visto = ("assente" if es.codice_wt is None
+                visto = ("absent" if es.codice_wt is None
                          else f"{es.codice_wt:#04x}")
-                riga(False, "", f"   §3.1 punto 3 su «{nome}»: la chiusura "
-                                f"della sessione porta {visto}, atteso "
+                riga(False, "", f"   §3.1 point 3 on «{nome}»: the closing "
+                                f"of the session carries {visto}, expected "
                                 f"{atteso:#04x}")
-            # ⛔ E IN QUALE MESSAGGIO (§11, §4.4).
+            # ⛔ AND IN WHICH MESSAGE (§11, §4.4).
             if es.motivo is not None:
-                conti["§11 — motivo nel messaggio giusto"][1] += 1
+                conti["§11 — reason in the right message"][1] += 1
                 if es.tipo_motivo == PORTATORE.get(atteso, "CONGEDO"):
-                    conti["§11 — motivo nel messaggio giusto"][0] += 1
+                    conti["§11 — reason in the right message"][0] += 1
                 else:
                     guasti += 1
-                    riga(False, "", f"   §11 su «{nome}»: il motivo e' arrivato "
-                                    f"in {es.tipo_motivo}, e §11 lo vuole in "
-                                    f"{PORTATORE.get(atteso, 'CONGEDO')} — sono "
-                                    f"due macchine a stati diverse")
-        # ⛔ e il server dopo?
+                    riga(False, "", f"   §11 on «{nome}»: the reason arrived "
+                                    f"in {es.tipo_motivo}, and §11 wants it in "
+                                    f"{PORTATORE.get(atteso, 'CONGEDO')} — they are "
+                                    f"two different state machines")
+        # ⛔ and the server afterwards?
         vivo, perche = await ancora_vivo(a)
         if not vivo:
-            riga(False, "", f"⛔ IL SERVER NON RISPONDE PIU' dopo «{nome}»: {perche}")
+            riga(False, "", f"⛔ THE SERVER NO LONGER ANSWERS after «{nome}»: {perche}")
             guasti += 1
             morto = True
             break
 
     if morto:
-        print(f"\n    {ROSSO}⛔ il banco si ferma: senza un server non c'e' "
-              f"niente da misurare{GRIGIO}")
-        # ⚠ E si stampa lo stesso quel che si era guardato FIN LI': un banco
-        #   che si ferma senza dire quanto aveva coperto lascia credere che
-        #   avesse coperto tutto.
+        print(f"\n    {ROSSO}⛔ the bench stops: without a server there is "
+              f"nothing to measure{GRIGIO}")
+        # ⚠ And what had been looked at UP TO THERE is printed anyway: a bench
+        #   that stops without saying how much it had covered lets one believe
+        #   it had covered everything.
         return esito_finale(conti, guasti, parziale=True, reg=a.reg)
 
-    # ⛔ SOTTO UN FILTRO QUESTE TRE SEZIONI NON SI ESEGUONO, ed e' dichiarato.
+    # ⛔ UNDER A FILTER THESE THREE SECTIONS ARE NOT RUN, and it is declared.
     #
-    #    Non dipendono dai casi selezionati: girarle su una selezione parziale
-    #    fa passare per «B5 passa» una misura che nessuno ha chiesto — e nel
-    #    caso del limitatore blocca l'indirizzo per trenta secondi a chi stava
-    #    solo riprovando un caso.  E' il gemello di R7.15(b), che nello script
-    #    di lancio dava rosso su una regola mai sollecitata.
+    #    They do not depend on the selected cases: running them on a partial
+    #    selection passes off as «B5 passes» a measurement nobody asked for —
+    #    and in the case of the limiter it blocks the address for thirty seconds
+    #    for someone who was only retrying a case.  It is the twin of
+    #    R7.15(b), which in the launch script gave red on a rule never triggered.
     if a.solo:
-        print(f"\n    ⚠ giro parziale: percorso, giro completo e limitatore "
-              f"saltati (vedi sopra)")
+        print(f"\n    ⚠ partial run: path, full run and limiter "
+              f"skipped (see above)")
         return esito_finale(conti, guasti, parziale=True, reg=a.reg)
 
-    print("\n== ⛔ Il percorso della sessione (§2.2), che viene prima di RCP")
+    print("\n== ⛔ The session path (§2.2), which comes before RCP")
     for percorso, atteso, stato, ok in await il_percorso(a):
-        riga(ok, percorso, f":status = {stato}   (atteso {atteso})")
+        riga(ok, percorso, f":status = {stato}   (expected {atteso})")
         if not ok:
             guasti += 1
 
-    # ⛔ IL GIRO COMPLETO VIENE PRIMA DEL LIMITATORE, e l'ordine e' una misura.
+    # ⛔ THE FULL RUN COMES BEFORE THE LIMITER, and the order is a measurement.
     #
-    #    Il limitatore di §4.4-bis, quando funziona, **blocca l'indirizzo** — e
-    #    da quel momento anche la parola d'ordine giusta riceve
-    #    TROPPI_TENTATIVI, per una finestra che parte da trenta secondi.  ⚠ Un
-    #    banco che mettesse la stretta di mano buona DOPO leggerebbe quel
-    #    rifiuto come «il server e' rotto», cioe' darebbe rosso proprio quando
-    #    la regola funziona.
-    print("\n== ⭐ La stretta di mano buona, intera")
+    #    The limiter of §4.4-bis, when it works, **blocks the address** — and
+    #    from that moment even the right password receives
+    #    TROPPI_TENTATIVI, for a window that starts at thirty seconds.  ⚠ A
+    #    bench that put the good handshake AFTER would read that refusal as
+    #    «the server is broken», that is it would give red precisely when the
+    #    rule works.
+    print("\n== ⭐ The good handshake, whole")
     ok, perche = await giro_completo(a)
     riga(ok, "giro-completo", perche or "CIAO → CREDENZIALI → ATTACCA → SESSIONE")
     if not ok:
         guasti += 1
 
-    print("\n== ⛔ Il limitatore dei tentativi (§4.4-bis) — per ultimo, e si dice perche'")
-    print(f"   ⚠ e su questo bersaglio il ban vive in «{a.bersaglio}»: il file")
-    print(f"     dei ban e' di B5 soltanto, e lo sblocco finale lo fa lo script")
-    print(f"     di lancio, DOPO questa sezione e dichiarandolo (B0.3)")
-    print("   ⚠ da qui in poi questo indirizzo resta BLOCCATO per almeno trenta")
-    print("     secondi: e' la regola che funziona, non un guasto del banco")
+    print("\n== ⛔ The attempt limiter (§4.4-bis) — last, and it says why")
+    print(f"   ⚠ and on this target the ban lives in «{a.bersaglio}»: the ban")
+    print(f"     file belongs to B5 only, and the final unblock is done by the launch")
+    print(f"     script, AFTER this section and declaring it (B0.3)")
+    print("   ⚠ from here on this address stays BLOCKED for at least thirty")
+    print("     seconds: it is the rule working, not a fault of the bench")
     for nome, (ok, perche) in (await limitatore(a)).items():
         riga(ok, nome, perche)
         if not ok:
@@ -1296,23 +1297,23 @@ async def principale(a):
 
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser(description="B5 — le violazioni verso il server")
+    p = argparse.ArgumentParser(description="B5 — the violations against the server")
     p.add_argument("--indirizzo", default="192.168.0.2")
-    # ⛔ La porta NON ha piu' un predefinito che nomina un bersaglio: 7447 e'
-    #    l'innesto e 7448 il prodotto, e un predefinito qui vorrebbe dire che
-    #    `--bersaglio prodotto` senza `--porta` misura l'innesto dichiarando il
-    #    prodotto.  La passa `01-b0-bersaglio.sh`, che e' l'unico posto in cui
-    #    le due porte sono scritte.
+    # ⛔ The port NO LONGER has a default that names a target: 7447 is the
+    #    graft and 7448 the product, and a default here would mean that
+    #    `--bersaglio prodotto` without `--porta` measures the graft while
+    #    declaring the product.  It is passed by `01-b0-bersaglio.sh`, which is
+    #    the only place where the two ports are written.
     p.add_argument("--porta", type=int, required=True)
     p.add_argument("--utente", default="prova")
     p.add_argument("--parola", default="parola-di-prova")
-    p.add_argument("--solo", default="", help="gira solo i casi che contengono questo")
+    p.add_argument("--solo", default="", help="run only the cases that contain this")
     p.add_argument("--elenco", action="store_true",
-                   help="stampa le previsioni senza misurare")
+                   help="print the predictions without measuring")
     b0.aggiungi_argomenti(p)
-    # ⚠ `--elenco` non misura niente e non ha bisogno di una porta: si guarda
-    #   prima di pretenderla, o stampare le previsioni richiederebbe di aver
-    #   gia' scelto un server.
+    # ⚠ `--elenco` measures nothing and does not need a port: it is checked
+    #   before demanding it, or printing the predictions would require having
+    #   already chosen a server.
     import sys as _s
     if "--elenco" in _s.argv:
         for _i, _az in enumerate(p._actions):

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""01-b2-sonda-trasporto.py — i parametri di trasporto, letti SUL FILO.
+"""01-b2-sonda-trasporto.py — the transport parameters, read ON THE WIRE.
 
     python3 01-b2-sonda-trasporto.py --bersaglio innesto  --porta 7447 --idle-atteso 30000
     python3 01-b2-sonda-trasporto.py --bersaglio prodotto --porta 7448 --idle-atteso 30000
@@ -7,77 +7,77 @@
             --idle-atteso 60000 --credito-atteso 125 --bozze-attese 02
 
 ---------------------------------------------------------------------------
-⛔ CHE COSA MISURA, E PERCHE' NON BASTAVA QUEL CHE C'ERA
+⛔ WHAT IT MEASURES, AND WHY WHAT WAS THERE WAS NOT ENOUGH
 
-Le proprieta' che `FASI.md` §01-filo-nudo assegna a B2 «perche' sono della
-libreria e nessun altro banco le guarda»:
+The properties that `FASI.md` §01-filo-nudo assigns to B2 "because they belong
+to the library and no other bench looks at them":
 
-    max_idle_timeout = 30 s imposto dal server      RCP.md §2.2
-    datagram abilitati sulla connessione HTTP/3     RCP.md §2.2
-    almeno 16 stream unidirezionali di credito      RCP.md §2.3
-      ⚠ qui si legge SOLO il credito iniziale — vedi il controllo
-    il server NON DEVE offrire 0-RTT                RCP.md §2.3
-    il server NON DEVE disabilitare la migrazione   RCP.md §2.3
+    max_idle_timeout = 30 s imposed by the server   RCP.md §2.2
+    datagrams enabled on the HTTP/3 connection      RCP.md §2.2
+    at least 16 unidirectional streams of credit    RCP.md §2.3
+      ⚠ here ONLY the initial credit is read — see the check
+    the server MUST NOT offer 0-RTT                 RCP.md §2.3
+    the server MUST NOT disable migration           RCP.md §2.3
 
-⚠ **Le prime due erano gia' «misurate», e male.**  Il 10 agosto il server
-  stampava da se' `max_idle_timeout=30000ms max_datagram_frame_size=65536`, e
-  quella riga e' stata scritta nei documenti come una misura.  ⛔ Ma e' la sua
-  CONFIGURAZIONE, non il filo: dice che cosa il server ha chiesto a ngtcp2, non
-  che cosa e' arrivato al pari.  E' esattamente il corollario di `LEZIONI.md`
-  §1.9 nato quella stessa mattina — *un denominatore si legge dove la cosa
-  succede* — applicato contro una misura nostra invece che contro una libreria
-  altrui.
+⚠ **The first two were already "measured", and badly.**  On 10 Aug the server
+  printed by itself `max_idle_timeout=30000ms max_datagram_frame_size=65536`, and
+  that line was written into the documents as a measurement.  ⛔ But it is its
+  CONFIGURATION, not the wire: it says what the server asked ngtcp2 for, not
+  what reached the peer.  It is exactly the corollary of `LEZIONI.md`
+  §1.9 born that same morning — *a denominator is read where the thing
+  happens* — applied against a measurement of ours instead of against someone
+  else's library.
 
-⭐ Questa sonda le rilegge tutte dal **pari**, cioe' da dove si vedono davvero.
-
----------------------------------------------------------------------------
-⛔⭐ IL BERSAGLIO STA DENTRO OGNI RIGA DEL REGISTRO — e questo file lo pretende
-
-*Aggiunto l'11 agosto 2026, ed e' la ragione per cui questa sonda e' stata
-riaperta.*
-
-Le sei proprieta' sono `[M]` **sull'innesto** (`bsslserver` + gli innesti di
-B2, porta 7447).  Il **prodotto** (`remotix`, porta 7448) e' un altro server, e
-di cinque delle sei non si sa niente: ⛔ **sei numeri letti su due server
-diversi, se il registro non dice quale, sono sei numeri che non si possono
-mettere in fila.**  Da cui `--bersaglio`, che e' **obbligatorio**, e la riga
-JSONL che ogni giro scrive.
-
-⚠ E accanto al bersaglio va **l'impronta di quel che si e' misurato**
-(`--impronta`): un binario ricostruito e' un altro bersaglio con lo stesso
-nome.  Se il lanciatore non la passa, nel registro finisce `ignota` — che e'
-un'informazione, non uno zero.
+⭐ This probe rereads them all from the **peer**, that is from where they are really seen.
 
 ---------------------------------------------------------------------------
-⛔ COME SI LEGGONO, E LO STRUMENTO E' DICHIARATO
+⛔⭐ THE TARGET IS INSIDE EVERY LINE OF THE LOG — and this file demands it
 
-`aioquic` conserva solo due dei parametri ricevuti (`_remote_max_idle_timeout`
-e `_remote_max_datagram_frame_size`) e butta il resto dopo averlo usato.  Per
-vedere anche `disable_active_migration` e il credito degli stream si mette una
-**spia** sulla funzione che li analizza — `pull_quic_transport_parameters` —
-e si tiene l'oggetto intero.
+*Added on 11 Aug 2026, and it is the reason this probe was
+reopened.*
 
-⚠ E' un attrezzo che entra dentro una libreria altrui, quindi e' **dichiarato
-  qui** invece che nascosto: se un aggiornamento di aioquic sposta quella
-  funzione, la sonda **non trova niente e lo dice**, invece di stampare zeri.
+The six properties are `[M]` **on the graft** (`bsslserver` + the B2
+grafts, port 7447).  The **product** (`remotix`, port 7448) is another server, and
+of five of the six nothing is known: ⛔ **six numbers read on two different
+servers, if the log does not say which, are six numbers that cannot be
+lined up.**  Hence `--bersaglio`, which is **mandatory**, and the JSONL
+line that every round writes.
 
-Il 0-RTT si vede da un'altra parte ancora: e' un **biglietto di sessione** con
-`max_early_data_size`, e arriva dopo la stretta di mano.  Si aspetta un momento
-e si guarda se ne e' arrivato uno.
+⚠ And next to the target goes **the fingerprint of what was measured**
+(`--impronta`): a rebuilt binary is another target with the same
+name.  If the launcher does not pass it, `ignota` ends up in the log — which is
+a piece of information, not a zero.
 
 ---------------------------------------------------------------------------
-⛔ E LA PROPRIETA' CHE DAL PARI **NON SI LEGGE**, detta qui e non altrove
+⛔ HOW THEY ARE READ, AND THE TOOL IS DECLARED
 
-Le proprieta' di B2 sono sei.  Questa sonda ne legge **cinque**.
+`aioquic` keeps only two of the received parameters (`_remote_max_idle_timeout`
+and `_remote_max_datagram_frame_size`) and throws away the rest after using it.
+To see `disable_active_migration` and the stream credit too, a **spy** is put on
+the function that parses them — `pull_quic_transport_parameters` —
+and the whole object is kept.
+
+⚠ It is a tool that goes inside someone else's library, so it is **declared
+  here** instead of hidden: if an aioquic update moves that
+  function, the probe **finds nothing and says so**, instead of printing zeros.
+
+0-RTT is seen somewhere else again: it is a **session ticket** with
+`max_early_data_size`, and it arrives after the handshake.  We wait a moment
+and look whether one has arrived.
+
+---------------------------------------------------------------------------
+⛔ AND THE PROPERTY THAT **CANNOT BE READ** FROM THE PEER, said here and not elsewhere
+
+The properties of B2 are six.  This probe reads **five** of them.
 
     `allowPooling: false`  —  `RCP.md` §4.1-bis
 
-⛔ Non e' un parametro che il server manda: e' un campo dell'oggetto
-`WebTransport` **che costruisce la pagina**, dentro il browser.  Sul filo non
-c'e' nessun byte che lo porti, e nessuna sonda QUIC potra' mai leggerlo.  Si
-legge nel sorgente della pagina (`[R]`) o nel browser che la esegue — non qui.
-⚠ Dichiararlo e' informazione; dedurlo da un verde di questa sonda sarebbe
-**E1**, una lettura che prova meno di quel che le si attribuisce.
+⛔ It is not a parameter the server sends: it is a field of the `WebTransport`
+object **that the page builds**, inside the browser.  On the wire there
+is no byte that carries it, and no QUIC probe will ever be able to read it.  It is
+read in the page source (`[R]`) or in the browser that runs it — not here.
+⚠ Declaring it is information; deducing it from a green of this probe would be
+**E1**, a reading that proves less than is attributed to it.
 """
 import argparse
 import asyncio
@@ -94,46 +94,46 @@ from aioquic.h3.connection import H3_ALPN, H3Connection
 from aioquic.quic.configuration import QuicConfiguration
 from aioquic.quic.events import QuicEvent
 
-# ⛔ H3_DATAGRAM (RFC 9297) — l'impostazione di HTTP/3, che NON e' il parametro
-#    di trasporto di QUIC.  Rilievo R8.11: qui si misurava
-#    `max_datagram_frame_size` (RFC 9221) e lo si chiamava «datagram sulla
-#    connessione HTTP/3», che e' quel che RCP.md §2.2 pretende.  Un server che
-#    alzasse il parametro di trasporto e NON annunciasse H3_DATAGRAM passava il
-#    controllo, e i datagram dell'audio non partirebbero — con il sintomo
-#    «sembra un difetto di rete» di LEZIONI.md §2.2.
+# ⛔ H3_DATAGRAM (RFC 9297) — the HTTP/3 setting, which is NOT the QUIC
+#    transport parameter.  Finding R8.11: here `max_datagram_frame_size`
+#    (RFC 9221) was measured and called "datagrams on the HTTP/3
+#    connection", which is what RCP.md §2.2 demands.  A server that
+#    raised the transport parameter and did NOT announce H3_DATAGRAM passed the
+#    check, and the audio datagrams would not leave — with the symptom
+#    "looks like a network defect" of LEZIONI.md §2.2.
 H3_DATAGRAM = 0x33
 
-# ⛔ Le DUE dichiarazioni di WebTransport, e sono due perche' le bozze in
-#    circolazione sono due.  `src/webtransport.c` le manda tutt'e due e dice
-#    perche'; qui si verifica che sul filo ci siano davvero.
+# ⛔ The TWO WebTransport declarations, and they are two because there are two
+#    drafts in circulation.  `src/webtransport.c` sends both and says
+#    why; here we check that they really are on the wire.
 #
-#      0x2b603742  SETTINGS_ENABLE_WEBTRANSPORT   bozza 02  — la cerca aioquic
-#      0xc671706a  SETTINGS_WT_MAX_SESSIONS       bozza 07+ — la cercano i browser
+#      0x2b603742  SETTINGS_ENABLE_WEBTRANSPORT   draft 02  — aioquic looks for it
+#      0xc671706a  SETTINGS_WT_MAX_SESSIONS       draft 07+ — browsers look for it
 #
-# ⚠ E' un rilievo GROSSO E MUTO: un server che ne mandasse una sola
-#   funzionerebbe con meta' dei nostri strumenti e non con l'altra meta', e la
-#   meta' che funziona sarebbe quella sbagliata da cui trarre conclusioni.  Il
-#   sintomo, dal lato che sbaglia, e' «la sessione non si apre» — che e' la
-#   stessa frase di altre quattro cause.
+# ⚠ It is a BIG AND SILENT finding: a server that sent only one of them would
+#   work with half of our tools and not with the other half, and the half that
+#   works would be the wrong one to draw conclusions from.  The symptom, on the
+#   side that gets it wrong, is "the session does not open" — which is the
+#   same sentence as four other causes.
 WT_BOZZA_02 = 0x2B603742
 WT_BOZZA_07 = 0xC671706A
 BOZZE = {"02": WT_BOZZA_02, "07": WT_BOZZA_07}
 
-# ⚠ RFC 9220: senza questa, l'extended CONNECT non esiste e WebTransport su
-#   HTTP/3 non puo' nemmeno cominciare.  `RCP.md` non la nomina — quindi qui
-#   NON e' un controllo contro l'arbitro, e' una LETTURA dichiarata: la si
-#   stampa perche' la sua assenza spiegherebbe da sola un «non si apre».
+# ⚠ RFC 9220: without this, the extended CONNECT does not exist and WebTransport
+#   over HTTP/3 cannot even begin.  `RCP.md` does not name it — so here it is
+#   NOT a check against the referee, it is a declared READING: it is printed
+#   because its absence alone would explain a "does not open".
 ENABLE_CONNECT_PROTOCOL = 0x08
 
-# ⛔ Quanti stream unidirezionali si porta via HTTP/3 PER SE'.  Non e' una
-#    costante creduta: piu' sotto si CONTANO quelli che la nostra
-#    `H3Connection` ha davvero aperto, e il numero misurato e' quello che
-#    entra nel conto.  Questo serve solo a dire nel registro che cosa ci si
-#    aspettava di contare.
+# ⛔ How many unidirectional streams HTTP/3 takes FOR ITSELF.  It is not a
+#    believed constant: further down the ones our `H3Connection` really
+#    opened are COUNTED, and the measured number is the one that
+#    goes into the sum.  This only serves to say in the log what we
+#    expected to count.
 HTTP3_UNI_ATTESI = 3
 
 # ---------------------------------------------------------------------------
-# La spia sui parametri di trasporto.
+# The spy on the transport parameters.
 VISTI = {}
 _originale = mod_conn.pull_quic_transport_parameters
 
@@ -146,7 +146,7 @@ def _spia(*a, **kw):
 
 mod_conn.pull_quic_transport_parameters = _spia
 
-# I biglietti di sessione, cioe' il 0-RTT.
+# The session tickets, that is the 0-RTT.
 BIGLIETTI = []
 
 
@@ -155,13 +155,13 @@ def raccogli_biglietto(b):
 
 
 class Ascoltatore(QuicConnectionProtocol):
-    """⛔ Serve SOLO a leggere il SETTINGS di HTTP/3.
+    """⛔ It serves ONLY to read the HTTP/3 SETTINGS.
 
-    La sonda si collegava con l'ALPN di HTTP/3 e **non costruiva nessuna
-    `H3Connection`**: quindi non leggeva nessun SETTINGS, e l'impostazione che
-    §2.2 pretende — `H3_DATAGRAM` — non la guardava nessuno (R8.11).  Il file
-    accanto (`01-b2-sonda-impostazioni.py`) sa benissimo che e' un'altra cosa:
-    la elenca per nome.
+    The probe connected with the HTTP/3 ALPN and **built no
+    `H3Connection`**: so it read no SETTINGS, and the setting that
+    §2.2 demands — `H3_DATAGRAM` — nobody looked at (R8.11).  The file
+    next to it (`01-b2-sonda-impostazioni.py`) knows very well it is another thing:
+    it lists it by name.
     """
 
     def __init__(self, *a, **kw):
@@ -176,16 +176,16 @@ class Ascoltatore(QuicConnectionProtocol):
         if imp is not None and not self.arrivate.done():
             self.arrivate.set_result(imp)
 
-    # ⛔ QUANTI STREAM UNIDIREZIONALI SI E' PRESO HTTP/3, CONTATI E NON CREDUTI.
+    # ⛔ HOW MANY UNIDIRECTIONAL STREAMS HTTP/3 TOOK, COUNTED AND NOT BELIEVED.
     #
-    #    `H3Connection` apre di suo il canale di controllo e i due di QPACK, e
-    #    NON si chiudono mai per tutta la connessione.  Sono stream
-    #    unidirezionali del client come tutti gli altri: mangiano lo stesso
-    #    credito che `RCP.md` §2.3 riserva a RCP.
+    #    `H3Connection` opens by itself the control channel and the two QPACK
+    #    ones, and they NEVER close for the whole connection.  They are
+    #    unidirectional client streams like all the others: they eat the same
+    #    credit that `RCP.md` §2.3 reserves for RCP.
     #
-    # ⚠ E' un conto fatto sul NOSTRO client, non sul browser: sta scritto
-    #   accanto al numero, ed e' la ragione per cui il verdetto sul credito
-    #   porta la parola «con questo client».
+    # ⚠ It is a count made on OUR client, not on the browser: it is written
+    #   next to the number, and it is the reason the verdict on the credit
+    #   carries the words "with this client".
     def uni_di_http3(self):
         ids = [
             getattr(self._http, "_local_control_stream_id", None),
@@ -203,9 +203,9 @@ async def principale(a) -> int:
     )
     conf.verify_mode = ssl.CERT_NONE
 
-    print(f"== i parametri di trasporto di {a.indirizzo}:{a.porta}")
-    print(f"   ⛔ BERSAGLIO: {a.bersaglio}   ({a.etichetta})")
-    print(f"   impronta del bersaglio: {a.impronta}")
+    print(f"== the transport parameters of {a.indirizzo}:{a.porta}")
+    print(f"   ⛔ TARGET: {a.bersaglio}   ({a.etichetta})")
+    print(f"   fingerprint of the target: {a.impronta}")
     print()
 
     impostazioni = None
@@ -213,35 +213,35 @@ async def principale(a) -> int:
     uni_h3 = []
     credito_corrente = None
     try:
-        # ⚠ `session_ticket_handler` sta su `connect`, non sulla
-        #   configurazione: sono due posti diversi in due moduli diversi.
+        # ⚠ `session_ticket_handler` sits on `connect`, not on the
+        #   configuration: they are two different places in two different modules.
         async with connect(a.indirizzo, a.porta, configuration=conf,
                            create_protocol=Ascoltatore,
                            session_ticket_handler=raccogli_biglietto) as cliente:
             await asyncio.wait_for(cliente.wait_connected(), timeout=a.attesa)
-            # ⛔ Il SETTINGS di HTTP/3 si aspetta e si legge: e' li' che stanno
-            #    `H3_DATAGRAM` (R8.11) e le due dichiarazioni di WebTransport.
-            # ⚠ E «non e' arrivato nessun SETTINGS» resta un fatto suo, diverso
-            #   da «e' arrivato e non conteneva X»: si tiene il perche', e piu'
-            #   sotto lo si stampa invece di un numero.
+            # ⛔ The HTTP/3 SETTINGS is awaited and read: that is where
+            #    `H3_DATAGRAM` (R8.11) and the two WebTransport declarations are.
+            # ⚠ And "no SETTINGS arrived" remains a fact of its own, different
+            #   from "it arrived and did not contain X": the why is kept, and further
+            #   down it is printed instead of a number.
             try:
                 impostazioni = await asyncio.wait_for(cliente.arrivate,
                                                       timeout=a.attesa)
             except Exception as e:  # noqa: BLE001
                 perche_niente_settings = f"{type(e).__name__}: {e}"
-            # ⚠ Il biglietto di sessione arriva DOPO la stretta di mano: senza
-            #   questa attesa, «nessun 0-RTT» sarebbe solo «non ho aspettato».
+            # ⚠ The session ticket arrives AFTER the handshake: without
+            #   this wait, "no 0-RTT" would only be "I did not wait".
             await asyncio.sleep(a.attesa_biglietto)
             uni_h3 = cliente.uni_di_http3()
-            # ⛔ Il credito COME STA ADESSO, e viene dal pari: `aioquic` alza
-            #    `_remote_max_streams_uni` a ogni `MAX_STREAMS_UNI` ricevuto.
-            #    Se il server rinnova, qui si vede un numero piu' alto di
-            #    quello iniziale; se non rinnova, si vede lo stesso.
+            # ⛔ The credit AS IT STANDS NOW, and it comes from the peer: `aioquic` raises
+            #    `_remote_max_streams_uni` at every `MAX_STREAMS_UNI` received.
+            #    If the server renews, a number higher than the initial one is seen
+            #    here; if it does not renew, the same one is seen.
             credito_corrente = getattr(cliente._quic, "_remote_max_streams_uni",
                                        None)
     except Exception as e:  # noqa: BLE001
-        print(f"   ⛔ non ci si collega: {type(e).__name__}: {e}")
-        print("   ⚠ verdetto sul banco, non sulla libreria.")
+        print(f"   ⛔ cannot connect: {type(e).__name__}: {e}")
+        print("   ⚠ verdict on the bench, not on the library.")
         scrivi_registro(a, esito="NON-COLLEGATO",
                         dettaglio=f"{type(e).__name__}: {e}", misure={},
                         controlli=[])
@@ -249,11 +249,11 @@ async def principale(a) -> int:
 
     p = VISTI.get("parametri")
     if p is None:
-        print("   ⛔ la spia non ha catturato niente: `aioquic` ha spostato")
-        print("      `pull_quic_transport_parameters`.  Nessun numero qui sotto")
-        print("      varrebbe, quindi non se ne stampa nessuno.")
+        print("   ⛔ the spy caught nothing: `aioquic` has moved")
+        print("      `pull_quic_transport_parameters`.  No number below")
+        print("      would be valid, so none is printed.")
         scrivi_registro(a, esito="SPIA-CIECA", dettaglio="pull_quic_transport_"
-                        "parameters non e' piu' dov'era", misure={}, controlli=[])
+                        "parameters is no longer where it was", misure={}, controlli=[])
         return 3
 
     idle = getattr(p, "max_idle_timeout", None)
@@ -262,49 +262,49 @@ async def principale(a) -> int:
     suni = getattr(p, "initial_max_streams_uni", None)
     sbidi = getattr(p, "initial_max_streams_bidi", None)
 
-    # ⛔⭐ IL CONTO CHE SEPARA 19 DA 16, e sta tutto in questa riga.
+    # ⛔⭐ THE SUM THAT SEPARATES 19 FROM 16, and it is all in this line.
     #
-    #    `initial_max_streams_uni` e' un TOTALE.  HTTP/3 se ne prende tre
-    #    (controllo + i due di QPACK) dal primo secondo e non li restituisce
-    #    mai.  Quel che resta a RCP — lo stream di input, uno per ogni
-    #    trasferimento di appunti — e' il totale MENO quelli.
+    #    `initial_max_streams_uni` is a TOTAL.  HTTP/3 takes three of them
+    #    (control + the two QPACK ones) from the first second and never gives
+    #    them back.  What is left to RCP — the input stream, one for every
+    #    clipboard transfer — is the total MINUS those.
     #
-    #    §2.3 chiede «almeno 16 DISPONIBILI in ogni momento»: la grandezza di
-    #    cui parla e' questa, non il totale.
+    #    §2.3 asks for "at least 16 AVAILABLE at any moment": the quantity
+    #    it talks about is this one, not the total.
     consumati = len(uni_h3)
     disponibili = None if suni is None else suni - consumati
 
-    print("   quel che il server ha MANDATO:")
+    print("   what the server SENT:")
     print(f"      max_idle_timeout           = {idle}")
     print(f"      max_datagram_frame_size    = {dgram}")
     print(f"      disable_active_migration   = {migr}")
-    print(f"      initial_max_streams_uni    = {suni}   (TOTALE)")
+    print(f"      initial_max_streams_uni    = {suni}   (TOTAL)")
     print(f"      initial_max_streams_bidi   = {sbidi}")
-    print(f"      credito uni ADESSO         = {credito_corrente}"
-          "   (iniziale + eventuali MAX_STREAMS_UNI)")
+    print(f"      uni credit NOW             = {credito_corrente}"
+          "   (initial + any MAX_STREAMS_UNI)")
     print()
-    print("   quel che ne resta a RCP, e il conto e' scritto:")
-    print(f"      stream uni presi da HTTP/3 = {consumati}   (contati: {uni_h3})")
-    print(f"      disponibili a RCP          = {suni} - {consumati} = {disponibili}")
+    print("   what is left of it to RCP, and the sum is written out:")
+    print(f"      uni streams taken by HTTP/3 = {consumati}   (counted: {uni_h3})")
+    print(f"      available to RCP           = {suni} - {consumati} = {disponibili}")
     if impostazioni is None:
-        print(f"      SETTINGS di HTTP/3         = nessuno letto"
+        print(f"      HTTP/3 SETTINGS            = none read"
               f"  ({perche_niente_settings})")
     else:
-        print(f"      SETTINGS di HTTP/3         = {len(impostazioni)} impostazioni")
+        print(f"      HTTP/3 SETTINGS            = {len(impostazioni)} settings")
         for chiave, nome in ((H3_DATAGRAM, "H3_DATAGRAM        (0x33)"),
                              (ENABLE_CONNECT_PROTOCOL,
                               "ENABLE_CONNECT_PROT (0x08)"),
-                             (WT_BOZZA_02, "WT bozza 02 (0x2b603742)"),
-                             (WT_BOZZA_07, "WT bozza 07 (0xc671706a)")):
-            v = impostazioni.get(chiave, "assente")
+                             (WT_BOZZA_02, "WT draft 02 (0x2b603742)"),
+                             (WT_BOZZA_07, "WT draft 07 (0xc671706a)")):
+            v = impostazioni.get(chiave, "absent")
             print(f"         {nome} = {v}")
-    print(f"      biglietti di sessione      = {len(BIGLIETTI)}")
+    print(f"      session tickets            = {len(BIGLIETTI)}")
     for b in BIGLIETTI:
         print(f"         max_early_data_size = {getattr(b, 'max_early_data_size', None)}")
     print()
 
     # -----------------------------------------------------------------------
-    # I controlli, ciascuno con il suo atteso e la sua riga di RCP.
+    # The checks, each with its expected value and its line of RCP.
     esiti = []
 
     def prova(nome, dove, passa, visto, atteso):
@@ -312,154 +312,154 @@ async def principale(a) -> int:
                       "visto": str(visto), "atteso": str(atteso)})
         segno = "OK " if passa else "NO "
         print(f"   {segno} {nome:38s} {dove}")
-        print(f"       atteso {atteso} · misurato {visto}")
+        print(f"       expected {atteso} · measured {visto}")
 
     prova("max_idle_timeout", "RCP.md §2.2",
           idle == a.idle_atteso, idle, a.idle_atteso)
 
-    # ⛔ DUE COSE DIVERSE, DUE CONTROLLI DIVERSI — rilievo R8.11.
+    # ⛔ TWO DIFFERENT THINGS, TWO DIFFERENT CHECKS — finding R8.11.
     #
-    #    `max_datagram_frame_size` e' il parametro di TRASPORTO (RFC 9221):
-    #    dice che la connessione QUIC sa portare datagram.  `H3_DATAGRAM`
-    #    (0x33, RFC 9297) e' l'impostazione di HTTP/3, ed e' quella che
-    #    `RCP.md` §2.2 pretende — «datagram DEVONO essere abilitati sulla
-    #    connessione HTTP/3».  Il primo era misurato col nome del secondo.
-    prova("datagram sul trasporto QUIC", "RFC 9221 (la fondamenta)",
+    #    `max_datagram_frame_size` is the TRANSPORT parameter (RFC 9221):
+    #    it says the QUIC connection can carry datagrams.  `H3_DATAGRAM`
+    #    (0x33, RFC 9297) is the HTTP/3 setting, and it is the one that
+    #    `RCP.md` §2.2 demands — "datagrams MUST be enabled on the
+    #    HTTP/3 connection".  The first was measured under the name of the second.
+    prova("datagrams on the QUIC transport", "RFC 9221 (the foundations)",
           bool(dgram), dgram, "> 0")
 
     if impostazioni is None:
-        prova("datagram su HTTP/3 (H3_DATAGRAM)", "RCP.md §2.2",
-              False, f"nessun SETTINGS letto — {perche_niente_settings}",
-              "0x33 presente e non zero")
+        prova("datagrams on HTTP/3 (H3_DATAGRAM)", "RCP.md §2.2",
+              False, f"no SETTINGS read — {perche_niente_settings}",
+              "0x33 present and non-zero")
     else:
-        prova("datagram su HTTP/3 (H3_DATAGRAM)", "RCP.md §2.2",
+        prova("datagrams on HTTP/3 (H3_DATAGRAM)", "RCP.md §2.2",
               bool(impostazioni.get(H3_DATAGRAM)),
-              impostazioni.get(H3_DATAGRAM, "assente"),
-              "0x33 presente e non zero")
+              impostazioni.get(H3_DATAGRAM, "absent"),
+              "0x33 present and non-zero")
 
-    # ⛔⭐ LE DUE BOZZE DI WEBTRANSPORT, E QUI SI DECIDE CHE COSA E' UN ROSSO.
+    # ⛔⭐ THE TWO WEBTRANSPORT DRAFTS, AND HERE WE DECIDE WHAT A RED IS.
     #
-    #    `--bozze-attese` dice quali si pretendono da QUESTO bersaglio:
-    #      · sul prodotto e sull'innesto sono DUE (02 e 07): un server che ne
-    #        mandasse una sola aprirebbe la sessione con meta' degli strumenti
-    #        e non con l'altra meta';
-    #      · sul controllo positivo (`aioquic` che fa da server) e' UNA sola —
-    #        aioquic 1.2 conosce la 02 e basta `[R]`.  ⭐ Ed e' esattamente il
-    #        CONTROLLO NEGATIVO di questo controllo: se puntando la sonda
-    #        contro aioquic la 07 risultasse presente, il controllo non
-    #        saprebbe dire di no e i verdi sugli altri due bersagli non
-    #        varrebbero niente.
+    #    `--bozze-attese` says which are demanded from THIS target:
+    #      · on the product and on the graft there are TWO (02 and 07): a server that
+    #        sent only one would open the session with half of the tools
+    #        and not with the other half;
+    #      · on the positive control (`aioquic` acting as server) there is ONE only —
+    #        aioquic 1.2 knows draft 02 and that is all `[R]`.  ⭐ And it is exactly the
+    #        NEGATIVE CONTROL of this check: if, pointing the probe
+    #        at aioquic, draft 07 turned out present, the check would not
+    #        be able to say no and the greens on the other two targets would
+    #        be worth nothing.
     attese = [b.strip() for b in a.bozze_attese.split(",") if b.strip()]
     for nome_bozza in ("02", "07"):
         chiave = BOZZE[nome_bozza]
         presente = bool(impostazioni.get(chiave)) if impostazioni else False
         if nome_bozza in attese:
-            prova(f"WebTransport dichiarato — bozza {nome_bozza}",
-                  "RCP.md §2 (l'innesto ne manda due)",
+            prova(f"WebTransport declared — draft {nome_bozza}",
+                  "RCP.md §2 (the graft sends two)",
                   presente,
-                  impostazioni.get(chiave, "assente") if impostazioni
-                  else f"nessun SETTINGS — {perche_niente_settings}",
-                  "presente e non zero")
+                  impostazioni.get(chiave, "absent") if impostazioni
+                  else f"no SETTINGS — {perche_niente_settings}",
+                  "present and non-zero")
         else:
-            # Non e' un controllo: e' una lettura, e si stampa senza voto.
-            visto = (impostazioni.get(chiave, "assente") if impostazioni
-                     else "nessun SETTINGS")
-            print(f"   --  bozza {nome_bozza} non pretesa da questo bersaglio "
-                  f"· letta: {visto}")
+            # It is not a check: it is a reading, and it is printed without a grade.
+            visto = (impostazioni.get(chiave, "absent") if impostazioni
+                     else "no SETTINGS")
+            print(f"   --  draft {nome_bozza} not demanded from this target "
+                  f"· read: {visto}")
 
     if impostazioni is not None:
-        # ⚠ Lettura, non controllo: `RCP.md` non nomina RFC 9220.  Ma la sua
-        #   assenza spiegherebbe da sola un «la sessione non si apre», e
-        #   cercarla dopo costa una serata.
-        print(f"   --  ENABLE_CONNECT_PROTOCOL (RFC 9220, lettura non "
-              f"normativa) = {impostazioni.get(ENABLE_CONNECT_PROTOCOL, 'assente')}")
+        # ⚠ A reading, not a check: `RCP.md` does not name RFC 9220.  But its
+        #   absence alone would explain a "the session does not open", and
+        #   looking for it afterwards costs an evening.
+        print(f"   --  ENABLE_CONNECT_PROTOCOL (RFC 9220, non-normative "
+              f"reading) = {impostazioni.get(ENABLE_CONNECT_PROTOCOL, 'absent')}")
 
-    # ⛔ Il credito degli stream unidirezionali: §2.3 ne impone almeno 16 «in
-    #    ogni momento», perche' il client apre uno stream di input e uno per
-    #    ogni trasferimento di appunti.  Se finisse, l'input non partirebbe
-    #    affatto e il sintomo sarebbe «il desktop non risponde».
+    # ⛔ The credit of unidirectional streams: §2.3 imposes at least 16 "at
+    #    any moment", because the client opens an input stream and one for
+    #    every clipboard transfer.  If it ran out, input would not leave
+    #    at all and the symptom would be "the desktop does not respond".
     #
-    # ⚠ E IL NOME DEL CONTROLLO DICE QUEL CHE MISURA — rilievo R8.12.
-    #   `initial_max_streams_uni` e' il credito che il server concede
-    #   ALL'APERTURA, e non dice niente su quel che succede dopo: §2.3 e'
-    #   scritta esattamente per il dopo, ed e' la forma di difetto che un banco
-    #   corto non vede — funziona per i primi secondi e si ferma (LEZIONI.md
-    #   §1.4).  Questa sonda apre, legge un numero e chiude: e' il banco corto
-    #   contro cui quella riga e' stata scritta.  ⛔ Il credito «in ogni
-    #   momento» qui NON e' misurato, e lo si dice invece di lasciarlo credere.
+    # ⚠ AND THE NAME OF THE CHECK SAYS WHAT IT MEASURES — finding R8.12.
+    #   `initial_max_streams_uni` is the credit the server grants
+    #   AT OPENING, and says nothing about what happens afterwards: §2.3 is
+    #   written exactly for the afterwards, and it is the form of defect a short
+    #   bench does not see — it works for the first seconds and stops (LEZIONI.md
+    #   §1.4).  This probe opens, reads a number and closes: it is the short bench
+    #   against which that line was written.  ⛔ The credit "at any
+    #   moment" is NOT measured here, and we say so instead of letting it be believed.
     #
-    # ⛔⭐ E IL CONTROLLO E' SUI DISPONIBILI, NON SUL TOTALE — 11 agosto 2026.
-    #    Prima si controllava `suni >= 16`, e con quel controllo un server che
-    #    dichiara 16 passava mentre a RCP ne restavano 13.  E' il rilievo B-12,
-    #    che `src/trasporto.c` ha gia' curato dichiarando 19: quel 19 qui si
-    #    LEGGE, e il verdetto si da' sul numero di cui §2.3 parla.
+    # ⛔⭐ AND THE CHECK IS ON THE AVAILABLE ONES, NOT ON THE TOTAL — 11 Aug 2026.
+    #    Before, `suni >= 16` was checked, and with that check a server that
+    #    declares 16 passed while 13 were left to RCP.  It is finding B-12,
+    #    which `src/trasporto.c` has already cured by declaring 19: that 19 is
+    #    READ here, and the verdict is given on the number §2.3 talks about.
     if disponibili is None:
-        prova("credito uni DISPONIBILE a RCP all'apertura",
-              "RCP.md §2.3 (solo l'apertura)",
-              False, "il pari non ha mandato initial_max_streams_uni",
+        prova("uni credit AVAILABLE to RCP at opening",
+              "RCP.md §2.3 (opening only)",
+              False, "the peer did not send initial_max_streams_uni",
               f">= {a.credito_atteso}")
     else:
-        prova("credito uni DISPONIBILE a RCP all'apertura",
-              "RCP.md §2.3 (solo l'apertura)",
+        prova("uni credit AVAILABLE to RCP at opening",
+              "RCP.md §2.3 (opening only)",
               disponibili >= a.credito_atteso,
-              f"{disponibili}  (= {suni} dichiarati - {consumati} di HTTP/3)",
+              f"{disponibili}  (= {suni} declared - {consumati} of HTTP/3)",
               f">= {a.credito_atteso}")
 
-    # ⚠ E un controllo sullo STRUMENTO, non sul server: se HTTP/3 non si fosse
-    #   preso i tre stream che ci si aspetta, il conto qui sopra sarebbe fatto
-    #   con un denominatore sbagliato — e sarebbe un numero credibile e falso.
-    prova("lo strumento ha contato gli stream di HTTP/3",
-          "controllo della SONDA, non del server",
+    # ⚠ And a check on the TOOL, not on the server: if HTTP/3 had not
+    #   taken the three streams we expect, the sum above would be made
+    #   with a wrong denominator — and it would be a credible and false number.
+    prova("the tool counted the HTTP/3 streams",
+          "check of the PROBE, not of the server",
           consumati == HTTP3_UNI_ATTESI, consumati, HTTP3_UNI_ATTESI)
 
-    # ⛔ La migrazione: e' la ragione per cui QUIC e' stato scelto — il
-    #    telefono che passa da WiFi a rete mobile.  Il parametro e' un
-    #    interruttore che DEVE restare spento.
-    prova("migrazione NON disabilitata", "RCP.md §2.3",
-          not migr, migr, "falso o assente")
+    # ⛔ Migration: it is the reason QUIC was chosen — the
+    #    phone moving from WiFi to mobile network.  The parameter is a
+    #    switch that MUST stay off.
+    prova("migration NOT disabled", "RCP.md §2.3",
+          not migr, migr, "false or absent")
 
-    # ⛔ Il 0-RTT: i dati si possono ripetere, e il secondo messaggio di RCP e'
+    # ⛔ 0-RTT: the data can be replayed, and the second RCP message is
     #    `CREDENZIALI`.
     #
-    # ⭐ E questo controllo il suo controllo POSITIVO ce l'ha avuto subito, dal
-    #    bersaglio stesso: al primo giro il server d'esempio di ngtcp2 ha
-    #    mandato **due biglietti con max_early_data_size = 4294967295** `[M]`
-    #    10 agosto 2026.  Cioe' la sonda sa vedere un 0-RTT acceso, perche'
-    #    l'ha visto.  Il verde che segue e' un verde dopo una cura, non un
-    #    verde da uno strumento cieco — che e' la differenza che conta.
+    # ⭐ And this check had its POSITIVE control right away, from the
+    #    target itself: at the first round the ngtcp2 example server
+    #    sent **two tickets with max_early_data_size = 4294967295** `[M]`
+    #    10 Aug 2026.  That is, the probe can see a 0-RTT turned on, because
+    #    it saw one.  The green that follows is a green after a cure, not a
+    #    green from a blind tool — which is the difference that counts.
     con_early = [b for b in BIGLIETTI
                  if getattr(b, "max_early_data_size", None)]
-    prova("niente 0-RTT", "RCP.md §2.3",
-          not con_early, f"{len(con_early)} biglietti con early data",
-          "nessuno")
+    prova("no 0-RTT", "RCP.md §2.3",
+          not con_early, f"{len(con_early)} tickets with early data",
+          "none")
 
     print()
-    print("== Verdetto")
-    # ⛔ Quel che questi controlli NON dicono, detto qui e non altrove: un
-    #    verdetto «tutti su tutti» che copre una proprieta' diversa da quella
-    #    nominata e' peggio di un rosso (rilievo R8.12).
-    print("   ⚠ NON misurato qui: il credito degli stream «in ogni momento»")
-    print("     (§2.3).  Sopra c'e' solo il credito all'apertura; quel che")
-    print("     succede quando finisce lo vede un banco che tiene viva la")
-    print("     sessione e apre stream finche' il credito non si esaurisce.")
-    print("   ⚠ NON misurato qui: `allowPooling: false` (§4.1-bis) — non passa")
-    print("     dal filo, sta nella pagina.  Si legge nel sorgente o nel")
-    print("     browser, e questa sonda non ne sa niente.")
-    print(f"   ⚠ I {consumati} stream di HTTP/3 sono contati su QUESTO client")
-    print("     (aioquic).  Un browser potrebbe aprirne di piu' — per esempio")
-    print("     uno stream di «grease» — e allora i disponibili sarebbero meno")
-    print("     di quanti se ne leggono qui.  Nessuno l'ha misurato: `[?]`")
+    print("== Verdict")
+    # ⛔ What these checks do NOT say, said here and not elsewhere: an
+    #    "all of all" verdict that covers a property different from the one
+    #    named is worse than a red (finding R8.12).
+    print("   ⚠ NOT measured here: the stream credit \"at any moment\"")
+    print("     (§2.3).  Above there is only the credit at opening; what")
+    print("     happens when it runs out is seen by a bench that keeps the")
+    print("     session alive and opens streams until the credit is exhausted.")
+    print("   ⚠ NOT measured here: `allowPooling: false` (§4.1-bis) — it does not")
+    print("     go over the wire, it is in the page.  It is read in the source or in")
+    print("     the browser, and this probe knows nothing about it.")
+    print(f"   ⚠ The {consumati} HTTP/3 streams are counted on THIS client")
+    print("     (aioquic).  A browser could open more of them — for example")
+    print("     a \"grease\" stream — and then the available ones would be fewer")
+    print("     than the ones read here.  Nobody has measured it: `[?]`")
     if not BIGLIETTI:
-        # ⛔ «Nessun biglietto» e «biglietti senza early data» sono due fatti
-        #    diversi, e il verde e' lo stesso.  Chi legge deve sapere quale dei
-        #    due ha avuto: nel primo caso questo giro non ha dimostrato che lo
-        #    strumento sappia vedere un 0-RTT acceso, e il controllo positivo
-        #    di quella riga resta quello STORICO del 10 agosto (l'innesto prima
-        #    della cura, due biglietti con max_early_data_size 4294967295).
-        print("   ⚠ NESSUN biglietto di sessione e' arrivato: il verde su «niente")
-        print("     0-RTT» viene da un'assenza, non da un biglietto guardato.")
-        print("     Il controllo positivo di quella riga resta quello del 10")
-        print("     agosto sull'innesto, non questo giro.")
+        # ⛔ "No ticket" and "tickets without early data" are two different
+        #    facts, and the green is the same.  Whoever reads must know which of the
+        #    two they got: in the first case this round did not prove that the
+        #    tool can see a 0-RTT turned on, and the positive control
+        #    of that line remains the HISTORICAL one of 10 Aug (the graft before
+        #    the cure, two tickets with max_early_data_size 4294967295).
+        print("   ⚠ NO session ticket arrived: the green on \"no")
+        print("     0-RTT\" comes from an absence, not from a ticket looked at.")
+        print("     The positive control of that line remains the one of 10")
+        print("     Aug on the graft, not this round.")
 
     falliti = [c["nome"] for c in esiti if not c["passa"]]
     misure = {
@@ -479,25 +479,25 @@ async def principale(a) -> int:
     }
     esito = "TUTTI" if not falliti else "ROSSO"
     scrivi_registro(a, esito=esito,
-                    dettaglio=("tutti i controlli passano" if not falliti
-                               else "non passano: " + ", ".join(falliti)),
+                    dettaglio=("all checks pass" if not falliti
+                               else "not passing: " + ", ".join(falliti)),
                     misure=misure, controlli=esiti)
 
     if not falliti:
-        print(f"   ⭐ {len(esiti)} controlli su {len(esiti)}")
+        print(f"   ⭐ {len(esiti)} checks of {len(esiti)}")
         return 0
-    print(f"   ⛔ {len(falliti)} controlli su {len(esiti)} NON passano:")
+    print(f"   ⛔ {len(falliti)} checks of {len(esiti)} do NOT pass:")
     for n in falliti:
         print(f"      - {n}")
     return 1
 
 
 def scrivi_registro(a, esito, dettaglio, misure, controlli):
-    """⛔ Una riga per giro, e il BERSAGLIO ci sta dentro.
+    """⛔ One line per round, and the TARGET is inside it.
 
-    Senza, sei numeri letti su due server diversi non si possono mettere in
-    fila — ed e' precisamente il lavoro per cui questa sonda e' stata riaperta
-    l'11 agosto 2026.
+    Without it, six numbers read on two different servers cannot be lined
+    up — and that is precisely the job for which this probe was reopened
+    on 11 Aug 2026.
     """
     riga = {
         "banco": "B2-trasporto",
@@ -519,36 +519,36 @@ def scrivi_registro(a, esito, dettaglio, misure, controlli):
     try:
         with Path(a.registro).open("a") as f:
             f.write(json.dumps(riga, ensure_ascii=False, default=str) + "\n")
-        print(f"   ·· registrato in {a.registro}")
+        print(f"   ·· recorded in {a.registro}")
     except Exception as e:  # noqa: BLE001
-        # ⛔ Un registro che non si scrive si DICE.  Un giro senza riga e' un
-        #    giro che fra sei mesi non e' mai avvenuto.
-        print(f"   ⛔ il registro NON e' stato scritto: {type(e).__name__}: {e}")
+        # ⛔ A log that cannot be written is SAID.  A round without a line is a
+        #    round that six months from now never happened.
+        print(f"   ⛔ the log was NOT written: {type(e).__name__}: {e}")
 
 
 if __name__ == "__main__":
-    p = argparse.ArgumentParser(description="i parametri di trasporto, sul filo")
-    # ⛔ Obbligatorio, e non ha un valore predefinito apposta: un giro senza
-    #    bersaglio produce un numero che non si puo' mettere in fila con gli
-    #    altri, ed e' peggio di nessun giro.
+    p = argparse.ArgumentParser(description="the transport parameters, on the wire")
+    # ⛔ Mandatory, and deliberately without a default value: a round without a
+    #    target produces a number that cannot be lined up with the
+    #    others, and that is worse than no round.
     p.add_argument("--bersaglio", required=True,
                    choices=("innesto", "prodotto", "controllo"),
                    help="innesto = bsslserver+B2 (7447) · prodotto = remotix "
-                        "(7448) · controllo = aioquic che fa da server")
+                        "(7448) · controllo = aioquic acting as server")
     p.add_argument("--indirizzo", default="192.168.0.2")
     p.add_argument("--porta", type=int, default=7447)
     p.add_argument("--etichetta", default="senza-etichetta")
     p.add_argument("--impronta", default="ignota",
-                   help="l'impronta di CIO' CHE SI MISURA (md5 del binario): "
-                        "un binario ricostruito e' un altro bersaglio con lo "
-                        "stesso nome")
+                   help="the fingerprint of WHAT IS MEASURED (md5 of the binary): "
+                        "a rebuilt binary is another target with the "
+                        "same name")
     p.add_argument("--idle-atteso", type=int, default=30000)
     p.add_argument("--credito-atteso", type=int, default=16,
-                   help="stream uni DISPONIBILI a RCP dopo i 3 di HTTP/3 "
+                   help="uni streams AVAILABLE to RCP after the 3 of HTTP/3 "
                         "(RCP.md §2.3)")
     p.add_argument("--bozze-attese", default="02,07",
-                   help="quali dichiarazioni di WebTransport si pretendono da "
-                        "questo bersaglio")
+                   help="which WebTransport declarations are demanded from "
+                        "this target")
     p.add_argument("--registro",
                    default=str(Path(__file__).resolve().parent
                                / "b2-trasporto-esiti.jsonl"))

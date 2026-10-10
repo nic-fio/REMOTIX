@@ -1,38 +1,38 @@
 #!/bin/sh
-# 17-t3-gruppi.sh — fase 17, T3 linea C: il PASSO DEL MOTORE «le persone nei
-# gruppi della scheda», fatto a mano nella VM di prova, e il suo ritorno indietro.
+# 17-t3-gruppi.sh — phase 17, T3 line C: the ENGINE STEP "people in the
+# GPU groups", done by hand in the test VM, and its undo.
 #
-#   (DENTRO la VM, da root)  sh 17-t3-gruppi.sh iscrivi | annulla
+#   (INSIDE the VM, as root)  sh 17-t3-gruppi.sh iscrivi | annulla
 #
-# ⭐ `DECISIONI.md` §10.12: il pacchetto non tocca i gruppi; lo fa il motore
-#    (`installatore/motore`, azione `aggiungi-utente-a-gruppo`, col suo
-#    registro).  Finche' il motore non monta i pacchetti, le prove fanno qui lo
-#    stesso gesto, con lo stesso criterio, e lo annotano come «passo del motore».
+# ⭐ `DECISIONI.md` §10.12: the package does not touch groups; the engine does
+#    (`installatore/motore`, action `aggiungi-utente-a-gruppo`, with its
+#    log).  Until the engine installs the packages, the tests do the same
+#    gesture here, with the same criterion, and record it as "engine step".
 #
-# ⭐ `DECISIONI.md` §7.21: una sessione remota non ha un seat, quindi l'ACL di
-#    logind sui nodi /dev/dri non arriva mai; restano SOLO i gruppi.  Alla
-#    installazione si iscrivono le persone gia' sulla macchina: UID_MIN..UID_MAX
-#    di login.defs, e solo chi ha una shell vera (gli account di servizio no).
-#    I nomi dei gruppi si chiedono ai NODI (`stat -c %g`), non si inchiodano.
+# ⭐ `DECISIONI.md` §7.21: a remote session has no seat, so logind's ACL
+#    on the /dev/dri nodes never arrives; ONLY the groups remain.  At
+#    install time the people already on the machine are enrolled: UID_MIN..UID_MAX
+#    from login.defs, and only those with a real shell (not service accounts).
+#    The group names are asked of the NODES (`stat -c %g`), not hard-coded.
 #
-# ⭐ `fasi/17-l-installatore.md` §6.4 e §6.6.4 (R6, R33): ogni coppia
-#    persona-gruppo si annota nel registro con la sua ORIGINE:
-#        c-era  <persona> <gruppo>   c'era gia' prima  ⇒ PREESISTENTE, non si tocca mai
-#        messo  <persona> <gruppo>   l'ha messo il pacchetto ⇒ DIRETTA, `annulla` la toglie
-#    Una coppia gia' annotata non si annota di nuovo: installare due volte non
-#    cambia niente (R5), e un aggiornamento non trasforma un «messo» in «c-era».
+# ⭐ `fasi/17-l-installatore.md` §6.4 and §6.6.4 (R6, R33): every
+#    person-group pair is recorded in the log with its ORIGIN:
+#        c-era  <person> <group>   was already there  ⇒ PRE-EXISTING, never touched
+#        messo  <person> <group>   the package put it ⇒ DIRECT, `annulla` removes it
+#    A pair already recorded is not recorded again: installing twice
+#    changes nothing (R5), and an upgrade does not turn a "messo" into a "c-era".
 #
-# ⚠ Quel che questo registro NON vede: le persone che il PRODOTTO iscrive alla
-#   loro prima connessione (`figlio.c`, `iscrivi_ai_gruppi_della_scheda`).
-#   Oggi quelle vanno solo nel journal; ⇒ la disinstallazione non le toglie.
-#   Vale anche per il motore: annotato in §13.1 come «da fare».
+# ⚠ What this log does NOT see: the people the PRODUCT enrolls at
+#   their first connection (`figlio.c`, `iscrivi_ai_gruppi_della_scheda`).
+#   Today those go only to the journal; ⇒ uninstalling does not remove them.
+#   The same holds for the engine: noted in §13.1 as "to do".
 #
-# ⚠ Esce sempre con 0: un'iscrizione mancata la DICE.
+# ⚠ Always exits with 0: a failed enrollment is SAID.
 set -u
 
 REGISTRO=/var/tmp/remotix-t3-gruppi.registro
 
-# login.defs: su openSUSE sta in /usr/etc (e /etc lo sovrascrive se c'e').
+# login.defs: on openSUSE it lives in /usr/etc (and /etc overrides it if present).
 leggi_defs()
 {
 	v=""
@@ -49,12 +49,12 @@ gruppi_della_scheda()
 	for n in /dev/dri/card[0-9]* /dev/dri/renderD[0-9]*; do
 		[ -e "$n" ] || continue
 		g=$(stat -c %g "$n" 2>/dev/null) || continue
-		[ "$g" = 0 ] && continue       # root: nessuno va messo nel gruppo di root
+		[ "$g" = 0 ] && continue       # root: nobody goes into root's group
 		getent group "$g" | cut -d: -f1
 	done | sort -u
 }
 
-# c'e' gia' (come gruppo supplementare o primario)?
+# already there (as supplementary or primary group)?
 membro()
 {
 	id -nG "$1" 2>/dev/null | tr ' ' '\n' | grep -qx "$2"
@@ -71,7 +71,7 @@ iscrivi()
 	max=$(leggi_defs UID_MAX 60000)
 	gruppi=$(gruppi_della_scheda)
 	if [ -z "$gruppi" ]; then
-		echo "remotix: nessun nodo /dev/dri su questa macchina: nessun gruppo della scheda da dare"
+		echo "remotix: no /dev/dri node on this machine: no GPU group to give"
 		return 0
 	fi
 	[ -f "$REGISTRO" ] || { : >"$REGISTRO"; chmod 0600 "$REGISTRO"; }
@@ -84,9 +84,9 @@ iscrivi()
 				echo "c-era $p $g" >>"$REGISTRO"
 			elif gpasswd -a "$p" "$g" >/dev/null 2>&1; then
 				echo "messo $p $g" >>"$REGISTRO"
-				echo "remotix: $p iscritto a $g (la sessione remota non ha il seat: senza, pagina bianca)"
+				echo "remotix: $p enrolled in $g (the remote session has no seat: without it, blank page)"
 			else
-				echo "remotix: ⛔ $p NON iscritto a $g (gpasswd ha rifiutato)"
+				echo "remotix: ⛔ $p NOT enrolled in $g (gpasswd refused)"
 			fi
 		done
 	done
@@ -99,7 +99,7 @@ annulla()
 	grep '^messo ' "$REGISTRO" | while read -r _ p g; do
 		getent passwd "$p" >/dev/null || continue
 		if membro "$p" "$g" && gpasswd -d "$p" "$g" >/dev/null 2>&1; then
-			echo "remotix: $p tolto da $g (ce l'aveva messo il passo del motore)"
+			echo "remotix: $p removed from $g (the engine step had put it there)"
 		fi
 	done
 	rm -f "$REGISTRO"
@@ -109,5 +109,5 @@ annulla()
 case ${1:-} in
 iscrivi) iscrivi ;;
 annulla) annulla ;;
-*) echo "uso: $0 iscrivi|annulla" >&2; exit 2 ;;
+*) echo "usage: $0 iscrivi|annulla" >&2; exit 2 ;;
 esac

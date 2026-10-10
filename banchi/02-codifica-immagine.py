@@ -1,105 +1,105 @@
 #!/usr/bin/env python3
-"""02-codifica-immagine.py — l'immagine nota di F2.3, e gli strumenti che la giudicano.
+"""02-codifica-immagine.py — the known image of F2.3, and the tools that judge it.
 
     python3 02-codifica-immagine.py --genera <cartella>
     python3 02-codifica-immagine.py --livelli <file.yuv> [--riga N]
     python3 02-codifica-immagine.py --confronta <a.yuv> <b.yuv>
-    python3 02-codifica-immagine.py --autoprova <cartella>   ⛔ il controllo positivo
+    python3 02-codifica-immagine.py --autoprova <cartella>   ⛔ the positive control
 
 ===========================================================================
-⛔ PERCHE' ESISTE — e non e' «serviva un'immagine di prova»
+⛔ WHY IT EXISTS — and it is not «a test image was needed»
 
-La sotto-fase F2.3 deve dimostrare che dal fotogramma catturato esce un flusso
-HEVC **Main10** che un browser sa decodificare.  ⚠ E la trappola vera dei 10
-bit e' che **nessuno se ne accorge guardando i pixel**:
+Sub-phase F2.3 must prove that out of the captured frame comes a
+**Main10** HEVC stream a browser can decode.  ⚠ And the real trap of 10
+bits is that **nobody notices by looking at the pixels**:
 
-  ⛔ *se il codificatore accetta 10 bit ma la catena gliene consegna 8, il
-     fotogramma decodificato viene BENE lo stesso.*  Le strisce sulle sfumature
-     ci sono, ma sono le stesse strisce che un occhio attribuirebbe al bitrate.
+  ⛔ *if the encoder accepts 10 bits but the chain delivers it 8, the
+     decoded frame comes out FINE anyway.*  The banding on the gradients
+     is there, but it is the same banding an eye would blame on the bitrate.
 
-E' esattamente la forma **E1** di `REVIEWER.md` §2 — necessario scambiato per
-sufficiente — applicata al colore: «`ffprobe` dice Main 10» e' **necessario**
-perche' i 10 bit ci siano, e non e' affatto **sufficiente**.  Un'etichetta la
-scrive il codificatore leggendo i propri argomenti; i **valori dei pixel** no.
+It is exactly form **E1** of `REVIEWER.md` §2 — necessary mistaken for
+sufficient — applied to colour: «`ffprobe` says Main 10» is **necessary**
+for the 10 bits to be there, and it is not at all **sufficient**.  A label is
+written by the encoder reading its own arguments; the **pixel values** are not.
 
-⭐ Da cui l'immagine che questo file genera non e' decorativa: e' costruita
-   perche' un solo numero, letto sui pixel decodificati, distingua
-   **«10 bit veri»** da **«10 bit dichiarati»**.
+⭐ Hence the image this file generates is not decorative: it is built
+   so that a single number, read on the decoded pixels, tells
+   **«real 10 bits»** from **«declared 10 bits»**.
 
 ===========================================================================
-⛔ IL NUMERO CHE DISTINGUE, E IL CASO OPPOSTO SCRITTO PRIMA
+⛔ THE NUMBER THAT DISTINGUISHES, AND THE OPPOSITE CASE WRITTEN BEFOREHAND
 
-`LEZIONI.md` §1.11 regola 1: *per ogni prova indiretta si scrive cosa
-mostrerebbe il caso opposto.  Se non si sa dire come apparirebbe il contrario,
-la prova non distingue e va cambiata.*
+`LEZIONI.md` §1.11 rule 1: *for every indirect test write what the
+opposite case would show.  If one cannot say what the opposite would look like,
+the test does not distinguish and must be changed.*
 
-La **rampa** occupa le prime 256 righe: la luminanza sale di **esattamente 1
-LSB a 10 bit** ogni volta che l'ascissa avanza abbastanza, da 64 a 940 (i due
-estremi del range limitato a 10 bit).  Su 1920 colonne si toccano **tutti e 877
-i livelli interi**, nessuno escluso.
+The **ramp** occupies the first 256 rows: luma rises by **exactly 1
+LSB at 10 bits** every time the abscissa advances enough, from 64 to 940 (the two
+ends of the limited range at 10 bits).  Over 1920 columns **all 877
+integer levels** are touched, none excluded.
 
-    | grandezza, letta sulla riga 128 del piano Y | 10 bit veri | 8 bit travestiti |
+    | quantity, read on row 128 of the Y plane     | real 10 bits | disguised 8 bits |
     |---|---|---|
-    | livelli distinti                            | **877**     | **220**          |
-    | frazione di valori multipli di 4            | **~0,251**  | **1,000**        |
+    | distinct levels                              | **877**      | **220**          |
+    | fraction of values that are multiples of 4   | **~0.251**   | **1.000**        |
 
-⭐ Il perche' della seconda riga: un campione a 8 bit promosso a 10 vale
-   `v << 2`, cioe' e' **sempre** un multiplo di 4.  Su una rampa a 10 bit veri i
-   multipli di 4 capitano invece per caso, uno ogni quattro.  ⛔ **1,000 contro
-   0,251 non e' una sfumatura: e' un interruttore**, e non ha bisogno di un
-   occhio per essere letto.
+⭐ The reason for the second row: an 8-bit sample promoted to 10 is worth
+   `v << 2`, that is it is **always** a multiple of 4.  On a real 10-bit ramp the
+   multiples of 4 instead happen by chance, one in four.  ⛔ **1.000 against
+   0.251 is not a nuance: it is a switch**, and it does not need an
+   eye to be read.
 
-⚠ E il caso opposto non e' un ragionamento: questo file lo **produce**.
-`sorgente-8in10.yuv` e' la stessa identica immagine passata per 8 bit e
-rimessa in un contenitore a 10 (`(v >> 2) << 2`).  Se il banco non sa
-distinguere quel file dal vero, il banco **non sta misurando i 10 bit** — e
-allora il verde di tutto il giro non vale niente (`REVIEWER.md` §1 punto 3).
-
-===========================================================================
-⛔ PERCHE' LA PROVA DEI BIT SI FA IN LOSSLESS, E NON AL BITRATE VERO
-
-A un bitrate realistico HEVC **distrugge una rampa a 1 LSB** per costruzione:
-e' l'ultimo bit di un dettaglio che nessuno vede, ed e' il primo che il
-quantizzatore butta.  Un banco che misurasse i livelli distinti a CRF 20
-troverebbe pochi livelli **anche su una catena a 10 bit perfetta**, e il rosso
-non distinguerebbe *«la catena e' a 8 bit»* da *«il bitrate era basso»* — due
-diagnosi opposte sotto la stessa etichetta, cioe' **E2**.
-
-⇒ Due giri, dichiarati e separati:
-
-  **giro A — la catena** (`lossless=1`): deve tornare **identica byte per
-  byte**.  Qui i 10 bit si misurano senza ambiguita', perche' non c'e' nessuna
-  perdita a cui dare la colpa.
-  **giro B — la resa** (CRF vero): qui si misura *quanto* si perde.  Le strisce
-  che si vedono qui sono del bitrate, non della profondita', ed e' il giro A a
-  permettere di dirlo.
+⚠ And the opposite case is not a reasoning: this file **produces** it.
+`sorgente-8in10.yuv` is the very same image passed through 8 bits and
+put back in a 10-bit container (`(v >> 2) << 2`).  If the bench cannot
+tell that file from the real one, the bench **is not measuring the 10 bits** — and
+then the green of the whole round is worth nothing (`REVIEWER.md` §1 point 3).
 
 ===========================================================================
-CHE COSA C'E' NELL'IMMAGINE, E CHE DIFETTO SMASCHERA CIASCUN PEZZO
+⛔ WHY THE BIT TEST IS DONE LOSSLESS, AND NOT AT THE REAL BITRATE
 
-    righe    0- 255  ⭐ la rampa a 1 LSB, grigia          → i 10 bit, e le strisce
-    righe  256- 511  sfumature morbide a colori           → le strisce, per l'occhio
-    righe  512- 767  ⭐ testo rosso saturo su blu saturo   → il testo sfrangiato (4:2:0)
-    righe  768-1023  scacchiere e barre da 1, 2, 3 px     → il taglio del croma
-    righe 1024-1079  toppe piatte di riferimento          → il rumore su fondo fermo
+At a realistic bitrate HEVC **destroys a 1-LSB ramp** by construction:
+it is the last bit of a detail nobody sees, and it is the first one the
+quantiser throws away.  A bench that measured distinct levels at CRF 20
+would find few levels **even on a perfect 10-bit chain**, and the red
+would not tell *«the chain is 8-bit»* from *«the bitrate was low»* — two
+opposite diagnoses under the same label, that is **E2**.
 
-⚠ Il testo e' disegnato con un font 5x7 **scritto qui dentro**, non preso dal
-  sistema: un font di sistema e' una dipendenza che cambia da macchina a
-  macchina, e due giri con due font diversi non si confrontano.
+⇒ Two rounds, declared and separate:
 
-⚠ **E la sfrangiatura del testo NON e' colpa del codificatore.** Nasce prima,
-  quando il croma a piena risoluzione viene ridotto a 4:2:0 — che e' la scelta
-  di `DECISIONI.md` §2.3.  Il giro A lossless serve anche a questo: dimostra
-  che il codificatore e' **trasparente**, e quindi che tutto lo sfrangiamento
-  misurato e' il prezzo del 4:2:0.  ⭐ E' un numero regalato a chi un giorno
-  riaprira' la `[?]` del 4:4:4.
+  **round A — the chain** (`lossless=1`): it must come back **identical byte by
+  byte**.  Here the 10 bits are measured without ambiguity, because there is no
+  loss to blame.
+  **round B — the rendering** (real CRF): here *how much* is lost is measured.  The banding
+  seen here belongs to the bitrate, not to the depth, and it is round A that
+  lets one say so.
 
 ===========================================================================
-IL COLORE, DICHIARATO
+WHAT IS IN THE IMAGE, AND WHICH DEFECT EACH PIECE UNMASKS
 
-BT.709, **range limitato**, 10 bit: Y in [64, 940], croma in [64, 960] attorno
-a 512.  Non e' un dettaglio: chi confronta i pixel deve sapere quale sia il
-nero, o `LEZIONI.md` §1.9 diventa «il banco ha misurato un'altra cosa».
+    rows    0- 255  ⭐ the 1-LSB ramp, grey                → the 10 bits, and the banding
+    rows  256- 511  soft colour gradients                 → the banding, for the eye
+    rows  512- 767  ⭐ saturated red text on saturated blue → fringed text (4:2:0)
+    rows  768-1023  checkerboards and 1, 2, 3 px bars     → the chroma cut
+    rows 1024-1079  flat reference patches                → noise on a still background
+
+⚠ The text is drawn with a 5x7 font **written in here**, not taken from the
+  system: a system font is a dependency that changes from machine to
+  machine, and two rounds with two different fonts cannot be compared.
+
+⚠ **And the fringing of the text is NOT the encoder's fault.** It is born earlier,
+  when the full-resolution chroma is reduced to 4:2:0 — which is the choice
+  of `DECISIONI.md` §2.3.  Lossless round A serves this too: it proves
+  that the encoder is **transparent**, and therefore that all the fringing
+  measured is the price of 4:2:0.  ⭐ It is a number given to whoever one day
+  reopens the `[?]` of 4:4:4.
+
+===========================================================================
+THE COLOUR, DECLARED
+
+BT.709, **limited range**, 10 bits: Y in [64, 940], chroma in [64, 960] around
+512.  It is not a detail: whoever compares pixels must know which one is
+black, or `LEZIONI.md` §1.9 becomes «the bench measured something else».
 """
 
 import argparse
@@ -107,33 +107,33 @@ import json
 import os
 import sys
 
-# ── La geometria, dichiarata una volta sola ────────────────────────────────
+# ── The geometry, declared once only ───────────────────────────────────────
 LARGHEZZA = 1920
 ALTEZZA = 1080
 
-# Le fasce, in righe.  Sono estremi INCLUSIVI a sinistra ed ESCLUSIVI a destra.
+# The bands, in rows.  They are INCLUSIVE on the left and EXCLUSIVE on the right.
 FASCIA_RAMPA = (0, 256)
 FASCIA_SFUMATURE = (256, 512)
 FASCIA_TESTO = (512, 768)
 FASCIA_FINE = (768, 1024)
 FASCIA_TOPPE = (1024, 1080)
 
-# ⛔ La riga su cui si legge la prova dei 10 bit.  E' dentro la rampa, ed e'
-#    dichiarata qui perche' il banco e il rapporto devono citare LA STESSA.
+# ⛔ The row on which the 10-bit test is read.  It is inside the ramp, and it is
+#    declared here because the bench and the report must cite THE SAME one.
 RIGA_RAMPA = 128
 
-# Il range limitato a 10 bit.
+# The limited range at 10 bits.
 Y_MIN, Y_MAX = 64, 940
 CROMA_ZERO = 512
 
-# Gli attesi, scritti PRIMA del giro (PIANO.md §0.3 regola 4).
+# The expectations, written BEFORE the round (PIANO.md §0.3 rule 4).
 ATTESO_LIVELLI_VERI = 877          # 940 - 64 + 1
-ATTESO_LIVELLI_8IN10 = 220         # da 64 a 940 di 4 in 4
+ATTESO_LIVELLI_8IN10 = 220         # from 64 to 940 in steps of 4
 ATTESO_M4_8IN10 = 1.0
-SOGLIA_M4_VERI = 0.50              # ⛔ sopra questa soglia si grida «8 bit travestiti»
+SOGLIA_M4_VERI = 0.50              # ⛔ above this threshold we shout «disguised 8 bits»
 
 
-# ── Il font 5x7, scritto qui perche' non cambi da una macchina all'altra ───
+# ── The 5x7 font, written here so that it does not change from one machine to another ───
 FONT = {
     "R": ("####.", "#...#", "#...#", "####.", "#.#..", "#..#.", "#...#"),
     "E": ("#####", "#....", "#....", "####.", "#....", "#....", "#####"),
@@ -157,7 +157,7 @@ FRASE = "REMOTIX 10 bit 4:2:0"
 
 
 def rgb_a_ycbcr(r, g, b):
-    """BT.709, range limitato, 10 bit.  r/g/b in [0,1].  Restituisce interi."""
+    """BT.709, limited range, 10 bits.  r/g/b in [0,1].  Returns integers."""
     yf = 0.2126 * r + 0.7152 * g + 0.0722 * b
     cb = (b - yf) / 1.8556
     cr = (r - yf) / 1.5748
@@ -169,24 +169,24 @@ def rgb_a_ycbcr(r, g, b):
 
 
 def costruisci():
-    """L'immagine, in tre piani a piena risoluzione (il croma si sottocampiona dopo).
+    """The image, in three full-resolution planes (the chroma is subsampled afterwards).
 
-    Si lavora a 4:4:4 e si riduce a 4:2:0 in fondo, con la media del blocco 2x2.
-    ⚠ E' quella media a produrre la sfrangiatura del testo: la si fa qui, in
-      chiaro, invece di lasciarla fare a uno strumento — cosi' chi legge sa
-      esattamente dove nasce il difetto che poi misura.
+    It works at 4:4:4 and reduces to 4:2:0 at the end, with the average of the 2x2 block.
+    ⚠ It is that average that produces the fringing of the text: it is done here, in
+      the open, instead of leaving it to a tool — so whoever reads knows
+      exactly where the defect they then measure is born.
     """
     Y = [[0] * LARGHEZZA for _ in range(ALTEZZA)]
     U = [[CROMA_ZERO] * LARGHEZZA for _ in range(ALTEZZA)]
     V = [[CROMA_ZERO] * LARGHEZZA for _ in range(ALTEZZA)]
 
-    # ── la rampa a 1 LSB ───────────────────────────────────────────────────
+    # ── the 1-LSB ramp ─────────────────────────────────────────────────────
     riga_rampa = [Y_MIN + (c * (Y_MAX - Y_MIN)) // (LARGHEZZA - 1)
                   for c in range(LARGHEZZA)]
     for r in range(*FASCIA_RAMPA):
         Y[r] = list(riga_rampa)
 
-    # ── sfumature morbide a colori: blu → ciano, e verde → giallo ──────────
+    # ── soft colour gradients: blue → cyan, and green → yellow ─────────────
     a, b_ = FASCIA_SFUMATURE
     meta = (a + b_) // 2
     for r in range(a, b_):
@@ -199,7 +199,7 @@ def costruisci():
                 y, u, v = rgb_a_ycbcr(0.05, t * 0.85, 0.85)
             Y[r][c], U[r][c], V[r][c] = y, u, v
 
-    # ── il testo: rosso saturo su blu saturo, a tre ingrandimenti ──────────
+    # ── the text: saturated red on saturated blue, at three magnifications ─
     a, b_ = FASCIA_TESTO
     fondo = rgb_a_ycbcr(0.05, 0.05, 0.90)
     inchiostro = rgb_a_ycbcr(0.90, 0.06, 0.06)
@@ -211,7 +211,7 @@ def costruisci():
         disegna_frase(Y, U, V, FRASE, 8, riga, scala, inchiostro)
         riga += 7 * scala + 10
 
-    # ── il dettaglio fine: scacchiere e barre da 1, 2, 3 px ───────────────
+    # ── the fine detail: checkerboards and 1, 2, 3 px bars ────────────────
     a, b_ = FASCIA_FINE
     nero = rgb_a_ycbcr(0.02, 0.02, 0.02)
     bianco = rgb_a_ycbcr(0.95, 0.95, 0.95)
@@ -221,21 +221,21 @@ def costruisci():
     for r in range(a, b_):
         i = (r - a) // quarto
         for c in range(LARGHEZZA):
-            if i == 0:                       # scacchiera 1px bianco/nero
+            if i == 0:                       # 1px white/black checkerboard
                 p = bianco if (r + c) % 2 == 0 else nero
-            elif i == 1:                     # scacchiera 1px rosso/blu ⭐
+            elif i == 1:                     # 1px red/blue checkerboard ⭐
                 p = rosso if (r + c) % 2 == 0 else blu
-            elif i == 2:                     # barre verticali 1,2,3 px
+            elif i == 2:                     # vertical bars 1,2,3 px
                 per = 12
                 x = c % per
                 p = rosso if x in (0, 2, 3, 5, 6, 7) else blu
-            else:                            # barre orizzontali 1,2,3 px
+            else:                            # horizontal bars 1,2,3 px
                 per = 12
                 x = (r - a) % per
                 p = bianco if x in (0, 2, 3, 5, 6, 7) else nero
             Y[r][c], U[r][c], V[r][c] = p
 
-    # ── le toppe piatte di riferimento ────────────────────────────────────
+    # ── the flat reference patches ────────────────────────────────────────
     a, b_ = FASCIA_TOPPE
     toppe = [rgb_a_ycbcr(x, x, x) for x in (0.0, 0.18, 0.5, 0.75, 1.0)]
     largo = LARGHEZZA // len(toppe)
@@ -264,7 +264,7 @@ def disegna_frase(Y, U, V, frase, x0, y0, scala, colore):
 
 
 def sottocampiona(P):
-    """4:4:4 → 4:2:0 con la media del blocco 2x2.  ⚠ Qui nasce lo sfrangiamento."""
+    """4:4:4 → 4:2:0 with the average of the 2x2 block.  ⚠ Here the fringing is born."""
     fuori = []
     for r in range(0, ALTEZZA, 2):
         riga = []
@@ -290,10 +290,10 @@ def scrivi_yuv(percorso, Y, U, V):
 
 
 def a_8_bit(dati):
-    """(v >> 2) << 2 su ogni campione a 16 bit little endian.
+    """(v >> 2) << 2 on every 16-bit little-endian sample.
 
-    ⛔ E' il CASO OPPOSTO, prodotto e non ragionato: la stessa immagine passata
-       da 8 bit e rimessa in un contenitore a 10.  Un occhio non la distingue.
+    ⛔ It is the OPPOSITE CASE, produced and not reasoned: the same image passed
+       through 8 bits and put back in a 10-bit container.  An eye cannot tell it apart.
     """
     fuori = bytearray(dati)
     for i in range(0, len(fuori), 2):
@@ -304,25 +304,25 @@ def a_8_bit(dati):
     return bytes(fuori)
 
 
-# ── Gli strumenti di giudizio ──────────────────────────────────────────────
+# ── The judging tools ──────────────────────────────────────────────────────
 
 def leggi_riga_y(percorso, riga):
-    """La riga `riga` del piano Y.  ⛔ Controlla la DIMENSIONE del file prima.
+    """Row `riga` of the Y plane.  ⛔ It checks the file SIZE first.
 
-    Un file corto letto con `seek` non da' errore: da' byte di un'altra riga, o
-    niente.  «Vuoto» e «proibito» hanno lo stesso aspetto (`LEZIONI.md` §1.9).
+    A short file read with `seek` gives no error: it gives bytes of another row, or
+    nothing.  «Empty» and «forbidden» look the same (`LEZIONI.md` §1.9).
     """
     atteso = LARGHEZZA * ALTEZZA * 2 + 2 * (LARGHEZZA // 2) * (ALTEZZA // 2) * 2
     vero = os.path.getsize(percorso)
     if vero != atteso:
         raise SystemExit(
-            f"⛔ {percorso} misura {vero} byte e ne doveva misurare {atteso}: "
-            f"non e' un fotogramma yuv420p10le {LARGHEZZA}x{ALTEZZA}")
+            f"⛔ {percorso} measures {vero} bytes and should measure {atteso}: "
+            f"it is not a yuv420p10le {LARGHEZZA}x{ALTEZZA} frame")
     with open(percorso, "rb") as f:
         f.seek(riga * LARGHEZZA * 2)
         crudo = f.read(LARGHEZZA * 2)
     if len(crudo) != LARGHEZZA * 2:
-        raise SystemExit(f"⛔ lettura corta su {percorso}: {len(crudo)} byte")
+        raise SystemExit(f"⛔ short read on {percorso}: {len(crudo)} bytes")
     return [crudo[i] | (crudo[i + 1] << 8) for i in range(0, len(crudo), 2)]
 
 
@@ -339,7 +339,7 @@ def misura_bit(percorso, riga):
 
 
 def confronta(a, b):
-    """Il confronto sui PIXEL, piano per piano.  Non «i file sono uguali»: dove."""
+    """The comparison on the PIXELS, plane by plane.  Not «the files are equal»: where."""
     da, db = open(a, "rb").read(), open(b, "rb").read()
     if len(da) != len(db):
         return {"confrontabili": False, "byte_a": len(da), "byte_b": len(db),
@@ -369,30 +369,30 @@ def confronta(a, b):
     return esito
 
 
-# ── ⛔ Il controllo positivo degli strumenti stessi ────────────────────────
+# ── ⛔ The positive control of the tools themselves ────────────────────────
 
 def autoprova(cartella):
-    """«Questo strumento sa trovare qualcosa che c'e' di sicuro?» (`CODER.md` §3.10)
+    """«Can this tool find something that is surely there?» (`CODER.md` §3.10)
 
-    Tre domande, e sono le tre in cui uno strumento di misura mente in silenzio:
+    Three questions, and they are the three where a measuring tool lies silently:
 
-      1. il **comparatore** sa dire DIVERSE?  Gli si da' il sorgente e una copia
-         con **un solo byte girato**.  Un comparatore che rispondesse «uguali»
-         renderebbe verde ogni giro futuro, per sempre;
-      2. il **misuratore dei bit** sa dire «10 bit veri» sul file vero?
-      3. ⛔ e sa dire «8 bit travestiti» sul caso opposto?  E' la meta' che si
-         dimentica: uno strumento che dice sempre «10 bit» passerebbe la 2 e
-         non misurerebbe niente.
+      1. can the **comparator** say DIFFERENT?  It is given the source and a copy
+         with **a single byte flipped**.  A comparator that answered «equal»
+         would make every future round green, forever;
+      2. can the **bit meter** say «real 10 bits» on the real file?
+      3. ⛔ and can it say «disguised 8 bits» on the opposite case?  It is the half that
+         gets forgotten: a tool that always says «10 bits» would pass 2 and
+         would measure nothing.
     """
     vero = os.path.join(cartella, "sorgente-10bit.yuv")
     finto = os.path.join(cartella, "sorgente-8in10.yuv")
     for p in (vero, finto):
         if not os.path.exists(p):
-            raise SystemExit(f"⛔ manca {p}: si genera prima, con --genera")
+            raise SystemExit(f"⛔ {p} is missing: generate it first, with --genera")
 
     guasti = []
 
-    # 1 — il comparatore
+    # 1 — the comparator
     graffiato = os.path.join(cartella, "autoprova-graffiato.yuv")
     dati = bytearray(open(vero, "rb").read())
     dove = LARGHEZZA * 2 * RIGA_RAMPA + 100
@@ -401,23 +401,23 @@ def autoprova(cartella):
     c1 = confronta(vero, graffiato)
     ok1 = (not c1["identici"]) and c1["Y"]["campioni_diversi"] >= 1
     if not ok1:
-        guasti.append("⛔ il comparatore non vede un byte girato: non confronta niente")
+        guasti.append("⛔ the comparator does not see a flipped byte: it compares nothing")
 
     c0 = confronta(vero, vero)
     ok0 = c0["identici"] and c0["Y"]["campioni_diversi"] == 0
     if not ok0:
-        guasti.append("⛔ il comparatore dice DIVERSO un file contro se stesso")
+        guasti.append("⛔ the comparator says DIFFERENT for a file against itself")
 
-    # 2 e 3 — il misuratore dei bit, nei due versi
+    # 2 and 3 — the bit meter, both ways
     m_vero = misura_bit(vero, RIGA_RAMPA)
     m_finto = misura_bit(finto, RIGA_RAMPA)
     ok2 = m_vero["verdetto"] == "10-bit-veri" and m_vero["livelli_distinti"] == ATTESO_LIVELLI_VERI
     ok3 = m_finto["verdetto"] == "8-bit-travestiti" and m_finto["livelli_distinti"] == ATTESO_LIVELLI_8IN10
     if not ok2:
-        guasti.append(f"⛔ sul sorgente VERO il misuratore dice {m_vero}")
+        guasti.append(f"⛔ on the REAL source the meter says {m_vero}")
     if not ok3:
-        guasti.append(f"⛔ 10 BIT NON DISTINGUIBILI DA 8: sul caso opposto il "
-                      f"misuratore dice {m_finto}")
+        guasti.append(f"⛔ 10 BITS NOT DISTINGUISHABLE FROM 8: on the opposite case the "
+                      f"meter says {m_finto}")
 
     os.remove(graffiato)
     esito = {"controllo_positivo": ok0 and ok1 and ok2 and ok3,

@@ -1,200 +1,202 @@
 #!/usr/bin/env python3
-"""01-b6-tetti.py — ⛔ B6: i tre tetti della stretta di mano, misurati TACENDO.
+"""01-b6-tetti.py — ⛔ B6: the three caps of the handshake, measured BY KEEPING QUIET.
 
     python3 01-b6-tetti.py --fase sani --idle 120000 --tetti-codice CIAO=5000,CREDENZIALI=60000,ATTACCA=10000
     python3 01-b6-tetti.py --fase ping --idle 15000
-    python3 01-b6-tetti.py --elenco            (le previsioni, senza misurare)
+    python3 01-b6-tetti.py --elenco            (the predictions, without measuring)
 
-⚠ Gira DENTRO il contenitore: aioquic sta li'.  Lo accende e lo lancia
-  `01-b6-lancia.sh`, che e' anche l'unico posto in cui si sceglie il tetto
-  d'inattivita' del trasporto — e questo file non lo presume mai: se lo fa
-  dire, lo stampa, e ci costruisce sopra le diagnosi.
+⚠ It runs INSIDE the container: aioquic lives there.  It is started and launched
+  by `01-b6-lancia.sh`, which is also the only place where the transport
+  inactivity cap is chosen — and this file never presumes it: it has it
+  stated, prints it, and builds the diagnoses on it.
 
 ===========================================================================
-⛔ CHE COSA MISURA, IN UNA RIGA D'UTENTE
+⛔ WHAT IT MEASURES, IN ONE USER'S LINE
 
-*«Quanto ci mette a dirti che non ce l'ha fatta, invece di restare li'
-appeso.»*  `RCP.md` §4.6 mette tre tetti alla stretta di mano perche' *«una
-connessione che si ferma a meta' stretta di mano tiene un posto e non lo
-dichiara a nessuno»*.  Questo banco fa esattamente quello: si ferma a meta' e
-tace, tre volte, in tre punti diversi.
+*«How long it takes to tell you it did not make it, instead of staying there
+hanging.»*  `RCP.md` §4.6 puts three caps on the handshake because *«a
+connection that stops halfway through the handshake holds a place and declares
+it to nobody»*.  This bench does exactly that: it stops halfway and keeps
+quiet, three times, at three different points.
 
-| Da | A | Tetto (§4.6) |
+| From | To | Cap (§4.6) |
 |---|---|---|
-| l'inizio (⚠ e QUALE inizio e' la domanda `[?]` R3.27, vedi sotto) | `CIAO` | **5 s** |
-| `ECCOMI` spedito | `CREDENZIALI` | **60 s** |
-| `AMMESSO` spedito | `ATTACCA` | **10 s** |
+| the start (⚠ and WHICH start is the `[?]` question R3.27, see below) | `CIAO` | **5 s** |
+| `ECCOMI` sent | `CREDENZIALI` | **60 s** |
+| `AMMESSO` sent | `ATTACCA` | **10 s** |
 
-⛔ Scaduto un tetto il server **DEVE** congedare con `TEMPO_SCADUTO` `0x0D`
-   (§8.2), per le due strade di §3.1 — il `CONGEDO` sul canale di controllo e
-   il codice del motivo nella chiusura della sessione WebTransport.
-
-===========================================================================
-⛔ LA SCENA SI DICHIARA, ED E' IL SILENZIO
-
-`LEZIONI.md` §1.1 chiede una scena dichiarata e sempre uguale.  Qui la scena
-**e' il silenzio del client**: dopo il messaggio che porta la stretta di mano
-allo stato da misurare, questo programma **non spedisce piu' un byte di RCP**
-fino alla fine della finestra.
-
-⚠ E quel che passa lo stesso sul filo — riscontri, PING del trasporto, il
-  keep-alive che il server arma — **non e' la scena**: e' il trasporto, e
-  `RCP.md` §4.6 lo nomina apposta come la cura che tiene viva la connessione
-  mentre l'utente digita.  Non lo si spegne e non lo si conta.
+⛔ Once a cap has expired the server **MUST** take leave with `TEMPO_SCADUTO`
+   `0x0D` (§8.2), by the two roads of §3.1 — the `CONGEDO` on the control
+   channel and the reason code in the closing of the WebTransport session.
 
 ===========================================================================
-⛔ IL PRIMO IMPUTATO E' IL BANCO: LE QUATTRO CERTIFICAZIONI, PRIMA DI MISURARE
+⛔ THE SCENE IS DECLARED, AND IT IS SILENCE
 
-`REVIEWER.md` §1.2 e `CODER.md` §3.3.  Un tetto si misura **aspettando che non
-succeda niente**, e una misura fatta di attese e' quella che si sbaglia meglio:
-se lo strumento non sa leggere un `CONGEDO`, ogni tetto risulta «mai scaduto»
-e il banco stampa tre rossi contro un server che fa il suo mestiere.
+`LEZIONI.md` §1.1 asks for a declared scene, always the same.  Here the scene
+**is the client's silence**: after the message that brings the handshake to
+the state to measure, this program **sends not one more byte of RCP** until the
+end of the window.
 
-  cert-giro-completo   ⭐ lo strumento sa arrivare in fondo a una stretta di
-                       mano che riesce.  ⛔ Ed e' anche il controllo dello
-                       STATO INIZIALE (B0.1/B0.3): se qui arriva
-                       `TROPPI_TENTATIVI`, l'indirizzo e' nella finestra di
-                       §4.4-bis lasciata da un altro banco, e ogni rosso che
-                       segue sarebbe un falso rosso.  Il banco si ferma e lo
-                       dice, invece di misurare;
-  cert-cronometro      ⭐ il cronometro sa misurare un'attesa NOTA sul filo: il
-                       secondo fisso di §4.4-bis, che B3 ha misurato
-                       1074-1085 ms `[M]`.  Chi non sa vedere un secondo che
-                       c'e' di sicuro non puo' dire niente su cinque;
-  cert-congedo-noto    ⛔ **la certificazione che conta**: si provoca un
-                       congedo NOTO e IMMEDIATO — `CIAO(versione = 2)` su
-                       `/rcp/1`, che §2.2 impone di respingere con
-                       `VERSIONE_INCOMPATIBILE` `0x0A` (B5: 36 su 36) — e si
-                       verifica che il lettore lo veda **per tutt'e due le
-                       strade di §3.1**.  Senza, «nessun congedo e' arrivato»
-                       resta ambiguo fra «il server non l'ha mandato» e «io non
-                       so leggerlo»;
-  cert-morte-silenziosa ⛔ solo nella fase `ping`: lo strumento sa vedere una
-                       connessione che muore **senza motivo**, e sa chiamarla
-                       col suo nome.  E' la diagnosi che §4.6 chiede di saper
-                       produrre — *«una morte a 30 s senza motivo e' il PING
-                       che manca»* — e un banco che non l'ha mai prodotta non
-                       ha nessun diritto di scriverla.
-
-⛔ Se una certificazione non passa, i tetti NON si misurano: si esce 4.  Un
-   esito negativo con lo strumento non certificato non e' una misura.
+⚠ And what passes on the wire anyway — acknowledgements, transport PINGs, the
+  keep-alive the server arms — **is not the scene**: it is the transport, and
+  `RCP.md` §4.6 names it on purpose as the cure that keeps the connection alive
+  while the user types.  It is neither switched off nor counted.
 
 ===========================================================================
-⛔ IL CONTROLLO CHE DICE NO: «NON PRIMA» E' META' DEL REQUISITO
+⛔ THE FIRST DEFENDANT IS THE BENCH: THE FOUR CERTIFICATIONS, BEFORE MEASURING
 
-Un tetto ha due meta', e la seconda non la scrive nessuno: *non dopo* — che e'
-il caso che tutti provano — e ⛔ *non prima*.  Un server che congedasse
-**subito** con `TEMPO_SCADUTO` darebbe `TEMPO_SCADUTO` in tutt'e tre i casi, e
-un banco che guarda solo il motivo lo promuoverebbe a pieni voti.
+`REVIEWER.md` §1.2 and `CODER.md` §3.3.  A cap is measured **by waiting for
+nothing to happen**, and a measurement made of waits is the one that goes wrong
+most easily: if the tool cannot read a `CONGEDO`, every cap comes out «never
+expired» and the bench prints three reds against a server doing its job.
 
-Per ogni tetto c'e' quindi un caso `-presto`: si aspetta il **70 %** del tetto
-in silenzio e **poi** si manda il messaggio atteso, che **DEVE** essere
-servito.  Sono i ⭐ verdi attesi di questo banco, e sono tre.
+  cert-giro-completo   ⭐ the tool can get to the end of a handshake that
+                       succeeds.  ⛔ And it is also the check of the INITIAL
+                       STATE (B0.1/B0.3): if `TROPPI_TENTATIVI` arrives here,
+                       the address is inside the §4.4-bis window left by
+                       another bench, and every red that follows would be a
+                       false red.  The bench stops and says so, instead of
+                       measuring;
+  cert-cronometro      ⭐ the stopwatch can measure a KNOWN wait on the wire:
+                       the fixed second of §4.4-bis, which B3 measured
+                       1074-1085 ms `[M]`.  Whoever cannot see a second that is
+                       surely there cannot say anything about five;
+  cert-congedo-noto    ⛔ **the certification that counts**: a KNOWN and
+                       IMMEDIATE farewell is provoked — `CIAO(versione = 2)` on
+                       `/rcp/1`, which §2.2 requires to be rejected with
+                       `VERSIONE_INCOMPATIBILE` `0x0A` (B5: 36 out of 36) — and
+                       it is verified that the reader sees it **by both roads
+                       of §3.1**.  Without it, «no farewell arrived» stays
+                       ambiguous between «the server did not send it» and «I
+                       cannot read it»;
+  cert-morte-silenziosa ⛔ only in the `ping` phase: the tool can see a
+                       connection that dies **without a reason**, and can call
+                       it by its name.  It is the diagnosis §4.6 asks to be able
+                       to produce — *«a death at 30 s without a reason is the
+                       missing PING»* — and a bench that has never produced it
+                       has no right whatsoever to write it.
 
-===========================================================================
-⛔ LA TRAPPOLA DI QUESTO BANCO: CHI CHIUDE, IL PROTOCOLLO O IL TRASPORTO?
-
-`RCP.md` §4.6 lo dice per esteso: i 60 secondi della parola d'ordine erano
-**irraggiungibili**, perche' al trentesimo scatta il tempo di inattivita' di
-QUIC e la connessione muore **in silenzio, senza motivo**.  La cura e' del
-server — i **PING del trasporto** — e senza di essa il banco misurerebbe 30
-dove il documento dice 60, dando la colpa al banco.
-
-⛔ Da cui **due fasi, e la seconda e' quella che prova qualcosa**:
-
-  `--fase sani`  il tetto del trasporto e' alzato a **120 s**, sopra tutti e
-                 tre i tetti del protocollo: qui i numeri si leggono puliti,
-                 perche' a chiudere puo' essere solo RCP.
-                 ⚠ Ma con 120 s **anche un server che non manda un PING**
-                 darebbe 60 s: questa fase da sola benedirebbe la violazione
-                 che §4.6 esiste per curare — `LEZIONI.md` §1.3.
-
-  `--fase ping`  ⭐ il tetto del trasporto e' abbassato **SOTTO** il tetto del
-                 protocollo (15 s contro 60 s).  Se il server tiene viva la
-                 connessione coi PING, `TEMPO_SCADUTO` arriva **lo stesso a
-                 60 s**, dopo aver attraversato quattro volte il tetto del
-                 trasporto.  Se non li manda, la connessione muore a **15 s
-                 senza motivo** — ed e' precisamente la firma che §4.6
-                 descrive, con un numero che non si puo' confondere con
-                 nessuno dei tre tetti.
-                 ⛔ E nella stessa fase, sullo stesso server, `cert-morte-
-                 silenziosa` **la morte a 15 s la produce apposta**: le due
-                 righe insieme dicono che la sopravvivenza dell'altra non e'
-                 una fortuna.
-
-⚠ **E il tetto del trasporto non lo decide solo il server.**  RFC 9000 §10.1:
-  vale il **minimo dei due valori annunciati**, e `aioquic` di suo annuncia
-  60 s — cioe' esattamente il tetto che questo banco deve misurare.  Qui la
-  configurazione del client lo alza a `IDLE_NOSTRO` apposta, perche' il minimo
-  dei due non sia mai il nostro; e il valore che conta si **legge dal pari**
-  con la sonda di B2 (lo fa `01-b6-lancia.sh`), non si presume.
+⛔ If a certification does not pass, the caps are NOT measured: it exits 4.  A
+   negative outcome with an uncertified tool is not a measurement.
 
 ===========================================================================
-⛔ DOVE PARTE IL CRONOMETRO DEL PRIMO TETTO — la `[?]` R3.27, e questo banco
-   e' il posto in cui si risolve
+⛔ THE CHECK THAT SAYS NO: «NOT BEFORE» IS HALF OF THE REQUIREMENT
 
-§4.6 dice *«stretta di mano TLS finita → `CIAO` ricevuto: 5 s»*.  ⛔ Ma in
-WebTransport la **connessione** HTTP/3 e la **sessione** sono due cose
-separate, e fra i due istanti passa almeno un giro di rete: il browser puo'
-aver stabilito la connessione molto prima che la pagina chiami l'API.  Se il
-server fa partire il cronometro dove dice il documento e il banco lo misura
-dall'apertura della sessione, la differenza si legge come **un tetto
-sbagliato**.
+A cap has two halves, and the second one nobody writes: *not after* — which is
+the case everybody tests — and ⛔ *not before*.  A server that took leave
+**immediately** with `TEMPO_SCADUTO` would give `TEMPO_SCADUTO` in all three
+cases, and a bench that looks only at the reason would promote it with full
+marks.
 
-Tre casi lo separano, e ciascuno stampa un numero invece di un'opinione:
-
-  ciao-tetto              il caso normale: sessione, canale di controllo,
-                          silenzio.  Il numero atteso e' 5 s da qui;
-  ciao-senza-controllo    ⛔ sessione aperta e **canale di controllo mai
-                          aperto**.  Alla lettera di §4.6 il tetto e' gia'
-                          partito (il TLS e' finito da un pezzo) e a 5 s
-                          dev'essere finita.  Se non succede niente, il
-                          cronometro **non parte dal TLS**;
-  ciao-sessione-tardiva   ⛔ il caso peggiore di R3.27: si finisce il TLS, si
-                          aspettano `RITARDO_SESSIONE` secondi **senza aprire
-                          la sessione**, poi si apre e si tace.  Se il tetto
-                          partisse dal TLS, il budget sarebbe **gia'
-                          consumato** e il congedo arriverebbe subito; se parte
-                          dalla sessione, arriva 5 s dopo l'apertura.
-
-⛔ Il verdetto di questi tre non e' «passa/non passa» ma **una risposta**, e la
-   risposta la confronta il banco (B0.4): se il cronometro parte dalla
-   sessione, §4.6 riga 1 **dice una cosa che il codice non fa**, e la cura e'
-   nel documento — «cambia di una parola», come lo dichiara la fase.  In quel
-   caso il banco esce **3**, che non e' il rosso del server.
+For every cap there is therefore a `-presto` case: one waits **70 %** of the
+cap in silence and **then** sends the expected message, which **MUST** be
+served.  They are the ⭐ expected greens of this bench, and there are three.
 
 ===========================================================================
-⛔ E I TRE NUMERI CHE QUESTO BANCO CONFRONTA, CHE SONO TRE E NON DUE
+⛔ THE TRAP OF THIS BENCH: WHO CLOSES, THE PROTOCOL OR THE TRANSPORT?
 
-  il DOCUMENTO   `RCP.md` §4.6 — scritto qui sotto in `TETTI_DOC`, a mano, ed
-                 e' l'arbitro: `RCP.md` e' l'arbitro del filo;
-  il CODICE      i `#define TETTO_*` di `banchi/rcp/rcp.c`, letti dal sorgente
-                 e passati da `01-b6-lancia.sh` con `--tetti-codice`;
-  la MISURA      quel che arriva sul filo.
+`RCP.md` §4.6 says it in full: the 60 seconds of the password were
+**unreachable**, because at the thirtieth QUIC's idle timeout triggers and the
+connection dies **silently, without a reason**.  The cure is the server's —
+the **transport PINGs** — and without it the bench would measure 30 where the
+document says 60, blaming the bench.
 
-⛔ **E qui c'e' un fatto datato che riguarda questo banco.**  Il 10 agosto
-   2026, rilievo R9.9, `TETTO_ATTACCA` e' stato portato da **60 000 a 10 000
-   ms** sulla sola lettura di §4.6, **senza che nessuno lo misurasse** — e il
-   commento nel codice lo dichiara: *«nessun banco lo vedeva: B6 non e' ancora
-   scritto»*.  Questo banco e' **il primo testimone di quel numero**.  Da cui
-   la regola di questo file: i tre numeri si stampano **tutti e tre**, sempre,
-   e se non vanno d'accordo il banco lo dice invece di adattarsi a uno dei due.
+⛔ Hence **two phases, and the second is the one that tests something**:
+
+  `--fase sani`  the transport cap is raised to **120 s**, above all three
+                 protocol caps: here the numbers read clean, because only RCP
+                 can be the one closing.
+                 ⚠ But with 120 s **even a server that sends no PING** would
+                 give 60 s: this phase alone would bless the violation that
+                 §4.6 exists to cure — `LEZIONI.md` §1.3.
+
+  `--fase ping`  ⭐ the transport cap is lowered **BELOW** the protocol cap
+                 (15 s against 60 s).  If the server keeps the connection alive
+                 with PINGs, `TEMPO_SCADUTO` arrives **all the same at 60 s**,
+                 after having crossed the transport cap four times.  If it does
+                 not send them, the connection dies at **15 s without a
+                 reason** — and it is precisely the signature §4.6 describes,
+                 with a number that cannot be confused with any of the three
+                 caps.
+                 ⛔ And in the same phase, on the same server, `cert-morte-
+                 silenziosa` **produces the death at 15 s on purpose**: the two
+                 lines together say that the survival of the other is not
+                 luck.
+
+⚠ **And the transport cap is not decided by the server alone.**  RFC 9000
+  §10.1: the **minimum of the two announced values** holds, and `aioquic` by
+  itself announces 60 s — that is exactly the cap this bench must measure.
+  Here the client configuration raises it to `IDLE_NOSTRO` on purpose, so that
+  the minimum of the two is never ours; and the value that counts is **read
+  from the peer** with B2's probe (`01-b6-lancia.sh` does it), not presumed.
 
 ===========================================================================
-⛔ CHE COSA QUESTO BANCO NON PROVA, E VA DETTO
+⛔ WHERE THE STOPWATCH OF THE FIRST CAP STARTS — the `[?]` R3.27, and this bench
+   is the place where it gets resolved
 
-  · il tetto **non** si prova su un client vero (browser): la pagina non ha un
-    modo di «tacere a comando», e il banco misura il SERVER.  Che il browser
-    veda la stessa cosa e' `[?]`, e sta a B11;
-  · i tre tetti si provano **uno per connessione**: che un tetto scaduto non
-    lasci strascichi su una connessione successiva lo copre B0.5, qui, ma il
-    caso di due tetti nella **stessa** connessione non esiste — la macchina a
-    stati di §4 non ci torna;
-  · `rcp_azzera_registro_sessioni()` esiste per il banco ⛔ **ma non ha nessun
-    chiamante** raggiungibile da qui: non e' innestata in nessun punto del
-    server.  Lo stato fra una fase e l'altra si azzera **riaccendendo il
-    server**, e lo fa `01-b6-lancia.sh`.  Dichiarato, perche' chi legge la
-    riga in `rcp.h` crede che il banco la usi.
+§4.6 says *«TLS handshake finished → `CIAO` received: 5 s»*.  ⛔ But in
+WebTransport the HTTP/3 **connection** and the **session** are two separate
+things, and between the two instants at least one network round trip passes:
+the browser may have established the connection long before the page calls the
+API.  If the server starts the stopwatch where the document says and the bench
+measures it from the opening of the session, the difference reads as **a wrong
+cap**.
+
+Three cases separate them, and each prints a number instead of an opinion:
+
+  ciao-tetto              the normal case: session, control channel,
+                          silence.  The expected number is 5 s from here;
+  ciao-senza-controllo    ⛔ session open and **control channel never
+                          opened**.  To the letter of §4.6 the cap has already
+                          started (TLS finished a while ago) and at 5 s it
+                          must be over.  If nothing happens, the stopwatch
+                          **does not start from TLS**;
+  ciao-sessione-tardiva   ⛔ the worst case of R3.27: TLS is finished, one
+                          waits `RITARDO_SESSIONE` seconds **without opening
+                          the session**, then opens it and keeps quiet.  If the
+                          cap started from TLS, the budget would be **already
+                          consumed** and the farewell would arrive immediately;
+                          if it starts from the session, it arrives 5 s after
+                          the opening.
+
+⛔ The verdict of these three is not «passes/does not pass» but **an answer**,
+   and the answer is compared by the bench (B0.4): if the stopwatch starts from
+   the session, §4.6 line 1 **says something the code does not do**, and the
+   cure is in the document — «it changes by one word», as the phase declares
+   it.  In that case the bench exits **3**, which is not the server's red.
+
+===========================================================================
+⛔ AND THE THREE NUMBERS THIS BENCH COMPARES, WHICH ARE THREE AND NOT TWO
+
+  the DOCUMENT   `RCP.md` §4.6 — written below in `TETTI_DOC`, by hand, and
+                 it is the arbiter: `RCP.md` is the arbiter of the wire;
+  the CODE       the `#define TETTO_*` of `banchi/rcp/rcp.c`, read from the
+                 source and passed by `01-b6-lancia.sh` with `--tetti-codice`;
+  the MEASUREMENT  what arrives on the wire.
+
+⛔ **And here there is a dated fact that concerns this bench.**  On 10 Aug
+   2026, finding R9.9, `TETTO_ATTACCA` was brought from **60 000 to 10 000
+   ms** on the sole reading of §4.6, **without anybody measuring it** — and the
+   comment in the code declares it: *«no bench saw it: B6 is not written
+   yet»*.  This bench is **the first witness of that number**.  Hence the rule
+   of this file: the three numbers are printed **all three**, always, and if
+   they do not agree the bench says so instead of adapting to one of the two.
+
+===========================================================================
+⛔ WHAT THIS BENCH DOES NOT TEST, AND IT MUST BE SAID
+
+  · the cap is **not** tested on a real client (browser): the page has no way
+    of «keeping quiet on command», and the bench measures the SERVER.  That the
+    browser sees the same thing is `[?]`, and it is up to B11;
+  · the three caps are tested **one per connection**: that an expired cap
+    leaves no aftermath on a following connection is covered by B0.5, here, but
+    the case of two caps in the **same** connection does not exist — the state
+    machine of §4 does not go back there;
+  · `rcp_azzera_registro_sessioni()` exists for the bench ⛔ **but has no
+    caller** reachable from here: it is not grafted at any point of the
+    server.  The state between one phase and the next is reset **by restarting
+    the server**, and `01-b6-lancia.sh` does it.  Declared, because whoever
+    reads the line in `rcp.h` believes the bench uses it.
 """
 import argparse
 import asyncio
@@ -210,18 +212,18 @@ from aioquic.asyncio import connect
 
 QUI = os.path.dirname(os.path.abspath(__file__))
 
-# ⛔ Il cliente di B3 si IMPORTA, non si ricopia — come fa B5.  Dentro c'e' la
-#    riga che gli impedisce di dare gli eventi del canale di controllo allo
-#    strato HTTP/3 di aioquic (senza la quale la connessione muore per mano
-#    del CLIENT), il lettore della capsula di chiusura di §3.1 punto 3, e la
-#    registrazione di §11.1.  Una copia divergente riporterebbe qui i difetti
-#    gia' pagati la', travestiti da difetti del server.
+# ⛔ The B3 client is IMPORTED, not copied — as B5 does.  Inside it is the line
+#    that prevents it from handing the control-channel events to aioquic's
+#    HTTP/3 layer (without which the connection dies at the hand of the
+#    CLIENT), the reader of the closing capsule of §3.1 point 3, and the
+#    recording of §11.1.  A diverging copy would bring back here the defects
+#    already paid for there, disguised as server defects.
 _spec = importlib.util.spec_from_file_location(
     "b3cliente", os.path.join(QUI, "01-b3-cliente.py"))
 b3 = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(b3)
 
-# ⛔ E il profilo del BERSAGLIO: le differenze fra i due server in un file solo.
+# ⛔ And the TARGET's profile: the differences between the two servers in a single file.
 _spec_b0 = importlib.util.spec_from_file_location(
     "b0bersaglio", os.path.join(QUI, "01-b0-bersaglio.py"))
 b0 = importlib.util.module_from_spec(_spec_b0)
@@ -234,63 +236,63 @@ VERSIONE_INCOMPATIBILE = 0x0A
 TROPPI_TENTATIVI = 0x08
 CONGEDO, RESPINTO = 0x000C, 0x0005
 
-# ⛔ I TRE TETTI COME LI SCRIVE IL DOCUMENTO — `RCP.md` §4.6, tabella.
-#    Non si leggono dal codice: il codice e' l'imputato.  Il valore del codice
-#    arriva a parte, con `--tetti-codice`, e i due si confrontano.
+# ⛔ THE THREE CAPS AS THE DOCUMENT WRITES THEM — `RCP.md` §4.6, table.
+#    They are not read from the code: the code is the defendant.  The code's
+#    value arrives separately, with `--tetti-codice`, and the two are compared.
 TETTI_DOC = {"CIAO": 5000, "CREDENZIALI": 60000, "ATTACCA": 10000,
-             # ⭐ La riga che §4.6 non aveva, ✅ decisa dall'utente l'11 agosto
-             #    2026 (`DECISIONI.md` §7.17): dall'apertura della SESSIONE
-             #    WebTransport all'apertura del CANALE di controllo, 5 s.
-             # ⛔ L'ha chiesta questo banco: era lui a dire «non e' successo
-             #    NIENTE in 20 s», e per quattro giorni quel numero e' stato
-             #    una risposta senza una regola contro cui giudicarla.
-             # ⚠ Il confronto documento/codice per questa riga NON si fa: il
-             #   valore del codice sta in `src/webtransport.c`
-             #   (`WT_TETTO_CANALE_NS`) e non fra i `#define TETTO_*` di
-             #   `rcp.c` che il lanciatore sa leggere.  Il banco lo dichiara
-             #   invece di tacerlo — «non me l'hanno detto» non e' «combaciano».
+             # ⭐ The line §4.6 did not have, ✅ decided by the user on 11 Aug
+             #    2026 (`DECISIONI.md` §7.17): from the opening of the
+             #    WebTransport SESSION to the opening of the control CHANNEL, 5 s.
+             # ⛔ This bench asked for it: it was the one saying «NOTHING
+             #    happened in 20 s», and for four days that number was an
+             #    answer without a rule to judge it against.
+             # ⚠ The document/code comparison for this line is NOT done: the
+             #   code's value is in `src/webtransport.c`
+             #   (`WT_TETTO_CANALE_NS`) and not among the `#define TETTO_*` of
+             #   `rcp.c` that the launcher knows how to read.  The bench declares
+             #   it instead of keeping quiet — «they did not tell me» is not «they match».
              "CANALE": 5000}
 
-# ⚠ La tolleranza, e perche' e' asimmetrica.
+# ⚠ The tolerance, and why it is asymmetric.
 #
-#    Il cronometro del banco parte dall'istante in cui **legge** il messaggio
-#    che porta allo stato (o in cui **spedisce** l'intestazione del canale), e
-#    quello del server dall'istante in cui l'ha spedito: fra i due c'e' mezzo
-#    giro di rete, quindi la misura puo' risultare un filo **piu' corta** del
-#    tetto.  Dall'altra parte il server valuta i tetti alla cadenza con cui
-#    passa il suo percorso di scrittura, quindi puo' risultare piu' lunga.
+#    The bench's stopwatch starts from the instant it **reads** the message
+#    that brings to the state (or **sends** the channel header), and the
+#    server's from the instant it sent it: between the two there is half a
+#    network round trip, so the measurement may come out a touch **shorter**
+#    than the cap.  On the other side the server evaluates the caps at the pace
+#    at which it goes through its write path, so it may come out longer.
 #
-# ⛔ E resta larghissima rispetto a quel che deve distinguere: 5 da 30, 10 da
-#    60, 60 da 15.  Una tolleranza che non separa i numeri in gioco non e' una
-#    tolleranza, e' una benedizione.
+# ⛔ And it stays very wide compared with what it must tell apart: 5 from 30, 10
+#    from 60, 60 from 15.  A tolerance that does not separate the numbers in play
+#    is not a tolerance, it is a blessing.
 TOLL_GIU, TOLL_SU = 1000, 2500
 
-# ⛔ IL TETTO D'INATTIVITA' CHE ANNUNCIAMO NOI, E PERCHE' NON E' SEMPRE LO
-#    STESSO.  E' la meta' nostra della regola «il tetto si legge dal pari, non
-#    si presume», e sono due esigenze opposte in due fasi diverse.
+# ⛔ THE INACTIVITY CAP WE ANNOUNCE, AND WHY IT IS NOT ALWAYS THE SAME.  It is
+#    our half of the rule «the cap is read from the peer, not presumed», and
+#    they are two opposite needs in two different phases.
 #
-#  · fase «sani»: dev'essere **molto sopra** tutti i tetti del protocollo, o a
-#    chiudere saremmo noi.  ⚠ Il predefinito di aioquic e' 60 s, cioe'
-#    esattamente il tetto di §4.6 da misurare: lasciarlo sarebbe misurare il
-#    nostro orologio credendo di misurare il suo;
+#  · «sani» phase: it must be **well above** all the protocol caps, or we would
+#    be the ones closing.  ⚠ aioquic's default is 60 s, that is exactly the §4.6
+#    cap to be measured: leaving it would be measuring our own clock believing
+#    we are measuring its;
 #
-#  · fase «ping»: dev'essere **poco sopra** quello del server, e la ragione e'
-#    un fatto del trasporto che rende cieco chi non lo sa.  ⛔ **Una morte per
-#    inattivita' NON manda un `CONNECTION_CLOSE`** (RFC 9000 §10.1: chi scade
-#    per inattivita' scarta lo stato e tace).  Se il server smettesse di
-#    tenere viva la connessione, dal filo non arriverebbe **niente**: l'unico
-#    modo di vedere quella morte e' che scada anche il NOSTRO orologio.  Con
-#    il nostro poco sopra il suo, la morte — se c'e' — si vede pochi secondi
-#    dopo; e se i PING ci sono, ogni PING lo rimette a zero e i 60 s si
-#    misurano lo stesso.
-#    ⚠ E se `aioquic` usasse il minimo dei due invece del proprio, la si
-#      vedrebbe ancora prima: in tutt'e due i casi si vede, ed e' per questo
-#      che sta poco sopra e non molto sopra.
+#  · «ping» phase: it must be **slightly above** the server's, and the reason is
+#    a fact of the transport that blinds whoever does not know it.  ⛔ **A death
+#    from inactivity does NOT send a `CONNECTION_CLOSE`** (RFC 9000 §10.1:
+#    whoever times out from inactivity discards the state and keeps quiet).  If
+#    the server stopped keeping the connection alive, **nothing** would arrive
+#    from the wire: the only way to see that death is for OUR clock to expire
+#    too.  With ours slightly above its, the death — if there is one — is seen a
+#    few seconds later; and if the PINGs are there, every PING resets it and the
+#    60 s are measured anyway.
+#    ⚠ And if `aioquic` used the minimum of the two instead of its own, it
+#      would be seen even earlier: in both cases it is seen, and that is why it
+#      is slightly above and not well above.
 IDLE_SANI = 180.0
 IDLE_PING_MARGINE = 5.0
 
-# Quanto si aspetta prima di aprire la sessione, in `ciao-sessione-tardiva`.
-# ⚠ DEVE essere piu' lungo del tetto del `CIAO`, o il caso non separa niente.
+# How long one waits before opening the session, in `ciao-sessione-tardiva`.
+# ⚠ It MUST be longer than the `CIAO` cap, or the case separates nothing.
 RITARDO_SESSIONE = 8.0
 
 VERDE, ROSSO, GIALLO, GRIGIO = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0m"
@@ -302,36 +304,36 @@ def adesso():
 
 # ===========================================================================
 class Attesa:
-    """Che cosa e' successo mentre tacevamo — dal lato che riceve.
+    """What happened while we kept quiet — from the receiving side.
 
-    ⛔ Gli esiti sono CINQUE e hanno cinque nomi, perche' «non e' arrivato
-       niente» e «e' morto tutto» sono diagnosi opposte con lo stesso aspetto
-       se si stampa un `si`/`no` (`LEZIONI.md` §1.9, forma E8).
+    ⛔ The outcomes are FIVE and they have five names, because «nothing
+       arrived» and «everything died» are opposite diagnoses that look the same
+       if one prints a `yes`/`no` (`LEZIONI.md` §1.9, form E8).
     """
 
     def __init__(self, nome):
         self.nome = nome
-        # ⛔ La meta' che si dimentica: il caso e' ARRIVATO allo stato che
-        #    voleva misurare?  Un caso che si ferma nella preparazione — un
-        #    `ECCOMI` che non arriva, le credenziali rifiutate — non ha provato
-        #    niente, e senza questa marca conterebbe come rosso del server.
-        #    E' il `provocato` di B5 (rilievo R7.1) applicato ai tetti.
+        # ⛔ The half that gets forgotten: did the case GET to the state it
+        #    wanted to measure?  A case that stops in the preparation — an
+        #    `ECCOMI` that does not arrive, the credentials refused — has tested
+        #    nothing, and without this mark it would count as a server red.
+        #    It is B5's `provocato` (finding R7.1) applied to the caps.
         self.pronto = False
-        self.fase = "apertura"
+        self.fase = "opening"
         self.esito = "niente"      # congedo · morte-silenziosa · sessione-chiusa
         #                            · canale-chiuso · niente · errore
-        self.motivo = None         # letto da un CONGEDO/RESPINTO sul filo
+        self.motivo = None         # read from a CONGEDO/RESPINTO on the wire
         self.tipo_motivo = None
         self.dettaglio = ""
-        self.codice_wt = None      # §3.1 punto 3
-        self.ms = None             # quanto ci ha messo, dal riferimento
-        self.riferimento = ""      # da CHE COSA si conta — si stampa sempre
+        self.codice_wt = None      # §3.1 point 3
+        self.ms = None             # how long it took, from the reference
+        self.riferimento = ""      # FROM WHAT one counts — always printed
         self.errore = None
 
     def __str__(self):
-        p = [f"da «{self.riferimento}»"] if self.riferimento else []
+        p = [f"from «{self.riferimento}»"] if self.riferimento else []
         if not self.pronto:
-            p.append(f"⛔ MAI ARRIVATO allo stato da misurare (fermo in "
+            p.append(f"⛔ NEVER GOT to the state to measure (stopped in "
                      f"«{self.fase}»)")
         p.append(f"esito={self.esito}")
         if self.ms is not None:
@@ -339,7 +341,7 @@ class Attesa:
         if self.motivo is not None:
             p.append(f"motivo={self.motivo:#04x}="
                      f"{MOTIVI.get(self.motivo, '?')} in {self.tipo_motivo}")
-        p.append("chiusura-wt=" + ("(assente)" if self.codice_wt is None
+        p.append("chiusura-wt=" + ("(absent)" if self.codice_wt is None
                                    else f"{self.codice_wt:#04x}"))
         if self.errore:
             p.append(f"errore={self.errore}")
@@ -347,17 +349,17 @@ class Attesa:
 
 
 async def ascolta(cli, t0, riferimento, finestra, es, grazia=1.5):
-    """Tace e guarda, fino al congedo o alla fine della finestra.
+    """Keeps quiet and watches, until the farewell or the end of the window.
 
-    ⛔ **E' l'unico posto in cui `es.motivo` e `es.ms` vengono scritti**, e li
-       scrive da quel che e' arrivato sul filo: §8.1 vuole il congedo
-       verificato dal lato che riceve, mai dal registro di chi lo manda.
+    ⛔ **It is the only place where `es.motivo` and `es.ms` are written**, and it
+       writes them from what arrived on the wire: §8.1 wants the farewell
+       verified from the receiving side, never from the log of whoever sends it.
 
-    ⚠ Si sfoglia con un giro breve invece di aspettare un solo evento: gli
-      eventi che ci interessano sono di due tipi — un messaggio sul canale di
-      controllo e la **morte della connessione** — e aspettarne uno solo
-      renderebbe l'altro invisibile fino allo scadere della finestra, cioe'
-      trasformerebbe una morte a 15 s in un «niente per 75 s».
+    ⚠ It polls with a short loop instead of waiting for a single event: the
+      events we care about are of two kinds — a message on the control channel
+      and the **death of the connection** — and waiting for only one would make
+      the other invisible until the window expires, that is it would turn a
+      death at 15 s into a «nothing for 75 s».
     """
     es.riferimento = riferimento
     scadenza = t0 + finestra
@@ -365,36 +367,36 @@ async def ascolta(cli, t0, riferimento, finestra, es, grazia=1.5):
         try:
             m = await asyncio.wait_for(cli.messaggi.get(), timeout=0.02)
         except asyncio.TimeoutError:
-            # ⛔ Nessun messaggio: e' caduto qualcosa nel frattempo?
+            # ⛔ No message: did something drop in the meantime?
             if cli.caduta is not None and es.motivo is None:
                 es.ms = (adesso() - t0) * 1000
                 es.esito = _classifica(cli)
                 break
             continue
         if m is None:
-            # il canale di controllo o la connessione si sono chiusi
+            # the control channel or the connection has closed
             if es.motivo is None:
                 es.ms = (adesso() - t0) * 1000
                 es.esito = _classifica(cli)
             break
         tipo, corpo, _ = m
         if tipo not in (CONGEDO, RESPINTO):
-            # ⚠ Un messaggio che non c'entra e' un fatto, non rumore: §4.2 non
-            #   prevede niente sul canale di controllo mentre il server
-            #   aspetta, e chi ne manda uno sta facendo altro.
-            es.errore = (f"messaggio inatteso mentre tacevamo: {tipo:#06x} "
-                         f"({len(corpo)} byte)")
+            # ⚠ A message that has nothing to do with it is a fact, not noise:
+            #   §4.2 provides for nothing on the control channel while the
+            #   server waits, and whoever sends one is doing something else.
+            es.errore = (f"unexpected message while we kept quiet: {tipo:#06x} "
+                         f"({len(corpo)} bytes)")
             continue
         es.ms = (adesso() - t0) * 1000
         es.esito = "congedo"
         es.tipo_motivo = "CONGEDO" if tipo == CONGEDO else "RESPINTO"
-        # ⛔ Un corpo VUOTO non e' «nessun motivo»: §7.1 vuole `u8 motivo` e
-        #    §3.1 vieta il codice 0.  Con `corpo[0] if corpo else None` un
-        #    server che chiude MALE sarebbe piu' facile da far passare di uno
-        #    che chiude bene (e' il rilievo R7.2 di B5).
+        # ⛔ An EMPTY body is not «no reason»: §7.1 wants `u8 motivo` and
+        #    §3.1 forbids code 0.  With `corpo[0] if corpo else None` a server
+        #    that closes BADLY would be easier to let through than one that
+        #    closes well (it is B5's finding R7.2).
         if not corpo:
-            es.errore = (f"{es.tipo_motivo} con corpo VUOTO: §7.1 ne vuole "
-                         "almeno il byte del motivo")
+            es.errore = (f"{es.tipo_motivo} with an EMPTY body: §7.1 wants "
+                         "at least the reason byte")
             break
         es.motivo = corpo[0]
         if tipo == CONGEDO and len(corpo) >= 3:
@@ -402,20 +404,20 @@ async def ascolta(cli, t0, riferimento, finestra, es, grazia=1.5):
             es.dettaglio = corpo[3:3 + n].decode("utf-8", "replace")
         break
     else:
-        # ⛔ La finestra e' scaduta.  «Niente» e' un esito, e vuole il suo
-        #    numero: senza, la riga «non e' successo niente» non dice per
-        #    quanto tempo non e' successo — cioe' non dice il denominatore
-        #    dell'attesa (`LEZIONI.md` §1.9, quarta regola).
+        # ⛔ The window has expired.  «Nothing» is an outcome, and it wants its
+        #    number: without it, the line «nothing happened» does not say for
+        #    how long nothing happened — that is it does not say the
+        #    denominator of the wait (`LEZIONI.md` §1.9, fourth rule).
         es.ms = (adesso() - t0) * 1000
         if cli.caduta is not None and es.motivo is None:
             es.esito = _classifica(cli)
 
-    # ⛔ §3.1 PUNTO 3, E PERCHE' SI ASPETTA UN PO'.
-    #    Il `CONGEDO` viaggia sul canale di controllo, il codice del motivo
-    #    dentro la capsula che chiude la sessione: due strade diverse, due
-    #    istanti diversi.  Leggere la seconda nell'istante esatto della prima
-    #    misurerebbe la nostra fretta.  ⚠ La finestra e' dichiarata e limitata:
-    #    se scade, il valore resta `None` e il verdetto lo conta come mancato.
+    # ⛔ §3.1 POINT 3, AND WHY ONE WAITS A LITTLE.
+    #    The `CONGEDO` travels on the control channel, the reason code inside
+    #    the capsule that closes the session: two different roads, two
+    #    different instants.  Reading the second at the exact instant of the
+    #    first would measure our hurry.  ⚠ The window is declared and bounded:
+    #    if it expires, the value stays `None` and the verdict counts it as missed.
     if es.motivo is not None or es.errore is not None:
         fine = adesso() + grazia
         while (cli.codice_chiusura is None and not cli.finito
@@ -426,28 +428,28 @@ async def ascolta(cli, t0, riferimento, finestra, es, grazia=1.5):
 
 
 def _classifica(cli):
-    """⛔ Come e' morta: il nome, non un `no`.
+    """⛔ How it died: the name, not a `no`.
 
-    Sono i tre imputati che §4.6 chiede di separare, e hanno tre nomi diversi
-    perche' portano a tre posti diversi: il tetto del trasporto (i PING che
-    mancano), la sessione chiusa senza congedo (§3.1 punto 2 non fatto), il
-    canale chiuso a secco.
+    They are the three defendants §4.6 asks to separate, and they have three
+    different names because they lead to three different places: the transport
+    cap (the missing PINGs), the session closed without a farewell (§3.1 point 2
+    not done), the channel closed dry.
     """
     c = cli.caduta or ""
     if cli.codice_chiusura is not None:
         return "sessione-chiusa"
-    if c.startswith("connessione TERMINATA"):
+    if c.startswith("connection TERMINATED"):
         return "morte-silenziosa"
-    if "sessione" in c:
+    if "session" in c:
         return "sessione-chiusa"
-    if "canale di controllo" in c:
+    if "control channel" in c:
         return "canale-chiuso"
     return "niente"
 
 
 # ===========================================================================
 async def apri(a, percorso="/rcp/1"):
-    """Connessione + sessione WebTransport.  ⚠ Il canale di controllo NO."""
+    """Connection + WebTransport session.  ⚠ NOT the control channel."""
     conf = QuicConfiguration(is_client=True, alpn_protocols=H3_ALPN,
                              max_datagram_frame_size=65536,
                              idle_timeout=a.idle_nostro)
@@ -463,10 +465,10 @@ async def apri(a, percorso="/rcp/1"):
 
 
 async def solo_connessione(a):
-    """Solo QUIC + TLS: nessuna sessione WebTransport, nessun canale.
+    """Only QUIC + TLS: no WebTransport session, no channel.
 
-    Serve a `cert-morte-silenziosa`: e' la connessione che **nessuno** tiene
-    viva, quindi quella che il tetto del trasporto DEVE portarsi via.
+    It is needed by `cert-morte-silenziosa`: it is the connection that **nobody**
+    keeps alive, so the one the transport cap MUST take away.
     """
     conf = QuicConfiguration(is_client=True, alpn_protocols=H3_ALPN,
                              max_datagram_frame_size=65536,
@@ -480,14 +482,13 @@ async def solo_connessione(a):
 
 
 def apri_controllo(cli):
-    """Apre il canale di controllo E LO METTE SUL FILO, senza mandarci niente.
+    """Opens the control channel AND PUTS IT ON THE WIRE, without sending anything on it.
 
-    ⛔ Il `transmit()` non e' una formalita': `create_webtransport_stream` si
-       limita a mettere in coda l'intestazione dello stream, e senza una
-       passata di scrittura quei byte **non partono**.  Il server non vedrebbe
-       nessuno stream, non chiamerebbe `rcp_avvia`, e il cronometro del primo
-       tetto non partirebbe affatto: il banco misurerebbe la propria coda
-       d'uscita e darebbe la colpa al server.
+    ⛔ The `transmit()` is not a formality: `create_webtransport_stream` only
+       queues the stream header, and without a write pass those bytes **do not
+       leave**.  The server would see no stream, would not call `rcp_avvia`,
+       and the stopwatch of the first cap would not start at all: the bench
+       would measure its own output queue and blame the server.
     """
     sid = cli.apri_controllo()
     cli.transmit()
@@ -513,16 +514,16 @@ def attacca():
 
 
 # ===========================================================================
-# I CASI.  ⛔ Ciascuno dichiara la sua PREVISIONE prima di misurare: la colonna
-#          «atteso» sta nel file, non nel commento sul risultato.
+# THE CASES.  ⛔ Each declares its PREDICTION before measuring: the «expected»
+#             column is in the file, not in the comment on the result.
 # ===========================================================================
 CASI = []
 
 
 def caso(nome, fase, tetto, atteso, spiega):
-    """`tetto` = chiave di TETTI_DOC o None · `atteso` = motivo o None (⭐ deve
-    passare) o "risposta" (⛔ non e' un passa/non passa: e' una domanda aperta
-    a cui questo caso risponde con un numero)."""
+    """`tetto` = key of TETTI_DOC or None · `atteso` = reason or None (⭐ must
+    pass) or "risposta" (⛔ it is not a pass/fail: it is an open question to
+    which this case answers with a number)."""
     def dec(f):
         CASI.append({"nome": nome, "fase": fase, "tetto": tetto,
                      "atteso": atteso, "spiega": spiega, "f": f})
@@ -530,19 +531,19 @@ def caso(nome, fase, tetto, atteso, spiega):
     return dec
 
 
-# ── I tre tetti ─────────────────────────────────────────────────────────────
+# ── The three caps ──────────────────────────────────────────────────────────
 @caso("ciao-tetto", "sani", "CIAO", TEMPO_SCADUTO,
-      "canale di controllo aperto e nessun CIAO: §4.6 riga 1, 5 s")
+      "control channel open and no CIAO: §4.6 line 1, 5 s")
 async def _(a, es):
     gestore, cli, stato = await apri(a)
     try:
         if stato != "200":
-            es.fase = f"CONNECT estesa :status={stato}"
+            es.fase = f"extended CONNECT :status={stato}"
             return es
         apri_controllo(cli)
         t0 = adesso()
-        es.pronto, es.fase = True, "canale aperto, silenzio"
-        await ascolta(cli, t0, "apertura del canale di controllo",
+        es.pronto, es.fase = True, "channel open, silence"
+        await ascolta(cli, t0, "opening of the control channel",
                       TETTI_DOC["CIAO"] / 1000 + 15, es)
     finally:
         await gestore.__aexit__(None, None, None)
@@ -550,21 +551,21 @@ async def _(a, es):
 
 
 @caso("credenziali-tetto", "sani", "CREDENZIALI", TEMPO_SCADUTO,
-      "ECCOMI ricevuto e nessuna CREDENZIALI: §4.6 riga 2, 60 s")
+      "ECCOMI received and no CREDENZIALI: §4.6 line 2, 60 s")
 async def _(a, es):
     gestore, cli, stato = await apri(a)
     try:
         if stato != "200":
-            es.fase = f"CONNECT estesa :status={stato}"
+            es.fase = f"extended CONNECT :status={stato}"
             return es
         apri_controllo(cli)
         cli.manda(ciao_buono())
         await b3.attendi(cli, "ECCOMI")
         t0 = adesso()
-        es.pronto, es.fase = True, "ECCOMI letto, silenzio"
-        await ascolta(cli, t0, "ECCOMI letto",
+        es.pronto, es.fase = True, "ECCOMI read, silence"
+        await ascolta(cli, t0, "ECCOMI read",
                       TETTI_DOC["CREDENZIALI"] / 1000 + 15, es)
-    except Exception as e:  # noqa: BLE001 — il tipo dell'errore E' la misura
+    except Exception as e:  # noqa: BLE001 — the error type IS the measurement
         es.errore = f"{type(e).__name__}: {e}"
     finally:
         await gestore.__aexit__(None, None, None)
@@ -572,24 +573,24 @@ async def _(a, es):
 
 
 @caso("attacca-tetto", "sani", "ATTACCA", TEMPO_SCADUTO,
-      "⛔ AMMESSO ricevuto e nessun ATTACCA: §4.6 riga 3, 10 s — ed e' il "
-      "numero cambiato il 10 agosto 2026 senza che nessuno lo misurasse")
+      "⛔ AMMESSO received and no ATTACCA: §4.6 line 3, 10 s — and it is the "
+      "number changed on 10 Aug 2026 without anybody measuring it")
 async def _(a, es):
     gestore, cli, stato = await apri(a)
     try:
         if stato != "200":
-            es.fase = f"CONNECT estesa :status={stato}"
+            es.fase = f"extended CONNECT :status={stato}"
             return es
         apri_controllo(cli)
         cli.manda(ciao_buono())
         await b3.attendi(cli, "ECCOMI")
-        es.fase = "CREDENZIALI spedite"
+        es.fase = "CREDENZIALI sent"
         cli.manda(credenziali(a))
-        # ⚠ `attesa=20`: c'e' di mezzo il secondo fisso di §4.4-bis, e PAM.
+        # ⚠ `attesa=20`: the fixed second of §4.4-bis is in between, and PAM.
         await b3.attendi(cli, "AMMESSO", attesa=20)
         t0 = adesso()
-        es.pronto, es.fase = True, "AMMESSO letto, silenzio"
-        await ascolta(cli, t0, "AMMESSO letto",
+        es.pronto, es.fase = True, "AMMESSO read, silence"
+        await ascolta(cli, t0, "AMMESSO read",
                       TETTI_DOC["ATTACCA"] / 1000 + 15, es)
     except Exception as e:  # noqa: BLE001
         es.errore = f"{type(e).__name__}: {e}"
@@ -598,18 +599,18 @@ async def _(a, es):
     return es
 
 
-# ── ⭐ I tre controlli che dicono NO: il tetto non scatta PRIMA ─────────────
+# ── ⭐ The three checks that say NO: the cap does not trigger BEFORE ─────────
 @caso("ciao-presto", "sani", "CIAO", None,
-      "⭐ si tace il 70 % del tetto e POI si manda CIAO: DEVE arrivare ECCOMI")
+      "⭐ keep quiet for 70 % of the cap and THEN send CIAO: ECCOMI MUST arrive")
 async def _(a, es):
     gestore, cli, stato = await apri(a)
     try:
         if stato != "200":
-            es.fase = f"CONNECT estesa :status={stato}"
+            es.fase = f"extended CONNECT :status={stato}"
             return es
         apri_controllo(cli)
         await asyncio.sleep(TETTI_DOC["CIAO"] * 0.7 / 1000)
-        es.pronto, es.fase = True, "CIAO spedito in ritardo"
+        es.pronto, es.fase = True, "CIAO sent late"
         cli.manda(ciao_buono())
         await b3.attendi(cli, "ECCOMI")
         es.esito = "servito"
@@ -623,19 +624,19 @@ async def _(a, es):
 
 
 @caso("credenziali-presto", "sani", "CREDENZIALI", None,
-      "⭐ si tace il 70 % dei 60 s e POI si mandano le CREDENZIALI: DEVE "
-      "arrivare AMMESSO — ed e' anche la prova che i PING reggono 42 s")
+      "⭐ keep quiet for 70 % of the 60 s and THEN send the CREDENZIALI: AMMESSO "
+      "MUST arrive — and it is also the proof that the PINGs hold 42 s")
 async def _(a, es):
     gestore, cli, stato = await apri(a)
     try:
         if stato != "200":
-            es.fase = f"CONNECT estesa :status={stato}"
+            es.fase = f"extended CONNECT :status={stato}"
             return es
         apri_controllo(cli)
         cli.manda(ciao_buono())
         await b3.attendi(cli, "ECCOMI")
         await asyncio.sleep(TETTI_DOC["CREDENZIALI"] * 0.7 / 1000)
-        es.pronto, es.fase = True, "CREDENZIALI spedite in ritardo"
+        es.pronto, es.fase = True, "CREDENZIALI sent late"
         cli.manda(credenziali(a))
         await b3.attendi(cli, "AMMESSO", attesa=20)
         es.esito = "servito"
@@ -649,13 +650,13 @@ async def _(a, es):
 
 
 @caso("attacca-presto", "sani", "ATTACCA", None,
-      "⭐ si tace il 70 % dei 10 s e POI si manda ATTACCA: DEVE arrivare "
-      "SESSIONE")
+      "⭐ keep quiet for 70 % of the 10 s and THEN send ATTACCA: SESSIONE MUST "
+      "arrive")
 async def _(a, es):
     gestore, cli, stato = await apri(a)
     try:
         if stato != "200":
-            es.fase = f"CONNECT estesa :status={stato}"
+            es.fase = f"extended CONNECT :status={stato}"
             return es
         apri_controllo(cli)
         cli.manda(ciao_buono())
@@ -663,7 +664,7 @@ async def _(a, es):
         cli.manda(credenziali(a))
         await b3.attendi(cli, "AMMESSO", attesa=20)
         await asyncio.sleep(TETTI_DOC["ATTACCA"] * 0.7 / 1000)
-        es.pronto, es.fase = True, "ATTACCA spedito in ritardo"
+        es.pronto, es.fase = True, "ATTACCA sent late"
         cli.manda(attacca())
         await b3.attendi(cli, "SESSIONE")
         es.esito = "servito"
@@ -676,21 +677,21 @@ async def _(a, es):
     return es
 
 
-# ── ⛔ Dove parte il cronometro del primo tetto — la `[?]` R3.27 ────────────
+# ── ⛔ Where the stopwatch of the first cap starts — the `[?]` R3.27 ────────
 @caso("ciao-senza-controllo", "sani", "CANALE", TEMPO_SCADUTO,
-      "⛔ sessione aperta e canale di controllo MAI aperto: §4.6 riga 4, 5 s "
-      "(DECISIONI.md §7.17).  ⚠ E il CONGEDO qui NON e' esigibile: il canale "
-      "non esiste, quindi il motivo puo' arrivare SOLO nel codice di chiusura "
-      "della sessione — e' la condizione decisa in §7.15 lo stesso giorno")
+      "⛔ session open and control channel NEVER opened: §4.6 line 4, 5 s "
+      "(DECISIONI.md §7.17).  ⚠ And the CONGEDO here is NOT enforceable: the channel "
+      "does not exist, so the reason can arrive ONLY in the closing code "
+      "of the session — it is the condition decided in §7.15 the same day")
 async def _(a, es):
     gestore, cli, stato = await apri(a)
     try:
         if stato != "200":
-            es.fase = f"CONNECT estesa :status={stato}"
+            es.fase = f"extended CONNECT :status={stato}"
             return es
         t0 = adesso()
-        es.pronto, es.fase = True, "sessione aperta, nessun canale"
-        await ascolta(cli, t0, "apertura della sessione WebTransport",
+        es.pronto, es.fase = True, "session open, no channel"
+        await ascolta(cli, t0, "opening of the WebTransport session",
                       TETTI_DOC["CIAO"] / 1000 + 15, es)
     finally:
         await gestore.__aexit__(None, None, None)
@@ -698,31 +699,31 @@ async def _(a, es):
 
 
 @caso("ciao-sessione-tardiva", "sani", "CIAO", TEMPO_SCADUTO,
-      "⛔ il caso peggiore di R3.27: TLS finito, si aspetta, POI si apre la "
-      "sessione.  Congedo subito = il budget era gia' consumato (cronometro "
-      "dal TLS); congedo 5 s dopo = cronometro dalla sessione")
+      "⛔ the worst case of R3.27: TLS finished, one waits, THEN the "
+      "session is opened.  Immediate farewell = the budget was already consumed "
+      "(stopwatch from TLS); farewell 5 s later = stopwatch from the session")
 async def _(a, es):
     gestore, cli = await solo_connessione(a)
     try:
-        # ⛔ Si aspetta CON LA CONNESSIONE APERTA e senza aprire la sessione:
-        #    e' esattamente il browser che ha stabilito HTTP/3 molto prima che
-        #    la pagina chiami l'API di WebTransport.
+        # ⛔ One waits WITH THE CONNECTION OPEN and without opening the session:
+        #    it is exactly the browser that established HTTP/3 long before the
+        #    page calls the WebTransport API.
         await asyncio.sleep(RITARDO_SESSIONE)
         if cli.caduta is not None:
-            es.fase = (f"la connessione e' caduta durante l'attesa: "
+            es.fase = (f"the connection dropped during the wait: "
                        f"{cli.caduta}")
             return es
         cli.apri_sessione(f"{a.indirizzo}:{a.porta}", "/rcp/1")
         stato = await asyncio.wait_for(cli.accettata, timeout=8)
         if stato != "200":
-            es.fase = f"CONNECT estesa :status={stato}"
+            es.fase = f"extended CONNECT :status={stato}"
             return es
         apri_controllo(cli)
         t0 = adesso()
         es.pronto = True
-        es.fase = f"canale aperto {RITARDO_SESSIONE:.0f} s dopo il TLS"
-        await ascolta(cli, t0, f"canale aperto {RITARDO_SESSIONE:.0f} s dopo "
-                               f"la fine del TLS",
+        es.fase = f"channel opened {RITARDO_SESSIONE:.0f} s after TLS"
+        await ascolta(cli, t0, f"channel opened {RITARDO_SESSIONE:.0f} s after "
+                               f"the end of TLS",
                       TETTI_DOC["CIAO"] / 1000 + 15, es)
     except Exception as e:  # noqa: BLE001
         es.errore = f"{type(e).__name__}: {e}"
@@ -731,24 +732,24 @@ async def _(a, es):
     return es
 
 
-# ── ⭐ La fase che prova i PING del trasporto (§4.6, riquadro R1.8) ─────────
+# ── ⭐ The phase that tests the transport PINGs (§4.6, box R1.8) ────────────
 @caso("credenziali-tetto-sotto-il-trasporto", "ping", "CREDENZIALI",
       TEMPO_SCADUTO,
-      "⭐ lo stesso tetto dei 60 s, ma col tetto del TRASPORTO piu' CORTO: se "
-      "arriva TEMPO_SCADUTO a 60 s i PING di §4.6 ci sono; se muore al tetto "
-      "del trasporto SENZA motivo, mancano")
+      "⭐ the same 60 s cap, but with a SHORTER TRANSPORT cap: if "
+      "TEMPO_SCADUTO arrives at 60 s the PINGs of §4.6 are there; if it dies at "
+      "the transport cap WITHOUT a reason, they are missing")
 async def _(a, es):
     gestore, cli, stato = await apri(a)
     try:
         if stato != "200":
-            es.fase = f"CONNECT estesa :status={stato}"
+            es.fase = f"extended CONNECT :status={stato}"
             return es
         apri_controllo(cli)
         cli.manda(ciao_buono())
         await b3.attendi(cli, "ECCOMI")
         t0 = adesso()
-        es.pronto, es.fase = True, "ECCOMI letto, silenzio sotto un tetto corto"
-        await ascolta(cli, t0, "ECCOMI letto",
+        es.pronto, es.fase = True, "ECCOMI read, silence under a short cap"
+        await ascolta(cli, t0, "ECCOMI read",
                       TETTI_DOC["CREDENZIALI"] / 1000 + 15, es)
     except Exception as e:  # noqa: BLE001
         es.errore = f"{type(e).__name__}: {e}"
@@ -758,30 +759,30 @@ async def _(a, es):
 
 
 # ===========================================================================
-# LE CERTIFICAZIONI.  ⛔ Girano PRIMA dei casi, e se cadono i casi non girano.
+# THE CERTIFICATIONS.  ⛔ They run BEFORE the cases, and if they fail the cases do not run.
 # ===========================================================================
 async def cert_giro_completo(a):
-    """⭐ Lo strumento sa arrivare in fondo — e lo stato iniziale e' pulito.
+    """⭐ The tool can get to the end — and the initial state is clean.
 
-    ⛔ Vale anche come B0.1/B0.3: `TROPPI_TENTATIVI` qui vuol dire che
-       l'indirizzo e' dentro la finestra di §4.4-bis lasciata da un altro
-       banco (B5 la lascia apposta, B8 pure), e ogni rosso che segue sarebbe
-       un falso rosso — proprio quello che B0.3 esiste per impedire.
+    ⛔ It also counts as B0.1/B0.3: `TROPPI_TENTATIVI` here means the address
+       is inside the §4.4-bis window left by another bench (B5 leaves it on
+       purpose, B8 too), and every red that follows would be a false red —
+       precisely the one B0.3 exists to prevent.
 
-    Restituisce (ok, testo, bloccato, ms_del_secondo_fisso).
+    Returns (ok, text, blocked, ms_of_the_fixed_second).
     """
-    # ⛔ Anche «non si apre nemmeno la connessione» e' un esito di questa
-    #    certificazione, e ha una diagnosi sua: senza questo ramo il banco
-    #    moriva con una traccia di Python, che e' il modo peggiore di dire «il
-    #    server non c'e'» — e non stampa nessun denominatore.
+    # ⛔ «The connection does not even open» is also an outcome of this
+    #    certification, and it has its own diagnosis: without this branch the
+    #    bench died with a Python traceback, which is the worst way of saying
+    #    «the server is not there» — and it prints no denominator.
     try:
         gestore, cli, stato = await apri(a)
     except Exception as e:  # noqa: BLE001
-        return False, f"non si apre la sessione: {type(e).__name__}: {e}", False, None
+        return False, f"the session does not open: {type(e).__name__}: {e}", False, None
     ms = None
     try:
         if stato != "200":
-            return False, f"CONNECT estesa :status={stato}", False, None
+            return False, f"extended CONNECT :status={stato}", False, None
         apri_controllo(cli)
         cli.manda(ciao_buono())
         await b3.attendi(cli, "ECCOMI")
@@ -791,10 +792,10 @@ async def cert_giro_completo(a):
             await b3.attendi(cli, "AMMESSO", attesa=20)
         except RuntimeError as e:
             testo = str(e)
-            # ⛔ «Non entra» ha piu' di una causa, e il banco ne deve nominare
-            #    UNA sola quando sa quale: il blocco di §4.4-bis ha un nome
-            #    proprio e una cura diversa (aspettare), e confonderlo con «il
-            #    server e' rotto» manda a cercare nel posto sbagliato.
+            # ⛔ «It does not get in» has more than one cause, and the bench must
+            #    name ONE only when it knows which: the §4.4-bis block has a
+            #    proper name and a different cure (waiting), and confusing it
+            #    with «the server is broken» sends one looking in the wrong place.
             return False, testo, "TROPPI_TENTATIVI" in testo, None
         ms = (adesso() - t0) * 1000
         cli.manda(attacca())
@@ -802,38 +803,38 @@ async def cert_giro_completo(a):
         return True, "CIAO → ECCOMI → CREDENZIALI → AMMESSO → ATTACCA → SESSIONE", False, ms
     except Exception as e:  # noqa: BLE001
         testo = f"{type(e).__name__}: {e}"
-        # ⚠ Il blocco di §4.4-bis puo' arrivare anche per strade che non sono
-        #   il `RESPINTO` di sopra: si guarda comunque il nome, perche' la cura
-        #   e' diversa (aspettare) e la diagnosi sbagliata manda a cercare nel
-        #   posto sbagliato — `LEZIONI.md` §1.6.
+        # ⚠ The §4.4-bis block can also arrive by roads that are not the
+        #   `RESPINTO` above: the name is looked at anyway, because the cure
+        #   is different (waiting) and the wrong diagnosis sends one looking in
+        #   the wrong place — `LEZIONI.md` §1.6.
         return False, testo, "TROPPI_TENTATIVI" in testo, ms
     finally:
         await gestore.__aexit__(None, None, None)
 
 
 async def cert_congedo_noto(a):
-    """⛔ La certificazione che conta: un congedo NOTO, immediato, letto per
-    tutt'e due le strade di §3.1.
+    """⛔ The certification that counts: a KNOWN, immediate farewell, read by
+    both roads of §3.1.
 
-    `CIAO(versione = 2)` su `/rcp/1` → `VERSIONE_INCOMPATIBILE` `0x0A` (§2.2,
-    e B5 lo misura 36 su 36).  ⭐ Se questo passa, «nessun congedo e' arrivato»
-    nei casi dei tetti vuol dire **che il server non l'ha mandato**, e non che
-    questo programma non sa leggerlo.
+    `CIAO(versione = 2)` on `/rcp/1` → `VERSIONE_INCOMPATIBILE` `0x0A` (§2.2,
+    and B5 measures it 36 out of 36).  ⭐ If this passes, «no farewell arrived»
+    in the cap cases means **that the server did not send it**, and not that
+    this program cannot read it.
 
-    Restituisce (ok, testo, secondi).
+    Returns (ok, text, seconds).
     """
     es = Attesa("cert-congedo-noto")
     try:
         gestore, cli, stato = await apri(a)
     except Exception as e:  # noqa: BLE001
-        return False, f"non si apre la sessione: {type(e).__name__}: {e}", None
+        return False, f"the session does not open: {type(e).__name__}: {e}", None
     try:
         if stato != "200":
-            return False, f"CONNECT estesa :status={stato}", None
+            return False, f"extended CONNECT :status={stato}", None
         apri_controllo(cli)
         t0 = adesso()
         cli.manda(ciao_buono(versione=2))
-        await ascolta(cli, t0, "CIAO(versione = 2) spedito", 8.0, es)
+        await ascolta(cli, t0, "CIAO(versione = 2) sent", 8.0, es)
     except Exception as e:  # noqa: BLE001
         return False, f"{type(e).__name__}: {e}", None
     finally:
@@ -845,26 +846,26 @@ async def cert_congedo_noto(a):
 
 
 async def cert_morte_silenziosa(a, idle_ms):
-    """⛔ Lo strumento sa vedere — e NOMINARE — una morte senza motivo.
+    """⛔ The tool can see — and NAME — a death without a reason.
 
-    Una connessione QUIC sola, senza sessione e senza canale: nessuno la tiene
-    viva, quindi il tetto del trasporto **DEVE** portarsela via, e la riga che
-    ne esce dev'essere `morte-silenziosa` — non `congedo`, non `niente`.
+    A lone QUIC connection, without a session and without a channel: nobody keeps
+    it alive, so the transport cap **MUST** take it away, and the line that comes
+    out must be `morte-silenziosa` — not `congedo`, not `niente`.
 
-    ⭐ E' il gemello negativo di `credenziali-tetto-sotto-il-trasporto`: sullo
-       stesso server e sotto lo stesso tetto, una connessione muore e l'altra
-       no.  Senza questa riga, «e' sopravvissuta» non dimostrerebbe che
-       qualcuno la teneva viva.
+    ⭐ It is the negative twin of `credenziali-tetto-sotto-il-trasporto`: on the
+       same server and under the same cap, one connection dies and the other
+       does not.  Without this line, «it survived» would not prove that
+       someone was keeping it alive.
     """
     es = Attesa("cert-morte-silenziosa")
     try:
         gestore, cli = await solo_connessione(a)
     except Exception as e:  # noqa: BLE001
-        return False, f"non si apre la connessione: {type(e).__name__}: {e}", None
+        return False, f"the connection does not open: {type(e).__name__}: {e}", None
     try:
         t0 = adesso()
         es.pronto = True
-        await ascolta(cli, t0, "fine del TLS", idle_ms / 1000 + 15, es)
+        await ascolta(cli, t0, "end of TLS", idle_ms / 1000 + 15, es)
     finally:
         await gestore.__aexit__(None, None, None)
     ok = es.esito == "morte-silenziosa" and es.motivo is None
@@ -872,24 +873,24 @@ async def cert_morte_silenziosa(a, idle_ms):
 
 
 async def ancora_vivo(a):
-    """⛔ B0.5, dopo ogni caso: il server e' ancora li'?
+    """⛔ B0.5, after every case: is the server still there?
 
-    «La connessione cade sempre» e' soddisfatto anche da un server ucciso dal
-    nucleo, che si porterebbe via **le sessioni di tutti gli altri utenti**.
-    Si arriva fino a `ECCOMI`, che e' la prima risposta che il server compone
-    davvero.
+    «The connection always drops» is satisfied also by a server killed by the
+    kernel, which would take away **all the other users' sessions**.
+    It gets as far as `ECCOMI`, which is the first answer the server really
+    composes.
     """
     try:
         gestore, cli, stato = await apri(a)
     except Exception as e:  # noqa: BLE001
-        return False, f"non si apre nemmeno la connessione: {type(e).__name__}: {e}"
+        return False, f"not even the connection opens: {type(e).__name__}: {e}"
     try:
         if stato != "200":
-            return False, f"CONNECT estesa :status={stato}"
+            return False, f"extended CONNECT :status={stato}"
         apri_controllo(cli)
         cli.manda(ciao_buono())
         await b3.attendi(cli, "ECCOMI", attesa=8)
-        return True, "una connessione nuova arriva a ECCOMI"
+        return True, "a new connection gets to ECCOMI"
     except Exception as e:  # noqa: BLE001
         return False, f"{type(e).__name__}: {e}"
     finally:
@@ -903,7 +904,7 @@ def riga(ok, nome, testo):
 
 
 def riga_gialla(nome, testo):
-    """⚠ Per le RISPOSTE: non sono passa/non passa, sono numeri."""
+    """⚠ For the ANSWERS: they are not pass/fail, they are numbers."""
     print(f"    {GIALLO}??{GRIGIO}  {nome:34s} {testo}")
 
 
@@ -912,12 +913,12 @@ def dentro_tolleranza(ms, tetto_ms):
 
 
 def leggi_tetti_codice(testo):
-    """`CIAO=5000,CREDENZIALI=60000,ATTACCA=10000` → dizionario.
+    """`CIAO=5000,CREDENZIALI=60000,ATTACCA=10000` → dictionary.
 
-    ⛔ E «non me l'hanno detto» non e' «combaciano»: se il parametro manca, il
-       confronto documento/codice **non si fa** e si dichiara di non averlo
-       fatto.  Un confronto saltato in silenzio e' peggio di un confronto
-       fallito (`LEZIONI.md` §1.9: il denominatore, non solo il risultato).
+    ⛔ And «they did not tell me» is not «they match»: if the parameter is
+       missing, the document/code comparison **is not done** and it is declared
+       that it was not done.  A comparison skipped silently is worse than a
+       failed comparison (`LEZIONI.md` §1.9: the denominator, not only the result).
     """
     fuori = {}
     for pezzo in (testo or "").split(","):
@@ -925,7 +926,7 @@ def leggi_tetti_codice(testo):
         if not pezzo:
             continue
         if "=" not in pezzo:
-            raise SystemExit(f"⛔ --tetti-codice: «{pezzo}» non ha la forma NOME=valore")
+            raise SystemExit(f"⛔ --tetti-codice: «{pezzo}» does not have the form NAME=value")
         n, v = pezzo.split("=", 1)
         fuori[n.strip().upper()] = int(v.strip())
     return fuori
@@ -933,359 +934,360 @@ def leggi_tetti_codice(testo):
 
 async def principale(a):
     tetti_codice = leggi_tetti_codice(a.tetti_codice)
-    # ⛔ Il nostro tetto d'inattivita' dipende dalla fase — vedi il riquadro
-    #    accanto a IDLE_SANI: nella fase «ping» e' l'unico modo che abbiamo di
-    #    VEDERE una morte per inattivita', che sul filo non manda niente.
+    # ⛔ Our inactivity cap depends on the phase — see the box next to
+    #    IDLE_SANI: in the «ping» phase it is the only way we have to SEE a
+    #    death from inactivity, which sends nothing on the wire.
     a.idle_nostro = (IDLE_SANI if a.fase == "sani"
                      else a.idle / 1000 + IDLE_PING_MARGINE)
 
     if a.elenco:
-        print(f"== B6 — i tre tetti della stretta di mano (RCP.md §4.6)")
-        print(f"   {len(CASI)} casi in due fasi.  Ogni riga e' una PREVISIONE\n")
+        print(f"== B6 — the three caps of the handshake (RCP.md §4.6)")
+        print(f"   {len(CASI)} cases in two phases.  Every line is a PREDICTION\n")
         for c in CASI:
             if c["atteso"] is None:
-                att = "⭐ DEVE PASSARE (il tetto non scatta prima)"
+                att = "⭐ MUST PASS (the cap does not trigger before)"
             elif c["atteso"] == "risposta":
-                att = "⛔ RISPOSTA A UNA DOMANDA APERTA (nessun passa/non passa)"
+                att = "⛔ ANSWER TO AN OPEN QUESTION (no pass/fail)"
             else:
-                att = (f"{c['atteso']:#04x} {MOTIVI.get(c['atteso'], '?')} a "
+                att = (f"{c['atteso']:#04x} {MOTIVI.get(c['atteso'], '?')} at "
                        f"{TETTI_DOC[c['tetto']] / 1000:.0f} s")
             print(f"  [{c['fase']:4s}] {c['nome']:36s} {att}")
             print(f"  {'':43s} {c['spiega']}")
-        print("\n  E prima di tutto: cert-giro-completo · cert-cronometro ·")
-        print("  cert-congedo-noto · cert-morte-silenziosa (solo fase «ping»)")
+        print("\n  And first of all: cert-giro-completo · cert-cronometro ·")
+        print("  cert-congedo-noto · cert-morte-silenziosa (only phase «ping»)")
         return 0
 
     casi = [c for c in CASI if c["fase"] == a.fase
             and (not a.solo or a.solo in c["nome"])]
 
-    # ⛔⭐ IL TETTO DI §7.17 NON ESISTE SU TUTT'E DUE I BERSAGLI, e si dichiara
-    #     invece di scoprirlo a ogni giro — rilievo R12-A.35, 11 agosto 2026.
+    # ⛔⭐ THE CAP OF §7.17 DOES NOT EXIST ON BOTH TARGETS, and it is declared
+    #     instead of discovered at every run — finding R12-A.35, 11 Aug 2026.
     #
-    # `[M]`: contro l'INNESTO il caso `ciao-senza-controllo` resta appeso **20 s
-    # senza che succeda niente**, e B6 esce 1.  ⭐ E ha ragione: la cura di
-    # §7.17 e' `WT_TETTO_CANALE_NS` in `src/webtransport.c`, cioe' nel prodotto.
-    # L'innesto e' l'esempio di ngtcp2 e uno strato WebTransport suo non ce l'ha
-    # — quel tetto non ha un posto dove vivere.
+    # `[M]`: against the GRAFT the case `ciao-senza-controllo` stays hanging **20 s
+    # without anything happening**, and B6 exits 1.  ⭐ And it is right: the cure of
+    # §7.17 is `WT_TETTO_CANALE_NS` in `src/webtransport.c`, that is in the product.
+    # The graft is the ngtcp2 example and does not have a WebTransport layer of
+    # its own — that cap has no place to live.
     #
-    # ⚠ E' la stessa forma di `server-in-chiusura` in B7, e si tratta allo
-    #   stesso modo: si toglie il caso E SI DICE, invece di lasciar credere che
-    #   il numeratore e il denominatore siano quelli di sempre.
-    # ⛔ Senza, B6 non si puo' CERTIFICARE contro l'innesto: il giro sano non
-    #   parte dal verde, e un banco gia' rosso col guasto e' una tautologia.
+    # ⚠ It is the same shape as `server-in-chiusura` in B7, and it is treated the
+    #   same way: the case is removed AND IT IS SAID, instead of letting one
+    #   believe that numerator and denominator are the usual ones.
+    # ⛔ Without it, B6 cannot be CERTIFIED against the graft: the healthy run
+    #   does not start from green, and a bench already red with the fault is a
+    #   tautology.
     if not b0.profilo(a.bersaglio).get("tetto_canale", True):
         tolti = [c["nome"] for c in casi if c["tetto"] == "CANALE"]
         casi = [c for c in casi if c["tetto"] != "CANALE"]
         if tolti:
-            print(f"    {GIALLO}⚠ TOLTI su «{a.bersaglio}»: {', '.join(tolti)}"
+            print(f"    {GIALLO}⚠ REMOVED on «{a.bersaglio}»: {', '.join(tolti)}"
                   f"{GRIGIO}")
-            print(f"       ⛔ Il tetto di §7.17 (sessione aperta, canale mai "
-                  f"aperto) e' del PRODOTTO:")
-            print(f"       `WT_TETTO_CANALE_NS` sta in `src/webtransport.c`, e "
-                  f"questo bersaglio non")
-            print(f"       ha uno strato WebTransport suo dove metterlo.")
-            print(f"       ⚠ Non e' «passato»: e' NON PROVATO qui, e il "
-                  f"denominatore lo dice.")
+            print(f"       ⛔ The cap of §7.17 (session open, channel never "
+                  f"opened) belongs to the PRODUCT:")
+            print(f"       `WT_TETTO_CANALE_NS` is in `src/webtransport.c`, and "
+                  f"this target does not")
+            print(f"       have a WebTransport layer of its own to put it in.")
+            print(f"       ⚠ It is not «passed»: it is NOT TESTED here, and the "
+                  f"denominator says so.")
 
-    # ⛔ ZERO CASI NON E' «TUTTI PASSATI» — la lezione di R7.15 su B5.  Un
-    #    errore di battitura nel filtro non deve avere il colore del verde.
+    # ⛔ ZERO CASES IS NOT «ALL PASSED» — the lesson of R7.15 on B5.  A typo in
+    #    the filter must not have the colour of green.
     if not casi:
-        print(f"    {ROSSO}⛔ fase «{a.fase}» + filtro «{a.solo}»: ZERO casi "
-              f"selezionati su {len(CASI)}{GRIGIO}")
-        print("       Questo NON e' un verde.  I nomi si leggono con --elenco.")
+        print(f"    {ROSSO}⛔ phase «{a.fase}» + filter «{a.solo}»: ZERO cases "
+              f"selected out of {len(CASI)}{GRIGIO}")
+        print("       This is NOT a green.  The names are read with --elenco.")
         return 2
 
-    print(f"== B6 — i tre tetti della stretta di mano · fase «{a.fase}»")
-    print(f"   {len(casi)} casi su {len(CASI)} selezionati")
-    print(f"   la scena: il client TACE — nessun byte di RCP dopo il messaggio "
-          f"che porta allo stato.")
-    print(f"   Riscontri e PING del trasporto non sono la scena, e sono "
-          f"dichiarati (§4.6).")
-    # ⛔ IL REGISTRO DEL GIRO — e per B6 non e' un di piu': fino all'11 agosto
-    #    2026 **non esisteva nessun `.jsonl` di B6**.  I suoi tre numeri —
-    #    5,0 · 60,1 · 10,0 s — vivevano soltanto a schermo e nel `README.md`,
-    #    la scena di quel giro non era ricostruibile, e quei numeri non sono
-    #    riverificabili da nessuno.
+    print(f"== B6 — the three caps of the handshake · phase «{a.fase}»")
+    print(f"   {len(casi)} cases out of {len(CASI)} selected")
+    print(f"   the scene: the client KEEPS QUIET — no RCP byte after the message "
+          f"that brings to the state.")
+    print(f"   Acknowledgements and transport PINGs are not the scene, and are "
+          f"declared (§4.6).")
+    # ⛔ THE RUN'S LOG — and for B6 it is not an extra: until 11 Aug 2026
+    #    **no B6 `.jsonl` existed**.  Its three numbers — 5.0 · 60.1 · 10.0 s —
+    #    lived only on screen and in `README.md`, the scene of that run could
+    #    not be reconstructed, and those numbers cannot be re-verified by
+    #    anyone.
     a.reg = b0.Registro(a.uscita, a.bersaglio, a.porta, a.giro or None,
                         a.md5 or None)
     prof = a.reg.profilo
-    # ⛔⭐ E LA DIFFERENZA PIU' GRANDE DI B6 FRA I DUE BERSAGLI SI DICHIARA QUI.
+    # ⛔⭐ AND B6'S BIGGEST DIFFERENCE BETWEEN THE TWO TARGETS IS DECLARED HERE.
     #
-    #     Le due fasi di B6 esistono perche' il tetto del TRASPORTO si puo'
-    #     spostare: 120 s sopra tutti e tre i tetti del protocollo («sani»,
-    #     dove a chiudere puo' essere solo RCP) e 15 s sotto i 60 s delle
-    #     credenziali («ping», dove si vede se i PING di §4.6 reggono).
+    #     B6's two phases exist because the TRANSPORT cap can be moved: 120 s
+    #     above all three protocol caps («sani», where only RCP can be the one
+    #     closing) and 15 s below the 60 s of the credentials («ping», where one
+    #     sees whether the PINGs of §4.6 hold).
     #
-    #  ⛔ SUL PRODOTTO QUEL TETTO NON SI SPOSTA: `#define IDLE_MS 30000` in
-    #     `src/trasporto.c`, e nessuna opzione lo tocca (nessun `getenv` in
-    #     tutto `src/`).  Le due fasi girano quindi contro **lo stesso** tetto,
-    #     e le conseguenze sono due e opposte:
+    #  ⛔ ON THE PRODUCT THAT CAP DOES NOT MOVE: `#define IDLE_MS 30000` in
+    #     `src/trasporto.c`, and no option touches it (no `getenv` in all of
+    #     `src/`).  The two phases therefore run against **the same** cap, and
+    #     the consequences are two and opposite:
     #
-    #       · CIAO (5 s) e ATTACCA (10 s) restano puliti: 30 > 10, a chiudere
-    #         puo' essere solo RCP, e i due numeri si leggono come prima;
-    #       · ⛔ CREDENZIALI (60 s) NON e' piu' pulito nella fase «sani»: 30 < 60,
-    #         quindi quel caso misura **la stessa cosa** del caso della fase
-    #         «ping».  ⚠ Contarli come due conferme indipendenti sarebbe contare
-    #         due volte la stessa misura, che e' la forma di denominatore gonfio
-    #         di `LEZIONI.md` §1.9 regola 4.
+    #       · CIAO (5 s) and ATTACCA (10 s) stay clean: 30 > 10, only RCP can be
+    #         the one closing, and the two numbers read as before;
+    #       · ⛔ CREDENZIALI (60 s) is NO longer clean in the «sani» phase: 30 < 60,
+    #         so that case measures **the same thing** as the case of the
+    #         «ping» phase.  ⚠ Counting them as two independent confirmations
+    #         would be counting the same measurement twice, which is the inflated
+    #         denominator shape of `LEZIONI.md` §1.9 rule 4.
     a.fasi_indipendenti = prof["idle_lungo"] != prof["idle_corto"]
     a.reg.apri_giro(
-        "B6", "il client TACE: nessun byte di RCP dopo il messaggio che porta "
-              "allo stato.  Riscontri e PING del trasporto non sono la scena, "
-              "e sono dichiarati (§4.6)",
+        "B6", "the client KEEPS QUIET: no RCP byte after the message that brings "
+              "to the state.  Acknowledgements and transport PINGs are not the scene, "
+              "and are declared (§4.6)",
         extra={"fase": a.fase, "idle_chiesto": a.idle,
                "idle_nostro_ms": int(a.idle_nostro * 1000),
                "casi": len(casi), "casi_totali": len(CASI),
                "tetti_documento": dict(TETTI_DOC),
                "tetti_codice": tetti_codice,
                "fasi_indipendenti": a.fasi_indipendenti})
-    print(f"   ⛔ BERSAGLIO: {a.bersaglio} · porta {a.porta} · binario md5 "
-          f"{(a.md5 or 'ignota')[:12]}…")
-    print(f"   il registro di questo giro: {a.uscita or '⛔ NESSUNO'}")
+    print(f"   ⛔ TARGET: {a.bersaglio} · port {a.porta} · binary md5 "
+          f"{(a.md5 or 'unknown')[:12]}…")
+    print(f"   this run's log: {a.uscita or '⛔ NONE'}")
     if not a.fasi_indipendenti:
-        print(f"   {GIALLO}⛔ SU QUESTO BERSAGLIO LE DUE FASI NON SONO "
-              f"INDIPENDENTI{GRIGIO}")
-        print(f"      Il tetto del trasporto non si sposta ({prof['idle_lungo']}"
+        print(f"   {GIALLO}⛔ ON THIS TARGET THE TWO PHASES ARE NOT "
+              f"INDEPENDENT{GRIGIO}")
+        print(f"      The transport cap does not move ({prof['idle_lungo']}"
               f" ms, IDLE_MS in src/trasporto.c),")
-        print(f"      quindi «credenziali-tetto» (fase sani) e "
-              f"«credenziali-tetto-sotto-il-trasporto» (fase ping)")
-        print(f"      misurano LA STESSA COSA: 30 s di trasporto sotto 60 s di "
-              f"protocollo.")
-        print(f"      ⚠ CIAO (5 s) e ATTACCA (10 s) restano puliti — 30 > 10.")
-        print(f"      ⛔ Contarli come due conferme sarebbe contare due volte la "
-              f"stessa misura.")
-    print(f"   tetto d'inattivita' del trasporto in vigore, LETTO DAL PARI: "
+        print(f"      so «credenziali-tetto» (phase sani) and "
+              f"«credenziali-tetto-sotto-il-trasporto» (phase ping)")
+        print(f"      measure THE SAME THING: 30 s of transport under 60 s of "
+              f"protocol.")
+        print(f"      ⚠ CIAO (5 s) and ATTACCA (10 s) stay clean — 30 > 10.")
+        print(f"      ⛔ Counting them as two confirmations would be counting the "
+              f"same measurement twice.")
+    print(f"   transport inactivity cap in force, READ FROM THE PEER: "
           f"{a.idle} ms")
-    print(f"   tetto d'inattivita' annunciato da noi: "
-          f"{a.idle_nostro * 1000:.0f} ms — ⛔ e il predefinito di aioquic "
-          f"sarebbe 60 000 ms,")
-    print(f"   cioe' proprio il tetto da misurare: qui e' scelto apposta "
-          f"(vedi IDLE_SANI nel file)\n")
+    print(f"   inactivity cap announced by us: "
+          f"{a.idle_nostro * 1000:.0f} ms — ⛔ and aioquic's default "
+          f"would be 60 000 ms,")
+    print(f"   that is exactly the cap to measure: here it is chosen on purpose "
+          f"(see IDLE_SANI in the file)\n")
 
-    # ── I TRE NUMERI, PRIMA DI MISURARE ────────────────────────────────────
-    print("   ⛔ i tre numeri che questo banco confronta:")
+    # ── THE THREE NUMBERS, BEFORE MEASURING ────────────────────────────────
+    print("   ⛔ the three numbers this bench compares:")
     disaccordo_doc_codice = []
     for n in ("CIAO", "CREDENZIALI", "ATTACCA"):
         c = tetti_codice.get(n)
         if c is None:
-            print(f"      {n:12s} documento {TETTI_DOC[n]:6d} ms · codice "
-                  f"{GIALLO}non dichiarato{GRIGIO} (--tetti-codice mancante: "
-                  f"il confronto NON si fa)")
+            print(f"      {n:12s} document {TETTI_DOC[n]:6d} ms · code "
+                  f"{GIALLO}not declared{GRIGIO} (--tetti-codice missing: "
+                  f"the comparison is NOT done)")
         elif c != TETTI_DOC[n]:
-            print(f"      {n:12s} documento {TETTI_DOC[n]:6d} ms · codice "
-                  f"{ROSSO}{c} ms — ⛔ NON COMBACIANO{GRIGIO}")
+            print(f"      {n:12s} document {TETTI_DOC[n]:6d} ms · code "
+                  f"{ROSSO}{c} ms — ⛔ THEY DO NOT MATCH{GRIGIO}")
             disaccordo_doc_codice.append(n)
         else:
-            print(f"      {n:12s} documento {TETTI_DOC[n]:6d} ms · codice "
-                  f"{c} ms · combaciano")
+            print(f"      {n:12s} document {TETTI_DOC[n]:6d} ms · code "
+                  f"{c} ms · they match")
     if "ATTACCA" in tetti_codice:
-        print(f"      ⚠ `TETTO_ATTACCA` e' stato portato da 60 000 a 10 000 ms "
-              f"il 10 agosto 2026 (R9.9)")
-        print(f"        sulla sola lettura di §4.6, senza misura: questo banco "
-              f"e' il suo primo testimone")
+        print(f"      ⚠ `TETTO_ATTACCA` was brought from 60 000 to 10 000 ms "
+              f"on 10 Aug 2026 (R9.9)")
+        print(f"        on the sole reading of §4.6, without measurement: this bench "
+              f"is its first witness")
     print()
 
     conti = {
-        "certificazioni dello strumento": [0, 0],
-        "tetti scaduti con TEMPO_SCADUTO": [0, 0],
-        "tetti scaduti NEL TEMPO GIUSTO (§4.6)": [0, 0],
-        "§3.1 punto 3 — 0x0D nella chiusura WT": [0, 0],
-        "⭐ il tetto NON scatta prima": [0, 0],
-        "B0.5 — il server ancora vivo dopo ogni caso": [0, 0],
-        "⛔ documento e codice d'accordo": [0, 0],
+        "certifications of the tool": [0, 0],
+        "caps expired with TEMPO_SCADUTO": [0, 0],
+        "caps expired IN THE RIGHT TIME (§4.6)": [0, 0],
+        "§3.1 point 3 — 0x0D in the WT closing": [0, 0],
+        "⭐ the cap does NOT trigger before": [0, 0],
+        "B0.5 — the server still alive after every case": [0, 0],
+        "⛔ document and code agree": [0, 0],
     }
     for n in ("CIAO", "CREDENZIALI", "ATTACCA"):
         if n in tetti_codice:
-            conti["⛔ documento e codice d'accordo"][1] += 1
-            conti["⛔ documento e codice d'accordo"][0] += int(
+            conti["⛔ document and code agree"][1] += 1
+            conti["⛔ document and code agree"][0] += int(
                 tetti_codice[n] == TETTI_DOC[n])
 
     guasti, risposte = 0, []
 
-    # ── LE CERTIFICAZIONI ──────────────────────────────────────────────────
-    print("== ⛔ Le certificazioni dello strumento, PRIMA di misurare")
-    print("   (REVIEWER.md §1.2: un esito negativo con lo strumento non "
-          "certificato e' ambiguo)")
+    # ── THE CERTIFICATIONS ─────────────────────────────────────────────────
+    print("== ⛔ The certifications of the tool, BEFORE measuring")
+    print("   (REVIEWER.md §1.2: a negative outcome with an uncertified "
+          "tool is ambiguous)")
 
     ok, testo, bloccato, ms_fisso = await cert_giro_completo(a)
-    conti["certificazioni dello strumento"][1] += 1
-    conti["certificazioni dello strumento"][0] += int(ok)
+    conti["certifications of the tool"][1] += 1
+    conti["certifications of the tool"][0] += int(ok)
     riga(ok, "cert-giro-completo", testo)
     if bloccato:
-        print(f"\n    {ROSSO}⛔ L'INDIRIZZO E' BANNATO (§4.4-bis) — B0.3{GRIGIO}")
-        print("       Tre autenticazioni fallite da questo indirizzo, e un")
-        print("       altro banco (B5, B8) le ha fatte poco fa: il ban dura")
-        print("       ⛔ DODICI ORE, non trenta secondi.")
-        print("       ⛔ Non e' un difetto dei tetti, ed e' precisamente il")
-        print("          falso rosso che B0.3 esiste per impedire.")
-        print("       ⛔ Le cure, e adesso sono DUE — ⚠ questa riga diceva che")
-        print("          la prima «non esiste»: era vera quando e' stata")
-        print("          scritta e ha smesso di esserlo nel giro di un'ora,")
-        print("          cioe' era la forma E5 (un fatto che era una deduzione")
-        print("          mai riverificata):")
-        print("          · ⭐ il comando di sblocco di §4.4-bis ESISTE:")
-        print("            `01-b8-sblocca.py` parla un socket Unix 0600 e dice")
-        print("            TOLTO / NON-BANNATO / «non ho parlato con nessuno».")
-        print("            Lo chiama `01-b6-lancia.sh` PRIMA del giro, e lo")
-        print("            dichiara (B0.3);")
-        print("          · **riaccendere il server** — ⛔ e su questo bersaglio")
-        print("            NON BASTA PIU': il ban del prodotto sta su FILE e")
-        print("            sopravvive al riavvio (invariante I7).  Riaccendere")
-        print("            azzera il conto in memoria, non il ban su disco.")
-        print("       ⚠ Quindi se questa riga si accende contro il prodotto, il")
-        print("         ban viene dal file — e il file di B6 lo butta lo script")
-        print("         di lancio all'inizio: guarda chi altro scrive li'.")
+        print(f"\n    {ROSSO}⛔ THE ADDRESS IS BANNED (§4.4-bis) — B0.3{GRIGIO}")
+        print("       Three failed authentications from this address, and")
+        print("       another bench (B5, B8) did them shortly before: the ban lasts")
+        print("       ⛔ TWELVE HOURS, not thirty seconds.")
+        print("       ⛔ It is not a defect of the caps, and it is precisely the")
+        print("          false red B0.3 exists to prevent.")
+        print("       ⛔ The cures, and now there are TWO — ⚠ this line said that")
+        print("          the first «does not exist»: it was true when it was")
+        print("          written and stopped being so within an hour,")
+        print("          that is it was form E5 (a fact that was a deduction")
+        print("          never re-verified):")
+        print("          · ⭐ the unblock command of §4.4-bis EXISTS:")
+        print("            `01-b8-sblocca.py` speaks a 0600 Unix socket and says")
+        print("            TOLTO / NON-BANNATO / «I talked to nobody».")
+        print("            `01-b6-lancia.sh` calls it BEFORE the run, and")
+        print("            declares it (B0.3);")
+        print("          · **restarting the server** — ⛔ and on this target")
+        print("            it is NO LONGER ENOUGH: the product's ban is on FILE and")
+        print("            survives the restart (invariant I7).  Restarting")
+        print("            resets the count in memory, not the ban on disk.")
+        print("       ⚠ So if this line lights up against the product, the")
+        print("         ban comes from the file — and B6's file is thrown away by the launch")
+        print("         script at the start: look at who else writes there.")
         return 5
     if not ok:
-        print(f"\n    {ROSSO}⛔ lo strumento non arriva in fondo a una stretta "
-              f"di mano che riesce: i tetti non si misurano{GRIGIO}")
+        print(f"\n    {ROSSO}⛔ the tool does not get to the end of a handshake "
+              f"that succeeds: the caps are not measured{GRIGIO}")
         return 4
 
-    # ⭐ Il cronometro, su un'attesa NOTA: il secondo fisso di §4.4-bis.
+    # ⭐ The stopwatch, on a KNOWN wait: the fixed second of §4.4-bis.
     ok_cr = ms_fisso is not None and 1000 <= ms_fisso <= 3000
-    conti["certificazioni dello strumento"][1] += 1
-    conti["certificazioni dello strumento"][0] += int(ok_cr)
+    conti["certifications of the tool"][1] += 1
+    conti["certifications of the tool"][0] += int(ok_cr)
     riga(ok_cr, "cert-cronometro",
-         (f"il secondo fisso di §4.4-bis misurato {ms_fisso:.0f} ms "
+         (f"the fixed second of §4.4-bis measured {ms_fisso:.0f} ms "
           f"(B3: 1074-1085 ms)" if ms_fisso is not None
-          else "⛔ non misurato: senza un'attesa nota il cronometro non e' "
-               "certificato"))
+          else "⛔ not measured: without a known wait the stopwatch is not "
+               "certified"))
     if not ok_cr:
         guasti += 1
 
     ok_cn, testo_cn, ms_cn = await cert_congedo_noto(a)
-    conti["certificazioni dello strumento"][1] += 1
-    conti["certificazioni dello strumento"][0] += int(ok_cn)
+    conti["certifications of the tool"][1] += 1
+    conti["certifications of the tool"][0] += int(ok_cn)
     riga(ok_cn, "cert-congedo-noto", testo_cn)
     if not ok_cn:
-        print(f"\n    {ROSSO}⛔ lo strumento non sa leggere un congedo NOTO "
-              f"per le due strade di §3.1{GRIGIO}")
-        print("       Ogni «nessun congedo e' arrivato» che segue sarebbe")
-        print("       ambiguo fra il server e il banco: non si misura.")
+        print(f"\n    {ROSSO}⛔ the tool cannot read a KNOWN farewell "
+              f"by the two roads of §3.1{GRIGIO}")
+        print("       Every «no farewell arrived» that follows would be")
+        print("       ambiguous between the server and the bench: it is not measured.")
         return 4
 
     if a.fase == "ping":
         ok_ms, testo_ms, ms_ms = await cert_morte_silenziosa(a, a.idle)
-        conti["certificazioni dello strumento"][1] += 1
-        conti["certificazioni dello strumento"][0] += int(ok_ms)
+        conti["certifications of the tool"][1] += 1
+        conti["certifications of the tool"][0] += int(ok_ms)
         riga(ok_ms, "cert-morte-silenziosa", testo_ms)
         if ms_ms is not None:
-            print(f"        ⚠ morta dopo {ms_ms / 1000:.1f} s, e il tetto del "
-                  f"trasporto e' {a.idle / 1000:.0f} s")
+            print(f"        ⚠ dead after {ms_ms / 1000:.1f} s, and the transport "
+                  f"cap is {a.idle / 1000:.0f} s")
         if not ok_ms:
-            print(f"\n    {ROSSO}⛔ lo strumento non sa vedere una morte senza "
-                  f"motivo: la diagnosi «i PING mancano» non e' producibile"
+            print(f"\n    {ROSSO}⛔ the tool cannot see a death without a "
+                  f"reason: the diagnosis «the PINGs are missing» cannot be produced"
                   f"{GRIGIO}")
             return 4
 
-    # ── I CASI ─────────────────────────────────────────────────────────────
-    print(f"\n== I casi")
+    # ── THE CASES ──────────────────────────────────────────────────────────
+    print(f"\n== The cases")
     for c in casi:
         es = Attesa(c["nome"])
         try:
             await c["f"](a, es)
-        except Exception as e:  # noqa: BLE001 — il tipo dell'errore E' la misura
+        except Exception as e:  # noqa: BLE001 — the error type IS the measurement
             es.errore = f"{type(e).__name__}: {e}"
 
         tetto_ms = TETTI_DOC[c["tetto"]] if c["tetto"] else None
 
         if c["atteso"] is None:
-            # ⭐ Il controllo che dice NO: il tetto non scatta prima.
-            conti["⭐ il tetto NON scatta prima"][1] += 1
+            # ⭐ The check that says NO: the cap does not trigger before.
+            conti["⭐ the cap does NOT trigger before"][1] += 1
             ok = es.pronto and es.esito == "servito" and es.errore is None
-            conti["⭐ il tetto NON scatta prima"][0] += int(ok)
+            conti["⭐ the cap does NOT trigger before"][0] += int(ok)
             riga(ok, c["nome"],
-                 (f"servito dopo {tetto_ms * 0.7 / 1000:.1f} s di silenzio "
-                  f"(tetto {tetto_ms / 1000:.0f} s)") if ok else str(es))
+                 (f"served after {tetto_ms * 0.7 / 1000:.1f} s of silence "
+                  f"(cap {tetto_ms / 1000:.0f} s)") if ok else str(es))
             if not ok:
                 guasti += 1
-                print(f"        atteso: ⭐ nessuna caduta — {c['spiega']}")
+                print(f"        expected: ⭐ no drop — {c['spiega']}")
 
         elif c["atteso"] == "risposta":
-            # ⛔ Non e' un passa/non passa: e' una domanda aperta, e la
-            #    risposta e' un numero.  Il confronto lo fa il banco (B0.4),
-            #    ma il verdetto sta in una riga sua.
+            # ⛔ It is not a pass/fail: it is an open question, and the
+            #    answer is a number.  The comparison is done by the bench (B0.4),
+            #    but the verdict is on a line of its own.
             if not es.pronto:
                 riga(False, c["nome"], str(es))
                 guasti += 1
-                print(f"        ⛔ il caso non e' mai arrivato allo stato che "
-                      f"doveva misurare: non e' una prova fallita, e' una "
-                      f"prova non fatta")
+                print(f"        ⛔ the case never got to the state it "
+                      f"had to measure: it is not a failed test, it is a "
+                      f"test not done")
             else:
-                # ⛔ «E' successo qualcosa» ha DUE strade, e in uno di questi
-                #    casi la prima non esiste: senza canale di controllo il
-                #    `CONGEDO` non ha per dove passare (§3.1 punto 2 e' proprio
-                #    condizionato a quello), e resta la chiusura della sessione
-                #    col codice del motivo (§3.1 punto 3).  Contare solo il
-                #    `CONGEDO` darebbe «non e' successo niente» a un server che
-                #    ha fatto tutto quel che poteva fare.
+                # ⛔ «Something happened» has TWO roads, and in one of these
+                #    cases the first does not exist: without a control channel
+                #    the `CONGEDO` has nowhere to go (§3.1 point 2 is precisely
+                #    conditional on that), and what remains is the closing of
+                #    the session with the reason code (§3.1 point 3).  Counting
+                #    only the `CONGEDO` would give «nothing happened» to a server
+                #    that did all it could do.
                 per_congedo = es.esito == "congedo" and es.motivo is not None
                 per_chiusura = es.codice_wt is not None
                 motivo_visto = es.motivo if per_congedo else es.codice_wt
                 strada = ("CONGEDO" if per_congedo else
-                          "chiusura della sessione" if per_chiusura else "")
+                          "session closing" if per_chiusura else "")
                 if (per_congedo or per_chiusura) and es.ms is not None:
                     if motivo_visto != TEMPO_SCADUTO:
-                        risp = (f"⛔ e' arrivato {motivo_visto:#04x}="
-                                f"{MOTIVI.get(motivo_visto, '?')} invece di "
-                                f"TEMPO_SCADUTO, dopo {es.ms / 1000:.2f} s: "
-                                f"non e' un tetto, e' un'altra cosa")
+                        risp = (f"⛔ {motivo_visto:#04x}="
+                                f"{MOTIVI.get(motivo_visto, '?')} arrived instead of "
+                                f"TEMPO_SCADUTO, after {es.ms / 1000:.2f} s: "
+                                f"it is not a cap, it is something else")
                         verso = "?"
                         guasti += 1
                     elif es.ms < 1500:
-                        risp = (f"il cronometro parte dalla FINE DEL TLS: "
-                                f"TEMPO_SCADUTO per {strada} dopo "
-                                f"{es.ms / 1000:.2f} s, cioe' col budget gia' "
-                                f"consumato")
+                        risp = (f"the stopwatch starts from the END OF TLS: "
+                                f"TEMPO_SCADUTO by {strada} after "
+                                f"{es.ms / 1000:.2f} s, that is with the budget already "
+                                f"consumed")
                         verso = "TLS"
                     else:
-                        risp = (f"il cronometro parte dall'APERTURA (sessione o "
-                                f"canale): TEMPO_SCADUTO per {strada} dopo "
+                        risp = (f"the stopwatch starts from the OPENING (session or "
+                                f"channel): TEMPO_SCADUTO by {strada} after "
                                 f"{es.ms / 1000:.2f} s")
                         verso = "APERTURA"
                 elif es.esito == "niente":
-                    risp = (f"⛔ non e' successo NIENTE in "
-                            f"{es.ms / 1000:.0f} s: in questo stato il "
-                            f"cronometro non parte affatto, e la connessione "
-                            f"resta li' appesa")
+                    risp = (f"⛔ NOTHING happened in "
+                            f"{es.ms / 1000:.0f} s: in this state the "
+                            f"stopwatch does not start at all, and the connection "
+                            f"stays there hanging")
                     verso = "MAI"
-                # ⛔ LA MORTE SILENZIOSA E' UN ROSSO DEL SERVER, NON UNA
-                #    RISPOSTA SUL DOCUMENTO — rilievo R12-A.25.
+                # ⛔ THE SILENT DEATH IS A SERVER RED, NOT AN ANSWER ABOUT THE
+                #    DOCUMENT — finding R12-A.25.
                 #
-                #    Fino all'11 agosto 2026 `esito == "morte-silenziosa"` —
-                #    che e' **la firma esatta del PING che manca**, quella per
-                #    cui la fase «ping» esiste — cadeva nell'`else` qui sotto,
-                #    non incrementava `guasti`, finiva in `risposte` con
-                #    `verso="?"`, e poi `fuori_dal_documento` lo raccoglieva e
-                #    lo script usciva **3**, stampando «i tetti si comportano
-                #    come il CODICE dice, ma §4.6 dice un'altra cosa … la cura
-                #    sta in RCP.md, non nel server».  ⛔ Cioe' il sintomo che
-                #    accusa il SERVER veniva consegnato come prova che sbaglia
-                #    il DOCUMENTO: il rosso mandato a cercare dove non c'e'
-                #    niente.  Il ramo giallo del banco sotto (righe 1190-1195)
-                #    lo diceva gia' bene per gli altri casi; qui no.
+                #    Until 11 Aug 2026 `esito == "morte-silenziosa"` — which
+                #    is **the exact signature of the missing PING**, the one
+                #    the «ping» phase exists for — fell into the `else` below,
+                #    did not increment `guasti`, ended up in `risposte` with
+                #    `verso="?"`, and then `fuori_dal_documento` collected it
+                #    and the script exited **3**, printing «the caps behave as
+                #    the CODE says, but §4.6 says something else … the cure is
+                #    in RCP.md, not in the server».  ⛔ That is, the symptom that
+                #    accuses the SERVER was handed over as proof that the
+                #    DOCUMENT is wrong: the red sent off to look where there is
+                #    nothing.  The yellow branch of the bench below (lines
+                #    1190-1195) already said it well for the other cases; here not.
                 elif es.esito == "morte-silenziosa":
-                    risp = (f"⛔ MORTA SENZA MOTIVO dopo "
-                            f"{es.ms / 1000:.1f} s, e il tetto del trasporto "
-                            f"e' {a.idle / 1000:.0f} s: e' la firma che §4.6 "
-                            f"descrive — i PING del trasporto non ci sono, e "
-                            f"a chiudere e' QUIC.  ⛔ La cura sta NEL SERVER")
+                    risp = (f"⛔ DIED WITHOUT A REASON after "
+                            f"{es.ms / 1000:.1f} s, and the transport cap "
+                            f"is {a.idle / 1000:.0f} s: it is the signature §4.6 "
+                            f"describes — the transport PINGs are not there, and "
+                            f"QUIC is the one closing.  ⛔ The cure is IN THE SERVER")
                     verso = "SERVER"
                 else:
-                    # ⛔ E QUEL CHE IL BANCO NON HA SAPUTO CLASSIFICARE HA UN
-                    #    NOME SUO, e non e' una risposta.  Un esito senza nome
-                    #    consegnato come «numero da portare nei documenti» e'
-                    #    un «non lo so» travestito da misura: il ramo che
-                    #    decide fra «cura nel documento» e «cura nel server»
-                    #    non puo' essere quello che non ha un «non lo so».
-                    risp = (f"⛔ esito che il banco NON SA CLASSIFICARE: {es}. "
-                            f"Non e' una risposta a §4.6, e non e' un rosso "
-                            f"del server: e' una misura da rifare")
+                    # ⛔ AND WHAT THE BENCH COULD NOT CLASSIFY HAS A NAME OF ITS
+                    #    OWN, and it is not an answer.  An outcome without a name
+                    #    handed over as «a number to bring into the documents» is
+                    #    an «I do not know» disguised as a measurement: the branch
+                    #    that decides between «cure in the document» and «cure in
+                    #    the server» cannot be the one without an «I do not know».
+                    risp = (f"⛔ outcome the bench CANNOT CLASSIFY: {es}. "
+                            f"It is not an answer to §4.6, and it is not a server "
+                            f"red: it is a measurement to redo")
                     verso = "NON-SO"
-                # ⛔ E LE TRE COSE SI STAMPANO IN TRE MODI DIVERSI, perche'
-                #    sono tre: un rosso del server e' un rosso (`riga`), una
-                #    risposta e' gialla (`riga_gialla`), un «non lo so» e'
-                #    giallo ma **non entra fra le risposte**.
+                # ⛔ AND THE THREE THINGS ARE PRINTED IN THREE DIFFERENT WAYS,
+                #    because they are three: a server red is a red (`riga`), an
+                #    answer is yellow (`riga_gialla`), an «I do not know» is
+                #    yellow but **does not go among the answers**.
                 if verso == "SERVER":
                     guasti += 1
                     riga(False, c["nome"], risp)
@@ -1294,25 +1296,25 @@ async def principale(a):
                 risposte.append((c["nome"], verso, risp))
 
         else:
-            # I tetti veri.
+            # The real caps.
             #
-            # ⛔⭐ E UNA RIGA IN CUI IL CONGEDO NON E' ESIGIBILE — §4.6 riga 4.
+            # ⛔⭐ AND A LINE IN WHICH THE FAREWELL IS NOT ENFORCEABLE — §4.6 line 4.
             #
-            #     Il tetto «CANALE» scade quando il canale di controllo non e'
-            #     mai stato aperto: ⛔ non c'e' dove spedire un `CONGEDO`, e
-            #     `DECISIONI.md` §7.15 — decisa l'11 agosto 2026 — dice che
-            #     li' l'obbligo CADE.  Pretenderlo qui vorrebbe dire dare
-            #     rosso a un server che fa esattamente quel che il documento
-            #     gli impone, che e' la forma di difetto piu' cara di questo
-            #     progetto (rilievo R3.3, gia' pagato su B5 e B11).
+            #     The «CANALE» cap expires when the control channel was never
+            #     opened: ⛔ there is nowhere to send a `CONGEDO`, and
+            #     `DECISIONI.md` §7.15 — decided on 11 Aug 2026 — says that
+            #     there the obligation FALLS.  Demanding it here would mean
+            #     giving red to a server that does exactly what the document
+            #     requires of it, which is the most expensive defect shape of
+            #     this project (finding R3.3, already paid for on B5 and B11).
             #
-            # ⭐ Quel che resta esigibile e' la SECONDA strada di §3.1 punto 3
-            #    — il motivo nel codice di chiusura della sessione — ed e'
-            #    controllata sotto da `ok_wt`, senza sconti.  ⚠ Cioe' questo
-            #    caso non prova di meno: prova la strada che le decisioni
-            #    dell'11 agosto rendono l'unica che arrivi sempre.
+            # ⭐ What stays enforceable is the SECOND road of §3.1 point 3
+            #    — the reason in the session closing code — and it is checked
+            #    below by `ok_wt`, with no discounts.  ⚠ That is, this case does
+            #    not test less: it tests the road that the decisions of 11
+            #    August make the only one that always arrives.
             congedo_esigibile = c["tetto"] != "CANALE"
-            conti["tetti scaduti con TEMPO_SCADUTO"][1] += 1
+            conti["caps expired with TEMPO_SCADUTO"][1] += 1
             if congedo_esigibile:
                 ok_motivo = (es.motivo == c["atteso"]
                              and es.tipo_motivo == "CONGEDO")
@@ -1320,66 +1322,67 @@ async def principale(a):
                 ok_motivo = es.codice_wt == c["atteso"]
             if not es.pronto:
                 ok_motivo = False
-            conti["tetti scaduti con TEMPO_SCADUTO"][0] += int(ok_motivo)
+            conti["caps expired with TEMPO_SCADUTO"][0] += int(ok_motivo)
 
-            conti["tetti scaduti NEL TEMPO GIUSTO (§4.6)"][1] += 1
-            # ⛔ «Nel tempo giusto» vale solo su un CONGEDO: la finestra
-            #    d'attesa dura piu' del tetto, quindi un «niente» porta con se'
-            #    un numero grande che non e' un tempo di scadenza.  Senza
-            #    questa condizione un caso in cui non succede niente potrebbe
-            #    cadere dentro la tolleranza di un ALTRO tetto e stampare un
-            #    verde — la forma E8, «niente» che prende l'aspetto di un dato.
-            # ⚠ E con il canale mai aperto l'esito NON e' «congedo»: e'
-            #   «sessione-chiusa», che qui e' la cosa giusta e non un ripiego.
+            conti["caps expired IN THE RIGHT TIME (§4.6)"][1] += 1
+            # ⛔ «In the right time» holds only on a CONGEDO: the wait window
+            #    lasts longer than the cap, so a «nothing» carries with it a big
+            #    number that is not an expiry time.  Without this condition a
+            #    case in which nothing happens could fall inside the tolerance
+            #    of ANOTHER cap and print a green — form E8, «nothing» taking
+            #    on the look of a datum.
+            # ⚠ And with the channel never opened the outcome is NOT «congedo»:
+            #   it is «sessione-chiusa», which here is the right thing and not a
+            #   fallback.
             esiti_buoni = ("congedo",) if congedo_esigibile \
                 else ("congedo", "sessione-chiusa")
             ok_tempo = (es.esito in esiti_buoni and es.ms is not None
                         and es.pronto and dentro_tolleranza(es.ms, tetto_ms))
-            conti["tetti scaduti NEL TEMPO GIUSTO (§4.6)"][0] += int(ok_tempo)
+            conti["caps expired IN THE RIGHT TIME (§4.6)"][0] += int(ok_tempo)
 
-            conti["§3.1 punto 3 — 0x0D nella chiusura WT"][1] += 1
+            conti["§3.1 point 3 — 0x0D in the WT closing"][1] += 1
             ok_wt = es.codice_wt == c["atteso"]
-            conti["§3.1 punto 3 — 0x0D nella chiusura WT"][0] += int(ok_wt)
+            conti["§3.1 point 3 — 0x0D in the WT closing"][0] += int(ok_wt)
 
             ok = ok_motivo and ok_tempo and ok_wt
             riga(ok, c["nome"], str(es))
             if not ok:
                 guasti += 1
-                print(f"        atteso: {c['atteso']:#04x} "
-                      f"{MOTIVI.get(c['atteso'], '?')} a "
+                print(f"        expected: {c['atteso']:#04x} "
+                      f"{MOTIVI.get(c['atteso'], '?')} at "
                       f"{tetto_ms / 1000:.0f} s "
-                      f"(tolleranza -{TOLL_GIU / 1000:.1f} / "
+                      f"(tolerance -{TOLL_GIU / 1000:.1f} / "
                       f"+{TOLL_SU / 1000:.1f} s)")
                 print(f"        {c['spiega']}")
                 if not es.pronto:
-                    print(f"        ⛔ e il caso NON E' MAI ARRIVATO allo stato "
-                          f"da misurare: non e' una prova fallita, e' una prova "
-                          f"non fatta")
+                    print(f"        ⛔ and the case NEVER GOT to the state "
+                          f"to measure: it is not a failed test, it is a test "
+                          f"not done")
                 elif es.esito == "morte-silenziosa":
-                    print(f"        ⛔ MORTA SENZA MOTIVO dopo "
-                          f"{es.ms / 1000:.1f} s, e il tetto del trasporto e' "
+                    print(f"        ⛔ DIED WITHOUT A REASON after "
+                          f"{es.ms / 1000:.1f} s, and the transport cap is "
                           f"{a.idle / 1000:.0f} s:")
-                    print(f"           e' la firma che §4.6 descrive — i PING "
-                          f"del trasporto non ci sono, e a chiudere e' QUIC")
+                    print(f"           it is the signature §4.6 describes — the "
+                          f"transport PINGs are not there, and QUIC is the one closing")
                 elif es.esito == "niente":
-                    print(f"        ⛔ NON E' SUCCESSO NIENTE per "
-                          f"{es.ms / 1000 if es.ms else 0:.0f} s: il tetto non "
-                          f"e' scaduto, e la connessione resta li' appesa")
+                    print(f"        ⛔ NOTHING HAPPENED for "
+                          f"{es.ms / 1000 if es.ms else 0:.0f} s: the cap did not "
+                          f"expire, and the connection stays there hanging")
                 elif es.ms is not None and not ok_tempo:
                     altri = [n for n, v in TETTI_DOC.items()
                              if dentro_tolleranza(es.ms, v)]
                     if altri:
-                        print(f"        ⚠ i {es.ms / 1000:.1f} s misurati "
-                              f"combaciano invece col tetto di «{altri[0]}» "
+                        print(f"        ⚠ the {es.ms / 1000:.1f} s measured "
+                              f"match instead the cap of «{altri[0]}» "
                               f"({TETTI_DOC[altri[0]] / 1000:.0f} s):")
-                        print(f"           e' la forma del difetto che si copia "
-                              f"dalla riga precedente (R9.9)")
+                        print(f"           it is the shape of the defect copied "
+                              f"from the previous line (R9.9)")
             if es.dettaglio:
-                print(f"        dettaglio dal corpo: «{es.dettaglio}»")
+                print(f"        detail from the body: «{es.dettaglio}»")
 
-        # ⛔ Il fatto va nel registro, e porta il bersaglio: un numero senza
-        #    il nome del server che l'ha prodotto e' un numero di due cose
-        #    diverse messe in fila.
+        # ⛔ The fact goes into the log, and it carries the target: a number
+        #    without the name of the server that produced it is a number of two
+        #    different things put in a row.
         a.reg.scrivi({"tipo": "caso", "nome": c["nome"], "fase": c["fase"],
                       "tetto": c["tetto"], "atteso": c["atteso"],
                       "ms": es.ms, "esito": es.esito, "motivo": es.motivo,
@@ -1387,242 +1390,243 @@ async def principale(a):
                       "pronto": es.pronto, "fase_raggiunta": es.fase,
                       "errore": es.errore,
                       "tetto_documento_ms": tetto_ms,
-                      # ⛔ E la riga dice se questa misura era PULITA: sul
-                      #    prodotto il caso delle credenziali in fase «sani» non
-                      #    lo e', perche' il tetto del trasporto sta sotto.
+                      # ⛔ And the line says whether this measurement was CLEAN: on
+                      #    the product the credentials case in the «sani» phase is
+                      #    not, because the transport cap is below.
                       "pulita": bool(a.fasi_indipendenti
                                      or c["tetto"] != "CREDENZIALI")})
 
-        # ⛔ B0.5, dopo OGNI caso.
-        conti["B0.5 — il server ancora vivo dopo ogni caso"][1] += 1
+        # ⛔ B0.5, after EVERY case.
+        conti["B0.5 — the server still alive after every case"][1] += 1
         vivo, perche = await ancora_vivo(a)
-        conti["B0.5 — il server ancora vivo dopo ogni caso"][0] += int(vivo)
+        conti["B0.5 — the server still alive after every case"][0] += int(vivo)
         if not vivo:
-            riga(False, "", f"⛔ IL SERVER NON RISPONDE PIU' dopo "
+            riga(False, "", f"⛔ THE SERVER NO LONGER ANSWERS after "
                             f"«{c['nome']}»: {perche}")
             guasti += 1
-            print(f"\n    {ROSSO}⛔ il banco si ferma: senza un server non "
-                  f"c'e' niente da misurare{GRIGIO}")
+            print(f"\n    {ROSSO}⛔ the bench stops: without a server there "
+                  f"is nothing to measure{GRIGIO}")
             break
 
-    # ── L'ESITO ────────────────────────────────────────────────────────────
+    # ── THE OUTCOME ────────────────────────────────────────────────────────
     print()
-    print("    == quel che questo giro ha davvero guardato")
+    print("    == what this run really looked at")
     for che, (buoni, tot) in conti.items():
         if tot == 0:
-            # ⛔ Un denominatore a zero si DICHIARA: «nessuno ha guardato» e
-            #    «tutti passati» hanno lo stesso aspetto se si tace.
-            print(f"    --  {che:46s} nessun caso lo ha sollecitato")
+            # ⛔ A zero denominator is DECLARED: «nobody looked» and «all
+            #    passed» look the same if one keeps quiet.
+            print(f"    --  {che:46s} no case triggered it")
             continue
         col = VERDE if buoni == tot else ROSSO
-        print(f"    {col}{buoni:3d} su {tot:3d}{GRIGIO}  {che}")
+        print(f"    {col}{buoni:3d} out of {tot:3d}{GRIGIO}  {che}")
 
-    # ⛔ E LE RISPOSTE SI SEPARANO DAI «NON LO SO» — rilievo R12-A.25.
-    #    Un esito che il banco non ha saputo classificare non e' «un numero da
-    #    portare nei documenti»: e' una misura da rifare, e stamparlo nello
-    #    stesso elenco delle risposte lo faceva pesare come una risposta.
+    # ⛔ AND THE ANSWERS ARE SEPARATED FROM THE «I DO NOT KNOW» — finding R12-A.25.
+    #    An outcome the bench could not classify is not «a number to bring into
+    #    the documents»: it is a measurement to redo, and printing it in the same
+    #    list as the answers made it weigh like an answer.
     non_classificati = [r for r in risposte if r[1] == "NON-SO"]
     risposte_vere = [r for r in risposte if r[1] not in ("NON-SO", "SERVER")]
     if risposte_vere:
         print()
-        print("    == ⛔ le domande aperte a cui questo giro ha RISPOSTO")
-        print("       (non sono passa/non passa: sono numeri da portare nei "
-               "documenti)")
+        print("    == ⛔ the open questions this run has ANSWERED")
+        print("       (they are not pass/fail: they are numbers to bring into the "
+               "documents)")
         for nome, verso, risp in risposte_vere:
             print(f"    ??  {nome:34s} {risp}")
     if non_classificati:
         print()
-        print(f"    == ⛔ e {len(non_classificati)} casi che il banco NON HA "
-              f"SAPUTO CLASSIFICARE")
-        print("       ⚠ Non entrano fra le risposte: un «non lo so» consegnato "
-              "come risposta")
-        print("         manderebbe la cura nel posto sbagliato.")
+        print(f"    == ⛔ and {len(non_classificati)} cases the bench COULD NOT "
+              f"CLASSIFY")
+        print("       ⚠ They do not go among the answers: an «I do not know» handed over "
+              "as an answer")
+        print("         would send the cure to the wrong place.")
         for nome, _, risp in non_classificati:
             print(f"    ?!  {nome:34s} {risp}")
 
-    # ⛔ TRE ESITI DIVERSI, PERCHE' SONO TRE COSE DIVERSE — ed e' il punto di
-    #    questo banco.
+    # ⛔ THREE DIFFERENT OUTCOMES, BECAUSE THEY ARE THREE DIFFERENT THINGS — and it
+    #    is the point of this bench.
     #
-    #      1  il SERVER non rispetta §4.6;
-    #      3  il server fa quel che il CODICE dice, ma il DOCUMENTO dice
-    #         un'altra cosa: la cura sta nel documento;
-    #      0  documento, codice e filo dicono la stessa cosa.
+    #      1  the SERVER does not respect §4.6;
+    #      3  the server does what the CODE says, but the DOCUMENT says
+    #         something else: the cure is in the document;
+    #      0  document, code and wire say the same thing.
     print()
-    # ⛔ E il verdetto va nel registro col bersaglio dentro, o fra sei mesi «i
-    #    tre tetti scadono col motivo giusto» non dira' su quale server.  ⚠ E'
-    #    esattamente quel che e' successo ai tre numeri del 10 agosto — 5,0 ·
-    #    60,1 · 10,0 s — che non hanno nessun registro e non sono riverificabili.
+    # ⛔ And the verdict goes into the log with the target inside, or in six months
+    #    «the three caps expire with the right reason» will not say on which
+    #    server.  ⚠ It is exactly what happened to the three numbers of 10 August
+    #    — 5.0 · 60.1 · 10.0 s — which have no log and cannot be re-verified.
     a.reg.scrivi({"tipo": "verdetto", "fase": a.fase, "guasti": guasti,
                   "risposte": [[n_, v_, r_] for n_, v_, r_ in risposte],
                   "fasi_indipendenti": a.fasi_indipendenti,
                   "conti": {k: v for k, v in conti.items()}})
     print(f"    --  {a.reg.riassunto()}")
     if guasti:
-        print(f"    {ROSSO}⛔ B6 «{a.fase}» contro «{a.bersaglio}»: {guasti} "
-              f"punti non passano{GRIGIO}")
+        print(f"    {ROSSO}⛔ B6 «{a.fase}» against «{a.bersaglio}»: {guasti} "
+              f"points do not pass{GRIGIO}")
         return 1
 
-    # ⛔ E L'ELENCO E' PER NOMI AMMESSI, NON PER ESCLUSIONE — rilievo R12-A.25.
-    #    Era `[r for r in risposte if r[1] != "TLS"]`: qualunque `verso` nuovo
-    #    — compreso il `"?"` che il banco metteva quando non aveva capito —
-    #    finiva automaticamente fra le prove che il DOCUMENTO sbaglia.  Una
-    #    lista per esclusione ingrossa da sola ogni volta che qualcuno aggiunge
-    #    un caso, e nella direzione che accusa il documento.
+    # ⛔ AND THE LIST IS BY ALLOWED NAMES, NOT BY EXCLUSION — finding R12-A.25.
+    #    It was `[r for r in risposte if r[1] != "TLS"]`: any new `verso`
+    #    — including the `"?"` the bench put when it had not understood —
+    #    automatically ended up among the proofs that the DOCUMENT is wrong.  A
+    #    list by exclusion grows by itself every time someone adds a case, and
+    #    in the direction that accuses the document.
     fuori_dal_documento = [r for r in risposte if r[1] in ("APERTURA", "MAI")]
     if disaccordo_doc_codice:
-        print(f"    {ROSSO}⛔ B6 «{a.fase}»: il filo si comporta bene, ma "
-              f"DOCUMENTO e CODICE non dicono lo stesso numero{GRIGIO}")
+        print(f"    {ROSSO}⛔ B6 «{a.fase}»: the wire behaves well, but "
+              f"DOCUMENT and CODE do not say the same number{GRIGIO}")
         for n in disaccordo_doc_codice:
-            print(f"       {n}: §4.6 dice {TETTI_DOC[n]} ms, "
-                  f"`banchi/rcp/rcp.c` dice {tetti_codice[n]} ms")
-        print("       ⛔ La cura non e' scegliere: e' che uno dei due si "
-              "aggiorni, con la data e la fonte (CODER.md §5).")
+            print(f"       {n}: §4.6 says {TETTI_DOC[n]} ms, "
+                  f"`banchi/rcp/rcp.c` says {tetti_codice[n]} ms")
+        print("       ⛔ The cure is not choosing: it is that one of the two gets "
+              "updated, with the date and the source (CODER.md §5).")
         return 3
     if fuori_dal_documento:
-        print(f"    {GIALLO}⛔ B6 «{a.fase}»: i tetti si comportano come il "
-              f"CODICE dice, ma §4.6 riga 1 dice un'altra cosa{GRIGIO}")
+        print(f"    {GIALLO}⛔ B6 «{a.fase}»: the caps behave as the "
+              f"CODE says, but §4.6 line 1 says something else{GRIGIO}")
         for nome, verso, risp in fuori_dal_documento:
             print(f"       {nome}: {risp}")
-        print("       §4.6 dice «stretta di mano TLS finita», e il cronometro "
-              "parte da un altro istante.")
-        print("       ⛔ E' la `[?]` R3.27, e adesso ha una misura: «§4.6 "
-              "cambia di una parola»,")
-        print("          oppure il cronometro cambia istante.  Non e' il rosso "
-              "del server.")
+        print("       §4.6 says «TLS handshake finished», and the stopwatch "
+              "starts from another instant.")
+        print("       ⛔ It is the `[?]` R3.27, and now it has a measurement: «§4.6 "
+              "changes by one word»,")
+        print("          or the stopwatch changes instant.  It is not the server's "
+              "red.")
 
-        # ⛔ E LE DUE RISPOSTE NON SONO LA STESSA, E LA SECONDA E' PIU' GRAVE.
+        # ⛔ AND THE TWO ANSWERS ARE NOT THE SAME, AND THE SECOND IS MORE SERIOUS.
         #
-        #    «APERTURA» dice quale parola cambiare.  «MAI» dice che **cambiare
-        #    la parola non basta**: se il cronometro parte dall'apertura del
-        #    canale, una sessione WebTransport aperta e un canale mai aperto
-        #    non hanno addosso NESSUN tetto — cioe' proprio la connessione che
-        #    §4.6 esiste per non lasciare li' appesa, sopravvissuta alla cura.
-        #    Un banco che stampasse una riga sola per le due risposte
-        #    consegnerebbe la meta' facile.
+        #    «APERTURA» says which word to change.  «MAI» says that **changing
+        #    the word is not enough**: if the stopwatch starts from the opening of
+        #    the channel, an open WebTransport session and a channel never opened
+        #    have NO cap on them — that is precisely the connection that §4.6
+        #    exists not to leave hanging, surviving the cure.  A bench that
+        #    printed a single line for the two answers would hand over the easy
+        #    half.
         mai = [r for r in risposte if r[1] == "MAI"]
         if mai:
             print()
-            print(f"    {ROSSO}⛔ E LA SECONDA RISPOSTA, CHE CAMBIARE LA PAROLA "
-                  f"NON CHIUDE{GRIGIO}")
+            print(f"    {ROSSO}⛔ AND THE SECOND ANSWER, WHICH CHANGING THE WORD "
+                  f"DOES NOT CLOSE{GRIGIO}")
             for nome, _, risp in mai:
                 print(f"       {nome}: {risp}")
-            print("       Se il cronometro parte dall'apertura del CANALE, chi")
-            print("       apre la sessione e non apre mai il canale non ha")
-            print("       addosso nessun tetto: e' la connessione che «tiene un")
-            print("       posto e non lo dichiara a nessuno» (§4.6, prima riga")
-            print("       del riquadro), viva e senza scadenza.")
-            print("       ⛔ §4.6 non ha una riga per questo stato: la tabella")
-            print("          comincia da «CIAO ricevuto», e prima del CIAO c'e'")
-            print("          uno stato in cui il server non conta niente.")
+            print("       If the stopwatch starts from the opening of the CHANNEL, whoever")
+            print("       opens the session and never opens the channel has no")
+            print("       cap on them: it is the connection that «holds a")
+            print("       place and declares it to nobody» (§4.6, first line")
+            print("       of the box), alive and without expiry.")
+            print("       ⛔ §4.6 has no line for this state: the table")
+            print("          starts from «CIAO received», and before the CIAO there is")
+            print("          a state in which the server counts nothing.")
         return 3
-    # ⛔ E IL «NON LO SO» HA UN ESITO SUO, IL 6 — rilievo R12-A.25.
-    #    Non e' 1 («il server sbaglia») e non e' 3 («il documento sbaglia»):
-    #    sono le due cose fra cui il banco non e' riuscito a scegliere, e
-    #    sceglierne una a caso e' il rosso mandato dove non c'e' niente.
+    # ⛔ AND THE «I DO NOT KNOW» HAS AN OUTCOME OF ITS OWN, 6 — finding R12-A.25.
+    #    It is not 1 («the server is wrong») and it is not 3 («the document is
+    #    wrong»): they are the two things between which the bench could not
+    #    choose, and choosing one at random is the red sent where there is nothing.
     if non_classificati:
-        print(f"    {GIALLO}⛔ B6 «{a.fase}»: {len(non_classificati)} casi "
-              f"hanno prodotto un esito che il banco non sa classificare"
+        print(f"    {GIALLO}⛔ B6 «{a.fase}»: {len(non_classificati)} cases "
+              f"produced an outcome the bench cannot classify"
               f"{GRIGIO}")
-        print("       Non e' un rosso del server e non e' un rosso del "
-              "documento: e' una")
-        print("       misura da rifare, e finche' resta cosi' B6 non ha "
-              "risposto alla R3.27.")
+        print("       It is not a server red and it is not a document "
+              "red: it is a")
+        print("       measurement to redo, and as long as it stays so B6 has not "
+              "answered R3.27.")
         return 6
-    print(f"    {VERDE}⭐ B6 «{a.fase}» passa, e i numeri qui sopra dicono su "
-          f"che cosa{GRIGIO}")
+    print(f"    {VERDE}⭐ B6 «{a.fase}» passes, and the numbers above say on "
+          f"what{GRIGIO}")
     return 0
 
 
 # ---------------------------------------------------------------------------
-# ⛔ LA PAROLA D'ORDINE NON DEVE PASSARE DALLA RIGA DI COMANDO — difetto **D12**,
-#    curato il 12 agosto 2026.
+# ⛔ THE PASSWORD MUST NOT GO THROUGH THE COMMAND LINE — defect **D12**,
+#    cured on 12 Aug 2026.
 #
-# ⛔ `--parola` finisce nell'`argv` del processo, cioe' in `/proc/<pid>/cmdline`,
-#    che su Linux e' **leggibile da chiunque**: un `ps` lanciato da un altro
-#    utente durante il giro la stampa per intero.
+# ⛔ `--parola` ends up in the process `argv`, that is in `/proc/<pid>/cmdline`,
+#    which on Linux is **readable by anyone**: a `ps` launched by another user
+#    during the run prints it in full.
 #
-# ⭐ La strada buona esisteva gia' in casa e questa e' la sua estensione, non un
-#    secondo modo: `01-b10-secondo-utente.py` prende `--parola-file`, un file
-#    `0600` che il lanciatore scrive con `printf` — un **builtin** della shell,
-#    quindi nemmeno la scrittura passa per un processo con la parola in `argv` —
-#    e cancella con una `trap`.
+# ⭐ The good road already existed in the house and this is its extension, not a
+#    second way: `01-b10-secondo-utente.py` takes `--parola-file`, a `0600` file
+#    that the launcher writes with `printf` — a shell **builtin**, so not even
+#    the writing goes through a process with the password in `argv` — and
+#    deletes with a `trap`.
 #
-# ⚠ E `--parola` NON e' stata tolta, e non per pigrizia: dei chiamanti non
-#   ancora curati la passano ancora, e romperli **in silenzio** sarebbe peggio
-#   del difetto.  ⛔ Ma il ripiego si DICHIARA (`CODER.md` §4.2): un ripiego
-#   silenzioso produce due comportamenti sotto la stessa etichetta, che e' la
-#   forma **E2** — e qui i due comportamenti sono «il segreto e' protetto» e
-#   «il segreto e' pubblico».  ⇒ chi passa `--parola` se lo sente dire.
+# ⚠ And `--parola` was NOT removed, and not out of laziness: some callers not
+#   yet cured still pass it, and breaking them **silently** would be worse than
+#   the defect.  ⛔ But the fallback is DECLARED (`CODER.md` §4.2): a silent
+#   fallback produces two behaviours under the same label, which is form
+#   **E2** — and here the two behaviours are «the secret is protected» and
+#   «the secret is public».  ⇒ whoever passes `--parola` gets told.
 #
-# ⚠ E l'avviso guarda `sys.argv`, non il valore: il predefinito scritto nel
-#   codice non sta in nessuna riga di comando, e dirgli il contrario sarebbe un
-#   allarme che si impara a ignorare.
+# ⚠ And the warning looks at `sys.argv`, not at the value: the default written
+#   in the code is in no command line, and telling it otherwise would be an
+#   alarm one learns to ignore.
 def parola_dagli_argomenti(a):
-    """La parola d'ordine: da `--parola-file` se c'e', da `--parola` altrimenti.
+    """The password: from `--parola-file` if present, from `--parola` otherwise.
 
-    ⛔ E i tre modi di fallire si distinguono: «non si legge», «e' leggibile da
-    altri» e «e' vuoto» hanno tre cure diverse, e un file vuoto NON e' una
-    parola vuota — e' «il lanciatore non l'ha scritta» (`LEZIONI.md` §1.9).
+    ⛔ And the three ways of failing are told apart: «cannot be read», «is
+    readable by others» and «is empty» have three different cures, and an empty
+    file is NOT an empty password — it is «the launcher did not write it»
+    (`LEZIONI.md` §1.9).
     """
     percorso = getattr(a, "parola_file", "") or ""
     if percorso:
         try:
             modo = os.stat(percorso).st_mode & 0o077
         except OSError as e:
-            print(f"   ⛔ il file della parola «{percorso}» non si legge: {e}")
+            print(f"   ⛔ the password file «{percorso}» cannot be read: {e}")
             sys.exit(2)
         if modo:
-            print(f"   ⚠ «{percorso}» e' leggibile da altri (bit {modo:o}): il "
-                  f"segreto non e' protetto")
+            print(f"   ⚠ «{percorso}» is readable by others (bits {modo:o}): the "
+                  f"secret is not protected")
         try:
             with open(percorso, encoding="utf-8") as f:
                 parola = f.read().strip("\n")
         except OSError as e:
-            print(f"   ⛔ la parola non si legge da «{percorso}»: {e}")
+            print(f"   ⛔ the password cannot be read from «{percorso}»: {e}")
             sys.exit(2)
         if not parola:
-            print(f"   ⛔ il file della parola «{percorso}» e' VUOTO.  Non e'")
-            print("      «la parola e' vuota»: e' «il lanciatore non l'ha scritta».")
+            print(f"   ⛔ the password file «{percorso}» is EMPTY.  It is not")
+            print("      «the password is empty»: it is «the launcher did not write it».")
             sys.exit(2)
         return parola
     if any(x == "--parola" or x.startswith("--parola=") for x in sys.argv[1:]):
-        print("   ⚠ D12: la parola d'ordine e' arrivata da `--parola`, cioe' dalla")
-        print("     RIGA DI COMANDO: sta in `/proc/<pid>/cmdline` e la vede chiunque")
-        print("     faccia `ps` su questa macchina.  Il giro prosegue — il chiamante")
-        print("     non e' stato curato — ma non e' un giro riservato.")
-        print("     ⭐ La cura: `--parola-file <file 0600>`, come in B10.")
+        print("   ⚠ D12: the password arrived from `--parola`, that is from the")
+        print("     COMMAND LINE: it is in `/proc/<pid>/cmdline` and anyone who")
+        print("     runs `ps` on this machine sees it.  The run goes on — the caller")
+        print("     has not been cured — but it is not a private run.")
+        print("     ⭐ The cure: `--parola-file <0600 file>`, as in B10.")
     return a.parola
 
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(
-        description="B6 — i tre tetti della stretta di mano (RCP.md §4.6)")
+        description="B6 — the three caps of the handshake (RCP.md §4.6)")
     p.add_argument("--indirizzo", default="192.168.0.2")
-    # ⛔ Nessun predefinito che nomini un bersaglio: 7447 e' l'innesto e 7448
-    #    il prodotto.  La passa `01-b0-bersaglio.sh`.
+    # ⛔ No default that names a target: 7447 is the graft and 7448
+    #    the product.  It is passed by `01-b0-bersaglio.sh`.
     p.add_argument("--porta", type=int, default=0)
     p.add_argument("--utente", default="prova")
     p.add_argument("--parola", default="parola-di-prova")
-    # ⛔ D12: la strada che NON passa da `ps`.  Vince su `--parola` se ci sono
-    #    tutt'e due — un file scritto apposta e' sempre piu' recente di un
-    #    predefinito.
+    # ⛔ D12: the road that does NOT go through `ps`.  It wins over `--parola` if
+    #    both are there — a file written on purpose is always more recent than a
+    #    default.
     p.add_argument("--parola-file", default="",
-                   help="file 0600 con la sola parola d'ordine (⭐ D12: cosi' "
-                        "non finisce in `ps`)")
+                   help="0600 file with only the password (⭐ D12: this way "
+                        "it does not end up in `ps`)")
     p.add_argument("--fase", default="sani", choices=["sani", "ping"],
-                   help="sani = trasporto largo · ping = trasporto piu' corto "
-                        "del tetto del protocollo")
+                   help="sani = wide transport · ping = transport shorter "
+                        "than the protocol cap")
     p.add_argument("--idle", type=int, default=120000,
-                   help="il tetto d'inattivita' del trasporto IN VIGORE, letto "
-                        "dal pari da 01-b6-lancia.sh — serve alle diagnosi")
+                   help="the transport inactivity cap IN FORCE, read "
+                        "from the peer by 01-b6-lancia.sh — needed for the diagnoses")
     p.add_argument("--tetti-codice", default="",
-                   help="CIAO=5000,CREDENZIALI=60000,ATTACCA=10000 — i "
-                        "#define letti da banchi/rcp/rcp.c")
+                   help="CIAO=5000,CREDENZIALI=60000,ATTACCA=10000 — the "
+                        "#define read from banchi/rcp/rcp.c")
     p.add_argument("--solo", default="",
-                   help="gira solo i casi che contengono questo")
+                   help="run only the cases that contain this")
     b0.aggiungi_argomenti(p)
     p.add_argument("--elenco", action="store_true",
-                   help="stampa le previsioni senza misurare")
+                   help="print the predictions without measuring")
     a = p.parse_args()
     a.parola = parola_dagli_argomenti(a)
     sys.exit(asyncio.run(principale(a)))

@@ -1,20 +1,20 @@
 #!/bin/bash
 #
-# 17-t1c-guarda.sh — fase 17, T1c: un Chrome VERO sul server entra nella VM e
-# guarda il desktop (`17-t1c-browser.py`), in un labwc senza schermo SUO.
+# 17-t1c-guarda.sh — phase 17, T1c: a REAL Chrome on the server enters the VM and
+# looks at the desktop (`17-t1c-browser.py`), in a headless labwc of ITS OWN.
 #
-#   (sul server, come nicfio)  bash 17-t1c-guarda.sh <macchina> <porta-inoltrata> [chrome|firefox]
-#   es.  bash 17-t1c-guarda.sh debian13-gnome 7511
-#   T1C_PROGRAMMA / T1C_EVIDENZE: un altro programma con le stesse opzioni (T8: t8-browser.py, che
-#   resta collegato durante l'aggiornamento) e un'altra cartella delle evidenze.
+#   (on the server, as nicfio)  bash 17-t1c-guarda.sh <machine> <forwarded-port> [chrome|firefox]
+#   e.g.  bash 17-t1c-guarda.sh debian13-gnome 7511
+#   T1C_PROGRAMMA / T1C_EVIDENZE: another program with the same options (T8: t8-browser.py, which
+#   stays connected during the upgrade) and another evidence folder.
 #
-# ⚠ 127.0.0.1 e non «localhost»: l'inoltro UDP di QEMU ascolta solo in IPv4, e
-#   Chrome manda il QUIC a ::1 ⇒ `QUIC_PACKET_WRITE_ERROR -102` e «Opening
-#   handshake failed» mentre la pagina (TCP) si apre lo stesso.  `[M]` 29 set.
-# ⚠ Il labwc e' SUO (non quelli di 15-compositori.sh, che servono alla suite)
-#   e rende sull'INTEGRATA Intel: la Radeon non si tocca.
-# ⚠ Un browser alla volta nel labwc: una finestra di Chrome coperta non si
-#   fotografa (15-compositori.sh).
+# ⚠ 127.0.0.1 and not "localhost": QEMU's UDP forwarding listens only on IPv4, and
+#   Chrome sends QUIC to ::1 ⇒ `QUIC_PACKET_WRITE_ERROR -102` and "Opening
+#   handshake failed" while the page (TCP) opens anyway.  `[M]` 29 Sep.
+# ⚠ The labwc is ITS OWN (not those of 15-compositori.sh, which serve the suite)
+#   and renders on the Intel INTEGRATED GPU: the Radeon is not touched.
+# ⚠ One browser at a time in the labwc: a covered Chrome window cannot be
+#   photographed (15-compositori.sh).
 set -u
 m=${1:?macchina}; p=${2:?porta}; b=${3:-chrome}
 QUI=$(cd "$(dirname "$0")" && pwd)
@@ -27,7 +27,7 @@ if ! { [ -f "$T1C/labwc.pid" ] && kill -0 "$(cat "$T1C/labwc.pid")" 2>/dev/null;
 	for r in /sys/class/drm/renderD*; do
 		[ "$(basename "$(readlink -f "$r/device/driver")")" = i915 ] && INTEL=/dev/dri/$(basename "$r")
 	done
-	[ -n "$INTEL" ] || { echo "⛔ nessun nodo Intel: non accendo labwc sulla scheda sbagliata"; exit 2; }
+	[ -n "$INTEL" ] || { echo "⛔ no Intel node: not starting labwc on the wrong GPU"; exit 2; }
 	prima=$(ls "$R" | grep -E '^wayland-[0-9]+$' | sort)
 	env -u WAYLAND_DISPLAY -u DISPLAY WLR_BACKENDS=headless WLR_LIBINPUT_NO_DEVICES=1 \
 		WLR_RENDER_DRM_DEVICE="$INTEL" XDG_RUNTIME_DIR="$R" setsid labwc </dev/null >"$T1C/labwc.log" 2>&1 &
@@ -37,7 +37,7 @@ if ! { [ -f "$T1C/labwc.pid" ] && kill -0 "$(cat "$T1C/labwc.pid")" 2>/dev/null;
 		n=$(comm -13 <(echo "$prima") <(ls "$R" | grep -E '^wayland-[0-9]+$' | sort) | head -1)
 		[ -n "$n" ] && break; sleep 0.25
 	done
-	[ -n "$n" ] || { echo "⛔ labwc non ha aperto un socket"; exit 2; }
+	[ -n "$n" ] || { echo "⛔ labwc did not open a socket"; exit 2; }
 	echo "$n" >"$T1C/labwc.sock"; sleep 0.5
 	u=$(WAYLAND_DISPLAY=$n wlr-randr | awk 'NR==1{print $1}')
 	WAYLAND_DISPLAY=$n wlr-randr --output "$u" --custom-mode 2560x1440

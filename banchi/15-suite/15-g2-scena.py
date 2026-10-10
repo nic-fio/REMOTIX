@@ -1,37 +1,37 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-g2-scena — LA SCENA E GLI ATTREZZI COMUNI DEL GRUPPO G2 (mouse e tastiera)
-    usata da 15-f004 (mouse), 15-f007 (tasti speciali), 15-f009 (accenti, AltGr).
+15-g2-scena — THE SCENE AND THE COMMON TOOLS OF GROUP G2 (mouse and keyboard)
+    used by 15-f004 (mouse), 15-f007 (special keys), 15-f009 (accents, AltGr).
 
-⭐ LA SCENA: una pagina nota, servita da un piccolo servitore `python3` nella
-   casa dell'inquilino e aperta con `firefox-esr --kiosk` DENTRO la sessione.
-   Ha i bersagli dei gesti:
-      pad  BLU     riceve il movimento (scrive dove il puntatore l'ha toccato)
-      bot  VERDE   il bottone del clic sinistro (conta i clic col pulsante 0)
-      box  GIALLO  si trascina (pointer events + cattura)
-      par  bianco  «alfa beta gamma delta»: doppio clic e selezione
-      a    campo di testo a piu' righe      (tastiera)
-      b    campo di una riga: Tab ci arriva, Esc lo svuota (l'applicazione)
-      menu MAGENTA il menu contestuale della pagina, dove si e' premuto il destro
-   ⛔ LA SCENA NON GIUDICA: SCRIVE lo stato dell'applicazione (valori dei campi,
-     testo selezionato, posizione del box, dove sta il menu) in un file
-     dell'inquilino.  E' «il valore di un campo letto nella sessione»: il
-     giudizio lo danno le prove, e il menu contestuale lo giudicano dalla FOTO.
-   ⭐ I colori pieni servono a TROVARE la scena nella fotografia: la
-     corrispondenza fra i pixel della pagina remota e quelli del desktop si
-     misura (BLU e VERDE: quattro bordi per asse), non si suppone — il kiosk
-     puo' non coprire il pannello, la scala puo' non essere 1.
+⭐ THE SCENE: a known page, served by a small `python3` server in the
+   tenant's home and opened with `firefox-esr --kiosk` INSIDE the session.
+   It has the targets of the gestures:
+      pad  BLUE    receives the movement (writes where the pointer touched it)
+      bot  GREEN   the left-click button (counts the clicks with button 0)
+      box  YELLOW  it is dragged (pointer events + capture)
+      par  white   «alfa beta gamma delta»: double click and selection
+      a    multi-line text field            (keyboard)
+      b    single-line field: Tab gets there, Esc empties it (the application)
+      menu MAGENTA the page's context menu, where the right button was pressed
+   ⛔ THE SCENE DOES NOT JUDGE: it WRITES the application's state (field values,
+     selected text, box position, where the menu is) in a file
+     of the tenant.  It is «the value of a field read in the session»: the
+     judgment is given by the tests, and the context menu they judge from the PHOTO.
+   ⭐ The solid colours serve to FIND the scene in the photo: the
+     correspondence between the pixels of the remote page and those of the desktop is
+     measured (BLUE and GREEN: four edges per axis), not assumed — the kiosk
+     may not cover the panel, the scale may not be 1.
 
-⭐ I COMANDI: il servitore serve `/c` (il contenuto di un file che il banco
-   scrive); la pagina lo legge ogni 250 ms e, a un id nuovo, esegue («reset»:
-   campi vuoti, selezione tolta, menu nascosto, box a casa, fuoco al campo a)
-   e risponde `FATTO <id>`.  ⇒ Fra un gesto e l'altro la scena si rimette in
-   ordine SENZA toccare l'input: cosi' il gesto dopo non eredita niente.
+⭐ THE COMMANDS: the server serves `/c` (the content of a file the bench
+   writes); the page reads it every 250 ms and, at a new id, executes («reset»:
+   empty fields, selection removed, menu hidden, box at home, focus on field a)
+   and answers `FATTO <id>`.  ⇒ Between one gesture and the next the scene tidies itself
+   up WITHOUT touching the input: so the next gesture inherits nothing.
 
-⭐ GLI EVENTI VERI: mouse e tastiera con `WebDriver:PerformActions`
-   (Marionette) e `Input.dispatchMouseEvent`/`Input.dispatchKeyEvent` (CDP),
-   come C22 e C23.  ⛔ Mai scritti nel filo a mano.
+⭐ THE REAL EVENTS: mouse and keyboard with `WebDriver:PerformActions`
+   (Marionette) and `Input.dispatchMouseEvent`/`Input.dispatchKeyEvent` (CDP),
+   like C22 and C23.  ⛔ Never written into the wire by hand.
 """
 import base64
 import io
@@ -49,13 +49,13 @@ import suite as S                                                     # noqa: E4
 C21 = S.C21
 
 
-# ⚠ `dentro()` sul server senza ssh e la `~/.cache` vera: li fa ora `suite.py`.
+# ⚠ `dentro()` on the server without ssh and the real `~/.cache`: `suite.py` does them now.
 
-# ⛔ CHROME NEL LABWC COMUNE: la finestra coperta da quelle degli altri agenti
-#   non riceve quadri ⇒ `Page.captureScreenshot` resta appeso (40 s, 17 min) e
-#   `Input.dispatchMouseEvent` risponde «Internal error» (`[M]` 25 set 2026,
-#   kde/xfce/lxqt).  Un utente vero ha il browser DAVANTI: si spegne la
-#   strozzatura delle finestre coperte (dichiarato: bandiere del BANCO).
+# ⛔ CHROME IN THE COMMON LABWC: the window covered by those of the other agents
+#   receives no frames ⇒ `Page.captureScreenshot` stays hung (40 s, 17 min) and
+#   `Input.dispatchMouseEvent` answers «Internal error» (`[M]` 25 Sep 2026,
+#   kde/xfce/lxqt).  A real user has the browser IN FRONT: the throttling of
+#   covered windows is turned off (declared: BENCH flags).
 _OPZ = os.environ.get("REMOTIX_CHROME_OPZIONI", "")
 for _b in ("--disable-backgrounding-occluded-windows", "--disable-renderer-backgrounding",
            "--disable-background-timer-throttling"):
@@ -67,7 +67,7 @@ TOLL_COLORE = 70
 PAROLE = ("alfa", "beta", "gamma", "delta")
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA PAGINA E IL SERVITORE
+#  THE PAGE AND THE SERVER
 # ═══════════════════════════════════════════════════════════════════════════
 PAGINA = r"""<!doctype html><meta charset=utf-8><title>REMOTIX G2</title>
 <style>
@@ -164,7 +164,7 @@ http.server.ThreadingHTTPServer(("127.0.0.1", int(sys.argv[1])), H).serve_foreve
 
 
 class Scena:
-    """La scena nella sessione di `s` (una `suite.Sessione`)."""
+    """The scene in the session of `s` (a `suite.Sessione`)."""
 
     def __init__(self, s, porta):
         self.s, self.sc, self.chi, self.porta = s, s.sc, s.chi, porta
@@ -173,7 +173,7 @@ class Scena:
         self.rett = None
 
     def accendi(self):
-        """Servitore + `firefox-esr --kiosk` nella sessione; aspetta «caricata»."""
+        """Server + `firefox-esr --kiosk` in the session; waits for «caricata»."""
         b = lambda x: base64.b64encode(x.encode()).decode()     # noqa: E731
         c, t = self.sc.dentro(
             "set -e; h={h}; mkdir -p $h/.g2-profilo; "
@@ -186,22 +186,22 @@ class Scena:
             "$h/g2.cmd </dev/null >$h/.g2-servitore.log 2>&1 & "
             "d=''; for i in $(seq 1 40); do d=$(ls /run/user/$u 2>/dev/null | "
             "grep -E '^wayland-[0-9]+$' | head -1); [ -n \"$d\" ] && break; sleep 0.5; done; "
-            "[ -n \"$d\" ] || {{ echo 'nessun socket wayland'; exit 2; }}; sleep 1; "
+            "[ -n \"$d\" ] || {{ echo 'no wayland socket'; exit 2; }}; sleep 1; "
             "setsid runuser -u {c} -- env XDG_RUNTIME_DIR=/run/user/$u WAYLAND_DISPLAY=$d "
             "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$u/bus MOZ_ENABLE_WAYLAND=1 "
             "XDG_SESSION_TYPE=wayland HOME=$h firefox-esr --no-remote --new-instance "
             "--profile $h/.g2-profilo --kiosk http://127.0.0.1:{p}/ "
             "</dev/null >$h/.g2-firefox.log 2>&1 & "
             "for i in $(seq 1 80); do grep -q caricata $h/g2.log && {{ echo accesa; exit 0; }}; "
-            "sleep 0.5; done; echo 'la scena non ha detto «caricata»'; echo \"socket $d\"; tail -n 8 $h/.g2-firefox.log; "
+            "sleep 0.5; done; echo 'the scene did not say «caricata»'; echo \"socket $d\"; tail -n 8 $h/.g2-firefox.log; "
             "tail -n 3 $h/.g2-servitore.log; tail -n 3 $h/g2.log; pgrep -u {c} -a firefox | head -3; exit 1".format(
                 h=self.h, c=self.chi, p=self.porta, srv=b(SERVITORE), pag=b(PAGINA),
                 pref=b(C21.PREFERENZE)), 90)
         return c == 0, t
 
-    # -- lo stato dell'applicazione ------------------------------------------
+    # -- the application's state ---------------------------------------------
     def leggi(self):
-        """(R, S, ultimo FATTO) dal quaderno della scena."""
+        """(R, S, last FATTO) from the scene's notebook."""
         _c, t = self.sc.dentro(
             "f=%s/g2.log; grep -a '^R ' $f | tail -n 1; echo @@; grep -a '^S ' $f | tail -n 1; "
             "echo @@; grep -a '^FATTO ' $f | tail -n 1" % self.h, 30)
@@ -216,7 +216,7 @@ class Scena:
         return r, s, f
 
     def comanda(self, cmd, attesa=20.0):
-        """Scrive il comando e aspetta `FATTO`.  Torna lo stato dopo, o None."""
+        """Writes the command and waits for `FATTO`.  Returns the state afterwards, or None."""
         self.n_cmd += 1
         ident = "%d-%d" % (int(time.time()), self.n_cmd)
         self.sc.dentro("printf '%%s' '%s %s' > %s/g2.cmd" % (ident, cmd, self.h), 30)
@@ -229,8 +229,8 @@ class Scena:
         return None
 
     def aspetta(self, giudice, attesa=5.0, ogni=0.7):
-        """Rilegge lo stato finche' `giudice(stato)` dice True o finisce l'attesa.
-        Torna l'ultimo stato letto."""
+        """Reads the state again until `giudice(stato)` says True or the wait ends.
+        Returns the last state read."""
         fine = time.time() + attesa
         s = None
         while True:
@@ -250,12 +250,12 @@ def _json(t):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  DOVE STA LA SCENA NEL DESKTOP — dalla FOTOGRAFIA
+#  WHERE THE SCENE IS IN THE DESKTOP — from the PHOTO
 # ═══════════════════════════════════════════════════════════════════════════
 def trova_colore(im, colore, passo=4, toll=TOLL_COLORE):
-    """Il riquadro {x0,y0,x1,y1, n, pieno} dei pixel vicini a `colore` in
-    un'immagine PIL, campionando ogni `passo` pixel; None se non ce ne sono.
-    `pieno` = frazione del riquadro coperta (un blocco vero e' ~1)."""
+    """The box {x0,y0,x1,y1, n, pieno} of the pixels close to `colore` in
+    a PIL image, sampling every `passo` pixels; None if there are none.
+    `pieno` = fraction of the box covered (a real block is ~1)."""
     w, h = im.size
     pic = im.resize((max(1, w // passo), max(1, h // passo)))
     pw, ph = pic.size
@@ -275,7 +275,7 @@ def trova_colore(im, colore, passo=4, toll=TOLL_COLORE):
 
 
 def adatta(coppie):
-    """Minimi quadrati di y = a*x + b sulle coppie [(x, y)]."""
+    """Least squares of y = a*x + b on the pairs [(x, y)]."""
     n = float(len(coppie))
     sx = sum(c[0] for c in coppie)
     sy = sum(c[1] for c in coppie)
@@ -289,7 +289,7 @@ def adatta(coppie):
 
 
 class Mappa:
-    """Pixel CSS della pagina remota ⇒ pixel del desktop remoto ⇒ vetro."""
+    """CSS pixels of the remote page ⇒ pixels of the remote desktop ⇒ glass."""
 
     def __init__(self, ax, bx, ay, by, geo):
         self.ax, self.bx, self.ay, self.by, self.geo = ax, bx, ay, by, geo
@@ -306,17 +306,17 @@ class Mappa:
 
 
 def calibra(im, geo, rett):
-    """⭐ La Mappa, dai bordi di BLU (pad) e VERDE (bot) nella foto e dai loro
-    rettangoli dichiarati dalla pagina.  Torna (Mappa | None, perche')."""
+    """⭐ The Mappa, from the edges of BLUE (pad) and GREEN (bot) in the photo and from their
+    rectangles declared by the page.  Returns (Mappa | None, why)."""
     pw, ph = im.size
     trovati = {}
     for nome, col in (("pad", BLU), ("bot", VERDE_C)):
         t = trova_colore(im, col)
         if not t:
-            return None, "il blocco %s (%s) non si vede nella foto" % (nome, col)
+            return None, "the %s block (%s) is not seen in the photo" % (nome, col)
         if t["pieno"] < 0.8:
-            return None, ("il colore di %s e' sparso (pieno %.2f): la scena non copre il "
-                          "desktop o c'e' altro dello stesso colore" % (nome, t["pieno"]))
+            return None, ("the colour of %s is scattered (pieno %.2f): the scene does not cover the "
+                          "desktop or there is something else of the same colour" % (nome, t["pieno"]))
         X0, Y0 = C21.dalla_foto_al_desktop(geo, pw, ph, t["x0"], t["y0"])
         X1, Y1 = C21.dalla_foto_al_desktop(geo, pw, ph, t["x1"], t["y1"])
         trovati[nome] = (X0, Y0, X1, Y1)
@@ -327,32 +327,32 @@ def calibra(im, geo, rett):
         cy += [(r[1], d[1]), (r[3], d[3])]
     fx, fy = adatta(cx), adatta(cy)
     if not fx or not fy:
-        return None, "la corrispondenza pagina⇒desktop non si calcola"
+        return None, "the page⇒desktop correspondence cannot be computed"
     ax, bx = fx
     ay, by = fy
     if not (0.3 < ax < 4 and 0.3 < ay < 4 and abs(ax - ay) / ax < 0.1):
-        return None, "corrispondenza assurda: ax=%.3f ay=%.3f" % (ax, ay)
-    # lo scarto dei punti dalla retta: se e' grande, uno dei blocchi e' tagliato
+        return None, "absurd correspondence: ax=%.3f ay=%.3f" % (ax, ay)
+    # the deviation of the points from the line: if it is large, one of the blocks is cut
     scarto = max([abs(ax * x + bx - X) for x, X in cx] + [abs(ay * y + by - Y) for y, Y in cy])
     if scarto > 30:
-        return None, "i bordi non stanno su una retta (scarto %.0f px del desktop)" % scarto
-    return Mappa(ax, bx, ay, by, geo), "scarto %.0f px" % scarto
+        return None, "the edges do not lie on a line (deviation %.0f desktop px)" % scarto
+    return Mappa(ax, bx, ay, by, geo), "deviation %.0f px" % scarto
 
 
 class Tetto(Exception):
-    """Il browser non ha risposto entro il tetto."""
+    """The browser did not answer within the cap."""
 
 
 @contextlib.contextmanager
 def tetto(secondi, cosa):
-    """⛔ Un tetto a una chiamata del browser.  `[M]` 25 set 2026, lxqt+Chrome
-    col server condiviso da dieci agenti: `Page.captureScreenshot` non e' MAI
-    tornato (17 minuti), e prima `Input.dispatchMouseEvent` dava «Internal
-    error» — la finestra di Chrome nel labwc comune coperta da quelle degli
-    altri non riceve piu' quadri.  La lettura del protocollo non scade perche'
-    gli EVENTI continuano ad arrivare ⇒ serve una sveglia."""
+    """⛔ A cap on a browser call.  `[M]` 25 Sep 2026, lxqt+Chrome
+    with the server shared by ten agents: `Page.captureScreenshot` NEVER
+    came back (17 minutes), and before that `Input.dispatchMouseEvent` gave «Internal
+    error» — the Chrome window in the common labwc covered by those of the
+    others no longer receives frames.  The protocol reading does not time out because
+    the EVENTS keep arriving ⇒ an alarm is needed."""
     def _suona(_n, _f):
-        raise Tetto("%s: nessuna risposta dal browser in %d s" % (cosa, secondi))
+        raise Tetto("%s: no answer from the browser in %d s" % (cosa, secondi))
     vecchio = signal.signal(signal.SIGALRM, _suona)
     signal.alarm(int(secondi))
     try:
@@ -363,7 +363,7 @@ def tetto(secondi, cosa):
 
 
 def davanti(g):
-    """Chiede di portare davanti la finestra (solo Chrome: `Page.bringToFront`)."""
+    """Asks to bring the window to the front (Chrome only: `Page.bringToFront`)."""
     if hasattr(g, "cdp"):
         try:
             with tetto(10, "Page.bringToFront"):
@@ -373,20 +373,20 @@ def davanti(g):
 
 
 def foto(s, nome):
-    """`s.foto()` con davanti e tetto: (png | None, percorso | motivo)."""
+    """`s.foto()` with front and cap: (png | None, path | reason)."""
     perche = ""
     for _i in range(3):
         davanti(s.g)
         try:
-            with tetto(25, "la fotografia"):
+            with tetto(25, "the photo"):
                 return s.foto(nome)
         except Tetto as e:
             perche = str(e)
-    return None, perche + " (tre volte)"
+    return None, perche + " (three times)"
 
 
 def foto_pil(s, nome):
-    """(immagine PIL | None, percorso | motivo) — la foto piena della tela."""
+    """(PIL image | None, path | reason) — the full photo of the canvas."""
     from PIL import Image
     png, dove = foto(s, nome)
     if not png:
@@ -395,20 +395,20 @@ def foto_pil(s, nome):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  IL MOUSE VERO
+#  THE REAL MOUSE
 # ═══════════════════════════════════════════════════════════════════════════
 _BOTTONI_CDP = {0: ("left", 1), 1: ("middle", 4), 2: ("right", 2)}
 
 
 def mouse(g, passi):
-    """⭐ Una catena di eventi VERI del browser.  `passi`:
-         ("muovi", x, y)        coordinate del vetro (viewport del browser)
-         ("giu", bottone, n)    n = il conteggio dei clic (2 = seconda pressione)
+    """⭐ A chain of REAL browser events.  `passi`:
+         ("muovi", x, y)        glass coordinates (the browser's viewport)
+         ("giu", bottone, n)    n = the click count (2 = second press)
          ("su", bottone, n)
          ("pausa", ms)"""
     if hasattr(g, "cdp"):
         davanti(g)
-        with tetto(60, "gli eventi del mouse"):
+        with tetto(60, "the mouse events"):
             _mouse_cdp(g, passi)
         return
     _mouse_wd(g, passi)
@@ -454,11 +454,11 @@ def _mouse_wd(g, passi):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA TASTIERA VERA
+#  THE REAL KEYBOARD
 # ═══════════════════════════════════════════════════════════════════════════
-#  nome: (key, code, vk, codice WebDriver | None, bit CDP)
-#  ⚠ AltGraph e CapsLock non hanno un codice WebDriver: con Marionette NON si
-#    possono premere (limite dichiarato); con CDP si'.
+#  name: (key, code, vk, WebDriver code | None, CDP bit)
+#  ⚠ AltGraph and CapsLock have no WebDriver code: with Marionette they CANNOT
+#    be pressed (declared limit); with CDP they can.
 SPECIALI = {
     "Shift":      ("Shift", "ShiftLeft", 16, "", 8),
     "Control":    ("Control", "ControlLeft", 17, "", 2),
@@ -478,7 +478,7 @@ PAUSA_MS = 90
 
 
 def codice_di(c):
-    """Il `code` e il keyCode di un carattere ASCII su una tastiera qualunque."""
+    """The `code` and the keyCode of an ASCII character on any keyboard."""
     if c.isalpha() and c.isascii():
         return "Key" + c.upper(), ord(c.upper())
     if c.isdigit():
@@ -489,14 +489,14 @@ def codice_di(c):
 
 
 def tasti(g, passi, pausa_ms=PAUSA_MS):
-    """⭐ Tasti VERI.  `passi` = [(«giu»|«su», nome, code, vk)]; per le lettere
-    `nome` e' il carattere (la `key` che il browser riporta) e code/vk quelli
-    della posizione (None ⇒ quelli di una tastiera qualunque).
-    Torna i passi SALTATI (quelli che Marionette non sa premere)."""
+    """⭐ REAL keys.  `passi` = [(«giu»|«su», name, code, vk)]; for the letters
+    `nome` is the character (the `key` the browser reports) and code/vk those
+    of the position (None ⇒ those of any keyboard).
+    Returns the SKIPPED steps (those Marionette cannot press)."""
     saltati = []
     if hasattr(g, "cdp"):
         davanti(g)
-        with tetto(90, "i tasti"):
+        with tetto(90, "the keys"):
             _tasti_cdp(g, passi, pausa_ms)
         return saltati
     return _tasti_wd(g, passi, pausa_ms)
@@ -558,11 +558,11 @@ def col(mod, passi):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA LINGUA DEL BROWSER — da essa la pagina dichiara la disposizione (ATTACCA)
+#  THE BROWSER'S LANGUAGE — from it the page declares the layout (ATTACCA)
 # ═══════════════════════════════════════════════════════════════════════════
 def metti_lingua(g, lingua):
-    """Fa dire al browser `navigator.language == lingua` (per i documenti che
-    si aprono DOPO).  Torna una frase di come."""
+    """Makes the browser say `navigator.language == lingua` (for the documents that
+    open AFTERWARDS).  Returns a sentence saying how."""
     if hasattr(g, "cdp"):
         ua = g.js("return navigator.userAgent")
         g.cdp.chiama("Emulation.setUserAgentOverride", userAgent=ua, acceptLanguage=lingua)
@@ -587,13 +587,13 @@ def metti_lingua(g, lingua):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  L'AVVIO COMUNE: entra, sveglia, scena, calibrazione
+#  THE COMMON START: login, wake-up, scene, calibration
 # ═══════════════════════════════════════════════════════════════════════════
 def prepara(s, porta_scena, lingua=None):
-    """Entra, sveglia, accende la scena, la trova nella foto.
-    Torna (Scena, Mappa, geo, prova_evidenza).  Solleva `S.Bloccata`."""
+    """Logs in, wakes up, starts the scene, finds it in the photo.
+    Returns (Scena, Mappa, geo, evidence_photo).  Raises `S.Bloccata`."""
     if lingua:
-        print("   lingua: %s" % metti_lingua(s.g, lingua), flush=True)
+        print("   language: %s" % metti_lingua(s.g, lingua), flush=True)
     ok, m = s.entra()
     if not ok:
         raise S.Bloccata(m)
@@ -601,19 +601,19 @@ def prepara(s, porta_scena, lingua=None):
         nl = s.g.js("return navigator.language")
         print("   navigator.language = %s" % nl, flush=True)
         if (nl or "").lower() != lingua.lower():
-            raise S.Bloccata("il browser non dice la lingua %s (dice %s): la pagina non "
-                             "dichiarerebbe la disposizione voluta" % (lingua, nl))
+            raise S.Bloccata("the browser does not say the language %s (it says %s): the page would not "
+                             "declare the intended layout" % (lingua, nl))
     geo = s.geometria()
     if not geo:
-        raise S.Bloccata("`REMOTIX_PUNTATORE.geometria` non c'e'")
-    print("   tela %sx%s · buffer %sx%s" % (geo["tl"], geo["ta"], geo["bw"], geo["bh"]),
+        raise S.Bloccata("`REMOTIX_PUNTATORE.geometria` is not there")
+    print("   canvas %sx%s · buffer %sx%s" % (geo["tl"], geo["ta"], geo["bw"], geo["bh"]),
           flush=True)
-    print("   sveglia: %s" % C21.sveglia(s.g, geo), flush=True)
+    print("   wake-up: %s" % C21.sveglia(s.g, geo), flush=True)
     sc = Scena(s, porta_scena)
     ok, t = sc.accendi()
-    print("   scena: %s" % ((t or "?").splitlines() or ["?"])[-1], flush=True)
+    print("   scene: %s" % ((t or "?").splitlines() or ["?"])[-1], flush=True)
     if not ok:
-        raise S.Bloccata("la scena non si accende: %s" % " | ".join((t or "").splitlines())[-700:])
+        raise S.Bloccata("the scene does not start: %s" % " | ".join((t or "").splitlines())[-700:])
     mp, perche, dove = None, "", ""
     fine = time.time() + 25
     while time.time() < fine:
@@ -621,7 +621,7 @@ def prepara(s, porta_scena, lingua=None):
         sc.comanda("reset")
         r, _s, _f = sc.leggi()
         if not r:
-            perche = "la pagina non ha dichiarato i suoi rettangoli"
+            perche = "the page did not declare its rectangles"
             continue
         im, dove = foto_pil(s, "scena")
         if im is None:
@@ -631,8 +631,8 @@ def prepara(s, porta_scena, lingua=None):
         if mp:
             break
     if not mp:
-        raise S.Bloccata("la scena non si trova nella foto: %s" % perche)
-    print("   scena trovata: %s (%s)" % (mp.descrivi(), perche), flush=True)
+        raise S.Bloccata("the scene is not found in the photo: %s" % perche)
+    print("   scene found: %s (%s)" % (mp.descrivi(), perche), flush=True)
     return sc, mp, geo, dove
 
 
@@ -641,11 +641,11 @@ def centro(r):
 
 
 def batti(s, sc, mp, passi, nome, fatto, attesa=8.0, saltabili=()):
-    """Scena pulita, clic nel campo «a», i TASTI VERI, lo stato letto finche'
-    `fatto(stato)` o finisce l'attesa.  Torna (stato, foto, saltati, perche'):
-    `perche'` non vuoto = non si e' potuto guardare."""
+    """Clean scene, click in field «a», the REAL KEYS, the state read until
+    `fatto(stato)` or the wait ends.  Returns (state, photo, skipped, why):
+    a non-empty `why` = it could not be looked at."""
     if sc.comanda("reset") is None:
-        return None, "", [], "la scena non ha risposto al reset"
+        return None, "", [], "the scene did not answer the reset"
     R = sc.rett
     x, y = R["a"][0] + 0.5 * (R["a"][2] - R["a"][0]), R["a"][1] + 0.3 * (R["a"][3] - R["a"][1])
     vx, vy = mp.vetro(x, y)
@@ -653,11 +653,11 @@ def batti(s, sc, mp, passi, nome, fatto, attesa=8.0, saltabili=()):
                 ("su", 0, 1), ("pausa", 400)])
     st = sc.comanda("fuoco-a")
     if st is None or st.get("a") != "" or st.get("fuoco") != "a":
-        return None, "", [], "la scena non e' pronta: %s" % (st,)
+        return None, "", [], "the scene is not ready: %s" % (st,)
     saltati = tasti(s.g, passi)
     fuori = [x for x in saltati if x[1] not in saltabili]
     if fuori:
-        return None, "", saltati, "tasti non premibili da questo browser: %s" % fuori
+        return None, "", saltati, "keys this browser cannot press: %s" % fuori
     st = sc.aspetta(fatto, attesa)
     time.sleep(0.5)
     _png, dove = foto(s, nome)

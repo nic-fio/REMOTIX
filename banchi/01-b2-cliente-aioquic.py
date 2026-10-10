@@ -1,72 +1,72 @@
 #!/usr/bin/env python3
-"""01-b2-cliente-aioquic.py — il cliente di prova, e il controllo d'ambiente di B2.
+"""01-b2-cliente-aioquic.py — the test client, and the environment check of B2.
 
-    python3 01-b2-cliente-aioquic.py [https://192.168.0.2:7447/rcp/1] [:status atteso]
+    python3 01-b2-cliente-aioquic.py [https://192.168.0.2:7447/rcp/1] [expected :status]
     python3 01-b2-cliente-aioquic.py https://192.168.0.2:7447/rcp/9 404
     python3 01-b2-cliente-aioquic.py https://192.168.0.2:7448/rcp/1 200 --senza-eco
 
 ---------------------------------------------------------------------------
-⛔⭐ CONTRO IL PRODOTTO SI USA `--senza-eco`, E NON E' UNA COMODITA'
+⛔⭐ AGAINST THE PRODUCT YOU USE `--senza-eco`, AND IT IS NOT A CONVENIENCE
 
-*Aggiunto l'11 agosto 2026, e il difetto che evita e' gia' costato una
-mattina.*
+*Added on 11 Aug 2026, and the defect it avoids has already cost a
+morning.*
 
-Questo cliente manda `ciao` su uno stream e aspetta che torni identico.
-⛔ **L'eco esiste solo nell'innesto di B2**, che era un server di cinquanta
-righe fatto per rimandare indietro i byte.  Il **prodotto** parla RCP: su quel
-primo stream si aspetta un `CIAO`, e a un `ciao` minuscolo risponde come deve
-— cioe' non rimandandolo indietro.
+This client sends `ciao` on a stream and waits for it to come back identical.
+⛔ **The echo exists only in the B2 graft**, which was a fifty-line server
+made to send the bytes back.  The **product** speaks RCP: on that first
+stream it expects a `CIAO`, and to a lowercase `ciao` it answers as it should
+— that is, by not sending it back.
 
-⚠ E' esattamente il rosso del mattino del 10 agosto, quello che si era preso
-  per un difetto del certificato: *«il rosso era della SONDA, non del
-  certificato: mandava `ciao` e aspettava l'eco di B2, che con RCP innestato
-  non esiste piu'»* (`FASI.md` §01-filo-nudo, riga di B3).  Senza questa
-  opzione lo stesso rosso si ripresenterebbe contro il prodotto, e sembrerebbe
-  un difetto del server.
+⚠ It is exactly the red of the morning of 10 Aug, the one that had been taken
+  for a certificate defect: *"the red was the PROBE's, not the
+  certificate's: it sent `ciao` and waited for the B2 echo, which with RCP
+  grafted on no longer exists"* (`FASI.md` §01-filo-nudo, line of B3).  Without
+  this option the same red would show up again against the product, and would
+  look like a server defect.
 
-⭐ Con `--senza-eco` il programma si ferma dove finisce quel che sa provare:
-  **la sessione WebTransport si e' aperta su quel percorso, con quel
-  `:status`**.  Quel che succede DOPO la CONNECT e' di RCP, e lo provano B3 e
-  B5 — non questo file.
-
----------------------------------------------------------------------------
-⛔ CHE COSA MISURA, E SOPRATTUTTO CHE COSA NON MISURA
-
-Questo programma apre una sessione WebTransport **senza un browser**.  Serve a
-separare due cause che, viste dalla pagina, hanno lo stesso aspetto:
-
-    la sessione non si apre  =  «il server non la regge»
-                             o  «il browser non la accetta»
-
-Se questo cliente si collega e la pagina no, il difetto e' **del browser o del
-certificato**, non del server ne' della rete.  Se non si collega nemmeno
-questo, non ha senso guardare nessun browser.
-
-⛔ MA NON SOSTITUISCE LA MISURA CON UN BROWSER, E CREDERLO SAREBBE **E10** —
-   una prova verde sul client sbagliato, che e' la forma d'errore che a v1 e'
-   costata di piu'.  Le differenze che contano:
-
-     - un browser verifica il certificato con `serverCertificateHashes`,
-       cioe' confrontando **l'impronta**; qui si salta la verifica del tutto
-       (`verify_mode = CERT_NONE`).  ⚠ Quindi questo cliente **non prova**
-       che l'impronta pubblicata sia giusta: e' precisamente la causa n.2 dei
-       tre falsi rossi, e resta scoperta;
-     - un browser impone il tetto dei 14 giorni; qui non lo impone nessuno;
-     - un browser sceglie da se' i parametri di trasporto (`RCP.md` §2.3).
-
-   Da cui: un verde qui e' **necessario, non sufficiente**.
+⭐ With `--senza-eco` the program stops where what it can test ends:
+  **the WebTransport session opened on that path, with that
+  `:status`**.  What happens AFTER the CONNECT belongs to RCP, and B3 and
+  B5 test it — not this file.
 
 ---------------------------------------------------------------------------
-⭐ E IL SECONDO MESTIERE, CHE E' QUELLO CHE DURA
+⛔ WHAT IT MEASURES, AND ABOVE ALL WHAT IT DOES NOT MEASURE
 
-Questo file e' il germe del **cliente di prova** di `PIANO.md` §1.1 — il
-secondo lettore di `RCP.md`, in un linguaggio diverso dal server e dalla
-pagina.  Il suo valore non e' «passa»: e' che chi lo scrive legge la
-specifica e **deve scegliere** dove la specifica ammette due letture.  Quelle
-scelte vanno scritte in «che cosa NON ha funzionato», e sono difetti del
-documento.
+This program opens a WebTransport session **without a browser**.  It serves to
+separate two causes that, seen from the page, look the same:
 
-⛔ Chi lo fa crescere non guarda il C ne' la pagina (regola B9).
+    the session does not open  =  "the server cannot hold it"
+                               or "the browser does not accept it"
+
+If this client connects and the page does not, the defect is **in the browser
+or in the certificate**, not in the server nor in the network.  If not even
+this one connects, there is no point looking at any browser.
+
+⛔ BUT IT DOES NOT REPLACE THE MEASUREMENT WITH A BROWSER, AND BELIEVING SO
+   WOULD BE **E10** — a green test on the wrong client, which is the form of
+   error that cost v1 the most.  The differences that count:
+
+     - a browser verifies the certificate with `serverCertificateHashes`,
+       that is by comparing **the fingerprint**; here verification is skipped
+       entirely (`verify_mode = CERT_NONE`).  ⚠ So this client **does not
+       prove** that the published fingerprint is right: it is precisely cause
+       no. 2 of the three false reds, and it stays uncovered;
+     - a browser enforces the 14-day cap; here nobody enforces it;
+     - a browser picks the transport parameters by itself (`RCP.md` §2.3).
+
+   Hence: a green here is **necessary, not sufficient**.
+
+---------------------------------------------------------------------------
+⭐ AND THE SECOND JOB, WHICH IS THE ONE THAT LASTS
+
+This file is the seed of the **test client** of `PIANO.md` §1.1 — the
+second reader of `RCP.md`, in a language different from the server's and the
+page's.  Its value is not "it passes": it is that whoever writes it reads the
+specification and **has to choose** where the specification allows two
+readings.  Those choices go into "what did NOT work", and they are defects of
+the document.
+
+⛔ Whoever grows it does not look at the C nor at the page (rule B9).
 """
 import asyncio
 import ssl
@@ -114,30 +114,30 @@ class ClienteWebTransport(QuicConnectionProtocol):
         self.transmit()
 
     def quic_event_received(self, event: QuicEvent) -> None:
-        # ⛔ Il cliente DICE che cosa riceve, a tutt'e due i livelli.
-        #    Il primo giro del 9 agosto 2026 e' andato in timeout aspettando
-        #    il ritorno mentre il server dichiarava di averlo spedito: senza
-        #    queste due righe non c'era modo di sapere se i byte non
-        #    arrivavano affatto o se arrivavano e nessuno li riconosceva —
-        #    che sono due difetti in due posti diversi.
+        # ⛔ The client SAYS what it receives, at both levels.
+        #    The first round of 9 Aug 2026 timed out waiting for the return
+        #    while the server declared it had sent it: without these two
+        #    lines there was no way of knowing whether the bytes did not
+        #    arrive at all or arrived and nobody recognised them —
+        #    which are two defects in two different places.
         if type(event).__name__ == "StreamDataReceived":
-            print(f"   [quic] stream {event.stream_id}: {len(event.data)} byte")
-            # ⛔ E QUI SI LEGGE IL RITORNO, AL LIVELLO QUIC.  Non e' pigrizia:
+            print(f"   [quic] stream {event.stream_id}: {len(event.data)} bytes")
+            # ⛔ AND HERE THE RETURN IS READ, AT THE QUIC LEVEL.  It is not laziness:
             #
-            #    `[R]` `H3Connection.create_webtransport_stream` di aioquic 1.2
-            #    scrive l'intestazione dello stream WebTransport e **non
-            #    registra lo stream in ricezione**.  Quindi i byte che tornano
-            #    su quello stream arrivano — si vedono qui sopra — e il livello
-            #    H3 non emette nessun `WebTransportStreamDataReceived`.
+            #    `[R]` aioquic 1.2's `H3Connection.create_webtransport_stream`
+            #    writes the WebTransport stream header and **does not
+            #    register the stream for receiving**.  So the bytes coming back
+            #    on that stream arrive — they can be seen just above — and the H3
+            #    level emits no `WebTransportStreamDataReceived`.
             #
-            #    E' un'asimmetria della libreria: sa CREARE uno stream
-            #    WebTransport e non sa RICONOSCERLO quando risponde.  Chi fara'
-            #    crescere il cliente di prova (B9) ci inciampera' di nuovo, e
-            #    per questo sta scritto qui invece che nella memoria di chi
-            #    l'ha visto.
+            #    It is an asymmetry of the library: it can CREATE a WebTransport
+            #    stream and cannot RECOGNISE it when it answers.  Whoever grows
+            #    the test client (B9) will trip over it again, and that is why
+            #    it is written here instead of in the memory of whoever
+            #    saw it.
             #
-            #    ⚠ Il ritorno si legge dunque a livello QUIC, dichiarandolo —
-            #      non si finge che il livello H3 l'abbia riconosciuto.
+            #    ⚠ The return is therefore read at the QUIC level, declaring it —
+            #      we do not pretend the H3 level recognised it.
             if event.stream_id == self._stream_wt and not self.tornato.done():
                 self.tornato.set_result(event.data)
         for ev in self._http.handle_event(event):
@@ -160,89 +160,89 @@ async def principale(url: str, atteso: str = "200", eco: bool = True) -> int:
         alpn_protocols=H3_ALPN,
         max_datagram_frame_size=65536,
     )
-    # ⛔ Dichiarato, non nascosto: qui NON si verifica il certificato.  Un
-    #    browser lo verifica per impronta, e quella differenza e' scritta in
-    #    cima a questo file perche' nessuno legga il verde di qui come un
-    #    verde di la'.
+    # ⛔ Declared, not hidden: here the certificate is NOT verified.  A
+    #    browser verifies it by fingerprint, and that difference is written at
+    #    the top of this file so that nobody reads a green from here as a
+    #    green from there.
     conf.verify_mode = ssl.CERT_NONE
 
-    print(f"== cliente di prova -> {url}")
-    print(f"   autorita: {autorita}   percorso: {u.path}")
-    print("   ⚠ certificato NON verificato (vedi l'intestazione del file)\n")
+    print(f"== test client -> {url}")
+    print(f"   authority: {autorita}   path: {u.path}")
+    print("   ⚠ certificate NOT verified (see the file header)\n")
 
     async with connect(u.hostname, u.port or 443, configuration=conf,
                        create_protocol=ClienteWebTransport) as cliente:
         await cliente.wait_connected()
-        print("   connessione QUIC/HTTP3 stabilita")
+        print("   QUIC/HTTP3 connection established")
 
         cliente.apri_sessione(autorita, u.path or "/")
         stato = await asyncio.wait_for(cliente.accettata, timeout=8)
-        print(f"   risposta alla CONNECT estesa: :status = {stato}")
+        print(f"   answer to the extended CONNECT: :status = {stato}")
 
-        # ⛔ IL RIFIUTO SI MISURA SUL NUMERO, NON SU «e' andata male» — R8.8.
+        # ⛔ THE REFUSAL IS MEASURED ON THE NUMBER, NOT ON "it went badly" — R8.8.
         #
-        #    Il banco del percorso sbagliato concludeva «RIFIUTATO, come impone
-        #    §2.2» da un codice d'uscita diverso da zero.  Ma questo programma
-        #    esce 1 per QUALUNQUE `:status` diverso da 200 e 2 per QUALUNQUE
-        #    eccezione: un timeout della CONNECT, l'UDP filtrato, il server gia'
-        #    morto e un traceback davano tutti lo stesso verde.  ⛔ E `RCP.md`
-        #    §2.2 non chiede «non 200»: chiede **404** (rilievo R1.24).
+        #    The wrong-path bench concluded "REFUSED, as §2.2 requires" from a
+        #    non-zero exit code.  But this program exits 1 for ANY `:status`
+        #    other than 200 and 2 for ANY exception: a CONNECT timeout, filtered
+        #    UDP, an already dead server and a traceback all gave the same
+        #    green.  ⛔ And `RCP.md` §2.2 does not ask for "not 200": it asks
+        #    for **404** (finding R1.24).
         #
-        # ⭐ Il numero passava sotto gli occhi e non si catturava: adesso chi
-        #    chiama dice quale aspetta, e il confronto lo fa il banco.
+        # ⭐ The number passed under our eyes and was not captured: now the
+        #    caller says which one it expects, and the bench does the comparison.
         if atteso != "200":
             if stato == atteso:
-                print(f"\n   ✅ rifiutata con :status {stato}, come atteso")
+                print(f"\n   ✅ refused with :status {stato}, as expected")
                 return 0
             if stato == "200":
-                print(f"\n   ⛔ ACCETTATA (200) dove ci si aspettava {atteso}:"
-                      " il server non controlla il percorso")
+                print(f"\n   ⛔ ACCEPTED (200) where {atteso} was expected:"
+                      " the server does not check the path")
                 return 1
-            print(f"\n   ⛔ rifiutata, ma con {stato} invece di {atteso}:"
-                  " e' un rifiuto che RCP.md §2.2 non prevede")
+            print(f"\n   ⛔ refused, but with {stato} instead of {atteso}:"
+                  " it is a refusal that RCP.md §2.2 does not provide for")
             return 1
         if stato != "200":
-            print(f"\n   ⛔ la sessione NON e' stata accettata (atteso 200, avuto {stato})")
+            print(f"\n   ⛔ the session was NOT accepted (expected 200, got {stato})")
             return 1
-        print("   ⭐ sessione WebTransport ACCETTATA")
+        print("   ⭐ WebTransport session ACCEPTED")
 
-        # ⛔ E QUI CI SI FERMA, SE L'ECO NON C'E' DA ASPETTARSI.  Il verdetto
-        #    dice quel che prova — «la sessione si e' aperta su questo
-        #    percorso» — e NON si allunga fino a un'affermazione che questo
-        #    programma non e' in grado di sostenere.  L'intestazione del file
-        #    spiega perche' contro il prodotto e' l'unica lettura onesta.
+        # ⛔ AND HERE WE STOP, IF NO ECHO IS TO BE EXPECTED.  The verdict
+        #    says what it proves — "the session opened on this
+        #    path" — and does NOT stretch to a claim that this
+        #    program is not able to support.  The file header
+        #    explains why against the product it is the only honest reading.
         if not eco:
-            print("\n   ✅ sessione aperta su", u.path,
-                  "— l'eco NON e' stata chiesta (--senza-eco)")
-            print("   ⚠ quel che viaggia dopo la CONNECT e' RCP, e lo provano"
-                  " B3 e B5: non questo file")
+            print("\n   ✅ session open on", u.path,
+                  "— the echo was NOT requested (--senza-eco)")
+            print("   ⚠ what travels after the CONNECT is RCP, and B3 and B5"
+                  " test it: not this file")
             return 0
 
-        # ⛔ «Accettata» non basta: si mandano byte e si aspetta che tornino.
-        #    Una sessione che si apre e non trasporta niente e' la forma di
-        #    verde che questo banco esiste per non produrre.
+        # ⛔ "Accepted" is not enough: bytes are sent and we wait for them to
+        #    come back.  A session that opens and carries nothing is the form of
+        #    green this bench exists not to produce.
         cliente.manda_byte(b"ciao")
         dati = await asyncio.wait_for(cliente.tornato, timeout=8)
-        print(f"   andata e ritorno su stream: {dati!r}")
+        print(f"   round trip on stream: {dati!r}")
         if dati == b"ciao":
-            print("\n   ✅ i byte tornano identici — server e rete sono a posto")
+            print("\n   ✅ the bytes come back identical — server and network are fine")
             return 0
-        print("\n   ⛔ i byte tornano DIVERSI")
+        print("\n   ⛔ the bytes come back DIFFERENT")
         return 1
 
 
 if __name__ == "__main__":
-    # ⚠ `--senza-eco` si toglie prima di leggere i posizionali, cosi' l'ordine
-    #   degli argomenti di sempre continua a valere.
+    # ⚠ `--senza-eco` is removed before reading the positionals, so the usual
+    #   order of the arguments keeps holding.
     argomenti = [x for x in sys.argv[1:] if x != "--senza-eco"]
     eco = "--senza-eco" not in sys.argv[1:]
     url = argomenti[0] if len(argomenti) > 0 else "https://192.168.0.2:7447/rcp/1"
-    # ⚠ Il secondo argomento e' lo `:status` ATTESO: senza, e' 200 e vale la
-    #   strada di sempre.  Con «404» il programma prova il controllo che dice
-    #   NO, e un fallimento qualunque non passa piu' per un rifiuto (R8.8).
+    # ⚠ The second argument is the EXPECTED `:status`: without it, it is 200 and
+    #   the usual road holds.  With "404" the program tests the check that says
+    #   NO, and an arbitrary failure no longer passes for a refusal (R8.8).
     atteso = argomenti[1] if len(argomenti) > 1 else "200"
     try:
         sys.exit(asyncio.run(principale(url, atteso, eco)))
     except Exception as e:
-        print(f"\n   ⛔ fallito: {type(e).__name__}: {e}")
+        print(f"\n   ⛔ failed: {type(e).__name__}: {e}")
         sys.exit(2)

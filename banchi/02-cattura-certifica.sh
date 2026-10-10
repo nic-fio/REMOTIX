@@ -1,83 +1,82 @@
 #!/bin/bash
 #
-# 02-cattura-certifica.sh — gira SUL SERVER.  ⛔ La certificazione del banco di
-# F2.2 col modello di B12: sano N → guasto M → risanato N, con i numeri attesi
-# **scritti prima del giro**.
+# 02-cattura-certifica.sh — runs ON THE SERVER.  ⛔ The certification of the
+# F2.2 bench on the B12 model: healthy N → fault M → healed N, with the expected numbers
+# **written before the round**.
 #
-#   bash /media/REMOTIX/src/02-cattura-certifica.sh            giro sano + i quattro guasti
-#   bash /media/REMOTIX/src/02-cattura-certifica.sh PREFISSO   riusa un giro sano gia' fatto
-#
-# ===========================================================================
-# ⛔ PERCHE' ESISTE, E PERCHE' NELLO STESSO GIRO DI CHI SCRIVE IL BANCO
-#
-# ⭐ La regola nata l'11 agosto 2026: *chi scrive un banco lo certifica nello
-#    stesso giro*, o il conto non cala mai.  E `PIANO.md` §0.3 punto 4: ogni
-#    fase, prima di dichiarare un numero, dimostra che il suo banco sa vedere il
-#    difetto che cerca.
-#
-# ⛔ E per F2.2 la domanda non e' accademica.  Il difetto che questo banco esiste
-#    per vedere e' **un fotogramma nero e valido**: un buffer della misura
-#    giusta, con lo stride giusto, il danno giusto, la sequenza giusta — e
-#    dentro il nulla.  ⛔ E' il guasto peggiore di questa sotto-fase perche' ogni
-#    altro strumento del progetto lo promuoverebbe: `misura-cattura` della fase 0
-#    conterebbe 36 fotogrammi al secondo e non guarderebbe dentro nemmeno uno.
-#
-# ⇒ Un banco che non sa distinguere un fotogramma nero da uno pieno **darebbe
-#   fiducia**, ed e' precisamente il caso che `REVIEWER.md` §1 chiama il
-#   peggiore: *«un difetto nel banco non lo trova niente, e avvelena ogni misura
-#   successiva perche' da' fiducia»*.
+#   bash /media/REMOTIX/src/02-cattura-certifica.sh            healthy round + the four faults
+#   bash /media/REMOTIX/src/02-cattura-certifica.sh PREFISSO   reuses a healthy round already done
 #
 # ===========================================================================
-# ⛔ IL GUASTO SI INNESTA NEI PIXEL, E NON TOCCA NE' IL PRODUTTORE NE' IL GIUDICE
+# ⛔ WHY IT EXISTS, AND WHY IN THE SAME ROUND AS WHOEVER WRITES THE BENCH
 #
-# E' la ragione per cui il produttore (`02-cattura-fotogramma.c`) e il giudice
-# (`02-cattura-giudica.py`) sono due programmi separati: fra i due c'e' un file,
-# e in quel file si puo' mettere quel che si vuole.  ⭐ Nessuna ricompilazione,
-# nessuna riga cambiata, nessun `git`.  Il guasto e' il **dato**, che e' il modo
-# piu' onesto di guastare un giudice.
+# ⭐ The rule born on 11 Aug 2026: *whoever writes a bench certifies it in the
+#    same round*, or the count never goes down.  And `PIANO.md` §0.3 point 4: every
+#    phase, before declaring a number, proves that its bench can see the
+#    defect it is looking for.
 #
-# ⛔ E SEMPRE SU UNA COPIA, con l'originale tenuto da parte e l'impronta accanto
-#    — come `01-b12-guasti.py`, che il file da guastare non lo tocca mai.
+# ⛔ And for F2.2 the question is not academic.  The defect this bench exists
+#    to see is **a black and valid frame**: a buffer of the right
+#    size, with the right stride, the right damage, the right sequence — and
+#    nothing inside.  ⛔ It is the worst fault of this sub-phase because every
+#    other tool of the project would promote it: `misura-cattura` of phase 0
+#    would count 36 frames per second and would not look inside even one.
+#
+# ⇒ A bench that cannot tell a black frame from a full one **would give
+#   confidence**, and it is precisely the case `REVIEWER.md` §1 calls the
+#   worst: *«a defect in the bench is found by nothing, and it poisons every
+#   following measurement because it gives confidence»*.
 #
 # ===========================================================================
-# ⛔ GLI ATTESI, SCRITTI PRIMA DEL GIRO (B0.4)
+# ⛔ THE FAULT IS INJECTED INTO THE PIXELS, AND TOUCHES NEITHER THE PRODUCER NOR THE JUDGE
 #
-#   il giro SANO esce 0 (VERDE) — e non e' un atteso allargato: il fotogramma
-#   c'e', e' 1920×1080 come chiesto, e contiene la scena «bandiera».
-#   ⚠ Se il giro sano NON uscisse 0, la certificazione **si ferma**: non si
-#     innesta un guasto su un banco gia' rosso, perche' il rosso di dopo non
-#     direbbe niente (`FASI.md` §00-ambiente, e la lezione di B13).
+# It is the reason why the producer (`02-cattura-fotogramma.c`) and the judge
+# (`02-cattura-giudica.py`) are two separate programs: between the two there is a file,
+# and in that file anything can be put.  ⭐ No recompilation,
+# no line changed, no `git`.  The fault is the **data**, which is the most
+# honest way of breaking a judge.
 #
-#   | # | il guasto innestato nel .raw   | atteso | marca PRETESA           | marca VIETATA |
+# ⛔ AND ALWAYS ON A COPY, with the original kept aside and the fingerprint next to it
+#    — like `01-b12-guasti.py`, which never touches the file to be broken.
+#
+# ===========================================================================
+# ⛔ THE EXPECTATIONS, WRITTEN BEFORE THE ROUND (B0.4)
+#
+#   the HEALTHY round exits 0 (VERDE) — and it is not a widened expectation: the frame
+#   is there, it is 1920×1080 as requested, and it contains the «bandiera» scene.
+#   ⚠ If the healthy round did NOT exit 0, the certification **stops**: no
+#     fault is injected on a bench already red, because the red afterwards would not
+#     say anything (`FASI.md` §00-ambiente, and the lesson of B13).
+#
+#   | # | the fault injected into the .raw | expected | REQUIRED mark           | FORBIDDEN mark |
 #   |---|-------------------------------|--------|-------------------------|---------------|
-#   | G1| nero pieno, stessi byte       |   1    | FOTOGRAMMA NERO         | —             |
-#   | G2| grigio uniforme, stessi byte  |   1    | SCENA NON RICONOSCIUTA  | FOTOGRAMMA NERO |
-#   | G3| ultimi byte tagliati          |   1    | BYTE NON TORNANO        | —             |
-#   | G4| il «primo» copiato sul «regime»|  1    | IL BUFFER NON E' CAMBIATO| FOTOGRAMMA NERO |
+#   | G1| full black, same bytes        |   1    | FOTOGRAMMA NERO         | —             |
+#   | G2| uniform grey, same bytes      |   1    | SCENA NON RICONOSCIUTA  | FOTOGRAMMA NERO |
+#   | G3| last bytes cut off            |   1    | BYTE NON TORNANO        | —             |
+#   | G4| the «first» copied onto «steady»|  1    | IL BUFFER NON E' CAMBIATO| FOTOGRAMMA NERO |
 #
-#   e il RISANATO torna 0 dopo ciascuno.
+#   and the HEALED one goes back to 0 after each.
 #
-# ⭐ LE DUE COLONNE «PRETESA» E «VIETATA» SONO LA META' CHE CONTA, e senza la
-#    seconda questa certificazione sarebbe una recita:
+# ⭐ THE TWO COLUMNS «REQUIRED» AND «FORBIDDEN» ARE THE HALF THAT COUNTS, and without the
+#    second this certification would be a performance:
 #
-#   - **G2** e' il guasto che distingue un giudice da un misuratore di
-#     luminosita'.  Un grigio uniforme non e' nero: chiamarlo nero vorrebbe dire
-#     sbagliare la diagnosi peggiore proprio nel caso in cui serve, e la cura
-#     verrebbe cercata dalla parte sbagliata — la stessa mezza giornata che
-#     `PIANO.md` racconta per la sessione nera;
-#   - **G4** e' il guasto della trappola 8 di `LEZIONI.md` §4: *«l'ultimo
-#     fotogramma va conservato e rispedito, o chi si collega a un desktop fermo
-#     resta al nero»*.  Un buffer vecchio rispedito e' un fotogramma
-#     perfettamente valido, non nero, con la scena dentro — ⛔ **verde su ogni
-#     controllo che guardi un fotogramma solo**.  Si vede solo confrontandone
-#     due, ed e' per questo che il produttore ne prende due.
+#   - **G2** is the fault that tells a judge from a brightness
+#     meter.  A uniform grey is not black: calling it black would mean
+#     getting the worst diagnosis wrong precisely in the case where it is needed, and the cure
+#     would be looked for on the wrong side — the same half day that
+#     `PIANO.md` tells about for the black session;
+#   - **G4** is the fault of trap 8 of `LEZIONI.md` §4: *«the last
+#     frame must be kept and resent, or whoever connects to a still desktop
+#     stays on black»*.  An old buffer resent is a
+#     perfectly valid frame, not black, with the scene inside — ⛔ **green on every
+#     check that looks at a single frame**.  It shows only by comparing
+#     two, and that is why the producer takes two.
 #
-# ⛔ E un guasto che NON e' in questa tabella, dichiarato invece che taciuto:
-#    **il buffer della scheda sbagliata** (`LEZIONI.md` §4 trappola 6, due GPU
-#    su questa macchina).  Non e' innestabile qui e questo banco non lo
-#    vedrebbe: sulla strada della memoria i pixel arrivano comunque.  Resta una
-#    `[?]` del rapporto, non una cosa che questo verde assolve.
-#
+# ⛔ And a fault that is NOT in this table, declared instead of kept silent:
+#    **the buffer of the wrong card** (`LEZIONI.md` §4 trap 6, two GPUs
+#    on this machine).  It cannot be injected here and this bench would not
+#    see it: on the memory road the pixels arrive anyway.  It stays a
+#    `[?]` of the report, not something this green acquits.
 # ===========================================================================
 set -uo pipefail
 
@@ -86,7 +85,7 @@ SRC=${SRC:-/media/REMOTIX/src}
 GIUDICE=$SRC/02-cattura-giudica.py
 LANCIA=$SRC/02-cattura-lancia.sh
 SCENA=${SCENA:-bandiera}
-mkdir -p "$QUI" || { echo "⛔ non riesco a creare $QUI" >&2; exit 2; }
+mkdir -p "$QUI" || { echo "⛔ I cannot create $QUI" >&2; exit 2; }
 REGISTRO=$QUI/certificazione-$(date -u +%Y%m%d-%H%M%S).log
 
 ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
@@ -97,7 +96,7 @@ log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ATTESO_SANO=0
 
 # ---------------------------------------------------------------------------
-#  L'innesto: sempre su una copia, con l'impronta di prima e di dopo
+#  The injection: always on a copy, with the fingerprint before and after
 # ---------------------------------------------------------------------------
 innesta()
 {
@@ -109,8 +108,8 @@ n = os.path.getsize(regime)
 if che == "nero":
     dati = bytes(n)
 elif che == "grigio":
-    # ⛔ Non un grigio qualunque: BGRx con B=G=R=128 e x=255, cioe' un
-    #    fotogramma perfettamente valido e perfettamente inutile.
+    # ⛔ Not just any grey: BGRx with B=G=R=128 and x=255, that is a
+    #    perfectly valid and perfectly useless frame.
     dati = bytes([128, 128, 128, 255]) * (n // 4) + bytes(n % 4)
 elif che == "troncato":
     dati = open(regime, "rb").read()[: n - 40000]
@@ -121,10 +120,10 @@ elif che == "copia":
     elif len(dati) < n:
         dati = dati + bytes(n - len(dati))
 else:
-    print("guasto sconosciuto:", che, file=sys.stderr)
+    print("unknown fault:", che, file=sys.stderr)
     sys.exit(2)
 open(regime, "wb").write(dati)
-print("    --  innestato «%s»: %d byte (erano %d)" % (che, len(dati), n))
+print("    --  injected «%s»: %d bytes (they were %d)" % (che, len(dati), n))
 FINE
 	return $?
 }
@@ -132,7 +131,7 @@ FINE
 impronta() { sha256sum "$1" | cut -d' ' -f1; }
 
 # ---------------------------------------------------------------------------
-#  Un giro del giudice, e il confronto con l'atteso scritto prima
+#  A round of the judge, and the comparison with the expectation written beforehand
 # ---------------------------------------------------------------------------
 giudica()
 {
@@ -144,9 +143,9 @@ giudica()
 
 marche_di()
 {
-	# ⛔ Solo le marche ROSSE: un avviso sul fotogramma `primo` — dove la scena
-	#    non c'e' ancora — non e' un rilievo, e contarlo qui farebbe passare per
-	#    «il guasto e' stato visto» un rumore che c'era anche nel giro sano.
+	# ⛔ Only the RED marks: a warning on the `primo` frame — where the scene
+	#    is not there yet — is not a finding, and counting it here would pass off as
+	#    «the fault was seen» a noise that was there in the healthy round too.
 	python3 -c '
 import json, sys
 v = json.load(open(sys.argv[1]))
@@ -161,16 +160,16 @@ verifica()
 	local nome=$1 uscita=$2 atteso=$3 marche=$4 pretesa=$5 vietata=$6
 	local buono=si
 	if [ "$uscita" != "$atteso" ]; then
-		ko "$nome: uscita $uscita, atteso $atteso"; buono=
+		ko "$nome: exit $uscita, expected $atteso"; buono=
 	fi
 	if [ -n "$pretesa" ] && [[ "$marche" != *"$pretesa"* ]]; then
-		ko "$nome: manca la marca PRETESA «$pretesa» — trovate: ${marche:-nessuna}"; buono=
+		ko "$nome: the REQUIRED mark «$pretesa» is missing — found: ${marche:-none}"; buono=
 	fi
 	if [ -n "$vietata" ] && [[ "$marche" == *"$vietata"* ]]; then
-		ko "$nome: c'e' la marca VIETATA «$vietata» — il giudice sbaglia diagnosi"; buono=
+		ko "$nome: the FORBIDDEN mark «$vietata» is there — the judge gets the diagnosis wrong"; buono=
 	fi
 	if [ -n "$buono" ]; then
-		ok "$nome: uscita $uscita come atteso, marche: ${marche:-nessuna}"
+		ok "$nome: exit $uscita as expected, marks: ${marche:-none}"
 		return 0
 	fi
 	return 1
@@ -178,76 +177,76 @@ verifica()
 
 # ===========================================================================
 {
-log "0. LO STATO INIZIALE — si dichiara e si verifica (B0.1)"
+log "0. THE INITIAL STATE — declared and checked (B0.1)"
 for f in "$GIUDICE" "$LANCIA"; do
-	if [ ! -r "$f" ]; then ko "⛔ non si legge: $f"; exit 2; fi
+	if [ ! -r "$f" ]; then ko "⛔ cannot read: $f"; exit 2; fi
 done
-ok "i due file del banco si leggono"
+ok "the two files of the bench can be read"
 
-log "0-bis. IL GIUDICE PRIMA DI TUTTO: passa il proprio controllo positivo?"
-inf "⛔ Non si certifica un banco con uno strumento non certificato: sarebbe misurare"
-inf "   con un metro di cui non si e' mai controllata la scala (LEZIONI.md §1.2)."
+log "0-bis. THE JUDGE FIRST OF ALL: does it pass its own positive control?"
+inf "⛔ A bench is not certified with an uncertified tool: it would be measuring"
+inf "   with a ruler whose scale was never checked (LEZIONI.md §1.2)."
 python3 -u "$GIUDICE" --solo-controllo-positivo
 if [ $? -ne 0 ]; then
-	ko "⛔ il giudice NON e' certificato: la certificazione si ferma qui"
+	ko "⛔ the judge is NOT certified: the certification stops here"
 	exit 2
 fi
-ok "il giudice trova la bandiera, chiama nero il nero, e NON chiama nero il grigio"
+ok "the judge finds the flag, calls black the black, and does NOT call black the grey"
 
 # ---------------------------------------------------------------------------
-log "1. IL GIRO SANO — e l'atteso e' $ATTESO_SANO, scritto prima"
+log "1. THE HEALTHY ROUND — and the expectation is $ATTESO_SANO, written beforehand"
 PREFISSO=${1:-}
 if [ -z "$PREFISSO" ]; then
-	inf "nessun prefisso dato: faccio un giro vero con $LANCIA"
+	inf "no prefix given: I do a real round with $LANCIA"
 	SCENA=$SCENA bash "$LANCIA" misura
 	U_LANCIA=$?
-	inf "il giro sano e' uscito con $U_LANCIA"
-	# ⛔ L'uscita non basta: serve il PREFISSO del giro, e lo si prende dal file
-	#    piu' recente invece di indovinarlo.  ⚠ E la lista si costruisce con un
-	#    glob, non con `ls` dentro una pipe: «nessun file» e «ls e' fallito»
-	#    hanno lo stesso aspetto in una catena di `|`, ed e' la voce 3 di
-	#    `FASI.md` §00-ambiente — «nessuna riga trovata» era una lettura negata.
+	inf "the healthy round exited with $U_LANCIA"
+	# ⛔ The exit is not enough: the PREFIX of the round is needed, and it is taken from the
+	#    most recent file instead of guessed.  ⚠ And the list is built with a
+	#    glob, not with `ls` inside a pipe: «no file» and «ls failed»
+	#    look the same in a chain of `|`, and it is item 3 of
+	#    `FASI.md` §00-ambiente — «no line found» was a denied read.
 	CANDIDATI=()
 	for m in "$QUI"/giro-*.json; do
 		case "$m" in *-verdetto.json) continue ;; esac
 		[ -f "$m" ] && CANDIDATI+=("$m")
 	done
 	if [ ${#CANDIDATI[@]} -eq 0 ]; then
-		ko "⛔ nessun manifesto in $QUI: il giro sano non ha prodotto niente."
-		inf "⚠ Non e' «il banco e' rotto»: e' «non c'e' stato nessun giro»."
+		ko "⛔ no manifest in $QUI: the healthy round produced nothing."
+		inf "⚠ It is not «the bench is broken»: it is «there was no round»."
 		exit 2
 	fi
 	PREFISSO=$(ls -t "${CANDIDATI[@]}" | head -1)
 	PREFISSO=${PREFISSO%.json}
 fi
 if [ -z "$PREFISSO" ] || [ ! -f "$PREFISSO.json" ]; then
-	ko "⛔ non trovo il manifesto del giro sano ($PREFISSO.json)"
+	ko "⛔ I cannot find the manifest of the healthy round ($PREFISSO.json)"
 	exit 2
 fi
-ok "giro sano: $PREFISSO"
+ok "healthy round: $PREFISSO"
 
 REGIME=$PREFISSO-regime.raw
 PRIMO=$PREFISSO-primo.raw
 if [ ! -f "$REGIME" ] || [ ! -f "$PRIMO" ]; then
-	ko "⛔ mancano i due .raw del giro sano: non c'e' niente da guastare"
-	inf "⚠ e questo NON e' un banco rotto: e' un giro che non ha preso fotogrammi."
+	ko "⛔ the two .raw of the healthy round are missing: there is nothing to break"
+	inf "⚠ and this is NOT a broken bench: it is a round that took no frames."
 	exit 2
 fi
 
-# ⛔ L'ORIGINALE SI METTE DA PARTE PRIMA DI TOCCARLO, con l'impronta accanto.
+# ⛔ THE ORIGINAL IS PUT ASIDE BEFORE TOUCHING IT, with the fingerprint next to it.
 ORIGINALE=$QUI/originale-regime.raw
 cp -f "$REGIME" "$ORIGINALE" || exit 2
 IMP_ORIG=$(impronta "$ORIGINALE")
-inf "originale messo da parte: $ORIGINALE"
-inf "impronta: $IMP_ORIG"
+inf "original put aside: $ORIGINALE"
+inf "fingerprint: $IMP_ORIG"
 
 giudica "$PREFISSO" "$QUI/cert-sano"; U_SANO=$?
 M_SANO=$(marche_di "$QUI/cert-sano.json")
 verifica "sano" "$U_SANO" "$ATTESO_SANO" "$M_SANO" "" ""
 if [ $? -ne 0 ]; then
-	ko "⛔ IL GIRO SANO NON E' SANO: la certificazione si ferma."
-	inf "Innestare un guasto su un banco gia' rosso darebbe un rosso che non dice niente."
-	inf "Il registro del giudice:"
+	ko "⛔ THE HEALTHY ROUND IS NOT HEALTHY: the certification stops."
+	inf "Injecting a fault on a bench already red would give a red that says nothing."
+	inf "The judge's log:"
 	sed 's/^/       /' "$QUI/cert-sano.log"
 	cp -f "$ORIGINALE" "$REGIME"
 	exit 2
@@ -255,7 +254,7 @@ fi
 
 # ---------------------------------------------------------------------------
 FALLITI=0
-#      nome        atteso  marca PRETESA               marca VIETATA
+#      name        expected  REQUIRED mark             FORBIDDEN mark
 GUASTI=(
 	"nero|1|FOTOGRAMMA NERO|"
 	"grigio|1|SCENA NON RICONOSCIUTA|FOTOGRAMMA NERO"
@@ -265,23 +264,23 @@ GUASTI=(
 for voce in "${GUASTI[@]}"; do
 	IFS='|' read -r NOME ATT PRETESA VIETATA <<< "$voce"
 
-	log "2. GUASTO «$NOME» — atteso $ATT, marca pretesa «$PRETESA», vietata «${VIETATA:-nessuna}»"
+	log "2. FAULT «$NOME» — expected $ATT, required mark «$PRETESA», forbidden «${VIETATA:-none}»"
 	cp -f "$ORIGINALE" "$REGIME" || exit 2
-	innesta "$NOME" "$REGIME" "$PRIMO" || { ko "innesto fallito"; FALLITI=$((FALLITI+1)); continue; }
-	inf "impronta dopo l'innesto: $(impronta "$REGIME")"
+	innesta "$NOME" "$REGIME" "$PRIMO" || { ko "injection failed"; FALLITI=$((FALLITI+1)); continue; }
+	inf "fingerprint after the injection: $(impronta "$REGIME")"
 
 	giudica "$PREFISSO" "$QUI/cert-guasto-$NOME"; U=$?
 	M=$(marche_di "$QUI/cert-guasto-$NOME.json")
 	verifica "guasto/$NOME" "$U" "$ATT" "$M" "$PRETESA" "$VIETATA" || FALLITI=$((FALLITI+1))
 
-	log "3. RISANATO dopo «$NOME» — atteso $ATTESO_SANO"
+	log "3. HEALED after «$NOME» — expected $ATTESO_SANO"
 	cp -f "$ORIGINALE" "$REGIME" || exit 2
 	IMP=$(impronta "$REGIME")
 	if [ "$IMP" != "$IMP_ORIG" ]; then
-		ko "⛔ il risanamento non ha rimesso il file com'era: $IMP ≠ $IMP_ORIG"
+		ko "⛔ the healing did not put the file back as it was: $IMP ≠ $IMP_ORIG"
 		FALLITI=$((FALLITI+1))
 	else
-		ok "l'impronta e' tornata quella di prima: $IMP"
+		ok "the fingerprint went back to the one before: $IMP"
 	fi
 	giudica "$PREFISSO" "$QUI/cert-risano-$NOME"; U=$?
 	M=$(marche_di "$QUI/cert-risano-$NOME.json")
@@ -289,36 +288,36 @@ for voce in "${GUASTI[@]}"; do
 done
 
 # ---------------------------------------------------------------------------
-log "4. IL VERDETTO DELLA CERTIFICAZIONE"
+log "4. THE VERDICT OF THE CERTIFICATION"
 cp -f "$ORIGINALE" "$REGIME"
 if [ $FALLITI -eq 0 ]; then
-	ok "⭐ IL BANCO F2.2 E' CERTIFICATO: sano $ATTESO_SANO → quattro guasti → risanato $ATTESO_SANO"
-	inf "⚠ E questo non dice che il banco sia giusto: dice che sa vedere QUESTI quattro"
-	inf "  difetti. «Non ho trovato niente» non e' «e' giusto» (REVIEWER.md §0)."
+	ok "⭐ THE F2.2 BENCH IS CERTIFIED: healthy $ATTESO_SANO → four faults → healed $ATTESO_SANO"
+	inf "⚠ And this does not say the bench is right: it says it can see THESE four"
+	inf "  defects. «I found nothing» is not «it is right» (REVIEWER.md §0)."
 	ESITO=0
 else
-	ko "⛔ LA CERTIFICAZIONE NON PASSA: $FALLITI verifiche fallite."
-	inf "Finche' non passa, nessun numero di questo banco vale."
+	ko "⛔ THE CERTIFICATION DOES NOT PASS: $FALLITI checks failed."
+	inf "Until it passes, no number of this bench counts."
 	ESITO=1
 fi
-inf "il registro completo di questo giro: $REGISTRO"
+inf "the full log of this round: $REGISTRO"
 
-# Il catalogo, nella forma di 01-b12-guasti.py, stampato qui perche' resti
-# accanto ai numeri invece che in un documento a parte.
+# The catalogue, in the form of 01-b12-guasti.py, printed here so that it stays
+# next to the numbers instead of in a separate document.
 cat <<FINE
 
-  LA RIGA PER IL CATALOGO DELLE CERTIFICAZIONI
+  THE LINE FOR THE CATALOGUE OF CERTIFICATIONS
   ────────────────────────────────────────────────────────────────────────
-  nome            F2.2 — la cattura (il fotogramma nero e valido)
-  comando         bash /media/REMOTIX/src/02-cattura-certifica.sh
-  atteso sano     0  (VERDE: un fotogramma 1920×1080 che contiene la scena)
-  guasti          nero · grigio · troncato · copia — innestati nel .raw, mai
-                  nel codice, sempre su una copia con l'originale da parte
-  atteso guasto   1  ciascuno, con la marca pretesa E quella vietata
-  atteso risanato 0  dopo ognuno, con l'impronta tornata quella di prima
-  costa           copia-di-file (nessuna ricompilazione)
-  riferimento     fasi/rapporti/F2-2-cattura.md · STUDI.md §gnome §3.1 §13 M9 ·
-                  LEZIONI.md §1.9 §4 trappola 8 · REVIEWER.md §1 punto 4, E1
+  name            F2.2 — capture (the black and valid frame)
+  command         bash /media/REMOTIX/src/02-cattura-certifica.sh
+  expected healthy 0 (VERDE: a 1920×1080 frame that contains the scene)
+  faults          nero · grigio · troncato · copia — injected into the .raw, never
+                  into the code, always on a copy with the original aside
+  expected fault  1  each, with the required mark AND the forbidden one
+  expected healed 0  after each, with the fingerprint back to the one before
+  cost            file-copy (no recompilation)
+  reference       fasi/rapporti/F2-2-cattura.md · STUDI.md §gnome §3.1 §13 M9 ·
+                  LEZIONI.md §1.9 §4 trap 8 · REVIEWER.md §1 point 4, E1
 
 FINE
 exit $ESITO

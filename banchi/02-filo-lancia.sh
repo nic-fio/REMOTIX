@@ -1,63 +1,63 @@
 #!/usr/bin/env bash
 # =========================================================================
-# 02-filo-lancia.sh — ⛔ F2.4: il giro intero del banco del filo, fase 2.
+# 02-filo-lancia.sh — ⛔ F2.4: the whole round of the wire bench, phase 2.
 #
-#     ./02-filo-lancia.sh              tutto quel che si puo' girare OGGI
-#     ./02-filo-lancia.sh --elenco     le previsioni, senza misurare
-#     ./02-filo-lancia.sh --vivo       ⏳ anche il cliente, contro la 7514
+#     ./02-filo-lancia.sh              everything that can be run TODAY
+#     ./02-filo-lancia.sh --elenco     the predictions, without measuring
+#     ./02-filo-lancia.sh --vivo       ⏳ the client too, against 7514
 #
 # =========================================================================
-# ⛔ PERCHE' QUESTO SCRIPT ESISTE, E NON E' «per comodita'»
+# ⛔ WHY THIS SCRIPT EXISTS, AND IT IS NOT «for convenience»
 #
-# `PIANO.md` §0.4 momento 1: il revisore interviene **appena il banco esiste,
-# PRIMA che il prodotto sia scritto**.  Il prodotto della fase 2 non c'e':
+# `PIANO.md` §0.4 moment 1: the reviewer steps in **as soon as the bench exists,
+# BEFORE the product is written**.  The phase 2 product is not there:
 #
 #     grep -c '0x0301\|0x0302' src/rcp.c src/webtransport.c src/pagina.html
-#     -> 0 · 0 · 0        `[M]` 12 agosto 2026
+#     -> 0 · 0 · 0        `[M]` 12 Aug 2026
 #
-# ⛔ Da cui il mestiere di questo file: **mettere in fila quel che si puo'
-#    misurare oggi, e DICHIARARE quel che non si puo'**.  Un giro che girasse
-#    solo i pezzi che passano e tacesse sugli altri sarebbe la peggiore delle
-#    prove: verde, e su niente.
+# ⛔ Hence the job of this file: **line up what can be
+#    measured today, and DECLARE what cannot**.  A round that ran
+#    only the pieces that pass and kept silent about the others would be the worst of
+#    proofs: green, and on nothing.
 #
-# ⚠ E la regola **B0.4** di `FASI.md` §01-filo-nudo vale qui piu' che altrove:
-#   *«l'atteso lo confronta il banco, non chi legge»*.  Ogni pezzo qui sotto
-#   esce con uno stato, e questo file lo **confronta** — non lo stampa e basta.
-#
-# =========================================================================
-# ⛔ LE TRE TRAPPOLE DI SHELL CHE QUESTO FILE NON RIPETE
-#
-#  1. ⛔ **niente `2>/dev/null`, e nessuno stato d'uscita buttato in una
-#     catena di `|`** (`REVIEWER.md` §1 punto 4).  «Zero» e «fallimento» hanno
-#     lo stesso aspetto quando l'errore e' stato mangiato, ed e' la forma
-#     d'errore **E8**;
-#
-#  2. ⛔ **mai una redirezione ATTORNO a `ssh` o a `enter.sh`**.  La richiesta
-#     di parola d'ordine di `sudo` esce su **stderr**: buttandola via, nessuno
-#     puo' rispondere, e il comando resta **appeso per sempre, in silenzio**.
-#     ⚠ `FASI.md` §00-ambiente B3.3 — pagata **quattro volte**, due delle quali
-#     nella sola notte dell'11 agosto 2026, e due di quelle **dentro i file
-#     che la trappola la descrivono in testa**;
-#
-#  3. ⛔ **`set -e` NON basta e qui non c'e'**: fa uscire al primo rosso, e un
-#     giro che si ferma al primo rosso non dice quanto aveva coperto.  Si
-#     contano i rossi e si va avanti, e alla fine c'e' un denominatore.
+# ⚠ And rule **B0.4** of `FASI.md` §01-filo-nudo applies here more than elsewhere:
+#   *«the expectation is compared by the bench, not by whoever reads»*.  Every piece below
+#   exits with a status, and this file **compares** it — it does not just print it.
 #
 # =========================================================================
-# ⛔ LO STATO INIZIALE, DICHIARATO **E VERIFICATO** — regola B0.1
+# ⛔ THE THREE SHELL TRAPS THIS FILE DOES NOT REPEAT
 #
-# *«Un banco che non sa da che stato parte misura la storia della macchina.»*
+#  1. ⛔ **no `2>/dev/null`, and no exit status thrown into a
+#     chain of `|`** (`REVIEWER.md` §1 point 4).  «Zero» and «failure» look
+#     the same when the error has been swallowed, and it is error
+#     form **E8**;
 #
-#  · la porta di F2.4 e' la **7514**, e questo script verifica che sia libera
-#    prima di dire qualunque cosa.  ⛔ Se e' occupata **non si spegne niente**:
-#    si dichiara e si esce.  Sulla **7448** gira il prodotto di casa e sulla
-#    **7501** il bersaglio di P5, accesi apposta (mandato §4);
-#  · i pezzi che girano su CHUWI **non toccano la rete**: il giudice del
-#    fotogramma e l'arbitro delle registrazioni non hanno dipendenze, ed e'
-#    voluto — chi revisiona il banco prima del prodotto non ha il contenitore;
-#  · `aioquic` sta **solo dentro il contenitore**, e la sua assenza si
-#    **dichiara**: ⛔ un pezzo saltato in silenzio e un pezzo passato hanno lo
-#    stesso aspetto.
+#  2. ⛔ **never a redirection AROUND `ssh` or `enter.sh`**.  `sudo`'s
+#     password prompt comes out on **stderr**: throwing it away, nobody
+#     can answer, and the command **hangs forever, silently**.
+#     ⚠ `FASI.md` §00-ambiente B3.3 — paid for **four times**, two of them
+#     in the single night of 11 Aug 2026, and two of those **inside the files
+#     that describe the trap in their header**;
+#
+#  3. ⛔ **`set -e` is NOT enough and it is not here**: it exits at the first red, and a
+#     round that stops at the first red does not say how much it had covered.  The
+#     reds are counted and it goes on, and at the end there is a denominator.
+#
+# =========================================================================
+# ⛔ THE INITIAL STATE, DECLARED **AND CHECKED** — rule B0.1
+#
+# *«A bench that does not know which state it starts from measures the history of the machine.»*
+#
+#  · the F2.4 port is **7514**, and this script checks that it is free
+#    before saying anything.  ⛔ If it is taken **nothing is switched off**:
+#    it is declared and it exits.  On **7448** runs the house product and on
+#    **7501** the P5 target, on on purpose (mandate §4);
+#  · the pieces that run on CHUWI **do not touch the network**: the frame
+#    judge and the recordings referee have no dependencies, and it is
+#    intended — whoever reviews the bench before the product does not have the container;
+#  · `aioquic` lives **only inside the container**, and its absence is
+#    **declared**: ⛔ a piece skipped silently and a piece passed look
+#    the same.
 # =========================================================================
 set -u
 
@@ -72,18 +72,18 @@ SALTATI=0
 
 dice() { printf '%s\n' "$*"; }
 
-# ⛔ Il confronto lo fa QUESTA funzione, non chi legge (B0.4).
+# ⛔ The comparison is done by THIS function, not by whoever reads (B0.4).
 pezzo() {
     local nome="$1" atteso="$2"; shift 2
     dice ""
-    dice "== $nome   (atteso: uscita $atteso)"
+    dice "== $nome   (expected: exit $atteso)"
     "$@"
     local visto=$?
     FATTI=$((FATTI + 1))
     if [ "$visto" -eq "$atteso" ]; then
-        dice "   ${VERDE}OK${GRIGIO}  $nome: uscita $visto"
+        dice "   ${VERDE}OK${GRIGIO}  $nome: exit $visto"
     else
-        dice "   ${ROSSO}NO${GRIGIO}  $nome: uscita $visto, atteso $atteso"
+        dice "   ${ROSSO}NO${GRIGIO}  $nome: exit $visto, expected $atteso"
         ROSSI=$((ROSSI + 1))
     fi
 }
@@ -92,13 +92,13 @@ salta() {
     local nome="$1" perche="$2"
     SALTATI=$((SALTATI + 1))
     dice ""
-    dice "   ${GIALLO}--${GRIGIO}  $nome: SALTATO — $perche"
-    dice "       ⛔ e «saltato» non e' «passato»: entra nel conto finale"
+    dice "   ${GIALLO}--${GRIGIO}  $nome: SKIPPED — $perche"
+    dice "       ⛔ and «skipped» is not «passed»: it enters the final count"
 }
 
 # -------------------------------------------------------------------------
 if [ "${1:-}" = "--elenco" ]; then
-    dice "== F2.4 — le previsioni, tutte, prima di qualunque giro"
+    dice "== F2.4 — the predictions, all of them, before any round"
     python3 "$QUI/02-filo-fotogramma.py" --elenco
     dice ""
     python3 "$QUI/02-filo-validatore.py" --elenco
@@ -108,41 +108,41 @@ if [ "${1:-}" = "--elenco" ]; then
 fi
 
 dice "==========================================================="
-dice "  F2.4 — IL FILO: un fotogramma da RCP alla pagina"
+dice "  F2.4 — THE WIRE: a frame from RCP to the page"
 dice "==========================================================="
 dice ""
-dice "== ⛔ lo stato iniziale, dichiarato E verificato (B0.1)"
-dice "   macchina: $(uname -n)   python: $(python3 -V)"
+dice "== ⛔ the initial state, declared AND checked (B0.1)"
+dice "   machine: $(uname -n)   python: $(python3 -V)"
 
-# ⛔ La porta si guarda, non si libera.  E se `ss` non c'e' si DICE, invece di
-#    concludere «libera» da un comando che non ha girato (forma E8).
+# ⛔ The port is looked at, not freed.  And if `ss` is not there it is SAID, instead of
+#    concluding «free» from a command that did not run (form E8).
 if command -v ss >/dev/null; then
     OCCUPANTI="$(ss -lun | grep -c ":$PORTA " || true)"
     if [ "$OCCUPANTI" -eq 0 ]; then
-        dice "   porta $PORTA: ${VERDE}libera${GRIGIO} (${OCCUPANTI} ascoltatori)"
+        dice "   port $PORTA: ${VERDE}free${GRIGIO} (${OCCUPANTI} listeners)"
     else
-        dice "   porta $PORTA: ${ROSSO}OCCUPATA${GRIGIO} da $OCCUPANTI ascoltatori"
-        dice "   ⛔ NON si spegne niente.  Si dichiara e si esce: sulla 7448 gira"
-        dice "      il prodotto di casa e sulla 7501 il bersaglio di P5."
+        dice "   port $PORTA: ${ROSSO}TAKEN${GRIGIO} by $OCCUPANTI listeners"
+        dice "   ⛔ NOTHING is switched off.  It is declared and it exits: on 7448 runs"
+        dice "      the house product and on 7501 the P5 target."
         exit 2
     fi
 else
-    dice "   porta $PORTA: ${GIALLO}NON GUARDATA${GRIGIO} — \`ss\` non c'e' su"
-    dice "      questa macchina.  ⛔ E «non guardata» non e' «libera»."
+    dice "   port $PORTA: ${GIALLO}NOT LOOKED AT${GRIGIO} — \`ss\` is not on"
+    dice "      this machine.  ⛔ And «not looked at» is not «free»."
 fi
 
-# ⛔ La presenza di aioquic si DICHIARA, e decide che cosa si puo' girare.
+# ⛔ The presence of aioquic is DECLARED, and it decides what can be run.
 if python3 -c "import aioquic" 2>&1 | grep -q ModuleNotFoundError; then
     AIOQUIC=no
-    dice "   aioquic: ${GIALLO}assente${GRIGIO} — i pezzi dal vivo non si girano"
-    dice "      ⚠ sta solo dentro il contenitore (\`/media/REMOTIX/enter.sh\`)"
+    dice "   aioquic: ${GIALLO}absent${GRIGIO} — the live pieces are not run"
+    dice "      ⚠ it lives only inside the container (\`/media/REMOTIX/enter.sh\`)"
 else
     AIOQUIC=si
-    dice "   aioquic: ${VERDE}presente${GRIGIO}"
+    dice "   aioquic: ${VERDE}present${GRIGIO}"
 fi
 
-# ⛔ E lo stato del PRODOTTO, che e' la ragione per cui meta' di questo banco
-#    non si puo' ancora girare.  Si conta, non si crede.
+# ⛔ And the state of the PRODUCT, which is the reason half of this bench
+#    cannot be run yet.  It is counted, not believed.
 VIDEO_NEL_PRODOTTO=0
 for f in "$QUI/../src/rcp.c" "$QUI/../src/webtransport.c" "$QUI/../src/pagina.html"; do
     if [ -r "$f" ]; then
@@ -150,158 +150,158 @@ for f in "$QUI/../src/rcp.c" "$QUI/../src/webtransport.c" "$QUI/../src/pagina.ht
         VIDEO_NEL_PRODOTTO=$((VIDEO_NEL_PRODOTTO + N))
     fi
 done
-dice "   il prodotto della fase 2: $VIDEO_NEL_PRODOTTO occorrenze di 0x0301/0x0302 in src/"
+dice "   the phase 2 product: $VIDEO_NEL_PRODOTTO occurrences of 0x0301/0x0302 in src/"
 if [ "$VIDEO_NEL_PRODOTTO" -eq 0 ]; then
-    dice "      ⏳ zero: il video non e' ancora scritto, ed e' il momento giusto"
-    dice "         per un banco (\`PIANO.md\` §0.4 momento 1)"
+    dice "      ⏳ zero: the video is not written yet, and it is the right moment"
+    dice "         for a bench (\`PIANO.md\` §0.4 moment 1)"
 fi
 
 # -------------------------------------------------------------------------
 dice ""
 dice "==========================================================="
-dice "  QUEL CHE SI MISURA OGGI, SENZA PRODOTTO E SENZA RETE"
+dice "  WHAT IS MEASURED TODAY, WITHOUT PRODUCT AND WITHOUT NETWORK"
 dice "==========================================================="
 
-pezzo "il giudice del fotogramma" 0 \
+pezzo "the frame judge" 0 \
     python3 "$QUI/02-filo-fotogramma.py" --uscita "$ESITI"
 
-pezzo "la certificazione del giudice (sano -> guasto -> risanato)" 0 \
+pezzo "the certification of the judge (healthy -> fault -> healed)" 0 \
     python3 "$QUI/02-filo-fotogramma.py" --certifica --uscita "$ESITI"
 
-pezzo "l'arbitro del canale video, certificato contro G4" 0 \
+pezzo "the video channel referee, certified against G4" 0 \
     python3 "$QUI/02-filo-validatore.py" --certifica --uscita "$ESITI"
 
-pezzo "l'arbitro su una registrazione conforme" 0 \
+pezzo "the referee on a conforming recording" 0 \
     python3 "$QUI/02-filo-validatore.py" \
         "$QUI/02-filo-prove/02-filo-prova-buona.rcpreg" --uscita "$ESITI"
 
-# ⛔ E IL ROSSO CHE DEVE ESSERE ROSSO — il controllo positivo dell'arbitro.
+# ⛔ AND THE RED THAT MUST BE RED — the referee's positive control.
 #
-#    §11: *«prima di concludere che il validatore non trova errori, gli si da'
-#    una registrazione CON UN ERRORE DENTRO e si verifica che lo veda.  Uno
-#    strumento che non ha mai trovato niente non e' uno strumento pulito: e'
-#    uno strumento non certificato»*.
-pezzo "⭐ l'arbitro su una registrazione NON conforme (deve uscire 1)" 1 \
+#    §11: *«before concluding that the validator finds no errors, it is given
+#    a recording WITH AN ERROR INSIDE and it is checked that it sees it.  A
+#    tool that has never found anything is not a clean tool: it is
+#    an uncertified tool»*.
+pezzo "⭐ the referee on a NON-conforming recording (must exit 1)" 1 \
     python3 "$QUI/02-filo-validatore.py" \
         "$QUI/02-filo-prove/02-filo-prova-tipo-storto.rcpreg"
 
-# ⛔ E QUELLO CHE DEVE DIRE «NON HO NIENTE DA GIUDICARE» (uscita 3).
+# ⛔ AND THE ONE THAT MUST SAY «I HAVE NOTHING TO JUDGE» (exit 3).
 #
-#    E' la meta' che si dimentica: un arbitro che uscisse 0 su una
-#    registrazione senza un byte di video **assolverebbe senza aver guardato**,
-#    ed e' il rilievo R7.4 della fase 1.
-pezzo "⭐ l'arbitro su una registrazione senza video (deve uscire 3)" 3 \
+#    It is the half that gets forgotten: a referee that exited 0 on a
+#    recording without one byte of video **would acquit without having looked**,
+#    and it is finding R7.4 of phase 1.
+pezzo "⭐ the referee on a recording without video (must exit 3)" 3 \
     python3 "$QUI/02-filo-validatore.py" \
         "$QUI/02-filo-prove/02-filo-prova-solo-controllo.rcpreg"
 
 # -------------------------------------------------------------------------
 dice ""
 dice "==========================================================="
-dice "  QUEL CHE NON SI PUO' MISURARE OGGI, E PERCHE'"
+dice "  WHAT CANNOT BE MEASURED TODAY, AND WHY"
 dice "==========================================================="
 
 if [ "${1:-}" = "--vivo" ] && [ "$AIOQUIC" = si ] && [ "$VIDEO_NEL_PRODOTTO" -gt 0 ]; then
-    pezzo "il cliente di prova riceve il fotogramma (porta $PORTA)" 0 \
+    pezzo "the test client receives the frame (port $PORTA)" 0 \
         python3 "$QUI/02-filo-cliente.py" --porta "$PORTA" \
             --registra "$QUI/02-filo-prove/02-filo-vivo.rcpreg" \
             --uscita "$ESITI"
-    pezzo "l'arbitro sulla traccia dal vivo" 0 \
+    pezzo "the referee on the live trace" 0 \
         python3 "$QUI/02-filo-validatore.py" \
             "$QUI/02-filo-prove/02-filo-vivo.rcpreg" --uscita "$ESITI"
 else
-    salta "il cliente di prova, dal vivo" \
-        "il prodotto non spedisce fotogrammi ($VIDEO_NEL_PRODOTTO occorrenze), \
+    salta "the test client, live" \
+        "the product does not send frames ($VIDEO_NEL_PRODOTTO occurrences), \
 aioquic=$AIOQUIC, --vivo=${1:-no}"
-    dice "       ⏳ il suo primo giro E' la prima misura della fase 2, e va"
-    dice "          fatto sulla $PORTA, dentro il contenitore"
+    dice "       ⏳ its first round IS the first measurement of phase 2, and it must"
+    dice "          be done on $PORTA, inside the container"
 fi
 
-salta "i pixel decodificati contro quelli catturati" \
-    "e' F2.6, e non e' una misura di protocollo"
-salta "il credito degli stream oltre i 256 fotogrammi (§2.3)" \
-    "la fase 2 consegna UN fotogramma fermo: e' la fase 3"
+salta "the decoded pixels against the captured ones" \
+    "it is F2.6, and it is not a protocol measurement"
+salta "the credit of the streams beyond 256 frames (§2.3)" \
+    "phase 2 delivers ONE still frame: it is phase 3"
 
 # -------------------------------------------------------------------------
 dice ""
 dice "==========================================================="
-dice "  IL VERDETTO, CON IL SUO DENOMINATORE"
+dice "  THE VERDICT, WITH ITS DENOMINATOR"
 dice "==========================================================="
 dice ""
-dice "   pezzi girati:  $FATTI"
-dice "   pezzi saltati: $SALTATI   ⛔ e «saltato» non e' «passato»"
-dice "   registro:      $ESITI"
+dice "   pieces run:     $FATTI"
+dice "   pieces skipped: $SALTATI   ⛔ and «skipped» is not «passed»"
+dice "   log:            $ESITI"
 dice ""
-# ⛔ LE LETTURE DOPPIE, E IL CONTO DELLE REGOLE CHE HANNO UN CASO CHE LE FA
-#    SCATTARE.
+# ⛔ THE DOUBLE READINGS, AND THE COUNT OF THE RULES THAT HAVE A CASE THAT MAKES THEM
+#    TRIGGER.
 #
-# ⚠ Fino all'11 agosto qui si stampavano le quattro ambiguita' di `RCP.md` con
-#   il testo da proporre.  ⭐ Il 12 agosto 2026 quelle quattro sono ENTRATE nel
-#   documento (§2.5, §5.2, §6.2) insieme alle altre tre, e questo blocco e'
-#   diventato la domanda opposta:
+# ⚠ Until 11 Aug the four ambiguities of `RCP.md` were printed here with
+#   the text to propose.  ⭐ On 12 Aug 2026 those four ENTERED the
+#   document (§2.5, §5.2, §6.2) together with the other three, and this block
+#   became the opposite question:
 #
-#     ⛔ *le regole nuove ce l'hanno, l'ingresso che le fa scattare?*
+#     ⛔ *do the new rules have the input that makes them trigger?*
 #
-#   Un arbitro che conosce una regola e non ha il caso che la viola non la fa
-#   rispettare, e il verde che da' e' quello che da' fiducia.  E il caso che la
-#   **rispetta** conta quanto l'altro: senza, una regola scritta troppo larga
-#   resterebbe verde su tutto il banco.
-dice "== ⭐⛔ LE RIGHE ENTRATE IN \`RCP.md\` IL 12 AGOSTO 2026"
-dice "   Sette di mattina (P1-P7), **due di sera** — P8 da D14 (la grazia sui"
-dice "   fotogrammi in volo) e P9 da D13 (la chiave vera a ogni cambio di tela) —"
-dice "   e ⛔ **due nate dalle due di sera**: P10 (§5.2, QUANDO il client"
-dice "   riconfigura) e P11 (§6.2, la finestra al posto de «la precedente»),"
-dice "   trovate applicando le prime e curate il giro dopo.  Il numero non e'"
-dice "   scritto qui: lo contano i due arbitri."
-dice "   Il conto lo calcolano i due arbitri cercando i casi per nome: una"
-dice "   regola che perdesse uno dei due diventa rossa qui, non fra sei mesi."
-python3 "$QUI/02-filo-fotogramma.py" --elenco | grep -E 'regole con TUTT' | \
-    sed 's/^ */   giudice del fotogramma:  /'
-python3 "$QUI/02-filo-validatore.py" --elenco | grep -E 'righe con TUTT' | \
-    sed 's/^ */   arbitro delle registrazioni: /'
+#   A referee that knows a rule and does not have the case that violates it does not
+#   enforce it, and the green it gives is the one that gives confidence.  And the case that
+#   **respects** it counts as much as the other: without it, a rule written too broadly
+#   would stay green on the whole bench.
+dice "== ⭐⛔ THE LINES THAT ENTERED \`RCP.md\` ON 12 AUG 2026"
+dice "   Seven in the morning (P1-P7), **two in the evening** — P8 from D14 (the grace on"
+dice "   frames in flight) and P9 from D13 (the real keyframe at every canvas change) —"
+dice "   and ⛔ **two born from the two of the evening**: P10 (§5.2, WHEN the client"
+dice "   reconfigures) and P11 (§6.2, the window instead of «the previous one»),"
+dice "   found by applying the first ones and cured in the next round.  The number is not"
+dice "   written here: the two referees count it."
+dice "   The count is computed by the two referees looking up the cases by name: a"
+dice "   rule that lost one of the two turns red here, not six months from now."
+python3 "$QUI/02-filo-fotogramma.py" --elenco | grep -E 'rules with BOTH' | \
+    sed 's/^ */   frame judge:            /'
+python3 "$QUI/02-filo-validatore.py" --elenco | grep -E 'lines with BOTH' | \
+    sed 's/^ */   recordings referee: /'
 dice ""
-# ⛔⛔ E LE CURE CHE `RCP.md` NON PORTA ANCORA.  ⚠ Aggiunto la sera del 12
-#    agosto 2026 col difetto **D14**, e la sera stessa il blocco ha cambiato
-#    contenuto: D14 e' entrato (P8), e al suo posto ci sono i **due punti in
-#    cui le cure di quella sera non reggono** — P10 (le due righe nuove si
-#    contraddicono sullo stesso fotogramma) e P11 (la grazia nomina «la tela
-#    precedente» al singolare, e chi trascina una finestra ne manda due).
-#    ⛔ Trovati **applicando** le righe ai due arbitri, che e' lo stesso modo
-#    in cui la mattina si erano trovate le due sbagliate su sette.
-#    ⚠ Sta in un blocco SUO e non insieme al conto
-#    qui sopra: «righe che il documento porta» e «cure che il documento non ha»
-#    sono due fatti diversi, e sommarli darebbe un numero che non vuol dire
-#    niente.  ⛔ E la coppia ha una forma diversa: la prova che la fa vedere e
-#    quella che impedisce di scriverla troppo larga.
-dice "== ⛔⛔ LE PROPOSTE ANCORA APERTE — \`RCP.md\` non le porta"
-python3 "$QUI/02-filo-fotogramma.py" --elenco | grep -E 'proposte con TUTTI' | \
-    sed 's/^ */   giudice del fotogramma:  /'
-python3 "$QUI/02-filo-validatore.py" --elenco | grep -E "proposte con TUTT'E DUE" | \
-    sed 's/^ */   arbitro delle registrazioni: /'
+# ⛔⛔ AND THE CURES `RCP.md` DOES NOT CARRY YET.  ⚠ Added on the evening of 12
+#    Aug 2026 with defect **D14**, and the same evening the block changed
+#    content: D14 went in (P8), and in its place there are the **two points
+#    where that evening's cures do not hold** — P10 (the two new lines
+#    contradict each other on the same frame) and P11 (the grace names «the previous
+#    canvas» in the singular, and whoever drags a window sends two).
+#    ⛔ Found **by applying** the lines to the two referees, which is the same way
+#    the two wrong ones out of seven had been found in the morning.
+#    ⚠ It sits in a block of ITS OWN and not together with the count
+#    above: «lines the document carries» and «cures the document does not have»
+#    are two different facts, and adding them up would give a number that means
+#    nothing.  ⛔ And the pair has a different form: the test that shows it and
+#    the one that prevents writing it too broadly.
+dice "== ⛔⛔ THE PROPOSALS STILL OPEN — \`RCP.md\` does not carry them"
+python3 "$QUI/02-filo-fotogramma.py" --elenco | grep -E 'proposals with ALL' | \
+    sed 's/^ */   frame judge:            /'
+python3 "$QUI/02-filo-validatore.py" --elenco | grep -E "proposals with BOTH" | \
+    sed 's/^ */   recordings referee: /'
 dice ""
-dice "== ⭐⛔ I PUNTI IN CUI \`RCP.md\` NON DECIDE BENE, in questo capitolo"
-dice "   ⚠ Due famiglie, e non sono la stessa cosa: una **lettura doppia** fa"
-dice "     divergere due implementazioni attente; una **contraddizione interna**"
-dice "     le fa convergere sullo stesso byte sbagliato — ed e' peggio, perche'"
-dice "     nessun confronto fra due implementazioni la trova."
+dice "== ⭐⛔ THE POINTS WHERE \`RCP.md\` DOES NOT DECIDE WELL, in this chapter"
+dice "   ⚠ Two families, and they are not the same thing: a **double reading** makes"
+dice "     two careful implementations diverge; an **internal contradiction**"
+dice "     makes them converge on the same wrong byte — and it is worse, because"
+dice "     no comparison between two implementations finds it."
 python3 "$QUI/02-filo-fotogramma.py" --elenco | grep -A1 'AMBIGUO$' | \
     grep -v '^--$' | sed 's/^/   /'
 if ! python3 "$QUI/02-filo-fotogramma.py" --elenco | grep -q 'AMBIGUO$'; then
-    dice "   ⭐ nessuna: le OTTO che questo banco ha trovato sono entrate tutte"
-    dice "      nel documento il 12 agosto 2026 — quattro di mattina (P2 §6.2 ·"
-    dice "      P3 §2.5 · P5 §6.2 · P6 §5.2), tre con loro (P1 · P4 · P7), due"
-    dice "      di sera (P8 §6.2 · P9 §5.2) e ⛔ due nate DALLE due di sera"
-    dice "      (P10 §5.2 · P11 §6.2), trovate applicandole poche ore dopo."
-    dice "   ⚠ E questo NON vuol dire che \`RCP.md\` non ne abbia piu': vuol dire"
-    dice "     che non ne restano fra quelle che QUESTO banco sa cercare."
+    dice "   ⭐ none: the EIGHT this bench found all entered"
+    dice "      the document on 12 Aug 2026 — four in the morning (P2 §6.2 ·"
+    dice "      P3 §2.5 · P5 §6.2 · P6 §5.2), three with them (P1 · P4 · P7), two"
+    dice "      in the evening (P8 §6.2 · P9 §5.2) and ⛔ two born FROM the two of the evening"
+    dice "      (P10 §5.2 · P11 §6.2), found by applying them a few hours later."
+    dice "   ⚠ And this does NOT mean that \`RCP.md\` has none left: it means"
+    dice "     that none are left among those THIS bench can look for."
 fi
 
 dice ""
 if [ "$ROSSI" -gt 0 ]; then
-    dice "   ${ROSSO}⛔ F2.4: $ROSSI pezzi su $FATTI non passano${GRIGIO}"
+    dice "   ${ROSSO}⛔ F2.4: $ROSSI pieces out of $FATTI do not pass${GRIGIO}"
     exit 1
 fi
-dice "   ${VERDE}⭐ F2.4: $FATTI pezzi su $FATTI passano${GRIGIO}"
-dice "   ⚠ e NON e' «il fotogramma arriva»: in questo giro non e' passato un"
-dice "     byte sulla rete, e $SALTATI pezzi sono stati saltati per mancanza di"
-dice "     prodotto.  Il verde vale per quel che il denominatore dice."
+dice "   ${VERDE}⭐ F2.4: $FATTI pieces out of $FATTI pass${GRIGIO}"
+dice "   ⚠ and it is NOT «the frame arrives»: in this round not one"
+dice "     byte went over the network, and $SALTATI pieces were skipped for lack of"
+dice "     product.  The green is worth what the denominator says."
 exit 0

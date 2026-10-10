@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-t8-browser — fase 17, T8 (R39, R11): un browser VERO resta collegato al desktop mentre REMOTIX si
-aggiorna (o torna indietro) dal gestore di pacchetti, e dopo ci rientra: il desktop è lo STESSO.
+t8-browser — phase 17, T8 (R39, R11): a REAL browser stays connected to the desktop while REMOTIX is
+upgraded (or rolled back) by the package manager, and then re-enters: the desktop is the SAME one.
 
-    (sul server, dentro il labwc di 17-t1c-guarda.sh: T1C_PROGRAMMA=…/t8-browser.py)
+    (on the server, inside the labwc of 17-t1c-guarda.sh: T1C_PROGRAMMA=…/t8-browser.py)
     python3 t8-browser.py --porta 7511 --utente prova --parola prova2026 --evidenze DIR
 
-1. entra e vede il desktop (il giudice dei pixel di 12-client-veri.py: una tela nera è ROSSO);
-   fotografia «prima»; scrive DIR/pronto;
-2. resta collegato (la scheda aperta) finché non compare DIR/via (tetto 20 minuti), contando i
-   fotogrammi dipinti ogni secondo (DIR/linea.jsonl);
-3. ricarica la scheda, rientra, e deve rivedere il desktop entro il tetto; fotografia «dopo».
-Uscita: una riga `T8 {json}`; codice 0 PASS · 1 FAIL · 3 BLOCKED.
+1. enters and sees the desktop (the pixel judge of 12-client-veri.py: a black canvas is RED);
+   "before" photo; writes DIR/pronto;
+2. stays connected (the tab open) until DIR/via appears (cap 20 minutes), counting the
+   frames painted each second (DIR/linea.jsonl);
+3. reloads the tab, re-enters, and must see the desktop again within the cap; "after" photo.
+Output: one line `T8 {json}`; exit code 0 PASS · 1 FAIL · 3 BLOCKED.
 """
 import argparse
 import importlib.util as _iu
@@ -62,19 +62,19 @@ def main():
         pr = VERI.Prova(g, o, o.url, o.parola)
         ok, m = pr.apri()
         if not ok:
-            riga["ragione"] = "la pagina non si apre: " + m
+            riga["ragione"] = "the page does not open: " + m
             raise StopIteration
         e, m, _ = pr.entra(o.parola)
         if e != VERI.VERDE:
-            esito, codice, riga["ragione"] = "FAIL", 1, "non entra: " + m
+            esito, codice, riga["ragione"] = "FAIL", 1, "does not get in: " + m
             raise StopIteration
         e, m, _ = pr.primo_fotogramma()
         riga["prima"] = m
         if e != VERI.VERDE:
-            esito, codice, riga["ragione"] = "FAIL", 1, "prima dell'aggiornamento il desktop non si vede: " + m
+            esito, codice, riga["ragione"] = "FAIL", 1, "before the upgrade the desktop is not visible: " + m
             raise StopIteration
         open(os.path.join(o.evidenze, "pronto"), "w").write(str(time.time()))
-        # collegato durante l'aggiornamento: i fotogrammi dipinti, ogni secondo
+        # connected during the upgrade: the painted frames, every second
         fine = time.time() + o.attesa_s
         with open(os.path.join(o.evidenze, "linea.jsonl"), "w") as lf:
             while time.time() < fine and not os.path.exists(os.path.join(o.evidenze, "via")):
@@ -85,28 +85,28 @@ def main():
                 time.sleep(1)
         riga["collegato_s"] = round(time.time() - t0, 1)
         if not os.path.exists(os.path.join(o.evidenze, "via")):
-            riga["ragione"] = "nessun «via» entro %d s" % o.attesa_s
+            riga["ragione"] = "no \"via\" within %d s" % o.attesa_s
             raise StopIteration
-        # il riattacco: la scheda ricaricata, si rientra, e il desktop si deve rivedere
+        # the reattach: the tab reloaded, we re-enter, and the desktop must be seen again
         t1 = time.time()
         g.ricarica()
         ok, m = pr.apri()
         e, m, _ = pr.entra(o.parola)
         riga["rientra"] = m
         if e != VERI.VERDE:
-            esito, codice, riga["ragione"] = "FAIL", 1, "dopo l'aggiornamento non rientra: " + m
+            esito, codice, riga["ragione"] = "FAIL", 1, "after the upgrade it does not get back in: " + m
             raise StopIteration
         e, m, _ = pr.primo_fotogramma()
         riga["dopo"] = m
         riga["riattacco_s"] = round(time.time() - t1, 1)
         if e == VERI.VERDE:
-            esito, codice, riga["ragione"] = "PASS", 0, "desktop rivisto dopo l'aggiornamento"
+            esito, codice, riga["ragione"] = "PASS", 0, "desktop seen again after the upgrade"
         else:
-            esito, codice, riga["ragione"] = "FAIL", 1, "rientra, ma il desktop non si vede: " + m
+            esito, codice, riga["ragione"] = "FAIL", 1, "gets back in, but the desktop is not visible: " + m
     except StopIteration:
         pass
     except Exception as ex:                      # noqa: BLE001
-        riga["ragione"] = "il banco è caduto: %r" % ex
+        riga["ragione"] = "the bench crashed: %r" % ex
     finally:
         if g is not None:
             try:

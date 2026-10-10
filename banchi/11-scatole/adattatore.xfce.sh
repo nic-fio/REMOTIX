@@ -1,34 +1,34 @@
 # ===========================================================================
-# adattatore.xfce.sh — ⭐ COME SI AVVIA E SI GUARDA **XFCE**
+# adattatore.xfce.sh — ⭐ HOW **XFCE** IS STARTED AND WATCHED
 # ===========================================================================
 #
-# ⚠⚠ XFCE NON HA UN COMPOSITORE SUO SU WAYLAND, e questa e' la differenza piu'
-#    grossa fra questa famiglia e le prime due.  GNOME porta Mutter, KDE porta
-#    KWin; ⛔ XFCE (4.20) porta una SESSIONE e si appoggia a un compositore di
-#    famiglia `wlroots` — `labwc` oppure `wayfire`.
+# ⚠⚠ XFCE HAS NO COMPOSITOR OF ITS OWN ON WAYLAND, and this is the biggest
+#    difference between this family and the first two.  GNOME brings Mutter, KDE brings
+#    KWin; ⛔ XFCE (4.20) brings a SESSION and leans on a compositor of the
+#    `wlroots` family — `labwc` or `wayfire`.
 #
-# ⇒ ⭐ Qui si sceglie **labwc**, ed e' una scelta DICHIARATA, non ovvia:
-#     · e' il piu' leggero dei due, e questa fase misura l ambiente non il gusto;
-#     · e' uno dei due che il progetto ha gia' clonato per studiarli
+# ⇒ ⭐ Here **labwc** is chosen, and it is a DECLARED choice, not an obvious one:
+#     · it is the lighter of the two, and this phase measures the environment, not taste;
+#     · it is one of the two the project has already cloned to study them
 #       (`reference-xfce/labwc`, `reference-xfce/wayfire`).
-#   ⛔ E va rimessa in discussione nella fase 13, dove il prodotto dovra' parlare
-#     con quel compositore davvero: se la scelta cambia, cambia QUESTO file e
-#     non la lista delle prove.  ⭐ Che e' esattamente il motivo per cui esiste
-#     un adattatore.
+#   ⛔ And it must be questioned again in phase 13, where the product will have to talk
+#     to that compositor for real: if the choice changes, THIS file changes and
+#     not the list of tests.  ⭐ Which is exactly the reason an
+#     adapter exists.
 #
-# ⛔ Il confine e' lo stesso degli altri: qui ci va **come si avvia e come si
-#    guarda**, MAI il comportamento del prodotto.
+# ⛔ The boundary is the same as the others: what goes in here is **how it is started and how
+#    it is watched**, NEVER the product's behaviour.
 # ===========================================================================
 
-adattatore_nome() { printf 'XFCE (labwc, famiglia wlroots)'; }
+adattatore_nome() { printf 'XFCE (labwc, wlroots family)'; }
 
 adattatore_pacchetto() { printf 'labwc'; }
 
-# ⚠ `WLR_BACKENDS=headless` e' il modo in cui un compositore wlroots nasce
-#   SENZA schermo fisico — l equivalente di `--headless` di Mutter e di
-#   `--virtual` di KWin.  ⭐ Tre compositori, tre parole diverse per la stessa
-#   cosa: e' precisamente il genere di differenza che deve stare qui sotto e non
-#   dentro la lista delle prove.
+# ⚠ `WLR_BACKENDS=headless` is the way a wlroots compositor is born
+#   WITHOUT a physical screen — the equivalent of Mutter's `--headless` and of
+#   KWin's `--virtual`.  ⭐ Three compositors, three different words for the same
+#   thing: it is precisely the kind of difference that must live down here and not
+#   inside the list of tests.
 adattatore_avvia() {
 	_rtd=$1; _log=$2
 	runuser -u provanic -- env \

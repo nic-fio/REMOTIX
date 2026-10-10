@@ -1,42 +1,42 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-f008 — F-008 MODIFICATORI E COMBINAZIONI (la maglia C23 dentro la suite, allargata)
+15-f008 — F-008 MODIFIERS AND COMBINATIONS (the C23 mesh inside the suite, widened)
 
     python3 15-f008-modificatori.py --scatola gnome --browser chrome [--guasto]
     python3 15-f008-modificatori.py --certifica
 
-La scena e' quella di C23 — IMPORTATA: `firefox-esr --kiosk` nella sessione con
-un <input> sempre a fuoco e sotto la STRISCIA DI COLORI, una casella per
-carattere: il valore del campo si legge dalla FOTOGRAFIA della tela
-(`C23.fotografa_e_leggi`), tasti VERI dati al browser (`C23.manda`).  Per ogni
-caso: pulizia (Ctrl+A, Canc indietro) ⇒ striscia vuota; la BASE ⇒ striscia =
-base (se no BLOCKED: la scrittura semplice e' di F-007); la SEQUENZA ⇒ l'atteso.
+The scene is C23's — IMPORTED: `firefox-esr --kiosk` in the session with
+an <input> always focused and below it the STRIP OF COLOURS, one cell per
+character: the value of the field is read from the PHOTO of the canvas
+(`C23.fotografa_e_leggi`), REAL keys given to the browser (`C23.manda`).  For each
+case: cleaning (Ctrl+A, Backspace) ⇒ empty strip; the BASE ⇒ strip =
+base (if not, BLOCKED: plain typing belongs to F-007); the SEQUENCE ⇒ the expectation.
 
-I GRUPPI (una riga SUITE per passata, i gruppi e i casi nei campi `gruppi`/`casi`):
-  Maiusc+frecce        i casi 1, 3, 4 di C23 (3 e 4: il Maiusc non resta incastrato)
-  Ctrl+Maiusc+frecce   il caso 2 di C23 (Ctrl+Maiusc+Sinistra), Ctrl+Maiusc+Sinistra×2,
-                       Ctrl+Maiusc+Destra (selezione per parola)
-  Ctrl+A               seleziona tutto, e la lettera lo sostituisce
-  Ctrl+C / Ctrl+V      copia e incolla DENTRO l'applicazione della sessione: una
-                       parte selezionata col Maiusc, poi tutto con Ctrl+A e incollato
-                       due volte — il testo incollato si LEGGE nella striscia
-L'atteso di ogni caso e' anche calcolato da `simula()` (un campo di testo finto,
-esteso da quello di C23: Destra, Ctrl+Destra, Ctrl+C, Ctrl+V), e `--certifica`
-controlla che coincida e che la sequenza col guasto dia un'altra cosa.
+THE GROUPS (one SUITE line per pass, the groups and the cases in the fields `gruppi`/`casi`):
+  Maiusc+frecce        cases 1, 3, 4 of C23 (3 and 4: Shift does not stay stuck)
+  Ctrl+Maiusc+frecce   case 2 of C23 (Ctrl+Shift+Left), Ctrl+Shift+Left×2,
+                       Ctrl+Shift+Right (selection by word)
+  Ctrl+A               selects everything, and the letter replaces it
+  Ctrl+C / Ctrl+V      copy and paste INSIDE the session's application: a
+                       part selected with Shift, then everything with Ctrl+A and pasted
+                       twice — the pasted text is READ in the strip
+The expectation of each case is also computed by `simula()` (a fake text field,
+extended from C23's: Right, Ctrl+Right, Ctrl+C, Ctrl+V), and `--certifica`
+checks that it matches and that the sequence with the fault gives something else.
 
-GUASTO, per ciascun gruppo (stessa sessione, stessa scena, dopo la passata sana):
-  Maiusc+frecce, Ctrl+Maiusc+frecce   le stesse sequenze senza Maiusc (`C23.senza_maiusc`)
-  Ctrl+A                              la «a» senza Ctrl
-  Ctrl+C / Ctrl+V                     la «c» e la «v» senza Ctrl (il Ctrl+A resta)
-⇒ ogni caso deve dare rosso; un caso conta solo se la sua passata sana era verde.
+FAULT, for each group (same session, same scene, after the healthy pass):
+  Maiusc+frecce, Ctrl+Maiusc+frecce   the same sequences without Shift (`C23.senza_maiusc`)
+  Ctrl+A                              the «a» without Ctrl
+  Ctrl+C / Ctrl+V                     the «c» and the «v» without Ctrl (the Ctrl+A stays)
+⇒ every case must give red; a case counts only if its healthy pass was green.
 
-⚠ Ctrl+V passa per il browser: la pagina, sull'evento `paste`, annuncia al server
-  gli appunti DEL BROWSER (src/pagina.html ~7110-7220), e il server mette in coda
-  l'incolla finche' l'annuncio non arriva.  ⇒ Il caso Ctrl+C/Ctrl+V prova tutta
-  la catena come la vive l'utente: copia di la' ⇒ appunti al browser ⇒ incolla
-  di la'.  ⛔ Il labwc del server e' di TUTTI gli agenti: gli appunti del browser
-  sono condivisi con le loro prove (vedi il rapporto).
+⚠ Ctrl+V goes through the browser: the page, on the `paste` event, announces to the server
+  the BROWSER's clipboard (src/pagina.html ~7110-7220), and the server queues
+  the paste until the announcement arrives.  ⇒ The Ctrl+C/Ctrl+V case tests the whole
+  chain as the user lives it: copy over there ⇒ clipboard to the browser ⇒ paste
+  over there.  ⛔ The server's labwc belongs to ALL the agents: the browser's clipboard
+  is shared with their tests (see the report).
 """
 import json
 import os
@@ -52,9 +52,9 @@ C23 = G3.carica_maglia("c23", "11-c23-maiusc-e-frecce-selezionano.py")
 VERDE, ROSSO, CIECO = C23.VERDE, C23.ROSSO, C23.CIECO
 FUNZIONI = ("F-008",)
 
-# ⭐ L'allargamento della tavolozza e dei tasti di C23 — si AGGIUNGE, non si copia:
-#   la pagina (`C23.pagina_scena`) e il giudice (`C23.nome_colore`) leggono lo
-#   stesso dizionario, quindi non possono divergere.
+# ⭐ The widening of C23's palette and keys — it is ADDED, not copied:
+#   the page (`C23.pagina_scena`) and the judge (`C23.nome_colore`) read the
+#   same dictionary, so they cannot diverge.
 C23.SPECIALI.setdefault("ArrowRight", ("ArrowRight", "ArrowRight", 39, "", 0))
 for _l in "rtv":
     if _l not in C23.COLORI:
@@ -67,11 +67,11 @@ premi, scrivi, col = C23.premi, C23.scrivi, C23.col
 
 
 def _cc(guasto, passi):
-    """Ctrl tenuto giu' su `passi` — o, col guasto, niente Ctrl."""
+    """Ctrl held down over `passi` — or, with the fault, no Ctrl."""
     return passi if guasto else col("Control", passi)
 
 
-# (gruppo, titolo, base, costruttore(guasto) ⇒ sequenza, atteso)
+# (group, title, base, builder(fault) ⇒ sequence, expectation)
 def _da_c23(i):
     t, b, seq, a = C23.CASI[i]
     return (t, b, lambda g, seq=seq: C23.senza_maiusc(seq) if g else seq, a)
@@ -82,11 +82,11 @@ CASI = [
     ("Maiusc+frecce",) + _da_c23(2),
     ("Maiusc+frecce",) + _da_c23(3),
     ("Ctrl+Maiusc+frecce",) + _da_c23(1),
-    ("Ctrl+Maiusc+frecce", "5 Ctrl+Maiusc+Sinistra×2, z", "uno due tre",
+    ("Ctrl+Maiusc+frecce", "5 Ctrl+Shift+Left×2, z", "uno due tre",
      lambda g: (col("Control", premi("ArrowLeft") * 2) if g else
                 col("Control", col("Shift", premi("ArrowLeft") * 2))) + premi("z"),
      "uno z"),
-    ("Ctrl+Maiusc+frecce", "6 Ctrl+Sinistra×2, Ctrl+Maiusc+Destra, z", "abc def",
+    ("Ctrl+Maiusc+frecce", "6 Ctrl+Left×2, Ctrl+Shift+Right, z", "abc def",
      lambda g: col("Control", premi("ArrowLeft") * 2)
      + (col("Control", premi("ArrowRight")) if g else
         col("Control", col("Shift", premi("ArrowRight"))))
@@ -94,11 +94,11 @@ CASI = [
      "z def"),
     ("Ctrl+A", "7 Ctrl+A, q", "abc de",
      lambda g: _cc(g, premi("a")) + premi("q"), "q"),
-    ("Ctrl+C/Ctrl+V", "8 Maiusc+Sinistra×3, Ctrl+C, Destra, Ctrl+V", "abcdef",
+    ("Ctrl+C/Ctrl+V", "8 Shift+Left×3, Ctrl+C, Right, Ctrl+V", "abcdef",
      lambda g: col("Shift", premi("ArrowLeft") * 3) + _cc(g, premi("c"))
      + premi("ArrowRight") + _cc(g, premi("v")),
      "abcdefdef"),
-    ("Ctrl+C/Ctrl+V", "9 Ctrl+A, Ctrl+C, Destra, Ctrl+V×2", "ab",
+    ("Ctrl+C/Ctrl+V", "9 Ctrl+A, Ctrl+C, Right, Ctrl+V×2", "ab",
      lambda g: col("Control", premi("a")) + _cc(g, premi("c")) + premi("ArrowRight")
      + _cc(g, premi("v")) + _cc(g, premi("v")),
      "ababab"),
@@ -110,11 +110,11 @@ for _c in CASI:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LE FUNZIONI PURE
+#  THE PURE FUNCTIONS
 # ═══════════════════════════════════════════════════════════════════════════
 def simula(passi, valore=""):
-    """Il campo finto di C23, allargato: Destra, Ctrl+Destra (a fine parola, come
-    Firefox/GTK su Linux), Ctrl+C e Ctrl+V con un appunto."""
+    """C23's fake field, widened: Right, Ctrl+Right (to the end of the word, like
+    Firefox/GTK on Linux), Ctrl+C and Ctrl+V with a clipboard."""
     ancora = fuoco = len(valore)
     giu, appunto = set(), ""
     for tipo, nome in passi:
@@ -171,8 +171,8 @@ def simula(passi, valore=""):
 
 
 def esito_guasto_gruppo(coppie):
-    """[(esito sano, esito col guasto)] di un gruppo ⇒ True visto / False / None.
-    ⛔ Un caso conta solo se la sua passata sana era verde."""
+    """[(healthy outcome, outcome with the fault)] of a group ⇒ True seen / False / None.
+    ⛔ A case counts only if its healthy pass was green."""
     if not coppie or any(s != VERDE for s, _g in coppie):
         return None
     e = C23.esito_col_guasto([g for _s, g in coppie])
@@ -181,7 +181,7 @@ def esito_guasto_gruppo(coppie):
 
 def certifica():
     r = C23.certifica()
-    print("\n⭐ 15-f008 · L'ALLARGAMENTO")
+    print("\n⭐ 15-f008 · THE WIDENING")
     guai = []
 
     def prova(cosa, vero, d=""):
@@ -191,52 +191,52 @@ def certifica():
 
     tutti = [C23.MARCA, C23.VUOTO, C23.ALTRO] + list(C23.COLORI.values())
     dmin = min(C23._dist(a, b) for i, a in enumerate(tutti) for b in tutti[i + 1:])
-    prova("tavolozza allargata: %d colori distinti, distanza minima %d > 2×%d"
+    prova("widened palette: %d distinct colours, minimum distance %d > 2×%d"
           % (len(set(tutti)), dmin, C23.TOLLERANZA),
           len(set(tutti)) == len(tutti) and dmin > 2 * C23.TOLLERANZA)
     for t, b, seq, a in C23.CASI:
-        prova("simula allargata = simula di C23 sul caso %s" % t.split()[0],
+        prova("widened simula = C23's simula on case %s" % t.split()[0],
               simula(scrivi(b) + seq) == C23.simula(scrivi(b) + seq))
     for gr, t, b, costr, a in CASI:
         sano, gu = simula(scrivi(b) + costr(False)), simula(scrivi(b) + costr(True))
-        prova("[%s] %s ⇒ %r" % (gr, t, a), sano == a, "da' %r" % sano)
-        prova("[%s] %s col guasto ⇒ un'altra cosa" % (gr, t.split()[0]), gu != a,
-              "da' %r" % gu)
-        prova("[%s] %s: ogni carattere ha il suo colore, e ci sta" % (gr, t.split()[0]),
+        prova("[%s] %s ⇒ %r" % (gr, t, a), sano == a, "gives %r" % sano)
+        prova("[%s] %s with the fault ⇒ something else" % (gr, t.split()[0]), gu != a,
+              "gives %r" % gu)
+        prova("[%s] %s: every character has its colour, and it fits" % (gr, t.split()[0]),
               all(c in C23.COLORI for c in b + a + gu) and max(len(b), len(a), len(gu))
               <= C23.CASELLE)
     geo = {"tl": 1920, "ta": 1080, "bw": 1920, "bh": 1080, "bx0": 0, "by0": 0,
            "sx": 1.0, "sy": 1.0}
     for v in ("abcdefdef", "ababab", "uno zdue tre", "cvv", "abccv"):
         letto, perche = C23.leggi_striscia(C23.campionatore(C23._foto_finta(v, geo), geo))
-        prova("striscia %r si rilegge" % v, letto == v, "letto %r %s" % (letto, perche))
-    prova("guasto: sano verde, guasto tutti rossi ⇒ visto",
+        prova("strip %r reads back" % v, letto == v, "read %r %s" % (letto, perche))
+    prova("fault: healthy green, fault all red ⇒ seen",
           esito_guasto_gruppo([(VERDE, ROSSO), (VERDE, ROSSO)]) is True)
-    prova("guasto: uno torna lo stesso ⇒ NON visto",
+    prova("fault: one comes back the same ⇒ NOT seen",
           esito_guasto_gruppo([(VERDE, ROSSO), (VERDE, VERDE)]) is False)
-    prova("guasto: sano rosso ⇒ non si giudica",
+    prova("fault: healthy red ⇒ not judged",
           esito_guasto_gruppo([(ROSSO, ROSSO)]) is None)
     if guai:
-        print("⛔ ALLARGAMENTO NON CERTIFICATO: %d" % len(guai))
+        print("⛔ WIDENING NOT CERTIFIED: %d" % len(guai))
         return 1
-    print("⭐ ALLARGAMENTO CERTIFICATO")
+    print("⭐ WIDENING CERTIFIED")
     return r
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA PASSATA
+#  THE PASS
 # ═══════════════════════════════════════════════════════════════════════════
 def un_caso(s, geo, gruppo, titolo, base, seq, atteso, etichetta):
-    """Il caso come lo fa `C23.osserva`: pulizia, base, sequenza, tre fotografie."""
+    """The case as `C23.osserva` does it: cleaning, base, sequence, three photos."""
     g, o = s.g, s.o
     corto = titolo.split()[0]
     nome = "%s-%s-c%s" % (o.browser, etichetta, corto)
     C23.manda(g, C23.PULISCI)
     vuoto, pv = C23.fotografa_e_leggi(g, geo, "", o.salva, nome + "-0vuoto")
     if vuoto:
-        # ⚠ `[M]` 25 set, kde, server carico: una pulizia persa (il campo resta
-        #   col valore del caso prima).  Si ripete UNA volta: la pulizia non e'
-        #   la cosa giudicata, e il controllo «vuoto» resta com'e'.
+        # ⚠ `[M]` 25 Sep, kde, server under load: a lost cleaning (the field keeps
+        #   the value of the previous case).  It is repeated ONCE: the cleaning is not
+        #   the thing judged, and the «empty» check stays as it is.
         C23.manda(g, C23.PULISCI)
         vuoto, pv = C23.fotografa_e_leggi(g, geo, "", o.salva, nome + "-0vuoto-bis")
     C23.manda(g, scrivi(base))
@@ -248,18 +248,18 @@ def un_caso(s, geo, gruppo, titolo, base, seq, atteso, etichetta):
     if es == CIECO and (vuoto is None or vb is None):
         msg += " — %s" % (pv or pb)
     elif visto is None and es != CIECO:
-        es, msg = CIECO, "%s: la striscia non si legge dopo la sequenza: %s" % (titolo, pvi)
+        es, msg = CIECO, "%s: the strip cannot be read after the sequence: %s" % (titolo, pvi)
     if es == ROSSO and not G3.scena_viva(s.sc, s.chi):
-        es, msg = CIECO, ("%s: la scena e' MORTA durante il caso (firefox-esr non c'e' piu' "
-                          "nella sessione): il rosso non e' del prodotto%s"
+        es, msg = CIECO, ("%s: the scene DIED during the case (firefox-esr is no longer "
+                          "in the session): the red is not the product's%s"
                           % (titolo, G3.spiega_cieco(s.oom0)))
     quad = C23.leggi_il_quaderno(s.sc, s.chi)[n0:]
     tasti = [r[2:] for r in quad if r.startswith("K ")]
     valori = [r[2:] for r in quad if r.startswith("V ")]
     print("   %s [%s] %s" % ({VERDE: "⭐", ROSSO: "⛔", CIECO: "⚠"}[es], gruppo, msg), flush=True)
     if es != VERDE:
-        print("        keydown remoti: %s" % " | ".join(tasti)[:400], flush=True)
-        print("        valori remoti:  %s" % " | ".join(valori)[-300:], flush=True)
+        print("        remote keydowns: %s" % " | ".join(tasti)[:400], flush=True)
+        print("        remote values:   %s" % " | ".join(valori)[-300:], flush=True)
     return {"gruppo": gruppo, "caso": corto, "titolo": titolo, "esito": es, "motivo": msg,
             "visto": visto, "atteso": atteso, "keydown_remoti": tasti[-40:],
             "valori_remoti": valori[-10:]}
@@ -274,7 +274,7 @@ def passata(s, geo, guasto):
         ciechi = [x for x in risultati[-2:] if x["esito"] == CIECO]
         if r["esito"] == CIECO and (not guasto or len(ciechi) >= 2
                                     or not G3.scena_viva(s.sc, s.chi)):
-            # come C23: un caso cieco vuol dire che la scena non testimonia
+            # like C23: a blind case means the scene does not bear witness
             break
     return risultati
 
@@ -289,13 +289,13 @@ def corpo(o, E):
             raise S.Bloccata(m)
         geo = s.geometria()
         if not geo:
-            raise S.Bloccata("`REMOTIX_PUNTATORE.geometria` non c'e'")
-        print("   sveglia: %s" % S.C21.sveglia(s.g, geo), flush=True)
+            raise S.Bloccata("`REMOTIX_PUNTATORE.geometria` is not there")
+        print("   wake-up: %s" % S.C21.sveglia(s.g, geo), flush=True)
         porta = random.randint(39400, 39499)
         ok, t = C23.accendi_la_scena(s.sc, s.chi, porta)
-        print("   scena: %s" % ((t or "?").splitlines() or ["?"])[-1], flush=True)
+        print("   scene: %s" % ((t or "?").splitlines() or ["?"])[-1], flush=True)
         if not ok:
-            raise S.Bloccata("la scena non si accende: %s" % t[-300:])
+            raise S.Bloccata("the scene does not start: %s" % t[-300:])
         time.sleep(3)
         x, y = S.C21.dal_desktop_al_vetro(geo, geo["tl"] * 0.5, geo["ta"] * 0.26)
         s.g.clic(x, y)
@@ -311,9 +311,9 @@ def corpo(o, E):
         tutto = C23.esito_complessivo(list(gruppi.values()))
         male = [r["motivo"] for r in sani if r["esito"] != VERDE]
         if tutto == VERDE:
-            ragione = "tutti e %d i casi tornano (%s)" % (len(sani), ", ".join(GRUPPI))
+            ragione = "all %d cases add up (%s)" % (len(sani), ", ".join(GRUPPI))
         else:
-            ragione = "; ".join(male) or "casi non guardati: %s" % [
+            ragione = "; ".join(male) or "cases not looked at: %s" % [
                 g for g, e in gruppi.items() if e == CIECO]
             if tutto == CIECO and "OOM" not in ragione:
                 ragione += G3.spiega_cieco(s.oom0)
@@ -332,7 +332,7 @@ def corpo(o, E):
                 tasti_premuti_alla_fine=premuti)
 
         if o.guasto:
-            print("   ── GUASTO: le stesse sequenze senza il modificatore di ciascun gruppo ──",
+            print("   ── FAULT: the same sequences without each group's modifier ──",
                   flush=True)
             prima = G3.evidenze_ora(o)
             guasti = passata(s, geo, True)
@@ -343,11 +343,11 @@ def corpo(o, E):
                 per_gruppo[gr] = esito_guasto_gruppo(coppie)
             v = list(per_gruppo.values())
             visto = None if None in v else all(v)
-            ragione = "; ".join("%s: %s" % (gr, {True: "visto", False: "NON VISTO",
-                                                  None: "non giudicabile"}[x])
+            ragione = "; ".join("%s: %s" % (gr, {True: "seen", False: "NOT SEEN",
+                                                  None: "not judgeable"}[x])
                                 for gr, x in per_gruppo.items())
             E.guasto("F-008", visto, ragione,
-                     atteso="senza il modificatore ogni caso da' rosso",
+                     atteso="without the modifier every case gives red",
                      osservato="; ".join("%s %r" % (r["caso"], r["visto"]) for r in guasti),
                      evidenze=G3.evidenze_nuove(o, prima),
                      gruppi={k: x for k, x in per_gruppo.items()},

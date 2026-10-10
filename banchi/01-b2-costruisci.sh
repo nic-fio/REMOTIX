@@ -1,60 +1,60 @@
 #!/bin/bash
 #
-# 01-b2-costruisci.sh — costruisce le candidate del banco B2 della fase 1.
+# 01-b2-costruisci.sh — builds the candidates of bench B2 of phase 1.
 #
-#   bash 01-b2-costruisci.sh lsquic     BoringSSL + lsquic con WebTransport
-#   bash 01-b2-costruisci.sh controlla  dice solo che cosa c'e' gia'
-#
-# ---------------------------------------------------------------------------
-# CHE COSA DECIDE, E PERCHE' NON BASTA LEGGERE
-#
-# `DECISIONI.md` §6.4 sceglie la libreria QUIC, e il criterio e' cambiato il 9
-# agosto 2026: non basta che parli QUIC, deve portare HTTP/3 e WebTransport
-# LATO SERVER.  Il censimento del 9 notte ha letto le quattro candidate e ha
-# stabilito che:
-#
-#   - `quiche` e `ngtcp2+nghttp3` danno le FONDAMENTA (extended CONNECT,
-#     datagram, capsule) e non lo strato WebTransport;
-#   - `lsquic` ha `OPTION(LSQUIC_WEBTRANSPORT ... OFF)` nel CMakeLists [R],
-#     ⛔ ma nell'intestazione pubblica espone SOLO due impostazioni e quattro
-#     funzioni di classificazione degli stream — nessuna API di sessione,
-#     nessuna apertura di stream WT, nessun datagram WT.
-#
-# ⛔ E' esattamente E1 — necessario preso per sufficiente.  Un flag di
-#    compilazione che si chiama WEBTRANSPORT_SERVER_SUPPORT non dice che il
-#    server faccia WebTransport: dice che qualcuno ha scritto del codice dietro
-#    quel nome.  Quanto ne faccia si MISURA, e questo script prepara la misura.
-#
-# ⚠ E un dettaglio che vale come indizio, non come prova: il commento di
-#   `es_webtransport_server` nell'intestazione dice «Enable datagram extension
-#   for http3 server» — cioe' documenta un'ALTRA cosa.  Un campo la cui
-#   documentazione parla di qualcos'altro e' un campo che nessuno ha riletto.
+#   bash 01-b2-costruisci.sh lsquic     BoringSSL + lsquic with WebTransport
+#   bash 01-b2-costruisci.sh controlla  only says what is already there
 #
 # ---------------------------------------------------------------------------
-# L'ATTESO, DICHIARATO PRIMA (regola B0.4 di `FASI.md` §01-filo-nudo)
+# WHAT IT DECIDES, AND WHY READING IS NOT ENOUGH
 #
-#   1. BoringSSL compila                                   -> atteso: si'
-#   2. lsquic compila CON -DLSQUIC_WEBTRANSPORT=ON          -> atteso: si'
-#   3. i quattro simboli WT sono nella libreria prodotta    -> atteso: 4 su 4
+# `DECISIONI.md` §6.4 chooses the QUIC library, and the criterion changed on
+# 9 Aug 2026: speaking QUIC is not enough, it must bring HTTP/3 and WebTransport
+# ON THE SERVER SIDE.  The survey of the night of the 9th read the four
+# candidates and established that:
 #
-# ⛔ Il punto 3 e' il controllo che rende credibili i primi due: una libreria
-#    che compila «con il flag» e non contiene i simboli e' una libreria in cui
-#    il flag non ha fatto niente — e il primo a scoprirlo sarebbe stato chi
-#    scrive il server, tre giorni dopo.
+#   - `quiche` and `ngtcp2+nghttp3` give the FOUNDATIONS (extended CONNECT,
+#     datagram, capsule) and not the WebTransport layer;
+#   - `lsquic` has `OPTION(LSQUIC_WEBTRANSPORT ... OFF)` in the CMakeLists [R],
+#     ⛔ but in the public header it exposes ONLY two settings and four
+#     stream classification functions — no session API, no opening of WT
+#     streams, no WT datagram.
+#
+# ⛔ It is exactly E1 — necessary taken for sufficient.  A build flag called
+#    WEBTRANSPORT_SERVER_SUPPORT does not say that the server does WebTransport:
+#    it says that someone wrote some code behind that name.  How much it does
+#    is MEASURED, and this script prepares the measurement.
+#
+# ⚠ And a detail that counts as a clue, not as proof: the comment of
+#   `es_webtransport_server` in the header says "Enable datagram extension
+#   for http3 server" — that is, it documents ANOTHER thing.  A field whose
+#   documentation talks about something else is a field nobody has reread.
+#
+# ---------------------------------------------------------------------------
+# THE EXPECTED, DECLARED FIRST (rule B0.4 of `FASI.md` §01-filo-nudo)
+#
+#   1. BoringSSL compiles                                  -> expected: yes
+#   2. lsquic compiles WITH -DLSQUIC_WEBTRANSPORT=ON        -> expected: yes
+#   3. the four WT symbols are in the produced library      -> expected: 4 of 4
+#
+# ⛔ Point 3 is the check that makes the first two credible: a library that
+#    compiles "with the flag" and does not contain the symbols is a library in
+#    which the flag did nothing — and the first to find out would have been
+#    whoever writes the server, three days later.
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
 SRC=/srv/src/b2
-# ⚠ Nessun `-b <ramo>`: si prende il ramo predefinito del deposito.  Il primo
-#   giro del 9 agosto 2026 chiedeva `master` a BoringSSL e falliva con «Remote
-#   branch master not found» — Google l'ha rinominato.  Un ramo scritto a mano
-#   in uno script e' una dipendenza dal nome di qualcun altro.
+# ⚠ No `-b <branch>`: the repository's default branch is taken.  The first
+#   round of 9 Aug 2026 asked BoringSSL for `master` and failed with "Remote
+#   branch master not found" — Google renamed it.  A branch written by hand
+#   in a script is a dependency on someone else's name.
 #
-# ⛔ E il fallimento e' arrivato con «uscita 0» sul terminale di chi guardava,
-#    perche' il comando remoto era in pipe con `tail`: lo stato d'uscita era
-#    quello di `tail`.  E' `LEZIONI.md` §1.9 — zero e fallimento con la stessa
-#    faccia — presa nell'INVOCAZIONE invece che nello script.  Chi lancia
-#    questo banco non ci metta un `| tail` davanti senza `PIPESTATUS`.
+# ⛔ And the failure arrived with "exit 0" on the terminal of whoever was
+#    watching, because the remote command was piped into `tail`: the exit
+#    status was that of `tail`.  It is `LEZIONI.md` §1.9 — zero and failure
+#    with the same face — caught in the INVOCATION instead of in the script.
+#    Whoever launches this bench must not put a `| tail` after it without `PIPESTATUS`.
 
 log()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ok()   { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
@@ -67,15 +67,15 @@ mkdir -p "$SRC" || exit 2
 cd "$SRC" || exit 2
 
 # ---------------------------------------------------------------------------
-# 0. Che cosa c'e' gia'
+# 0. What is already there
 # ---------------------------------------------------------------------------
-log "Stato di partenza"
-inf "go       $(go version 2>/dev/null || echo MANCA)"
-inf "cmake    $(cmake --version 2>/dev/null | head -1 || echo MANCA)"
-inf "gcc      $(gcc -dumpversion 2>/dev/null || echo MANCA)"
-inf "sorgenti $SRC"
-[ -d "$SRC/boringssl" ] && inf "boringssl gia' clonato" || inf "boringssl da clonare"
-[ -d "$SRC/lsquic" ]    && inf "lsquic gia' clonato"    || inf "lsquic da clonare"
+log "Starting state"
+inf "go       $(go version 2>/dev/null || echo MISSING)"
+inf "cmake    $(cmake --version 2>/dev/null | head -1 || echo MISSING)"
+inf "gcc      $(gcc -dumpversion 2>/dev/null || echo MISSING)"
+inf "sources  $SRC"
+[ -d "$SRC/boringssl" ] && inf "boringssl already cloned" || inf "boringssl to be cloned"
+[ -d "$SRC/lsquic" ]    && inf "lsquic already cloned"    || inf "lsquic to be cloned"
 
 if [ "$AZIONE" = controlla ]; then
 	exit 0
@@ -84,37 +84,37 @@ fi
 # ---------------------------------------------------------------------------
 # 1. BoringSSL
 #
-# ⚠ lsquic non parla con OpenSSL: vuole BoringSSL, e BoringSSL si compila con
-#   Go.  E' la ragione per cui `golang-go` e' entrato in `provision.sh`.
+# ⚠ lsquic does not talk to OpenSSL: it wants BoringSSL, and BoringSSL is built
+#   with Go.  That is the reason `golang-go` entered `provision.sh`.
 # ---------------------------------------------------------------------------
 log "BoringSSL"
 if [ ! -d "$SRC/boringssl" ]; then
 	git clone --depth 1 https://boringssl.googlesource.com/boringssl "$SRC/boringssl" \
-		|| { ko "clone fallito"; exit 3; }
+		|| { ko "clone failed"; exit 3; }
 fi
 if [ ! -f "$SRC/boringssl/build/libssl.a" ] && [ ! -f "$SRC/boringssl/build/ssl/libssl.a" ]; then
 	cmake -B "$SRC/boringssl/build" -S "$SRC/boringssl" -GNinja -DCMAKE_BUILD_TYPE=Release \
-		|| { ko "cmake fallito"; exit 3; }
-	ninja -C "$SRC/boringssl/build" ssl crypto || { ko "compilazione fallita"; exit 3; }
+		|| { ko "cmake failed"; exit 3; }
+	ninja -C "$SRC/boringssl/build" ssl crypto || { ko "build failed"; exit 3; }
 fi
 BSSL_SSL=$(find "$SRC/boringssl/build" -name libssl.a | head -1)
 BSSL_CRY=$(find "$SRC/boringssl/build" -name libcrypto.a | head -1)
 if [ -n "$BSSL_SSL" ] && [ -n "$BSSL_CRY" ]; then
-	ok "libssl.a e libcrypto.a costruite"
+	ok "libssl.a and libcrypto.a built"
 else
-	ko "le librerie di BoringSSL non ci sono"
+	ko "the BoringSSL libraries are not there"
 	exit 3
 fi
 
 # ---------------------------------------------------------------------------
-# 2. lsquic, CON il flag
+# 2. lsquic, WITH the flag
 # ---------------------------------------------------------------------------
-log "lsquic con LSQUIC_WEBTRANSPORT=ON"
+log "lsquic with LSQUIC_WEBTRANSPORT=ON"
 if [ ! -d "$SRC/lsquic" ]; then
 	git clone --depth 1 --recursive https://github.com/litespeedtech/lsquic "$SRC/lsquic" \
-		|| { ko "clone fallito"; exit 4; }
+		|| { ko "clone failed"; exit 4; }
 fi
-inf "versione $(cd "$SRC/lsquic" && git describe --tags 2>/dev/null || echo '(senza tag)')"
+inf "version $(cd "$SRC/lsquic" && git describe --tags 2>/dev/null || echo '(no tag)')"
 
 cmake -B "$SRC/lsquic/build" -S "$SRC/lsquic" -GNinja \
 	-DCMAKE_BUILD_TYPE=Release \
@@ -124,34 +124,34 @@ cmake -B "$SRC/lsquic/build" -S "$SRC/lsquic" -GNinja \
 	-DBORINGSSL_LIB_crypto="$BSSL_CRY" \
 	-DBORINGSSL_INCLUDE="$SRC/boringssl/include" \
 	-DLSQUIC_TESTS=OFF \
-	|| { ko "cmake fallito"; exit 4; }
-ninja -C "$SRC/lsquic/build" lsquic || { ko "compilazione fallita"; exit 4; }
-# ⭐ E i programmi d'esempio, che sono la strada piu' economica per avere un
-#    server HTTP/3 VERO da puntare contro un browser vero.  Vogliono libevent:
-#    senza, cmake avverte «binaries won't be built» e tira dritto — cioe' il
-#    banco resterebbe senza il pezzo che serve, e con esito zero.
+	|| { ko "cmake failed"; exit 4; }
+ninja -C "$SRC/lsquic/build" lsquic || { ko "build failed"; exit 4; }
+# ⭐ And the example programs, which are the cheapest way to have a REAL
+#    HTTP/3 server to point a real browser at.  They want libevent: without
+#    it, cmake warns "binaries won't be built" and carries on — that is, the
+#    bench would be left without the piece it needs, and with exit zero.
 if ninja -C "$SRC/lsquic/build" http_server 2>/dev/null; then
-	ok "http_server d'esempio costruito"
+	ok "example http_server built"
 else
-	inf "http_server non costruito (manca libevent?) — non blocca il controllo"
+	inf "http_server not built (libevent missing?) — does not block the check"
 fi
 LIB=$(find "$SRC/lsquic/build" -name 'liblsquic.a' | head -1)
-[ -n "$LIB" ] && ok "liblsquic.a costruita" || { ko "liblsquic.a non trovata"; exit 4; }
+[ -n "$LIB" ] && ok "liblsquic.a built" || { ko "liblsquic.a not found"; exit 4; }
 
 # ---------------------------------------------------------------------------
-# 3. ⛔ IL CONTROLLO: il flag ha prodotto qualcosa?
+# 3. ⛔ THE CHECK: did the flag produce anything?
 #
-# Non «compila», non «il flag e' accettato»: i SIMBOLI.  Un flag ignorato
-# produce una libreria identica a quella senza flag, e nessun messaggio.
+# Not "it compiles", not "the flag is accepted": the SYMBOLS.  An ignored flag
+# produces a library identical to the one without the flag, and no message.
 # ---------------------------------------------------------------------------
-log "Il controllo: i simboli WebTransport dentro la libreria"
-# ⛔ Il banco dichiara SU CHE COSA sta guardando, e quanti ne vede in tutto,
-#    prima di dire quali mancano.  Il primo giro del 9 agosto 2026 ha detto
-#    «0 su 4» mentre una lettura a mano sullo stesso archivio ne mostrava 4:
-#    senza queste tre righe non c'era modo di sapere chi dei due mentiva.
-inf "archivio $LIB"
-inf "byte     $(stat -c %s "$LIB" 2>/dev/null || echo '?')"
-inf "simboli che nominano webtransport, a occhio: $(nm -g --defined-only "$LIB" 2>/dev/null | grep -ci webtransport)"
+log "The check: the WebTransport symbols inside the library"
+# ⛔ The bench declares WHAT it is looking at, and how many it sees in all,
+#    before saying which are missing.  The first round of 9 Aug 2026 said
+#    "0 of 4" while a hand reading on the same archive showed 4:
+#    without these three lines there was no way of knowing which of the two was lying.
+inf "archive $LIB"
+inf "bytes   $(stat -c %s "$LIB" 2>/dev/null || echo '?')"
+inf "symbols naming webtransport, at a glance: $(nm -g --defined-only "$LIB" 2>/dev/null | grep -ci webtransport)"
 nm -g --defined-only "$LIB" 2>/dev/null | grep -i webtransport | sed 's/^/        /' | head -8
 ATTESI=(
 	lsquic_stream_set_webtransport_session
@@ -159,21 +159,21 @@ ATTESI=(
 	lsquic_stream_is_webtransport_client_bidi_stream
 	lsquic_stream_get_webtransport_session_stream_id
 )
-# ⛔ I simboli si leggono UNA volta e si cercano in una stringa, non in un tubo.
+# ⛔ The symbols are read ONCE and searched in a string, not in a pipe.
 #
-#    Il primo giro del 9 agosto 2026 faceva `nm ... | grep -q " $s$"` e diceva
-#    **0 su 4** mentre i quattro simboli erano nell'archivio — li stampava lui
-#    stesso tre righe sopra.  La causa: `set -o pipefail` in cima, e `grep -q`
-#    che esce al PRIMO riscontro chiudendo il tubo.  `nm` sta ancora scrivendo,
-#    prende SIGPIPE, muore con 141 — e `pipefail` fa valere quel 141 come esito
-#    della pipeline.  ⛔ **Il riscontro riuscito veniva letto come fallimento**:
-#    piu' il simbolo era facile da trovare, prima grep usciva, piu' sicuro era
-#    il falso rosso.
+#    The first round of 9 Aug 2026 did `nm ... | grep -q " $s$"` and said
+#    **0 of 4** while the four symbols were in the archive — it printed them
+#    itself three lines above.  The cause: `set -o pipefail` at the top, and
+#    `grep -q` exiting at the FIRST match, closing the pipe.  `nm` is still
+#    writing, gets SIGPIPE, dies with 141 — and `pipefail` makes that 141 the
+#    outcome of the pipeline.  ⛔ **The successful match was read as failure**:
+#    the easier the symbol was to find, the sooner grep exited, the surer the
+#    false red.
 #
-#    E' `LEZIONI.md` §2.3 — una prova che boccia il codice giusto costa quanto
-#    una che promuove quello sbagliato — nella stessa famiglia del banco della
-#    rotella.  Qui avrebbe cancellato la candidata migliore di `DECISIONI.md`
-#    §6.4 con un [M] falso contro un [R].
+#    It is `LEZIONI.md` §2.3 — a test that fails the right code costs as much
+#    as one that passes the wrong one — in the same family as the scroll wheel
+#    bench.  Here it would have struck off the best candidate of `DECISIONI.md`
+#    §6.4 with a false [M] against an [R].
 SIMBOLI=$(nm -g --defined-only "$LIB" 2>/dev/null)
 TROVATI=0
 for s in "${ATTESI[@]}"; do
@@ -181,20 +181,20 @@ for s in "${ATTESI[@]}"; do
 		ok "$s"
 		TROVATI=$((TROVATI + 1))
 	else
-		ko "$s  — assente"
+		ko "$s  — absent"
 	fi
 done
 
 printf '\n'
-log "Esito"
-inf "atteso:    4 simboli su 4"
-inf "trovati:   $TROVATI su 4"
+log "Outcome"
+inf "expected:  4 symbols of 4"
+inf "found:     $TROVATI of 4"
 if [ "$TROVATI" -eq 4 ]; then
-	ok "il flag ha prodotto codice: si puo' passare alla sessione vera"
+	ok "the flag produced code: we can move on to the real session"
 	exit 0
 else
-	ko "il flag NON ha prodotto quel che dichiara"
-	printf '\n    ⛔ E questo e\047 il caso in cui il banco vale piu\047 di tutto:\n'
-	printf '       la libreria compila, il flag e\047 accettato, e il codice non c\047e\047.\n'
+	ko "the flag did NOT produce what it declares"
+	printf '\n    ⛔ And this is the case in which the bench is worth more than anything:\n'
+	printf '       the library compiles, the flag is accepted, and the code is not there.\n'
 	exit 1
 fi

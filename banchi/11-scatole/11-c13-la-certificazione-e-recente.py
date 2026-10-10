@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-11-c13 — ⭐⭐ «LA CERTIFICAZIONE E' RECENTE» — la maglia che guarda LA RETE
+11-c13 — ⭐⭐ «THE CERTIFICATION IS RECENT» — the mesh that looks at THE NET
 ===========================================================================
 
     python3 11-c13-la-certificazione-e-recente.py
@@ -10,78 +10,78 @@
     python3 11-c13-la-certificazione-e-recente.py --ultimi 40
 
 ---------------------------------------------------------------------------
-⛔⛔ IL GUASTO CHE PRENDE — e `fasi/11…` §4.2 lo dice meglio di come lo direi io
+⛔⛔ THE FAULT IT CATCHES — and `fasi/11…` §4.2 says it better than I would
 ---------------------------------------------------------------------------
 
-  ⛔ *«una rete che non e' piu' capace di dare rosso HA ESATTAMENTE L'ASPETTO
-       di una rete che non trova niente.»*
+  ⛔ *«a net that is no longer able to give red LOOKS EXACTLY LIKE
+       a net that finds nothing.»*
 
-⚠ Ed e' il guasto piu' difficile da vedere di tutta la fase, perche' **non ha
-  sintomi**.  Tutto verde, ogni giorno, per settimane.  ⇒ E la differenza fra
-  *«non c'e' niente che non va»* e *«non guardo piu'»* non si legge da fuori: si
-  legge **solo** innestando un guasto e pretendendo che venga visto.
+⚠ And it is the hardest fault to see in the whole phase, because **it has no
+  symptoms**.  All green, every day, for weeks.  ⇒ And the difference between
+  *«there is nothing wrong»* and *«I no longer look»* cannot be read from outside: it
+  can be read **only** by injecting a fault and demanding that it be seen.
 
-⭐ §3.6 lo dichiara come parte della rete, non come cortesia:
-  ⛔ *«ogni prova della lista ha, obbligatoriamente, il suo guasto innestato, e
-     quel caso va fatto girare, NON IMMAGINATO»* — e ⇒ *«il registro di quel che
-     e' stato iniettato, quando, e con che esito, e' parte della rete (C13)»*.
+⭐ §3.6 declares it as part of the net, not as a courtesy:
+  ⛔ *«every test of the list has, mandatorily, its injected fault, and
+     that case must be run, NOT IMAGINED»* — and ⇒ *«the log of what
+     was injected, when, and with what outcome, is part of the net (C13)»*.
 
 ---------------------------------------------------------------------------
-⭐ CHE COSA GUARDA — e i tre esiti che sa distinguere
+⭐ WHAT IT LOOKS AT — and the three outcomes it can tell apart
 ---------------------------------------------------------------------------
 
-Legge il registro del gancio e, negli ultimi **N giri veri**, cerca **almeno una
-maglia** che porti tutt'e due le cose:
+It reads the hook's log and, in the last **N real runs**, looks for **at least one
+mesh** that carries both things:
 
-    "guasto_innestato": true    ⇒ le e' stato innestato un guasto
-    "ha_visto_il_guasto": true  ⇒ e lei lo ha VISTO
+    "guasto_innestato": true    ⇒ a fault was injected into it
+    "ha_visto_il_guasto": true  ⇒ and it SAW it
 
-⛔⛔ E LE DUE COSE DEVONO STARE NELLA STESSA MAGLIA, non nello stesso giro.
-   ⚠ Se bastasse *«in questo giro c'era un guasto innestato E qualcuno ha dato
-     rosso»*, il rosso potrebbe venire da **un'altra maglia** — per esempio da
-     C1, che un guasto vero ce l'ha davvero — ⇒ e questa maglia direbbe *«la
-     rete sa dare rosso»* avendo guardato una prova che non c'entra niente.
-     ⛔ Sarebbe un controllo che non puo' dare rosso: la forma d'errore di
+⛔⛔ AND THE TWO THINGS MUST BE IN THE SAME MESH, not in the same run.
+   ⚠ If *«in this run there was an injected fault AND someone gave
+     red»* were enough, the red could come from **another mesh** — for example from
+     C1, which really has a real fault — ⇒ and this mesh would say *«the
+     net can give red»* having looked at a test that has nothing to do with it.
+     ⛔ It would be a check that cannot give red: the error shape of
      `LEZIONI.md` §1.44.
 
-⚠ E il campo si chiama `ha_visto_il_guasto` e non `esito` per una ragione: su un
-  giro innestato **l'esito si legge al contrario** (C8 `--senza-cura` esce **0**
-  quando il guasto e' stato visto).  ⭐ Quell'inversione sta in un posto solo —
-  dentro il gancio — e qui non serve saperla.
+⚠ And the field is called `ha_visto_il_guasto` and not `esito` for a reason: on an
+  injected run **the outcome reads the other way round** (C8 `--senza-cura` exits **0**
+  when the fault was seen).  ⭐ That inversion lives in one place only —
+  inside the hook — and here there is no need to know it.
 
-I tre casi distinti, e sono davvero tre cose diverse:
+The three distinct cases, and they really are three different things:
 
-  ⛔ **mai innestato niente**    la rete gira e nessuno la mette alla prova
-  ⛔⛔ **innestato e NON visto**  il caso peggiore: la rete ha avuto un guasto
-                                sotto il naso e ha detto verde
-  ⭐ **innestato e visto**       la rete e' ancora capace di dare rosso
-
----------------------------------------------------------------------------
-⚠ IL METRO, dichiarato e stampato in ogni esito
----------------------------------------------------------------------------
-
-  `[?]` **ultimi 20 giri veri.**  ⛔ Scelto, non misurato.
-  ⚠ I giri a VUOTO (`--secco`) non contano: un giro che non ha eseguito niente
-    non puo' aver visto niente.
-
-⛔ E il criterio e' **a CONTI, non a giorni** — perche' cosi' lo chiede §4.2
-   (*«negli ultimi N giri»*).  ⚠ Ha un buco dichiarato: se il gancio girasse una
-   volta al mese, «gli ultimi venti giri» coprirebbero due anni.  ⇒ L'eta'
-   dell'ultima certificazione si **stampa sempre**, e con `--giorni N` diventa
-   anche un giudizio.  ⭐ Predefinito spento: questa maglia fa quel che il
-   documento le chiede, e non inventa politica per conto suo.
+  ⛔ **nothing ever injected**   the net runs and nobody puts it to the test
+  ⛔⛔ **injected and NOT seen**  the worst case: the net had a fault
+                                under its nose and said green
+  ⭐ **injected and seen**       the net is still able to give red
 
 ---------------------------------------------------------------------------
-GLI ESITI (§4.5 del documento di fase)
+⚠ THE YARDSTICK, declared and printed in every outcome
 ---------------------------------------------------------------------------
 
-  0  ⭐ negli ultimi N giri un guasto e' stato innestato ed E' STATO VISTO
-  1  ⛔ nessun guasto innestato, oppure innestato e non visto ⇒ rosso
-  3  ⛔ non ho potuto guardare — nessun giro vero da esaminare, o il registro
-     non si lascia leggere.  ⛔ E NON e' un rosso: che il gancio non abbia mai
-     girato lo dice **C12**, e due maglie che danno rosso per lo stesso fatto
-     fanno sembrare grave il doppio quel che e' successo una volta sola
-  2  il terreno non regge, o l'uso e' sbagliato
+  `[?]` **last 20 real runs.**  ⛔ Chosen, not measured.
+  ⚠ DRY runs (`--secco`) do not count: a run that executed nothing
+    cannot have seen anything.
+
+⛔ And the criterion is **by COUNTS, not by days** — because that is how §4.2 asks for it
+   (*«in the last N runs»*).  ⚠ It has a declared hole: if the hook ran once
+   a month, «the last twenty runs» would cover two years.  ⇒ The age
+   of the last certification is **always printed**, and with `--giorni N` it becomes
+   a judgement too.  ⭐ Off by default: this mesh does what the
+   document asks of it, and does not invent policy on its own.
+
+---------------------------------------------------------------------------
+THE OUTCOMES (§4.5 of the phase document)
+---------------------------------------------------------------------------
+
+  0  ⭐ in the last N runs a fault was injected and IT WAS SEEN
+  1  ⛔ no fault injected, or injected and not seen ⇒ red
+  3  ⛔ I could not look — no real run to examine, or the log
+     cannot be read.  ⛔ And it is NOT a red: that the hook has never
+     run is said by **C12**, and two meshes giving red for the same fact
+     make what happened once look twice as serious
+  2  the terrain does not hold, or the usage is wrong
 ===========================================================================
 """
 import argparse
@@ -97,11 +97,11 @@ ULTIMI_PREDEFINITI = 20
 
 
 def leggi_il_registro(percorso):
-    """Torna (giri, guaio) — ⛔ e i tre casi sono tre, come in C12.
+    """Returns (giri, guaio) — ⛔ and the cases are three, as in C12.
 
-       (None, "assente")     il file non c'e'
-       (None, "illeggibile") c'e' e non si apre, o e' tutto storto
-       ([...], None)         i giri, in ordine di scrittura
+       (None, "assente")     the file is not there
+       (None, "illeggibile") it is there and does not open, or it is all malformed
+       ([...], None)         the runs, in order of writing
     """
     if not os.path.exists(percorso):
         return None, "assente"
@@ -125,22 +125,22 @@ def leggi_il_registro(percorso):
 
 
 def giudica(giri, ultimi):
-    """Dice se la rete e' ancora capace di dare rosso.
+    """Says whether the net is still able to give red.
 
-    ⛔ Torna `None` per «non ho potuto guardare» (nessun giro vero da guardare),
-       altrimenti un dizionario:
+    ⛔ Returns `None` for «I could not look» (no real run to look at),
+       otherwise a dictionary:
 
-         esaminati       quanti giri veri ha guardato
-         innestati       quante maglie hanno avuto un guasto innestato
-         viste           quante di quelle lo hanno VISTO
-         mancate         l'elenco (giro, maglia) di quelle che NON lo hanno visto
-         ultima          il giro in cui l'ultima certificazione e' riuscita
+         esaminati       how many real runs it looked at
+         innestati       how many meshes had a fault injected
+         viste           how many of those SAW it
+         mancate         the list (run, mesh) of those that did NOT see it
+         ultima          the run in which the last certification succeeded
     """
     if giri is None:
         return None
-    # ⛔ I giri a vuoto si buttano PRIMA di contare gli ultimi N: contarli
-    #    vorrebbe dire che venti `--secco` di fila spingono fuori dalla finestra
-    #    l'ultima certificazione vera, e la maglia diventa rossa per niente.
+    # ⛔ Dry runs are thrown away BEFORE counting the last N: counting them
+    #    would mean that twenty `--secco` in a row push out of the window
+    #    the last real certification, and the mesh turns red for nothing.
     veri = [g for g in giri if not g.get("secco")]
     if not veri:
         return None
@@ -155,10 +155,10 @@ def giudica(giri, ultimi):
             if not m.get("guasto_innestato"):
                 continue
             innestati += 1
-            # ⛔ La chiave dev'esserci ED essere vera.  ⚠ Una chiave ASSENTE non
-            #   e' «visto»: e' un registro piu' vecchio del campo, cioe' «non lo
-            #   so» — e qui vale come «non visto», perche' una certificazione di
-            #   cui non si sa l'esito non certifica niente.
+            # ⛔ The key must be there AND be true.  ⚠ An ABSENT key is not
+            #   «seen»: it is a log older than the field, that is «I do not
+            #   know» — and here it counts as «not seen», because a certification
+            #   whose outcome is unknown certifies nothing.
             if m.get("ha_visto_il_guasto") is True:
                 viste += 1
                 ultima = g
@@ -171,7 +171,7 @@ def giudica(giri, ultimi):
 
 
 def eta_in_giorni(istante, adesso):
-    """⛔ Torna `None` se non sa dirlo — mai zero, mai un numero inventato."""
+    """⛔ Returns `None` if it cannot tell — never zero, never an invented number."""
     if not istante:
         return None
     try:
@@ -186,7 +186,7 @@ def eta_in_giorni(istante, adesso):
 
 # ═══════════════════════════════════════════════════════════════════════════
 def certifica():
-    """⛔ Si dimostra che il giudice SA dare rosso, verde, e «non lo so»."""
+    """⛔ We prove that the judge CAN give red, green, and «I do not know»."""
 
     def giro(maglie, secco=False, istante="2026-08-26T05:00:00+02:00"):
         return {"istante": istante, "secco": secco, "maglie": maglie}
@@ -198,48 +198,48 @@ def certifica():
         return d
 
     casi = [
-        ("⭐ un guasto innestato, e la rete lo ha VISTO",
+        ("⭐ a fault injected, and the net SAW it",
          [giro([m("C1"), m("C8 guasto", guasto=True, visto=True)])], "verde"),
 
-        ("⛔ venti giri e nessun guasto mai innestato",
+        ("⛔ twenty runs and no fault ever injected",
          [giro([m("C1"), m("C11")]) for _ in range(20)], "ROSSO"),
 
-        ("⛔⛔ innestato e NON visto — il caso peggiore",
+        ("⛔⛔ injected and NOT seen — the worst case",
          [giro([m("C8 guasto", guasto=True, visto=False, esito=1)])], "ROSSO"),
 
-        # ⭐⭐ IL CASO CHE TIENE IN PIEDI TUTTA LA MAGLIA.
-        ("⭐⭐ rosso da un'ALTRA maglia non certifica niente",
+        # ⭐⭐ THE CASE THAT HOLDS UP THE WHOLE MESH.
+        ("⭐⭐ red from ANOTHER mesh certifies nothing",
          [giro([m("C1", esito=1),
                 m("C8 guasto", guasto=True, visto=False, esito=1)])], "ROSSO"),
 
-        ("⚠ innestato, e del suo esito non si sa niente (campo assente)",
+        ("⚠ injected, and nothing is known of its outcome (field absent)",
          [giro([m("C8 guasto", guasto=True)])], "ROSSO"),
 
-        ("una certificazione riuscita fra venti giri normali ⇒ verde",
+        ("one successful certification among twenty normal runs ⇒ green",
          [giro([m("C1")]) for _ in range(19)]
          + [giro([m("C8 guasto", guasto=True, visto=True)])], "verde"),
 
-        ("⛔ la certificazione e' scivolata FUORI dalla finestra dei venti",
+        ("⛔ the certification slid OUT of the window of twenty",
          [giro([m("C8 guasto", guasto=True, visto=True)])]
          + [giro([m("C1")]) for _ in range(20)], "ROSSO"),
 
-        # ⛔ E i giri a vuoto non devono spingere fuori una certificazione vera.
-        ("⭐ venti giri A VUOTO non spingono fuori la certificazione vera",
+        # ⛔ And dry runs must not push out a real certification.
+        ("⭐ twenty DRY runs do not push out the real certification",
          [giro([m("C8 guasto", guasto=True, visto=True)])]
          + [giro([m("C1")], secco=True) for _ in range(20)], "verde"),
 
-        ("⛔ tutti i giri sono a vuoto ⇒ «non lo so», non rosso",
+        ("⛔ all the runs are dry ⇒ «I do not know», not red",
          [giro([m("C8 guasto", guasto=True, visto=True)], secco=True)], "non lo so"),
 
-        ("⛔ nessun giro ⇒ «non lo so» — che non abbia mai girato lo dice C12",
+        ("⛔ no run ⇒ «I do not know» — that it has never run is said by C12",
          [], "non lo so"),
 
-        ("⛔ registro illeggibile ⇒ «non lo so», non rosso",
+        ("⛔ unreadable log ⇒ «I do not know», not red",
          None, "non lo so"),
     ]
 
-    print("== certificazione del giudice di C13 ==")
-    print("   finestra in vigore: ultimi %d giri VERI · i giri a vuoto non contano"
+    print("== certification of the C13 judge ==")
+    print("   window in force: last %d REAL runs · dry runs do not count"
           % ULTIMI_PREDEFINITI)
     guai = 0
     for nome, giri, atteso in casi:
@@ -251,21 +251,21 @@ def certifica():
         else:
             ottenuto = "ROSSO"
         ok = ottenuto == atteso
-        print("  %s  %-58s  ⇒ %-9s (atteso %s)"
+        print("  %s  %-58s  ⇒ %-9s (expected %s)"
               % ("OK " if ok else "NO ", nome, ottenuto, atteso))
         if not ok:
             guai += 1
-            print("        (il giudice ha detto: %r)" % (r,))
+            print("        (the judge said: %r)" % (r,))
 
     print()
     if guai:
-        print("⛔ il giudice NON e' affidabile: %d casi sbagliati" % guai)
+        print("⛔ the judge is NOT reliable: %d wrong cases" % guai)
         return 1
-    print("⭐ il giudice distingue le tre cose che contano: mai innestato ·")
-    print("   innestato e non visto · innestato e visto")
-    print("⭐⭐ e ⛔ NON si lascia certificare da un rosso venuto da un'altra maglia")
-    print("⚠ e questa certificazione copre IL GIUDIZIO, non i guasti innestati:")
-    print("  che siano quelli GIUSTI lo decide §3.6, non io")
+    print("⭐ the judge tells apart the three things that count: never injected ·")
+    print("   injected and not seen · injected and seen")
+    print("⭐⭐ and ⛔ it does NOT let itself be certified by a red coming from another mesh")
+    print("⚠ and this certification covers THE JUDGEMENT, not the injected faults:")
+    print("  that they are the RIGHT ones is decided by §3.6, not by me")
     return 0
 
 
@@ -274,11 +274,11 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--registro", default=REGISTRO)
     p.add_argument("--ultimi", type=int, default=ULTIMI_PREDEFINITI,
-                   help="quanti giri veri guardare indietro. `[?]` scelto, non misurato")
+                   help="how many real runs to look back. `[?]` chosen, not measured")
     p.add_argument("--giorni", type=int, default=0,
-                   help="⚠ se > 0, l'eta' dell'ultima certificazione diventa "
-                        "anche un GIUDIZIO. Predefinito spento: §4.2 chiede un "
-                        "criterio a conti, non a giorni")
+                   help="⚠ if > 0, the age of the last certification becomes "
+                        "a JUDGEMENT too. Off by default: §4.2 asks for a "
+                        "criterion by counts, not by days")
     p.add_argument("--certifica", action="store_true")
     a = p.parse_args()
 
@@ -287,48 +287,48 @@ def main():
 
     giri, guaio = leggi_il_registro(a.registro)
 
-    print("== C13 — la certificazione e' recente? ==")
-    print("   ⛔ il guasto che cerca: una rete che non e' piu' capace di dare")
-    print("      rosso HA LO STESSO ASPETTO di una rete che non trova niente")
-    print("   metro: ultimi %d giri VERI  `[?]`  ·  i giri a vuoto non contano"
+    print("== C13 — is the certification recent? ==")
+    print("   ⛔ the fault it looks for: a net that is no longer able to give")
+    print("      red LOOKS THE SAME as a net that finds nothing")
+    print("   yardstick: last %d REAL runs  `[?]`  ·  dry runs do not count"
           % a.ultimi)
     if a.giorni:
-        print("   ⚠ e in piu': l'ultima certificazione entro %d giorni" % a.giorni)
+        print("   ⚠ and in addition: the last certification within %d days" % a.giorni)
     print()
 
     if guaio == "assente":
-        print("⛔ il registro non c'e': %s" % a.registro)
-        print("   ⇒ non ho potuto guardare — ⛔ e NON e' un rosso.")
-        print("     Che il gancio non abbia mai girato lo dice C12, ed e' giusto")
-        print("     che lo dica UNA maglia sola.")
+        print("⛔ the log is not there: %s" % a.registro)
+        print("   ⇒ I could not look — ⛔ and it is NOT a red.")
+        print("     That the hook has never run is said by C12, and it is right")
+        print("     that ONE mesh only says it.")
         return 3
     if guaio == "illeggibile":
-        print("⛔ il registro c'e' e non si lascia leggere: %s" % a.registro)
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ the log is there and cannot be read: %s" % a.registro)
+        print("   ⇒ I could not look")
         return 3
 
     r = giudica(giri, a.ultimi)
     if r is None:
-        print("⛔ nessun giro VERO da guardare (%d righe, tutte a vuoto o nessuna)"
+        print("⛔ no REAL run to look at (%d lines, all dry or none)"
               % len(giri or []))
-        print("   ⇒ non ho potuto guardare — ⛔ e NON e' un rosso")
+        print("   ⇒ I could not look — ⛔ and it is NOT a red")
         return 3
 
-    print("   giri nel registro : %d veri, %d a vuoto" % (r["totali"], r["a_vuoto"]))
-    print("   guardati          : gli ultimi %d" % r["esaminati"])
-    print("   guasti innestati  : %d" % r["innestati"])
-    print("   ⭐ visti           : %d" % r["viste"])
+    print("   runs in the log   : %d real, %d dry" % (r["totali"], r["a_vuoto"]))
+    print("   looked at         : the last %d" % r["esaminati"])
+    print("   injected faults   : %d" % r["innestati"])
+    print("   ⭐ seen            : %d" % r["viste"])
     adesso = time.time()
     if r["ultima"]:
         eta = eta_in_giorni(r["ultima"].get("istante"), adesso)
-        print("   ultima riuscita   : %s  (%s)"
+        print("   last successful   : %s  (%s)"
               % (r["ultima"].get("istante"),
-                 "eta ignota" if eta is None else "%.1f giorni fa" % eta))
+                 "age unknown" if eta is None else "%.1f days ago" % eta))
     print()
 
     if r["mancate"]:
-        print("⛔⛔ E QUESTE MAGLIE HANNO AVUTO UN GUASTO SOTTO IL NASO E NON LO")
-        print("    HANNO VISTO:")
+        print("⛔⛔ AND THESE MESHES HAD A FAULT UNDER THEIR NOSE AND DID NOT")
+        print("    SEE IT:")
         for quando, nome, visto in r["mancate"]:
             print("   · %s  ·  %s  (ha_visto_il_guasto=%r)" % (quando, nome, visto))
         print()
@@ -339,33 +339,33 @@ def main():
             eta = eta_in_giorni(r["ultima"].get("istante"), adesso)
             if eta is not None and eta > a.giorni:
                 vecchia = True
-                print("⛔ ROSSO — l'ultima certificazione riuscita e' di %.1f giorni"
-                      " fa, e la soglia chiesta e' %d" % (eta, a.giorni))
+                print("⛔ RED — the last successful certification is from %.1f days"
+                      " ago, and the threshold asked is %d" % (eta, a.giorni))
         if not vecchia:
-            print("⭐ negli ultimi %d giri un guasto e' stato innestato ed E' STATO"
-                  " VISTO %d volte" % (r["esaminati"], r["viste"]))
-            print("⚠ e questo dice che la rete sa ancora dare rosso SUI GUASTI CHE")
-            print("  CONOSCE. ⛔ §3.6: i guasti innestati sono guasti gia' noti, e")
-            print("  ogni desktop nuovo deve entrare con **un guasto suo**.")
+            print("⭐ in the last %d runs a fault was injected and IT WAS"
+                  " SEEN %d times" % (r["esaminati"], r["viste"]))
+            print("⚠ and this says the net can still give red ON THE FAULTS IT")
+            print("  KNOWS. ⛔ §3.6: the injected faults are faults already known, and")
+            print("  every new desktop must come in with **a fault of its own**.")
             if r["mancate"]:
-                print("⚠ ⛔ ma sopra c'e' un elenco di certificazioni MANCATE: vanno")
-                print("  guardate, anche se questa maglia e' verde.")
+                print("⚠ ⛔ but above there is a list of MISSED certifications: they must")
+                print("  be looked at, even if this mesh is green.")
             return 0
         return 1
 
     if r["innestati"] == 0:
-        print("⛔⛔ ROSSO — negli ultimi %d giri **nessun guasto e' mai stato"
-              " innestato**." % r["esaminati"])
-        print("   ⇒ la rete gira, e nessuno la mette alla prova. ⛔ Da fuori e'")
-        print("     indistinguibile da una rete che funziona benissimo.")
-        print("   ⚠ E la cura non e' toccare questa maglia: e' far girare la")
-        print("     famiglia `tutto`, che il guasto innestato ce l'ha dentro.")
+        print("⛔⛔ RED — in the last %d runs **no fault was ever"
+              " injected**." % r["esaminati"])
+        print("   ⇒ the net runs, and nobody puts it to the test. ⛔ From outside it is")
+        print("     indistinguishable from a net that works perfectly.")
+        print("   ⚠ And the cure is not touching this mesh: it is running the")
+        print("     `tutto` family, which has the injected fault inside it.")
         return 1
 
-    print("⛔⛔ ROSSO — %d guasti sono stati innestati e **nessuno e' stato visto**."
+    print("⛔⛔ RED — %d faults were injected and **none was seen**."
           % r["innestati"])
-    print("   ⇒ ⛔ e' il caso peggiore dei tre: la rete non e' piu' capace di")
-    print("     dare rosso, e continua a dire verde con la stessa faccia.")
+    print("   ⇒ ⛔ it is the worst case of the three: the net is no longer able to")
+    print("     give red, and it keeps saying green with the same face.")
     return 1
 
 

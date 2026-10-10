@@ -2,203 +2,203 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-11-c8b — ⭐⭐⭐ «E LA STESSA PAGINA SI VEDE **DAL CLIENTE**»
+11-c8b — ⭐⭐⭐ «AND THE SAME PAGE IS SEEN **FROM THE CLIENT**»
 ===========================================================================
 
     python3 11-c8b-la-pagina-si-vede-dal-cliente.py
     python3 11-c8b-la-pagina-si-vede-dal-cliente.py --senza-cura
     python3 11-c8b-la-pagina-si-vede-dal-cliente.py --certifica
 
-⛔ E' la META' B di C8, quella che nel documento di fase (§4.1, riga «C8b») era
-   dichiarata *«oggi non si misura: le sessioni nuove nascono cieche»*.
+⛔ It is HALF B of C8, the one that in the phase document (§4.1, line «C8b») was
+   declared *«today it is not measured: new sessions are born blind»*.
 
 ---------------------------------------------------------------------------
-⭐⭐ PERCHE' ADESSO SI PUO' — e la ragione va letta prima del codice
+⭐⭐ WHY IT CAN BE DONE NOW — and the reason must be read before the code
 ---------------------------------------------------------------------------
 
-`[M]` 27 agosto 2026, banco isolato con Mutter vero: il `wl_output` di una
-sessione headless nasce ⛔ **soltanto quando un consumatore PipeWire si aggancia
-al flusso** — 65-93 ms dopo l'aggancio, ⛔ **mai prima**.
+`[M]` 27 August 2026, isolated bench with real Mutter: the `wl_output` of a
+headless session is born ⛔ **only when a PipeWire consumer hooks
+onto the stream** — 65-93 ms after the hooking, ⛔ **never before**.
 
-⇒ ⭐ **Mentre un cliente e' attaccato, lo schermo c'e'.**  E «mentre un cliente
-  e' attaccato» e' esattamente la condizione di questa prova.  ⛔ La riga «oggi
-  non si misura» non e' piu' vera, e questa maglia esiste per quello.
+⇒ ⭐ **While a client is attached, the screen is there.**  And «while a client
+  is attached» is exactly the condition of this test.  ⛔ The line «today
+  it is not measured» is no longer true, and this mesh exists for that.
 
-⚠⚠ E LA STESSA SCOPERTA PORTA DUE VINCOLI, che qui sono il disegno:
+⚠⚠ AND THE SAME DISCOVERY BRINGS TWO CONSTRAINTS, which here are the design:
 
-  1. ⭐ **Il cliente si attacca PRIMA**, e il browser si accende **dopo**, con il
-     cliente ancora attaccato.  ⛔ La stesura vecchia della prova B faceva il
-     contrario — scatto, distacco, browser, secondo scatto — cioe' accendeva il
-     browser **quando lo schermo non c'era**, e poi si stupiva di non vedere
-     niente.
-  2. ⛔ **Il monitor muore con la connessione D-Bus del figlio, e il figlio
-     muore col cliente.**  ⇒ Niente di quel che si vede qui sopravvive a un
-     distacco, e questa maglia non ci conta mai: ⭐ **un attacco solo, continuo,
-     che copre l'accensione del browser E la ripresa.**  (Quel che sopravvive a
-     un distacco e' il mestiere di C6, non di questa.)
-
----------------------------------------------------------------------------
-⛔⛔ FILE NUOVO E NON UN BRACCIO DI C8a — e la scelta si argomenta
----------------------------------------------------------------------------
-
-La domanda vera era: *un braccio in piu' dentro `11-c8-il-secondo-apre-il-
-browser.py`, o un file suo?*  ⚠ Le due strade avevano argomenti veri.
-
-⭐ **A favore del braccio**: la scena e' la stessa — lo scheletro con
-  `.cache -> /tmp`, i due inquilini fatti con `useradd -m`, la cura della
-  provvista, il giudice dei pixel.  ⛔ Duplicarli vorrebbe dire **due posti che
-  possono divergere in silenzio**, che e' il difetto che questo progetto teme
-  per iscritto (`LEZIONI.md` §1.25, §1.17).
-
-⛔ **A favore del file nuovo**, e ha vinto per tre ragioni che non si annullano:
-
-  · **girano in posti diversi.**  C8a ⭐ non passa dal prodotto e gira in
-    QUALUNQUE scatola (il collaudo del 26 agosto e' girato in quella di PLASMA).
-    C8b passa dal prodotto, ⛔ e il prodotto allora (27 ago 2026) sapeva
-    avviare **solo GNOME** ⇒ nella scatola di KDE C8b avrebbe detto «non ho
-    potuto guardare» per sempre — il cugino del rosso perpetuo di §1.49.
-    ⚠ Oggi (21 set 2026) il prodotto da' l'immagine su gnome, kde e xfce, e
-    dove C8b gira lo decide `11-capacita-del-prodotto.sh`; la ragione per
-    tenere i due file separati resta intera.
-  · **costano in modo diverso.**  C8a: `[M]` due inquilini, un paio di minuti.
-    C8b: `[S]` **~6 minuti** — ogni inquilino tiene un filo attaccato per
-    `26 + 120 + 30 = 176 s` (il tetto del palco di C1, quello del browser, il
-    margine), ⛔ e il filo lo scrive solo alla fine.  ⇒ Un file solo
-    obbligherebbe il gancio a pagare il caro per avere il poco.
-  · **hanno esiti loro.**  Nel registro del gancio due mestieri diversi sotto lo
-    stesso nome sono due righe che non si sanno leggere (§1.52: il giunto fra
-    due maglie e' il posto dove i difetti si nascondono).
-
-⭐⭐ **E l'argomento del braccio non si e' buttato: si e' onorato importando.**
-  ⛔ Questa maglia **non riscrive niente** della scena: scheletro, creazione
-  degli inquilini, cura della provvista, sgombero del posto condiviso, colore,
-  tolleranza, frazione minima e lettore dei pixel ⇒ **arrivano tutti da C8a**,
-  per `import`.  ⚠ E' la stessa disciplina che C8a applica a `10-f1-testimone.py`
-  (*«il giudice si IMPORTA, non si riscrive»*) e che `10-f1` applica a
-  `03-marca.py`.  ⇒ Se domani la tolleranza cambia in C8a, **cambia anche qui**,
-  e non c'e' nessun secondo posto da ricordarsi.
+  1. ⭐ **The client attaches FIRST**, and the browser is switched on **afterwards**, with the
+     client still attached.  ⛔ The old draft of test B did the
+     opposite — screenshot, detach, browser, second screenshot — i.e. it switched on the
+     browser **when the screen was not there**, and then was surprised not to see
+     anything.
+  2. ⛔ **The monitor dies with the child's D-Bus connection, and the child
+     dies with the client.**  ⇒ Nothing of what is seen here survives a
+     detach, and this mesh never counts on it: ⭐ **a single attach, continuous,
+     that covers the switching on of the browser AND the recording.**  (What survives
+     a detach is C6's job, not this one's.)
 
 ---------------------------------------------------------------------------
-⭐ COME GIUDICA — il pixel, **attraverso il prodotto**, e per DIFFERENZA
+⛔⛔ A NEW FILE AND NOT AN ARM OF C8a — and the choice is argued
 ---------------------------------------------------------------------------
 
-Per ogni inquilino, con **un attacco solo**:
+The real question was: *one more arm inside `11-c8-il-secondo-apre-il-
+browser.py`, or a file of its own?*  ⚠ Both roads had real arguments.
 
-    t=0    si attacca il cliente di prova  (⇒ nasce il monitor)
-    t=?    si aspetta **l'evento**: il registro del prodotto dice che il palco
-           ha montato un monitor per QUESTO inquilino
-    +resp  un respiro, perche' almeno un fotogramma senza browser sia partito
-    ⇒      si accende il browser DENTRO la sessione (kiosk, la pagina di C8)
-    +brw   si aspetta che disegni
-    t=R    il cliente si stacca e **scrive il flusso** (⛔ lo scrive solo alla
-           fine: `01-b3-cliente.py`, `scrivi_video`)
-           ⇒ dal flusso si tirano fuori DUE fotogrammi:
-               il PRIMO   = il desktop **prima** che il browser disegnasse
-               l'ULTIMO   = quel che il desktop mostra **adesso**
+⭐ **In favour of the arm**: the scene is the same — the skeleton with
+  `.cache -> /tmp`, the two tenants made with `useradd -m`, the provisioning
+  cure, the pixel judge.  ⛔ Duplicating them would mean **two places that
+  can diverge silently**, which is the defect this project fears
+  in writing (`LEZIONI.md` §1.25, §1.17).
 
-E il verdetto e' una **differenza**, non un valore assoluto:
+⛔ **In favour of the new file**, and it won for three reasons that do not cancel out:
 
-    ⭐ ha visto la pagina  ⟺  frazione(ultimo) >= minima  E  frazione(primo) < minima
+  · **they run in different places.**  C8a ⭐ does not go through the product and runs in
+    ANY box (the acceptance test of 26 August ran in the PLASMA one).
+    C8b goes through the product, ⛔ and the product then (27 Aug 2026) could
+    start **only GNOME** ⇒ in the KDE box C8b would have said «I could not
+    look» forever — the cousin of the perpetual red of §1.49.
+    ⚠ Today (21 Sep 2026) the product gives the image on gnome, kde and xfce, and
+    where C8b runs is decided by `11-capacita-del-prodotto.sh`; the reason to
+    keep the two files separate stays whole.
+  · **they cost differently.**  C8a: `[M]` two tenants, a couple of minutes.
+    C8b: `[S]` **~6 minutes** — each tenant keeps a wire attached for
+    `26 + 120 + 30 = 176 s` (C1's stage ceiling, the browser's, the
+    margin), ⛔ and the wire is written only at the end.  ⇒ A single file
+    would force the hook to pay the dear price to get the little.
+  · **they have outcomes of their own.**  In the hook's log two different trades under the
+    same name are two lines that cannot be read (§1.52: the joint between
+    two meshes is the place where defects hide).
 
-⛔ Il «prima» non e' cerimonia, e qui fa **tre** lavori:
-
-  1. se il desktop e' nero o quasi-nero, ⇒ ⛔ **non e' un rosso di C8b**: e' il
-     guasto che sta a monte, e dare la colpa al browser di una cosa successa
-     prima che il browser esistesse e' il modo esatto in cui questo progetto ha
-     gia' perso due diagnosi;
-  2. se la pagina c'e' **gia'** prima che io accenda il browser, ⛔ **non e' un
-     verde**: vorrebbe dire prendermi il merito del browser di qualcun altro.
-     ⇒ «non ho potuto guardare», e si dice perche';
-  3. e senza di lui *«il browser non ha aperto»* e *«non c'era nessuno schermo»*
-     avrebbero la stessa faccia — ⚠ due guasti diversi con un sintomo solo.
-
-⛔⛔ E «IL PALCO C'E'» NON SE LO CHIEDE DA SE': LO CHIEDE A **C1**.
-   Il giudice della nascita — `leggi_nascita`, `monitor_nato`, `verdetto_giro` —
-   e il suo tetto `TETTO_NASCITA` si **importano** da `11-c1-nasce-e-si-vede.py`.
-   ⇒ ⭐ *«il palco ha montato un monitor per questo inquilino?»* e' una domanda
-     sola, e in tutta la rete ha **una risposta sola**.
-
-   ⚠⚠ E l'importo evita un errore che questa maglia avrebbe copiato volentieri:
-      fino al 27 agosto 2026 la riga «⛔ ZERO MONITOR» era letta come **prova di
-      cecita'**, ⛔ e `[R]` `src/sessione.c:345-348` la scrive nel passaggio
-      obbligatorio di una nascita **RIUSCITA** — il monitor lo monta la cattura,
-      dopo, quando qualcuno si aggancia.  ⭐ C1 oggi quella riga la conta e la
-      stampa senza giudicarla, e C8b eredita la correzione invece di ripeterla.
-
-   ⛔⛔ E LO STESSO VALE PER IL TETTO, che qui non c'e'.  La prima stesura aveva
-      scritto **152 s**, copiati da C1 — 101,0 s misurati su GNOME piu' meta'.
-      `[M]` Poche ore dopo si e' scoperto che quei ~97 s **non erano del
-      prodotto**: erano un difetto della SCATOLA, e curata la scatola il palco
-      nasce in **1,0 s** e il tetto di C1 e' sceso a **26 s**.  ⇒ ⭐ Un numero
-      copiato e' un numero che resta indietro (`LEZIONI.md` §1.17): qui ce n'e'
-      **uno solo**, e sta in C1.
+⭐⭐ **And the argument for the arm was not thrown away: it was honoured by importing.**
+  ⛔ This mesh **rewrites nothing** of the scene: skeleton, creation
+  of the tenants, provisioning cure, cleanup of the shared place, colour,
+  tolerance, minimum fraction and pixel reader ⇒ **all come from C8a**,
+  by `import`.  ⚠ It is the same discipline C8a applies to `10-f1-testimone.py`
+  (*«the judge is IMPORTED, not rewritten»*) and that `10-f1` applies to
+  `03-marca.py`.  ⇒ If tomorrow the tolerance changes in C8a, **it changes here too**,
+  and there is no second place to remember.
 
 ---------------------------------------------------------------------------
-⛔ COME SO CHE SA DARE ROSSO — `--senza-cura`, e si legge AL CONTRARIO
+⭐ HOW IT JUDGES — the pixel, **through the product**, and by DIFFERENCE
 ---------------------------------------------------------------------------
 
-Stesso guasto innestato di C8a: gli inquilini nascono **senza** la cura di
-`src/provisiona.sh`, cioe' come li faceva il codice del 25 agosto 2026 ⇒ il
-**secondo** non riesce a farsi il profilo di Firefox, e la pagina non arriva.
+For each tenant, with **a single attach**:
 
-⭐ E l'esito col guasto innestato **non si misura sul colore del verdetto** —
-  `LEZIONI.md` §1.52.  Si pretende una **differenza misurabile**:
+    t=0    the test client attaches  (⇒ the monitor is born)
+    t=?    we wait for **the event**: the product log says that the stage
+           mounted a monitor for THIS tenant
+    +resp  a breath, so that at least one frame without browser has left
+    ⇒      the browser is switched on INSIDE the session (kiosk, C8's page)
+    +brw   we wait for it to draw
+    t=R    the client detaches and **writes the stream** (⛔ it writes it only at the
+           end: `01-b3-cliente.py`, `scrivi_video`)
+           ⇒ TWO frames are pulled out of the stream:
+               the FIRST  = the desktop **before** the browser drew
+               the LAST   = what the desktop shows **now**
 
-    guasto VISTO (esito 0)  ⟺  il PRIMO ha visto la pagina
-                            E  almeno un altro NO
-                            E  ⭐ le due frazioni distano almeno `SALTO_MINIMO`
+And the verdict is a **difference**, not an absolute value:
 
-  ⛔ Rosso a tutt'e due ⇒ esito **1**, e la riga lo dice: *«ha fallito anche il
-     PRIMO»* — quel che si sta misurando non e' quel guasto (§7-bis.12, §1.45).
-  ⛔ Verde a tutt'e due ⇒ esito **1**: o la cura non serviva, o questa maglia
-     non guarda nel posto giusto.
-  ⛔ Nessun giudizio ⇒ esito **3**: non posso dire se il guasto si sarebbe visto.
+    ⭐ it saw the page  ⟺  fraction(last) >= minimum  AND  fraction(first) < minimum
+
+⛔ The «before» is not ceremony, and here it does **three** jobs:
+
+  1. if the desktop is black or near-black, ⇒ ⛔ **it is not a red of C8b**: it is the
+     fault that sits upstream, and blaming the browser for something that happened
+     before the browser existed is the exact way in which this project has
+     already lost two diagnoses;
+  2. if the page is **already** there before I switch on the browser, ⛔ **it is not a
+     green**: it would mean taking credit for someone else's browser.
+     ⇒ «I could not look», and it says why;
+  3. and without it *«the browser did not open»* and *«there was no screen»*
+     would have the same face — ⚠ two different faults with a single symptom.
+
+⛔⛔ AND «THE STAGE IS THERE» IT DOES NOT ASK ITSELF: IT ASKS **C1**.
+   The birth judge — `leggi_nascita`, `monitor_nato`, `verdetto_giro` —
+   and its ceiling `TETTO_NASCITA` are **imported** from `11-c1-nasce-e-si-vede.py`.
+   ⇒ ⭐ *«did the stage mount a monitor for this tenant?»* is a single
+     question, and in the whole net it has **a single answer**.
+
+   ⚠⚠ And the import avoids an error this mesh would have gladly copied:
+      until 27 August 2026 the line «⛔ ZERO MONITOR» was read as **proof of
+      blindness**, ⛔ and `[R]` `src/sessione.c:345-348` writes it in the mandatory
+      step of a **SUCCESSFUL** birth — the monitor is mounted by capture,
+      afterwards, when someone hooks on.  ⭐ C1 today counts that line and
+      prints it without judging it, and C8b inherits the correction instead of repeating it.
+
+   ⛔⛔ AND THE SAME HOLDS FOR THE CEILING, which is not here.  The first draft had
+      written **152 s**, copied from C1 — 101.0 s measured on GNOME plus half.
+      `[M]` A few hours later it was discovered that those ~97 s **were not the
+      product's**: they were a defect of the BOX, and with the box cured the stage
+      is born in **1.0 s** and C1's ceiling went down to **26 s**.  ⇒ ⭐ A number
+      copied is a number that stays behind (`LEZIONI.md` §1.17): here there is
+      **only one**, and it lives in C1.
 
 ---------------------------------------------------------------------------
-⭐ CHE COSA HA GIA' GIRATO — e che cosa no, che e' la meta' che conta
+⛔ HOW I KNOW IT CAN SAY RED — `--senza-cura`, and it is read BACKWARDS
 ---------------------------------------------------------------------------
 
-  `[M]` 27 ago 2026, **sul portatile**  `--certifica`: **51 casi su 51**, e
-        ⭐ **12 guasti innestati nel banco stesso, tutti e 12 hanno morso**
-        (fra cui: la guardia «ha fallito anche il PRIMO» smontata, il salto
-        minimo smontato, il tetto del palco ricopiato invece che preso da C1).
-  `[M]` 27 ago 2026, **sul portatile**  giro **a secco** della meccanica —
-        cliente finto, registro finto, `ffmpeg` vero, flussi H.264 veri:
-        i cinque casi (il browser disegna · non disegna · desktop nero ·
-        nessun fotogramma · il palco non nasce) danno **SI · NO · non lo so ·
-        non lo so · non lo so**, che e' quel che devono dare.
-        ⭐ E un numero che vale: attraverso una catena **H.264 4:2:0 vera** il
-        magenta torna indietro al **97,8 %** — cioe' la tolleranza di C8a
-        (±48) regge il sottocampionamento del croma, che era il rilievo di
-        Gemini accolto in §4.3.
+The same grafted fault as C8a: the tenants are born **without** the cure of
+`src/provisiona.sh`, i.e. as the code of 25 August 2026 made them ⇒ the
+**second** cannot make its Firefox profile, and the page does not arrive.
 
-  ⛔⛔ E QUEL CHE NON HA GIRATO, dichiarato: **il giro vero, nella scatola**.
-     Non c'e' nessun `[M]` di questa maglia contro il prodotto — ne' verde ne'
-     rosso — e finche' non c'e', ⚠ **i tetti sono argomenti, non misure**.
-     ⇒ `--certifica` copre i giudizi e il giunto; ⛔ **non** copre la meccanica
-       (il filo, `ffmpeg`, l'attesa) — quella l'ha esercitata il giro a secco,
-       e nemmeno lui ha mai parlato col prodotto.
+⭐ And the outcome with the grafted fault **is not measured on the colour of the verdict** —
+  `LEZIONI.md` §1.52.  A **measurable difference** is demanded:
+
+    fault SEEN (outcome 0)  ⟺  the FIRST saw the page
+                            AND  at least one other did NOT
+                            AND  ⭐ the two fractions are at least `SALTO_MINIMO` apart
+
+  ⛔ Red to both ⇒ outcome **1**, and the line says so: *«the FIRST failed
+     too»* — what is being measured is not that fault (§7-bis.12, §1.45).
+  ⛔ Green to both ⇒ outcome **1**: either the cure was not needed, or this mesh
+     does not look in the right place.
+  ⛔ No judgement ⇒ outcome **3**: I cannot say whether the fault would have been seen.
 
 ---------------------------------------------------------------------------
-GLI ESITI (§4.5 del documento di fase)
+⭐ WHAT HAS ALREADY RUN — and what has not, which is the half that matters
 ---------------------------------------------------------------------------
 
-  0  ⭐ ho guardato: TUTTI gli inquilini vedono la pagina DAL CLIENTE
-  1  ho guardato: almeno uno NON la vede                    ⇒ rosso
-  3  ⛔ non ho potuto guardare (niente palco, niente fotogrammi, giudice
-     assente, campo non pulito) — ⛔ e NON e' un rosso
-  2  il terreno non regge, o l'uso e' sbagliato
+  `[M]` 27 Aug 2026, **on the laptop**  `--certifica`: **51 cases of 51**, and
+        ⭐ **12 faults grafted into the bench itself, all 12 bit**
+        (among them: the «the FIRST failed too» guard dismantled, the minimum
+        jump dismantled, the stage ceiling copied instead of taken from C1).
+  `[M]` 27 Aug 2026, **on the laptop**  a **dry** run of the mechanics —
+        fake client, fake log, real `ffmpeg`, real H.264 streams:
+        the five cases (the browser draws · does not draw · black desktop ·
+        no frame · the stage is not born) give **YES · NO · unknown ·
+        unknown · unknown**, which is what they must give.
+        ⭐ And a number that counts: through a **real H.264 4:2:0** chain the
+        magenta comes back at **97.8 %** — i.e. C8a's tolerance
+        (±48) withstands the chroma subsampling, which was Gemini's
+        finding accepted in §4.3.
 
-⚠ ⛔ E QUEL CHE QUESTA MAGLIA **NON** GUARDA, dichiarato:
-  · **non** dice che il browser sia partito quando la pagina non si vede: dice
-    che dal cliente non si vede.  ⭐ Chi separa i tre guasti (browser morto ·
-    profilo mai nato · pagina non a schermo) e' **C8a**, e le due vanno lette
-    insieme;
-  · **non** guarda il collegamento `/etc/skel/.cache`: guarda l'effetto, non la
-    causa che crediamo di conoscere;
-  · **non** dice niente sulle sessioni **senza** nessuno attaccato — ⛔ e su
-    quelle, dopo la scoperta del 27 agosto, non c'e' niente da dire: lo schermo
-    li' non esiste per costruzione.
+  ⛔⛔ AND WHAT HAS NOT RUN, declared: **the real round, in the box**.
+     There is no `[M]` of this mesh against the product — neither green nor
+     red — and until there is, ⚠ **the ceilings are arguments, not measurements**.
+     ⇒ `--certifica` covers the judgements and the joint; ⛔ it does **not** cover the mechanics
+       (the wire, `ffmpeg`, the wait) — those were exercised by the dry run,
+       and not even that one ever talked to the product.
+
+---------------------------------------------------------------------------
+THE OUTCOMES (§4.5 of the phase document)
+---------------------------------------------------------------------------
+
+  0  ⭐ I looked: ALL the tenants see the page FROM THE CLIENT
+  1  I looked: at least one does NOT see it                 ⇒ red
+  3  ⛔ I could not look (no stage, no frames, judge
+     absent, field not clean) — ⛔ and it is NOT a red
+  2  the terrain does not hold, or the usage is wrong
+
+⚠ ⛔ AND WHAT THIS MESH DOES **NOT** LOOK AT, declared:
+  · it does **not** say that the browser started when the page is not seen: it says
+    that it is not seen from the client.  ⭐ Whoever separates the three faults (browser dead ·
+    profile never born · page not on screen) is **C8a**, and the two must be read
+    together;
+  · it does **not** look at the `/etc/skel/.cache` link: it looks at the effect, not the
+    cause we believe we know;
+  · it says **nothing** about sessions with **nobody** attached — ⛔ and about
+    those, after the discovery of 27 August, there is nothing to say: the screen
+    there does not exist by construction.
 ===========================================================================
 """
 import argparse
@@ -213,74 +213,74 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⛔ I TETTI — ognuno col SUO nome e il SUO valore.  `LEZIONI.md` §1.45: un
-#    tetto prestato da un'altra prova produce un rosso che non distingue piu'
-#    il guasto dal banco, e allora il collaudo non vale niente.
+# ⛔ THE CEILINGS — each one with ITS OWN name and ITS OWN value.  `LEZIONI.md` §1.45: a
+#    ceiling borrowed from another test produces a red that no longer distinguishes
+#    the fault from the bench, and then the acceptance test is worth nothing.
 # ═══════════════════════════════════════════════════════════════════════════
 
-# ── quanto puo' metterci il palco a montare un monitor ──────────────────────
-# ⭐⭐ QUESTO NUMERO **NON STA QUI**: si prende da `11-c1-nasce-e-si-vede.py`
-#     (`TETTO_NASCITA`), che e' la maglia il cui mestiere e' la nascita, e che
-#     quel tetto lo certifica contro la propria misura.
+# ── how long the stage may take to mount a monitor ──────────────────────────
+# ⭐⭐ THIS NUMBER **DOES NOT LIVE HERE**: it is taken from `11-c1-nasce-e-si-vede.py`
+#     (`TETTO_NASCITA`), which is the mesh whose job is the birth, and which
+#     certifies that ceiling against its own measurement.
 #
-# ⛔⛔ E la ragione e' costata mezza giornata a qualcun altro, oggi.  La prima
-#     stesura di questa maglia ci aveva scritto **152 s**, copiati da C1 —
-#     101,0 s misurati su GNOME per meta'.  ⚠ Poche ore dopo si e' scoperto che
-#     quei ~97 s **non erano del prodotto**: erano un difetto della SCATOLA
-#     (`groupmod -g` su `polkitd` che non si portava dietro i file ⇒ polkit
-#     morto ⇒ quattro scadenze da 25 s addosso a `gnome-shell`).  ⇒ `[M]` 27
-#     agosto 2026, scatola curata: il palco nasce in **1,0 s**, e il tetto di C1
-#     e' sceso a **26 s**.
-# ⇒ ⛔ Un numero copiato e' un numero che resta indietro (`LEZIONI.md` §1.17:
-#   *un numero nuovo entra in cinque posti, e uno resta sempre indietro*).  ⭐ Qui
-#   ce n'e' **uno solo**, ed e' di C1.
+# ⛔⛔ And the reason cost someone else half a day, today.  The first
+#     draft of this mesh had written **152 s** in it, copied from C1 —
+#     101.0 s measured on GNOME plus half.  ⚠ A few hours later it was discovered that
+#     those ~97 s **were not the product's**: they were a defect of the BOX
+#     (`groupmod -g` on `polkitd` not carrying the files along ⇒ polkit
+#     dead ⇒ four 25 s timeouts on `gnome-shell`).  ⇒ `[M]` 27
+#     August 2026, cured box: the stage is born in **1.0 s**, and C1's ceiling
+#     went down to **26 s**.
+# ⇒ ⛔ A number copied is a number that stays behind (`LEZIONI.md` §1.17:
+#   *a new number enters five places, and one always stays behind*).  ⭐ Here
+#   there is **only one**, and it is C1's.
 
-# ── quanto si da' al BROWSER per disegnare, dentro la sessione ───────────────
-# ⛔ NON e' 25 s, e la ragione e' misurata: `LEZIONI.md` §1.45 — il **primo**
-#    avvio di Firefox in una scatola fredda (che deve prima farsi il profilo)
-#    passa abbondantemente i 25 s, e con quel tetto C8a dava **rosso a tutt'e
-#    due** gli inquilini, con la cura e senza.  ⇒ C8a si e' data 120 s
-#    (`--attesa-scatto`), e qui il browser e' **altrettanto freddo**: gli
-#    inquilini di questa maglia sono nuovi, e il profilo non esiste ancora.
-# ⚠ `[?]` Qui il browser deve anche **mappare una finestra su Wayland** e farla
-#   arrivare al codificatore — cioe' fa **di piu'** che in C8a.  ⇒ 120 s e' un
-#   limite basso credibile, non uno misurato: si tara al primo giro vero.
+# ── how long the BROWSER is given to draw, inside the session ────────────────
+# ⛔ It is NOT 25 s, and the reason is measured: `LEZIONI.md` §1.45 — the **first**
+#    start of Firefox in a cold box (which must first make its profile)
+#    well exceeds 25 s, and with that ceiling C8a gave **red to both**
+#    tenants, with the cure and without.  ⇒ C8a gave itself 120 s
+#    (`--attesa-scatto`), and here the browser is **just as cold**: the
+#    tenants of this mesh are new, and the profile does not exist yet.
+# ⚠ `[?]` Here the browser must also **map a window on Wayland** and get it
+#   to the encoder — i.e. it does **more** than in C8a.  ⇒ 120 s is a
+#   credible lower limit, not a measured one: it is calibrated at the first real round.
 ATTESA_BROWSER = 120.0
 
-# ── il respiro fra «il palco c'e'» e «accendo il browser» ────────────────────
-# ⚠ Serve a una cosa sola: che almeno un fotogramma **senza browser** sia gia'
-#   partito, o il «primo fotogramma» conterrebbe gia' la pagina e la maglia non
-#   saprebbe distinguere la propria pagina da una che c'era gia'.
-# ⛔ `[?]` Tre secondi e' una scelta prudente, non una misura.  Se al giro vero
-#    il «prima» esce gia' magenta, ⭐ **il numero da alzare e' questo** — e la
-#    maglia lo dice da se' invece di lasciarlo indovinare.
+# ── the breath between «the stage is there» and «I switch on the browser» ────
+# ⚠ It serves one thing only: that at least one frame **without browser** has already
+#   left, or the «first frame» would already contain the page and the mesh would not
+#   know how to tell its own page from one that was already there.
+# ⛔ `[?]` Three seconds is a prudent choice, not a measurement.  If at the real round
+#    the «before» already comes out magenta, ⭐ **the number to raise is this one** — and the
+#    mesh says so by itself instead of leaving it to be guessed.
 RESPIRO = 3.0
 
-# ── il margine sul filo, dopo che il browser ha avuto il suo tempo ───────────
-# ⛔ Il cliente di prova scrive il flusso **solo alla fine** di `--resta`
-#    (`01-b3-cliente.py`, `scrivi_video`: *«si chiama DOPO l'attesa di --resta»*)
-#    ⇒ non esiste un file da guardare a meta' strada, e `--resta` va deciso
-#    PRIMA di sapere quanto ci mettera' il palco.  ⚠ E' il costo di questa
-#    maglia, ed e' dichiarato invece che nascosto.
+# ── the margin on the wire, after the browser has had its time ───────────────
+# ⛔ The test client writes the stream **only at the end** of `--resta`
+#    (`01-b3-cliente.py`, `scrivi_video`: *«it is called AFTER the wait of --resta»*)
+#    ⇒ there is no file to look at halfway, and `--resta` must be decided
+#    BEFORE knowing how long the stage will take.  ⚠ It is the cost of this
+#    mesh, and it is declared instead of hidden.
 MARGINE_FILO = 30.0
 
-# ── ⭐ IL SALTO CHE RENDE MISURABILE LA DIFFERENZA (`LEZIONI.md` §1.52) ───────
-# Col guasto innestato non basta che il primo sia «si'» e il secondo «no»: le
-# due frazioni devono **distare**, o si starebbe festeggiando un capello.
-# ⚠ E la soglia si scrive sulla grandezza vera del fenomeno (§1.13): `[M]` 26
-#   agosto 2026, C8a col guasto innestato ⇒ primo **98,7 %**, secondo **niente**.
-#   ⇒ Un salto di 0,10 e' un decimo di quel che il fenomeno fa davvero: lontano
-#   dal rumore, e lontanissimo dal vero.
+# ── ⭐ THE JUMP THAT MAKES THE DIFFERENCE MEASURABLE (`LEZIONI.md` §1.52) ─────
+# With the grafted fault it is not enough that the first is «yes» and the second «no»: the
+# two fractions must be **far apart**, or we would be celebrating a hair.
+# ⚠ And the threshold is written on the real size of the phenomenon (§1.13): `[M]` 26
+#   August 2026, C8a with the grafted fault ⇒ first **98.7 %**, second **nothing**.
+#   ⇒ A jump of 0.10 is a tenth of what the phenomenon really does: far
+#   from the noise, and very far from the real thing.
 SALTO_MINIMO = 0.10
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# GLI IMPORTI — ⛔ e ognuno con la ragione per cui non si riscrive
+# THE IMPORTS — ⛔ and each one with the reason why it is not rewritten
 # ═══════════════════════════════════════════════════════════════════════════
 def _modulo(percorso, nome):
-    """Carica un banco vicino come modulo.  Torna `None` se non c'e' o non si
-    lascia caricare — ⛔ e chi chiama deve dire «non ho potuto guardare», mai
-    ripiegare su un giudizio piu' povero in silenzio."""
+    """Loads a nearby bench as a module.  Returns `None` if it is not there or cannot
+    be loaded — ⛔ and the caller must say «I could not look», never
+    silently fall back on a poorer judgement."""
     if not percorso or not os.path.exists(percorso):
         return None
     spec = importlib.util.spec_from_file_location(nome, percorso)
@@ -293,36 +293,36 @@ def _modulo(percorso, nome):
 
 
 def prendi_c8a():
-    """⭐⭐ LA SCENA E IL METRO ARRIVANO DA C8a, e non da una loro parafrasi.
+    """⭐⭐ THE SCENE AND THE YARDSTICK COME FROM C8a, and not from a paraphrase of them.
 
-    ⛔ Da qui vengono: `COLORE`, `TOLLERANZA`, `FRAZIONE_MINIMA`,
+    ⛔ From here come: `COLORE`, `TOLLERANZA`, `FRAZIONE_MINIMA`,
        `frazione_del_colore`, `prepara_lo_scheletro`, `sgombra_il_posto_condiviso`,
        `crea`, `applica_la_cura`, `sa_scrivere_nella_cache`, `apri_il_browser`,
-       `sh` e `giudice_immagini`.
-    ⇒ ⭐ Due maglie che misurano lo stesso colore con la stessa tolleranza
-      **perche' e' lo stesso numero**, non perche' qualcuno si e' ricordato di
-      copiarlo tutt'e due le volte.
+       `sh` and `giudice_immagini`.
+    ⇒ ⭐ Two meshes that measure the same colour with the same tolerance
+      **because it is the same number**, not because someone remembered to
+      copy it both times.
     """
     return _modulo(os.path.join(QUI, "11-c8-il-secondo-apre-il-browser.py"),
                    "c8a")
 
 
-# ⭐ I quattro pezzi di C1 senza i quali questa maglia non sa aspettare il palco.
-#   ⛔ Sono qui, in un elenco, e non sparsi nel codice: un elenco si puo'
-#      controllare, una decina di `getattr` no.
+# ⭐ The four pieces of C1 without which this mesh cannot wait for the stage.
+#   ⛔ They are here, in a list, and not scattered in the code: a list can be
+#      checked, a dozen `getattr` cannot.
 PEZZI_DI_C1 = ("leggi_nascita", "monitor_nato", "verdetto_giro", "TETTO_NASCITA")
 
 
 def c1_ha_quel_che_serve(c1):
-    """⛔ «C1 c'e'» non e' «C1 ha quel che mi serve».
+    """⛔ «C1 is there» is not «C1 has what I need».
 
-    ⚠ C1 e' viva: `[M]` il 27 agosto 2026 e' stata riscritta due volte in un
-      giorno, e la prima stesura di C8b importava una `FIRMA_MONITOR` che dopo
-      quella riscrittura **non esisteva piu'**.  ⇒ La maglia se n'e' accorta
-      perche' `--certifica` glielo chiedeva; ⛔ senza il controllo si sarebbe
-      accorta solo dentro la scatola, con un `None` in mano e un rosso storto.
-    ⭐ Quindi: se la maglia della nascita cambia forma, questa **lo dice** invece
-      di ripiegare in silenzio su un giudizio suo (`LEZIONI.md` §1.29).
+    ⚠ C1 is alive: `[M]` on 27 August 2026 it was rewritten twice in one
+      day, and the first draft of C8b imported a `FIRMA_MONITOR` that after
+      that rewrite **no longer existed**.  ⇒ The mesh noticed it
+      because `--certifica` asked it; ⛔ without the check it would have
+      noticed only inside the box, with a `None` in hand and a crooked red.
+    ⭐ So: if the birth mesh changes shape, this one **says so** instead
+      of silently falling back on a judgement of its own (`LEZIONI.md` §1.29).
     """
     if c1 is None:
         return False
@@ -330,35 +330,35 @@ def c1_ha_quel_che_serve(c1):
 
 
 def prendi_c1():
-    """⭐⭐ IL GIUDICE DELLA NASCITA ARRIVA DA C1 — ⛔ e non si riscrive.
+    """⭐⭐ THE BIRTH JUDGE COMES FROM C1 — ⛔ and it is not rewritten.
 
-    Da qui vengono `leggi_nascita`, `monitor_nato`, `verdetto_giro` e il tetto
-    `TETTO_NASCITA`.  ⇒ ⭐ *«il palco ha montato un monitor per questo
-    inquilino»* e' **una domanda sola**, e ha **una risposta sola** in tutta la
-    rete: quella di C1.
+    From here come `leggi_nascita`, `monitor_nato`, `verdetto_giro` and the ceiling
+    `TETTO_NASCITA`.  ⇒ ⭐ *«did the stage mount a monitor for this
+    tenant»* is **a single question**, and it has **a single answer** in the whole
+    net: C1's.
 
-    ⚠⚠ E l'importo evita di ereditare un difetto che questa maglia avrebbe
-       copiato volentieri: fino al 27 agosto 2026 la riga «⛔ ZERO MONITOR» era
-       letta come **prova di cecita'**, ⛔ e `[R]` `src/sessione.c:345-348` la
-       scrive nel passaggio obbligatorio di una nascita **RIUSCITA** — il
-       monitor lo monta la cattura, dopo.  ⇒ C1 oggi quella riga la **conta e la
-       stampa**, e non la giudica.  ⭐ Importando, C8b eredita la correzione
-       invece di ripetere l'errore.
+    ⚠⚠ And the import avoids inheriting a defect this mesh would have
+       gladly copied: until 27 August 2026 the line «⛔ ZERO MONITOR» was
+       read as **proof of blindness**, ⛔ and `[R]` `src/sessione.c:345-348`
+       writes it in the mandatory step of a **SUCCESSFUL** birth — the
+       monitor is mounted by capture, afterwards.  ⇒ C1 today **counts and
+       prints** that line, and does not judge it.  ⭐ By importing, C8b inherits the correction
+       instead of repeating the error.
 
-    Torna il modulo, oppure `None` se non c'e' o se non ha quel che serve.
+    Returns the module, or `None` if it is not there or does not have what is needed.
     """
     c1 = _modulo(os.path.join(QUI, "11-c1-nasce-e-si-vede.py"), "c1")
     return c1 if c1_ha_quel_che_serve(c1) else None
 
 
 def trova_il_giudice(c8a):
-    """Il giudice delle immagini di `10-f1-testimone.py`.
+    """The image judge of `10-f1-testimone.py`.
 
-    ⚠ Due posti, e si DICE quale si e' usato (`LEZIONI.md` §1.48: un messaggio
-      di riuscita che ripete l'intenzione non e' una verifica, e' un'eco):
-        · accanto a C8a  ⇒ com'e' dentro la scatola (`/opt/remotix`)
-        · nella cartella di sopra ⇒ com'e' nel deposito (`banchi/`)
-    ⛔ Se non c'e' ne' qui ne' li', l'esito e' **3**, mai un giudizio piu' povero.
+    ⚠ Two places, and we SAY which one was used (`LEZIONI.md` §1.48: a success
+      message that repeats the intention is not a verification, it is an echo):
+        · next to C8a  ⇒ as it is inside the box (`/opt/remotix`)
+        · in the folder above ⇒ as it is in the repository (`banchi/`)
+    ⛔ If it is neither here nor there, the outcome is **3**, never a poorer judgement.
     """
     g = c8a.giudice_immagini() if c8a is not None else None
     if g is not None:
@@ -371,182 +371,182 @@ def trova_il_giudice(c8a):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐ I GIUDIZI — funzioni PURE, perche' `--certifica` le possa far girare tutte
-#    senza una scatola, senza un server e senza un browser.
+# ⭐ THE JUDGEMENTS — PURE functions, so that `--certifica` can run them all
+#    without a box, without a server and without a browser.
 # ═══════════════════════════════════════════════════════════════════════════
 def tetto_del_palco(c1):
-    """⭐ Il tetto d'attesa del palco, **preso da C1**.
+    """⭐ The waiting ceiling for the stage, **taken from C1**.
 
-    ⛔ Non e' una costante di questo file, e non deve diventarlo: il giorno che
-       la nascita cambia velocita', il numero si corregge in **un posto solo**,
-       quello della maglia che la misura.
+    ⛔ It is not a constant of this file, and it must not become one: the day
+       the birth changes speed, the number is corrected in **one place only**,
+       that of the mesh that measures it.
     """
     return float(c1.TETTO_NASCITA)
 
 
 def resta_del_filo(attesa_palco, attesa_browser, margine=MARGINE_FILO):
-    """Quanto deve restare attaccato il cliente.
+    """How long the client must stay attached.
 
-    ⛔ Si CALCOLA dai tre tetti, non si sceglie: il filo deve coprire l'attesa
-       del palco **piu'** quella del browser, o la maglia si staccherebbe prima
-       di aver guardato quel che e' venuta a guardare.
+    ⛔ It is COMPUTED from the three ceilings, not chosen: the wire must cover the wait
+       for the stage **plus** that of the browser, or the mesh would detach before
+       having looked at what it came to look at.
     """
     return float(attesa_palco) + float(attesa_browser) + float(margine)
 
 
 def giudica_il_prima(verdetto, frazione, minima):
-    """Che cosa mostrava il desktop **prima** che accendessi il browser.
+    """What the desktop showed **before** I switched on the browser.
 
-    `verdetto`  quel che dice il giudice di `10-f1` («nero», «quasi-nero»,
-                «tinta-unita», «disegnato»), oppure `None` = non ho guardato
-    `frazione`  quanta parte era gia' del colore della pagina, oppure `None`
+    `verdetto`  what the `10-f1` judge says («nero», «quasi-nero»,
+                «tinta-unita», «disegnato»), or `None` = I did not look
+    `frazione`  how much was already the colour of the page, or `None`
 
-    Torna `(stato, spiegazione)`, con `stato` fra:
-      «pulito»       ⭐ c'e' uno schermo, disegnato, e la pagina NON c'e' ancora
-      «a-monte»      ⛔ lo schermo e' nero: il guasto sta prima del browser
-      «gia-magenta»  ⛔ la pagina c'era gia': non posso attribuirmela
-      «non-lo-so»    ⛔ non ho guardato — ⚠ e `None` non e' zero
+    Returns `(stato, spiegazione)`, with `stato` among:
+      «pulito»       ⭐ there is a screen, drawn, and the page is NOT there yet
+      «a-monte»      ⛔ the screen is black: the fault sits before the browser
+      «gia-magenta»  ⛔ the page was already there: I cannot claim it
+      «non-lo-so»    ⛔ I did not look — ⚠ and `None` is not zero
     """
     if verdetto is None or frazione is None:
-        return "non-lo-so", ("non ho potuto guardare il desktop PRIMA del "
-                             "browser ⇒ ⛔ non e' «era nero»")
+        return "non-lo-so", ("I could not look at the desktop BEFORE the "
+                             "browser ⇒ ⛔ it is not «it was black»")
     if verdetto in ("nero", "quasi-nero"):
-        return "a-monte", ("il desktop e' «%s» PRIMA del browser: il guasto sta "
-                           "a monte di C8b, ⛔ e non e' un suo rosso" % verdetto)
+        return "a-monte", ("the desktop is «%s» BEFORE the browser: the fault sits "
+                           "upstream of C8b, ⛔ and it is not its red" % verdetto)
     if frazione >= minima:
-        return "gia-magenta", ("⛔ la pagina copriva gia' il %.1f%% dello schermo "
-                               "PRIMA che accendessi il browser: non posso dire "
-                               "che l'abbia disegnata io" % (frazione * 100))
-    return "pulito", ("il desktop e' «%s» e la pagina non c'e' ancora "
+        return "gia-magenta", ("⛔ the page already covered %.1f%% of the screen "
+                               "BEFORE I switched on the browser: I cannot say "
+                               "that I drew it" % (frazione * 100))
+    return "pulito", ("the desktop is «%s» and the page is not there yet "
                       "(%.1f%%)" % (verdetto, frazione * 100))
 
 
 def giudizio_inquilino(stato_prima, frazione_dopo, minima):
-    """⭐ Il verdetto su UN inquilino: ha visto la pagina dal cliente?
+    """⭐ The verdict on ONE tenant: did it see the page from the client?
 
-    Torna `(True|False|None, motivo)` — ⛔ e `None` («non ho guardato») non e'
-    `False` («ho guardato e non c'era»).
+    Returns `(True|False|None, motivo)` — ⛔ and `None` («I did not look») is not
+    `False` («I looked and it was not there»).
     """
     if stato_prima != "pulito":
-        return None, "il campo non era pulito ⇒ non giudico il dopo"
+        return None, "the field was not clean ⇒ I do not judge the after"
     if frazione_dopo is None:
-        return None, ("non ho potuto guardare il desktop DOPO ⇒ ⛔ non e' «la "
-                      "pagina non c'era»")
+        return None, ("I could not look at the desktop AFTER ⇒ ⛔ it is not «the "
+                      "page was not there»")
     if frazione_dopo >= minima:
-        return True, "la pagina copre il %.1f%% dello schermo" % (frazione_dopo * 100)
-    return False, ("⛔ la pagina copre il %.1f%%, e ne serve almeno il %.0f%%"
+        return True, "the page covers %.1f%% of the screen" % (frazione_dopo * 100)
+    return False, ("⛔ the page covers %.1f%%, and at least %.0f%% is needed"
                    % (frazione_dopo * 100, minima * 100))
 
 
 def decidi(esiti, senza_cura, minima, salto=SALTO_MINIMO):
-    """⭐⭐ IL GIUNTO — da N giudizi a UN codice d'uscita.
+    """⭐⭐ THE JOINT — from N judgements to ONE exit code.
 
-    ⛔ Sta in una funzione pura apposta: `LEZIONI.md` §1.52 racconta un difetto
-       che **nessuna certificazione ha preso** perche' stava nel giunto fra due
-       maglie — nel codice d'uscita, che non era il mestiere di nessuno dei due
-       giudici.  ⇒ Qui il codice d'uscita **e'** un mestiere, e ha i suoi casi.
+    ⛔ It lives in a pure function on purpose: `LEZIONI.md` §1.52 tells of a defect
+       that **no certification caught** because it lay in the joint between two
+       meshes — in the exit code, which was the job of neither of the two
+       judges.  ⇒ Here the exit code **is** a job, and it has its cases.
 
-    `esiti` e' una lista, **in ordine di nascita**, di dizionari:
+    `esiti` is a list, **in order of birth**, of dictionaries:
         {"chi": str, "visto": True|False|None, "dopo": float|None, ...}
 
-    Torna `(codice, motivo, righe_da_stampare)`.
+    Returns `(codice, motivo, righe_da_stampare)`.
 
-    ⭐⭐ E IL `motivo` NON E' UN LUSSO — e' nato da un guasto innestato che NON
-    HA MORSO.  `[M]` 27 agosto 2026, scrivendo questa maglia: disfacendo la
-    guardia *«ha fallito anche il PRIMO»* il codice d'uscita restava **1** lo
-    stesso — per un'altra strada (il salto troppo piccolo) — ⛔ e una
-    certificazione che guardava solo il numero **diceva OK su una guardia
-    smontata**.
-    ⇒ ⛔ Un verdetto giusto per la ragione sbagliata e' un verdetto che smettera'
-      di essere giusto senza che nessuno se ne accorga (`LEZIONI.md` §2.0: *un
-      banco che dice «no» deve dire CON CHE PALCO ha detto no*).  ⭐ Percio' il
-      motivo esce dalla funzione, e la certificazione lo pretende insieme al
-      numero.
+    ⭐⭐ AND THE `motivo` IS NOT A LUXURY — it was born from a grafted fault that DID NOT
+    BITE.  `[M]` 27 August 2026, while writing this mesh: undoing the
+    guard *«the FIRST failed too»* the exit code stayed **1** anyway
+    — by another road (the jump too small) — ⛔ and a
+    certification that looked only at the number **said OK on a dismantled
+    guard**.
+    ⇒ ⛔ A right verdict for the wrong reason is a verdict that will stop
+      being right without anyone noticing (`LEZIONI.md` §2.0: *a
+      bench that says «no» must say WITH WHICH STAGE it said no*).  ⭐ That is why the
+      reason comes out of the function, and the certification demands it together with the
+      number.
     """
     righe = []
     si = [e for e in esiti if e["visto"] is True]
     no = [e for e in esiti if e["visto"] is False]
     ignoti = [e for e in esiti if e["visto"] is None]
 
-    righe.append("  ⭐ vedono la pagina dal cliente: %d · ⛔ NON la vedono: %d · "
-                 "non giudicati: %d" % (len(si), len(no), len(ignoti)))
+    righe.append("  ⭐ see the page from the client: %d · ⛔ do NOT see it: %d · "
+                 "not judged: %d" % (len(si), len(no), len(ignoti)))
 
     if not senza_cura:
         if no:
-            righe.append("⛔ ROSSO: %d inquilini su %d non vedono la pagina dal "
-                         "cliente" % (len(no), len(esiti)))
+            righe.append("⛔ RED: %d tenants out of %d do not see the page from the "
+                         "client" % (len(no), len(esiti)))
             for e in no:
                 righe.append("   ⇒ %s: %s" % (e["chi"], e.get("perche", "")))
             return 1, "rosso", righe
         if ignoti or not esiti:
-            righe.append("⛔ non ho potuto giudicare %d inquilini su %d ⇒ non e' "
-                         "un verde e non e' un rosso (§4.5)"
+            righe.append("⛔ I could not judge %d tenants out of %d ⇒ it is not "
+                         "a green and it is not a red (§4.5)"
                          % (len(ignoti), len(esiti)))
             for e in ignoti:
                 righe.append("   ⇒ %s: %s" % (e["chi"], e.get("perche", "")))
             return 3, "non-giudicato", righe
-        righe.append("⭐ tutt'e %d gli inquilini vedono la pagina ATTRAVERSO IL "
-                     "PRODOTTO" % len(esiti))
+        righe.append("⭐ all %d tenants see the page THROUGH THE "
+                     "PRODUCT" % len(esiti))
         return 0, "tutti-vedono", righe
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ⛔ COL GUASTO INNESTATO SI LEGGE AL CONTRARIO: qui il verde e' un rosso.
+    # ⛔ WITH THE GRAFTED FAULT IT IS READ BACKWARDS: here green is a red.
     # ═══════════════════════════════════════════════════════════════════════
     if not esiti or all(e["visto"] is None for e in esiti):
-        righe.append("⛔ non ho potuto giudicare nessuno: non posso dire se il "
-                     "guasto si sarebbe visto")
+        righe.append("⛔ I could not judge anyone: I cannot say whether the "
+                     "fault would have been seen")
         return 3, "nessun-giudizio", righe
     primo = esiti[0]
     if primo["visto"] is None:
-        righe.append("⛔ non ho potuto giudicare il PRIMO inquilino (%s): senza "
-                     "di lui non so di CHI sarebbe il rosso" % primo["chi"])
+        righe.append("⛔ I could not judge the FIRST tenant (%s): without "
+                     "it I do not know WHOSE the red would be" % primo["chi"])
         return 3, "primo-non-giudicato", righe
     if primo["visto"] is False:
-        righe.append("⛔⛔ HA FALLITO ANCHE IL PRIMO (%s): il guasto atteso morde "
-                     "dal SECONDO in poi." % primo["chi"])
-        righe.append("   ⇒ o il posto condiviso era gia' sporco, o quel che si "
-                     "sta misurando non e' il difetto della provvista.")
-        righe.append("   ⚠ E un rosso che non distingue il guasto dal banco non "
-                     "certifica niente (`LEZIONI.md` §1.45).")
+        righe.append("⛔⛔ THE FIRST FAILED TOO (%s): the expected fault bites "
+                     "from the SECOND on." % primo["chi"])
+        righe.append("   ⇒ either the shared place was already dirty, or what is "
+                     "being measured is not the provisioning defect.")
+        righe.append("   ⚠ And a red that does not distinguish the fault from the bench "
+                     "certifies nothing (`LEZIONI.md` §1.45).")
         return 1, "anche-il-primo", righe
     if not no:
-        righe.append("⛔⛔ IL GUASTO INNESTATO NON E' STATO VISTO: tutti vedono la "
-                     "pagina anche senza la cura.")
-        righe.append("   ⇒ o la cura non serviva, o questa maglia non guarda nel "
-                     "posto giusto — e in tutt'e due i casi non ci si puo' "
-                     "fidare di lei.")
+        righe.append("⛔⛔ THE GRAFTED FAULT WAS NOT SEEN: everyone sees the "
+                     "page even without the cure.")
+        righe.append("   ⇒ either the cure was not needed, or this mesh does not look in "
+                     "the right place — and in both cases it cannot "
+                     "be trusted.")
         return 1, "guasto-non-visto", righe
 
-    # ⭐ E adesso la parte che vale: la DIFFERENZA, misurata (`LEZIONI.md` §1.52).
+    # ⭐ And now the part that counts: the DIFFERENCE, measured (`LEZIONI.md` §1.52).
     fr_primo = primo.get("dopo")
     peggiori = [e.get("dopo") for e in no if e.get("dopo") is not None]
     if fr_primo is None or not peggiori:
-        righe.append("⛔ il guasto sembra visto, ma non ho i due numeri per "
-                     "misurare la differenza ⇒ non certifico niente")
+        righe.append("⛔ the fault seems seen, but I do not have the two numbers to "
+                     "measure the difference ⇒ I certify nothing")
         return 3, "senza-numeri", righe
     distanza = fr_primo - max(peggiori)
-    righe.append("   la differenza: primo %.1f%% · peggiore %.1f%% ⇒ salto "
-                 "%.1f punti (ne servono %.1f)"
+    righe.append("   the difference: first %.1f%% · worst %.1f%% ⇒ jump "
+                 "%.1f points (%.1f are needed)"
                  % (fr_primo * 100, max(peggiori) * 100,
                     distanza * 100, salto * 100))
     if distanza < salto:
-        righe.append("⛔ IL SALTO E' TROPPO PICCOLO: i due inquilini stanno ai "
-                     "due lati di un capello.")
-        righe.append("   ⇒ ⛔ non si certifica una rete su una differenza che "
-                     "non si distingue dal rumore (`LEZIONI.md` §1.52).")
+        righe.append("⛔ THE JUMP IS TOO SMALL: the two tenants sit on the "
+                     "two sides of a hair.")
+        righe.append("   ⇒ ⛔ a net is not certified on a difference that "
+                     "cannot be told from the noise (`LEZIONI.md` §1.52).")
         return 1, "salto-troppo-piccolo", righe
-    righe.append("⭐ IL GUASTO INNESTATO E' STATO VISTO: %d inquilini su %d non "
-                 "vedono la pagina, ⛔ e il PRIMO si'"
+    righe.append("⭐ THE GRAFTED FAULT WAS SEEN: %d tenants out of %d do not "
+                 "see the page, ⛔ and the FIRST does"
                  % (len(no), len(esiti)))
-    righe.append("   ⇒ non ce l'hanno fatta: %s"
+    righe.append("   ⇒ they did not make it: %s"
                  % ", ".join(e["chi"] for e in no))
-    righe.append("   ⇒ ⭐ questa maglia SA dare rosso, e la differenza e' "
-                 "misurabile")
+    righe.append("   ⇒ ⭐ this mesh CAN say red, and the difference is "
+                 "measurable")
     return 0, "guasto-visto", righe
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# LA PRESA — ⛔ un attacco solo, e il browser si accende DENTRO quell'attacco
+# THE GRAB — ⛔ a single attach, and the browser is switched on INSIDE that attach
 # ═══════════════════════════════════════════════════════════════════════════
 def leggi(percorso):
     try:
@@ -557,15 +557,15 @@ def leggi(percorso):
 
 
 def quanti_fotogrammi(testo):
-    """Dal registro del cliente: quanti fotogrammi sono ARRIVATI.
+    """From the client's log: how many frames ARRIVED.
 
-    ⛔ `None` quando non e' arrivato niente, e non zero: un flusso vuoto
-       decodificato direbbe «schermo nero» su un server che non ha mai avuto
-       occasione di mandare niente (`LEZIONI.md` §1.30).
+    ⛔ `None` when nothing arrived, and not zero: an empty stream
+       decoded would say «black screen» on a server that never had the
+       chance to send anything (`LEZIONI.md` §1.30).
     """
     quanti = None
     for riga in (testo or "").splitlines():
-        if "[vid]" in riga and "nessun fotogramma" not in riga:
+        if "[vid]" in riga and "no frame" not in riga:
             try:
                 quanti = int(riga.split("[vid]", 1)[1].strip().split()[0])
             except Exception:
@@ -577,27 +577,27 @@ def ffmpeg(c8a, comando):
     return c8a.sh(comando, secondi=240)
 
 
-# ── quanti fotogrammi d'apertura si guardano per il «prima» ──────────────────
-# ⭐ FASE 12 (19 set 2026).  `[M]` Su KDE il primo fotogramma di una sessione
-#   nuova e' la schermata d'avvio di Plasma (99 % nero + logo, ~2,4 s): e' il
-#   desktop VERO che si accende, e col solo primo fotogramma C8b lo chiamava
-#   «guasto a monte» per sempre.  ⇒ Il «prima» e' il PRIMO fotogramma NON NERO
-#   fra i primi `APERTURA` — che su GNOME e' il primo, cioe' com'era.
-# ⛔ E non regala niente: se sono tutti neri il «prima» resta il primo (⇒
-#    «a monte», come prima); se il primo non nero e' gia' la pagina, il giudizio
-#    del «prima» dice «gia' magenta» e la maglia non giudica il dopo.
+# ── how many opening frames are looked at for the «before» ──────────────────
+# ⭐ PHASE 12 (19 Sep 2026).  `[M]` On KDE the first frame of a new session
+#   is the Plasma splash screen (99 % black + logo, ~2.4 s): it is the
+#   REAL desktop switching on, and with the first frame only C8b called it
+#   «upstream fault» forever.  ⇒ The «before» is the FIRST NON-BLACK frame
+#   among the first `APERTURA` — which on GNOME is the first, i.e. as it was.
+# ⛔ And it gives nothing away: if they are all black the «before» stays the first (⇒
+#    «upstream», as before); if the first non-black one is already the page, the judgement
+#    of the «before» says «already magenta» and the mesh does not judge the after.
 APERTURA = 240
 
 
 def estrai(c8a, flusso, primo, ultimo, giudice=None):
-    """Dal flusso H.264 tira fuori il «PRIMA» e l'ULTIMO fotogramma.
+    """From the H.264 stream pulls out the «BEFORE» and the LAST frame.
 
-    ⛔ Sono due domande diverse e servono due comandi: i fotogrammi d'apertura
-       (il desktop **prima** del browser), e `-update 1`, che riscrive sempre lo
-       stesso file e quindi vince l'ULTIMO decodificato — che e' quel che il
-       desktop mostra adesso.
-    ⭐ Il «prima» e' il primo NON NERO fra i primi `APERTURA` (vedi sopra);
-       senza giudice, il primo in assoluto.
+    ⛔ They are two different questions and two commands are needed: the opening frames
+       (the desktop **before** the browser), and `-update 1`, which always rewrites the
+       same file and so the LAST decoded wins — which is what the
+       desktop shows now.
+    ⭐ The «before» is the first NON-BLACK among the first `APERTURA` (see above);
+       without a judge, the very first.
     """
     for f in (primo, ultimo):
         if os.path.exists(f):
@@ -614,15 +614,15 @@ def estrai(c8a, flusso, primo, ultimo, giudice=None):
         if not (os.path.exists(p) and os.path.getsize(p)):
             break
         if scelto is None:
-            scelto = p              # il primo, se nessuno e' meglio
+            scelto = p              # the first, if none is better
         if giudice is None:
             break
         g = giudice.giudica(p)
         if g and g.get("verdetto") not in ("nero", "quasi-nero"):
             scelto = p
             if i > 1:
-                print("           ⭐ il «prima» e' il fotogramma %d: i %d prima di lui "
-                      "erano neri (su KDE: la schermata d'avvio di Plasma)" % (i, i - 1))
+                print("           ⭐ the «before» is frame %d: the %d before it "
+                      "were black (on KDE: the Plasma splash screen)" % (i, i - 1))
             break
     if scelto:
         c8a.sh("cp %s %s" % (scelto, primo))
@@ -634,20 +634,20 @@ def estrai(c8a, flusso, primo, ultimo, giudice=None):
 
 
 def cerca_in_tutta_la_ripresa(c8a, flusso, cartella, chi, minima, quanti=240):
-    """⭐ SOLO DIAGNOSI — la pagina e' comparsa **in qualche momento**?
+    """⭐ DIAGNOSIS ONLY — did the page appear **at some moment**?
 
-    ⛔ Non cambia nessun verdetto, e non puo' farlo: il verdetto e' sull'ultimo
-       fotogramma, cioe' su quel che il desktop mostra **adesso**.
-    ⚠ Ma serve a nominare il motivo accanto al sintomo: `[M]` 25 agosto 2026, il
-      dialogo «Profile Missing» di Firefox compariva a meta' della presa e
-      sull'ultimo fotogramma non c'era piu' (`10-f1-testimone.py`, `--tutti`).
-      ⇒ *«non ha mai disegnato»* e *«ha disegnato e poi e' sparita»* sono due
-      guasti diversi, e chi legge ha diritto di sapere quale dei due e'.
+    ⛔ It changes no verdict, and it cannot: the verdict is on the last
+       frame, i.e. on what the desktop shows **now**.
+    ⚠ But it serves to name the reason next to the symptom: `[M]` 25 August 2026, the
+      Firefox «Profile Missing» dialog appeared halfway through the grab and
+      on the last frame it was no longer there (`10-f1-testimone.py`, `--tutti`).
+      ⇒ *«it never drew»* and *«it drew and then it disappeared»* are two
+      different faults, and whoever reads has the right to know which of the two it is.
     """
     modello = os.path.join(cartella, "%s-seq-%%03d.png" % chi)
     c8a.sh("rm -f %s" % os.path.join(cartella, "%s-seq-*.png" % chi))
-    # ⚠ Un fotogramma al secondo, al massimo `quanti`: la ripresa dura minuti, e
-    #   decodificarla tutta costerebbe piu' della prova.
+    # ⚠ One frame per second, at most `quanti`: the recording lasts minutes, and
+    #   decoding it all would cost more than the test.
     ffmpeg(c8a, "ffmpeg -hide_banner -loglevel error -i %s -vf fps=1 "
                 "-frames:v %d -y %s" % (flusso, quanti, modello))
     migliore = None
@@ -663,35 +663,35 @@ def cerca_in_tutta_la_ripresa(c8a, flusso, cartella, chi, minima, quanti=240):
             migliore = fr
             dove = i
     if not n:
-        return "⚠ non sono riuscito a rileggere la ripresa: nessun campione"
+        return "⚠ I could not reread the recording: no sample"
     if migliore is None:
-        return "⚠ %d campioni rivisti, nessuno leggibile" % n
+        return "⚠ %d samples reviewed, none readable" % n
     if migliore >= minima:
-        return ("⛔⛔ LA PAGINA C'ERA e poi e' sparita: al campione %d/%d copriva "
-                "il %.1f%% — ⚠ il browser ha disegnato, e qualcosa gliel'ha "
-                "tolta di sotto" % (dove, n, migliore * 100))
-    return ("⚠ in %d campioni della ripresa la pagina non e' MAI comparsa "
-            "(massimo %.1f%%): ⇒ non e' «e' comparsa e sparita»"
+        return ("⛔⛔ THE PAGE WAS THERE and then it disappeared: at sample %d/%d it covered "
+                "%.1f%% — ⚠ the browser drew, and something took it "
+                "away from underneath" % (dove, n, migliore * 100))
+    return ("⚠ in %d samples of the recording the page NEVER appeared "
+            "(maximum %.1f%%): ⇒ it is not «it appeared and disappeared»"
             % (n, migliore * 100))
 
 
 def aspetta_il_palco(registro, chi, c1, segno, scadenza, cliente):
-    """⛔ Si aspetta L'EVENTO, non l'orologio — col giudice della nascita di C1.
+    """⛔ We wait for THE EVENT, not for the clock — with C1's birth judge.
 
-    Torna `(secondi|None, perche|None)`.
+    Returns `(secondi|None, perche|None)`.
 
-    ⚠ Si sorveglia anche il cliente: se muore per conto suo, aspettare il palco
-      fino alla scadenza sarebbe aspettare un morto — si torna subito, e si dice
-      **chi** e' morto invece di lasciare un silenzio (`LEZIONI.md` §1.29).
-    ⭐ E quando scade, il perche' lo dice **C1**: «CIECA» e «NON-LO-SO» sono due
-      cose diverse, e chi legge ha diritto di sapere quale delle due.
+    ⚠ The client is watched too: if it dies on its own, waiting for the stage
+      until the deadline would be waiting for a dead man — we return at once, and say
+      **who** died instead of leaving a silence (`LEZIONI.md` §1.29).
+    ⭐ And when it expires, the why is said by **C1**: «CIECA» and «NON-LO-SO» are two
+      different things, and whoever reads has the right to know which of the two.
     """
     t0 = time.time()
     ultimo = None
     while time.time() < scadenza:
         if cliente.poll() is not None:
-            return None, ("il cliente di prova se n'e' andato dopo %.0f s, prima "
-                          "che il palco montasse un monitor" % (time.time() - t0))
+            return None, ("the test client went away after %.0f s, before "
+                          "the stage mounted a monitor" % (time.time() - t0))
         testo = leggi(registro)
         fetta = testo[segno:] if testo is not None else ""
         ultimo = c1.leggi_nascita(fetta, chi)
@@ -699,16 +699,16 @@ def aspetta_il_palco(registro, chi, c1, segno, scadenza, cliente):
             return time.time() - t0, None
         time.sleep(1.0)
     stato, perche = c1.verdetto_giro(ultimo)
-    return None, ("in %.0f s il palco non ha montato nessun monitor per «%s» "
-                  "(C1 dice «%s»: %s): ⛔ senza schermo il browser non ha dove "
-                  "disegnare, e questo NON e' un rosso di C8b"
+    return None, ("in %.0f s the stage did not mount any monitor for «%s» "
+                  "(C1 says «%s»: %s): ⛔ without a screen the browser has nowhere "
+                  "to draw, and this is NOT a red of C8b"
                   % (time.time() - t0, chi, stato, perche))
 
 
 def guarda_un_inquilino(chi, a, c8a, c1, giudice):
-    """⭐⭐ IL CUORE — un attacco solo, e dentro ci sta tutto.
+    """⭐⭐ THE HEART — a single attach, and everything fits inside it.
 
-    Torna un dizionario:
+    Returns a dictionary:
         {"prima": float|None, "dopo": float|None, "verdetto_prima": str|None,
          "fotogrammi": int|None, "palco_s": float|None, "perche": str}
     """
@@ -722,16 +722,16 @@ def guarda_un_inquilino(chi, a, c8a, c1, giudice):
 
     testo = leggi(a.registro)
     if testo is None:
-        esito["perche"] = ("non riesco a leggere il registro del prodotto (%s): "
-                           "⛔ non so quando il palco e' nato" % a.registro)
+        esito["perche"] = ("I cannot read the product log (%s): "
+                           "⛔ I do not know when the stage was born" % a.registro)
         return esito
     segno = len(testo)
 
     resta = resta_del_filo(a.attesa_palco, a.attesa_browser, a.margine_filo)
-    # ⛔ Il cliente scrive il flusso SOLO alla fine: si lancia in sottofondo e si
-    #    lavora mentre e' attaccato.  ⚠ E l'uscita va in un FILE, non in una
-    #    pipe: una pipe piena bloccherebbe il cliente, e un banco appeso non
-    #    dice niente a nessuno (`LEZIONI.md` §1.51).
+    # ⛔ The client writes the stream ONLY at the end: it is launched in the background and we
+    #    work while it is attached.  ⚠ And the output goes into a FILE, not into a
+    #    pipe: a full pipe would block the client, and a hung bench does not
+    #    say anything to anyone (`LEZIONI.md` §1.51).
     acceso = False
     with open(diario, "wb") as f:
         cliente = subprocess.Popen(
@@ -750,24 +750,24 @@ def guarda_un_inquilino(chi, a, c8a, c1, giudice):
             esito["perche"] = perche
             return esito
 
-        # ⭐ Il respiro: almeno un fotogramma SENZA browser dev'essere partito,
-        #   o il «prima» conterrebbe gia' la pagina.
+        # ⭐ The breath: at least one frame WITHOUT browser must have left,
+        #   or the «before» would already contain the page.
         time.sleep(a.respiro)
 
         display, err = c8a.apri_il_browser(chi, a)
         if display is None:
-            esito["perche"] = "⛔ non ho potuto accendere il browser: %s" % err
+            esito["perche"] = "⛔ I could not switch on the browser: %s" % err
             return esito
         acceso = True
-        esito["perche"] = "browser acceso su %s" % display
+        esito["perche"] = "browser switched on on %s" % display
         time.sleep(a.attesa_browser)
     finally:
         if esito["palco_s"] is None or not acceso:
-            # ⛔ Qui non c'e' niente da raccogliere — il palco non e' nato, o il
-            #    browser non si e' acceso — e restare attaccati fino alla fine
-            #    vorrebbe dire pagare tre minuti per un file che non guardero'.
-            # ⚠ E si dice: un banco che spende e non spiega e' un banco che
-            #   qualcuno spegnera' (§1.3 del documento di fase).
+            # ⛔ Here there is nothing to collect — the stage was not born, or the
+            #    browser did not switch on — and staying attached until the end
+            #    would mean paying three minutes for a file I will not look at.
+            # ⚠ And it is said: a bench that spends and does not explain is a bench that
+            #   someone will switch off (§1.3 of the phase document).
             cliente.terminate()
             try:
                 cliente.wait(timeout=30)
@@ -775,8 +775,8 @@ def guarda_un_inquilino(chi, a, c8a, c1, giudice):
                 cliente.kill()
                 cliente.wait(timeout=30)
         else:
-            # ⭐ Altrimenti si aspetta che finisca DA SE': e' lui che scrive il
-            #   flusso — solo alla fine — e ucciderlo butterebbe via la ripresa.
+            # ⭐ Otherwise we wait for it to finish BY ITSELF: it is the one that writes the
+            #   stream — only at the end — and killing it would throw away the recording.
             try:
                 cliente.wait(timeout=resta + 120)
             except subprocess.TimeoutExpired:
@@ -791,16 +791,16 @@ def guarda_un_inquilino(chi, a, c8a, c1, giudice):
             if riga.strip():
                 ultima = riga.strip()[:110]
                 break
-        esito["perche"] = ("nessun fotogramma e' arrivato dal filo ⇒ ⛔ non e' "
-                           "«lo schermo era vuoto».  Il cliente dice: %s" % ultima)
+        esito["perche"] = ("no frame arrived from the wire ⇒ ⛔ it is not "
+                           "«the screen was empty».  The client says: %s" % ultima)
         return esito
 
     primo, ultimo = estrai(c8a, flusso,
                            os.path.join(a.lavoro, "%s-prima.png" % chi),
                            os.path.join(a.lavoro, "%s-dopo.png" % chi), giudice)
     if primo is None or ultimo is None:
-        esito["perche"] = ("%d fotogrammi sono arrivati ma ffmpeg non ne ha "
-                           "fatto un'immagine" % esito["fotogrammi"])
+        esito["perche"] = ("%d frames arrived but ffmpeg did not make "
+                           "an image of them" % esito["fotogrammi"])
         return esito
     g = giudice.giudica(primo)
     esito["verdetto_prima"] = g["verdetto"] if g else None
@@ -811,47 +811,47 @@ def guarda_un_inquilino(chi, a, c8a, c1, giudice):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⛔ LA CERTIFICAZIONE — e si dichiara che cosa copre e che cosa no
+# ⛔ THE CERTIFICATION — and it declares what it covers and what it does not
 # ═══════════════════════════════════════════════════════════════════════════
 def certifica():
-    """⭐ Fa girare **tutti** i giudizi di questa maglia, sul portatile, senza
-    scatola, senza server e senza browser.
+    """⭐ Runs **all** the judgements of this mesh, on the laptop, without
+    box, without server and without browser.
 
-    COPRE: ⭐ il giudizio del «prima» (nero ⇒ non e' un rosso · gia' magenta ⇒
-    non e' un verde · niente ⇒ «non lo so») · il verdetto sul singolo inquilino ·
-    ⭐⭐ **il giunto**, cioe' il codice d'uscita, nei due versi (senza guasto e
-    col guasto innestato, `LEZIONI.md` §1.52) · i tetti, che sono soglie e come
-    tali si certificano · ⭐ che il metro sia **quello di C8a** e non una copia.
-    ⛔ NON COPRE: che il lettore dei pixel sappia riconoscere il colore — quello
-    e' certificato in C8a (8 casi su 8) — ne' che il giudice delle immagini
-    sappia dire «nero» — quello e' certificato in `10-f1` (12 guasti innestati).
-    ⇒ Una certificazione che si dichiara piu' larga di quel che e' vale meno di
-      nessuna certificazione.
+    COVERS: ⭐ the judgement of the «before» (black ⇒ it is not a red · already magenta ⇒
+    it is not a green · nothing ⇒ «I do not know») · the verdict on the single tenant ·
+    ⭐⭐ **the joint**, i.e. the exit code, in both directions (without fault and
+    with the grafted fault, `LEZIONI.md` §1.52) · the ceilings, which are thresholds and as
+    such are certified · ⭐ that the yardstick is **C8a's** and not a copy.
+    ⛔ DOES NOT COVER: that the pixel reader can recognise the colour — that
+    is certified in C8a (8 cases of 8) — nor that the image judge
+    can say «black» — that is certified in `10-f1` (12 grafted faults).
+    ⇒ A certification that declares itself wider than it is is worth less than
+      no certification.
     """
-    print("== certificazione di C8b — «la pagina si vede DAL CLIENTE» ==")
+    print("== certification of C8b — «the page is seen FROM THE CLIENT» ==")
 
     c8a = prendi_c8a()
     if c8a is None:
-        print("⛔ non trovo C8a (11-c8-il-secondo-apre-il-browser.py) accanto a me:")
-        print("   ⇒ senza di lei non ho ne' la scena ne' il metro")
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ I cannot find C8a (11-c8-il-secondo-apre-il-browser.py) next to me:")
+        print("   ⇒ without it I have neither the scene nor the yardstick")
+        print("   ⇒ I could not look")
         return 3
     giudice, dove = trova_il_giudice(c8a)
     if giudice is None:
-        print("⛔ non trovo il giudice delle immagini (10-f1-testimone.py)")
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ I cannot find the image judge (10-f1-testimone.py)")
+        print("   ⇒ I could not look")
         return 3
     c1 = prendi_c1()
     if c1 is None:
-        print("⛔ non trovo C1 (11-c1-nasce-e-si-vede.py), o non ha piu' il")
-        print("   giudice della nascita che mi serve ⇒ non ho potuto guardare")
+        print("⛔ I cannot find C1 (11-c1-nasce-e-si-vede.py), or it no longer has the")
+        print("   birth judge I need ⇒ I could not look")
         return 3
 
     minima = c8a.FRAZIONE_MINIMA
-    print("   il metro viene da C8a: colore %s · tolleranza ±%d · frazione "
-          "minima %.2f" % (c8a.COLORE, c8a.TOLLERANZA, minima))
-    print("   il giudice delle immagini: %s" % dove)
-    print("   il giudice della nascita e il suo tetto: da C1, %.0f s"
+    print("   the yardstick comes from C8a: colour %s · tolerance ±%d · minimum "
+          "fraction %.2f" % (c8a.COLORE, c8a.TOLLERANZA, minima))
+    print("   the image judge: %s" % dove)
+    print("   the birth judge and its ceiling: from C1, %.0f s"
           % c1.TETTO_NASCITA)
     print()
 
@@ -859,37 +859,37 @@ def certifica():
     quanti = 0
 
     def prova(gruppo, nome, atteso, ottenuto):
-        # ⛔ Il conto si tiene QUI e si stampa RILEGGENDOLO: un «N su N» scritto
-        #    a mano in fondo e' un numero che resta indietro (`LEZIONI.md` §1.48).
+        # ⛔ The count is kept HERE and printed by READING IT BACK: an «N of N» written
+        #    by hand at the end is a number that stays behind (`LEZIONI.md` §1.48).
         nonlocal guai, quanti
         quanti += 1
         ok = (atteso == ottenuto)
         if not ok:
             guai += 1
-        print("  %s  %-8s %-52s atteso %-14s ottenuto %s"
+        print("  %s  %-8s %-52s expected %-14s got %s"
               % ("OK " if ok else "NO ", gruppo, nome, repr(atteso),
                  repr(ottenuto)))
         return ok
 
-    # ── P1 · il giudizio del PRIMA ──────────────────────────────────────────
-    print("  P1 · il desktop PRIMA del browser — ⛔ tre esiti, non due")
-    prova("P1", "desktop disegnato, niente pagina ⇒ pulito", "pulito",
+    # ── P1 · the judgement of the BEFORE ────────────────────────────────────
+    print("  P1 · the desktop BEFORE the browser — ⛔ three outcomes, not two")
+    prova("P1", "desktop drawn, no page ⇒ clean", "pulito",
           giudica_il_prima("disegnato", 0.001, minima)[0])
-    prova("P1", "desktop NERO ⇒ «a monte», ⛔ non un rosso di C8b", "a-monte",
+    prova("P1", "BLACK desktop ⇒ «upstream», ⛔ not a red of C8b", "a-monte",
           giudica_il_prima("nero", 0.0, minima)[0])
-    prova("P1", "desktop QUASI-NERO ⇒ «a monte»", "a-monte",
+    prova("P1", "NEAR-BLACK desktop ⇒ «upstream»", "a-monte",
           giudica_il_prima("quasi-nero", 0.0, minima)[0])
-    prova("P1", "⭐ la pagina c'era GIA' ⇒ non me l'attribuisco", "gia-magenta",
+    prova("P1", "⭐ the page was ALREADY there ⇒ I do not claim it", "gia-magenta",
           giudica_il_prima("disegnato", 0.99, minima)[0])
-    prova("P1", "⛔ non ho guardato ⇒ «non lo so», non «era nero»", "non-lo-so",
+    prova("P1", "⛔ I did not look ⇒ «I do not know», not «it was black»", "non-lo-so",
           giudica_il_prima(None, None, minima)[0])
-    prova("P1", "⛔ ho un verdetto ma non la frazione ⇒ «non lo so»", "non-lo-so",
+    prova("P1", "⛔ I have a verdict but not the fraction ⇒ «I do not know»", "non-lo-so",
           giudica_il_prima("disegnato", None, minima)[0])
 
-    # ⭐ E i due casi che attraversano DAVVERO i pixel, con immagini vere: qui
-    #   non si certifica il lettore (e' di C8a), si certifica che l'IMPORTO sia
-    #   vivo — ⛔ che il metro usato sia quello di C8a e non una copia sbiadita.
-    print("\n  P2 · ⭐ il metro e' DAVVERO quello di C8a (l'importo e' vivo)")
+    # ⭐ And the two cases that REALLY go through the pixels, with real images: here
+    #   the reader is not certified (it is C8a's), it is certified that the IMPORT is
+    #   alive — ⛔ that the yardstick used is C8a's and not a faded copy.
+    print("\n  P2 · ⭐ the yardstick is REALLY C8a's (the import is alive)")
     try:
         import numpy as np
         from PIL import Image
@@ -910,183 +910,184 @@ def certifica():
         nero = dipingi("nero", (0, 0, 0))
         fr_pagina = c8a.frazione_del_colore(pagina)
         fr_vuoto = c8a.frazione_del_colore(vuoto)
-        prova("P2", "la pagina si ritrova col metro importato", True,
+        prova("P2", "the page is found with the imported yardstick", True,
               fr_pagina is not None and fr_pagina >= minima)
-        prova("P2", "un desktop senza pagina non la ritrova", True,
+        prova("P2", "a desktop without the page does not find it", True,
               fr_vuoto is not None and fr_vuoto < minima)
-        prova("P2", "⛔ un file che non c'e' ⇒ None, non zero", None,
+        prova("P2", "⛔ a file that is not there ⇒ None, not zero", None,
               c8a.frazione_del_colore(os.path.join(lav, "manca.png")))
-        prova("P2", "il giudice di 10-f1 dice «nero» su uno schermo nero",
+        prova("P2", "the 10-f1 judge says «nero» on a black screen",
               "nero", (giudice.giudica(nero) or {}).get("verdetto"))
-        # ⭐ E la catena intera, dal PNG al verdetto dell'inquilino.
+        # ⭐ And the whole chain, from the PNG to the tenant's verdict.
         stato, _ = giudica_il_prima(
             (giudice.giudica(vuoto) or {}).get("verdetto"),
             c8a.frazione_del_colore(vuoto), minima)
-        prova("P2", "⭐ catena intera: desktop vuoto ⇒ campo pulito", "pulito",
+        prova("P2", "⭐ whole chain: empty desktop ⇒ clean field", "pulito",
               stato)
-        prova("P2", "⭐ catena intera: pulito + pagina ⇒ VISTA", True,
+        prova("P2", "⭐ whole chain: clean + page ⇒ SEEN", True,
               giudizio_inquilino(stato, fr_pagina, minima)[0])
     except ImportError:
-        print("  ⛔ mancano numpy o Pillow: non posso certificare l'importo")
-        print("     ⇒ non ho potuto guardare")
+        print("  ⛔ numpy or Pillow is missing: I cannot certify the import")
+        print("     ⇒ I could not look")
         return 3
 
-    # ── P3 · il verdetto su un inquilino ────────────────────────────────────
-    print("\n  P3 · il verdetto su UN inquilino")
-    prova("P3", "campo pulito, pagina piena ⇒ SI", True,
+    # ── P3 · the verdict on a tenant ────────────────────────────────────────
+    print("\n  P3 · the verdict on ONE tenant")
+    prova("P3", "clean field, full page ⇒ YES", True,
           giudizio_inquilino("pulito", 0.987, minima)[0])
-    prova("P3", "campo pulito, niente pagina ⇒ NO", False,
+    prova("P3", "clean field, no page ⇒ NO", False,
           giudizio_inquilino("pulito", 0.004, minima)[0])
-    prova("P3", "⛔ campo pulito, dopo non guardato ⇒ «non lo so»", None,
+    prova("P3", "⛔ clean field, after not looked at ⇒ «I do not know»", None,
           giudizio_inquilino("pulito", None, minima)[0])
-    prova("P3", "⛔ desktop nero prima ⇒ «non lo so», non un rosso", None,
+    prova("P3", "⛔ black desktop before ⇒ «I do not know», not a red", None,
           giudizio_inquilino("a-monte", 0.0, minima)[0])
-    prova("P3", "⛔ pagina gia' presente prima ⇒ «non lo so», non un verde", None,
+    prova("P3", "⛔ page already present before ⇒ «I do not know», not a green", None,
           giudizio_inquilino("gia-magenta", 0.99, minima)[0])
-    # ⚠ E la soglia si tara nei due versi, come C1 e C8a: appena sopra passa,
-    #   appena sotto no — o non e' una soglia, e' un'opinione.
-    prova("P3", "appena SOPRA la frazione minima ⇒ SI", True,
+    # ⚠ And the threshold is calibrated in both directions, like C1 and C8a: just above passes,
+    #   just below does not — or it is not a threshold, it is an opinion.
+    prova("P3", "just ABOVE the minimum fraction ⇒ YES", True,
           giudizio_inquilino("pulito", minima + 0.001, minima)[0])
-    prova("P3", "appena SOTTO la frazione minima ⇒ NO", False,
+    prova("P3", "just BELOW the minimum fraction ⇒ NO", False,
           giudizio_inquilino("pulito", minima - 0.001, minima)[0])
 
     def E(chi, visto, dopo):
         return {"chi": chi, "visto": visto, "dopo": dopo, "perche": ""}
 
-    # ⛔⛔ E DA QUI IN POI SI PRETENDE **IL NUMERO E LA RAGIONE**, non il numero.
+    # ⛔⛔ AND FROM HERE ON **THE NUMBER AND THE REASON** ARE DEMANDED, not the number.
     #
-    # `[M]` 27 agosto 2026, scrivendo questa maglia: smontando la guardia «ha
-    # fallito anche il PRIMO» il codice d'uscita restava **1** lo stesso, per
-    # un'altra strada — ⛔ e questa certificazione, che guardava solo il numero,
-    # diceva **OK su una guardia smontata**.  ⇒ E' §1.44 in un'altra veste: un
-    # controllo che non puo' dare rosso ha l'aspetto di uno che passa.
+    # `[M]` 27 August 2026, while writing this mesh: dismantling the guard «the
+    # FIRST failed too» the exit code stayed **1** anyway, by
+    # another road — ⛔ and this certification, which looked only at the number,
+    # said **OK on a dismantled guard**.  ⇒ It is §1.44 in another guise: a
+    # check that cannot give red looks like one that passes.
     def giudizio(esiti_, senza_cura_):
         c, m, _ = decidi(esiti_, senza_cura_, minima)
         return (c, m)
 
-    # ── P4 · il giunto, SENZA guasto innestato ──────────────────────────────
-    print("\n  P4 · il codice d'uscita, giro normale — ⭐ numero E ragione")
-    prova("P4", "tutt'e due vedono ⇒ 0", (0, "tutti-vedono"),
+    # ── P4 · the joint, WITHOUT grafted fault ───────────────────────────────
+    print("\n  P4 · the exit code, normal round — ⭐ number AND reason")
+    prova("P4", "both see ⇒ 0", (0, "tutti-vedono"),
           giudizio([E("u1", True, 0.98), E("u2", True, 0.98)], False))
-    prova("P4", "uno non vede ⇒ 1 (rosso)", (1, "rosso"),
+    prova("P4", "one does not see ⇒ 1 (red)", (1, "rosso"),
           giudizio([E("u1", True, 0.98), E("u2", False, 0.00)], False))
-    prova("P4", "⛔ uno non giudicato ⇒ 3, e non e' un verde", (3, "non-giudicato"),
+    prova("P4", "⛔ one not judged ⇒ 3, and it is not a green", (3, "non-giudicato"),
           giudizio([E("u1", True, 0.98), E("u2", None, None)], False))
-    prova("P4", "⛔ nessuno giudicato ⇒ 3", (3, "non-giudicato"),
+    prova("P4", "⛔ nobody judged ⇒ 3", (3, "non-giudicato"),
           giudizio([E("u1", None, None), E("u2", None, None)], False))
-    prova("P4", "⛔ nessun inquilino affatto ⇒ 3, non 0", (3, "non-giudicato"),
+    prova("P4", "⛔ no tenant at all ⇒ 3, not 0", (3, "non-giudicato"),
           giudizio([], False))
 
-    # ── P5 · il giunto COL guasto innestato — si legge al contrario ─────────
-    print("\n  P5 · ⛔ col guasto innestato: `0` = guasto VISTO (§1.52)")
-    prova("P5", "⭐ primo si', secondo no, salto largo ⇒ 0 (visto)",
+    # ── P5 · the joint WITH the grafted fault — it is read backwards ────────
+    print("\n  P5 · ⛔ with the grafted fault: `0` = fault SEEN (§1.52)")
+    prova("P5", "⭐ first yes, second no, wide jump ⇒ 0 (seen)",
           (0, "guasto-visto"),
           giudizio([E("u1", True, 0.987), E("u2", False, 0.001)], True))
-    prova("P5", "⛔ tutt'e due vedono ⇒ 1 (il guasto non ha morso)",
+    prova("P5", "⛔ both see ⇒ 1 (the fault did not bite)",
           (1, "guasto-non-visto"),
           giudizio([E("u1", True, 0.98), E("u2", True, 0.98)], True))
-    # ⭐⭐ LA GUARDIA DI §7-bis.12, e si pretende PER NOME: col guasto innestato
-    #    un rosso anche sul PRIMO non e' quel guasto — ⛔ e senza la ragione
-    #    questo caso passava anche con la guardia smontata.
-    prova("P5", "⛔ ha fallito anche il PRIMO ⇒ 1, e per QUELLA ragione",
+    # ⭐⭐ THE GUARD OF §7-bis.12, and it is demanded BY NAME: with the grafted fault
+    #    a red also on the FIRST is not that fault — ⛔ and without the reason
+    #    this case passed even with the guard dismantled.
+    prova("P5", "⛔ the FIRST failed too ⇒ 1, and for THAT reason",
           (1, "anche-il-primo"),
           giudizio([E("u1", False, 0.0), E("u2", False, 0.0)], True))
-    prova("P5", "⛔ nessun giudizio ⇒ 3, e non «non e' stato visto»",
+    prova("P5", "⛔ no judgement ⇒ 3, and not «it was not seen»",
           (3, "nessun-giudizio"),
           giudizio([E("u1", None, None), E("u2", None, None)], True))
-    prova("P5", "⛔ il primo non giudicato ⇒ 3, e per QUELLA ragione",
+    prova("P5", "⛔ the first not judged ⇒ 3, and for THAT reason",
           (3, "primo-non-giudicato"),
           giudizio([E("u1", None, None), E("u2", False, 0.0)], True))
-    # ⭐⭐ IL CASO CHE VALE PIU' DI TUTTI — `LEZIONI.md` §1.52: il guasto
-    #    innestato non si misura sul COLORE del verdetto, si misura sulla
-    #    DIFFERENZA.  Qui i due stanno ai due lati di un capello: il verdetto
-    #    sarebbe «visto», ⛔ e non deve bastare.
-    prova("P5", "⛔⛔ salto sotto il minimo (0,26 vs 0,24) ⇒ 1, non 0",
+    # ⭐⭐ THE CASE WORTH MORE THAN ALL — `LEZIONI.md` §1.52: the grafted
+    #    fault is not measured on the COLOUR of the verdict, it is measured on the
+    #    DIFFERENCE.  Here the two sit on the two sides of a hair: the verdict
+    #    would be «seen», ⛔ and it must not be enough.
+    prova("P5", "⛔⛔ jump below the minimum (0.26 vs 0.24) ⇒ 1, not 0",
           (1, "salto-troppo-piccolo"),
           giudizio([E("u1", True, minima + 0.01), E("u2", False, minima - 0.01)],
                    True))
-    prova("P5", "⭐ e appena il salto basta ⇒ 0", (0, "guasto-visto"),
+    prova("P5", "⭐ and as soon as the jump is enough ⇒ 0", (0, "guasto-visto"),
           giudizio([E("u1", True, minima + SALTO_MINIMO),
                     E("u2", False, minima - 0.001)], True))
-    prova("P5", "⛔ visto ma senza i numeri ⇒ 3 (non certifico al buio)",
+    prova("P5", "⛔ seen but without the numbers ⇒ 3 (I do not certify in the dark)",
           (3, "senza-numeri"),
           giudizio([E("u1", True, None), E("u2", False, None)], True))
 
-    # ── P6 · i tetti sono soglie, e le soglie si certificano ────────────────
-    print("\n  P6 · ⭐ il giudice della NASCITA e' quello di C1, e lo dimostro")
-    # `[M]` 27 ago 2026, scatola GNOME curata — la riga vera del testimone A.
+    # ── P6 · the ceilings are thresholds, and thresholds are certified ──────
+    print("\n  P6 · ⭐ the BIRTH judge is C1's, and I prove it")
+    # `[M]` 27 Aug 2026, cured GNOME box — the real line of witness A
+    #   (10 Oct 2026: in the English text of the product).
     nata = c1.leggi_nascita(
-        "cattura  [c8bu1] formato negoziato: 1920x1080\n", "c8bu1")
-    prova("P6", "il «formato negoziato» ⇒ il monitor c'e'", True,
+        "cattura  [c8bu1] negotiated format: 1920x1080\n", "c8bu1")
+    prova("P6", "the «negotiated format» ⇒ the monitor is there", True,
           bool(c1.monitor_nato(nata)))
-    prova("P6", "e il verdetto di C1 e' «NATA»", "NATA",
+    prova("P6", "and C1's verdict is «NATA»", "NATA",
           c1.verdetto_giro(nata)[0])
-    # ⛔⛔ IL CASO CHE VALE DI PIU': la riga «ZERO MONITOR» da sola NON e' un
-    #    monitor — e non e' nemmeno una prova di cecita'.  ⇒ Se questa maglia
-    #    la leggesse come l'evento che aspetta, accenderebbe il browser su uno
-    #    schermo che non c'e'.
+    # ⛔⛔ THE CASE WORTH THE MOST: the «ZERO MONITOR» line alone is NOT a
+    #    monitor — and it is not even a proof of blindness.  ⇒ If this mesh
+    #    read it as the event it is waiting for, it would switch on the browser on a
+    #    screen that is not there.
     zero = c1.leggi_nascita(
-        "sessione [c8bu1] ⛔ ZERO MONITOR, e la sessione e' viva\n", "c8bu1")
-    prova("P6", "⛔ «ZERO MONITOR» da sola NON fa nascere il monitor", False,
+        "sessione [c8bu1] ⛔ ZERO MONITORS, and the session is alive\n", "c8bu1")
+    prova("P6", "⛔ «ZERO MONITOR» alone does NOT make the monitor be born", False,
           bool(c1.monitor_nato(zero)))
-    # ⚠ E l'omonimia: il registro e' comune ai due inquilini.
+    # ⚠ And homonymy: the log is shared by the two tenants.
     altrui = c1.leggi_nascita(
-        "cattura  [c8bu2] formato negoziato: 1920x1080\n", "c8bu1")
-    prova("P6", "⛔ il palco di un ALTRO inquilino non e' il mio", False,
+        "cattura  [c8bu2] negotiated format: 1920x1080\n", "c8bu1")
+    prova("P6", "⛔ the stage of ANOTHER tenant is not mine", False,
           bool(c1.monitor_nato(altrui)))
-    prova("P6", "⛔ registro muto ⇒ «non lo so», non «cieca»", "NON-LO-SO",
+    prova("P6", "⛔ silent log ⇒ «I do not know», not «blind»", "NON-LO-SO",
           c1.verdetto_giro(c1.leggi_nascita("", "c8bu1"))[0])
-    # ⛔⛔ E LA GUARDIA SULL'IMPORTO, esercitata con una C1 finta a cui manca un
-    #    pezzo: ⚠ un controllo che non si e' mai visto scattare non e' un
-    #    controllo, e' una speranza (`LEZIONI.md` §1.44).
+    # ⛔⛔ AND THE GUARD ON THE IMPORT, exercised with a fake C1 missing a
+    #    piece: ⚠ a check that has never been seen firing is not a
+    #    check, it is a hope (`LEZIONI.md` §1.44).
     import types as _tipi
-    prova("P6", "la C1 vera ha tutti i pezzi che mi servono", True,
+    prova("P6", "the real C1 has all the pieces I need", True,
           c1_ha_quel_che_serve(c1))
     for manca in PEZZI_DI_C1:
         finta = _tipi.SimpleNamespace(**{p: (1 if p == "TETTO_NASCITA"
                                              else (lambda *x: None))
                                          for p in PEZZI_DI_C1 if p != manca})
-        prova("P6", "⛔ una C1 senza «%s» viene rifiutata" % manca, False,
+        prova("P6", "⛔ a C1 without «%s» is refused" % manca, False,
               c1_ha_quel_che_serve(finta))
-    prova("P6", "⛔ e nessuna C1 affatto viene rifiutata", False,
+    prova("P6", "⛔ and no C1 at all is refused", False,
           c1_ha_quel_che_serve(None))
 
-    print("\n  P7 · i tetti — ⛔ ognuno col SUO valore, `LEZIONI.md` §1.45")
-    # ⭐⭐ Il tetto del palco NON e' un numero di questo file: e' quello di C1.
-    #    ⛔ Il caso che segue e' l'unico che avrebbe preso il difetto della prima
-    #    stesura, che aveva copiato 152 s da C1 poche ore prima che C1 li
-    #    abbassasse a 26 (`LEZIONI.md` §1.17).
-    prova("P7", "⭐ il tetto del palco lo prendo da C1, non ne ho uno mio", True,
+    print("\n  P7 · the ceilings — ⛔ each one with ITS OWN value, `LEZIONI.md` §1.45")
+    # ⭐⭐ The stage ceiling is NOT a number of this file: it is C1's.
+    #    ⛔ The following case is the only one that would have caught the defect of the first
+    #    draft, which had copied 152 s from C1 a few hours before C1
+    #    lowered them to 26 (`LEZIONI.md` §1.17).
+    prova("P7", "⭐ I take the stage ceiling from C1, I do not have one of my own", True,
           "RITARDO_PALCO" not in globals())
-    prova("P7", "e il predefinito e' esattamente il suo", c1.TETTO_NASCITA,
+    prova("P7", "and the default is exactly its own", c1.TETTO_NASCITA,
           tetto_del_palco(c1))
-    # ⛔ Il tetto del browser NON e' prestato da un'altra attesa: e' suo, ed e'
-    #    almeno quanto C8a si da' per il primo avvio a freddo (`--attesa-scatto`
+    # ⛔ The browser ceiling is NOT lent by another wait: it is its own, and it is
+    #    at least as much as C8a gives itself for the cold first start (`--attesa-scatto`
     #    = 120 s, `LEZIONI.md` §1.45).
-    prova("P7", "il tetto del browser regge il primo avvio a freddo (120 s)",
+    prova("P7", "the browser ceiling withstands the cold first start (120 s)",
           True, ATTESA_BROWSER >= 120.0)
-    prova("P7", "⛔ i due tetti sono DIVERSI: nessuno e' prestato all'altro",
+    prova("P7", "⛔ the two ceilings are DIFFERENT: neither is lent to the other",
           True, ATTESA_BROWSER != c1.TETTO_NASCITA)
-    prova("P7", "il filo resta attaccato piu' della somma dei due", True,
+    prova("P7", "the wire stays attached longer than the sum of the two", True,
           resta_del_filo(c1.TETTO_NASCITA, ATTESA_BROWSER)
           > c1.TETTO_NASCITA + ATTESA_BROWSER)
-    prova("P7", "il conto del filo e' un CALCOLO, non un numero tondo", 176.0,
+    prova("P7", "the wire's count is a CALCULATION, not a round number", 176.0,
           resta_del_filo(26.0, 120.0, 30.0))
-    prova("P7", "⭐ il respiro c'e', o il «prima» conterrebbe gia' la pagina",
+    prova("P7", "⭐ the breath is there, or the «before» would already contain the page",
           True, RESPIRO > 0)
-    prova("P7", "⛔ il salto minimo e' ben sotto il fenomeno misurato (98,7 %)",
+    prova("P7", "⛔ the minimum jump is well below the measured phenomenon (98.7 %)",
           True, 0.0 < SALTO_MINIMO < 0.5)
 
     print()
     if guai:
-        print("⛔ C8b NON e' certificata: %d casi sbagliati su %d" % (guai, quanti))
+        print("⛔ C8b is NOT certified: %d cases wrong out of %d" % (guai, quanti))
         return 1
-    print("⭐ %d casi su %d: C8b sa dire verde, rosso e «non lo so» — e col "
-          "guasto innestato" % (quanti, quanti))
-    print("   ⭐ pretende una DIFFERENZA misurabile, non il colore del verdetto")
-    print("⚠ e questa certificazione copre I GIUDIZI E IL GIUNTO, non il lettore")
-    print("  dei pixel (certificato in C8a) ne' il giudice delle immagini")
-    print("  (certificato in 10-f1) — vedi la dichiarazione in testa a certifica()")
+    print("⭐ %d cases out of %d: C8b can say green, red and «I do not know» — and with the "
+          "grafted fault" % (quanti, quanti))
+    print("   ⭐ it demands a measurable DIFFERENCE, not the colour of the verdict")
+    print("⚠ and this certification covers THE JUDGEMENTS AND THE JOINT, not the pixel")
+    print("  reader (certified in C8a) nor the image judge")
+    print("  (certified in 10-f1) — see the declaration at the top of certifica()")
     return 0
 
 
@@ -1094,11 +1095,11 @@ def certifica():
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--utente-base", default="c8bu",
-                   help="⛔ diverso da quello di C8a («c8u»): due banchi con gli "
-                        "stessi inquilini si falsano in silenzio (§1.26)")
+                   help="⛔ different from C8a's («c8u»): two benches with the "
+                        "same tenants falsify each other silently (§1.26)")
     p.add_argument("--quanti", type=int, default=2,
-                   help="DUE, come C8a: la domanda e' la correttezza a piu' "
-                        "inquilini, non la capienza")
+                   help="TWO, like C8a: the question is correctness with several "
+                        "tenants, not capacity")
     p.add_argument("--parola", default="provanic2026")
     p.add_argument("--porta", type=int, default=8511)
     p.add_argument("--indirizzo", default="127.0.0.1")
@@ -1108,28 +1109,28 @@ def main():
     p.add_argument("--registro", default="/var/lib/rete11/registro.log")
     p.add_argument("--lavoro", default="/var/lib/rete11/c8b")
     p.add_argument("--attesa-palco", type=float, default=None,
-                   help="quanto si aspetta che il palco monti un monitor. "
-                        "⭐ Predefinito: il tetto di C1 (`TETTO_NASCITA`), preso "
-                        "da lei e non ricopiato. Scaduto: «non ho potuto "
-                        "guardare», ⛔ MAI un rosso")
+                   help="how long to wait for the stage to mount a monitor. "
+                        "⭐ Default: C1's ceiling (`TETTO_NASCITA`), taken "
+                        "from it and not copied. Expired: «I could not "
+                        "look», ⛔ NEVER a red")
     p.add_argument("--attesa-browser", type=float, default=ATTESA_BROWSER,
-                   help="quanto si da' al browser per disegnare la pagina "
-                        "DENTRO la sessione. ⛔ 120 s e non 25: il primo avvio a "
-                        "freddo deve farsi il profilo (LEZIONI.md §1.45)")
+                   help="how long the browser is given to draw the page "
+                        "INSIDE the session. ⛔ 120 s and not 25: the cold first "
+                        "start must make its profile (LEZIONI.md §1.45)")
     p.add_argument("--respiro", type=float, default=RESPIRO,
-                   help="⭐ quanto si aspetta, dopo che il palco c'e', prima di "
-                        "accendere il browser: serve a far partire almeno un "
-                        "fotogramma SENZA la pagina")
+                   help="⭐ how long to wait, after the stage is there, before "
+                        "switching on the browser: it serves to get at least one "
+                        "frame WITHOUT the page going")
     p.add_argument("--margine-filo", type=float, default=MARGINE_FILO,
-                   help="quanto il filo resta attaccato oltre la somma dei due "
-                        "tetti. ⛔ Il cliente scrive il flusso solo alla fine")
+                   help="how long the wire stays attached beyond the sum of the two "
+                        "ceilings. ⛔ The client writes the stream only at the end")
     p.add_argument("--attesa-sgombero", type=float, default=45.0,
-                   help="quanto si aspetta che l'inquilino di prima sia sparito "
-                        "DAVVERO, prima di far nascere il successivo")
+                   help="how long to wait for the previous tenant to be REALLY "
+                        "gone, before making the next one be born")
     p.add_argument("--senza-cura", action="store_true",
-                   help="⛔ IL GUASTO INNESTATO: non si applica la cura della "
-                        "provvista. Il secondo inquilino DEVE dare rosso, e la "
-                        "differenza dev'essere misurabile")
+                   help="⛔ THE GRAFTED FAULT: the provisioning cure is not "
+                        "applied. The second tenant MUST give red, and the "
+                        "difference must be measurable")
     p.add_argument("--certifica", action="store_true")
     a = p.parse_args()
 
@@ -1137,84 +1138,84 @@ def main():
         sys.exit(certifica())
 
     if os.geteuid() != 0:
-        print("⛔ va eseguita da amministratore: deve creare gli inquilini")
+        print("⛔ it must be run as administrator: it has to create the tenants")
         sys.exit(2)
 
-    # ── quel senza cui non si giudica ──────────────────────────────────────
+    # ── what we cannot judge without ───────────────────────────────────────
     c8a = prendi_c8a()
     if c8a is None:
-        print("⛔ non trovo C8a (11-c8-il-secondo-apre-il-browser.py) accanto a me")
-        print("   ⇒ senza di lei non ho ne' la scena ne' il metro")
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ I cannot find C8a (11-c8-il-secondo-apre-il-browser.py) next to me")
+        print("   ⇒ without it I have neither the scene nor the yardstick")
+        print("   ⇒ I could not look")
         sys.exit(3)
     giudice, dove_giudice = trova_il_giudice(c8a)
     if giudice is None:
-        print("⛔ non trovo il giudice delle immagini (10-f1-testimone.py)")
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ I cannot find the image judge (10-f1-testimone.py)")
+        print("   ⇒ I could not look")
         sys.exit(3)
     c1 = prendi_c1()
     if c1 is None:
-        print("⛔ non trovo C1 (11-c1-nasce-e-si-vede.py), o non ha piu' il "
-              "giudice della nascita che mi serve")
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ I cannot find C1 (11-c1-nasce-e-si-vede.py), or it no longer has the "
+              "birth judge I need")
+        print("   ⇒ I could not look")
         sys.exit(3)
-    # ⛔ Il tetto si riempie ADESSO, da C1: `argparse` non puo' farlo, perche'
-    #    quando costruisce i predefiniti C1 non e' ancora stata caricata.
+    # ⛔ The ceiling is filled NOW, from C1: `argparse` cannot do it, because
+    #    when it builds the defaults C1 has not been loaded yet.
     if a.attesa_palco is None:
         a.attesa_palco = tetto_del_palco(c1)
-    for nome, perc in (("il cliente di prova", a.cliente),
-                       ("la pagina bersaglio", a.pagina)):
+    for nome, perc in (("the test client", a.cliente),
+                       ("the target page", a.pagina)):
         if not os.path.exists(perc):
-            print("⛔ non trovo %s: %s" % (nome, perc))
-            print("   ⇒ non ho potuto guardare")
+            print("⛔ I cannot find %s: %s" % (nome, perc))
+            print("   ⇒ I could not look")
             sys.exit(3)
     if c8a.sh("command -v %s" % a.browser).returncode != 0:
-        print("⛔ nella scatola non c'e' %s" % a.browser)
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ the box does not have %s" % a.browser)
+        print("   ⇒ I could not look")
         sys.exit(3)
     if c8a.sh("command -v ffmpeg").returncode != 0:
-        print("⛔ nella scatola non c'e' ffmpeg: i fotogrammi non diventano "
-              "un'immagine")
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ the box does not have ffmpeg: the frames do not become "
+              "an image")
+        print("   ⇒ I could not look")
         sys.exit(3)
     if leggi(a.registro) is None:
-        print("⛔ non riesco a leggere il registro del prodotto: %s" % a.registro)
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ I cannot read the product log: %s" % a.registro)
+        print("   ⇒ I could not look")
         sys.exit(3)
 
     os.makedirs(a.lavoro, exist_ok=True)
     minima = c8a.FRAZIONE_MINIMA
     dove = c8a.prepara_lo_scheletro()
-    # ⛔ Si sgombra `/tmp/mozilla` per TUTT'E DUE le famiglie di inquilini: se
-    #    restasse quello di C8a, il PRIMO di questa maglia fallirebbe come il
-    #    secondo — cioe' un rosso per la ragione sbagliata.
-    # ⭐ E si chiama la funzione di C8a due volte invece di riscriverne una: la
-    #   sua regola («non si tocca il `/tmp/mozilla` di chi non e' un inquilino di
-    #   questa rete») resta scritta in un posto solo.
+    # ⛔ `/tmp/mozilla` is cleared for BOTH families of tenants: if
+    #    C8a's remained, the FIRST of this mesh would fail like the
+    #    second — i.e. a red for the wrong reason.
+    # ⭐ And C8a's function is called twice instead of rewriting one: its
+    #   rule («do not touch the `/tmp/mozilla` of whoever is not a tenant of
+    #   this net») stays written in one place only.
     resti = [c8a.sgombra_il_posto_condiviso(b)
              for b in (a.utente_base, "c8u")]
 
     resta = resta_del_filo(a.attesa_palco, a.attesa_browser, a.margine_filo)
-    print("== C8b — e la stessa pagina si vede DAL CLIENTE ==")
-    print("   %d inquilini · porta %d · pagina %s"
+    print("== C8b — and the same page is seen FROM THE CLIENT ==")
+    print("   %d tenants · port %d · page %s"
           % (a.quanti, a.porta, os.path.basename(a.pagina)))
-    print("   terreno: /etc/skel/.cache -> %s  (la configurazione della "
-          "macchina vera)" % (dove or "⛔ NON SONO RIUSCITO A METTERLO"))
-    print("   cura della provvista: %s"
-          % ("⛔ NON APPLICATA (guasto innestato: il secondo DEVE dare rosso)"
-             if a.senza_cura else "applicata, come src/provisiona.sh"))
-    print("   metro (da C8a): colore %s ±%d, almeno il %.0f%% dello schermo"
+    print("   terrain: /etc/skel/.cache -> %s  (the configuration of the "
+          "real machine)" % (dove or "⛔ I COULD NOT PUT IT THERE"))
+    print("   provisioning cure: %s"
+          % ("⛔ NOT APPLIED (grafted fault: the second MUST give red)"
+             if a.senza_cura else "applied, as src/provisiona.sh"))
+    print("   yardstick (from C8a): colour %s ±%d, at least %.0f%% of the screen"
           % (c8a.COLORE, c8a.TOLLERANZA, minima * 100))
-    print("   giudice delle immagini: %s" % dove_giudice)
-    print("   giudice della nascita: C1 (e il tetto del palco e' il suo)")
-    print("   tetti: palco %.0f s · browser %.0f s · respiro %.0f s ⇒ il filo "
-          "resta attaccato %.0f s per inquilino"
+    print("   image judge: %s" % dove_giudice)
+    print("   birth judge: C1 (and the stage ceiling is its own)")
+    print("   ceilings: stage %.0f s · browser %.0f s · breath %.0f s ⇒ the wire "
+          "stays attached %.0f s per tenant"
           % (a.attesa_palco, a.attesa_browser, a.respiro, resta))
     for r in resti:
         if r:
             print("   %s" % r)
     if not dove:
-        print("⛔ non sono riuscito a preparare lo scheletro: il terreno non regge")
+        print("⛔ I could not prepare the skeleton: the terrain does not hold")
         sys.exit(2)
     print()
 
@@ -1223,9 +1224,9 @@ def main():
         chi = "%s%d" % (a.utente_base, n)
         fatto, perche = c8a.crea(chi, a.parola)
         if not fatto:
-            print("  %-7s  ?   non sono riuscito a crearlo: %s" % (chi, perche))
+            print("  %-7s  ?   I could not create it: %s" % (chi, perche))
             esiti.append({"chi": chi, "visto": None, "dopo": None,
-                          "perche": "non creato"})
+                          "perche": "not created"})
             continue
         if not a.senza_cura:
             c8a.applica_la_cura(chi)
@@ -1238,16 +1239,16 @@ def main():
         visto, motivo = giudizio_inquilino(stato, r["dopo"], minima)
 
         print("  %-7s  %-3s  %s"
-              % (chi, "SI" if visto else ("NO" if visto is False else "?"),
+              % (chi, "YES" if visto else ("NO" if visto is False else "?"),
                  motivo))
-        print("           prima: %s" % detto)
-        print("           filo: %s fotogrammi · palco a %s · sa scrivere in "
+        print("           before: %s" % detto)
+        print("           wire: %s frames · stage at %s · can write in "
               "~/.cache/mozilla: %s"
-              % ("non lo so" if r["fotogrammi"] is None else r["fotogrammi"],
-                 "non lo so" if r["palco_s"] is None else "%.0f s" % r["palco_s"],
-                 "si'" if scrive else "⛔ NO"))
-        # ⭐ Il motivo accanto al sintomo: «non si vede» nasconde due guasti
-        #   diversi, e la ripresa sa dire quale.
+              % ("unknown" if r["fotogrammi"] is None else r["fotogrammi"],
+                 "unknown" if r["palco_s"] is None else "%.0f s" % r["palco_s"],
+                 "yes" if scrive else "⛔ NO"))
+        # ⭐ The reason next to the symptom: «it is not seen» hides two different
+        #   faults, and the recording can say which.
         if visto is False and os.path.exists(
                 os.path.join(a.lavoro, "%s.264" % chi)):
             print("           %s" % cerca_in_tutta_la_ripresa(
@@ -1259,9 +1260,9 @@ def main():
                       "perche": motivo if visto is not None else detto})
         c8a.sh("pkill -KILL -u %s 2>/dev/null; loginctl terminate-user %s "
                "2>/dev/null" % (chi, chi))
-        # ⛔ E si aspetta che se ne sia andato DAVVERO: `[M]` in C1, senza questa
-        #    attesa i giri si alternavano «non lo so» / rosso, perche' il giro
-        #    dopo partiva su un campo ancora occupato.
+        # ⛔ And we wait for it to be REALLY gone: `[M]` in C1, without this
+        #    wait the rounds alternated «I do not know» / red, because the next
+        #    round started on a field still occupied.
         scadenza = time.time() + a.attesa_sgombero
         libero = False
         while time.time() < scadenza:
@@ -1274,16 +1275,16 @@ def main():
                 break
             time.sleep(0.5)
         if not libero:
-            print("           ⚠ «%s» non se n'e' andato in %.0f s: il prossimo "
-                  "NON parte da un campo libero" % (chi, a.attesa_sgombero))
+            print("           ⚠ «%s» did not go away in %.0f s: the next one "
+                  "does NOT start from a free field" % (chi, a.attesa_sgombero))
 
-    # ⛔⛔ E ADESSO SI SGOMBRA IL PROPRIO — «chi apre, chiude» (`LEZIONI.md`
-    #    §9-ter), e qui non e' buona educazione: e' correttezza.
-    #    ⚠ `/tmp/mozilla` resta di `c8bu1`, modo 0700.  ⭐ C8a lo toglie solo se
-    #      e' di un «c8u*» — il suo prefisso — ⇒ se questa maglia girasse PRIMA
-    #      di lei, il PRIMO inquilino di C8a fallirebbe come il secondo, e C8a
-    #      direbbe «ha fallito anche il PRIMO»: ⛔ un rosso lasciato in eredita'
-    #      da un banco a un altro, che e' §1.26 in piccolo.
+    # ⛔⛔ AND NOW ONE'S OWN IS CLEARED — «whoever opens, closes» (`LEZIONI.md`
+    #    §9-ter), and here it is not good manners: it is correctness.
+    #    ⚠ `/tmp/mozilla` stays with `c8bu1`, mode 0700.  ⭐ C8a removes it only if
+    #      it belongs to a «c8u*» — its prefix — ⇒ if this mesh ran BEFORE
+    #      it, the FIRST tenant of C8a would fail like the second, and C8a
+    #      would say «the FIRST failed too»: ⛔ a red left as an inheritance
+    #      by one bench to another, which is §1.26 in small.
     finale = c8a.sgombra_il_posto_condiviso(a.utente_base)
     if finale:
         print("  %s" % finale)
@@ -1292,9 +1293,9 @@ def main():
     codice, motivo, righe = decidi(esiti, a.senza_cura, minima)
     for r in righe:
         print(r)
-    # ⭐ Il motivo si stampa accanto al numero: un esito senza la ragione che lo
-    #   ha prodotto e' un numero che il giro dopo nessuno sa rileggere.
-    print("  (esito %d · motivo «%s»)" % (codice, motivo))
+    # ⭐ The reason is printed next to the number: an outcome without the reason that
+    #   produced it is a number that nobody can reread at the next round.
+    print("  (outcome %d · reason «%s»)" % (codice, motivo))
     return codice
 
 

@@ -1,6 +1,6 @@
 /*
- * parita.c — la seconda meta' della domanda di F4-IN-8: Mutter accetta una
- * misura dispari, ma il CODIFICATORE la accetta?  I tre di `codificatore.c`:
+ * parita.c — the second half of the F4-IN-8 question: Mutter accepts an
+ * odd size, but does the ENCODER accept it?  The three of `codificatore.c`:
  * libx265, libsvtav1, hevc_vaapi.
  *
  *   parita <L> <A>
@@ -20,7 +20,7 @@ static void prova(const char *nome, int l, int a, enum AVPixelFormat pf)
 	AVPacket *p;
 	int e;
 
-	if (!c) { printf("  %-12s  NON C'E'\n", nome); return; }
+	if (!c) { printf("  %-12s  NOT THERE\n", nome); return; }
 	ctx = avcodec_alloc_context3(c);
 	ctx->width = l;
 	ctx->height = a;
@@ -31,19 +31,19 @@ static void prova(const char *nome, int l, int a, enum AVPixelFormat pf)
 	if (e < 0) {
 		char b[256];
 		av_strerror(e, b, sizeof b);
-		printf("  %-12s  %dx%d %-12s  ⛔ APERTURA RIFIUTATA: %s\n", nome, l, a,
+		printf("  %-12s  %dx%d %-12s  ⛔ OPEN REFUSED: %s\n", nome, l, a,
 		       av_get_pix_fmt_name(pf), b);
 		avcodec_free_context(&ctx);
 		return;
 	}
-	/* ⛔ Aprire non basta: un codificatore puo' aprire e poi rifiutare il
-	 *    fotogramma.  Si spinge un fotogramma vero e si guarda l'esito. */
+	/* ⛔ Opening is not enough: an encoder can open and then refuse the
+	 *    frame.  A real frame is pushed and the outcome is looked at. */
 	f = av_frame_alloc();
 	f->format = pf;
 	f->width = l;
 	f->height = a;
 	if (av_frame_get_buffer(f, 0) < 0) {
-		printf("  %-12s  %dx%d  ⛔ il fotogramma non si alloca\n", nome, l, a);
+		printf("  %-12s  %dx%d  ⛔ the frame cannot be allocated\n", nome, l, a);
 		goto fine;
 	}
 	memset(f->data[0], 32, (size_t) f->linesize[0] * a);
@@ -52,16 +52,16 @@ static void prova(const char *nome, int l, int a, enum AVPixelFormat pf)
 	if (e < 0) {
 		char b[256];
 		av_strerror(e, b, sizeof b);
-		printf("  %-12s  %dx%d %-12s  ⚠ aperto, ma il FOTOGRAMMA e' rifiutato: %s\n", nome,
+		printf("  %-12s  %dx%d %-12s  ⚠ opened, but the FRAME is refused: %s\n", nome,
 		       l, a, av_get_pix_fmt_name(pf), b);
 		goto fine;
 	}
 	avcodec_send_frame(ctx, NULL);
 	p = av_packet_alloc();
 	e = avcodec_receive_packet(ctx, p);
-	printf("  %-12s  %dx%d %-12s  ⭐ APERTO (coded %dx%d), primo pacchetto: %s (%d byte)\n",
+	printf("  %-12s  %dx%d %-12s  ⭐ OPENED (coded %dx%d), first packet: %s (%d bytes)\n",
 	       nome, l, a, av_get_pix_fmt_name(pf), ctx->width, ctx->height,
-	       e >= 0 ? "SI" : (e == AVERROR(EAGAIN) ? "in attesa" : "NO"), e >= 0 ? p->size : 0);
+	       e >= 0 ? "YES" : (e == AVERROR(EAGAIN) ? "pending" : "NO"), e >= 0 ? p->size : 0);
 	av_packet_free(&p);
 fine:
 	av_frame_free(&f);

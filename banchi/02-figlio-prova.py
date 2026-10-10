@@ -1,71 +1,71 @@
 #!/usr/bin/env python3
-"""02-figlio-prova.py — il banco di `DECISIONI.md` §1.10-bis: **un figlio per utente**.
+"""02-figlio-prova.py — the bench of `DECISIONI.md` §1.10-bis: **one child per user**.
 
     python3 02-figlio-prova.py --previsione
     python3 02-figlio-prova.py --caso nasce --porta 7571 \\
         --pid-server 12345 --registro /srv/remotix/tmp/02-figlio/registro.log \\
         --utente nicfio --parola-file /srv/src/tmp/02-figlio-parola
 
-⛔ GIRA DENTRO IL CONTENITORE E DA ROOT.  Dentro perche' `aioquic` sta li'; da
-   root perche' meta' delle letture sono su `/proc` di un processo di root — e
-   ⛔ **«non ho potuto leggere» non e' «non c'era»** (`LEZIONI.md` §1.9), quindi
-   un banco che non puo' leggere esce **2** invece di stampare un verde.
+⛔ IT RUNS INSIDE THE CONTAINER AND AS ROOT.  Inside because `aioquic` lives there; as
+   root because half of the readings are on `/proc` of a root process — and
+   ⛔ **«I could not read» is not «it was not there»** (`LEZIONI.md` §1.9), so
+   a bench that cannot read exits **2** instead of printing a green.
 
-⚠ `/proc` dentro il contenitore E' quello dell'host (`enter.sh` lo monta), quindi
-  i processi che si guardano sono quelli veri del server.
-
----------------------------------------------------------------------------
-⛔ CHE COSA PROVA, E PERCHE' NON BASTA GUARDARE IL REGISTRO
-
-Il prodotto scrive nel registro *«sono il figlio di «nicfio»: uid 1000»*.  ⛔ Un
-banco che si accontentasse di quella riga **non proverebbe niente**: e' il
-processo che si dichiara, ed e' esattamente la cosa che §1.10-bis dice di non
-credere — *«un figlio che gira come l'utente sbagliato e' I3 violata in modo
-invisibile»*.
-
-⇒ Qui l'identita' si CHIEDE AL NUCLEO, in due modi indipendenti:
-
-  · `/proc/<pid>/status`, campo `Uid:`, che porta **quattro** numeri — reale,
-    effettivo, salvato, filesystem.  ⛔ Si guardano tutti e quattro: un
-    processo con `Uid: 1000 1000 0 1000` e' un processo che **puo' tornare
-    root**, e sarebbe verde per chi ne legge uno solo;
-  · le credenziali che il nucleo timbra su ogni messaggio (`SO_PASSCRED`), che
-    il PADRE confronta a ogni messaggio — e che questo banco mette alla prova
-    col guasto `cieco`, dove sono l'unico muro rimasto.
+⚠ `/proc` inside the container IS the host's (`enter.sh` mounts it), so
+  the processes looked at are the server's real ones.
 
 ---------------------------------------------------------------------------
-⛔ LE SEI PROVE, E IL CASO OPPOSTO DI CIASCUNA
+⛔ WHAT IT PROVES, AND WHY LOOKING AT THE LOG IS NOT ENOUGH
 
-  | caso          | che cosa deve succedere            | il caso opposto        |
+The product writes in the log *«I am the child of «nicfio»: uid 1000»*.  ⛔ A
+bench that settled for that line **would prove nothing**: it is the
+process declaring itself, and it is exactly the thing §1.10-bis says not to
+believe — *«a child running as the wrong user is I3 violated
+invisibly»*.
+
+⇒ Here identity is ASKED OF THE KERNEL, in two independent ways:
+
+  · `/proc/<pid>/status`, field `Uid:`, which carries **four** numbers — real,
+    effective, saved, filesystem.  ⛔ All four are looked at: a
+    process with `Uid: 1000 1000 0 1000` is a process that **can go back to
+    root**, and it would be green for whoever reads only one;
+  · the credentials the kernel stamps on every message (`SO_PASSCRED`), which
+    the PARENT compares at every message — and which this bench puts to the test
+    with the `cieco` fault, where they are the only wall left.
+
+---------------------------------------------------------------------------
+⛔ THE SIX TESTS, AND THE OPPOSITE CASE OF EACH
+
+  | case          | what must happen                   | the opposite case      |
   |---------------|------------------------------------|------------------------|
-  | `nasce`       | un figlio, uid dell'utente, col bus| nessun figlio, o il bus|
-  |               | e SENZA la porta del server        | del padre              |
-  | `due`         | due connessioni, UN figlio (I2)    | due figli              |
-  | `distacco`    | il cliente se ne va, il figlio VIVE| il figlio muore col    |
-  |               | con lo STESSO pid (I4)             | distacco               |
-  | `muore`       | ucciso il figlio, il padre lo       | uno zombie che ha la   |
-  |               | RACCOGLIE e lo dice                 | stessa faccia di un    |
-  |               |                                     | processo vivo          |
-  | `senza-palco` | utente senza `/run/user/<uid>`:    | il figlio prende il    |
-  |               | il figlio nasce, LO DICE, e non ha  | palco di qualcun altro |
-  |               | palco                               |                        |
-  | `guasto-uid`  | il figlio non scende: se ne accorge | gira come root e       |
-  |               | DA SE' e muore (uscita 42)          | consegna pixel         |
-  | `guasto-cieco`| il figlio non scende e non se ne    | il padre si fida e     |
-  |               | accorge: lo abbatte IL PADRE, sulle | consegna i pixel di    |
-  |               | credenziali del nucleo              | root a chi e' entrato  |
+  | `nasce`       | one child, the user's uid, with bus| no child, or the       |
+  |               | and WITHOUT the server's port      | parent's bus           |
+  | `due`         | two connections, ONE child (I2)    | two children           |
+  | `distacco`    | the client leaves, the child LIVES | the child dies with    |
+  |               | with the SAME pid (I4)             | the detach             |
+  | `muore`       | child killed, the parent REAPS it   | a zombie that looks    |
+  |               | and says so                         | the same as a live     |
+  |               |                                     | process                |
+  | `senza-palco` | user without `/run/user/<uid>`:    | the child takes        |
+  |               | the child is born, SAYS SO, and has | someone else's stage   |
+  |               | no stage                            |                        |
+  | `guasto-uid`  | the child does not drop: it notices | runs as root and       |
+  |               | BY ITSELF and dies (exit 42)        | delivers pixels        |
+  | `guasto-cieco`| the child does not drop and does not| the parent trusts it   |
+  |               | notice: THE PARENT takes it down, on| and delivers root's    |
+  |               | the kernel's credentials            | pixels to who got in   |
 
 ---------------------------------------------------------------------------
-⛔ LE REGOLE DI B0 CHE QUESTO BANCO DEVE
+⛔ THE B0 RULES THIS BENCH OWES
 
-  B0.1 lo stato iniziale si dichiara **e si verifica**: il pid del server, chi
-       lo possiede, quanti figli ci sono gia', e il registro da che offset;
-  B0.3 questo banco autentica, quindi **banna**: il file dei ban e' suo, e i
-       tentativi falliti si contano.  ⚠ Qui non se ne fanno di proposito;
-  B0.4 l'atteso lo confronta il banco: **0** tutto come atteso · **1** almeno
-       una prova ha dato altro · **2** non si e' potuto misurare;
-  B0.7 marcatori, non `sleep`: il registro si legge da un **offset** preso
-       prima di ogni prova, cosi' quel che si conta e' di questo giro.
+  B0.1 the initial state is declared **and checked**: the server pid, who
+       owns it, how many children there already are, and the log from which offset;
+  B0.3 this bench authenticates, so **it bans**: the ban file is its own, and
+       failed attempts are counted.  ⚠ None are made on purpose here;
+  B0.4 the expectation is compared by the bench: **0** all as expected · **1** at least
+       one test gave something else · **2** it could not be measured;
+  B0.7 markers, not `sleep`: the log is read from an **offset** taken
+       before every test, so what is counted belongs to this round.
 """
 import argparse
 import json
@@ -78,42 +78,42 @@ import time
 
 QUI = os.path.dirname(os.path.abspath(__file__))
 
-# ⛔ L'atteso si scrive PRIMA del giro, e si stampa con `--previsione`: un atteso
-#    scritto dopo aver visto il numero non e' un atteso.
+# ⛔ The expectation is written BEFORE the round, and printed with `--previsione`: an expectation
+#    written after seeing the number is not an expectation.
 PREVISIONE = """
-⛔ L'ATTESO, scritto prima del giro — `DECISIONI.md` §1.10-bis
+⛔ THE EXPECTATION, written before the round — `DECISIONI.md` §1.10-bis
 
- 1. `nasce`  ⭐ dopo che «nicfio» e' AMMESSO esiste **un** processo figlio del
-    server, e:
-      · `/proc/<pid>/status` dice `Uid: 1000 1000 1000 1000` — tutti e quattro,
-        perche' un saved-uid a 0 e' un processo che puo' tornare root;
-      · la sua riga di comando comincia con `remotix-figlio --figlio-interno`;
-      · ⛔ ha **4 descrittori** (0,1,2 e il socket verso il padre) e NON ha
-        nessun socket in comune col padre oltre a quello: la porta 7571 non
-        se l'e' portata dietro;
-      · nel registro c'e' «IL BUS DI SESSIONE E' MIO», e il padre non ha mai
-        scritto niente del genere.
- 2. `due`  ⭐ due connessioni dello stesso utente ⇒ **un figlio solo**, lo
-    stesso pid, e nel registro «NON ne nasce un secondo — invariante I2».
- 3. `distacco`  ⭐ il cliente chiude, e dopo 5 s il figlio e' **ancora vivo**,
-    stesso pid, stato NON `Z`.  ⛔ Se morisse, I4 sarebbe rotta.
- 4. `muore`  ⭐ `SIGKILL` al figlio ⇒ il padre lo raccoglie (il pid **sparisce**
-    da /proc, non resta `Z`), scrive «se ne va», e una connessione nuova fa
-    nascere un figlio con un pid **diverso**.
- 5. `senza-palco`  ⭐ «prova» (uid 1001, senza /run/user/1001) entra: il figlio
-    NASCE come uid 1001 e scrive «NON ho il bus di sessione».  ⛔ E non vede il
-    desktop di nessun altro.
- 6. `guasto-uid`  ⛔ col `setuid` tolto, il figlio esce **42** e nel registro
-    c'e' «NON SONO CHI DOVREI ESSERE».  Nessun fotogramma.
- 7. `guasto-cieco`  ⛔ col `setuid` tolto E il controllo del figlio tolto,
-    e' il PADRE ad abbattere: «MESSAGGIO RIFIUTATO», con dentro «il nucleo dice
-    uid 0».  ⛔ Se questo caso fosse verde senza quella riga, vorrebbe dire che
-    il padre si fida di quel che il figlio dichiara.
+ 1. `nasce`  ⭐ after «nicfio» is AMMESSO there exists **one** child process of the
+    server, and:
+      · `/proc/<pid>/status` says `Uid: 1000 1000 1000 1000` — all four,
+        because a saved-uid at 0 is a process that can go back to root;
+      · its command line starts with `remotix-figlio --figlio-interno`;
+      · ⛔ it has **4 descriptors** (0,1,2 and the socket to the parent) and has NO
+        socket in common with the parent besides that one: it did not take port 7571
+        along with it;
+      · in the log there is «THE SESSION BUS IS MINE», and the parent has never
+        written anything of the kind.
+ 2. `due`  ⭐ two connections of the same user ⇒ **a single child**, the
+    same pid, and in the log «a second one is NOT born — invariant I2».
+ 3. `distacco`  ⭐ the client closes, and after 5 s the child is **still alive**,
+    same pid, state NOT `Z`.  ⛔ If it died, I4 would be broken.
+ 4. `muore`  ⭐ `SIGKILL` to the child ⇒ the parent reaps it (the pid **disappears**
+    from /proc, it does not stay `Z`), writes «is leaving», and a new connection makes
+    a child be born with a **different** pid.
+ 5. `senza-palco`  ⭐ «prova» (uid 1001, without /run/user/1001) gets in: the child
+    IS BORN as uid 1001 and writes «I do NOT have the session bus».  ⛔ And it does not see
+    anybody else's desktop.
+ 6. `guasto-uid`  ⛔ with `setuid` removed, the child exits **42** and in the log
+    there is «I AM NOT WHO I SHOULD BE».  No frame.
+ 7. `guasto-cieco`  ⛔ with `setuid` removed AND the child's check removed,
+    it is the PARENT that takes it down: «MESSAGE REFUSED», with «the kernel says
+    uid 0» inside.  ⛔ If this case were green without that line, it would mean that
+    the parent trusts what the child declares.
 
-⛔ IL CASO OPPOSTO DI TUTTO IL BANCO — che aspetto avrebbe un prodotto che NON
-   fa quel che §1.10-bis chiede: un figlio con `Uid: 0 0 0 0` che consegna
-   fotogrammi lo stesso, e un registro pieno di ⭐.  ⇒ Per questo il banco legge
-   `/proc` e non il registro.
+⛔ THE OPPOSITE CASE OF THE WHOLE BENCH — what a product that does NOT
+   do what §1.10-bis asks would look like: a child with `Uid: 0 0 0 0` that delivers
+   frames anyway, and a log full of ⭐.  ⇒ That is why the bench reads
+   `/proc` and not the log.
 """
 
 
@@ -138,9 +138,9 @@ def titolo(t):
 
 
 # ---------------------------------------------------------------------------
-# Le letture dal NUCLEO.  ⛔ Ciascuna distingue «non c'e'» da «non ho potuto
-#    leggere», e la seconda e' un `None` che il chiamante deve trattare come un
-#    «non ho misurato» — mai come uno zero.
+# The readings from the KERNEL.  ⛔ Each tells «it is not there» from «I could not
+#    read», and the second is a `None` the caller must treat as an
+#    «I did not measure» — never as a zero.
 
 
 def leggi(percorso):
@@ -148,15 +148,15 @@ def leggi(percorso):
         with open(percorso, "rb") as f:
             return f.read()
     except FileNotFoundError:
-        return b""          # non c'e'
+        return b""          # it is not there
     except PermissionError:
-        return None         # ⛔ NON ho potuto leggere: e' un fatto diverso
+        return None         # ⛔ I could NOT read: it is a different fact
     except OSError:
         return None
 
 
 def stato_proc(pid):
-    """I quattro uid, i quattro gid e lo stato, chiesti al nucleo."""
+    """The four uids, the four gids and the state, asked of the kernel."""
     b = leggi(f"/proc/{pid}/status")
     if b is None:
         return None
@@ -183,7 +183,7 @@ def cmdline(pid):
 
 
 def descrittori(pid):
-    """{fd: bersaglio}.  ⛔ `None` = non ho potuto guardare."""
+    """{fd: target}.  ⛔ `None` = I could not look."""
     try:
         elenco = os.listdir(f"/proc/{pid}/fd")
     except (PermissionError, OSError):
@@ -193,16 +193,16 @@ def descrittori(pid):
         try:
             fuori[int(n)] = os.readlink(f"/proc/{pid}/fd/{n}")
         except OSError:
-            fuori[int(n)] = "(sparito mentre guardavo)"
+            fuori[int(n)] = "(vanished while I was looking)"
     return fuori
 
 
 def figli_di(pid_padre):
-    """I figli «--figlio-interno» del server, chiesti a /proc.
+    """The server's «--figlio-interno» children, asked of /proc.
 
-    ⛔ NON si usa `pgrep remotix`: prenderebbe anche i server degli altri
-       banchi (7448, 7501, 7561), e un banco che conta i processi di qualcun
-       altro misura la macchina e non il prodotto.
+    ⛔ `pgrep remotix` is NOT used: it would also catch the servers of the other
+       benches (7448, 7501, 7561), and a bench that counts someone
+       else's processes measures the machine and not the product.
     """
     fuori = []
     for n in os.listdir("/proc"):
@@ -228,10 +228,10 @@ def figli_di(pid_padre):
 
 
 class Registro:
-    """Il registro del server, letto da un OFFSET — B0.7.
+    """The server's log, read from an OFFSET — B0.7.
 
-    ⛔ Leggerlo dall'inizio conterebbe le righe di ieri.  E `dimensione()` si
-       prende PRIMA di ogni prova, non dopo.
+    ⛔ Reading it from the start would count yesterday's lines.  And `dimensione()` is
+       taken BEFORE every test, not after.
     """
 
     def __init__(self, percorso):
@@ -256,7 +256,7 @@ class Registro:
 
 
 def aspetta(cond, secondi=15.0, passo=0.2):
-    """Marcatori, non `sleep`: si aspetta una CONDIZIONE, e si dice quanto."""
+    """Markers, not `sleep`: a CONDITION is waited for, and how long is said."""
     t0 = time.time()
     while time.time() - t0 < secondi:
         v = cond()
@@ -267,15 +267,15 @@ def aspetta(cond, secondi=15.0, passo=0.2):
 
 
 def cliente(a, attesa=6.0, utente=None, parola=None):
-    """Un giro del cliente RCP indipendente (`02-filo-cliente.py`).
+    """One round of the independent RCP client (`02-filo-cliente.py`).
 
-    ⭐ Non si riscrive un client: quello e' gia' un arbitro certificato di F2.4,
-       e usarlo qui vuol dire che «la sessione arriva a SESSIONE» lo dice un
-       programma che non e' questo banco.
+    ⭐ A client is not rewritten: that one is already a certified referee of F2.4,
+       and using it here means that «the session reaches SESSIONE» is said by a
+       program that is not this bench.
     """
     parola_file = None
     if parola is not None:
-        # ⛔ D12: la parola non passa mai da `argv`.
+        # ⛔ D12: the password never goes through `argv`.
         parola_file = os.path.join(a.lavoro, "parola-caso")
         vecchia = os.umask(0o077)
         try:
@@ -287,15 +287,15 @@ def cliente(a, attesa=6.0, utente=None, parola=None):
            "--indirizzo", a.indirizzo, "--porta", str(a.porta),
            "--utente", utente or a.utente,
            "--parola-file", parola_file or a.parola_file,
-           # ⛔ `--codec 1`, e non 2: quel numero dice al giudice **che cosa
-           #    aspettarsi**, e la negoziazione di §4.3 la fa il `CIAO` di
-           #    `01-b3-cliente.py`, che di codec ne dichiara due e si sente
-           #    rispondere HEVC.  ⚠ `[M]` 12 agosto 2026, primo giro: con
-           #    `--codec 2` il cliente ha detto «ERRORE_PROTOCOLLO: codec 1, ma
-           #    si era negoziato 2» — cioe' un rosso puntato sul SERVER per una
-           #    riga di questo banco.  E' la seconda volta che questo cliente
-           #    accusa il server (`P2-6-montaggio.md` §5.2), e la seconda volta
-           #    che aveva torto.
+           # ⛔ `--codec 1`, and not 2: that number tells the judge **what to
+           #    expect**, and the negotiation of §4.3 is done by the `CIAO` of
+           #    `01-b3-cliente.py`, which declares two codecs and gets
+           #    HEVC as the answer.  ⚠ `[M]` 12 Aug 2026, first round: with
+           #    `--codec 2` the client said «ERRORE_PROTOCOLLO: codec 1, but
+           #    2 had been negotiated» — that is a red pointed at the SERVER for one
+           #    line of this bench.  It is the second time this client
+           #    accuses the server (`P2-6-montaggio.md` §5.2), and the second time
+           #    it was wrong.
            "--codec", "1", "--attesa", str(attesa)]
     p = subprocess.run(cmd, capture_output=True, text=True, timeout=attesa + 90)
     if parola_file:
@@ -307,222 +307,222 @@ def cliente(a, attesa=6.0, utente=None, parola=None):
 
 
 # ---------------------------------------------------------------------------
-# I casi
+# The cases
 
 
 def caso_nasce(a, reg, guai):
-    titolo("1. `nasce` — un figlio, che gira COME L'UTENTE (chiesto al nucleo)")
+    titolo("1. `nasce` — one child, running AS THE USER (asked of the kernel)")
     off = reg.offset()
     prima = figli_di(a.pid_server)
-    inf(f"figli prima: {len(prima)}")
-    # ⛔ LA SCENA DI QUESTO CASO E' «UN SERVER APPENA ACCESO», e si VERIFICA
-    #    invece di sperarci: con un figlio gia' vivo, I2 fa la cosa giusta —
-    #    non ne nasce un secondo — e questo caso non vedrebbe ne' la
-    #    presentazione ne' la riga del bus.  ⚠ Sarebbe un ROSSO su un prodotto
-    #    sano, ed e' il difetto che il banco puo' fare a se stesso.
+    inf(f"children before: {len(prima)}")
+    # ⛔ THE SCENE OF THIS CASE IS «A SERVER JUST STARTED», and it is CHECKED
+    #    instead of hoped for: with a child already alive, I2 does the right thing —
+    #    a second one is not born — and this case would see neither the
+    #    introduction nor the bus line.  ⚠ It would be a RED on a healthy
+    #    product, and it is the defect the bench can inflict on itself.
     if prima:
-        ko(f"⛔ c'e' gia' {len(prima)} figlio vivo: questo caso vuole un server "
-           f"APPENA ACCESO.  Non misuro, e non stampo un verde — si rifa' "
-           f"«riaccendi» e poi «misura nasce».")
-        guai.append("nasce: scena sbagliata (un figlio c'era gia')")
+        ko(f"⛔ there is already {len(prima)} live child: this case wants a server "
+           f"JUST STARTED.  I do not measure, and I do not print a green — redo "
+           f"«riaccendi» and then «misura nasce».")
+        guai.append("nasce: wrong scene (a child was already there)")
         return
 
     p = cliente(a)
-    inf(f"il cliente e' uscito {p.returncode}")
+    inf(f"the client exited {p.returncode}")
     for r in p.stdout.splitlines():
-        if "SESSIONE" in r or "fotogrammi" in r or "ACCETTATO" in r:
+        if "SESSIONE" in r or "frames" in r or "ACCETTATO" in r:
             inf(r.strip())
 
     dopo, quanto = aspetta(lambda: figli_di(a.pid_server) or None, 20)
     if not dopo:
-        ko("⛔ NESSUN figlio dopo un accesso ammesso: §1.10-bis non e' viva")
-        guai.append("nasce: nessun figlio")
+        ko("⛔ NO child after an admitted login: §1.10-bis is not alive")
+        guai.append("nasce: no child")
         return
-    ok(f"{len(dopo)} figlio dopo {quanto:.1f} s")
+    ok(f"{len(dopo)} child after {quanto:.1f} s")
 
     g = dopo[0]
     atteso = int(a.uid_atteso)
     if g["uid"] is None:
-        ko("⛔ non ho POTUTO leggere gli uid del figlio: non e' un verde e non")
-        ko("   e' un rosso — e' «non ho misurato».  Serve root.")
-        guai.append("nasce: uid non leggibili")
+        ko("⛔ I COULD NOT read the child's uids: it is not a green and it is not")
+        ko("   a red — it is «I did not measure».  Root is needed.")
+        guai.append("nasce: uids not readable")
         return
     if g["uid"] == [atteso] * 4:
-        ok(f"⭐ il nucleo dice Uid: {g['uid']} — reale, effettivo, SALVATO e fs, "
-           f"tutti e quattro a {atteso}")
+        ok(f"⭐ the kernel says Uid: {g['uid']} — real, effective, SAVED and fs, "
+           f"all four at {atteso}")
     else:
-        ko(f"⛔ Uid: {g['uid']}, atteso [{atteso}]*4.  ⚠ Un saved-uid diverso e' "
-           f"un processo che puo' tornare root")
+        ko(f"⛔ Uid: {g['uid']}, expected [{atteso}]*4.  ⚠ A different saved-uid is "
+           f"a process that can go back to root")
         guai.append(f"nasce: uid {g['uid']}")
     if g["gid"] == [int(a.gid_atteso)] * 4:
-        ok(f"⭐ e Gid: {g['gid']}")
+        ok(f"⭐ and Gid: {g['gid']}")
     else:
-        ko(f"⛔ Gid: {g['gid']}, atteso [{a.gid_atteso}]*4")
+        ko(f"⛔ Gid: {g['gid']}, expected [{a.gid_atteso}]*4")
         guai.append(f"nasce: gid {g['gid']}")
 
     if g["argv"].split()[0].endswith("remotix-figlio"):
-        ok(f"la riga di comando lo dichiara: «{g['argv'][:90]}»")
+        ok(f"the command line declares it: «{g['argv'][:90]}»")
     else:
-        ko(f"⛔ argv[0] inatteso: «{g['argv'][:90]}»")
+        ko(f"⛔ unexpected argv[0]: «{g['argv'][:90]}»")
         guai.append("nasce: argv")
 
-    # ⛔ LA PORTA NON SE L'E' PORTATA DIETRO — e non e' una deduzione.
+    # ⛔ IT DID NOT TAKE THE PORT ALONG — and it is not a deduction.
     fdp = descrittori(a.pid_server)
     if g["fd"] is None or fdp is None:
-        ko("⛔ non ho potuto leggere i descrittori: non dico che la porta non "
-           "c'e'.  ⚠ «non ho guardato» non e' «non c'era» (LEZIONI.md §1.9)")
-        guai.append("nasce: fd non leggibili")
+        ko("⛔ I could not read the descriptors: I do not say the port is not "
+           "there.  ⚠ «I did not look» is not «it was not there» (LEZIONI.md §1.9)")
+        guai.append("nasce: fds not readable")
     else:
-        inf(f"il padre ha {len(fdp)} descrittori, il figlio {len(g['fd'])} "
-            f"(⚠ ADESSO: dopo che ha aperto il palco)")
+        inf(f"the parent has {len(fdp)} descriptors, the child {len(g['fd'])} "
+            f"(⚠ NOW: after it has opened the stage)")
         for n, t in sorted(g["fd"].items())[:6]:
             inf(f"    fd {n} → {t}")
         comuni = set(g["fd"].values()) & set(fdp.values())
-        # ⚠ 0,1,2 sono lo stesso registro apposta: e' quel che rende leggibile
-        #   «chi ha detto che cosa».  Quel che NON deve esserci e' un socket
-        #   del padre — la porta, o il socket del comando di sblocco.
+        # ⚠ 0,1,2 are the same log on purpose: it is what makes readable
+        #   «who said what».  What must NOT be there is a socket
+        #   of the parent — the port, or the unblock command socket.
         socket_comuni = {v for v in comuni if v.startswith("socket:")}
         if not socket_comuni:
-            ok(f"⭐ ZERO socket in comune col padre: la porta {a.porta} NON se "
-               f"l'e' portata dietro")
+            ok(f"⭐ ZERO sockets in common with the parent: it did NOT take port {a.porta} "
+               f"along with it")
         else:
-            ko(f"⛔ {len(socket_comuni)} socket in comune col padre: "
+            ko(f"⛔ {len(socket_comuni)} sockets in common with the parent: "
                f"{sorted(socket_comuni)}")
-            guai.append("nasce: socket ereditati dal padre")
-        # ⛔⭐ E IL NUMERO CHE CONTA E' QUELLO ALLA NASCITA, NON QUELLO DI ADESSO
-        #     — difetto di QUESTO BANCO, trovato al primo giro, 12 agosto 2026.
+            guai.append("nasce: sockets inherited from the parent")
+        # ⛔⭐ AND THE NUMBER THAT COUNTS IS THE ONE AT BIRTH, NOT THE ONE NOW
+        #     — defect of THIS BENCH, found in the first round, 12 Aug 2026.
         #
-        #     La prima stesura pretendeva «≤ 4 descrittori» e ha dato un rosso a
-        #     un prodotto sano: `[M]` il figlio ne aveva **34**, e i trenta in
-        #     piu' erano PipeWire, il bus, gli eventfd e i memfd di
-        #     `mutter-screen-cast` — cioe' **il palco**, cioe' esattamente la
-        #     cosa che questo mandato esiste per fargli avere.
+        #     The first draft required «≤ 4 descriptors» and gave a red to
+        #     a healthy product: `[M]` the child had **34**, and the thirty
+        #     extra were PipeWire, the bus, the eventfds and the memfds of
+        #     `mutter-screen-cast` — that is **the stage**, that is exactly the
+        #     thing this mandate exists to give it.
         #
-        # ⇒ La grandezza vera e' *«quanti ne aveva quando e' nato»*, e il
-        #   prodotto la CONTA da se' subito dopo l'`exec`, prima di aprire
-        #   qualunque cosa: la riga «N descrittori aperti» del messaggio con cui
-        #   si presenta.  ⚠ E' `LEZIONI.md` §1.13: si nomina la grandezza vera
-        #   del fenomeno, non quella che gli somiglia.
-        m = re.search(r"si presenta:.*?(\d+) descrittori aperti",
+        # ⇒ The real quantity is *«how many it had when it was born»*, and the
+        #   product COUNTS it by itself right after the `exec`, before opening
+        #   anything: the «N open descriptors» line of the message with which it
+        #   introduces itself.  ⚠ It is `LEZIONI.md` §1.13: name the real quantity
+        #   of the phenomenon, not the one that resembles it.
+        m = re.search(r"introduces itself:.*?(\d+) open descriptors",
                       reg.da(off) or "")
         if not m:
-            ko("⛔ il figlio non ha detto quanti descrittori aveva alla nascita: "
-               "senza quel numero «non si e' portato dietro la porta» resta "
-               "una speranza")
-            guai.append("nasce: nessun conto dei descrittori alla nascita")
+            ko("⛔ the child did not say how many descriptors it had at birth: "
+               "without that number «it did not take the port along» remains "
+               "a hope")
+            guai.append("nasce: no descriptor count at birth")
         elif int(m.group(1)) == 4:
-            ok("⭐ e ALLA NASCITA ne aveva 4: 0, 1, 2 e il socket verso il "
-               "padre.  ⛔ Il padre ne ha "
-               f"{len(fdp)} — nessuno dei suoi e' passato di la'")
+            ok("⭐ and AT BIRTH it had 4: 0, 1, 2 and the socket to the "
+               "parent.  ⛔ The parent has "
+               f"{len(fdp)} — none of its own went across")
         else:
-            ko(f"⛔ alla nascita ne aveva {m.group(1)}, non 4: qualcosa del "
-               f"padre e' arrivato al figlio")
-            guai.append(f"nasce: {m.group(1)} descrittori alla nascita")
+            ko(f"⛔ at birth it had {m.group(1)}, not 4: something of the "
+               f"parent reached the child")
+            guai.append(f"nasce: {m.group(1)} descriptors at birth")
 
     testo = reg.da(off) or ""
-    if "IL BUS DI SESSIONE E' MIO" in testo:
-        ok("⭐ e nel registro: «IL BUS DI SESSIONE E' MIO» — la cosa che root "
-           "non puo' fare")
+    if "THE SESSION BUS IS MINE" in testo:
+        ok("⭐ and in the log: «THE SESSION BUS IS MINE» — the thing root "
+           "cannot do")
     else:
-        ko("⛔ il figlio NON ha detto di avere il bus.  Le righe «figlio»:")
+        ko("⛔ the child did NOT say it has the bus.  The «figlio» lines:")
         for r in testo.splitlines():
             if " figlio " in r:
                 inf(r.strip()[:160])
-        guai.append("nasce: nessun bus")
-    if "fotogramma completo da" in testo:
-        ok("⭐ e un fotogramma e' arrivato dal figlio al padre")
+        guai.append("nasce: no bus")
+    if "complete frame from" in testo:
+        ok("⭐ and a frame arrived from the child to the parent")
     else:
-        inf("⚠ nessun fotogramma dal figlio in questa finestra: guarda le righe "
-            "«figlio»/«video» qui sopra per il perche'")
+        inf("⚠ no frame from the child in this window: look at the "
+            "«figlio»/«video» lines above for the reason")
 
 
 def caso_due(a, reg, guai):
-    titolo("2. `due` — due connessioni dello stesso utente, UN figlio solo (I2)")
+    titolo("2. `due` — two connections of the same user, ONE single child (I2)")
     off = reg.offset()
     prima = figli_di(a.pid_server)
     if not prima:
         cliente(a)
         prima, _ = aspetta(lambda: figli_di(a.pid_server) or None, 20)
     if not prima:
-        ko("⛔ non c'e' nemmeno il primo figlio: non ho potuto misurare")
-        guai.append("due: nessun primo figlio")
+        ko("⛔ not even the first child is there: I could not measure")
+        guai.append("due: no first child")
         return
     pid1 = prima[0]["pid"]
-    inf(f"il figlio di adesso e' il pid {pid1}")
+    inf(f"the current child is pid {pid1}")
 
     p = cliente(a)
-    inf(f"seconda connessione: il cliente e' uscito {p.returncode}")
+    inf(f"second connection: the client exited {p.returncode}")
     time.sleep(1.0)
     dopo = figli_di(a.pid_server)
     if len(dopo) == 1 and dopo[0]["pid"] == pid1:
-        ok(f"⭐ un figlio solo, e lo STESSO pid {pid1}: I2 regge, e il palco e' "
-           f"lo stesso perche' e' della sessione (I4)")
+        ok(f"⭐ a single child, and the SAME pid {pid1}: I2 holds, and the stage is "
+           f"the same because it belongs to the session (I4)")
     else:
-        ko(f"⛔ dopo la seconda connessione i figli sono {len(dopo)}: "
+        ko(f"⛔ after the second connection the children are {len(dopo)}: "
            f"{[x['pid'] for x in dopo]}")
-        guai.append("due: piu' di un figlio")
+        guai.append("due: more than one child")
     testo = reg.da(off) or ""
-    if "NON ne nasce un secondo" in testo:
-        ok("⭐ e il prodotto lo dice: «NON ne nasce un secondo — invariante I2»")
+    if "a second one is NOT born" in testo:
+        ok("⭐ and the product says so: «a second one is NOT born — invariant I2»")
     else:
-        ko("⛔ il prodotto non ha scritto la riga di I2: il comportamento "
-           "giusto senza la riga e' un comportamento che nessuno puo' verificare")
-        guai.append("due: riga I2 mancante")
+        ko("⛔ the product did not write the I2 line: the right behaviour "
+           "without the line is a behaviour nobody can check")
+        guai.append("due: I2 line missing")
 
 
 def caso_distacco(a, reg, guai):
-    titolo("3. `distacco` — il cliente se ne va, il palco RESTA (I4)")
+    titolo("3. `distacco` — the client leaves, the stage STAYS (I4)")
     prima = figli_di(a.pid_server)
     if not prima:
         cliente(a)
         prima, _ = aspetta(lambda: figli_di(a.pid_server) or None, 20)
     if not prima:
-        ko("⛔ nessun figlio: non ho potuto misurare")
-        guai.append("distacco: nessun figlio")
+        ko("⛔ no child: I could not measure")
+        guai.append("distacco: no child")
         return
     pid1 = prima[0]["pid"]
-    inf(f"il figlio e' il pid {pid1}; il cliente si e' gia' scollegato "
-        f"(il suo processo e' finito)")
-    inf("aspetto 6 s con NESSUNA connessione viva…")
+    inf(f"the child is pid {pid1}; the client has already disconnected "
+        f"(its process has ended)")
+    inf("waiting 6 s with NO live connection…")
     time.sleep(6.0)
     s = stato_proc(pid1)
     if s is None:
-        ko("⛔ non ho potuto leggere lo stato del figlio")
-        guai.append("distacco: stato non leggibile")
+        ko("⛔ I could not read the child's state")
+        guai.append("distacco: state not readable")
         return
     if not s:
-        ko(f"⛔ il figlio {pid1} NON C'E' PIU' dopo il distacco: l'invariante I4 "
-           f"e' rotta — il palco apparteneva alla connessione")
-        guai.append("distacco: il figlio e' morto")
+        ko(f"⛔ the child {pid1} IS GONE after the detach: invariant I4 "
+           f"is broken — the stage belonged to the connection")
+        guai.append("distacco: the child died")
         return
     if s.get("stato") == "Z":
-        ko(f"⛔ il figlio {pid1} e' uno ZOMBIE: «vivo» e «morto» hanno la stessa "
-           f"faccia in /proc, ed e' il difetto gia' pagato con l'aiutante")
+        ko(f"⛔ the child {pid1} is a ZOMBIE: «alive» and «dead» look the "
+           f"same in /proc, and it is the defect already paid for with the helper")
         guai.append("distacco: zombie")
         return
-    ok(f"⭐ il figlio {pid1} e' ancora vivo (stato {s['stato']}), uid {s['uid']}: "
-       f"il palco appartiene alla SESSIONE, non alla connessione (I4)")
+    ok(f"⭐ the child {pid1} is still alive (state {s['stato']}), uid {s['uid']}: "
+       f"the stage belongs to the SESSION, not to the connection (I4)")
 
 
 def caso_muore(a, reg, guai):
-    titolo("4. `muore` — ucciso il figlio, il padre lo RACCOGLIE e lo dice")
+    titolo("4. `muore` — child killed, the parent REAPS it and says so")
     off = reg.offset()
     prima = figli_di(a.pid_server)
     if not prima:
         cliente(a)
         prima, _ = aspetta(lambda: figli_di(a.pid_server) or None, 20)
     if not prima:
-        ko("⛔ nessun figlio: non ho potuto misurare")
-        guai.append("muore: nessun figlio")
+        ko("⛔ no child: I could not measure")
+        guai.append("muore: no child")
         return
     pid1 = prima[0]["pid"]
-    inf(f"ammazzo il figlio {pid1} con SIGKILL — cosi' non puo' salutare "
-        f"nessuno e nessun gestore puo' rispondere al posto suo")
+    inf(f"killing the child {pid1} with SIGKILL — so it cannot say goodbye "
+        f"to anyone and no handler can answer in its place")
     try:
         os.kill(pid1, signal.SIGKILL)
     except OSError as e:
-        ko(f"⛔ non ho potuto ucciderlo: {e}")
-        guai.append("muore: kill fallito")
+        ko(f"⛔ I could not kill it: {e}")
+        guai.append("muore: kill failed")
         return
 
     def sparito():
@@ -530,148 +530,147 @@ def caso_muore(a, reg, guai):
         if s is None:
             return None
         if not s:
-            return "sparito"
+            return "vanished"
         if s.get("stato") == "Z":
-            return None      # ⛔ zombie: NON e' «raccolto»
+            return None      # ⛔ zombie: it is NOT «reaped»
         return None
 
     v, quanto = aspetta(sparito, 15)
     if v:
-        ok(f"⭐ il pid {pid1} e' sparito da /proc dopo {quanto:.1f} s: il padre "
-           f"l'ha RACCOLTO, e «morto» non ha piu' la stessa faccia di «vivo»")
+        ok(f"⭐ pid {pid1} vanished from /proc after {quanto:.1f} s: the parent "
+           f"REAPED it, and «dead» no longer looks the same as «alive»")
     else:
         s = stato_proc(pid1) or {}
-        ko(f"⛔ dopo {quanto:.1f} s il pid {pid1} c'e' ancora, stato "
-           f"{s.get('stato')}: se e' `Z` e' uno zombie non raccolto")
-        guai.append("muore: non raccolto")
+        ko(f"⛔ after {quanto:.1f} s pid {pid1} is still there, state "
+           f"{s.get('stato')}: if it is `Z` it is an unreaped zombie")
+        guai.append("muore: not reaped")
 
     testo = reg.da(off) or ""
-    if "se ne va" in testo and "l'ha ucciso il segnale 9" in testo:
-        ok("⭐ e il registro lo dice con la causa: «l'ha ucciso il segnale 9»")
+    if "is leaving" in testo and "killed by signal 9" in testo:
+        ok("⭐ and the log says so with the cause: «killed by signal 9»")
     else:
-        ko("⛔ il registro non nomina la causa della morte")
-        guai.append("muore: causa non scritta")
-    if "SVUOTATO" in testo:
-        ok("⭐ e il deposito del video e' stato SVUOTATO: l'immagine di un "
-           "utente non resta in casa dopo che il suo palco e' morto")
+        ko("⛔ the log does not name the cause of death")
+        guai.append("muore: cause not written")
+    if "EMPTIED" in testo:
+        ok("⭐ and the video store was EMPTIED: a user's image "
+           "does not stay in the house after their stage has died")
     else:
-        inf("⚠ nessun «SVUOTATO»: o il deposito non era suo, o non c'era")
+        inf("⚠ no «EMPTIED»: either the store was not theirs, or it was not there")
 
     off2 = reg.offset()
     p = cliente(a)
-    inf(f"connessione nuova: il cliente e' uscito {p.returncode}")
+    inf(f"new connection: the client exited {p.returncode}")
     nuovi, _ = aspetta(lambda: figli_di(a.pid_server) or None, 20)
     if not nuovi:
-        ko("⛔ dopo la morte del figlio NON ne rinasce uno: la casella e' "
-           "rimasta occupata da un morto")
-        guai.append("muore: non rinasce")
+        ko("⛔ after the child's death no new one is born: the slot "
+           "stayed occupied by a dead one")
+        guai.append("muore: not reborn")
     elif nuovi[0]["pid"] != pid1:
-        ok(f"⭐ ne e' nato uno nuovo, pid {nuovi[0]['pid']} ≠ {pid1}")
+        ok(f"⭐ a new one was born, pid {nuovi[0]['pid']} ≠ {pid1}")
     else:
-        ko("⛔ il pid e' lo stesso: qualcosa non torna")
-        guai.append("muore: stesso pid")
+        ko("⛔ the pid is the same: something does not add up")
+        guai.append("muore: same pid")
 
 
 def caso_senza_palco(a, reg, guai):
-    titolo("5. `senza-palco` — un utente che il bus NON ce l'ha")
+    titolo("5. `senza-palco` — a user who does NOT have the bus")
     off = reg.offset()
     p = cliente(a, utente=a.utente2, parola=a.parola2)
-    inf(f"il cliente di «{a.utente2}» e' uscito {p.returncode}")
+    inf(f"the client of «{a.utente2}» exited {p.returncode}")
     for r in p.stdout.splitlines():
-        if "SESSIONE" in r or "fotogrammi" in r or "AMMESSO" in r:
+        if "SESSIONE" in r or "frames" in r or "AMMESSO" in r:
             inf(r.strip())
-    # ⛔⭐ LA PROVA CHE CONTA DI QUESTO CASO, e la prima stesura NON la faceva:
-    #     «prova» non deve vedere **niente**.  `[M]` 12 agosto 2026, primo giro:
-    #     ne vedeva UNO, conforme — ed era il desktop di «nicfio», servito dal
-    #     deposito di PROCESSO di `webtransport.c`.  ⛔ Non «non ricevi niente»:
-    #     **ricevi il desktop di un altro**, che e' I3 violata in modo
-    #     invisibile.  ⇒ Questa riga e' la sola che lo puo' vedere.
+    # ⛔⭐ THE TEST THAT COUNTS IN THIS CASE, and the first draft did NOT do it:
+    #     «prova» must see **nothing**.  `[M]` 12 Aug 2026, first round:
+    #     it saw ONE, conforming — and it was «nicfio»'s desktop, served from the
+    #     PROCESS store of `webtransport.c`.  ⛔ Not «you receive nothing»:
+    #     **you receive someone else's desktop**, which is I3 violated
+    #     invisibly.  ⇒ This line is the only one that can see it.
     visti = 0
     for r in p.stdout.splitlines():
-        m = re.search(r"(\d+) fotogrammi, tutti conformi", r)
+        m = re.search(r"(\d+) frames, all conforming", r)
         if m:
             visti = int(m.group(1))
     if visti == 0:
-        ok(f"⭐⭐ «{a.utente2}» ha visto ZERO fotogrammi: NON gli e' arrivato il "
-           f"desktop di «{a.utente}»")
+        ok(f"⭐⭐ «{a.utente2}» saw ZERO frames: «{a.utente}»'s desktop did NOT "
+           f"reach them")
     else:
-        ko(f"⛔⛔ «{a.utente2}» ha ricevuto {visti} fotogrammi, e il suo palco "
-           f"non ne ha prodotto nemmeno uno ⇒ sono di un ALTRO utente.  "
-           f"Invariante I3 violata in modo invisibile.")
-        guai.append("senza-palco: FUGA DI PIXEL fra utenti")
+        ko(f"⛔⛔ «{a.utente2}» received {visti} frames, and their stage "
+           f"did not produce even one ⇒ they belong to ANOTHER user.  "
+           f"Invariant I3 violated invisibly.")
+        guai.append("senza-palco: PIXEL LEAK between users")
     dopo, _ = aspetta(
         lambda: [x for x in figli_di(a.pid_server) if x["utente"] == a.utente2]
         or None, 20)
     if not dopo:
-        ko(f"⛔ nessun figlio per «{a.utente2}»: la sessione e' stata ammessa e "
-           f"il palco non e' stato nemmeno TENTATO")
-        guai.append("senza-palco: nessun figlio")
+        ko(f"⛔ no child for «{a.utente2}»: the session was admitted and "
+           f"the stage was not even ATTEMPTED")
+        guai.append("senza-palco: no child")
         return
     g = dopo[0]
-    ok(f"⭐ il figlio di «{a.utente2}» c'e': pid {g['pid']}, Uid: {g['uid']}")
+    ok(f"⭐ «{a.utente2}»'s child is there: pid {g['pid']}, Uid: {g['uid']}")
     if g["uid"] and g["uid"][0] != int(a.uid_atteso):
-        ok(f"⭐ e NON e' l'uid di «{a.utente}» ({a.uid_atteso}): due utenti, due "
-           f"identita' — che e' tutto il mandato")
+        ok(f"⭐ and it is NOT «{a.utente}»'s uid ({a.uid_atteso}): two users, two "
+           f"identities — which is the whole mandate")
     else:
-        ko("⛔ i due utenti hanno lo stesso uid: questo banco non prova niente")
-        guai.append("senza-palco: stesso uid")
+        ko("⛔ the two users have the same uid: this bench proves nothing")
+        guai.append("senza-palco: same uid")
     testo = reg.da(off) or ""
-    if "NON ho il bus di sessione" in testo:
-        ok("⭐ e il figlio DICE che non ha il bus, invece di tacere: «non ho "
-           "potuto guardare» non e' «non c'e' la sessione»")
+    if "I do NOT have the session bus" in testo:
+        ok("⭐ and the child SAYS it has no bus, instead of staying silent: «I could "
+           "not look» is not «there is no session»")
     else:
-        ko("⛔ il figlio non ha dichiarato l'assenza del bus")
-        guai.append("senza-palco: assenza non dichiarata")
+        ko("⛔ the child did not declare the absence of the bus")
+        guai.append("senza-palco: absence not declared")
     if "NON entra in deposito" in testo:
-        ok("⭐ e se avesse consegnato, il deposito di un altro l'avrebbe "
-           "rifiutato (la guardia di `main.c`)")
-
+        ok("⭐ and had it delivered, someone else's store would have "
+           "refused it (the guard of `main.c`)")
 
 def caso_guasto(a, reg, guai, cieco):
     nome = "guasto-cieco" if cieco else "guasto-uid"
-    titolo(f"{'7' if cieco else '6'}. `{nome}` — un figlio che gira come "
-           f"l'utente SBAGLIATO")
+    titolo(f"{'7' if cieco else '6'}. `{nome}` — a child running as the "
+           f"WRONG user")
     off = reg.offset()
     p = cliente(a)
-    inf(f"il cliente e' uscito {p.returncode}")
+    inf(f"the client exited {p.returncode}")
     time.sleep(3.0)
     vivi = figli_di(a.pid_server)
     testo = reg.da(off) or ""
 
     if vivi:
         s = vivi[0]["uid"]
-        ko(f"⛔⛔ c'e' un figlio VIVO con Uid: {s} mentre il guasto e' innestato: "
-           f"nessuno dei due muri ha morso")
-        guai.append(f"{nome}: figlio vivo")
+        ko(f"⛔⛔ there is a LIVE child with Uid: {s} while the fault is injected: "
+           f"neither of the two walls bit")
+        guai.append(f"{nome}: live child")
     else:
-        ok("⭐ nessun figlio vivo: il guasto e' stato fermato")
+        ok("⭐ no live child: the fault was stopped")
 
     if cieco:
-        if "MESSAGGIO RIFIUTATO" in testo and "il nucleo dice uid 0" in testo:
-            ok("⭐⭐ e a fermarlo e' stato IL PADRE, sulle credenziali timbrate "
-               "dal nucleo: «MESSAGGIO RIFIUTATO … il nucleo dice uid 0»")
+        if "MESSAGE REFUSED" in testo and "the kernel says uid 0" in testo:
+            ok("⭐⭐ and what stopped it was THE PARENT, on the credentials stamped "
+               "by the kernel: «MESSAGE REFUSED … the kernel says uid 0»")
         else:
-            ko("⛔ il padre NON ha rifiutato sul timbro del nucleo: la verifica "
-               "a ogni messaggio non ha morso, e questo caso e' l'unico che la "
-               "puo' vedere")
-            guai.append("guasto-cieco: nessun rifiuto del padre")
+            ko("⛔ the parent did NOT refuse on the kernel's stamp: the check "
+               "at every message did not bite, and this case is the only one that "
+               "can see it")
+            guai.append("guasto-cieco: no refusal by the parent")
     else:
-        # ⛔ I MURI DEL FIGLIO SONO DUE, e il banco li accetta tutt'e due: lo
-        #    stesso controllo — `getresuid()` — sta PRIMA dell'`exec` (uscita
-        #    35) e DOPO (uscita 42).  `[M]` 12 agosto 2026: a mordere e' stato
-        #    il primo, e il banco pretendeva le parole del secondo.  ⚠ Quel che
-        #    conta non e' QUALE muro: e' che la causa sia NOMINATA — «e' uscito
-        #    con 35» non e' una diagnosi, «NON E' SCESO all'utente» si'.
-        if "NON E' SCESO all'utente" in testo or "NON E' CHI DOVREBBE" in testo:
-            ok("⭐ e a fermarlo e' stato il figlio stesso, rileggendo i propri "
-               "uid dal nucleo — e il padre ne ha scritto la CAUSA, non il "
-               "numero")
+        # ⛔ THE CHILD'S WALLS ARE TWO, and the bench accepts both: the
+        #    same check — `getresuid()` — sits BEFORE the `exec` (exit
+        #    35) and AFTER (exit 42).  `[M]` 12 Aug 2026: the one that bit was
+        #    the first, and the bench required the words of the second.  ⚠ What
+        #    counts is not WHICH wall: it is that the cause is NAMED — «it exited
+        #    with 35» is not a diagnosis, «DID NOT DROP to the user» is.
+        if "DID NOT DROP to the user" in testo or "IS NOT WHO IT SHOULD" in testo:
+            ok("⭐ and what stopped it was the child itself, rereading its own "
+               "uids from the kernel — and the parent wrote down the CAUSE, not the "
+               "number")
         else:
-            ko("⛔ il figlio non si e' accorto di non essere sceso, o il padre "
-               "non ha nominato la causa")
-            guai.append("guasto-uid: nessun controllo del figlio")
+            ko("⛔ the child did not notice it had not dropped, or the parent "
+               "did not name the cause")
+            guai.append("guasto-uid: no check by the child")
     for r in testo.splitlines():
-        if " figlio " in r and ("⛔" in r or "NON" in r):
+        if " figlio " in r and ("⛔" in r or "NOT" in r):
             inf(r.strip()[:170])
 
 
@@ -693,13 +692,13 @@ def main():
     p.add_argument("--indirizzo", default="192.168.0.2")
     p.add_argument("--porta", type=int, default=7571)
     p.add_argument("--pid-server", type=int, default=0)
-    # ⛔ IL PID SI LEGGE DAL FILE, NON DA UNA SOSTITUZIONE DI SHELL.
-    #    ⚠ `p=$(cat …)` dentro `ssh → enter.sh → bash -lc` attraversa TRE
-    #    livelli di virgolette e muore in mezzo: `[M]` 12 agosto 2026, questo
-    #    banco, primo giro — il `$(…)` e' arrivato vuoto e `argparse` ha detto
-    #    «expected one argument».  E' la stessa forma che ha gia' fatto girare
-    #    un caso «l'aiutante e' morto» su un aiutante VIVO
-    #    (`PAM-filo-unico.md` §6).  ⇒ Un file non ha livelli di virgolette.
+    # ⛔ THE PID IS READ FROM THE FILE, NOT FROM A SHELL SUBSTITUTION.
+    #    ⚠ `p=$(cat …)` inside `ssh → enter.sh → bash -lc` crosses THREE
+    #    levels of quotes and dies halfway: `[M]` 12 Aug 2026, this
+    #    bench, first round — the `$(…)` arrived empty and `argparse` said
+    #    «expected one argument».  It is the same form that has already run
+    #    a case «the helper is dead» on a LIVE helper
+    #    (`PAM-filo-unico.md` §6).  ⇒ A file has no levels of quotes.
     p.add_argument("--pid-file", default="")
     p.add_argument("--registro", default="")
     p.add_argument("--utente", default="nicfio")
@@ -721,51 +720,51 @@ def main():
             with open(a.pid_file) as f:
                 a.pid_server = int(f.read().strip())
         except (OSError, ValueError) as e:
-            ko(f"⛔ il file del pid «{a.pid_file}» non si legge: {e}.  ⚠ Non e' "
-               f"«il server non c'e'»: e' «non ho potuto guardare», e senza il "
-               f"pid ogni lettura di /proc sarebbe di un processo a caso.")
+            ko(f"⛔ the pid file «{a.pid_file}» cannot be read: {e}.  ⚠ It is not "
+               f"«the server is not there»: it is «I could not look», and without the "
+               f"pid every reading of /proc would be of a random process.")
             return 2
 
-    titolo("0. Lo stato iniziale, dichiarato E verificato (B0.1)")
+    titolo("0. The initial state, declared AND checked (B0.1)")
     if os.geteuid() != 0:
-        ko("⛔ questo banco vuole root: meta' delle letture sono su /proc di un "
-           "processo di root, e «non ho potuto leggere» non e' «non c'era».")
+        ko("⛔ this bench wants root: half of the readings are on /proc of a "
+           "root process, and «I could not read» is not «it was not there».")
         return 2
     s = stato_proc(a.pid_server)
     if not s:
-        ko(f"⛔ il pid {a.pid_server} non esiste: non c'e' niente da misurare")
+        ko(f"⛔ pid {a.pid_server} does not exist: there is nothing to measure")
         return 2
-    inf(f"il server e' il pid {a.pid_server}, Uid: {s.get('uid')}")
+    inf(f"the server is pid {a.pid_server}, Uid: {s.get('uid')}")
     if s.get("uid", [1])[1] != 0:
-        ko("⛔ il server NON gira da root: allora non puo' ne' verificare la "
-           "parola di un altro ne' far scendere un figlio.  ⚠ Questo banco "
-           "sarebbe verde per costruzione, quindi esce 2 (vacuita').")
+        ko("⛔ the server does NOT run as root: then it can neither check "
+           "someone else's password nor make a child drop.  ⚠ This bench "
+           "would be green by construction, so it exits 2 (vacuity).")
         return 2
-    ok("⭐ il server e' root: e' il regime di §1.10-bis")
-    inf(f"riga: {(cmdline(a.pid_server) or '')[:150]}")
+    ok("⭐ the server is root: it is the §1.10-bis regime")
+    inf(f"line: {(cmdline(a.pid_server) or '')[:150]}")
     reg = Registro(a.registro)
     if not reg.leggibile:
-        ko(f"⛔ il registro «{a.registro}» non c'e': senza, meta' delle prove "
-           f"non ha dove guardare")
+        ko(f"⛔ the log «{a.registro}» is not there: without it, half of the tests "
+           f"have nowhere to look")
         return 2
-    ok(f"registro: {a.registro} ({reg.offset()} byte finora)")
+    ok(f"log: {a.registro} ({reg.offset()} bytes so far)")
     prima = figli_di(a.pid_server)
-    inf(f"figli gia' vivi: {len(prima)} {[x['pid'] for x in prima]}")
+    inf(f"children already alive: {len(prima)} {[x['pid'] for x in prima]}")
 
     guai = []
     casi = list(CASI) if a.caso == "tutti" else [a.caso]
     for c in casi:
         if c not in CASI:
-            ko(f"caso ignoto: {c}")
+            ko(f"unknown case: {c}")
             return 2
         CASI[c](a, reg, guai)
 
-    titolo("Il verdetto")
+    titolo("The verdict")
     if not guai:
-        dico("    \033[1;32m⭐ tutto come l'atteso\033[0m")
+        dico("    \033[1;32m⭐ all as expected\033[0m")
         esito = 0
     else:
-        dico(f"    \033[1;31m⛔ {len(guai)} prove hanno dato altro\033[0m")
+        dico(f"    \033[1;31m⛔ {len(guai)} tests gave something else\033[0m")
         for g in guai:
             ko(g)
         esito = 1
@@ -784,7 +783,7 @@ def main():
                     "esito": esito,
                 }, ensure_ascii=False) + "\n")
         except OSError as e:
-            ko(f"⚠ l'esito non si e' scritto in {a.uscita}: {e}")
+            ko(f"⚠ the outcome was not written to {a.uscita}: {e}")
     return esito
 
 

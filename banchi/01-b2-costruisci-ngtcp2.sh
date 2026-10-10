@@ -1,41 +1,41 @@
 #!/bin/bash
 #
-# 01-b2-costruisci-ngtcp2.sh — la seconda candidata di B2.
+# 01-b2-costruisci-ngtcp2.sh — the second candidate of B2.
 #
-#   bash 01-b2-costruisci-ngtcp2.sh          costruisce
-#   bash 01-b2-costruisci-ngtcp2.sh controlla dice solo che cosa c'e'
-#
-# ---------------------------------------------------------------------------
-# PERCHE' DAL LORO ESEMPIO E NON DAL FOGLIO BIANCO
-#
-# B2 deve misurare **quanto collante resta a noi**, e quel numero ha senso solo
-# se si parte da dove parte chiunque: il server d'esempio del progetto.
-# Scrivere tutto da zero misurerebbe la nostra pazienza, non la libreria.
-#
-# ⚠ E su ngtcp2 non esiste un «server minimo da cinquanta righe»: la libreria
-#   e' deliberatamente di basso livello — socket UDP, TLS montato a mano,
-#   connection ID, timer di ritrasmissione — e sopra ci va nghttp3 per
-#   l'HTTP/3.  Questo e' un dato di B2, non una lamentela: e' esattamente la
-#   colonna «quanto collante» di `DECISIONI.md` §6.4.
+#   bash 01-b2-costruisci-ngtcp2.sh          builds
+#   bash 01-b2-costruisci-ngtcp2.sh controlla only says what is already there
 #
 # ---------------------------------------------------------------------------
-# L'ATTESO, DICHIARATO PRIMA (regola B0.4)
+# WHY FROM THEIR EXAMPLE AND NOT FROM A BLANK PAGE
 #
-#   1. nghttp3 compila                                     -> atteso: si'
-#   2. ngtcp2 compila con BoringSSL                        -> atteso: si'
-#   3. il server d'esempio si costruisce                   -> atteso: si'
-#   4. ⛔ il loro esempio parla gia' WebTransport?          -> atteso: NO
+# B2 must measure **how much glue is left to us**, and that number makes sense
+# only if we start where anyone starts: the project's example server.
+# Writing everything from scratch would measure our patience, not the library.
 #
-# ⛔ Il punto 4 e' quello che conta, ed e' scritto come previsione: nghttp3
-#    implementa RFC 9220 (l'extended CONNECT di HTTP/3) `[S]`, cioe' la
-#    FONDAMENTA, e non lo strato WebTransport.  Se l'esempio lo parlasse gia',
-#    la previsione e' sbagliata e va scritto perche' — che e' `LEZIONI.md`
-#    §1.11 applicata a una lettura invece che a una misura.
+# ⚠ And for ngtcp2 there is no "minimal fifty-line server": the library
+#   is deliberately low level — UDP socket, TLS assembled by hand,
+#   connection IDs, retransmission timers — and nghttp3 goes on top of it for
+#   HTTP/3.  This is a datum of B2, not a complaint: it is exactly the
+#   "how much glue" column of `DECISIONI.md` §6.4.
 #
-# ⚠ E si riusa BoringSSL gia' costruito da `01-b2-costruisci.sh`: due pile TLS
-#   diverse per due candidate darebbero due misure non confrontabili, che e'
-#   la ragione per cui `provision-server.sh` e `provision-vm.sh` hanno lo
-#   stesso elenco.
+# ---------------------------------------------------------------------------
+# THE EXPECTED, DECLARED FIRST (rule B0.4)
+#
+#   1. nghttp3 compiles                                    -> expected: yes
+#   2. ngtcp2 compiles with BoringSSL                      -> expected: yes
+#   3. the example server builds                           -> expected: yes
+#   4. ⛔ does their example already speak WebTransport?    -> expected: NO
+#
+# ⛔ Point 4 is the one that counts, and it is written as a prediction: nghttp3
+#    implements RFC 9220 (the extended CONNECT of HTTP/3) `[S]`, that is the
+#    FOUNDATIONS, and not the WebTransport layer.  If the example already spoke
+#    it, the prediction is wrong and why must be written down — which is
+#    `LEZIONI.md` §1.11 applied to a reading instead of a measurement.
+#
+# ⚠ And the BoringSSL already built by `01-b2-costruisci.sh` is reused: two
+#   different TLS stacks for two candidates would give two measurements that
+#   cannot be compared, which is the reason `provision-server.sh` and
+#   `provision-vm.sh` have the same list.
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
@@ -49,46 +49,46 @@ inf()  { printf '    --  %s\n' "$*"; }
 
 AZIONE=${1:-costruisci}
 
-log "Stato di partenza"
-inf "sorgenti  $SRC"
+log "Starting state"
+inf "sources   $SRC"
 for d in boringssl nghttp3 ngtcp2; do
-	[ -d "$SRC/$d" ] && inf "$d: clonato" || inf "$d: da clonare"
+	[ -d "$SRC/$d" ] && inf "$d: cloned" || inf "$d: to be cloned"
 done
 if [ ! -f "$BSSL/build/libssl.a" ]; then
-	ko "BoringSSL non e' costruito: lancia prima 01-b2-costruisci.sh"
+	ko "BoringSSL is not built: run 01-b2-costruisci.sh first"
 	exit 2
 fi
-ok "BoringSSL riusato da lsquic (stessa pila TLS per tutte le candidate)"
+ok "BoringSSL reused from lsquic (same TLS stack for all candidates)"
 
 [ "$AZIONE" = controlla ] && exit 0
 
 # ---------------------------------------------------------------------------
-# 1. nghttp3 — l'HTTP/3, cioe' la meta' che porta l'extended CONNECT
+# 1. nghttp3 — HTTP/3, that is the half that brings the extended CONNECT
 # ---------------------------------------------------------------------------
 log "nghttp3"
 if [ ! -d "$SRC/nghttp3" ]; then
 	git clone --depth 1 --recursive https://github.com/ngtcp2/nghttp3 "$SRC/nghttp3" \
-		|| { ko "clone fallito"; exit 3; }
+		|| { ko "clone failed"; exit 3; }
 fi
 if [ ! -f "$SRC/nghttp3/build/lib/libnghttp3.a" ]; then
 	cmake -B "$SRC/nghttp3/build" -S "$SRC/nghttp3" -GNinja \
 		-DCMAKE_BUILD_TYPE=Release -DENABLE_LIB_ONLY=ON -DENABLE_STATIC_LIB=ON \
-		|| { ko "cmake fallito"; exit 3; }
-	ninja -C "$SRC/nghttp3/build" || { ko "compilazione fallita"; exit 3; }
+		|| { ko "cmake failed"; exit 3; }
+	ninja -C "$SRC/nghttp3/build" || { ko "build failed"; exit 3; }
 fi
 NGH=$(find "$SRC/nghttp3/build" -name 'libnghttp3.a' | head -1)
-[ -n "$NGH" ] && ok "libnghttp3.a costruita" || { ko "libnghttp3.a assente"; exit 3; }
-inf "versione $(cd "$SRC/nghttp3" && git describe --tags 2>/dev/null || echo '(senza tag)')"
+[ -n "$NGH" ] && ok "libnghttp3.a built" || { ko "libnghttp3.a absent"; exit 3; }
+inf "version $(cd "$SRC/nghttp3" && git describe --tags 2>/dev/null || echo '(no tag)')"
 
 # ---------------------------------------------------------------------------
-# 2. ngtcp2 — il QUIC
+# 2. ngtcp2 — the QUIC
 # ---------------------------------------------------------------------------
-log "ngtcp2 con BoringSSL"
+log "ngtcp2 with BoringSSL"
 if [ ! -d "$SRC/ngtcp2" ]; then
 	git clone --depth 1 --recursive https://github.com/ngtcp2/ngtcp2 "$SRC/ngtcp2" \
-		|| { ko "clone fallito"; exit 4; }
+		|| { ko "clone failed"; exit 4; }
 fi
-inf "versione $(cd "$SRC/ngtcp2" && git describe --tags 2>/dev/null || echo '(senza tag)')"
+inf "version $(cd "$SRC/ngtcp2" && git describe --tags 2>/dev/null || echo '(no tag)')"
 
 if [ ! -f "$SRC/ngtcp2/build/lib/libngtcp2.a" ]; then
 	cmake -B "$SRC/ngtcp2/build" -S "$SRC/ngtcp2" -GNinja \
@@ -97,49 +97,49 @@ if [ ! -f "$SRC/ngtcp2/build/lib/libngtcp2.a" ]; then
 		-DENABLE_BORINGSSL=ON \
 		-DBORINGSSL_INCLUDE_DIR="$BSSL/include" \
 		-DBORINGSSL_LIBRARIES="$BSSL/build/libssl.a;$BSSL/build/libcrypto.a" \
-		|| { ko "cmake fallito"; exit 4; }
-	ninja -C "$SRC/ngtcp2/build" || { ko "compilazione fallita"; exit 4; }
+		|| { ko "cmake failed"; exit 4; }
+	ninja -C "$SRC/ngtcp2/build" || { ko "build failed"; exit 4; }
 fi
 NGT=$(find "$SRC/ngtcp2/build" -name 'libngtcp2.a' | head -1)
-[ -n "$NGT" ] && ok "libngtcp2.a costruita" || { ko "libngtcp2.a assente"; exit 4; }
+[ -n "$NGT" ] && ok "libngtcp2.a built" || { ko "libngtcp2.a absent"; exit 4; }
 
 # ---------------------------------------------------------------------------
-# 3. ⛔ IL CONTROLLO CHE CONTA: il loro esempio parla WebTransport?
+# 3. ⛔ THE CHECK THAT COUNTS: does their example speak WebTransport?
 #
-# Non «compila»: che cosa sa fare.  Si cercano le tre cose senza le quali una
-# sessione WebTransport non nasce, e si dice quante se ne trovano.
+# Not "it compiles": what it can do.  We look for the three things without which
+# a WebTransport session is not born, and say how many are found.
 # ---------------------------------------------------------------------------
-log "Il controllo: quanto WebTransport c'e' gia'"
-inf "atteso: NESSUNO — nghttp3 porta l'extended CONNECT (RFC 9220), non lo strato WT"
+log "The check: how much WebTransport is already there"
+inf "expected: NONE — nghttp3 brings the extended CONNECT (RFC 9220), not the WT layer"
 
-# ⛔ TRE DIFETTI IN NOVE RIGHE, IL 9 AGOSTO 2026, E TUTTI DELLA STESSA
-#    FAMIGLIA: il banco diceva ZERO dove non aveva GUARDATO.
+# ⛔ THREE DEFECTS IN NINE LINES, ON 9 AUG 2026, AND ALL OF THE SAME
+#    FAMILY: the bench said ZERO where it had not LOOKED.
 #
-#    1. i due alberi erano passati come UNA stringa — `"$SRC/ngtcp2 $SRC/nghttp3"`
-#       — quindi grep riceveva un percorso solo, con uno spazio dentro, che non
-#       esiste.  Zero risultati;
-#    2. `2>/dev/null` nascondeva il «No such file or directory» che l'avrebbe
-#       detto subito.  ⛔ E' precisamente cio' che `REVIEWER.md` §1 punto 4
-#       ordina di rifiutare;
-#    3. il `printf` diagnostico finiva dentro `$(...)`, quindi spariva dal
-#       terminale: il banco non mostrava nemmeno che cosa stesse cercando.
+#    1. the two trees were passed as ONE string — `"$SRC/ngtcp2 $SRC/nghttp3"`
+#       — so grep received a single path, with a space inside, that does not
+#       exist.  Zero results;
+#    2. `2>/dev/null` hid the "No such file or directory" that would have
+#       said so at once.  ⛔ It is precisely what `REVIEWER.md` §1 point 4
+#       orders us to reject;
+#    3. the diagnostic `printf` ended up inside `$(...)`, so it vanished from
+#       the terminal: the bench did not even show what it was looking for.
 #
-#    Risultato: «nessuna traccia di SETTINGS_WT_MAX_SESSIONS: la previsione
-#    regge» — un VERDE stampato da una ricerca mai eseguita.
+#    Result: "no trace of SETTINGS_WT_MAX_SESSIONS: the prediction
+#    holds" — a GREEN printed by a search never executed.
 #
-# ⭐ La cura non e' aggiustare il grep: e' che il banco DICA SU CHE COSA HA
-#    GUARDATO.  Un conteggio senza il suo denominatore non e' una misura.
+# ⭐ The cure is not fixing the grep: it is that the bench SAYS WHAT IT
+#    LOOKED AT.  A count without its denominator is not a measurement.
 ALBERI=("$SRC/ngtcp2" "$SRC/nghttp3")
 for a in "${ALBERI[@]}"; do
 	if [ ! -d "$a" ]; then
-		ko "l'albero $a non esiste: la ricerca non si puo' fare"
+		ko "the tree $a does not exist: the search cannot be done"
 		exit 5
 	fi
 done
 FILE_TOT=$(find "${ALBERI[@]}" \( -name '*.c' -o -name '*.h' -o -name '*.cc' -o -name '*.hh' \) | wc -l)
-inf "si guarda dentro $FILE_TOT file di ${#ALBERI[@]} alberi"
+inf "looking inside $FILE_TOT files of ${#ALBERI[@]} trees"
 if [ "$FILE_TOT" -lt 100 ]; then
-	ko "solo $FILE_TOT file: la ricerca sta guardando nel posto sbagliato"
+	ko "only $FILE_TOT files: the search is looking in the wrong place"
 	exit 5
 fi
 
@@ -147,37 +147,37 @@ cerca()
 {
 	local etichetta=$1 modello=$2
 	local n
-	# ⚠ Niente `2>/dev/null`: se grep si lamenta, si deve vedere.
+	# ⚠ No `2>/dev/null`: if grep complains, it must be seen.
 	n=$(grep -rIl --include='*.c' --include='*.h' --include='*.cc' --include='*.hh' \
 		-e "$modello" "${ALBERI[@]}" | wc -l)
-	printf '    --  %-34s %s file\n' "$etichetta" "$n" >&2
+	printf '    --  %-34s %s files\n' "$etichetta" "$n" >&2
 	echo "$n"
 }
 
 N1=$(cerca "SETTINGS_WT_MAX_SESSIONS (0xc671706a)" "c671706a")
-N2=$(cerca "il token 'webtransport'"               "webtransport")
-N3=$(cerca "l'extended CONNECT (:protocol)"        "ENABLE_CONNECT_PROTOCOL\|:protocol")
+N2=$(cerca "the token 'webtransport'"              "webtransport")
+N3=$(cerca "the extended CONNECT (:protocol)"      "ENABLE_CONNECT_PROTOCOL\|:protocol")
 
-# ⛔ E IL CONTROLLO POSITIVO DELLA RICERCA STESSA: si cerca una cosa che DEVE
-#    esserci.  Se anche questa da' zero, non e' la libreria a mancare: e' il
-#    grep che non sta leggendo niente, ed e' l'errore che questo riquadro
-#    racconta.
-CTRL=$(cerca "controllo: la parola 'nghttp3'"      "nghttp3")
+# ⛔ AND THE POSITIVE CONTROL OF THE SEARCH ITSELF: we look for something that
+#    MUST be there.  If this too gives zero, it is not the library that is
+#    missing: it is the grep that is not reading anything, and that is the
+#    error this box tells about.
+CTRL=$(cerca "control: the word 'nghttp3'"         "nghttp3")
 if [ "$CTRL" -eq 0 ]; then
-	ko "⛔ il controllo positivo della ricerca e' FALLITO: zero file nominano 'nghttp3'"
-	ko "   la ricerca non sta guardando niente. Nessun numero qui sotto vale."
+	ko "⛔ the positive control of the search FAILED: zero files name 'nghttp3'"
+	ko "   the search is not looking at anything. No number below is valid."
 	exit 5
 fi
-ok "controllo positivo della ricerca: 'nghttp3' trovato in $CTRL file"
+ok "positive control of the search: 'nghttp3' found in $CTRL files"
 
 printf '\n'
-log "Esito"
+log "Outcome"
 if [ "$N1" -eq 0 ]; then
-	ok "nessuna traccia di SETTINGS_WT_MAX_SESSIONS: la previsione regge"
-	inf "⇒ lo strato WebTransport lo scriviamo noi, e le righe si CONTANO"
+	ok "no trace of SETTINGS_WT_MAX_SESSIONS: the prediction holds"
+	inf "⇒ we write the WebTransport layer ourselves, and the lines are COUNTED"
 else
-	ko "⛔ la previsione e' SBAGLIATA: SETTINGS_WT_MAX_SESSIONS c'e' in $N1 file"
-	inf "va riletto perche', prima di scrivere una riga di collante"
+	ko "⛔ the prediction is WRONG: SETTINGS_WT_MAX_SESSIONS is in $N1 files"
+	inf "why must be reread, before writing one line of glue"
 fi
-inf "extended CONNECT presente in $N3 file — e' la fondamenta, non lo strato"
+inf "extended CONNECT present in $N3 files — it is the foundations, not the layer"
 exit 0

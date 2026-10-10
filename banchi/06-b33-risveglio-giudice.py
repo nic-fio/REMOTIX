@@ -1,40 +1,42 @@
 #!/usr/bin/env python3
-"""06-b33-risveglio-giudice.py — ⛔ IL VERDETTO DI §7.1, e non lo da' chi manda.
+"""06-b33-risveglio-giudice.py — ⛔ THE VERDICT OF §7.1, and the sender does not give it.
 
     python3 06-b33-risveglio-giudice.py --visto .../visto.jsonl \\
         --iniettore .../06-b33-risveglio.log --da 12 --modo tenuto \\
         --etichetta s2-tenuto --tela 1264x800 --esiti .../esiti.jsonl
 
-⚠ Gira SUL SERVER, fuori dal contenitore, da root (i due file sono di root).
-  Nessuna dipendenza oltre alla libreria standard.
+⚠ Runs ON THE SERVER, outside the container, as root (the two files are root's).
+  No dependency beyond the standard library.
 
 ===========================================================================
-⛔ CHE COSA GIUDICA, E DA QUALE LATO
+⛔ WHAT IT JUDGES, AND FROM WHICH SIDE
 ===========================================================================
 
-Due fonti, e **non hanno lo stesso peso**:
+Two sources, and **they do not weigh the same**:
 
-  · `--visto`      quel che una finestra Wayland VERA dentro la sessione ha
-                   ricevuto.  ⭐ E' la misura (`CODER.md` §3.8);
-  · `--iniettore`  quel che il programma che manda **dice** di aver fatto.
-                   ⛔ NON e' una prova che il desktop abbia ricevuto: si legge
-                   per due sole cose — il conto `ricambi_puntatore`, che e' una
-                   finestra sullo stato interno di `input.c` e non una riga di
-                   registro, e la presenza delle righe che DICHIARANO un
-                   ripiego, dove la domanda e' proprio «c'e' la riga?».
+  · `--visto`      what a REAL Wayland window inside the session has
+                   received.  ⭐ It is the measurement (`CODER.md` §3.8);
+  · `--iniettore`  what the sending program **says** it did.
+                   ⛔ It is NOT proof that the desktop received anything: it
+                   is read for two things only — the `ricambi_puntatore`
+                   count, which is a window on the internal state of
+                   `input.c` and not a log line, and the presence of the lines
+                   that DECLARE a fallback, where the question is precisely
+                   "is the line there?".
 
 ===========================================================================
-⛔ IL DIFETTO ATTESO NON E' UN VERDE, E IL VERDE ATTESO NON E' UN ROSSO
+⛔ THE EXPECTED DEFECT IS NOT A GREEN, AND THE EXPECTED GREEN IS NOT A RED
 ===========================================================================
 
-Nel modo `tenuto` ci sono casi il cui esito **giusto col mondo di oggi** e'
-`DIFETTO_VIVO`: il rilascio dopo il ricambio non arriva, e il clic fresco
-nemmeno.  ⇒ Si dichiara `DIFETTO_VIVO` e non `OK` — un banco che chiamasse
-«verde» un difetto misurato e' la cosa che `CODER.md` §4.6 vieta — e nemmeno
-`NO`, che vorrebbe dire «il banco ha trovato qualcosa che non si aspettava».
+In `tenuto` mode there are cases whose **right outcome with today's world** is
+`DIFETTO_VIVO`: the release after the replacement does not arrive, and neither
+does the fresh click.  ⇒ `DIFETTO_VIVO` is declared and not `OK` — a bench
+that called a measured defect "green" is what `CODER.md` §4.6 forbids — and
+not `NO` either, which would mean "the bench found something it did not
+expect".
 
-⭐ Il giorno che la cura c'e', quei casi devono diventare `OK`.  E se non
-diventano, la cura non e' quella che si credeva.
+⭐ The day the cure is there, those cases must become `OK`.  And if they do
+not, the cure is not the one we believed.
 """
 import argparse
 import json
@@ -46,45 +48,46 @@ VERDE, ROSSO, GIALLO, BLU, GRIGIO = ("\033[1;32m", "\033[1;31m", "\033[1;33m",
 BTN_LEFT, KEY_ENTER, KEY_CTRL = 272, 28, 29
 
 # ---------------------------------------------------------------------------
-# ⛔⛔⛔ LE RIGHE DEL PRODOTTO CHE IL GIUDICE CERCA — e **una riga scritta con
-#       `%s` NON E' UNA RIGA, sono N righe**.
+# ⛔⛔⛔ THE PRODUCT LINES THE JUDGE SEARCHES FOR — and **a line written with
+#       `%s` IS NOT ONE LINE, it is N lines**.
 #
-# *Rilievo della revisione avversariale del 22 agosto 2026, ed era una
-# regressione MIA: il banco vecchio (`06-b33-giudice.py:86-88`) la distinzione
-# ce l'aveva, e scrivendo questo banco nuovo l'ho persa.*
+# *Finding of the adversarial review of 22 August 2026, and it was MY
+# regression: the old bench (`06-b33-giudice.py:86-88`) had the distinction,
+# and writing this new bench I lost it.*
 #
-# `src/input.c` `segna_orfani()` ha **una sola** stringa di formato —
-# `«%u %s erano PREMUTI sul dispositivo che il compositore ha appena tolto»` —
-# con `%s` = `"pulsanti"` **oppure** `"tasti"`.  ⇒ Cercare la parte comune
-# significa non distinguere il puntatore dalla tastiera.
+# `src/input.c` `segna_orfani()` has **a single** format string —
+# `"%u %s were PRESSED on the device the compositor has just removed"` —
+# with `%s` = `"buttons"` **or** `"keys"`.  ⇒ Searching for the common part
+# means not telling the pointer from the keyboard.
 #
-# ⛔ Il caso concreto che sarebbe passato in verde: il rilascio del PULSANTE non
-#    arriva e il suo percorso tace — cioe' il difetto che T7 esiste per prendere
-#    — ma un cambio di keymap ha prodotto la riga della TASTIERA ⇒ T7 verde.
-#    E in modo `libero`, L4 rosso contro `input.c` per una riga di tastiera
-#    legittima.
+# ⛔ The concrete case that would have passed in green: the release of the
+#    BUTTON does not arrive and its path stays silent — that is, the defect T7
+#    exists to catch — but a keymap change produced the KEYBOARD line ⇒ T7
+#    green.  And in `libero` mode, L4 red against `input.c` for a legitimate
+#    keyboard line.
 #
-# ⇒ Ogni marcatore porta la parte **variabile** dentro di se', e sta in un posto
-#   solo con accanto chi lo scrive.  ⚠ E lo spazio davanti a «pulsanti»/«tasti»
-#   ci sta apposta: e' il `%u %s`, e ancora il marcatore alla parola intera.
+# ⇒ Every marker carries the **variable** part inside itself, and lives in one
+#   place only with its writer next to it.  ⚠ And the space before
+#   "buttons"/"keys" is there on purpose: it is the `%u %s`, and it anchors the
+#   marker to the whole word.
 #
-# ⚠ Lo stesso vale per `«NON PARTE: era premuto su un…»`, che senza il seguito
-#   combacia sia con *«su UN DISPOSITIVO»* (il puntatore) sia con *«su UNA
-#   TASTIERA»*.
+# ⚠ The same holds for `"DOES NOT LEAVE: it was pressed on a…"`, which without
+#   what follows matches both *"on a DEVICE"* (the pointer) and *"on a
+#   KEYBOARD"*.
 # ---------------------------------------------------------------------------
-M_ORFANI_PULSANTI = " pulsanti erano PREMUTI sul dispositivo che il compositore ha appena tolto"
-M_ORFANI_TASTI = " tasti erano PREMUTI sul dispositivo che il compositore ha appena tolto"
-M_NON_PARTE_PULSANTE = "NON PARTE: era premuto su un dispositivo"
-M_NON_PARTE_TASTO = "NON PARTE: era premuto su una tastiera"
-# la cura «C», `src/input.c` `guarisci()` — ⚠ forma lunga: «GUARIGIONE» da solo
-# comparirebbe anche in un commento o in una riga futura di un altro modulo
-M_GUARIGIONE = "GUARIGIONE (n."
-M_GUARITO = "canale EIS RIFATTO"
+M_ORFANI_PULSANTI = " buttons were PRESSED on the device the compositor has just removed"
+M_ORFANI_TASTI = " keys were PRESSED on the device the compositor has just removed"
+M_NON_PARTE_PULSANTE = "DOES NOT LEAVE: it was pressed on a device"
+M_NON_PARTE_TASTO = "DOES NOT LEAVE: it was pressed on a keyboard"
+# cure "C", `src/input.c` `guarisci()` — ⚠ long form: "HEALING" alone would
+# also show up in a comment or in a future line of another module
+M_GUARIGIONE = "HEALING (n."
+M_GUARITO = "EIS channel REDONE"
 
 
 def leggi_visto(percorso, da):
-    """Le righe del testimone con `n` > `da`.  ⛔ E si tiene il numero: e' il
-    denominatore, e senza «zero eventi» e «non ho guardato» sono uguali."""
+    """The witness lines with `n` > `da`.  ⛔ And the number is kept: it is the
+    denominator, and without it "zero events" and "I did not look" are the same."""
     fuori = []
     try:
         f = open(percorso, encoding="utf-8", errors="replace")
@@ -121,14 +124,14 @@ def tasto(righe, codice, premuto, dopo=-1):
 
 
 def main():
-    p = argparse.ArgumentParser(description="06-b33 §7.1 — il verdetto")
+    p = argparse.ArgumentParser(description="06-b33 §7.1 — the verdict")
     p.add_argument("--visto", required=True)
     p.add_argument("--iniettore", required=True)
     p.add_argument("--da", type=int, default=0)
     p.add_argument("--modo", choices=["strumento", "libero", "tenuto"],
                    default="tenuto")
     p.add_argument("--etichetta", default="giro")
-    p.add_argument("--scena", default="(non dichiarata)")
+    p.add_argument("--scena", default="(not declared)")
     p.add_argument("--tela", default="1264x800")
     p.add_argument("--esiti", default="")
     a = p.parse_args()
@@ -140,16 +143,16 @@ def main():
     except OSError:
         ini = ""
 
-    # ⛔ I risvegli e i loro delta, LETTI dalle righe dell'iniettore: il conto
-    #    viene da `input_conto()`, che e' lo stato interno di `input.c`, non una
-    #    deduzione da un registro.
+    # ⛔ The wake-ups and their deltas, READ from the injector's lines: the count
+    #    comes from `input_conto()`, which is the internal state of `input.c`,
+    #    not a deduction from a log.
     risvegli = [(int(m.group(1)), int(m.group(2)), int(m.group(3)))
                 for m in re.finditer(
-                    r"RISVEGLIO n\.(\d+) esito=(-?\d+) ricambi_puntatore \d+ → \d+ "
+                    r"WAKE-UP n\.(\d+) esito=(-?\d+) ricambi_puntatore \d+ → \d+ "
                     r"\(delta (-?\d+)\)", ini)]
     ridim = [(int(m.group(1)), int(m.group(2)))
              for m in re.finditer(
-                 r"RIDIMENSIONATO a \S+ esito=(-?\d+) ricambi_puntatore \d+ → \d+ "
+                 r"RESIZED to \S+ esito=(-?\d+) ricambi_puntatore \d+ → \d+ "
                  r"\(delta (-?\d+)\)", ini)]
 
     casi = []
@@ -157,235 +160,238 @@ def main():
     def caso(nome, esito, dettaglio):
         casi.append({"caso": nome, "esito": esito, "dettaglio": dettaglio})
 
-    # ---- C0: lo strumento ha visto qualcosa? ------------------------------
-    # ⛔ Un giudice che dicesse «nessun BOTTONE» su un file vuoto accuserebbe il
-    #    prodotto di una cosa che non ha fatto (`CODER.md` §3.10).
+    # ---- C0: has the instrument seen anything? ----------------------------
+    # ⛔ A judge that said "no BOTTONE" on an empty file would accuse the
+    #    product of something it did not do (`CODER.md` §3.10).
     #
-    # ⛔⛔ E LO STRUMENTO NON E' LO STESSO IN TUTTE LE SCENE — difetto del banco
-    #      trovato il 21 agosto 2026, al secondo giro.  Nella scena `libero`
-    #      **non si inietta niente al testimone**: la misura e' il conto dei
-    #      ricambi, che viene da `input_conto()`.  ⇒ Pretendere righe del
-    #      testimone li' dentro era un rosso che accusava il banco di se stesso,
-    #      e che avrebbe nascosto la misura vera.
+    # ⛔⛔ AND THE INSTRUMENT IS NOT THE SAME IN ALL SCENES — bench defect found
+    #      on 21 August 2026, at the second round.  In the `libero` scene
+    #      **nothing is injected to the witness**: the measurement is the count
+    #      of replacements, which comes from `input_conto()`.  ⇒ Demanding
+    #      witness lines in there was a red that accused the bench of itself,
+    #      and that would have hidden the real measurement.
     if a.modo == "libero":
         if not ini.strip():
-            caso("C0 lo strumento ha parlato", "NO",
-                 "⛔ IL BANCO: il registro dell'iniettore e' VUOTO")
+            caso("C0 the instrument has spoken", "NO",
+                 "⛔ THE BENCH: the injector's log is EMPTY")
             return stampa(a, casi)
-        caso("C0 lo strumento ha parlato", "OK",
-             f"{len(ini.splitlines())} righe dall'iniettore — ⚠ e in questa "
-             f"scena il testimone NON e' lo strumento: non si inietta niente "
-             f"che debba arrivargli")
+        caso("C0 the instrument has spoken", "OK",
+             f"{len(ini.splitlines())} lines from the injector — ⚠ and in this "
+             f"scene the witness is NOT the instrument: nothing is injected "
+             f"that should reach it")
     else:
         if not righe:
-            caso("C0 lo strumento ha visto qualcosa", "NO",
-                 f"ZERO righe del testimone dopo n={a.da}: ⛔ IL BANCO, NON IL "
-                 f"PRODOTTO — il testimone non era aperto, o non aveva il fuoco")
+            caso("C0 the instrument has seen something", "NO",
+                 f"ZERO witness lines after n={a.da}: ⛔ THE BENCH, NOT THE "
+                 f"PRODUCT — the witness was not open, or did not have the focus")
             return stampa(a, casi)
-        caso("C0 lo strumento ha visto qualcosa", "OK",
-             f"{len(righe)} righe dopo n={a.da}")
+        caso("C0 the instrument has seen something", "OK",
+             f"{len(righe)} lines after n={a.da}")
 
     if a.modo == "strumento":
-        # ⭐ IL CONTROLLO ZERO: un clic senza nessun ricambio in mezzo.  Se
-        #   questo non e' verde, ogni rosso delle altre scene accusa il banco.
+        # ⭐ THE ZERO CHECK: a click with no replacement in between.  If this
+        #   is not green, every red of the other scenes accuses the bench.
         g = bottone(righe, 1)
         s = bottone(righe, 0, g) if g >= 0 else -1
-        caso("S0 il clic arriva quando NON c'e' nessun ricambio",
+        caso("S0 the click arrives when there is NO replacement",
              "OK" if g >= 0 and s >= 0 else "NO",
-             f"BTN_LEFT giu' {'si' if g >= 0 else 'NO'}, su {'si' if s >= 0 else 'NO'}"
+             f"BTN_LEFT down {'yes' if g >= 0 else 'NO'}, up {'yes' if s >= 0 else 'NO'}"
              + ("" if g >= 0 and s >= 0 else
-                " — ⛔ IL BANCO: senza questo verde nessun altro rosso significa niente"))
-        caso("S0-bis e NESSUN risveglio e' stato chiesto",
+                " — ⛔ THE BENCH: without this green no other red means anything"))
+        caso("S0-bis and NO wake-up was requested",
              "OK" if not risvegli else "NO",
-             f"risvegli nel registro dell'iniettore: {len(risvegli)} (atteso 0)")
+             f"wake-ups in the injector's log: {len(risvegli)} (expected 0)")
         return stampa(a, casi)
 
     if a.modo == "libero":
-        # ---- LA TESI DI §7.1, presa per smentirla -------------------------
+        # ---- THE THESIS OF §7.1, taken in order to refute it --------------
         deltas = [d for (_n, _e, d) in risvegli]
-        caso("L1 i tre risvegli sono partiti",
+        caso("L1 the three wake-ups went off",
              "OK" if len(risvegli) == 3 and all(e for (_n, e, _d) in risvegli) else "NO",
-             f"risvegli={len(risvegli)} esiti={[e for (_n, e, _d) in risvegli]} "
-             f"(atteso 3, tutti esito=1)")
-        caso("L2 ⭐ OGNI risveglio ricrea i dispositivi — §7.1",
+             f"wake-ups={len(risvegli)} outcomes={[e for (_n, e, _d) in risvegli]} "
+             f"(expected 3, all esito=1)")
+        caso("L2 ⭐ EVERY wake-up recreates the devices — §7.1",
              "OK" if deltas and all(d >= 1 for d in deltas) else "NO",
-             f"delta di ricambi_puntatore per risveglio: {deltas} (atteso [1,1,1] "
-             f"o piu').  ⛔ Se fossero zeri, §7.1 E' FALSA e va corretta: "
-             f"`[R]` `meta-screen-cast-virtual-stream-src.c:283` chiama "
-             f"`meta_eis_viewport_notify_changed()` a ogni `..._src_enable()`")
-        caso("L3 e NESSUNO ha toccato la tela",
+             f"delta of ricambi_puntatore per wake-up: {deltas} (expected [1,1,1] "
+             f"or more).  ⛔ If they were zeros, §7.1 IS FALSE and must be corrected: "
+             f"`[R]` `meta-screen-cast-virtual-stream-src.c:283` calls "
+             f"`meta_eis_viewport_notify_changed()` at every `..._src_enable()`")
+        caso("L3 and NOBODY touched the canvas",
              "OK" if not ridim else "NO",
-             f"chiamate a cattura_ridimensiona(): {len(ridim)} (atteso 0) — "
-             f"e' la meta' della tesi che rende §7.1 una porta NUOVA")
-        # ⚠ A mano alzata non c'e' niente di premuto: la riga degli orfani NON
-        #   deve esserci.  Se ci fosse, il conto di `input.c` sarebbe sporco.
+             f"calls to cattura_ridimensiona(): {len(ridim)} (expected 0) — "
+             f"it is the half of the thesis that makes §7.1 a NEW door")
+        # ⚠ With the hand raised nothing is pressed: the orphans line must NOT
+        #   be there.  If it were, the count of `input.c` would be dirty.
         #
-        # ⛔ E si guardano SEPARATAMENTE pulsanti e tasti, e si DICE quale dei
-        #    due e' comparso: sono due difetti diversi (il puntatore ricambia al
-        #    viewport, la tastiera solo al cambio di keymap) e un rosso che non
-        #    li distingue manda a cercare nel posto sbagliato.
+        # ⛔ And buttons and keys are looked at SEPARATELY, and it is SAID which
+        #    of the two showed up: they are two different defects (the pointer
+        #    is replaced at the viewport, the keyboard only at a keymap change)
+        #    and a red that does not tell them apart sends one looking in the
+        #    wrong place.
         orf_p = M_ORFANI_PULSANTI in ini
         orf_t = M_ORFANI_TASTI in ini
-        quali = ("pulsanti" if orf_p and not orf_t
-                 else "tasti" if orf_t and not orf_p
-                 else "pulsanti E tasti" if orf_p else "")
-        caso("L4 a mano alzata NON ci sono orfani",
+        quali = ("buttons" if orf_p and not orf_t
+                 else "keys" if orf_t and not orf_p
+                 else "buttons AND keys" if orf_p else "")
+        caso("L4 with the hand raised there are NO orphans",
              "OK" if not (orf_p or orf_t) else "NO",
-             "nessuna riga di orfani, ne' di pulsanti ne' di tasti, com'e' giusto"
+             "no orphans line, neither of buttons nor of keys, as it should be"
              if not (orf_p or orf_t)
-             else f"⛔ c'e' la riga degli orfani ({quali}) senza che nulla fosse "
-                  f"premuto: il conto di input.c e' sporco")
+             else f"⛔ the orphans line ({quali}) is there without anything being "
+                  f"pressed: the count of input.c is dirty")
         return stampa(a, casi)
 
     # ------------------------------------------------------------------ #
-    #  modo «tenuto»: la scena cattiva, col risveglio o col ridimensionamento
+    #  "tenuto" mode: the bad scene, with the wake-up or with the resize
     # ------------------------------------------------------------------ #
-    porta = "risveglio" if risvegli else ("ridimensionamento" if ridim else "NESSUNA")
+    porta = "wake-up" if risvegli else ("resize" if ridim else "NONE")
     deltas = ([d for (_n, _e, d) in risvegli] or [d for (_e, d) in ridim])
 
-    caso("T0 la porta si e' aperta: i dispositivi sono ricambiati",
+    caso("T0 the door opened: the devices were replaced",
          "OK" if deltas and any(d >= 1 for d in deltas) else "NO",
-         f"porta={porta}, delta di ricambi_puntatore={deltas} (atteso ≥1).  "
-         f"⛔ Se fosse 0 il difetto NON e' stato riprodotto, e quel che segue "
-         f"non misura niente")
+         f"door={porta}, delta of ricambi_puntatore={deltas} (expected ≥1).  "
+         f"⛔ If it were 0 the defect was NOT reproduced, and what follows "
+         f"measures nothing")
 
-    # ⛔ Il PULSANTE era GIU' PRIMA della porta?  Senza, non c'e' orfano da
-    #    misurare e il rosso accuserebbe la cosa sbagliata.
+    # ⛔ Was the BUTTON DOWN BEFORE the door?  Without it, there is no orphan to
+    #    measure and the red would accuse the wrong thing.
     #
-    # ⛔⛔ E si cerca la forma **dei pulsanti**, non la parte comune: la scena
-    #      tiene giu' anche il Ctrl, e la riga dei TASTI la scrive la stessa
-    #      `printf` (`%u %s erano PREMUTI…`).  ⚠ Con la parte comune, T1 sarebbe
-    #      verde per una riga di tastiera anche se il pulsante non fosse mai
-    #      diventato orfano — cioe' proprio quando la scena non regge.
-    #      *Regressione trovata dalla revisione avversariale il 22 ago 2026: il
-    #      banco vecchio la distinzione ce l'aveva.*
+    # ⛔⛔ And the form **of the buttons** is searched, not the common part: the
+    #      scene also holds the Ctrl down, and the KEYS line is written by the
+    #      same `printf` (`%u %s were PRESSED…`).  ⚠ With the common part, T1
+    #      would be green for a keyboard line even if the button had never
+    #      become an orphan — that is, precisely when the scene does not hold.
+    #      *Regression found by the adversarial review on 22 Aug 2026: the
+    #      old bench had the distinction.*
     orf_p = M_ORFANI_PULSANTI in ini
     orf_t = M_ORFANI_TASTI in ini
-    caso("T1 il PULSANTE era premuto al momento del ricambio",
+    caso("T1 the BUTTON was pressed at the moment of the replacement",
          "OK" if orf_p else "NO",
-         "`input.c` dichiara gli orfani dei PULSANTI, dunque il pulsante c'era"
+         "`input.c` declares the orphans of the BUTTONS, so the button was there"
          if orf_p
-         else "⛔ IL BANCO: nessun orfano di PULSANTI dichiarato"
-              + (" — c'e' solo quello dei TASTI, che e' un'altra cosa: al "
-                 "cambio di viewport la tastiera non ricambia, quindi questa "
-                 "scena non ha fatto quel che credeva" if orf_t
-                 else " — o non si e' premuto niente, o il ricambio e' arrivato "
-                      "prima della pressione"))
+         else "⛔ THE BENCH: no orphan of BUTTONS declared"
+              + (" — there is only the KEYS one, which is another thing: at "
+                 "the viewport change the keyboard is not replaced, so this "
+                 "scene did not do what it believed" if orf_t
+                 else " — either nothing was pressed, or the replacement arrived "
+                      "before the press"))
 
     g = bottone(righe, 1)
-    caso("T2 il testimone ha visto il pulsante SCENDERE",
+    caso("T2 the witness saw the button GO DOWN",
          "OK" if g >= 0 else "NO",
-         "BTN_LEFT giu' visto" if g >= 0
-         else "⛔ IL BANCO: il testimone non ha visto nemmeno la pressione")
+         "BTN_LEFT down seen" if g >= 0
+         else "⛔ THE BENCH: the witness did not even see the press")
 
-    # ---- T3: il rilascio, DOVUNQUE sia ------------------------------------
-    # ⛔ E la domanda giusta e' «il rilascio arriva?», non «arriva DOPO il
-    #    ricambio»: con una cura che rilascia PRIMA, il rilascio arriva prima —
-    #    e un banco che guardasse solo il «dopo» chiamerebbe rossa la cura.
-    # ⛔⛔ E IL RILASCIO DEL PULSANTE TENUTO SI DISTINGUE DA QUELLO DEL CLIC
-    #      FRESCO **per il press che li separa** — difetto del banco trovato il
-    #      21 agosto 2026 sul gemello `06-b33-giudice.py`: prendendo «il primo
-    #      rilascio dopo il press tenuto» si rischia di prendere il rilascio del
-    #      clic NUOVO, e allora T3 diventa verde su un desktop bloccato.
-    #  ⇒ Il confine e' il SECONDO press: quel che sta prima e' del pulsante
-    #    tenuto, quel che sta dopo e' del clic fresco.
+    # ---- T3: the release, WHEREVER it is ----------------------------------
+    # ⛔ And the right question is "does the release arrive?", not "does it
+    #    arrive AFTER the replacement": with a cure that releases BEFORE, the
+    #    release arrives before — and a bench that looked only at the "after"
+    #    would call the cure red.
+    # ⛔⛔ AND THE RELEASE OF THE HELD BUTTON IS TOLD FROM THAT OF THE FRESH
+    #      CLICK **by the press that separates them** — bench defect found on
+    #      21 August 2026 on the twin `06-b33-giudice.py`: taking "the first
+    #      release after the held press" risks taking the release of the NEW
+    #      click, and then T3 turns green on a stuck desktop.
+    #  ⇒ The boundary is the SECOND press: what comes before belongs to the
+    #    held button, what comes after belongs to the fresh click.
     g2 = bottone(righe, 1, g) if g >= 0 else -1
     limite = g2 if g2 >= 0 else len(righe)
     s = -1
     if g >= 0:
         cand = bottone(righe[:limite], 0, g)
         s = cand
-    caso("T3 ⛔ il rilascio del pulsante arriva al desktop (prima o dopo, purche' arrivi)",
+    caso("T3 ⛔ the button release reaches the desktop (before or after, as long as it arrives)",
          "OK" if s >= 0 else "DIFETTO_VIVO",
-         "il rilascio arriva — ⭐ allora questa porta e' curata" if s >= 0
-         else "NON arriva: il posto conta il pulsante ancora giu' "
-              "(`meta-seat-impl.c:899-908`), e `handle_button` "
-              "(`meta-eis-client.c:612-621`) ingoia in silenzio il rilascio sul "
-              "dispositivo nuovo")
+         "the release arrives — ⭐ so this door is cured" if s >= 0
+         else "it does NOT arrive: the seat counts the button as still down "
+              "(`meta-seat-impl.c:899-908`), and `handle_button` "
+              "(`meta-eis-client.c:612-621`) silently swallows the release on the "
+              "new device")
 
-    # ---- T4: ⭐ LA MISURA CHE CONTA — il desktop prende ancora i clic? -----
+    # ---- T4: ⭐ THE MEASUREMENT THAT COUNTS — does the desktop still take clicks? -----
     s2 = bottone(righe, 0, g2) if g2 >= 0 else -1
-    caso("T4 ⭐⭐ un clic FRESCO, dopo tutto, arriva ancora?",
+    caso("T4 ⭐⭐ does a FRESH click, after all, still arrive?",
          "OK" if g2 >= 0 and s2 >= 0 else "DIFETTO_VIVO",
-         f"clic fresco: giu' {'si' if g2 >= 0 else 'NO'}, su {'si' if s2 >= 0 else 'NO'}"
+         f"fresh click: down {'yes' if g2 >= 0 else 'NO'}, up {'yes' if s2 >= 0 else 'NO'}"
          + ("" if g2 >= 0 and s2 >= 0 else
-            " — ⛔ da adesso il desktop NON PRENDE PIU' UN CLIC, per tutta la "
-            "sessione: e' «su Android il mouse non prende piu' i click»"))
+            " — ⛔ from now on the desktop DOES NOT TAKE A CLICK ANY MORE, for the "
+            "whole session: it is \"on Android the mouse no longer takes clicks\""))
 
-    # ---- T5: il controllo INTERNO alla scena — la tastiera -----------------
-    # ⚠ La tastiera non e' un dispositivo di viewport (`remove_viewport_devices`
-    #   guarda TOUCH e POINTER_ABSOLUTE), quindi al ricambio di geometria NON
-    #   ricambia e il suo rilascio DEVE arrivare.  Se non arrivasse, la causa
-    #   sarebbe un'altra e T3/T4 accuserebbero la cosa sbagliata.
+    # ---- T5: the check INSIDE the scene — the keyboard ---------------------
+    # ⚠ The keyboard is not a viewport device (`remove_viewport_devices` looks
+    #   at TOUCH and POINTER_ABSOLUTE), so at a geometry replacement it is NOT
+    #   replaced and its release MUST arrive.  If it did not, the cause would
+    #   be something else and T3/T4 would accuse the wrong thing.
     #
-    # ⛔⛔ E «non iniettato» NON E' «iniettato e perso» — difetto del banco
-    #      trovato il 21 agosto 2026, alla prima corsa della scena `guarigione`:
-    #      quella scena non batte nessun tasto, e T5/T6 uscivano ROSSI dicendo
-    #      *«non arriva nemmeno il tasto»* — cioe' il banco accusava il prodotto
-    #      di una cosa che nessuno gli aveva chiesto (`CODER.md` §3.10).
-    #      ⇒ Se il tasto non e' stato nemmeno CHIESTO all'iniettore, il caso e'
-    #      fuori scena, non rosso.
+    # ⛔⛔ And "not injected" IS NOT "injected and lost" — bench defect found
+    #      on 21 August 2026, at the first run of the `guarigione` scene: that
+    #      scene presses no key, and T5/T6 came out RED saying *"not even the
+    #      key arrives"* — that is, the bench accused the product of something
+    #      nobody had asked of it (`CODER.md` §3.10).
+    #      ⇒ If the key was not even REQUESTED from the injector, the case is
+    #      out of scene, not red.
     chiesto_ctrl = "posizione 29 1 ->" in ini
     chiesto_invio = "posizione 28 1 ->" in ini
     kg = tasto(righe, KEY_CTRL, 1)
     ks = tasto(righe, KEY_CTRL, 0, kg) if kg >= 0 else -1
     if not chiesto_ctrl:
-        caso("T5 il TASTO invece va giu' e torna su (controllo interno alla scena)",
+        caso("T5 the KEY instead goes down and comes back up (check inside the scene)",
              "NON_IN_SCENA",
-             "questa scena non batte nessun Ctrl: non c'e' niente da giudicare")
+             "this scene presses no Ctrl: there is nothing to judge")
     else:
-        caso("T5 il TASTO invece va giu' e torna su (controllo interno alla scena)",
+        caso("T5 the KEY instead goes down and comes back up (check inside the scene)",
              "OK" if kg >= 0 and ks >= 0 else "NO",
-             f"Ctrl giu' {'si' if kg >= 0 else 'NO'}, su {'si' if ks >= 0 else 'NO'}"
+             f"Ctrl down {'yes' if kg >= 0 else 'NO'}, up {'yes' if ks >= 0 else 'NO'}"
              + ("" if kg >= 0 and ks >= 0 else
-                " — ⛔ non arriva nemmeno il tasto: la causa NON e' il ricambio "
-                "del PUNTATORE, e T3/T4 stanno accusando la cosa sbagliata"))
+                " — ⛔ not even the key arrives: the cause is NOT the replacement "
+                "of the POINTER, and T3/T4 are accusing the wrong thing"))
 
     ke = tasto(righe, KEY_ENTER, 1)
     if not chiesto_invio:
-        caso("T6 e un tasto FRESCO arriva ancora", "NON_IN_SCENA",
-             "questa scena non batte nessun Invio: non c'e' niente da giudicare")
+        caso("T6 and a FRESH key still arrives", "NON_IN_SCENA",
+             "this scene presses no Enter: there is nothing to judge")
     else:
-        caso("T6 e un tasto FRESCO arriva ancora",
+        caso("T6 and a FRESH key still arrives",
              "OK" if ke >= 0 else "NO",
-             "Invio visto" if ke >= 0
-             else "⛔ nemmeno la tastiera funziona piu': il danno e' piu' largo "
-                  "di quel che §4.6 descrive")
+             "Enter seen" if ke >= 0
+             else "⛔ not even the keyboard works any more: the damage is wider "
+                  "than what §4.6 describes")
 
-    # ---- T7: la riga che dichiara il ripiego DEL PULSANTE -------------------
-    # ⛔ E l'atteso dipende dal MONDO, non e' fisso: se il rilascio e' arrivato
-    #    (cura presente) non c'e' nessun ripiego da dichiarare, e pretendere la
-    #    riga sarebbe scrivere l'atteso del mondo col difetto vivo.
+    # ---- T7: the line that declares the BUTTON's fallback -------------------
+    # ⛔ And the expectation depends on the WORLD, it is not fixed: if the
+    #    release arrived (cure present) there is no fallback to declare, and
+    #    demanding the line would be writing the expectation of the world with
+    #    the defect alive.
     #
-    # ⛔⛔ E si cerca la forma **del pulsante**: `«NON PARTE: era premuto su
-    #      un…»` senza il seguito combacia sia con *«su UN DISPOSITIVO»* (il
-    #      puntatore) sia con *«su UNA TASTIERA»*.  ⚠ Il difetto che T7 esiste
-    #      per prendere e' il rilascio del PULSANTE che non arriva mentre il suo
-    #      percorso tace: una riga di tastiera lo avrebbe fatto passare in verde.
-    #      *Regressione trovata dalla revisione avversariale il 22 ago 2026.*
+    # ⛔⛔ And the form **of the button** is searched: `"DOES NOT LEAVE: it was
+    #      pressed on a…"` without what follows matches both *"on a DEVICE"*
+    #      (the pointer) and *"on a KEYBOARD"*.  ⚠ The defect T7 exists to
+    #      catch is the BUTTON release that does not arrive while its path
+    #      stays silent: a keyboard line would have let it pass in green.
+    #      *Regression found by the adversarial review on 22 Aug 2026.*
     np_pulsante = M_NON_PARTE_PULSANTE in ini
     np_tasto = M_NON_PARTE_TASTO in ini
     if np_pulsante:
-        caso("T7 il rilascio impossibile del PULSANTE e' DICHIARATO", "OK",
-             "la riga c'e': il registro NON dice «fatto» mentre il desktop "
-             "resta bloccato")
+        caso("T7 the impossible release of the BUTTON is DECLARED", "OK",
+             "the line is there: the log does NOT say \"done\" while the desktop "
+             "stays stuck")
     elif s >= 0:
-        caso("T7 il rilascio impossibile del PULSANTE e' DICHIARATO", "OK",
-             "⭐ la riga non c'e' — ed e' giusto: il rilascio e' ARRIVATO, "
-             "quindi non c'era nessun ripiego da dichiarare")
+        caso("T7 the impossible release of the BUTTON is DECLARED", "OK",
+             "⭐ the line is not there — and that is right: the release ARRIVED, "
+             "so there was no fallback to declare")
     else:
-        caso("T7 il rilascio impossibile del PULSANTE e' DICHIARATO", "NO",
-             "⛔ il rilascio del pulsante non e' arrivato E il suo percorso "
-             "tace: e' il verde che non e' vero (`CODER.md` §4.6)"
-             + (".  ⚠ C'e' la riga della TASTIERA, che e' un'altra cosa e non "
-                "vale per il pulsante" if np_tasto else ""))
+        caso("T7 the impossible release of the BUTTON is DECLARED", "NO",
+             "⛔ the button release did not arrive AND its path stays "
+             "silent: it is the green that is not true (`CODER.md` §4.6)"
+             + (".  ⚠ The KEYBOARD line is there, which is another thing and "
+                "does not count for the button" if np_tasto else ""))
 
     return stampa(a, casi)
 
 
 def stampa(a, casi):
-    print(f"\n== 06-b33 §7.1 · giudizio «{a.etichetta}» · modo {a.modo}")
-    print(f"   scena: {a.scena}")
+    print(f"\n== 06-b33 §7.1 · judgement «{a.etichetta}» · mode {a.modo}")
+    print(f"   scene: {a.scena}")
     rossi = 0
     for c in casi:
         col = {"OK": VERDE, "NO": ROSSO, "DIFETTO_VIVO": GIALLO,
@@ -396,14 +402,14 @@ def stampa(a, casi):
             rossi += 1
     vivi = sum(1 for c in casi if c["esito"] == "DIFETTO_VIVO")
     fuori = sum(1 for c in casi if c["esito"] == "NON_IN_SCENA")
-    print(f"\n   {len(casi)} casi · {rossi} rossi · {vivi} difetti vivi "
-          f"dichiarati · {fuori} fuori scena")
+    print(f"\n   {len(casi)} cases · {rossi} red · {vivi} live defects "
+          f"declared · {fuori} out of scene")
     if a.esiti:
         with open(a.esiti, "a", encoding="utf-8") as f:
             f.write(json.dumps({"etichetta": a.etichetta, "modo": a.modo,
                                 "scena": a.scena, "casi": casi},
                                ensure_ascii=False) + "\n")
-        print(f"   esiti: {a.esiti}")
+        print(f"   results: {a.esiti}")
     return 1 if rossi else 0
 
 

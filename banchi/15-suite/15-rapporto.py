@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-rapporto — IL RAPPORTO DELLA SUITE, GENERATO DAL REGISTRO (mai scritto a mano)
+15-rapporto — THE SUITE REPORT, GENERATED FROM THE REGISTER (never written by hand)
 
     python3 15-rapporto.py --registro registro.jsonl [--difetti difetti.jsonl]
                            [--giro 1] [--html rapporto.html] [--testo]
 
-- la MATRICE funzione × desktop × browser: per ogni casella l'ULTIMO esito del
-  giro scelto (passata sana), col segno del guasto (visto / non visto);
-- l'elenco dei DIFETTI col loro stato (da difetti.jsonl);
-- per ogni casella FAIL o BLOCKED: la ragione, e le evidenze;
-- in testa: binario, pagina, commit su cui e' stato misurato, e i conti.
-Serve alla BONIFICA, non all'utente.
+- the MATRIX function × desktop × browser: for each cell the LAST outcome of the
+  chosen round (healthy pass), with the fault mark (seen / not seen);
+- the list of DEFECTS with their state (from difetti.jsonl);
+- for each FAIL or BLOCKED cell: the reason, and the evidence;
+- at the top: binary, page, commit it was measured on, and the counts.
+It serves the CLEAN-UP, not the user.
 """
 import argparse
 import html
@@ -21,34 +21,34 @@ import re
 import sys
 
 DESKTOP = ("gnome", "kde", "xfce", "lxqt")
-BROWSER = ("firefox", "chrome", "telefono")   # telefono: Chrome sul telefono vero (fase 19 §5)
+BROWSER = ("firefox", "chrome", "telefono")   # telefono: Chrome on the real phone (phase 19 §5)
 NOMI = {
-    "F-001": "accesso e creazione della sessione", "F-002": "prima immagine",
-    "F-003": "aggiornamento dello schermo", "F-004": "mouse", "F-005": "forma del puntatore",
-    "F-006": "ridimensionare dal bordo", "F-007": "tastiera: caratteri e tasti speciali",
-    "F-008": "modificatori e combinazioni", "F-009": "disposizione, accenti, AltGr",
-    "F-010": "scorciatoie del desktop", "F-011": "la tela all'attacco", "F-012": "audio",
-    "F-012B": "audio dopo «Esci» e un rientro subito (client PulseAudio)",
-    "F-013": "video", "F-014": "appunti, browser → sessione",
-    "F-015": "appunti, sessione → browser", "F-016": "stacco",
-    "F-015C": "appunti, sessione → computer, senza gesti recenti",
-    "F-014C": "appunti, copiato fuori dal browser, un solo Ctrl+V",
-    "F-014D": "appunti, lo stesso testo copiato due volte",
-    "F-017": "riattacco alla stessa misura", "F-018": "riattacco a misura diversa",
-    "F-019": "perdita di rete e rientro", "F-020": "browser chiuso di colpo",
-    "F-021": "«Esci» dal menu", "F-022": "orologio del silenzio",
-    "F-023": "orologio d'inattività", "F-024": "orologio d'abbandono",
-    "F-025": "stesso utente da due schede", "F-026": "più utenti insieme",
-    "F-027": "parola sbagliata", "F-028": "ban", "F-029": "voci pericolose assenti",
-    "F-030": "lo schermo non si spegne da solo", "F-031": "tocco (Android)",
-    "F-024b": "abbandono senza nessun gesto",
-    "P-A": "percorso A: stacco e riattacco con input", "P-B": "percorso B: perdita di rete",
-    "P-C": "percorso C: misura diversa e ritorno", "P-D": "percorso D: rete persa col video",
-    "P-E": "percorso E: browser chiuso, nuova connessione",
-    "P-F": "percorso F: applicazione ritrovata",
-    "C7": "tecnico: non resta niente", "C9": "tecnico: il registro dice di chi",
-    "C14": "tecnico: le scatole non si disturbano", "C18": "tecnico: i gruppi della scheda",
-    "C19": "tecnico: la scatola resta pulita",
+    "F-001": "login and session creation", "F-002": "first image",
+    "F-003": "screen update", "F-004": "mouse", "F-005": "pointer shape",
+    "F-006": "resizing from the edge", "F-007": "keyboard: characters and special keys",
+    "F-008": "modifiers and combinations", "F-009": "layout, accents, AltGr",
+    "F-010": "desktop shortcuts", "F-011": "the canvas at attach", "F-012": "audio",
+    "F-012B": "audio after «Exit» and an immediate re-entry (PulseAudio client)",
+    "F-013": "video", "F-014": "clipboard, browser → session",
+    "F-015": "clipboard, session → browser", "F-016": "detach",
+    "F-015C": "clipboard, session → computer, without recent gestures",
+    "F-014C": "clipboard, copied outside the browser, a single Ctrl+V",
+    "F-014D": "clipboard, the same text copied twice",
+    "F-017": "reattach at the same size", "F-018": "reattach at a different size",
+    "F-019": "network loss and re-entry", "F-020": "browser closed abruptly",
+    "F-021": "«Exit» from the menu", "F-022": "silence clock",
+    "F-023": "inactivity clock", "F-024": "abandonment clock",
+    "F-025": "same user from two tabs", "F-026": "several users together",
+    "F-027": "wrong password", "F-028": "ban", "F-029": "dangerous entries absent",
+    "F-030": "the screen does not turn off by itself", "F-031": "touch (Android)",
+    "F-024b": "abandonment without any gesture",
+    "P-A": "path A: detach and reattach with input", "P-B": "path B: network loss",
+    "P-C": "path C: different size and back", "P-D": "path D: network lost with video",
+    "P-E": "path E: browser closed, new connection",
+    "P-F": "path F: application found again",
+    "C7": "technical: nothing remains", "C9": "technical: the log says whose",
+    "C14": "technical: the boxes do not disturb each other", "C18": "technical: the card's groups",
+    "C19": "technical: the box stays clean",
 }
 
 
@@ -73,8 +73,8 @@ def leggi(p):
 
 
 def matrice(righe):
-    """{(funzione, desktop, browser, passata): ultima riga} — l'ordine del file
-    e' l'ordine del tempo (il registro si aggiunge soltanto)."""
+    """{(funzione, desktop, browser, passata): last line} — the order of the file
+    is the order of time (the register is append only)."""
     m = {}
     for r in righe:
         m[(r.get("funzione"), r.get("desktop"), r.get("browser"), r.get("passata", "sana"))] = r
@@ -100,7 +100,7 @@ def testo(righe, difetti, giro):
     for k, r in m.items():
         if k[3] == "sana":
             conto[r["esito"]] = conto.get(r["esito"], 0) + 1
-    out = ["GIRO %s · %s" % (giro, " ".join("%s=%d" % kv for kv in sorted(conto.items())))]
+    out = ["ROUND %s · %s" % (giro, " ".join("%s=%d" % kv for kv in sorted(conto.items())))]
     out.append("%-8s " % "" + " ".join("%-7s" % (d[:3] + "/" + b[:2]) for d, b in col))
     for f in funzioni:
         celle = []
@@ -114,15 +114,15 @@ def testo(righe, difetti, giro):
         out.append("%-8s " % f + " ".join(celle))
     rosse = [r for k, r in m.items() if r["esito"] != "PASS"]
     if rosse:
-        out.append("\nNON VERDI:")
+        out.append("\nNOT GREEN:")
         for r in sorted(rosse, key=lambda r: (ordine(r["funzione"]), r["desktop"], r["browser"])):
             out.append("  %s %s/%s [%s] %s: %s" % (r["funzione"], r["desktop"], r["browser"],
                                                   r.get("passata"), r["esito"],
                                                   (r.get("ragione") or "")[:220]))
     if difetti:
-        out.append("\nDIFETTI:")
+        out.append("\nDEFECTS:")
         for dd in difetti:
-            out.append("  %s [%s, classe %s] %s — %s" % (dd.get("id"), dd.get("stato"),
+            out.append("  %s [%s, class %s] %s — %s" % (dd.get("id"), dd.get("stato"),
                                                         dd.get("classe"), dd.get("titolo", ""),
                                                         ", ".join(dd.get("dove") or [])))
     return "\n".join(out)
@@ -168,20 +168,20 @@ def pagina(righe, difetti, giro):
     visti = sum(1 for r in guasti if r["esito"] == "PASS")
     impronte = sorted({(str(r.get("binario")), str(r.get("pagina")), str(r.get("commit"))) for r in righe
                        if r.get("binario")})
-    h = ["<!doctype html><html lang='it'><head><meta charset='utf-8'>",
+    h = ["<!doctype html><html lang='en'><head><meta charset='utf-8'>",
          "<meta name='viewport' content='width=device-width,initial-scale=1'>",
-         "<title>Suite REMOTIX, giro %s</title><style>%s</style></head><body><main>" % (e(str(giro)), CSS),
-         "<h1>Suite funzionale — giro %s</h1>" % e(str(giro)),
-         "<p class='tenue'>Generato dal registro. Misurato su: %s.</p>" % e("; ".join(
-             "binario %s · pagina %s · commit %s" % x for x in impronte)),
+         "<title>REMOTIX suite, round %s</title><style>%s</style></head><body><main>" % (e(str(giro)), CSS),
+         "<h1>Functional suite — round %s</h1>" % e(str(giro)),
+         "<p class='tenue'>Generated from the register. Measured on: %s.</p>" % e("; ".join(
+             "binary %s · page %s · commit %s" % x for x in impronte)),
          "<div class='conti'>"]
     for k, cls in (("PASS", "PASS"), ("FAIL", "FAIL"), ("BLOCKED", "BLOCKED")):
         h.append("<div class='conto'><span class='%s' style='background:none'>%s</span><b>%d</b></div>"
                  % (cls, k, conto.get(k, 0)))
-    h.append("<div class='conto'>guasti visti<b>%d/%d</b></div>" % (visti, len(guasti)))
-    h.append("<div class='conto'>difetti aperti<b>%d</b></div></div>" % sum(
+    h.append("<div class='conto'>faults seen<b>%d/%d</b></div>" % (visti, len(guasti)))
+    h.append("<div class='conto'>open defects<b>%d</b></div></div>" % sum(
         1 for d in difetti if d.get("stato") not in ("verificato",)))
-    h.append("<h2>La matrice</h2><div class='scorre'><table><thead><tr><th>funzione</th>")
+    h.append("<h2>The matrix</h2><div class='scorre'><table><thead><tr><th>function</th>")
     for d, b in col:
         h.append("<th>%s<br><span class='tenue'>%s</span></th>" % (e(d), e(b)))
     h.append("</tr></thead><tbody>")
@@ -195,15 +195,15 @@ def pagina(righe, difetti, giro):
                 continue
             gs = ""
             if g:
-                gs = "<br><span class='g'>guasto %s</span>" % {"PASS": "visto", "FAIL": "NON visto",
+                gs = "<br><span class='g'>fault %s</span>" % {"PASS": "seen", "FAIL": "NOT seen",
                                                               "BLOCKED": "?"}.get(g["esito"], "?")
             h.append("<td class='c %s' title='%s'>%s%s</td>" % (r["esito"], e(r.get("ragione") or ""),
                                                             r["esito"], gs))
         h.append("</tr>")
     h.append("</tbody></table></div>")
     if difetti:
-        h.append("<h2>I difetti</h2><div class='scorre'><table><thead><tr><th>id</th><th>che cosa si vede</th>"
-                 "<th>dove</th><th>classe</th><th>stato</th><th>cura</th><th>prova</th></tr></thead><tbody>")
+        h.append("<h2>The defects</h2><div class='scorre'><table><thead><tr><th>id</th><th>what is seen</th>"
+                 "<th>where</th><th>class</th><th>state</th><th>cure</th><th>test</th></tr></thead><tbody>")
         for dd in difetti:
             h.append("<tr><th>%s</th><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
                      % tuple(e(str(x or "")) for x in (dd.get("id"), dd.get("titolo"),
@@ -214,14 +214,14 @@ def pagina(righe, difetti, giro):
     rosse = sorted([r for k, r in m.items() if r["esito"] != "PASS"],
                    key=lambda r: (ordine(r["funzione"]), r["desktop"], r["browser"]))
     if rosse:
-        h.append("<h2>Le caselle non verdi</h2>")
+        h.append("<h2>The non-green cells</h2>")
         for r in rosse:
             h.append("<details><summary><b class='%s' style='background:none'>%s</b> %s · %s/%s · %s</summary>"
                      % (r["esito"], r["esito"], e(r["funzione"]), e(r["desktop"]), e(r["browser"]),
                         e(r.get("passata", ""))))
             h.append("<p>%s</p>" % e(r.get("ragione") or ""))
             if r.get("atteso"):
-                h.append("<p class='tenue'>atteso: %s<br>osservato: %s</p>" % (e(r["atteso"]),
+                h.append("<p class='tenue'>expected: %s<br>observed: %s</p>" % (e(r["atteso"]),
                                                                             e(r.get("osservato") or "")))
             for x in r.get("evidenze") or []:
                 h.append("<code>%s</code><br>" % e(x))

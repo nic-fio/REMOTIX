@@ -1,44 +1,44 @@
 #!/bin/bash
-# lancia.sh — un BROWSER VERO contro il server di src/.  Gira SULL'HOST (il
-# browser sta li'), il server gira nel contenitore.
+# lancia.sh — a REAL BROWSER against the server of src/.  It runs ON THE HOST (the
+# browser is there), the server runs in the container.
 set -uo pipefail
 QUI=$(cd -- "$(dirname -- "$0")" && pwd)
 IND=${1:-192.168.0.2}
 PORTA=${2:-7448}
-# ⛔ La porta del raccoglitore e' un PARAMETRO — 11 agosto 2026, sera.  Era
-#    fissa a 8898, e due giri della sonda sulla stessa macchina si prendevano
-#    la porta a vicenda: il secondo moriva con «raccoglitore morto», che ha
-#    esattamente l'aspetto di «la sonda non sa partire».  Sono due cose.
+# ⛔ The collector's port is a PARAMETER — 11 Aug 2026, evening.  It was
+#    fixed at 8898, and two probe rounds on the same machine took the port
+#    from each other: the second died with "collector dead", which looks
+#    exactly like "the probe cannot start".  They are two different things.
 RACC=${3:-8898}
 ok() { printf '    OK  %s\n' "$*"; }
 ko() { printf '    NO  %s\n' "$*"; }
 log(){ printf '\n== %s\n' "$*"; }
 
-command -v firefox >/dev/null || { ko "firefox non c'e'"; exit 2; }
-command -v xvfb-run >/dev/null || { ko "xvfb-run non c'e'"; exit 2; }
+command -v firefox >/dev/null || { ko "firefox is not there"; exit 2; }
+command -v xvfb-run >/dev/null || { ko "xvfb-run is not there"; exit 2; }
 firefox --version
 
-log "L'impronta la si chiede AL SERVER, non la si indovina"
+log "The fingerprint is asked OF THE SERVER, not guessed"
 IMP=$(curl -sk "https://$IND:$PORTA/impronta" | python3 -c 'import json,sys;print(json.load(sys.stdin)["impronta"])')
-[ -n "$IMP" ] || { ko "nessuna impronta da https://$IND:$PORTA/impronta"; exit 2; }
-echo "    impronta: $IMP"
+[ -n "$IMP" ] || { ko "no fingerprint from https://$IND:$PORTA/impronta"; exit 2; }
+echo "    fingerprint: $IMP"
 
 rm -f "$QUI/esiti.jsonl"
 python3 "$QUI/racc.py" $RACC > "$QUI/racc.log" 2>&1 &
 PR=$!
 sleep 1
-[ -d "/proc/$PR" ] || { ko "raccoglitore morto"; cat "$QUI/racc.log"; exit 2; }
-ok "raccoglitore su 127.0.0.1:$RACC"
+[ -d "/proc/$PR" ] || { ko "collector dead"; cat "$QUI/racc.log"; exit 2; }
+ok "collector on 127.0.0.1:$RACC"
 
 # ---------------------------------------------------------------------------
-# ⛔ CHI STA ANCORA USANDO QUESTO PROFILO — letto da `/proc`, PID per PID.
+# ⛔ WHO IS STILL USING THIS PROFILE — read from `/proc`, PID by PID.
 #
-#    ⛔ Non `pkill -f`: quello sceglie da se' chi ammazzare, e prenderebbe il
-#       browser di un altro giro (la regola del progetto: si ferma PER PID).
-#    ⭐ Il criterio e' il percorso del profilo, che esiste solo per questo giro,
-#       e si confronta con l'argomento INTERO (`grep -x`): «/…/prof-ammesso» e
-#       «/…/prof-ammesso-vecchio» sono due cose.
-chi_usa_il_profilo() # $1 = profilo
+#    ⛔ Not `pkill -f`: that one picks by itself whom to kill, and would take
+#       the browser of another round (the project rule: stop BY PID).
+#    ⭐ The criterion is the profile path, which exists only for this round,
+#       and it is compared with the WHOLE argument (`grep -x`): "/…/prof-ammesso"
+#       and "/…/prof-ammesso-vecchio" are two different things.
+chi_usa_il_profilo() # $1 = profile
 {
   local d
   for d in /proc/[0-9]*; do
@@ -49,19 +49,19 @@ chi_usa_il_profilo() # $1 = profilo
   done
 }
 
-# ⛔⭐ E CHE LA CURA DI D12 ABBIA CHIUSO NON SI CREDE: SI GUARDA IN `ps`.
+# ⛔⭐ AND THAT THE D12 CURE HAS CLOSED IS NOT BELIEVED: IT IS CHECKED IN `ps`.
 #
-# `LEZIONI.md` §1.9: «non l'ho trovata» e «non ho guardato» hanno lo stesso
-# aspetto, e la prova qui e' un'**ASSENZA** — che si dimostra solo con accanto
-# un denominatore che dica «lo strumento, in quell'istante, stava guardando».
-# ⇒ Il secondo ago e' il PERCORSO DEL PROFILO, che in `argv` c'e' di sicuro
-#   (`--profile "$prof"`): se sparisse anche quello, lo zero della parola
-#   varrebbe «non ho guardato» e non «non c'era».
+# `LEZIONI.md` §1.9: "I did not find it" and "I did not look" look the same,
+# and the proof here is an **ABSENCE** — which can only be shown with a
+# denominator beside it saying "the tool, at that instant, was looking".
+# ⇒ The second needle is the PROFILE PATH, which is surely in `argv`
+#   (`--profile "$prof"`): if that disappeared too, the password's zero
+#   would mean "I did not look" and not "it was not there".
 #
-# ⛔ E IL GUARDIANO NON DEVE CREARE IL DIFETTO CHE CERCA: `ps` si legge in una
-#    variabile e il confronto lo fa **bash**.  Un `grep "$parola"` metterebbe la
-#    parola nell'`argv` del `grep`, e il guardiano sarebbe la falla.
-guardia_ps() # $1 = ago che NON deve comparire · $2 = ago che DEVE comparire
+# ⛔ AND THE GUARD MUST NOT CREATE THE DEFECT IT LOOKS FOR: `ps` is read into a
+#    variable and the comparison is done by **bash**.  A `grep "$parola"` would
+#    put the password in the `argv` of `grep`, and the guard would be the leak.
+guardia_ps() # $1 = needle that must NOT appear · $2 = needle that MUST appear
 {
   local i righe uno=0 due=0
   for i in $(seq 1 40); do
@@ -73,50 +73,53 @@ guardia_ps() # $1 = ago che NON deve comparire · $2 = ago che DEVE comparire
   printf '%s %s\n' "$uno" "$due" > "$QUI/guardia-ps"
 }
 
-giro() # $1 = etichetta, $2 = parola
+giro() # $1 = label, $2 = password
 {
   local prof="$QUI/prof-$1"
   rm -rf "$prof"; mkdir -p "$prof"
   local U="http://127.0.0.1:$RACC/sonda-rcp.html?base=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=""))' "https://$IND:$PORTA")&impronta=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1],safe=""))' "$IMP")#utente=prova&parola=$2"
-  log "giro «$1»"
-  # ⛔ E QUI L'INDIRIZZO SI STAMPA MASCHERATO — R12-A.34, seconda meta'.
-  #    Spostare la parola nel frammento la toglie dal registro HTTP, ma questa
-  #    riga la scriveva sul terminale, e il terminale di un giro finisce in un
-  #    file come tutto il resto.  ⚠ Una cura a meta' e' peggio di nessuna: fa
-  #    credere che il buco sia chiuso.
-  echo "    ${U%%#*}#utente=prova&parola=<NON SI STAMPA>"
+  log "round «$1»"
+  # ⛔ AND HERE THE ADDRESS IS PRINTED MASKED — R12-A.34, second half.
+  #    Moving the password into the fragment takes it out of the HTTP log, but
+  #    this line wrote it on the terminal, and the terminal of a round ends up
+  #    in a file like everything else.  ⚠ A half cure is worse than none: it
+  #    makes you believe the hole is closed.
+  echo "    ${U%%#*}#utente=prova&parola=<NOT PRINTED>"
 
-  # ⛔⭐ LA TERZA META' DELLA CURA DEL FRAMMENTO — difetto **D12**, 12 agosto
-  #     2026, e qui la forma e' DIVERSA da quella di tutti gli altri banchi.
+  # ⛔⭐ THE THIRD HALF OF THE FRAGMENT CURE — defect **D12**, 12 Aug
+  #     2026, and here the form is DIFFERENT from that of all the other benches.
   #
-  # Negli altri la parola era un `--parola` da togliere.  ⛔ Qui sta **dentro
-  # l'indirizzo**, e l'indirizzo si dava a `firefox` come argomento: finiva
-  # nell'`argv` di `setsid`, in quello di `xvfb-run` e in quello di `firefox`,
-  # cioe' in `/proc/<pid>/cmdline`, che su Linux e' leggibile da chiunque.
+  # In the others the password was a `--parola` to remove.  ⛔ Here it sits
+  # **inside the address**, and the address was given to `firefox` as an
+  # argument: it ended up in the `argv` of `setsid`, in that of `xvfb-run` and
+  # in that of `firefox`, that is in `/proc/<pid>/cmdline`, which on Linux is
+  # readable by anyone.
   #
-  # ⚠ E questa e' la falla che le prime due meta' NON toccavano, ed e' la
-  #   ragione per cui vale la pena scriverlo qui: R12-A.34 ha spostato la parola
-  #   dalla query al frammento — cioe' fuori dai registri HTTP — e l'ha tolta
-  #   dal terminale, e in tutto quel tempo `ps` continuava a stamparla intera.
-  #   ⛔ Tre cure sullo stesso segreto, e la piu' facile da vedere era l'ultima.
+  # ⚠ And this is the leak the first two halves did NOT touch, and it is the
+  #   reason it is worth writing it here: R12-A.34 moved the password from the
+  #   query to the fragment — that is, out of the HTTP logs — and took it off
+  #   the terminal, and all that time `ps` kept printing it whole.
+  #   ⛔ Three cures on the same secret, and the easiest to see was the last.
   #
-  # ⭐ LA CURA, e non poteva essere `--parola-file`: `firefox` non prende
-  #    l'indirizzo da un file.  Lo prende pero' dal **proprio profilo** —
-  #    `browser.startup.homepage` — e il profilo e' una cartella nostra, di
-  #    questo giro, che questa stessa funzione butta e VERIFICA di aver buttato.
-  #    ⇒ L'indirizzo passa da `user.js` (0600, in una cartella 0700) e
-  #    `firefox` si lancia **senza nessun indirizzo fra gli argomenti**.
+  # ⭐ THE CURE, and it could not be `--parola-file`: `firefox` does not take
+  #    the address from a file.  It does take it, though, from **its own
+  #    profile** — `browser.startup.homepage` — and the profile is a folder of
+  #    ours, of this round, which this very function throws away and VERIFIES
+  #    it threw away.
+  #    ⇒ The address goes through `user.js` (0600, in a 0700 folder) and
+  #    `firefox` is launched **with no address among its arguments**.
   #
-  # ⚠ E si dichiara che cosa questa cura NON compra: la parola resta nel
-  #   profilo, esattamente come gia' ci restava dentro `recovery.jsonlz4`.  Il
-  #   conto dei file sporchi qui sotto SALIRA', ed e' giusto che salga — e' la
-  #   verita' che si misurava gia' prima.  Quel che sparisce e' `ps`, che era
-  #   l'unico posto dove a guardare bastava essere sulla macchina.
+  # ⚠ And it is declared what this cure does NOT buy: the password stays in the
+  #   profile, exactly as it already stayed inside `recovery.jsonlz4`.  The
+  #   count of dirty files below WILL RISE, and it is right that it rises —
+  #   it is the truth that was already being measured before.  What disappears
+  #   is `ps`, which was the only place where being on the machine was enough
+  #   to look.
   #
-  # ⛔ Le tre righe in piu' non sono ornamento: su un profilo NUOVO Firefox
-  #    mostrerebbe la pagina di benvenuto invece della propria home, e la sonda
-  #    resterebbe ad aspettare un esito che non arriva mai — che ha lo stesso
-  #    aspetto di «il server non risponde».
+  # ⛔ The three extra lines are not ornament: on a NEW profile Firefox would
+  #    show the welcome page instead of its own home, and the probe would sit
+  #    waiting for an outcome that never arrives — which looks the same as
+  #    "the server does not answer".
   ( umask 077
     {
       printf 'user_pref("browser.startup.homepage", "%s");\n' "$U"
@@ -126,14 +129,14 @@ giro() # $1 = etichetta, $2 = parola
       printf 'user_pref("browser.aboutwelcome.enabled", false);\n'
       printf 'user_pref("datareporting.policy.dataSubmissionEnabled", false);\n'
       printf 'user_pref("datareporting.policy.firstRunURL", "");\n'
-    } > "$prof/user.js" ) || { ko "⛔ non si scrive $prof/user.js"; return 2; }
+    } > "$prof/user.js" ) || { ko "⛔ cannot write $prof/user.js"; return 2; }
   chmod 700 "$prof"; chmod 600 "$prof/user.js"
 
-  # ⚠ `setsid` mette Firefox e il suo Xvfb in un gruppo tutto loro, cosi' il
-  #   TERM qui sotto puo' provare a prenderli in blocco.  ⛔ Ma e' un tentativo,
-  #   non il criterio: il criterio e' `/proc`, e la ragione sta nella corsa
-  #   raccontata piu' sotto.
-  # ⛔ E NIENTE INDIRIZZO FRA GLI ARGOMENTI: e' la cura di D12 (qui sopra).
+  # ⚠ `setsid` puts Firefox and its Xvfb in a group of their own, so the
+  #   TERM below can try to take them all at once.  ⛔ But it is an attempt,
+  #   not the criterion: the criterion is `/proc`, and the reason is in the
+  #   race told further down.
+  # ⛔ AND NO ADDRESS AMONG THE ARGUMENTS: it is the D12 cure (above).
   rm -f "$QUI/guardia-ps"
   guardia_ps "$2" "$prof" &
   local pg=$!
@@ -146,50 +149,50 @@ giro() # $1 = etichetta, $2 = parola
     sleep 1; i=$((i+1))
   done
 
-  # ── ⛔ D12: la misura, con il suo denominatore ─────────────────────────────
+  # ── ⛔ D12: the measurement, with its denominator ───────────────────────────
   wait "$pg" 2>/dev/null
   local vp=0 vf=0
   if [ -r "$QUI/guardia-ps" ]; then
     vp=$(cut -d' ' -f1 "$QUI/guardia-ps"); vf=$(cut -d' ' -f2 "$QUI/guardia-ps")
   fi
-  echo "    -- D12/ps: la PAROLA vista $vp volte · il PROFILO (che in argv c'e')"
-  echo "       visto $vf volte"
+  echo "    -- D12/ps: the PASSWORD seen $vp times · the PROFILE (which is in argv)"
+  echo "       seen $vf times"
   if [ "${vf:-0}" -lt 1 ]; then
-    ko "⚠ non ho visto in «ps» nemmeno il profilo, che in «argv» c'era di"
-    ko "  sicuro: allora lo zero della parola e' «non ho guardato», non «non"
-    ko "  c'era».  ⛔ Non e' un verde, e si dichiara."
+    ko "⚠ I did not see in «ps» even the profile, which was surely in «argv»:"
+    ko "  so the password's zero means «I did not look», not «it was not"
+    ko "  there».  ⛔ It is not a green, and it is declared."
   elif [ "${vp:-1}" -gt 0 ]; then
-    ko "⛔⛔ LA PAROLA E' ANCORA IN «ps» ($vp volte su $vf): D12 NON e' chiuso qui"
+    ko "⛔⛔ THE PASSWORD IS STILL IN «ps» ($vp times out of $vf): D12 is NOT closed here"
   else
-    ok "⭐ D12 chiuso per misura: nello stesso istante «ps» vedeva il profilo"
-    ok "   ($vf volte) e NON vedeva la parola"
+    ok "⭐ D12 closed by measurement: at the same instant «ps» saw the profile"
+    ok "   ($vf times) and did NOT see the password"
   fi
 
-  # ⛔⭐ E QUI C'ERA UNA CORSA, ED E' STATA MISURATA — 11 agosto 2026, 12:50 UTC.
+  # ⛔⭐ AND HERE THERE WAS A RACE, AND IT WAS MEASURED — 11 Aug 2026, 12:50 UTC.
   #
-  #     `kill "$p"` ammazzava **il capo** — `xvfb-run`, che e' uno script di
-  #     shell — e non Firefox, che e' suo figlio.  ⛔ Il profilo veniva
-  #     cancellato mentre Firefox era ancora vivo, e Firefox lo **riscriveva
-  #     subito dopo**: `[M]` profilo cancellato alle 12:49:54,
-  #     `sessionstore-backups/recovery.jsonlz4` ricomparso alle **12:50:10**,
-  #     2223 byte, con dentro la parola d'ordine.
+  #     `kill "$p"` killed **the leader** — `xvfb-run`, which is a shell
+  #     script — and not Firefox, which is its child.  ⛔ The profile was
+  #     deleted while Firefox was still alive, and Firefox **rewrote it right
+  #     after**: `[M]` profile deleted at 12:49:54,
+  #     `sessionstore-backups/recovery.jsonlz4` reappeared at **12:50:10**,
+  #     2223 bytes, with the password inside.
   #
-  # ⚠ Cioe' la cura c'era, il registro diceva «il profilo si butta adesso», e il
-  #   segreto restava sul disco lo stesso.  E' la forma peggiore: una cura che
-  #   **stampa di aver funzionato**.
+  # ⚠ That is, the cure was there, the log said "the profile is thrown away
+  #   now", and the secret stayed on disk all the same.  It is the worst form:
+  #   a cure that **prints that it worked**.
   #
-  # ⛔ E LA PRIMA CURA NON E' BASTATA, ED E' STATA MISURATA ANCHE LEI: si e'
-  #    passati a `setsid` + `kill -- -$p`, cioe' al GRUPPO, e alle 12:51:31 UTC
-  #    `recovery.jsonlz4` e' ricomparso lo stesso (2227 byte, la parola dentro).
-  #    ⛔ Il motivo e' che «il gruppo e' morto» rispondeva **subito** — cioe' il
-  #    controllo era muto — e un controllo muto e' indistinguibile da un
-  #    controllo che passa.
+  # ⛔ AND THE FIRST CURE WAS NOT ENOUGH, AND IT WAS MEASURED TOO: we moved
+  #    to `setsid` + `kill -- -$p`, that is to the GROUP, and at 12:51:31 UTC
+  #    `recovery.jsonlz4` reappeared all the same (2227 bytes, the password
+  #    inside).  ⛔ The reason is that "the group is dead" answered **at once**
+  #    — that is, the check was mute — and a mute check is indistinguishable
+  #    from a check that passes.
   #
-  # ⭐ Da cui il criterio di adesso, che non passa dai gruppi: si guarda in
-  #    `/proc` CHI ha ancora questo profilo fra i suoi argomenti.  Il caso
-  #    contrario ha un aspetto preciso — l'elenco non si svuota, e questa
-  #    funzione esce 3 senza cancellare niente.
-  kill -TERM -- "-$p" 2>/dev/null   # il gruppo: si prova, non ci si fida
+  # ⭐ Hence today's criterion, which does not go through groups: it looks in
+  #    `/proc` for WHO still has this profile among its arguments.  The
+  #    opposite case has a precise look — the list does not empty, and this
+  #    function exits 3 without deleting anything.
+  kill -TERM -- "-$p" 2>/dev/null   # the group: we try, we do not trust it
   wait "$p" 2>/dev/null
   local g=0 vivi
   vivi=$(chi_usa_il_profilo "$prof")
@@ -200,70 +203,70 @@ giro() # $1 = etichetta, $2 = parola
     sleep 0.5; g=$((g+1))
   done
   if [ -n "$vivi" ]; then
-    echo "    -- dopo 30 s col TERM usano ancora il profilo: $(echo $vivi) — KILL"
+    echo "    -- after 30 s of TERM these still use the profile: $(echo $vivi) — KILL"
     kill -KILL $vivi 2>/dev/null
     sleep 1
     vivi=$(chi_usa_il_profilo "$prof")
   fi
   if [ -n "$vivi" ]; then
-    ko "⛔ questi processi hanno ancora il profilo aperto: $(echo $vivi)"
-    ko "   NON cancello: cancellarlo adesso vorrebbe dire farselo riscrivere"
+    ko "⛔ these processes still have the profile open: $(echo $vivi)"
+    ko "   NOT deleting: deleting it now would mean having it rewritten"
     return 3
   fi
-  echo "    -- browser spento, e lo dice /proc: nessun processo ha piu' «$prof»"
-  echo "       fra i suoi argomenti (atteso $(( g / 2 )) s)"
+  echo "    -- browser stopped, and /proc says so: no process has «$prof»"
+  echo "       among its arguments any more (waited $(( g / 2 )) s)"
 
-  # ⛔⭐ LA SECONDA META' DELLA CURA DEL FRAMMENTO — 11 agosto 2026, sera.
+  # ⛔⭐ THE SECOND HALF OF THE FRAGMENT CURE — 11 Aug 2026, evening.
   #
-  #     `sonda-rcp.html` dichiara, nel commento di R12-A.34, che *«il profilo lo
-  #     si butta a fine giro (lancia.sh)»*.  ⛔ Non era vero: `lancia.sh`
-  #     buttava il profilo all'INIZIO del giro, e quello dell'ultimo giro
-  #     restava sul disco — con la parola d'ordine dentro
-  #     `sessionstore-backups/recovery.jsonlz4`, perche' il frammento fa parte
-  #     dell'indirizzo che il browser salva nella sessione.  ⚠ Una cura scritta
-  #     in un commento e non nel codice fa credere che il buco sia chiuso: e'
-  #     peggio di nessuna cura.
+  #     `sonda-rcp.html` declares, in the comment of R12-A.34, that *"the profile
+  #     is thrown away at the end of the round (lancia.sh)"*.  ⛔ It was not
+  #     true: `lancia.sh` threw the profile away at the START of the round, and
+  #     the one of the last round stayed on disk — with the password inside
+  #     `sessionstore-backups/recovery.jsonlz4`, because the fragment is part
+  #     of the address the browser saves in the session.  ⚠ A cure written in
+  #     a comment and not in the code makes you believe the hole is closed: it
+  #     is worse than no cure.
   #
-  # ⭐ E prima di buttarlo si MISURA, invece di buttarlo e basta: cosi' resta
-  #    scritto che cosa c'era dentro — se un giorno il frammento smettesse di
-  #    finire nella sessione salvata, questa riga passerebbe da N a 0 e si
-  #    saprebbe che e' cambiato qualcosa, invece di non saperlo mai.
+  # ⭐ And before throwing it away it is MEASURED, instead of just thrown away:
+  #    so what was inside stays written — if one day the fragment stopped
+  #    ending up in the saved session, this line would go from N to 0 and we
+  #    would know something changed, instead of never knowing.
   local sporchi resta
   sporchi=$(grep -rl --binary-files=text -e "$2" "$prof" 2>/dev/null | wc -l)
-  echo "    -- il profilo di questo giro conteneva la parola in $sporchi file"
-  echo "       (il frammento resta nella sessione salvata del browser: e' il"
-  echo "        limite dichiarato della cura).  Il profilo si butta adesso."
+  echo "    -- this round's profile held the password in $sporchi files"
+  echo "       (the fragment stays in the browser's saved session: it is the"
+  echo "        declared limit of the cure).  The profile is thrown away now."
   rm -rf "$prof"
-  # ⛔ E la cancellazione si VERIFICA — DUE VOLTE, a distanza.  «Non c'e' piu'»
-  #    guardato nell'istante stesso in cui si cancella e' proprio quel che
-  #    nascondeva la corsa: la prima volta il controllo passava, e sei secondi
-  #    dopo il file era tornato.  ⭐ Il secondo sguardo, cinque secondi dopo, e'
-  #    la differenza fra «l'ho cancellato» e «e' rimasto cancellato».
+  # ⛔ And the deletion is VERIFIED — TWICE, some time apart.  "It is gone"
+  #    looked at in the very instant of deleting is exactly what hid the
+  #    race: the first time the check passed, and six seconds later the file
+  #    was back.  ⭐ The second look, five seconds later, is the difference
+  #    between "I deleted it" and "it stayed deleted".
   sleep 5
   if [ -e "$prof" ]; then
     resta=$(find "$prof" -type f 2>/dev/null | wc -l)
-    ko "⛔ il profilo $prof e' TORNATO ($resta file) 5 s dopo la cancellazione:"
-    ko "   qualcuno lo sta ancora scrivendo, e la cura non ha tenuto"
+    ko "⛔ the profile $prof CAME BACK ($resta files) 5 s after the deletion:"
+    ko "   someone is still writing it, and the cure did not hold"
     grep -rl --binary-files=text -e "$2" "$prof" 2>/dev/null | sed 's/^/        /'
   else
-    ok "profilo buttato, e cinque secondi dopo il disco lo conferma ancora"
+    ok "profile thrown away, and five seconds later the disk still confirms it"
   fi
 
   if [ ! -s "$QUI/esiti.jsonl" ]; then
-    ko "nessun esito in $i secondi"
-    echo "    -- richieste ricevute dal raccoglitore: $(grep -c '^richiesta: ' "$QUI/racc.log")"
+    ko "no outcome in $i seconds"
+    echo "    -- requests received by the collector: $(grep -c '^request: ' "$QUI/racc.log")"
     tail -6 "$QUI/racc.log" | sed 's/^/        /'
     tail -8 "$QUI/ff-$1.log" | sed 's/^/        /'
     return 1
   fi
-  ok "esito ricevuto dopo $i secondi"
+  ok "outcome received after $i seconds"
   cat "$QUI/esiti.jsonl" | python3 -c '
 import json,sys
 for r in sys.stdin:
     d=json.loads(r)
-    print("        esito :", d.get("esito"))
-    print("        motore:", (d.get("motore") or "")[:90])
-    print("        detta :", d.get("dettaglio"))
+    print("        outcome:", d.get("esito"))
+    print("        engine :", (d.get("motore") or "")[:90])
+    print("        detail :", d.get("dettaglio"))
     for x in (d.get("righe") or []): print("          .", x)
 '
   return 0
@@ -274,4 +277,4 @@ rm -f "$QUI/esiti.jsonl"
 giro respinto parola-SBAGLIATA; E2=$?
 
 kill "$PR" 2>/dev/null
-log "esiti: ammesso=$E1 respinto=$E2"
+log "outcomes: ammesso=$E1 respinto=$E2"

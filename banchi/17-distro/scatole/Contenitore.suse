@@ -1,12 +1,12 @@
-# Contenitore.suse — fase 17: la scatola «cliente» di openSUSE (BASE=tumbleweed o leap:16.0) col
-# desktop DESKTOP, dal pattern ufficiale di zypper (gnome, kde, xfce, lxqt: gli stessi di 17-vm.sh
-# vesti). NIENTE Packman: l'H.264 della scheda AMD è dell'amministratore. Generalizza
-# Contenitore.leap16-kde (1 ott 2026). Il resto come Contenitore.debian13.
+# Contenitore.suse — phase 17: the "customer" box of openSUSE (BASE=tumbleweed or leap:16.0) with the
+# desktop DESKTOP, from the official zypper pattern (gnome, kde, xfce, lxqt: the same as 17-vm.sh
+# vesti). NO Packman: the AMD GPU's H.264 is the administrator's. Generalises
+# Contenitore.leap16-kde (1 Oct 2026). The rest as in Contenitore.debian13.
 ARG BASE=tumbleweed
 FROM registry.opensuse.org/opensuse/${BASE}
 ARG DESKTOP
 ARG PORTA_SSH=8600
-RUN case "$DESKTOP" in gnome|kde|xfce|lxqt) ;; *) echo "DESKTOP=«$DESKTOP»: gnome|kde|xfce|lxqt" >&2; exit 2 ;; esac
+RUN case "$DESKTOP" in gnome|kde|xfce|lxqt) ;; *) echo "DESKTOP=\"$DESKTOP\": gnome|kde|xfce|lxqt" >&2; exit 2 ;; esac
 RUN zypper -n --gpg-auto-import-keys refresh \
     && zypper -n install systemd dbus-1 sudo procps iproute2 ca-certificates curl openssh-server shadow \
     && zypper -n clean -a

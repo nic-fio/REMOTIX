@@ -1,19 +1,19 @@
 #!/bin/bash
-# 19-nvidia.sh — il banco della macchina NVIDIA a noleggio, guidato DAL PORTATILE.
+# 19-nvidia.sh — the bench of the rented NVIDIA machine, driven FROM THE LAPTOP.
 #
-#   bash banchi/19-nvidia/19-nvidia.sh prepara           # PRIMA del noleggio: la valigia
-#   bash banchi/19-nvidia/19-nvidia.sh tutto IP          # manda, avvia, segue (riavvio compreso), raccoglie
-#   bash banchi/19-nvidia/19-nvidia.sh pulisci IP        # DOPO aver raccolto: la macchina come trovata
+#   bash banchi/19-nvidia/19-nvidia.sh prepara           # BEFORE the rental: the suitcase
+#   bash banchi/19-nvidia/19-nvidia.sh tutto IP          # sends, starts, follows (reboot included), collects
+#   bash banchi/19-nvidia/19-nvidia.sh pulisci IP        # AFTER collecting: the machine as found
 #
-#   e a pezzi:  manda IP · avvia IP [PASSO] · segui IP · stato IP · raccogli IP · entra IP
+#   and piece by piece:  manda IP · avvia IP [STEP] · segui IP · stato IP · raccogli IP · entra IP
 #
-# Variabili: UTENTE (root; un utente con «sudo» senza parola va bene: ubuntu, debian, admin),
-# PORTA_SSH (22), CHIAVE (un file di chiave ssh), CONTENITORE=nome (la prova LOCALE: podman exec
-# al posto di ssh, per i passi che non toccano la scheda — vedi 19-nv-prova-contenitore.sh).
+# Variables: UTENTE (root; a user with passwordless "sudo" is fine: ubuntu, debian, admin),
+# PORTA_SSH (22), CHIAVE (an ssh key file), CONTENITORE=name (the LOCAL test: podman exec
+# instead of ssh, for the steps that do not touch the GPU — see 19-nv-prova-contenitore.sh).
 #
-# La valigia (`prepara`) sta in costruzione-uscita/19-nvidia/ (ignorata da git): i .deb di
-# REMOTIX per Debian 13 e Ubuntu 26.04 costruiti da QUESTO albero (si lancia da un checkout di
-# `fase-19`), l'installatore, e i banchi che servono sulla macchina.  Le evidenze tornano in
+# The suitcase (`prepara`) lives in costruzione-uscita/19-nvidia/ (ignored by git): the REMOTIX .debs
+# for Debian 13 and Ubuntu 26.04 built from THIS tree (run it from a checkout of
+# `fase-19`), the installer, and the benches needed on the machine.  The evidence comes back to
 # misure/19-nvidia/.
 set -u
 QUI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -30,11 +30,11 @@ ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 log() { printf '\n\033[1m== %s · %s\033[0m\n' "$(date +%H:%M:%S)" "$*"; }
 
-# ── la strada verso la macchina: ssh, o podman exec per la prova locale ────────────────────
+# ── the road to the machine: ssh, or podman exec for the local test ──────────────────────────
 PRE=""
 [ "$UTENTE" != root ] && PRE="sudo -n"
-lontano() {  # lontano 'comando' — gira da root sulla macchina (il comando viaggia sullo stdin:
-	#             niente virgolette da sfuggire, qualunque sia la shell di chi entra)
+lontano() {  # lontano 'command' — runs as root on the machine (the command travels on stdin:
+	#             no quotes to escape, whatever the login shell is)
 	if [ -n "${CONTENITORE:-}" ]; then
 		printf '%s\n' "$1" | podman exec -i "$CONTENITORE" bash -s
 	else
@@ -45,46 +45,46 @@ lontano() {  # lontano 'comando' — gira da root sulla macchina (il comando via
 
 serve_ip() {
 	IP=${1:-}
-	[ -n "$IP" ] || [ -n "${CONTENITORE:-}" ] || { echo "serve l'indirizzo della macchina"; exit 2; }
+	[ -n "$IP" ] || [ -n "${CONTENITORE:-}" ] || { echo "the machine's address is required"; exit 2; }
 	IP=${IP:-contenitore}
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
 prepara() {
-	log "prepara: la valigia (prima del noleggio, sul portatile)"
-	command -v podman >/dev/null || { ko "serve podman"; exit 2; }
+	log "prepara: the suitcase (before the rental, on the laptop)"
+	command -v podman >/dev/null || { ko "podman is required"; exit 2; }
 	local ramo hash sporco=""
 	ramo=$(git -C "$ALBERO" rev-parse --abbrev-ref HEAD)
 	hash=$(git -C "$ALBERO" rev-parse --short HEAD)
 	[ -n "$(git -C "$ALBERO" status --porcelain -- src packaging installatore banchi)" ] && sporco="+modifiche"
-	[ "$ramo" = fase-19 ] || echo "    ⚠ il ramo e' «$ramo», non fase-19: la valigia porta $hash$sporco, e lo dice"
+	[ "$ramo" = fase-19 ] || echo "    ⚠ the branch is \"$ramo\", not fase-19: the suitcase carries $hash$sporco, and says so"
 	rm -rf "$VAL/valigia"
 	mkdir -p "$VAL/valigia/pacchetti" "$VAL/valigia/bin" "$VAL/valigia/albero"
-	log "i .deb di REMOTIX (src/costruzione/costruisci-deb.sh debian13 ubuntu2604)"
+	log "the REMOTIX .debs (src/costruzione/costruisci-deb.sh debian13 ubuntu2604)"
 	if ! USCITA=$USCITA bash "$ALBERO/src/costruzione/costruisci-deb.sh" debian13 ubuntu2604 > "$VAL/costruisci-deb.log" 2>&1; then
-		ko "costruisci-deb.sh non riuscito ($VAL/costruisci-deb.log)"; tail -n 5 "$VAL/costruisci-deb.log"; exit 1
+		ko "costruisci-deb.sh failed ($VAL/costruisci-deb.log)"; tail -n 5 "$VAL/costruisci-deb.log"; exit 1
 	fi
 	cp "$USCITA"/deb-debian13/remotix_*.deb "$USCITA"/deb-ubuntu2604/remotix_*.deb "$VAL/valigia/pacchetti/" \
-		|| { ko "i .deb non ci sono"; exit 1; }
+		|| { ko "the .debs are missing"; exit 1; }
 	grep -h . "$USCITA"/deb-*/controlli.txt 2>/dev/null | sed 's/^/      /'
 	ok "$(ls "$VAL/valigia/pacchetti" | tr '\n' ' ')"
-	log "l'installatore (installatore/costruisci.sh)"
+	log "the installer (installatore/costruisci.sh)"
 	bash "$ALBERO/installatore/costruisci.sh" > "$VAL/costruisci-installatore.log" 2>&1 \
-		|| { ko "installatore non costruito ($VAL/costruisci-installatore.log)"; exit 1; }
+		|| { ko "installer not built ($VAL/costruisci-installatore.log)"; exit 1; }
 	cp "$ALBERO/installatore/uscita/remotix-install" "$VAL/valigia/bin/"
 	ok "remotix-install $("$VAL/valigia/bin/remotix-install" version 2>/dev/null)"
-	log "i banchi (come 15-porta.sh) e i sorgenti per il banco 19"
+	log "the benches (like 15-porta.sh) and the sources for bench 19"
 	albero_in_valigia
 	{
 		echo "$hash$sporco ($ramo) · $(git -C "$ALBERO" log -1 --format='%cd %s' --date=short HEAD | cut -c1-120)"
-		echo "preparata: $(date -Is) su $(hostname)"
+		echo "prepared: $(date -Is) on $(hostname)"
 		(cd "$VAL/valigia" && sha256sum pacchetti/*.deb bin/remotix-install)
 	} > "$VAL/valigia/VERSIONE"
 	tar -C "$VAL/valigia" -czf "$VAL/valigia.tgz" .
-	ok "valigia: $VAL/valigia.tgz ($(du -h "$VAL/valigia.tgz" | cut -f1)) · $(head -1 "$VAL/valigia/VERSIONE")"
+	ok "suitcase: $VAL/valigia.tgz ($(du -h "$VAL/valigia.tgz" | cut -f1)) · $(head -1 "$VAL/valigia/VERSIONE")"
 }
 
-# i banchi e i sorgenti dell'albero di ADESSO dentro la valigia (non i pacchetti)
+# the benches and sources of the CURRENT tree into the suitcase (not the packages)
 albero_in_valigia() {
 	rm -rf "$VAL/valigia/albero"
 	mkdir -p "$VAL/valigia/albero"
@@ -100,16 +100,16 @@ albero_in_valigia() {
 }
 
 manda() {
-	log "manda la valigia a $IP"
-	[ -f "$VAL/valigia.tgz" ] || { ko "manca la valigia: prima «$0 prepara»"; exit 1; }
-	# ⛔ 5 ott 2026: PROVE e BROWSER_SUITE aggiunti al banco DOPO la valigia non arrivavano —
-	#    `manda` spediva i banchi di quando la valigia era stata fatta, e la macchina girava la
-	#    suite intera. ⇒ I banchi (non i pacchetti) si rinfrescano dall'albero a ogni `manda`,
-	#    e la VERSIONE lo dice
+	log "sending the suitcase to $IP"
+	[ -f "$VAL/valigia.tgz" ] || { ko "the suitcase is missing: first \"$0 prepara\""; exit 1; }
+	# ⛔ 5 Oct 2026: PROVE and BROWSER_SUITE added to the bench AFTER the suitcase did not arrive —
+	#    `manda` shipped the benches from when the suitcase had been made, and the machine ran the
+	#    whole suite. ⇒ The benches (not the packages) are refreshed from the tree at every `manda`,
+	#    and the VERSIONE says so
 	if [ -d "$VAL/valigia/pacchetti" ]; then
 		albero_in_valigia
-		sed -i '/^banchi rinfrescati:/d' "$VAL/valigia/VERSIONE"
-		echo "banchi rinfrescati: $(date -Is) da $(git -C "$ALBERO" rev-parse --short HEAD)$( \
+		sed -i '/^benches refreshed:/d' "$VAL/valigia/VERSIONE"
+		echo "benches refreshed: $(date -Is) from $(git -C "$ALBERO" rev-parse --short HEAD)$( \
 			[ -n "$(git -C "$ALBERO" status --porcelain -- banchi)" ] && echo +modifiche)" >> "$VAL/valigia/VERSIONE"
 		tar -C "$VAL/valigia" -czf "$VAL/valigia.tgz" .
 	fi
@@ -125,20 +125,20 @@ manda() {
 
 avvia() {
 	local p=${1:-tutto}
-	log "avvia «$p» sulla macchina (un'unita' di systemd: ssh puo' cadere)"
-	if lontano "systemctl is-active --quiet $UNITA"; then ko "il banco gira gia' ($UNITA)"; return 1; fi
+	log "starting \"$p\" on the machine (a systemd unit: ssh may drop)"
+	if lontano "systemctl is-active --quiet $UNITA"; then ko "the bench is already running ($UNITA)"; return 1; fi
 	lontano "mkdir -p $LAVORO && rm -f $LAVORO/uscita && echo '=== avvio $p $(date -Is)' >> $LAVORO/banco.log && \
 		systemctl reset-failed $UNITA 2>/dev/null; \
 		systemd-run --unit=$UNITA --collect --property=StandardOutput=append:$LAVORO/banco.log \
 		--property=StandardError=append:$LAVORO/banco.log --setenv=FORZA=${FORZA:-0} --setenv=RIFAI='${RIFAI:-}' \
 		--setenv=PROVE='${PROVE:-}' --setenv=BROWSER_SUITE='${BROWSER_SUITE:-}' --setenv=CLIENTE_SCHEDA='${CLIENTE_SCHEDA:-0}' --setenv=DESKTOP_NV='${DESKTOP_NV:-xfce}' \
 		/bin/bash $LONTANO/albero/banchi/19-nvidia/19-nv-macchina.sh $p" \
-		&& ok "partito"
+		&& ok "started"
 }
 
-# segue il registro finche' il banco non scrive la sua uscita; torna quell'uscita
+# follows the log until the bench writes its exit code; returns that exit code
 segui() {
-	log "seguo il banco (Ctrl-C non lo ferma: rilancia «segui»)"
+	log "following the bench (Ctrl-C does not stop it: run \"segui\" again)"
 	local da=0 righe u
 	da=$(lontano "wc -l < $LAVORO/banco.log" 2>/dev/null || echo 0)
 	da=$(( ${da:-0} > 40 ? da - 40 : 0 ))
@@ -150,10 +150,10 @@ segui() {
 		fi
 		if ! lontano "systemctl is-active --quiet $UNITA" 2>/dev/null; then
 			u=$(lontano "cat $LAVORO/uscita 2>/dev/null")
-			[ -n "$u" ] && { log "il banco ha finito: uscita $u"; return "$u"; }
-			# ssh caduto o macchina che riparte: si riprova
+			[ -n "$u" ] && { log "the bench has finished: exit $u"; return "$u"; }
+			# ssh dropped or machine rebooting: retry
 			lontano true 2>/dev/null || { sleep 20; continue; }
-			log "il banco non gira e non ha scritto l'uscita (fermato a mano?)"; return 3
+			log "the bench is not running and has not written its exit code (stopped by hand?)"; return 3
 		fi
 		sleep 20
 	done
@@ -163,33 +163,33 @@ aspetta_ssh() {
 	local i
 	for i in $(seq 1 60); do
 		sleep 15
-		lontano true >/dev/null 2>&1 && { ok "la macchina risponde"; return 0; }
+		lontano true >/dev/null 2>&1 && { ok "the machine answers"; return 0; }
 	done
-	ko "dopo 15 minuti la macchina non risponde"; return 1
+	ko "after 15 minutes the machine does not answer"; return 1
 }
 
 raccogli() {
-	log "raccolgo l'archivio delle evidenze"
+	log "collecting the evidence archive"
 	lontano "bash $LONTANO/albero/banchi/19-nvidia/19-nv-macchina.sh raccogli" | tail -n 3
 	local nome sha
 	nome=$(lontano "cat $LAVORO/archivio")
 	sha=$(lontano "cat $LAVORO/archivio.sha256")
-	[ -n "$nome" ] || { ko "nessun archivio"; return 1; }
+	[ -n "$nome" ] || { ko "no archive"; return 1; }
 	mkdir -p "$MISURE"
 	lontano "cat $LAVORO/$nome" > "$MISURE/$nome"
 	if [ "$(sha256sum "$MISURE/$nome" | cut -d' ' -f1)" = "$sha" ]; then
 		lontano "touch $LAVORO/raccolto"
-		ok "$MISURE/$nome (sha256 uguale)"
+		ok "$MISURE/$nome (sha256 equal)"
 		tar -xzf "$MISURE/$nome" -O evidenze/passi.txt 2>/dev/null | sed 's/^/      /'
 	else
-		ko "sha256 diverso: rifai «raccogli»"; return 1
+		ko "sha256 differs: run \"raccogli\" again"; return 1
 	fi
 }
 
 pulisci() {
-	log "pulisco la macchina"
+	log "cleaning the machine"
 	lontano "FORZA=${FORZA:-0} bash $LONTANO/albero/banchi/19-nvidia/19-nv-macchina.sh pulisci" || return 1
-	lontano "rm -rf $LONTANO $LAVORO" && ok "valigia e cartella di lavoro tolte"
+	lontano "rm -rf $LONTANO $LAVORO" && ok "suitcase and work folder removed"
 	lontano "cat /run/reboot-required 2>/dev/null; true"
 }
 
@@ -197,18 +197,18 @@ tutto() {
 	manda
 	avvia tutto || exit 1
 	segui; local u=$? n=0
-	# piu' di un riavvio (5 ott 2026): l'aggiornamento di Ubuntu ne chiede uno per salto, il driver uno
+	# more than one reboot (5 Oct 2026): the Ubuntu upgrade asks for one per hop, the driver one
 	while [ "$u" = 10 ] && [ $n -lt 10 ]; do
 		n=$((n + 1))
-		log "il banco chiede un RIAVVIO ($n; aggiornamento/driver/ICD/modeset): riavvio e riprendo"
-		[ -n "${CONTENITORE:-}" ] && { ko "in un contenitore non si riavvia"; exit 1; }
+		log "the bench asks for a REBOOT ($n; upgrade/driver/ICD/modeset): rebooting and resuming"
+		[ -n "${CONTENITORE:-}" ] && { ko "a container cannot be rebooted"; exit 1; }
 		lontano "systemctl reboot" || true
 		aspetta_ssh || exit 1
 		avvia tutto || exit 1
 		segui; u=$?
 	done
 	raccogli
-	log "FINE: uscita $u · le evidenze in $MISURE · la pulizia: «$0 pulisci $IP»"
+	log "END: exit $u · the evidence in $MISURE · the cleanup: \"$0 pulisci $IP\""
 	return "$u"
 }
 

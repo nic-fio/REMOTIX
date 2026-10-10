@@ -1,45 +1,45 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-f024b — F-024b: UNA SESSIONE APERTA E MAI TOCCATA SCADE PER ABBANDONO (§5.3)
+15-f024b — F-024b: A SESSION OPENED AND NEVER TOUCHED EXPIRES BY ABANDONMENT (§5.3)
 
     python3 15-f024b-sessione-mai-toccata.py --scatola kde --browser firefox --guasto --porta 8612
 
-⭐ SORVEGLIA IL DIFETTO D-004.  L'orologio dell'abbandono (`--abbandono-s`,
-   predefinito 3600) si nutriva SOLO dei cinque gesti d'input: `main.c`
-   `input_al_figlio` → `presenza_segna`.  Una sessione in cui nessuno ha mai
-   mosso il mouse ne' premuto un tasto non entrava nella tabella della presenza,
-   e ⛔ non scadeva mai — contro `SPECIFICHE.md` §5.3, «60 minuti senza input ⇒
-   la sessione si chiude».  F-024 (in `15-f022-orologi.py`) non lo vede: fa un
-   clic per sbloccare l'audio, e il clic mette l'utente in tabella.
-   La cura (bonifica D-004): l'orologio parte alla NASCITA del palco.
+⭐ IT WATCHES DEFECT D-004.  The abandonment clock (`--abbandono-s`,
+   default 3600) fed ONLY on the five input gestures: `main.c`
+   `input_al_figlio` → `presenza_segna`.  A session in which nobody ever
+   moved the mouse or pressed a key did not enter the presence table,
+   and ⛔ never expired — against `SPECIFICHE.md` §5.3, «60 minutes without input ⇒
+   the session closes».  F-024 (in `15-f022-orologi.py`) does not see it: it makes a
+   click to unblock the audio, and the click puts the user in the table.
+   The cure (clean-up D-004): the clock starts at the stage's BIRTH.
 
-⛔ SERVER SUO (`15-g7-server.sh`, porte 8611-8614), come F-022/23/24: l'orologio
-   si accorcia dalla riga di comando.  Alla fine il server resta coi PREDEFINITI.
+⛔ A SERVER OF ITS OWN (`15-g7-server.sh`, ports 8611-8614), like F-022/23/24: the clock
+   is shortened from the command line.  At the end the server stays with the DEFAULTS.
 
-F-024b (server con `--abbandono-s 60`, inattivita' predefinita) si entra col
-       browser vero e NON SI FA NIENTE: nessun clic, nessun tasto, nessuna
-       scena lanciata ⇒ atteso: entro ABBANDONO_S + MARGINE_S dall'accesso la
-       riga «§5.3 — ABBANDONO» dell'inquilino, e poi la sessione SPARISCE: il
-       compositore (gnome-shell / kwin_wayland / labwc) non c'e' piu', e dei
-       processi dell'inquilino restano solo gli esenti della regola di F-021
-       (il figlio `remotix` e il gestore d'utente di systemd coi suoi servizi).
-       GUASTO: l'orologio LUNGO (il predefinito, 3600 s), stessa sequenza ⇒
-       nessun ABBANDONO nella stessa finestra e la sessione viva ⇒ il giudice
-       deve dire rosso.
+F-024b (server with `--abbandono-s 60`, default inactivity) you log in with the
+       real browser and DO NOTHING: no click, no key, no
+       scene launched ⇒ expected: within ABBANDONO_S + MARGINE_S of the login the
+       tenant's «§5.3 — ABANDONMENT» line, and then the session DISAPPEARS: the
+       compositor (gnome-shell / kwin_wayland / labwc) is no longer there, and of the
+       tenant's processes only the exempt ones of F-021's rule remain
+       (the `remotix` child and systemd's user manager with its services).
+       FAULT: the LONG clock (the default, 3600 s), same sequence ⇒
+       no ABANDONMENT in the same window and the session alive ⇒ the judge
+       must say red.
 
-⛔⛔ «NESSUN GESTO» SI VERIFICA, non si presume.  Il banco non ne fa: l'accesso
-     (`Prova.entra`) compila e manda il modulo da JavaScript, il primo
-     fotogramma si giudica con fotografie (`fotografa_tela`), e le foto non
-     passano dal puntatore.  ⚠ Ma un browser puo' generare da se' eventi di
-     puntatore (un `mousemove` sintetico dopo un cambio di impaginazione, col
-     puntatore di labwc fermo sopra la finestra), e la pagina li girerebbe al
-     server come `PUNTATORE` — cioe' come un gesto, che rinnova l'orologio.
-     ⇒ Si CONTANO le righe `input id=` dell'inquilino nel registro del server
-       (`rcp.c`, una per ogni messaggio dei cinque tipi del canale di input,
-       lo stesso insieme che nutre `presenza_segna`).  Se ce n'e' anche UNA la
-       premessa e' caduta e l'esito e' BLOCKED con la riga — non un FAIL del
-       prodotto e non un PASS.
+⛔⛔ «NO GESTURE» IS VERIFIED, not presumed.  The bench makes none: the login
+     (`Prova.entra`) fills in and sends the form from JavaScript, the first
+     frame is judged with photos (`fotografa_tela`), and the photos do not
+     go through the pointer.  ⚠ But a browser can generate pointer events
+     by itself (a synthetic `mousemove` after a layout change, with
+     labwc's pointer still over the window), and the page would forward them to the
+     server as `PUNTATORE` — that is as a gesture, which renews the clock.
+     ⇒ The tenant's `input id=` lines in the server log are COUNTED
+       (`rcp.c`, one for every message of the five types of the input channel,
+       the same set that feeds `presenza_segna`).  If there is even ONE the
+       premise has fallen and the outcome is BLOCKED with the line — not a FAIL of the
+       product and not a PASS.
 """
 import importlib.util as _iu
 import os
@@ -61,24 +61,24 @@ FUNZIONI = ("F-024b",)
 SERVER = "15-g7-server.sh"
 PER_BROWSER = False
 ABBANDONO_S = 60
-MARGINE_S = 30          # il giro dell'orologio + la nascita del palco prima dell'accesso
-CHIUSURA_S = 40         # la chiusura della sessione grafica non e' istantanea
-FORMA_ABBANDONO = "§5.3 — ABBANDONO"
+MARGINE_S = 30          # the clock's turn + the stage's birth before the login
+CHIUSURA_S = 40         # the closing of the graphical session is not instantaneous
+FORMA_ABBANDONO = "§5.3 — ABANDONMENT"
 FORMA_GESTO = "input id="
-# ⭐ Il CUORE della sessione: il compositore.  ⚠ Non basta la regola di F-021
-#   da sola: su GNOME la Shell e' un servizio del gestore d'utente
-#   (`org.gnome.Shell@wayland.service`), cioe' ESENTE per quella regola ⇒ la
-#   sessione viva avrebbe zero processi non esenti, e «chiusa» sarebbe vera per
-#   forza.  Il compositore c'e' su tutti e quattro (lo stesso elenco di F-016).
+# ⭐ The HEART of the session: the compositor.  ⚠ F-021's rule alone is not
+#   enough: on GNOME the Shell is a service of the user manager
+#   (`org.gnome.Shell@wayland.service`), that is EXEMPT for that rule ⇒ the
+#   live session would have zero non-exempt processes, and «closed» would be true
+#   by force.  The compositor is there on all four (the same list as F-016).
 CUORI = ("gnome-shell", "kwin_wayland", "labwc")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  I GIUDICI (puri: li prova --certifica)
+#  THE JUDGES (pure: --certifica tests them)
 # ═══════════════════════════════════════════════════════════════════════════
 def righe_di(righe, chi):
-    """Le righe che nominano l'inquilino.  ⛔ Il nome si cerca intero: un
-    inquilino c15024u11 non deve prendere le righe di c15024u111."""
+    """The lines naming the tenant.  ⛔ The name is looked for whole: a
+    tenant c15024u11 must not take the lines of c15024u111."""
     fuori = []
     for r in righe:
         i = r.find(chi)
@@ -102,42 +102,42 @@ def gesti(righe, chi):
 
 
 def cuore(ps):
-    """«nome pid» dei compositori fra i processi {pid: nome}; None se illeggibili."""
+    """«name pid» of the compositors among the processes {pid: name}; None if unreadable."""
     if ps is None:
         return None
     return ["%s %d" % (n, p) for p, n in sorted(ps.items()) if n in CUORI]
 
 
 def giudica(d):
-    """(esito, ragione) dai campi misurati:
-         nati      il compositore dell'inquilino DOPO il primo fotogramma
-                   («nome pid», lista; vuota = la sessione non si e' vista nascere)
-         gesti     le righe `input id=` dell'inquilino (lista)
-         abbandono la riga ABBANDONO, o None
-         cuore     il compositore alla fine (lista, o None = illeggibile)
-         rimasti   i processi non esenti alla fine (lista, o None = illeggibili)
-    ⛔ L'ordine conta: prima la premessa (sessione nata, nessun gesto), poi i
-       fatti del prodotto."""
+    """(outcome, reason) from the measured fields:
+         nati      the tenant's compositor AFTER the first frame
+                   («name pid», list; empty = the session was not seen being born)
+         gesti     the tenant's `input id=` lines (list)
+         abbandono the ABANDONMENT line, or None
+         cuore     the compositor at the end (list, or None = unreadable)
+         rimasti   the non-exempt processes at the end (list, or None = unreadable)
+    ⛔ The order matters: first the premise (session born, no gesture), then the
+       product's facts."""
     if not d.get("nati"):
-        return S.BLOCKED, ("la sessione non si e' vista nascere (nessun compositore %s "
-                           "dell'inquilino dopo il primo fotogramma): non c'e' niente che "
-                           "possa scadere" % "/".join(CUORI))
+        return S.BLOCKED, ("the session was not seen being born (no %s compositor "
+                           "of the tenant after the first frame): there is nothing that "
+                           "can expire" % "/".join(CUORI))
     if d.get("gesti"):
-        return S.BLOCKED, ("la premessa e' caduta: al server sono arrivati %d gesti che il "
-                           "banco non ha fatto (il primo: %s) — rinnovano l'orologio"
+        return S.BLOCKED, ("the premise has fallen: %d gestures that the bench did not make "
+                           "reached the server (the first: %s) — they renew the clock"
                            % (len(d["gesti"]), d["gesti"][0][:160]))
     if d.get("rimasti") is None or d.get("cuore") is None:
-        return S.BLOCKED, "non ho potuto leggere i processi dell'inquilino"
+        return S.BLOCKED, "I could not read the tenant's processes"
     if not d.get("abbandono"):
-        return S.FAIL, ("nessun ABBANDONO entro %d s da un accesso senza nessun gesto "
-                        "(compositore alla fine: %s)"
-                        % (ABBANDONO_S + MARGINE_S, ", ".join(d["cuore"]) or "sparito"))
+        return S.FAIL, ("no ABANDONMENT within %d s of a login without any gesture "
+                        "(compositor at the end: %s)"
+                        % (ABBANDONO_S + MARGINE_S, ", ".join(d["cuore"]) or "gone"))
     if d["cuore"] or d["rimasti"]:
-        return S.FAIL, ("ABBANDONO scritto, ma la sessione non si e' chiusa: compositore "
-                        "%s · non esenti %s" % (", ".join(d["cuore"]) or "sparito",
-                                                ", ".join(d["rimasti"])[:180] or "nessuno"))
-    return S.PASS, ("abbandono senza nessun gesto: compositore sparito, nessun processo "
-                    "non esente rimasto")
+        return S.FAIL, ("ABANDONMENT written, but the session did not close: compositor "
+                        "%s · non-exempt %s" % (", ".join(d["cuore"]) or "gone",
+                                                ", ".join(d["rimasti"])[:180] or "none"))
+    return S.PASS, ("abandonment without any gesture: compositor gone, no non-exempt "
+                    "process left")
 
 
 def certifica():
@@ -150,45 +150,45 @@ def certifica():
             ok = False
 
     chi = "c15024u111"
-    ab = "21:00 avvio ⭐ §5.3 — ABBANDONO: «%s» non tocca niente da 61000 ms (tetto 60000)"
-    gesto = "21:00 rcp [%s] input id=3 (era 2) PUNTATORE 10,10 · istante del client 1 us"
-    prova("l'ABBANDONO dell'inquilino si vede", trova_abbandono([ab % chi], chi))
-    prova("l'ABBANDONO di un ALTRO inquilino non conta",
+    ab = "21:00 avvio ⭐ §5.3 — ABANDONMENT: «%s» has touched nothing for 61000 ms (ceiling 60000)"
+    gesto = "21:00 rcp [%s] input id=3 (was 2) PUNTATORE 10,10 · client instant 1 us"
+    prova("the tenant's ABANDONMENT is seen", trova_abbandono([ab % chi], chi))
+    prova("the ABANDONMENT of ANOTHER tenant does not count",
           trova_abbandono([ab % "c15024u222"], chi) is None)
-    prova("l'ABBANDONO di un nome piu' lungo non conta",
+    prova("the ABANDONMENT of a longer name does not count",
           trova_abbandono([ab % "c15024u1110"], chi) is None)
-    prova("un gesto dell'inquilino si conta", len(gesti([gesto % chi], chi)) == 1)
-    prova("un gesto di un altro non si conta", not gesti([gesto % "c15024u222"], chi))
-    prova("il cuore si legge dai processi",
+    prova("a gesture of the tenant is counted", len(gesti([gesto % chi], chi)) == 1)
+    prova("a gesture of another is not counted", not gesti([gesto % "c15024u222"], chi))
+    prova("the heart is read from the processes",
           cuore({1: "bash", 9: "kwin_wayland"}) == ["kwin_wayland 9"]
           and cuore({1: "bash"}) == [] and cuore(None) is None)
     viva = ["labwc 4242"]
     base = {"nati": viva, "gesti": [], "abbandono": ab % chi, "cuore": [], "rimasti": []}
-    prova("abbandono, compositore sparito, niente rimasti ⇒ PASS",
+    prova("abandonment, compositor gone, nothing left ⇒ PASS",
           giudica(base)[0] == S.PASS)
-    prova("nessun abbandono ⇒ FAIL (il difetto D-004)",
+    prova("no abandonment ⇒ FAIL (the defect D-004)",
           giudica(dict(base, abbandono=None, cuore=viva))[0] == S.FAIL)
-    prova("nessun abbandono su GNOME (zero non esenti, la Shell e' un servizio) ⇒ FAIL",
+    prova("no abandonment on GNOME (zero non-exempt, the Shell is a service) ⇒ FAIL",
           giudica(dict(base, abbandono=None, cuore=["gnome-shell 7"]))[0] == S.FAIL)
-    prova("abbandono ma compositore vivo ⇒ FAIL", giudica(dict(base, cuore=viva))[0] == S.FAIL)
-    prova("abbandono ma processi non esenti rimasti ⇒ FAIL",
+    prova("abandonment but compositor alive ⇒ FAIL", giudica(dict(base, cuore=viva))[0] == S.FAIL)
+    prova("abandonment but non-exempt processes left ⇒ FAIL",
           giudica(dict(base, rimasti=["xfce4-panel|0::/user.slice/x/session-5.scope"]))[0]
           == S.FAIL)
-    prova("un gesto non fatto dal banco ⇒ BLOCKED, non PASS ne' FAIL",
+    prova("a gesture not made by the bench ⇒ BLOCKED, neither PASS nor FAIL",
           giudica(dict(base, gesti=[gesto % chi]))[0] == S.BLOCKED)
-    prova("sessione mai nata ⇒ BLOCKED (sarebbe «chiusa» per forza)",
+    prova("session never born ⇒ BLOCKED (it would be «closed» by force)",
           giudica(dict(base, nati=[]))[0] == S.BLOCKED)
-    prova("processi illeggibili ⇒ BLOCKED",
+    prova("unreadable processes ⇒ BLOCKED",
           giudica(dict(base, rimasti=None))[0] == S.BLOCKED
           and giudica(dict(base, cuore=None))[0] == S.BLOCKED)
-    prova("l'orologio corto e l'attesa stanno sotto il predefinito",
+    prova("the short clock and the wait stay below the default",
           ABBANDONO_S + MARGINE_S + CHIUSURA_S < 3600)
-    print("%s giudici di F-024b" % ("⭐" if ok else "⛔"))
+    print("%s F-024b judges" % ("⭐" if ok else "⛔"))
     return 0 if ok else 1
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA PROVA
+#  THE TEST
 # ═══════════════════════════════════════════════════════════════════════════
 def _f021():
     sp = _iu.spec_from_file_location("f021", os.path.join(S.QUI, "15-f021-esci.py"))
@@ -200,30 +200,30 @@ def _f021():
 def accendi(o, *opz):
     ok, t = G7.server("accendi", o.scatola, *opz)
     if not ok:
-        raise S.Bloccata("il server nostro non si accende (%s): %s" % (" ".join(opz), t[-300:]))
+        raise S.Bloccata("our server does not start (%s): %s" % (" ".join(opz), t[-300:]))
     inatt, abb, _r = G7.orologi_in_vigore(o.scatola)
-    print("   server nostro: inattivita' %s s · abbandono %s s" % (inatt, abb), flush=True)
+    print("   our server: inactivity %s s · abandonment %s s" % (inatt, abb), flush=True)
     return abb
 
 
 def passata(o, E, reg, corta):
-    """corta=True: la passata sana; False: il GUASTO (l'orologio lungo)."""
+    """corta=True: the healthy pass; False: the FAULT (the long clock)."""
     F021 = _f021()
     with S.Sessione(o, "024", E) as s:
         segno = reg.righe()
-        # ⛔ NESSUN GESTO: niente `clic_tela`, niente scena, niente tasti.  Si
-        #    entra e basta (modulo compilato da JavaScript, primo fotogramma
-        #    giudicato con fotografie).
+        # ⛔ NO GESTURE: no `clic_tela`, no scene, no keys.  You
+        #    just log in (form filled in from JavaScript, first frame
+        #    judged with photos).
         ok, m = s.entra()
         if not ok:
-            raise S.Bloccata("non si entra: " + m)
+            raise S.Bloccata("you cannot get in: " + m)
         t_accesso = time.time()
         nati = cuore(G7.processi_inquilino(o.scatola, s.chi)) or []
-        # l'attesa: la riga ABBANDONO, entro abbandono + margine dall'accesso
+        # the wait: the ABANDONMENT line, within abandonment + margin of the login
         forma, riga, _d = reg.aspetta(segno, [FORMA_ABBANDONO], s.chi,
                                       tetto=ABBANDONO_S + MARGINE_S, passo=2.0)
         dopo = time.time() - t_accesso
-        # la chiusura: il compositore e i processi non esenti devono sparire
+        # the closing: the compositor and the non-exempt processes must disappear
         fine = time.time() + (CHIUSURA_S if forma else 0)
         while True:
             cuore_ora = cuore(G7.processi_inquilino(o.scatola, s.chi))
@@ -239,30 +239,30 @@ def passata(o, E, reg, corta):
         esito, ragione = giudica(d)
         if not corta:
             if esito == S.BLOCKED:
-                E.bloccate(["F-024b"], "passata col guasto: " + ragione, passata="guasto")
+                E.bloccate(["F-024b"], "pass with the fault: " + ragione, passata="guasto")
                 return
             rosso = esito == S.FAIL and not d["abbandono"]
             E.guasto("F-024b", rosso,
-                     "orologio LUNGO ⇒ il giudice %s" % (
-                         "non vede ABBANDONO in %d s e la sessione e' viva (rosso)"
+                     "LONG clock ⇒ the judge %s" % (
+                         "sees no ABANDONMENT in %d s and the session is alive (red)"
                          % (ABBANDONO_S + MARGINE_S) if rosso
-                         else "dice %s: %s" % (esito, ragione[:150])))
+                         else "says %s: %s" % (esito, ragione[:150])))
             return
         ev = [s.salva_testo("server-f024b.txt", righe),
               s.salva_testo("processi-f024b.txt",
-                            "compositore alla nascita:\n%s\ncompositore alla fine:\n%s\n"
-                            "non esenti alla fine:\n%s"
-                            % ("\n".join(nati), "\n".join(cuore_ora or ["(nessuno)"]),
-                               "\n".join(rimasti or ["(nessuno o illeggibili)"]))),
+                            "compositor at birth:\n%s\ncompositor at the end:\n%s\n"
+                            "non-exempt at the end:\n%s"
+                            % ("\n".join(nati), "\n".join(cuore_ora or ["(none)"]),
+                               "\n".join(rimasti or ["(none or unreadable)"]))),
               s.salva_testo("pagina-f024b.txt",
                             "\n".join("%s: %s" % kv for kv in pag.items()))]
-        atteso = ("accesso e poi NESSUN gesto ⇒ entro %d s la riga «§5.3 — ABBANDONO» e la "
-                  "sessione si chiude (compositore sparito, non esenti spariti: regola di "
+        atteso = ("login and then NO gesture ⇒ within %d s the «§5.3 — ABANDONMENT» line and the "
+                  "session closes (compositor gone, non-exempt gone: rule of "
                   "F-021)" % (ABBANDONO_S + MARGINE_S))
-        oss = ("riga: %s · a %.0f s dall'accesso · gesti arrivati al server %d · compositore "
-               "alla nascita %s, alla fine %s · non esenti alla fine %s · pagina: «%s»"
-               % ((riga or "NESSUNA")[:140], dopo, len(d["gesti"]), ", ".join(nati),
-                  ", ".join(cuore_ora or []) or "sparito",
+        oss = ("line: %s · %.0f s after the login · gestures that reached the server %d · compositor "
+               "at birth %s, at the end %s · non-exempt at the end %s · page: «%s»"
+               % ((riga or "NONE")[:140], dopo, len(d["gesti"]), ", ".join(nati),
+                  ", ".join(cuore_ora or []) or "gone",
                   "?" if rimasti is None else len(rimasti), (pag.get("esito") or "")[:80]))
         E.metti("F-024b", esito, ragione, atteso=atteso, osservato=oss, evidenze=ev)
 
@@ -272,28 +272,28 @@ def corpo(o, E):
         o.porta = G7.PORTE_G7[o.scatola]
         o.url = "https://%s:%d/" % (o.host, o.porta)
     if o.porta != G7.PORTE_G7[o.scatola]:
-        raise S.Bloccata("la porta %d non e' quella del server nostro (%d)"
+        raise S.Bloccata("port %d is not our server's (%d)"
                          % (o.porta, G7.PORTE_G7[o.scatola]))
     prima_8511 = F019.sano_8511(o)
     reg = G7.Registro(o.scatola)
     try:
         if accendi(o, "--abbandono-s", str(ABBANDONO_S)) != ABBANDONO_S:
-            raise S.Bloccata("l'orologio dell'abbandono non e' quello chiesto (%d s)"
+            raise S.Bloccata("the abandonment clock is not the one requested (%d s)"
                              % ABBANDONO_S)
         passata(o, E, reg, corta=True)
         if o.guasto:
             try:
-                accendi(o)                            # il LUNGO: il predefinito
+                accendi(o)                            # the LONG one: the default
                 passata(o, E, reg, corta=False)
             except S.Bloccata as b:
                 E.bloccate(["F-024b"], str(b), passata="guasto")
     finally:
         inatt, abb, _r = G7.orologi_in_vigore(o.scatola)
         if (inatt, abb) != (1800, 3600):
-            G7.server("accendi", o.scatola)           # si lascia coi predefiniti
+            G7.server("accendi", o.scatola)           # left with the defaults
         dopo_8511 = F019.sano_8511(o)
-        print("   server 851x prima «%s» dopo «%s»%s" % (
-            prima_8511, dopo_8511, "" if prima_8511 == dopo_8511 else "  ⛔ CAMBIATO"), flush=True)
+        print("   851x server before «%s» after «%s»%s" % (
+            prima_8511, dopo_8511, "" if prima_8511 == dopo_8511 else "  ⛔ CHANGED"), flush=True)
 
 
 if __name__ == "__main__":

@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 """
-07-b42 — il giudice dell'audio: ASCOLTA, non conta i blocchi.
+07-b42 — the audio judge: it LISTENS, it does not count blocks.
 
-⛔ `LEZIONI.md` §2.2, prima riga della tabella: «il banco contava fotogrammi
-   spediti e blocchi riscontrati; il difetto cambiava **i campioni** — l'audio
-   era rumore a fondo scala».  ⇒ Qui si misura il SEGNALE:
+⛔ `LEZIONI.md` §2.2, first row of the table: «the bench counted frames
+   sent and blocks acknowledged; the defect changed **the samples** — the audio
+   was full-scale noise».  ⇒ Here we measure the SIGNAL:
 
-     hz        la frequenza dominante (Goertzel, passo 1 Hz)
-     rms       l'ampiezza
-     purezza   quanta energia sta nella riga dominante — ⭐ e' l'unico numero
-               che distingue un TONO da RUMORE, ed e' quello che il giudice
-               della sonda `07-b40` ha gia' certificato su sei casi
+     hz        the dominant frequency (Goertzel, 1 Hz step)
+     rms       the amplitude
+     purezza   how much energy sits in the dominant line — ⭐ it is the only number
+               that tells a TONE from NOISE, and it is the one the judge
+               of the probe `07-b40` has already certified on six cases
 
-⭐ E in piu' misura una cosa che la sonda non poteva: **il ritmo**.  Gli
-   `istante` di §6.3 sono l'orologio del server, quindi i buchi si contano
-   dove sono nati invece di dedurli dal silenzio.
+⭐ And on top of that it measures something the probe could not: **the rhythm**.  The
+   `istante` of §6.3 are the server's clock, so gaps are counted
+   where they were born instead of being deduced from silence.
 
-Legge il JSONL che `01-b3-cliente.py --audio-scrivi` produce.
+Reads the JSONL that `01-b3-cliente.py --audio-scrivi` produces.
 
-Uso:  python3 07-b42-giudice.py blocchi.jsonl [--hz 440] [--secondi 3]
+Usage:  python3 07-b42-giudice.py blocchi.jsonl [--hz 440] [--secondi 3]
 """
 import argparse
 import base64
@@ -32,9 +32,9 @@ BLOCCO_US = {1: 20000, 2: 5000}  # Opus 20 ms, PCM 5 ms (§5.3)
 
 
 def giudica(campioni):
-    """La frequenza dominante, l'ampiezza e la purezza.
+    """The dominant frequency, the amplitude and the purity.
 
-    ⛔ «Niente da giudicare» e' un esito SUO e non uno zero: `CODER.md` §3.10.
+    ⛔ «Nothing to judge» is an outcome of ITS OWN and not a zero: `CODER.md` §3.10.
     """
     m = len(campioni)
     if m == 0:
@@ -56,11 +56,11 @@ def giudica(campioni):
 
 
 def pcm_campioni(dati):
-    """s16 LITTLE-endian, interlacciati (§5.3) — si prende il canale sinistro.
+    """s16 LITTLE-endian, interleaved (§5.3) — the left channel is taken.
 
-    ⛔ Il little-endian e' l'unica eccezione dichiarata all'ordine di rete, e
-       leggerlo big-endian NON da' un errore: da' rumore a fondo scala.  E'
-       il caso 2 del controllo positivo di `07-b40`.
+    ⛔ Little-endian is the only declared exception to network order, and
+       reading it big-endian does NOT give an error: it gives full-scale noise.  It is
+       case 2 of the positive control of `07-b40`.
     """
     fuori = []
     for i in range(0, len(dati) - 3, 2 * CANALI):
@@ -72,12 +72,12 @@ def pcm_campioni(dati):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("file")
-    p.add_argument("--hz", type=int, default=440, help="il tono atteso")
+    p.add_argument("--hz", type=int, default=440, help="the expected tone")
     p.add_argument("--tolleranza-hz", type=int, default=2)
     p.add_argument("--purezza-minima", type=float, default=0.80)
     p.add_argument("--secondi", type=float, default=0,
-                   help="quanti secondi di parete e' durata la presa: senza, "
-                        "il ritmo non si giudica (e si DICE che non si giudica)")
+                   help="how many wall-clock seconds the capture lasted: without it, "
+                        "the rhythm is not judged (and it SAYS it is not judged)")
     a = p.parse_args()
 
     blocchi = []
@@ -88,17 +88,17 @@ def main():
                 blocchi.append(json.loads(riga))
 
     if not blocchi:
-        print("⛔ NIENTE DA GIUDICARE: il file non ha blocchi.")
-        print("   ⚠ E non e' «l'audio non arriva»: e' «non ho niente da")
-        print("     guardare».  I due casi hanno due esiti diversi apposta.")
+        print("⛔ NOTHING TO JUDGE: the file has no blocks.")
+        print("   ⚠ And it is not «the audio does not arrive»: it is «I have nothing")
+        print("     to look at».  The two cases have two different outcomes on purpose.")
         return 2
 
     codec = blocchi[0]["codec"]
     if any(b["codec"] != codec for b in blocchi):
-        print("⛔ il codec CAMBIA a meta' presa: §4.3 lo negozia una volta sola.")
+        print("⛔ the codec CHANGES mid-capture: §4.3 negotiates it only once.")
         return 1
 
-    # ── il RITMO, dagli `istante` del server ────────────────────────────────
+    # ── the RHYTHM, from the server's `istante` ─────────────────────────────
     atteso_us = BLOCCO_US.get(codec)
     istanti = [b["istante"] for b in blocchi]
     salti, passi = [], []
@@ -109,61 +109,61 @@ def main():
             salti.append((i, d))
     durata_s = (istanti[-1] - istanti[0] + (atteso_us or 0)) / 1e6
 
-    # ── il CONTENUTO ────────────────────────────────────────────────────────
+    # ── the CONTENT ─────────────────────────────────────────────────────────
     if codec == 2:
         campioni = []
         for b in blocchi:
             campioni.extend(pcm_campioni(base64.b64decode(b["byte"])))
-        # ⚠ 100 ms d'innesco scartati: `CODER.md` §3.5, «un campione preso
-        #   all'avvio non dice niente del regime».
+        # ⚠ 100 ms of start-up discarded: `CODER.md` §3.5, «a sample taken
+        #   at startup says nothing about steady state».
         salta = min(4800, len(campioni) // 4)
         g = giudica(campioni[salta:])
     else:
         g = {"esito": "NON GIUDICABILE QUI",
-             "perche": "i pacchetti Opus li giudica il BROWSER, che ha il "
-                       "decodificatore: qui si giudicherebbe con uno diverso "
-                       "da quello dell'utente (forma d'errore E10)"}
+             "perche": "Opus packets are judged by the BROWSER, which has the "
+                       "decoder: here they would be judged with a different one "
+                       "from the user's (error form E10)"}
 
-    print(f"== 07-b42 · {len(blocchi)} blocchi · codec {codec} "
+    print(f"== 07-b42 · {len(blocchi)} blocks · codec {codec} "
           f"({'Opus' if codec == 1 else 'PCM'})")
-    print(f"   durata secondo il SERVER: {durata_s:.3f} s")
+    print(f"   duration according to the SERVER: {durata_s:.3f} s")
     if a.secondi:
         resa = durata_s / a.secondi
-        print(f"   parete: {a.secondi:.3f} s  ⇒  resa {resa * 100:.1f} %")
+        print(f"   wall clock: {a.secondi:.3f} s  ⇒  yield {resa * 100:.1f} %")
     else:
-        print("   ⚠ il ritmo NON e' giudicato: manca `--secondi`, cioe' quanto "
-              "e' durata la presa")
-    print(f"   passo fra i blocchi: atteso {atteso_us} µs · "
-          f"minimo {min(passi) if passi else '-'} · "
-          f"massimo {max(passi) if passi else '-'} · fuori passo {len(salti)}")
+        print("   ⚠ the rhythm is NOT judged: `--secondi` is missing, that is how long "
+              "the capture lasted")
+    print(f"   step between blocks: expected {atteso_us} µs · "
+          f"minimum {min(passi) if passi else '-'} · "
+          f"maximum {max(passi) if passi else '-'} · off step {len(salti)}")
     if salti[:5]:
-        print(f"   i primi salti: {salti[:5]}")
-    print(f"   giudizio del segnale: {json.dumps(g, ensure_ascii=False)}")
+        print(f"   the first jumps: {salti[:5]}")
+    print(f"   signal judgement: {json.dumps(g, ensure_ascii=False)}")
 
-    # ── il VERDETTO, e ogni riga rossa nomina la sua regola ─────────────────
+    # ── the VERDICT, and every red line names its rule ──────────────────────
     rossi = []
     if g["esito"] == "GIUDICATO":
         if abs(g["hz"] - a.hz) > a.tolleranza_hz:
-            rossi.append(f"la frequenza e' {g['hz']} Hz e non {a.hz}: "
-                         f"§5.3 impone 48 000 Hz ai due capi")
+            rossi.append(f"the frequency is {g['hz']} Hz and not {a.hz}: "
+                         f"§5.3 mandates 48 000 Hz at both ends")
         if g["purezza"] is None or g["purezza"] < a.purezza_minima:
-            rossi.append(f"purezza {g['purezza']} sotto {a.purezza_minima}: "
-                         f"non e' un tono, e' rumore — il difetto di v1")
+            rossi.append(f"purity {g['purezza']} below {a.purezza_minima}: "
+                         f"it is not a tone, it is noise — the v1 defect")
         if g["rms"] < 0.05:
-            rossi.append(f"ampiezza {g['rms']}: silenzio, o guadagno perduto")
+            rossi.append(f"amplitude {g['rms']}: silence, or lost gain")
     if salti:
-        rossi.append(f"{len(salti)} passi fuori dai {atteso_us} µs di §5.3")
+        rossi.append(f"{len(salti)} steps off the {atteso_us} µs of §5.3")
     if a.secondi and durata_s / a.secondi < 0.95:
-        rossi.append(f"resa {durata_s / a.secondi * 100:.1f} %: il server NON "
-                     f"produce l'audio in tempo reale")
+        rossi.append(f"yield {durata_s / a.secondi * 100:.1f} %: the server does NOT "
+                     f"produce the audio in real time")
 
     if rossi:
         print("\n⛔ ROSSO:")
         for r in rossi:
             print(f"   · {r}")
         return 1
-    print("\n⭐ VERDE — e vale per quel che ha guardato: contenuto"
-          + (" e ritmo" if a.secondi else ", NON il ritmo"))
+    print("\n⭐ VERDE — and it holds for what it looked at: content"
+          + (" and rhythm" if a.secondi else ", NOT the rhythm"))
     return 0
 
 

@@ -1,32 +1,32 @@
 #!/usr/bin/env python3
-"""02-pagina-misura-cdp.py — ⭐ IL CANALE DI LETTURA DEL BANCO DELLE MISURE.
+"""02-pagina-misura-cdp.py — ⭐ THE READING CHANNEL OF THE MEASUREMENT BENCH.
 
-Un cliente CDP (Chrome DevTools Protocol) minimo, scritto qui invece che preso
-da una libreria: sono un handshake HTTP e quattro righe di inquadratura
-WebSocket, e su questa macchina non c'e' nessun `websockets` installato.
+A minimal CDP (Chrome DevTools Protocol) client, written here instead of taken
+from a library: it is an HTTP handshake and four lines of WebSocket
+framing, and on this machine there is no `websockets` installed.
 
     python3 banchi/02-pagina-misura-cdp.py --porta 9222 --stato
 
-⛔ NON E' UN INTERRUTTORE DEL PRODOTTO, ED E' LA RIGA CHE CONTA.
+⛔ IT IS NOT A SWITCH OF THE PRODUCT, AND THAT IS THE LINE THAT COUNTS.
 
-`src/pagina.html` non ha e non deve avere un modo di consegnare i propri esiti a
-un banco: e' la decisione di `P2-6` §7 punto 1, e resta.  ⇒ Il banco **guarda da
-fuori**, con lo stesso strumento con cui si guarda una pagina qualunque —
-`Runtime.evaluate` — e legge `window.REMOTIX`, che esiste per la diagnosi.
-⚠ Nessun byte di questo file entra nel prodotto, e il prodotto gira identico
-  che questo file ci sia o no.
+`src/pagina.html` does not have and must not have a way of handing its outcomes to
+a bench: it is the decision of `P2-6` §7 point 1, and it stands.  ⇒ The bench **looks from
+outside**, with the same tool used to look at any page —
+`Runtime.evaluate` — and reads `window.REMOTIX`, which exists for diagnosis.
+⚠ Not one byte of this file enters the product, and the product runs identically
+  whether this file is there or not.
 
-⛔⭐ E LA SECONDA COSA CHE SA FARE E' IL TELEFONO.
+⛔⭐ AND THE SECOND THING IT CAN DO IS THE PHONE.
 
-`Page.addScriptToEvaluateOnNewDocument` mette un prologo **prima** di ogni
-script della pagina.  Il banco lo usa per una cosa sola: **incappucciare il
-decodificatore**, cioe' far rifiutare a `VideoDecoder` le misure oltre un tetto.
+`Page.addScriptToEvaluateOnNewDocument` puts a prologue **before** every
+script of the page.  The bench uses it for one thing only: **capping the
+decoder**, that is making `VideoDecoder` refuse sizes beyond a ceiling.
 
-⚠ E' esattamente quel che e' diverso su un telefono, ed e' la sola forma
-  onesta di provarlo su questa macchina: ⛔ non si tocca il prodotto e non si
-  innesta un guasto nel suo sorgente — si cambia **il decodificatore che ha
-  sotto**.  Un banco che avesse innestato un guasto in `pagina.html` avrebbe
-  misurato il guasto, non il telefono.
+⚠ It is exactly what is different on a phone, and it is the only honest
+  way to test it on this machine: ⛔ the product is not touched and no fault is
+  injected into its source — what changes is **the decoder it has
+  underneath**.  A bench that had injected a fault into `pagina.html` would have
+  measured the fault, not the phone.
 """
 import base64
 import hashlib
@@ -42,7 +42,7 @@ MAGIA = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 
 class Ws:
-    """Un WebSocket cliente essenziale: testo, mascherato, senza estensioni."""
+    """An essential client WebSocket: text, masked, no extensions."""
 
     def __init__(self, url, timeout=30):
         assert url.startswith("ws://"), url
@@ -63,27 +63,27 @@ class Ws:
         while b"\r\n\r\n" not in testa:
             pezzo = self.s.recv(4096)
             if not pezzo:
-                raise RuntimeError("il socket si e' chiuso durante l'handshake")
+                raise RuntimeError("the socket closed during the handshake")
             testa += pezzo
         intestazione, _, avanzo = testa.partition(b"\r\n\r\n")
         if b" 101 " not in intestazione.split(b"\r\n")[0]:
-            raise RuntimeError("handshake rifiutato: "
+            raise RuntimeError("handshake refused: "
                                + intestazione.split(b"\r\n")[0].decode())
         atteso = base64.b64encode(
             hashlib.sha1((chiave + MAGIA).encode()).digest()).decode()
-        # ⛔ Si VERIFICA l'accettazione: senza, un server qualunque che
-        #    rispondesse 101 passerebbe per Chrome.
+        # ⛔ The acceptance is CHECKED: without it, any server that
+        #    answered 101 would pass for Chrome.
         if atteso.lower() not in intestazione.decode("latin1").lower():
-            raise RuntimeError("Sec-WebSocket-Accept non torna")
+            raise RuntimeError("Sec-WebSocket-Accept does not match")
         self.buf = bytearray(avanzo)
         self.n = 0
 
-    # -- inquadratura -------------------------------------------------------
+    # -- framing ------------------------------------------------------------
     def _leggi(self, quanti):
         while len(self.buf) < quanti:
             pezzo = self.s.recv(65536)
             if not pezzo:
-                raise RuntimeError("il socket si e' chiuso")
+                raise RuntimeError("the socket closed")
             self.buf += pezzo
         fuori = bytes(self.buf[:quanti])
         del self.buf[:quanti]
@@ -124,7 +124,7 @@ class Ws:
                 self.s.sendall(b"\x8a\x80" + os.urandom(4))
                 continue
             if codice == 0x8:
-                raise RuntimeError("il browser ha chiuso il WebSocket")
+                raise RuntimeError("the browser closed the WebSocket")
             pezzi += corpo
             if fin:
                 return pezzi.decode("utf-8", "replace")
@@ -149,20 +149,20 @@ class Cdp:
         while True:
             r = json.loads(self.ws.ricevi())
             if r.get("id") != mio:
-                continue                     # e' un evento: non serve
+                continue                     # it is an event: not needed
             if "error" in r:
                 raise RuntimeError(metodo + ": " + json.dumps(r["error"]))
             return r.get("result", {})
 
     def valuta(self, espressione, attendi=True):
-        """⛔ `awaitPromise` e' acceso: quel che il banco legge sono promesse
-        (`SONDAGGIO` e' una promessa che si risolve a sondaggio finito).  Senza,
-        si leggerebbe l'oggetto `Promise` e si direbbe «letto» di un valore mai
-        arrivato — la forma E1 dentro il banco."""
+        """⛔ `awaitPromise` is on: what the bench reads are promises
+        (`SONDAGGIO` is a promise that resolves when the probing is over).  Without it,
+        one would read the `Promise` object and say «read» of a value that never
+        arrived — the E1 form inside the bench."""
         r = self.chiama("Runtime.evaluate", expression=espressione,
                         returnByValue=True, awaitPromise=attendi)
         if "exceptionDetails" in r:
-            return {"⛔ eccezione": json.dumps(r["exceptionDetails"])[:400]}
+            return {"⛔ exception": json.dumps(r["exceptionDetails"])[:400]}
         return r.get("result", {}).get("value")
 
     def chiudi(self):
@@ -171,7 +171,7 @@ class Cdp:
 
 # ---------------------------------------------------------------------------
 def bersagli(porta, attesa=25):
-    """Aspetta che Chrome apra la sua porta di diagnosi e torna i bersagli."""
+    """Waits for Chrome to open its diagnosis port and returns the targets."""
     fine = time.time() + attesa
     ultimo = None
     while time.time() < fine:
@@ -179,36 +179,36 @@ def bersagli(porta, attesa=25):
             with urllib.request.urlopen(
                     f"http://127.0.0.1:{porta}/json/list", timeout=3) as r:
                 return json.loads(r.read().decode())
-        except Exception as e:            # noqa: BLE001 — qualunque cosa: si riprova
+        except Exception as e:            # noqa: BLE001 — anything at all: retry
             ultimo = e
             time.sleep(0.5)
-    raise RuntimeError(f"la porta di diagnosi {porta} non ha risposto in "
+    raise RuntimeError(f"the diagnosis port {porta} did not answer within "
                        f"{attesa} s: {ultimo}")
 
 
 def pagina(porta, attesa=25):
-    """Il bersaglio di tipo `page`.  ⛔ Se ce n'e' piu' d'uno si prende il
-    primo E LO SI DICE: un banco che ne scegliesse uno a caso misurerebbe una
-    scheda diversa da quella che si sta guardando."""
+    """The target of type `page`.  ⛔ If there is more than one the first is taken
+    AND IT IS SAID: a bench that picked one at random would measure a
+    tab different from the one being looked at."""
     fine = time.time() + attesa
     while True:
         elenco = [b for b in bersagli(porta, attesa) if b.get("type") == "page"]
         if elenco:
             if len(elenco) > 1:
-                print(f"    ⚠ {len(elenco)} schede aperte, prendo la prima: "
+                print(f"    ⚠ {len(elenco)} tabs open, taking the first: "
                       f"«{elenco[0].get('title')}»", file=sys.stderr)
             return elenco[0]
         if time.time() > fine:
-            raise RuntimeError("nessuna scheda aperta")
+            raise RuntimeError("no tab open")
         time.sleep(0.5)
 
 
-# ⛔ IL PROLOGO DEL TELEFONO.  Rifiuta al decodificatore ogni configurazione
-#    oltre il tetto, in tutt'e due i posti in cui la pagina lo interroga:
-#    `isConfigSupported` (il filtro) e `configure` (il pixel).  ⚠ E li fa
-#    rispondere in modo COERENTE: un finto decodificatore che dicesse «si» al
-#    filtro e lanciasse a `configure` misurerebbe un dispositivo che non
-#    esiste — e proprio il caso in cui la pagina non si fida gia' del filtro.
+# ⛔ THE PHONE PROLOGUE.  It refuses the decoder every configuration
+#    beyond the ceiling, in both places where the page queries it:
+#    `isConfigSupported` (the filter) and `configure` (the pixel).  ⚠ And it makes them
+#    answer CONSISTENTLY: a fake decoder that said «yes» to the
+#    filter and threw at `configure` would measure a device that does not
+#    exist — and precisely the case in which the page already does not trust the filter.
 PROLOGO_TELEFONO = r"""
 (function () {
   if (typeof VideoDecoder === "undefined") return;
@@ -220,7 +220,7 @@ PROLOGO_TELEFONO = r"""
   class Incappucciato extends vero {
     configure(c) {
       if (!dentro(c))
-        throw new DOMException("banco: il decodificatore finto si ferma a " +
+        throw new DOMException("bench: the fake decoder stops at " +
                                TETTO_L + "x" + TETTO_A, "NotSupportedError");
       return super.configure(c);
     }

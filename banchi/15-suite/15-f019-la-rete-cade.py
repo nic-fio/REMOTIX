@@ -1,55 +1,55 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-f019 — F-019 PERDITA DI RETE E RIENTRO · percorsi P-B e P-D
+15-f019 — F-019 NETWORK LOSS AND RE-ENTRY · paths P-B and P-D
 
     python3 15-f019-la-rete-cade.py --scatola gnome --browser firefox --guasto --porta 8611
 
-⛔ SERVER SUO: gira contro il SECONDO server del prodotto della scatola
-   (`15-g7-server.sh`, porte 8611-8614, orologi PREDEFINITI) — la linea che
-   cade si simula con nftables e sulla 851x la vedrebbero tutti.
+⛔ A SERVER OF ITS OWN: it runs against the box's SECOND product server
+   (`15-g7-server.sh`, ports 8611-8614, DEFAULT clocks) — the line that
+   drops is simulated with nftables and on the 851x everybody would see it.
 
-⛔ LA SIMULAZIONE, dichiarata (decisione presa per la suite): la linea muore
-   SULLA RETE DEL SERVER — una tabella nftables nostra (`inet remotix_g7_<porta>`)
-   scarta TUTTO l'UDP della porta del server nostro (QUIC/WebTransport), nei due
-   versi, per CADUTA_S secondi; poi si toglie (sempre: anche se la prova cade).
-   ⚠ Non e' il percorso vero dal tablet (Wi-Fi, `wondershaper`): browser e
-   server stanno sulla stessa macchina, e la pagina HTTPS (TCP) resta raggiungibile.
+⛔ THE SIMULATION, declared (decision taken for the suite): the line dies
+   ON THE SERVER'S NETWORK — an nftables table of ours (`inet remotix_g7_<port>`)
+   drops ALL the UDP of our server's port (QUIC/WebTransport), in both
+   directions, for CADUTA_S seconds; then it is removed (always: even if the test falls over).
+   ⚠ It is not the real path from the tablet (Wi-Fi, `wondershaper`): browser and
+   server are on the same machine, and the HTTPS page (TCP) stays reachable.
 
-L'ATTESO VERO, letto nel codice (non nelle intenzioni):
-  · il SERVER dichiara la linea morta dopo 10 s senza un pacchetto
-    (`--linea-morta-silenzio-s`, predefinito 10: `webtransport.c`
-    `linea_morta_giudica`, riga `linea-morta … causa=silenzio`), chiude la
-    connessione e LASCIA IL POSTO; la sessione grafica resta (I4);
-  · il rientro e' A MANO (decisione dell'utente del 23 ago 2026, `main.c`
-    `--niente-linea-morta`: «il filo cade e si rientra a mano»): la pagina NON si
-    ricollega da se' — non c'e' nessun codice che lo faccia;
-  · la PAGINA deve DIRLO (SPECIFICHE §8.2 e §3.2 della pagina: «un'attesa muta
-    e' un guasto»; `torna_al_modulo()` per ogni congedo): una frase visibile o il
-    modulo tornato in vista.  ⚠ Nel codice di oggi la chiusura del trasporto
-    SENZA `CONGEDO` (quella della linea morta: il `CONGEDO` non puo' arrivare su
-    una linea che non porta) finisce in `nota()` — il registro nascosto — e basta.
+THE REAL EXPECTATION, read in the code (not in the intentions):
+  · the SERVER declares the line dead after 10 s without a packet
+    (`--linea-morta-silenzio-s`, default 10: `webtransport.c`
+    `linea_morta_giudica`, line `linea-morta … causa=silenzio`), closes the
+    connection and FREES THE SLOT; the graphical session stays (I4);
+  · re-entry is BY HAND (the user's decision of 23 Aug 2026, `main.c`
+    `--niente-linea-morta`: «the wire drops and you come back in by hand»): the page does NOT
+    reconnect by itself — there is no code that does it;
+  · the PAGE must SAY IT (SPECIFICHE §8.2 and §3.2 of the page: «a mute wait
+    is a fault»; `torna_al_modulo()` for every farewell): a visible sentence or the
+    form back in view.  ⚠ In today's code the closing of the transport
+    WITHOUT `CONGEDO` (that of the dead line: the `CONGEDO` cannot arrive on
+    a line that does not carry) ends up in `nota()` — the hidden log — and that's all.
 
-F-019  atteso: il server scrive `linea-morta` per l'inquilino; la pagina lo dice
-       entro OSSERVA_S dal ritorno della linea (con un movimento del mouse, come
-       farebbe chi e' davanti); si rientra (dal modulo se c'e', altrimenti
-       ricaricando: e' «a mano»); e i programmi
-       della sessione sono gli STESSI (pid).  ⚠ Non si pretende la frase
-       «sessione ripresa»: `rcp.c` manda SEMPRE `1 = NUOVA` in `SESSIONE`
-       (riga ~3051), quindi la pagina dice «sessione nuova» anche quando la
-       ritrova — lo si scrive nell'osservato, e il giudizio viene dai pid.
-P-B    creazione → attivita' → perdita → rientro → attivita': dopo il rientro la
-       scena in movimento (weston-simple-egl) si muove nelle FOTOGRAFIE, ed e' lo
-       stesso processo di prima.
-P-D    creazione → video/audio → perdita → rientro: con la scena E un tono vero
-       (pw-play 440 Hz sul sink «remotix») accesi durante la caduta, dopo il
-       rientro la foto si muove E il suono che la pagina SUONA non e' silenzio
-       (RMS dei campioni passati a `AudioBufferSourceNode.start`, non un contatore).
+F-019  expected: the server writes `linea-morta` for the tenant; the page says it
+       within OSSERVA_S of the line coming back (with a mouse movement, as
+       whoever is in front would do); we come back in (from the form if it is there, otherwise
+       by reloading: it is «by hand»); and the programs
+       of the session are the SAME (pid).  ⚠ The sentence
+       «resumed session» is not demanded: `rcp.c` ALWAYS sends `1 = NUOVA` in `SESSIONE`
+       (line ~3051), so the page says «new session» even when it
+       finds it again — it is written in the observed, and the judgment comes from the pids.
+P-B    creation → activity → loss → re-entry → activity: after the re-entry the
+       moving scene (weston-simple-egl) moves in the PHOTOS, and it is the
+       same process as before.
+P-D    creation → video/audio → loss → re-entry: with the scene AND a real tone
+       (pw-play 440 Hz on the «remotix» sink) on during the drop, after the
+       re-entry the photo moves AND the sound the page PLAYS is not silence
+       (RMS of the samples passed to `AudioBufferSourceNode.start`, not a counter).
 
-GUASTO (seconda caduta, stessa sessione): durante la linea morta si UCCIDONO la
-       scena e il tono (lo stato si perde) e il rientro si tenta con la linea
-       ANCORA morta ⇒ F-019 deve vedere «non si rientra»; poi la linea torna, si
-       rientra, e P-B deve vedere la scena ferma/sparita e P-D il silenzio.
+FAULT (second drop, same session): during the dead line the scene and the
+       tone are KILLED (the state is lost) and the re-entry is attempted with the line
+       STILL dead ⇒ F-019 must see «no getting back in»; then the line comes back, we
+       come back in, and P-B must see the scene still/gone and P-D the silence.
 """
 import importlib.util as _iu
 import os
@@ -67,8 +67,8 @@ G7.scatola_locale(S)
 
 FUNZIONI = ("F-019", "P-B", "P-D")
 SERVER = "15-g7-server.sh"
-CADUTA_S = 20          # la linea morta; il server la dichiara a 10 s
-OSSERVA_S = 60         # dopo il ritorno della linea: quanto si aspetta che la pagina lo dica
+CADUTA_S = 20          # the dead line; the server declares it at 10 s
+OSSERVA_S = 60         # after the line comes back: how long to wait for the page to say it
 TETTO_RIENTRO_S = 40
 
 
@@ -84,14 +84,14 @@ def certifica():
     for atteso in ("table inet remotix_g7_8611", "udp dport 8611 counter drop",
                    "udp sport 8611 counter drop", "hook input", "hook output"):
         if atteso not in r:
-            print("⛔ la regola non ha «%s»" % atteso)
+            print("⛔ the rule does not have «%s»" % atteso)
             ok = False
     try:
         G7.LineaMorta(8511)
-        print("⛔ la linea morta accetta la 8511 (quella di tutti)")
+        print("⛔ the dead line accepts 8511 (everybody's)")
         ok = False
     except AssertionError:
-        print("⭐ la linea morta rifiuta le porte che non sono nostre")
+        print("⭐ the dead line refuses the ports that are not ours")
     casi = [({"esito_visibile": True, "esito_classe": "male", "vestita": "acceso"}, True),
             ({"esito_visibile": False, "modulo_visibile": True, "vestita": None}, True),
             ({"esito_visibile": False, "modulo_visibile": False, "vestita": "acceso"}, False),
@@ -100,35 +100,35 @@ def certifica():
     for st, att in casi:
         v = G7.la_pagina_lo_dice(st)
         if v is not att:
-            print("⛔ la_pagina_lo_dice(%s) = %s, atteso %s" % (st, v, att))
+            print("⛔ la_pagina_lo_dice(%s) = %s, expected %s" % (st, v, att))
             ok = False
-    print("%s regole nft e giudice della pagina" % ("⭐" if ok else "⛔"))
+    print("%s nft rules and page judge" % ("⭐" if ok else "⛔"))
     return 0 if ok else 1
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 def server_pronto(o):
-    """Il server nostro acceso e con gli orologi PREDEFINITI; se no lo accende."""
+    """Our server on and with the DEFAULT clocks; if not, it starts it."""
     inatt, abb, riga = G7.orologi_in_vigore(o.scatola)
     c, t = G7.dentro(o.scatola, "systemctl is-active rete15-g7", 30)
     if (t or "").strip() == "active" and inatt == 1800 and abb == 3600:
-        return "server nostro gia' acceso, orologi predefiniti"
+        return "our server already on, default clocks"
     ok, t = G7.server("accendi", o.scatola)
     if not ok:
-        raise S.Bloccata("il server nostro non si accende: %s" % t[-300:])
-    return t.splitlines()[0] if t else "acceso"
+        raise S.Bloccata("our server does not start: %s" % t[-300:])
+    return t.splitlines()[0] if t else "on"
 
 
 def sano_8511(o):
-    """⛔ Il server di tutti (851x) deve restare quello di prima: pid e attivo."""
+    """⛔ Everybody's server (851x) must stay the previous one: pid and active."""
     c, t = G7.dentro(o.scatola, "systemctl is-active rete11-server; "
                      "systemctl show -p MainPID --value rete11-server", 30)
     return " ".join((t or "").split())
 
 
 def clic_tela(s):
-    """Un clic al centro della tela: e' il gesto dell'utente che sblocca
-    l'audio del browser (autoplay) — senza, l'AudioContext resta sospeso."""
+    """A click at the centre of the canvas: it is the user's gesture that unblocks
+    the browser's audio (autoplay) — without it, the AudioContext stays suspended."""
     st = s.stato()
     x, y = s.pr.centro(st, 0.5, 0.5)
     s.g.clic(x, y)
@@ -139,34 +139,34 @@ def clic_tela(s):
 def entra_con_orecchio(s):
     ok, m = s.pr.apri()
     if not ok:
-        return False, "la pagina non si apre: " + m
+        return False, "the page does not open: " + m
     G7.orecchio(s.g)
     ok, m = s.entra(apri=False)
     return ok, m
 
 
 def rientra(s, tetto):
-    """Il rientro «a mano»: dal modulo se la pagina l'ha rimesso in vista,
-    altrimenti ricaricando (quel che farebbe chi guarda un desktop fermo).
-    Torna (ok, come, esito)."""
+    """The re-entry «by hand»: from the form if the page put it back in view,
+    otherwise by reloading (what whoever looks at a frozen desktop would do).
+    Returns (ok, how, outcome)."""
     st = G7.pagina(s.g)
-    come = "dal modulo tornato in vista"
+    come = "from the form back in view"
     if not (st.get("modulo_visibile") and not st.get("vestita")):
-        come = "ricaricando la pagina (il modulo non c'era)"
+        come = "by reloading the page (the form was not there)"
         ok, m = s.pr.apri()
         if not ok:
-            return False, come, "la pagina non si riapre: " + m
+            return False, come, "the page does not reopen: " + m
     G7.orecchio(s.g)
     vecchio = s.o.tetto_s
     s.o.tetto_s = tetto
     try:
         e, m, st2 = s.pr.entra(s.parola)
-        # ⚠ `[M]` 24 set 2026, server con carico ~50: il ciclo del server resta
-        #   indietro fino a 13 s e il CIAO scade (0x0D «tempo scaduto durante la
-        #   stretta di mano»).  Chi e' davanti riprova: si riprova UNA volta, e
-        #   lo si scrive.
-        if e != S.VERDE and "stretta di mano" in (m or ""):
-            come += " (riprovato una volta dopo «%s»)" % m[:60]
+        # ⚠ `[M]` 24 Sep 2026, server with load ~50: the server's loop falls
+        #   behind by up to 13 s and the CIAO expires (0x0D «timed out during the
+        #   handshake»).  Whoever is in front retries: we retry ONCE, and
+        #   it is written.
+        if e != S.VERDE and "handshake" in (m or ""):
+            come += " (retried once after «%s»)" % m[:60]
             ok, m0 = s.pr.apri()
             G7.orecchio(s.g)
             e, m, st2 = s.pr.entra(s.parola)
@@ -180,8 +180,8 @@ def rientra(s, tetto):
 
 
 def caduta(s, o, reg, lm, osserva_s, togli=True, durante=None):
-    """La linea muore per `o.caduta_s`; `durante()` si chiama a meta'.
-    Torna un dizionario coi fatti visti."""
+    """The line dies for `o.caduta_s`; `durante()` is called halfway.
+    Returns a dictionary with the facts seen."""
     f = {"linea_morta": None, "detto": None, "detto_dopo_s": None, "scartati": 0}
     segno = reg.righe()
     lm.metti()
@@ -204,7 +204,7 @@ def caduta(s, o, reg, lm, osserva_s, togli=True, durante=None):
             f["tolta"] = lm.togli()
     if not togli:
         return f
-    # la linea e' tornata: chi e' davanti muove il mouse e guarda
+    # the line came back: whoever is in front moves the mouse and looks
     t1 = time.time()
     mosso = 0
     while time.time() - t1 < osserva_s and f["detto"] is None:
@@ -234,7 +234,7 @@ def corpo(o, E):
         o.porta = G7.PORTE_G7[o.scatola]
         o.url = "https://%s:%d/" % (o.host, o.porta)
     if o.porta != G7.PORTE_G7[o.scatola]:
-        raise S.Bloccata("la porta %d non e' quella del server nostro (%d)"
+            raise S.Bloccata("port %d is not our server's (%d)"
                          % (o.porta, G7.PORTE_G7[o.scatola]))
     print("   %s" % server_pronto(o), flush=True)
     prima_8511 = sano_8511(o)
@@ -247,34 +247,34 @@ def corpo(o, E):
             segno0 = reg.righe()
             ok, m = entra_con_orecchio(s)
             if not ok:
-                raise S.Bloccata("non si entra nemmeno a linea sana: " + m)
-            print("   entrato: %s" % m, flush=True)
+                raise S.Bloccata("you cannot get in even with a healthy line: " + m)
+            print("   in: %s" % m, flush=True)
             clic_tela(s)
             pid_scena, t = G7.lancia_scena(s)
             print("   %s" % t, flush=True)
             if not pid_scena:
-                raise S.Bloccata("la scena non parte: " + t)
+                raise S.Bloccata("the scene does not start: " + t)
             c, t = G7.lancia_tono(s)
             vista, t = G7.aspetta_scena(s, S)
             if not vista:
-                raise S.Bloccata("prima della caduta: " + t)
+                raise S.Bloccata("before the drop: " + t)
             time.sleep(3)
             ps0 = G7.processi_inquilino(o.scatola, s.chi)
             pid_tono = [p for p, n in ps0.items() if n.startswith("pw-play")]
             rms0, d0 = G7.ascolta(s.g, 3)
             mossa0, dm0, ev0 = G7.la_scena_si_muove(s, "prima")
-            print("   prima: scena %s (%s) · suono RMS %s %s · %d processi"
+            print("   before: scene %s (%s) · sound RMS %s %s · %d processes"
                   % (mossa0, dm0, rms0, d0, len(ps0)), flush=True)
 
-            # ═══ LA CADUTA SANA ═══════════════════════════════════════════
+            # ═══ THE HEALTHY DROP ═════════════════════════════════════════
             f = caduta(s, o, reg, lm, o.osserva_s)
-            print("   caduta: scartati %d pacchetti · linea-morta: %s · detto: %s"
+            print("   drop: %d packets dropped · linea-morta: %s · said: %s"
                   % (f["scartati"], bool(f["linea_morta"]),
-                     ("dopo %.0f s" % f["detto_dopo_s"]) if f["detto"] else "NO"), flush=True)
+                     ("after %.0f s" % f["detto_dopo_s"]) if f["detto"] else "NO"), flush=True)
             if f["scartati"] == 0:
-                raise S.Bloccata("la regola nft non ha scartato niente: la linea non e' morta")
+                raise S.Bloccata("the nft rule dropped nothing: the line did not die")
             ok_r, come, mr = rientra(s, TETTO_RIENTRO_S)
-            print("   rientro %s: %s — %s" % (come, ok_r, mr[:200]), flush=True)
+            print("   re-entry %s: %s — %s" % (come, ok_r, mr[:200]), flush=True)
             if ok_r:
                 clic_tela(s)
             time.sleep(4)
@@ -284,79 +284,79 @@ def corpo(o, E):
             ev_srv.append(s.salva_testo("server-f019-sana.txt", reg.da(segno0, s.chi)))
             ev_pag = s.salva_testo("pagina-dopo-caduta.txt", "\n".join(
                 "%s: %s" % (k, v) for k, v in (f.get("ultima_pagina") or {}).items()))
-            # ⚠ Il pid di pw-play cambia a ogni giro del ciclo (un file di 5 s):
-            #   lo stato della sessione si giudica sul pid della scena.
+            # ⚠ pw-play's pid changes at every turn of the loop (a 5 s file):
+            #   the session's state is judged on the scene's pid.
             stessi = pid_scena in ps1
-            ripresa = "ripresa" in mr
+            ripresa = "resumed" in mr
             ev = ev0 + ev1 + ev_srv + [ev_pag, s.salva_console()]
 
             # F-019
-            osservato = ("linea-morta dal server: %s · la pagina: %s · rientro %s: %s · "
-                         "la pagina scrive «sessione ripresa»: %s (⚠ rcp.c manda sempre "
-                         "1=NUOVA) · programmi di prima vivi: %s"
-                         % ("si'" if f["linea_morta"] else "NO",
-                            ("lo dice dopo %.0f s: «%s»" % (f["detto_dopo_s"],
+            osservato = ("linea-morta from the server: %s · the page: %s · re-entry %s: %s · "
+                         "the page writes «resumed session»: %s (⚠ rcp.c always sends "
+                         "1=NUOVA) · previous programs alive: %s"
+                         % ("yes" if f["linea_morta"] else "NO",
+                            ("it says so after %.0f s: «%s»" % (f["detto_dopo_s"],
                                                            (f["detto"].get("esito") or "")[:100]))
                             if f["detto"] else
-                            ("NON lo dice: dopo %d s dal ritorno della linea (e %d movimenti del "
-                             "mouse) la pagina e' ancora vestita da desktop, congelata, esito "
+                            ("it does NOT say so: %d s after the line came back (and %d mouse "
+                             "movements) the page is still dressed as a desktop, frozen, outcome "
                              "«%s»" % (o.osserva_s, f.get("mossi", 0),
                                       (f["ultima_pagina"].get("esito") or "")[:80])),
-                            come, "riuscito" if ok_r else "FALLITO", ripresa, stessi))
-            atteso = ("linea-morta nel registro; la pagina lo dice (frase o modulo) entro "
-                      "%d s dal ritorno; si rientra a mano; «sessione ripresa» coi programmi "
-                      "di prima" % o.osserva_s)
+                            come, "succeeded" if ok_r else "FAILED", ripresa, stessi))
+            atteso = ("linea-morta in the log; the page says it (sentence or form) within "
+                      "%d s of the return; you come back in by hand; «resumed session» with the "
+                      "previous programs" % o.osserva_s)
             if not f["linea_morta"]:
-                E.metti("F-019", S.FAIL, "il server non ha dichiarato la linea morta in %d s"
+                E.metti("F-019", S.FAIL, "the server did not declare the line dead in %d s"
                         % o.caduta_s, atteso=atteso, osservato=osservato, evidenze=ev)
             elif not ok_r or not stessi:
-                E.metti("F-019", S.FAIL, "dopo la caduta la sessione non si ritrova: " + osservato,
+                E.metti("F-019", S.FAIL, "after the drop the session is not found again: " + osservato,
                         atteso=atteso, osservato=osservato, evidenze=ev)
             elif not f["detto"]:
-                E.metti("F-019", S.FAIL, "il filo cade e la pagina NON lo dice: desktop congelato "
-                        "senza una parola (si rientra solo ricaricando di propria iniziativa)",
+                E.metti("F-019", S.FAIL, "the wire drops and the page does NOT say it: frozen desktop "
+                        "without a word (you come back in only by reloading on your own initiative)",
                         atteso=atteso, osservato=osservato, evidenze=ev)
             else:
                 E.metti("F-019", S.PASS, osservato, atteso=atteso, osservato=osservato,
                         evidenze=ev)
 
             # P-B
-            atteso_b = "dopo il rientro la scena si muove nelle foto, stesso processo di prima"
+            atteso_b = "after the re-entry the scene moves in the photos, same process as before"
             if not ok_r:
-                E.metti("P-B", S.FAIL, "non si rientra: " + mr[:200], atteso=atteso_b,
+                E.metti("P-B", S.FAIL, "no getting back in: " + mr[:200], atteso=atteso_b,
                         osservato=mr[:200], evidenze=ev)
             elif mossa1 is None:
-                E.metti("P-B", S.BLOCKED, "foto non giudicabili: " + dm1, evidenze=ev)
+                E.metti("P-B", S.BLOCKED, "photos not judgeable: " + dm1, evidenze=ev)
             elif mossa1 and pid_scena in ps1:
-                E.metti("P-B", S.PASS, "scena viva dopo il rientro (%s), pid %d" % (dm1, pid_scena),
+                E.metti("P-B", S.PASS, "scene alive after the re-entry (%s), pid %d" % (dm1, pid_scena),
                         atteso=atteso_b, osservato=dm1, evidenze=ev)
             else:
-                E.metti("P-B", S.FAIL, "dopo il rientro la scena e' ferma o sparita (%s, pid vivo %s)"
+                E.metti("P-B", S.FAIL, "after the re-entry the scene is still or gone (%s, pid alive %s)"
                         % (dm1, pid_scena in ps1), atteso=atteso_b, osservato=dm1, evidenze=ev)
 
             # P-D
-            atteso_d = "dopo il rientro foto in movimento E suono suonato non silenzio (RMS > %.2f)" \
+            atteso_d = "after the re-entry moving photos AND sound played not silence (RMS > %.2f)" \
                 % G7.SOGLIA_RMS
             if rms0 is None or rms0 < G7.SOGLIA_RMS:
-                E.metti("P-D", S.BLOCKED, "il suono non arrivava nemmeno PRIMA della caduta "
-                        "(RMS %s, %s): non ho un «prima» da ritrovare" % (rms0, d0), evidenze=ev)
+                E.metti("P-D", S.BLOCKED, "the sound was not arriving even BEFORE the drop "
+                        "(RMS %s, %s): I have no «before» to find again" % (rms0, d0), evidenze=ev)
             elif not ok_r:
-                E.metti("P-D", S.FAIL, "non si rientra: " + mr[:200], atteso=atteso_d, evidenze=ev)
+                E.metti("P-D", S.FAIL, "no getting back in: " + mr[:200], atteso=atteso_d, evidenze=ev)
             elif mossa1 and rms1 is not None and rms1 >= G7.SOGLIA_RMS:
-                E.metti("P-D", S.PASS, "dopo il rientro video vivo (%s) e suono RMS %.3f (prima %.3f)"
+                E.metti("P-D", S.PASS, "after the re-entry video alive (%s) and sound RMS %.3f (before %.3f)"
                         % (dm1, rms1, rms0), atteso=atteso_d,
                         osservato="RMS %.3f · %s" % (rms1, d1), evidenze=ev)
             else:
-                E.metti("P-D", S.FAIL, "dopo il rientro: video %s (%s), suono RMS %s (%s)"
+                E.metti("P-D", S.FAIL, "after the re-entry: video %s (%s), sound RMS %s (%s)"
                         % (mossa1, dm1, rms1, d1), atteso=atteso_d, evidenze=ev)
 
             if not o.guasto:
                 return
-            # ═══ IL GUASTO: lo stato si perde E la linea resta morta ═════
+            # ═══ THE FAULT: the state is lost AND the line stays dead ═════
             if not ok_r:
-                E.guasto("F-019", None, "la passata sana non e' rientrata: niente da guastare")
-                E.guasto("P-B", None, "idem")
-                E.guasto("P-D", None, "idem")
+                E.guasto("F-019", None, "the healthy pass did not come back in: nothing to break")
+                E.guasto("P-B", None, "same")
+                E.guasto("P-D", None, "same")
                 return
             vittime = [pid_scena] + pid_tono
 
@@ -366,15 +366,15 @@ def corpo(o, E):
                           % (s.chi, " ".join(str(p) for p in vittime)), 30)
             f2 = caduta(s, o, reg, lm, 0, togli=False, durante=uccidi)
             try:
-                ok_g, come_g, mg = rientra(s, 30)          # linea ANCORA morta
+                ok_g, come_g, mg = rientra(s, 30)          # line STILL dead
             finally:
                 lm.togli()
-            E.guasto("F-019", not ok_g, "rientro con la linea ancora morta ⇒ %s (%s)"
-                     % ("NON si rientra: " + mg[:120] if not ok_g else "RIENTRATO?!", come_g))
+            E.guasto("F-019", not ok_g, "re-entry with the line still dead ⇒ %s (%s)"
+                     % ("NO getting back in: " + mg[:120] if not ok_g else "BACK IN?!", come_g))
             ok_r2, come2, mr2 = rientra(s, TETTO_RIENTRO_S)
             if not ok_r2:
-                E.guasto("P-B", None, "dopo il guasto non si rientra piu': " + mr2[:150])
-                E.guasto("P-D", None, "idem")
+                E.guasto("P-B", None, "after the fault you can no longer get back in: " + mr2[:150])
+                E.guasto("P-D", None, "same")
                 return
             clic_tela(s)
             time.sleep(4)
@@ -385,17 +385,17 @@ def corpo(o, E):
             vivo = pid_scena in ps2
             pb_rosso = not (mossa2 and vivo)
             E.guasto("P-B", pb_rosso if mossa2 is not None else None,
-                     "scena uccisa durante la caduta ⇒ il giudice di P-B dice %s (%s, pid vivo %s)"
-                     % ("rosso" if pb_rosso else "VERDE", dm2, vivo))
+                     "scene killed during the drop ⇒ P-B's judge says %s (%s, pid alive %s)"
+                     % ("red" if pb_rosso else "VERDE", dm2, vivo))
             pd_rosso = not (mossa2 and rms2 is not None and rms2 >= G7.SOGLIA_RMS)
-            E.guasto("P-D", pd_rosso, "scena e tono uccisi ⇒ il giudice di P-D dice %s "
-                     "(video %s, RMS %s)" % ("rosso" if pd_rosso else "VERDE", mossa2, rms2))
+            E.guasto("P-D", pd_rosso, "scene and tone killed ⇒ P-D's judge says %s "
+                     "(video %s, RMS %s)" % ("red" if pd_rosso else "VERDE", mossa2, rms2))
     finally:
         tolta = lm.togli()
         dopo_8511 = sano_8511(o)
-        print("   regola nft tolta: %s · server 851x prima «%s» dopo «%s»%s"
+        print("   nft rule removed: %s · 851x server before «%s» after «%s»%s"
               % (tolta, prima_8511, dopo_8511,
-                 "" if prima_8511 == dopo_8511 else "  ⛔ CAMBIATO"), flush=True)
+                 "" if prima_8511 == dopo_8511 else "  ⛔ CHANGED"), flush=True)
 
 
 if __name__ == "__main__":

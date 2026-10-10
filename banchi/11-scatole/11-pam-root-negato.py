@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-# 11-pam-root-negato.py — dentro una scatola, da root: la catena PAM «remotix» del prodotto (D3) deve
-# respingere root PER L ELENCO (/etc/remotix/utenti-negati, nel registro «pam_listfile … Refused user root»)
-# e far entrare nictest con la sua parola.  [M] 3 ott 2026: 4/4 scatole.
+# 11-pam-root-negato.py — inside a box, as root: the product's «remotix» PAM chain (D3) must
+# reject root BECAUSE OF THE LIST (/etc/remotix/utenti-negati, in the log «pam_listfile … Refused user root»)
+# and let nictest in with its password.  [M] 3 Oct 2026: 4/4 boxes.
 import ctypes, ctypes.util, sys
 pam = ctypes.CDLL(ctypes.util.find_library("pam"))
 class Msg(ctypes.Structure): _fields_=[("style",ctypes.c_int),("msg",ctypes.c_char_p)]

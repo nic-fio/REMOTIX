@@ -1,204 +1,204 @@
 #!/bin/bash
 # ===========================================================================
-# 11-gancio.sh — ⭐⭐ QUANDO PARTE LA RETE, E CHE COSA PARTE
+# 11-gancio.sh — ⭐⭐ WHEN THE NET STARTS, AND WHAT STARTS
 # ===========================================================================
 #
-#   bash 11-gancio.sh decidi                 dice che cosa farebbe, e perche'
-#   bash 11-gancio.sh gira [--secco]         decide e fa girare
-#   bash 11-gancio.sh gira --famiglia rete           ⭐ costo quasi zero, davvero
-#   bash 11-gancio.sh gira --famiglia rete-intera    ⛔ + C14: [M] ~800 s, e si
-#                                                    prende le QUATTRO scatole
+#   bash 11-gancio.sh decidi                 says what it would do, and why
+#   bash 11-gancio.sh gira [--secco]         decides and runs
+#   bash 11-gancio.sh gira --famiglia rete           ⭐ almost zero cost, really
+#   bash 11-gancio.sh gira --famiglia rete-intera    ⛔ + C14: [M] ~800 s, and it
+#                                                    takes the FOUR boxes
 #   bash 11-gancio.sh gira --famiglia tutto --scatola gnome
-#   bash 11-gancio.sh remoto [--secco]       ⭐ decide QUI, esegue LA', e riporta
+#   bash 11-gancio.sh remoto [--secco]       ⭐ decides HERE, runs THERE, and reports back
 #   bash 11-gancio.sh installa [pre-push|pre-commit] [--solo-qui]
-#   bash 11-gancio.sh installato             c'e' o non c'e', e dove
-#   bash 11-gancio.sh registro [n]           gli ultimi n giri
+#   bash 11-gancio.sh installato             is it there or not, and where
+#   bash 11-gancio.sh registro [n]           the last n runs
 #
 # ===========================================================================
-# ⛔⛔ DEFINITO PER PERCORSO, NON PER BUONA VOLONTA' — `fasi/11…` §5.1
+# ⛔⛔ DEFINED BY PATH, NOT BY GOOD WILL — `fasi/11…` §5.1
 # ===========================================================================
 #
-# ⚠ La differenza non e' formale.  Un gancio che CHIEDE a chi lavora *«vuoi far
-#   girare la rete?»* e' un gancio che, il giorno che si ha fretta, non gira —
-#   ⛔ e i giorni in cui si ha fretta sono esattamente quelli in cui si rompono
-#   le cose.
-# ⇒ Qui la domanda non si fa: si guarda **quali file sono cambiati**, e da quelli
-#   discende che cosa parte.  Chi lavora non ha una leva da tirare.
+# ⚠ The difference is not formal.  A hook that ASKS whoever is working *«do you want to
+#   run the net?»* is a hook that, the day one is in a hurry, does not run —
+#   ⛔ and the days one is in a hurry are exactly those when things
+#   break.
+# ⇒ Here the question is not asked: we look at **which files changed**, and from those
+#   follows what starts.  Whoever works has no lever to pull.
 #
-#   si tocca `src/` (il prodotto)      ⇒ la famiglia FUNZIONA
-#   si toccano i banchi o la rete      ⇒ RETE: C10-C13, C15.  ⭐ Costo quasi
-#                                        zero, e ⭐ nessuna accende una sessione
-#   si tocca cio' da cui C14 dipende   ⇒ RETE-INTERA: la rete PIU' C14.
-#     (`11-c14-*`, `11-c8-*`, `11-accendi.sh`, una `Contenitore.*`)
-#     ⛔ `[M]` ~800 s, e si prende tutt'e quattro le scatole per tredici minuti
-#   compare un `Contenitore.<nuovo>`   ⇒ desktop nuovo: tutto sul nuovo, PIU'
-#                                        la regressione sui vecchi
-#   si toccano solo i documenti        ⇒ ⭐ NIENTE, e si dice.  Un gancio che
-#                                        gira anche quando non serve e' un
-#                                        gancio che qualcuno spegnera'
+#   `src/` is touched (the product)    ⇒ the FUNZIONA family
+#   the benches or the net are touched ⇒ RETE: C10-C13, C15.  ⭐ Almost
+#                                        zero cost, and ⭐ none starts a session
+#   what C14 depends on is touched     ⇒ RETE-INTERA: the net PLUS C14.
+#     (`11-c14-*`, `11-c8-*`, `11-accendi.sh`, a `Contenitore.*`)
+#     ⛔ `[M]` ~800 s, and it takes all four boxes for thirteen minutes
+#   a `Contenitore.<new>` appears      ⇒ new desktop: everything on the new one, PLUS
+#                                        the regression on the old ones
+#   only documents are touched         ⇒ ⭐ NOTHING, and it says so.  A hook that
+#                                        runs even when it is not needed is a
+#                                        hook that someone will switch off
 #
-# ⚠ E UNA COSA IL PERCORSO NON LA SA DIRE, dichiarata invece di essere nascosta:
-#   *«prima di chiudere una fase»* non e' un file che cambia — e' una decisione.
-#   ⇒ Quella si chiede per nome (`--famiglia tutto`), e va bene cosi': ⛔ far
-#     finta che un percorso possa indovinarla vorrebbe dire una regola che non
-#     scatta mai e che nessuno si accorge non essere scattata.
-#
-# ===========================================================================
-# ⛔⛔ IL TETTO DEI 3 MINUTI, E LE PROVE CHE SONO STATE TAGLIATE
-# ===========================================================================
-#
-# `fasi/11…` §5.1: sotto i 3 minuti per la famiglia veloce.  Sopra i 5 comincia
-# il rischio che venga spenta; sopra i 10 e' quasi certo.  ⛔ E la regola su che
-# cosa fare quando il tempo non ci sta: **si tagliano prove, non si alza il
-# tetto.**
-#
-# `[M]` 26 agosto 2026 (`fasi/11…` §7-bis.13): **un giro di C1 costa 74
-# secondi.**  ⇒ Nei 180 secondi ci stanno **DUE giri**, e basta.
-#
-# ⇒ ⭐⭐ QUEL CHE E' STATO TAGLIATO DALLA FAMIGLIA VELOCE, e quanto costa:
-#
-#   · **C1 dal terzo giro in poi** (otto giri su dieci).  ⛔ Costo: il documento
-#     di fase dice che il guasto della nascita e' INTERMITTENTE, e con due giri
-#     un guasto che colpisce una volta su cinque passa inosservato piu' della
-#     meta' delle volte.  ⚠ Oggi non morde — `[M]` 26 ago 2026: dieci sessioni
-#     su dieci nascono cieche, e due giri bastano ad accorgersene — ⛔ ma il
-#     giorno in cui il difetto sara' curato e tornera' raro, DUE GIRI NON
-#     BASTERANNO PIU', e questa riga e' li' per ricordarlo.
-#   · **C8, tutt'e due le prove.**  ⛔ E' la maglia piu' importante della lista,
-#     e questo taglio e' il piu' caro di tutti: il difetto del secondo inquilino
-#     NON viene guardato a ogni modifica.  ⚠ Resta nella famiglia `tutto`, cioe'
-#     prima di chiudere una fase.  ⇒ `[?]` Il costo vero: il primo avvio di
-#     Firefox in una scatola fredda passa i 25 s (`LEZIONI.md` §1.45), e due
-#     inquilini per quattro scatole non ci stanno in tre minuti in nessun modo.
-#   · ⭐⭐ **LE CINQUE NUOVE DEL 27 AGOSTO — C2, C3, C4, C6, C8b.**  Nessuna
-#     entra nella famiglia veloce, e non e' un rinvio: `[M]` il tetto e' pieno a
-#     **173 s su 180**, e §5.1 dice che una maglia in piu' si SCAMBIA, non si
-#     somma.  ⛔ Qui non c e niente da scambiare — la meno cara di queste costa
-#     piu' dell intera famiglia veloce, perche' ognuna fa nascere una sessione.
-#     ⇒ Stanno in `tutto` e in `desktop-nuovo`.
-#     ⚠ E IL COSTO DEL TAGLIO, dichiarato: fra un invio e la chiusura di una
-#     fase, **nessuno guarda se una finestra si apre, se i fotogrammi cambiano,
-#     se un tasto arriva allo schermo, se un desktop si ritrova dopo un
-#     distacco, e se la pagina si vede dal cliente**.  ⛔ Sono cinque delle sei
-#     domande che l utente si fa guardando lo schermo.  ⇒ La cura non e'
-#     alzare il tetto: e' che una sessione costi meno a nascere.
-#   · **il passo 0.**  Guarda l'AMBIENTE, che non cambia quando cambia `src/`.
-#     ⚠ Costo basso e dichiarato: se qualcuno ricostruisce una scatola senza
-#     dirlo, la famiglia veloce non se ne accorge.  ⭐ Ma se ne accorge **C11**,
-#     che nella famiglia veloce c'e' — ed e' per questo che c'e'.
-#
-# ⛔ E il tetto NON e' creduto: ogni giro si CRONOMETRA e il tempo finisce nel
-#    registro.  Se sfora, il gancio lo dice a voce alta invece di tirare avanti.
-#    ⇒ Il `[?]` dei tre minuti diventera' un `[M]` al primo giro vero.
+# ⚠ AND ONE THING THE PATH CANNOT TELL, declared instead of hidden:
+#   *«before closing a phase»* is not a file that changes — it is a decision.
+#   ⇒ That one is asked for by name (`--famiglia tutto`), and that is fine: ⛔ pretending
+#     a path could guess it would mean a rule that never
+#     fires and that nobody notices has not fired.
 #
 # ===========================================================================
-# ⭐⭐ E LASCIA TRACCIA — perche' senza traccia C12 e C13 non esistono
+# ⛔⛔ THE 3-MINUTE CEILING, AND THE TESTS THAT WERE CUT
 # ===========================================================================
 #
-# Un giro per riga, in `11-gancio-registro.jsonl`, in coda e mai riscritto.
-# ⛔ E fra i campi ce n'e' uno che vale piu' degli altri: **`secco`**.
+# `fasi/11…` §5.1: under 3 minutes for the fast family.  Above 5 begins
+# the risk that it gets switched off; above 10 it is almost certain.  ⛔ And the rule on what
+# to do when the time does not fit: **tests are cut, the ceiling is not
+# raised.**
 #
-# ⚠ Un giro a vuoto (`--secco`) NON e' un giro.  Se contasse, basterebbe un
-#   `--secco` a far dire a C12 *«il gancio e' vivo»* per una settimana, ⛔ cioe'
-#   la rete si racconterebbe che sta girando mentre non gira.  ⇒ La riga si
-#   scrive lo stesso (serve a chi diagnostica), ma porta `"secco": true`, e
-#   **C12 e C13 la buttano via**.  ⭐ E tutt'e due hanno quel caso dentro la
-#   loro certificazione, cioe' e' provato e non promesso.
+# `[M]` 26 August 2026 (`fasi/11…` §7-bis.13): **one C1 run costs 74
+# seconds.**  ⇒ In the 180 seconds **TWO runs** fit, and that is all.
 #
-# ⛔ NIENTE `sh -c` annidati qui dentro: `LEZIONI.md` §1.46 — un comando che
-#    perde le virgolette non esegue niente e restituisce 0, cioe' un banco che
-#    non ha girato e dice «riuscito».  Ogni maglia si chiama con un ARRAY.
+# ⇒ ⭐⭐ WHAT WAS CUT FROM THE FAST FAMILY, and what it costs:
+#
+#   · **C1 from the third run on** (eight runs out of ten).  ⛔ Cost: the phase
+#     document says the birth fault is INTERMITTENT, and with two runs
+#     a fault that strikes once in five goes unnoticed more than
+#     half the time.  ⚠ Today it does not bite — `[M]` 26 Aug 2026: ten sessions
+#     out of ten are born blind, and two runs are enough to notice — ⛔ but the
+#     day the defect is cured and becomes rare again, TWO RUNS WILL NOT
+#     BE ENOUGH ANY MORE, and this line is there to remember it.
+#   · **C8, both tests.**  ⛔ It is the most important mesh of the list,
+#     and this cut is the most expensive of all: the second tenant's defect
+#     is NOT looked at at every change.  ⚠ It stays in the `tutto` family, that is
+#     before closing a phase.  ⇒ `[?]` The real cost: the first start of
+#     Firefox in a cold box exceeds 25 s (`LEZIONI.md` §1.45), and two
+#     tenants for four boxes do not fit in three minutes in any way.
+#   · ⭐⭐ **THE FIVE NEW ONES OF 27 AUGUST — C2, C3, C4, C6, C8b.**  None
+#     enters the fast family, and it is not a postponement: `[M]` the ceiling is full at
+#     **173 s out of 180**, and §5.1 says an extra mesh is SWAPPED, not
+#     added.  ⛔ Here there is nothing to swap — the cheapest of these costs
+#     more than the whole fast family, because each brings a session to life.
+#     ⇒ They are in `tutto` and in `desktop-nuovo`.
+#     ⚠ AND THE COST OF THE CUT, declared: between a push and the closing of a
+#     phase, **nobody looks whether a window opens, whether the frames change,
+#     whether a key reaches the screen, whether a desktop finds itself again after a
+#     detach, and whether the page shows from the client**.  ⛔ They are five of the six
+#     questions the user asks himself looking at the screen.  ⇒ The cure is not
+#     raising the ceiling: it is making a session cheaper to bring to life.
+#   · **step 0.**  It looks at the ENVIRONMENT, which does not change when `src/` changes.
+#     ⚠ Low and declared cost: if someone rebuilds a box without
+#     saying so, the fast family does not notice.  ⭐ But **C11** notices,
+#     which is in the fast family — and that is why it is there.
+#
+# ⛔ And the ceiling is NOT believed: every run is TIMED and the time ends up in the
+#    log.  If it overruns, the hook says so out loud instead of carrying on.
+#    ⇒ The `[?]` of the three minutes will become an `[M]` at the first real run.
+#
+# ===========================================================================
+# ⭐⭐ AND IT LEAVES A TRACE — because without a trace C12 and C13 do not exist
+# ===========================================================================
+#
+# One run per line, in `11-gancio-registro.jsonl`, append-only and never rewritten.
+# ⛔ And among the fields there is one worth more than the others: **`secco`**.
+#
+# ⚠ A dry run (`--secco`) is NOT a run.  If it counted, one
+#   `--secco` would be enough to make C12 say *«the hook is alive»* for a week, ⛔ that is
+#   the net would tell itself it is running while it is not.  ⇒ The line is
+#   written anyway (it serves whoever diagnoses), but it carries `"secco": true`, and
+#   **C12 and C13 throw it away**.  ⭐ And both have that case inside their
+#   certification, that is it is proven and not promised.
+#
+# ⛔ NO nested `sh -c` in here: `LEZIONI.md` §1.46 — a command that
+#    loses its quotes runs nothing and returns 0, that is a bench that
+#    did not run and says «succeeded».  Every mesh is called with an ARRAY.
 # ===========================================================================
 set -uo pipefail
 
 QUI=$(cd "$(dirname "$0")" && pwd)
-# ⛔ Dentro un gancio git esporta GIT_DIR: con quella, `--show-toplevel` risponde
-#    la cartella corrente (banchi/11-scatole) e non la radice del deposito —
-#    `[M]` 3 ott 2026, pre-push da un worktree: «non trovo
-#    banchi/11-scatole/fondamenta/strumenti/sshpw.py».  ⇒ Si chiede senza.
+# ⛔ Inside a git hook, git exports GIT_DIR: with it, `--show-toplevel` answers
+#    the current folder (banchi/11-scatole) and not the root of the repository —
+#    `[M]` 3 Oct 2026, pre-push from a worktree: «I cannot find
+#    banchi/11-scatole/fondamenta/strumenti/sshpw.py».  ⇒ We ask without it.
 RADICE=$(env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE git -C "$QUI" rev-parse --show-toplevel 2>/dev/null)
 REGISTRO="$QUI/11-gancio-registro.jsonl"
 
-# ⭐⭐ CHE COSA IL PRODOTTO SA FARE, E SU QUALE DESKTOP — la lista sta in UN
-#    posto solo, letto anche da `11-accendi.sh` (fase 13, 21 set 2026: prima
-#    erano due whitelist scritte a mano, e disallineate).
-# ⛔ E se il file mancasse il cancello resta CHIUSO e lo dice: nessuna maglia
-#    del prodotto gira «perche' non c'era la lista», e nessuna resta muta.
+# ⭐⭐ WHAT THE PRODUCT CAN DO, AND ON WHICH DESKTOP — the list is in ONE
+#    place only, read also by `11-accendi.sh` (phase 13, 21 Sep 2026: before
+#    there were two whitelists written by hand, and misaligned).
+# ⛔ And if the file were missing the gate stays CLOSED and says so: no product
+#    mesh runs «because the list was not there», and none stays silent.
 if [ -r "$QUI/11-capacita-del-prodotto.sh" ]; then
 	. "$QUI/11-capacita-del-prodotto.sh"
 else
 	prodotto_pronto() {
-		printf 'manca 11-capacita-del-prodotto.sh accanto al gancio: non so che cosa il prodotto sa fare'
+		printf '11-capacita-del-prodotto.sh is missing next to the hook: I do not know what the product can do'
 		return 1
 	}
 fi
 
-# ⚠ Ogni riga di registro dice SU QUALE MACCHINA e' stata scritta.  ⛔ Non e' un
-#   ornamento: da quando i giri di due macchine finiscono nello stesso file
-#   (`11-registro-unisci.py`), una riga senza questo campo e' una riga di cui non
-#   si sa piu' se ha visto delle scatole o soltanto un deposito git.
+# ⚠ Every log line says ON WHICH MACHINE it was written.  ⛔ It is not an
+#   ornament: since the runs of two machines end up in the same file
+#   (`11-registro-unisci.py`), a line without this field is a line of which one no
+#   longer knows whether it saw boxes or only a git repository.
 DOVE=$(hostname 2>/dev/null) || DOVE=""
 [ -n "$DOVE" ] || DOVE=sconosciuta
 
 # ---------------------------------------------------------------------------
-# ⭐⭐ LA MACCHINA DI PROVA — dove il gancio ESEGUE.  `DECISIONI.md`
-#    §4.6-novemdecies: decidere vuole il deposito, far girare vuole le scatole.
+# ⭐⭐ THE TEST MACHINE — where the hook RUNS.  `DECISIONI.md`
+#    §4.6-novemdecies: deciding needs the repository, running needs the boxes.
 # ---------------------------------------------------------------------------
 RETE11_REMOTA=/media/REMOTIX/rete11
-# ⚠ Il nome dell'unita' si puo' cambiare (`--unita`) per una ragione sola: due
-#   giri insieme sulla stessa macchina si pesterebbero l'unita' e il log.
-#   ⛔ Non e' una leva per far girare meno cose — quelle non ci sono.
+# ⚠ The unit name can be changed (`--unita`) for one reason only: two
+#   runs together on the same machine would step on each other's unit and log.
+#   ⛔ It is not a lever to run fewer things — those do not exist.
 UNITA_REMOTA=rete11-gancio
-# ⛔ Il tetto d'attesa della meta' remota.  ⚠ NON e' il tetto dei 3 minuti: e'
-#   quanto si sta ad aspettare prima di dire «non ho potuto guardare».  La
-#   famiglia `tutto` costa `[M]` 1 704 s (§7-bis.16), quindi non puo' essere 180.
+# ⛔ The wait ceiling of the remote half.  ⚠ It is NOT the 3-minute ceiling: it is
+#   how long we wait before saying «I could not look».  The
+#   `tutto` family costs `[M]` 1 704 s (§7-bis.16), so it cannot be 180.
 #
-# ⛔⛔ ED ERA 2 400, CIOE' UN QUARTO DI QUEL CHE SERVE — 20 settembre 2026.
+# ⛔⛔ AND IT WAS 2 400, THAT IS A QUARTER OF WHAT IS NEEDED — 20 September 2026.
 #
-# `[M]` Quel numero e' del 27 agosto, quando la famiglia `tutto` costava 1 704 s
-# su due scatole e meno maglie.  Da allora la fase 12 ha misurato giri da
-# **9 075 s** (incremento 11, 20 set) e **10 645 s** (incremento 4, 19 set) —
-# `fasi/12-kde.md`.  ⇒ Con 2 400 questa meta' molla dopo 40 minuti e scrive
-# «non ho potuto guardare» **mentre la' il giro sta ancora misurando**: un 3
-# che non parla del prodotto ma dell'orologio di chi aspetta.  Il punto era
-# gia' scritto come aperto in `fasi/12-kde.md` (il tetto della delega remota).
+# `[M]` That number is from 27 August, when the `tutto` family cost 1 704 s
+# on two boxes and fewer meshes.  Since then phase 12 has measured runs of
+# **9 075 s** (increment 11, 20 Sep) and **10 645 s** (increment 4, 19 Sep) —
+# `fasi/12-kde.md`.  ⇒ With 2 400 this half gives up after 40 minutes and writes
+# «I could not look» **while over there the run is still measuring**: a 3
+# that says nothing about the product but about the clock of whoever waits.  The point was
+# already written as open in `fasi/12-kde.md` (the ceiling of the remote delegation).
 #
-# ⭐ E il tetto non e' la protezione: la protezione e' la domanda sull'unita'
-#   dentro `attendi_remoto` — se la' muore, si torna subito, tetto o non tetto.
-#   ⇒ Il tetto serve solo a non aspettare in eterno un'unita' viva e muta, e
-#     percio' puo' stare largo: quattro ore, contro giri da tre.
+# ⭐ And the ceiling is not the protection: the protection is the question about the unit
+#   inside `attendi_remoto` — if over there it dies, we return at once, ceiling or no ceiling.
+#   ⇒ The ceiling only serves not to wait for ever on a unit that is alive and silent, and
+#     so it can be wide: four hours, against runs of three.
 ATTESA_REMOTA=14400
 
-# ⛔ Il tetto sta QUI, dichiarato, e si stampa in ogni giro: un verdetto senza
-#    il suo metro e' un'opinione.
+# ⛔ The ceiling is HERE, declared, and it is printed in every run: a verdict without
+#    its yardstick is an opinion.
 TETTO_VELOCE=180
 
-# ⚠ Quanto ci si aspetta che costi ciascuna maglia.  Serve a UNA cosa sola: non
-#   iniziare una maglia che non ci sta nel tempo rimasto.  ⛔ E' una previsione,
-#   non una misura — solo C1 ha un `[M]` sotto:
-#     C1   `[M]` 74 s a giro, 26 ago 2026, `fasi/11…` §7-bis.13
-#     C11  `[?]` interroga quattro scatole con dpkg, secondi
-#     C12  `[?]` legge due file
-#     C13  `[?]` legge un file
-#     C14  ⛔ `[M]` **786 s** — §7-bis.16, giro completo del 26 ago 2026. E
-#          ⛔ accende tutt'e quattro le scatole INSIEME: non e' una maglia a
-#          costo quasi zero, e per questo NON sta piu' nella famiglia `rete`
-#     C15  `[?]` legge un file, come C12 e C13
-#     C5   `[M]` 71 s a giro — 27 ago 2026, dopo la cura dei tetti morti
-#          (`--attesa-sink` 26 s + `--resta` 51 s).  ⛔ Prima diceva 45, che era
-#          la misura di PRIMA della cura: un costo vecchio fa saltare una maglia
-#          che ci starebbe, o ne fa partire una che non ci sta
-#   ⭐⭐ LE CINQUE MAGLIE NUOVE del 27 agosto 2026 — i costi stanno accanto
-#   alla loro dichiarazione qui sotto, con la marca vera di ciascuno.
-#     C7   `[M]` 26 s il giro normale, 25 s «si stacca soltanto», 37 s col
-#          guasto innestato (26 ago 2026, scatola XFCE) — dichiarato 30
-#     C9   `[M]` 50 s (--resta 45), 26 ago 2026, scatola lxqt
-#     C10  ⭐ `[M]` **0,039 s** — legge tre file e una riga del Makefile.
-#          26 ago 2026, mediana su dieci giri sul portatile
+# ⚠ How much each mesh is expected to cost.  It serves ONE thing only: not
+#   starting a mesh that does not fit in the remaining time.  ⛔ It is a forecast,
+#   not a measurement — only C1 has an `[M]` under it:
+#     C1   `[M]` 74 s per run, 26 Aug 2026, `fasi/11…` §7-bis.13
+#     C11  `[?]` queries four boxes with dpkg, seconds
+#     C12  `[?]` reads two files
+#     C13  `[?]` reads one file
+#     C14  ⛔ `[M]` **786 s** — §7-bis.16, full run of 26 Aug 2026. And
+#          ⛔ it starts all four boxes TOGETHER: it is not an almost-zero-cost
+#          mesh, and that is why it is NO LONGER in the `rete` family
+#     C15  `[?]` reads one file, like C12 and C13
+#     C5   `[M]` 71 s per run — 27 Aug 2026, after the cure of the dead ceilings
+#          (`--attesa-sink` 26 s + `--resta` 51 s).  ⛔ Before it said 45, which was
+#          the measurement from BEFORE the cure: an old cost makes a mesh skip
+#          that would fit, or starts one that does not fit
+#   ⭐⭐ THE FIVE NEW MESHES of 27 August 2026 — the costs are next
+#   to their declaration below, with the real mark of each.
+#     C7   `[M]` 26 s the normal run, 25 s «only detaches», 37 s with the
+#          fault injected (26 Aug 2026, XFCE box) — declared 30
+#     C9   `[M]` 50 s (--resta 45), 26 Aug 2026, lxqt box
+#     C10  ⭐ `[M]` **0,039 s** — reads three files and one line of the Makefile.
+#          26 Aug 2026, median over ten runs on the laptop
 COSTO_C1_GIRO=74
-# ⛔ 27 ago 2026: era **45**, cioe' la misura di PRIMA che C5 fosse curata dei
-#    suoi tetti morti.  ⚠ Un costo che resta indietro non e' innocuo: governa se
-#    una maglia si comincia o si salta.
+# ⛔ 27 Aug 2026: it was **45**, that is the measurement from BEFORE C5 was cured of its
+#    dead ceilings.  ⚠ A cost that lags behind is not harmless: it governs whether
+#    a mesh is started or skipped.
 COSTO_C5=71
 COSTO_C7=30
 COSTO_C9=50
@@ -208,25 +208,25 @@ COSTO_C12=5
 COSTO_C13=5
 COSTO_C14=800
 COSTO_C15=5
-# ⭐ C16 `[M]` **0,79 s** — mediana su cinque giri sul portatile, 28 ago 2026.
-#    Legge 17 documenti (48 000 righe) e l'elenco dei file del deposito.
+# ⭐ C16 `[M]` **0,79 s** — median over five runs on the laptop, 28 Aug 2026.
+#    It reads 17 documents (48 000 lines) and the list of the repository's files.
 COSTO_C16=1
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐ LE CINQUE MAGLIE NUOVE — 27 agosto 2026.  ⛔ NESSUNA sta nella famiglia
-#    veloce, e non e' una svista: `[M]` il tetto e' pieno a 173 s su 180, e
-#    §5.1 dice che una maglia in piu' si SCAMBIA, non si somma.  Qui non c e
-#    niente da scambiare: la meno cara di queste costa piu' dell intera
-#    famiglia veloce.  ⇒ Stanno in `tutto` e in `desktop-nuovo`.
-# ⚠ E NON girano su ogni scatola: ciascuna gira dove il prodotto da' le
-#   capacita' che lei vuole (immagine, input, appunti), e altrimenti SALTA
-#   dicendo quale manca.  La lista sta in `11-capacita-del-prodotto.sh`.
-#   `[R]` 21 set 2026: gnome e kde tutto; xfce la sola immagine (fase 13,
-#   incremento 2); lxqt niente — il prodotto non la riconosce.
+# ⭐⭐ THE FIVE NEW MESHES — 27 August 2026.  ⛔ NONE is in the fast
+#    family, and it is not an oversight: `[M]` the ceiling is full at 173 s out of 180, and
+#    §5.1 says an extra mesh is SWAPPED, not added.  Here there is
+#    nothing to swap: the cheapest of these costs more than the whole
+#    fast family.  ⇒ They are in `tutto` and in `desktop-nuovo`.
+# ⚠ And they do NOT run on every box: each runs where the product provides the
+#   capabilities it wants (image, input, clipboard), and otherwise it SKIPS
+#   saying which one is missing.  The list is in `11-capacita-del-prodotto.sh`.
+#   `[R]` 21 Sep 2026: gnome and kde everything; xfce only the image (phase 13,
+#   increment 2); lxqt nothing — the product does not recognise it.
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐ `[M]` 27 agosto 2026, scatola rete11-gnome curata, giro normale cronometrato
-#   dal sistema.  ⚠ Col guasto innestato C2 apre DUE inquilini e costa il doppio
-#   (`[M]` 418 e 419 s); C3 col codificatore fermo costa `[M]` 321 s.
+# ⭐ `[M]` 27 August 2026, cured rete11-gnome box, normal run timed
+#   by the system.  ⚠ With the fault injected C2 opens TWO tenants and costs double
+#   (`[M]` 418 and 419 s); C3 with the encoder stopped costs `[M]` 321 s.
 COSTO_C2=210
 COSTO_C3=162
 COSTO_C4=32
@@ -234,25 +234,25 @@ COSTO_C6=205
 COSTO_C8B=378
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐ IL TETTO DEL PALCO DI C2 E C3 — ⛔ un numero, in un posto solo.
+# ⭐⭐ THE STAGE CEILING OF C2 AND C3 — ⛔ one number, in one place only.
 #
-# `[M]` 27 agosto 2026, scatola gnome curata: il palco nasce in **2,1 · 2,2 ·
-# 2,3 · 4,1 · 4,2 secondi** (cinque giri) — massimo **4,2 s**.  ⛔ Il valore
-# predefinito dentro le due maglie e' ancora **200 s**, che veniva dai ~97 s di
-# quando nella scatola il `polkit` non partiva.
+# `[M]` 27 August 2026, cured gnome box: the stage is born in **2,1 · 2,2 ·
+# 2,3 · 4,1 · 4,2 seconds** (five runs) — maximum **4,2 s**.  ⛔ The default
+# value inside the two meshes is still **200 s**, which came from the ~97 s of
+# when in the box `polkit` did not start.
 #
-# ⛔⛔ E in C2 e C3 quel numero NON e' una scadenza: e' un ADDENDO.  Le due
-#     maglie calcolano `--resta = attesa-palco + ... `, cioe' quanto il cliente
-#     resta attaccato: con 200 il cliente sta attaccato 255 s **anche quando il
-#     palco e' nato dopo 2 secondi**.  ⇒ 140 secondi buttati a ogni inquilino.
-# ⚠ In C4 e in C6 invece e' una scadenza vera (si aspetta FINCHE' nasce), e
-#   percio' qui non si passa: allungarlo o accorciarlo non cambia il costo, e
-#   un tetto passato da fuori senza ragione e' rumore.
+# ⛔⛔ And in C2 and C3 that number is NOT a deadline: it is an ADDEND.  The two
+#     meshes compute `--resta = attesa-palco + ... `, that is how long the client
+#     stays attached: with 200 the client stays attached 255 s **even when the
+#     stage was born after 2 seconds**.  ⇒ 140 seconds thrown away at every tenant.
+# ⚠ In C4 and C6 instead it is a real deadline (we wait UNTIL it is born), and
+#   so it is not passed here: lengthening or shortening it does not change the cost, and
+#   a ceiling passed from outside without a reason is noise.
 #
-# ⇒ **60 s = 14 volte il massimo misurato.**  ⛔ E il posto giusto per questo
-#   numero e' il `default` delle due maglie: qui sta perche' il 27 agosto le
-#   maglie erano in mano a un altro agente e non si toccano in due.
-#   ⚠ Il giorno che il default scende, questa riga va TOLTA, non lasciata.
+# ⇒ **60 s = 14 times the measured maximum.**  ⛔ And the right place for this
+#   number is the `default` of the two meshes: it is here because on 27 August the
+#   meshes were in the hands of another agent and two must not touch them at once.
+#   ⚠ The day the default goes down, this line must be REMOVED, not left.
 # ═══════════════════════════════════════════════════════════════════════════
 TETTO_PALCO_C2C3=60
 
@@ -261,15 +261,15 @@ GIRI_VELOCE=2
 DESKTOP_NOTI="gnome kde xfce lxqt"
 
 # ---------------------------------------------------------------------------
-# ⛔⛔ DOVE STANNO I GANCI DI GIT — e non e' una riga sola, per una ragione.
+# ⛔⛔ WHERE THE GIT HOOKS ARE — and it is not a single line, for a reason.
 #
-# `git --git-path` torna un percorso **relativo alla cartella data a `-C`**, non
-# alla radice del deposito.  `[M]` 26 agosto 2026: chiamato da `banchi/11-scatole`
-# risponde `../../.git/hooks`.  ⇒ Usarlo cosi com e vuol dire un percorso che
-# dipende da dove ci si trovava quando si e chiamato — cioe un gancio che a
-# volte si installa nel posto giusto e a volte no, senza dirlo.
-# ⚠ E lo stesso identico difetto ha morso C12, che diceva «non installato» per
-#   sempre.  ⇒ La risoluzione sta QUI, in un posto solo.
+# `git --git-path` returns a path **relative to the folder given to `-C`**, not
+# to the root of the repository.  `[M]` 26 August 2026: called from `banchi/11-scatole`
+# it answers `../../.git/hooks`.  ⇒ Using it as it is means a path that
+# depends on where one was when it was called — that is a hook that
+# sometimes installs in the right place and sometimes not, without saying so.
+# ⚠ And the very same defect bit C12, which said «not installed» for
+#   ever.  ⇒ The resolution is HERE, in one place only.
 # ---------------------------------------------------------------------------
 cartella_ganci() {
 	local c
@@ -286,9 +286,9 @@ inf() { printf '      %s\n' "$*"; }
 log() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
 
 # ---------------------------------------------------------------------------
-# ⚠ L'unica scrittura JSON di questo file, e sta in un posto solo apposta: un
-#   secondo punto che costruisce JSON e' un secondo punto che puo' costruirlo
-#   storto senza che nessuno se ne accorga.
+# ⚠ The only JSON writing in this file, and it is in one place only on purpose: a
+#   second point that builds JSON is a second point that can build it
+#   crooked without anyone noticing.
 # ---------------------------------------------------------------------------
 json_stringa() {
 	local s=${1-}
@@ -311,30 +311,30 @@ json_elenco() {
 }
 
 # ---------------------------------------------------------------------------
-# ⭐ CHE COSA E' CAMBIATO — e da dove lo si guarda
+# ⭐ WHAT HAS CHANGED — and where it is looked at from
 #
-# ⚠ Il confronto NON e' lo stesso per tutti gli inneschi, e dev'essere quello
-#   giusto o il gancio guarda il posto sbagliato:
-#     pre-commit   quel che sta per entrare nel commit  (`--cached`)
-#     pre-push     quel che sta per partire             (`@{upstream}..HEAD`)
-#     a mano       quel che c'e' adesso sotto le mani   (albero + staged)
+# ⚠ The comparison is NOT the same for every trigger, and it must be the
+#   right one or the hook looks at the wrong place:
+#     pre-commit   what is about to enter the commit    (`--cached`)
+#     pre-push     what is about to leave               (`@{upstream}..HEAD`)
+#     by hand      what is under one's hands now        (tree + staged)
 # ---------------------------------------------------------------------------
 cambiati() {
 	local innesco=$1
-	# ⛔ Senza deposito non c e niente da elencare, e NON e un errore: e la
-	#    macchina di prova, dove il gancio ESEGUE invece di DECIDERE.
-	#    ⚠ Senza questa riga uscivano tre `git: command not found` su ogni giro,
-	#      cioe rumore che somiglia a un guasto.
+	# ⛔ Without a repository there is nothing to list, and it is NOT an error: it is the
+	#    test machine, where the hook RUNS instead of DECIDING.
+	#    ⚠ Without this line three `git: command not found` came out at every run,
+	#      that is noise that looks like a fault.
 	[ -n "$RADICE" ] || return 0
 	case "$innesco" in
 	pre-commit)
 		git -C "$RADICE" diff --name-only --cached
 		;;
 	pre-push)
-		# ⚠ Se non c'e' un ramo a monte (ramo nuovo), non si puo' fare la
-		#   differenza: si guarda l'ultimo commit.  ⛔ E si preferisce
-		#   guardare TROPPO piuttosto che troppo poco — un gancio che salta
-		#   e' peggio di un gancio che gira di piu'.
+		# ⚠ If there is no upstream branch (new branch), the difference cannot be
+		#   made: the last commit is looked at.  ⛔ And looking at TOO MUCH is
+		#   preferred to too little — a hook that skips
+		#   is worse than a hook that runs more.
 		local monte
 		monte=$(git -C "$RADICE" rev-parse --abbrev-ref '@{upstream}' 2>/dev/null)
 		if [ -n "$monte" ]; then
@@ -352,17 +352,17 @@ cambiati() {
 }
 
 # ---------------------------------------------------------------------------
-# ⭐⭐ LA REGOLA, tutta qui: dai percorsi alla famiglia.
+# ⭐⭐ THE RULE, all here: from the paths to the family.
 #
-# ⛔ E l'ordine conta: «desktop nuovo» vince su tutto, perche' e' il caso in cui
-#    la regressione sui vecchi serve di piu' — ed e' anche l'unico in cui il
-#    percorso sa dire una cosa che nessuno pensava di dichiarare.
+# ⛔ And the order counts: «new desktop» wins over everything, because it is the case where
+#    the regression on the old ones is needed most — and it is also the only one where the
+#    path can say something nobody thought of declaring.
 # ---------------------------------------------------------------------------
 decidi_famiglia() {
 	local -n _elenco=$1
 	local f tocca_prodotto=0 tocca_rete=0 nuovo=""
 
-	# Un desktop nuovo si riconosce da una ricetta AGGIUNTA, non modificata.
+	# A new desktop is recognised by an ADDED recipe, not a modified one.
 	local aggiunti
 	aggiunti=$(git -C "$RADICE" diff --name-only --diff-filter=A --cached 2>/dev/null
 	           git -C "$RADICE" ls-files --others --exclude-standard 2>/dev/null)
@@ -379,38 +379,38 @@ decidi_famiglia() {
 	done
 
 	# ═══════════════════════════════════════════════════════════════════
-	# ⭐⭐ E I QUATTRO PERCORSI DA CUI C14 DIPENDE — dichiarati, non intuiti.
+	# ⭐⭐ AND THE FOUR PATHS C14 DEPENDS ON — declared, not guessed.
 	#
-	# ⛔ C14 non sta piu' nella famiglia `rete` (costa `[M]` 786 s e si prende
-	#    le quattro scatole: vedi `famiglia_rete`).  ⚠ Ma toglierla e basta
-	#    vorrebbe dire che un cambiamento **a C14 stessa** non la fa piu'
-	#    girare — cioe' §5.2, *«una prova che non prende niente si toglie»*,
-	#    ottenuto per disuso invece che per decisione.
-	# ⇒ ⭐ Quindi non si toglie: si SPOSTA su un percorso suo.  E il percorso
-	#   non e' arbitrario — sono le quattro cose che, cambiando, cambiano
-	#   proprio quel che C14 misura:
+	# ⛔ C14 is no longer in the `rete` family (it costs `[M]` 786 s and takes
+	#    the four boxes: see `famiglia_rete`).  ⚠ But just removing it
+	#    would mean that a change **to C14 itself** no longer makes it
+	#    run — that is §5.2, *«a test that catches nothing is removed»*,
+	#    obtained by disuse instead of by decision.
+	# ⇒ ⭐ So it is not removed: it is MOVED onto a path of its own.  And the path
+	#   is not arbitrary — they are the four things that, when they change, change
+	#   precisely what C14 measures:
 	#
-	#   `11-accendi.sh`      ⭐ ci sta dentro la MAPPA DELLE PORTE (righe 58-62,
-	#                        gnome 8511 · kde 8512 · xfce 8513 · lxqt 8514), ed
-	#                        e' li' che e' scritto il prezzo di `--network=host`.
-	#                        ⛔ C14 quelle porte **le ricopia** — e un numero
-	#                        ricopiato che cambia da una parte sola e' esattamente
-	#                        il difetto che C14 esiste per prendere
-	#   `Contenitore.*`      la ricetta della scatola: se cambia come nasce, cambia
-	#                        se due possono stare accese insieme
-	#   `11-c8-*`            ⭐ e' la SONDA di C14 (usa la prova A di C8): se cambia
-	#                        la sonda, cambia l'impronta che C14 confronta
-	#   `11-c14-*`           la maglia stessa
+	#   `11-accendi.sh`      ⭐ the PORT MAP lives inside it (lines 58-62,
+	#                        gnome 8511 · kde 8512 · xfce 8513 · lxqt 8514), and
+	#                        that is where the price of `--network=host` is written.
+	#                        ⛔ C14 **copies** those ports — and a copied number
+	#                        that changes on one side only is exactly
+	#                        the defect C14 exists to catch
+	#   `Contenitore.*`      the box recipe: if how it is born changes, whether
+	#                        two can be on together changes
+	#   `11-c8-*`            ⭐ it is C14's PROBE (it uses C8's test A): if the probe
+	#                        changes, the fingerprint C14 compares changes
+	#   `11-c14-*`           the mesh itself
 	# ═══════════════════════════════════════════════════════════════════
 	# ═══════════════════════════════════════════════════════════════════
-	# ⭐⭐ E LE CARTE — 28 agosto 2026, e prima di oggi non decidevano NIENTE.
+	# ⭐⭐ AND THE PAPERS — 28 August 2026, and before today they decided NOTHING.
 	#
-	# ⛔ Un commit che toccava solo `*.md` cadeva nel ramo `niente`: la rete non
-	#    guardava le carte, mai.  ⇒ E' la ragione per cui una coordinata di riga
-	#    ha potuto marcire per tre giorni senza che nulla se ne accorgesse
+	# ⛔ A commit that touched only `*.md` fell into the `niente` branch: the net never
+	#    looked at the papers.  ⇒ It is the reason why a line coordinate
+	#    could rot for three days without anything noticing
 	#    (`MASTERPLAN.md`, `src/figlio.c:3290` → 3482).
-	# ⭐ Costa 0,79 s e non accende niente: rispetta il patto di §4.2 meglio di
-	#    qualunque altra maglia.
+	# ⭐ It costs 0,79 s and starts nothing: it keeps the pact of §4.2 better than
+	#    any other mesh.
 	# ═══════════════════════════════════════════════════════════════════
 	local tocca_c14=0 tocca_carte=0
 	for f in "${_elenco[@]}"; do
@@ -445,62 +445,62 @@ decidi_famiglia() {
 
 perche_famiglia() {
 	case "${1%%:*}" in
-	desktop-nuovo) printf 'e comparsa la ricetta di un desktop che non c era: %s' "${1##*:}" ;;
-	funziona)      printf 'e cambiato il PRODOTTO (src/ o web/)' ;;
-	rete-intera)   printf 'e cambiato qualcosa da cui C14 dipende (accendi, una ricetta, C8, C14) ⇒ ⛔ ~800 s e le quattro scatole' ;;
-	rete)          printf 'sono cambiati i banchi o la rete (banchi/)' ;;
-	niente)        printf 'non e cambiato niente che la rete guardi' ;;
+	desktop-nuovo) printf 'the recipe of a desktop that was not there has appeared: %s' "${1##*:}" ;;
+	funziona)      printf 'the PRODUCT has changed (src/ or web/)' ;;
+	rete-intera)   printf 'something C14 depends on has changed (accendi, a recipe, C8, C14) ⇒ ⛔ ~800 s and the four boxes' ;;
+	rete)          printf 'the benches or the net have changed (banchi/)' ;;
+	niente)        printf 'nothing the net looks at has changed' ;;
 	esac
 }
 
 # ---------------------------------------------------------------------------
-# ⭐ FAR GIRARE UNA MAGLIA, cronometrandola — e senza gusci in mezzo.
+# ⭐ RUNNING A MESH, timing it — and without shells in between.
 #
-# Riempie tre variabili globali, e non torna una stringa da spezzare: ⛔ una
-# stringa da spezzare e' un posto dove un esito puo' perdersi in silenzio.
+# It fills three global variables, and does not return a string to split: ⛔ a
+# string to split is a place where an outcome can get lost silently.
 # ---------------------------------------------------------------------------
 M_ESITO=0
 M_SECONDI=0
-# ⭐ l esito di C10, tenuto da parte: decide se ha senso innestarle un guasto.
+# ⭐ C10's outcome, kept aside: it decides whether it makes sense to inject a fault into it.
 ESITO_C10=3
 eseguiti_json=""
 
 # ---------------------------------------------------------------------------
-# ⛔⛔ LA SGOMBERATA, IN UN POSTO SOLO — 22 settembre 2026
+# ⛔⛔ THE CLEAR-OUT, IN ONE PLACE ONLY — 22 September 2026
 #
-# ⚠ Le maglie cancellano il loro inquilino **prima** di crearlo, non dopo: e'
-#   voluto («da zero comprende anche da zero rispetto a me stesso di ieri»),
-#   ⛔ ma vuol dire che fra un giro e l'altro l'inquilino RESTA.  `[M]` 22 set
-#   2026, dopo `--famiglia tutto`: 22-24 inquilini vivi in ognuna delle tre
-#   scatole, con le loro `/home`, piu' unita' `user@…` fallite e orfani in
-#   `/tmp`.  Solo C6, C7 e C17 sgomberavano davvero.
+# ⚠ The meshes delete their tenant **before** creating it, not after: it is
+#   intended («from scratch includes from scratch with respect to myself of yesterday»),
+#   ⛔ but it means that between one run and the next the tenant REMAINS.  `[M]` 22 Sep
+#   2026, after `--famiglia tutto`: 22-24 live tenants in each of the three
+#   boxes, with their `/home`, plus failed `user@…` units and orphans in
+#   `/tmp`.  Only C6, C7 and C17 really cleared out.
 #
-# ⭐ E si fa QUI, non undici volte: chi aggiunge una maglia domani non deve
-#    ricordarsi niente.  ⛔ Il modello e' DELIMITATO allo spazio di nomi della
-#    rete — `c<numero>[b]u<numero>` — e non e' un `pkill` globale: §7.3 della
-#    fase 10 resta rispettata, `nictest` e `provanic` non si toccano.
-# ⚠ E il `runuser` che fa da padre agli inquilini e' di **root**: va ripreso
-#   (`-CONT`) prima di chiuderlo, o resta fermo in `T` con un figlio zombie —
-#   il residuo trovato in tutte e tre le scatole (vedi `11-c3`).
+# ⭐ And it is done HERE, not eleven times: whoever adds a mesh tomorrow must not
+#    remember anything.  ⛔ The pattern is BOUNDED to the net's name space
+#    — `c<number>[b]u<number>` — and it is not a global `pkill`: §7.3 of
+#    phase 10 stays respected, `nictest` and `provanic` are not touched.
+# ⚠ And the `runuser` that acts as the tenants' parent is **root**'s: it must be resumed
+#   (`-CONT`) before closing it, or it stays stopped in `T` with a zombie child —
+#   the leftover found in all three boxes (see `11-c3`).
 # ---------------------------------------------------------------------------
 sgombera_inquilini() {
 	local d=$1 tolti
 	[ "$SECCO" = 1 ] && return 0
-	# ⛔ SI SGOMBERA SOLO CON LA SERRATURA DELLE SCATOLE IN MANO (29 set 2026): le
-	#   CARTE non la prendono (non accendono niente), ma lo sgombero dopo C16
-	#   girava lo stesso ⇒ `[M]` 10:32:18, un push di soli documenti durante un
-	#   giro della suite ha cancellato gli inquilini di f016 in GNOME e LXQt, e
-	#   i riattacchi falliti hanno bandito l'indirizzo: 12 FAIL e 102 BLOCKED.
+	# ⛔ WE CLEAR OUT ONLY WITH THE BOXES LOCK IN HAND (29 Sep 2026): the
+	#   PAPERS do not take it (they start nothing), but the clear-out after C16
+	#   ran anyway ⇒ `[M]` 10:32:18, a push of documents only during a
+	#   run of the suite deleted the tenants of f016 in GNOME and LXQt, and
+	#   the failed reattaches banned the address: 12 FAIL and 102 BLOCKED.
 	[ -n "${REMOTIX_SCATOLE_TENUTE:-}" ] || return 0
 	scatola_accesa "$d" || return 0
 	tolti=$(podman exec "rete11-$d" sh -c '
 		tolti=""
 		for u in $(awk -F: "\$1 ~ /^c[0-9]+b?u[0-9]+$/ {print \$1}" /etc/passwd); do
 			id=$(id -u "$u" 2>/dev/null)
-			# ⛔ Il modello NON deve pescare se stesso: la riga di comando di
-			#    questo guscio contiene «runuser -u <u>», e un `pkill -f` la
-			#    prenderebbe.  `[c]3u2` vale `c3u2` come espressione e non come
-			#    testo (22 set 2026, il guscio si uccideva da solo).
+			# ⛔ The pattern must NOT catch itself: the command line of
+			#    this shell contains «runuser -u <u>», and a `pkill -f` would
+			#    take it.  `[c]3u2` matches `c3u2` as an expression and not as
+			#    text (22 Sep 2026, the shell was killing itself).
 			m="runuser -u [$(printf %s "$u" | cut -c1)]$(printf %s "$u" | cut -c2-) "
 			loginctl terminate-user "$u" >/dev/null 2>&1
 			pkill -CONT -f "$m" >/dev/null 2>&1
@@ -515,12 +515,12 @@ sgombera_inquilini() {
 		done
 		printf "%s" "$tolti"
 	' 2>/dev/null)
-	[ -n "$tolti" ] && inf "sgomberati da $d:$tolti"
+	[ -n "$tolti" ] && inf "cleared out of $d:$tolti"
 	return 0
 }
 
-# ⚠ Le maglie che non nominano una scatola (C10, C11, C14, C16) lasciano
-#   inquilini nelle scatole che hanno toccato: si spazza dove si e' lavorato.
+# ⚠ The meshes that do not name a box (C10, C11, C14, C16) leave
+#   tenants in the boxes they touched: we sweep where work was done.
 sgombera_dopo_la_maglia() {
 	local nome=$1 d
 	case "$nome" in
@@ -534,7 +534,7 @@ esegui_maglia() {
 	local prima dopo
 
 	if [ "$SECCO" = 1 ]; then
-		inf "(a vuoto) $nome  ⇒  $*"
+		inf "(dry run) $nome  ⇒  $*"
 		M_ESITO=-1
 		M_SECONDI=0
 	else
@@ -544,92 +544,92 @@ esegui_maglia() {
 		dopo=$SECONDS
 		M_SECONDI=$((dopo - prima))
 		case "$M_ESITO" in
-		0) ok  "$nome — regge  (${M_SECONDI}s)" ;;
-		1) ko  "$nome — NON REGGE  (${M_SECONDI}s)" ;;
-		# ⭐ 23 set 2026: il 2 aveva un nome solo nel codice, e nel rapporto
-		#   usciva come «esito 2» — che chi legge deve andare a cercare.
-		#   ⛔ E' l uscita di C10, C12, C15 e C16 sulla macchina di prova: la
-		#   domanda li' non si fa, e va scritto cosi invece che a numero.
-		2) inf "?   $nome — il terreno non regge  (${M_SECONDI}s)" ;;
-		3) inf "?   $nome — non ho potuto guardare  (${M_SECONDI}s)" ;;
-		4) inf "?   $nome — il turno non e mai arrivato  (${M_SECONDI}s)" ;;
-		*) inf "?   $nome — esito $M_ESITO  (${M_SECONDI}s)" ;;
+		0) ok  "$nome — holds  (${M_SECONDI}s)" ;;
+		1) ko  "$nome — DOES NOT HOLD  (${M_SECONDI}s)" ;;
+		# ⭐ 23 Sep 2026: 2 had a name only in the code, and in the report
+		#   it came out as «outcome 2» — which the reader has to go and look up.
+		#   ⛔ It is the exit of C10, C12, C15 and C16 on the test machine: the
+		#   question is not asked there, and it must be written like this instead of as a number.
+		2) inf "?   $nome — the terrain does not hold  (${M_SECONDI}s)" ;;
+		3) inf "?   $nome — I could not look  (${M_SECONDI}s)" ;;
+		4) inf "?   $nome — the turn never came  (${M_SECONDI}s)" ;;
+		*) inf "?   $nome — outcome $M_ESITO  (${M_SECONDI}s)" ;;
 		esac
 	fi
 
 	# ═══════════════════════════════════════════════════════════════════
-	# ⛔⛔ E QUI STA UNA COSA CHE, SE SI PERDE, RENDE C13 UNA BUGIA.
+	# ⛔⛔ AND HERE IS SOMETHING THAT, IF LOST, MAKES C13 A LIE.
 	#
-	# Una maglia col GUASTO INNESTATO si legge **AL CONTRARIO**: `C8 --senza-cura`
-	# esce **0** quando il guasto E' STATO VISTO, e **1** quando NON lo e' stato.
-	# ⇒ Cioe' su un giro innestato lo `0` e' la buona notizia.
+	# A mesh with the FAULT INJECTED reads **THE OTHER WAY ROUND**: `C8 --senza-cura`
+	# exits **0** when the fault WAS SEEN, and **1** when it was NOT.
+	# ⇒ That is, on an injected run `0` is the good news.
 	#
-	# ⚠ Se questa inversione restasse implicita, C13 andrebbe a cercare «un giro
-	#   con un guasto innestato e un rosso», ⛔ e la troverebbe anche quando il
-	#   rosso viene da UN'ALTRA maglia — per esempio da C1, che il guasto vero ce
-	#   l ha davvero.  ⇒ C13 direbbe «la rete sa dare rosso» avendo guardato una
-	#   maglia che non c entra niente.
+	# ⚠ If this inversion stayed implicit, C13 would go looking for «a run
+	#   with an injected fault and a red», ⛔ and it would find it even when the
+	#   red comes from ANOTHER mesh — for example from C1, which really has the real
+	#   fault.  ⇒ C13 would say «the net can give red» having looked at a
+	#   mesh that has nothing to do with it.
 	#
-	# ⭐ Percio' l inversione sta QUI, in un posto solo, e nel registro finisce il
-	#   fatto invece dell esito grezzo: **`ha_visto_il_guasto`**.  C13 legge
-	#   quello e non ha bisogno di sapere niente di come esce C8.
+	# ⭐ So the inversion lives HERE, in one place only, and the log gets the
+	#   fact instead of the raw outcome: **`ha_visto_il_guasto`**.  C13 reads
+	#   that and does not need to know anything about how C8 exits.
 	# ═══════════════════════════════════════════════════════════════════
 	local visto=""
-	# ⚠ A vuoto non si e' visto niente, ne' in un senso ne' nell altro: la
-	#   chiave non si scrive affatto.  ⛔ Scriverla `false` direbbe «il guasto
-	#   non e' stato visto», che e' un'accusa a una prova che non e' girata.
+	# ⚠ In a dry run nothing was seen, in either direction: the
+	#   key is not written at all.  ⛔ Writing it `false` would say «the fault
+	#   was not seen», which is an accusation against a test that did not run.
 	#
 	# ═══════════════════════════════════════════════════════════════════
-	# ⛔⛔⛔ E LA STESSA ACCUSA LA FACEVA L'ESITO **3**, per tutte le maglie
-	#      tranne C10.  27 agosto 2026, rilievo di un agente mandato a refutare.
+	# ⛔⛔⛔ AND OUTCOME **3** MADE THE SAME ACCUSATION, for all the meshes
+	#      except C10.  27 August 2026, finding of an agent sent to refute.
 	#
-	# Qui c'era `if esito = 0 … else false`: ⇒ un `3` — «non ho potuto
-	# guardare» — finiva scritto **`ha_visto_il_guasto: false`**, cioe' *«il
-	# guasto le e' passato sotto il naso e non l'ha visto»*.
-	# ⛔ Ma una maglia che non ha guardato non ha ne' visto ne' mancato: e'
-	#    esattamente il caso di `--secco` qui sopra, e li' la regola c'era gia'.
-	# ⇒ Il giorno che su una scatola le innestate uscissero tutte 3 (server
-	#   fermo, scatola non accesa, prodotto non ancora dentro), ⛔ **C13
-	#   comincerebbe a gridare «la rete non sa piu' dare rosso» mentre la rete
-	#   sta benissimo** — il difetto che C13 esiste per prendere, prodotto dal
-	#   gancio stesso.
+	# Here there was `if esito = 0 … else false`: ⇒ a `3` — «I could not
+	# look» — ended up written as **`ha_visto_il_guasto: false`**, that is *«the
+	# fault passed under its nose and it did not see it»*.
+	# ⛔ But a mesh that did not look has neither seen nor missed: it is
+	#    exactly the `--secco` case above, and there the rule was already there.
+	# ⇒ The day the injected ones on a box all came out 3 (server
+	#   stopped, box not started, product not yet inside), ⛔ **C13
+	#   would start shouting «the net can no longer give red» while the net
+	#   is perfectly fine** — the defect C13 exists to catch, produced by the
+	#   hook itself.
 	#
-	# ⛔⛔ E NON BASTA OMETTERE LA CHIAVE, che era la cura ovvia: **C13 conta le
-	#     maglie per `guasto_innestato`**, e per lei una chiave ASSENTE vale
-	#     «non visto» (`11-c13…`, ha quel caso dentro la certificazione: *«e del
-	#     suo esito non si sa niente ⇒ ROSSO»*, ed e' giusto cosi').
-	# ⇒ Quindi cade anche `guasto_innestato`: se la maglia non ha giudicato,
-	#   **in questo giro non e' stata certificata**, e la riga lo dice.  ⭐ E' la
-	#   stessa forma che `salta_maglia` usa da sempre — `guasto_innestato:false`
-	#   piu' la RAGIONE — invece di due modi diversi di dire la stessa cosa.
-	# ⚠ E il fatto non si perde: resta `innesto_non_giudicato`, per chi diagnostica.
+	# ⛔⛔ AND OMITTING THE KEY IS NOT ENOUGH, which was the obvious cure: **C13 counts the
+	#     meshes by `guasto_innestato`**, and for it an ABSENT key means
+	#     «not seen» (`11-c13…` has that case inside its certification: *«and
+	#     nothing is known of its outcome ⇒ RED»*, and rightly so).
+	# ⇒ So `guasto_innestato` falls too: if the mesh did not judge,
+	#   **in this run it was not certified**, and the line says so.  ⭐ It is the
+	#   same shape `salta_maglia` has always used — `guasto_innestato:false`
+	#   plus the REASON — instead of two different ways of saying the same thing.
+	# ⚠ And the fact is not lost: `innesto_non_giudicato` remains, for whoever diagnoses.
 	# ═══════════════════════════════════════════════════════════════════
 	local guasto_scritto=$guasto
 	if [ "$guasto" = true ] && [ "$SECCO" != 1 ]; then
 		case "$M_ESITO" in
 		0)
 			visto=',"ha_visto_il_guasto":true'
-			ok "  ⭐ il guasto innestato E' STATO VISTO — la rete sa ancora dare rosso"
+			ok "  ⭐ the injected fault WAS SEEN — the net can still give red"
 			;;
 		1)
 			visto=',"ha_visto_il_guasto":false'
-			ko "  ⛔⛔ il guasto innestato NON e' stato visto (esito $M_ESITO)"
+			ko "  ⛔⛔ the injected fault was NOT seen (outcome $M_ESITO)"
 			;;
 		*)
-			# ⛔ Ne' `true` ne' `false`: non ha guardato.  ⚠ E si dice a voce —
-			#   «non ho potuto innestare il guasto» e' un'informazione, non un
-			#   silenzio, e un 3 che si ripete e' un guasto del banco (§5.2).
+			# ⛔ Neither `true` nor `false`: it did not look.  ⚠ And it is said out loud —
+			#   «I could not inject the fault» is information, not a
+			#   silence, and a 3 that repeats is a fault of the bench (§5.2).
 			guasto_scritto=false
 			visto=',"innesto_non_giudicato":true'
-			inf "  ⚠ il guasto era innestato e la maglia NON HA POTUTO GUARDARE (esito $M_ESITO)"
-			inf "    ⇒ questo giro NON la certifica, e ⛔ nemmeno la accusa:"
-			inf "      per C13 e' come se il guasto non fosse stato innestato"
+			inf "  ⚠ the fault was injected and the mesh COULD NOT LOOK (outcome $M_ESITO)"
+			inf "    ⇒ this run does NOT certify it, and ⛔ does not accuse it either:"
+			inf "      for C13 it is as if the fault had not been injected"
 			;;
 		esac
 	fi
 
-	# ⭐ E QUI SI SPAZZA, comunque sia andata: una maglia che esce male e' quella
-	#   che lascia piu' roba dietro.
+	# ⭐ AND HERE WE SWEEP, however it went: a mesh that ends badly is the one
+	#   that leaves the most behind.
 	sgombera_dopo_la_maglia "$nome"
 
 	[ -n "$eseguiti_json" ] && eseguiti_json="$eseguiti_json,"
@@ -638,26 +638,26 @@ esegui_maglia() {
 
 salta_maglia() {
 	local nome=$1 perche=$2
-	inf "⚠ SALTATA $nome — $perche"
+	inf "⚠ SKIPPED $nome — $perche"
 	[ -n "$eseguiti_json" ] && eseguiti_json="$eseguiti_json,"
 	eseguiti_json="$eseguiti_json{\"nome\":$(json_stringa "$nome"),\"esito\":3,\"secondi\":0,\"guasto_innestato\":false,\"saltata\":$(json_stringa "$perche")}"
 }
 
 # ---------------------------------------------------------------------------
-# ⛔⛔ LE MAGLIE SI CERCANO PER PREFISSO, non per nome intero.
+# ⛔⛔ THE MESHES ARE LOOKED UP BY PREFIX, not by full name.
 #
-# ⚠ Una maglia che non c'e' NON e' un verde e NON e' un rosso: e' «non ho potuto
-#   guardare».  ⛔ Darla per buona perche' il file manca sarebbe la forma
-#   d errore che questa fase esiste per non ripetere.
+# ⚠ A mesh that is not there is NOT a green and NOT a red: it is «I could not
+#   look».  ⛔ Taking it as good because the file is missing would be the
+#   error shape this phase exists not to repeat.
 #
-# ⭐ E il prefisso non e' pigrizia: `[M]` 26 agosto 2026, la prima stesura
-#   inchiodava `11-c14-le-scatole-non-si-disturbano.py`, e il file vero si
-#   chiama `11-c14-non-si-disturbano.py`.  ⇒ Il gancio avrebbe detto «SALTATA
-#   C14 — il file non c e» per sempre, ⛔ e avrebbe avuto ragione da un punto di
-#   vista sbagliato: la maglia c era, ero io a chiamarla col nome storto.
-# ⚠ E se ce ne fossero DUE con lo stesso numero non si tira a indovinare: si
-#   dice, perche' scegliere in silenzio vorrebbe dire far girare una maglia e
-#   crederne un altra.
+# ⭐ And the prefix is not laziness: `[M]` 26 August 2026, the first draft
+#   pinned `11-c14-le-scatole-non-si-disturbano.py`, and the real file is
+#   called `11-c14-non-si-disturbano.py`.  ⇒ The hook would have said «SKIPPED
+#   C14 — the file is not there» for ever, ⛔ and it would have been right from a wrong
+#   point of view: the mesh was there, it was me calling it by the wrong name.
+# ⚠ And if there were TWO with the same number we do not guess: we
+#   say so, because choosing silently would mean running one mesh and
+#   believing it is another.
 # ---------------------------------------------------------------------------
 QUALE_MAGLIA=""
 trova_maglia() {
@@ -687,19 +687,19 @@ GIRA_C17() { bash "$QUI/11-accendi.sh" c17 "$1" "${@:2}"; }
 GIRA_C18() { bash "$QUI/11-accendi.sh" c18 "$1" "${@:2}"; }
 GIRA_C19() { bash "$QUI/11-accendi.sh" c19 "$1" "${@:2}"; }
 GIRA_C20() { bash "$QUI/11-accendi.sh" c20 "$1" "${@:2}"; }
-# ⭐ C24 «Esci dieci volte» (fase 14-15): non e' nel passo «prodotto» di
-#   11-accendi.sh, quindi si copia da se' nella scatola prima di girare.
+# ⭐ C24 «Log out ten times» (phase 14-15): it is not in the «prodotto» step of
+#   11-accendi.sh, so it copies itself into the box before running.
 GIRA_C24() {
 	local p; case "$1" in gnome) p=8511;; kde) p=8512;; xfce) p=8513;; lxqt) p=8514;; esac
 	podman cp "$QUI/11-c24-l-esci-chiude-sempre.py" "rete11-$1:/opt/remotix/" &&
 	podman exec "rete11-$1" python3 -u /opt/remotix/11-c24-l-esci-chiude-sempre.py --porta "$p" "${@:2}"
 }
-# ⭐ C21 (fase 14, 24 set 2026) NON gira dentro la scatola: vuole i BROWSER VERI,
-#   che stanno sull'ospite dentro il labwc senza schermo dell'utente dei banchi.
-#   ⇒ Si lancia come quell'utente (i browser da amministratore non partono) e
-#   dall'albero intero dei banchi, perche' importa `12-c20-veri.py` e
-#   `12-client-veri.py` (importati, non copiati).  ⚠ Se il labwc senza schermo
-#   non c'e', C21 dice 3 e lo nomina: un 3 non e' un verde.
+# ⭐ C21 (phase 14, 24 Sep 2026) does NOT run inside the box: it wants the REAL BROWSERS,
+#   which live on the host inside the screenless labwc of the benches user.
+#   ⇒ It is launched as that user (browsers as administrator do not start) and
+#   from the whole benches tree, because it imports `12-c20-veri.py` and
+#   `12-client-veri.py` (imported, not copied).  ⚠ If the screenless labwc
+#   is not there, C21 says 3 and names it: a 3 is not a green.
 BANCHI_VERI=${REMOTIX_BANCHI_VERI:-/media/REMOTIX/src/controllo/banchi}
 UTENTE_VERI=${REMOTIX_UTENTE_VERI:-nicfio}
 GIRA_C21() {
@@ -729,385 +729,384 @@ GIRA_C23() {
 		python3 "$BANCHI_VERI/11-scatole/11-c23-maiusc-e-frecce-selezionano.py" \
 		--scatola "$1" --visibile "${@:2}"
 }
-# ⭐ LA SUITE FUNZIONALE (fase 15) — la nuova rete, decisa dall'utente il 24 set
-#   2026: i 4 desktop in parallelo coi browser VERI, ogni prova col suo guasto,
-#   piu' lo strato tecnico corto (C7 C9 C18 C19 per desktop, C14 insieme).
-#   Gira come l'utente dei browser, dall'albero intero dei banchi; ⛔ ~2 ore.
+# ⭐ THE FUNCTIONAL SUITE (phase 15) — the new net, decided by the user on 24 Sep
+#   2026: the 4 desktops in parallel with the REAL browsers, each test with its fault,
+#   plus the short technical layer (C7 C9 C18 C19 per desktop, C14 together).
+#   It runs as the browsers user, from the whole benches tree; ⛔ ~2 hours.
 GIRA_SUITE() {
 	local u; u=$(id -u "$UTENTE_VERI" 2>/dev/null) || return 3
 	runuser -u "$UTENTE_VERI" -- env XDG_RUNTIME_DIR="/run/user/$u" \
 		python3 "$BANCHI_VERI/15-suite/15-giro.py" --giro "${GIRO_SUITE:-rete}" --strato-tecnico
 }
-# ⭐ C10 col guasto innestato: gira SUL DEPOSITO, non su una scatola — ⇒ e' la
-#   sola maglia con un guasto innestato che la meta'-portatile del gancio possa
-#   far girare.  ⛔ Senza, C13 su quella meta' non potrebbe mai diventare verde.
+# ⭐ C10 with the fault injected: it runs ON THE REPOSITORY, not on a box — ⇒ it is the
+#   only mesh with an injected fault that the laptop half of the hook can
+#   run.  ⛔ Without it, C13 on that half could never turn green.
 GIRA_C10G() { python3 "$1" --guasto-innestato; }
 GIRA_P0()  { bash "$QUI/11-accendi.sh" passo0 "$1"; }
 
 # ---------------------------------------------------------------------------
-# LE FAMIGLIE
+# THE FAMILIES
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
-# ⭐ LE CARTE — la famiglia piu' piccola che c'e': una maglia sola, 0,79 s.
+# ⭐ THE PAPERS — the smallest family there is: one mesh only, 0,79 s.
 #
-# ⛔ Serve perche' un commit di soli documenti prima non faceva girare niente,
-#    e le carte sono l'unica cosa del progetto che nessuno sorvegliava.
+# ⛔ It is needed because a commit of documents only used to run nothing,
+#    and the papers were the only thing in the project nobody watched.
 # ---------------------------------------------------------------------------
 famiglia_carte() {
 	if trova_maglia c16; then
 		esegui_maglia C16 false GIRA_MAGLIA "$QUALE_MAGLIA"
 	else
-		salta_maglia C16 "il file non c e"
+		salta_maglia C16 "the file is not there"
 	fi
 }
 
 famiglia_rete() {
 	# ═══════════════════════════════════════════════════════════════════
-	# ⛔⛔ QUI C'ERA DENTRO C14, E LA RIGA ACCANTO PROMETTEVA «costo quasi zero,
-	#     e nessuna accende una sessione (§4.2)».  ⛔ **Era falso, e di molto.**
+	# ⛔⛔ C14 USED TO BE IN HERE, AND THE LINE NEXT TO IT PROMISED «almost zero cost,
+	#     and none starts a session (§4.2)».  ⛔ **It was false, by a lot.**
 	#
-	# `[M]` §7-bis.16, giro completo del 26 agosto 2026: **C14 costa 786 s**, e
-	# per misurare che le scatole non si disturbano le accende **tutt'e quattro
-	# insieme** e ci fa girare dentro la prova A di C8.
-	# ⇒ ⚠ Chi leggeva quella riga credeva di poter lanciare `--famiglia rete`
-	#   accanto a un'altra misura senza disturbarla: ⛔ e invece si prendeva le
-	#   quattro scatole per tredici minuti.  ⛔ E' la trappola di `LEZIONI.md`
-	#   §1.50 — un commento che descrive una grandezza diversa da quella che il
-	#   codice governa — con l'aggravante che qui il numero e' 786 contro «zero».
+	# `[M]` §7-bis.16, full run of 26 August 2026: **C14 costs 786 s**, and
+	# to measure that the boxes do not disturb each other it starts **all four
+	# together** and runs C8's test A inside them.
+	# ⇒ ⚠ Whoever read that line believed they could launch `--famiglia rete`
+	#   next to another measurement without disturbing it: ⛔ and instead it took the
+	#   four boxes for thirteen minutes.  ⛔ It is the trap of `LEZIONI.md`
+	#   §1.50 — a comment that describes a quantity different from the one the
+	#   code governs — made worse by the number here being 786 against «zero».
 	#
-	# ⭐⭐ E LA CURA SCELTA E' **DIVIDERE**, non riscrivere il commento.  Perche':
+	# ⭐⭐ AND THE CURE CHOSEN IS **TO SPLIT**, not to rewrite the comment.  Because:
 	#
-	#   · ⛔ **dichiarare e basta non bastava.**  Il costo vero era gia' scritto
-	#     in un commento, e la famiglia costava lo stesso 786 s: un cartello non
-	#     e' una cura.  E questa famiglia scatta su OGNI cambiamento a `banchi/`,
-	#     cioe' — in questa fase — su quasi ogni invio.  ⇒ Tredici minuti a ogni
-	#     invio sono esattamente la cosa che §5.1 dice che fa **spegnere** un
-	#     gancio.
-	#   · ⛔ **spostarla in `tutto` e basta l'avrebbe fatta marcire.**  Un
-	#     cambiamento a C14 stessa non l'avrebbe piu' fatta girare: §5.2 dice
-	#     che *«una prova che non prende niente si toglie, e si scrive perche'»*
-	#     ⛔ — non che si lascia morire per disuso.
-	#   · ⭐ **Dividere le tiene tutt'e due**: `rete` torna a essere quel che
-	#     §4.2 prometteva, e C14 resta agganciata **al percorso da cui dipende**
-	#     (`decidi_famiglia`, dove c'e' scritto quali e perche'), piu' che a
-	#     `tutto`, a `desktop-nuovo`, e al nome `--famiglia rete-intera`.
+	#   · ⛔ **just declaring was not enough.**  The real cost was already written
+	#     in a comment, and the family cost 786 s all the same: a sign is not
+	#     a cure.  And this family fires on EVERY change to `banchi/`,
+	#     that is — in this phase — on almost every push.  ⇒ Thirteen minutes at every
+	#     push are exactly the thing §5.1 says makes a hook get **switched off**.
+	#   · ⛔ **just moving it to `tutto` would have made it rot.**  A
+	#     change to C14 itself would no longer have made it run: §5.2 says
+	#     that *«a test that catches nothing is removed, and the reason is written»*
+	#     ⛔ — not that it is left to die of disuse.
+	#   · ⭐ **Splitting keeps both**: `rete` goes back to being what
+	#     §4.2 promised, and C14 stays hooked **to the path it depends on**
+	#     (`decidi_famiglia`, where it is written which and why), as well as to
+	#     `tutto`, to `desktop-nuovo`, and to the name `--famiglia rete-intera`.
 	#
-	# ⭐ IL COSTO DI QUESTA FAMIGLIA, adesso vero: **sul portatile** `[M]` circa
-	#   1 s (C11 non trova le scatole e dice «non ho potuto guardare»);
-	#   **sulla macchina di prova** `[M]` ~11 s, che e' C11 — e nessuna accende
-	#   una sessione.  ⇒ Il patto di §4.2 e' rispettato invece che ereditato.
+	# ⭐ THE COST OF THIS FAMILY, now true: **on the laptop** `[M]` about
+	#   1 s (C11 does not find the boxes and says «I could not look»);
+	#   **on the test machine** `[M]` ~11 s, which is C11 — and none starts
+	#   a session.  ⇒ The pact of §4.2 is kept instead of inherited.
 	#
-	# ⛔ IL PREZZO, dichiarato: un cambiamento a `banchi/` che NON tocca i
-	#    quattro percorsi di C14 non fa piu' girare C14.  ⚠ Se un giorno si
-	#    scoprisse che C14 dipende da qualcos'altro, la cura e' **aggiungere quel
-	#    percorso** li' sopra, ⛔ non rimetterla qui dentro.
+	# ⛔ THE PRICE, declared: a change to `banchi/` that does NOT touch the
+	#    four paths of C14 no longer runs C14.  ⚠ If one day it were
+	#    discovered that C14 depends on something else, the cure is **adding that
+	#    path** up there, ⛔ not putting it back in here.
 	# ═══════════════════════════════════════════════════════════════════
 	local n
-	# ⚠ C10 e' una maglia del PRODOTTO (§4.1), non della rete — sta qui perche la
-	#   meta' gemella vive in `banchi/rcp/`: un cambiamento li' fa scattare QUESTA
-	#   famiglia, ed e' ⛔ esattamente il cambiamento che rompe il gemello.
-	#   ⭐ E rispetta il patto di §4.2: costo quasi zero, e non accende niente.
-	# ⭐ C15 guarda se la META' REMOTA gira davvero: legge il registro, costa
-	#   quanto C12 e C13, ⛔ e sulla macchina di prova esce **2** apposta (li' il
-	#   registro non e' la memoria unita, e sarebbe verde qualunque cosa succeda).
+	# ⚠ C10 is a mesh of the PRODUCT (§4.1), not of the net — it is here because the
+	#   twin half lives in `banchi/rcp/`: a change there fires THIS
+	#   family, and it is ⛔ exactly the change that breaks the twin.
+	#   ⭐ And it keeps the pact of §4.2: almost zero cost, and it starts nothing.
+	# ⭐ C15 looks at whether the REMOTE HALF really runs: it reads the log, it costs
+	#   as much as C12 and C13, ⛔ and on the test machine it exits **2** on purpose (there the
+	#   log is not the merged memory, and it would be green whatever happens).
 	for n in c10 c11 c12 c13 c15 c16; do
 		local N=${n^^}
 		if trova_maglia "$n"; then
 			esegui_maglia "$N" false GIRA_MAGLIA "$QUALE_MAGLIA"
-			# ⭐ si tiene da parte l esito di C10: serve fra poco per decidere
-			#   se ha senso innestarle un guasto.
+			# ⭐ C10's outcome is kept aside: it is needed shortly to decide
+			#   whether it makes sense to inject a fault into it.
 			[ "$n" = c10 ] && ESITO_C10=$M_ESITO
 		elif [ "$QUALE_MAGLIA" = TROPPE ]; then
-			salta_maglia "$N" "ce ne sono PIU DI UNA con questo numero: non tiro a indovinare"
+			salta_maglia "$N" "there is MORE THAN ONE with this number: I do not guess"
 		else
-			salta_maglia "$N" "il file non c e"
+			salta_maglia "$N" "the file is not there"
 		fi
 	done
-	# ⭐⭐ E IL GUASTO INNESTATO, §3.6.  ⛔ Non e' un lusso: e' l unica riga di
-	#    questa famiglia che tiene in vita C13 quando il gancio gira sul
-	#    portatile, dove le scatole non ci sono.  Costa `[M]` 0,1 s.
-	# ⛔ E anche qui: solo se C10 ha potuto guardare — vedi `famiglia_veloce`.
+	# ⭐⭐ AND THE INJECTED FAULT, §3.6.  ⛔ It is not a luxury: it is the only line of
+	#    this family that keeps C13 alive when the hook runs on the
+	#    laptop, where there are no boxes.  It costs `[M]` 0,1 s.
+	# ⛔ And here too: only if C10 could look — see `famiglia_veloce`.
 	if trova_maglia c10; then
 		if [ "${ESITO_C10:-3}" = 0 ] || [ "${ESITO_C10:-3}" = 1 ]; then
 			esegui_maglia "C10 guasto innestato" true GIRA_C10G "$QUALE_MAGLIA"
 		else
-			salta_maglia "C10 guasto innestato" "C10 non ha guardato (qui non c e il deposito): non c e niente su cui innestare"
+			salta_maglia "C10 guasto innestato" "C10 did not look (there is no repository here): there is nothing to inject into"
 		fi
 	fi
 }
 
 # ---------------------------------------------------------------------------
-# ⭐⭐ LA RETE **PIU' C14** — e il costo si dice PRIMA di cominciare.
+# ⭐⭐ THE NET **PLUS C14** — and the cost is said BEFORE starting.
 #
-# ⛔ Dirlo dopo non servirebbe a niente: chi si accorge di aver lanciato la cosa
-#    sbagliata deve poterla fermare, non leggerne il conto a tredici minuti di
-#    distanza.  ⚠ E' la stessa ragione per cui il tetto si rispetta prima di
-#    cominciare una maglia invece di troncarla a meta' (§5.1).
+# ⛔ Saying it afterwards would be useless: whoever realises they launched the wrong
+#    thing must be able to stop it, not read the bill thirteen minutes
+#    later.  ⚠ It is the same reason the ceiling is respected before
+#    starting a mesh instead of cutting it off half-way (§5.1).
 # ---------------------------------------------------------------------------
 famiglia_rete_intera() {
 	famiglia_rete
-	log "e adesso C14 — ⛔ [M] 786 s (§7-bis.16), e SI PRENDE LE QUATTRO SCATOLE"
-	inf "⛔ se in questo momento qualcuno sta misurando su rete11-*, questo giro"
-	inf "  gliele porta via: §3.4, una scatola per volta per il lucchetto della"
-	inf "  scheda.  ⇒ Si ferma con Ctrl-C adesso, non fra tredici minuti."
-	inf "⚠ e per la rete SENZA C14: --famiglia rete  ([M] ~11 s, non accende niente)"
+	log "and now C14 — ⛔ [M] 786 s (§7-bis.16), and IT TAKES THE FOUR BOXES"
+	inf "⛔ if someone is measuring on rete11-* right now, this run"
+	inf "  takes them away: §3.4, one box at a time because of the card"
+	inf "  lock.  ⇒ Stop it with Ctrl-C now, not in thirteen minutes."
+	inf "⚠ and for the net WITHOUT C14: --famiglia rete  ([M] ~11 s, starts nothing)"
 	if trova_maglia c14; then
 		esegui_maglia C14 false GIRA_MAGLIA "$QUALE_MAGLIA"
 	elif [ "$QUALE_MAGLIA" = TROPPE ]; then
-		salta_maglia C14 "ce ne sono PIU DI UNA con questo numero: non tiro a indovinare"
+		salta_maglia C14 "there is MORE THAN ONE with this number: I do not guess"
 	else
-		salta_maglia C14 "il file non c e"
+		salta_maglia C14 "the file is not there"
 	fi
 }
 
 famiglia_veloce() {
-	# ⛔ Il tetto si RISPETTA prima di cominciare una maglia, non si tronca a
-	#    meta': troncare darebbe un rosso che non e' del prodotto — la forma
-	#    d errore di `LEZIONI.md` §1.45.
+	# ⛔ The ceiling is RESPECTED before starting a mesh, it is not cut off
+	#    half-way: cutting off would give a red that is not the product's — the
+	#    error shape of `LEZIONI.md` §1.45.
 	local speso rimasto
-	# ⭐⭐ C10 PER PRIMA, e per due ragioni: gira **prima di compilare** (e' il
-	#    momento in cui il difetto si ferma a costo zero), e ⛔ costa meno della
-	#    risoluzione di questo cronometro, che conta in secondi interi.
-	#    `[M]` 26 ago 2026: 0,039 s mediana su dieci giri.
-	# ⚠ §5.1 dice che il tetto e' pieno (153 s su 180) e che una maglia in piu' va
-	#   SCAMBIATA, non sommata.  ⭐ Qui non c e niente da scambiare: 0,04 s non
-	#   muovono un numero contato in secondi interi — e il tetto resta 153 s.
+	# ⭐⭐ C10 FIRST, and for two reasons: it runs **before compiling** (it is the
+	#    moment when the defect is stopped at zero cost), and ⛔ it costs less than the
+	#    resolution of this stopwatch, which counts in whole seconds.
+	#    `[M]` 26 Aug 2026: 0,039 s median over ten runs.
+	# ⚠ §5.1 says the ceiling is full (153 s out of 180) and that an extra mesh must be
+	#   SWAPPED, not added.  ⭐ Here there is nothing to swap: 0,04 s do not
+	#   move a number counted in whole seconds — and the ceiling stays 153 s.
 	if trova_maglia c10; then
 		esegui_maglia C10 false GIRA_MAGLIA "$QUALE_MAGLIA"
-		# ⭐ e il suo guasto innestato, che costa `[M]` 0,1 s: e' quel che
-		#   permette a C13 di dire «la rete sa ancora dare rosso» anche in un
-		#   giro veloce, senza accendere niente.
-		# ⛔⛔ MA SOLO SE C10 HA POTUTO GUARDARE.  Sulla macchina di prova il
-		#    deposito non c e (§4.6-novemdecies): C10 direbbe «non lo so», il
-		#    guasto innestato pure.
-		#    ⇒ Se non ha potuto guardare non si innesta niente: non c e ragione
-		#      di far girare una prova che non puo' giudicare.
-		# ⚠ 27 agosto 2026 — QUESTA GUARDIA NON E' PIU' L'UNICA DIFESA, ed e'
-		#   giusto dirlo perche' prima lo era: senza, `esegui_maglia` scriveva
-		#   `ha_visto_il_guasto: false` su un esito 3, cioe' un'accusa alla rete
-		#   per un guasto che nessuno aveva giudicato.  ⭐ Adesso quella regola
-		#   sta DENTRO `esegui_maglia` e vale per TUTTE le maglie, non per C10
-		#   soltanto.  ⇒ Qui resta perche' fa due cose in piu': non spreca il
-		#   giro, e scrive una ragione piu' precisa di «non ha potuto guardare».
+		# ⭐ and its injected fault, which costs `[M]` 0,1 s: it is what
+		#   allows C13 to say «the net can still give red» even in a
+		#   fast run, without starting anything.
+		# ⛔⛔ BUT ONLY IF C10 COULD LOOK.  On the test machine the
+		#    repository is not there (§4.6-novemdecies): C10 would say «I do not know», the
+		#    injected fault too.
+		#    ⇒ If it could not look nothing is injected: there is no reason
+		#      to run a test that cannot judge.
+		# ⚠ 27 August 2026 — THIS GUARD IS NO LONGER THE ONLY DEFENCE, and it is
+		#   right to say so because before it was: without it, `esegui_maglia` wrote
+		#   `ha_visto_il_guasto: false` on an outcome 3, that is an accusation against the net
+		#   for a fault nobody had judged.  ⭐ Now that rule
+		#   lives INSIDE `esegui_maglia` and holds for ALL the meshes, not for C10
+		#   only.  ⇒ It stays here because it does two more things: it does not waste the
+		#   run, and it writes a more precise reason than «could not look».
 		if [ "$M_ESITO" = 0 ] || [ "$M_ESITO" = 1 ]; then
 			esegui_maglia "C10 guasto innestato" true GIRA_C10G "$QUALE_MAGLIA"
 		else
-			salta_maglia "C10 guasto innestato" "C10 non ha guardato (qui non c e il deposito): non c e niente su cui innestare"
+			salta_maglia "C10 guasto innestato" "C10 did not look (there is no repository here): there is nothing to inject into"
 		fi
 	else
-		salta_maglia C10 "il file non c e (o ce n e piu di uno)"
+		salta_maglia C10 "the file is not there (or there is more than one)"
 	fi
 
-	# ⛔⛔ E ANCHE QUI LA MAGLIA SI CERCA PER PREFISSO, non si chiama per nome.
-	#    `[M]` 26 agosto 2026, primo giro vero sulla macchina di prova: qui
-	#    c era scritto `GIRA_C11`, una funzione **che non esiste** ⇒ la shell ha
-	#    detto `command not found`, l esito e' stato **127**, e il giro e'
-	#    proseguito come se niente fosse: ⛔ la famiglia veloce girava **senza
-	#    la sua prima maglia**, e nel registro restava un numero che non
-	#    significa niente.
-	# ⚠ E si e' visto solo facendola girare: `bash -n` passa, perche la sintassi
-	#   e' valida (`LEZIONI.md` §1.40).
+	# ⛔⛔ AND HERE TOO THE MESH IS LOOKED UP BY PREFIX, it is not called by name.
+	#    `[M]` 26 August 2026, first real run on the test machine: here
+	#    it said `GIRA_C11`, a function **that does not exist** ⇒ the shell
+	#    said `command not found`, the outcome was **127**, and the run
+	#    went on as if nothing had happened: ⛔ the fast family ran **without
+	#    its first mesh**, and the log kept a number that
+	#    means nothing.
+	# ⚠ And it was seen only by running it: `bash -n` passes, because the syntax
+	#   is valid (`LEZIONI.md` §1.40).
 	if trova_maglia c11; then
 		esegui_maglia C11 false GIRA_MAGLIA "$QUALE_MAGLIA"
 	else
-		salta_maglia C11 "il file non c e (o ce n e piu di uno)"
+		salta_maglia C11 "the file is not there (or there is more than one)"
 	fi
 
 	speso=$SECONDS; rimasto=$((TETTO_VELOCE - speso))
 	local costo=$((COSTO_C1_GIRO * GIRI_VELOCE))
 	if [ $rimasto -lt $costo ]; then
-		salta_maglia "C1x$GIRI_VELOCE" "restano ${rimasto}s e ne servono ~${costo}s (tetto ${TETTO_VELOCE}s)"
+		salta_maglia "C1x$GIRI_VELOCE" "${rimasto}s remain and ~${costo}s are needed (ceiling ${TETTO_VELOCE}s)"
 	else
 		local d
-		# ⚠ `gnome` e basta per il TETTO, non perche' il prodotto non sappia
-		#   fare altro: oggi accende anche kde e xfce
-		#   (`11-capacita-del-prodotto.sh`), ma due giri di C1 da `[M]` 74 s
-		#   l'uno ne prendono gia' 148 su 180, e una scatola in piu' si SCAMBIA, non si somma
-		#   (§5.1).  ⛔ Aggiungerne una e' una decisione sul tetto, non qui.
+		# ⚠ `gnome` only because of the CEILING, not because the product cannot
+		#   do anything else: today it starts kde and xfce too
+		#   (`11-capacita-del-prodotto.sh`), but two C1 runs of `[M]` 74 s
+		#   each already take 148 out of 180, and an extra box is SWAPPED, not added
+		#   (§5.1).  ⛔ Adding one is a decision about the ceiling, not here.
 		for d in gnome; do
 			esegui_maglia "C1($d)x$GIRI_VELOCE" false GIRA_C1 "$d" "$GIRI_VELOCE"
 		done
 	fi
-	inf "⚠ tagliate dalla famiglia veloce, e dichiarato perche in testa a questo file:"
-	inf "  C1 dal terzo giro in poi · C5 · C7 · C8 (tutt e due le prove) · C9 · il passo 0"
-	inf "  ⛔ e le CINQUE NUOVE del 27 agosto: C2 · C3 · C4 · C6 · C8b"
-	inf "  ⚠ e il tetto e PIENO: [M] 173 s su 180 (26 ago 2026, macchina di prova)."
-	inf "    ⛔ C5 (71 s), C7 (26 s) e C9 (50 s) NON ci stanno: una maglia in piu"
-	inf "    si SCAMBIA, non si somma (§5.1).  ⭐ C10 c e perche costa 0,04 s."
-	inf "    ⛔ E le cinque nuove costano da sole piu di tutta questa famiglia:"
-	inf "      una sessione da far nascere ciascuna.  ⇒ stanno in tutto e desktop-nuovo."
+	inf "⚠ cut from the fast family, and declared why at the top of this file:"
+	inf "  C1 from the third run on · C5 · C7 · C8 (both tests) · C9 · step 0"
+	inf "  ⛔ and the FIVE NEW ONES of 27 August: C2 · C3 · C4 · C6 · C8b"
+	inf "  ⚠ and the ceiling is FULL: [M] 173 s out of 180 (26 Aug 2026, test machine)."
+	inf "    ⛔ C5 (71 s), C7 (26 s) and C9 (50 s) do NOT fit: an extra mesh"
+	inf "    is SWAPPED, not added (§5.1).  ⭐ C10 is there because it costs 0,04 s."
+	inf "    ⛔ And the five new ones alone cost more than this whole family:"
+	inf "      one session to bring to life each.  ⇒ they are in tutto and desktop-nuovo."
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐ LE CINQUE MAGLIE NUOVE, in un posto solo — 27 agosto 2026.
+# ⭐⭐ THE FIVE NEW MESHES, in one place only — 27 August 2026.
 #
-# ⛔ Stanno qui e non copiate due volte apposta: `famiglia_tutto` e
-#    `famiglia_desktop_nuovo` le vogliono tutt e due, e due elenchi identici
-#    sono due elenchi che il giorno dopo non lo sono piu' — e nessuno se ne
-#    accorge, perche' tutt e due continuano a girare (`LEZIONI.md` §1.46).
+# ⛔ They are here and not copied twice on purpose: `famiglia_tutto` and
+#    `famiglia_desktop_nuovo` both want them, and two identical lists
+#    are two lists that the next day are not any more — and nobody
+#    notices, because both keep running (`LEZIONI.md` §1.46).
 #
-# ⚠ E oggi sono SETTE, non cinque: C17 (fase 12, 19 set 2026) sta qui dentro
-#   da allora — e fino al 21 set stava DOPO il `return` del cancello, cioe'
-#   saltava senza essere nominata nel registro (`fasi/13-xfce.md`, «Il banco»,
-#   punto 1); e C20 dal 23 set 2026.  Il nome della funzione e' rimasto per chi
-#   la cerca.
+# ⚠ And today they are SEVEN, not five: C17 (phase 12, 19 Sep 2026) has been in here
+#   since then — and until 21 Sep it was AFTER the gate's `return`, that is
+#   it skipped without being named in the log (`fasi/13-xfce.md`, «The bench»,
+#   point 1); and C20 since 23 Sep 2026.  The function name stayed for whoever
+#   looks for it.
 #
-# ⭐⭐ IL CANCELLO — fase 13, 21 set 2026: UNA MAGLIA PER VOLTA, e per
-#     CAPACITA', non per nome di desktop.
-#   Prima c'era un `if` solo, *«il prodotto sa avviare solo GNOME e KDE»*, che
-#   saltava tutto in blocco con quella frase.  ⛔ Da quando XFCE nasce e si vede
-#   (C1(xfce) verde, incremento 2) la frase e' falsa: le maglie che guardano
-#   PIXEL possono giudicare, quelle che vogliono l'input o gli appunti ancora
-#   no.  ⇒ Ogni maglia chiede a `prodotto_pronto` (in
-#   `11-capacita-del-prodotto.sh`, letto anche da `11-accendi.sh`) se il
-#   desktop ha quel che lei vuole; se manca qualcosa SALTA, col suo nome e con
-#   la capacita' che manca scritti nel registro.
-# ⚠ E saltare non e' prudenza: su una scatola dove il prodotto non da' una
-#   capacita' queste maglie spenderebbero minuti per dire «non ho potuto
-#   guardare» — e un 3 che si ripete per una decisione presa apposta e' il
-#   cugino del rosso perpetuo (§1.49).
-# ⛔ E il cancello non tocca NESSUN metro: una maglia che passa gira con gli
-#   stessi argomenti, le stesse soglie e gli stessi guasti innestati di prima.
-#   `[R]` Su gnome e kde (tutte le capacita') la sequenza e' identica a quella
-#   di prima riga per riga: C2×3, C3×4, C4×3, C6×2, C8b×2, C17×2.
+# ⭐⭐ THE GATE — phase 13, 21 Sep 2026: ONE MESH AT A TIME, and by
+#     CAPABILITY, not by desktop name.
+#   Before there was a single `if`, *«the product can only start GNOME and KDE»*, which
+#   skipped everything as a block with that sentence.  ⛔ Since XFCE is born and shows
+#   (C1(xfce) green, increment 2) the sentence is false: the meshes that look at
+#   PIXELS can judge, those that want input or the clipboard still
+#   cannot.  ⇒ Each mesh asks `prodotto_pronto` (in
+#   `11-capacita-del-prodotto.sh`, read also by `11-accendi.sh`) whether the
+#   desktop has what it wants; if something is missing it SKIPS, with its name and with
+#   the missing capability written in the log.
+# ⚠ And skipping is not caution: on a box where the product does not provide a
+#   capability these meshes would spend minutes to say «I could not
+#   look» — and a 3 that repeats because of a decision taken on purpose is the
+#   cousin of the perpetual red (§1.49).
+# ⛔ And the gate touches NO yardstick: a mesh that passes runs with the
+#   same arguments, the same thresholds and the same injected faults as before.
+#   `[R]` On gnome and kde (all capabilities) the sequence is identical to the one
+#   before, line by line: C2×3, C3×4, C4×3, C6×2, C8b×2, C17×2.
 # ═══════════════════════════════════════════════════════════════════════════
 le_cinque_nuove() {
 	local d=$1 perche
-	# ⭐ FASE 12, INCREMENTO 3 (19 set 2026) — il prodotto accende anche KDE, e
-	#   su `kde` C3, C4 e C6 sono `[M]` VERDI coi loro guasti visti
-	#   (`fasi/12-kde.md`).  E con l'incremento 4 anche C2 e C8b, adattate alla
-	#   schermata d'avvio di Plasma; e dal 19 set anche il guasto «codificatore
-	#   fermo» di C3.
-	# ⭐ FASE 13, INCREMENTO 2 (21 set 2026) — su `xfce` l'immagine arriva:
-	#   si aprono C2, C3 e C8b.  ⛔ C4, C6 e C17 restano chiuse, e dicono quale
-	#   capacita' manca (`11-capacita-del-prodotto.sh`).
+	# ⭐ PHASE 12, INCREMENT 3 (19 Sep 2026) — the product starts KDE too, and
+	#   on `kde` C3, C4 and C6 are `[M]` GREEN with their faults seen
+	#   (`fasi/12-kde.md`).  And with increment 4 also C2 and C8b, adapted to the
+	#   Plasma splash screen; and since 19 Sep also C3's «encoder
+	#   stopped» fault.
+	# ⭐ PHASE 13, INCREMENT 2 (21 Sep 2026) — on `xfce` the image arrives:
+	#   C2, C3 and C8b open.  ⛔ C4, C6 and C17 stay closed, and say which
+	#   capability is missing (`11-capacita-del-prodotto.sh`).
 
-	# ⭐ C2 — una finestra si apre.  ⛔ Guarda IL PIXEL: il conto dei processi
-	#   diceva 1 in tutt e due i casi (fasi/10… §7.4), e `--finestra-che-non-si-apre`
-	#   lo dimostra invece di affermarlo — l applicazione resta VIVA e non dipinge.
+	# ⭐ C2 — a window opens.  ⛔ It looks at THE PIXEL: the process count
+	#   said 1 in both cases (fasi/10… §7.4), and `--finestra-che-non-si-apre`
+	#   proves it instead of asserting it — the application stays ALIVE and does not paint.
 	local P=(--attesa-palco "$TETTO_PALCO_C2C3")
-	# ⭐ Incremento 4: C2 guarda 240 fotogrammi per il «prima», e la
-	#   schermata d'avvio di Plasma non la ferma piu' — aperta a kde.
+	# ⭐ Increment 4: C2 looks at 240 frames for the «before», and the
+	#   Plasma splash screen no longer stops it — opened to kde.
 	if ! perche=$(prodotto_pronto C2 "$d"); then
-		salta_maglia "C2($d)" "${perche:-il cancello non ha risposto} — saltati con lei i suoi 2 guasti innestati"
+		salta_maglia "C2($d)" "${perche:-the gate did not answer} — its 2 injected faults skipped with it"
 	else
 		esegui_maglia "C2($d)" false GIRA_C2 "$d" "${P[@]}"
 		esegui_maglia "C2($d) guasto innestato" true GIRA_C2 "$d" "${P[@]}" --applicazione-che-muore
 		esegui_maglia "C2($d) guasto innestato (finestra cieca)" true GIRA_C2 "$d" "${P[@]}" --finestra-che-non-si-apre
 	fi
 
-	# ⭐ C3 — i fotogrammi arrivano e la scena CAMBIA.
-	# ⚠ `--scena-ferma` NON e' un guasto innestato: e' il controllo NEGATIVO, e
-	#   con la scena ferma C3 non deve dare rosso (`[M]` fasi/09… §3.1: a scena
-	#   ferma escono 0,03 fotogrammi/s, ed e' un RISULTATO).
+	# ⭐ C3 — the frames arrive and the scene CHANGES.
+	# ⚠ `--scena-ferma` is NOT an injected fault: it is the NEGATIVE control, and
+	#   with the scene still C3 must not give red (`[M]` fasi/09… §3.1: with a still
+	#   scene 0,03 frames/s come out, and it is a RESULT).
 	if ! perche=$(prodotto_pronto C3 "$d"); then
-		salta_maglia "C3($d)" "${perche:-il cancello non ha risposto} — saltati con lei la scena ferma e i suoi 2 guasti innestati"
+		salta_maglia "C3($d)" "${perche:-the gate did not answer} — the still scene and its 2 injected faults skipped with it"
 	else
 		esegui_maglia "C3($d)" false GIRA_C3 "$d" "${P[@]}"
 		esegui_maglia "C3($d) scena ferma" false GIRA_C3 "$d" "${P[@]}" --scena-ferma
 		esegui_maglia "C3($d) guasto innestato" true GIRA_C3 "$d" "${P[@]}" --fotogramma-ripetuto
-		# ⭐ Da C3 del 19 set 2026 (il desktop fermo prima della scena, e un respiro
-		#   CONTATO prima dell'innesto) questo guasto si vede anche su KDE.
+		# ⭐ Since C3 of 19 Sep 2026 (the desktop still before the scene, and a COUNTED
+		#   breath before the injection) this fault is seen on KDE too.
 		esegui_maglia "C3($d) guasto innestato (codificatore fermo)" true GIRA_C3 "$d" "${P[@]}" --codificatore-fermo
 	fi
 
-	# ⭐ C4 — il tasto arriva fino allo schermo.  ⛔ E' l unica maglia che
-	#   giudica un PIXEL attraversando il prodotto ANDATA E RITORNO: C8 giudica
-	#   il browser da solo, C5 giudica byte.
+	# ⭐ C4 — the key reaches the screen.  ⛔ It is the only mesh that
+	#   judges a PIXEL crossing the product THERE AND BACK: C8 judges
+	#   the browser alone, C5 judges bytes.
 	if ! perche=$(prodotto_pronto C4 "$d"); then
-		salta_maglia "C4($d)" "${perche:-il cancello non ha risposto} — saltati con lei i suoi 2 guasti innestati"
+		salta_maglia "C4($d)" "${perche:-the gate did not answer} — its 2 injected faults skipped with it"
 	else
 		esegui_maglia "C4($d)" false GIRA_C4 "$d"
 		esegui_maglia "C4($d) guasto innestato" true GIRA_C4 "$d" --senza-tasto
 		esegui_maglia "C4($d) guasto innestato (coda)" true GIRA_C4 "$d" --scena-sorda
 	fi
 
-	# ⭐⭐ C6 — si stacca e si ritrova.  ⚠ NON contraddice C7 `--solo-distacco`:
-	#   C7 chiede «il figlio e' vivo?», C6 chiede «e quel che il figlio teneva in
-	#   piedi si RITROVA?».  ⛔ Chi, vedendo C6 rossa, rendesse rossa anche C7
-	#   «per coerenza», romperebbe la maglia sana.
+	# ⭐⭐ C6 — detaches and finds itself again.  ⚠ It does NOT contradict C7 `--solo-distacco`:
+	#   C7 asks «is the child alive?», C6 asks «and is what the child kept
+	#   up FOUND AGAIN?».  ⛔ Whoever, seeing C6 red, made C7 red too
+	#   «for consistency», would break the healthy mesh.
 	if ! perche=$(prodotto_pronto C6 "$d"); then
-		salta_maglia "C6($d)" "${perche:-il cancello non ha risposto} — saltato con lei il suo guasto innestato"
+		salta_maglia "C6($d)" "${perche:-the gate did not answer} — its injected fault skipped with it"
 	else
 		esegui_maglia "C6($d)" false GIRA_C6 "$d"
 		esegui_maglia "C6($d) guasto innestato" true GIRA_C6 "$d" --uccidi-la-sessione
 	fi
 
-	# ⭐ C8b — e la stessa pagina si vede DAL CLIENTE.  ⛔ C8a non passa dal
-	#   prodotto: guarda il browser dentro la sessione.  Questa guarda i pixel
-	#   che arrivano al cliente.
-	# ⭐ Incremento 4: il «prima» di C8b e' il primo fotogramma non nero —
-	#   aperta a kde.
-	# ⚠ `11-accendi.sh c8b` ha un cancello suo (per chi la lancia a mano), ⭐ ma
-	#   legge la STESSA lista: i due non possono piu' dire cose diverse.
+	# ⭐ C8b — and the same page shows FROM THE CLIENT.  ⛔ C8a does not go through the
+	#   product: it looks at the browser inside the session.  This one looks at the pixels
+	#   that reach the client.
+	# ⭐ Increment 4: C8b's «before» is the first non-black frame —
+	#   opened to kde.
+	# ⚠ `11-accendi.sh c8b` has a gate of its own (for whoever launches it by hand), ⭐ but
+	#   it reads the SAME list: the two can no longer say different things.
 	if ! perche=$(prodotto_pronto C8b "$d"); then
-		salta_maglia "C8b($d)" "${perche:-il cancello non ha risposto} — saltato con lei il suo guasto innestato"
+		salta_maglia "C8b($d)" "${perche:-the gate did not answer} — its injected fault skipped with it"
 	else
 		esegui_maglia "C8b($d)" false GIRA_C8B "$d"
 		esegui_maglia "C8b($d) guasto innestato" true GIRA_C8B "$d" --senza-cura
 	fi
 
-	# ⭐ C17 — gli appunti nei due versi, e chi si riattacca (fase 12, 19 set
-	#   2026).  `[M]` 19 set: kde verde, e rosso sul solo «R» col binario di
-	#   prima della cura; dal 20 set verde anche su gnome (l'arbitro GTK col
-	#   fuoco dato dal clic del cliente).
-	# ⛔ Fino al 21 set qui c'era scritto *«Nessun cancello per desktop QUI»*,
-	#   ed era falso: queste due righe stavano DOPO il `return` del cancello,
-	#   e su xfce e lxqt C17 saltava senza essere nominata.  ⇒ Adesso ha il
-	#   cancello suo, come le altre: vuole l'immagine, l'INPUT (il clic che da'
-	#   il fuoco all'arbitro passa dal prodotto) e gli appunti.
+	# ⭐ C17 — the clipboard both ways, and whoever reattaches (phase 12, 19 Sep
+	#   2026).  `[M]` 19 Sep: kde green, and red on «R» only with the binary from
+	#   before the cure; since 20 Sep green on gnome too (the GTK arbiter with the
+	#   focus given by the client's click).
+	# ⛔ Until 21 Sep here it said *«No desktop gate HERE»*,
+	#   and it was false: these two lines were AFTER the gate's `return`,
+	#   and on xfce and lxqt C17 skipped without being named.  ⇒ Now it has its own
+	#   gate, like the others: it wants the image, the INPUT (the click that gives
+	#   the focus to the arbiter goes through the product) and the clipboard.
 	if ! perche=$(prodotto_pronto C17 "$d"); then
-		salta_maglia "C17($d)" "${perche:-il cancello non ha risposto} — saltato con lei il suo guasto innestato"
+		salta_maglia "C17($d)" "${perche:-the gate did not answer} — its injected fault skipped with it"
 	else
 		esegui_maglia "C17($d)" false GIRA_C17 "$d"
 		esegui_maglia "C17($d) guasto innestato" true GIRA_C17 "$d" --senza-copia
 	fi
 
-	# ⭐⭐ C20 — la rinascita dopo «Esci» non porta fantasmi (23 set 2026).
-	#   ⛔ E' il difetto che l'UTENTE ha trovato il 22 set su KDE con Chrome:
-	#     dopo «Esci» e un nuovo accesso lo schermo alternava tre immagini, e
-	#     ⛔ **senza nessun errore da nessuna parte** — il prodotto non se ne
-	#     accorge, il cliente non se ne accorge, se ne accorge solo chi guarda.
-	#   ⭐ Viene da `banchi/13-w4-rinascita-senza-fantasmi.sh`, che l'ha
-	#     misurato; entrando nella rete ha preso il suo guasto innestato
-	#     (`--scena-che-lampeggia`), ha smesso di sapere che cosa sia Plasma, e
-	#     ha preso un nome della rete per il suo inquilino (`c20u<n>`) — ⇒ cosi'
-	#     C19 lo vede e la sgomberata del gancio lo toglie.
-	#   ⚠ Vuole l'IMMAGINE, e il gesto «Esci» se lo cerca da se': se in quella
-	#     scatola non c'e' nessuno dei tre menu, dice 3 e nomina quello che
-	#     manca — ⛔ e un 3 non e' un verde.
+	# ⭐⭐ C20 — rebirth after «Log out» brings no ghosts (23 Sep 2026).
+	#   ⛔ It is the defect the USER found on 22 Sep on KDE with Chrome:
+	#     after «Log out» and a new login the screen alternated three images, and
+	#     ⛔ **without any error anywhere** — the product does not
+	#     notice, the client does not notice, only whoever looks notices.
+	#   ⭐ It comes from `banchi/13-w4-rinascita-senza-fantasmi.sh`, which
+	#     measured it; entering the net it took its injected fault
+	#     (`--scena-che-lampeggia`), stopped knowing what Plasma is, and
+	#     took a net name for its tenant (`c20u<n>`) — ⇒ so
+	#     C19 sees it and the hook's clear-out removes it.
+	#   ⚠ It wants the IMAGE, and it looks for the «Log out» gesture by itself: if in that
+	#     box none of the three menus is there, it says 3 and names the one that is
+	#     missing — ⛔ and a 3 is not a green.
 	if ! perche=$(prodotto_pronto C20 "$d"); then
-		salta_maglia "C20($d)" "${perche:-il cancello non ha risposto} — saltato con lei il suo guasto innestato"
+		salta_maglia "C20($d)" "${perche:-the gate did not answer} — its injected fault skipped with it"
 	else
 		esegui_maglia "C20($d)" false GIRA_C20 "$d"
 		esegui_maglia "C20($d) guasto innestato" true GIRA_C20 "$d" --scena-che-lampeggia
 		esegui_maglia "C24($d)" false GIRA_C24 "$d"
 		esegui_maglia "C24($d) guasto innestato" true GIRA_C24 "$d" --rientra-subito
 	fi
-	# ⭐ C21 — sul bordo la forma cambia (fase 14, decisione dell'utente del 24
-	#   set: la forma vera del puntatore su tutti e quattro i desktop).  Vuole
-	#   la capacita' «forma»; il guasto `--forma-sbagliata` e' giudicato dai
-	#   PIXEL della forma, non da un contatore.
+	# ⭐ C21 — on the edge the shape changes (phase 14, user's decision of 24
+	#   Sep: the real pointer shape on all four desktops).  It wants
+	#   the «forma» capability; the `--forma-sbagliata` fault is judged by the
+	#   PIXELS of the shape, not by a counter.
 	if ! perche=$(prodotto_pronto C21 "$d"); then
-		salta_maglia "C21($d)" "${perche:-il cancello non ha risposto} — saltato con lei il suo guasto innestato"
+		salta_maglia "C21($d)" "${perche:-the gate did not answer} — its injected fault skipped with it"
 	else
 		esegui_maglia "C21($d)" false GIRA_C21 "$d"
 		esegui_maglia "C21($d) guasto innestato" true GIRA_C21 "$d" --forma-sbagliata
 	fi
-	# ⭐ C22 — trascinando il bordo la finestra si allarga (fase 14: l'utente,
-	#   24 set, «il ridimensionamento con il trascinamento del bordo su tutti i
-	#   DE»).  Giudicata dalla FOTOGRAFIA: il bordo destro si sposta, gli altri no.
+	# ⭐ C22 — dragging the edge the window widens (phase 14: the user,
+	#   24 Sep, «resizing by dragging the edge on all the
+	#   DEs»).  Judged by the PHOTOGRAPH: the right edge moves, the others do not.
 	if ! perche=$(prodotto_pronto C22 "$d"); then
-		salta_maglia "C22($d)" "${perche:-il cancello non ha risposto} — saltato con lei il suo guasto innestato"
+		salta_maglia "C22($d)" "${perche:-the gate did not answer} — its injected fault skipped with it"
 	else
 		esegui_maglia "C22($d)" false GIRA_C22 "$d"
 		esegui_maglia "C22($d) guasto innestato" true GIRA_C22 "$d" --senza-pulsante
 	fi
-	# ⭐ C23 — Maiusc e frecce selezionano (fase 14: l'utente, 24 set, «la
-	#   selezione con Maiusc+frecce su tutti i DE»).  Il giudizio si fa sulla
-	#   FOTOGRAFIA del campo, non su un contatore.
+	# ⭐ C23 — Shift and arrows select (phase 14: the user, 24 Sep, «selection
+	#   with Shift+arrows on all the DEs»).  The judgement is made on the
+	#   PHOTOGRAPH of the field, not on a counter.
 	if ! perche=$(prodotto_pronto C23 "$d"); then
-		salta_maglia "C23($d)" "${perche:-il cancello non ha risposto} — saltato con lei il suo guasto innestato"
+		salta_maglia "C23($d)" "${perche:-the gate did not answer} — its injected fault skipped with it"
 	else
 		esegui_maglia "C23($d)" false GIRA_C23 "$d"
 		esegui_maglia "C23($d) guasto innestato" true GIRA_C23 "$d" --senza-maiusc
@@ -1115,82 +1114,82 @@ le_cinque_nuove() {
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐⭐ E L'ULTIMA MAGLIA DI OGNI SCATOLA — C19, «della rete non resta dentro
-#      nessuno».  23 settembre 2026, `fasi/13-xfce.md` «Che cosa resta».
+# ⭐⭐⭐ AND THE LAST MESH OF EVERY BOX — C19, «nobody from the net stays
+#      inside».  23 September 2026, `fasi/13-xfce.md` «What remains».
 #
-# ⛔⛔ VA IN FONDO, E NON E' UN DETTAGLIO DI GUSTO: questa maglia non prepara
-#     niente e non prova niente da sola — ⭐ **giudica il lavoro di tutte le
-#     altre**.  Lanciata su una scatola appena rifatta direbbe verde e non
-#     avrebbe guardato niente.  ⇒ Sta dopo l'ultima maglia che apre una
-#     sessione, e prima del bilancio.
+# ⛔⛔ IT GOES AT THE END, AND IT IS NOT A MATTER OF TASTE: this mesh prepares
+#     nothing and proves nothing on its own — ⭐ **it judges the work of all the
+#     others**.  Launched on a freshly rebuilt box it would say green and would not
+#     have looked at anything.  ⇒ It comes after the last mesh that opens a
+#     session, and before the balance.
 #
-# ⚠ E il suo verde dipende dalla SGOMBERATA che `esegui_maglia` fa dopo ogni
-#   maglia: se qualcuno togliesse quella, C19 diventerebbe rossa il giorno
-#   dopo — ⭐ ed e' precisamente il motivo per cui esiste.  Prima di lei la
-#   sporcizia era una riga `inf` annotata `riuscita=true`, cioe' la rete
-#   poteva lasciare venti inquilini dentro una scatola e dirsi verde.
+# ⚠ And its green depends on the CLEAR-OUT that `esegui_maglia` does after every
+#   mesh: if someone removed that, C19 would turn red the next
+#   day — ⭐ and that is precisely why it exists.  Before it the
+#   dirt was an `inf` line annotated `riuscita=true`, that is the net
+#   could leave twenty tenants inside a box and call itself green.
 # ═══════════════════════════════════════════════════════════════════════════
 la_scatola_resta_pulita() {
 	local d=$1
 	esegui_maglia "C19($d)" false GIRA_C19 "$d"
-	# ⛔ I due guasti innestati, e sono DUE perche' guardano due residui
-	#    diversi: un inquilino VIVO (che `pgrep` e `getent` vedono) e ⭐ una
-	#    CASA SENZA UTENTE — il `userdel` senza `-r`, che nessun conto di
-	#    processi e nessun conto di utenti prenderebbe mai.
+	# ⛔ The two injected faults, and they are TWO because they look at two different
+	#    leftovers: a LIVE tenant (which `pgrep` and `getent` see) and ⭐ a
+	#    HOME WITHOUT A USER — the `userdel` without `-r`, which no count of
+	#    processes and no count of users would ever catch.
 	esegui_maglia "C19($d) guasto innestato" true GIRA_C19 "$d" --lascia-un-inquilino
 	esegui_maglia "C19($d) guasto innestato (solo la casa)" true GIRA_C19 "$d" --lascia-una-casa
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐⭐ LE SCATOLE SI RIFANNO ALL'INIZIO DI `tutto` — 21 settembre 2026
+# ⭐⭐⭐ THE BOXES ARE REBUILT AT THE START OF `tutto` — 21 September 2026
 #
-# ⛔ Fino a qui un giro completo partiva dalle scatole COME LE TROVAVA.
-#    `[M]` 21 set 2026: dopo ~14 ore e centinaia di sessioni nella stessa
-#    scatola C17 e' diventata ROSSA su gnome e kde (verso «sessione →
-#    dispositivo»).  Bisezione: col binario di ieri (verde ieri) nella scatola
-#    vecchia era rossa lo stesso; col binario nuovo nella scatola rifatta da
-#    zero, verde 2 su 2.  ⇒ Categoria C: lo stato accumulato dalla scatola ha
-#    rotto una maglia, e la rete ha accusato il prodotto di un rosso non suo.
+# ⛔ Until now a full run started from the boxes AS IT FOUND THEM.
+#    `[M]` 21 Sep 2026: after ~14 hours and hundreds of sessions in the same
+#    box C17 turned RED on gnome and kde (direction «session →
+#    device»).  Bisection: with yesterday's binary (green yesterday) in the old
+#    box it was red anyway; with the new binary in the box rebuilt from
+#    scratch, green 2 out of 2.  ⇒ Category C: the state accumulated by the box
+#    broke a mesh, and the net accused the product of a red that was not its own.
 #
-# `[?]` CHE COSA SI ACCUMULA, letto dal codice (non si e' potuto entrare):
-#   · ⭐ `/tmp/remotix-arbitro-copia.log` — UN nome fisso scritto e tolto
-#     dall'INQUILINO di C17, mai tolto alla fine ⇒ resta all'uid del primo
-#     `c17uNNN`; /tmp e' «sticky», e un inquilino con un altro uid non lo
-#     toglie e non lo riscrive ⇒ il comando della copia non parte ⇒ B e R
-#     rossi.  E' la causa piu' probabile, ed e' CURATA in C17 (il nome porta
-#     l'inquilino, e si toglie alla fine).
-#   · gli uid che salgono: `useradd` da' max+1, quindi l'uid di un inquilino
-#     dipende da CHI E' RIMASTO.  `[M]` in kde `user@4024` e `user@4025`
-#     falliti, con `provanic` a 4011: inquilini sopravvissuti a un giro morto
-#     (un `userdel` che fallisce con un processo ancora vivo).  ⇒ E' quel che
-#     sposta l'uid di C17 e fa mordere il file qui sopra.
-#   · le unita' `user@…` FALLITE restano elencate finche' nessuno fa
-#     `reset-failed`: il passo 0 le mostra, e la scatola e' «degraded».
-#   · `/tmp/mozilla` del primo inquilino (C2 lo dice gia', e la cura sta nelle
-#     maglie da agosto); i file per-inquilino in /tmp (`c4-…`, `c5-…`, `c8-…`)
-#     che non si tolgono; `/var/lib/rete11/rilievo`, che cresce a ogni sessione.
+# `[?]` WHAT ACCUMULATES, read from the code (it was not possible to get in):
+#   · ⭐ `/tmp/remotix-arbitro-copia.log` — ONE fixed name written and removed
+#     by C17's TENANT, never removed at the end ⇒ it stays with the uid of the first
+#     `c17uNNN`; /tmp is «sticky», and a tenant with another uid neither
+#     removes nor rewrites it ⇒ the copy command does not start ⇒ B and R
+#     red.  It is the most likely cause, and it is CURED in C17 (the name carries
+#     the tenant, and it is removed at the end).
+#   · the uids that climb: `useradd` gives max+1, so a tenant's uid
+#     depends on WHO REMAINED.  `[M]` in kde `user@4024` and `user@4025`
+#     failed, with `provanic` at 4011: tenants that survived a dead run
+#     (a `userdel` that fails with a process still alive).  ⇒ It is what
+#     shifts C17's uid and makes the file above bite.
+#   · the FAILED `user@…` units stay listed until someone does
+#     `reset-failed`: step 0 shows them, and the box is «degraded».
+#   · the first tenant's `/tmp/mozilla` (C2 already says so, and the cure has been in the
+#     meshes since August); the per-tenant files in /tmp (`c4-…`, `c5-…`, `c8-…`)
+#     that are not removed; `/var/lib/rete11/rilievo`, which grows at every session.
 #
-# ⭐ LA CURA: la famiglia `tutto` (e `desktop-nuovo`) comincia RIFACENDO ogni
-#   scatola su cui gira — `accendi` (il contenitore si ricrea dall'immagine,
-#   e con lui sparisce tutto quel che c'era), `prodotto`, `server` — e lo
-#   DICHIARA: nel registro, campo `scatole`, con i secondi e l'eta' che la
-#   scatola aveva prima di essere buttata.
-# ⛔ La famiglia veloce (`funziona`, tetto 180 s) NON rifa' niente: una scatola
-#   costa `[?]` 15-40 s (l'attesa di systemd dentro fino a 30 s, i server fino
-#   a 20 s), e il tetto e' pieno.  ⇒ La' parla la GUARDIA (`11-accendi.sh`,
-#   `riga_eta`): una riga, non un rosso, se la scatola ha passato le sue ore o
-#   le sue sessioni.
-# ⚠ IL COSTO in `tutto`: `[?]` 1-3 minuti per quattro scatole, contro giri da
-#   `[M]` 9 075-10 645 s (fase 12) ⇒ ~1-2 %.  Diventa `[M]` al primo giro: i
-#   secondi di ciascuna finiscono nel registro.
-# ⛔ E prende le scatole: una sessione aperta dentro muore.  E' gia' il prezzo
-#   di `tutto` (C14 prende le quattro scatole e riaccende i server).
+# ⭐ THE CURE: the `tutto` family (and `desktop-nuovo`) starts by REBUILDING every
+#   box it runs on — `accendi` (the container is recreated from the image,
+#   and everything that was there disappears with it), `prodotto`, `server` — and it
+#   DECLARES it: in the log, field `scatole`, with the seconds and the age the
+#   box had before being thrown away.
+# ⛔ The fast family (`funziona`, ceiling 180 s) rebuilds NOTHING: a box
+#   costs `[?]` 15-40 s (the wait for systemd inside up to 30 s, the servers up
+#   to 20 s), and the ceiling is full.  ⇒ There the GUARD speaks (`11-accendi.sh`,
+#   `riga_eta`): one line, not a red, if the box has passed its hours or
+#   its sessions.
+# ⚠ THE COST in `tutto`: `[?]` 1-3 minutes for four boxes, against runs of
+#   `[M]` 9 075-10 645 s (phase 12) ⇒ ~1-2 %.  It becomes `[M]` at the first run: the
+#   seconds of each end up in the log.
+# ⛔ And it takes the boxes: a session open inside dies.  It is already the price
+#   of `tutto` (C14 takes the four boxes and restarts the servers).
 #
-# ⛔⛔ IL BINARIO RESTA LO STESSO NELLE QUATTRO (C11 lo controlla): `prodotto`
-#     copia da `/rete11/prodotto`, cioe' dalla STESSA cartella per tutte.  Con
-#     `--scatola X` si rifa' solo X, ⚠ e nelle altre accese si rimette soltanto
-#     il prodotto (non si rifanno e non si riaccendono i loro server), cosi' C11
-#     e C14 a fine giro confrontano quattro binari uguali.  Una spenta si dice.
+# ⛔⛔ THE BINARY STAYS THE SAME IN THE FOUR (C11 checks it): `prodotto`
+#     copies from `/rete11/prodotto`, that is from the SAME folder for all.  With
+#     `--scatola X` only X is rebuilt, ⚠ and in the other running ones only the
+#     product is put back (they are not rebuilt and their servers are not restarted), so C11
+#     and C14 at the end of the run compare four identical binaries.  One that is off is said.
 # ═══════════════════════════════════════════════════════════════════════════
 DESKTOP_TUTTI="gnome kde xfce lxqt"
 SCATOLE_JSON=""
@@ -1201,9 +1200,9 @@ annota_scatola() {
 	SCATOLE_JSON="$SCATOLE_JSON{\"desktop\":$(json_stringa "$d"),\"cosa\":$(json_stringa "$cosa"),\"secondi\":$secondi,\"riuscita\":$riuscita,\"dice\":$(json_stringa "$dice")}"
 }
 
-# ⚠ `11-accendi.sh` stampa anche i suoi «OK/NO»: si tiene SOLO la riga che ha
-#   la forma attesa, o si dice che non si sa.  ⛔ Un «va eseguito da
-#   amministratore» letto come eta' sarebbe una misura inventata.
+# ⚠ `11-accendi.sh` also prints its «OK/NO»: we keep ONLY the line that has
+#   the expected shape, or we say it is not known.  ⛔ A «must be run as
+#   administrator» read as an age would be an invented measurement.
 riga_da_accendi() {
 	local azione=$1 d=$2 forma=$3 r
 	r=$(bash "$QUI/11-accendi.sh" "$azione" "$d" 2>/dev/null | grep -E "^($forma|spenta)" | tail -1)
@@ -1218,18 +1217,18 @@ rifai_una_scatola() {
 	local d=$1 prima passo t0 s fallito=""
 	prima=$(riga_da_accendi eta "$d" 'ore=')
 	if [ "$SECCO" = 1 ]; then
-		inf "(a vuoto) rifarei la scatola $d  (adesso: $prima)"
+		inf "(dry run) I would rebuild the box $d  (now: $prima)"
 		return 0
 	fi
-	# ⛔ Senza immagine NON si butta giu' niente: `accendi` toglierebbe la
-	#    scatola che c'e' senza poterla rifare.  Si usa com'e', e si dice.
+	# ⛔ Without the image NOTHING is knocked down: `accendi` would remove the
+	#    box that is there without being able to rebuild it.  It is used as it is, and said.
 	if ! command -v podman >/dev/null 2>&1 || ! podman image exists "rete11/$d:p0" 2>/dev/null; then
-		ko "la scatola $d NON e' stata rifatta: qui non c'e' l'immagine rete11/$d:p0"
-		inf "  ⇒ le sue maglie girano sulla scatola COME LA TROVANO ($prima)"
-		annota_scatola "$d" "rifatta" 0 false "manca l'immagine: usata com'era ($prima)"
+		ko "the box $d was NOT rebuilt: the image rete11/$d:p0 is not here"
+		inf "  ⇒ its meshes run on the box AS THEY FIND IT ($prima)"
+		annota_scatola "$d" "rifatta" 0 false "the image is missing: used as it was ($prima)"
 		return 1
 	fi
-	inf "la scatola $d prima di essere buttata: $prima"
+	inf "the box $d before being thrown away: $prima"
 	t0=$SECONDS
 	for passo in accendi prodotto server; do
 		if ! bash "$QUI/11-accendi.sh" "$passo" "$d"; then
@@ -1239,80 +1238,80 @@ rifai_una_scatola() {
 	done
 	s=$((SECONDS - t0))
 	if [ -z "$fallito" ]; then
-		ok "scatola $d rifatta da zero — accendi, prodotto, server — in ${s}s"
-		annota_scatola "$d" "rifatta" "$s" true "era: $prima"
+		ok "box $d rebuilt from scratch — accendi, prodotto, server — in ${s}s"
+		annota_scatola "$d" "rifatta" "$s" true "it was: $prima"
 	else
-		ko "scatola $d: «$fallito» non e' riuscito (${s}s) ⇒ le sue maglie diranno «non ho potuto guardare»"
-		annota_scatola "$d" "rifatta" "$s" false "fallito «$fallito»; era: $prima"
+		ko "box $d: «$fallito» did not succeed (${s}s) ⇒ its meshes will say «I could not look»"
+		annota_scatola "$d" "rifatta" "$s" false "failed «$fallito»; it was: $prima"
 	fi
 }
 
 rifai_le_scatole() {
 	local d t0 chieste=" $* "
-	log "le scatole si RIFANNO da zero prima di misurare: $*"
-	inf "⛔ un giro completo non parte piu' dallo sporco dei giri prima (21 set 2026, C17)"
+	log "the boxes are REBUILT from scratch before measuring: $*"
+	inf "⛔ a full run no longer starts from the dirt of the runs before (21 Sep 2026, C17)"
 	for d in "$@"; do
 		rifai_una_scatola "$d"
 	done
-	# ⛔ Lo stesso binario nelle quattro: le altre, se accese, prendono il
-	#    prodotto di questo giro (e basta: niente server riacceso, niente
-	#    scatola buttata — non sono state chieste).
+	# ⛔ The same binary in the four: the others, if running, take this run's
+	#    product (and that is all: no server restarted, no
+	#    box thrown away — they were not asked for).
 	for d in $DESKTOP_TUTTI; do
 		case "$chieste" in *" $d "*) continue ;; esac
 		if [ "$SECCO" = 1 ]; then
-			inf "(a vuoto) rimetterei il prodotto in $d, senza rifarla"
+			inf "(dry run) I would put the product back in $d, without rebuilding it"
 			continue
 		fi
 		if ! scatola_accesa "$d"; then
-			inf "⚠ $d e' spenta: non rifatta e non allineata ⇒ C11 dira' se il binario differisce"
+			inf "⚠ $d is off: not rebuilt and not aligned ⇒ C11 will say whether the binary differs"
 			continue
 		fi
 		t0=$SECONDS
 		if bash "$QUI/11-accendi.sh" prodotto "$d" >/dev/null 2>&1; then
-			inf "⭐ $d non rifatta (non chiesta), ma col prodotto di questo giro ($((SECONDS - t0))s)"
-			annota_scatola "$d" "solo il prodotto" "$((SECONDS - t0))" true "non chiesta: non rifatta, binario allineato"
+			inf "⭐ $d not rebuilt (not asked for), but with this run's product ($((SECONDS - t0))s)"
+			annota_scatola "$d" "solo il prodotto" "$((SECONDS - t0))" true "not asked for: not rebuilt, binary aligned"
 		else
-			ko "$d: non sono riuscito a rimetterci il prodotto ⇒ C11 dira' se il binario differisce"
-			annota_scatola "$d" "solo il prodotto" "$((SECONDS - t0))" false "prodotto non rimesso"
+			ko "$d: I could not put the product back in ⇒ C11 will say whether the binary differs"
+			annota_scatola "$d" "solo il prodotto" "$((SECONDS - t0))" false "product not put back"
 		fi
 	done
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⛔⛔ E IL RIFACIMENTO NON DEVE NASCONDERE UNA PERDITA DEL PRODOTTO.
+# ⛔⛔ AND THE REBUILD MUST NOT HIDE A LEAK OF THE PRODUCT.
 #
-# ⚠ Rifare le scatole cancella lo sporco della scatola, ⛔ ma cancellerebbe
-#   anche i segni di un prodotto che perde qualcosa a ogni sessione: la rete
-#   sarebbe verde per sempre, perche' non vivrebbe mai abbastanza da vederlo.
-# ⭐ Percio' ogni scatola ha un BILANCIO subito prima e subito dopo le sue
-#   maglie (`11-accendi.sh bilancio`), sullo stesso server — nessuna maglia
-#   del giro lo riaccende, solo C14 che viene dopo.  ~40-50 sessioni in mezzo.
-#   E il bilancio e' diviso per PADRONE:
-#     · il SERVER (descrittori, fili, figli): se cresce, e' il PRODOTTO — e
-#       nessun rifacimento lo cura.  ⚠ Una riga gialla, a voce alta.
-#     · la SCATOLA (inquilini rimasti, sessioni, unita' fallite, /tmp senza
-#       padrone): se cresce, e' sporco dei banchi o di systemd — ed e'
-#       quel che il rifacimento toglie al giro dopo.
-# ⚠ Non e' un rosso: una misura nuova senza guasto innestato non giudica
-#   (§3.6).  `[?]` Il primo giro dira' se il server torna al suo pavimento
-#   quando l'ultima sessione e' chiusa; da li' si potra' farne una maglia.
+# ⚠ Rebuilding the boxes wipes the box's dirt, ⛔ but it would also wipe
+#   the signs of a product that leaks something at every session: the net
+#   would be green for ever, because it would never live long enough to see it.
+# ⭐ So every box has a BALANCE right before and right after its
+#   meshes (`11-accendi.sh bilancio`), on the same server — no mesh
+#   of the run restarts it, only C14 which comes after.  ~40-50 sessions in between.
+#   And the balance is split by OWNER:
+#     · the SERVER (descriptors, threads, children): if it grows, it is the PRODUCT — and
+#       no rebuild cures it.  ⚠ A yellow line, out loud.
+#     · the BOX (leftover tenants, sessions, failed units, /tmp without an
+#       owner): if it grows, it is dirt of the benches or of systemd — and it is
+#       what the rebuild removes from the next run.
+# ⚠ It is not a red: a new measurement without an injected fault does not judge
+#   (§3.6).  `[?]` The first run will say whether the server goes back to its floor
+#   when the last session is closed; from there a mesh can be made of it.
 #
-# ⭐⭐ E PER LA COLONNA DELLA SCATOLA QUEL GIORNO E' ARRIVATO — 23 set 2026.
-#     La riga *«la SCATOLA si e' sporcata»* qui sotto resta una riga `inf`
-#     annotata `riuscita=true`, ⛔ ma non e' piu' l'unica cosa che guarda quel
-#     fatto: **C19** (`la_scatola_resta_pulita`, subito prima di questo
-#     bilancio) ne fa un VERDETTO, col suo guasto innestato.
-#   ⚠ E i due contano in modo DIVERSO, apposta:
-#     · `bilancio` conta per **uid** (`>= 1000`, escluso `provanic`) ⇒ per lui
-#       ⛔ `nictest` e' un inquilino, e va benissimo: e' una misura, non un
-#       giudizio, e chi diagnostica vuole vedere tutto.
-#     · C19 conta per **NOME**, sullo spazio di nomi della rete
-#       (`c<n>[b]u<n>`) ⇒ `nictest` non ci casca dentro per forma, e la maglia
-#       non da' mai rosso per l'utente delle prove a mano.
-#   ⛔ Se un giorno i due dicessero cose diverse, quello che giudica e' C19.
-# ⭐ E la guardia dell'eta' resta accesa FUORI da `tutto`: chi lavora con la
-#   famiglia veloce o a mano sulle scatole vecchie vede la riga, e se un rosso
-#   sparisce rifacendo la scatola il bilancio dice da quale colonna veniva.
+# ⭐⭐ AND FOR THE BOX COLUMN THAT DAY HAS COME — 23 Sep 2026.
+#     The line *«the BOX got dirty»* below stays an `inf` line
+#     annotated `riuscita=true`, ⛔ but it is no longer the only thing that looks at that
+#     fact: **C19** (`la_scatola_resta_pulita`, right before this
+#     balance) makes a VERDICT of it, with its injected fault.
+#   ⚠ And the two count in a DIFFERENT way, on purpose:
+#     · `bilancio` counts by **uid** (`>= 1000`, excluding `provanic`) ⇒ for it
+#       ⛔ `nictest` is a tenant, and that is perfectly fine: it is a measurement, not a
+#       judgement, and whoever diagnoses wants to see everything.
+#     · C19 counts by **NAME**, on the net's name space
+#       (`c<n>[b]u<n>`) ⇒ `nictest` does not fall into it by shape, and the mesh
+#       never gives red for the user of the manual tests.
+#   ⛔ If one day the two said different things, the one that judges is C19.
+# ⭐ And the age guard stays on OUTSIDE `tutto`: whoever works with the
+#   fast family or by hand on old boxes sees the line, and if a red
+#   disappears by rebuilding the box the balance says which column it came from.
 # ═══════════════════════════════════════════════════════════════════════════
 BILANCIO_PRIMA=""
 
@@ -1335,15 +1334,15 @@ bilancio_dopo() {
 	dopo=$(riga_da_accendi bilancio "$d" 'server_pid=')
 	case "$BILANCIO_PRIMA$dopo" in
 	*ignota*|*spenta*)
-		inf "⚠ bilancio($d): non leggibile (prima «$BILANCIO_PRIMA», dopo «$dopo»)"
-		annota_scatola "$d" "bilancio" 0 false "prima: $BILANCIO_PRIMA; dopo: $dopo"
+		inf "⚠ bilancio($d): not readable (before «$BILANCIO_PRIMA», after «$dopo»)"
+		annota_scatola "$d" "bilancio" 0 false "before: $BILANCIO_PRIMA; after: $dopo"
 		return 0 ;;
 	esac
 	a=$(valore_di "$BILANCIO_PRIMA" server_pid); b=$(valore_di "$dopo" server_pid)
 	if [ "$b" = 0 ] && [ "$a" != 0 ]; then
-		nota="il server NON C'E' PIU' a fine maglie"
+		nota="the server is NO LONGER THERE at the end of the meshes"
 	elif [ "$a" != "$b" ]; then
-		nota="il server e' cambiato nel mezzo ($a→$b): la colonna del prodotto non si confronta"
+		nota="the server changed in between ($a→$b): the product column is not compared"
 	else
 		for k in server_fd server_fili server_figli; do
 			a=$(valore_di "$BILANCIO_PRIMA" "$k"); b=$(valore_di "$dopo" "$k")
@@ -1356,20 +1355,20 @@ bilancio_dopo() {
 		case "$a$b" in ''|*[!0-9]*) continue ;; esac
 		[ "$b" -gt "$a" ] && della_scatola="$della_scatola $k $a→$b"
 	done
-	inf "bilancio($d) prima: $BILANCIO_PRIMA"
-	inf "bilancio($d) dopo : $dopo"
+	inf "bilancio($d) before: $BILANCIO_PRIMA"
+	inf "bilancio($d) after : $dopo"
 	[ -n "$nota" ] && printf '  \033[1;33m⚠\033[0m  bilancio(%s): %s\n' "$d" "$nota"
 	if [ -n "$del_prodotto" ]; then
-		printf '  \033[1;33m⚠\033[0m  bilancio(%s): il SERVER e'"'"' cresciuto fra la prima e l'"'"'ultima maglia:%s — puo'"'"' essere una perdita del PRODOTTO, e rifare la scatola NON la cura\n' "$d" "$del_prodotto"
+		printf '  \033[1;33m⚠\033[0m  bilancio(%s): the SERVER grew between the first and the last mesh:%s — it may be a leak of the PRODUCT, and rebuilding the box does NOT cure it\n' "$d" "$del_prodotto"
 	fi
-	[ -n "$della_scatola" ] && inf "⚠ bilancio($d): la SCATOLA si e' sporcata:$della_scatola — banchi o systemd, non il server"
-	annota_scatola "$d" "bilancio" 0 true "prima: $BILANCIO_PRIMA; dopo: $dopo; prodotto:${del_prodotto:- niente}${nota:+ ($nota)}; scatola:${della_scatola:- niente}"
+	[ -n "$della_scatola" ] && inf "⚠ bilancio($d): the BOX got dirty:$della_scatola — benches or systemd, not the server"
+	annota_scatola "$d" "bilancio" 0 true "before: $BILANCIO_PRIMA; after: $dopo; product:${del_prodotto:- nothing}${nota:+ ($nota)}; box:${della_scatola:- nothing}"
 }
 
-# ⭐ LA GUARDIA a fine giro: l'eta' di ogni scatola nel registro, e UNA riga
-#   a voce se ha passato la soglia (le soglie stanno in `11-accendi.sh`).
-#   ⚠ Si chiama DOPO aver fermato il cronometro: `[?]` ~1 s per quattro
-#   scatole, che nella famiglia veloce non deve entrare nel tetto.
+# ⭐ THE GUARD at the end of the run: the age of every box in the log, and ONE line
+#   out loud if it has passed the threshold (the thresholds are in `11-accendi.sh`).
+#   ⚠ It is called AFTER stopping the stopwatch: `[?]` ~1 s for four
+#   boxes, which in the fast family must not enter the ceiling.
 guardia_delle_scatole() {
 	local d riga
 	[ "$SECCO" = 1 ] && return 0
@@ -1380,79 +1379,79 @@ guardia_delle_scatole() {
 		annota_scatola "$d" "eta a fine giro" 0 true "$riga"
 		case "$riga" in
 		*guardia=SUPERATA*)
-			printf '  \033[1;33m⚠\033[0m  scatola %s VECCHIA: %s — non e'"'"' un rosso; se qualcosa e'"'"' rosso, si rifa'"'"' la scatola e si riprova prima di accusare il prodotto\n' "$d" "$riga" ;;
+			printf '  \033[1;33m⚠\033[0m  box %s OLD: %s — it is not a red; if something is red, rebuild the box and try again before accusing the product\n' "$d" "$riga" ;;
 		esac
 	done
 }
 
 famiglia_tutto() {
-	# ⛔ Nessun tetto qui: e' la famiglia di prima di chiudere una fase, e §3.4
-	#    dice UNA SCATOLA PER VOLTA, in fila, per il lucchetto della scheda.
+	# ⛔ No ceiling here: it is the family for before closing a phase, and §3.4
+	#    says ONE BOX AT A TIME, in a row, because of the card lock.
 	local d
-	# ⭐ Da scatole PULITE, e dichiarato (vedi `rifai_le_scatole`).
+	# ⭐ From CLEAN boxes, and declared (see `rifai_le_scatole`).
 	# shellcheck disable=SC2086
 	rifai_le_scatole $DESKTOP_NOTI
 	for d in $DESKTOP_NOTI; do
-		log "scatola $d"
+		log "box $d"
 		bilancio_prima "$d"
 		esegui_maglia "passo0($d)" false GIRA_P0 "$d"
 		esegui_maglia "C1($d)x10" false GIRA_C1 "$d" 10
 		esegui_maglia "C8($d)" false GIRA_C8 "$d" --senza-sessione
-		# ⭐⭐ E QUI STA LA META' CHE VALE: il guasto INNESTATO.
-		#    §3.6 — «ogni prova della lista ha, obbligatoriamente, il suo
-		#    guasto innestato, e quel caso va fatto girare, non immaginato».
-		#    ⇒ E' questa riga che tiene in vita C13.
+		# ⭐⭐ AND HERE IS THE HALF THAT COUNTS: the INJECTED fault.
+		#    §3.6 — «every test of the list has, mandatorily, its
+		#    injected fault, and that case must be run, not imagined».
+		#    ⇒ It is this line that keeps C13 alive.
 		esegui_maglia "C8($d) guasto innestato" true GIRA_C8 "$d" --senza-sessione --senza-cura
 
-		# ⭐ C5 — il suono: ⛔ e' oggi l unica maglia che attraversa il prodotto
-		#   da cima a fondo, perche giudica BYTE e non pixel (§7-bis.18).
+		# ⭐ C5 — the sound: ⛔ today it is the only mesh that crosses the product
+		#   from top to bottom, because it judges BYTES and not pixels (§7-bis.18).
 		esegui_maglia "C5($d)" false GIRA_C5 "$d"
 		esegui_maglia "C5($d) guasto innestato" true GIRA_C5 "$d" --senza-sorgente
 
-		# ⭐ C7 — i residui.  ⚠ «si stacca soltanto» NON deve dare rosso (I4):
-		#   il palco appartiene alla sessione e sopravvive alla disconnessione.
+		# ⭐ C7 — the leftovers.  ⚠ «only detaches» must NOT give red (I4):
+		#   the stage belongs to the session and survives the disconnection.
 		esegui_maglia "C7($d)" false GIRA_C7 "$d"
 		esegui_maglia "C7($d) si stacca soltanto" false GIRA_C7 "$d" --solo-distacco
-		# ⚠ `--attesa-chiusura 10` non e' un tetto preso in prestito (§1.45): col
-		#   guasto innestato si SA che il campo non tornera libero, e 10 s sono
-		#   nove volte la chiusura misurata (`[M]` 1,13 s).
+		# ⚠ `--attesa-chiusura 10` is not a borrowed ceiling (§1.45): with the
+		#   fault injected it is KNOWN that the field will not become free again, and 10 s are
+		#   nine times the measured closing (`[M]` 1,13 s).
 		esegui_maglia "C7($d) guasto innestato" true GIRA_C7 "$d" --lascia-un-processo --attesa-chiusura 10
 
-		# ⭐ C9 — il registro.  Il guasto si innesta sui DATI VERI, sfregiando la
-		#   copia in memoria della fetta: il registro sul disco non si tocca.
+		# ⭐ C9 — the log.  The fault is injected on the REAL DATA, defacing the
+		#   in-memory copy of the slice: the log on disk is not touched.
 		esegui_maglia "C9($d)" false GIRA_C9 "$d"
 		esegui_maglia "C9($d) guasto innestato" true GIRA_C9 "$d" --togli-nome tutto
 
-		# ⭐⭐ C18 — i gruppi della scheda li mette il PRODOTTO (§7.21), e
-		#    questa e' l'unica maglia che arriva SENZA gruppi: tutte le altre
-		#    glieli mettono da se' (`garantisci_i_gruppi`) e cosi' nascondono
-		#    quel pezzo.  ⛔ Come C1, C5, C7, C9 non passa dal cancello delle
-		#    capacita': l'iscrizione sta nel padre, prima del `fork`, e non sa
-		#    nemmeno quale compositore nascera' — ⇒ vale su OGNI desktop.
+		# ⭐⭐ C18 — the card groups are set by the PRODUCT (§7.21), and
+		#    this is the only mesh that arrives WITHOUT groups: all the others
+		#    give them to themselves (`garantisci_i_gruppi`) and so hide
+		#    that piece.  ⛔ Like C1, C5, C7, C9 it does not go through the
+		#    capabilities gate: the enrolment lives in the parent, before the `fork`, and does not
+		#    even know which compositor will be born — ⇒ it holds on EVERY desktop.
 		esegui_maglia "C18($d)" false GIRA_C18 "$d"
 		esegui_maglia "C18($d) guasto innestato" true GIRA_C18 "$d" --senza-usermod
 
-		# ⭐⭐ E le maglie del prodotto — ciascuna dove il prodotto le da' quel
-		#    che vuole, e la ragione di ogni salto sta scritta dentro
-		#    `le_cinque_nuove` (e in `11-capacita-del-prodotto.sh`).
+		# ⭐⭐ And the product meshes — each where the product provides what
+		#    it wants, and the reason for every skip is written inside
+		#    `le_cinque_nuove` (and in `11-capacita-del-prodotto.sh`).
 		le_cinque_nuove "$d"
-		# ⭐⭐ E L'ULTIMA: della rete, qui dentro, non deve restare nessuno.
-		#    ⛔ Dopo tutte le altre, o non giudicherebbe il loro lavoro.
+		# ⭐⭐ AND THE LAST ONE: nobody from the net must remain in here.
+		#    ⛔ After all the others, or it would not judge their work.
 		la_scatola_resta_pulita "$d"
-		# ⛔ E il bilancio: se il SERVER e' cresciuto, il rifacimento non lo
-		#    avrebbe mai fatto vedere — lo dice questa riga.
+		# ⛔ And the balance: if the SERVER grew, the rebuild would never
+		#    have shown it — this line says it.
 		bilancio_dopo "$d"
 	done
-	# ⭐ `rete_intera`, cioe' **con C14** — e qui e' giusto: questa e' la
-	#   famiglia di prima di chiudere una fase, i 786 s sono gia' a bilancio
-	#   (`[M]` 786 su 1 704, §7-bis.16), e nessun'altra prova sta girando.
+	# ⭐ `rete_intera`, that is **with C14** — and here it is right: this is the
+	#   family for before closing a phase, the 786 s are already budgeted
+	#   (`[M]` 786 out of 1 704, §7-bis.16), and no other test is running.
 	famiglia_rete_intera
 }
 
 famiglia_desktop_nuovo() {
 	local nuovo=$1 d
-	log "il desktop nuovo: $nuovo"
-	# ⭐ Da scatole PULITE anche qui: il nuovo e i vecchi della regressione.
+	log "the new desktop: $nuovo"
+	# ⭐ From CLEAN boxes here too: the new one and the old ones of the regression.
 	local da_rifare="$nuovo"
 	for d in $DESKTOP_NOTI; do
 		[ "$d" = "$nuovo" ] || da_rifare="$da_rifare $d"
@@ -1472,52 +1471,52 @@ famiglia_desktop_nuovo() {
 	esegui_maglia "C9($nuovo) guasto innestato" true GIRA_C9 "$nuovo" --togli-nome tutto
 	esegui_maglia "C18($nuovo)" false GIRA_C18 "$nuovo"
 	esegui_maglia "C18($nuovo) guasto innestato" true GIRA_C18 "$nuovo" --senza-usermod
-	# ⭐⭐ Le maglie del prodotto.  ⚠ Un desktop nuovo non sta in
-	#    `11-capacita-del-prodotto.sh` ⇒ si saltano tutte, e la ragione finisce
-	#    nel registro — ⛔ ed e' proprio il posto dove la si vuole leggere: il
-	#    giorno che il prodotto sapra' avviarlo si scrive la sua riga LI', e
-	#    questa comincia a girare senza che nessuno debba toccarla.
+	# ⭐⭐ The product meshes.  ⚠ A new desktop is not in
+	#    `11-capacita-del-prodotto.sh` ⇒ they are all skipped, and the reason ends up
+	#    in the log — ⛔ and that is exactly the place where one wants to read it: the
+	#    day the product can start it, its line is written THERE, and
+	#    this one starts running without anybody having to touch it.
 	le_cinque_nuove "$nuovo"
 	la_scatola_resta_pulita "$nuovo"
 	bilancio_dopo "$nuovo"
-	log "e la REGRESSIONE sui vecchi — ⭐ senza riscrivere una riga della lista"
+	log "and the REGRESSION on the old ones — ⭐ without rewriting a line of the list"
 	for d in $DESKTOP_NOTI; do
 		[ "$d" = "$nuovo" ] && continue
 		esegui_maglia "C1($d)x$GIRI_VELOCE" false GIRA_C1 "$d" "$GIRI_VELOCE"
 	done
-	# ⭐⭐ E QUI C14 SERVE PIU' CHE MAI, non meno: con una scatola in piu' la
-	#    domanda *«le scatole non si disturbano»* ha una risposta nuova, e la
-	#    mappa delle porte di `11-accendi.sh` ha una voce nuova da assegnare.
+	# ⭐⭐ AND HERE C14 IS NEEDED MORE THAN EVER, not less: with one more box the
+	#    question *«the boxes do not disturb each other»* has a new answer, and the
+	#    port map of `11-accendi.sh` has a new entry to assign.
 	famiglia_rete_intera
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐⭐ LE DUE META', CABLATE — e non e' una comodita': e' la cura del guasto
-#      dichiarato in `DECISIONI.md` §4.6-novemdecies.
+# ⭐⭐⭐ THE TWO HALVES, WIRED — and it is not a convenience: it is the cure of the fault
+#      declared in `DECISIONI.md` §4.6-novemdecies.
 #
-# ⛔ Fin qui il gancio aveva due meta' su due macchine e **soltanto una delle due
-#    era agganciata a qualcosa**: sul portatile c'e' il deposito e c'e' il
-#    `pre-push`, ma li' possono girare solo C10, C12, C13 — `[M]` un secondo.
-#    Le maglie vere vogliono le scatole e la scheda, cioe' la macchina di prova,
-#    ⛔ dove non c'e' git e quindi **non le fa partire niente**: oggi le lancia
-#    una persona a mano.  ⇒ E' il modo esatto in cui queste reti muoiono in
-#    silenzio (§4.2): esistono, sono perfette, e non parte niente.
+# ⛔ Until now the hook had two halves on two machines and **only one of the two
+#    was hooked to anything**: on the laptop there is the repository and there is the
+#    `pre-push`, but there only C10, C12, C13 can run — `[M]` one second.
+#    The real meshes want the boxes and the card, that is the test machine,
+#    ⛔ where there is no git and so **nothing starts them**: today a
+#    person launches them by hand.  ⇒ It is the exact way these nets die
+#    silently (§4.2): they exist, they are perfect, and nothing starts.
 #
-# ⭐ Da qui in poi: **si decide dove c'e' il deposito, si esegue dove ci sono le
-#   scatole, e la memoria torna indietro in un posto solo.**
+# ⭐ From here on: **we decide where the repository is, we run where the
+#   boxes are, and the memory comes back to one place only.**
 # ═══════════════════════════════════════════════════════════════════════════
 
 # ---------------------------------------------------------------------------
-# ⭐ LA META' DI QUI — le maglie che vogliono il DEPOSITO e non le scatole.
+# ⭐ THE HALF HERE — the meshes that want the REPOSITORY and not the boxes.
 #
-# ⚠ Sono TRE, e sono sempre le stesse qualunque sia la famiglia: C10, il suo
-#   guasto innestato, ⭐ e **C15** — che legge la memoria appena unita e dice se
-#   la meta' di LA' sta girando davvero (vedi in fondo a questa funzione).
-#   ⛔ Non e' una scelta di comodo — §4.6-unetvicies: sulla
-#   macchina di prova C10 non puo' che dire «non ho potuto guardare», quindi
-#   **il guasto innestato che tiene in vita C13 puo' nascere solo qui.**
-#   ⇒ Se questa meta' non girasse, C13 avrebbe come unico cibo dei giri in cui
-#     nessun guasto e' mai stato iniettato, e direbbe rosso per sempre.
+# ⚠ They are THREE, and they are always the same whatever the family: C10, its
+#   injected fault, ⭐ and **C15** — which reads the freshly merged memory and says whether
+#   the half OVER THERE is really running (see at the end of this function).
+#   ⛔ It is not a choice of convenience — §4.6-unetvicies: on the
+#   test machine C10 can only say «I could not look», so
+#   **the injected fault that keeps C13 alive can only be born here.**
+#   ⇒ If this half did not run, C13 would have as its only food runs in which
+#     no fault was ever injected, and would say red for ever.
 # ---------------------------------------------------------------------------
 meta_locale() {
 	if trova_maglia c10; then
@@ -1525,42 +1524,42 @@ meta_locale() {
 		if [ "$M_ESITO" = 0 ] || [ "$M_ESITO" = 1 ]; then
 			esegui_maglia "C10 guasto innestato" true GIRA_C10G "$QUALE_MAGLIA"
 		else
-			salta_maglia "C10 guasto innestato" "C10 non ha guardato: non c e niente su cui innestare"
+			salta_maglia "C10 guasto innestato" "C10 did not look: there is nothing to inject into"
 		fi
 	elif [ "$QUALE_MAGLIA" = TROPPE ]; then
-		salta_maglia C10 "ce ne sono PIU DI UNA con questo numero: non tiro a indovinare"
+		salta_maglia C10 "there is MORE THAN ONE with this number: I do not guess"
 	else
-		salta_maglia C10 "il file non c e"
+		salta_maglia C10 "the file is not there"
 	fi
 
 	# ═══════════════════════════════════════════════════════════════════
-	# ⭐⭐⭐ E C15, **QUI E SOLO QUI FRA LE DUE META'** — ed e' il posto che
-	#      la rende una maglia invece di un ornamento.
+	# ⭐⭐⭐ AND C15, **HERE AND ONLY HERE BETWEEN THE TWO HALVES** — and it is the place that
+	#      makes it a mesh instead of an ornament.
 	#
-	# ⛔ C15 legge la MEMORIA UNITA, e la memoria unita nasce due righe fa:
-	#    `meta_remota` ha appena riportato e accodato le righe della macchina
-	#    di prova (`unisci_registri`).  ⇒ Un giro remoto riuscito la fa
-	#    diventare verde nello stesso istante in cui succede.
-	# ⛔ E se la meta' remota ha detto 3, l'unione NON e' avvenuta: C15 legge
-	#    il registro di prima, ed e' giusto — quel giro sulle scatole non c'e'
-	#    stato.  ⇒ ⭐ E' cosi' che «un 3 frequente» (§5.2) diventa una riga
-	#    rossa invece di restare un'impressione.
+	# ⛔ C15 reads the MERGED MEMORY, and the merged memory is born two lines ago:
+	#    `meta_remota` has just brought back and appended the lines of the test
+	#    machine (`unisci_registri`).  ⇒ A successful remote run makes it
+	#    turn green at the same instant it happens.
+	# ⛔ And if the remote half said 3, the merge did NOT happen: C15 reads
+	#    the log from before, and rightly so — that run on the boxes did not
+	#    happen.  ⇒ ⭐ That is how «a frequent 3» (§5.2) becomes a red
+	#    line instead of staying an impression.
 	#
-	# ⚠⚠ E VA DETTO CHE COSA COMPRA, perche' e' una decisione e non un
-	#    dettaglio: **un rosso di C15 BLOCCA l'invio**, mentre il 3 della meta'
-	#    remota non lo blocca.  ⛔ Sembra un'incoerenza e non lo e': §5.2 dice
-	#    che *«il singolo 3 e' neutro; un 3 FREQUENTE e' un guasto del banco»*.
-	#    ⇒ La macchina di prova spenta stamattina non ferma nessuno; ⛔ la
-	#      macchina di prova spenta da otto giorni ferma l'invio, perche' a
-	#      quel punto si sta spingendo codice che nessuno ha misurato.
-	#    ⭐ E si torna verde con un comando, che C15 stessa stampa.
+	# ⚠⚠ AND WHAT IT BUYS MUST BE SAID, because it is a decision and not a
+	#    detail: **a red from C15 BLOCKS the push**, while the 3 of the remote
+	#    half does not block it.  ⛔ It looks like an inconsistency and it is not: §5.2 says
+	#    that *«the single 3 is neutral; a FREQUENT 3 is a fault of the bench»*.
+	#    ⇒ The test machine switched off this morning stops nobody; ⛔ the
+	#      test machine switched off for eight days stops the push, because at
+	#      that point one is pushing code nobody has measured.
+	#    ⭐ And one goes back to green with one command, which C15 itself prints.
 	# ═══════════════════════════════════════════════════════════════════
 	if trova_maglia c15; then
 		esegui_maglia C15 false GIRA_MAGLIA "$QUALE_MAGLIA"
 	elif [ "$QUALE_MAGLIA" = TROPPE ]; then
-		salta_maglia C15 "ce ne sono PIU DI UNA con questo numero: non tiro a indovinare"
+		salta_maglia C15 "there is MORE THAN ONE with this number: I do not guess"
 	else
-		salta_maglia C15 "il file non c e"
+		salta_maglia C15 "the file is not there"
 	fi
 }
 
@@ -1568,12 +1567,12 @@ meta_locale() {
 SSHPW=""
 sshpw() { python3 "$SSHPW" "$@"; }
 
-# ⚠ Un'annotazione, non una maglia: dice se la DELEGA ha funzionato.
-#   ⛔ Serve perche' altrimenti una macchina di prova spenta sarebbe invisibile:
-#     la meta' locale scriverebbe la sua riga verde, C12 direbbe «il gancio e'
-#     vivo», C13 direbbe «la rete sa dare rosso» — ⛔ e sulle scatole non
-#     sarebbe girato niente per settimane.  ⇒ Con questa riga nel registro,
-#     §5.2 morde: «un 3 frequente e' un guasto del banco, non un esito».
+# ⚠ An annotation, not a mesh: it says whether the DELEGATION worked.
+#   ⛔ It is needed because otherwise a switched-off test machine would be invisible:
+#     the local half would write its green line, C12 would say «the hook is
+#     alive», C13 would say «the net can give red» — ⛔ and on the boxes
+#     nothing would have run for weeks.  ⇒ With this line in the log,
+#     §5.2 bites: «a frequent 3 is a fault of the bench, not an outcome».
 annota_remota() {
 	local esito=$1 secondi=$2 nota=$3
 	[ -n "$eseguiti_json" ] && eseguiti_json="$eseguiti_json,"
@@ -1581,44 +1580,44 @@ annota_remota() {
 }
 
 # ---------------------------------------------------------------------------
-# ⛔⛔ L'ATTESA NON LA FA QUESTA MACCHINA, e non e' un dettaglio.
+# ⛔⛔ THE WAITING IS NOT DONE BY THIS MACHINE, and it is not a detail.
 #
-# Un `systemctl is-active` ogni cinque secondi per mezz'ora sono **quattrocento
-# connessioni ssh**, ciascuna `[M]` 0,28 s: ⇒ due minuti buttati e quattrocento
-# richieste di password.  ⛔ E nemmeno un'attesa sola lunga: un comando che sta
-# in ssh diretto oltre il minuto e mezzo non si porta a casa.
-# ⇒ Un minuto per volta, e ad aspettare e' la macchina di prova.
+# A `systemctl is-active` every five seconds for half an hour is **four hundred
+# ssh connections**, each `[M]` 0,28 s: ⇒ two minutes thrown away and four hundred
+# password prompts.  ⛔ And not even one long wait: a command that stays
+# on direct ssh beyond a minute and a half does not make it home.
+# ⇒ One minute at a time, and the one waiting is the test machine.
 #
-# ⚠ E si aspetta **il file d'esito**, non lo stato di systemd: un'unita'
-#   transitoria che riesce SPARISCE, e «sparita» somiglia a «non partita»
-#   (`11-gancio-remoto.sh`, e c'e' scritto perche').
+# ⚠ And we wait for **the outcome file**, not for systemd's state: a transient
+#   unit that succeeds DISAPPEARS, and «gone» looks like «not started»
+#   (`11-gancio-remoto.sh`, and it says why).
 # ---------------------------------------------------------------------------
 #
-# ⛔⛔ E SI GUARDA ANCHE SE L'UNITA' E' ANCORA VIVA — `[M]` 27 agosto 2026, e
-#     l'ha preso il guasto innestato di questo meccanismo, non una lettura.
+# ⛔⛔ AND WE ALSO LOOK WHETHER THE UNIT IS STILL ALIVE — `[M]` 27 August 2026, and
+#     it was caught by this mechanism's injected fault, not by a reading.
 #
-# La prima stesura aspettava **solo** il file d'esito.  ⇒ Se l'unita' moriva
-# senza scriverlo — il file del lanciatore non c'e', `bash` non parte, systemd
-# la marca `failed` — ⛔ **questa funzione restava ad aspettare 2 400 secondi**
-# un file che non sarebbe arrivato mai.  ⚠ E il sintomo era quello che inganna:
-# non un errore, ma un invio «lento» (la stessa forma di `sshpw.py`, dove c'e'
-# scritta per esteso).
+# The first draft waited **only** for the outcome file.  ⇒ If the unit died
+# without writing it — the launcher file is not there, `bash` does not start, systemd
+# marks it `failed` — ⛔ **this function kept waiting 2 400 seconds**
+# for a file that would never arrive.  ⚠ And the symptom was the deceiving one:
+# not an error, but a «slow» push (the same shape as `sshpw.py`, where it is
+# written out in full).
 #
-# ⭐ E L'ORDINE DELLE DUE DOMANDE NON E' LIBERO: **prima il file, poi l'unita'.**
-#   Il lanciatore scrive l'esito **prima** di uscire ⇒ se l'unita' e' sparita, il
-#   file c'e' gia'.  ⛔ Chiedendo prima dell'unita' ci sarebbe una fessura in cui
-#   un giro riuscito verrebbe dichiarato morto.
+# ⭐ AND THE ORDER OF THE TWO QUESTIONS IS NOT FREE: **first the file, then the unit.**
+#   The launcher writes the outcome **before** exiting ⇒ if the unit has disappeared, the
+#   file is already there.  ⛔ Asking about the unit first there would be a gap in which
+#   a successful run would be declared dead.
 attendi_remoto() {
 	local esito_f=$1 tetto=$2 speso=0 risposta=""
 	while [ "$speso" -lt "$tetto" ]; do
-		# ⛔⛔ E IL PASSO E' DI 2 SECONDI, NON DI 5 — ed e' un conto sul tetto,
-		#    non un gusto.  `[M]` §5.1: la famiglia veloce e' a **173 s su 180**,
-		#    cioe' sette secondi di margine.  ⚠ Chi aspetta paga, oltre al giro,
-		#    l'ARROTONDAMENTO di questa domanda: col passo a 5 s si potevano
-		#    perdere 5 s in fondo, e 173 + 5 + il giro dei comandi **sfonda**.
-		#    ⇒ Col passo a 2 s l'arrotondamento sta dentro il margine.
-		# ⚠ La lista dei giri la costruisce il portatile (`seq`), cosi' la riga
-		#   che arriva alla macchina di prova non ha niente da espandere.
+		# ⛔⛔ AND THE STEP IS 2 SECONDS, NOT 5 — and it is an account on the ceiling,
+		#    not a taste.  `[M]` §5.1: the fast family is at **173 s out of 180**,
+		#    that is seven seconds of margin.  ⚠ Whoever waits pays, on top of the run,
+		#    the ROUNDING of this question: with a 5 s step one could
+		#    lose 5 s at the end, and 173 + 5 + the round of the commands **breaks through**.
+		#    ⇒ With a 2 s step the rounding stays inside the margin.
+		# ⚠ The list of rounds is built by the laptop (`seq`), so the line
+		#   that reaches the test machine has nothing to expand.
 		risposta=$(sshpw "for i in $(seq 1 30 | tr '\n' ' '); do [ -f $esito_f ] && break; systemctl is-active --quiet $UNITA_REMOTA || break; sleep 2; done; cat $esito_f 2>/dev/null || { systemctl is-active --quiet $UNITA_REMOTA && echo ANCORA || echo MORTA; }" 2>/dev/null \
 			| tr -d '\r' | grep -E '^[0-9]+$|^ANCORA$|^MORTA$' | tail -n 1)
 		case "$risposta" in
@@ -1626,19 +1625,19 @@ attendi_remoto() {
 		*) printf '%s' "$risposta"; return 0 ;;
 		esac
 		speso=$((speso + 60))
-		# ⛔ Su STDERR: questa funzione si chiama dentro `$(…)`, e quel che va
-		#    sullo stdout E' la risposta.  `[M]` 18 set 2026: la meta' remota ha
-		#    impiegato 77 s, questa riga e' finita davanti allo «0», e un giro
-		#    verde e' stato registrato come «3 — non ho potuto guardare».
-		inf "  … la meta' remota sta ancora girando (${speso}s)" >&2
+		# ⛔ On STDERR: this function is called inside `$(…)`, and what goes
+		#    on stdout IS the answer.  `[M]` 18 Sep 2026: the remote half
+		#    took 77 s, this line ended up in front of the «0», and a green
+		#    run was recorded as «3 — I could not look».
+		inf "  … the remote half is still running (${speso}s)" >&2
 	done
 	printf 'ATTESA'
 	return 1
 }
 
 # ---------------------------------------------------------------------------
-# ⭐ LA META' DI LA' — si lancia, si aspetta, si legge, e si riporta.
-#    Riempie R_ESITO (0 verde · 1 rosso · 3 non ho potuto guardare) e R_NOTA.
+# ⭐ THE HALF OVER THERE — it is launched, waited for, read, and brought back.
+#    It fills R_ESITO (0 green · 1 red · 3 I could not look) and R_NOTA.
 # ---------------------------------------------------------------------------
 R_ESITO=3
 R_NOTA=""
@@ -1646,50 +1645,50 @@ meta_remota() {
 	local fam=$1 inn=$2
 	local log="$RETE11_REMOTA/$UNITA_REMOTA.log"
 	local esito_f="$RETE11_REMOTA/$UNITA_REMOTA.esito"
-	# ⚠ `sudo` serve perche' le maglie delle scatole passano da `podman`, e il
-	#   registro di la' e' di root da sempre.  ⛔ E il prezzo va detto: se il
-	#   gancio girasse la' da `nicfio`, l'accodamento al registro fallirebbe con
-	#   «Permission denied» e il giro **non lascerebbe traccia** pur avendo
-	#   misurato tutto.  `[M]` 27 agosto 2026, provato.
+	# ⚠ `sudo` is needed because the box meshes go through `podman`, and the
+	#   log over there has always been root's.  ⛔ And the price must be said: if the
+	#   hook ran there as `nicfio`, appending to the log would fail with
+	#   «Permission denied» and the run **would leave no trace** despite having
+	#   measured everything.  `[M]` 27 August 2026, tried.
 	local S="sudo -S -p 'Password sudo: '"
 	local opz="" risposta="" prima dopo
 
 	[ "$SECCO" = 1 ] && opz="$opz --secco"
-	# ⚠ Fra apici: `--scatola "gnome kde"` porta uno SPAZIO, e senza gli apici
-	#   la meta' remota riceve «kde» come comando suo.  `[M]` 20 set 2026: il
-	#   giro non partiva e la riga diceva solo «non sono riuscito a lanciare».
+	# ⚠ In quotes: `--scatola "gnome kde"` carries a SPACE, and without the quotes
+	#   the remote half receives «kde» as a command of its own.  `[M]` 20 Sep 2026: the
+	#   run did not start and the line only said «I could not launch».
 	[ -n "$SCATOLA_CHIESTA" ] && opz="$opz --scatola \"$SCATOLA_CHIESTA\""
 
 	prima=$SECONDS
-	# ⛔⛔ PRIMA DI TUTTO: UN GIRO GIA' IN CORSO NON SI TOCCA — 20 set 2026.
+	# ⛔⛔ FIRST OF ALL: A RUN ALREADY IN PROGRESS IS NOT TOUCHED — 20 Sep 2026.
 	#
-	# `[M]` Il `pre-push` di stamattina ha trovato l'unita' occupata da una rete
-	# lanciata a mano, non e' riuscito a lanciare la sua (giusto), ⛔ ma aveva
-	# GIA' CANCELLATO il log — e il giro in corso ha continuato a scrivere in un
-	# file che non esisteva piu'.  ⇒ Si guarda prima, e se gira si esce 3
-	# dicendolo: «occupato» e «non ci arrivo» sono due diagnosi diverse.
+	# `[M]` This morning's `pre-push` found the unit busy with a net
+	# launched by hand, it could not launch its own (right), ⛔ but it had
+	# ALREADY DELETED the log — and the run in progress kept writing to a
+	# file that no longer existed.  ⇒ We look first, and if it is running we exit 3
+	# saying so: «busy» and «I cannot reach it» are two different diagnoses.
 	if sshpw "systemctl is-active --quiet $UNITA_REMOTA" >/dev/null 2>&1; then
 		R_ESITO=3
-		R_NOTA="sulla macchina di prova un giro e' GIA' in corso ($UNITA_REMOTA)"
+		R_NOTA="on the test machine a run is ALREADY in progress ($UNITA_REMOTA)"
 		ko "⛔ $R_NOTA"
-		inf "  ⇒ non lancio niente e non tocco il suo log: una scatola per volta"
-		inf "    (§3.4, il lucchetto della scheda).  Si riprova quando ha finito"
+		inf "  ⇒ I launch nothing and do not touch its log: one box at a time"
+		inf "    (§3.4, the card lock).  Try again when it has finished"
 		M_SECONDI=$((SECONDS - prima))
 		return 3
 	fi
-	# ⛔ Il log e il file d'esito si cancellano PRIMA: un esito vecchio letto
-	#    come se fosse di questo giro e' un giro che riferisce di un altro.
+	# ⛔ The log and the outcome file are deleted FIRST: an old outcome read
+	#    as if it belonged to this run is a run that reports about another.
 	sshpw "$S systemctl reset-failed $UNITA_REMOTA 2>/dev/null; $S rm -f $log $esito_f" >/dev/null 2>&1
 
-	inf "lancio: $RETE11_REMOTA/11-gancio.sh gira --famiglia $fam --innesco $inn$opz"
+	inf "launch: $RETE11_REMOTA/11-gancio.sh gira --famiglia $fam --innesco $inn$opz"
 	if ! sshpw "$S systemd-run --unit=$UNITA_REMOTA --property=StandardOutput=append:$log --property=StandardError=append:$log --property=WorkingDirectory=$RETE11_REMOTA bash $RETE11_REMOTA/11-gancio-remoto.sh $esito_f gira --famiglia $fam --innesco $inn$opz" >/dev/null 2>&1; then
 		dopo=$SECONDS
 		R_ESITO=3
-		R_NOTA="non sono riuscito a lanciare il giro sulla macchina di prova"
+		R_NOTA="I could not launch the run on the test machine"
 		ko "⛔ $R_NOTA"
-		inf "  ⇒ e' un «non ho potuto guardare» (esito 3), ⛔ NON un verde:"
-		inf "    la riga di registro lo porta scritto, e §5.2 dice che un 3"
-		inf "    ripetuto e' un guasto del banco"
+		inf "  ⇒ it is an «I could not look» (outcome 3), ⛔ NOT a green:"
+		inf "    the log line carries it written, and §5.2 says that a repeated"
+		inf "    3 is a fault of the bench"
 		M_SECONDI=$((dopo - prima))
 		return 3
 	fi
@@ -1698,65 +1697,65 @@ meta_remota() {
 	dopo=$SECONDS
 	M_SECONDI=$((dopo - prima))
 
-	# ⭐ Il log si porta a casa con scp (`--get`), ⛔ mai catturando lo stdout di
-	#   un `cat` remoto: li' dentro finisce anche la richiesta di password
-	#   (`fondamenta/strumenti/sshpw.py`, e c'e' scritto perche').
+	# ⭐ The log is brought home with scp (`--get`), ⛔ never by capturing the stdout of
+	#   a remote `cat`: the password prompt also ends up in there
+	#   (`fondamenta/strumenti/sshpw.py`, and it says why).
 	local tana
 	tana=$(mktemp -d)
 	sshpw --get "$log" "$tana/remoto.log" >/dev/null 2>&1
 	if [ -s "$tana/remoto.log" ]; then
-		log "quel che ha detto la macchina di prova"
+		log "what the test machine said"
 		sed 's/^/  | /' "$tana/remoto.log"
 	fi
 
-	# ⛔ E i due modi di non sapere sono DUE, e vanno detti separati: «non ha
-	#    finito» e «e' morta senza dire niente» si curano in posti diversi.
+	# ⛔ And the two ways of not knowing are TWO, and they must be said separately: «it did not
+	#    finish» and «it died without saying anything» are cured in different places.
 	if [ "$risposta" = ATTESA ] || [ "$risposta" = MORTA ]; then
 		R_ESITO=3
 		if [ "$risposta" = MORTA ]; then
-			R_NOTA="l'unita' della meta' remota e' morta senza scrivere un esito"
+			R_NOTA="the remote half's unit died without writing an outcome"
 			ko "⛔ $R_NOTA"
-			inf "  ⇒ guarda il log qui sopra e «systemctl status $UNITA_REMOTA»"
-			inf "    sulla macchina di prova: il giro non e' nemmeno partito"
+			inf "  ⇒ look at the log above and «systemctl status $UNITA_REMOTA»"
+			inf "    on the test machine: the run did not even start"
 		else
-			R_NOTA="la meta' remota non ha finito entro ${ATTESA_REMOTA}s"
+			R_NOTA="the remote half did not finish within ${ATTESA_REMOTA}s"
 			ko "⛔ $R_NOTA"
 		fi
 		rm -rf "$tana"
 		return 3
 	fi
 
-	# ⭐⭐ E ADESSO LA MEMORIA TORNA INDIETRO — l'altra meta' del problema.
+	# ⭐⭐ AND NOW THE MEMORY COMES BACK — the other half of the problem.
 	unisci_registri "$tana"
 	rm -rf "$tana"
 
 	case "$risposta" in
-	0) R_ESITO=0; R_NOTA="la meta' remota e' verde" ;;
-	1) R_ESITO=1; R_NOTA="⛔ la meta' remota ha dato ROSSO" ;;
-	*) R_ESITO=3; R_NOTA="la meta' remota e' uscita $risposta (terreno, o uso sbagliato)" ;;
+	0) R_ESITO=0; R_NOTA="the remote half is green" ;;
+	1) R_ESITO=1; R_NOTA="⛔ the remote half gave RED" ;;
+	*) R_ESITO=3; R_NOTA="the remote half exited $risposta (terrain, or wrong usage)" ;;
 	esac
 	return 0
 }
 
 # ---------------------------------------------------------------------------
-# ⭐⭐ UNA MEMORIA SOLA — e sta QUI, sul portatile.
+# ⭐⭐ ONE MEMORY ONLY — and it lives HERE, on the laptop.
 #
-# ⛔ Non e' una preferenza: e' l'unico posto dove le due maglie che leggono
-#    quella memoria sanno giudicare.  C12 ha bisogno del deposito git per sapere
-#    dove stanno i ganci, e sulla macchina di prova esce **2** — e §7-bis.16 dice
-#    che *e' la risposta giusta*.  ⇒ Il portatile e' dove la rete si guarda allo
-#    specchio; la macchina di prova e' dove **esegue**.
-# ⚠ Il registro di la' NON si cancella e NON si svuota: resta la memoria locale
-#   di quella macchina, e serve a chi diagnostica li'.  Qui se ne prende copia.
+# ⛔ It is not a preference: it is the only place where the two meshes that read
+#    that memory can judge.  C12 needs the git repository to know
+#    where the hooks are, and on the test machine it exits **2** — and §7-bis.16 says
+#    that *it is the right answer*.  ⇒ The laptop is where the net looks at itself in the
+#    mirror; the test machine is where it **runs**.
+# ⚠ The log over there is NOT deleted and NOT emptied: it stays the local memory
+#   of that machine, and serves whoever diagnoses there.  Here a copy of it is taken.
 # ---------------------------------------------------------------------------
 unisci_registri() {
 	local tana=$1
 	local remoto="$RETE11_REMOTA/11-gancio-registro.jsonl"
 	sshpw --get "$remoto" "$tana/registro-remoto.jsonl" >/dev/null 2>&1
 	if [ ! -s "$tana/registro-remoto.jsonl" ]; then
-		ko "⚠ non sono riuscito a riportare il registro della macchina di prova"
-		inf "  ⇒ il giro di la' e' successo davvero, ma qui non se ne saprebbe"
-		inf "    niente: C13 non lo vedrebbe.  ⛔ E' un guasto, non un dettaglio"
+		ko "⚠ I could not bring back the test machine's log"
+		inf "  ⇒ the run over there really happened, but here nothing would be known"
+		inf "    of it: C13 would not see it.  ⛔ It is a fault, not a detail"
 		return 3
 	fi
 	python3 "$QUI/11-registro-unisci.py" "$REGISTRO" "$tana/registro-remoto.jsonl"
@@ -1775,9 +1774,9 @@ scrivi_registro() {
 		printf '"secco":%s,' "$([ "$SECCO" = 1 ] && echo true || echo false)"
 		printf '"cambiati":%s,' "$(json_elenco "$@")"
 		printf '"maglie":[%s],' "$eseguiti_json"
-		# ⭐ Le scatole: rifatte (con i secondi), bilanci, eta' a fine giro.
-		#   ⚠ Fuori da `maglie` apposta: non sono giudizi, e C12, C13 e C15
-		#   non devono contarle ne' come verdi ne' come rosse.
+		# ⭐ The boxes: rebuilt (with the seconds), balances, age at the end of the run.
+		#   ⚠ Outside `maglie` on purpose: they are not judgements, and C12, C13 and C15
+		#   must not count them as greens or as reds.
 		printf '"scatole":[%s],' "$SCATOLE_JSON"
 		printf '"guasto_innestato":%s,' "$guasto"
 		printf '"ha_dato_rosso":%s,' "$rosso"
@@ -1787,48 +1786,48 @@ scrivi_registro() {
 		printf '}\n'
 	} >> "$REGISTRO"
 	# ═══════════════════════════════════════════════════════════════════
-	# ⛔⛔ E SI GUARDA SE LA RIGA E' DAVVERO ANDATA GIU'.
+	# ⛔⛔ AND WE CHECK WHETHER THE LINE REALLY WENT DOWN.
 	#
-	# `[M]` 27 agosto 2026, provato sulla macchina di prova: il registro la' e'
-	# **di root** — l'hanno scritto i giri lanciati con `systemd-run`, e i modi
-	# sono `-rw-r--r--`.  ⇒ Un giro lanciato a mano da `nicfio` fa un `>>` che
-	# fallisce con *«Permission denied»*, ⛔ **e questo script tira avanti**:
-	# `set -uo pipefail` non ha la `e`, e la riga successiva stampa «nessun
-	# rosso».
-	# ⇒ ⛔ Un giro che ha misurato tutto, non ha lasciato traccia, e ha detto
-	#   che era andato bene.  ⚠ E il danno non e' nel giro: e' che C12 e C13
-	#   vivono di quella traccia — la rete perderebbe la memoria senza che
-	#   nessuno se ne accorga, che e' §4.2 di nuovo.
-	# ⭐ Non si ripara il permesso da qui (non e' mestiere di un banco): si DICE.
+	# `[M]` 27 August 2026, tried on the test machine: the log there is
+	# **root's** — the runs launched with `systemd-run` wrote it, and the modes
+	# are `-rw-r--r--`.  ⇒ A run launched by hand as `nicfio` does a `>>` that
+	# fails with *«Permission denied»*, ⛔ **and this script carries on**:
+	# `set -uo pipefail` has no `e`, and the next line prints «no
+	# red».
+	# ⇒ ⛔ A run that measured everything, left no trace, and said
+	#   it had gone well.  ⚠ And the damage is not in the run: it is that C12 and C13
+	#   live on that trace — the net would lose its memory without
+	#   anyone noticing, which is §4.2 again.
+	# ⭐ The permission is not repaired from here (it is not a bench's job): it is SAID.
 	# ═══════════════════════════════════════════════════════════════════
 	if [ ! -w "$REGISTRO" ] && [ -e "$REGISTRO" ]; then
-		ko "⛔⛔ NON HO POTUTO SCRIVERE NEL REGISTRO: $REGISTRO"
-		inf "  ⇒ questo giro ha misurato tutto e ⛔ NON HA LASCIATO TRACCIA."
-		inf "    C12 dira' che il gancio non gira e C13 che nessuno la mette"
-		inf "    alla prova, e tutt'e due avranno ragione da un punto di vista"
-		inf "    sbagliato."
-		inf "  ⚠ e' di $(stat -c %U "$REGISTRO" 2>/dev/null): o lo si lancia con"
-		inf "    lo stesso utente, o si cambia il proprietario del file"
+		ko "⛔⛔ I COULD NOT WRITE TO THE LOG: $REGISTRO"
+		inf "  ⇒ this run measured everything and ⛔ LEFT NO TRACE."
+		inf "    C12 will say the hook does not run and C13 that nobody puts it"
+		inf "    to the test, and both will be right from a wrong"
+		inf "    point of view."
+		inf "  ⚠ it belongs to $(stat -c %U "$REGISTRO" 2>/dev/null): either launch it with"
+		inf "    the same user, or change the file's owner"
 		return 1
 	fi
 }
 
 # ---------------------------------------------------------------------------
-# ⛔⛔ IL GIT SERVE PER **DECIDERE**, NON PER **GIRARE** — e la differenza e' una
-#     cosa che si e' scoperta al primo giro vero, `[M]` 26 agosto 2026.
+# ⛔⛔ GIT IS NEEDED TO **DECIDE**, NOT TO **RUN** — and the difference is something
+#     that was discovered at the first real run, `[M]` 26 August 2026.
 #
-# ⚠ Le due meta' di questo gancio vivono in due posti diversi:
-#     · DECIDERE che cosa far girare vuole il deposito ⇒ sta sul portatile
-#     · FAR GIRARE vuole le scatole e la scheda grafica ⇒ sta sulla macchina
-#       di prova, ⛔ **dove il deposito NON c e**
-#   ⇒ La prima stesura pretendeva git sempre, e usciva **2** («terreno cattivo»)
-#     sull unica macchina in grado di eseguire le maglie: cioe' ⛔ **il gancio
-#     non poteva essere cronometrato dove gira davvero.**
+# ⚠ The two halves of this hook live in two different places:
+#     · DECIDING what to run needs the repository ⇒ it lives on the laptop
+#     · RUNNING needs the boxes and the graphics card ⇒ it lives on the test
+#       machine, ⛔ **where the repository is NOT**
+#   ⇒ The first draft demanded git always, and exited **2** («bad terrain»)
+#     on the only machine able to run the meshes: that is ⛔ **the hook
+#     could not be timed where it really runs.**
 #
-# ⭐ Quindi: se la famiglia e' CHIESTA PER NOME non c e' niente da decidere, e il
-#   deposito non serve.  Se non e' chiesta, serve — e allora si dice.
-# ⚠ E il registro segna sempre quale delle due strade e' stata presa, cosi' chi
-#   legge sa se quel giro ha guardato dei percorsi o ha ubbidito a un nome.
+# ⭐ So: if the family is ASKED FOR BY NAME there is nothing to decide, and the
+#   repository is not needed.  If it is not asked for, it is needed — and then it is said.
+# ⚠ And the log always marks which of the two roads was taken, so whoever
+#   reads knows whether that run looked at paths or obeyed a name.
 # ---------------------------------------------------------------------------
 SECCO=0
 AZIONE=${1:-decidi}
@@ -1837,40 +1836,40 @@ FAMIGLIA_CHIESTA=""
 SCATOLA_CHIESTA=""
 SOLO_QUI=0
 INNESCO="mano"
-# ⛔⛔ E GLI ARGOMENTI CHE NON SONO OPZIONI SI METTONO DA PARTE, non si buttano.
+# ⛔⛔ AND THE ARGUMENTS THAT ARE NOT OPTIONS ARE PUT ASIDE, not thrown away.
 #
-# `[M]` 26 agosto 2026, e l'ha preso il banco di prova al primo giro: la prima
-# stesura faceva `shift` su TUTTO dentro questo ciclo, ⇒ quando poi `installa`
-# andava a leggere `$1` non c era piu' niente e ripiegava sul predefinito.
-# ⛔ Risultato: `installa pre-commit` **installava `pre-push`**, e diceva «OK».
-# ⚠ Cioe' il gancio faceva una cosa diversa da quella chiesta e riferiva
-#   riuscita — la stessa famiglia d errore di `LEZIONI.md` §1.46, e questa volta
-#   dentro il gancio stesso.
+# `[M]` 26 August 2026, and the test bench caught it at the first run: the first
+# draft did `shift` on EVERYTHING inside this loop, ⇒ when `installa` then
+# went to read `$1` there was nothing left and it fell back on the default.
+# ⛔ Result: `installa pre-commit` **installed `pre-push`**, and said «OK».
+# ⚠ That is, the hook did something different from what was asked and reported
+#   success — the same error family as `LEZIONI.md` §1.46, and this time
+#   inside the hook itself.
 RESTO=()
 while [ $# -gt 0 ]; do
 	case "$1" in
 	--secco)    SECCO=1 ;;
 	--famiglia) FAMIGLIA_CHIESTA=${2:-}; shift ;;
-	# ⛔⛔ E SI PUO CHIEDERE UNA SCATOLA SOLA, ed e una necessita, non un lusso.
-	#    `[M]` 26 agosto 2026: la famiglia `tutto` gira le maglie del PRODOTTO su
-	#    tutt e quattro i desktop, ⛔ e allora il prodotto ne sapeva accendere
-	#    UNO: un giro che per tre quarti non giudica costa un ora e insegna
-	#    niente.  ⚠ Oggi (21 set 2026) ne accende TRE — gnome, kde e xfce, xfce
-	#    con la sola immagine — e lxqt resta fuori (`11-capacita-del-prodotto.sh`).
-	#    ⭐ L opzione serve ancora: una scatola sola costa un quarto.
-	# ⚠ E NON si mette un «se il desktop e gnome» dentro le famiglie: quello
-	#   sarebbe un eccezione per compositore travestita (`DECISIONI.md` §5.1-bis).
-	#   ⭐ Qui e chi lancia a dire su quale scatola vuole girare, e resta scritto
-	#     nel registro.  ⛔ Quel che il prodotto sa fare su ciascuna NON si
-	#     decide qui: sta in `11-capacita-del-prodotto.sh`, per capacita'.
+	# ⛔⛔ AND ONE CAN ASK FOR A SINGLE BOX, and it is a necessity, not a luxury.
+	#    `[M]` 26 August 2026: the `tutto` family runs the PRODUCT meshes on
+	#    all four desktops, ⛔ and back then the product could start
+	#    ONE: a run that for three quarters does not judge costs an hour and teaches
+	#    nothing.  ⚠ Today (21 Sep 2026) it starts THREE — gnome, kde and xfce, xfce
+	#    with the image only — and lxqt stays out (`11-capacita-del-prodotto.sh`).
+	#    ⭐ The option is still useful: a single box costs a quarter.
+	# ⚠ And NO «if the desktop is gnome» is put inside the families: that
+	#   would be a per-compositor exception in disguise (`DECISIONI.md` §5.1-bis).
+	#   ⭐ Here it is whoever launches who says which box to run on, and it stays written
+	#     in the log.  ⛔ What the product can do on each is NOT
+	#     decided here: it is in `11-capacita-del-prodotto.sh`, by capability.
 	--scatola)  DESKTOP_NOTI=${2:-}; SCATOLA_CHIESTA=${2:-}; shift ;;
 	--innesco)  INNESCO=${2:-mano}; shift ;;
-	# ⚠ Il nome dell'unita' della meta' remota — serve a far girare due giri
-	#   insieme senza pestarsi l'unita' e il log.  ⛔ Non decide che cosa gira.
+	# ⚠ The name of the remote half's unit — it serves to run two runs
+	#   together without stepping on each other's unit and log.  ⛔ It does not decide what runs.
 	--unita)    UNITA_REMOTA=${2:-$UNITA_REMOTA}; shift ;;
-	# ⚠ `installa … --solo-qui`: il gancio installato fa girare SOLO la meta'
-	#   del portatile.  ⛔ E' un ripiego dichiarato, non il predefinito — vedi
-	#   `installa`, dove c'e' scritto che cosa costa.
+	# ⚠ `installa … --solo-qui`: the installed hook runs ONLY the laptop
+	#   half.  ⛔ It is a declared fallback, not the default — see
+	#   `installa`, where it is written what it costs.
 	--solo-qui) SOLO_QUI=1 ;;
 	*)          RESTO+=("$1") ;;
 	esac
@@ -1878,11 +1877,11 @@ while [ $# -gt 0 ]; do
 done
 set -- "${RESTO[@]+"${RESTO[@]}"}"
 
-# ⛔ Adesso che si sa se la famiglia e stata chiesta per nome, si puo dire se il
-#    deposito serviva davvero.
+# ⛔ Now that we know whether the family was asked for by name, we can say whether the
+#    repository was really needed.
 if [ -z "$RADICE" ] && [ -z "$FAMIGLIA_CHIESTA" ]; then
-	ko "non sono dentro un deposito git, e nessuna famiglia e stata chiesta per nome"
-	ko "⇒ non ho modo di DECIDERE che cosa far girare (--famiglia <nome> non ne ha bisogno)"
+	ko "I am not inside a git repository, and no family was asked for by name"
+	ko "⇒ I have no way to DECIDE what to run (--famiglia <nome> does not need it)"
 	exit 2
 fi
 
@@ -1892,45 +1891,45 @@ decidi|gira)
 	mapfile -t ELENCO < <(cambiati "$INNESCO")
 	if [ -n "$FAMIGLIA_CHIESTA" ]; then
 		FAMIGLIA="$FAMIGLIA_CHIESTA"
-		MOTIVO="chiesta per nome"
+		MOTIVO="asked for by name"
 	else
 		FAMIGLIA=$(decidi_famiglia ELENCO)
 		MOTIVO=$(perche_famiglia "$FAMIGLIA")
 	fi
 
-	log "Il gancio — innesco: $INNESCO"
-	inf "file cambiati: ${#ELENCO[@]}"
+	log "The hook — trigger: $INNESCO"
+	inf "files changed: ${#ELENCO[@]}"
 	for f in "${ELENCO[@]:0:12}"; do inf "  · $f"; done
-	[ ${#ELENCO[@]} -gt 12 ] && inf "  … e altri $(( ${#ELENCO[@]} - 12 ))"
-	inf "famiglia: ${FAMIGLIA%%:*}   ⇐ $MOTIVO"
-	[ "${FAMIGLIA%%:*}" = funziona ] && inf "tetto: ${TETTO_VELOCE}s (⛔ e se sfora si tagliano prove, non si alza il tetto)"
+	[ ${#ELENCO[@]} -gt 12 ] && inf "  … and $(( ${#ELENCO[@]} - 12 )) more"
+	inf "family: ${FAMIGLIA%%:*}   ⇐ $MOTIVO"
+	[ "${FAMIGLIA%%:*}" = funziona ] && inf "ceiling: ${TETTO_VELOCE}s (⛔ and if it overruns tests are cut, the ceiling is not raised)"
 
 	if [ "$AZIONE" = decidi ]; then
 		exit 0
 	fi
 
 	if [ "${FAMIGLIA%%:*}" = niente ]; then
-		inf "⭐ non parte niente — e non e' pigrizia: un gancio che gira quando"
-		inf "  non serve e' un gancio che qualcuno spegnera'"
+		inf "⭐ nothing starts — and it is not laziness: a hook that runs when"
+		inf "  it is not needed is a hook that someone will switch off"
 		exit 0
 	fi
 
-	# ⛔ LE SCATOLE SONO DI UN BANCO ALLA VOLTA (29 set 2026): ogni maglia sgombera
-	#   TUTTI gli inquilini `c<n>u<n>` ⇒ un push durante un giro della suite ne
-	#   cancellava gli inquilini appena nati (`[M]` «user unknown», 04:28, 04:40 e
-	#   04:42 del 29 set: 4 FAIL e 36 BLOCKED).  La stessa serratura di 15-giro.py e
-	#   16-salita.py; le CARTE non toccano le scatole e non la chiedono.  Se un
-	#   banco lungo e' in corso il gancio dice NO e il push aspetta la sua fine.
-	#   ⚠ Senza la serratura `sgombera_inquilini` non tocca niente: e' la stessa
-	#   variabile, REMOTIX_SCATOLE_TENUTE, a dire «le scatole sono nostre».
+	# ⛔ THE BOXES BELONG TO ONE BENCH AT A TIME (29 Sep 2026): every mesh clears out
+	#   ALL the `c<n>u<n>` tenants ⇒ a push during a run of the suite
+	#   deleted its newly born tenants (`[M]` «user unknown», 04:28, 04:40 and
+	#   04:42 of 29 Sep: 4 FAIL and 36 BLOCKED).  The same lock as 15-giro.py and
+	#   16-salita.py; the PAPERS do not touch the boxes and do not ask for it.  If a
+	#   long bench is in progress the hook says NO and the push waits for it to end.
+	#   ⚠ Without the lock `sgombera_inquilini` touches nothing: it is the same
+	#   variable, REMOTIX_SCATOLE_TENUTE, that says «the boxes are ours».
 	if [ "${FAMIGLIA%%:*}" != carte ] && [ -z "${REMOTIX_SCATOLE_TENUTE:-}" ]; then
-		# ⚠ non in /run/lock («sticky»: root non riapre il file di nicfio, `[M]`)
+		# ⚠ not in /run/lock («sticky»: root does not reopen nicfio's file, `[M]`)
 		SERRATURA_SCATOLE=/media/REMOTIX/rete11/.scatole.lock
-		exec 9<>"$SERRATURA_SCATOLE" || { ko "non apro $SERRATURA_SCATOLE"; exit 2; }
+		exec 9<>"$SERRATURA_SCATOLE" || { ko "I cannot open $SERRATURA_SCATOLE"; exit 2; }
 		chmod 666 "$SERRATURA_SCATOLE" 2>/dev/null
 		if ! flock -n -x 9; then
-			ko "le scatole le tiene gia' un altro banco ($(head -c 200 "$SERRATURA_SCATOLE" 2>/dev/null || echo ?)):"
-			ko "⇒ il gancio non parte, o sgombererebbe i suoi inquilini. Riprova a banco finito."
+			ko "the boxes are already held by another bench ($(head -c 200 "$SERRATURA_SCATOLE" 2>/dev/null || echo ?)):"
+			ko "⇒ the hook does not start, or it would clear out its tenants. Try again when the bench is over."
 			exit 1
 		fi
 		: > "$SERRATURA_SCATOLE"
@@ -1940,31 +1939,31 @@ decidi|gira)
 
 	SECONDS=0
 	case "${FAMIGLIA%%:*}" in
-	funziona)      log "famiglia FUNZIONA"; famiglia_veloce ;;
-	# ⛔ E LA RIGA CHE SI STAMPA DICE IL COSTO VERO.  Qui c'era scritto
-	#    «C11-C14 + C10, che non accende niente»: ⛔ era la stessa promessa
-	#    falsa del commento, ma **stampata**, cioe' vista da qualcuno nel
-	#    momento esatto in cui contava.
-	carte)         log "le CARTE — solo C16  ⭐ [M] 0,79 s, e non accende niente"; famiglia_carte ;;
-	rete)          log "la RETE — C10, C11, C12, C13, C15  ⭐ [M] ~11 s, e nessuna accende una sessione"; famiglia_rete ;;
-	rete-intera)   log "la RETE **PIU' C14** — ⛔ [M] ~800 s, e si prende le QUATTRO scatole"; famiglia_rete_intera ;;
-	tutto)         log "TUTTO — prima di chiudere una fase"; famiglia_tutto ;;
-	suite)         log "la SUITE FUNZIONALE — 4 desktop x 2 browser veri + strato tecnico, ⛔ ~2 ore"; esegui_maglia "SUITE" false GIRA_SUITE ;;
+	funziona)      log "family FUNZIONA"; famiglia_veloce ;;
+	# ⛔ AND THE LINE THAT IS PRINTED SAYS THE REAL COST.  Here it said
+	#    «C11-C14 + C10, which starts nothing»: ⛔ it was the same false
+	#    promise as the comment, but **printed**, that is seen by someone at the
+	#    exact moment it mattered.
+	carte)         log "the PAPERS — C16 only  ⭐ [M] 0,79 s, and it starts nothing"; famiglia_carte ;;
+	rete)          log "the NET — C10, C11, C12, C13, C15  ⭐ [M] ~11 s, and none starts a session"; famiglia_rete ;;
+	rete-intera)   log "the NET **PLUS C14** — ⛔ [M] ~800 s, and it takes the FOUR boxes"; famiglia_rete_intera ;;
+	tutto)         log "EVERYTHING — before closing a phase"; famiglia_tutto ;;
+	suite)         log "the FUNCTIONAL SUITE — 4 desktops x 2 real browsers + technical layer, ⛔ ~2 hours"; esegui_maglia "SUITE" false GIRA_SUITE ;;
 	desktop-nuovo) famiglia_desktop_nuovo "${FAMIGLIA##*:}" ;;
-	*)             ko "famiglia sconosciuta: $FAMIGLIA"; exit 2 ;;
+	*)             ko "unknown family: $FAMIGLIA"; exit 2 ;;
 	esac
 	DURATA=$SECONDS
 
-	# ⭐ LA GUARDIA DELL'ETA' — dopo il cronometro, apposta (vedi
-	#   `guardia_delle_scatole`): una riga se una scatola e' vecchia, mai un rosso.
+	# ⭐ THE AGE GUARD — after the stopwatch, on purpose (see
+	#   `guardia_delle_scatole`): one line if a box is old, never a red.
 	# shellcheck disable=SC2086
 	case "${FAMIGLIA%%:*}" in
 	funziona|rete-intera|tutto) guardia_delle_scatole $DESKTOP_NOTI ;;
 	desktop-nuovo)              guardia_delle_scatole "${FAMIGLIA##*:}" $DESKTOP_NOTI ;;
 	esac
 
-	# ⛔ «ha dato rosso» vuol dire ESITO 1 — un giudizio.  ⚠ Il 3 NON e' un
-	#    rosso (§4.5), e contarlo come tale renderebbe C13 verde per sbaglio.
+	# ⛔ «gave red» means OUTCOME 1 — a judgement.  ⚠ 3 is NOT a
+	#    red (§4.5), and counting it as one would make C13 green by mistake.
 	ROSSO=false
 	GUASTO=false
 	printf '%s' "$eseguiti_json" | grep -q '"esito":1' && ROSSO=true
@@ -1977,93 +1976,93 @@ decidi|gira)
 
 	scrivi_registro "${FAMIGLIA%%:*}" "$INNESCO" "$SFORATO" "$DURATA" "$ROSSO" "$GUASTO" "${ELENCO[@]}"
 
-	log "esito del giro"
-	inf "durata: ${DURATA}s"
+	log "outcome of the run"
+	inf "duration: ${DURATA}s"
 	if [ "$SFORATO" = true ]; then
-		ko "⛔ HA SFORATO IL TETTO: ${DURATA}s contro ${TETTO_VELOCE}s"
-		inf "⇒ §5.1: si TAGLIANO PROVE, non si alza il tetto.  ⚠ E questo e'"
-		inf "  adesso un [M], non piu' un [?]: il numero e' nel registro"
+		ko "⛔ IT OVERRAN THE CEILING: ${DURATA}s against ${TETTO_VELOCE}s"
+		inf "⇒ §5.1: tests are CUT, the ceiling is not raised.  ⚠ And this is"
+		inf "  now an [M], no longer a [?]: the number is in the log"
 	fi
 	if [ "$SECCO" = 1 ]; then
-		inf "⚠ giro a VUOTO: non ha misurato niente, e la riga di registro porta"
-		inf "  «secco: true» — ⛔ C12 e C13 la buttano via, e devono"
+		inf "⚠ DRY run: it measured nothing, and the log line carries"
+		inf "  «secco: true» — ⛔ C12 and C13 throw it away, and they must"
 		exit 0
 	fi
 	if [ "$ROSSO" = true ]; then
-		# §5.2, la politica del rosso: rosso in FUNZIONA BLOCCA.
-		ko "⛔ ROSSO — §5.2: si ripara prima di andare avanti, non si archivia"
-		inf "  come «poi vediamo».  ⚠ E un rosso intermittente E' un rosso:"
-		inf "  non si ripete la prova sperando nel verde"
+		# §5.2, the red policy: red in FUNZIONA BLOCKS.
+		ko "⛔ RED — §5.2: it is repaired before going on, it is not filed away"
+		inf "  as «we will see».  ⚠ And an intermittent red IS a red:"
+		inf "  the test is not repeated hoping for green"
 		exit 1
 	fi
-	ok "nessun rosso"
+	ok "no red"
 	exit 0
 	;;
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐⭐ `remoto` — IL GIRO INTERO, sulle due macchine
+# ⭐⭐⭐ `remoto` — THE WHOLE RUN, on the two machines
 #
-# ⛔⛔ E L'ORDINE DEI PASSI NON E' LIBERO: prima LA', poi QUI.
+# ⛔⛔ AND THE ORDER OF THE STEPS IS NOT FREE: first THERE, then HERE.
 #
-# La meta' remota scrive la sua riga sulla macchina di prova; quella riga deve
-# poter essere accodata al registro di qui, e `11-registro-unisci.py` accoda
-# **solo cio' che e' piu' nuovo della riga piu' recente gia' presente**.
-# ⇒ Se la riga locale si scrivesse per prima, sarebbe piu' recente di quella
-#   remota, ⛔ **e la riga remota non entrerebbe mai** — cioe' il giro sulle
-#   scatole sarebbe girato davvero e la memoria non ne saprebbe niente.
-# ⇒ Percio': si esegue di la', si riporta, e **solo alla fine** si scrive la
-#   riga di qui, che e' l'ultima anche in ordine di tempo.
+# The remote half writes its line on the test machine; that line must
+# be able to be appended to the log here, and `11-registro-unisci.py` appends
+# **only what is newer than the most recent line already present**.
+# ⇒ If the local line were written first, it would be more recent than the
+#   remote one, ⛔ **and the remote line would never get in** — that is the run on the
+#   boxes would really have run and the memory would know nothing of it.
+# ⇒ So: we run over there, bring back, and **only at the end** write the
+#   line here, which is the last one in time order too.
 # ═══════════════════════════════════════════════════════════════════════════
 remoto)
-	# ⛔ Questa e' la meta' che DECIDE: senza deposito non ha niente da guardare.
+	# ⛔ This is the half that DECIDES: without a repository it has nothing to look at.
 	if [ -z "$RADICE" ]; then
-		ko "«remoto» si lancia dal PORTATILE, dove c'e' il deposito"
-		ko "⇒ qui il deposito non c'e': se questa e' la macchina di prova, il"
-		ko "  comando e' «gira --famiglia <nome>», e lo lancia il portatile"
+		ko "«remoto» is launched from the LAPTOP, where the repository is"
+		ko "⇒ the repository is not here: if this is the test machine, the"
+		ko "  command is «gira --famiglia <nome>», and the laptop launches it"
 		exit 2
 	fi
 	SSHPW="$RADICE/fondamenta/strumenti/sshpw.py"
 	if [ ! -f "$SSHPW" ]; then
-		ko "non trovo $SSHPW: senza non si arriva alla macchina di prova"
+		ko "I cannot find $SSHPW: without it the test machine cannot be reached"
 		exit 2
 	fi
 
 	mapfile -t ELENCO < <(cambiati "$INNESCO")
 	if [ -n "$FAMIGLIA_CHIESTA" ]; then
 		FAMIGLIA="$FAMIGLIA_CHIESTA"
-		MOTIVO="chiesta per nome"
+		MOTIVO="asked for by name"
 	else
 		FAMIGLIA=$(decidi_famiglia ELENCO)
 		MOTIVO=$(perche_famiglia "$FAMIGLIA")
 	fi
 
-	log "Il gancio, LE DUE META' — innesco: $INNESCO"
-	inf "decide QUI ($DOVE, dove c'e' il deposito)"
-	inf "esegue LA'  ($RETE11_REMOTA, dove ci sono le scatole e la scheda)"
-	inf "file cambiati: ${#ELENCO[@]}"
+	log "The hook, THE TWO HALVES — trigger: $INNESCO"
+	inf "decides HERE ($DOVE, where the repository is)"
+	inf "runs THERE  ($RETE11_REMOTA, where the boxes and the card are)"
+	inf "files changed: ${#ELENCO[@]}"
 	for f in "${ELENCO[@]:0:12}"; do inf "  · $f"; done
-	[ ${#ELENCO[@]} -gt 12 ] && inf "  … e altri $(( ${#ELENCO[@]} - 12 ))"
-	inf "famiglia: ${FAMIGLIA%%:*}   ⇐ $MOTIVO"
+	[ ${#ELENCO[@]} -gt 12 ] && inf "  … and $(( ${#ELENCO[@]} - 12 )) more"
+	inf "family: ${FAMIGLIA%%:*}   ⇐ $MOTIVO"
 
 	if [ "${FAMIGLIA%%:*}" = niente ]; then
-		inf "⭐ non parte niente, ne' qui ne' la' — e non e' pigrizia: un gancio"
-		inf "  che gira quando non serve e' un gancio che qualcuno spegnera'"
-		inf "  ⇒ ⭐ ed e' anche il motivo per cui il prezzo di questa strada NON"
-		inf "    e' «ogni invio diventa lento»: gli invii che toccano solo i"
-		inf "    documenti costano **zero secondi**"
+		inf "⭐ nothing starts, neither here nor there — and it is not laziness: a hook"
+		inf "  that runs when it is not needed is a hook that someone will switch off"
+		inf "  ⇒ ⭐ and it is also the reason why the price of this road is NOT"
+		inf "    «every push becomes slow»: the pushes that touch only the"
+		inf "    documents cost **zero seconds**"
 		exit 0
 	fi
 
 	SECONDS=0
 
-	# 1 · LA' — le maglie vere, sulle scatole
-	log "la meta' di LA' — le scatole e la scheda"
+	# 1 · THERE — the real meshes, on the boxes
+	log "the half OVER THERE — the boxes and the card"
 	meta_remota "${FAMIGLIA%%:*}" "$INNESCO-remoto"
 	R_SECONDI=$M_SECONDI
 	annota_remota "$R_ESITO" "$R_SECONDI" "$R_NOTA"
 
-	# 2 · QUI — le maglie che vogliono il deposito
-	log "la meta' di QUI — il deposito"
+	# 2 · HERE — the meshes that want the repository
+	log "the half HERE — the repository"
 	meta_locale
 
 	DURATA=$SECONDS
@@ -2073,10 +2072,10 @@ remoto)
 	printf '%s' "$eseguiti_json" | grep -q '"esito":1' && ROSSO=true
 	printf '%s' "$eseguiti_json" | grep -q '"guasto_innestato":true' && GUASTO=true
 
-	# ⚠ E il tetto si giudica sul tempo che ASPETTA CHI LAVORA — cioe' tutto il
-	#   giro, l'andata e il ritorno compresi.  ⛔ La riga scritta di la' porta un
-	#   altro numero, ed e' giusto che siano due: quello dice quanto costano le
-	#   maglie, questo quanto costa l'invio.
+	# ⚠ And the ceiling is judged on the time WHOEVER WORKS WAITS — that is the whole
+	#   run, there and back included.  ⛔ The line written over there carries
+	#   another number, and it is right that there are two: that one says what the
+	#   meshes cost, this one what the push costs.
 	SFORATO=false
 	if [ "${FAMIGLIA%%:*}" = funziona ] && [ "$DURATA" -gt "$TETTO_VELOCE" ]; then
 		SFORATO=true
@@ -2084,32 +2083,32 @@ remoto)
 
 	scrivi_registro "${FAMIGLIA%%:*}" "$INNESCO" "$SFORATO" "$DURATA" "$ROSSO" "$GUASTO" "${ELENCO[@]}"
 
-	log "esito del giro, tutt'e due le meta'"
-	inf "durata totale (quel che aspetta chi manda): ${DURATA}s"
-	inf "di cui la meta' remota: ${R_SECONDI}s"
-	inf "la meta' remota: $R_NOTA"
+	log "outcome of the run, both halves"
+	inf "total duration (what whoever pushes waits): ${DURATA}s"
+	inf "of which the remote half: ${R_SECONDI}s"
+	inf "the remote half: $R_NOTA"
 	if [ "$SFORATO" = true ]; then
-		ko "⛔ HA SFORATO IL TETTO: ${DURATA}s contro ${TETTO_VELOCE}s"
-		inf "⇒ §5.1: si TAGLIANO PROVE, non si alza il tetto"
+		ko "⛔ IT OVERRAN THE CEILING: ${DURATA}s against ${TETTO_VELOCE}s"
+		inf "⇒ §5.1: tests are CUT, the ceiling is not raised"
 	fi
 	if [ "$SECCO" = 1 ]; then
-		inf "⚠ giro a VUOTO: non ha misurato niente, e le righe di registro —"
-		inf "  quella di qui e quella di la' — portano «secco: true».  ⛔ C12 e"
-		inf "  C13 le buttano via, e devono"
+		inf "⚠ DRY run: it measured nothing, and the log lines —"
+		inf "  the one here and the one over there — carry «secco: true».  ⛔ C12 and"
+		inf "  C13 throw them away, and they must"
 		exit 0
 	fi
 	if [ "$ROSSO" = true ]; then
-		ko "⛔ ROSSO — §5.2: si ripara prima di andare avanti"
+		ko "⛔ RED — §5.2: it is repaired before going on"
 		exit 1
 	fi
 	if [ "$R_ESITO" = 3 ]; then
-		inf "⚠ e non blocca, per scelta dichiarata: un gancio che ferma il"
-		inf "  lavoro perche' una SECONDA macchina non risponde e' un gancio che"
-		inf "  qualcuno spegnera'.  ⛔ Ma il «non ho potuto guardare» resta"
-		inf "  scritto nel registro, e §5.2 dice che un 3 ripetuto e' un guasto"
+		inf "⚠ and it does not block, by declared choice: a hook that stops the"
+		inf "  work because a SECOND machine does not answer is a hook that"
+		inf "  someone will switch off.  ⛔ But the «I could not look» stays"
+		inf "  written in the log, and §5.2 says that a repeated 3 is a fault"
 		exit 0
 	fi
-	ok "nessun rosso, ne' qui ne' la'"
+	ok "no red, neither here nor there"
 	exit 0
 	;;
 
@@ -2117,34 +2116,34 @@ installa)
 	QUALE=${1:-pre-push}
 	case "$QUALE" in
 	pre-commit|pre-push) : ;;
-	# ⛔ Un nome che non si conosce NON si ignora ripiegando sul predefinito:
-	#    si rifiuta.  Ripiegare vorrebbe dire installare una cosa diversa da
-	#    quella chiesta e dire «OK» — il difetto che questo file ha gia avuto.
-	*) ko "gancio sconosciuto: «$QUALE» — sono pre-commit o pre-push"; exit 2 ;;
+	# ⛔ A name that is not known is NOT ignored by falling back on the default:
+	#    it is refused.  Falling back would mean installing something different from
+	#    what was asked and saying «OK» — the defect this file has already had.
+	*) ko "unknown hook: «$QUALE» — they are pre-commit or pre-push"; exit 2 ;;
 	esac
-	# ⚠ E la scelta del predefinito e' DICHIARATA, non ovvia.
-	#   §5.1 dice «si tocca src/», che suona come un commit.  ⛔ Ma la famiglia
-	#   veloce costa fino a tre minuti, e tre minuti a OGNI commit sono
-	#   esattamente la cosa che §5.1 stessa dice che fa spegnere un gancio.
-	#   ⇒ Predefinito `pre-push`: si paga una volta per spinta invece che una
-	#     volta per commit.  Chi vuole l altro lo chiede per nome, e sa perche.
+	# ⚠ And the choice of the default is DECLARED, not obvious.
+	#   §5.1 says «src/ is touched», which sounds like a commit.  ⛔ But the fast
+	#   family costs up to three minutes, and three minutes at EVERY commit are
+	#   exactly the thing §5.1 itself says makes a hook get switched off.
+	#   ⇒ Default `pre-push`: one pays once per push instead of once
+	#     per commit.  Whoever wants the other asks for it by name, and knows why.
 	CARTELLA=$(cartella_ganci)
 	[ -d "$CARTELLA" ] || mkdir -p "$CARTELLA"
-	# ⚠ Si chiamava `DOVE`, ed e' stato rinominato: `DOVE` adesso e' il nome
-	#   della macchina, e finisce in ogni riga di registro.  ⛔ Due variabili
-	#   con lo stesso nome in uno script senza `local` sono un valore che
-	#   cambia sotto i piedi di chi non guarda.
+	# ⚠ It was called `DOVE`, and it was renamed: `DOVE` is now the name
+	#   of the machine, and it ends up in every log line.  ⛔ Two variables
+	#   with the same name in a script without `local` are a value that
+	#   changes under the feet of whoever is not looking.
 	PERCORSO="$CARTELLA/$QUALE"
 	# ═══════════════════════════════════════════════════════════════════
-	# ⛔⛔ E QUEL CHE IL GANCIO INSTALLATO CHIAMA E' `remoto`, NON `gira`.
+	# ⛔⛔ AND WHAT THE INSTALLED HOOK CALLS IS `remoto`, NOT `gira`.
 	#
-	# `gira`, qui sul portatile, fa girare **un secondo** di maglie: C10, C12,
-	# C13.  ⛔ Le maglie che guardano il prodotto vogliono le scatole e la
-	# scheda, che stanno sull'altra macchina — quindi un `pre-push` che chiama
-	# `gira` e' un gancio che scatta, dice verde, e **non ha guardato il
-	# prodotto**.  ⇒ E' la rete che muore in silenzio di §4.2, con l'aggravante
-	# che il registro dice che sta girando.
-	# ⭐ `remoto` decide qui e fa eseguire la'.
+	# `gira`, here on the laptop, runs **one second** of meshes: C10, C12,
+	# C13.  ⛔ The meshes that look at the product want the boxes and the
+	# card, which are on the other machine — so a `pre-push` that calls
+	# `gira` is a hook that fires, says green, and **has not looked at the
+	# product**.  ⇒ It is the net that dies silently of §4.2, made worse by
+	# the log saying it is running.
+	# ⭐ `remoto` decides here and has it run there.
 	# ═══════════════════════════════════════════════════════════════════
 	if [ "$SOLO_QUI" = 1 ]; then
 		AZIONE_GANCIO=gira
@@ -2153,25 +2152,25 @@ installa)
 	fi
 	{
 		printf '#!/bin/sh\n'
-		printf '# rete11 — installato da 11-gancio.sh il %s\n' "$(date -Is)"
-		printf '# ⛔ Definito PER PERCORSO: e questo file non decide niente,\n'
-		printf '#    passa la palla al gancio, che guarda i file cambiati.\n'
+		printf '# rete11 — installed by 11-gancio.sh on %s\n' "$(date -Is)"
+		printf '# ⛔ Defined BY PATH: and this file decides nothing,\n'
+		printf '#    it passes the ball to the hook, which looks at the changed files.\n'
 		printf 'exec bash %s %s --innesco %s\n' "$QUI/11-gancio.sh" "$AZIONE_GANCIO" "$QUALE"
 	} > "$PERCORSO"
 	chmod 755 "$PERCORSO"
-	ok "gancio installato: $PERCORSO"
-	inf "azione: $AZIONE_GANCIO"
+	ok "hook installed: $PERCORSO"
+	inf "action: $AZIONE_GANCIO"
 	if [ "$SOLO_QUI" = 1 ]; then
-		ko "⚠ ⛔ INSTALLATO A META': con «--solo-qui» questo gancio fa girare"
-		inf '  solo C10 e il suo guasto innestato — [M] un secondo — e ⛔ NON'
-		inf "  guarda il prodotto: le maglie del prodotto vogliono le scatole."
-		inf "  ⇒ C12 dira' «il gancio e' vivo» e C13 «la rete sa dare rosso»,"
-		inf "    ⛔ e tutt'e due diranno il vero avendo guardato un decimo della"
-		inf "    rete.  ⚠ Si usa quando la macchina di prova non c'e', e si sa"
-		inf "    che cosa si sta comprando"
+		ko "⚠ ⛔ HALF INSTALLED: with «--solo-qui» this hook runs"
+		inf '  only C10 and its injected fault — [M] one second — and ⛔ does NOT'
+		inf "  look at the product: the product meshes want the boxes."
+		inf "  ⇒ C12 will say «the hook is alive» and C13 «the net can give red»,"
+		inf "    ⛔ and both will tell the truth having looked at a tenth of the"
+		inf "    net.  ⚠ It is used when the test machine is not there, knowing"
+		inf "    what one is buying"
 	else
-		inf "⇒ ⭐ decide qui (il deposito) ed esegue su $RETE11_REMOTA (le scatole)"
-		inf "⇒ e adesso C12 puo' dire se e' vivo"
+		inf "⇒ ⭐ decides here (the repository) and runs on $RETE11_REMOTA (the boxes)"
+		inf "⇒ and now C12 can say whether it is alive"
 	fi
 	;;
 
@@ -2181,37 +2180,37 @@ installato)
 	for q in pre-commit pre-push; do
 		D="$CARTELLA/$q"
 		if [ -f "$D" ] && grep -q '11-gancio.sh' "$D" 2>/dev/null; then
-			if [ -x "$D" ]; then ok "$q  ⇒  $D"; else ko "$q c'e' ma NON e' eseguibile: $D"; fi
-			# ⛔⛔ E NON BASTA CHE IL GANCIO CI SIA: conta QUALE AZIONE chiama.
-			#    `gira`, sul portatile, e' un secondo di maglie e NON guarda il
-			#    prodotto.  ⇒ Un gancio installato cosi' scatta, dice verde, e
-			#    non ha misurato niente delle scatole: e' la rete che muore in
-			#    silenzio (§4.2) con il registro che dice che sta girando.
-			#    ⚠ C12 questa distinzione non la fa — guarda che il file NOMINI
-			#      il gancio.  ⇒ Finche' non la fa, la dice questa riga.
+			if [ -x "$D" ]; then ok "$q  ⇒  $D"; else ko "$q is there but is NOT executable: $D"; fi
+			# ⛔⛔ AND IT IS NOT ENOUGH THAT THE HOOK IS THERE: WHICH ACTION it calls counts.
+			#    `gira`, on the laptop, is one second of meshes and does NOT look at the
+			#    product.  ⇒ A hook installed like that fires, says green, and
+			#    has measured nothing of the boxes: it is the net that dies
+			#    silently (§4.2) with the log saying it is running.
+			#    ⚠ C12 does not make this distinction — it checks that the file NAMES
+			#      the hook.  ⇒ Until it does, this line says it.
 			if grep -q '11-gancio.sh remoto' "$D" 2>/dev/null; then
-				inf "  ⭐ chiama «remoto»: decide qui, esegue sulle scatole"
+				inf "  ⭐ it calls «remoto»: decides here, runs on the boxes"
 			elif grep -q '11-gancio.sh gira' "$D" 2>/dev/null; then
-				ko "  ⚠ chiama «gira»: qui gira solo la meta' del deposito"
-				inf "    ⇒ le maglie del prodotto NON girano.  Per cablarle:"
+				ko "  ⚠ it calls «gira»: here only the repository half runs"
+				inf "    ⇒ the product meshes do NOT run.  To wire them:"
 				inf "      bash 11-gancio.sh installa $q"
 			fi
 			TROVATO=1
 		fi
 	done
-	[ $TROVATO -eq 0 ] && ko "il gancio NON e' installato in $CARTELLA"
+	[ $TROVATO -eq 0 ] && ko "the hook is NOT installed in $CARTELLA"
 	printf '\n'
 	if [ -f "$REGISTRO" ]; then
-		inf "registro: $REGISTRO ($(grep -c . "$REGISTRO") righe)"
+		inf "log: $REGISTRO ($(grep -c . "$REGISTRO") lines)"
 	else
-		ko "⛔ nessun registro: il gancio non ha MAI girato"
+		ko "⛔ no log: the hook has NEVER run"
 	fi
 	;;
 
 registro)
 	N=${1:-10}
 	case "$N" in ''|*[!0-9]*) N=10 ;; esac
-	[ -f "$REGISTRO" ] || { ko "nessun registro: il gancio non ha mai girato"; exit 1; }
+	[ -f "$REGISTRO" ] || { ko "no log: the hook has never run"; exit 1; }
 	tail -n "$N" "$REGISTRO"
 	;;
 

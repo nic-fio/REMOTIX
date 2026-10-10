@@ -2,105 +2,105 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-16-salita — UNA SALITA A GRADINI DELLA FASE 16 (fasi/16-stress-e-capacita.md §6)
+16-salita — A CLIMB IN RUNGS OF PHASE 16 (fasi/16-stress-e-capacita.md §6)
 ===========================================================================
 
-    (sul server, come nicfio — i browser-cliente girano la', §2)
+    (on the server, as nicfio — the client browsers run there, §2)
     python3 16-salita.py --scatola gnome --campagna intel-4k-gnome --misura 4k
     python3 16-salita.py --scatola lxqt --campagna taratura --misura 4k --prova
-    python3 16-salita.py ... --secco              # il piano, senza fare niente
-    python3 16-salita.py --scatola kde --campagna amd-4k-kde --scheda amd   # §11, la Radeon
+    python3 16-salita.py ... --secco              # the plan, without doing anything
+    python3 16-salita.py --scatola kde --campagna amd-4k-kde --scheda amd   # §11, the Radeon
 
-    opzioni:  --gradini 1,4,8,12,16  --minuti 10  --minuti-ultimo 30
+    options:  --gradini 1,4,8,12,16  --minuti 10  --minuti-ultimo 30
               --controllo-min 2  --seme-base 1600  --fps-video F  --video URL
-              --tetto 17  --porte-base 9900  --prova (§13.3: 1,2,4 da 5 min)
-              --scheda intel|amd  (la scheda della SCATOLA, predefinito intel)
+              --tetto 17  --porte-base 9900  --prova (§13.3: 1,2,4 of 5 min)
+              --scheda intel|amd  (the card of the BOX, default intel)
 
-LA SCHEDA (§11, due campagne)
-  --scheda passa REMOTIX_SCHEDA a `11-accendi.sh accendi`: dentro la scatola
-  entra UNA scheda sola, la Intel UHD 770 o la RX 6800, sempre come
-  card0/renderD128.  ⭐ I browser-cliente (i labwc di 16-compositori.sh e
-  Chrome con --render-node-override) restano sulla INTEL in tutte e due le
-  campagne: il cliente pesa uguale, e il confronto Intel/Radeon misura solo
-  il server.  ⚠ Il prezzo, dichiarato: nella campagna Intel cliente e server
-  si contendono la stessa iGPU, nella AMD no — il vantaggio della Radeon
-  include anche «la iGPU non e' piu' divisa».  E' la domanda giusta (quanto
-  regge il SERVER su quella scheda), ma va scritto accanto al confronto;
-  per separarla, il livello registra `processi_gpu` per scheda (16-risorse).
-  Dopo il rifacimento si GUARDA che il renderD128 della scatola sia davvero
-  la scheda chiesta (stesso numero di periferica): se no, BLOCKED.
+THE CARD (§11, two campaigns)
+  --scheda passes REMOTIX_SCHEDA to `11-accendi.sh accendi`: ONE card only
+  goes into the box, the Intel UHD 770 or the RX 6800, always as
+  card0/renderD128.  ⭐ The client browsers (the labwc of 16-compositori.sh and
+  Chrome with --render-node-override) stay on the INTEL in both
+  campaigns: the client weighs the same, and the Intel/Radeon comparison measures only
+  the server.  ⚠ The price, declared: in the Intel campaign client and server
+  compete for the same iGPU, in the AMD one they do not — the Radeon's advantage
+  also includes «the iGPU is no longer shared».  It is the right question (how much
+  the SERVER holds on that card), but it must be written beside the comparison;
+  to separate it, the level records `processi_gpu` per card (16-risorse).
+  After the rebuild we LOOK that the box's renderD128 is really
+  the card asked for (same device number): otherwise, BLOCKED.
 
-CHE COSA FA
-  0. guarda che il server sia VUOTO: nessun inquilino c16*, nessun browser dei
-     banchi, nessuna sessione nella scatola, nessun'altra salita — se no si
-     ferma BLOCKED con la ragione (codice 3);
-  1. rifa' la scatola DA ZERO (11-accendi.sh accendi · prodotto · server, come
-     15-rifai-scatole.sh) col server acceso a `--tetto` sessioni
-     (REMOTIX_TETTO_SESSIONI, vedi 11-accendi.sh) e GUARDA nel registro che il
-     tetto sia entrato in vigore;
-  2. per ogni gradino: accende i compositori che servono (16-compositori.sh),
-     fa entrare gli attori mancanti (16-attore.py, un processo per utente,
-     indipendente: seme = seme-base + N, porte-base + 10·N, il suo labwc) —
-     uno dopo l'altro, ciascuno quando il precedente ha il primo fotogramma
-     (§6: cosi' si misura la nascita sotto carico) —, 16-risorse.py per tutto
-     il livello, i minuti del livello a lavoro stabile; `--anticipo-foto-s`
-     (30) PRIMA degli ultimi `--controllo-min` minuti SIGUSR1 agli attori (la
-     foto piena di ogni tela) e si aspetta che le foto siano scritte: la
-     finestra di giudizio comincia dopo (se tardano, slitta con la fine del
-     livello); nella finestra il controllo corto (16-controllo-corto.py, una
-     sessione sua, browser alternato fra i livelli; al SIGTERM si ferma
-     subito); poi il registro del server tagliato sul
-     livello, le serie degli attori tagliate sul livello, livello.json, e
+WHAT IT DOES
+  0. checks that the server is EMPTY: no c16* tenant, no bench
+     browser, no session in the box, no other climb — otherwise it
+     stops BLOCKED with the reason (code 3);
+  1. rebuilds the box FROM SCRATCH (11-accendi.sh accendi · prodotto · server, like
+     15-rifai-scatole.sh) with the server on at `--tetto` sessions
+     (REMOTIX_TETTO_SESSIONI, see 11-accendi.sh) and LOOKS in the log that the
+     cap has come into force;
+  2. for every rung: turns on the compositors needed (16-compositori.sh),
+     brings in the missing actors (16-attore.py, one process per user,
+     independent: seed = seme-base + N, porte-base + 10·N, its labwc) —
+     one after the other, each when the previous one has the first frame
+     (§6: this way birth under load is measured) —, 16-risorse.py for the whole
+     level, the minutes of the level at steady work; `--anticipo-foto-s`
+     (30) BEFORE the last `--controllo-min` minutes SIGUSR1 to the actors (the
+     full photo of every canvas) and we wait for the photos to be written: the
+     judgement window starts afterwards (if they are late, it slips with the end of the
+     level); in the window the short check (16-controllo-corto.py, a
+     session of its own, browser alternating between levels; at SIGTERM it stops
+     at once); then the server log cut on the
+     level, the actors' series cut on the level, livello.json, and
      16-classifica.py;
-     ⛔ Se l'ENTRATA fallisce (compositore o attore che non parte) il livello
-     e' «?» (non buono: ferma la salita come una classe illeggibile), con
-     l'evento e quanti sono entrati in livello.json.
-     ⭐ nascita.json va nel livello solo per gli utenti NUOVI del livello.
-  3. la regola di non-prosecuzione (§6, §14): FAIL o DEGRADED significativo ⇒
-     il livello si RIPETE una volta nelle stesse condizioni (scatola pulita,
-     gli stessi N utenti coi loro semi); se si conferma ⇒ la RICERCA A META'
-     fra l'ultimo gradino buono e quello rotto, ogni livello da scatola pulita,
-     finche' si sa il confine preciso a un utente; poi si ferma;
-  4. l'ultimo gradino dura `--minuti-ultimo` (le perdite di memoria, §6);
-  5. alla fine: attori fermati (SIGTERM: sgomberano da se'), inquilini c16*
-     sgomberati comunque, compositori spenti, il server rimesso col tetto
-     predefinito (se non --lascia-tetto).
+     ⛔ If the ENTRY fails (compositor or actor that does not start) the level
+     is «?» (not good: it stops the climb like an unreadable class), with
+     the event and how many entered in livello.json.
+     ⭐ nascita.json goes into the level only for the NEW users of the level.
+  3. the no-continuation rule (§6, §14): FAIL or significant DEGRADED ⇒
+     the level is REPEATED once under the same conditions (clean box,
+     the same N users with their seeds); if it is confirmed ⇒ the BISECTION
+     between the last good rung and the broken one, every level from a clean box,
+     until the precise border is known to one user; then it stops;
+  4. the last rung lasts `--minuti-ultimo` (memory leaks, §6);
+  5. at the end: actors stopped (SIGTERM: they clean up by themselves), c16* tenants
+     cleaned up anyway, compositors off, the server put back with the default
+     cap (unless --lascia-tetto).
 
-LE EVIDENZE (§10) in /media/REMOTIX/misure/fase16/<campagna>/:
-    stato.json              il punto corrente, per il coordinatore
-    salita.jsonl            una riga per livello (meta + classe)
-    salita.log              quel che esce qui, con gli orari
-    attori-<k>/utente-NN/   quel che scrivono gli attori (k: una per scatola pulita)
+THE EVIDENCE (§10) in /media/REMOTIX/misure/fase16/<campagna>/:
+    stato.json              the current point, for the coordinator
+    salita.jsonl            one row per level (meta + class)
+    salita.log              what comes out here, with the times
+    attori-<k>/utente-NN/   what the actors write (k: one per clean box)
     livello-NN[-ripetizione]/
-        livello.json        meta: campagna, livello, utenti, orari, commit,
-                            binario, pagina, kernel, schede, misura, tetto…
-        utente-NN/          stato.jsonl TAGLIATO sul livello, nascita.json,
-                            foto e altri file dell'attore nati nel livello
+        livello.json        meta: campaign, level, users, times, commit,
+                            binary, page, kernel, cards, size, cap…
+        utente-NN/          stato.jsonl CUT on the level, nascita.json,
+                            photos and other files of the actor born in the level
         risorse.jsonl       16-risorse.py
         controllo-corto.json, controllo-corto/
-        server.log (registro.log del prodotto, dal segno) · journal-err.jsonl
+        server.log (the product's registro.log, from the mark) · journal-err.jsonl
         (journalctl -t remotix -p err -o json) · journal-server.log
-        (journalctl -u rete11-server) · journal-scatola.log (tutto il journal)
-        classifica.log      l'uscita di 16-classifica.py
+        (journalctl -u rete11-server) · journal-scatola.log (the whole journal)
+        classifica.log      the output of 16-classifica.py
 
-⛔ Le soglie sono di 16-classifica.py (§9, ferme): qui non si giudica niente,
-   si legge la classe che dice lui.
+⛔ The thresholds belong to 16-classifica.py (§9, frozen): nothing is judged here,
+   we read the class it says.
 
---sistema xrdp (fasi/20-le-prestazioni.md §7, 9 ott 2026) — la STESSA salita contro xrdp:
-  la scatola e' `rete11-<desktop>-xrdp` (Contenitore.xrdp), e prima di accenderla si
-  spegne OGNI rete11-*-xrdp e si pretende la 3389 libera (`--network=host`: una porta
-  sola per l'ospite; il 9 ott una scatola rimasta accesa rispondeva al posto delle
-  altre); xrdp e xrdp-sesman si accendono coi file di Debian COM'E'; i clienti sono
-  16-attore-rdp.py negli Xvfb di 16-compositori-rdp.sh; il controllo corto e'
-  16-attore-rdp.py --controllo (§7.3, ridotto); server.log = le righe nuove di
-  /var/log/xrdp.log e xrdp-sesman.log; livello.json porta le versioni dei pacchetti al
-  posto di commit e binario; 16-classifica.py --sistema xrdp.  Niente tetto delle
-  sessioni (xrdp non ne ha uno nostro).
-  ⛔ §7.7, IL SERVER NON SI DEVE BLOCCARE: la GUARDIA legge ogni 2 s MemAvailable e
-  /proc/pressure/memory; sotto 3 GiB liberi o con «full avg10» sopra 20 il livello si
-  chiude SUBITO (SIGTERM agli attori) come FAIL «risorse dell'ospite», senza ripetizione
-  (ripeterlo vorrebbe dire rimettere il server sull'orlo).  sshd riceve
-  oom_score_adj −900 (e un drop-in in /run), i clienti +800.
+--sistema xrdp (fasi/20-le-prestazioni.md §7, 9 Oct 2026) — the SAME climb against xrdp:
+  the box is `rete11-<desktop>-xrdp` (Contenitore.xrdp), and before turning it on
+  EVERY rete11-*-xrdp is turned off and port 3389 is required free (`--network=host`: one port
+  only for the host; on 9 Oct a box left on answered in place of the
+  others); xrdp and xrdp-sesman are turned on with Debian's files AS THEY ARE; the clients are
+  16-attore-rdp.py in the Xvfb of 16-compositori-rdp.sh; the short check is
+  16-attore-rdp.py --controllo (§7.3, reduced); server.log = the new lines of
+  /var/log/xrdp.log and xrdp-sesman.log; livello.json carries the package versions in
+  place of commit and binary; 16-classifica.py --sistema xrdp.  No session
+  cap (xrdp has no cap of ours).
+  ⛔ §7.7, THE SERVER MUST NOT LOCK UP: the GUARD reads MemAvailable and
+  /proc/pressure/memory every 2 s; below 3 GiB free or with «full avg10» above 20 the level is
+  closed AT ONCE (SIGTERM to the actors) as FAIL «host resources», without repetition
+  (repeating it would mean putting the server back on the edge).  sshd gets
+  oom_score_adj −900 (and a drop-in in /run), the clients +800.
 """
 import argparse
 import datetime
@@ -132,8 +132,8 @@ RUN = "/run/user/%d" % UID
 COMPOSITORI = os.path.join(RUN, "16-compositori")
 INQUILINO_16 = re.compile(r"^c16[0-9]+u[0-9]+$")
 COMPOSITORI_RDP = os.path.join(RUN, "16-compositori-rdp")
-GUARDIA_MEM_MB = 3 * 1024           # §7.7: sotto, il livello si chiude
-GUARDIA_PSI_FULL = 20.0             # §7.7: «full avg10» oltre, il livello si chiude
+GUARDIA_MEM_MB = 3 * 1024           # §7.7: below it, the level is closed
+GUARDIA_PSI_FULL = 20.0             # §7.7: «full avg10» beyond it, the level is closed
 PACCHETTI_XRDP = ("xrdp", "xorgxrdp", "pipewire-module-xrdp", "xserver-xorg-core", "xfwm4", "openbox",
                   "kwin-x11", "gnome-session-xsession", "firefox-esr", "mesa-va-drivers")
 PACCHETTI_OSPITE_XRDP = ("freerdp3-x11", "xvfb", "python3-xlib", "x11-utils", "python3-pil")
@@ -161,8 +161,8 @@ def dice(msg):
 
 
 def _parola_sudo():
-    """La parola di sudo del server: da REMOTIX_PAROLA_SUDO, o dalla riga «pass:» di
-    ~/SERVER.ssh. ⛔ Mai scritta nei banchi: sono nel deposito."""
+    """The server's sudo password: from REMOTIX_PAROLA_SUDO, or from the «pass:» line of
+    ~/SERVER.ssh. ⛔ Never written in the benches: they are in the repository."""
     p = os.environ.get("REMOTIX_PAROLA_SUDO")
     if p is None:
         try:
@@ -180,7 +180,7 @@ def sudo(comando, secondi=300):
         r = subprocess.run(["sudo", "-S", "-p", "", "sh", "-c", comando], input=_parola_sudo(),
                            capture_output=True, text=True, errors="replace", timeout=secondi)
     except subprocess.TimeoutExpired:
-        return None, "(nessuna risposta in %d s)" % secondi
+        return None, "(no answer in %d s)" % secondi
     return r.returncode, (r.stdout + r.stderr).strip()
 
 
@@ -219,7 +219,7 @@ def comando(argv, secondi=30):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA MACCHINA: che cosa si misura (§10, in ogni riga)
+#  THE MACHINE: what is measured (§10, in every row)
 # ═══════════════════════════════════════════════════════════════════════════
 def schede():
     out = []
@@ -253,8 +253,8 @@ def meta_macchina(o):
         m["scheda_compositori"] = open(os.path.join(COMPOSITORI, "render")).read().strip()
     except OSError:
         m["scheda_compositori"] = "?"
-    # ⭐ il commit del PRODOTTO: /media/REMOTIX/src/16-prodotto/VERSIONE, valido solo se
-    #   il binario di la' e' LO STESSO di rete11/prodotto (md5 intero)
+    # ⭐ the PRODUCT's commit: /media/REMOTIX/src/16-prodotto/VERSIONE, valid only if
+    #   the binary there is THE SAME as rete11/prodotto (whole md5)
     m["commit_prodotto"] = None
     b = os.path.join(PRODOTTO16, "src", "remotix")
     if os.path.exists(b) and md5_8(b, 32) == md5_8(os.path.join(RETE11, "prodotto", "remotix"), 32):
@@ -262,8 +262,8 @@ def meta_macchina(o):
             m["commit_prodotto"] = open(os.path.join(PRODOTTO16, "VERSIONE")).read().strip()
         except OSError:
             pass
-    # ⭐ fase 20: l'etichetta accanto al binario, «<commit> <md5 a 8>», scritta quando lo si
-    #   copia in rete11/prodotto; vale solo se l'md5 e' ancora quello del binario
+    # ⭐ phase 20: the label beside the binary, «<commit> <md5 at 8>», written when it is
+    #   copied into rete11/prodotto; valid only if the md5 is still that of the binary
     if not m["commit_prodotto"]:
         try:
             commit, md5 = open(os.path.join(RETE11, "prodotto", "VERSIONE")).read().split()[:2]
@@ -278,8 +278,8 @@ DRIVER_SCHEDA = {"intel": ("i915", "xe"), "amd": ("amdgpu",)}
 
 
 def scheda_di(quale):
-    """La scheda `intel` o `amd` (dict di schede()) e il suo nodo di disegno, per
-    indirizzo PCI (come 11-accendi.sh).  (scheda, nodo) o (None, None)."""
+    """The `intel` or `amd` card (dict of schede()) and its render node, by
+    PCI address (like 11-accendi.sh).  (card, node) or (None, None)."""
     for s in schede():
         if s["driver"] in DRIVER_SCHEDA[quale]:
             p = os.path.realpath("/dev/dri/by-path/pci-%s-render" % s["pci"])
@@ -289,34 +289,34 @@ def scheda_di(quale):
 
 
 def render_intel():
-    """Il nodo di disegno della Intel integrata, per indirizzo PCI (come 11-accendi.sh)."""
+    """The render node of the integrated Intel, by PCI address (like 11-accendi.sh)."""
     s, p = scheda_di("intel")
     return (p, s["pci"]) if s else (None, None)
 
 
 def scheda_giusta(o, d):
-    """⛔ «Scritto non e' in vigore»: il renderD128 DENTRO la scatola deve essere
-    la stessa periferica (maggiore:minore) del nodo della scheda chiesta.  (ok, motivo)"""
+    """⛔ «Written is not in force»: the renderD128 INSIDE the box must be
+    the same device (major:minor) as the node of the card asked for.  (ok, reason)"""
     s, nodo = scheda_di(o.scheda)
     if not s:
-        return False, "sull'ospite non trovo la scheda «%s» (driver %s)" % (
+        return False, "on the host I cannot find the card «%s» (driver %s)" % (
             o.scheda, "/".join(DRIVER_SCHEDA[o.scheda]))
     st = os.stat(nodo)
     fuori = "%x:%x" % (os.major(st.st_rdev), os.minor(st.st_rdev))
     _c, t = nella_scatola(d, "stat -c %t:%T /dev/dri/renderD128", 60)
     dentro = (t or "").strip().splitlines()[-1:] or ["?"]
     if dentro[0] != fuori:
-        return False, "il renderD128 della scatola (%s) NON e' %s (%s, %s = %s)" % (
+        return False, "the box's renderD128 (%s) is NOT %s (%s, %s = %s)" % (
             dentro[0], s["scheda"], s["pci"], nodo, fuori)
-    dice("   ⭐ scheda della scatola: %s [%s] %s = renderD128 dentro" % (
+    dice("   ⭐ card of the box: %s [%s] %s = renderD128 inside" % (
         s["scheda"], s["driver"], s["pci"]))
     return True, ""
 
 
 def ambiente_browser(s):
-    """L'ambiente dei browser-cliente (attori e controllo).  ⭐ Chrome si inchioda
-    alla Intel (--render-node-override): renderD128/129 si scambiano fra due avvii,
-    e sul server c'e' anche la RX 6800.  Firefox segue il labwc (che e' sulla Intel)."""
+    """The environment of the client browsers (actors and check).  ⭐ Chrome is pinned
+    to the Intel (--render-node-override): renderD128/129 swap between two boots,
+    and the server also has the RX 6800.  Firefox follows the labwc (which is on the Intel)."""
     amb = dict(os.environ, WAYLAND_DISPLAY=s, **AMBIENTE_BROWSER)
     nodo, _pci = render_intel()
     if nodo:
@@ -326,15 +326,15 @@ def ambiente_browser(s):
 
 
 def ambiente_rdp(d):
-    """L'ambiente dei clienti xrdp: il loro Xvfb, niente Wayland."""
+    """The environment of the xrdp clients: their Xvfb, no Wayland."""
     amb = dict(os.environ, DISPLAY=d, XDG_RUNTIME_DIR=RUN, REMOTIX_SUL_SERVER="1")
     amb.pop("WAYLAND_DISPLAY", None)
     return amb
 
 
 def browser_fuori_scheda(dirliv):
-    """Dalla serie delle risorse: i processi dei browser-cliente (recinti `browser`
-    e `labwc_cliente`) che disegnano su una scheda che NON e' la Intel."""
+    """From the resources series: the processes of the client browsers (enclosures `browser`
+    and `labwc_cliente`) that draw on a card that is NOT the Intel."""
     _n, pci = render_intel()
     fuori, visti = {}, 0
     try:
@@ -356,7 +356,7 @@ def browser_fuori_scheda(dirliv):
 
 
 def meta_scatola(d):
-    """Dentro la scatola: binario e pagina IN USO, la scheda che vede, i driver."""
+    """Inside the box: binary and page IN USE, the card it sees, the drivers."""
     v = {}
     _c, t = nella_scatola(d, "md5sum /opt/remotix/remotix /opt/remotix/pagina.html; "
                              "echo @@; ls /dev/dri; echo @@; dpkg-query -W -f "
@@ -380,17 +380,17 @@ def meta_scatola(d):
     v["driver_video"] = [x for x in parti[2].split() if "=" in x and not x.endswith("=")]
     v["opzioni_server"] = parti[3].strip()
     v["journal"] = "--journal" in parti[3]
-    # ⭐ il fornitore VA che vede la scatola sul SUO renderD128 (iHD o radeonsi)
+    # ⭐ the VA provider the box sees on ITS renderD128 (iHD or radeonsi)
     v["driver_va"] = parti[4].split(":", 1)[-1].strip() or "?"
-    # ⭐ fase 18: che cosa il prodotto ha MISURATO all'avvio (la riga dell'ECCOMI):
-    #   «H.264: scheda si' (…), software OpenH264 si'» in hardware; con --senza-scheda
-    #   «H.264: scheda no (…), software OpenH264 si'» — cosi' il livello dichiara la strada
+    # ⭐ phase 18: what the product MEASURED at startup (the ECCOMI line):
+    #   «H.264: scheda si' (…), software OpenH264 si'» in hardware; with --senza-scheda
+    #   «H.264: scheda no (…), software OpenH264 si'» — this way the level declares the route
     v["codifica_video"] = parti[5].strip() or "?"
     return v
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  IL SERVER VUOTO (§6.1, §13.0)
+#  THE EMPTY SERVER (§6.1, §13.0)
 # ═══════════════════════════════════════════════════════════════════════════
 def scatole_accese():
     c, t = sudo("podman ps --format '{{.Names}}'", 60)
@@ -403,60 +403,60 @@ def perche_non_vuoto(d):
         _c, t = sudo("podman exec %s awk -F: '$1 ~ /^c16[0-9]+u[0-9]+$/ {print $1}' /etc/passwd"
                      % s, 60)
         if t.strip():
-            guai.append("in %s ci sono inquilini della fase 16: %s" % (s, " ".join(t.split())))
+            guai.append("in %s there are phase 16 tenants: %s" % (s, " ".join(t.split())))
     if "rete11-%s" % d in scatole_accese():
         _c, t = nella_scatola(d, "loginctl list-users --no-legend 2>/dev/null | awk '{print $2}'")
         chi = [u for u in (t or "").split() if u and u not in ("root",)]
         if chi:
-            guai.append("in rete11-%s ci sono sessioni: %s" % (d, " ".join(chi)))
+            guai.append("in rete11-%s there are sessions: %s" % (d, " ".join(chi)))
     me = os.getpid()
     t = comando(["pgrep", "-u", str(UID), "-af",
                  "marionette|remote-debugging-port|16-attore|16-controllo-corto|xfreerdp3"])
     browser = [r for r in t.splitlines() if r.strip() and not r.startswith("%d " % me)
                and "pgrep" not in r]
     if browser:
-        guai.append("%d processi di browser/attori dei banchi vivi (es. %s)" % (
+        guai.append("%d bench browser/actor processes alive (e.g. %s)" % (
             len(browser), browser[0][:120]))
     return guai
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA SCATOLA
+#  THE BOX
 # ═══════════════════════════════════════════════════════════════════════════
 def rifai_scatola(o, d, tetto, dove):
-    """accendi · prodotto · server, come 15-rifai-scatole.sh.  (ok, motivo)"""
+    """accendi · prodotto · server, like 15-rifai-scatole.sh.  (ok, reason)"""
     for passo in ("accendi", "prodotto", "server"):
         amb = "env REMOTIX_TETTO_SESSIONI=%d " % tetto if (passo == "server" and tetto) else ""
         if passo == "accendi":
             amb = "env REMOTIX_SCHEDA=%s " % o.scheda
         t0 = time.time()
         c, t = sudo("cd %s && %sbash 11-accendi.sh %s %s" % (RETE11, amb, passo, d), 900)
-        # ⛔ [M] 26 set 00:35: la ricerca a meta' rifa' la scatola nella cartella di un
-        #    livello che non esiste ancora ⇒ FileNotFoundError e salita caduta
+        # ⛔ [M] 26 Sep 00:35: the bisection rebuilds the box in the folder of a
+        #    level that does not exist yet ⇒ FileNotFoundError and climb crashed
         os.makedirs(dove, exist_ok=True)
         with open(os.path.join(dove, "scatola-%s.log" % passo), "a") as f:
             f.write("=== %s\n%s\n" % (ora(), t))
         ultima = [x for x in (t or "").splitlines() if x.strip()][-1:] or [""]
-        dice("   scatola %s: codice %s in %.0f s · %s" % (passo, c, time.time() - t0,
-                                                         re.sub(r"\x1b\[[0-9;]*m", "", ultima[0])[:120]))
+        dice("   box %s: code %s in %.0f s · %s" % (passo, c, time.time() - t0,
+                                                     re.sub(r"\x1b\[[0-9;]*m", "", ultima[0])[:120]))
         if c != 0:
-            return False, "11-accendi.sh %s %s non riuscito (codice %s): %s" % (
+            return False, "11-accendi.sh %s %s failed (code %s): %s" % (
                 passo, d, c, re.sub(r"\x1b\[[0-9;]*m", "", " ".join((t or "").splitlines()[-3:]))[:300])
-        # ⭐ fase 18, --senza-scheda: PRIMA di accendere il server si nasconde il driver VA
-        #   della scatola (iHD_drv_video.so rinominato), come nel giro di fumo in software
-        #   (fasi/18 §4): il figlio compone l'ambiente da zero e LIBVA_DRIVER_NAME non basta.
-        #   Il compositore continua a disegnare sulla scheda (Mesa iris): e' solo la
-        #   codifica a scendere in OpenH264, che e' la strada del prodotto senza driver.
+        # ⭐ phase 18, --senza-scheda: BEFORE turning on the server the box's VA driver
+        #   is hidden (iHD_drv_video.so renamed), as in the software smoke round
+        #   (fasi/18 §4): the child composes the environment from scratch and LIBVA_DRIVER_NAME is not enough.
+        #   The compositor keeps drawing on the card (Mesa iris): it is only the
+        #   encoding that drops to OpenH264, which is the product's route without a driver.
         if passo == "prodotto" and getattr(o, "senza_scheda", False):
             c2, t2 = nella_scatola(d, "cd /usr/lib/x86_64-linux-gnu/dri && mv iHD_drv_video.so "
                                       "iHD_drv_video.so.nascosto && ls iHD_drv_video.so* ")
-            dice("   scatola driver VA nascosto: codice %s · %s" % (c2, (t2 or "").strip()[:80]))
+            dice("   box VA driver hidden: code %s · %s" % (c2, (t2 or "").strip()[:80]))
             if c2 != 0 or "iHD_drv_video.so.nascosto" not in (t2 or ""):
-                return False, "non ho potuto nascondere iHD_drv_video.so nella scatola: %s" % t2
-        # ⭐ fase 20, --mesa-vulkan-deb: PRIMA di accendere il server si installa nella scatola
-        #   un altro mesa-vulkan-drivers (il backport di Debian 13), per vedere se il difetto A3
-        #   della Radeon sparisce con RADV >= 25.1, che traduce `ULTRA_LOW_LATENCY` al firmware
-        #   (~/Documenti/AMD §5-ter). Si pretende che dpkg dica la versione del pacchetto.
+                return False, "I could not hide iHD_drv_video.so in the box: %s" % t2
+        # ⭐ phase 20, --mesa-vulkan-deb: BEFORE turning on the server another
+        #   mesa-vulkan-drivers is installed in the box (the Debian 13 backport), to see whether the Radeon's
+        #   A3 defect disappears with RADV >= 25.1, which translates `ULTRA_LOW_LATENCY` to the firmware
+        #   (~/Documenti/AMD §5-ter). We require dpkg to state the package version.
         if passo == "prodotto" and getattr(o, "mesa_vulkan_deb", ""):
             deb = o.mesa_vulkan_deb
             c2, t2 = sudo("podman cp %s rete11-%s:/tmp/mesa-vulkan.deb" % (_q(deb), d), 120)
@@ -464,39 +464,40 @@ def rifai_scatola(o, d, tetto, dove):
                 c2, t2 = nella_scatola(d, "dpkg -i /tmp/mesa-vulkan.deb >/dev/null 2>&1; "
                                           "dpkg-query -W -f '${Version}' mesa-vulkan-drivers", 300)
             atteso = re.sub(r"^.*mesa-vulkan-drivers_([^_]+)_.*$", r"\1", os.path.basename(deb))
-            dice("   scatola mesa-vulkan-drivers: codice %s · %s" % (c2, (t2 or "").strip()[:80]))
+            dice("   box mesa-vulkan-drivers: code %s · %s" % (c2, (t2 or "").strip()[:80]))
             if c2 != 0 or (t2 or "").strip() != atteso:
-                return False, "mesa-vulkan-drivers %s non installato nella scatola: %s" % (atteso, t2)
+                return False, "mesa-vulkan-drivers %s not installed in the box: %s" % (atteso, t2)
     ok, perche = scheda_giusta(o, d)
     if not ok:
         return False, perche
     if getattr(o, "senza_scheda", False):
         cv = meta_scatola(d).get("codifica_video", "")
         if "H.264: scheda no (" not in cv or "software OpenH264 si'" not in cv:
-            return False, "il server non dichiara la codifica H.264 in software (dice «%s»)" % cv
-        dice("   ⭐ codifica dichiarata dal prodotto: %s" % cv)
+            return False, "the server does not declare H.264 encoding in software (it says «%s»)" % cv
+        dice("   ⭐ encoding declared by the product: %s" % cv)
     if tetto:
         v = tetto_in_vigore(d)
         if v != tetto:
-            return False, "il server non dice «tetto AMMINISTRATIVO delle sessioni: **%d**» " \
-                          "(dice %s)" % (tetto, v)
-        dice("   ⭐ tetto delle sessioni in vigore: %d" % v)
+            return False, "the server does not say «ADMINISTRATIVE session cap: **%d**» " \
+                          "(it says %s)" % (tetto, v)
+        dice("   ⭐ session cap in force: %d" % v)
     return True, ""
 
 
 def tetto_in_vigore(d):
+    # ⚠ BOTH forms of the product's line: the old (Italian) binary and the new (English) one
     _c, t = nella_scatola(d, "{ cat /var/lib/rete11/registro.log 2>/dev/null; journalctl -u "
-                             "rete11-server -b --no-pager -o cat 2>/dev/null; } | grep -a "
-                             "'tetto AMMINISTRATIVO delle sessioni' | tail -1", 60)
-    m = re.search(r"sessioni: \*\*(\d+)\*\*", t or "")
+                             "rete11-server -b --no-pager -o cat 2>/dev/null; } | grep -a -E "
+                             "'tetto AMMINISTRATIVO delle sessioni|ADMINISTRATIVE session cap' | tail -1", 60)
+    m = re.search(r"(?:sessioni|session cap): \*\*(\d+)\*\*", t or "")
     return int(m.group(1)) if m else None
 
 
 def meta_scatola_xrdp(d):
-    """Dentro la scatola xrdp: le versioni, la scheda, e se la configurazione di xrdp e'
-    quella del pacchetto (dpkg --verify: nessuna riga = file intatti)."""
-    v = {"binario": None, "pagina": None, "opzioni_server": "xrdp di Debian 13, configurazione del pacchetto",
-         "codifica_video": "RemoteFX sul processore (xrdp di Debian senza H.264)"}
+    """Inside the xrdp box: the versions, the card, and whether the xrdp configuration is
+    the package's (dpkg --verify: no line = files intact)."""
+    v = {"binario": None, "pagina": None, "opzioni_server": "Debian 13 xrdp, package configuration",
+         "codifica_video": "RemoteFX on the processor (Debian's xrdp without H.264)"}
     _c, t = nella_scatola(d, "dpkg-query -W -f '${Package}=${Version}\\n' %s 2>/dev/null; echo @@; "
                              "ls /dev/dri; echo @@; dpkg --verify xrdp xorgxrdp 2>&1 | grep -v '^$' "
                              "| head -5; echo @@; vainfo --display drm --device /dev/dri/renderD128 2>&1 "
@@ -504,8 +505,8 @@ def meta_scatola_xrdp(d):
     parti = (t or "").split("@@") + ["", "", "", ""]
     v["pacchetti"] = dict(x.split("=", 1) for x in parti[0].split() if "=" in x)
     v["dri_nella_scatola"] = parti[1].split()
-    v["xrdp_configurazione"] = "del pacchetto (dpkg --verify pulito)" if not parti[2].strip() \
-        else "⚠ MODIFICATA: " + " | ".join(parti[2].strip().splitlines())
+    v["xrdp_configurazione"] = "the package's (dpkg --verify clean)" if not parti[2].strip() \
+        else "⚠ MODIFIED: " + " | ".join(parti[2].strip().splitlines())
     v["driver_va"] = parti[3].split(":", 1)[-1].strip() or "?"
     v["driver_video"] = ["%s=%s" % kv for kv in sorted(v["pacchetti"].items())
                          if kv[0] in ("mesa-va-drivers",)]
@@ -515,42 +516,42 @@ def meta_scatola_xrdp(d):
 
 
 def ospite_pronto_xrdp():
-    """⚠ La radice dell'ospite e' in RAM: dopo un riavvio i pacchetti del cliente non ci
-    sono piu'.  Si guardano, e se mancano si installano (dichiarato).  (ok, motivo)"""
+    """⚠ The host's root is in RAM: after a reboot the client packages are no longer
+    there.  They are checked, and if missing they are installed (declared).  (ok, reason)"""
     t = comando(["dpkg-query", "-W", "-f", "${Package} ${db:Status-Status}\n"] + list(PACCHETTI_OSPITE_XRDP))
     mancano = [p for p in PACCHETTI_OSPITE_XRDP if "%s installed" % p not in t]
     if not mancano:
         return True, ""
-    dice("   ⚠ sull'ospite mancano %s: li installo" % " ".join(mancano))
+    dice("   ⚠ on the host %s are missing: installing them" % " ".join(mancano))
     c, t = sudo("DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends %s"
                 % " ".join(mancano), 900)
     if c != 0:
-        return False, "pacchetti del cliente non installati sull'ospite: %s" % (t or "")[-300:]
+        return False, "client packages not installed on the host: %s" % (t or "")[-300:]
     return True, ""
 
 
 def proteggi_ssh():
-    """§7.7: se il kernel deve uccidere qualcosa, NON sshd (senza, la macchina resta
-    irraggiungibile e un riavvio perde chiave e provisioning).  Subito sui processi
-    vivi, e un drop-in in /run per un riavvio di sshd (sparisce col riavvio, come tutto)."""
+    """§7.7: if the kernel has to kill something, NOT sshd (without it, the machine stays
+    unreachable and a reboot loses key and provisioning).  At once on the live
+    processes, and a drop-in in /run for an sshd restart (it disappears on reboot, like everything)."""
     c, t = sudo("for p in $(pgrep -x 'sshd|sshd-session'); do echo -900 > /proc/$p/oom_score_adj; done; "
                 "mkdir -p /run/systemd/system/ssh.service.d && printf '[Service]\\nOOMScoreAdjust=-900\\n' "
                 "> /run/systemd/system/ssh.service.d/remotix-oom.conf && systemctl daemon-reload && "
                 "for p in $(pgrep -x 'sshd|sshd-session'); do cat /proc/$p/oom_score_adj; done | sort | uniq -c", 60)
-    dice("   sshd protetto dal kernel (oom_score_adj): %s" % " · ".join((t or "?").split("\n"))[:120])
+    dice("   sshd protected from the kernel (oom_score_adj): %s" % " · ".join((t or "?").split("\n"))[:120])
 
 
 def rifai_scatola_xrdp(o, d, dove):
-    """La scatola xrdp da zero: le altre xrdp spente, la 3389 libera, accendi, xrdp
-    acceso, la scheda guardata.  (ok, motivo)"""
+    """The xrdp box from scratch: the other xrdp ones off, 3389 free, accendi, xrdp
+    on, the card checked.  (ok, reason)"""
     os.makedirs(dove, exist_ok=True)
     for s in scatole_accese():
         if s.endswith("-xrdp"):
             c, t = sudo("podman rm -f -t 10 %s" % s, 120)
-            dice("   spenta %s (la 3389 e' una per l'ospite): codice %s" % (s, c))
+            dice("   turned off %s (3389 is one per host): code %s" % (s, c))
     t = comando(["ss", "-ltnH", "sport = :3389"])
     if t.strip():
-        return False, "la porta 3389 dell'ospite e' occupata: %s" % t.strip()[:160]
+        return False, "the host's port 3389 is taken: %s" % t.strip()[:160]
     ok, perche = ospite_pronto_xrdp()
     if not ok:
         return False, perche
@@ -559,23 +560,23 @@ def rifai_scatola_xrdp(o, d, dove):
     with open(os.path.join(dove, "scatola-accendi.log"), "a") as f:
         f.write("=== %s\n%s\n" % (ora(), t))
     ultima = [x for x in (t or "").splitlines() if x.strip()][-1:] or [""]
-    dice("   scatola accendi %s: codice %s in %.0f s · %s" % (d, c, time.time() - t0,
-                                                            re.sub(r"\x1b\[[0-9;]*m", "", ultima[0])[:120]))
+    dice("   box accendi %s: code %s in %.0f s · %s" % (d, c, time.time() - t0,
+                                                         re.sub(r"\x1b\[[0-9;]*m", "", ultima[0])[:120]))
     if c != 0:
-        return False, "11-accendi.sh accendi %s non riuscito (codice %s): %s" % (
+        return False, "11-accendi.sh accendi %s failed (code %s): %s" % (
             d, c, re.sub(r"\x1b\[[0-9;]*m", "", " ".join((t or "").splitlines()[-3:]))[:300])
     c, t = nella_scatola(d, "systemctl start xrdp-sesman xrdp && for i in $(seq 1 60); do "
                             "ss -ltnH 'sport = :3389' | grep -q . && { systemctl is-active xrdp xrdp-sesman "
                             "| tr '\\n' ' '; exit 0; }; sleep 0.25; done; systemctl status xrdp --no-pager "
                             "| tail -5; exit 1", 120)
-    dice("   xrdp acceso: codice %s · %s" % (c, (t or "").strip()[:100]))
+    dice("   xrdp on: code %s · %s" % (c, (t or "").strip()[:100]))
     if c != 0:
-        return False, "xrdp non ascolta sulla 3389 nella scatola: %s" % (t or "")[-300:]
+        return False, "xrdp is not listening on 3389 in the box: %s" % (t or "")[-300:]
     return scheda_giusta(o, d)
 
 
 class Guardia(threading.Thread):
-    """§7.7: ogni 2 s MemAvailable e la pressione della memoria; `motivo` quando scatta."""
+    """§7.7: every 2 s MemAvailable and the memory pressure; `motivo` when it trips."""
 
     def __init__(self):
         super().__init__(daemon=True)
@@ -601,9 +602,9 @@ class Guardia(threading.Thread):
     @staticmethod
     def giudica(mem, psi):
         if mem is not None and mem < GUARDIA_MEM_MB:
-            return "memoria disponibile %d MB < %d MB" % (mem, GUARDIA_MEM_MB)
+            return "available memory %d MB < %d MB" % (mem, GUARDIA_MEM_MB)
         if psi is not None and psi > GUARDIA_PSI_FULL:
-            return "pressione della memoria full avg10 %.1f %% > %.0f %%" % (psi, GUARDIA_PSI_FULL)
+            return "memory pressure full avg10 %.1f %% > %.0f %%" % (psi, GUARDIA_PSI_FULL)
         return None
 
     def run(self):
@@ -613,11 +614,11 @@ class Guardia(threading.Thread):
             m = self.giudica(mem, psi)
             if m and not self.motivo:
                 self.motivo = m
-                dice("⛔ GUARDIA DELL'OSPITE (§7.7): %s — chiudo il livello" % m)
+                dice("⛔ HOST GUARD (§7.7): %s — closing the level" % m)
             time.sleep(2)
 
     def riarma(self, attesa_s=180):
-        """Prima di un livello: si aspetta che la memoria sia tornata (al piu' `attesa_s`)."""
+        """Before a level: wait for the memory to have come back (at most `attesa_s`)."""
         fine = time.time() + attesa_s
         while time.time() < fine and self.giudica(*self.leggi()):
             time.sleep(5)
@@ -635,21 +636,21 @@ for u in $(awk -F: '$1 ~ /^c16[0-9]+u[0-9]+$/ {print $1}' /etc/passwd); do
   userdel -r "$u" >/dev/null 2>&1 || userdel "$u" >/dev/null 2>&1
   [ -n "$id" ] && systemctl reset-failed "user@$id.service" >/dev/null 2>&1
   [ -n "$id" ] && find /tmp -maxdepth 1 -uid "$id" -exec rm -rf {} + 2>/dev/null
-  echo "sgomberato $u"
+  echo "cleared $u"
 done; true
 """
 
 
 def sgombera_16(d):
-    """Gli inquilini c16* via dalla scatola (la riga di 15-giro.py, solo i nostri)."""
+    """The c16* tenants out of the box (the line of 15-giro.py, only ours)."""
     _c, t = nella_scatola(d, SGOMBERO_16, 300)
-    n = len([r for r in (t or "").splitlines() if r.startswith("sgomberato")])
+    n = len([r for r in (t or "").splitlines() if r.startswith("cleared")])
     if n:
-        dice("   sgomberati %d inquilini c16 rimasti" % n)
+        dice("   cleared %d leftover c16 tenants" % n)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  I COMPOSITORI
+#  THE COMPOSITORS
 # ═══════════════════════════════════════════════════════════════════════════
 SISTEMA = {"xrdp": False}
 
@@ -662,7 +663,7 @@ def compositori(azione, *arg):
 
 
 def display_di(n):
-    """xrdp: il display dell'Xvfb di questo utente (16-compositori-rdp.sh), se vivo."""
+    """xrdp: the display of this user's Xvfb (16-compositori-rdp.sh), if alive."""
     try:
         d = open(os.path.join(COMPOSITORI_RDP, "u%02d" % n)).read().strip()
     except OSError:
@@ -681,7 +682,7 @@ def socket_di(n):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  GLI ATTORI
+#  THE ACTORS
 # ═══════════════════════════════════════════════════════════════════════════
 class Attore:
     def __init__(self, o, n, livello, cartella):
@@ -695,7 +696,7 @@ class Attore:
     def avvia(self):
         s = socket_di(self.n)
         if not s:
-            raise RuntimeError("il compositore u%02d non c'e'" % self.n)
+            raise RuntimeError("the compositor u%02d is not there" % self.n)
         largo, alto = self.o.largo, self.o.alto
         cmd = [sys.executable, self.o.prog_attore, "--scatola", self.o.scatola,
                "--utente", str(self.n), "--display" if SISTEMA["xrdp"] else "--wayland", s,
@@ -738,14 +739,14 @@ class Attore:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA SALITA
+#  THE CLIMB
 # ═══════════════════════════════════════════════════════════════════════════
 class Salita:
     def __init__(self, o):
         self.o = o
         self.base = os.path.join(MISURE, o.campagna)
         self.attori = {}                 # n -> Attore
-        self.giro_attori = 0             # una cartella attori-<k> per scatola pulita
+        self.giro_attori = 0             # one attori-<k> folder per clean box
         self.cartella_attori = None
         self.storia = []
         self.livelli_fatti = 0
@@ -757,12 +758,12 @@ class Salita:
                       "storia": self.storia, "prova": o.prova}
         self.meta = {}
         self.guardia = None
-        self.ospite = None               # §7.7: il motivo, se la guardia e' scattata nel livello
+        self.ospite = None               # §7.7: the reason, if the guard tripped in the level
         if o.guardia:
             self.guardia = Guardia()
             self.guardia.start()
 
-    # -- lo stato per il coordinatore ----------------------------------------
+    # -- the state for the coordinator ---------------------------------------
     def aggiorna(self, **k):
         self.stato.update(k)
         self.stato["utenti_vivi"] = sum(1 for a in self.attori.values() if a.vivo())
@@ -770,18 +771,18 @@ class Salita:
         try:
             scrivi_json(os.path.join(self.base, "stato.json"), self.stato)
         except OSError as e:
-            dice("⚠ stato.json non scritto: %s" % e)
+            dice("⚠ stato.json not written: %s" % e)
 
     def nuova_cartella_attori(self):
         self.giro_attori += 1
         self.cartella_attori = os.path.join(self.base, "attori-%d" % self.giro_attori)
         os.makedirs(self.cartella_attori, exist_ok=True)
 
-    # -- i pezzi --------------------------------------------------------------
+    # -- the pieces -----------------------------------------------------------
     def ferma_attori(self):
         vivi = [a for a in self.attori.values() if a.vivo()]
         if vivi:
-            dice("   fermo %d attori (SIGTERM: sgomberano da se')" % len(vivi))
+            dice("   stopping %d actors (SIGTERM: they clean up by themselves)" % len(vivi))
         for a in vivi:
             a.segnale(signal.SIGTERM)
         fine = time.time() + self.o.attesa_uscita_s
@@ -789,7 +790,7 @@ class Salita:
             time.sleep(1)
         duri = [a for a in vivi if a.vivo()]
         if duri:
-            dice("   ⚠ %d attori non sono usciti in %d s: SIGKILL al gruppo (%s)" % (
+            dice("   ⚠ %d actors did not exit in %d s: SIGKILL to the group (%s)" % (
                 len(duri), self.o.attesa_uscita_s, ", ".join("u%02d" % a.n for a in duri)))
         for a in self.attori.values():
             if a.vivo():
@@ -797,11 +798,11 @@ class Salita:
         self.attori = {}
 
     def scatola_pulita(self, dove):
-        """Attori via, inquilini via, scatola rifatta col tetto.  (ok, motivo)"""
+        """Actors out, tenants out, box rebuilt with the cap.  (ok, reason)"""
         self.aggiorna(fase="rifaccio la scatola")
         self.ferma_attori()
         if self.o.non_rifare:
-            dice("⚠ --non-rifare: la scatola NON si rifa' (solo prove dell'impianto)")
+            dice("⚠ --non-rifare: the box is NOT rebuilt (only tests of the setup)")
             sgombera_16(self.o.cont)
             ok, perche = True, ""
         elif SISTEMA["xrdp"]:
@@ -810,41 +811,41 @@ class Salita:
             ok, perche = rifai_scatola(self.o, self.o.scatola, self.o.tetto, dove)
         if ok and SISTEMA["xrdp"]:
             self.meta_scatola = meta_scatola_xrdp(self.o.cont)
-            dice("   scatola: %s · xrdp %s · configurazione %s · dri %s · VA %s" % (
+            dice("   box: %s · xrdp %s · configuration %s · dri %s · VA %s" % (
                 self.o.cont, self.meta_scatola["pacchetti"].get("xrdp"),
                 self.meta_scatola.get("xrdp_configurazione"),
                 ",".join(self.meta_scatola.get("dri_nella_scatola", [])), self.meta_scatola.get("driver_va")))
         elif ok:
             self.meta_scatola = meta_scatola(self.o.scatola)
-            dice("   scatola: binario %s · pagina %s · %s · dri %s · VA %s · %s" % (
+            dice("   box: binary %s · page %s · %s · dri %s · VA %s · %s" % (
                 self.meta_scatola.get("binario"), self.meta_scatola.get("pagina"),
-                self.meta_scatola.get("opzioni_server") or "(opzioni predefinite)",
+                self.meta_scatola.get("opzioni_server") or "(default options)",
                 ",".join(self.meta_scatola.get("dri_nella_scatola", [])),
                 self.meta_scatola.get("driver_va"), self.meta_scatola.get("codifica_video")))
         self.nuova_cartella_attori()
         return ok, perche
 
     def entrano(self, n_fino, livello):
-        """Gli attori mancanti fino a `n_fino`, uno dopo l'altro: il successivo
-        quando il precedente ha il primo fotogramma (nascita.json)."""
+        """The missing actors up to `n_fino`, one after the other: the next one
+        when the previous one has the first frame (nascita.json)."""
         c, t = compositori("accendi", str(n_fino), self.o.misura)
         if c != 0:
-            dice("⛔ compositori: %s" % " | ".join(t.splitlines()[-3:]))
-            return False, "i compositori non si accendono: %s" % t.strip().splitlines()[-1:]
+            dice("⛔ compositors: %s" % " | ".join(t.splitlines()[-3:]))
+            return False, "the compositors do not turn on: %s" % t.strip().splitlines()[-1:]
         nuovi = [n for n in range(1, n_fino + 1) if n not in self.attori]
         for n in nuovi:
             if self.fermati:
-                return False, "fermata da fuori"
+                return False, "stopped from outside"
             if self.guardia and self.guardia.motivo:
                 self.ospite = self.guardia.motivo
-                return False, "risorse dell'ospite: %s" % self.guardia.motivo
+                return False, "host resources: %s" % self.guardia.motivo
             a = Attore(self.o, n, livello, self.cartella_attori)
             try:
                 s = a.avvia()
             except Exception as e:               # noqa: BLE001
-                return False, "l'attore %d non parte: %s" % (n, e)
+                return False, "actor %d does not start: %s" % (n, e)
             self.attori[n] = a
-            dice("   + utente %02d (pid %d, %s, seme %d, porte %d)" % (
+            dice("   + user %02d (pid %d, %s, seed %d, ports %d)" % (
                 n, a.proc.pid, s, self.o.seme_base + n, self.o.porte_base + 10 * n))
             self.aggiorna(fase="entrano gli utenti", utenti_attesi=n_fino)
             fine = time.time() + self.o.attesa_nascita_s
@@ -852,20 +853,20 @@ class Salita:
                     and not (self.guardia and self.guardia.motivo):
                 time.sleep(0.5)
             if a.e_nato():
-                dice("     utente %02d nato in %.1f s" % (n, a.nato - a.partito))
+                dice("     user %02d born in %.1f s" % (n, a.nato - a.partito))
             elif not a.vivo():
-                dice("   ⛔ utente %02d MORTO prima di nascere (codice %s): si prosegue, "
-                     "lo dira' la classifica" % (n, a.proc.returncode))
+                dice("   ⛔ user %02d DEAD before being born (code %s): going on, "
+                     "the classification will tell" % (n, a.proc.returncode))
             else:
-                dice("   ⚠ utente %02d non ha il primo fotogramma in %d s: entra il "
-                     "prossimo lo stesso" % (n, self.o.attesa_nascita_s))
+                dice("   ⚠ user %02d has no first frame in %d s: the next one "
+                     "comes in anyway" % (n, self.o.attesa_nascita_s))
         return True, ""
 
     def controllo_corto(self, livello, dirliv):
         browser = ("firefox", "chrome")[self.livelli_fatti % 2]
         s = socket_di(0)
         if not s:
-            dice("   ⚠ il compositore u00 del controllo non c'e'")
+            dice("   ⚠ the check's compositor u00 is not there")
             return None
         cmd = [sys.executable, self.o.prog_controllo, "--scatola", self.o.scatola,
                "--livello", str(livello), "--dir", dirliv, "--browser", browser,
@@ -877,13 +878,13 @@ class Salita:
             amb = ambiente_rdp(s)
         else:
             amb = ambiente_browser(s)
-        dice("   controllo corto: %s su %s" % (browser, s))
+        dice("   short check: %s on %s" % (browser, s))
         with open(os.path.join(dirliv, "controllo-corto.log"), "w") as log:
             try:
                 p = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, env=amb, cwd=QUI,
                                      start_new_session=True)
-                # ⭐ non un wait() cieco di 600 s: al SIGTERM (fermata da fuori) il
-                #   controllo si ferma subito e la salita va a sgomberare
+                # ⭐ not a blind wait() of 600 s: at SIGTERM (stopped from outside) the
+                #   check stops at once and the climb goes to clean up
                 limite = time.time() + self.o.tetto_controllo_s
                 c = None
                 while True:
@@ -893,31 +894,31 @@ class Salita:
                     except subprocess.TimeoutExpired:
                         pass
                     if self.fermati or time.time() >= limite:
-                        dice("   ⛔ controllo corto %s: fermato" % (
-                            "interrotto (fermata da fuori)" if self.fermati
-                            else "oltre %d s" % self.o.tetto_controllo_s))
+                        dice("   ⛔ short check %s: stopped" % (
+                            "interrupted (stopped from outside)" if self.fermati
+                            else "beyond %d s" % self.o.tetto_controllo_s))
                         ferma_gruppo(p)
                         c = None
                         break
             except Exception as e:               # noqa: BLE001
-                dice("   ⛔ controllo corto non lanciato: %s" % e)
+                dice("   ⛔ short check not launched: %s" % e)
                 return None
         esito = None
         try:
             esito = json.load(open(os.path.join(dirliv, "controllo-corto.json"))).get("esito")
         except (OSError, ValueError):
             pass
-        dice("   controllo corto: %s (codice %s)" % (esito, c))
+        dice("   short check: %s (code %s)" % (esito, c))
         return esito
 
     def foto_prima_della_finestra(self, inizio_controllo, eventi):
-        """SIGUSR1 a tutti gli attori vivi, poi aspetta che ognuno abbia scritto
-        la sua foto (un file foto-* o l'evento «foto», anche fallito) — al piu'
-        `tetto_foto_s`.  Torna il riassunto per livello.json."""
+        """SIGUSR1 to all the live actors, then wait for each one to have written
+        its photo (a foto-* file or the «foto» event, even failed) — at most
+        `tetto_foto_s`.  Returns the summary for livello.json."""
         vivi = [a for a in self.attori.values() if a.vivo()]
         t = time.time()
         self.aggiorna(fase="foto")
-        dice("   SIGUSR1 a %d attori (foto piena), %.0f s prima della finestra" % (
+        dice("   SIGUSR1 to %d actors (full photo), %.0f s before the window" % (
             len(vivi), inizio_controllo - t))
         for a in vivi:
             a.segnale(signal.SIGUSR1)
@@ -931,9 +932,9 @@ class Salita:
                 break
             time.sleep(1)
         mancano = sorted(a.n for a in vivi if a.n not in fatte)
-        dice("   foto scritte: %d/%d in %.0f s%s" % (
+        dice("   photos written: %d/%d in %.0f s%s" % (
             len(fatte), len(vivi), time.time() - t,
-            (" · ⚠ mancano %s" % mancano) if mancano else ""))
+            (" · ⚠ missing %s" % mancano) if mancano else ""))
         if mancano:
             eventi.append({"t": ora(), "evento": "foto mancanti", "utenti": mancano})
         self.aggiorna(fase="lavoro")
@@ -941,10 +942,10 @@ class Salita:
                 "fatte": sorted(fatte), "durata_s": round(time.time() - t, 1)}
 
     def taglia_attori(self, dirliv, t0, t1):
-        """Le serie degli attori dentro [t0, t1], nella cartella del livello.
-        ⛔ nascita.json SOLO se l'utente e' NUOVO in questo livello (partito nel
-        livello, o la nascita scritta nel livello): le nascite dei gradini prima
-        sono gia' state giudicate la', e qui non si rigiudicano."""
+        """The actors' series inside [t0, t1], in the level folder.
+        ⛔ nascita.json ONLY if the user is NEW in this level (started in the
+        level, or the birth written in the level): the births of the earlier rungs
+        have already been judged there, and here they are not re-judged."""
         for a in self.attori.values():
             src = a.dir_utente
             dst = os.path.join(dirliv, "utente-%02d" % a.n)
@@ -971,7 +972,7 @@ class Salita:
                         shutil.copy2(p, q)
 
     def registro_server_xrdp(self, dirliv, segno, t0, t1):
-        """xrdp: server.log = le righe NUOVE di xrdp.log e xrdp-sesman.log dal segno."""
+        """xrdp: server.log = the NEW lines of xrdp.log and xrdp-sesman.log from the mark."""
         d = self.o.cont
         seg = segno or {}
         parti = []
@@ -998,12 +999,12 @@ class Salita:
         d = self.o.scatola
         files = []
         if segno is not None:
-            # ⭐ «server.log»: il nome che legge 16-classifica.py
+            # ⭐ «server.log»: the name 16-classifica.py reads
             _c, t = nella_scatola(d, "tail -n +%d /var/lib/rete11/registro.log" % (segno + 1), 300)
             open(os.path.join(dirliv, "server.log"), "w").write(t or "")
             files.append("server.log")
         da, a = "@%d" % int(t0), "@%d" % int(t1 + 1)
-        # ⭐ gli errori del prodotto nel journal (--journal): lo schema di 16-classifica.py
+        # ⭐ the product's errors in the journal (--journal): the schema of 16-classifica.py
         _c, t = nella_scatola(d, "journalctl -t remotix -p err -o json --since %s --until %s "
                                  "--no-pager 2>/dev/null | tail -n 200000" % (da, a), 300)
         open(os.path.join(dirliv, "journal-err.jsonl"), "w").write(
@@ -1028,29 +1029,29 @@ class Salita:
         if SISTEMA["xrdp"]:
             cmd += ["--sistema", "xrdp"]
         if self.o.prova:
-            cmd.append("--secco")            # §13.3: la salita di prova non conta
+            cmd.append("--secco")            # §13.3: the test climb does not count
         try:
             r = subprocess.run(cmd, capture_output=True, text=True, errors="replace", timeout=900,
                                cwd=QUI)
             uscita, codice = r.stdout + r.stderr, r.returncode
         except Exception as e:                   # noqa: BLE001
-            uscita, codice = "classifica non lanciata: %s" % e, None
+            uscita, codice = "classification not launched: %s" % e, None
         open(os.path.join(dirliv, "classifica.log"), "w").write(uscita)
         return leggi_classe(uscita, codice)
 
-    # -- UN LIVELLO ------------------------------------------------------------
+    # -- ONE LEVEL -------------------------------------------------------------
     def livello(self, n, minuti, nome, tipo):
-        """Porta la salita a `n` utenti e fa il livello.  Torna (classe, signif, dirliv)."""
+        """Brings the climb to `n` users and does the level.  Returns (class, signif, dirliv)."""
         o = self.o
         dirliv = os.path.join(self.base, nome)
         os.makedirs(dirliv, exist_ok=True)
-        dice("══ %s: %d utenti, %s min (%s) ══" % (nome, n, minuti, tipo))
+        dice("══ %s: %d users, %s min (%s) ══" % (nome, n, minuti, tipo))
         self.aggiorna(fase="livello", gradino=n, livello_dir=dirliv, tipo_livello=tipo)
         t_inizio = time.time()
         if self.guardia:
             ancora = self.guardia.riarma()
             if ancora:
-                dice("⚠ la guardia dice ancora «%s» dopo l'attesa: il livello parte lo stesso" % ancora)
+                dice("⚠ the guard still says «%s» after the wait: the level starts anyway" % ancora)
         self.ospite = None
         if SISTEMA["xrdp"]:
             _c, t = nella_scatola(o.cont, "for f in xrdp.log xrdp-sesman.log; do echo $f $(wc -l < "
@@ -1066,8 +1067,8 @@ class Salita:
                 segno = int((t or "").split()[-1])
             except (ValueError, IndexError):
                 segno = None
-        # ⛔ 16-risorse.py gira da ROOT (smaps_rollup e fdinfo degli inquilini):
-        #   sudo -S, la parola sullo stdin; sudo passa il SIGTERM al figlio.
+        # ⛔ 16-risorse.py runs as ROOT (the tenants' smaps_rollup and fdinfo):
+        #   sudo -S, the password on stdin; sudo passes the SIGTERM to the child.
         cmd_r = [sys.executable, o.prog_risorse, "--scatola", o.cont, "--dir", dirliv]
         if SISTEMA["xrdp"]:
             cmd_r += ["--sistema", "xrdp", "--segni-browser", "remotix-rdp-"]
@@ -1090,36 +1091,36 @@ class Salita:
             for a in self.attori.values():
                 a.segnale(signal.SIGTERM)
         if not entrata_ok:
-            # ⛔ compositore o attore che non parte: il livello NON e' buono
-            #   (classe «?», che ferma la salita come una classe illeggibile)
+            # ⛔ compositor or actor that does not start: the level is NOT good
+            #   (class «?», which stops the climb like an unreadable class)
             eventi.append({"t": ora(), "evento": "entrata fallita", "ragione": perche_entrata,
                            "attesi": n, "entrati": len(entrati), "nati": len(nati)})
-            dice("⛔ ENTRATA FALLITA (%d entrati su %d, %d nati): %s — il livello sara' «?»" % (
+            dice("⛔ ENTRY FAILED (%d entered of %d, %d born): %s — the level will be «?»" % (
                 len(entrati), n, len(nati), perche_entrata))
         t_lavoro = time.time()
         fine = t_lavoro + minuti * 60
         inizio_controllo = fine - o.controllo_min * 60
-        # ⭐ la foto piena (SIGUSR1) PRIMA della finestra di giudizio: Chrome
-        #   Page.captureScreenshot in 4K ferma il disegno, e dentro la finestra
-        #   la sporcherebbe.  Si manda `anticipo_foto_s` prima e la finestra
-        #   comincia solo quando le foto sono scritte (se tardano, finestra e
-        #   fine del livello slittano insieme: la finestra resta intera e pulita).
+        # ⭐ the full photo (SIGUSR1) BEFORE the judgement window: Chrome
+        #   Page.captureScreenshot in 4K stops drawing, and inside the window
+        #   it would dirty it.  It is sent `anticipo_foto_s` before and the window
+        #   starts only when the photos are written (if they are late, window and
+        #   end of the level slip together: the window stays whole and clean).
         ora_foto = inizio_controllo - o.anticipo_foto_s
         if entrata_ok:
-            dice("   tutti dentro (%.0f s dopo l'inizio del livello): lavoro fino alle %s" % (
+            dice("   all inside (%.0f s after the start of the level): work until %s" % (
                 t_lavoro - t_inizio, time.strftime("%H:%M:%S", time.localtime(fine))))
         self.aggiorna(fase="lavoro", fine_prevista=datetime.datetime.fromtimestamp(
             fine).astimezone().isoformat(timespec="seconds"))
         esito_controllo = None
         fatto_controllo = False
-        foto = None                      # {"t": invio, "attesi": [...], "fatte": [...]}
+        foto = None                      # {"t": sent, "attesi": [...], "fatte": [...]}
         while not self.fermati and entrata_ok:
             if self.guardia and self.guardia.motivo:
                 self.ospite = self.guardia.motivo
                 eventi.append({"t": ora(), "evento": "guardia dell'ospite", "ragione": self.ospite,
                                "misura": dict(self.guardia.ultima)})
                 for a in self.attori.values():
-                    a.segnale(signal.SIGTERM)          # via subito: i clienti liberano la memoria
+                    a.segnale(signal.SIGTERM)          # out at once: the clients free the memory
                 break
             adesso = time.time()
             for a in self.attori.values():
@@ -1127,14 +1128,14 @@ class Salita:
                     a.morto_annotato = True
                     eventi.append({"t": ora(), "evento": "attore morto", "utente": a.n,
                                    "codice": a.proc.returncode})
-                    dice("   ⛔ utente %02d e' uscito (codice %s)" % (a.n, a.proc.returncode))
+                    dice("   ⛔ user %02d exited (code %s)" % (a.n, a.proc.returncode))
             if foto is None and adesso >= ora_foto:
                 foto = self.foto_prima_della_finestra(inizio_controllo, eventi)
                 adesso = time.time()
                 if adesso > inizio_controllo:
                     ritardo = adesso - inizio_controllo
                     inizio_controllo, fine = adesso, fine + ritardo
-                    dice("   la finestra comincia %.0f s dopo (foto lente): fine alle %s" % (
+                    dice("   the window starts %.0f s later (slow photos): end at %s" % (
                         ritardo, time.strftime("%H:%M:%S", time.localtime(fine))))
                     self.aggiorna(fine_prevista=datetime.datetime.fromtimestamp(
                         fine).astimezone().isoformat(timespec="seconds"))
@@ -1162,7 +1163,7 @@ class Salita:
         files = self.registro_server(dirliv, segno, t_inizio, t_fine)
         schede_b = browser_fuori_scheda(dirliv)
         if schede_b and schede_b["fuori_intel"]:
-            dice("   ⛔ browser-cliente su una scheda che non e' la Intel: %s" % schede_b["fuori_intel"])
+            dice("   ⛔ client browser on a card that is not the Intel: %s" % schede_b["fuori_intel"])
             eventi.append({"t": ora(), "evento": "browser fuori dalla Intel",
                            "dettaglio": schede_b["fuori_intel"]})
         self.taglia_attori(dirliv, t_inizio, t_fine)
@@ -1195,10 +1196,10 @@ class Salita:
             "guardia": dict(self.guardia.ultima) if self.guardia else None})
         ms = getattr(self, "meta_scatola", {})
         riga.update({"scatola_" + k: v for k, v in ms.items()})
-        # ⭐ i campi di §10 coi nomi che legge 16-classifica.py (BASE)
-        # ⭐ la scheda del SERVER (quella nella scatola, --scheda), non la Intel
-        #   sempre: nella campagna AMD e' la RX 6800.  I browser-cliente restano
-        #   sulla Intel e lo dice `scheda_browser`.
+        # ⭐ the fields of §10 with the names 16-classifica.py reads (BASE)
+        # ⭐ the SERVER's card (the one in the box, --scheda), not always the
+        #   Intel: in the AMD campaign it is the RX 6800.  The client browsers stay
+        #   on the Intel and `scheda_browser` says so.
         srv = [s for s in self.meta.get("schede", []) if s["driver"] in DRIVER_SCHEDA[o.scheda]]
         intel = [s for s in self.meta.get("schede", []) if s["driver"] in DRIVER_SCHEDA["intel"]]
         riga.update(scheda=(srv or [{}])[0].get("scheda", "?"),
@@ -1207,31 +1208,31 @@ class Salita:
                     driver=" ".join([(srv or [{}])[0].get("driver", "?")]
                                     + ms.get("driver_video", [])),
                     commit=self.meta.get("commit_prodotto") or
-                    "banchi %s" % self.meta.get("commit_banchi"), binario=ms.get("binario"),
+                    "benches %s" % self.meta.get("commit_banchi"), binario=ms.get("binario"),
                     pagina=ms.get("pagina"), nucleo=self.meta.get("kernel"))
         if SISTEMA["xrdp"]:
             pk = ms.get("pacchetti") or {}
             riga.update(commit="xrdp %s · xorgxrdp %s · freerdp %s" % (
                 pk.get("xrdp"), pk.get("xorgxrdp"), (ms.get("pacchetti_ospite") or {}).get("freerdp3-x11")),
-                tetto_sessioni=None, scheda_browser="nessuna (FreeRDP decodifica sul processore)")
+                tetto_sessioni=None, scheda_browser="none (FreeRDP decodes on the processor)")
         scrivi_json(os.path.join(dirliv, "livello.json"), riga)
         if self.fermati:
-            # ⛔ un livello interrotto da fuori non si classifica: non e' durato
+            # ⛔ a level interrupted from outside is not classified: it did not last
             riga["interrotto"] = True
             scrivi_json(os.path.join(dirliv, "livello.json"), riga)
-            classe, signif, perche_c = "INTERROTTO", False, "fermata da fuori (segnale)"
+            classe, signif, perche_c = "INTERROTTO", False, "stopped from outside (signal)"
         else:
             self.aggiorna(fase="classifico")
             classe, signif, perche_c = self.classifica(dirliv, n)
             if not entrata_ok:
-                # ⛔ quel che dice la classifica resta nel suo registro, ma il
-                #   livello non e' quello chiesto: non e' buono
-                perche_c = "ENTRATA FALLITA (%d entrati su %d): %s · la classifica diceva %s" % (
+                # ⛔ what the classification says stays in its log, but the
+                #   level is not the one asked for: it is not good
+                perche_c = "ENTRY FAILED (%d entered of %d): %s · the classification said %s" % (
                     len(entrati), n, perche_entrata, classe)
                 classe, signif = "?", False
         if self.ospite and not self.fermati:
-            # ⛔ §7.7: il livello chiuso dalla guardia e' una ROTTURA dichiarata
-            perche_c = "⛔ RISORSE DELL'OSPITE (§7.7): %s · la classifica diceva %s — %s" % (
+            # ⛔ §7.7: the level closed by the guard is a declared BREAK
+            perche_c = "⛔ HOST RESOURCES (§7.7): %s · the classification said %s — %s" % (
                 self.ospite, classe, perche_c[:200])
             classe, signif = "FAIL", True
         self.livelli_fatti += 1
@@ -1242,24 +1243,24 @@ class Salita:
         self.storia.append({"livello": n, "nome": nome, "tipo": tipo, "classe": classe,
                             "significativo": signif, "dir": dirliv})
         self.aggiorna(classe_ultimo=classe)
-        dice("   ▶ %s: %s%s — %s" % (nome, classe, " (significativo)" if signif else "",
+        dice("   ▶ %s: %s%s — %s" % (nome, classe, " (significant)" if signif else "",
                                      perche_c[:200]))
         return classe, signif, dirliv
 
-    # -- LA SALITA INTERA ------------------------------------------------------
+    # -- THE WHOLE CLIMB -------------------------------------------------------
     def corri(self):
         o = self.o
         self.meta = meta_macchina(o)
-        dice("⭐ SALITA %s · %s · %s (%dx%d) · gradini %s · %s min (ultimo %s) · tetto %d%s" % (
+        dice("⭐ CLIMB %s · %s · %s (%dx%d) · rungs %s · %s min (last %s) · cap %d%s" % (
             o.campagna, o.scatola, o.misura, o.largo, o.alto, ",".join(map(str, o.gradini)),
-            o.minuti, o.minuti_ultimo, o.tetto, " · PROVA (non conta)" if o.prova else ""))
-        dice("   scheda della scatola: %s · %s" % (o.scheda, "SISTEMA xrdp, clienti FreeRDP sul processore"
-                                                  if SISTEMA["xrdp"] else "browser-cliente sulla Intel"))
+            o.minuti, o.minuti_ultimo, o.tetto, " · TEST (does not count)" if o.prova else ""))
+        dice("   card of the box: %s · %s" % (o.scheda, "SYSTEM xrdp, FreeRDP clients on the processor"
+                                              if SISTEMA["xrdp"] else "client browsers on the Intel"))
         if SISTEMA["xrdp"]:
             proteggi_ssh()
-        dice("   commit del prodotto: %s" % (self.meta["commit_prodotto"] or
-                                            "? (16-prodotto assente o binario diverso)"))
-        dice("   kernel %s · %s · binario %s · pagina %s · banchi %s" % (
+        dice("   product commit: %s" % (self.meta["commit_prodotto"] or
+                                       "? (16-prodotto absent or different binary)"))
+        dice("   kernel %s · %s · binary %s · page %s · benches %s" % (
             self.meta["kernel"], " + ".join("%s [%s]" % (s["scheda"], s["driver"])
                                             for s in self.meta["schede"]),
             self.meta["prodotto_binario"], self.meta["prodotto_pagina"],
@@ -1277,12 +1278,12 @@ class Salita:
                 break
             if cattivo(classe, signif) and self.ospite:
                 rotto = n
-                dice("⛔ %d utenti: chiuso dalla guardia dell'ospite (%s) — rottura, senza ripetere "
+                dice("⛔ %d users: closed by the host guard (%s) — break, without repeating "
                      "(§7.7)" % (n, self.ospite))
                 break
             if cattivo(classe, signif):
-                dice("⚠ %d utenti: %s — si RIPETE nelle stesse condizioni (§14), da scatola "
-                     "pulita" % (n, classe))
+                dice("⚠ %d users: %s — REPEATED under the same conditions (§14), from a clean "
+                     "box" % (n, classe))
                 ok, perche = self.scatola_pulita(os.path.join(self.base, "livello-%02d" % n))
                 if not ok:
                     return self.blocca(perche)
@@ -1292,24 +1293,24 @@ class Salita:
                     break
                 if cattivo(classe2, signif2):
                     rotto = n
-                    dice("⛔ confermato: %d utenti %s due volte" % (n, classe2))
+                    dice("⛔ confirmed: %d users %s twice" % (n, classe2))
                     break
-                dice("   la ripetizione dice %s: non confermato, si sale" % classe2)
+                dice("   the repetition says %s: not confirmed, climbing" % classe2)
             ultimo_buono = n
         if rotto is not None and not self.fermati:
             ultimo_buono, rotto = self.ricerca(ultimo_buono, rotto)
         self.aggiorna(fase="fine", ultimo_buono=ultimo_buono, rottura=rotto)
-        dice("⏹ FINE: ultimo livello buono %s · rottura %s%s" % (
-            ultimo_buono, rotto, " · ⚠ FERMATA DA FUORI" if self.fermati else ""))
+        dice("⏹ END: last good level %s · break %s%s" % (
+            ultimo_buono, rotto, " · ⚠ STOPPED FROM OUTSIDE" if self.fermati else ""))
         if self.fermati:
             return 3
         return 0 if rotto is None else 1
 
     def ricerca(self, buono, rotto):
-        """La ricerca a meta' (§6): ogni livello da scatola pulita coi suoi N utenti."""
+        """The bisection (§6): every level from a clean box with its N users."""
         while rotto - buono > 1 and not self.fermati:
             n = (buono + rotto) // 2
-            dice("🔎 ricerca a meta' fra %d (buono) e %d (rotto): %d utenti" % (buono, rotto, n))
+            dice("🔎 bisection between %d (good) and %d (broken): %d users" % (buono, rotto, n))
             self.aggiorna(fase="ricerca", ricerca=[buono, rotto])
             ok, perche = self.scatola_pulita(os.path.join(self.base, "livello-%02d" % n))
             if not ok:
@@ -1336,19 +1337,19 @@ class Salita:
         try:
             sgombera_16(o.cont)
         except Exception as e:                   # noqa: BLE001
-            dice("⚠ sgombero: %s" % e)
+            dice("⚠ clean-up: %s" % e)
         c, t = compositori("spegni")
-        dice("   compositori spenti (%d)" % t.count("spento"))
+        dice("   compositors off (%d)" % t.count("switched off"))
         if self.guardia:
             self.guardia.vivo = False
         if SISTEMA["xrdp"]:
-            # la scatola xrdp si spegne: libera la 3389 e la memoria per chi viene dopo
+            # the xrdp box is turned off: it frees 3389 and the memory for whoever comes next
             c, t = sudo("podman rm -f -t 10 rete11-%s" % o.cont, 120)
-            dice("   scatola rete11-%s spenta (codice %s)" % (o.cont, c))
+            dice("   box rete11-%s off (code %s)" % (o.cont, c))
             return
         if not o.lascia_tetto and o.tetto and not o.non_rifare:
             c, t = sudo("cd %s && bash 11-accendi.sh server %s" % (RETE11, o.scatola), 300)
-            dice("   server rimesso col tetto predefinito (codice %s, tetto %s)" % (
+            dice("   server put back with the default cap (code %s, cap %s)" % (
                 c, tetto_in_vigore(o.scatola)))
 
 
@@ -1357,15 +1358,15 @@ def iso(t):
 
 
 def cattivo(classe, signif):
-    """§6: FAIL o DEGRADED significativo fermano la salita.  Una classe che non
-    si e' potuta leggere ferma anche lei: non si sale alla cieca."""
+    """§6: FAIL or significant DEGRADED stop the climb.  A class that could not
+    be read stops it too: no blind climbing."""
     return classe not in ("GREEN", "DEGRADED") or (classe == "DEGRADED" and signif)
 
 
 def leggi_classe(uscita, codice):
-    """(classe, significativo, ragione) dall'uscita di 16-classifica.py: l'ULTIMA
-    riga JSON con «classe» (e «significativo»), o l'ultima parola GREEN /
-    DEGRADED / FAIL; altrimenti «?» (e la salita si ferma)."""
+    """(class, significant, reason) from the output of 16-classifica.py: the LAST
+    JSON line with «classe» (and «significativo»), or the last word GREEN /
+    DEGRADED / FAIL; otherwise «?» (and the climb stops)."""
     righe = []
     for riga in uscita.splitlines():
         riga = riga.strip()
@@ -1378,31 +1379,33 @@ def leggi_classe(uscita, codice):
             continue
         if isinstance(d, dict) and str(d.get("classe") or "").upper() in CLASSI:
             righe.append(d)
-    # ⭐ la riga `"tipo": "livello"` (16-classifica.py --json), se no l'ultima
+    # ⭐ the `"tipo": "livello"` line (16-classifica.py --json), otherwise the last one
     for d in [r for r in righe if r.get("tipo") == "livello"][-1:] or righe[-1:]:
         return (str(d["classe"]).upper(), bool(d.get("significativo")),
                 str(d.get("ragione") or "")[:400])
     parole = re.findall(r"\b(GREEN|DEGRADED|FAIL)\b", uscita)
     if parole:
         c = parole[-1]
-        return c, bool(re.search(r"(?<!non )significativo", uscita, re.I)) and c == "DEGRADED", \
-            "(letto dalla parola, codice %s)" % codice
+        # ⚠ both forms: the old (Italian) 16-classifica.py and the new (English) one
+        return c, bool(re.search(r"(?<!non )(?<!not )(?:significativo|significant)", uscita, re.I)) \
+            and c == "DEGRADED", \
+            "(read from the word, code %s)" % codice
     if codice in (0, 1, 3):                     # 16-classifica.py: GREEN 0, FAIL 1, DEGRADED 3
         return {0: "GREEN", 1: "FAIL", 3: "DEGRADED"}[codice], codice == 3, \
-            "(dal codice d'uscita %s: DEGRADED contato come significativo)" % codice
-    return "?", False, "16-classifica non ha detto una classe (codice %s): %s" % (
+            "(from the exit code %s: DEGRADED counted as significant)" % codice
+    return "?", False, "16-classifica did not say a class (code %s): %s" % (
         codice, " | ".join(uscita.strip().splitlines()[-3:])[:300])
 
 
 def nascita_del_livello(partito, mtime_nascita, t0):
-    """⭐ La nascita.json appartiene al livello che comincia a `t0` se l'attore
-    e' partito nel livello, o se la nascita e' stata scritta nel livello."""
+    """⭐ The nascita.json belongs to the level that starts at `t0` if the actor
+    started in the level, or if the birth was written in the level."""
     return (partito is not None and partito >= t0) or mtime_nascita >= t0 - 1
 
 
 def foto_scritta(dir_utente, dopo):
-    """La foto chiesta a `dopo` c'e'?  Un file foto-* nuovo, o l'evento «foto»
-    (anche fallito: l'attore ha finito di provarci) in eventi.jsonl."""
+    """Is the photo asked for at `dopo` there?  A new foto-* file, or the «foto» event
+    (even failed: the actor has finished trying) in eventi.jsonl."""
     try:
         for nome in os.listdir(dir_utente):
             if nome.startswith("foto-") and os.path.getmtime(os.path.join(dir_utente, nome)) >= dopo:
@@ -1427,8 +1430,8 @@ def foto_scritta(dir_utente, dopo):
 
 
 def ferma_gruppo(p, grazia=20):
-    """SIGTERM al gruppo di `p` (il controllo sgombera la sua sessione), poi
-    SIGKILL se non esce in `grazia` s."""
+    """SIGTERM to the group of `p` (the check cleans up its session), then
+    SIGKILL if it does not exit in `grazia` s."""
     try:
         os.killpg(p.pid, signal.SIGTERM)
     except OSError:
@@ -1444,8 +1447,8 @@ def ferma_gruppo(p, grazia=20):
 
 
 def taglia_jsonl(src, dst, t0, t1):
-    """Le righe di `src` con l'istante dentro [t0, t1]; le righe senza istante
-    leggibile passano tutte."""
+    """The rows of `src` with the instant inside [t0, t1]; the rows without a readable
+    instant all pass."""
     chiavi = ("t", "ts", "tempo", "epoch", "quando", "ora", "istante", "orario")
     with open(src, encoding="utf-8", errors="replace") as f, \
             open(dst, "w", encoding="utf-8") as g:
@@ -1472,20 +1475,20 @@ def taglia_jsonl(src, dst, t0, t1):
 
 # ═══════════════════════════════════════════════════════════════════════════
 
-# ⛔ LE SCATOLE SONO DI UN BANCO ALLA VOLTA (29 set 2026, «user unknown» della fase 16):
-#   il gancio (anche quello del pre-push, da solo) sgombera TUTTI gli inquilini
-#   `c<n>u<n>` prima di ogni maglia ⇒ un push durante un giro cancellava gli inquilini
-#   nati 7 s prima (`[M]` 04:28, 04:40, 04:42 del 29 set = i 4 FAIL e 36 BLOCKED).
-#   La stessa serratura in 15-giro.py, 16-salita.py e 11-gancio.sh; chi e' lanciato da
-#   uno di loro eredita REMOTIX_SCATOLE_TENUTE e non la riprende.
-#   ⚠ NON in /run/lock: la cartella e' «sticky» e con fs.protected_regular root non
-#   riapre il file creato da nicfio (e il gancio dice «tenute» a scatole libere, `[M]`).
+# ⛔ THE BOXES BELONG TO ONE BENCH AT A TIME (29 Sep 2026, «user unknown» of phase 16):
+#   the hook (even the pre-push one, by itself) clears ALL the tenants
+#   `c<n>u<n>` before every mesh ⇒ a push during a round deleted the tenants
+#   born 7 s earlier (`[M]` 04:28, 04:40, 04:42 of 29 Sep = the 4 FAIL and 36 BLOCKED).
+#   The same lock in 15-giro.py, 16-salita.py and 11-gancio.sh; whoever is launched by
+#   one of them inherits REMOTIX_SCATOLE_TENUTE and does not take it again.
+#   ⚠ NOT in /run/lock: the folder is «sticky» and with fs.protected_regular root does not
+#   reopen the file created by nicfio (and the hook says «held» about free boxes, `[M]`).
 SERRATURA_SCATOLE = "/media/REMOTIX/rete11/.scatole.lock"
 
 
 def tieni_le_scatole(chi):
-    """None se le scatole sono nostre (la serratura resta presa fino all'uscita),
-    altrimenti la frase che dice chi le tiene."""
+    """None if the boxes are ours (the lock stays taken until exit),
+    otherwise the sentence that says who holds them."""
     if os.environ.get("REMOTIX_SCATOLE_TENUTE"):
         return None
     fd = os.open(SERRATURA_SCATOLE, os.O_RDWR | os.O_CREAT, 0o666)
@@ -1501,7 +1504,7 @@ def tieni_le_scatole(chi):
         except OSError:
             tiene = ""
         os.close(fd)
-        return "le scatole le tiene gia' un altro banco (%s)" % (tiene or "?")
+        return "the boxes are already held by another bench (%s)" % (tiene or "?")
     os.ftruncate(fd, 0)
     os.pwrite(fd, ("%s pid %d" % (chi, os.getpid())).encode(), 0)
     os.environ["REMOTIX_SCATOLE_TENUTE"] = chi
@@ -1524,50 +1527,50 @@ def main():
     a.add_argument("--fps-video", type=float, default=0)
     a.add_argument("--video", default="")
     a.add_argument("--tetto", type=int, default=0,
-                   help="il tetto delle sessioni del server (predefinito: gradino piu' alto + 1, "
-                        "per il controllo corto)")
+                   help="the server's session cap (default: highest rung + 1, "
+                        "for the short check)")
     a.add_argument("--porte-base", type=int, default=9900)
     a.add_argument("--scheda", default="intel", choices=sorted(DRIVER_SCHEDA),
-                   help="la scheda della SCATOLA (REMOTIX_SCHEDA di 11-accendi.sh); i "
-                        "browser-cliente restano sulla Intel")
+                   help="the card of the BOX (REMOTIX_SCHEDA of 11-accendi.sh); the "
+                        "client browsers stay on the Intel")
     a.add_argument("--prova", action="store_true",
-                   help="salita di prova §13.3: gradini 1,2,4 da 5 minuti; non conta")
+                   help="test climb §13.3: rungs 1,2,4 of 5 minutes; does not count")
     a.add_argument("--senza-scheda", action="store_true",
-                   help="fase 18: la codifica SENZA scheda (OpenH264) — nella scatola rifatta "
-                        "si nasconde iHD_drv_video.so prima di accendere il server, e si "
-                        "pretende che il registro dica «H.264: scheda no, software OpenH264 si'»")
+                   help="phase 18: encoding WITHOUT a card (OpenH264) — in the rebuilt box "
+                        "iHD_drv_video.so is hidden before turning on the server, and we "
+                        "require the log to say «H.264: scheda no, software OpenH264 si'»")
     a.add_argument("--mesa-vulkan-deb", default="",
-                   help="fase 20: un mesa-vulkan-drivers_*.deb da installare nella scatola "
-                        "prima del server (il backport per la Radeon, difetto A3)")
+                   help="phase 20: a mesa-vulkan-drivers_*.deb to install in the box "
+                        "before the server (the backport for the Radeon, defect A3)")
     a.add_argument("--sistema", choices=("remotix", "xrdp"), default="remotix",
-                   help="xrdp: la stessa salita contro xrdp di Debian 13 (fasi/20 §7)")
+                   help="xrdp: the same climb against Debian 13's xrdp (fasi/20 §7)")
     a.add_argument("--guardia", action="store_true",
-                   help="la guardia dell'ospite di fasi/20 §7.7 (sempre accesa con --sistema xrdp)")
-    a.add_argument("--secco", action="store_true", help="stampa il piano e basta")
+                   help="the host guard of fasi/20 §7.7 (always on with --sistema xrdp)")
+    a.add_argument("--secco", action="store_true", help="prints the plan and that's all")
     a.add_argument("--attesa-nascita-s", type=int, default=180)
     a.add_argument("--attesa-uscita-s", type=int, default=120)
     a.add_argument("--tetto-controllo-s", type=int, default=600)
     a.add_argument("--anticipo-foto-s", type=int, default=30,
-                   help="la foto piena (SIGUSR1) quanti s PRIMA della finestra di giudizio")
+                   help="the full photo (SIGUSR1) how many s BEFORE the judgement window")
     a.add_argument("--tetto-foto-s", type=int, default=90,
-                   help="quanto si aspettano le foto prima della finestra")
+                   help="how long the photos are waited for before the window")
     a.add_argument("--lascia-tetto", action="store_true")
-    # ⚠ solo per provare l'impianto, mai in una campagna:
+    # ⚠ only to test the setup, never in a campaign:
     a.add_argument("--anche-se-non-vuoto", action="store_true")
     a.add_argument("--non-rifare", action="store_true")
     a.add_argument("--senza-controllo", action="store_true")
     a.add_argument("--risorse-senza-root", action="store_true",
-                   help="16-risorse.py come nicfio (i finti): senza, PSS e fdinfo non si leggono")
+                   help="16-risorse.py as nicfio (the fakes): without root, PSS and fdinfo are not read")
     a.add_argument("--programmi", default=QUI,
-                   help="la cartella di 16-attore/16-risorse/16-classifica (i finti: finti/)")
+                   help="the folder of 16-attore/16-risorse/16-classifica (the fakes: finti/)")
     o = a.parse_args()
     if o.prova:
         if "--gradini" not in sys.argv:
             o.gradini = "1,2,4"
-        # ⛔ [M] 6 ott (taratura fase 20): 3 min = 1 di assestamento + 2 di controllo
-        #    corto ⇒ il tratto della memoria e' VUOTO, «NON MISURATO» ⇒ DEGRADED al primo
-        #    gradino.  E a 4 min la serie ha 60 punti in 59 s: 16-classifica ne vuole
-        #    piu' di 60 s ⇒ ancora NON MISURATO.  5 min lasciano 2 min di memoria.
+        # ⛔ [M] 6 Oct (phase 20 tuning): 3 min = 1 of settling + 2 of short
+        #    check ⇒ the memory stretch is EMPTY, «NOT MEASURED» ⇒ DEGRADED at the first
+        #    rung.  And at 4 min the series has 60 points in 59 s: 16-classifica wants
+        #    more than 60 s ⇒ still NOT MEASURED.  5 min leave 2 min of memory.
         if "--minuti" not in sys.argv:
             o.minuti = 5
         if "--minuti-ultimo" not in sys.argv:
@@ -1576,13 +1579,13 @@ def main():
             o.campagna = "prova-" + o.campagna
     o.gradini = [int(x) for x in str(o.gradini).split(",") if x.strip()]
     if o.gradini != sorted(set(o.gradini)) or not o.gradini or o.gradini[0] < 1:
-        a.error("--gradini: numeri crescenti da 1 in su")
+        a.error("--gradini: increasing numbers from 1 upwards")
     if o.controllo_min > min(o.minuti, o.minuti_ultimo):
-        a.error("--controllo-min piu' lungo del livello")
-    # il tratto della memoria (16-classifica): dopo 60 s di assestamento, prima del controllo
+        a.error("--controllo-min longer than the level")
+    # the memory stretch (16-classifica): after 60 s of settling, before the check
     if min(o.minuti, o.minuti_ultimo) * 60 - o.controllo_min * 60 - 60 < 90:
-        a.error("livelli troppo corti: servono almeno --controllo-min + 2.5 minuti "
-                "(1 di assestamento, e la memoria vuole piu' di 60 s di serie)")
+        a.error("levels too short: at least --controllo-min + 2.5 minutes are needed "
+                "(1 of settling, and the memory wants more than 60 s of series)")
     o.tetto = o.tetto or (max(o.gradini) + 1)
     SISTEMA["xrdp"] = o.sistema == "xrdp"
     o.cont = o.scatola + "-xrdp" if SISTEMA["xrdp"] else o.scatola
@@ -1598,30 +1601,30 @@ def main():
         o.prog_controllo = os.path.join(QUI, "16-attore-rdp.py")
     if o.secco:
         tot = sum(o.minuti for _ in o.gradini[:-1]) + o.minuti_ultimo
-        print("piano: %s · scheda %s · %s · gradini %s · %s min + ultimo %s ≈ %.0f min di lavoro (+ nascite, "
-              "controlli, registro) · tetto %d · porte %d-%d · programmi %s" % (
+        print("plan: %s · card %s · %s · rungs %s · %s min + last %s ≈ %.0f min of work (+ births, "
+              "checks, log) · cap %d · ports %d-%d · programs %s" % (
                   o.campagna, o.scheda, o.scatola, o.gradini, o.minuti, o.minuti_ultimo, tot, o.tetto,
                   o.porte_base, o.porte_base + 10 * max(o.gradini) + 9, prog))
         for p in (o.prog_attore, o.prog_risorse, o.prog_classifica, o.prog_controllo):
-            print("  %s %s" % ("✓" if os.path.exists(p) else "✗ MANCA", p))
+            print("  %s %s" % ("✓" if os.path.exists(p) else "✗ MISSING", p))
         return 0
     for p in (o.prog_attore, o.prog_risorse, o.prog_classifica, o.prog_controllo):
         if not os.path.exists(p):
-            print("⛔ manca %s" % p)
+            print("⛔ %s is missing" % p)
             return 3
     base = os.path.join(MISURE, o.campagna)
     if glob.glob(os.path.join(base, "livello-*")):
-        print("⛔ la campagna %s ha gia' dei livelli in %s: le evidenze non si toccano (§14). "
-              "Un altro nome." % (o.campagna, base))
+        print("⛔ the campaign %s already has levels in %s: the evidence is not touched (§14). "
+              "Another name." % (o.campagna, base))
         return 3
     os.makedirs(base, exist_ok=True)
     _log_file = open(os.path.join(base, "salita.log"), "a", encoding="utf-8")
-    # ⛔ UNA salita alla volta sul server
+    # ⛔ ONE climb at a time on the server
     serratura = open(os.path.join(RUN, "16-salita.lock"), "w")
     try:
         fcntl.flock(serratura, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except OSError:
-        dice("⛔ BLOCKED: c'e' gia' un'altra salita in corso su questo server")
+        dice("⛔ BLOCKED: there is already another climb in progress on this server")
         return 3
     guaio = tieni_le_scatole("16-salita %s" % o.campagna)
     if guaio:
@@ -1629,9 +1632,9 @@ def main():
         return 3
     sal = Salita(o)
     guai = perche_non_vuoto(o.cont)
-    # ⚠ [M] 26 set, 00:01: la salita di prima aveva appena sgomberato e la sessione
-    #   dell'inquilino era ancora in chiusura (logind) 6 s dopo ⇒ BLOCKED falso.  Chi
-    #   sta chiudendo si aspetta fino a 120 s; chi resta dopo e' un server non vuoto.
+    # ⚠ [M] 26 Sep, 00:01: the previous climb had just cleaned up and the tenant's
+    #   session was still closing (logind) 6 s later ⇒ false BLOCKED.  Whoever
+    #   is closing is waited for up to 120 s; whoever is left after that is a non-empty server.
     for _ in range(12):
         if not guai:
             break
@@ -1640,12 +1643,12 @@ def main():
     if guai:
         sal.stato["server_non_vuoto"] = guai
         if not o.anche_se_non_vuoto:
-            return sal.blocca("il server non e' vuoto: " + " · ".join(guai))
-        dice("⚠ il server NON e' vuoto (--anche-se-non-vuoto, prova dell'impianto): " +
+            return sal.blocca("the server is not empty: " + " · ".join(guai))
+        dice("⚠ the server is NOT empty (--anche-se-non-vuoto, test of the setup): " +
              " · ".join(guai))
 
     def fermati(sig, _f):
-        dice("⚠ segnale %d: mi fermo e sgombero" % sig)
+        dice("⚠ signal %d: stopping and cleaning up" % sig)
         sal.fermati = True
     signal.signal(signal.SIGTERM, fermati)
     signal.signal(signal.SIGINT, fermati)
@@ -1654,13 +1657,13 @@ def main():
         codice = sal.corri()
     except Exception as e:                       # noqa: BLE001
         import traceback
-        dice("⛔ la salita e' caduta: %r\n%s" % (e, traceback.format_exc()))
+        dice("⛔ the climb crashed: %r\n%s" % (e, traceback.format_exc()))
         sal.aggiorna(fase="caduta", ragione=repr(e))
     finally:
         sal.sgombera_tutto()
         if sal.stato.get("fase") not in ("BLOCKED", "caduta"):
             sal.aggiorna(fase="finita" if not sal.fermati else "fermata")
-        dice("fine · %s" % json.dumps(sal.storia, ensure_ascii=False))
+        dice("end · %s" % json.dumps(sal.storia, ensure_ascii=False))
     return codice
 
 

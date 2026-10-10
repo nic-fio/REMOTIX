@@ -1,49 +1,49 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-f030 — F-030 LO SCHERMO NON SI SPEGNE E NON SI BLOCCA DA SOLO
+15-f030 — F-030 THE SCREEN DOES NOT TURN OFF AND DOES NOT LOCK BY ITSELF
 
     python3 15-f030-schermo-sempre-acceso.py --scatola lxqt --browser chrome [--guasto]
         [--attesa-s 450] [--ogni-s 45]
 
-ATTESO: una sessione FERMA, senza input, per minuti: lo schermo resta il
-desktop — non si spegne (DPMS, salvaschermo), non si oscura, non si blocca, la
-macchina non si sospende.
+EXPECTED: a STILL session, without input, for minutes: the screen stays the
+desktop — it does not turn off (DPMS, screensaver), does not dim, does not lock, the
+machine does not suspend.
 
-⛔ LA FORMA, DICHIARATA (il piano dice 11 minuti, il tetto per prova e' 10):
-   · ATTESA VERA di `--attesa-s` (450 s = 7 min 30 s) senza un solo evento
-     d'input, con una FOTO ogni `--ogni-s` (45 s): copre tutti i tempi di 5
-     minuti di serie — GNOME idle-delay 300 s (oscura e blocca), il swayidle
-     di LXQt/labwc (`timeout 300 wlopm --off`), kscreenlocker di Plasma 5 min;
-   · e i tempi di 10 minuti — XFCE DPMS (xfce4-power-manager, 10 min), Plasma
-     powerdevil «spegni lo schermo dopo 10 min» — che l'attesa non raggiunge,
-     si giudicano dal VALORE DEI CAMPI letti DENTRO la sessione
-     dell'inquilino: devono essere spenti o > 600 s (su KDE: KWin con
-     `--no-lockscreen` e l'inibizione di REMOTIX a powerdevil in vigore);
-   · e nessun bloccatore/oscuratore acceso come l'inquilino (swayidle,
+⛔ THE FORM, DECLARED (the plan says 11 minutes, the cap per test is 10):
+   · a REAL WAIT of `--attesa-s` (450 s = 7 min 30 s) without a single input
+     event, with a PHOTO every `--ogni-s` (45 s): it covers all the standard
+     5-minute times — GNOME idle-delay 300 s (dims and locks), LXQt/labwc's swayidle
+     (`timeout 300 wlopm --off`), Plasma's kscreenlocker 5 min;
+   · and the 10-minute times — XFCE DPMS (xfce4-power-manager, 10 min), Plasma
+     powerdevil «turn off the screen after 10 min» — which the wait does not reach,
+     are judged from the VALUE OF THE FIELDS read INSIDE the
+     tenant's session: they must be off or > 600 s (on KDE: KWin with
+     `--no-lockscreen` and REMOTIX's inhibition of powerdevil in force);
+   · and no locker/dimmer running as the tenant (swayidle,
      swaylock, xscreensaver, xfce4-screensaver, light-locker, hypridle).
-   PASS = foto tutte «ancora il desktop» + immagine VIVA + campi giusti.
+   PASS = photos all «still the desktop» + LIVE image + right fields.
 
-⭐ L'IMMAGINE VIVA: una foto uguale all'inizio non basta — se la cattura muore
-   (su wlroots un'uscita spenta da' `failed` alla cattura) la tela resta
-   CONGELATA sull'ultimo fotogramma e sembra accesa.  ⇒ Nella sessione gira
-   una finestra nota (GTK4, 30% del desktop) che cambia colore DA SOLA ogni 7
-   s, ciano ⇄ giallo, senza input; le foto devono vederla, e vederla CAMBIARE.
+⭐ THE LIVE IMAGE: a photo equal to the start is not enough — if the capture dies
+   (on wlroots a turned-off output gives `failed` to the capture) the canvas stays
+   FROZEN on the last frame and looks on.  ⇒ In the session runs
+   a known window (GTK4, 30% of the desktop) that changes colour BY ITSELF every 7
+   s, cyan ⇄ yellow, without input; the photos must see it, and see it CHANGE.
 
-Ogni foto si giudica contro quella d'inizio: la finestra nota c'e' (ciano o
-giallo, almeno meta' dell'area d'inizio), la luminanza media entro 25
-livelli, i pixel non neri almeno meta' (uno schermo spento e' nero anche su
-XFCE, che nasce con lo sfondo nero).
+Every photo is judged against the starting one: the known window is there (cyan or
+yellow, at least half of the starting area), the mean luminance within 25
+levels, the non-black pixels at least half (a turned-off screen is black even on
+XFCE, which is born with a black background).
 
-Questa prova non dipende dal browser (una passata per desktop) e puo'
-girare in parallelo alle altre del suo desktop: inquilino suo (c15030u<n>).
+This test does not depend on the browser (one pass per desktop) and can
+run in parallel with the others of its desktop: a tenant of its own (c15030u<n>).
 
-GUASTO (due, tutt'e due devono dare rosso):
-  A) un tempo letto che vale 300 s (sostituito nel valore letto dal desktop:
-     GNOME idle-delay, KDE inibizione tolta e spegnimento a 300 s, XFCE DPMS
-     acceso a 5 min, LXQt sorvegliante acceso a 300 s) ⇒ giudice dei campi ROSSO;
-  B) una tela NERA della stessa misura al posto dell'ultima foto ⇒ giudice
-     delle foto ROSSO.
+FAULT (two, both must give red):
+  A) a time read that is 300 s (substituted in the value read from the desktop:
+     GNOME idle-delay, KDE inhibition removed and turn-off at 300 s, XFCE DPMS
+     on at 5 min, LXQt watcher on at 300 s) ⇒ fields judge RED;
+  B) a BLACK canvas of the same size instead of the last photo ⇒ photos
+     judge RED.
 """
 import os
 import re
@@ -58,7 +58,7 @@ FUNZIONI = ("F-030",)
 PER_BROWSER = False
 LUNGA = True
 
-TETTO_S = 600           # un tempo sopra i 10 minuti non e' «da solo, in fretta»
+TETTO_S = 600           # a time above 10 minutes is not «by itself, in a hurry»
 GIALLO = (255, 255, 0)
 BLOCCATORI = r"swayidle|swaylock|xscreensaver|xfce4-screensaver|light-locker|hypridle|gtklock"
 
@@ -69,60 +69,60 @@ def extra(a):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  I GIUDICI (funzioni pure)
+#  THE JUDGES (pure functions)
 # ═══════════════════════════════════════════════════════════════════════════
 def _spento_o_lungo(v, scala=1):
-    """None (non letto) · True se 0 (spento) o > TETTO_S."""
+    """None (not read) · True if 0 (off) or > TETTO_S."""
     if v is None:
         return None
     return v == 0 or v * scala > TETTO_S
 
 
 def giudica_tempi(d, v):
-    """v = i valori letti.  Torna [difetti]; un valore che manca e' un difetto
-    (non ho potuto leggere quel che dovevo giudicare)."""
+    """v = the values read.  Returns [defects]; a missing value is a defect
+    (I could not read what I had to judge)."""
     guai = []
 
     def serve(k):
         if v.get(k) is None:
-            guai.append("%s non letto" % k)
+            guai.append("%s not read" % k)
             return False
         return True
 
     if d == "gnome":
         if serve("idle-delay") and not _spento_o_lungo(v["idle-delay"]):
-            guai.append("idle-delay=%d s (oscura e blocca)" % v["idle-delay"])
+            guai.append("idle-delay=%d s (dims and locks)" % v["idle-delay"])
         if serve("sleep-inactive-ac-type") and v["sleep-inactive-ac-type"] != "nothing":
             if not _spento_o_lungo(v.get("sleep-inactive-ac-timeout")):
-                guai.append("sospensione «%s» dopo %s s" % (
+                guai.append("suspend «%s» after %s s" % (
                     v["sleep-inactive-ac-type"], v.get("sleep-inactive-ac-timeout")))
     elif d == "kde":
         if serve("no-lockscreen") and not v["no-lockscreen"]:
-            guai.append("KWin SENZA --no-lockscreen (kscreenlocker blocca)")
+            guai.append("KWin WITHOUT --no-lockscreen (kscreenlocker locks)")
         if serve("inibito") and not v["inibito"]:
             s = v.get("spegni-schermo-s")
             if not _spento_o_lungo(s):
-                guai.append("powerdevil NON inibito e schermo spento dopo %s s" % s)
+                guai.append("powerdevil NOT inhibited and screen off after %s s" % s)
     elif d == "xfce":
         if serve("dpms-enabled") and v["dpms-enabled"]:
             for k in ("dpms-on-ac-sleep", "dpms-on-ac-off"):
                 if not _spento_o_lungo(v.get(k), 60):
-                    guai.append("DPMS acceso, %s=%s min" % (k, v.get(k)))
+                    guai.append("DPMS on, %s=%s min" % (k, v.get(k)))
         if serve("inactivity-on-ac") and not _spento_o_lungo(v["inactivity-on-ac"], 60):
             guai.append("inactivity-on-ac=%d min" % v["inactivity-on-ac"])
         if v.get("blank-on-ac") is not None and not _spento_o_lungo(v["blank-on-ac"], 60):
             guai.append("blank-on-ac=%d min" % v["blank-on-ac"])
     elif d == "lxqt":
         if serve("enableIdlenessWatcher") and v["enableIdlenessWatcher"]:
-            guai.append("il sorvegliante d'inattivita' di LXQt e' ACCESO (%s s)"
+            guai.append("LXQt's inactivity watcher is ON (%s s)"
                         % v.get("idle-s", "?"))
     if v.get("bloccatori"):
-        guai.append("bloccatori accesi come l'inquilino: %s" % v["bloccatori"])
+        guai.append("lockers running as the tenant: %s" % v["bloccatori"])
     return guai
 
 
 def col_guasto_300(d, v):
-    """Il GUASTO A: il tempo principale del desktop portato a 300 s."""
+    """FAULT A: the desktop's main time brought to 300 s."""
     v = dict(v)
     if d == "gnome":
         v["idle-delay"] = 300
@@ -142,17 +142,17 @@ def misura(png):
 
 
 def giudica_foto(rif, m):
-    """(ok, frase) di UNA foto contro quella d'inizio."""
+    """(ok, sentence) of ONE photo against the starting one."""
     guai = []
     area0 = rif["ciano"] + rif["giallo"]
     area = m["ciano"] + m["giallo"]
     if area < 0.5 * area0:
-        guai.append("finestra nota %.3f → %.3f" % (area0, area))
+        guai.append("known window %.3f → %.3f" % (area0, area))
     if abs(m["lum"] - rif["lum"]) > 25:
-        guai.append("luminanza %.0f → %.0f" % (rif["lum"], m["lum"]))
+        guai.append("luminance %.0f → %.0f" % (rif["lum"], m["lum"]))
     if m["vivi"] < 0.5 * rif["vivi"]:
-        guai.append("pixel non neri %.3f → %.3f" % (rif["vivi"], m["vivi"]))
-    frase = "c %.3f g %.3f lum %.0f vivi %.3f" % (m["ciano"], m["giallo"], m["lum"], m["vivi"])
+        guai.append("non-black pixels %.3f → %.3f" % (rif["vivi"], m["vivi"]))
+    frase = "c %.3f y %.3f lum %.0f live %.3f" % (m["ciano"], m["giallo"], m["lum"], m["vivi"])
     return (not guai), (frase if not guai else "; ".join(guai))
 
 
@@ -165,22 +165,22 @@ def colore_di(m):
 
 
 def giudica_serie(rif, serie):
-    """serie = [(t, misura)].  Torna (esito, frase)."""
+    """serie = [(t, measurement)].  Returns (outcome, sentence)."""
     cattive = []
     colori = set()
     for t, m in serie:
         ok, f = giudica_foto(rif, m)
         if not ok:
-            cattive.append("a %d s: %s" % (t, f))
+            cattive.append("at %d s: %s" % (t, f))
         c = colore_di(m)
         if c:
             colori.add(c)
     if cattive:
-        return S.ROSSO, "lo schermo NON e' piu' il desktop — " + " · ".join(cattive)
+        return S.ROSSO, "the screen is NO longer the desktop — " + " · ".join(cattive)
     if len(colori) < 2:
-        return S.ROSSO, ("immagine CONGELATA: la finestra nota non ha mai cambiato colore "
-                         "(visti: %s)" % (sorted(colori) or "nessuno"))
-    return S.VERDE, "%d foto, tutte il desktop, immagine viva (%s)" % (
+        return S.ROSSO, ("FROZEN image: the known window never changed colour "
+                         "(seen: %s)" % (sorted(colori) or "none"))
+    return S.VERDE, "%d photos, all the desktop, live image (%s)" % (
         len(serie), "⇄".join(sorted(colori)))
 
 
@@ -201,30 +201,30 @@ def certifica():
         "lxqt": {"enableIdlenessWatcher": False, "bloccatori": ""},
     }
     for d, v in buoni.items():
-        prova("%s: i valori della cura ⇒ niente difetti" % d, not giudica_tempi(d, v))
-        prova("%s: GUASTO A (300 s) ⇒ difetto" % d, bool(giudica_tempi(d, col_guasto_300(d, v))))
-        prova("%s: un campo non letto ⇒ difetto" % d,
+        prova("%s: the cure's values ⇒ no defects" % d, not giudica_tempi(d, v))
+        prova("%s: FAULT A (300 s) ⇒ defect" % d, bool(giudica_tempi(d, col_guasto_300(d, v))))
+        prova("%s: a field not read ⇒ defect" % d,
               bool(giudica_tempi(d, {"bloccatori": ""})))
-    prova("gnome: idle-delay 900 s ⇒ va bene", not giudica_tempi(
+    prova("gnome: idle-delay 900 s ⇒ fine", not giudica_tempi(
         "gnome", dict(buoni["gnome"], **{"idle-delay": 900})))
-    prova("bloccatore acceso ⇒ difetto", bool(giudica_tempi(
+    prova("locker running ⇒ defect", bool(giudica_tempi(
         "lxqt", dict(buoni["lxqt"], bloccatori="swayidle"))))
     rif = {"ciano": 0.08, "giallo": 0.0, "lum": 90, "vivi": 0.9}
     g = {"ciano": 0.0, "giallo": 0.08, "lum": 95, "vivi": 0.9}
-    prova("serie viva ⇒ VERDE", giudica_serie(rif, [(45, rif), (90, g)])[0] == S.VERDE)
-    prova("serie congelata ⇒ ROSSO", giudica_serie(rif, [(45, rif), (90, rif)])[0] == S.ROSSO)
+    prova("live series ⇒ VERDE", giudica_serie(rif, [(45, rif), (90, g)])[0] == S.VERDE)
+    prova("frozen series ⇒ ROSSO", giudica_serie(rif, [(45, rif), (90, rif)])[0] == S.ROSSO)
     nero = misura(G1B.png_nero(64, 36))
-    prova("GUASTO B: tela nera in fondo ⇒ ROSSO",
+    prova("FAULT B: black canvas at the end ⇒ ROSSO",
           giudica_serie(rif, [(45, rif), (90, g), (135, nero)])[0] == S.ROSSO)
     xfce = {"ciano": 0.08, "giallo": 0.0, "lum": 22, "vivi": 0.12}
-    prova("XFCE (sfondo nero): lo schermo spento si vede dai pixel non neri",
+    prova("XFCE (black background): the turned-off screen is seen from the non-black pixels",
           not giudica_foto(xfce, dict(nero))[0])
-    print("⛔ %d guai" % len(guai) if guai else "⭐ CERTIFICATO")
+    print("⛔ %d problems" % len(guai) if guai else "⭐ CERTIFIED")
     return 1 if guai else 0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  I CAMPI, dentro la sessione
+#  THE FIELDS, inside the session
 # ═══════════════════════════════════════════════════════════════════════════
 def _num(t):
     m = re.search(r"-?\d+", t or "")
@@ -232,8 +232,8 @@ def _num(t):
 
 
 def _ultima(t):
-    # ⚠ `[M]` 25 set 2026, kde: qdbus6/kreadconfig6 scrivono DOPO la risposta
-    #   l'avviso della località («Detected locale "C"…»): non e' il valore
+    # ⚠ `[M]` 25 Sep 2026, kde: qdbus6/kreadconfig6 write AFTER the answer
+    #   the locale warning («Detected locale "C"…»): it is not the value
     rumore = re.compile(r"password|Detected locale|Qt depends on a UTF-8|reconfigure your "
                         r"locale|See the locale|Gtk-WARNING")
     righe = [r for r in (t or "").splitlines() if r.strip() and not rumore.search(r)]
@@ -262,7 +262,7 @@ def leggi_tempi(s, d):
     elif d == "kde":
         c, t = s.sc.dentro("p=$(pgrep -u %s -x kwin_wayland | head -1); [ -n \"$p\" ] && "
                            "tr '\\0' ' ' < /proc/$p/cmdline" % s.chi, 30)
-        grezzo.append("$ cmdline di kwin_wayland\n" + t)
+        grezzo.append("$ cmdline of kwin_wayland\n" + t)
         v["no-lockscreen"] = ("--no-lockscreen" in t) if "kwin" in t else None
         _c, t = sess("qdbus6 org.kde.Solid.PowerManagement "
                      "/org/kde/Solid/PowerManagement/PolicyAgent "
@@ -279,7 +279,7 @@ def leggi_tempi(s, d):
         _c, t = sess("kreadconfig6 --file kscreenlockerrc --group Daemon --key Autolock "
                      "--default true; kreadconfig6 --file kscreenlockerrc --group Daemon "
                      "--key Timeout --default 5")
-        v["kscreenlocker (solo nota)"] = t
+        v["kscreenlocker (note only)"] = t
     elif d == "xfce":
         for k in ("dpms-enabled", "dpms-on-ac-sleep", "dpms-on-ac-off", "inactivity-on-ac",
                   "blank-on-ac"):
@@ -306,15 +306,15 @@ def leggi_tempi(s, d):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA PROVA
+#  THE TEST
 # ═══════════════════════════════════════════════════════════════════════════
 def corpo(o, E):
     d = o.scatola
     t_inizio = time.time()
     with S.Sessione(o, "030", E) as s:
-        G1B.passo("inquilino e browser pronti")
+        G1B.passo("tenant and browser ready")
         ok, m = s.entra()
-        G1B.passo("dentro: %s" % m[:80])
+        G1B.passo("inside: %s" % m[:80])
         if not ok:
             raise S.Bloccata(m)
         time.sleep(6 if d != "kde" else 10)
@@ -322,22 +322,22 @@ def corpo(o, E):
         W, H = geo["tl"], geo["ta"]
         c, t = G1B.metti_finestra(s)
         if c != 0:
-            raise S.Bloccata("il programma della finestra non si scrive: " + t[-200:])
+            raise S.Bloccata("the window's program cannot be written: " + t[-200:])
         c, t = G1B.apri_finestra(s, "orologio", "#00ffff", int(W * 0.3), int(H * 0.3),
                                  altro="#ffff00", periodo=7)
         if c != 0:
-            raise S.Bloccata("la finestra nota non parte: " + t[-200:])
+            raise S.Bloccata("the known window does not start: " + t[-200:])
         time.sleep(5)
         if d == "gnome":
             G1B.fuoco_sulla_tela(s, geo)
-            G1B.combinazione(s.g, ["Escape"])    # ⚠ GNOME nasce nella panoramica
+            G1B.combinazione(s.g, ["Escape"])    # ⚠ GNOME is born in the overview
             time.sleep(2)
-        # ⛔ da qui NESSUN input: solo fotografie (CDP/Marionette non muovono niente)
+        # ⛔ from here NO input: only photos (CDP/Marionette move nothing)
         png0, p0 = G1B.foto(s, "inizio", scala=0.5)
         if not png0:
-            raise S.Bloccata("nessuna foto d'inizio: " + p0)
+            raise S.Bloccata("no starting photo: " + p0)
         rif = misura(png0)
-        for _ in range(6):                       # la finestra puo' tardare a nascere
+        for _ in range(6):                       # the window can be late being born
             if rif["ciano"] + rif["giallo"] >= 0.01:
                 break
             time.sleep(4)
@@ -345,13 +345,13 @@ def corpo(o, E):
             rif = misura(png0) if png0 else rif
         if rif["ciano"] + rif["giallo"] < 0.01:
             c, t = s.sc.dentro("cat /home/%s/.c15-python3.log 2>&1 | tail -n 5" % s.chi, 30)
-            G1B.passo("registro della finestra: %s" % t[-400:])
-            raise S.Bloccata("la finestra nota non si vede nella foto d'inizio (%s)" % rif)
+            G1B.passo("the window's log: %s" % t[-400:])
+            raise S.Bloccata("the known window is not seen in the starting photo (%s)" % rif)
         ev = [p0]
         v, grezzo = leggi_tempi(s, d)
-        # l'attesa: il tetto e' di 10 minuti per TUTTA la prova
+        # the wait: the cap is 10 minutes for the WHOLE test
         attesa = min(o.attesa_s, max(60, 480 - int(time.time() - t_inizio)))
-        print("   attesa senza input: %d s (foto ogni %d s)" % (attesa, o.ogni_s), flush=True)
+        print("   wait without input: %d s (photo every %d s)" % (attesa, o.ogni_s), flush=True)
         serie, t0 = [], time.time()
         png_ultima = png0
         while True:
@@ -369,10 +369,10 @@ def corpo(o, E):
             print("   %4d s: %s" % (trascorso, giudica_foto(rif, mm)[1]), flush=True)
             serie.append((trascorso, mm))
             ev.append(p)
-        # ⭐ LA PROVA DI VITA, in fondo all'attesa: la finestra nota cambia colore
-        #   ogni 7 s (era 30: `[M]` 24 set 2026, gnome, foto ogni ~60 s cadevano
-        #   sulla stessa fase (`[M]` 24 set 2026, gnome: otto foto tutte gialle).
-        #   ⇒ Si fotografa ogni 4 s, fino a 40 s, finche' il colore CAMBIA.
+        # ⭐ THE PROOF OF LIFE, at the end of the wait: the known window changes colour
+        #   every 7 s (it was 30: `[M]` 24 Sep 2026, gnome, photos every ~60 s fell
+        #   on the same phase (`[M]` 24 Sep 2026, gnome: eight photos all yellow).
+        #   ⇒ A photo every 4 s, up to 40 s, until the colour CHANGES.
         ultimo = colore_di(serie[-1][1]) if serie else colore_di(rif)
         fine_vita = time.time() + 40
         while time.time() < fine_vita:
@@ -386,7 +386,7 @@ def corpo(o, E):
             serie.append((trascorso, mm))
             if colore_di(mm) and colore_di(mm) != ultimo:
                 ev.append(p)
-                print("   %4d s: prova di vita, %s → %s" % (trascorso, ultimo, colore_di(mm)),
+                print("   %4d s: proof of life, %s → %s" % (trascorso, ultimo, colore_di(mm)),
                       flush=True)
                 break
         v_fine, grezzo_fine = leggi_tempi(s, d)
@@ -394,18 +394,18 @@ def corpo(o, E):
         guai = giudica_tempi(d, v)
         guai_fine = giudica_tempi(d, v_fine)
         ev.append(s.salva_testo("f030-campi.txt",
-                                ["all'inizio: %s" % v, "alla fine: %s" % v_fine, ""]
-                                + grezzo + ["", "--- alla fine ---"] + grezzo_fine))
-        oss = "foto: %s · campi: %s" % (f_foto, v)
-        atteso = ("%d s fermi senza input: ogni foto e' ancora il desktop, l'immagine e' viva; "
-                  "inattivita'/DPMS/blocco spenti o > %d s" % (attesa, TETTO_S))
+                                ["at the start: %s" % v, "at the end: %s" % v_fine, ""]
+                                + grezzo + ["", "--- at the end ---"] + grezzo_fine))
+        oss = "photos: %s · fields: %s" % (f_foto, v)
+        atteso = ("%d s still without input: every photo is still the desktop, the image is live; "
+                  "inactivity/DPMS/lock off or > %d s" % (attesa, TETTO_S))
         if e_foto == S.ROSSO:
             E.metti("F-030", S.FAIL, f_foto, atteso=atteso, osservato=oss, evidenze=ev)
         elif guai or guai_fine:
-            E.metti("F-030", S.FAIL, "le foto vanno, ma i campi no: %s"
+            E.metti("F-030", S.FAIL, "the photos are fine, but the fields are not: %s"
                     % "; ".join(guai or guai_fine), atteso=atteso, osservato=oss, evidenze=ev)
         else:
-            E.metti("F-030", S.PASS, "%s; campi giusti (%s)" % (f_foto, d), atteso=atteso,
+            E.metti("F-030", S.PASS, "%s; right fields (%s)" % (f_foto, d), atteso=atteso,
                     osservato=oss, evidenze=ev)
 
         if o.guasto:
@@ -415,9 +415,9 @@ def corpo(o, E):
                                      misura(G1B.png_nero(w, h)))]
             eb, fb = giudica_serie(rif, serie_b)
             E.guasto("F-030", bool(ga) and eb == S.ROSSO,
-                     "A) tempo a 300 s ⇒ %s · B) ultima foto nera ⇒ %s"
-                     % ("ROSSO (%s)" % "; ".join(ga) if ga else "verde (NON visto)",
-                        "ROSSO" if eb == S.ROSSO else "verde (NON visto)"))
+                     "A) time at 300 s ⇒ %s · B) last photo black ⇒ %s"
+                     % ("ROSSO (%s)" % "; ".join(ga) if ga else "verde (NOT seen)",
+                        "ROSSO" if eb == S.ROSSO else "verde (NOT seen)"))
 
 
 if __name__ == "__main__":

@@ -2,40 +2,40 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-15-giro — UN GIRO DELLA SUITE FUNZIONALE (fase 15)
+15-giro — ONE ROUND OF THE FUNCTIONAL SUITE (phase 15)
 ===========================================================================
 
-    (sul server, come nicfio — i browser veri stanno la')
+    (on the server, as nicfio — the real browsers are there)
     python3 15-giro.py --giro 1
     python3 15-giro.py --giro bonifica --desktop kde --browser chrome --prove f018
     python3 15-giro.py --giro 1 --strato-tecnico          # + C7 C9 C18 C19 C14
-    python3 15-giro.py --elenco                           # che cosa farebbe
+    python3 15-giro.py --elenco                           # what it would do
 
-    (dal tablet)  bash banchi/15-suite/15-porta.sh && \
+    (from the tablet)  bash banchi/15-suite/15-porta.sh && \
                   ssh nicfio@192.168.0.2 'python3 /media/REMOTIX/src/controllo/banchi/15-suite/15-giro.py --giro 1'
 
-CHE COSA FA
-  - trova le prove `15-f*.py` / `15-n*.py` di questa cartella e ne legge le
-    dichiarazioni (righe di testo, non import):
-        FUNZIONI = ("F-004", …)        che cosa guarda (obbligatoria)
-        PER_BROWSER = False            gira una volta sola (con Firefox)
-        LUNGA = True                   gira IN PARALLELO alle altre del suo desktop
-        SERVER = "15-g7-server.sh"     un server suo da accendere/spegnere
-  - ⭐ i QUATTRO desktop in parallelo, una fila per desktop; nella fila i due
-    browser uno dopo l'altro; porte di debug diverse per desktop;
-  - ogni prova con `--guasto` (sana + guasto nella stessa sessione), tetto
-    10 minuti (oltre: BLOCKED «oltre i 10 minuti», e il processo si uccide);
-  - ⭐ OGNI esecuzione lascia righe nel REGISTRO (solo aggiunte):
+WHAT IT DOES
+  - finds the tests `15-f*.py` / `15-n*.py` of this folder and reads their
+    declarations (lines of text, not imports):
+        FUNZIONI = ("F-004", …)        what it looks at (mandatory)
+        PER_BROWSER = False            runs only once (with Firefox)
+        LUNGA = True                   runs IN PARALLEL with the others of its desktop
+        SERVER = "15-g7-server.sh"     a server of its own to start/stop
+  - ⭐ the FOUR desktops in parallel, one queue per desktop; in the queue the two
+    browsers one after the other; different debug ports per desktop;
+  - every test with `--guasto` (healthy + fault in the same session), cap
+    10 minutes (beyond: BLOCKED «over 10 minutes», and the process is killed);
+  - ⭐ EVERY run leaves lines in the REGISTER (append only):
         /media/REMOTIX/misure/fase15/registro.jsonl
-    con giro, test, funzione, desktop, browser, versione, sistema, binario,
+    with giro, test, funzione, desktop, browser, versione, sistema, binario,
     pagina, commit, inizio, durata, esito, ragione, atteso, osservato,
     guasto_visto, evidenze, difetto;
-  - le evidenze in /media/REMOTIX/misure/fase15/giro<N>/<desktop>/<browser>/<prova>/
-    (l'uscita intera della prova in `uscita.log`, le foto e le console dentro).
+  - the evidence in /media/REMOTIX/misure/fase15/giro<N>/<desktop>/<browser>/<prova>/
+    (the whole output of the test in `uscita.log`, the photos and the consoles inside).
 
-⛔ PRIMA DI PARTIRE guarda se nelle scatole c'e' una sessione di una persona
-   (nictest o chiunque non sia un inquilino dei banchi `c<n>u<n>`): se c'e', si
-   ferma — la prova a mano dell'utente non si interrompe (24 set 2026).
+⛔ BEFORE STARTING it checks whether in the boxes there is a session of a person
+   (nictest or anyone who is not a bench tenant `c<n>u<n>`): if there is, it
+   stops — the user's manual test is not interrupted (24 Sep 2026).
 """
 import argparse
 import datetime
@@ -58,17 +58,17 @@ RETE11 = "/media/REMOTIX/rete11"
 DESKTOP = ("gnome", "kde", "xfce", "lxqt")
 BROWSER = ("firefox", "chrome")
 TETTO_S = 600
-# ⚠ il telefono (fase 19 §5) dichiara il suo: `banchi/19-android/19-android.py`
+# ⚠ the phone (phase 19 §5) declares its own: `banchi/19-android/19-android.py`
 SISTEMA = os.environ.get("REMOTIX_SISTEMA_15") or \
-    "Debian 13 · labwc senza schermo 3840x2160 · i5-13500T, Intel UHD 770"
+    "Debian 13 · headless labwc 3840x2160 · i5-13500T, Intel UHD 770"
 INQUILINO = re.compile(r"^c[0-9]+b?u[0-9]+$")
 _serratura = threading.Lock()
 
 
 def _parola_sudo():
-    """La parola di sudo del server: da REMOTIX_PAROLA_SUDO, o dalla riga «pass:» di
-    ~/SERVER.ssh (lo stesso file di fondamenta/strumenti/sshpw.py). ⛔ Mai scritta
-    nei banchi: sono nel deposito."""
+    """The server's sudo password: from REMOTIX_PAROLA_SUDO, or from the «pass:» line of
+    ~/SERVER.ssh (the same file as fondamenta/strumenti/sshpw.py). ⛔ Never written
+    in the benches: they are in the repository."""
     p = os.environ.get("REMOTIX_PAROLA_SUDO")
     if p is None:
         try:
@@ -82,7 +82,7 @@ def _parola_sudo():
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LE PROVE E LE LORO DICHIARAZIONI
+#  THE TESTS AND THEIR DECLARATIONS
 # ═══════════════════════════════════════════════════════════════════════════
 def leggi_prove(filtro=""):
     prove = []
@@ -98,7 +98,7 @@ def leggi_prove(filtro=""):
             continue
         per_browser = not re.search(r"^PER_BROWSER\s*=\s*False", testo, re.M)
         lunga = bool(re.search(r"^LUNGA\s*=\s*True", testo, re.M))
-        # ⭐ SOLO_TELEFONO = True: la prova ha senso solo col telefono vero (F-031, il tocco)
+        # ⭐ SOLO_TELEFONO = True: the test makes sense only with the real phone (F-031, touch)
         solo_tel = bool(re.search(r"^SOLO_TELEFONO\s*=\s*True", testo, re.M))
         s = re.search(r"^SERVER\s*=\s*[\"']([^\"']+)[\"']", testo, re.M)
         prove.append({"file": f, "nome": nome, "corto": corto, "funzioni": funzioni,
@@ -108,7 +108,7 @@ def leggi_prove(filtro=""):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA MACCHINA: scatole, binario, pagina, commit
+#  THE MACHINE: boxes, binary, page, commit
 # ═══════════════════════════════════════════════════════════════════════════
 def sudo(comando, secondi=120):
     r = subprocess.run(["sudo", "-S", "-p", "", "sh", "-c", comando], input=_parola_sudo(),
@@ -135,7 +135,7 @@ def impronte(d):
 
 
 def persone_dentro(d):
-    """Gli utenti con una sessione che NON sono inquilini dei banchi."""
+    """The users with a session who are NOT bench tenants."""
     _c, t = nella_scatola(d, "loginctl list-users --no-legend 2>/dev/null | awk '{print $2}'")
     return [u for u in t.split() if u and not INQUILINO.match(u) and u not in ("root", "provanic")]
 
@@ -148,20 +148,20 @@ def commit():
         return "?"
 
 
-# ⛔ LE SCATOLE SONO DI UN BANCO ALLA VOLTA (29 set 2026, «user unknown» della fase 16):
-#   il gancio (anche quello del pre-push, da solo) sgombera TUTTI gli inquilini
-#   `c<n>u<n>` prima di ogni maglia ⇒ un push durante un giro cancellava gli inquilini
-#   nati 7 s prima (`[M]` 04:28, 04:40, 04:42 del 29 set = i 4 FAIL e 36 BLOCKED).
-#   La stessa serratura in 15-giro.py, 16-salita.py e 11-gancio.sh; chi e' lanciato da
-#   uno di loro eredita REMOTIX_SCATOLE_TENUTE e non la riprende.
-#   ⚠ NON in /run/lock: la cartella e' «sticky» e con fs.protected_regular root non
-#   riapre il file creato da nicfio (e il gancio dice «tenute» a scatole libere, `[M]`).
+# ⛔ THE BOXES BELONG TO ONE BENCH AT A TIME (29 Sep 2026, «user unknown» of phase 16):
+#   the hook (even the pre-push one, on its own) clears out ALL the tenants
+#   `c<n>u<n>` before every mesh ⇒ a push during a round deleted the tenants
+#   born 7 s earlier (`[M]` 04:28, 04:40, 04:42 of 29 Sep = the 4 FAIL and 36 BLOCKED).
+#   The same lock in 15-giro.py, 16-salita.py and 11-gancio.sh; whoever is launched by
+#   one of them inherits REMOTIX_SCATOLE_TENUTE and does not take it again.
+#   ⚠ NOT in /run/lock: the folder is «sticky» and with fs.protected_regular root does not
+#   reopen the file created by nicfio (and the hook says «held» for free boxes, `[M]`).
 SERRATURA_SCATOLE = "/media/REMOTIX/rete11/.scatole.lock"
 
 
 def tieni_le_scatole(chi):
-    """None se le scatole sono nostre (la serratura resta presa fino all'uscita),
-    altrimenti la frase che dice chi le tiene."""
+    """None if the boxes are ours (the lock stays taken until exit),
+    otherwise the sentence saying who holds them."""
     if os.environ.get("REMOTIX_SCATOLE_TENUTE"):
         return None
     fd = os.open(SERRATURA_SCATOLE, os.O_RDWR | os.O_CREAT, 0o666)
@@ -177,7 +177,7 @@ def tieni_le_scatole(chi):
         except OSError:
             tiene = ""
         os.close(fd)
-        return "le scatole le tiene gia' un altro banco (%s)" % (tiene or "?")
+        return "the boxes are already held by another bench (%s)" % (tiene or "?")
     os.ftruncate(fd, 0)
     os.pwrite(fd, ("%s pid %d" % (chi, os.getpid())).encode(), 0)
     os.environ["REMOTIX_SCATOLE_TENUTE"] = chi
@@ -186,7 +186,7 @@ def tieni_le_scatole(chi):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  IL REGISTRO
+#  THE REGISTER
 # ═══════════════════════════════════════════════════════════════════════════
 def scrivi(righe):
     os.makedirs(MISURE, exist_ok=True)
@@ -198,14 +198,14 @@ def scrivi(righe):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  UNA PROVA
+#  ONE TEST
 # ═══════════════════════════════════════════════════════════════════════════
 def compositore(d, u, lunga):
-    """⭐ Il labwc senza schermo DEL desktop (15-compositori.sh): quattro desktop
-    in parallelo nello stesso compositore coprono le finestre di Chrome, e Chrome
-    coperto non si fotografa.  Le prove LUNGHE (un browser fermo per minuti)
-    vanno nel labwc «comune» (acceso da 15-compositori.sh col suo nome, non
-    «wayland-0»: dopo un riavvio quel numero puo' essere di un desktop)."""
+    """⭐ The headless labwc OF the desktop (15-compositori.sh): four desktops
+    in parallel in the same compositor cover Chrome's windows, and a covered
+    Chrome cannot be photographed.  The LONG tests (a browser idle for minutes)
+    go into the «comune» labwc (started by 15-compositori.sh with its own name, not
+    «wayland-0»: after a reboot that number may belong to a desktop)."""
     comune = os.environ.get("REMOTIX_WAYLAND_VERI", "wayland-0")
     try:
         s = open("/run/user/%d/15-compositori/%s" % (u, "comune" if lunga else d)).read().strip()
@@ -259,9 +259,9 @@ def una_prova(o, p, d, b, base, meta):
             finally:
                 cane.cancel()
             if scaduto:
-                fuori = "oltre i %d minuti: la prova e' stata fermata" % (TETTO_S // 60)
+                fuori = "over %d minutes: the test was stopped" % (TETTO_S // 60)
         except Exception as e:                   # noqa: BLE001
-            fuori = "il giro non ha potuto lanciare la prova: %r" % e
+            fuori = "the round could not launch the test: %r" % e
     durata = round(time.time() - t0)
     passate = ("sana",) if o.senza_guasto else ("sana", "guasto")
     viste = {(r.get("funzione"), r.get("passata")) for r in righe}
@@ -269,8 +269,8 @@ def una_prova(o, p, d, b, base, meta):
         for ps in passate:
             if (f, ps) not in viste:
                 righe.append({"funzione": f, "passata": ps, "esito": "BLOCKED",
-                              "ragione": fuori or "la prova non ha dato un giudizio per %s "
-                              "(vedi uscita.log)" % f, "guasto_visto": None, "evidenze": []})
+                              "ragione": fuori or "the test gave no judgment for %s "
+                              "(see uscita.log)" % f, "guasto_visto": None, "evidenze": []})
     uscita = []
     for r in righe:
         f = r.get("funzione", "?")
@@ -324,11 +324,11 @@ def server_delle_prove(prove, desktop, azione):
         for d in desktop:
             c, t = subprocess.run(["bash", os.path.join(QUI, s), azione, d],
                                   capture_output=True, text=True).returncode, ""
-            print("   server %s %s %s: codice %s" % (s, azione, d, c), flush=True)
+            print("   server %s %s %s: code %s" % (s, azione, d, c), flush=True)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LO STRATO TECNICO CORTO: C7 C9 C18 C19 (per desktop) e C14 (tutte insieme)
+#  THE SHORT TECHNICAL LAYER: C7 C9 C18 C19 (per desktop) and C14 (all together)
 # ═══════════════════════════════════════════════════════════════════════════
 MAGLIE = [("C7", "c7", [], False), ("C7", "c7", ["--lascia-un-processo", "--attesa-chiusura", "10"], True),
           ("C9", "c9", [], False), ("C9", "c9", ["--togli-nome", "tutto"], True),
@@ -352,8 +352,8 @@ done; true
 
 
 def sgombera(d):
-    """Gli inquilini della rete (`c<n>[b]u<n>`) via dalla scatola: la stessa riga
-    di 11-gancio.sh, nello stesso spazio di nomi (nictest e provanic restano)."""
+    """The net's tenants (`c<n>[b]u<n>`) out of the box: the same line
+    as 11-gancio.sh, in the same namespace (nictest and provanic stay)."""
     nella_scatola(d, SGOMBERO, 120)
 
 
@@ -361,14 +361,14 @@ def strato_tecnico(o, desktop, meta):
     righe = []
 
     def una(d, nome, sotto, arg, guasto):
-        # ⛔ la SGOMBERATA della rete (11-gancio.sh sgombera_inquilini), prima di
-        #   ogni maglia: le maglie cancellano il loro inquilino PRIMA di crearlo,
-        #   non dopo ⇒ senza, C19 vede gli inquilini di C9 e dice rosso.
-        #   `[M]` giro 1, 25 set 2026 (D-013, classe C).
+        # ⛔ the net's CLEAR-OUT (11-gancio.sh sgombera_inquilini), before
+        #   every mesh: the meshes delete their tenant BEFORE creating it,
+        #   not after ⇒ without it, C19 sees C9's tenants and says red.
+        #   `[M]` round 1, 25 Sep 2026 (D-013, class C).
         sgombera(d)
         t0 = time.time()
         c, t = sudo("bash %s/11-accendi.sh %s %s %s" % (RETE11, sotto, d, " ".join(arg)), 900)
-        # ⛔ il guasto si legge al contrario (11-gancio.sh esegui_maglia): 0 = visto
+        # ⛔ the fault reads the other way round (11-gancio.sh esegui_maglia): 0 = seen
         if guasto:
             esito = {0: "PASS", 1: "FAIL"}.get(c, "BLOCKED")
         else:
@@ -386,10 +386,10 @@ def strato_tecnico(o, desktop, meta):
                       "pagina": meta.get(d, {}).get("pagina", "?"), "commit": meta.get("commit"),
                       "inizio": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
                       "durata_s": round(time.time() - t0), "esito": esito,
-                      "ragione": "codice %s · %s" % (c, coda[0][:200]),
+                      "ragione": "code %s · %s" % (c, coda[0][:200]),
                       "atteso": "", "osservato": "", "guasto_visto": (c == 0) if guasto else None,
                       "evidenze": [os.path.join(ev, "uscita.log")], "difetto": None})
-        print("[%s tecnico] %s%s → %s" % (d, nome, " (guasto)" if guasto else "", esito), flush=True)
+        print("[%s technical] %s%s → %s" % (d, nome, " (fault)" if guasto else "", esito), flush=True)
 
     fili = []
     for d in desktop:
@@ -412,7 +412,7 @@ def strato_tecnico(o, desktop, meta):
                           "commit": meta.get("commit"), "durata_s": round(time.time() - t0),
                           "inizio": datetime.datetime.now().astimezone().isoformat(timespec="seconds"),
                           "esito": {0: "PASS", 1: "FAIL"}.get(c, "BLOCKED"),
-                          "ragione": "codice %s" % c, "guasto_visto": None,
+                          "ragione": "code %s" % c, "guasto_visto": None,
                           "evidenze": [], "difetto": None})
     scrivi(righe)
     return righe
@@ -425,7 +425,7 @@ def main():
     a.add_argument("--giro", default="prova")
     a.add_argument("--desktop", default=",".join(DESKTOP))
     a.add_argument("--browser", default=",".join(BROWSER))
-    a.add_argument("--prove", default="", help="filtro: parti del nome, separate da virgole")
+    a.add_argument("--prove", default="", help="filter: parts of the name, separated by commas")
     a.add_argument("--senza-guasto", action="store_true")
     a.add_argument("--strato-tecnico", action="store_true")
     a.add_argument("--solo-strato-tecnico", action="store_true")
@@ -438,24 +438,24 @@ def main():
     if o.elenco:
         for p in prove:
             print("%-44s %-28s %s%s%s" % (p["nome"], ",".join(p["funzioni"]),
-                                          "per browser" if p["per_browser"] else "una volta",
-                                          " · LUNGA" if p["lunga"] else "",
+                                          "per browser" if p["per_browser"] else "once",
+                                          " · LONG" if p["lunga"] else "",
                                           " · server " + p["server"] if p["server"] else ""))
         return 0
     guaio = tieni_le_scatole("15-giro %s" % o.giro)
     if guaio:
-        print("⛔ %s: il giro non parte (un gancio o una salita sgombererebbero i suoi "
-              "inquilini, o lui i loro)" % guaio)
+        print("⛔ %s: the round does not start (a hook or a climb would clear out its "
+              "tenants, or it theirs)" % guaio)
         return 3
     meta = {"commit": commit()}
     for d in o.desktop:
         meta[d] = impronte(d)
         chi = persone_dentro(d)
         if chi and not o.anche_se_qualcuno_e_dentro:
-            print("⛔ in rete11-%s c'e' una sessione di %s: la prova a mano non si interrompe. "
-                  "Fermo il giro." % (d, ", ".join(chi)))
+            print("⛔ in rete11-%s there is a session of %s: the manual test is not interrupted. "
+                  "I stop the round." % (d, ", ".join(chi)))
             return 3
-    print("⭐ GIRO %s · %s · %s · %d prove · commit %s · %s" % (
+    print("⭐ ROUND %s · %s · %s · %d tests · commit %s · %s" % (
         o.giro, ",".join(o.desktop), ",".join(o.browser), len(prove), meta["commit"],
         " ".join("%s=%s/%s" % (d, meta[d].get("binario"), meta[d].get("pagina"))
                  for d in o.desktop)), flush=True)
@@ -477,7 +477,7 @@ def main():
     conto = {}
     for r in esiti:
         conto[r["esito"]] = conto.get(r["esito"], 0) + 1
-    print("\n⏱ giro %s: %.0f min · %s" % (o.giro, (time.time() - t0) / 60,
+    print("\n⏱ round %s: %.0f min · %s" % (o.giro, (time.time() - t0) / 60,
                                          " ".join("%s=%d" % kv for kv in sorted(conto.items()))))
     return 1 if conto.get("FAIL") else (3 if conto.get("BLOCKED") else 0)
 

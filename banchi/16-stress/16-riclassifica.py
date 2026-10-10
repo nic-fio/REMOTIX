@@ -1,31 +1,31 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-16-riclassifica — IL «BLOCCO» RIFATTO COL GIRO DELLA PAGINA, SENZA RIFARE LA SALITA (fasi/20 §3-bis.2)
+16-riclassifica — THE «FREEZE» REDONE WITH THE PAGE'S ROUND, WITHOUT REDOING THE CLIMB (fasi/20 §3-bis.2)
 
     python3 16-riclassifica.py --salita /media/REMOTIX/misure/fase16/intel-f20-fhd-xfce [--fps-video 30]
     python3 16-riclassifica.py --certifica
 
-Fino al commit della cura, l'attore metteva l'ora dei tasti battuti da Firefox
-con `ore_dei_tasti`, dal ritorno della catena di Marionette: una catena
-trattenuta spostava i tasti DOPO il loro stesso eco, e la voce «blocco piu'
-lungo dell'immagine» prendeva il dipinto successivo (il cursore che lampeggia,
-~1,1 s).  ⭐ La pagina, intanto, misurava da se' il ritardo di ogni comando
-(tasto, clic, tacca → fotogramma che lo contiene: `REMOTIX.giro`), e l'attore
-lo scriveva in ogni riga di `stato.jsonl`.
+Until the commit of the cure, the actor set the time of the keys typed by Firefox
+with `ore_dei_tasti`, from the return of the Marionette chain: a held-back
+chain moved the keys AFTER their own echo, and the «longest freeze of the
+image» entry took the next paint (the blinking cursor,
+~1.1 s).  ⭐ The page, meanwhile, measured by itself the delay of every command
+(key, click, notch → frame that contains it: `REMOTIX.giro`), and the actor
+wrote it in every row of `stato.jsonl`.
 
-Che cosa fa, per ogni livello di `salita.jsonl`:
-  1. nelle righe dei profili che battono (non D) con lavoro, il blocco diventa
-     min(blocco di prima, il giro piu' lento dei campioni NUOVI di quei 5 s).
-     ⇒ un blocco vero resta (il giro di un tasto fermo e' lungo anche lui; e un
-     tasto che non torna mai non da' campioni, quindi la riga non si tocca);
-  2. rifa' il giudizio con 16-classifica.py --secco su una COPIA del livello
-     (collegamenti ai file veri, solo gli stato.jsonl riscritti);
-  3. scrive ACCANTO, senza toccare i dati: `livello-NN/classifica-riclassificata.log`
-     e, nella salita, `riclassificata.json` (classe prima/ora di ogni livello,
-     «ultimo GREEN vero» prima/ora).
-⛔ Le classi che la salita aveva imposto (entrata fallita, risorse dell'ospite,
-   livello interrotto, classe illeggibile) restano quelle: non sono del blocco.
+What it does, for every level of `salita.jsonl`:
+  1. in the rows of the profiles that type (not D) with work, the freeze becomes
+     min(previous freeze, the slowest round of the NEW samples of those 5 s).
+     ⇒ a real freeze stays (the round of a stuck key is long too; and a
+     key that never comes back gives no samples, so the row is not touched);
+  2. redoes the judgement with 16-classifica.py --secco on a COPY of the level
+     (links to the real files, only the stato.jsonl rewritten);
+  3. writes ALONGSIDE, without touching the data: `livello-NN/classifica-riclassificata.log`
+     and, in the climb, `riclassificata.json` (class before/now of every level,
+     «last true GREEN» before/now).
+⛔ The classes that the climb had imposed (entry failed, host resources,
+   level interrupted, unreadable class) stay as they are: they are not about the freeze.
 """
 import argparse
 import glob
@@ -52,7 +52,7 @@ campioni_nuovi = _modulo("attore16", "16-attore.py").campioni_nuovi
 
 
 def correggi_righe(righe):
-    """⇒ (righe corrette, quante toccate).  Pura: le righe sono dict di stato.jsonl."""
+    """⇒ (corrected rows, how many touched).  Pure: the rows are dicts of stato.jsonl."""
     out, toccate, prec = [], 0, None
     for r in righe:
         r = dict(r)
@@ -72,20 +72,23 @@ def correggi_righe(righe):
 
 
 def ultimo_green(righe):
-    """Come `ultimo_green` di 16-coda.sh: il livello piu' alto con classe GREEN, non interrotto."""
+    """Like `ultimo_green` of 16-coda.sh: the highest level with class GREEN, not interrupted."""
     g = [int(r.get("livello") or 0) for r in righe if r.get("classe") == "GREEN" and not r.get("interrotto")]
     return max(g) if g else None
 
 
 def classe_imposta(r):
-    """La classe della salita che non viene dal giudizio delle soglie."""
+    """The class of the climb that does not come from the judgement of the thresholds.
+    ⚠ Both forms: the salita.jsonl of the running campaign is written by the old
+    (Italian) 16-salita.py, the new one writes in English."""
     perche = str(r.get("ragione_classe") or "")
     return (r.get("interrotto") or r.get("classe") not in CLASSI
-            or perche.startswith("ENTRATA FALLITA") or perche.startswith("⛔ RISORSE DELL'OSPITE"))
+            or perche.startswith(("ENTRATA FALLITA", "ENTRY FAILED"))
+            or perche.startswith(("⛔ RISORSE DELL'OSPITE", "⛔ HOST RESOURCES")))
 
 
 def copia_corretta(dirliv, dest):
-    """La copia del livello: collegamenti, salvo gli stato.jsonl riscritti.  ⇒ righe toccate."""
+    """The copy of the level: links, except the rewritten stato.jsonl.  ⇒ rows touched."""
     toccate = 0
     for voce in os.listdir(dirliv):
         src = os.path.join(dirliv, voce)
@@ -112,7 +115,7 @@ def copia_corretta(dirliv, dest):
 
 
 def giudica_di_nuovo(dirliv, riga, fps_video, prog):
-    """⇒ (classe nuova o None, righe toccate, uscita del classificatore)."""
+    """⇒ (new class or None, rows touched, output of the classifier)."""
     tmp = tempfile.mkdtemp(prefix="16-riclassifica-")
     try:
         dest = os.path.join(tmp, os.path.basename(dirliv))
@@ -155,17 +158,17 @@ def riclassifica(salita, fps_video=None, prog=None):
         n = dict(r)
         voce = {"nome": r.get("nome"), "livello": r.get("livello"), "classe_prima": r.get("classe")}
         if classe_imposta(r) or not r.get("nome") or not os.path.isdir(dirliv):
-            voce.update(classe_ora=r.get("classe"), toccate=0, nota="classe imposta dalla salita: invariata")
+            voce.update(classe_ora=r.get("classe"), toccate=0, nota="class imposed by the climb: unchanged")
         else:
             classe, toccate, uscita = giudica_di_nuovo(dirliv, r, fps_video, prog)
             with open(os.path.join(dirliv, "classifica-riclassificata.log"), "w", encoding="utf-8") as f:
-                f.write("# 16-riclassifica.py: il blocco col giro della pagina (fasi/20 §3-bis.2); "
-                        "righe toccate: %d\n%s" % (toccate, uscita))
+                f.write("# 16-riclassifica.py: the freeze with the page's round (fasi/20 §3-bis.2); "
+                        "rows touched: %d\n%s" % (toccate, uscita))
             n["classe"] = classe or "?"
             voce.update(classe_ora=n["classe"], toccate=toccate)
             if toccate == 0 and n["classe"] != r.get("classe"):
-                # ⚠ senza righe toccate il giudizio DEVE tornare uguale: se no il giudizio
-                #   rifatto non e' quello della salita (argomenti, file mancanti), e non vale
+                # ⚠ without rows touched the judgement MUST come back the same: otherwise the
+                #   redone judgement is not that of the climb (arguments, missing files), and it does not count
                 voce["incoerente"] = True
         nuove.append(n)
         livelli.append(voce)
@@ -186,43 +189,43 @@ def certifica():
         if not vero:
             falliti.append(cosa)
 
-    print("── le righe")
+    print("── the rows")
     g = lambda v, c: {"visti": v, "campioni": c}  # noqa: E731
     righe = [{"profilo": "C", "lavoro": True, "blocco_max_ms": 40, "giro": g(10, [20.0] * 10)},
-             # ⛔ GUASTO visto il 7 ott: 1111 ms dalla stima, la pagina nello stesso intervallo 47,5
+             # ⛔ FAULT seen on 7 Oct: 1111 ms from the estimate, the page in the same interval 47.5
              {"profilo": "C", "lavoro": True, "blocco_max_ms": 1111, "giro": g(14, [20.0] * 10 + [30, 47.5, 25, 22])},
-             # un blocco VERO: anche il giro e' lungo ⇒ resta quasi tutto
+             # a REAL freeze: the round is long too ⇒ almost all of it stays
              {"profilo": "A", "lavoro": True, "blocco_max_ms": 2500, "giro": g(15, [20.0] * 14 + [2400.0])},
-             # nessun campione nuovo (il tasto non e' mai tornato) ⇒ non si tocca
+             # no new sample (the key never came back) ⇒ not touched
              {"profilo": "A", "lavoro": True, "blocco_max_ms": 3000, "giro": g(15, [20.0] * 14 + [2400.0])},
-             # il video non si tocca
+             # the video is not touched
              {"profilo": "D", "lavoro": True, "blocco_max_ms": 1200, "giro": g(20, [20.0] * 20)}]
     nuove, n = correggi_righe(righe)
     b = [r["blocco_max_ms"] for r in nuove]
-    prova("GUASTO visto: il blocco di 1,1 s di Firefox diventa il giro della pagina (48 ms)",
+    prova("FAULT seen: Firefox's 1.1 s freeze becomes the page's round (48 ms)",
           b[1] == 48 and nuove[1]["blocco_ricalcolato"]["prima_ms"] == 1111, str(b))
-    prova("un blocco vero resta (2,4 s)", b[2] == 2400, str(b))
-    prova("senza campioni nuovi la riga non si tocca", b[3] == 3000 and "blocco_ricalcolato" not in nuove[3])
-    prova("il video (D) non si tocca", b[4] == 1200)
-    prova("contate le righe toccate", n == 2, str(n))
-    prova("le righe di partenza non cambiano", righe[1]["blocco_max_ms"] == 1111)
-    prova("la prima riga (senza lettura prima) non si tocca", b[0] == 40)
+    prova("a real freeze stays (2.4 s)", b[2] == 2400, str(b))
+    prova("without new samples the row is not touched", b[3] == 3000 and "blocco_ricalcolato" not in nuove[3])
+    prova("the video (D) is not touched", b[4] == 1200)
+    prova("rows touched counted", n == 2, str(n))
+    prova("the starting rows do not change", righe[1]["blocco_max_ms"] == 1111)
+    prova("the first row (without a previous reading) is not touched", b[0] == 40)
 
-    print("── la salita")
+    print("── the climb")
     sr = [{"livello": 1, "classe": "GREEN"}, {"livello": 4, "classe": "DEGRADED"},
           {"livello": 8, "classe": "GREEN", "interrotto": True}]
-    prova("ultimo GREEN vero come 16-coda.sh", ultimo_green(sr) == 1)
-    prova("classe imposta: entrata fallita, ospite, interrotto, «?»",
+    prova("last true GREEN as in 16-coda.sh", ultimo_green(sr) == 1)
+    prova("imposed class: entry failed, host, interrupted, «?»",
           classe_imposta({"classe": "FAIL", "ragione_classe": "ENTRATA FALLITA (1 entrati su 4)"})
           and classe_imposta({"classe": "FAIL", "ragione_classe": "⛔ RISORSE DELL'OSPITE (§7.7): x"})
           and classe_imposta({"classe": "GREEN", "interrotto": True}) and classe_imposta({"classe": "?"})
           and not classe_imposta({"classe": "DEGRADED", "ragione_classe": "blocco"}))
 
-    print("── da capo a fondo, con un classificatore finto (le soglie vere le prova 16-classifica)")
+    print("── end to end, with a fake classifier (the real thresholds are tested by 16-classifica)")
     tmp = tempfile.mkdtemp(prefix="16-riclassifica-cert-")
     try:
         finto = os.path.join(tmp, "finto.py")
-        # ⭐ il finto giudica solo il blocco, come la soglia di §9: > 1000 ms ⇒ DEGRADED
+        # ⭐ the fake judges only the freeze, like the threshold of §9: > 1000 ms ⇒ DEGRADED
         open(finto, "w").write(
             "import sys, json, glob, os\n"
             "d = sys.argv[sys.argv.index('--livello-dir') + 1]\n"
@@ -247,40 +250,40 @@ def certifica():
                                     "controllo_min": 2}) + "\n")
         prima = open(os.path.join(sal, "livello-04", "utente-01", "stato.jsonl")).read()
         e = riclassifica(sal, prog=finto)
-        prova("GUASTO visto: «buono 12, verde vero 1» ⇒ ultimo GREEN vero 8",
+        prova("FAULT seen: «good 12, true green 1» ⇒ last true GREEN 8",
               e["ultimo_green_prima"] == 1 and e["ultimo_green_ora"] == 8, json.dumps(e)[:300])
-        prova("il livello col blocco vero (5 s senza campioni nuovi) resta DEGRADED",
+        prova("the level with the real freeze (5 s without new samples) stays DEGRADED",
               e["livelli"][3]["classe_ora"] == "DEGRADED")
-        prova("i dati originali non cambiano",
+        prova("the original data do not change",
               open(os.path.join(sal, "livello-04", "utente-01", "stato.jsonl")).read() == prima
               and open(os.path.join(sal, "livello-04", "classifica.log")).read() == "originale\n")
-        prova("accanto: classifica-riclassificata.log e riclassificata.json",
+        prova("alongside: classifica-riclassificata.log and riclassificata.json",
               os.path.exists(os.path.join(sal, "livello-04", "classifica-riclassificata.log"))
               and os.path.exists(os.path.join(sal, "riclassificata.json")))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-    print("⭐ CERTIFICATO" if not falliti else "⛔ NON CERTIFICATO: %d" % len(falliti))
+    print("⭐ CERTIFIED" if not falliti else "⛔ NOT CERTIFIED: %d" % len(falliti))
     return 0 if not falliti else 1
 
 
 def main():
     a = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    a.add_argument("--salita", help="la cartella della salita (con salita.jsonl)")
+    a.add_argument("--salita", help="the folder of the climb (with salita.jsonl)")
     a.add_argument("--fps-video", type=float, default=None)
     a.add_argument("--certifica", action="store_true")
     o = a.parse_args()
     if o.certifica:
         return certifica()
     if not o.salita:
-        a.error("--salita o --certifica")
+        a.error("--salita or --certifica")
     e = riclassifica(o.salita, o.fps_video)
     for v in e["livelli"]:
-        print("  %-26s %-9s → %-9s righe toccate %s" % (v["nome"], v["classe_prima"], v["classe_ora"],
+        print("  %-26s %-9s → %-9s rows touched %s" % (v["nome"], v["classe_prima"], v["classe_ora"],
                                                         v.get("toccate")))
-    print("%s: ultimo GREEN vero %s → %s" % (e["salita"], e["ultimo_green_prima"], e["ultimo_green_ora"]))
+    print("%s: last true GREEN %s → %s" % (e["salita"], e["ultimo_green_prima"], e["ultimo_green_ora"]))
     if any(v.get("incoerente") for v in e["livelli"]):
-        print("⛔ livelli senza righe toccate con la classe cambiata: il giudizio rifatto non e' quello "
-              "della salita, la riclassificazione NON vale")
+        print("⛔ levels without rows touched with the class changed: the redone judgement is not that "
+              "of the climb, the reclassification does NOT count")
         return 2
     return 0
 

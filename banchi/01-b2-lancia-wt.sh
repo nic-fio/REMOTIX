@@ -1,23 +1,22 @@
 #!/bin/bash
 #
-# 01-b2-lancia-wt.sh — gira SUL SERVER, e misura il server minimo di B2.
+# 01-b2-lancia-wt.sh — runs ON THE SERVER, and measures the minimal server of B2.
 #
 #   bash /media/REMOTIX/src/01-b2-lancia-wt.sh
 #
 # ---------------------------------------------------------------------------
-# CHE COSA MISURA
+# WHAT IT MEASURES
 #
-# `FASI.md` §01-filo-nudo, gruppo 2: **una sessione WebTransport su `/rcp/1`,
-# e un byte che torna**.  Qui la si prova senza browser, col cliente di prova
-# — che e' necessario e NON sufficiente (`LEZIONI.md`: e' E10, la prova verde
-# sul client sbagliato).  Il browser viene dopo, e con la pagina.
+# `FASI.md` §01-filo-nudo, group 2: **a WebTransport session on `/rcp/1`,
+# and a byte that comes back**.  Here it is tested without a browser, with the
+# test client — which is necessary and NOT sufficient (`LEZIONI.md`: it is E10,
+# the green test on the wrong client).  The browser comes later, with the page.
 #
-# ⛔ E CON IL CONTROLLO CHE DICE NO, che nelle due revisioni del 9 agosto
-#    cadeva ogni volta: `RCP.md` §2.2 impone che il server **NON DEVE**
-#    accettare una sessione su un percorso diverso, e che il rifiuto sia
-#    **404** (rilievo R1.24).  Un banco che prova solo il percorso giusto non
-#    distingue «il server controlla il percorso» da «il server accetta
-#    qualunque cosa».
+# ⛔ AND WITH THE CHECK THAT SAYS NO, which in the two reviews of 9 Aug fell
+#    every time: `RCP.md` §2.2 requires that the server **MUST NOT** accept a
+#    session on a different path, and that the refusal be **404** (finding
+#    R1.24).  A bench that tests only the right path cannot tell "the server
+#    checks the path" from "the server accepts anything".
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
@@ -33,20 +32,20 @@ ok()   { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()   { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf()  { printf '    --  %s\n' "$*"; }
 
-# ⚠ Tre azioni, e servono perche' la misura col BROWSER ha bisogno che il
-#   server resti in piedi mentre la conduce un altro script, sull'altra
-#   macchina.  «misura» accende, prova col cliente di prova e spegne.
+# ⚠ Three actions, and they are needed because the BROWSER measurement needs the
+#   server to stay up while another script, on the other machine, conducts it.
+#   "misura" turns on, tests with the test client and turns off.
 AZIONE=${1:-misura}
 IND=${2:-192.168.0.2}
 PORTA=${3:-7447}
-# ⚠ Le opzioni in piu' del server: servono a B3, che alza `max_idle_timeout` a
-#   120 s per distinguere «il server sa che una sessione e' staccata» da «QUIC
-#   ha chiuso da se'» (rilievo R3.19).
-# ⛔ `shift 3` con MENO di tre argomenti non sposta niente e non fallisce in
-#    modo utile: `$*` restava «accendi», il server riceveva il nome
-#    dell'azione come opzione e moriva con «port: invalid port number».
-#    Visto il 10 agosto 2026 — e il sintomo era un cliente che «non si
-#    collega», cioe' il rosso di nuovo sull'imputato sbagliato.
+# ⚠ The server's extra options: B3 needs them, raising `max_idle_timeout` to
+#   120 s to tell "the server knows a session is detached" from "QUIC closed
+#   by itself" (finding R3.19).
+# ⛔ `shift 3` with FEWER than three arguments shifts nothing and does not fail
+#    in a useful way: `$*` stayed "accendi", the server received the name of
+#    the action as an option and died with "port: invalid port number".
+#    Seen on 10 Aug 2026 — and the symptom was a client that "does not
+#    connect", that is, the red once again on the wrong suspect.
 if [ $# -gt 3 ]; then
 	shift 3
 	OPZIONI="$*"
@@ -55,59 +54,59 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# ⛔ FERMARE PER PID VUOL DIRE PRIMA GUARDARE CHE PID E' — rilievo R8.13.
+# ⛔ STOPPING BY PID MEANS FIRST LOOKING AT WHICH PID IT IS — finding R8.13.
 #
-# Il file del PID puo' essere di ieri: lo cancella solo chi ferma per bene, e
-# un'esecuzione interrotta lo lascia li'.  Il rootfs del server vive in RAM e si
-# riavvia, mentre `/media/REMOTIX/src` sopravvive: al riavvio i PID ripartono
-# dal basso e quel numero indica **un processo di sistema**.  ⛔ Poi si faceva
-# `kill` da root dentro il contenitore, con `|| true` a nascondere anche
-# l'errore.
+# The PID file may be yesterday's: only whoever stops properly deletes it, and
+# an interrupted run leaves it there.  The server's rootfs lives in RAM and gets
+# rebooted, while `/media/REMOTIX/src` survives: at reboot PIDs restart from
+# the bottom and that number points to **a system process**.  ⛔ Then a `kill`
+# was done as root inside the container, with `|| true` hiding even the
+# error.
 #
-# ⭐ La cura costa una lettura: `/proc/<pid>/comm` dice il nome del programma, e
-#    `enter.sh` usa `chroot` e non uno spazio dei nomi dei PID — i numeri sono
-#    gli stessi da tutt'e due i lati, quindi si legge da qui senza sudo.
-# ⚠ E dopo il `kill` si CONTROLLA che sia morto, prima di buttare il file:
-#    cancellarlo prima e' perdere l'unico appiglio che si aveva.
-ferma_per_pid() # $1 = file del PID, $2 = nome atteso del programma
+# ⭐ The cure costs one read: `/proc/<pid>/comm` gives the program name, and
+#    `enter.sh` uses `chroot` and not a PID namespace — the numbers are the
+#    same on both sides, so it can be read from here without sudo.
+# ⚠ And after the `kill` we CHECK that it is dead, before throwing away the file:
+#    deleting it first is losing the only handle we had.
+ferma_per_pid() # $1 = PID file, $2 = expected program name
 {
 	local file=$1 atteso=$2 p="" comm=""
 	[ -f "$file" ] && p=$(cat "$file" 2>/dev/null)
 	if [ -z "$p" ]; then
-		printf '    --  nessun server da fermare\n'
+		printf '    --  no server to stop\n'
 		return 0
 	fi
 	if [ ! -d "/proc/$p" ]; then
-		printf "    --  il PID %s non esiste piu': butto il file\n" "$p"
+		printf "    --  PID %s no longer exists: throwing away the file\n" "$p"
 		rm -f "$file"
 		return 0
 	fi
 	comm=$(cat "/proc/$p/comm" 2>/dev/null)
 	if [ "$comm" != "$atteso" ]; then
-		ko "⛔ il PID $p adesso e' «$comm», non «$atteso»: NON lo ammazzo."
-		ko "   Il file $file e' di un'esecuzione precedente, e i PID si"
-		ko "   riusano.  Lo butto e basta — guarda tu che cos'e' quel processo."
+		ko "⛔ PID $p is now «$comm», not «$atteso»: NOT killing it."
+		ko "   The file $file is from a previous run, and PIDs get"
+		ko "   reused.  Just throwing it away — check yourself what that process is."
 		rm -f "$file"
 		return 1
 	fi
 	bash "$ENTRA" --root "kill $p"
 	local esito=$?
 	if [ "$esito" -ne 0 ]; then
-		ko "il kill del PID $p ($comm) e' fallito (uscita $esito)"
+		ko "the kill of PID $p ($comm) failed (exit $esito)"
 		return 1
 	fi
-	# ⚠ Un `kill` riuscito e' un segnale consegnato, non un processo morto.
+	# ⚠ A successful `kill` is a delivered signal, not a dead process.
 	local n=0
 	while [ -d "/proc/$p" ] && [ "$n" -lt 10 ]; do
 		sleep 1
 		n=$((n + 1))
 	done
 	if [ -d "/proc/$p" ]; then
-		ko "il PID $p ($comm) e' ancora vivo dopo $n secondi: non butto il file"
+		ko "PID $p ($comm) is still alive after $n seconds: not throwing away the file"
 		return 1
 	fi
 	rm -f "$file"
-	printf '    --  fermato il server (PID %s, %s)\n' "$p" "$comm"
+	printf '    --  stopped the server (PID %s, %s)\n' "$p" "$comm"
 	return 0
 }
 
@@ -116,32 +115,32 @@ if [ "$AZIONE" = spegni ]; then
 	exit $?
 fi
 if [ "$AZIONE" != misura ] && [ "$AZIONE" != accendi ]; then
-	ko "azione sconosciuta: $AZIONE  (misura | accendi | spegni)"
+	ko "unknown action: $AZIONE  (misura | accendi | spegni)"
 	exit 2
 fi
 
-log "Credenziali per il contenitore"
-bash "$ENTRA" --root "true" || { ko "non si entra nel contenitore"; exit 2; }
-ok "sudo validato"
+log "Credentials for the container"
+bash "$ENTRA" --root "true" || { ko "cannot enter the container"; exit 2; }
+ok "sudo validated"
 
 # ---------------------------------------------------------------------------
-# ⛔ «PORTA LIBERA» E «NON HO POTUTO GUARDARE» NON SONO LA STESSA COSA — R8.15.
+# ⛔ "PORT FREE" AND "I COULD NOT LOOK" ARE NOT THE SAME THING — R8.15.
 #
-# `CHI=$(bash enter.sh --root "ss | grep …")` cattura solo lo standard output, e
-# QUATTRO esiti diversi danno la stessa stringa vuota: `enter.sh` fallito su un
-# mount o su una credenziale scaduta, `ss` assente nel chroot, `grep` che non
-# trova, e la porta davvero libera.  ⛔ Il banco leggeva «non ho potuto
-# guardare» come «non c'e' niente», lanciava un secondo server sopra il primo, e
-# il rosso che seguiva arrivava su un imputato sbagliato.  E' la stessa forma che
-# questo file combatte poco piu' sotto scegliendo `/proc` invece di `kill -0`.
+# `CHI=$(bash enter.sh --root "ss | grep …")` captures only standard output, and
+# FOUR different outcomes give the same empty string: `enter.sh` failing on a
+# mount or on an expired credential, `ss` absent in the chroot, `grep` finding
+# nothing, and the port really free.  ⛔ The bench read "I could not look" as
+# "there is nothing", launched a second server on top of the first, and the red
+# that followed landed on the wrong suspect.  It is the same shape this file
+# fights a little further down by choosing `/proc` instead of `kill -0`.
 #
-# ⭐ La cura: l'elenco si scrive in un FILE, e la redirezione sta dentro le
-#    virgolette del comando remoto — mai attorno a `enter.sh`, che se ne
-#    porterebbe via la richiesta di password di sudo.  Poi si guardano tre cose
-#    distinte: lo stato di `enter.sh`, lo stato di `ss`, e il contenuto.
+# ⭐ The cure: the list is written to a FILE, and the redirection stays inside
+#    the quotes of the remote command — never around `enter.sh`, which would
+#    carry off sudo's password prompt with it.  Then three distinct things are
+#    looked at: the status of `enter.sh`, the status of `ss`, and the content.
 #
-# Esce 0 = occupata · 1 = libera · 2 = non ho potuto guardare.
-guarda_porta() # $1 = porta
+# Exits 0 = taken · 1 = free · 2 = could not look.
+guarda_porta() # $1 = port
 {
 	local p=$1
 	rm -f "$FUORI/b2-porte.txt" "$FUORI/b2-porte.stato"
@@ -149,17 +148,17 @@ guarda_porta() # $1 = porta
 		"ss -ulnp > $DENTRO/b2-porte.txt 2>&1; echo \$? > $DENTRO/b2-porte.stato"
 	local entrata=$?
 	if [ "$entrata" -ne 0 ]; then
-		ko "non si e' potuto guardare le porte: enter.sh e' uscito $entrata"
+		ko "could not look at the ports: enter.sh exited $entrata"
 		return 2
 	fi
 	if [ ! -f "$FUORI/b2-porte.stato" ] || [ ! -f "$FUORI/b2-porte.txt" ]; then
-		ko "non si e' potuto guardare le porte: l'elenco non e' stato scritto"
+		ko "could not look at the ports: the list was not written"
 		return 2
 	fi
 	local stato_ss
 	stato_ss=$(cat "$FUORI/b2-porte.stato")
 	if [ "$stato_ss" != 0 ]; then
-		ko "«ss» dentro il contenitore e' uscito $stato_ss:"
+		ko "«ss» inside the container exited $stato_ss:"
 		sed 's/^/        /' "$FUORI/b2-porte.txt"
 		return 2
 	fi
@@ -167,64 +166,64 @@ guarda_porta() # $1 = porta
 	return 1
 }
 
-log "La porta"
+log "The port"
 guarda_porta "$PORTA"
 LIBERA=$?
 if [ "$LIBERA" -eq 2 ]; then
 	exit 3
 fi
 if [ "$LIBERA" -eq 0 ]; then
-	ko "la porta $PORTA e' gia' occupata (l'elenco e' qui sopra)"
-	ko "fermalo per PID (mai con pkill -f) e rilancia"
+	ko "port $PORTA is already taken (the list is above)"
+	ko "stop it by PID (never with pkill -f) and relaunch"
 	exit 3
 fi
-ok "porta $PORTA libera"
+ok "port $PORTA free"
 
 # ---------------------------------------------------------------------------
-log "Il server minimo (l'esempio di ngtcp2 con lo strato WebTransport innestato)"
+log "The minimal server (the ngtcp2 example with the WebTransport layer grafted on)"
 rm -f "$FUORI/b2-wt.log" "$FUORI/b2-wt.pid"
 bash "$ENTRA" --root \
 	"nohup env LD_LIBRARY_PATH=$LIBS $SERVER $OPZIONI $IND $PORTA $CERT/sessione.key $CERT/sessione.pem < /dev/null > $DENTRO/b2-wt.log 2>&1 & echo \$! > $DENTRO/b2-wt.pid"
 sleep 2
 PID=$(cat "$FUORI/b2-wt.pid" 2>/dev/null)
-# ⛔ `/proc`, non `kill -0`: il server e' di root e questo script no — e da
-#    utente normale `kill -0` risponde «operazione non permessa», cioe' un
-#    errore, non «non esiste» (10 agosto 2026).
+# ⛔ `/proc`, not `kill -0`: the server belongs to root and this script does not
+#    — and as a normal user `kill -0` answers "operation not permitted", that is
+#    an error, not "does not exist" (10 Aug 2026).
 if [ -z "$PID" ] || [ ! -d "/proc/$PID" ]; then
-	ko "il server non e' partito.  Il registro dice:"
+	ko "the server did not start.  The log says:"
 	sed 's/^/        /' "$FUORI/b2-wt.log"
 	exit 4
 fi
-# ⛔ «IN ASCOLTO» VUOL DIRE «SU QUESTA PORTA» — rilievo R8.14.
+# ⛔ "LISTENING" MEANS "ON THIS PORT" — finding R8.14.
 #
-#    `grep 'pid=$PID,'` e' vero per QUALUNQUE porta UDP tenuta da quel
-#    processo: un server che ignorasse i suoi argomenti posizionali e si legasse
-#    alla propria porta predefinita passava il controllo, e il banco stampava
-#    «in ascolto» su un fatto falso.  E' il necessario preso per sufficiente
-#    (E1), proprio nel file che racconta il difetto degli argomenti storti.
+#    `grep 'pid=$PID,'` is true for ANY UDP port held by that process: a
+#    server that ignored its positional arguments and bound to its own default
+#    port passed the check, and the bench printed "listening" on a false fact.
+#    It is the necessary taken for sufficient (E1), right in the file that
+#    tells of the defect of the crooked arguments.
 guarda_porta "$PORTA"
 TIENE=$?
 if [ "$TIENE" -eq 2 ]; then
 	exit 4
 fi
 if [ "$TIENE" -ne 0 ] || ! grep ":$PORTA " "$FUORI/b2-porte.txt" | grep -q "pid=$PID,"; then
-	ko "il server e' vivo ma NON tiene la porta $PORTA (l'elenco e' qui sopra)"
+	ko "the server is alive but does NOT hold port $PORTA (the list is above)"
 	sed 's/^/        /' "$FUORI/b2-wt.log"
 	exit 4
 fi
-ok "in ascolto sulla porta $PORTA, PID $PID"
-inf "quel che ha detto all'avvio:"
+ok "listening on port $PORTA, PID $PID"
+inf "what it said at startup:"
 grep "REMOTIX B2" "$FUORI/b2-wt.log" | head -4 | sed 's/^/        /'
 
 fermare() {
-	# ⚠ Stessa strada dello spegnimento: si guarda che PID sia, e si controlla
-	#   che sia morto prima di buttare il file (R8.13).
+	# ⚠ Same road as the shutdown: we look at which PID it is, and check
+	#   that it is dead before throwing away the file (R8.13).
 	ferma_per_pid "$FUORI/b2-wt.pid" "$(basename "$SERVER")"
 }
 
 if [ "$AZIONE" = accendi ]; then
-	ok "il server resta acceso: fermalo con «01-b2-lancia-wt.sh spegni»"
-	inf "l'impronta del certificato della sessione, per la pagina:"
+	ok "the server stays on: stop it with «01-b2-lancia-wt.sh spegni»"
+	inf "the fingerprint of the session certificate, for the page:"
 	bash "$ENTRA" --root \
 		"openssl x509 -in $CERT/sessione.pem -outform der | openssl dgst -sha256 -binary | base64 -w0" \
 		| tail -1 | sed 's/^/        /'
@@ -232,49 +231,49 @@ if [ "$AZIONE" = accendi ]; then
 fi
 
 # ---------------------------------------------------------------------------
-log "1. Il percorso GIUSTO — /rcp/1"
-inf "atteso: :status 200, e i byte tornano identici"
+log "1. The RIGHT path — /rcp/1"
+inf "expected: :status 200, and the bytes come back identical"
 bash "$ENTRA" --root \
 	"python3 $DENTRO/01-b2-cliente-aioquic.py https://$IND:$PORTA/rcp/1"
 ESITO_SI=$?
-inf "cliente di prova: uscita $ESITO_SI"
+inf "test client: exit $ESITO_SI"
 
 # ---------------------------------------------------------------------------
-log "2. ⛔ Il percorso SBAGLIATO — /rcp/9, il controllo che dice NO"
-inf "atteso: 404.  RCP.md §2.2: un percorso sconosciuto si rifiuta, e"
-inf "        il rilievo R1.24 ha scelto 404 fra i tre stati che erano leciti."
-# ⛔ Il numero si passa al cliente e il confronto lo fa lui — rilievo R8.8.
-#    Prima si teneva solo «uscita diversa da zero», e un timeout della CONNECT,
-#    l'UDP filtrato o un server gia' morto davano lo stesso verde: il controllo
-#    che dice NO non distingueva il rifiuto dal fallimento.  Adesso l'atteso e'
-#    **404**, cioe' quel che il documento chiede, e ogni altro esito e' rosso.
+log "2. ⛔ The WRONG path — /rcp/9, the check that says NO"
+inf "expected: 404.  RCP.md §2.2: an unknown path is refused, and"
+inf "          finding R1.24 chose 404 among the three statuses that were legitimate."
+# ⛔ The number is passed to the client and the client does the comparison —
+#    finding R8.8.  Before, only "non-zero exit" was kept, and a CONNECT timeout,
+#    filtered UDP or an already dead server gave the same green: the check that
+#    says NO did not tell refusal from failure.  Now the expected is **404**,
+#    that is what the document asks for, and any other outcome is red.
 bash "$ENTRA" --root \
 	"python3 $DENTRO/01-b2-cliente-aioquic.py https://$IND:$PORTA/rcp/9 404"
 ESITO_NO=$?
-inf "cliente di prova: uscita $ESITO_NO (atteso: 0, cioe' «rifiutato con 404»)"
+inf "test client: exit $ESITO_NO (expected: 0, that is «refused with 404»)"
 
 # ---------------------------------------------------------------------------
-log "Che cosa ha visto il server"
+log "What the server saw"
 grep "REMOTIX B2" "$FUORI/b2-wt.log" | sed 's/^/        /'
 
 fermare
 
-log "Esito"
+log "Outcome"
 BENE=0
 if [ "$ESITO_SI" -eq 0 ]; then
-	ok "/rcp/1: sessione aperta e byte tornati"
+	ok "/rcp/1: session opened and bytes came back"
 else
-	ko "/rcp/1: NON ha funzionato (uscita $ESITO_SI)"
+	ko "/rcp/1: did NOT work (exit $ESITO_SI)"
 	BENE=1
 fi
 if [ "$ESITO_NO" -eq 0 ]; then
-	ok "/rcp/9: RIFIUTATO con 404, come impone §2.2"
+	ok "/rcp/9: REFUSED with 404, as §2.2 requires"
 else
-	ko "⛔ /rcp/9 NON e' stato rifiutato con 404 (uscita $ESITO_NO):"
-	ko "   o il server lo accetta — e allora e' una violazione di RCP.md"
-	ko "   §2.2 — o il rifiuto e' arrivato con un altro stato, o la prova"
-	ko "   non e' nemmeno partita.  Il registro qui sopra dice quale."
+	ko "⛔ /rcp/9 was NOT refused with 404 (exit $ESITO_NO):"
+	ko "   either the server accepts it — and then it is a violation of RCP.md"
+	ko "   §2.2 — or the refusal came with another status, or the test"
+	ko "   did not even start.  The log above says which."
 	BENE=1
 fi
-inf "il registro completo resta in $FUORI/b2-wt.log"
+inf "the complete log stays in $FUORI/b2-wt.log"
 exit "$BENE"

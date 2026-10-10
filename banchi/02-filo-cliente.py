@@ -1,99 +1,99 @@
 #!/usr/bin/env python3
-"""02-filo-cliente.py — ⛔ F2.4: il cliente di prova RICEVE il fotogramma, e lo giudica.
+"""02-filo-cliente.py — ⛔ F2.4: the test client RECEIVES the frame, and judges it.
 
     python3 02-filo-cliente.py --porta 7514 --utente prova --parola X
     python3 02-filo-cliente.py --porta 7514 --registra t.rcpreg --attesa 20
-    python3 02-filo-cliente.py --porta 7514 --violazioni      le prove verso il server
-    python3 02-filo-cliente.py --elenco                       le previsioni, senza rete
+    python3 02-filo-cliente.py --porta 7514 --violazioni      the tests against the server
+    python3 02-filo-cliente.py --elenco                       the predictions, without network
 
-⚠ Gira DENTRO il contenitore: `aioquic` sta li'.  ⛔ E la porta e' la **7514**,
-  che e' quella di F2.4: la 7448 e' il prodotto di casa e la 7501 il bersaglio
-  di P5, tutt'e due accese apposta (mandato §4).
+⚠ It runs INSIDE the container: `aioquic` lives there.  ⛔ And the port is **7514**,
+  which is F2.4's: 7448 is the house product and 7501 the target
+  of P5, both on on purpose (mandate §4).
 
-⏳ **NON E' ANCORA STATO GIRATO, e va detto.**  Il prodotto della fase 2 non
-   esiste — `grep -c '0x0301\\|0x0302' src/rcp.c src/webtransport.c
-   src/pagina.html` da' **0 · 0 · 0**, `[M]` 12 agosto 2026 — quindi non c'e'
-   nessun server che spedisca un fotogramma.  ⛔ Questo file e' il banco
-   **scritto prima del prodotto** che `PIANO.md` §0.4 momento 1 pretende, e il
-   suo primo giro e' la prima misura della fase 2.
-
-===========================================================================
-⛔ PERCHE' IL SECONDO LETTORE VALE IL DOPPIO QUI, E NON E' UNA RIPETIZIONE
-
-`PIANO.md` §1.1.  Il server e' in **C**, la pagina e' in **JavaScript**, e
-tutt'e due li scrive la stessa mano.  Se il server scrivesse `istante` in
-little-endian e la pagina lo leggesse in little-endian, ⛔ **il desktop
-comparirebbe perfetto** e nessun banco nostro se ne accorgerebbe: i due si sono
-capiti su una cosa che `RCP.md` non dice.
-
-Questo programma e' il **terzo lettore**, in un terzo linguaggio, e ⛔ chi lo
-fa crescere **non guarda `src/`**.  Il suo valore non e' il verde: e' che chi
-lo scrive **deve scegliere** dove `RCP.md` ammette due letture — e quelle
-scelte sono l'esito piu' prezioso della fase, non un effetto collaterale.
-`FASI.md` §01-filo-nudo ne ha raccolte **dodici** per la stretta di mano; il
-capitolo del video ne aggiunge **sette**, ed e' onesto separarle: ⛔ **quattro
-sono letture doppie vere** — due implementazioni conformi producono byte
-diversi per lo stesso ingresso — e ⚠ **tre sono regole DERIVATE**, cioe' che si
-ricavano da §3 e da §1 ma che nessuna riga scrive.  Le prime le tiene
-`02-filo-fotogramma.py` con l'esito `AMBIGUO`; le seconde sono scelte del
-banco, dichiarate accanto al caso.  ⭐ Confonderle sarebbe gonfiare il conto:
-una regola derivata non fa divergere due implementazioni attente, una lettura
-doppia si'.
+⏳ **IT HAS NOT BEEN RUN YET, and it must be said.**  The phase 2 product does not
+   exist — `grep -c '0x0301\\|0x0302' src/rcp.c src/webtransport.c
+   src/pagina.html` gives **0 · 0 · 0**, `[M]` 12 Aug 2026 — so there is
+   no server that sends a frame.  ⛔ This file is the bench
+   **written before the product** that `PIANO.md` §0.4 moment 1 requires, and its
+   first round is the first measurement of phase 2.
 
 ===========================================================================
-⛔ CHE COSA GUARDA, E LE PRIME DUE SI DIMENTICANO
+⛔ WHY THE SECOND READER IS WORTH DOUBLE HERE, AND IT IS NOT A REPETITION
 
-  1. ⛔ **che il fotogramma sia ARRIVATO DAVVERO**, e con il denominatore.
-     `LEZIONI.md` §1.9: un conteggio senza denominatore non e' una misura.
-     ⚠ *«nessuna violazione»* e' vero anche su zero fotogrammi, ed e' il modo
-     piu' facile di dichiarare verde una fase che non ha consegnato niente —
-     il rilievo **R7.4** di `01-b4-validatore.py`.  ⛔ Qui zero fotogrammi ha
-     un **codice d'uscita suo** (`5`), e non e' un verde;
+`PIANO.md` §1.1.  The server is in **C**, the page is in **JavaScript**, and
+both are written by the same hand.  If the server wrote `istante` in
+little-endian and the page read it in little-endian, ⛔ **the desktop
+would appear perfect** and no bench of ours would notice: the two
+agreed on something `RCP.md` does not say.
 
-  2. ⛔ **DAL LATO CHE RICEVE** (`CODER.md` §3.8, forma d'errore **E7**).  Il
-     registro del server dice che ha chiamato una funzione, non che il byte e'
-     arrivato.  In v1 il server scriveva «congedo il client» e il client, alla
-     stessa ora, «errore di rete» — **per tre fasi** (`LEZIONI.md` §1.7);
+This program is the **third reader**, in a third language, and ⛔ whoever
+grows it **does not look at `src/`**.  Its value is not the green: it is that whoever
+writes it **must choose** where `RCP.md` allows two readings — and those
+choices are the most precious outcome of the phase, not a side effect.
+`FASI.md` §01-filo-nudo collected **twelve** of them for the handshake; the
+video chapter adds **seven**, and it is honest to separate them: ⛔ **four
+are true double readings** — two conforming implementations produce different
+bytes for the same input — and ⚠ **three are DERIVED rules**, that is they
+follow from §3 and §1 but no line writes them.  The first are kept by
+`02-filo-fotogramma.py` with the `AMBIGUO` outcome; the second are choices of the
+bench, declared next to the case.  ⭐ Confusing them would inflate the count:
+a derived rule does not make two careful implementations diverge, a double
+reading does.
 
-  3. **su quale STREAM** e' arrivato: uno unidirezionale nuovo, aperto dal
-     server, uno per fotogramma (§2.5, §5.1).  ⛔ E il canale si riconosce dal
-     **byte alto di `tipo`**, mai dal numero dello stream — e' la cura del
-     rilievo R11.9;
+===========================================================================
+⛔ WHAT IT LOOKS AT, AND THE FIRST TWO GET FORGOTTEN
 
-  4. ⛔ **come e' finito lo stream**: FIN o `RESET_STREAM`, e sono due cose
-     diverse (§6.2, rilievo R1.7).  ⭐ **Questo lo puo' fare solo un cliente
-     dal vivo**: la registrazione di §11.1 quel campo non ce l'ha, e
-     `02-filo-validatore.py` lo dichiara non giudicabile.  Vedi la proposta
+  1. ⛔ **that the frame REALLY ARRIVED**, and with the denominator.
+     `LEZIONI.md` §1.9: a count without a denominator is not a measurement.
+     ⚠ *«no violation»* is true even on zero frames, and it is the
+     easiest way to declare green a phase that delivered nothing —
+     finding **R7.4** of `01-b4-validatore.py`.  ⛔ Here zero frames has
+     an **exit code of its own** (`5`), and it is not a green;
+
+  2. ⛔ **FROM THE RECEIVING SIDE** (`CODER.md` §3.8, error form **E7**).  The
+     server's log says it called a function, not that the byte
+     arrived.  In v1 the server wrote «farewelling the client» and the client, at the
+     same time, «network error» — **for three phases** (`LEZIONI.md` §1.7);
+
+  3. **on which STREAM** it arrived: a new unidirectional one, opened by the
+     server, one per frame (§2.5, §5.1).  ⛔ And the channel is recognised by the
+     **high byte of `tipo`**, never by the stream number — it is the cure of
+     finding R11.9;
+
+  4. ⛔ **how the stream ended**: FIN or `RESET_STREAM`, and they are two different
+     things (§6.2, finding R1.7).  ⭐ **Only a live client can do
+     this**: the recording of §11.1 does not have that field, and
+     `02-filo-validatore.py` declares it not judgeable.  See proposal
      **P7**;
 
-  5. ⛔ **che cosa il client DEVE fare dopo**: su un buco o un abbandono,
-     `RICHIEDI_CHIAVE` (§5.2); su una violazione, `CONGEDO` **e** il motivo nel
-     codice d'errore della chiusura (§3.1 punti 2 e 3).  ⚠ Un cliente di prova
-     che si limitasse a giudicare e tacere non eserciterebbe **nessuno** degli
-     obblighi che §5.2 mette sul client — ed e' la meta' del protocollo che
-     nessun banco del server puo' vedere.
+  5. ⛔ **what the client MUST do next**: on a gap or an abandonment,
+     `RICHIEDI_CHIAVE` (§5.2); on a violation, `CONGEDO` **and** the reason in the
+     error code of the closing (§3.1 points 2 and 3).  ⚠ A test client
+     that limited itself to judging and staying silent would exercise **none** of the
+     obligations §5.2 puts on the client — and it is the half of the protocol that
+     no server bench can see.
 
 ===========================================================================
-⛔ E REGISTRA, NEL FORMATO DI §11.1
+⛔ AND IT RECORDS, IN THE FORMAT OF §11.1
 
-Ogni byte che arriva finisce in una registrazione che `02-filo-validatore.py`
-puo' giudicare.  ⭐ Cosi' il fotogramma viene letto **due volte da due
-programmi**: qui dal vivo, e dopo dall'arbitro meccanico.  ⚠ E se i due
-dicessero cose diverse sarebbe una misura, non un incidente.
+Every byte that arrives ends up in a recording that `02-filo-validatore.py`
+can judge.  ⭐ This way the frame is read **twice by two
+programs**: here live, and afterwards by the mechanical referee.  ⚠ And if the two
+said different things it would be a measurement, not an accident.
 
-⛔ **La parola d'ordine si oscura**, come nella fase 1: lunghezza vera, byte
-sostituiti con `0x2A`, impronta di quel che c'era (§11.1).
+⛔ **The password is masked**, as in phase 1: real length, bytes
+replaced with `0x2A`, fingerprint of what was there (§11.1).
 
 ===========================================================================
-⛔ I CODICI D'USCITA, E SONO SEI PERCHE' I FATTI SONO SEI
+⛔ THE EXIT CODES, AND THEY ARE SIX BECAUSE THE FACTS ARE SIX
 
-  0  ⭐ e' arrivato almeno un fotogramma e ogni fotogramma e' conforme
-  1  ⛔ un fotogramma NON e' conforme — e si dice quale byte e quale regola
-  2  la stretta di mano non e' arrivata a `SESSIONE` (non si e' provato niente)
-  3  ⛔ `RCP.md` ammette due letture su quel che e' arrivato: non e' un verde
-     e non e' un rosso.  Vedi `02-filo-fotogramma.py --elenco`
-  4  la connessione o la sessione sono cadute prima della fine dell'attesa
-  5  ⛔ ZERO fotogrammi.  «Non ho niente da giudicare» non e' «va tutto bene»
+  0  ⭐ at least one frame arrived and every frame is conforming
+  1  ⛔ a frame is NOT conforming — and it says which byte and which rule
+  2  the handshake did not reach `SESSIONE` (nothing was tested)
+  3  ⛔ `RCP.md` allows two readings of what arrived: it is not a green
+     and it is not a red.  See `02-filo-fotogramma.py --elenco`
+  4  the connection or the session dropped before the end of the wait
+  5  ⛔ ZERO frames.  «I have nothing to judge» is not «all is well»
 """
 import argparse
 import asyncio
@@ -116,25 +116,25 @@ def _porta(nome, file):
     return m
 
 
-# ⛔ SI IMPORTANO, NON SI RICOPIANO.
+# ⛔ THEY ARE IMPORTED, NOT COPIED.
 #
-#    In `01-b3-cliente.py` c'e' la riga che impedisce di dare gli eventi del
-#    canale di controllo allo strato HTTP/3 di `aioquic`: senza, la connessione
-#    muore per mano del CLIENT con `0x105 — DATA frame is not allowed in this
-#    state` (`[M]` 10 agosto 2026).  Una copia divergente riporterebbe quel
-#    difetto qui dentro travestito da difetto del server.
-#    ⚠ E il giudizio del fotogramma sta in un file solo, o due copie della
-#      stessa lettura darebbero sempre ragione a se' stesse.
+#    In `01-b3-cliente.py` there is the line that prevents giving the events of the
+#    control channel to the HTTP/3 layer of `aioquic`: without it, the connection
+#    dies at the CLIENT's hand with `0x105 — DATA frame is not allowed in this
+#    state` (`[M]` 10 Aug 2026).  A diverging copy would bring that
+#    defect back in here disguised as a server defect.
+#    ⚠ And the frame judgement sits in a single file, or two copies of the
+#      same reading would always agree with themselves.
 #
-# ⛔ E `01-b3-cliente.py` SI IMPORTA TARDI, non qui in cima.
+# ⛔ And `01-b3-cliente.py` IS IMPORTED LATE, not here at the top.
 #
-#    Quel file importa `aioquic`, che sta **solo dentro il contenitore**.
-#    Importandolo in cima, `--elenco` — che non tocca la rete e serve a leggere
-#    le previsioni **prima** del giro — moriva con `ModuleNotFoundError` su
-#    CHUWI.  ⚠ E le previsioni sono precisamente la cosa che va letta da chi
-#    non ha il contenitore: chi revisiona il banco prima che il prodotto esista.
-#    ⭐ `02-filo-fotogramma.py` invece non ha dipendenze, ed e' voluto: il
-#    giudizio del fotogramma deve poter girare dovunque.
+#    That file imports `aioquic`, which lives **only inside the container**.
+#    Importing it at the top, `--elenco` — which does not touch the network and serves to read
+#    the predictions **before** the round — died with `ModuleNotFoundError` on
+#    CHUWI.  ⚠ And the predictions are precisely the thing to be read by whoever
+#    does not have the container: whoever reviews the bench before the product exists.
+#    ⭐ `02-filo-fotogramma.py` instead has no dependencies, and it is intended: the
+#    frame judgement must be able to run anywhere.
 f24 = _porta("f24", "02-filo-fotogramma.py")
 b3 = None
 
@@ -147,37 +147,37 @@ def carica_b3():
 
 CLIENT, SERVER = 1, 2
 
-# ⛔ IL FORMATO DELLA REGISTRAZIONE E' `RCPREG 0x00 0x03` — §11.1.
+# ⛔ THE RECORDING FORMAT IS `RCPREG 0x00 0x03` — §11.1.
 #
-#    `0x02`, 12 agosto 2026, proposta P7 (che questo banco stesso aveva
-#    trovato): il blocco porta `fine`, e passa da 16 a 17 byte.
-#    ⚠ Senza quel campo, quel che questo cliente registra e quel che ha visto
-#      sul filo non sono la stessa cosa: **lui** sa se lo stream e' finito con
-#      FIN o e' stato azzerato — glielo dice QUIC — e la registrazione non
-#      sapeva scriverlo.  L'arbitro che la legge doveva indovinare.
+#    `0x02`, 12 Aug 2026, proposal P7 (which this very bench had
+#    found): the block carries `fine`, and goes from 16 to 17 bytes.
+#    ⚠ Without that field, what this client records and what it saw
+#      on the wire are not the same thing: **it** knows whether the stream ended with
+#      FIN or was reset — QUIC tells it — and the recording could
+#      not write it.  The referee reading it had to guess.
 #
-# ⭐⭐ `0x03`, **21 agosto 2026**: il blocco porta `istante_ms` e passa a 21
-#    byte, l'intestazione dichiara `orologio` (1 = i tempi sono del client).
-#    Senza il tempo, §7.1 — il secondo di grazia — non era collaudabile da
-#    nessun `.rcpreg`, e T4 («un server che dice `TELA(ADATTATA)` e non tocca
-#    il palco») non era scrivibile affatto.
+# ⭐⭐ `0x03`, **21 Aug 2026**: the block carries `istante_ms` and goes to 21
+#    bytes, the header declares `orologio` (1 = the times are the client's).
+#    Without time, §7.1 — the grace second — could not be tested from
+#    any `.rcpreg`, and T4 («a server that says `TELA(ADATTATA)` and does not touch
+#    the stage») could not be written at all.
 #
-# ⛔⛔ E QUESTO FILE ERA IL SECONDO DELL'ISOLA `0x02`: `02-filo-validatore.py`
-#    lo leggeva, `04-b20-desktop-vero.py` pure, e i tre andavano d'accordo fra
-#    loro mentre `01-b3`/`01-b4` erano passati a `0x03`.  ⚠ Due formati vivi
-#    sotto una specifica sola sono la condizione esatta del difetto del 12
-#    agosto, solo piu' grande — e nessuno dei tre file era rotto da solo.
+# ⛔⛔ AND THIS FILE WAS THE SECOND ONE OF THE `0x02` ISLAND: `02-filo-validatore.py`
+#    read it, `04-b20-desktop-vero.py` too, and the three agreed with each
+#    other while `01-b3`/`01-b4` had moved to `0x03`.  ⚠ Two live formats
+#    under a single specification are the exact condition of the 12 Aug
+#    defect, only bigger — and none of the three files was broken on its own.
 MAGIA = b"RCPREG\x00\x03"
 BLOCCO = "!BBBIQIH"
 CONTINUA, FIN, RESET = 0, 1, 2
-OROLOGIO_CLIENT = 1        # §11.1: questo programma e' il client
+OROLOGIO_CLIENT = 1        # §11.1: this program is the client
 
-# ⛔ L'istante e' MONOTONO e RELATIVO al primo blocco, mai un'ora del mondo:
-#    §4.4 vieta i segreti nel file, e una data assoluta dice **quando** e —
-#    con l'indirizzo che la traccia gia' porta — **da dove** un utente si e'
-#    collegato.  ⚠ `time.monotonic()` e non `time.time()`: un aggiustamento di
-#    NTP nel mezzo farebbe tornare indietro gli istanti, e l'arbitro
-#    leggerebbe un fotogramma arrivato «prima» del `TELA` che lo precede.
+# ⛔ The instant is MONOTONIC and RELATIVE to the first block, never a wall-clock time:
+#    §4.4 forbids secrets in the file, and an absolute date says **when** and —
+#    with the address the trace already carries — **from where** a user
+#    connected.  ⚠ `time.monotonic()` and not `time.time()`: an NTP adjustment
+#    in the middle would make the instants go backwards, and the referee
+#    would read a frame that arrived «before» the `TELA` preceding it.
 _t0 = None
 
 
@@ -198,7 +198,7 @@ VERDE, ROSSO, GIALLO, GRIGIO = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0
 
 # ===========================================================================
 class Flusso:
-    """Uno stream unidirezionale del server: uno stream, un fotogramma (§6.2)."""
+    """A unidirectional stream of the server: one stream, one frame (§6.2)."""
 
     def __init__(self, sid, ctx):
         self.sid = sid
@@ -210,64 +210,64 @@ class Flusso:
 
 
 def fabbrica_cliente():
-    """Il cliente della fase 1, che impara a ricevere gli stream del video.
+    """The phase 1 client, which learns to receive the video streams.
 
-    ⛔ **Eredita, non riscrive**: la stretta di mano e' gia' il secondo lettore
-       di `RCP.md`, e riscriverla qui darebbe due secondi lettori che possono
-       divergere — cioe' due arbitri.
+    ⛔ **It inherits, it does not rewrite**: the handshake is already the second reader
+       of `RCP.md`, and rewriting it here would give two second readers that can
+       diverge — that is two referees.
 
-    ⚠ E' una fabbrica e non una classe al livello del file perche' la classe
-      base sta dentro `01-b3-cliente.py`, che importa `aioquic`: vedi il
-      riquadro in cima.
+    ⚠ It is a factory and not a file-level class because the base
+      class sits inside `01-b3-cliente.py`, which imports `aioquic`: see the
+      box at the top.
     """
     class Cliente(carica_b3().Cliente):
 
         def __init__(self, *a, **kw):
             super().__init__(*a, **kw)
-            self.contesto = None       # lo si pone dopo `SESSIONE`
-            # ⛔ Gli stream che abbiamo riconosciuto come VIDEO: si tiene
-            #    l'insieme e non si ricalcola, perche' il preambolo di
-            #    WebTransport arriva una volta sola, nel primo evento.
+            self.contesto = None       # set after `SESSIONE`
+            # ⛔ The streams we recognised as VIDEO: the set is kept
+            #    and not recomputed, because the WebTransport preamble
+            #    arrives only once, in the first event.
             self.video_visti = set()
             self.flussi = {}
             self.finiti = []
             self.chiavi_chieste = 0
-            # (verso, canale, stream, carico, oscurati, fine) — §11.1
+            # (direction, channel, stream, payload, masked, end) — §11.1
             self.reg_video = []
-            self.primo_byte = None     # ⛔ quando e' arrivato il PRIMO byte video
-            # ⚠ Il codec negoziato in §4.3.  Lo pone il guidatore PRIMA della
-            #   stretta di mano, perche' `_sfoglia` puo' averne bisogno gia'
-            #   nel primo pacchetto che porta `SESSIONE`.
+            self.primo_byte = None     # ⛔ when the FIRST video byte arrived
+            # ⚠ The codec negotiated in §4.3.  The driver sets it BEFORE the
+            #   handshake, because `_sfoglia` may need it already
+            #   in the first packet that carries `SESSIONE`.
             self.codec_atteso = 1
 
-        # ⛔⛔ IL CONTESTO SI PONE **QUI**, E NON NELLA COROUTINE CHE ASPETTA —
-        #     difetto del banco trovato dal PRIMO giro contro un server che
-        #     spedisce davvero, `[M]` 12 agosto 2026, montaggio della fase 2.
+        # ⛔⛔ THE CONTEXT IS SET **HERE**, AND NOT IN THE COROUTINE THAT WAITS —
+        #     bench defect found by the FIRST round against a server that
+        #     really sends, `[M]` 12 Aug 2026, phase 2 assembly.
         #
-        #     Il server spedisce `SESSIONE` sul canale di controllo e SUBITO
-        #     DOPO apre lo stream del primo fotogramma (§5.2: «il primo dopo
-        #     `SESSIONE` DEVE essere una chiave»).  Sul filo l'ordine e'
-        #     giusto, e i due arrivano nello stesso volo di pacchetti.
+        #     The server sends `SESSIONE` on the control channel and RIGHT
+        #     AFTER opens the stream of the first frame (§5.2: «the first after
+        #     `SESSIONE` MUST be a keyframe»).  On the wire the order is
+        #     right, and the two arrive in the same flight of packets.
         #
-        # ⛔ Ma `cli.contesto` lo poneva il guidatore **dopo**
-        #    `await attendi(cli, "SESSIONE")`, cioe' quando `asyncio` riprende
-        #    la coroutine — che e' **dopo** che tutti gli eventi di quel volo
-        #    sono stati smistati.  ⇒ `_arrivano()` trovava `contesto is None`,
-        #    concludeva *«un fotogramma prima di SESSIONE»* e stampava
-        #    `ERRORE_PROTOCOLLO` — ⛔ **un rosso puntato sul server, che aveva
-        #    fatto esattamente quel che §2.5 gli impone**.
+        # ⛔ But `cli.contesto` was set by the driver **after**
+        #    `await attendi(cli, "SESSIONE")`, that is when `asyncio` resumes
+        #    the coroutine — which is **after** all the events of that flight
+        #    have been dispatched.  ⇒ `_arrivano()` found `contesto is None`,
+        #    concluded *«a frame before SESSIONE»* and printed
+        #    `ERRORE_PROTOCOLLO` — ⛔ **a red pointed at the server, which had
+        #    done exactly what §2.5 requires of it**.
         #
-        # ⭐ Chi ha detto di chi era la colpa: `02-filo-validatore.py`, il
-        #    secondo lettore, sulla STESSA registrazione — *«ACCETTATO, flusso
-        #    15: chiave n. 1, 1920x1080, 11923 byte, conforme»*, uscita 0.  ⚠ E
-        #    che i due arbitri dello stesso banco dicessero cose opposte sugli
-        #    stessi byte e' una MISURA, non un incidente (`P2-4-filo.md` §4).
+        # ⭐ Who said whose fault it was: `02-filo-validatore.py`, the
+        #    second reader, on the SAME recording — *«ACCETTATO, stream
+        #    15: keyframe no. 1, 1920x1080, 11923 bytes, conforming»*, exit 0.  ⚠ And
+        #    that the two referees of the same bench said opposite things about the
+        #    same bytes is a MEASUREMENT, not an accident (`P2-4-filo.md` §4).
         #
-        # ⛔ E la cura non e' «aspettare un po'»: e' guardare il buffer del
-        #    canale di controllo **prima** che `_sfoglia` lo consumi, cioe'
-        #    nello stesso istante sincrono in cui i byte sono arrivati.  Cosi'
-        #    «prima di `SESSIONE`» torna a essere una domanda sui BYTE, e non
-        #    sull'ordine in cui `asyncio` sveglia le coroutine.
+        # ⛔ And the cure is not «wait a little»: it is looking at the buffer of the
+        #    control channel **before** `_sfoglia` consumes it, that is
+        #    at the same synchronous instant the bytes arrived.  This way
+        #    «before `SESSIONE`» becomes again a question about BYTES, and not
+        #    about the order in which `asyncio` wakes the coroutines.
         def _sfoglia(self):
             if self.contesto is None:
                 dati = bytes(self.arrivati)
@@ -276,7 +276,7 @@ def fabbrica_cliente():
                     tipo, lung = struct.unpack("!HI", dati[i:i + 6])
                     if len(dati) - i < 6 + lung:
                         break
-                    # corpo: 1 byte di stato, poi larghezza e altezza (§4.5)
+                    # body: 1 byte of state, then width and height (§4.5)
                     if tipo == carica_b3().T["SESSIONE"] and lung >= 9:
                         lar, alt = struct.unpack("!II", dati[i + 7:i + 15])
                         self.contesto = f24.Contesto(
@@ -289,47 +289,47 @@ def fabbrica_cliente():
 
         def quic_event_received(self, event):
             nome = type(event).__name__
-            # ⛔ Gli stream unidirezionali del server si intercettano PRIMA di
-            #    passare l'evento alla catena della fase 1: quella non li
-            #    conosce e li darebbe allo strato HTTP/3 di `aioquic`, che li
-            #    leggerebbe come frame di HTTP/3 e chiuderebbe la connessione —
-            #    **per mano nostra**.  ⚠ E' la stessa asimmetria pagata il 10
-            #    agosto 2026 sul canale di controllo (`01-b3-cliente.py`).
+            # ⛔ The server's unidirectional streams are intercepted BEFORE
+            #    passing the event to the phase 1 chain: that one does not know
+            #    them and would give them to the HTTP/3 layer of `aioquic`, which would
+            #    read them as HTTP/3 frames and close the connection —
+            #    **by our own hand**.  ⚠ It is the same asymmetry paid for on 10
+            #    Aug 2026 on the control channel (`01-b3-cliente.py`).
             if nome == "StreamDataReceived" and self._smista(event):
                 return
             if nome == "StreamReset" and event.stream_id in self.video_visti:
-                # ⛔ `RESET_STREAM`: il fotogramma e' INCOMPLETO (§6.2).
+                # ⛔ `RESET_STREAM`: the frame is INCOMPLETE (§6.2).
                 self._azzerato(event.stream_id)
                 return
             super().quic_event_received(event)
 
-        # ⛔⛔ IL PREAMBOLO DI WEBTRANSPORT, E IL PRIMO GIRO L'HA PAGATO
+        # ⛔⛔ THE WEBTRANSPORT PREAMBLE, AND THE FIRST ROUND PAID FOR IT
         #
-        # ⚠ `[M]` 12 agosto 2026, PRIMO GIRO DAL VIVO di questo cliente contro
-        #   la 7514.  La riga di prima diceva: *«uno stream unidirezionale
-        #   aperto dal server si riconosce dai due bit bassi
-        #   dell'identificatore QUIC»* — e si prendeva **anche i tre stream
-        #   unidirezionali di HTTP/3** (il control stream e i due di QPACK, che
-        #   `aioquic` apre da se' e che hanno gli stessi due bit).  ⇒ Lo strato
-        #   HTTP/3 restava senza i suoi byte, la CONNECT estesa non arrivava
-        #   mai a `:status 200`, il canale di controllo non si apriva, e il
-        #   server chiudeva con `TEMPO_SCADUTO` dopo 5 s (§4.6).
-        #   ⛔ Il sintomo era **un rosso puntato sul server**, che aveva fatto
-        #      esattamente il suo mestiere: il controllo positivo —
-        #      `01-b3-cliente.py` contro lo **stesso** server, nello stesso
-        #      minuto — arrivava a `SESSIONE` in 1003 ms.
+        # ⚠ `[M]` 12 Aug 2026, FIRST LIVE ROUND of this client against
+        #   7514.  The previous line said: *«a unidirectional stream
+        #   opened by the server is recognised by the two low bits
+        #   of the QUIC identifier»* — and it also took **the three
+        #   unidirectional streams of HTTP/3** (the control stream and the two of QPACK, which
+        #   `aioquic` opens by itself and which have the same two bits).  ⇒ The
+        #   HTTP/3 layer was left without its bytes, the extended CONNECT never
+        #   reached `:status 200`, the control channel did not open, and the
+        #   server closed with `TEMPO_SCADUTO` after 5 s (§4.6).
+        #   ⛔ The symptom was **a red pointed at the server**, which had done
+        #      exactly its job: the positive control —
+        #      `01-b3-cliente.py` against the **same** server, in the same
+        #      minute — reached `SESSIONE` in 1003 ms.
         #
-        # ⭐ E la cura porta con se' una scoperta su `RCP.md`, che sta nel
-        #    rapporto come **P18**: §2.5 dice *«si leggono i primi due byte
-        #    dello stream, che sono in ogni caso un campo `tipo`»*, ⛔ e su
-        #    WebTransport **non e' vero**: uno stream unidirezionale del server
-        #    comincia con il tipo `0x54` in varint (due byte, `40 54`) e con il
-        #    numero della sessione, e i 28 byte di §6.2 cominciano dopo.
-        WT_UNI = 0x54  # draft-ietf-webtrans-http3: il tipo dello stream uni
+        # ⭐ And the cure carries a discovery about `RCP.md`, which is in the
+        #    report as **P18**: §2.5 says *«the first two bytes of the
+        #    stream are read, which are in any case a `tipo` field»*, ⛔ and on
+        #    WebTransport **it is not true**: a unidirectional stream of the server
+        #    starts with type `0x54` as a varint (two bytes, `40 54`) and with the
+        #    session number, and the 28 bytes of §6.2 start after.
+        WT_UNI = 0x54  # draft-ietf-webtrans-http3: the type of the uni stream
 
         @staticmethod
         def _varint(b, i):
-            """Il varint di QUIC (RFC 9000 §16).  `None` = non e' tutto qui."""
+            """The QUIC varint (RFC 9000 §16).  `None` = it is not all here."""
             if i >= len(b):
                 return None, i
             n = 1 << (b[i] >> 6)
@@ -341,20 +341,20 @@ def fabbrica_cliente():
             return v, i + n
 
         def _smista(self, event):
-            """Questo stream e' un fotogramma?  ⛔ E se non lo e', **non se ne
-            consuma un byte**: quei byte sono di HTTP/3, e prenderglieli e'
-            il difetto che il primo giro ha pagato."""
+            """Is this stream a frame?  ⛔ And if it is not, **not one byte of it
+            is consumed**: those bytes belong to HTTP/3, and taking them is
+            the defect the first round paid for."""
             sid = event.stream_id
             if sid in self.video_visti:
                 self._arrivano(sid, event.data, event.end_stream)
                 return True
-            # 0b11 = unidirezionale, aperto dal server
+            # 0b11 = unidirectional, opened by the server
             if (sid & 0x03) != 0x03 or sid == self.sessione:
                 return False
             d = event.data
-            # ⛔ Si decide sul PRIMO evento e sui primi due byte, e se non
-            #    bastano si lascia perdere invece di trattenerli: «non ho
-            #    capito» e «e' mio» sono due cose diverse.
+            # ⛔ The decision is made on the FIRST event and the first two bytes, and if they
+            #    are not enough it is dropped instead of holding them back: «I did not
+            #    understand» and «it is mine» are two different things.
             if len(d) < 2 or d[0] != 0x40 or d[1] != self.WT_UNI:
                 return False
             tipo, i = self._varint(d, 0)
@@ -367,8 +367,8 @@ def fabbrica_cliente():
 
         def _arrivano(self, sid, dati, fine):
             if self.contesto is None:
-                # ⛔ Un fotogramma prima di `SESSIONE`: il contesto non c'e'
-                #    ancora, e il giudice DEVE poterlo dire — invariante I3.
+                # ⛔ A frame before `SESSIONE`: the context is not there
+                #    yet, and the judge MUST be able to say so — invariant I3.
                 self.contesto = f24.Contesto(sessione_aperta=False)
             f = self.flussi.get(sid)
             if f is None:
@@ -384,13 +384,13 @@ def fabbrica_cliente():
                 self._chiudi(f)
 
         def _azzerato(self, sid):
-            # ⛔ E LO SI SCRIVE NELLA REGISTRAZIONE — §11.1, campo `fine`.
+            # ⛔ AND IT IS WRITTEN IN THE RECORDING — §11.1, field `fine`.
             #
-            #    Il `RESET_STREAM` non porta byte, quindi non ha un blocco suo:
-            #    marca l'ULTIMO blocco di quello stream.  ⚠ E se non ce n'e'
-            #    nessuno — uno stream azzerato prima di aver consegnato un byte
-            #    — se ne scrive uno **vuoto**: «zero byte, azzerato» e «non e'
-            #    mai esistito» sono due fatti diversi, ed e' la forma E8.
+            #    The `RESET_STREAM` carries no bytes, so it has no block of its own:
+            #    it marks the LAST block of that stream.  ⚠ And if there is
+            #    none — a stream reset before delivering a byte
+            #    — an **empty** one is written: «zero bytes, reset» and «it never
+            #    existed» are two different facts, and it is the E8 form.
             ultimo = None
             for b in self.reg_video:
                 if b[2] == sid:
@@ -416,16 +416,16 @@ def fabbrica_cliente():
             self.finiti.append(f)
             del self.flussi[f.sid]
 
-        # -- gli obblighi che §5.2 mette sul CLIENT ----------------------
+        # -- the obligations §5.2 puts on the CLIENT -----------------------
         def chiedi_chiave(self, ultimo):
-            """§5.2: il client DEVE chiedere una chiave su un buco o un
-            abbandono.
+            """§5.2: the client MUST ask for a keyframe on a gap or an
+            abandonment.
 
-            ⛔ E `ultimo_numero` e' «l'ultimo fotogramma decodificato, 0 se
-               nessuno» (§7.1) — che e' l'ambiguita' **A2**: se il contatore di
-               §6.2 potesse partire da 0, questo campo direbbe due cose.  Qui
-               si manda quel che il documento dice, e l'ambiguita' si segnala
-               invece di essere risolta a mano dal banco.
+            ⛔ And `ultimo_numero` is «the last decoded frame, 0 if
+               none» (§7.1) — which is ambiguity **A2**: if the counter of
+               §6.2 could start from 0, this field would say two things.  Here
+               what the document says is sent, and the ambiguity is flagged
+               instead of being resolved by hand by the bench.
             """
             self.manda(struct.pack("!HII", T_RICHIEDI_CHIAVE, 4,
                                    ultimo if ultimo is not None else 0))
@@ -436,18 +436,18 @@ def fabbrica_cliente():
 
 # ===========================================================================
 async def guarda(cli, a, ctx):
-    """Resta ad ascoltare, e fa quel che §5.2 impone al client.
+    """Keeps listening, and does what §5.2 requires of the client.
 
-    ⛔ **Con gli occhi aperti, non dormendo** — rilievi R8.2/R8.4 della fase 1.
-       Un `asyncio.sleep` non si accorge di niente: la connessione puo' cadere
-       per il tetto d'inattivita' di QUIC, o la sessione puo' essere chiusa dal
-       server, e questo programma uscirebbe 0 dicendo «ho guardato».
+    ⛔ **With eyes open, not asleep** — findings R8.2/R8.4 of phase 1.
+       An `asyncio.sleep` notices nothing: the connection can drop
+       because of QUIC's idle ceiling, or the session can be closed by the
+       server, and this program would exit 0 saying «I looked».
     """
     scadenza = asyncio.get_event_loop().time() + a.attesa
     visti = 0
     while asyncio.get_event_loop().time() < scadenza:
         if cli.caduta is not None:
-            return visti, f"caduto: {cli.caduta}"
+            return visti, f"dropped: {cli.caduta}"
         while len(cli.finiti) > visti:
             f = cli.finiti[visti]
             visti += 1
@@ -455,18 +455,18 @@ async def guarda(cli, a, ctx):
             col = {f24.ACCETTATO: VERDE, f24.SCARTATO: GIALLO,
                    f24.AMBIGUO: GIALLO, f24.ERRORE_PROTOCOLLO: ROSSO}[v.esito]
             print(f"   {col}{v.esito:18s}{GRIGIO} stream {f.sid}, {f.byte} "
-                  f"byte, finito con {f.chiuso}: {v.dice}")
+                  f"bytes, ended with {f.chiuso}: {v.dice}")
             if v.esito == f24.ERRORE_PROTOCOLLO:
-                # ⛔ §3.1, e i punti sono TRE e in quest'ordine: nel registro,
-                #    il `CONGEDO` sul canale se il canale e' utilizzabile, e il
-                #    motivo nel codice d'errore della chiusura della sessione.
+                # ⛔ §3.1, and the points are THREE and in this order: in the log,
+                #    the `CONGEDO` on the channel if the channel is usable, and the
+                #    reason in the error code of the session's closing.
                 print(f"      ⛔ {v.regola} — byte {v.scostamento} "
-                      f"dell'intestazione")
+                      f"of the header")
                 cli.manda(struct.pack("!HIB", T_CONGEDO, 3, ERRORE_PROTOCOLLO)
                           + struct.pack("!H", 0))
-                return visti, f"NON CONFORME: {v.dice}"
-            # ⛔ E gli obblighi di §5.2, che sono del CLIENT e che nessun banco
-            #    del server puo' esercitare al posto suo.
+                return visti, f"NOT CONFORMING: {v.dice}"
+            # ⛔ And the obligations of §5.2, which are the CLIENT's and which no
+            #    server bench can exercise in its place.
             if ctx.chiedi_chiave:
                 cli.chiedi_chiave(ctx.ultimo_consegnato)
                 print(f"      ⇒ `RICHIEDI_CHIAVE(ultimo_numero="
@@ -477,26 +477,26 @@ async def guarda(cli, a, ctx):
 
 
 def scrivi_registrazione(percorso, blocchi):
-    """Il formato di §11.1, con i blocchi del video accanto a quelli di controllo.
+    """The format of §11.1, with the video blocks next to the control ones.
 
-    ⛔ `fine` predefinito a CONTINUA: il canale di controllo vive su **un solo
-       stream per tutta la sessione** (§2.5), e dentro la registrazione quello
-       stream non si chiude.  ⚠ Scrivere `FIN` a ogni messaggio direbbe che la
-       sessione si chiude e riapre a ogni riga.
+    ⛔ `fine` defaults to CONTINUA: the control channel lives on **a single
+       stream for the whole session** (§2.5), and inside the recording that
+       stream does not close.  ⚠ Writing `FIN` at every message would say that the
+       session closes and reopens at every line.
     """
-    # ⛔⛔ E I BLOCCHI SI RIMETTONO IN ORDINE DI TEMPO, e non e' cosmetica.
+    # ⛔⛔ AND THE BLOCKS ARE PUT BACK IN TIME ORDER, and it is not cosmetic.
     #
-    #    Chi chiama passa `blocchi + cli.reg_video`: i blocchi di CONTROLLO
-    #    tutti prima, quelli VIDEO tutti dopo.  ⚠ Ma un `RICHIEDI_CHIAVE`
-    #    spedito a meta' sessione finiva **davanti** al primo fotogramma, che
-    #    sul filo era passato molto prima.  ⛔ Con `0x02` non si vedeva: senza
-    #    il tempo, un ordine sbagliato e uno giusto hanno la stessa faccia.
-    #    Con `0x03` l'arbitro pretende un orologio monotono e lo direbbe —
-    #    «registrazione rotta» — su una traccia di un filo sanissimo.
+    #    The caller passes `blocchi + cli.reg_video`: the CONTROL blocks
+    #    all first, the VIDEO ones all after.  ⚠ But a `RICHIEDI_CHIAVE`
+    #    sent midway through the session ended up **in front of** the first frame, which
+    #    had passed on the wire much earlier.  ⛔ With `0x02` it did not show: without
+    #    time, a wrong order and a right one look the same.
+    #    With `0x03` the referee requires a monotonic clock and would say so —
+    #    «broken recording» — on a trace of a perfectly healthy wire.
     #
-    # ⭐ `sorted` e' STABILE: due blocchi con lo stesso millisecondo restano
-    #    nell'ordine in cui sono stati registrati, che e' quel che si sa di
-    #    loro.  Inventare un ordine fra pari sarebbe peggio di non averlo.
+    # ⭐ `sorted` is STABLE: two blocks with the same millisecond stay
+    #    in the order in which they were recorded, which is what is known about
+    #    them.  Inventing an order among equals would be worse than not having one.
     def _quando(b):
         return b[6] if len(b) > 6 else 0
 
@@ -530,32 +530,32 @@ async def principale(a):
     autorita = f"{a.indirizzo}:{a.porta}"
     blocchi = []
 
-    print(f"== F2.4 — il cliente di prova RICEVE il fotogramma")
-    print(f"   ⛔ BERSAGLIO: https://{autorita}{a.percorso}")
-    print(f"   ⛔ SCENA: sessione appena aperta, nessun input, nessun "
-          f"movimento —")
-    print(f"      la fase 2 consegna **un'immagine ferma** (`PIANO.md` "
-          f"«Fase 2»).")
-    print(f"      ⚠ E va dichiarato: `CODER.md` §3.2 vuole una scena sempre in")
-    print(f"        movimento, e qui la scena ferma **e' il soggetto**, non "
-          f"una")
-    print(f"        distrazione.  Dalla fase 3 in poi quella regola torna a "
-          f"valere.")
-    print(f"   attesa: {a.attesa} s\n")
+    print(f"== F2.4 — the test client RECEIVES the frame")
+    print(f"   ⛔ TARGET: https://{autorita}{a.percorso}")
+    print(f"   ⛔ SCENE: session just opened, no input, no "
+          f"movement —")
+    print(f"      phase 2 delivers **a still image** (`PIANO.md` "
+          f"«Phase 2»).")
+    print(f"      ⚠ And it must be declared: `CODER.md` §3.2 wants a scene always in")
+    print(f"        motion, and here the still scene **is the subject**, not "
+          f"a")
+    print(f"        distraction.  From phase 3 onwards that rule applies "
+          f"again.")
+    print(f"   wait: {a.attesa} s\n")
 
     async with connect(a.indirizzo, a.porta, configuration=conf,
                        create_protocol=Cliente) as cli:
         await asyncio.wait_for(cli.wait_connected(), timeout=8)
         cli.apri_sessione(autorita, a.percorso)
         stato = await asyncio.wait_for(cli.accettata, timeout=8)
-        print(f"   CONNECT estesa: :status = {stato}")
+        print(f"   extended CONNECT: :status = {stato}")
         if stato != "200":
             return 2
         cli.apri_controllo()
-        # ⛔ PRIMA della stretta di mano: `_sfoglia` puo' aver bisogno del
-        #    codec gia' nel pacchetto che porta `SESSIONE`, e un valore posto
-        #    dopo sarebbe posto troppo tardi — e' lo stesso difetto di ordine
-        #    che il riquadro di `_sfoglia` descrive.
+        # ⛔ BEFORE the handshake: `_sfoglia` may need the
+        #    codec already in the packet that carries `SESSIONE`, and a value set
+        #    after would be set too late — it is the same ordering defect
+        #    the box of `_sfoglia` describes.
         cli.codec_atteso = a.codec
         try:
             b = b3.inquadra(b3.T["CIAO"], b3.corpo_ciao())
@@ -584,26 +584,26 @@ async def principale(a):
             blocchi.append((CLIENT, 0x00, 0, b, [], CONTINUA, istante()))
             _, corpo, grezzo = await b3.attendi(cli, "SESSIONE")
             blocchi.append((SERVER, 0x00, 0, grezzo, [], CONTINUA, istante()))
-        except Exception as e:      # noqa: BLE001 — il tipo dell'errore E' la misura
-            print(f"   ⛔ la stretta di mano non e' arrivata a SESSIONE: "
+        except Exception as e:      # noqa: BLE001 — the error type IS the measurement
+            print(f"   ⛔ the handshake did not reach SESSIONE: "
                   f"{type(e).__name__}: {e}")
-            print(f"      ⚠ Questo NON e' un rosso del video: non si e' provato "
-                  f"niente")
+            print(f"      ⚠ This is NOT a video red: nothing was "
+                  f"tested")
             return 2
 
         lar, alt = struct.unpack("!II", corpo[1:9])
-        print(f"   ⭐ SESSIONE: tela concessa {lar}x{alt}")
-        # ⛔ IL CONTESTO SI PRENDE DA `SESSIONE`, NON DAI PREDEFINITI.
+        print(f"   ⭐ SESSIONE: canvas granted {lar}x{alt}")
+        # ⛔ THE CONTEXT IS TAKEN FROM `SESSIONE`, NOT FROM THE DEFAULTS.
         #
-        #    §6.2 lega `largh.`/`altezza` alla **tela concessa** — che puo'
-        #    essere diversa da quella chiesta (§4.5, il ripiego su KDE) — e
-        #    `codec` a quel che §4.3 ha negoziato.  Un giudice che usasse i
-        #    propri predefiniti giudicherebbe se stesso.
-        # ⚠ `_sfoglia` puo' averlo gia' posto, sugli stessi byte e con gli
-        #   stessi valori: allora non si rifa'.  ⛔ Rifarlo qui cancellerebbe
-        #   un contesto gia' usato dai flussi arrivati nello stesso volo — e i
-        #   loro `Flusso` terrebbero il vecchio oggetto, cioe' due verita'
-        #   sulla stessa sessione.
+        #    §6.2 ties `largh.`/`altezza` to the **granted canvas** — which can
+        #    differ from the requested one (§4.5, the fallback on KDE) — and
+        #    `codec` to what §4.3 negotiated.  A judge that used its
+        #    own defaults would be judging itself.
+        # ⚠ `_sfoglia` may have set it already, on the same bytes and with the
+        #   same values: then it is not redone.  ⛔ Redoing it here would erase
+        #   a context already used by the streams arrived in the same flight — and their
+        #   `Flusso` would keep the old object, that is two truths
+        #   about the same session.
         if cli.contesto is None:
             cli.contesto = f24.Contesto(tela=(lar, alt),
                                         codec_negoziato=a.codec,
@@ -614,208 +614,208 @@ async def principale(a):
 
     if a.registra:
         n = scrivi_registrazione(a.registra, blocchi + cli.reg_video)
-        print(f"\n   registrazione: {a.registra} ({n} blocchi) — "
-              f"⛔ e va data a `02-filo-validatore.py`, che e' l'altro lettore")
+        print(f"\n   recording: {a.registra} ({n} blocks) — "
+              f"⛔ and it must be given to `02-filo-validatore.py`, which is the other reader")
 
     esiti = [f.verdetto.esito for f in cli.finiti]
     conformi = sum(1 for e in esiti if e == f24.ACCETTATO)
     ambigui = sum(1 for e in esiti if e == f24.AMBIGUO)
-    print(f"\n   guardati: {len(cli.finiti)} flussi video · {conformi} "
-          f"conformi · {ambigui} ambigui · {cli.chiavi_chieste} "
-          f"`RICHIEDI_CHIAVE` spedite")
+    print(f"\n   watched: {len(cli.finiti)} video streams · {conformi} "
+          f"conforming · {ambigui} ambiguous · {cli.chiavi_chieste} "
+          f"`RICHIEDI_CHIAVE` sent")
 
     if a.uscita:
         with open(a.uscita, "a") as f:
             f.write(json.dumps({
                 "quando": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
                 "banco": "F2.4-cliente", "porta": a.porta,
-                "scena": "sessione appena aperta, nessun input, immagine ferma",
+                "scena": "session just opened, no input, still image",
                 "flussi": len(cli.finiti), "conformi": conformi,
                 "ambigui": ambigui, "chiavi_chieste": cli.chiavi_chieste,
                 "esiti": esiti, "caduta": cli.caduta}, ensure_ascii=False) + "\n")
 
-    # ⛔ E LO ZERO HA UN CODICE SUO — vedi il punto 1 dell'intestazione.
+    # ⛔ AND ZERO HAS A CODE OF ITS OWN — see point 1 of the header.
     if not cli.finiti:
-        print(f"\n   {ROSSO}⛔ ZERO fotogrammi in {a.attesa} s.{GRIGIO}")
-        print(f"      Questo NON e' «conforme»: e' l'assenza dell'oggetto del "
-              f"giudizio.")
-        print(f"      Si guarda chi doveva spedirli — non `RCP.md`.")
+        print(f"\n   {ROSSO}⛔ ZERO frames in {a.attesa} s.{GRIGIO}")
+        print(f"      This is NOT «conforming»: it is the absence of the object of "
+              f"judgement.")
+        print(f"      Look at whoever had to send them — not at `RCP.md`.")
         return 5
     if f24.ERRORE_PROTOCOLLO in esiti:
-        print(f"\n   {ROSSO}⛔ un fotogramma NON e' conforme{GRIGIO}")
+        print(f"\n   {ROSSO}⛔ a frame is NOT conforming{GRIGIO}")
         return 1
     if perche:
         print(f"\n   {ROSSO}⛔ {perche}{GRIGIO}")
         return 4
     if ambigui:
-        print(f"\n   {GIALLO}⭐⛔ `RCP.md` ammette due letture su quel che e' "
-              f"arrivato{GRIGIO}")
-        print(f"      Non e' un verde e non e' un rosso: e' un difetto del "
-              f"DOCUMENTO.")
-        print(f"      Le proposte: `python3 02-filo-fotogramma.py --elenco`")
+        print(f"\n   {GIALLO}⭐⛔ `RCP.md` allows two readings of what "
+              f"arrived{GRIGIO}")
+        print(f"      It is not a green and it is not a red: it is a defect of the "
+              f"DOCUMENT.")
+        print(f"      The proposals: `python3 02-filo-fotogramma.py --elenco`")
         return 3
-    print(f"\n   {VERDE}⭐ {conformi} fotogrammi, tutti conformi a `RCP.md`"
+    print(f"\n   {VERDE}⭐ {conformi} frames, all conforming to `RCP.md`"
           f"{GRIGIO}")
-    print(f"   ⚠ e NON e' «l'utente vede il suo desktop»: qui si giudicano i "
-          f"BYTE.")
-    print(f"     I pixel li confronta F2.6, e il metro e' l'utente (I8).")
+    print(f"   ⚠ and it is NOT «the user sees their desktop»: here the "
+          f"BYTES are judged.")
+    print(f"     The pixels are compared by F2.6, and the yardstick is the user (I8).")
     return 0
 
 
 # ===========================================================================
-# ⛔ LE VIOLAZIONI VERSO IL SERVER, e sono quelle che la fase 2 aggiunge.
+# ⛔ THE VIOLATIONS TOWARDS THE SERVER, and they are those phase 2 adds.
 #
-#    `01-b5-violazioni.py` ne prova quarantaquattro sulla stretta di mano, e
-#    dichiara in testa quali NON prova perche' il messaggio non esiste ancora:
-#    fra queste, *«due `RICHIEDI_CHIAVE` a meno di 200 ms»*, rinviata alla
-#    fase 3.  ⭐ Qui si aggiungono quelle che nascono col primo fotogramma.
+#    `01-b5-violazioni.py` tests forty-four of them on the handshake, and
+#    declares at the top which ones it does NOT test because the message does not exist yet:
+#    among these, *«two `RICHIEDI_CHIAVE` less than 200 ms apart»*, postponed to
+#    phase 3.  ⭐ Here are added those born with the first frame.
 #
-# ⚠ E una che c'e' gia' in B5 si RIFA', e non e' un doppione: `uni-video`
-#   spediva `0x0301` a un server che il canale video **non lo conosceva
-#   affatto** — cadeva nel ramo `default`.  Contro un server che lo conosce,
-#   lo stesso ingresso esercita un percorso di codice **diverso**, e un caso
-#   che passa contro il primo non dice niente del secondo.
+# ⚠ And one already in B5 is REDONE, and it is not a duplicate: `uni-video`
+#   sent `0x0301` to a server that did **not know** the video channel
+#   at all — it fell into the `default` branch.  Against a server that knows it,
+#   the same input exercises a **different** code path, and a case
+#   that passes against the first says nothing about the second.
 VIOLAZIONI = [
     ("video-dal-client", ERRORE_PROTOCOLLO,
-     "un fotogramma chiave BEN FORMATO su uno stream unidirezionale del "
-     "client: §2.5, «un `0x03` che arriva dal client».  ⛔ Il carico e' legale "
-     "in se': l'unica cosa storta e' il verso"),
+     "a WELL-FORMED keyframe on a unidirectional stream of the "
+     "client: §2.5, «a `0x03` that arrives from the client».  ⛔ The payload is legal "
+     "in itself: the only wrong thing is the direction"),
     ("richiedi-chiave-prima-di-sessione", ERRORE_PROTOCOLLO,
-     "`RICHIEDI_CHIAVE` fra `AMMESSO` e `SESSIONE`: non esiste nessun "
-     "fotogramma di cui chiedere la chiave (§1, §3)"),
+     "`RICHIEDI_CHIAVE` between `AMMESSO` and `SESSIONE`: there is no "
+     "frame whose keyframe could be asked for (§1, §3)"),
     ("richiedi-chiave-corta", ERRORE_PROTOCOLLO,
-     "`RICHIEDI_CHIAVE` con tre byte di corpo invece di quattro: §6.1, «una "
-     "lunghezza incoerente con quel che il tipo prevede»"),
+     "`RICHIEDI_CHIAVE` with three bytes of body instead of four: §6.1, «a "
+     "length inconsistent with what the type expects»"),
     ("richiedi-chiave-zero", None,
-     "⭐ `RICHIEDI_CHIAVE(ultimo_numero = 0)`: §7.1 lo dichiara legale — «0 se "
-     "nessuno» — ed e' quel che manda un client appena attaccato.  ⛔ La "
-     "sessione DEVE restare viva"),
+     "⭐ `RICHIEDI_CHIAVE(ultimo_numero = 0)`: §7.1 declares it legal — «0 if "
+     "none» — and it is what a just-attached client sends.  ⛔ The "
+     "session MUST stay alive"),
     ("richiedi-chiave-due-volte", None,
-     "⏳ due `RICHIEDI_CHIAVE` a meno di 200 ms: il server **PUO'** ignorare la "
-     "seconda (§3 eccezione 5, §5.2) — e in tutt'e due i casi la sessione "
-     "DEVE restare viva.  ⚠ La misura vera e' della **fase 3**, dove le "
-     "chiavi si contano: qui si prova solo che la sessione regge"),
+     "⏳ two `RICHIEDI_CHIAVE` less than 200 ms apart: the server **MAY** ignore the "
+     "second (§3 exception 5, §5.2) — and in both cases the session "
+     "MUST stay alive.  ⚠ The real measurement belongs to **phase 3**, where the "
+     "keyframes are counted: here it is only proved that the session holds"),
 ]
 
 
 def elenco():
-    print("== F2.4 — il cliente di prova: che cosa prova, e contro che cosa")
-    print("   ⏳ NON ANCORA GIRATO: il prodotto della fase 2 non esiste\n")
-    print("== ⛔ dal lato che RICEVE — i casi stanno in 02-filo-fotogramma.py")
+    print("== F2.4 — the test client: what it tests, and against what")
+    print("   ⏳ NOT RUN YET: the phase 2 product does not exist\n")
+    print("== ⛔ from the RECEIVING side — the cases are in 02-filo-fotogramma.py")
     print("   `python3 02-filo-fotogramma.py --elenco`\n")
-    print("== ⛔ verso il SERVER — le violazioni che la fase 2 aggiunge")
-    print("   ⛔ Ogni riga e' una PREVISIONE, scritta prima del giro\n")
+    print("== ⛔ towards the SERVER — the violations phase 2 adds")
+    print("   ⛔ Every line is a PREDICTION, written before the round\n")
     for nome, atteso, spiega in VIOLAZIONI:
         att = (f"{atteso:#04x} ERRORE_PROTOCOLLO" if atteso
-               else "⭐ DEVE PASSARE, e la sessione DEVE restare viva")
+               else "⭐ MUST PASS, and the session MUST stay alive")
         print(f"  {nome:36s} {att}")
         print(f"  {'':36s}   {spiega}")
-    print(f"\n  {len(VIOLAZIONI)} casi: "
-          f"{sum(1 for v in VIOLAZIONI if v[1])} violazioni e "
-          f"{sum(1 for v in VIOLAZIONI if not v[1])} ⭐ verdi attesi")
+    print(f"\n  {len(VIOLAZIONI)} cases: "
+          f"{sum(1 for v in VIOLAZIONI if v[1])} violations and "
+          f"{sum(1 for v in VIOLAZIONI if not v[1])} ⭐ expected greens")
     return 0
 
 
 # ---------------------------------------------------------------------------
-# ⛔ LA PAROLA D'ORDINE NON DEVE PASSARE DALLA RIGA DI COMANDO — difetto **D12**,
-#    curato il 12 agosto 2026.
+# ⛔ THE PASSWORD MUST NOT GO THROUGH THE COMMAND LINE — defect **D12**,
+#    cured on 12 Aug 2026.
 #
-# ⛔ `--parola` finisce nell'`argv` del processo, cioe' in `/proc/<pid>/cmdline`,
-#    che su Linux e' **leggibile da chiunque**: un `ps` lanciato da un altro
-#    utente durante il giro la stampa per intero.
+# ⛔ `--parola` ends up in the process's `argv`, that is in `/proc/<pid>/cmdline`,
+#    which on Linux is **readable by anyone**: a `ps` launched by another
+#    user during the round prints it in full.
 #
-# ⭐ La strada buona esisteva gia' in casa e questa e' la sua estensione, non un
-#    secondo modo: `01-b10-secondo-utente.py` prende `--parola-file`, un file
-#    `0600` che il lanciatore scrive con `printf` — un **builtin** della shell,
-#    quindi nemmeno la scrittura passa per un processo con la parola in `argv` —
-#    e cancella con una `trap`.
+# ⭐ The good road already existed in the house and this is its extension, not a
+#    second way: `01-b10-secondo-utente.py` takes `--parola-file`, a `0600`
+#    file the launcher writes with `printf` — a shell **builtin**,
+#    so not even the writing goes through a process with the password in `argv` —
+#    and deletes with a `trap`.
 #
-# ⚠ E `--parola` NON e' stata tolta, e non per pigrizia: dei chiamanti non
-#   ancora curati la passano ancora, e romperli **in silenzio** sarebbe peggio
-#   del difetto.  ⛔ Ma il ripiego si DICHIARA (`CODER.md` §4.2): un ripiego
-#   silenzioso produce due comportamenti sotto la stessa etichetta, che e' la
-#   forma **E2** — e qui i due comportamenti sono «il segreto e' protetto» e
-#   «il segreto e' pubblico».  ⇒ chi passa `--parola` se lo sente dire.
+# ⚠ And `--parola` was NOT removed, and not out of laziness: some callers not
+#   yet cured still pass it, and breaking them **silently** would be worse
+#   than the defect.  ⛔ But the fallback is DECLARED (`CODER.md` §4.2): a silent
+#   fallback produces two behaviours under the same label, which is the
+#   **E2** form — and here the two behaviours are «the secret is protected» and
+#   «the secret is public».  ⇒ whoever passes `--parola` gets told.
 #
-# ⚠ E l'avviso guarda `sys.argv`, non il valore: il predefinito scritto nel
-#   codice non sta in nessuna riga di comando, e dirgli il contrario sarebbe un
-#   allarme che si impara a ignorare.
+# ⚠ And the warning looks at `sys.argv`, not at the value: the default written in the
+#   code is on no command line, and telling it otherwise would be an
+#   alarm one learns to ignore.
 def parola_dagli_argomenti(a):
-    """La parola d'ordine: da `--parola-file` se c'e', da `--parola` altrimenti.
+    """The password: from `--parola-file` if present, from `--parola` otherwise.
 
-    ⛔ E i tre modi di fallire si distinguono: «non si legge», «e' leggibile da
-    altri» e «e' vuoto» hanno tre cure diverse, e un file vuoto NON e' una
-    parola vuota — e' «il lanciatore non l'ha scritta» (`LEZIONI.md` §1.9).
+    ⛔ And the three ways of failing are kept apart: «cannot be read», «is readable by
+    others» and «is empty» have three different cures, and an empty file is NOT an
+    empty password — it is «the launcher did not write it» (`LEZIONI.md` §1.9).
     """
     percorso = getattr(a, "parola_file", "") or ""
     if percorso:
         try:
             modo = os.stat(percorso).st_mode & 0o077
         except OSError as e:
-            print(f"   ⛔ il file della parola «{percorso}» non si legge: {e}")
+            print(f"   ⛔ the password file «{percorso}» cannot be read: {e}")
             sys.exit(2)
         if modo:
-            print(f"   ⚠ «{percorso}» e' leggibile da altri (bit {modo:o}): il "
-                  f"segreto non e' protetto")
+            print(f"   ⚠ «{percorso}» is readable by others (bits {modo:o}): the "
+                  f"secret is not protected")
         try:
             with open(percorso, encoding="utf-8") as f:
                 parola = f.read().strip("\n")
         except OSError as e:
-            print(f"   ⛔ la parola non si legge da «{percorso}»: {e}")
+            print(f"   ⛔ the password cannot be read from «{percorso}»: {e}")
             sys.exit(2)
         if not parola:
-            print(f"   ⛔ il file della parola «{percorso}» e' VUOTO.  Non e'")
-            print("      «la parola e' vuota»: e' «il lanciatore non l'ha scritta».")
+            print(f"   ⛔ the password file «{percorso}» is EMPTY.  It is not")
+            print("      «the password is empty»: it is «the launcher did not write it».")
             sys.exit(2)
         return parola
     if any(x == "--parola" or x.startswith("--parola=") for x in sys.argv[1:]):
-        print("   ⚠ D12: la parola d'ordine e' arrivata da `--parola`, cioe' dalla")
-        print("     RIGA DI COMANDO: sta in `/proc/<pid>/cmdline` e la vede chiunque")
-        print("     faccia `ps` su questa macchina.  Il giro prosegue — il chiamante")
-        print("     non e' stato curato — ma non e' un giro riservato.")
-        print("     ⭐ La cura: `--parola-file <file 0600>`, come in B10.")
+        print("   ⚠ D12: the password arrived from `--parola`, that is from the")
+        print("     COMMAND LINE: it is in `/proc/<pid>/cmdline` and anyone who runs")
+        print("     `ps` on this machine sees it.  The round goes on — the caller")
+        print("     has not been cured — but it is not a private round.")
+        print("     ⭐ The cure: `--parola-file <0600 file>`, as in B10.")
     return a.parola
 
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(
-        description="F2.4 — il cliente di prova che riceve il fotogramma")
+        description="F2.4 — the test client that receives the frame")
     p.add_argument("--indirizzo", default="192.168.0.2")
-    # ⛔ La porta NON ha un predefinito che nomini un bersaglio: 7448 e' il
-    #    prodotto di casa e 7501 il bersaglio di P5, tutt'e due accese apposta.
-    #    La porta di F2.4 e' la **7514**, e si passa a mano.
-    p.add_argument("--porta", type=int, help="⛔ la 7514, per F2.4")
+    # ⛔ The port has NO default naming a target: 7448 is the
+    #    house product and 7501 the P5 target, both on on purpose.
+    #    The F2.4 port is **7514**, and it is passed by hand.
+    p.add_argument("--porta", type=int, help="⛔ 7514, for F2.4")
     p.add_argument("--percorso", default="/rcp/1")
     p.add_argument("--utente", default="prova")
     p.add_argument("--parola", default="parola-di-prova")
-    # ⛔ D12: la strada che NON passa da `ps`.  Vince su `--parola` se ci sono
-    #    tutt'e due — un file scritto apposta e' sempre piu' recente di un
-    #    predefinito.
+    # ⛔ D12: the road that does NOT go through `ps`.  It wins over `--parola` if both
+    #    are there — a file written on purpose is always more recent than a
+    #    default.
     p.add_argument("--parola-file", default="",
-                   help="file 0600 con la sola parola d'ordine (⭐ D12: cosi' "
-                        "non finisce in `ps`)")
+                   help="0600 file with only the password (⭐ D12: this way "
+                        "it does not end up in `ps`)")
     p.add_argument("--larghezza", type=int, default=1920)
     p.add_argument("--altezza", type=int, default=1080)
     p.add_argument("--disposizione", default="it")
     p.add_argument("--codec", type=int, default=1, help="1 = HEVC, 2 = AV1")
     p.add_argument("--attesa", type=float, default=15.0,
-                   help="quanti secondi si resta ad ascoltare")
-    p.add_argument("--registra", help="la traccia, nel formato di §11.1")
-    p.add_argument("--uscita", default="", help="il registro del giro, in JSONL")
+                   help="how many seconds to keep listening")
+    p.add_argument("--registra", help="the trace, in the format of §11.1")
+    p.add_argument("--uscita", default="", help="the round's log, in JSONL")
     p.add_argument("--elenco", action="store_true",
-                   help="le previsioni, senza rete")
+                   help="the predictions, without network")
     p.add_argument("--violazioni", action="store_true",
-                   help="⏳ le prove verso il server (vuole un server)")
+                   help="⏳ the tests against the server (needs a server)")
     a = p.parse_args()
     a.parola = parola_dagli_argomenti(a)
     if a.elenco:
         sys.exit(elenco())
     if not a.porta:
-        print("⛔ serve --porta.  Per F2.4 e' la 7514: la 7448 e la 7501 sono")
-        print("   accese apposta e non si toccano (mandato §4).")
+        print("⛔ --porta is needed.  For F2.4 it is 7514: 7448 and 7501 are")
+        print("   on on purpose and are not touched (mandate §4).")
         sys.exit(2)
     try:
         sys.exit(asyncio.run(principale(a)))
-    except Exception as e:  # noqa: BLE001 — il tipo dell'errore E' la misura
+    except Exception as e:  # noqa: BLE001 — the error type IS the measurement
         print(f"\n   ⛔ {type(e).__name__}: {e}")
         sys.exit(2)

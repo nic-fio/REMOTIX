@@ -1,31 +1,31 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-g4-comune — L'ORECCHIO E L'OCCHIO DEL GRUPPO G4 (audio e video), fase 15.
+15-g4-comune — THE EAR AND THE EYE OF GROUP G4 (audio and video), phase 15.
 
-Lo usano `15-f012-audio.py` e `15-f013-video.py`.  Tre cose:
+Used by `15-f012-audio.py` and `15-f013-video.py`.  Three things:
 
-1. ⭐ L'ORECCHIO NELLA PAGINA.  Il suono della pagina nasce in `src/pagina.html`
-   (`avvia_audio` → `suona()`): un `AudioBufferSourceNode` per blocco, collegato
-   con `s.connect(ctx.destination)`.  Il banco sostituisce, NELLA PAGINA VERA
-   (script nel DOM, non la sandbox del driver), `AudioNode.prototype.connect`:
-   quando la destinazione e' l'`AudioDestinationNode`, il blocco passa per un
-   `AnalyserNode` che a sua volta va alla destinazione ⇒ l'uscita resta
-   identica (l'analizzatore e' un passante), e l'analizzatore sente ESATTAMENTE
-   quel che va all'altoparlante, DOPO la programmazione, il cuscino, i tagli.
-   Ogni 100 ms si legge livello (RMS del dominio del tempo) e frequenza di picco
-   (FFT 8192 a 48 kHz, interpolazione parabolica), con lo stato del contesto.
-   ⛔ Un contesto `suspended` NON vale suono: il suo analizzatore tiene l'ultimo
-   quadro, e si segna come «non udibile».
+1. ⭐ THE EAR IN THE PAGE.  The page's sound is born in `src/pagina.html`
+   (`avvia_audio` → `suona()`): one `AudioBufferSourceNode` per block, connected
+   with `s.connect(ctx.destination)`.  The bench replaces, IN THE REAL PAGE
+   (script in the DOM, not the driver's sandbox), `AudioNode.prototype.connect`:
+   when the destination is the `AudioDestinationNode`, the block goes through an
+   `AnalyserNode` that in turn goes to the destination ⇒ the output stays
+   identical (the analyser is a pass-through), and the analyser hears EXACTLY
+   what goes to the loudspeaker, AFTER the scheduling, the cushion, the cuts.
+   Every 100 ms the level (RMS of the time domain) and the peak frequency are read
+   (FFT 8192 at 48 kHz, parabolic interpolation), with the state of the context.
+   ⛔ A `suspended` context does NOT count as sound: its analyser keeps the last
+   frame, and it is marked as «not audible».
 
-2. ⭐ IL GIUDICE DEL SUONO (puro, certificato): frazione udibile, frequenza di
-   picco rispetto all'attesa, buco piu' lungo.
+2. ⭐ THE SOUND JUDGE (pure, certified): audible fraction, peak frequency
+   relative to the expectation, longest gap.
 
-3. ⭐ L'OCCHIO SUL VIDEO (puro, certificato): la finestra del video si trova per
-   DIFFERENZA fra fotografie (e' l'unica cosa che cambia tutta), poi per ogni
-   foto: fondo uniforme a colore saturo (il video c'e', niente mosaico: tessere
-   di un altro colore oltre quelle della mira ⇒ rosso) e differenza dalla foto
-   prima (l'immagine cammina; un blocco lungo ⇒ rosso).
+3. ⭐ THE EYE ON THE VIDEO (pure, certified): the video window is found by
+   DIFFERENCE between photos (it is the only thing that changes entirely), then for each
+   photo: uniform background in a saturated colour (the video is there, no mosaic: tiles
+   of another colour beyond those of the target ⇒ red) and difference from the previous
+   photo (the image moves; a long freeze ⇒ red).
 """
 import base64
 import io
@@ -35,7 +35,7 @@ import os
 import time
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  1. L'ORECCHIO NELLA PAGINA
+#  1. THE EAR IN THE PAGE
 # ═══════════════════════════════════════════════════════════════════════════
 ORECCHIO_JS = r"""
 (function () {
@@ -54,9 +54,9 @@ ORECCHIO_JS = r"""
     O.contesti.push(ctx);
     return an;
   }
-  /* ⚠ Anche alla NASCITA del contesto, non solo al primo `connect`: a contesto
-     sospeso `suona()` butta i blocchi senza collegarli (conto `sospesi`), e un
-     orecchio che aspettasse il `connect` non vedrebbe mai il contesto muto. */
+  /* ⚠ Also at the context's BIRTH, not only at the first `connect`: with the context
+     suspended `suona()` throws the blocks away without connecting them (count `sospesi`), and an
+     ear waiting for the `connect` would never see the mute context. */
   const CtxOrig = window.AudioContext;
   if (CtxOrig) {
     const Ctx = function () {
@@ -111,7 +111,7 @@ ORECCHIO_JS = r"""
 
 
 def _inietta(corpo):
-    """Uno script nella pagina VERA (non nella sandbox di Marionette)."""
+    """A script in the REAL page (not in Marionette's sandbox)."""
     return ("const s = document.createElement('script');"
             "s.textContent = %s;"
             "(document.head || document.documentElement).appendChild(s); s.remove();"
@@ -119,9 +119,9 @@ def _inietta(corpo):
 
 
 def in_pagina(g, espressione):
-    """Valuta `espressione` NELLA PAGINA VERA e torna il valore (via JSON in un
-    attributo del DOM: le xray di Firefox non lasciano vedere le proprieta'
-    scritte dalla pagina)."""
+    """Evaluates `espressione` IN THE REAL PAGE and returns the value (via JSON in a
+    DOM attribute: Firefox's xrays do not let you see the properties
+    written by the page)."""
     corpo = ("(function(){ let v; try { v = (function(){ return (%s); })(); }"
              " catch (e) { v = { __errore: String(e) }; }"
              " document.documentElement.setAttribute('data-c15g4', JSON.stringify(v));"
@@ -133,12 +133,12 @@ def in_pagina(g, espressione):
 
 
 def metti_orecchio(g):
-    """Monta l'orecchio.  Torna (ok, descrizione)."""
+    """Mounts the ear.  Returns (ok, description)."""
     g.js(_inietta(ORECCHIO_JS))
     r = in_pagina(g, "window.__c15orecchio ? { ok: true, ora: performance.now() } : null")
     if not r or not r.get("ok"):
-        return False, "l'orecchio non si e' montato nella pagina: %r" % (r,)
-    return True, "orecchio montato"
+        return False, "the ear did not mount in the page: %r" % (r,)
+    return True, "ear mounted"
 
 
 def ora_pagina(g):
@@ -147,7 +147,7 @@ def ora_pagina(g):
 
 
 def leggi_orecchio(g, da=0.0, a=None):
-    """I campioni con `da <= t < a` (ora della pagina, ms) e lo stato."""
+    """The samples with `da <= t < a` (page time, ms) and the state."""
     r = in_pagina(g, (
         "(function(){ const O = window.__c15orecchio; if (!O) return null;"
         " const da = %f, a = %s;"
@@ -160,8 +160,8 @@ def leggi_orecchio(g, da=0.0, a=None):
 
 
 def aspetta_contesto(g, tetto_s=30):
-    """Aspetta che la pagina crei il suo `AudioContext` (alla prima consegna
-    audio).  Torna (stato del contesto | None, conti della pagina)."""
+    """Waits for the page to create its `AudioContext` (at the first audio
+    delivery).  Returns (context state | None, page counts)."""
     fine = time.time() + tetto_s
     r = None
     while time.time() < fine:
@@ -176,19 +176,19 @@ def aspetta_contesto(g, tetto_s=30):
 
 
 def clic_vero(s, fx, fy):
-    """⭐ Un clic VERO sulla tela (evento fidato del browser), come l'utente:
-    e' il gesto che sveglia l'audio.  Torna la descrizione."""
+    """⭐ A REAL click on the canvas (trusted browser event), like the user:
+    it is the gesture that wakes up the audio.  Returns the description."""
     st = s.stato()
     x, y = s.pr.centro(st, fx, fy)
     s.g.clic(x, y)
-    return "clic vero a (%.0f, %.0f) del vetro" % (x, y)
+    return "real click at (%.0f, %.0f) of the glass" % (x, y)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  2. IL GIUDICE DEL SUONO (puro)
+#  2. THE SOUND JUDGE (pure)
 # ═══════════════════════════════════════════════════════════════════════════
-SOGLIA_RMS = 0.01          # −40 dBFS: la stessa di C5 (tarata su dati veri)
-TOLL_HZ = 12.0             # FFT 8192 @ 48 kHz: 5,9 Hz a casella
+SOGLIA_RMS = 0.01          # −40 dBFS: the same as C5 (calibrated on real data)
+TOLL_HZ = 12.0             # FFT 8192 @ 48 kHz: 5.9 Hz per bin
 
 
 def mediana(v):
@@ -201,15 +201,15 @@ def mediana(v):
 
 def giudica_suono(campioni, atteso_hz, min_frazione=0.8, max_buco_s=None,
                   min_campioni=10, soglia=SOGLIA_RMS, toll=TOLL_HZ):
-    """(esito 'PASS'|'FAIL'|'BLOCKED', descrizione, numeri).
+    """(outcome 'PASS'|'FAIL'|'BLOCKED', description, numbers).
 
-    Udibile = contesto `running` e RMS > soglia.  PASS se la frazione udibile e'
-    >= `min_frazione`, e fra gli udibili la frequenza di picco e' entro `toll`
-    dall'attesa per almeno `min_frazione`, e (se chiesto) nessun buco di
-    silenzio piu' lungo di `max_buco_s`."""
+    Audible = context `running` and RMS > threshold.  PASS if the audible fraction is
+    >= `min_frazione`, and among the audible ones the peak frequency is within `toll`
+    of the expectation for at least `min_frazione`, and (if requested) no silence
+    gap longer than `max_buco_s`."""
     n = len(campioni)
     if n < min_campioni:
-        return "BLOCKED", "solo %d campioni dall'orecchio (ne servono %d)" % (n, min_campioni), {}
+        return "BLOCKED", "only %d samples from the ear (%d needed)" % (n, min_campioni), {}
     udibili = [c for c in campioni if c.get("stato") == "running"
                and (c.get("rms") or 0) > soglia]
     sospesi = sum(1 for c in campioni if c.get("stato") != "running")
@@ -217,8 +217,8 @@ def giudica_suono(campioni, atteso_hz, min_frazione=0.8, max_buco_s=None,
     giusti = [c for c in udibili if c.get("hz") is not None
               and abs(c["hz"] - atteso_hz) <= toll]
     fr_hz = len(giusti) / float(len(udibili)) if udibili else 0.0
-    # il buco piu' lungo: tempo fra il primo e l'ultimo campione di una fila
-    # di NON udibili (i buchi del campionamento non contano come silenzio)
+    # the longest gap: time between the first and the last sample of a run
+    # of NON-audible ones (the gaps in the sampling do not count as silence)
     buco, inizio, prec = 0.0, None, None
     for c in campioni:
         ud = c.get("stato") == "running" and (c.get("rms") or 0) > soglia
@@ -237,24 +237,24 @@ def giudica_suono(campioni, atteso_hz, min_frazione=0.8, max_buco_s=None,
            "hz_mediana": round(hz_med, 1) if hz_med else None,
            "hz_giusti": round(fr_hz, 3), "buco_max_s": round(buco, 2),
            "atteso_hz": atteso_hz}
-    desc = ("%d campioni in %.1f s: udibile %.0f%% (RMS mediano %.3f = %s dBFS), picco "
-            "mediano %s Hz (attesi %.0f: giusti %.0f%%), buco piu' lungo %.1f s%s"
+    desc = ("%d samples in %.1f s: audible %.0f%% (median RMS %.3f = %s dBFS), median "
+            "peak %s Hz (expected %.0f: right %.0f%%), longest gap %.1f s%s"
             % (n, dur, 100 * fr, rms_med or 0, num["dbfs"], num["hz_mediana"], atteso_hz,
-               100 * fr_hz, buco, (", %d campioni a contesto NON running" % sospesi)
+               100 * fr_hz, buco, (", %d samples with the context NOT running" % sospesi)
                if sospesi else ""))
     if sospesi == n:
-        return "FAIL", "il contesto audio della pagina non e' mai «running»: " + desc, num
+        return "FAIL", "the page's audio context is never «running»: " + desc, num
     if fr < min_frazione:
-        return "FAIL", "SILENZIO (o quasi): " + desc, num
+        return "FAIL", "SILENCE (or almost): " + desc, num
     if fr_hz < min_frazione:
-        return "FAIL", "suono c'e' ma NON alla frequenza attesa: " + desc, num
+        return "FAIL", "there is sound but NOT at the expected frequency: " + desc, num
     if max_buco_s is not None and buco > max_buco_s:
-        return "FAIL", "suono con un BUCO di %.1f s (tetto %.1f): %s" % (buco, max_buco_s, desc), num
+        return "FAIL", "sound with a GAP of %.1f s (cap %.1f): %s" % (buco, max_buco_s, desc), num
     return "PASS", desc, num
 
 
 def onda_wav(hz, secondi, ampiezza=0.5, frequenza=48000):
-    """Un tono puro, stereo s16 — l'ampiezza e' un numero di questo file (come C5)."""
+    """A pure tone, stereo s16 — the amplitude is a number of this file (like C5)."""
     import struct
     n = int(secondi * frequenza)
     dati = bytearray()
@@ -268,10 +268,10 @@ def onda_wav(hz, secondi, ampiezza=0.5, frequenza=48000):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  3. L'OCCHIO SUL VIDEO (puro)
+#  3. THE EYE ON THE VIDEO (pure)
 # ═══════════════════════════════════════════════════════════════════════════
 def foto_ridotta(g, scala=0.5):
-    """La tela fotografata e ridotta: (PIL RGB | None, png | None, motivo)."""
+    """The canvas photographed and reduced: (PIL RGB | None, png | None, reason)."""
     from PIL import Image
     try:
         _t0 = time.time()
@@ -280,10 +280,10 @@ def foto_ridotta(g, scala=0.5):
                      "if(!t) return null; const b=t.getBoundingClientRect();"
                      "return [b.left, b.top, b.width, b.height];")
             if not r:
-                return None, None, "la tela non c'e'"
-            # ⚠ `[M]` 24 set: a pagina FERMA (video in pausa) Chrome aspetta un
-            #   quadro nuovo per fotografare e ci metteva ~20 s.  Un punto di 2 px
-            #   in un angolo, fuori dalla tela, che cambia ⇒ c'e' sempre un quadro.
+                return None, None, "the canvas is not there"
+            # ⚠ `[M]` 24 Sep: with the page STILL (video paused) Chrome waits for a
+            #   new frame to photograph and took ~20 s.  A 2 px dot
+            #   in a corner, outside the canvas, that changes ⇒ there is always a frame.
             g.js("let d=document.getElementById('c15g4-battito');"
                  "if(!d){d=document.createElement('div');d.id='c15g4-battito';"
                  "d.style.cssText='position:fixed;right:0;bottom:0;width:2px;height:2px;"
@@ -296,23 +296,23 @@ def foto_ridotta(g, scala=0.5):
                                     "scale": scala})
             png = base64.b64decode(sh["data"])
             if os.environ.get("C15G4_TEMPI"):
-                print("   [tempi] foto: prima %.2f s, cattura %.2f s" % (_t1 - _t0, time.time() - _t1),
+                print("   [times] photo: before %.2f s, capture %.2f s" % (_t1 - _t0, time.time() - _t1),
                       flush=True)
             im = Image.open(io.BytesIO(png)).convert("RGB")
         else:
             png, _p = g.fotografa_tela()
             if not png:
-                return None, None, "la tela non si fotografa"
+                return None, None, "the canvas cannot be photographed"
             im = Image.open(io.BytesIO(png)).convert("RGB")
             if scala != 1:
                 im = im.resize((max(1, int(im.size[0] * scala)), max(1, int(im.size[1] * scala))))
         return im, png, ""
     except Exception as e:                       # noqa: BLE001
-        return None, None, "fotografia fallita: %s" % str(e)[:200]
+        return None, None, "photo failed: %s" % str(e)[:200]
 
 
 def _corsa_piu_lunga(valori, soglia):
-    """(inizio, fine) della fila contigua piu' lunga con valore > soglia."""
+    """(start, end) of the longest contiguous run with value > soglia."""
     migliore, lung, i0 = (0, -1), 0, None
     for i, v in enumerate(list(valori) + [0]):
         if v > soglia:
@@ -325,12 +325,12 @@ def _corsa_piu_lunga(valori, soglia):
 
 
 def trova_video(imgs, soglia=24):
-    """⭐ La finestra del video: i pixel che cambiano in TUTTE le coppie di foto
-    consecutive (il video e' l'unica cosa che cambia sempre).  Torna
-    ((x0, y0, x1, y1) | None, descrizione)."""
+    """⭐ The video window: the pixels that change in ALL the pairs of consecutive
+    photos (the video is the only thing that always changes).  Returns
+    ((x0, y0, x1, y1) | None, description)."""
     from PIL import ImageChops
     if len(imgs) < 3:
-        return None, "servono tre fotografie"
+        return None, "three photos are needed"
     maschera = None
     for a, b in zip(imgs, imgs[1:]):
         d = ImageChops.difference(a, b).convert("L").point(lambda v: 255 if v > soglia else 0)
@@ -348,20 +348,20 @@ def trova_video(imgs, soglia=24):
                 col[x] += 1
                 rig[y] += 1
     if max(col) == 0:
-        return None, "nessun pixel cambia in tutte le foto: il video non si muove (o non c'e')"
+        return None, "no pixel changes in all the photos: the video does not move (or is not there)"
     x0, x1 = _corsa_piu_lunga(col, 0.15 * max(col))
     y0, y1 = _corsa_piu_lunga(rig, 0.15 * max(rig))
     if x1 < 0 or y1 < 0:
-        return None, "nessuna zona che cambia"
+        return None, "no changing area"
     x0, x1, y0, y1 = x0 * f, (x1 + 1) * f - 1, y0 * f, (y1 + 1) * f - 1
     w, h = W, H
     ww, hh = x1 - x0 + 1, y1 - y0 + 1
     rap = ww / float(hh)
-    desc = "zona che cambia %dx%d a (%d,%d) su %dx%d, rapporto %.2f" % (ww, hh, x0, y0, w, h, rap)
+    desc = "changing area %dx%d at (%d,%d) on %dx%d, ratio %.2f" % (ww, hh, x0, y0, w, h, rap)
     if ww < 0.08 * w or hh < 0.08 * h:
-        return None, "zona che cambia troppo piccola: " + desc
+        return None, "changing area too small: " + desc
     if not (16 / 9.0 * 0.75 <= rap <= 16 / 9.0 * 1.3):
-        return None, "la zona che cambia non ha la forma del video (16:9): " + desc
+        return None, "the changing area does not have the shape of the video (16:9): " + desc
     return (x0, y0, x1 + 1, y1 + 1), desc
 
 
@@ -372,10 +372,10 @@ def ritaglia(im, box, margine=0.05):
 
 
 def esamina_quadro(crop):
-    """Un quadro del video (160x90): (ok, descrizione, numeri).
-    Il fondo e' UNO colore saturo (tinta che ruota); la mira bianca copre al
-    piu' ~9 tessere su 144.  Tessere di un colore diverso oltre la mira ⇒
-    mosaico; fondo non saturo ⇒ il video non c'e' (nero, grigio, desktop)."""
+    """A frame of the video (160x90): (ok, description, numbers).
+    The background is ONE saturated colour (rotating hue); the white target covers at
+    most ~9 tiles out of 144.  Tiles of a different colour beyond the target ⇒
+    mosaic; non-saturated background ⇒ the video is not there (black, grey, desktop)."""
     tessere = []
     px = crop.load()
     for ty in range(9):
@@ -394,12 +394,12 @@ def esamina_quadro(crop):
                   if math.sqrt(sum((t[i] - med[i]) ** 2 for i in range(3))) > 60)
     num = {"fondo": [round(v) for v in med], "saturazione": round(sat), "tessere_diverse": diverse}
     if sat < 70:
-        return False, "il fondo del video non e' saturo (%s): il video non si vede" % (num["fondo"],), num
+        return False, "the video's background is not saturated (%s): the video is not seen" % (num["fondo"],), num
     if diverse > 16:
-        return False, "MOSAICO: %d tessere su 144 fuori dal colore del fondo (la mira ne copre <= 9)" % diverse, num
+        return False, "MOSAIC: %d tiles out of 144 outside the background colour (the target covers <= 9)" % diverse, num
     if diverse < 1:
-        return False, "la mira non c'e' (nessuna tessera diversa dal fondo)", num
-    return True, "fondo %s, %d tessere diverse (la mira)" % (num["fondo"], diverse), num
+        return False, "the target is not there (no tile different from the background)", num
+    return True, "background %s, %d different tiles (the target)" % (num["fondo"], diverse), num
 
 
 def diff_media(a, b):
@@ -408,10 +408,10 @@ def diff_media(a, b):
 
 
 def giudica_immagine(quadri, min_ok=0.9, min_cambi=0.9, max_blocco_s=4.0, soglia_cambio=6.0):
-    """quadri: [(t_secondi, crop 160x90)].  (esito, descrizione, numeri)."""
+    """quadri: [(t_seconds, crop 160x90)].  (outcome, description, numbers)."""
     n = len(quadri)
     if n < 5:
-        return "BLOCKED", "solo %d fotografie del video" % n, {}
+        return "BLOCKED", "only %d photos of the video" % n, {}
     esami = [esamina_quadro(c) for _t, c in quadri]
     ok = sum(1 for e in esami if e[0])
     cambi, blocco, inizio, blocco_max = 0, 0.0, None, 0.0
@@ -432,18 +432,18 @@ def giudica_immagine(quadri, min_ok=0.9, min_cambi=0.9, max_blocco_s=4.0, soglia
     num = {"foto": n, "durata_s": round(dur, 1), "quadri_buoni": round(fr_ok, 3),
            "cambi": round(fr_c, 3), "blocco_max_s": round(blocco_max, 1),
            "diff_mediana": mediana(diffs)}
-    desc = ("%d foto in %.0f s: quadri buoni %.0f%%, cambia fra foto consecutive %.0f%% "
-            "(differenza mediana %.1f), blocco piu' lungo %.1f s"
+    desc = ("%d photos in %.0f s: good frames %.0f%%, changes between consecutive photos %.0f%% "
+            "(median difference %.1f), longest freeze %.1f s"
             % (n, dur, 100 * fr_ok, 100 * fr_c, num["diff_mediana"] or 0, blocco_max))
     if fr_c < min_cambi or blocco_max > max_blocco_s:
-        return "FAIL", "IMMAGINE FERMA: " + desc, num
+        return "FAIL", "STILL IMAGE: " + desc, num
     if fr_ok < min_ok:
-        return "FAIL", "quadri sbagliati (%s): %s" % (primo_male, desc), num
+        return "FAIL", "wrong frames (%s): %s" % (primo_male, desc), num
     return "PASS", desc, num
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA CERTIFICAZIONE delle funzioni pure
+#  THE CERTIFICATION of the pure functions
 # ═══════════════════════════════════════════════════════════════════════════
 def _quadro_sintetico(tinta, mx, my, mosaico=False):
     from PIL import Image, ImageDraw
@@ -472,24 +472,24 @@ def certifica_comune():
         return [{"t": i * 100.0, "stato": stato, "rms": rms, "hz": hz} for i in range(n)]
 
     e, d, _ = giudica_suono(camp(440.3, 0.35), 440)
-    di("tono 440 atteso 440 ⇒ PASS", e == "PASS", d)
+    di("tone 440 expected 440 ⇒ PASS", e == "PASS", d)
     e, d, _ = giudica_suono(camp(440.3, 0.35), 660)
-    di("tono 440 atteso 660 ⇒ FAIL", e == "FAIL", d)
+    di("tone 440 expected 660 ⇒ FAIL", e == "FAIL", d)
     e, d, _ = giudica_suono(camp(None, 0.0), 440)
-    di("silenzio ⇒ FAIL", e == "FAIL", d)
+    di("silence ⇒ FAIL", e == "FAIL", d)
     e, d, _ = giudica_suono(camp(440, 0.35, stato="suspended"), 440)
-    di("contesto sospeso (quadro vecchio) ⇒ FAIL", e == "FAIL", d)
+    di("context suspended (old frame) ⇒ FAIL", e == "FAIL", d)
     buco = camp(660, 0.3, 300)
     for c in buco[100:125]:
         c["rms"] = 0.0
     e, d, _ = giudica_suono(buco, 660, min_frazione=0.9, max_buco_s=1.0)
-    di("buco di 2,5 s su 30 s ⇒ FAIL", e == "FAIL", d)
+    di("gap of 2.5 s over 30 s ⇒ FAIL", e == "FAIL", d)
     e, d, _ = giudica_suono(camp(440, 0.35, 3), 440)
-    di("tre campioni ⇒ BLOCKED", e == "BLOCKED", d)
+    di("three samples ⇒ BLOCKED", e == "BLOCKED", d)
     e, d, _ = giudica_suono(camp(440, 0.005), 440)
-    di("sotto soglia (−46 dBFS) ⇒ FAIL", e == "FAIL", d)
+    di("below threshold (−46 dBFS) ⇒ FAIL", e == "FAIL", d)
 
-    # il video: una tela di desktop grigio con il video in (300,200)
+    # the video: a grey desktop canvas with the video at (300,200)
     def tela(q):
         t = Image.new("RGB", (1920, 1080), (40, 44, 52))
         t.paste(q.resize((640, 360)), (300, 200))
@@ -498,27 +498,27 @@ def certifica_comune():
              for i in range(12)]
     box, d = trova_video(fotos[:4])
     ok = box is not None and abs(box[0] - 300) <= 4 and abs(box[2] - 940) <= 4
-    di("la finestra del video si trova per differenza", ok, "%s · %s" % (box, d))
+    di("the video window is found by difference", ok, "%s · %s" % (box, d))
     if box:
         quadri = [(i * 2.0, ritaglia(f, box)) for i, f in enumerate(fotos)]
         e, d, _ = giudica_immagine(quadri)
-        di("video che cammina ⇒ PASS", e == "PASS", d)
+        di("moving video ⇒ PASS", e == "PASS", d)
         fermo = [(i * 2.0, quadri[3][1]) for i in range(12)]
         e, d, _ = giudica_immagine(fermo)
-        di("video FERMO ⇒ FAIL", e == "FAIL", d)
+        di("STILL video ⇒ FAIL", e == "FAIL", d)
         mos = [(i * 2.0, ritaglia(tela(_quadro_sintetico(i * 94, 300, 200, mosaico=True)), box))
                for i in range(12)]
         e, d, _ = giudica_immagine(mos)
-        di("video a MOSAICO ⇒ FAIL", e == "FAIL", d)
+        di("MOSAIC video ⇒ FAIL", e == "FAIL", d)
         nero = [(i * 2.0, Image.new("RGB", (160, 90), (0, 0, 0))) for i in range(12)]
         e, d, _ = giudica_immagine(nero)
-        di("video NERO ⇒ FAIL", e == "FAIL", d)
+        di("BLACK video ⇒ FAIL", e == "FAIL", d)
     fermi = [fotos[0]] * 4
     box, d = trova_video(fermi)
-    di("nessun video che si muove ⇒ non trovato", box is None, d)
+    di("no moving video ⇒ not found", box is None, d)
     wav = onda_wav(440, 0.1)
-    di("l'onda: intestazione WAV e lunghezza", wav[:4] == b"RIFF" and len(wav) == 44 + 4800 * 4,
-       "%d byte" % len(wav))
+    di("the wave: WAV header and length", wav[:4] == b"RIFF" and len(wav) == 44 + 4800 * 4,
+       "%d bytes" % len(wav))
     return 0 if bene else 1
 
 
@@ -532,18 +532,18 @@ def salva_json(o, nome, dati):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  ssh che non si arrende a un rifiuto passeggero
+#  ssh that does not give up at a passing refusal
 # ═══════════════════════════════════════════════════════════════════════════
 _PASSEGGERO = ("Connection closed by", "kex_exchange_identification", "Connection reset by",
                "ssh_exchange_identification")
 
 
 def robusta(sc, tentativi=6):
-    """⚠ `[M]` 24 set 2026, dieci agenti sullo stesso server: `sshd` rifiuta
-    connessioni nuove quando troppe sono in negoziazione (MaxStartups) ⇒
-    «Connection closed by 192.168.0.2 port 22» a caso.  Ogni `Scatola.dentro`
-    apre una connessione nuova: qui la si RIPROVA se il rifiuto e' di sshd
-    (nessun comando eseguito), non se il comando e' fallito."""
+    """⚠ `[M]` 24 Sep 2026, ten agents on the same server: `sshd` refuses
+    new connections when too many are negotiating (MaxStartups) ⇒
+    «Connection closed by 192.168.0.2 port 22» at random.  Every `Scatola.dentro`
+    opens a new connection: here it is RETRIED if the refusal is sshd's
+    (no command executed), not if the command failed."""
     if getattr(sc, "_g4_robusta", False):
         return sc
     originale = sc.dentro
@@ -562,15 +562,15 @@ def robusta(sc, tentativi=6):
 
 
 def entra_con_orecchio(s):
-    """La pagina, l'orecchio PRIMA dell'accesso (il contesto audio puo' nascere
-    subito dopo l'ammissione, se la sessione sta gia' suonando), poi l'accesso."""
+    """The page, the ear BEFORE the login (the audio context can be born
+    right after admission, if the session is already playing), then the login."""
     ok, m = s.pr.apri()
     if not ok:
-        return False, "la pagina non si apre: " + m
+        return False, "the page does not open: " + m
     ok, m = metti_orecchio(s.g)
     if not ok:
         return False, m
     ok, m = s.entra(apri=False)
     if not ok:
-        return False, "senza sessione non c'e' niente da guardare: " + m
+        return False, "without a session there is nothing to look at: " + m
     return True, m

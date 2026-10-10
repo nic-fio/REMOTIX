@@ -1,29 +1,29 @@
 /*
- * 04-b25-guasti.c — TRE IMPLEMENTAZIONI SBAGLIATE DI PROPOSITO.
+ * 04-b25-guasti.c — THREE IMPLEMENTATIONS WRONG ON PURPOSE.
  *
- * ⛔ Esistono per una ragione sola: CERTIFICARE il banco (`CODER.md` §3.3 e
- *    §4.6).  Un banco che non ha mai visto il difetto non e' una prova — e' un
- *    verde che da' fiducia.  `04-b25-lancia.sh` compila `04-b25-tastiera.c`
- *    contro ciascuno di questi e PRETENDE che dica ROSSO.
+ * ⛔ They exist for one reason only: to CERTIFY the bench (`CODER.md` §3.3 and
+ *    §4.6).  A bench that has never seen the defect is not a test — it is a
+ *    green that gives false confidence.  `04-b25-lancia.sh` compiles `04-b25-tastiera.c`
+ *    against each of these and DEMANDS that it says ROSSO.
  *
- * ⚠ Nessuna di queste tre e' inventata: sono i tre modi in cui questo modulo
- *   sbaglia davvero, e ciascuna ha un nome nel prodotto reale.
+ * ⚠ None of these three is invented: they are the three ways this module
+ *   really goes wrong, and each has a name in the real product.
  *
- *   GUASTO=1  «manda la lettera senza accento».  Non trova la «e'» accentata e
- *             ripiega sulla «e».  ⇒ E' precisamente cio' che `RCP.md` §7.3
- *             vieta: «NON DEVE mandare un carattere diverso».  Per l'utente
- *             sono le lettere sbagliate nel campo della parola d'ordine.
+ *   GUASTO=1  «sends the letter without the accent».  It does not find the accented «e'» and
+ *             falls back on the «e».  ⇒ It is precisely what `RCP.md` §7.3
+ *             forbids: «MUST NOT send a different character».  For the user
+ *             it is the wrong letters in the password field.
  *
- *   GUASTO=2  «dimentica i modificatori».  Trova il tasto giusto e consegna
- *             solo quello: su `it` esce «e` » invece di «e'», su `us` esce «2»
- *             invece di «@».  E' il difetto che un banco che confronta i
- *             CODICI non vedrebbe mai — il tasto e' quello giusto.
+ *   GUASTO=2  «forgets the modifiers».  It finds the right key and hands over
+ *             only that: on `it` out comes «e` » instead of «e'», on `us` out comes «2»
+ *             instead of «@».  It is the defect that a bench comparing the
+ *             CODES would never see — the key is the right one.
  *
- *   GUASTO=3  «ripiega su us in silenzio».  La disposizione chiesta non si
- *             carica e si carica `us` senza dirlo, continuando a dichiarare il
- *             nome chiesto.  E' la trappola di `CODER.md` §4.2 nella sua forma
- *             peggiore: il sintomo e' «scrive le lettere sbagliate» e nessuno
- *             lo collega alla disposizione.
+ *   GUASTO=3  «falls back to us silently».  The requested layout does not
+ *             load and `us` is loaded without saying so, still declaring the
+ *             requested name.  It is the trap of `CODER.md` §4.2 in its worst
+ *             form: the symptom is «it types the wrong letters» and nobody
+ *             connects it to the layout.
  */
 #include "../src/tastiera.h"
 
@@ -101,7 +101,7 @@ Tastiera *tastiera_apri(const char *disposizione, char **errore)
 	t->km = compila(t->ctx, chiesta);
 
 #if GUASTO == 3
-	/* ⛔ IL RIPIEGO SILENZIOSO: non si carica, si carica `us`, e non si dice. */
+	/* ⛔ THE SILENT FALLBACK: it does not load, `us` is loaded, and nobody is told. */
 	if (!t->km)
 		t->km = compila(t->ctx, "us");
 #endif
@@ -109,7 +109,7 @@ Tastiera *tastiera_apri(const char *disposizione, char **errore)
 	if (!t->km)
 	{
 		if (errore)
-			*errore = strdup("la disposizione non si compila");
+			*errore = strdup("the layout does not compile");
 		xkb_context_unref(t->ctx);
 		free(t);
 		return NULL;
@@ -119,17 +119,17 @@ Tastiera *tastiera_apri(const char *disposizione, char **errore)
 }
 
 /*
- * GUASTO=4  ⛔ «si fida del nome negoziato invece che della disposizione che la
- *           sessione ha consegnato».  E' IL DIFETTO PER CUI IL CONTRATTO E'
- *           CAMBIATO il 14 agosto 2026: la keymap arriva da `libei` e viene
- *           buttata via, e si compila quella che il client ha chiesto.
+ * GUASTO=4  ⛔ «trusts the negotiated name instead of the layout the
+ *           session handed over».  It is THE DEFECT FOR WHICH THE CONTRACT
+ *           CHANGED on 14 Aug 2026: the keymap arrives from `libei` and is
+ *           thrown away, and the one the client asked for is compiled.
  *
- *           Sessione `it`, client `us`, l'utente scrive `[`: questo manda il
- *           tasto 26 — giusto su `us` — e sullo schermo compare **«è»**.  Il
- *           banco deve accusarlo, o la cura non e' provata.
+ *           Session `it`, client `us`, the user types `[`: this sends
+ *           key 26 — right on `us` — and on the screen appears **«è»**.  The
+ *           bench must catch it, or the cure is not proven.
  *
- * ⚠ Per gli altri tre guasti questa funzione e' CORRETTA: ciascuno deve
- *   sbagliare una cosa sola, o non si sa che cosa il banco abbia visto.
+ * ⚠ For the other three faults this function is CORRECT: each must
+ *   get one thing wrong only, or nobody knows what the bench has seen.
  */
 Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza, const char *negoziata,
                                   char **errore)
@@ -140,7 +140,7 @@ Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza, const cha
 		*errore = NULL;
 
 #if GUASTO == 4
-	/* ⛔ la keymap della sessione non si guarda nemmeno. */
+	/* ⛔ the session's keymap is not even looked at. */
 	(void) testo;
 	(void) lunghezza;
 	return tastiera_apri(negoziata ? negoziata : "us", errore);
@@ -168,7 +168,7 @@ Tastiera *tastiera_apri_da_keymap(const char *testo, size_t lunghezza, const cha
 		free(t);
 		return NULL;
 	}
-	snprintf(t->nome, sizeof t->nome, "%s", negoziata ? negoziata : "della sessione");
+	snprintf(t->nome, sizeof t->nome, "%s", negoziata ? negoziata : "the session's");
 	return t;
 #endif
 }
@@ -184,7 +184,7 @@ void tastiera_chiudi(Tastiera *t)
 	free(t);
 }
 
-/* Cerca un tasto che produca `carattere`; ritorna il livello in `*livello`. */
+/* Looks for a key that produces `carattere`; returns the level in `*livello`. */
 static int cerca(struct xkb_keymap *km, uint32_t carattere, xkb_keycode_t *tasto,
                  xkb_level_index_t *livello)
 {
@@ -224,8 +224,8 @@ int tastiera_posizioni_per(Tastiera *t, uint32_t carattere, uint16_t codici[TAST
 	if (!cerca(t->km, carattere, &tasto, &livello))
 	{
 #if GUASTO == 1
-		/* ⛔ «meglio qualcosa che niente»: si toglie l'accento e si manda
-		 *    quella.  E' la falsificazione che RCP.md §7.3 vieta. */
+		/* ⛔ «better something than nothing»: the accent is dropped and that
+		 *    letter is sent.  It is the falsification RCP.md §7.3 forbids. */
 		static const struct
 		{
 			uint32_t accentata, nuda;
@@ -244,13 +244,13 @@ trovato:
 	{
 		size_t q = 0;
 #if GUASTO != 2
-		/* La regoletta ingenua di v1: livello 1 = Maiusc, 2 = AltGr, 3 = tutt'e due. */
+		/* The naive little rule of v1: level 1 = Shift, 2 = AltGr, 3 = both. */
 		if (livello == 1 || livello == 3)
 			codici[q++] = 42;
 		if (livello == 2 || livello == 3)
 			codici[q++] = 100;
 #endif
-		/* ⛔ GUASTO=2: i modificatori non si mettono affatto. */
+		/* ⛔ GUASTO=2: the modifiers are not added at all. */
 		codici[q++] = XKB_A_EVDEV(tasto);
 		*n = q;
 	}

@@ -2,46 +2,46 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-11-c17 — ⭐ «GLI APPUNTI VANNO NEI DUE VERSI»
+11-c17 — ⭐ «THE CLIPBOARD GOES BOTH WAYS»
 ===========================================================================
 
     python3 11-c17-gli-appunti-vanno-nei-due-versi.py --porta 8512
     python3 11-c17-gli-appunti-vanno-nei-due-versi.py --porta 8512 --senza-copia
 
-    che cosa deve essere vero : un testo copiato sul dispositivo si incolla nel
-                                desktop, e uno copiato nel desktop arriva al
-                                dispositivo — anche a chi si RIATTACCA
-    da dove parte             : una sessione nuova, un inquilino nuovo
-    che cosa guarda           : tre fatti, ciascuno col suo nome
-      A  dispositivo → sessione   `wl-paste` nella sessione legge il testo
-                                  che il cliente ha annunciato
-      B  sessione → dispositivo   `wl-copy` nella sessione, e il server lo
-                                  ANNUNCIA al cliente attaccato (§7.4)
-      R  chi si riattacca         un cliente nuovo sullo stesso figlio lo
-                                  riceve intero, senza che nessuno ricopi
-    come so che sa dare rosso : `--senza-copia` — nessuno copia niente, da
-                                nessuna delle due parti ⇒ tre rossi
+    what must be true         : a text copied on the device is pasted in the
+                                desktop, and one copied in the desktop reaches the
+                                device — even whoever REATTACHES
+    where it starts from      : a new session, a new tenant
+    what it looks at          : three facts, each with its own name
+      A  device → session         `wl-paste` in the session reads the text
+                                  the client announced
+      B  session → device         `wl-copy` in the session, and the server
+                                  ANNOUNCES it to the attached client (§7.4)
+      R  whoever reattaches       a new client on the same child
+                                  receives it whole, without anyone copying again
+    how I know it can give red: `--senza-copia` — nobody copies anything, on
+                                either side ⇒ three reds
 
-⭐ Nata in fase 12 (19 set 2026): gli appunti di KDE erano provati solo a mano
-   (`07-b54`), e questa maglia li mette nella rete.  E al primo giro ha
-   trovato un difetto VERO, di tutti i desktop: il testo copiato nella sessione
-   prima che la sessione RCP fosse aperta si teneva e non si annunciava mai
-   (`src/rcp.c`, `annuncia_il_tenuto`) ⇒ il fatto R.
+⭐ Born in phase 12 (19 Sep 2026): the KDE clipboard was tested only by hand
+   (`07-b54`), and this mesh puts it in the net.  And at the first run it
+   found a REAL defect, of all desktops: the text copied in the session
+   before the RCP session was open was kept and never announced
+   (`src/rcp.c`, `annuncia_il_tenuto`) ⇒ fact R.
 
-⛔ Due implementazioni ai due lati, e nessuna e' il server: `01-b3-cliente.py`
-   (che ha letto solo `RCP.md`) e **GTK** (`appunti-gtk.py`), che non e' nostro
-   e non ha mai sentito parlare di RCP.
-⭐⭐ E L'ARBITRO E' LO STESSO SUI DUE DESKTOP — 20 set 2026.  Prima erano
-   `wl-copy`/`wl-paste`, che parlano `zwlr_data_control_manager_v1`: KWin ce
-   l'ha, ⛔ Mutter no, e su GNOME la maglia usciva 3 («non ho potuto
-   guardare»).  ⇒ Adesso si fa come fa una PERSONA: si apre una finestra vera,
-   ⭐ **le si da' il fuoco con un clic mandato attraverso il prodotto**
-   (`01-b3-cliente.py --clic`), e da li' in poi gli appunti si toccano — su
-   GNOME come su KDE.  ⚠ E se il clic non arrivasse, il rosso sarebbe del
-   prodotto che non consegna l'input: e' la stessa strada di C4.
+⛔ Two implementations on the two sides, and neither is the server: `01-b3-cliente.py`
+   (which has read only `RCP.md`) and **GTK** (`appunti-gtk.py`), which is not ours
+   and has never heard of RCP.
+⭐⭐ AND THE ARBITER IS THE SAME ON BOTH DESKTOPS — 20 Sep 2026.  Before they were
+   `wl-copy`/`wl-paste`, which speak `zwlr_data_control_manager_v1`: KWin has
+   it, ⛔ Mutter does not, and on GNOME the mesh exited 3 («I could not
+   look»).  ⇒ Now we do what a PERSON does: a real window is opened,
+   ⭐ **it is given the focus with a click sent through the product**
+   (`01-b3-cliente.py --clic`), and from then on the clipboard is touched — on
+   GNOME as on KDE.  ⚠ And if the click did not arrive, the red would be the
+   product's for not delivering the input: it is the same road as C4.
 
-Esiti: 0 verde · 1 rosso · 3 non ho potuto guardare (⛔ NON e' un rosso).
-⛔ Con `--senza-copia` si legge al contrario: 0 = il guasto e' stato VISTO.
+Outcomes: 0 green · 1 red · 3 I could not look (⛔ it is NOT a red).
+⛔ With `--senza-copia` it reads the other way round: 0 = the fault was SEEN.
 """
 import argparse
 import importlib.util
@@ -56,32 +56,32 @@ import time
 QUI = os.path.dirname(os.path.abspath(__file__))
 CLIENTE = os.path.join(QUI, "01-b3-cliente.py")
 PAROLA = "provanic2026"
-# ⭐ L'arbitro esterno: GTK, cioe' `wl_data_device` — la clipboard delle
-#    applicazioni vere.  ⛔ Vuole il FUOCO, e il fuoco lo da' il clic del
-#    cliente (`--clic`).  Sta accanto a questa maglia dentro la scatola.
-# ⚠ Dove l'arbitro racconta la sua copia: il banco lo LEGGE invece di dormire
-#   un tempo fisso — con GTK la copia parte quando arriva il fuoco, e il fuoco
-#   arriva col clic del cliente (ogni 4 s), non a un'ora decisa da noi.
+# ⭐ The external arbiter: GTK, that is `wl_data_device` — the clipboard of
+#    real applications.  ⛔ It wants the FOCUS, and the focus is given by the
+#    client's click (`--clic`).  It sits next to this mesh inside the box.
+# ⚠ Where the arbiter reports its copy: the bench READS it instead of sleeping
+#   a fixed time — with GTK the copy starts when the focus arrives, and the focus
+#   arrives with the client's click (every 4 s), not at a time decided by us.
 #
-# ⛔⛔ E IL FILE E' DELL'INQUILINO, non uno per tutti — 21 set 2026.
-#   Qui c'era `PROVA_COPIA = "/tmp/remotix-arbitro-copia.log"`: UN nome fisso,
-#   scritto e cancellato DALL'INQUILINO (il copione gira con `runuser -u chi`),
-#   e ⛔ mai tolto alla fine.  `[R]` dal codice, e la stessa forma di
-#   `/tmp/mozilla` (C2): il primo `c17uNNN` lo crea, `userdel` lo lascia a un
-#   uid senza nome, e `/tmp` ha il bit «sticky» ⇒ un inquilino con un ALTRO uid
-#   non puo' ne' toglierlo (`rm -f` fallisce in silenzio) ne' riscriverlo
-#   (`>` rifiutato) ⇒ il guscio non esegue il comando della copia ⇒ ⛔ **B e R
-#   rossi, cioe' «il server non annuncia la copia fatta nel desktop»**, mentre
-#   nessuno aveva copiato niente.
-#   ⚠ E morde SOLO in una scatola vecchia: finche' gli utenti restano gli stessi
-#     `useradd` ridà a ogni `c17u` lo stesso uid (4012) e il file resta suo;
-#     ⛔ basta un inquilino rimasto da un giro morto (`[M]` 21 set: in kde
-#     `user@4024` e `user@4025` falliti, cioe' uid ben oltre 4012) e l'uid di
-#     C17 si sposta.  `[?]` il nesso diretto non e' stato misurato dentro la
-#     scatola vecchia: e' la sola scrittura condivisa fra inquilini diversi
-#     che C17 fa, e combacia con la bisezione (scatola nuova ⇒ verde 2 su 2).
-# ⭐ Ora il nome porta l'inquilino, come `esito_a` ed `esito_r`, e si toglie
-#   alla fine: nessun giro lascia niente al giro dopo.
+# ⛔⛔ AND THE FILE BELONGS TO THE TENANT, not one for all — 21 Sep 2026.
+#   Here there was `PROVA_COPIA = "/tmp/remotix-arbitro-copia.log"`: ONE fixed name,
+#   written and deleted BY THE TENANT (the script runs with `runuser -u chi`),
+#   and ⛔ never removed at the end.  `[R]` from the code, and the same shape as
+#   `/tmp/mozilla` (C2): the first `c17uNNN` creates it, `userdel` leaves it to a
+#   nameless uid, and `/tmp` has the «sticky» bit ⇒ a tenant with ANOTHER uid
+#   can neither remove it (`rm -f` fails silently) nor rewrite it
+#   (`>` refused) ⇒ the shell does not run the copy command ⇒ ⛔ **B and R
+#   red, that is «the server does not announce the copy made in the desktop»**, while
+#   nobody had copied anything.
+#   ⚠ And it bites ONLY in an old box: as long as the users stay the same
+#     `useradd` gives every `c17u` the same uid again (4012) and the file stays its own;
+#     ⛔ one tenant left over from a dead run is enough (`[M]` 21 Sep: in kde
+#     `user@4024` and `user@4025` failed, that is uids well beyond 4012) and C17's
+#     uid shifts.  `[?]` the direct link was not measured inside the
+#     old box: it is the only write shared between different tenants
+#     that C17 does, and it matches the bisection (new box ⇒ green 2 out of 2).
+# ⭐ Now the name carries the tenant, like `esito_a` and `esito_r`, and it is removed
+#   at the end: no run leaves anything to the next run.
 def prova_copia(chi):
     return "/tmp/%s-arbitro-copia.log" % chi
 
@@ -91,16 +91,16 @@ ARBITRO_GTK = ("env GDK_BACKEND=wayland python3 " +
 
 
 def arbitro(chi):
-    """⭐ L'arbitro che QUESTO desktop permette — e si CHIEDE, non si indovina.
+    """⭐ The arbiter THIS desktop allows — and it is ASKED, not guessed.
 
-    ⛔ `[M]` 20 set 2026, misurato su tutt'e due le scatole:
-      · dove c'e' `zwlr_data_control_manager_v1` (KWin) `wl-clipboard` legge e
-        scrive senza bisogno del fuoco, ed e' la strada piu' corta;
-      · dove non c'e' (Mutter) `wl-copy` e `wl-paste` restano APPESI, e l'unica
-        strada e' quella delle applicazioni vere: GTK piu' il fuoco, che arriva
-        col clic mandato dal cliente (`--clic`).
-    ⚠ La differenza e' del BANCO, non del prodotto: il prodotto su tutt'e due i
-      desktop fa la stessa cosa, e le due strade portano allo stesso giudizio.
+    ⛔ `[M]` 20 Sep 2026, measured on both boxes:
+      · where `zwlr_data_control_manager_v1` exists (KWin) `wl-clipboard` reads and
+        writes without needing the focus, and it is the shortest road;
+      · where it does not (Mutter) `wl-copy` and `wl-paste` stay HUNG, and the only
+        road is that of real applications: GTK plus the focus, which arrives
+        with the click sent by the client (`--clic`).
+    ⚠ The difference is the BENCH's, not the product's: the product on both
+      desktops does the same thing, and the two roads lead to the same judgement.
     """
     elenco = nella_sessione(chi, "wayland-info 2>/dev/null | grep -c -E "
                                  "'zwlr_data_control_manager_v1|"
@@ -111,14 +111,14 @@ def arbitro(chi):
                 "copia": "pkill -x wl-copy; printf %%s '%s' | timeout 90 wl-copy "
                          ">" + prova_copia(chi) + " 2>&1 &",
                 "attesa_copia": 3, "dice": ""}
-    return {"nome": "GTK col fuoco (il clic del cliente)",
+    return {"nome": "GTK with focus (the client's click)",
             "incolla": ARBITRO_GTK + " incolla 2>/dev/null",
             "copia": ARBITRO_GTK + " copia '%s' 60 >" + prova_copia(chi) + " 2>&1 &",
-            "attesa_copia": 30, "dice": "copiato A FUOCO"}
+            "attesa_copia": 30, "dice": "copied WITH FOCUS"}
 
 
 def carica_c1():
-    """Da C1 vengono l'ammissione e i gruppi della scheda: un posto solo (§1.47)."""
+    """From C1 come the admission and the card groups: one place only (§1.47)."""
     for p in (os.path.join(QUI, "11-c1-nasce-e-si-vede.py"),):
         if os.path.exists(p):
             spec = importlib.util.spec_from_file_location("c1", p)
@@ -127,7 +127,7 @@ def carica_c1():
             if callable(getattr(m, "e_stato_ammesso", None)) and \
                callable(getattr(m, "garantisci_i_gruppi", None)):
                 return m
-    print("⛔ non trovo `11-c1-nasce-e-si-vede.py` accanto a me ⇒ non ho potuto guardare")
+    print("⛔ I cannot find `11-c1-nasce-e-si-vede.py` next to me ⇒ I could not look")
     sys.exit(3)
 
 
@@ -150,7 +150,7 @@ def sgombera(chi):
 
 
 def socket_wayland(chi):
-    """Il socket del compositore dell'inquilino, o `None` se non c'e' ancora."""
+    """The socket of the tenant's compositor, or `None` if it is not there yet."""
     r = corri(["id", "-u", chi], 5)
     run = "/run/user/%s" % (r.stdout.strip() if r else "")
     if not os.path.isdir(run):
@@ -161,35 +161,35 @@ def socket_wayland(chi):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⛔⛔ UN ATTREZZO CHE MANCA NON E' UN ROSSO — 21 set 2026, fase 13.
+# ⛔⛔ A MISSING TOOL IS NOT A RED — 21 Sep 2026, phase 13.
 #
-# `[R]` Qui si prendeva lo `stdout` del copione senza guardare il codice
-#   d'uscita.  ⇒ Nella scatola xfce (e lxqt), dove `wl-clipboard` non c'era,
-#   `wl-paste: command not found` diventava `""`, la guardia di A (che guarda
-#   `None`) non scattava, e la maglia stampava **ROSSO**: un difetto del BANCO
-#   con la faccia di un difetto del prodotto (§1.51).
-# ⛔ E col guasto innestato era peggio: A, B e R tutti «NO» per mancanza
-#   d'attrezzi ⇒ «IL GUASTO INNESTATO E' STATO VISTO», esito 0 ⇒ una
-#   certificazione per C13 che non aveva guardato niente.
-# ⇒ Due reti, una sotto l'altra:
-#   1. ⭐ un controllo POSITIVO prima di cominciare (`attrezzo_che_manca`):
-#      ogni pezzo che l'arbitro scelto userà si CHIEDE alla sessione;
-#   2. e qui, per quel che sfugge: il guscio che esce 126/127 (comando non
-#      trovato / non eseguibile) non da' uno stdout, da' `AttrezzoMancante`.
-# ⚠ E il resto NON cambia: un attrezzo presente che risponde `""` (appunti
-#   vuoti) resta un «NO», come prima — e' il caso che la maglia deve vedere.
+# `[R]` Here the script's `stdout` was taken without looking at the exit
+#   code.  ⇒ In the xfce box (and lxqt), where `wl-clipboard` was not there,
+#   `wl-paste: command not found` became `""`, A's guard (which looks at
+#   `None`) did not fire, and the mesh printed **RED**: a defect of the BENCH
+#   with the face of a defect of the product (§1.51).
+# ⛔ And with the injected fault it was worse: A, B and R all «NO» for lack
+#   of tools ⇒ «THE INJECTED FAULT WAS SEEN», outcome 0 ⇒ a
+#   certification for C13 that had looked at nothing.
+# ⇒ Two nets, one under the other:
+#   1. ⭐ a POSITIVE check before starting (`attrezzo_che_manca`):
+#      every piece the chosen arbiter will use is ASKED of the session;
+#   2. and here, for what slips through: the shell that exits 126/127 (command not
+#      found / not executable) does not give a stdout, it gives `AttrezzoMancante`.
+# ⚠ And the rest does NOT change: a tool present that answers `""` (empty
+#   clipboard) stays a «NO», as before — it is the case the mesh must see.
 # ═══════════════════════════════════════════════════════════════════════════
 class AttrezzoMancante(Exception):
-    """Nella sessione manca un pezzo del BANCO ⇒ esito 3, mai 1 e mai 0."""
+    """A piece of the BENCH is missing in the session ⇒ outcome 3, never 1 and never 0."""
 
 
-# `[R]` POSIX, «Command Search and Execution»: 127 = non trovato, 126 =
-#   trovato ma non eseguibile.  `timeout` e `env` li ripassano uguali.
+# `[R]` POSIX, «Command Search and Execution»: 127 = not found, 126 =
+#   found but not executable.  `timeout` and `env` pass them on unchanged.
 NON_TROVATO = (126, 127)
 
 
 def nella_sessione_rc(chi, copione, tempo=15):
-    """Come `nella_sessione`, ma torna `(codice, stdout)`.  `None` = non c'e'."""
+    """Like `nella_sessione`, but returns `(code, stdout)`.  `None` = it is not there."""
     uid = corri(["id", "-u", chi], 5).stdout.strip()
     run = "/run/user/%s" % uid
     socket = sorted(f for f in os.listdir(run)
@@ -202,26 +202,26 @@ def nella_sessione_rc(chi, copione, tempo=15):
 
 
 def nella_sessione(chi, copione, tempo=15):
-    """Un copione dentro la sessione Wayland dell'inquilino.  `None` = non c'e'.
+    """A script inside the tenant's Wayland session.  `None` = it is not there.
 
-    ⛔ Se il guscio dice «comando non trovato» (126/127) solleva
-       `AttrezzoMancante` invece di tornare uno stdout vuoto (vedi sopra).
+    ⛔ If the shell says «command not found» (126/127) it raises
+       `AttrezzoMancante` instead of returning an empty stdout (see above).
     """
     r = nella_sessione_rc(chi, copione, tempo)
     if r is None:
         return None
     codice, uscita = r
     if codice in NON_TROVATO:
-        raise AttrezzoMancante("«%s» esce %d (comando non trovato o non eseguibile)"
+        raise AttrezzoMancante("«%s» exits %d (command not found or not executable)"
                                % (copione, codice))
     return uscita
 
 
-# ⭐ I pezzi che ciascun arbitro usa — e come si CHIEDE se ci sono.
-#   ⚠ `wayland-info` sta in tutti e due: e' lui che SCEGLIE l'arbitro, e se
-#     mancasse la scelta cadrebbe su GTK in silenzio (`grep -c` risponde «0»).
-#   ⚠ Per GTK non basta `command -v`: `python3` c'e' sempre, e' `import gi`
-#     con GTK 4 che manca ⇒ lo si importa davvero, come fa `appunti-gtk.py`.
+# ⭐ The pieces each arbiter uses — and how one ASKS whether they are there.
+#   ⚠ `wayland-info` is in both: it is the one that CHOOSES the arbiter, and if
+#     it were missing the choice would fall on GTK silently (`grep -c` answers «0»).
+#   ⚠ For GTK `command -v` is not enough: `python3` is always there, it is `import gi`
+#     with GTK 4 that is missing ⇒ it is really imported, as `appunti-gtk.py` does.
 ATTREZZI_COMUNI = [
     ("wayland-info (wayland-utils)", "command -v wayland-info"),
 ]
@@ -241,10 +241,10 @@ ATTREZZI = {
 
 
 def attrezzo_che_manca(chi, elenco):
-    """⭐ Il controllo POSITIVO: torna il nome del primo pezzo che manca, o `None`.
+    """⭐ The POSITIVE check: returns the name of the first missing piece, or `None`.
 
-    ⛔ Un pezzo di cui la sessione non risponde (niente socket, tempo scaduto)
-       conta come mancante: non so se c'e', e allora non guardo.
+    ⛔ A piece the session does not answer about (no socket, time out)
+       counts as missing: I do not know whether it is there, and so I do not look.
     """
     for nome, prova in elenco:
         r = nella_sessione_rc(chi, prova + " >/dev/null 2>&1", 30)
@@ -262,7 +262,7 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--porta", type=int, required=True)
     p.add_argument("--senza-copia", action="store_true",
-                   help="⛔ IL GUASTO INNESTATO: nessuno copia niente ⇒ tre rossi")
+                   help="⛔ THE INJECTED FAULT: nobody copies anything ⇒ three reds")
     p.add_argument("--attesa", type=float, default=20.0)
     a = p.parse_args()
     c1 = carica_c1()
@@ -274,17 +274,17 @@ def main():
     esito_a = "/tmp/%s-a.json" % chi
     esito_r = "/tmp/%s-r.json" % chi
     segnale = "/tmp/%s-segnale" % chi
-    print("== C17 — gli appunti vanno nei due versi (%s, porta %d)%s"
-          % (chi, a.porta, "  ⛔ GUASTO INNESTATO: --senza-copia" if a.senza_copia else ""))
+    print("== C17 — the clipboard goes both ways (%s, port %d)%s"
+          % (chi, a.porta, "  ⛔ INJECTED FAULT: --senza-copia" if a.senza_copia else ""))
 
     sgombera(chi)
     if corri(["useradd", "-m", "-s", "/bin/bash", chi]).returncode != 0:
-        print("⛔ non ho potuto creare l'inquilino ⇒ non ho potuto guardare")
+        print("⛔ I could not create the tenant ⇒ I could not look")
         return 3
     corri(["chpasswd"], input="%s:%s\n" % (chi, PAROLA))
     e_gr, perche = c1.garantisci_i_gruppi(chi)
     if e_gr != 0:
-        print("⛔ %s ⇒ non ho potuto guardare" % perche)
+        print("⛔ %s ⇒ I could not look" % perche)
         sgombera(chi)
         return 3
     for f in (esito_a, esito_r, segnale, prova_copia(chi)):
@@ -293,9 +293,9 @@ def main():
 
     primo = None
     try:
-        # ── il primo cliente: annuncia A, resta, e ascolta gli annunci ─────
-        # ⭐ `--clic`: il fuoco alle finestre dell'arbitro, e si RIFA' ogni 4 s
-        #    perche' le finestre sono due, una dopo l'altra (leggere, copiare).
+        # ── the first client: announces A, stays, and listens to the announcements ─
+        # ⭐ `--clic`: the focus to the arbiter's windows, and it is REDONE every 4 s
+        #    because the windows are two, one after the other (read, copy).
         argv = cliente(chi, a.porta, "--segnale", segnale, "--resta", "75",
                        "--clic", "960,540", "--clic-dopo", "3", "--clic-ogni", "4",
                        "--appunti-scrivi", esito_a)
@@ -309,40 +309,40 @@ def main():
         if not os.path.exists(segnale):
             uscita = primo.communicate(timeout=30)[0] if primo.poll() is None else primo.stdout.read()
             amm = c1.e_stato_ammesso(uscita)
-            print("⛔ il cliente non si e' attaccato (ammesso: %s) ⇒ non ho potuto guardare" % amm)
+            print("⛔ the client did not attach (admitted: %s) ⇒ I could not look" % amm)
             return 3
 
-        # ⭐ IL CLIC LO MANDA IL CLIENTE (`--clic`): qui si aspetta solo che
-        #    la finestra dell'arbitro sia in piedi e col fuoco.
-        # A — dispositivo → sessione
-        # ⚠ Una chiamata sola e generosa, non un giro di chiamate: l'arbitro
-        #   apre la sua finestra e ASPETTA il fuoco (che arriva col clic del
-        #   cliente, ogni 4 s), poi legge.  Chiamarlo dieci volte vorrebbe dire
-        #   dieci finestre che si rubano il fuoco a vicenda.
+        # ⭐ THE CLIENT SENDS THE CLICK (`--clic`): here we only wait for
+        #    the arbiter's window to be up and focused.
+        # A — device → session
+        # ⚠ One single generous call, not a round of calls: the arbiter
+        #   opens its window and WAITS for the focus (which arrives with the
+        #   client's click, every 4 s), then reads.  Calling it ten times would mean
+        #   ten windows stealing the focus from each other.
         t0 = time.time()
-        # ⛔ Prima il SOCKET: il segnale del cliente dice «sono attaccato», non
-        #    «la sessione grafica c'e'».  Chiedere l'arbitro prima del
-        #    compositore darebbe «None» e un rosso che non e' del prodotto.
+        # ⛔ First the SOCKET: the client's signal says «I am attached», not
+        #    «the graphical session is there».  Asking for the arbiter before the
+        #    compositor would give «None» and a red that is not the product's.
         while time.time() - t0 < 90 and socket_wayland(chi) is None:
             time.sleep(1)
         if socket_wayland(chi) is None:
-            print("   ⚠ nessun socket Wayland in 90 s: la sessione non c'e'"
-                  " ⇒ non ho potuto guardare")
+            print("   ⚠ no Wayland socket in 90 s: the session is not there"
+                  " ⇒ I could not look")
             return 3
-        # ⚠ Qualche tentativo, uno alla volta: l'offerta del prodotto alla
-        #   sessione arriva quando gli appunti si aprono, che e' dopo il palco.
-        #   ⛔ Non in parallelo: due finestre si ruberebbero il fuoco.
-        # ⛔ PRIMA si chiede se gli attrezzi ci sono (vedi `AttrezzoMancante`):
-        #    uno che manca e' «non ho potuto guardare», ⛔ mai un rosso.
+        # ⚠ A few attempts, one at a time: the product's offer to the
+        #   session arrives when the clipboard opens, which is after the stage.
+        #   ⛔ Not in parallel: two windows would steal the focus from each other.
+        # ⛔ FIRST we ask whether the tools are there (see `AttrezzoMancante`):
+        #    one that is missing is «I could not look», ⛔ never a red.
         manca = attrezzo_che_manca(chi, ATTREZZI_COMUNI)
         arb = arbitro(chi) if manca is None else None
         if arb is not None:
-            print("   l'arbitro di questo desktop: %s" % arb["nome"])
+            print("   the arbiter of this desktop: %s" % arb["nome"])
             chiave = "wl-clipboard" if arb["nome"] == "wl-clipboard" else "GTK"
             manca = attrezzo_che_manca(chi, ATTREZZI[chiave])
         if manca is not None:
-            print("   ⛔ nella sessione manca «%s»: e' un attrezzo del BANCO, non del"
-                  " prodotto ⇒ non ho potuto guardare" % manca)
+            print("   ⛔ «%s» is missing in the session: it is a tool of the BENCH, not of the"
+                  " product ⇒ I could not look" % manca)
             if primo.poll() is None:
                 primo.kill()
             return 3
@@ -353,21 +353,21 @@ def main():
                 break
             time.sleep(4)
         ok_a = visto == testo_a
-        print("   A  dispositivo → sessione : %s  (atteso «%s», la sessione incolla «%s», %.0f s)"
-              % ("⭐ SI" if ok_a else "⛔ NO", testo_a, visto, time.time() - t0))
+        print("   A  device → session       : %s  (expected «%s», the session pastes «%s», %.0f s)"
+              % ("⭐ YES" if ok_a else "⛔ NO", testo_a, visto, time.time() - t0))
         if visto is None:
-            print("   ⚠ nessun socket Wayland: la sessione non c'e' ⇒ non ho potuto guardare")
+            print("   ⚠ no Wayland socket: the session is not there ⇒ I could not look")
             return 3
 
-        # B — sessione → dispositivo, a cliente attaccato
+        # B — session → device, with the client attached
         if not a.senza_copia:
             nella_sessione(chi, "rm -f " + prova_copia(chi))
             nella_sessione(chi, arb["copia"] % testo_b)
-            # ⚠ Si aspetta che la copia sia AVVENUTA, non un tempo fisso: con GTK
-            #   parte quando arriva il fuoco, e il fuoco arriva col clic del
-            #   cliente.  ⛔ Un'attesa a orologio dava un rosso intermittente
-            #   (`[M]` 20 set 2026, la rete: B e R rossi, gli stessi giri verdi
-            #   a mano un minuto prima).
+            # ⚠ We wait for the copy to HAVE HAPPENED, not a fixed time: with GTK
+            #   it starts when the focus arrives, and the focus arrives with the
+            #   client's click.  ⛔ A clock-based wait gave an intermittent red
+            #   (`[M]` 20 Sep 2026, the net: B and R red, the same runs green
+            #   by hand a minute before).
             t1 = time.time()
             while time.time() - t1 < arb["attesa_copia"]:
                 time.sleep(1)
@@ -375,61 +375,61 @@ def main():
                     break
                 detto = nella_sessione(chi, "cat " + prova_copia(chi) + " 2>/dev/null") or ""
                 if arb["dice"] in detto:
-                    print("   la copia nella sessione e' avvenuta dopo %.0f s"
+                    print("   the copy in the session happened after %.0f s"
                           % (time.time() - t1))
                     break
             else:
                 if arb["dice"]:
-                    print("   ⚠ in %d s l'arbitro non ha detto «%s»: la copia "
-                          "nella sessione non e' partita"
+                    print("   ⚠ in %d s the arbiter did not say «%s»: the copy "
+                          "in the session did not start"
                           % (arb["attesa_copia"], arb["dice"]))
             time.sleep(2)
-        # ⚠ Il tetto e' piu' largo di `--resta` del cliente (75 s), o si
-        #   scadrebbe aspettando un cliente che sta facendo il suo mestiere.
+        # ⚠ The ceiling is wider than the client's `--resta` (75 s), or it
+        #   would expire waiting for a client that is doing its job.
         uscita = primo.communicate(timeout=150)[0]
-        # ⚠ Dall'uscita del cliente e non dal suo file: il file lo scrive PRIMA
-        #   di restare attaccato (`scrivi_appunti` sta prima di `--resta`), e
-        #   l'annuncio di B arriva dopo.
+        # ⚠ From the client's output and not from its file: it writes the file BEFORE
+        #   staying attached (`scrivi_appunti` comes before `--resta`), and
+        #   B's announcement arrives after.
         annunci = [(int(m.group(1)), int(m.group(2))) for m in re.finditer(
-            r"il server annuncia il trasferimento (\d+), (\d+) byte", uscita)]
+            r"the server announces transfer (\d+), (\d+) bytes", uscita)]
         lungo_b = len(testo_b.encode("utf-8"))
         ok_b = any(n == lungo_b for _, n in annunci)
-        print("   B  sessione → dispositivo  : %s  (annunci del server: %s, atteso uno da %d byte)"
-              % ("⭐ SI" if ok_b else "⛔ NO", annunci, lungo_b))
+        print("   B  session → device       : %s  (server announcements: %s, expected one of %d bytes)"
+              % ("⭐ YES" if ok_b else "⛔ NO", annunci, lungo_b))
 
-        # R — chi si riattacca riceve il testo della sessione
+        # R — whoever reattaches receives the session's text
         r = corri(cliente(chi, a.porta, "--appunti-attendi", "15", "--appunti-scrivi", esito_r), 60)
         try:
             ricevuto = json.load(open(esito_r))["ricevuto"]
         except (OSError, ValueError, KeyError):
             ricevuto = None
         ok_r = ricevuto == testo_b
-        print("   R  chi si riattacca       : %s  (atteso «%s», ricevuto «%s»)"
-              % ("⭐ SI" if ok_r else "⛔ NO", testo_b, ricevuto))
+        print("   R  whoever reattaches     : %s  (expected «%s», received «%s»)"
+              % ("⭐ YES" if ok_r else "⛔ NO", testo_b, ricevuto))
         if r is not None and c1.e_stato_ammesso(r.stdout) is False:
-            print("   ⛔ il secondo cliente e' stato RESPINTO ⇒ non ho potuto guardare")
+            print("   ⛔ the second client was REJECTED ⇒ I could not look")
             return 3
 
-        # ⛔ Col guasto innestato l'esito si legge AL CONTRARIO, come in tutta la
-        #    rete (C8 `--senza-cura`): 0 = il guasto e' stato VISTO.  `[M]` 19
-        #    set 2026, il primo giro nella rete: usciva 1 su tre rossi, e il
-        #    gancio ha detto «guasto non visto» — aveva ragione lui.
+        # ⛔ With the injected fault the outcome reads THE OTHER WAY ROUND, as in the whole
+        #    net (C8 `--senza-cura`): 0 = the fault was SEEN.  `[M]` 19
+        #    Sep 2026, the first run in the net: it exited 1 on three reds, and the
+        #    hook said «fault not seen» — it was right.
         if a.senza_copia:
             if not (ok_a or ok_b or ok_r):
-                print("⭐ IL GUASTO INNESTATO E' STATO VISTO: A, B e R tutti rossi")
+                print("⭐ THE INJECTED FAULT WAS SEEN: A, B and R all red")
                 return 0
-            print("⛔⛔ il guasto innestato NON e' stato visto: qualcosa e' verde senza copie")
+            print("⛔⛔ the injected fault was NOT seen: something is green without copies")
             return 1
         if ok_a and ok_b and ok_r:
-            print("⭐ VERDE — i due versi, e anche chi si riattacca")
+            print("⭐ GREEN — both ways, and whoever reattaches too")
             return 0
-        print("⛔⛔ ROSSO — %s" % ", ".join(n for n, v in (("A", ok_a), ("B", ok_b), ("R", ok_r)) if not v))
+        print("⛔⛔ RED — %s" % ", ".join(n for n, v in (("A", ok_a), ("B", ok_b), ("R", ok_r)) if not v))
         return 1
     except AttrezzoMancante as e:
-        # ⛔ La seconda rete: un attrezzo sfuggito al controllo di prima.
-        #    ⇒ 3, anche col guasto innestato (dove altrimenti sarebbe stato 0).
-        print("   ⛔ un attrezzo del BANCO manca nella sessione: %s"
-              " ⇒ non ho potuto guardare" % e)
+        # ⛔ The second net: a tool that slipped past the earlier check.
+        #    ⇒ 3, even with the injected fault (where otherwise it would have been 0).
+        print("   ⛔ a tool of the BENCH is missing in the session: %s"
+              " ⇒ I could not look" % e)
         if primo is not None and primo.poll() is None:
             primo.kill()
         return 3

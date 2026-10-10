@@ -1,106 +1,106 @@
 #!/usr/bin/env python3
-"""02-pam-fermo.py — ⛔ QUANTO STA FERMO CHI **NON** SI STA AUTENTICANDO.
+"""02-pam-fermo.py — ⛔ HOW LONG WHOEVER IS **NOT** AUTHENTICATING STANDS STILL.
 
     python3 02-pam-fermo.py --porta 7531 --parola-file F --giri 5
 
 ===========================================================================
-⛔ PERCHE' QUESTO BANCO ESISTE, E PERCHE' NON NE BASTAVA UNO GIA' SCRITTO
+⛔ WHY THIS BENCH EXISTS, AND WHY ONE ALREADY WRITTEN WAS NOT ENOUGH
 
-`DECISIONI.md` §1.10, 11 agosto 2026, dall'utente: la verifica PAM blocca
-l'unico ciclo `poll` del server, e si cura **prima della fase 2**.  ⛔ E la
-riga che ordina questo file e' l'ultima di quella decisione:
+`DECISIONI.md` §1.10, 11 Aug 2026, from the user: the PAM check blocks
+the server's single `poll` loop, and it is cured **before phase 2**.  ⛔ And the
+line that orders this file is the last one of that decision:
 
-    «La proprieta' da provare NON e' "PAM funziona ancora": e' "mentre uno si
-     autentica, gli altri non se ne accorgono" — e oggi non esiste nessun
-     banco che la guardi.  Senza quel banco la cura e' una speranza.»
+    «The property to prove is NOT "PAM still works": it is "while one is
+     authenticating, the others do not notice" — and today there is no
+     bench that looks at it.  Without that bench the cure is a hope.»
 
-⛔ **B8 non lo puo' fare, e non e' una svista sua**: B8 cronometra la risposta
-   a `CREDENZIALI`, cioe' **il tempo di chi entra**.  Quel numero e' governato
-   da PAM (`[M]` 11 agosto: +1034 ms oltre il secondo fisso sui respinti,
-   la firma di `pam_faildelay`) e ⭐ **dopo la cura deve restare quello che
-   e'**.  Chi misurasse solo quello vedrebbe una cura riuscita come un
-   fallimento, o — peggio — non vedrebbe niente e chiamerebbe verde la
-   speranza.
+⛔ **B8 cannot do it, and it is not an oversight of its own**: B8 times the answer
+   to `CREDENZIALI`, that is **the time of whoever is getting in**.  That number is governed
+   by PAM (`[M]` 11 Aug: +1034 ms beyond the fixed second on the rejected ones,
+   the signature of `pam_faildelay`) and ⭐ **after the cure it must stay what it
+   is**.  Whoever measured only that would see a successful cure as a
+   failure, or — worse — would see nothing and call the hope
+   green.
 
-⇒ Qui si misura **l'altro numero**: quanto tempo passa fermo chi si e' gia'
-  autenticato, o chi sta facendo tutt'altro, MENTRE un terzo presenta
-  credenziali sbagliate (il caso lento, quello con `pam_faildelay`).
-
-===========================================================================
-⛔ LA SCENA, DICHIARATA — tre connessioni, e ciascuna ha un mestiere
-
-    A   «gia' dentro»       stretta di mano completa fino a `SESSIONE`, utente
-                            `prova`.  ⭐ **E' il righello**: da attaccata manda
-                            `BANCO_MARCA` (§7.5) ogni 50 ms e cronometra il
-                            `BANCO_ESITO` che torna.  E' l'unica coppia
-                            domanda/risposta che RCP concede a una sessione
-                            ATTIVA alla fase 1 — dalla fase 2 al suo posto ci
-                            sara' un fotogramma, e il numero vorra' dire la
-                            stessa cosa: **quanto sta fermo lo schermo di chi
-                            sta gia' lavorando**;
-
-    C   «il caso lento»     apre, arriva a `attesa-credenziali`, e manda
-                            `CREDENZIALI` con la parola **SBAGLIATA**.  ⛔ Il
-                            motivo del `RESPINTO` si legge e si pretende
-                            `0x07 CREDENZIALI_ERRATE`: un `0x08
-                            TROPPI_TENTATIVI` vuol dire che l'indirizzo era
-                            bannato e ⛔ **PAM non e' stata nemmeno
-                            interrogata** — cioe' il campione misurerebbe un
-                            server che non ha fatto la cosa lenta.  Quel
-                            campione si BUTTA, e si dice perche';
-
-    B   «la seconda che fa  nasce nell'istante in cui C manda `CREDENZIALI`, e
-        la stretta di mano» cronometra **da zero a `ECCOMI`**.  E' il secondo
-                            righello, quello che il mandato nomina per primo:
-                            un utente qualunque che apre la pagina mentre un
-                            altro sbaglia la parola.
-
-⛔ **Il denominatore che rende leggibile tutto**: prima della finestra si
-   cronometrano 20 marche a ciclo tranquillo.  ⭐ Se la mediana tranquilla non
-   fosse piccola, il righello sarebbe rotto e non ci sarebbe niente da
-   confrontare — e il banco lo dice invece di dividere per un numero che non ha
-   guardato (`LEZIONI.md` §1.9: un denominatore si legge dove la cosa succede).
+⇒ Here **the other number** is measured: how long whoever has already
+  authenticated, or whoever is doing something else entirely, stands still WHILE a third party presents
+  wrong credentials (the slow case, the one with `pam_faildelay`).
 
 ===========================================================================
-⭐ IL CONTROLLO POSITIVO, E QUI E' PIU' FORTE DEL SOLITO
+⛔ THE SCENE, DECLARED — three connections, and each has a job
 
-«Lo strumento sa trovare qualcosa che c'e' di sicuro?»  ⛔ Si', ed e' **il giro
-di PRIMA**: il server della fase 1 il blocco ce l'ha, misurato, e questo banco
-**deve vederlo**.  Un giro «prima» che non trovasse la pausa non proverebbe
-che il server e' sano: proverebbe che questo file non sa misurare — e
-qualunque «dopo» verde sarebbe la peggiore delle prove (`CODER.md` §4.6).
+    A   «already inside»    full handshake up to `SESSIONE`, user
+                            `prova`.  ⭐ **It is the ruler**: once attached it sends
+                            `BANCO_MARCA` (§7.5) every 50 ms and times the
+                            `BANCO_ESITO` that comes back.  It is the only
+                            request/response pair RCP grants an
+                            ACTIVE session in phase 1 — from phase 2 a frame
+                            will take its place, and the number will mean the
+                            same thing: **how long the screen of whoever is
+                            already working stands still**;
 
-⇒ **L'atteso, scritto prima del giro** (e ripetuto da `--previsione`):
+    C   «the slow case»     opens, reaches `attesa-credenziali`, and sends
+                            `CREDENZIALI` with the **WRONG** password.  ⛔ The
+                            reason of the `RESPINTO` is read and required to be
+                            `0x07 CREDENZIALI_ERRATE`: a `0x08
+                            TROPPI_TENTATIVI` means the address was
+                            banned and ⛔ **PAM was not even
+                            queried** — that is the sample would measure a
+                            server that did not do the slow thing.  That
+                            sample is THROWN AWAY, and the reason is said;
 
-  | | PRIMA (fase 1) | DOPO (la cura) |
+    B   «the second one     is born the instant C sends `CREDENZIALI`, and
+        doing the handshake» times **from zero to `ECCOMI`**.  It is the second
+                            ruler, the one the mandate names first:
+                            any user who opens the page while
+                            another gets the password wrong.
+
+⛔ **The denominator that makes everything readable**: before the window,
+   20 marks are timed on a quiet loop.  ⭐ If the quiet median were not
+   small, the ruler would be broken and there would be nothing to
+   compare — and the bench says so instead of dividing by a number it has not
+   looked at (`LEZIONI.md` §1.9: a denominator is read where the thing happens).
+
+===========================================================================
+⭐ THE POSITIVE CONTROL, AND HERE IT IS STRONGER THAN USUAL
+
+«Can the tool find something that is surely there?»  ⛔ Yes, and it is **the round
+of BEFORE**: the phase 1 server has the blocking, measured, and this bench
+**must see it**.  A «before» round that did not find the pause would not prove
+that the server is healthy: it would prove that this file cannot measure — and
+any green «after» would be the worst of proofs (`CODER.md` §4.6).
+
+⇒ **The expectation, written before the round** (and repeated by `--previsione`):
+
+  | | BEFORE (phase 1) | AFTER (the cure) |
   |---|---|---|
-  | il picco della marca durante la finestra | ⛔ **≥ 900 ms**, e vicino al tempo che PAM si prende (1,0-2,2 s) | ⭐ **< 150 ms**, cioe' l'ordine di grandezza del ciclo tranquillo |
-  | il tempo fermo di A (somma degli scarti) | ⛔ ≈ la durata di PAM | ⭐ ≈ 0 |
-  | la stretta di mano di B | ⛔ **≥ 900 ms** | ⭐ **< 300 ms** |
-  | ⚠ il tempo di C (chi si autentica) | 1,0-2,2 s | ⭐ **UGUALE**, e va bene cosi' |
+  | the peak of the mark during the window | ⛔ **≥ 900 ms**, and close to the time PAM takes (1.0-2.2 s) | ⭐ **< 150 ms**, that is the order of magnitude of the quiet loop |
+  | A's stalled time (sum of the excesses) | ⛔ ≈ the duration of PAM | ⭐ ≈ 0 |
+  | B's handshake | ⛔ **≥ 900 ms** | ⭐ **< 300 ms** |
+  | ⚠ C's time (whoever authenticates) | 1.0-2.2 s | ⭐ **THE SAME**, and that is fine |
 
-⛔ **E il caso opposto, cioe' che aspetto avrebbe una cura che NON funziona**:
-   il picco della marca resta ≥ 900 ms e la stretta di B resta ≥ 900 ms,
-   **mentre il tempo di C non cambia** — cioe' esattamente la stessa
-   fotografia del «prima», con il codice nuovo dentro.  ⭐ E' il caso che
-   `--guasto` di `02-pam-lancia.sh` innesta apposta, e che questo banco DEVE
-   colorare di rosso.
-
-===========================================================================
-⛔ CHE COSA QUESTO BANCO **NON** MISURA, perche' non se ne appropri nessuno
-
-  · il secondo fisso di §4.4-bis e il ban dell'indirizzo: sono **di B8**, e
-    questo file non li giudica.  ⚠ Li OSSERVA soltanto quel tanto che serve a
-    buttare i campioni sporchi (il motivo `0x08`);
-  · la correttezza di PAM: se `prova` non entra, questo banco si ferma e lo
-    dice — ⛔ non prosegue misurando una scena in cui A non e' dentro, che
-    darebbe un numero verde perche' non c'era niente da bloccare (E1).
+⛔ **And the opposite case, that is what a cure that does NOT work would look like**:
+   the peak of the mark stays ≥ 900 ms and B's handshake stays ≥ 900 ms,
+   **while C's time does not change** — that is exactly the same
+   picture as the «before», with the new code inside.  ⭐ It is the case that
+   `--guasto` of `02-pam-lancia.sh` injects on purpose, and that this bench MUST
+   colour red.
 
 ===========================================================================
-⛔ LO ZERO E IL FALLIMENTO SONO DUE COSE DIVERSE (`REVIEWER.md` §1 punto 4)
+⛔ WHAT THIS BENCH DOES **NOT** MEASURE, so that nobody appropriates it
 
-Ogni esito porta `valido: true//false` e, quando e' falso, **perche'**.  Un
-giro che non ha potuto misurare non scrive «0 ms»: scrive che non ha misurato.
+  · the fixed second of §4.4-bis and the address ban: they are **B8's**, and
+    this file does not judge them.  ⚠ It only OBSERVES them as much as needed to
+    throw away the dirty samples (reason `0x08`);
+  · the correctness of PAM: if `prova` does not get in, this bench stops and says
+    so — ⛔ it does not go on measuring a scene in which A is not inside, which
+    would give a green number because there was nothing to block (E1).
+
+===========================================================================
+⛔ ZERO AND FAILURE ARE TWO DIFFERENT THINGS (`REVIEWER.md` §1 point 4)
+
+Every outcome carries `valido: true//false` and, when it is false, **why**.  A
+round that could not measure does not write «0 ms»: it writes that it did not measure.
 """
 import argparse
 import asyncio
@@ -114,11 +114,11 @@ import sys
 import time
 from contextlib import AsyncExitStack
 
-# ⛔ L'IMPORT E' DENTRO UN `try`, E NON PER INDULGENZA — `--previsione` deve
-#    poter girare sulla macchina dei documenti, dove `aioquic` non c'e'.  ⚠ Ma
-#    «la libreria non c'e'» NON diventa «il giro e' andato»: senza `aioquic`
-#    qualunque giro vero si ferma con un messaggio che nomina la libreria,
-#    invece di una traccia che nomina una riga a caso.
+# ⛔ THE IMPORT IS INSIDE A `try`, AND NOT OUT OF LENIENCY — `--previsione` must
+#    be able to run on the documents machine, where `aioquic` is not there.  ⚠ But
+#    «the library is not there» does NOT become «the round went fine»: without `aioquic`
+#    any real round stops with a message that names the library,
+#    instead of a traceback that names a random line.
 try:
     from aioquic.asyncio import connect
     from aioquic.asyncio.protocol import QuicConnectionProtocol
@@ -142,12 +142,12 @@ MOTIVI = {0x01: "CHIUSO_DALL_UTENTE", 0x07: "CREDENZIALI_ERRATE",
           0x0C: "SERVER_IN_CHIUSURA", 0x0D: "TEMPO_SCADUTO",
           0x0E: "SESSIONE_NON_SERVIBILE", 0x0F: "GIA_ATTIVA_REMOTA"}
 
-# ⛔ Le soglie stanno QUI, in cima e con un nome, perche' l'atteso non si
-#    aggiusti a giro finito.  Sono quelle scritte nel riquadro sopra.
-PICCO_BLOCCATO_MS = 900.0   # sopra: il ciclo si e' fermato (il «prima»)
-PICCO_LIBERO_MS = 150.0     # sotto: il ciclo non si e' fermato (il «dopo»)
+# ⛔ The thresholds sit HERE, at the top and with a name, so that the expectation
+#    is not adjusted once the round is over.  They are those written in the box above.
+PICCO_BLOCCATO_MS = 900.0   # above: the loop stopped (the «before»)
+PICCO_LIBERO_MS = 150.0     # below: the loop did not stop (the «after»)
 STRETTA_LIBERA_MS = 300.0
-BASE_MAX_MS = 60.0          # il ciclo tranquillo: sopra, il righello e' rotto
+BASE_MAX_MS = 60.0          # the quiet loop: above, the ruler is broken
 
 
 def s(t):
@@ -175,12 +175,12 @@ class Caduta(RuntimeError):
 
 
 class Cliente(QuicConnectionProtocol):
-    """⚠ Scritto guardando `RCP.md`, non `src/rcp.c`: due programmi che vanno
-    d'accordo perche' li ha scritti la stessa mano non confermano niente
-    (`PIANO.md` §1.1).  ⛔ Quel che qui e' copiato da `01-b3-cliente.py` sono le
-    DUE trappole di `aioquic` gia' pagate il 10 agosto 2026, e sono copiate
-    apposta: non passare al suo strato H3 gli eventi degli stream WebTransport,
-    e non leggere lo `0` come «nessuno stream»."""
+    """⚠ Written looking at `RCP.md`, not `src/rcp.c`: two programs that
+    agree because the same hand wrote them confirm nothing
+    (`PIANO.md` §1.1).  ⛔ What is copied here from `01-b3-cliente.py` are the
+    TWO `aioquic` traps already paid for on 10 Aug 2026, and they are copied
+    on purpose: do not pass the WebTransport stream events to its H3 layer,
+    and do not read `0` as «no stream»."""
 
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)
@@ -220,12 +220,12 @@ class Cliente(QuicConnectionProtocol):
     def quic_event_received(self, event: QuicEvent) -> None:
         nome = type(event).__name__
         if nome == "ConnectionTerminated":
-            self._cade(f"connessione TERMINATA: codice "
+            self._cade(f"connection TERMINATED: code "
                        f"{getattr(event, 'error_code', '?')}")
             return
         if nome == "StreamDataReceived" and event.stream_id == self.controllo:
-            # ⛔ E NON si passa allo strato H3 di aioquic: lo leggerebbe come un
-            #    frame DATA e ucciderebbe la connessione (`[M]` 10 agosto 2026).
+            # ⛔ And it is NOT passed to aioquic's H3 layer: it would read it as a
+            #    DATA frame and kill the connection (`[M]` 10 Aug 2026).
             self.arrivati += event.data
             while len(self.arrivati) >= 6:
                 tipo, lung = struct.unpack("!HI", self.arrivati[:6])
@@ -235,11 +235,11 @@ class Cliente(QuicConnectionProtocol):
                 del self.arrivati[:6 + lung]
                 self.messaggi.put_nowait((tipo, corpo))
             if event.end_stream:
-                self._cade("il canale di controllo si e' chiuso")
+                self._cade("the control channel closed")
             return
         if nome == "StreamDataReceived" and event.stream_id == self.sessione:
             if event.end_stream:
-                self._cade("la sessione WebTransport si e' chiusa")
+                self._cade("the WebTransport session closed")
         for ev in self._http.handle_event(event):
             if isinstance(ev, HeadersReceived) and not self.accettata.done():
                 self.accettata.set_result(
@@ -247,27 +247,27 @@ class Cliente(QuicConnectionProtocol):
 
 
 async def attendi(cli, quale, attesa=25.0):
-    """Aspetta UN messaggio e pretende che sia quello. Restituisce (nome, corpo).
+    """Waits for ONE message and requires it to be that one. Returns (name, body).
 
-    ⛔ Un `CONGEDO` o un `RESPINTO` non sono «un altro messaggio»: sono la
-       misura, e vanno nominati con il loro motivo o la diagnosi punta sul
-       nulla."""
+    ⛔ A `CONGEDO` or a `RESPINTO` are not «another message»: they are the
+       measurement, and must be named with their reason or the diagnosis points at
+       nothing."""
     m = await asyncio.wait_for(cli.messaggi.get(), timeout=attesa)
     if m is None:
-        raise Caduta(f"la sessione e' caduta: {cli.caduta}")
+        raise Caduta(f"the session dropped: {cli.caduta}")
     tipo, corpo = m
     nome = NOME.get(tipo, f"{tipo:#06x}")
     if quale and nome != quale:
         motivo = corpo[0] if corpo else 0
         if nome in ("CONGEDO", "RESPINTO"):
-            raise Caduta(f"{nome} invece di {quale}: motivo {motivo:#04x} = "
+            raise Caduta(f"{nome} instead of {quale}: reason {motivo:#04x} = "
                          f"{MOTIVI.get(motivo, '?')}")
-        raise Caduta(f"atteso {quale}, arrivato {nome}")
+        raise Caduta(f"expected {quale}, got {nome}")
     return nome, corpo
 
 
 async def apri(pila, indirizzo, porta, percorso):
-    """Apre QUIC + la sessione WebTransport + il canale di controllo."""
+    """Opens QUIC + the WebTransport session + the control channel."""
     conf = QuicConfiguration(is_client=True, alpn_protocols=H3_ALPN,
                              max_datagram_frame_size=65536)
     conf.verify_mode = ssl.CERT_NONE
@@ -278,7 +278,7 @@ async def apri(pila, indirizzo, porta, percorso):
     cli.apri_sessione(autorita, percorso)
     stato = await asyncio.wait_for(cli.accettata, timeout=10)
     if stato != "200":
-        raise Caduta(f"la CONNECT estesa ha risposto {stato}, non 200")
+        raise Caduta(f"the extended CONNECT answered {stato}, not 200")
     cli.apri_controllo()
     return cli
 
@@ -302,13 +302,13 @@ async def fino_a_sessione(cli, utente, parola, larghezza=1920, altezza=1080):
 
 
 # ---------------------------------------------------------------------------
-# ⛔ IL RIGHELLO: `BANCO_MARCA` -> `BANCO_ESITO`, e si cronometra il ritorno.
+# ⛔ THE RULER: `BANCO_MARCA` -> `BANCO_ESITO`, and the return is timed.
 #
-# §7.5 regola 2: con la funzione di banco SPENTA il server DEVE rispondere
-# `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` — «non deve tacere e non deve
-# chiudere».  ⭐ E' quel che rende questo messaggio un righello utilizzabile: la
-# risposta arriva sempre, non cambia stato, e non dipinge niente sul desktop di
-# nessuno (la funzione e' spenta, invariante I6).
+# §7.5 rule 2: with the bench function OFF the server MUST answer
+# `BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` — «it must not stay silent and must not
+# close».  ⭐ That is what makes this message a usable ruler: the
+# answer always arrives, does not change state, and paints nothing on anybody's
+# desktop (the function is off, invariant I6).
 async def sonda(cli, periodo, ferma, campioni):
     n = 0
     while not ferma.is_set():
@@ -321,9 +321,9 @@ async def sonda(cli, periodo, ferma, campioni):
             campioni.append({"n": n, "t0": t0, "ms": None, "caduta": str(e)})
             return
         t1 = time.monotonic()
-        # ⛔ Si guarda che l'esito sia DELLA MARCA MANDATA: un righello che
-        #    accoppiasse una risposta col cronometro sbagliato misurerebbe
-        #    numeri veri di un'altra domanda.
+        # ⛔ It is checked that the outcome is OF THE MARK SENT: a ruler that
+        #    paired an answer with the wrong stopwatch would measure
+        #    real numbers of another question.
         eco = struct.unpack("!I", corpo[:4])[0] if len(corpo) >= 4 else 0
         campioni.append({"n": n, "t0": t0, "ms": (t1 - t0) * 1000,
                          "eco": eco, "combacia": eco == n})
@@ -333,27 +333,27 @@ async def sonda(cli, periodo, ferma, campioni):
 
 
 async def stretta_cronometrata(pila, indirizzo, porta, percorso, fuori):
-    """La connessione B: da zero a `ECCOMI`, cronometrata."""
+    """Connection B: from zero to `ECCOMI`, timed."""
     t0 = time.monotonic()
     try:
         cli = await apri(pila, indirizzo, porta, percorso)
         await fino_a_eccomi(cli)
         fuori["ms"] = (time.monotonic() - t0) * 1000
-    except Exception as e:  # noqa: BLE001 — il tipo dell'errore E' la misura
+    except Exception as e:  # noqa: BLE001 — the error type IS the measurement
         fuori["ms"] = None
         fuori["caduta"] = f"{type(e).__name__}: {e}"
 
 
 # ---------------------------------------------------------------------------
 def sblocca(percorso, indirizzo):
-    """§4.4-bis, il comando di sblocco. ⛔ E si DICHIARA sempre: «il ban non e'
-    scattato» e «qualcuno l'ha tolto» hanno lo stesso aspetto (regola B0.3).
+    """§4.4-bis, the unblock command. ⛔ And it is always DECLARED: «the ban did not
+    trigger» and «someone removed it» look the same (rule B0.3).
 
-    ⚠ Qui lo sblocco non e' mai un attrezzo per far passare una misura: questo
-      banco NON prova il ban.  Serve a portare l'indirizzo a uno stato NOTO
-      prima di cominciare, e a non lasciare il campo sporco a chi viene dopo."""
+    ⚠ Here the unblock is never a tool to let a measurement pass: this
+      bench does NOT test the ban.  It serves to bring the address to a KNOWN state
+      before starting, and not to leave the field dirty for whoever comes next."""
     if not percorso:
-        return "nessun socket dichiarato: NON ho sbloccato, e non e' «era libero»"
+        return "no socket declared: I did NOT unblock, and it is not «it was free»"
     try:
         c = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         c.settimeout(5)
@@ -361,14 +361,14 @@ def sblocca(percorso, indirizzo):
         c.sendall(f"SBLOCCA {indirizzo}\n".encode())
         r = c.recv(256).decode(errors="replace").strip()
         c.close()
-        return r or "(risposta vuota)"
+        return r or "(empty answer)"
     except OSError as e:
-        return f"⛔ non ho parlato con nessuno: {e}"
+        return f"⛔ I talked to nobody: {e}"
 
 
 def ping(percorso):
-    """⛔ Il denominatore dello sblocco (regola B0.3): senza, «il ban non c'era»
-    e «lo sblocco non e' mai arrivato a nessuno» hanno la stessa faccia."""
+    """⛔ The denominator of the unblock (rule B0.3): without it, «there was no ban»
+    and «the unblock never reached anybody» look the same."""
     if not percorso:
         return "—"
     try:
@@ -378,7 +378,7 @@ def ping(percorso):
         c.sendall(b"PING\n")
         r = c.recv(64).decode(errors="replace").strip()
         c.close()
-        return r or "(vuota)"
+        return r or "(empty)"
     except OSError as e:
         return f"⛔ {e}"
 
@@ -387,7 +387,7 @@ def ping(percorso):
 async def un_giro(a, parola, n):
     esito = {"giro": n, "valido": False, "perche": None}
     async with AsyncExitStack() as pila:
-        # ── A: gia' dentro ────────────────────────────────────────────────
+        # ── A: already inside ─────────────────────────────────────────────
         A = await apri(pila, a.indirizzo, a.porta, a.percorso)
         esito["ms_ammesso_A"] = await fino_a_sessione(A, a.utente, parola)
 
@@ -395,20 +395,20 @@ async def un_giro(a, parola, n):
         ferma = asyncio.Event()
         righello = asyncio.create_task(sonda(A, a.periodo, ferma, campioni))
 
-        # ── il ciclo tranquillo: il denominatore ──────────────────────────
+        # ── the quiet loop: the denominator ───────────────────────────────
         await asyncio.sleep(a.tranquillo)
         base = [c["ms"] for c in campioni if c.get("ms") is not None]
         if len(base) < 5:
             ferma.set()
             await righello
-            esito["perche"] = (f"solo {len(base)} marche a ciclo tranquillo: il "
-                               f"righello non ha misurato niente")
+            esito["perche"] = (f"only {len(base)} marks on a quiet loop: the "
+                               f"ruler measured nothing")
             return esito
         esito["base_mediana_ms"] = statistics.median(base)
         esito["base_n"] = len(base)
         quante_prima = len(campioni)
 
-        # ── C: le credenziali sbagliate, e B nello stesso istante ─────────
+        # ── C: the wrong credentials, and B at the same instant ───────────
         C = await apri(pila, a.indirizzo, a.porta, a.percorso)
         await fino_a_eccomi(C)
 
@@ -425,7 +425,7 @@ async def un_giro(a, parola, n):
             ferma.set()
             await righello
             await seconda
-            esito["perche"] = f"C non ha ricevuto risposta: {e}"
+            esito["perche"] = f"C received no answer: {e}"
             return esito
         await seconda
 
@@ -435,40 +435,40 @@ async def un_giro(a, parola, n):
         esito["motivo_C_nome"] = MOTIVI.get(motivo, "?")
         esito["ms_C"] = (t_resp - t_cred) * 1000
 
-        # ── la coda: si continua a sondare dopo la finestra ───────────────
+        # ── the tail: probing goes on after the window ────────────────────
         await asyncio.sleep(a.coda)
         ferma.set()
         await righello
 
-        # ⛔ IL CAMPIONE SPORCO SI BUTTA, E SI DICE PERCHE'.
+        # ⛔ THE DIRTY SAMPLE IS THROWN AWAY, AND THE REASON IS SAID.
         if nome_C != "RESPINTO":
             esito["perche"] = (
-                f"a CREDENZIALI sbagliate il server ha risposto «{nome_C}», non "
-                f"RESPINTO: la scena non e' quella dichiarata")
+                f"to wrong CREDENZIALI the server answered «{nome_C}», not "
+                f"RESPINTO: the scene is not the declared one")
             return esito
         if motivo != 0x07:
             esito["perche"] = (
-                f"il RESPINTO porta {motivo:#04x} = {MOTIVI.get(motivo, '?')}, "
-                f"non 0x07 CREDENZIALI_ERRATE: ⛔ con {MOTIVI.get(motivo, '?')} "
-                f"il server rifiuta SENZA interrogare PAM (§4.4-bis), cioe' la "
-                f"cosa lenta non e' avvenuta e non c'era niente da bloccare")
+                f"the RESPINTO carries {motivo:#04x} = {MOTIVI.get(motivo, '?')}, "
+                f"not 0x07 CREDENZIALI_ERRATE: ⛔ with {MOTIVI.get(motivo, '?')} "
+                f"the server refuses WITHOUT querying PAM (§4.4-bis), that is the "
+                f"slow thing did not happen and there was nothing to block")
             return esito
 
-        # ── il conto ──────────────────────────────────────────────────────
-        # La finestra: le marche PARTITE fra il `CREDENZIALI` e il `RESPINTO`.
+        # ── the count ─────────────────────────────────────────────────────
+        # The window: the marks SENT between the `CREDENZIALI` and the `RESPINTO`.
         dentro = [c for c in campioni[quante_prima:]
                   if c.get("ms") is not None and t_cred <= c["t0"] <= t_resp]
-        # ⚠ E anche la marca partita PRIMA e tornata DOPO: e' proprio quella
-        #   che il blocco si mangia, ed escluderla sarebbe misurare tutto
-        #   tranne il fatto (`LEZIONI.md` §1.9).
+        # ⚠ And also the mark sent BEFORE and returned AFTER: it is precisely the one
+        #   the blocking eats, and excluding it would mean measuring everything
+        #   except the fact (`LEZIONI.md` §1.9).
         a_cavallo = [c for c in campioni
                      if c.get("ms") is not None and c["t0"] < t_cred
                      and c["t0"] + c["ms"] / 1000 > t_cred]
         finestra = a_cavallo + dentro
         if not finestra:
-            esito["perche"] = ("nessuna marca e' partita dentro la finestra: la "
-                               "finestra e' durata "
-                               f"{esito['ms_C']:.0f} ms e il periodo e' "
+            esito["perche"] = ("no mark was sent inside the window: the "
+                               "window lasted "
+                               f"{esito['ms_C']:.0f} ms and the period is "
                                f"{a.periodo * 1000:.0f} ms")
             return esito
 
@@ -489,36 +489,36 @@ async def un_giro(a, parola, n):
 
 def previsione():
     print("""
-== ⛔ L'ATTESO, SCRITTO PRIMA DEL GIRO  (02-pam-fermo.py)
+== ⛔ THE EXPECTATION, WRITTEN BEFORE THE ROUND  (02-pam-fermo.py)
 
-   La cosa misurata:  quanto sta fermo chi NON si sta autenticando, mentre
-                      un terzo presenta credenziali SBAGLIATE.
+   What is measured:  how long whoever is NOT authenticating stands still, while
+                      a third party presents WRONG credentials.
 
-   | | PRIMA (fase 1, PAM sul filo unico) | DOPO (la cura) |
+   | | BEFORE (phase 1, PAM on the single thread) | AFTER (the cure) |
    |---|---|---|
-   | picco della marca in finestra | ⛔ >= %.0f ms   | ⭐ < %.0f ms |
-   | tempo fermo di A (somma scarti)| ⛔ ~ la durata di PAM | ⭐ ~ 0 |
-   | stretta di mano di B           | ⛔ >= %.0f ms   | ⭐ < %.0f ms |
-   | ⚠ tempo di C (chi si autentica)| 1000-2200 ms | ⭐ UGUALE |
+   | peak of the mark in the window | ⛔ >= %.0f ms   | ⭐ < %.0f ms |
+   | A's stalled time (sum excesses)| ⛔ ~ the duration of PAM | ⭐ ~ 0 |
+   | B's handshake                  | ⛔ >= %.0f ms   | ⭐ < %.0f ms |
+   | ⚠ C's time (who authenticates) | 1000-2200 ms | ⭐ THE SAME |
 
-   ⛔ IL CASO OPPOSTO — che aspetto avrebbe una cura che NON funziona:
-      picco e stretta restano >= %.0f ms **mentre il tempo di C non cambia**,
-      cioe' la stessa fotografia del «prima» con il codice nuovo dentro.
-      E' quel che `02-pam-lancia.sh --guasto` innesta apposta.
+   ⛔ THE OPPOSITE CASE — what a cure that does NOT work would look like:
+      peak and handshake stay >= %.0f ms **while C's time does not change**,
+      that is the same picture as the «before» with the new code inside.
+      It is what `02-pam-lancia.sh --guasto` injects on purpose.
 
-   ⛔ E se il ciclo tranquillo (la mediana di base) fosse sopra %.0f ms, il
-      righello e' rotto e NON si divide per lui: il giro si dichiara non valido.
+   ⛔ And if the quiet loop (the base median) were above %.0f ms, the
+      ruler is broken and it is NOT divided by: the round is declared invalid.
 """ % (PICCO_BLOCCATO_MS, PICCO_LIBERO_MS, PICCO_BLOCCATO_MS,
        STRETTA_LIBERA_MS, PICCO_BLOCCATO_MS, BASE_MAX_MS))
 
 
 async def principale(a, parola):
     print(f"== 02-pam-fermo — https://{a.indirizzo}:{a.porta}{a.percorso}"
-          f"  ·  {a.giri} giri  ·  attesa «{a.attesa}»")
-    print(f"   PING al socket di comando: {ping(a.socket)}")
-    print(f"   ⚠ sblocco DICHIARATO, prima di cominciare: "
+          f"  ·  {a.giri} rounds  ·  expectation «{a.attesa}»")
+    print(f"   PING to the command socket: {ping(a.socket)}")
+    print(f"   ⚠ unblock DECLARED, before starting: "
           f"{sblocca(a.socket, a.indirizzo)}")
-    print(f"   ⚠ e per l'altro indirizzo con cui questa macchina si vede: "
+    print(f"   ⚠ and for the other address this machine sees itself with: "
           f"{sblocca(a.socket, '127.0.0.1')}")
 
     esiti = []
@@ -535,24 +535,24 @@ async def principale(a, parola):
         if e["valido"]:
             b = e["ms_stretta_B"]
             quanto_b = (f"{b:.0f} ms" if b is not None
-                        else f"CADUTA ({e.get('caduta_B')})")
-            print(f"   giro {n}: base {e['base_mediana_ms']:.1f} ms · "
-                  f"⛔ picco {e['picco_ms']:.0f} ms · fermo {e['fermo_ms']:.0f} ms · "
-                  f"stretta B {quanto_b}")
-            print(f"            e chi si autenticava (C): {e['ms_C']:.0f} ms "
-                  f"[{e['motivo_C_nome']}]  ·  A era entrato in "
+                        else f"DROPPED ({e.get('caduta_B')})")
+            print(f"   round {n}: base {e['base_mediana_ms']:.1f} ms · "
+                  f"⛔ peak {e['picco_ms']:.0f} ms · stalled {e['fermo_ms']:.0f} ms · "
+                  f"handshake B {quanto_b}")
+            print(f"            and whoever was authenticating (C): {e['ms_C']:.0f} ms "
+                  f"[{e['motivo_C_nome']}]  ·  A had got in in "
                   f"{e['ms_ammesso_A']:.0f} ms")
         else:
-            print(f"   giro {n}: ⛔ NON VALIDO — {e['perche']}")
-        # ⛔ Fra un giro e l'altro si lascia respirare: A si stacca e il posto
-        #    (§8.2 motivo 0x0F, invariante I2) dev'essere libero per il giro dopo.
+            print(f"   round {n}: ⛔ NOT VALID — {e['perche']}")
+        # ⛔ Between one round and the next it is given room to breathe: A detaches and the slot
+        #    (§8.2 reason 0x0F, invariant I2) must be free for the next round.
         await asyncio.sleep(1.0)
 
     buoni = [e for e in esiti if e["valido"]]
-    print(f"\n== il conto: {len(buoni)} giri validi su {len(esiti)}")
+    print(f"\n== the count: {len(buoni)} valid rounds out of {len(esiti)}")
     if not buoni:
-        print("   ⛔ NIENTE DA CONCLUDERE: nessun giro valido.  ⚠ Non e' «zero "
-              "millisecondi»: e' «non ho misurato» (`LEZIONI.md` §1.9).")
+        print("   ⛔ NOTHING TO CONCLUDE: no valid round.  ⚠ It is not «zero "
+              "milliseconds»: it is «I did not measure» (`LEZIONI.md` §1.9).")
         scrivi(a, esiti, None)
         return 3
 
@@ -572,50 +572,50 @@ async def principale(a, parola):
         "C_mediana_ms": statistics.median(cc),
         "attesa": a.attesa,
     }
-    print(f"   ciclo tranquillo (base)      mediana {riassunto['base_mediana_ms']:8.1f} ms")
-    print(f"   ⛔ picco della marca         mediana {riassunto['picco_mediana_ms']:8.1f} ms"
-          f"   (massimo {riassunto['picco_massimo_ms']:.0f})")
-    print(f"   ⛔ tempo fermo di A          mediana {riassunto['fermo_mediana_ms']:8.1f} ms")
+    print(f"   quiet loop (base)            median  {riassunto['base_mediana_ms']:8.1f} ms")
+    print(f"   ⛔ peak of the mark          median  {riassunto['picco_mediana_ms']:8.1f} ms"
+          f"   (maximum {riassunto['picco_massimo_ms']:.0f})")
+    print(f"   ⛔ A's stalled time          median  {riassunto['fermo_mediana_ms']:8.1f} ms")
     if strette:
-        print(f"   ⛔ stretta di mano di B      mediana {riassunto['stretta_B_mediana_ms']:8.1f} ms")
-    print(f"   ⚠ chi si autenticava (C)     mediana {riassunto['C_mediana_ms']:8.1f} ms"
-          f"   ← ⭐ questo NON deve cambiare")
+        print(f"   ⛔ B's handshake             median  {riassunto['stretta_B_mediana_ms']:8.1f} ms")
+    print(f"   ⚠ who was authenticating (C) median  {riassunto['C_mediana_ms']:8.1f} ms"
+          f"   ← ⭐ this must NOT change")
 
-    # ── il verdetto, contro l'atteso scritto prima ────────────────────────
+    # ── the verdict, against the expectation written beforehand ───────────
     verdetto = 0
     if riassunto["base_mediana_ms"] > BASE_MAX_MS:
-        print(f"\n   ⛔ IL RIGHELLO E' ROTTO: il ciclo tranquillo misura "
-              f"{riassunto['base_mediana_ms']:.0f} ms, sopra i {BASE_MAX_MS:.0f} "
-              f"attesi.  Nessun confronto e' leggibile.")
+        print(f"\n   ⛔ THE RULER IS BROKEN: the quiet loop measures "
+              f"{riassunto['base_mediana_ms']:.0f} ms, above the {BASE_MAX_MS:.0f} "
+              f"expected.  No comparison is readable.")
         verdetto = 3
     elif a.attesa == "bloccato":
         ok = (riassunto["picco_mediana_ms"] >= PICCO_BLOCCATO_MS)
-        print(f"\n   {'⭐ OK' if ok else '⛔ NO'}  atteso «bloccato»: il picco "
-              f"doveva essere >= {PICCO_BLOCCATO_MS:.0f} ms ed e' "
+        print(f"\n   {'⭐ OK' if ok else '⛔ NO'}  expected «bloccato»: the peak "
+              f"had to be >= {PICCO_BLOCCATO_MS:.0f} ms and it is "
               f"{riassunto['picco_mediana_ms']:.0f}")
         if not ok:
-            print("      ⛔ E NON E' UNA BUONA NOTIZIA: vuol dire che questo "
-                  "banco NON SA VEDERE il blocco che il server ha davvero.\n"
-                  "         Un «dopo» verde misurato con un righello cieco e' "
-                  "la peggiore delle prove (`CODER.md` §4.6).")
+            print("      ⛔ AND IT IS NOT GOOD NEWS: it means this "
+                  "bench CANNOT SEE the blocking the server really has.\n"
+                  "         A green «after» measured with a blind ruler is "
+                  "the worst of proofs (`CODER.md` §4.6).")
         verdetto = 0 if ok else 1
     elif a.attesa == "libero":
         ok = (riassunto["picco_mediana_ms"] < PICCO_LIBERO_MS)
         ok_b = bool(strette) and riassunto["stretta_B_mediana_ms"] < STRETTA_LIBERA_MS
-        print(f"\n   {'⭐ OK' if ok else '⛔ NO'}  atteso «libero»: il picco "
-              f"doveva essere < {PICCO_LIBERO_MS:.0f} ms ed e' "
+        print(f"\n   {'⭐ OK' if ok else '⛔ NO'}  expected «libero»: the peak "
+              f"had to be < {PICCO_LIBERO_MS:.0f} ms and it is "
               f"{riassunto['picco_mediana_ms']:.0f}")
         if strette:
-            print(f"   {'⭐ OK' if ok_b else '⛔ NO'}  e la stretta di B < "
-                  f"{STRETTA_LIBERA_MS:.0f} ms: e' "
+            print(f"   {'⭐ OK' if ok_b else '⛔ NO'}  and B's handshake < "
+                  f"{STRETTA_LIBERA_MS:.0f} ms: it is "
                   f"{riassunto['stretta_B_mediana_ms']:.0f}")
         else:
-            print("   ⛔ NO  nessuna stretta di B misurata: non e' «e' stata "
-                  "veloce», e' «non ho misurato»")
+            print("   ⛔ NO  no handshake of B measured: it is not «it was "
+                  "fast», it is «I did not measure»")
         verdetto = 0 if (ok and ok_b) else 1
     else:
-        print("\n   ⚠ nessun atteso dichiarato (--attesa): il giro misura e non "
-              "giudica")
+        print("\n   ⚠ no expectation declared (--attesa): the round measures and does not "
+              "judge")
 
     scrivi(a, esiti, riassunto)
     return verdetto
@@ -634,31 +634,31 @@ def scrivi(a, esiti, riassunto):
             "nota": a.nota}
     with open(a.esiti, "a", encoding="utf-8") as f:
         f.write(json.dumps(riga, ensure_ascii=False) + "\n")
-    print(f"   esiti: {a.esiti}")
+    print(f"   outcomes: {a.esiti}")
 
 
 def parola_dal_file(percorso):
-    """⛔ D12: la parola d'ordine non passa dalla riga di comando —
-    `/proc/<pid>/cmdline` la legge chiunque."""
+    """⛔ D12: the password does not go through the command line —
+    anyone can read `/proc/<pid>/cmdline`."""
     try:
         modo = os.stat(percorso).st_mode & 0o077
     except OSError as e:
-        print(f"   ⛔ il file della parola «{percorso}» non si legge: {e}")
+        print(f"   ⛔ the password file «{percorso}» cannot be read: {e}")
         sys.exit(2)
     if modo:
-        print(f"   ⚠ «{percorso}» e' leggibile da altri (bit {modo:o})")
+        print(f"   ⚠ «{percorso}» is readable by others (bits {modo:o})")
     with open(percorso, encoding="utf-8") as f:
         parola = f.read().strip("\n")
     if not parola:
-        print(f"   ⛔ «{percorso}» e' VUOTO: non e' «la parola e' vuota», e' "
-              f"«il lanciatore non l'ha scritta»")
+        print(f"   ⛔ «{percorso}» is EMPTY: it is not «the password is empty», it is "
+              f"«the launcher did not write it»")
         sys.exit(2)
     return parola
 
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(
-        description="quanto sta fermo chi NON si sta autenticando")
+        description="how long whoever is NOT authenticating stands still")
     p.add_argument("--indirizzo", default="192.168.0.2")
     p.add_argument("--porta", type=int, default=7531)
     p.add_argument("--percorso", default="/rcp/1")
@@ -669,13 +669,13 @@ if __name__ == "__main__":
     p.add_argument("--socket", default="")
     p.add_argument("--giri", type=int, default=5)
     p.add_argument("--periodo", type=float, default=0.05,
-                   help="ogni quanto parte una marca, in secondi")
+                   help="how often a mark is sent, in seconds")
     p.add_argument("--tranquillo", type=float, default=1.2,
-                   help="quanto si sonda a ciclo fermo, per il denominatore")
+                   help="how long probing goes on with the loop idle, for the denominator")
     p.add_argument("--coda", type=float, default=0.7)
     p.add_argument("--attesa", choices=["bloccato", "libero", "nessuna"],
                    default="nessuna",
-                   help="l'atteso, DICHIARATO PRIMA del giro")
+                   help="the expectation, DECLARED BEFORE the round")
     p.add_argument("--esiti", default="")
     p.add_argument("--nota", default="")
     p.add_argument("--previsione", action="store_true")
@@ -684,16 +684,16 @@ if __name__ == "__main__":
         previsione()
         sys.exit(0)
     if AIOQUIC:
-        print(f"   ⛔ «aioquic» non c'e' su questa macchina ({AIOQUIC}): questo "
-              f"banco gira DENTRO il contenitore di NIC-OS.\n"
-              f"      ⚠ Non e' «il giro e' andato»: e' «non ho misurato».")
+        print(f"   ⛔ «aioquic» is not on this machine ({AIOQUIC}): this "
+              f"bench runs INSIDE the NIC-OS container.\n"
+              f"      ⚠ It is not «the round went fine»: it is «I did not measure».")
         sys.exit(2)
     if not a.parola_file:
-        print("   ⛔ serve --parola-file (D12: la parola non passa da argv)")
+        print("   ⛔ --parola-file is needed (D12: the password does not go through argv)")
         sys.exit(2)
     parola = parola_dal_file(a.parola_file)
     try:
         sys.exit(asyncio.run(principale(a, parola)))
-    except Exception as e:  # noqa: BLE001 — il tipo dell'errore E' la misura
+    except Exception as e:  # noqa: BLE001 — the error type IS the measurement
         print(f"\n   ⛔ {type(e).__name__}: {e}")
         sys.exit(2)

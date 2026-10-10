@@ -1,5 +1,5 @@
 #!/bin/sh
-# lancia.sh DESKTOP ESPERIMENTI... — sul server, nell'ambiente di 15-una.sh
+# lancia.sh DESKTOP EXPERIMENTS... — on the server, in the environment of 15-una.sh
 cd /media/REMOTIX/tmp/t2 || exit 1
 u=$(id -u); D=$1
 W=$(cat /run/user/$u/15-compositori/$D)

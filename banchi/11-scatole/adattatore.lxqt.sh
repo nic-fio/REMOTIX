@@ -1,41 +1,41 @@
 # ===========================================================================
-# adattatore.lxqt.sh — ⭐ COME SI AVVIA E SI GUARDA **LXQt**
+# adattatore.lxqt.sh — ⭐ HOW **LXQt** IS STARTED AND WATCHED
 # ===========================================================================
 #
-# ⚠⚠ E QUI VA DETTA SUBITO LA COSA SCOMODA, invece di lasciarla scoprire a
-#    qualcuno fra sei mesi: ⛔ **questo adattatore e' quasi identico a quello di
-#    XFCE**, e non per pigrizia.
+# ⚠⚠ AND HERE THE AWKWARD THING MUST BE SAID RIGHT AWAY, instead of letting
+#    someone discover it six months from now: ⛔ **this adapter is almost identical to the
+#    XFCE one**, and not out of laziness.
 #
-#    LXQt, come XFCE, non porta un compositore suo su Wayland: porta una
-#    SESSIONE e si appoggia a uno di famiglia `wlroots`.  `PIANO.md` fase 13 lo
-#    dice in una riga — *«il terzo e il quarto desktop, che condividono wlroots
-#    e quindi quasi tutto»* — e `DECISIONI.md` §… ha gia' MISURATO `labwc`
-#    sotto l'etichetta **«labwc (XFCE, LXQt)»**: una misura sola, valida per
-#    due desktop.
+#    LXQt, like XFCE, does not bring a compositor of its own on Wayland: it brings a
+#    SESSION and leans on one from the `wlroots` family.  `PIANO.md` phase 13
+#    says it in one line — *«the third and fourth desktops, which share wlroots
+#    and therefore almost everything»* — and `DECISIONI.md` §… has already MEASURED `labwc`
+#    under the label **«labwc (XFCE, LXQt)»**: a single measurement, valid for
+#    two desktops.
 #
-# ⇒ ⭐ LA CONSEGUENZA, dichiarata: **la quarta scatola non mette alla prova un
-#     quarto compositore.**  Mette alla prova una quarta SESSIONE e una quarta
-#     ricetta.  ⛔ Chi legge i risultati deve saperlo, o contera' quattro prove
-#     indipendenti dove ce ne sono tre.
+# ⇒ ⭐ THE CONSEQUENCE, declared: **the fourth box does not test a
+#     fourth compositor.**  It tests a fourth SESSION and a fourth
+#     recipe.  ⛔ Whoever reads the results must know it, or will count four independent
+#     tests where there are three.
 #
-# ⚠ E resta comunque utile averla: fra la terza e la quarta scatola cambiano i
-#   pacchetti, le dipendenze che si tirano dietro e il demone d'inattivita' —
-#   e `DECISIONI.md` ha gia' un rilievo che riguarda LXQt e non XFCE
-#   (`enableIdlenessWatcher` che il demone riscrive a `true` al primo avvio).
+# ⚠ And it is still useful to have it: between the third and the fourth box the
+#   packages change, the dependencies they drag along and the idle daemon —
+#   and `DECISIONI.md` already has a finding that concerns LXQt and not XFCE
+#   (`enableIdlenessWatcher`, which the daemon rewrites to `true` at first start).
 #
-# ⛔ Il confine e' lo stesso di tutti: qui ci va **come si avvia e come si
-#    guarda**, MAI il comportamento del prodotto.
+# ⛔ The boundary is the same for all: what goes in here is **how it is started and how
+#    it is watched**, NEVER the product's behaviour.
 # ===========================================================================
 
-adattatore_nome() { printf 'LXQt (labwc, famiglia wlroots)'; }
+adattatore_nome() { printf 'LXQt (labwc, wlroots family)'; }
 
 adattatore_pacchetto() { printf 'labwc'; }
 
-# ⚠ `WLR_BACKENDS=headless` e' il modo in cui un compositore wlroots nasce
-#   SENZA schermo fisico — l equivalente di `--headless` di Mutter e di
-#   `--virtual` di KWin.  ⭐ Tre parole diverse per la stessa cosa: e'
-#   precisamente il genere di differenza che deve stare qui sotto e non dentro
-#   la lista delle prove.
+# ⚠ `WLR_BACKENDS=headless` is the way a wlroots compositor is born
+#   WITHOUT a physical screen — the equivalent of Mutter's `--headless` and of
+#   KWin's `--virtual`.  ⭐ Three different words for the same thing: it is
+#   precisely the kind of difference that must live down here and not inside
+#   the list of tests.
 adattatore_avvia() {
 	_rtd=$1; _log=$2
 	runuser -u provanic -- env \

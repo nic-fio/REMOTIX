@@ -1,23 +1,23 @@
 #!/bin/bash
 #
-# 17-t3-pacchetto.sh — fase 17, T3: il PACCHETTO NATIVO provato in una VM
-# «cliente» di 17-vm.sh (per ora Arch: `pacman`).  Un passo per chiamata, cosi'
-# ogni esito si legge prima di andare avanti.
+# 17-t3-pacchetto.sh — phase 17, T3: the NATIVE PACKAGE tested in a
+# "customer" VM from 17-vm.sh (for now Arch: `pacman`).  One step per call, so
+# each outcome is read before going on.
 #
-#   (sul server, come nicfio; la VM accesa con 17-vm.sh avvia)
-#   bash 17-t3-pacchetto.sh <macchina> prepara            utente `prova` (gia' in `video`: R33)
-#   bash 17-t3-pacchetto.sh <macchina> impronta <nome>    $T3/<macchina>/impronta-<nome>.txt
-#   bash 17-t3-pacchetto.sh <macchina> installa <pkg>     copia e `pacman -U`, NIENT'ALTRO (R4)
-#   bash 17-t3-pacchetto.sh <macchina> r40                il pacchetto da solo non accende niente
-#   bash 17-t3-pacchetto.sh <macchina> motore-monta       PASSI DEL MOTORE a mano: gruppi + enable --now
-#   bash 17-t3-pacchetto.sh <macchina> motore-smonta      e il loro contrario, dal registro
-#   bash 17-t3-pacchetto.sh <macchina> togli              `pacman -Rns remotix`
-#   bash 17-t3-pacchetto.sh <macchina> confronta <a> <b>  diff delle due impronte
+#   (on the server, as nicfio; the VM started with 17-vm.sh avvia)
+#   bash 17-t3-pacchetto.sh <machine> prepara             user `prova` (already in `video`: R33)
+#   bash 17-t3-pacchetto.sh <machine> impronta <name>     $T3/<machine>/impronta-<name>.txt
+#   bash 17-t3-pacchetto.sh <machine> installa <pkg>      copy and `pacman -U`, NOTHING ELSE (R4)
+#   bash 17-t3-pacchetto.sh <machine> r40                 the package alone starts nothing
+#   bash 17-t3-pacchetto.sh <machine> motore-monta        ENGINE STEPS by hand: groups + enable --now
+#   bash 17-t3-pacchetto.sh <machine> motore-smonta       and their reverse, from the log
+#   bash 17-t3-pacchetto.sh <machine> togli               `pacman -Rns remotix`
+#   bash 17-t3-pacchetto.sh <machine> confronta <a> <b>   diff of the two fingerprints
 #
-# ⭐ «prepara» e' la scena, non l'installazione: una persona con la parola
-#    d'ordine per entrare dal browser, e gia' in `video` PRIMA — cosi' la prova
-#    vede se la disinstallazione toglie un gruppo che c'era (R33, ⛔ non deve).
-# ⛔ Fra «impronta prima» e «installa» non si tocca niente a mano: e' R4.
+# ⭐ "prepara" is the scene, not the installation: a person with the password
+#    to enter from the browser, and already in `video` BEFORE — so the test
+#    sees whether uninstalling removes a group that was there (R33, ⛔ it must not).
+# ⛔ Between "fingerprint before" and "installa" nothing is touched by hand: that is R4.
 set -euo pipefail
 m=${1:?macchina}; passo=${2:?passo}
 R=/media/REMOTIX/vm17
@@ -29,7 +29,7 @@ mkdir -p "$T3/$m"
 
 case $m in
 debian13-*) n=1;; ubuntu2604-*) n=2;; fedora44-*) n=3;; arch-*) n=4;;
-tumbleweed-*) n=5;; leap16-*) n=6;; alma10-*) n=7;; *) echo "macchina sconosciuta: $m"; exit 2;;
+tumbleweed-*) n=5;; leap16-*) n=6;; alma10-*) n=7;; *) echo "unknown machine: $m"; exit 2;;
 esac
 case ${m#*-} in gnome) k=1;; kde) k=2;; xfce) k=3;; lxqt) k=4;; esac
 PORTA_SSH=$((2300 + 10 * n + k))
@@ -55,26 +55,26 @@ installa)
 	b=$(basename "$pkg")
 	VM "sudo pacman -U --noconfirm /var/tmp/$b; e=\$?; rm -f /var/tmp/$b; exit \$e" 2>&1 | tee "$T3/$m/installa-$(date +%H%M%S).log" ;;
 r40)
-	# ⭐ R40 (DECISIONI.md §10.12): il pacchetto DA SOLO non accende niente.
-	VM 'echo "servizio: $(systemctl is-enabled remotix.service 2>&1) / $(systemctl is-active remotix.service 2>&1)"
-echo "in ascolto sulla 7447: $(ss -Hlntu | grep -c ":7447 ")"
-echo "gruppi della scheda: $(for n in /dev/dri/card* /dev/dri/renderD*; do stat -c %G $n; done | sort -u | while read g; do printf "%s=[%s] " $g "$(getent group $g | cut -d: -f4)"; done)"
-echo "cinture attive: $(ls /etc/polkit-1/rules.d/*remotix* /usr/share/polkit-1/rules.d/*remotix* /etc/systemd/logind.conf.d/*remotix* /usr/lib/systemd/logind.conf.d/*remotix* /etc/systemd/sleep.conf.d/*remotix* /usr/lib/systemd/sleep.conf.d/*remotix* 2>/dev/null | wc -l)"
-echo "logind in vigore: $(systemd-analyze cat-config systemd/logind.conf | grep -c "^HandlePowerKey=ignore")  sleep in vigore: $(systemd-analyze cat-config systemd/sleep.conf | grep -c "^AllowSuspend=no")"
+	# ⭐ R40 (DECISIONI.md §10.12): the package ON ITS OWN starts nothing.
+	VM 'echo "service: $(systemctl is-enabled remotix.service 2>&1) / $(systemctl is-active remotix.service 2>&1)"
+echo "listening on 7447: $(ss -Hlntu | grep -c ":7447 ")"
+echo "GPU groups: $(for n in /dev/dri/card* /dev/dri/renderD*; do stat -c %G $n; done | sort -u | while read g; do printf "%s=[%s] " $g "$(getent group $g | cut -d: -f4)"; done)"
+echo "active belts: $(ls /etc/polkit-1/rules.d/*remotix* /usr/share/polkit-1/rules.d/*remotix* /etc/systemd/logind.conf.d/*remotix* /usr/lib/systemd/logind.conf.d/*remotix* /etc/systemd/sleep.conf.d/*remotix* /usr/lib/systemd/sleep.conf.d/*remotix* 2>/dev/null | wc -l)"
+echo "logind in force: $(systemd-analyze cat-config systemd/logind.conf | grep -c "^HandlePowerKey=ignore")  sleep in force: $(systemd-analyze cat-config systemd/sleep.conf | grep -c "^AllowSuspend=no")"
 echo "firewall: $(systemctl is-active firewalld 2>&1)"
-echo "== systemctl start remotix (a mano): deve rifiutare con RX-INST-001"
+echo "== systemctl start remotix (by hand): must refuse with RX-INST-001"
 sudo systemctl start remotix.service; sleep 3
-echo "dopo start: $(systemctl is-active remotix.service)  RX-INST-001 nel registro: $(sudo journalctl -u remotix.service -o cat --no-pager | grep -c RX-INST-001)"
+echo "after start: $(systemctl is-active remotix.service)  RX-INST-001 in the log: $(sudo journalctl -u remotix.service -o cat --no-pager | grep -c RX-INST-001)"
 sudo systemctl stop remotix.service' ;;
 motore-monta)
-	# ⚠ PASSI DEL MOTORE fatti a mano (§10.12): il motore non c'e' ancora (T4-T5).
-	#   Gruppi della scheda alla persona che entra (letti dai nodi, col registro
-	#   di chi c'era gia'), poi l'accensione.  Le cinture no: al desktop non servono.
+	# ⚠ ENGINE STEPS done by hand (§10.12): the engine does not exist yet (T4-T5).
+	#   GPU groups to the person who enters (read from the nodes, with the log
+	#   of who was already there), then the start.  Not the belts: the desktop does not need them.
 	VM 'for g in $(for n in /dev/dri/card* /dev/dri/renderD*; do stat -c %G $n; done | sort -u); do
   if id -nG prova | tr " " "\n" | grep -qx $g; then echo "C_ERA prova $g"; else sudo gpasswd -a prova $g >/dev/null && echo "MESSO prova $g"; fi
 done' | tee "$T3/$m/motore.registro"
 	VM 'sudo systemctl enable --now remotix.service && sleep 3 && systemctl is-active remotix.service
-sudo journalctl -u remotix.service -o cat --no-pager | grep -E "pronto:|PAM|KWin|desktop di questa" | tail -5' ;;
+sudo journalctl -u remotix.service -o cat --no-pager | grep -E "ready:|PAM|KWin|desktop of this" | tail -5' ;;
 motore-smonta)
 	VM 'sudo systemctl disable --now remotix.service'
 	while read -r cosa u g; do
@@ -87,5 +87,5 @@ confronta)
 	diff "$T3/$m/impronta-$a.txt" "$T3/$m/impronta-$b.txt" >"$T3/$m/diff-$a-$b.txt" || true
 	grep -c '^[<>]' "$T3/$m/diff-$a-$b.txt" || true
 	echo "$T3/$m/diff-$a-$b.txt" ;;
-*) echo "passo sconosciuto: $passo"; exit 2 ;;
+*) echo "unknown step: $passo"; exit 2 ;;
 esac

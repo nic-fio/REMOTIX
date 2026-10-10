@@ -1,27 +1,27 @@
 #!/usr/bin/env python3
-"""01-b2-raccogli.py — serve la sonda di B2 e ne REGISTRA l'esito.
+"""01-b2-raccogli.py — serves the B2 probe and RECORDS its outcome.
 
-    python3 01-b2-raccogli.py [porta]        predefinita: 8899
+    python3 01-b2-raccogli.py [port]        default: 8899
 
 ---------------------------------------------------------------------------
-PERCHE' NON BASTA `python3 -m http.server`
+WHY `python3 -m http.server` IS NOT ENOUGH
 
-La sonda gira in un browser, e il suo verdetto finiva **negli occhi di chi
-guardava**: qualcuno lo leggeva e lo ricopiava nel documento di fase.  ⛔ E'
-esattamente quel che la regola B0.4 vieta — *l'atteso lo confronta il banco,
-non chi legge* — e la fase 0 l'ha gia' pagato con il difetto 11, dove un
-numero confrontato a memoria con la colonna sbagliata faceva sembrare il
-banco in errore di dieci fotogrammi.
+The probe runs in a browser, and its verdict ended up **in the eyes of whoever
+was watching**: someone read it and copied it into the phase document.  ⛔ That
+is exactly what rule B0.4 forbids — *the bench compares against the expected,
+not the reader* — and phase 0 already paid for it with defect 11, where a
+number compared from memory against the wrong column made the bench look
+ten frames off.
 
-⚠ E c'e' un secondo motivo, meno ovvio e piu' caro: **la versione esatta del
-  browser**.  S1 §4.5 la mette fra gli errori che rovinano la misura — *«un
-  risultato senza versione, fra sei mesi, non vale niente»* — ed e'
-  precisamente il campo che una trascrizione a mano dimentica sempre.  Qui
-  arriva da sola, perche' la manda la pagina.
+⚠ And there is a second reason, less obvious and more costly: **the exact
+  browser version**.  S1 §4.5 lists it among the errors that ruin a
+  measurement — *"a result without a version, six months from now, is worth
+  nothing"* — and it is precisely the field a hand transcription always
+  forgets.  Here it arrives on its own, because the page sends it.
 
-Questo programma fa due cose e nessuna di piu':
-  1. serve i file del banco su 127.0.0.1;
-  2. accetta un POST su /esito e lo scrive, con l'ora, in `b2-esiti.jsonl`.
+This program does two things and nothing more:
+  1. it serves the bench files on 127.0.0.1;
+  2. it accepts a POST on /esito and writes it, with the time, to `b2-esiti.jsonl`.
 ---------------------------------------------------------------------------
 """
 import json
@@ -52,11 +52,11 @@ class Raccoglitore(SimpleHTTPRequestHandler):
         with REGISTRO.open("a") as f:
             f.write(json.dumps(dati, ensure_ascii=False) + "\n")
 
-        # Si stampa anche a terminale, perche' chi lancia il banco veda
-        # arrivare la misura invece di doverla andare a cercare.
-        print(f"\n=== esito ricevuto {dati['ora']}")
-        print(f"    esito:   {dati.get('esito')}")
-        print(f"    motore:  {dati.get('motore', '?')[:100]}")
+        # It is also printed on the terminal, so that whoever launches the bench
+        # sees the measurement arrive instead of having to go looking for it.
+        print(f"\n=== outcome received {dati['ora']}")
+        print(f"    outcome: {dati.get('esito')}")
+        print(f"    engine:  {dati.get('motore', '?')[:100]}")
         for riga in (dati.get("dettaglio") or "").splitlines():
             print(f"    | {riga}")
         print(flush=True)
@@ -66,22 +66,22 @@ class Raccoglitore(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def log_message(self, formato, *a):
-        # ⛔ Il 10 agosto 2026 questa riga diceva `pass`, con la spiegazione
-        #    «il rumore delle richieste non serve: serve l'esito».  Era falsa,
-        #    e l'ha dimostrato la prima misura col browser: la pagina non
-        #    registrava niente, e non c'era modo di sapere se il browser
-        #    l'avesse **chiesta** o no — cioe' se il difetto fosse nel browser
-        #    o nella pagina.  Due cause opposte, lo stesso silenzio.
+        # ⛔ On 10 Aug 2026 this line said `pass`, with the explanation
+        #    "the noise of the requests is not needed: the outcome is".  It was
+        #    false, and the first browser measurement proved it: the page
+        #    recorded nothing, and there was no way of knowing whether the
+        #    browser had **requested** it or not — that is, whether the defect
+        #    was in the browser or in the page.  Two opposite causes, the same silence.
         #
-        # ⭐ La richiesta E' il denominatore dell'esito (`LEZIONI.md` §1.9,
-        #    quarta regola): senza, «nessun esito» non e' un dato.
-        sys.stderr.write("richiesta: " + (formato % a) + "\n")
+        # ⭐ The request IS the denominator of the outcome (`LEZIONI.md` §1.9,
+        #    fourth rule): without it, "no outcome" is not a datum.
+        sys.stderr.write("request: " + (formato % a) + "\n")
         sys.stderr.flush()
 
 
 if __name__ == "__main__":
     porta = int(sys.argv[1]) if len(sys.argv) > 1 else 8899
-    print(f"== banco B2: sonda su http://localhost:{porta}/01-b2-sonda.html")
-    print(f"   gli esiti si accumulano in {REGISTRO}")
-    print("   in attesa che qualcuno prema il bottone.\n", flush=True)
+    print(f"== bench B2: probe on http://localhost:{porta}/01-b2-sonda.html")
+    print(f"   the outcomes accumulate in {REGISTRO}")
+    print("   waiting for someone to press the button.\n", flush=True)
     ThreadingHTTPServer(("127.0.0.1", porta), Raccoglitore).serve_forever()

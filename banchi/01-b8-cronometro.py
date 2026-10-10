@@ -1,166 +1,166 @@
 #!/usr/bin/env python3
-"""01-b8-cronometro.py — ⛔ B8: il secondo fisso, e IL BAN DELL'INDIRIZZO.
+"""01-b8-cronometro.py — ⛔ B8: the fixed second, and THE BAN OF THE ADDRESS.
 
     python3 01-b8-cronometro.py --previsione
     python3 01-b8-cronometro.py --campioni --blocco 3 --giro ...
-    python3 01-b8-cronometro.py --ban prima  --giro ...    (una vita del server)
-    python3 01-b8-cronometro.py --ban dopo   --giro ...    (dopo il riavvio)
+    python3 01-b8-cronometro.py --ban prima  --giro ...    (one life of the server)
+    python3 01-b8-cronometro.py --ban dopo   --giro ...    (after the restart)
     python3 01-b8-cronometro.py --verdetto --giro ...
 
-⚠ Gira DENTRO il contenitore: `aioquic` sta li'.  Lo conduce `01-b8-lancia.sh`.
+⚠ It runs INSIDE the container: `aioquic` lives there.  It is driven by `01-b8-lancia.sh`.
 
 ===========================================================================
-⛔ RISCRITTO L'11 AGOSTO 2026, E QUEL CHE E' CADUTO VA SAPUTO LEGGENDO QUI
+⛔ REWRITTEN ON 11 AUG 2026, AND WHAT FELL MUST BE KNOWN BY READING HERE
 
-`DECISIONI.md` §1.9 ha sostituito la forma della limitazione: **tre
-autenticazioni fallite dallo stesso indirizzo dentro cinque minuti, e
-quell'indirizzo e' fuori per dodici ore**.  Con essa cadono, da questo file:
+`DECISIONI.md` §1.9 replaced the shape of the limitation: **three failed
+authentications from the same address within five minutes, and that address is
+out for twelve hours**.  With it, these fall from this file:
 
-  · i **due contatori** (uno per nome utente, uno per indirizzo).  Ne resta
-    **uno solo**, sull'indirizzo: ⛔ tre nomi diversi contano **tre**;
-  · il controllo *«quattro falliti · uno riuscito · altri quattro»*: dopo il
-    terzo fallito **non esiste nessun quinto tentativo**;
-  · ⛔ e **le dodici vite del server**.  La vecchia coreografia spegneva e
-    riaccendeva il processo a ogni blocco perche' quello era l'unico modo di
-    azzerare i contatori: *«`rcp_azzera_registro_sessioni()` esiste ma non la
-    chiama nessuno — non c'e' messaggio, segnale o opzione che ci arrivi»*.
-    ⭐ Adesso **c'e'**: il comando di sblocco di §4.4-bis, che l'11 agosto e'
-    nato lato ospite.  Le vite del server sono **due**, e la seconda esiste per
-    una ragione sola — provare che il ban sopravvive al riavvio.
-
-===========================================================================
-⛔ CHE COSA MISURA, IN DUE PARTI CHE NON SI MESCOLANO
-
-**1. Il secondo fisso, e le tre mediane** — invariato nella sostanza.  §4.4
-vieta di distinguere nel **motivo** fra «utente inesistente» e «parola
-sbagliata»; §4.4-bis impone un **ritardo fisso di un secondo** perche' quella
-distinzione non si legga col **cronometro**.  ⛔ E il criterio NON e' «≥ 1 s»:
-`pam_authenticate(); sleep(1); rispondi();` da 1,001 · 1,050 · 1,300 s nei tre
-casi — tre righe verdi, e la distinzione leggibile esattamente come prima
-(rilievo R3.2).  Il criterio e' **di forma diversa**: le tre mediane devono
-differire **meno del rumore della misura**.
-
-**2. Il ban** — nuovo.  Tre fallite con **tre nomi diversi**, poi il quarto
-tentativo **con la parola d'ordine GIUSTA** che DEVE essere rifiutato con
-`TROPPI_TENTATIVI`; piu' i tre controlli che dicono *no*; piu' la pagina che si
-carica lo stesso e dice quante ore mancano; piu' il comando di sblocco.
+  · the **two counters** (one per user name, one per address).  **Only one**
+    remains, on the address: ⛔ three different names count **three**;
+  · the check *«four failed · one succeeded · another four»*: after the third
+    failed **there is no fifth attempt**;
+  · ⛔ and **the twelve lives of the server**.  The old choreography turned the
+    process off and on again at every block because that was the only way to
+    reset the counters: *«`rcp_azzera_registro_sessioni()` exists but nobody
+    calls it — there is no message, signal or option that reaches it»*.
+    ⭐ Now **there is**: the unblock command of §4.4-bis, which on 11 August was
+    born on the host side.  The lives of the server are **two**, and the second
+    exists for one reason only — proving that the ban survives the restart.
 
 ===========================================================================
-⛔ COME QUESTO BANCO SI PROCURA I CAMPIONI, E PERCHE' LA SCELTA VA DICHIARATA
+⛔ WHAT IT MEASURES, IN TWO PARTS THAT DO NOT MIX
 
-`FASI.md` §01-filo-nudo B8 lo dice in una riga: *«i campioni adesso costano: tre
-per indirizzo, poi il ban.  Le mediane vogliono molti campioni per caso, quindi
-il banco deve **variare l'indirizzo di provenienza** o **sbloccare fra un blocco
-e l'altro** — ⛔ e **dichiarare quale delle due fa**, perche' cambiano quel che
-la misura sta misurando»*.
+**1. The fixed second, and the three medians** — unchanged in substance.  §4.4
+forbids distinguishing in the **reason** between «user does not exist» and
+«wrong password»; §4.4-bis imposes a **fixed delay of one second** so that that
+distinction cannot be read with the **stopwatch**.  ⛔ And the criterion is NOT
+«≥ 1 s»: `pam_authenticate(); sleep(1); rispondi();` gives 1.001 · 1.050 · 1.300 s
+in the three cases — three green lines, and the distinction readable exactly as
+before (finding R3.2).  The criterion is **of a different shape**: the three
+medians must differ **less than the noise of the measurement**.
 
-⭐ **Questo banco fa la SECONDA, e usa la prima solo come margine.**
-
-  · un **blocco** e' la sequenza fra due sblocchi.  Dentro un blocco il banco
-    porta al massimo **due** fallimenti per indirizzo — ⛔ **uno sotto la
-    soglia**, e il conto e' fatto **senza contare l'azzeramento sul successo**:
-    se un giorno l'azzeramento smettesse di funzionare, il bilancio reggerebbe
-    lo stesso e il banco misurerebbe ancora PAM.  Un bilancio che poggia sulla
-    regola che si sta provando non e' un bilancio;
-  · i fallimenti si alternano fra **due indirizzi di provenienza**
-    (`127.0.0.1` e `192.168.0.2`, che la stessa macchina raggiunge perche' il
-    server e' acceso su `0.0.0.0`): raddoppia il margine e ⛔ **si vede nel
-    registro del server**, che scrive `da=<indirizzo>:<porta>` — il denominatore
-    letto dove la cosa succede, non nella nostra intenzione (`LEZIONI.md` §1.9);
-  · fra un blocco e l'altro, `01-b8-lancia.sh` chiama il **comando di sblocco**
-    su tutt'e due gli indirizzi, ⛔ **e lo stampa**.
-
-⛔ **CHE COSA QUESTA SCELTA CAMBIA, DETTO INVECE CHE NASCOSTO.**  I campioni
-   sono presi **sempre con il conto sotto soglia**, quindi le tre mediane
-   misurano PAM piu' il ritardo fisso e **mai** la strada del rifiuto immediato.
-   E' quel che serve — le tre mediane parlano di quel che PAM lascia trapelare —
-   ⚠ ma vuol dire che questa parte del banco **non prova niente sul ban**: il
-   ban lo prova la parte 2, dove nessuno sblocca niente.
-
-⛔ **E NESSUNO SBLOCCA DENTRO IL GIRO DEL BAN** (B0.3: *«mai dentro il giro di
-   B8, o B8 non prova piu' niente»*).  Gli sblocchi di questo banco sono in tre
-   posti soli, e sono tutti e tre dichiarati:
-
-     1. **prima** di cominciare, per partire da uno stato noto (B0.1);
-     2. **fra un blocco e l'altro** dei campioni, e mai dentro il giro del ban;
-     3. **in fondo**, dove lo sblocco non e' un attrezzo ma **la cosa provata**.
+**2. The ban** — new.  Three failed with **three different names**, then the
+fourth attempt **with the RIGHT password** that MUST be refused with
+`TROPPI_TENTATIVI`; plus the three checks that say *no*; plus the page that
+loads anyway and says how many hours are left; plus the unblock command.
 
 ===========================================================================
-⛔ LE TRE GUARDIE CONTRO IL LIMITATORE, E NESSUNA SI FIDA DELLE ALTRE
+⛔ HOW THIS BENCH GETS ITS SAMPLES, AND WHY THE CHOICE MUST BE DECLARED
 
-  a. **il bilancio**: due fallimenti per indirizzo per blocco, soglia tre;
-  b. **il piano si verifica PRIMA di eseguirlo**: `simula()` e' un modello della
-     §4.4-bis nuova — soglia 3, finestra scorrevole di 5 minuti, chiave sul solo
-     indirizzo, azzeramento sul successo, sblocco che azzera tutto — e dice
-     **tentativo per tentativo** che cosa dovrebbe arrivare.  `verifica_piano()`
-     **non fa partire** un blocco che il modello vede sforare.  Un commento che
-     dice «stiamo sotto soglia» non e' una verifica: questo lo e';
-  c. ⛔ **e sul filo si guarda ogni singola risposta**: un campione che torna
-     `RESPINTO(TROPPI_TENTATIVI)` **non entra nelle mediane**, si conta a parte e
-     **toglie il verde**.  E' il controllo che non dipende da nessuna nostra
-     aritmetica.
+`FASI.md` §01-filo-nudo B8 says it in one line: *«the samples now cost: three
+per address, then the ban.  The medians want many samples per case, so the
+bench must **vary the source address** or **unblock between one block and the
+next** — ⛔ and **declare which of the two it does**, because they change what
+the measurement is measuring»*.
+
+⭐ **This bench does the SECOND, and uses the first only as a margin.**
+
+  · a **block** is the sequence between two unblocks.  Inside a block the bench
+    brings at most **two** failures per address — ⛔ **one below the
+    threshold**, and the count is done **without counting the reset on success**:
+    if one day the reset stopped working, the balance would hold anyway and the
+    bench would still measure PAM.  A balance that rests on the rule being
+    tested is not a balance;
+  · the failures alternate between **two source addresses** (`127.0.0.1` and
+    `192.168.0.2`, which the same machine reaches because the server is running
+    on `0.0.0.0`): it doubles the margin and ⛔ **it shows in the server log**,
+    which writes `da=<indirizzo>:<porta>` — the denominator read where the thing
+    happens, not in our intention (`LEZIONI.md` §1.9);
+  · between one block and the next, `01-b8-lancia.sh` calls the **unblock
+    command** on both addresses, ⛔ **and prints it**.
+
+⛔ **WHAT THIS CHOICE CHANGES, SAID INSTEAD OF HIDDEN.**  The samples are taken
+   **always with the count below threshold**, so the three medians measure PAM
+   plus the fixed delay and **never** the road of the immediate refusal.  It is
+   what is needed — the three medians speak of what PAM lets leak — ⚠ but it
+   means that this part of the bench **proves nothing about the ban**: the ban
+   is proved by part 2, where nobody unblocks anything.
+
+⛔ **AND NOBODY UNBLOCKS INSIDE THE BAN RUN** (B0.3: *«never inside the B8 run,
+   or B8 no longer proves anything»*).  The unblocks of this bench are in three
+   places only, and all three are declared:
+
+     1. **before** starting, to start from a known state (B0.1);
+     2. **between one block and the next** of the samples, and never inside the ban run;
+     3. **at the end**, where the unblock is not a tool but **the thing proved**.
 
 ===========================================================================
-⛔ LA REGOLA CON CUI SI DECIDE CHE DUE MEDIANE SONO «INDISTINGUIBILI»
+⛔ THE THREE GUARDS AGAINST THE LIMITER, AND NONE TRUSTS THE OTHERS
 
-Per ogni coppia di casi: la **differenza delle mediane** e il suo intervallo al
-95 % per **ricampionamento** (bootstrap, 2000 ripetizioni, seme fisso perche'
-due giri sugli stessi dati diano lo stesso verdetto).
+  a. **the balance**: two failures per address per block, threshold three;
+  b. **the plan is verified BEFORE running it**: `simula()` is a model of the
+     new §4.4-bis — threshold 3, sliding window of 5 minutes, key on the address
+     only, reset on success, unblock that resets everything — and says
+     **attempt by attempt** what should arrive.  `verifica_piano()` **does not
+     start** a block the model sees overflowing.  A comment saying «we stay
+     below threshold» is not a check: this is;
+  c. ⛔ **and on the wire every single answer is looked at**: a sample that comes
+     back `RESPINTO(TROPPI_TENTATIVI)` **does not enter the medians**, it is
+     counted separately and **takes the green away**.  It is the check that does
+     not depend on any arithmetic of ours.
 
-  | l'intervallo | il verdetto |
+===========================================================================
+⛔ THE RULE BY WHICH TWO MEDIANS ARE DECIDED TO BE «INDISTINGUISHABLE»
+
+For every pair of cases: the **difference of the medians** and its 95 %
+interval by **resampling** (bootstrap, 2000 repetitions, fixed seed so that two
+runs on the same data give the same verdict).
+
+  | the interval | the verdict |
   |---|---|
-  | **non** contiene lo zero | ⛔ **SI DISTINGUONO** |
-  | contiene lo zero, semiampiezza ≤ RISOLUZIONE_VOLUTA | ⭐ **indistinguibili**, e si dice fin dove si e' guardato |
-  | contiene lo zero, semiampiezza piu' grande | ⚠ **SOSPESO**: non ho guardato abbastanza |
+  | does **not** contain zero | ⛔ **THEY ARE DISTINGUISHABLE** |
+  | contains zero, half-width ≤ RISOLUZIONE_VOLUTA | ⭐ **indistinguishable**, and it says how far one looked |
+  | contains zero, half-width larger | ⚠ **SUSPENDED**: I did not look enough |
 
-⭐ Guardare **meno** allarga l'intervallo e porta al *sospeso*, non al verde: e'
-   l'unica forma di regola che non si puo' soddisfare misurando di meno.
-
-===========================================================================
-⚠ IL `[?]` CHE QUESTO BANCO HA GIA' TROVATO, E CHE IL BAN NON CHIUDE
-
-`[M]` 10 agosto 2026: la mediana dei respinti era **2636 ms**, dove §4.4-bis
-vuole ~1000.  ⛔ A governare i tempi non e' il nostro ritardo: e' **PAM**
-(`pam_faildelay` nella pila di `/etc/pam.d/login` ritarda i FALLIMENTI di ~3 s,
-con la randomizzazione di libpam).  Finche' quel ritardo non e' costante, il
-secondo fisso **non nasconde quel che dichiara di nascondere**.  Il ban e' una
-proprieta' diversa e **non la chiude**.
+⭐ Looking **less** widens the interval and leads to *suspended*, not to green:
+   it is the only shape of rule that cannot be satisfied by measuring less.
 
 ===========================================================================
-⚠ DUE PUNTI IN CUI I DOCUMENTI AMMETTEVANO DUE LETTURE, E LA SCELTA FATTA
+⚠ THE `[?]` THIS BENCH HAS ALREADY FOUND, AND THAT THE BAN DOES NOT CLOSE
 
-  1. §4.4-bis: *«il rifiuto di un indirizzo bannato **non passa dal secondo
-     fisso** … si decide **prima di CREDENZIALI**»*.  ⛔ `banchi/rcp/rcp.c` lo
-     decide **dopo** aver ricevuto `CREDENZIALI` (non puo' fare altrimenti: il
-     canale di controllo e' l'unica cosa che vede) e lo fa passare **dal
-     ritardo fisso lo stesso**.  ⭐ E deve essere cosi', o il banco non
-     potrebbe esistere: B8 pretende `TROPPI_TENTATIVI` **dentro un `RESPINTO`**
-     (§4.4, rilievo R1.18), e un rifiuto deciso prima di `CREDENZIALI` non
-     avrebbe nessun `RESPINTO` da mandare.  Qui il tempo del rifiuto si
-     **misura e si stampa**, e non fa ne' rosso ne' verde: e' un difetto del
-     documento, non del codice;
-  2. §4.4-bis: *«la pagina si serve lo stesso»* non dice **con quale stato
-     HTTP**.  L'ospite risponde **200**, e la ragione sta nel suo commento: con
-     un 4xx un intermediario o il browser possono sostituire il corpo, e la
-     frase che l'utente DEVE leggere sparirebbe.  Qui si pretende **200**;
-  3. ⭐ **e la piu' importante delle tre**: `FASI.md` §01-filo-nudo B8 chiede
-     *«le TRE mediane indistinguibili»*, e §4.4-bis vuole il ritardo fisso
-     *«anche quando la risposta e' AMMESSO»*.  ⚠ Ma quel che §4.4 **vieta** di
-     far sapere e' una cosa sola — **se un nome utente esista** — mentre
-     «ammesso» contro «respinto» il filo lo dice da se': sono due **messaggi
-     diversi**.  ⛔ Le tre coppie non valgono lo stesso, e questo banco le
-     esegue tutt'e tre **contandole a parte**:
+`[M]` 10 Aug 2026: the median of the refused was **2636 ms**, where §4.4-bis
+wants ~1000.  ⛔ What governs the times is not our delay: it is **PAM**
+(`pam_faildelay` in the stack of `/etc/pam.d/login` delays the FAILURES by ~3 s,
+with libpam's randomisation).  As long as that delay is not constant, the
+fixed second **does not hide what it declares it hides**.  The ban is a
+different property and **does not close it**.
 
-       `inesistente − sbagliata` che si separa   ⇒ ⛔ ROSSO PIENO: e' la
-                                                   separazione che §4.4 vieta;
-       le altre due che si separano              ⇒ un esito a se' (5), col
-                                                   colpevole nominato.
+===========================================================================
+⚠ TWO POINTS WHERE THE DOCUMENTS ALLOWED TWO READINGS, AND THE CHOICE MADE
 
-     ⚠ Non si sceglie la lettura comoda e non si tace: si eseguono tutt'e due
-       e si dice **quale numero appartiene a quale**.  ⛔ E `[M]` 11 agosto
-       2026 la coppia che porta il segreto **non** si separa (−56 ms,
-       intervallo [−569; +442]) mentre le altre due si separano di ~2 secondi:
-       il ritardo fisso fa quel che deve, e a spostare gli altri due e' PAM.
+  1. §4.4-bis: *«the refusal of a banned address **does not go through the
+     fixed second** … it is decided **before CREDENZIALI**»*.  ⛔ `banchi/rcp/rcp.c`
+     decides it **after** having received `CREDENZIALI` (it cannot do otherwise:
+     the control channel is the only thing it sees) and makes it go **through
+     the fixed delay anyway**.  ⭐ And it must be so, or the bench could not
+     exist: B8 demands `TROPPI_TENTATIVI` **inside a `RESPINTO`** (§4.4, finding
+     R1.18), and a refusal decided before `CREDENZIALI` would have no
+     `RESPINTO` to send.  Here the time of the refusal is **measured and
+     printed**, and it makes neither red nor green: it is a defect of the
+     document, not of the code;
+  2. §4.4-bis: *«the page is served anyway»* does not say **with which HTTP
+     status**.  The host answers **200**, and the reason is in its comment: with
+     a 4xx an intermediary or the browser may replace the body, and the
+     sentence the user MUST read would disappear.  Here **200** is demanded;
+  3. ⭐ **and the most important of the three**: `FASI.md` §01-filo-nudo B8 asks
+     for *«the THREE medians indistinguishable»*, and §4.4-bis wants the fixed
+     delay *«even when the answer is AMMESSO»*.  ⚠ But what §4.4 **forbids**
+     letting be known is one thing only — **whether a user name exists** — while
+     «admitted» against «refused» the wire says by itself: they are two
+     **different messages**.  ⛔ The three pairs are not worth the same, and this
+     bench runs all three **counting them separately**:
+
+       `inesistente − sbagliata` that separates   ⇒ ⛔ FULL RED: it is the
+                                                    separation §4.4 forbids;
+       the other two that separate                ⇒ an outcome of its own (5),
+                                                    with the culprit named.
+
+     ⚠ The convenient reading is not chosen and nothing is kept quiet: both are
+       run and it is said **which number belongs to which**.  ⛔ And `[M]` 11 Aug
+       2026 the pair that carries the secret does **not** separate (−56 ms,
+       interval [−569; +442]) while the other two separate by ~2 seconds: the
+       fixed delay does what it must, and what moves the other two is PAM.
 """
 import argparse
 import asyncio
@@ -190,15 +190,15 @@ def _importa(nome, file):
     return mod
 
 
-# ⛔ Il cliente di prova di B3 si IMPORTA, non si ricopia: dentro c'e' la riga
-#    che gli impedisce di dare gli eventi del canale di controllo allo strato
-#    HTTP/3 di aioquic — senza la quale la connessione muore per mano del
-#    CLIENT, e qui il sintomo sarebbe «il server non risponde in tempo».
+# ⛔ The B3 test client is IMPORTED, not copied: inside it is the line that
+#    prevents it from handing the control-channel events to aioquic's HTTP/3
+#    layer — without which the connection dies at the hand of the CLIENT, and
+#    here the symptom would be «the server does not answer in time».
 b3 = _importa("b3cliente", "01-b3-cliente.py")
-# ⛔ E il comando di sblocco pure: se questo file se lo riscrivesse, B0.3
-#    avrebbe due comandi di sblocco e nessuno saprebbe quale ha girato.
+# ⛔ And the unblock command too: if this file rewrote it for itself, B0.3
+#    would have two unblock commands and nobody would know which one ran.
 cmd = _importa("b8sblocca", "01-b8-sblocca.py")
-# ⛔ E il profilo del BERSAGLIO: le differenze fra i due server in un file solo.
+# ⛔ And the TARGET's profile: the differences between the two servers in a single file.
 b0 = _importa("b0bersaglio", "01-b0-bersaglio.py")
 
 inquadra, s_str, MOTIVI = b3.inquadra, b3.s, b3.MOTIVI
@@ -207,29 +207,29 @@ CREDENZIALI_ERRATE, TROPPI_TENTATIVI = 0x07, 0x08
 
 VERDE, ROSSO, GIALLO, GRIGIO = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0m"
 
-# ── I numeri della regola, tutti in un posto e tutti dichiarati ──────────────
-# `RCP.md` §4.4-bis, forma dell'utente del 10 agosto 2026.
-SOGLIA = 3                 # tre autenticazioni fallite dallo stesso indirizzo
-FINESTRA_MIN = 5           # ...dentro cinque minuti (finestra SCORREVOLE)
-BAN_ORE = 12               # ...e quell'indirizzo e' fuori per dodici ore
-BILANCIO = 2               # ⛔ uno SOTTO la soglia, per indirizzo e per blocco
-RITARDO_FISSO = 1000.0     # §4.4-bis: nessuna risposta a CREDENZIALI prima di 1 s
-RISOLUZIONE_VOLUTA = 50.0  # ms — la separazione che il documento della fase nomina
-MINIMO_CAMPIONI = 10       # sotto questo non si giudica: si dice «sospeso»
-RIPETIZIONI = 2000         # ricampionamenti del bootstrap
-SEME = 20260811            # ⛔ fisso: due verdetti sugli stessi dati coincidono
-# ⛔ I DUE MARGINI CHE SERVONO A NOMINARE UN IMPUTATO, e stanno qui perche' un
-#    numero scelto dentro un `if` e' un numero che nessuno confronta.
-#    · `MARGINE_IMPUTATO`  quanto il server deve aver aspettato OLTRE il secondo
-#      fisso perche' si possa dire «a governare non e' stato il nostro ritardo».
-#      Sotto questa soglia il secondo fisso ha coperto tutto, e chi ha ritardato
-#      non ha lasciato nessuna traccia nel punto in cui il server misura.
-#    · `MARGINE_CRONOMETRI`  di quanto il cronometro del CLIENT puo' stare sotto
-#      quello del SERVER prima che la differenza smetta di essere rumore di
-#      rete.  ⛔ Il client misura un intervallo che CONTIENE quello del server
-#      (parte prima di spedire e finisce dopo aver ricevuto): puo' solo essere
-#      piu' grande.  Se e' piu' piccolo, non e' il server ad essere strano — e'
-#      il cronometro del banco che non sta cronometrando quel che dichiara.
+# ── The numbers of the rule, all in one place and all declared ───────────────
+# `RCP.md` §4.4-bis, the user's shape of 10 Aug 2026.
+SOGLIA = 3                 # three failed authentications from the same address
+FINESTRA_MIN = 5           # ...within five minutes (SLIDING window)
+BAN_ORE = 12               # ...and that address is out for twelve hours
+BILANCIO = 2               # ⛔ one BELOW the threshold, per address and per block
+RITARDO_FISSO = 1000.0     # §4.4-bis: no answer to CREDENZIALI before 1 s
+RISOLUZIONE_VOLUTA = 50.0  # ms — the separation the phase document names
+MINIMO_CAMPIONI = 10       # below this one does not judge: one says «suspended»
+RIPETIZIONI = 2000         # bootstrap resamplings
+SEME = 20260811            # ⛔ fixed: two verdicts on the same data coincide
+# ⛔ THE TWO MARGINS NEEDED TO NAME A DEFENDANT, and they are here because a
+#    number chosen inside an `if` is a number nobody compares.
+#    · `MARGINE_IMPUTATO`  how long the server must have waited BEYOND the fixed
+#      second for one to be able to say «what governed was not our delay».
+#      Below this threshold the fixed second covered everything, and whoever
+#      delayed left no trace at the point where the server measures.
+#    · `MARGINE_CRONOMETRI`  by how much the CLIENT's stopwatch may be below
+#      the SERVER's before the difference stops being network noise.
+#      ⛔ The client measures an interval that CONTAINS the server's (it starts
+#      before sending and ends after receiving): it can only be larger.  If it
+#      is smaller, it is not the server that is strange — it is the bench's
+#      stopwatch that is not timing what it declares.
 MARGINE_IMPUTATO = 200.0
 MARGINE_CRONOMETRI = 100.0
 
@@ -238,10 +238,10 @@ ATTESO = {"inesistente": ("RESPINTO", CREDENZIALI_ERRATE),
           "sbagliata": ("RESPINTO", CREDENZIALI_ERRATE),
           "giusta": ("AMMESSO", None)}
 
-# Le sei permutazioni della terzina.  ⛔ L'ordine RUOTA: se un caso stesse
-#    sempre subito dopo lo sblocco e un altro sempre in fondo, qualunque deriva
-#    dentro il blocco finirebbe **nelle mediane** travestita da differenza fra
-#    i casi.
+# The six permutations of the triplet.  ⛔ The order ROTATES: if one case always
+#    sat right after the unblock and another always at the end, any drift inside
+#    the block would end up **in the medians** disguised as a difference between
+#    the cases.
 ROTAZIONI = [("inesistente", "sbagliata", "giusta"),
              ("sbagliata", "giusta", "inesistente"),
              ("giusta", "inesistente", "sbagliata"),
@@ -249,26 +249,26 @@ ROTAZIONI = [("inesistente", "sbagliata", "giusta"),
              ("sbagliata", "inesistente", "giusta"),
              ("giusta", "sbagliata", "inesistente")]
 
-# ⛔ I TRE NOMI DEL GIRO DEL BAN — e DEVONO essere diversi.
-#    `FASI.md` §01-filo-nudo B8: «con lo stesso nome tre volte, un server che
-#    avesse ancora il contatore per NOME della forma vecchia darebbe verde: il
-#    banco proverebbe la regola sbagliata.  E' la stessa forma con cui B5 ha
-#    trovato il contatore chiavato sulla porta».
-#    ⭐ E i tre non sono nemmeno dello stesso TIPO: due nomi che non esistono e
-#       una parola sbagliata sull'utente vero.  §4.4-bis conta le due cose come
-#       una sola — «il conto non sa se il nome non esistesse o se la parola
-#       fosse sbagliata» — e questo e' il modo di provarlo invece di crederlo.
+# ⛔ THE THREE NAMES OF THE BAN RUN — and they MUST be different.
+#    `FASI.md` §01-filo-nudo B8: «with the same name three times, a server that
+#    still had the per-NAME counter of the old shape would give green: the bench
+#    would prove the wrong rule.  It is the same shape with which B5 found the
+#    counter keyed on the port».
+#    ⭐ And the three are not even of the same KIND: two names that do not exist
+#       and a wrong password on the real user.  §4.4-bis counts the two things as
+#       one — «the count does not know whether the name did not exist or the
+#       password was wrong» — and this is the way to prove it instead of believing it.
 NOMI_DEL_BAN = ("nessuno-b8-uno", "<utente>", "nessuno-b8-tre")
 
 
 # ===========================================================================
-# Il filo
+# The wire
 # ===========================================================================
 async def apri(indirizzo, porta, percorso="/rcp/1"):
-    """Una connessione nuova, e la sessione WebTransport su `/rcp/1`.
+    """A new connection, and the WebTransport session on `/rcp/1`.
 
-    ⚠ Una per tentativo, e non e' una scelta: §4.4 ammette **un solo tentativo
-      per connessione**."""
+    ⚠ One per attempt, and it is not a choice: §4.4 allows **a single attempt
+      per connection**."""
     conf = QuicConfiguration(is_client=True, alpn_protocols=H3_ALPN,
                              max_datagram_frame_size=65536)
     conf.verify_mode = ssl.CERT_NONE
@@ -283,28 +283,28 @@ async def apri(indirizzo, porta, percorso="/rcp/1"):
 
 
 async def un_tentativo(indirizzo, porta, nome, parola, attesa_chiusura=4.0):
-    """Un tentativo: `CREDENZIALI` che parte, la risposta che arriva, i millisecondi.
+    """One attempt: `CREDENZIALI` leaving, the answer arriving, the milliseconds.
 
-    ⛔ CHE COSA STA DENTRO IL CRONOMETRO, E CHE COSA NO.  Dentro: il viaggio di
-       `CREDENZIALI`, il lavoro del server (guardia del ban, PAM, ritardo fisso)
-       e il viaggio della risposta.  Fuori: la stretta di mano QUIC/TLS,
-       l'apertura della sessione, `CIAO`/`ECCOMI`.
+    ⛔ WHAT IS INSIDE THE STOPWATCH, AND WHAT IS NOT.  Inside: the trip of
+       `CREDENZIALI`, the server's work (ban guard, PAM, fixed delay) and the
+       trip of the answer.  Outside: the QUIC/TLS handshake, the opening of the
+       session, `CIAO`/`ECCOMI`.
 
-    ⚠ Il giro di rete e' dentro e non si toglie — ma e' **lo stesso per tutt'e
-      tre i casi**, sullo stesso cammino: puo' spostare le tre mediane insieme,
-      non separarle.  E' la ragione per cui il criterio e' una DIFFERENZA.
+    ⚠ The network round trip is inside and is not removed — but it is **the same
+      for all three cases**, on the same path: it can move the three medians
+      together, not separate them.  It is the reason the criterion is a DIFFERENCE.
 
-    ⛔ E SI ASPETTA ANCHE LA CHIUSURA DELLA SESSIONE, che e' la **seconda strada
-       di §3.1 punto 3** e l'unica cosa che risponde a *«e la scheda gia'
-       aperta?»* di B8.  ⚠ Non arriva insieme al `RESPINTO`: l'ospite la rimanda
-       di cinque passate del ciclo di scrittura — mezzo secondo — apposta,
-       perche' un browser che processa la capsula prima dei byte dello stream
-       butterebbe il `RESPINTO` (difetto trovato da B11).  Chiudere subito dopo
-       la risposta vorrebbe dire dichiarare «nessun codice di chiusura» su un
-       codice che stava arrivando.
+    ⛔ AND THE CLOSING OF THE SESSION IS ALSO WAITED FOR, which is the **second
+       road of §3.1 point 3** and the only thing that answers *«and the tab
+       already open?»* of B8.  ⚠ It does not arrive together with the
+       `RESPINTO`: the host defers it by five passes of the write loop — half a
+       second — on purpose, because a browser that processes the capsule before
+       the bytes of the stream would throw away the `RESPINTO` (defect found by
+       B11).  Closing right after the answer would mean declaring «no closing
+       code» on a code that was arriving.
 
-    ⛔ La parola d'ordine non finisce in nessun file (B13.2): di qui esce solo il
-       **nome** e il tempo."""
+    ⛔ The password ends up in no file (B13.2): only the **name** and the time
+       come out of here."""
     fuori = {"indirizzo": indirizzo, "nome": nome, "ms": None,
              "messaggio": None, "motivo": None, "chiusura": None,
              "esito": "errore", "errore": ""}
@@ -312,7 +312,7 @@ async def un_tentativo(indirizzo, porta, nome, parola, attesa_chiusura=4.0):
     try:
         gestore, cli, stato = await apri(indirizzo, porta)
         if stato != "200":
-            fuori["errore"] = f"la sessione non si e' aperta: :status={stato}"
+            fuori["errore"] = f"the session did not open: :status={stato}"
             return fuori
         cli.apri_controllo()
         cli.manda(inquadra(b3.T["CIAO"], b3.corpo_ciao()))
@@ -320,25 +320,25 @@ async def un_tentativo(indirizzo, porta, nome, parola, attesa_chiusura=4.0):
         corpo = s_str(nome) + s_str(parola)
         t0 = time.perf_counter()
         cli.manda(inquadra(T_CREDENZIALI, corpo))
-        # ⛔ `quale=None`: si accetta QUALUNQUE risposta e la si classifica dopo.
-        #    Pretendere `AMMESSO` farebbe sollevare un'eccezione sui casi che
-        #    devono essere respinti — cioe' il banco non avrebbe il tempo dei
-        #    casi che gli interessano di piu'.
+        # ⛔ `quale=None`: ANY answer is accepted and classified afterwards.
+        #    Demanding `AMMESSO` would raise an exception on the cases that must
+        #    be refused — that is the bench would not have the time of the cases
+        #    it cares most about.
         nome_msg, corpo_r, _ = await b3.attendi(cli, None, attesa=30)
         fuori["ms"] = (time.perf_counter() - t0) * 1000.0
         fuori["messaggio"] = nome_msg
         if nome_msg == "RESPINTO":
             fuori["motivo"] = corpo_r[0] if corpo_r else None
-            # ⚠ Solo dopo un RESPINTO: dopo un AMMESSO la sessione resta viva e
-            #   aspettare qui vorrebbe dire aspettare per niente quattro secondi
-            #   per ogni campione «giusta» — cioe' un terzo del banco.
+            # ⚠ Only after a RESPINTO: after an AMMESSO the session stays alive and
+            #   waiting here would mean waiting four seconds for nothing for every
+            #   «giusta» sample — that is a third of the bench.
             try:
                 await asyncio.wait_for(cli.caduto.wait(), timeout=attesa_chiusura)
             except asyncio.TimeoutError:
                 pass
             fuori["chiusura"] = cli.codice_chiusura
         fuori["esito"] = "misurato"
-    except Exception as e:  # noqa: BLE001 — il tipo dell'errore E' la misura
+    except Exception as e:  # noqa: BLE001 — the error type IS the measurement
         fuori["errore"] = f"{type(e).__name__}: {e}"
     finally:
         if gestore is not None:
@@ -350,12 +350,12 @@ async def un_tentativo(indirizzo, porta, nome, parola, attesa_chiusura=4.0):
 
 
 def classifica(rec, caso):
-    """⛔ La terza guardia: che cosa e' arrivato DAVVERO.
+    """⛔ The third guard: what REALLY arrived.
 
-    Un `TROPPI_TENTATIVI` non e' un campione di «parola sbagliata»: e' un'altra
-    strada dentro il server — **non passa nemmeno da PAM** — e metterlo nella
-    stessa mediana significherebbe mescolare due popolazioni sotto la stessa
-    etichetta (forma E2)."""
+    A `TROPPI_TENTATIVI` is not a sample of «wrong password»: it is another road
+    inside the server — **it does not even go through PAM** — and putting it in
+    the same median would mean mixing two populations under the same label
+    (form E2)."""
     if rec["esito"] == "errore":
         return "errore"
     msg, motivo = ATTESO[caso]
@@ -369,61 +369,62 @@ def classifica(rec, caso):
 
 
 # ===========================================================================
-# ⛔ LA PAGINA IN TCP — «quel che l'utente vede»
+# ⛔ THE PAGE OVER TCP — «what the user sees»
 # ===========================================================================
-# `RCP.md` §4.4-bis, e la ragione e' dell'utente: «la pagina si serve lo stesso,
-# e mostra il rifiuto — *tentativi esauriti* … chi e' stato bannato per errore e'
-# quasi sempre il proprietario».
+# `RCP.md` §4.4-bis, and the reason is the user's: «the page is served anyway,
+# and shows the refusal — *attempts exhausted* … whoever was banned by mistake is
+# almost always the owner».
 #
-# ⚠ E QUEL CHE QUESTA LETTURA **NON** E'.  `FASI.md` §01-filo-nudo B8 dice «si
-#   legge il DOM, come per le otto frasi di B7».  Qui si legge **l'HTML servito**
-#   con un socket, non un DOM costruito da un browser: e' legittimo perche' la
-#   frase la scrive il server nel corpo e nessuno script la costruisce — quel
-#   che il browser mostrerebbe e' esattamente questo testo — ⛔ ma va detto, ed
-#   e' un `[?]`: con un browser vero non e' stato provato.
+# ⚠ AND WHAT THIS READING IS **NOT**.  `FASI.md` §01-filo-nudo B8 says «the DOM is
+#   read, as for the eight phrases of B7».  Here **the served HTML** is read with
+#   a socket, not a DOM built by a browser: it is legitimate because the phrase
+#   is written by the server in the body and no script builds it — what the
+#   browser would show is exactly this text — ⛔ but it must be said, and it is a
+#   `[?]`: it has not been tried with a real browser.
 #
-# ⛔⭐ E DI QUALE SERVER PARLANO QUESTI TRE MARCATORI — rilievo R12.2, lente D
-#    della revisione dell'11 agosto 2026.  E' l'avvertenza piu' importante di
-#    questa parte, e non c'era.
+# ⛔⭐ AND WHICH SERVER THESE THREE MARKERS SPEAK OF — finding R12.2, lens D of
+#    the review of 11 Aug 2026.  It is the most important warning of this part,
+#    and it was not there.
 #
-#    I tre marcatori che si cercano qui sotto — `data-bannato="(si|no)"`,
-#    `data-restano-ms="(\d+)"` e la sottostringa esatta `tentativi esauriti` —
-#    li produce **soltanto l'innesto**, `01-b3-rcp-innesta.py:1105-1139`.  ⛔ Il
-#    server di prodotto in `src/` la stessa cosa la dice in un altro modo:
+#    The three markers looked for below — `data-bannato="(si|no)"`,
+#    `data-restano-ms="(\d+)"` and the exact substring `tentativi esauriti` —
+#    are produced **only by the graft**, `01-b3-rcp-innesta.py:1105-1139`.  ⛔ The
+#    product server in `src/` says the same thing in another way:
 #
-#      · `src/pagina.c:257-262` scrive «I tentativi di accesso da questo
+#      · `src/pagina.c:257-262` writes «I tentativi di accesso da questo
 #        indirizzo sono **esauriti**.  Riprova fra %llu ore e %llu minuti…» —
-#        sette parole in mezzo, quindi la sottostringa che si cerca qui NON c'e';
-#      · i millisecondi residui **non compaiono affatto** nel documento servito:
-#        il prodotto li formatta gia' in ore e minuti e butta il resto;
-#      · `data-bannato` e `data-restano-ms` compaiono **zero volte** in
-#        `src/pagina.c` e in `src/pagina.html`.
+#        seven words in between, so the substring looked for here is NOT there;
+#      · the remaining milliseconds **do not appear at all** in the served
+#        document: the product already formats them into hours and minutes and
+#        throws away the rest;
+#      · `data-bannato` and `data-restano-ms` appear **zero times** in
+#        `src/pagina.c` and in `src/pagina.html`.
 #
-# ⛔ CONSEGUENZA, E VA LETTA PRIMA DI CREDERE A UN ROSSO: il giorno in cui
-#    qualcuno punta questo banco al server di `src/`, i tre controlli della
-#    pagina diventano **rossi su un server che il ban lo fa**, tutti e tre
-#    insieme — e il rosso finisce sull'imputato sbagliato, che e' il difetto
-#    piu' caro di questo progetto (`LEZIONI.md` §1.9, settima veste).
-#    ⚠ Prima di cercare nel server, si guardi se il server e' `bsslserver`
-#      (l'innesto) o `remotix` (il prodotto): sono due formati di pagina senza
-#      un solo campo in comune, ed e' la forma d'errore **E2** — due misure
-#      diverse sotto la stessa etichetta.
-#    ⛔ La cura non e' qui: e' che i due formati diventino uno.  Finche' non lo
-#      sono, questa e' la riga che impedisce di perderci un'ora.
+# ⛔ CONSEQUENCE, AND IT MUST BE READ BEFORE BELIEVING A RED: the day someone
+#    points this bench at the server of `src/`, the three page checks become
+#    **red on a server that does ban**, all three together — and the red ends up
+#    on the wrong defendant, which is the most expensive defect of this project
+#    (`LEZIONI.md` §1.9, seventh guise).
+#    ⚠ Before looking in the server, check whether the server is `bsslserver`
+#      (the graft) or `remotix` (the product): they are two page formats without
+#      a single field in common, and it is error form **E2** — two different
+#      measurements under the same label.
+#    ⛔ The cure is not here: it is that the two formats become one.  Until they
+#      are, this is the line that prevents losing an hour on it.
 def _chiedi_pagina(indirizzo, porta, attesa, tls):
-    """Una richiesta sola, nel dialetto chiesto.  (grezzo, errore)."""
+    """A single request, in the requested dialect.  (raw, error)."""
     nudo = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     nudo.settimeout(attesa)
     s = None
     try:
         nudo.connect((indirizzo, porta))
         if tls:
-            # ⭐ Quel che NON cambia: l'indirizzo di provenienza continua a
-            #    sceglierlo il nucleo.  `wrap_socket` incarta la connessione
-            #    gia' aperta, non ne apre un'altra.
+            # ⭐ What does NOT change: the source address is still chosen by the
+            #    kernel.  `wrap_socket` wraps the connection already open, it does
+            #    not open another one.
             conf = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             conf.check_hostname = False
-            conf.verify_mode = ssl.CERT_NONE  # il certificato lo giudica B3
+            conf.verify_mode = ssl.CERT_NONE  # the certificate is judged by B3
             s = conf.wrap_socket(nudo, server_hostname=indirizzo)
         else:
             s = nudo
@@ -438,10 +439,10 @@ def _chiedi_pagina(indirizzo, porta, attesa, tls):
             pezzi.append(d)
         return b"".join(pezzi), ""
     except OSError as e:
-        # ⛔ E questo e' un esito, non un'assenza: §4.4-bis vieta «un errore di
-        #    rete, un silenzio».  Chi legge questo campo deve poter distinguere
-        #    «la pagina dice che non sono bannato» da «non ho parlato con
-        #    nessuno» — sono la stessa faccia solo per chi non guarda.
+        # ⛔ And this is an outcome, not an absence: §4.4-bis forbids «a network
+        #    error, a silence».  Whoever reads this field must be able to tell
+        #    «the page says I am not banned» from «I talked to nobody» — they
+        #    are the same face only for whoever does not look.
         return b"", f"{type(e).__name__}: {e}"
     finally:
         try:
@@ -451,51 +452,50 @@ def _chiedi_pagina(indirizzo, porta, attesa, tls):
 
 
 def leggi_pagina(indirizzo, porta, attesa=5.0, tls=True):
-    """Chiede la pagina in TCP **da quell'indirizzo**, e legge che cosa dice.
+    """Asks for the page over TCP **from that address**, and reads what it says.
 
-    ⛔ L'indirizzo di provenienza non si dichiara: lo sceglie il nucleo, ed e'
-       quello dell'interfaccia con cui si esce.  Chiedendo a `127.0.0.1` si
-       arriva come `127.0.0.1`; chiedendo a `192.168.0.2` si arriva come
-       `192.168.0.2`.  ⭐ E il server scrive nel registro **da quale** indirizzo
-       ha ricevuto: il denominatore si legge dove la cosa succede."""
+    ⛔ The source address is not declared: the kernel chooses it, and it is that
+       of the interface one goes out through.  Asking `127.0.0.1` one arrives as
+       `127.0.0.1`; asking `192.168.0.2` one arrives as `192.168.0.2`.  ⭐ And the
+       server writes in the log **from which** address it received: the
+       denominator is read where the thing happens."""
     fuori = {"indirizzo": indirizzo, "stato": None, "bannato": None,
              "restano_ms": None, "ore": None, "minuti": None,
              "frase": False, "byte": 0, "errore": "", "tls": tls}
-    # ⛔⭐ IL DIALETTO DELLA PAGINA E' UNA DIFFERENZA FRA I DUE SERVER, e sono
-    #     due rossi opposti pagati a un giorno di distanza (11 agosto 2026):
+    # ⛔⭐ THE DIALECT OF THE PAGE IS A DIFFERENCE BETWEEN THE TWO SERVERS, and
+    #     they are two opposite reds paid for one day apart (11 Aug 2026):
     #
-    #       · questa funzione parlava HTTP IN CHIARO.  Contro l'innesto andava;
-    #         contro il PRODOTTO il server chiudeva — `ConnectionResetError:
-    #         [Errno 104]` da tutt'e due gli indirizzi — perche' li' la porta
-    #         TCP serve HTTPS (`SPECIFICHE.md` §11.5);
-    #       · la cura fu incartare SEMPRE in TLS, e ⛔ ha spostato il rosso
-    #         sull'altro bersaglio: `[M]` 11 agosto sera, contro l'innesto,
-    #         `SSLError: [SSL: WRONG_VERSION_NUMBER]` da tutt'e due gli
-    #         indirizzi — perche' `01-b3-rcp-innesta.py` la pagina la scrive
-    #         **in chiaro** (`HTTP/1.1 200 OK` su un fd nudo, nessuna riga di
-    #         TLS in tutto il file).
+    #       · this function spoke PLAIN HTTP.  Against the graft it worked;
+    #         against the PRODUCT the server closed — `ConnectionResetError:
+    #         [Errno 104]` from both addresses — because there the TCP port
+    #         serves HTTPS (`SPECIFICHE.md` §11.5);
+    #       · the cure was to ALWAYS wrap in TLS, and ⛔ it moved the red onto the
+    #         other target: `[M]` 11 August evening, against the graft,
+    #         `SSLError: [SSL: WRONG_VERSION_NUMBER]` from both addresses —
+    #         because `01-b3-rcp-innesta.py` writes the page **in plain text**
+    #         (`HTTP/1.1 200 OK` on a bare fd, no TLS line in the whole file).
     #
-    # ⚠ In tutt'e due i casi il server faceva la cosa giusta e il banco leggeva
-    #   un silenzio — la settima veste di `LEZIONI.md` §1.9 — e §4.4-bis vieta
-    #   proprio al ban di presentarsi come «un errore di rete, un silenzio».
+    # ⚠ In both cases the server was doing the right thing and the bench read a
+    #   silence — the seventh guise of `LEZIONI.md` §1.9 — and §4.4-bis forbids
+    #   the ban precisely to present itself as «a network error, a silence».
     #
-    # ⭐ Quindi il dialetto lo DICHIARA chi chiama (dal bersaglio), e qui c'e' il
-    #    controllo che dice no: se il dialetto dichiarato non risponde, si prova
-    #    l'ALTRO — e se e' l'altro a rispondere, l'errore lo scrive a lettere,
-    #    invece di lasciare «non ho parlato con nessuno».  ⛔ E' la differenza
-    #    fra «la pagina non c'e'» e «la pagina la sto chiedendo nella lingua
-    #    sbagliata», che senza questa riga hanno la stessa faccia.
+    # ⭐ So the dialect is DECLARED by the caller (from the target), and here there
+    #    is the check that says no: if the declared dialect does not answer, the
+    #    OTHER one is tried — and if it is the other one that answers, the error
+    #    writes it in full, instead of leaving «I talked to nobody».  ⛔ It is the
+    #    difference between «the page is not there» and «I am asking for the page
+    #    in the wrong language», which without this line look the same.
     grezzo, errore = _chiedi_pagina(indirizzo, porta, attesa, tls)
     if errore:
         altro, err2 = _chiedi_pagina(indirizzo, porta, attesa, not tls)
         if not err2 and altro:
             fuori["errore"] = (
-                f"⛔ IL DIALETTO E' L'ALTRO: chiesta in "
-                f"{'TLS' if tls else 'chiaro'} ha dato «{errore}», e in "
-                f"{'chiaro' if tls else 'TLS'} risponde ({len(altro)} byte). "
-                f"Non e' «la pagina non risponde»: e' il bersaglio dichiarato "
-                f"male, e i tre controlli della pagina qui sotto parlerebbero "
-                f"del banco e non del server")
+                f"⛔ THE DIALECT IS THE OTHER ONE: asked in "
+                f"{'TLS' if tls else 'plain'} it gave «{errore}», and in "
+                f"{'plain' if tls else 'TLS'} it answers ({len(altro)} bytes). "
+                f"It is not «the page does not answer»: it is the target declared "
+                f"wrongly, and the three page checks below would speak "
+                f"of the bench and not of the server")
         else:
             fuori["errore"] = errore
         return fuori
@@ -517,53 +517,53 @@ def leggi_pagina(indirizzo, porta, attesa=5.0, tls=True):
     m = re.search(r'id="minuti">(\d+)<', corpo)
     if m:
         fuori["minuti"] = int(m.group(1))
-    fuori["frase"] = "tentativi esauriti" in corpo
+    fuori["frase"] = "attempts exhausted" in corpo
     return fuori
 
 
 # ===========================================================================
-# ⛔ IL MODELLO DI §4.4-bis, APPLICATO AL PIANO PRIMA CHE AL FILO
+# ⛔ THE MODEL OF §4.4-bis, APPLIED TO THE PLAN BEFORE THE WIRE
 # ===========================================================================
 def simula(passi):
-    """§4.4-bis letta come un modello, e applicata al piano prima di eseguirlo.
+    """§4.4-bis read as a model, and applied to the plan before running it.
 
-    Una chiave sola — **l'indirizzo** — perche' quella per nome utente non
-    esiste piu' (`DECISIONI.md` §1.9).  ⛔ Tre nomi diversi contano tre.
+    A single key — **the address** — because the one per user name no longer
+    exists (`DECISIONI.md` §1.9).  ⛔ Three different names count three.
 
-    ⚠ La finestra dei cinque minuti qui e' presa per **sempre vera**: il modello
-      suppone che tutti i tentativi di un blocco ci stiano dentro, che e' la
-      lettura **pessimistica** — un giro piu' lungo farebbe scattare il ban di
-      meno, mai di piu'.  ⭐ E' voluto: un modello ottimista lascerebbe partire
-      un piano che sfora.
+    ⚠ The five-minute window is taken here as **always true**: the model assumes
+      that all the attempts of a block fit inside it, which is the
+      **pessimistic** reading — a longer run would make the ban trigger less,
+      never more.  ⭐ It is intended: an optimistic model would let a plan that
+      overflows start.
 
-    ⚠ E' un MODELLO — la mia lettura dell'arbitro, scritta prima di misurare —
-      non una prova.  Serve a due cose, e nessuna delle due e' «avere ragione»:
-      dire **prima** se il piano resta sotto soglia, e dare a ogni singolo
-      tentativo un'attesa invece di darne una complessiva.  Se il filo lo
-      smentisce, uno dei due e' sbagliato e il banco dice **quale tentativo** li
-      ha divisi.
+    ⚠ It is a MODEL — my reading of the arbiter, written before measuring —
+      not a proof.  It serves two things, and neither of the two is «being
+      right»: saying **before** whether the plan stays below threshold, and
+      giving every single attempt an expectation instead of an overall one.  If
+      the wire refutes it, one of the two is wrong and the bench says **which
+      attempt** split them.
 
-    Restituisce (atteso per tentativo, picco dei fallimenti per indirizzo)."""
+    Returns (expected per attempt, peak of the failures per address)."""
     falliti, bannati, picco, esiti = {}, set(), {}, []
     for p in passi:
         ind = p["indirizzo"]
         if p.get("azione") == "sblocca":
-            # ⛔ Lo sblocco azzera la voce INTERA — ban e conteggio — perche' e'
-            #    quel che `rcp_sblocca()` fa: `memset` della voce.
+            # ⛔ The unblock resets the WHOLE entry — ban and count — because it
+            #    is what `rcp_sblocca()` does: `memset` of the entry.
             #
-            # ⛔ E FINO ALL'11 AGOSTO 2026 QUESTA RIGA ERA UNA CONVINZIONE
-            #    (rilievo A22): su un indirizzo NON bannato lo sblocco risponde
-            #    «NON-BANNATO», e che azzerasse comunque il conto non lo
-            #    verificava nessuno — mentre l'intera strategia dei campioni
-            #    («sbloccare fra un blocco e l'altro») ci poggia sopra.
-            #    ⭐ Adesso e' misurato, e non da qui: `01-b8-prova-ban.c`
-            #    sezione 5 fa fallire due volte, chiama `rcp_sblocca()` su un
-            #    indirizzo che NON e' bannato, e verifica che il terzo
-            #    fallimento non faccia scattare il ban.
-            # ⚠ E il sintomo del caso opposto (§1.11), se un giorno tornasse:
-            #   i fallimenti si accumulerebbero fra i blocchi, e i campioni
-            #   comincerebbero a tornare `limitatore` — il verdetto lo dice, ed
-            #   e' la prima delle quattro cause che stampa.
+            # ⛔ AND UNTIL 11 AUG 2026 THIS LINE WAS A BELIEF (finding A22): on
+            #    an address NOT banned the unblock answers «NON-BANNATO», and
+            #    whether it reset the count anyway nobody verified — while the
+            #    whole sampling strategy («unblock between one block and the
+            #    next») rests on it.
+            #    ⭐ Now it is measured, and not from here: `01-b8-prova-ban.c`
+            #    section 5 fails twice, calls `rcp_sblocca()` on an address that
+            #    is NOT banned, and verifies that the third failure does not make
+            #    the ban trigger.
+            # ⚠ And the symptom of the opposite case (§1.11), if one day it came
+            #   back: the failures would pile up between the blocks, and the
+            #   samples would start coming back `limitatore` — the verdict says
+            #   it, and it is the first of the four causes it prints.
             falliti[ind] = 0
             bannati.discard(ind)
             esiti.append(("SBLOCCA", None, ""))
@@ -577,9 +577,10 @@ def simula(passi):
             continue
         falliti[ind] = falliti.get(ind, 0) + 1
         picco[ind] = max(picco.get(ind, 0), falliti[ind])
-        # ⛔ Il terzo fallito riceve ancora `CREDENZIALI_ERRATE` — e' quello che
-        #    FA scattare il ban, non il primo che lo subisce.  Chi si aspettasse
-        #    il rifiuto gia' al terzo cercherebbe un difetto che non c'e'.
+        # ⛔ The third failed one still receives `CREDENZIALI_ERRATE` — it is the
+        #    one that MAKES the ban trigger, not the first that suffers it.
+        #    Whoever expected the refusal already at the third would look for a
+        #    defect that is not there.
         esiti.append(("RESPINTO", CREDENZIALI_ERRATE, ""))
         if falliti[ind] >= SOGLIA:
             bannati.add(ind)
@@ -587,56 +588,56 @@ def simula(passi):
 
 
 def verifica_piano(passi, modo):
-    """⛔ Il piano si verifica PRIMA di eseguirlo, e se non torna non si parte.
+    """⛔ The plan is verified BEFORE running it, and if it does not add up one does not start.
 
-    Tre modi, perche' i piani sono di tre nature:
+    Three modes, because plans are of three natures:
 
-      `sotto-soglia`  nessun tentativo dev'essere bloccato, e nessun indirizzo
-                      deve superare il BILANCIO.  E' il modo dei campioni;
-      `banna-al-4`    il **quarto** tentativo DEVE essere bloccato, e nessuno
-                      prima: e' il giro del ban;
-      `non-banna`     nessun tentativo bloccato **e** almeno un indirizzo che
-                      arriva a due fallimenti: e' il controllo dell'azzeramento,
-                      e senza la seconda meta' sarebbe soddisfatto anche da un
-                      piano che non fallisce mai — cioe' non proverebbe niente.
+      `sotto-soglia`  no attempt must be blocked, and no address must exceed
+                      the BALANCE.  It is the mode of the samples;
+      `banna-al-4`    the **fourth** attempt MUST be blocked, and none before:
+                      it is the ban run;
+      `non-banna`     no attempt blocked **and** at least one address that
+                      reaches two failures: it is the reset check, and without
+                      the second half it would be satisfied also by a plan that
+                      never fails — that is it would prove nothing.
     """
     esiti, picco = simula(passi)
     bloccati = [i + 1 for i, (_m, mo, _c) in enumerate(esiti)
                 if mo == TROPPI_TENTATIVI]
-    righe = [f"picco dei fallimenti per indirizzo: "
-             f"{ {k: v for k, v in sorted(picco.items())} or 'nessuno' }",
-             f"tentativi che il modello vede bloccati: {bloccati or 'nessuno'}"]
+    righe = [f"peak of the failures per address: "
+             f"{ {k: v for k, v in sorted(picco.items())} or 'none' }",
+             f"attempts the model sees blocked: {bloccati or 'none'}"]
     if modo == "sotto-soglia":
         ok = not bloccati and max(picco.values(), default=0) <= BILANCIO
-        righe.append(f"atteso: nessun bloccato, e picco ≤ {BILANCIO} "
-                     f"(soglia {SOGLIA})")
+        righe.append(f"expected: none blocked, and peak ≤ {BILANCIO} "
+                     f"(threshold {SOGLIA})")
     elif modo == "banna-al-4":
         ok = bloccati == [4]
-        righe.append("atteso: bloccato SOLO il quarto — i primi tre passano da "
-                     "PAM, e il terzo e' quello che FA scattare il ban")
+        righe.append("expected: ONLY the fourth blocked — the first three go "
+                     "through PAM, and the third is the one that MAKES the ban trigger")
     elif modo == "non-banna":
         ok = (not bloccati) and max(picco.values(), default=0) >= 2
-        righe.append("atteso: nessun bloccato, e almeno un indirizzo a 2 "
-                     "fallimenti (se non ci arrivasse, il controllo sarebbe "
-                     "verde per costruzione)")
+        righe.append("expected: none blocked, and at least one address at 2 "
+                     "failures (if it did not get there, the check would be "
+                     "green by construction)")
     else:
-        ok, _ = False, righe.append(f"modo sconosciuto: {modo}")
+        ok, _ = False, righe.append(f"unknown mode: {modo}")
     return ok, esiti, righe
 
 
 # ===========================================================================
-# I piani
+# The plans
 # ===========================================================================
 def piano_campioni(k, per_caso, indirizzi, utente, inesistente):
-    """Un blocco: `per_caso` terzine, con i fallimenti alternati fra gli indirizzi.
+    """A block: `per_caso` triplets, with the failures alternating between the addresses.
 
-    ⛔ Gli indirizzi si alternano **fra i FALLIMENTI**, non fra i passi: solo i
-       fallimenti muovono il conto di §4.4-bis, e alternare su tutti i passi
-       lascerebbe l'alternanza in balia di dove cade il successo.
+    ⛔ The addresses alternate **between the FAILURES**, not between the steps: only
+       the failures move the count of §4.4-bis, and alternating on all the steps
+       would leave the alternation at the mercy of where the success falls.
 
-    ⚠ La rotazione parte da `k`, cosi' nessun caso resta legato a un indirizzo:
-      se un giorno i due cammini avessero tempi diversi, la differenza si
-      spalmerebbe su tutt'e tre le mediane invece di separarne una."""
+    ⚠ The rotation starts from `k`, so no case stays tied to an address: if one
+      day the two paths had different times, the difference would spread over
+      all three medians instead of separating one of them."""
     passi, falliti = [], 0
     for g in range(per_caso):
         for caso in ROTAZIONI[(k + g) % len(ROTAZIONI)]:
@@ -650,15 +651,15 @@ def piano_campioni(k, per_caso, indirizzi, utente, inesistente):
 
 
 def piano_ban(indirizzi, utente, nomi):
-    """⛔ IL GIRO DEL BAN: tre fallite con TRE NOMI DIVERSI, poi la parola GIUSTA.
+    """⛔ THE BAN RUN: three failed with THREE DIFFERENT NAMES, then the RIGHT password.
 
-    ⭐ Il quarto tentativo **ha la parola d'ordine giusta** e dev'essere rifiutato
-       lo stesso: *«e' la riga che distingue un ban da un contatore, ed e' anche
-       il sintomo che l'utente vedra' — l'ho scritta giusta e non mi fa entrare —
-       quindi e' voluto e va provato, non evitato»* (`FASI.md` §01-filo-nudo B8).
+    ⭐ The fourth attempt **has the right password** and must be refused anyway:
+       *«it is the line that tells a ban from a counter, and it is also the
+       symptom the user will see — I typed it right and it does not let me in —
+       so it is intended and must be tested, not avoided»* (`FASI.md` §01-filo-nudo B8).
 
-    ⛔ Tutti e quattro dallo STESSO indirizzo: il conto e' per indirizzo, e
-       alternare qui vorrebbe dire non arrivare mai a tre."""
+    ⛔ All four from the SAME address: the count is per address, and alternating
+       here would mean never reaching three."""
     a = indirizzi[0]
     passi = [{"caso": "inesistente", "indirizzo": a, "nome": nomi[0],
               "scaldata": False},
@@ -666,23 +667,23 @@ def piano_ban(indirizzi, utente, nomi):
               "scaldata": False},
              {"caso": "inesistente", "indirizzo": a, "nome": nomi[2],
               "scaldata": False},
-             # ⛔ il quarto: la parola GIUSTA
+             # ⛔ the fourth: the RIGHT password
              {"caso": "giusta", "indirizzo": a, "nome": utente,
               "scaldata": False}]
     return passi
 
 
 def piano_azzeramento(indirizzi, utente, inesistente):
-    """⭐ IL CONTROLLO CHE DICE NO: 2 falliti · 1 riuscito · 2 falliti.
+    """⭐ THE CHECK THAT SAYS NO: 2 failed · 1 succeeded · 2 failed.
 
-    *«Se il successo non azzerasse, il secondo blocco sarebbe gia' scattato»*
-    (`FASI.md` §01-filo-nudo B8).  ⛔ Contando tutti i fallimenti, il **terzo** —
-    cioe' il primo dopo il successo — sarebbe quello che fa scattare il ban su
-    un server che non azzera.
+    *«If the success did not reset, the second block would already have
+    triggered»* (`FASI.md` §01-filo-nudo B8).  ⛔ Counting all the failures, the
+    **third** — that is the first after the success — would be the one that makes
+    the ban trigger on a server that does not reset.
 
-    ⚠ Gira sul SECONDO indirizzo, e non e' un dettaglio: il primo lo si sta per
-      bannare, e un controllo che dice «non e' bannato» condotto sull'indirizzo
-      che verra' bannato subito dopo sarebbe illeggibile."""
+    ⚠ It runs on the SECOND address, and it is not a detail: the first is about
+      to be banned, and a check that says «it is not banned» conducted on the
+      address that will be banned right after would be unreadable."""
     b = indirizzi[1]
     return [{"caso": "sbagliata", "indirizzo": b, "nome": utente, "scaldata": False},
             {"caso": "inesistente", "indirizzo": b, "nome": inesistente, "scaldata": False},
@@ -692,138 +693,139 @@ def piano_azzeramento(indirizzi, utente, inesistente):
 
 
 # ===========================================================================
-# L'esecuzione
+# The execution
 # ===========================================================================
-# ⛔ IL BERSAGLIO ENTRA IN OGNI RIGA, e lo mette questa variabile invece dei
-#    venti punti che chiamano `scrivi()`.  ⚠ Il caso concreto e' gia' sul disco:
-#    `banchi/prodotto/b8-campioni.jsonl` sono i campioni del secondo fisso presi
-#    contro il PRODOTTO la notte del 10 agosto, e `/media/REMOTIX/src/
-#    b8-fatti.jsonl` quelli presi contro l'INNESTO.  Stesso nome, stessa forma,
-#    stessi campi — e nessuna riga, in nessuno dei due, dice quale server ha
-#    risposto.  Chi li mettesse insieme «per avere piu' campioni» calcolerebbe
-#    la mediana di due popolazioni diverse credendo di ridurre il rumore.
+# ⛔ THE TARGET GOES INTO EVERY LINE, and this variable puts it there instead of
+#    the twenty points that call `scrivi()`.  ⚠ The concrete case is already on
+#    disk: `banchi/prodotto/b8-campioni.jsonl` are the samples of the fixed second
+#    taken against the PRODUCT on the night of 10 August, and `/media/REMOTIX/src/
+#    b8-fatti.jsonl` those taken against the GRAFT.  Same name, same shape,
+#    same fields — and no line, in either of the two, says which server
+#    answered.  Whoever put them together «to have more samples» would compute
+#    the median of two different populations believing they are reducing the noise.
 BERSAGLIO = {"bersaglio": "non dichiarato", "porta": None, "md5": "ignota"}
 
-# ⛔ Le righe che il lettore del registro cerca, e sono SCRITTE DIVERSE nei due
-#    server: le riempie `principale()` dal profilo del bersaglio.  ⚠ I valori
-#    qui sotto sono quelli dell'innesto e servono solo perche' il modulo si
-#    possa importare: se restassero questi contro il prodotto, il lettore
-#    direbbe «il server non ha detto niente sul ban» su un server che lo dice.
+# ⛔ The lines the log reader looks for, and they are WRITTEN DIFFERENTLY in the two
+#    servers: `principale()` fills them from the target's profile.  ⚠ The values
+#    below are the graft's and serve only so that the module can be imported: if
+#    these stayed against the product, the reader would say «the server said
+#    nothing about the ban» on a server that does say it.
 R_BAN = {"caricati": "ban caricati:",
          "illeggibile": "NON HO POTUTO LEGGERE il file dei ban",
          "pagina": "pagina TCP a"}
 
 # ===========================================================================
-# ⛔⭐ COME SI LEGGE UN VERDETTO DI PAM NEL REGISTRO — e perche' NON DALLA FINE
+# ⛔⭐ HOW A PAM VERDICT IS READ IN THE LOG — and why NOT FROM THE END
 # ===========================================================================
-# *Difetto pagato il 12 agosto 2026, e questo banco e' rimasto **cieco** per un
-#  giro intero di ricertificazione senza dire una parola.*
+# *Defect paid for on 12 Aug 2026, and this bench stayed **blind** for a whole
+#  recertification run without saying a word.*
 #
-# ⛔ QUEL CHE E' SUCCESSO.  Qui c'era:
+# ⛔ WHAT HAPPENED.  Here there was:
 #
 #      ultimo_pam = "ammesso" if riga.rstrip().endswith("ammesso") else "respinto"
 #
-#    e la riga di `rcp.c` finiva davvero con la parola del verdetto.  Poi la cura
-#    di `DECISIONI.md` §1.10 (PAM fuori dal filo unico) le ha appeso in coda
-#    la spiegazione del ripiego:
+#    and the line of `rcp.c` really ended with the verdict's word.  Then the cure
+#    of `DECISIONI.md` §1.10 (PAM off the single thread) appended to its tail
+#    the explanation of the fallback:
 #
 #      PAM ha risposto: ammesso  ⚠ (per via SINCRONA: nessun gancio asincrono
 #      collegato — il filo e' rimasto fermo)
 #
-#    ⇒ `endswith("ammesso")` e' diventato **sempre falso**, ogni risposta e'
-#    finita fra i respinti — **52 righe, 0 ammessi** — `imputato_dei_tempi()`
-#    non ha piu' potuto nominare nessuno, e l'esito **5** (l'indulgenza scritta
-#    per `pam_faildelay`) non si e' piu' applicato: B8 ha dato **1** su un
-#    prodotto sano, con il ban che passava per intero.
+#    ⇒ `endswith("ammesso")` became **always false**, every answer ended up among
+#    the refused — **52 lines, 0 admitted** — `imputato_dei_tempi()` could no
+#    longer name anyone, and outcome **5** (the leniency written for
+#    `pam_faildelay`) no longer applied: B8 gave **1** on a healthy product, with
+#    the ban passing in full.
 #
-# ⛔ LE DUE META' DELLA CAUSA, e curarne una sola la fa tornare:
-#      1. la cura ha cambiato una riga di registro che un banco LEGGE;
-#      2. il banco era ancorato alla **FINE** della riga — un'ancora che
-#         **qualunque** aggiunta rompe, e che si rompe **in silenzio**.
+# ⛔ THE TWO HALVES OF THE CAUSE, and curing only one brings it back:
+#      1. the cure changed a log line that a bench READS;
+#      2. the bench was anchored to the **END** of the line — an anchor that
+#         **any** addition breaks, and that breaks **silently**.
 #
-# ⭐ LA FORMA CHE REGGE, ed e' quella gia' in casa (`01-p5-registro.py` §«le
-#    righe che si contano», e `re.search(r"(-?\d+) indirizzi caricati", …)`
-#    dieci righe piu' sotto in questo stesso file): si ancora al **pezzo
-#    stabile** della riga — il nome del fatto e la parola che lo qualifica —
-#    e si lascia libero **tutto quel che viene dopo**.  Una spiegazione appesa
-#    in coda, un'altra emoji, un secondo campo: nessuno di questi la tocca.
+# ⭐ THE SHAPE THAT HOLDS, and it is the one already in the house
+#    (`01-p5-registro.py` §«the lines that are counted», and
+#    `re.search(r"(-?\d+) indirizzi caricati", …)` ten lines further down in this
+#    very file): one anchors to the **stable piece** of the line — the name of
+#    the fact and the word that qualifies it — and leaves free **everything that
+#    comes after**.  An explanation appended at the tail, another emoji, a second
+#    field: none of these touches it.
 #
-# ⚠ E `[^:]*` fra «risposto» e i due punti non e' un vezzo: la cura di §1.10 ha
-#   scritto una SECONDA forma della stessa riga, per la strada asincrona —
-#   `rcp.c:2636`, «PAM ha risposto (pratica 7): ammesso  ⭐ …» — che l'innesto
-#   oggi non percorre ma che il prodotto percorrera'.  Un'ancora che pretendesse
-#   i due punti subito dopo «risposto» sarebbe cieca su quella, e la cecita'
-#   arriverebbe **il giorno in cui il banco viene puntato sul prodotto**.
-R_PAM = re.compile(r"PAM ha risposto\b[^:]*:\s*(ammesso|respinto)\b")
-# ⛔ E la riga si riconosce PRIMA di saperla leggere: «non e' una riga di PAM» e
-#    «e' una riga di PAM che non so leggere» sono due fatti diversi, e il
-#    secondo e' quello che oggi e' costato un giro.
-R_PAM_RIGA = "PAM ha risposto"
+# ⚠ And `[^:]*` between «answered» and the colon is not a whim: the cure of §1.10
+#   wrote a SECOND form of the same line, for the asynchronous road —
+#   `rcp.c:2636`, «PAM ha risposto (pratica 7): ammesso  ⭐ …» — which the graft
+#   today does not travel but the product will.  An anchor that demanded the
+#   colon right after «answered» would be blind to that one, and the blindness
+#   would arrive **the day the bench is pointed at the product**.
+R_PAM = re.compile(r"PAM answered\b[^:]*:\s*(admitted|refused)\b")
+# ⛔ And the line is recognised BEFORE knowing how to read it: «it is not a PAM
+#    line» and «it is a PAM line I cannot read» are two different facts, and the
+#    second is the one that today cost a run.
+R_PAM_RIGA = "PAM answered"
 
-# ⛔ Quante righe servono perche' «tutte nella stessa casella» sia un'accusa e
-#    non un caso: sotto questa soglia si dice e basta.  ⚠ Il giro vero ne porta
-#    una cinquantina.
+# ⛔ How many lines are needed for «all in the same box» to be an accusation and
+#    not a chance: below this threshold it is just said.  ⚠ The real run carries
+#    about fifty.
 SOGLIA_MONOCATEGORIA = 5
 
 
 # ===========================================================================
-# ⛔⭐ IL CLASSIFICATORE CHE MISURA SE STESSO — E8 applicata a un CONTATORE
+# ⛔⭐ THE CLASSIFIER THAT MEASURES ITSELF — E8 applied to a COUNTER
 # ===========================================================================
-# *Nata il 12 agosto 2026, e conta piu' della cura dell'ancora qui sopra.*
+# *Born on 12 Aug 2026, and it counts more than the cure of the anchor above.*
 #
-# ⛔ Il giudice ha contato **52 righe e 0 ammessi** senza che niente gridasse.
-#    Il numero c'era, era stampato, ed era assurdo — e nessuno lo ha guardato
-#    perche' nessuna riga diceva che era assurdo.
+# ⛔ The judge counted **52 lines and 0 admitted** without anything shouting.
+#    The number was there, it was printed, and it was absurd — and nobody looked
+#    at it because no line said it was absurd.
 #
-# ⛔ E' la forma **E8** di `REVIEWER.md` §2 — *«vuoto» e «proibito» hanno lo
-#    stesso aspetto* — spostata dalla lettura al **conteggio**: quando un
-#    classificatore mette **tutto** in una casella sola, «i fatti sono davvero
-#    tutti uguali» e «non so piu' leggere i fatti» hanno lo stesso aspetto.  E
-#    fra le due, la seconda e' quasi sempre quella vera.
+# ⛔ It is form **E8** of `REVIEWER.md` §2 — *«empty» and «forbidden» look the
+#    same* — moved from reading to **counting**: when a classifier puts
+#    **everything** in a single box, «the facts really are all the same» and «I
+#    can no longer read the facts» look the same.  And between the two, the
+#    second is almost always the true one.
 #
-# ⭐ LA REGOLA, e vale per qualunque contatore di questo banco: se le caselle
-#    sono piu' d'una e i fatti sono abbastanza, **almeno due caselle devono
-#    essere abitate**.  Se ne e' abitata una sola, il primo imputato e' il
-#    classificatore — `REVIEWER.md` §1: *il banco e' il primo imputato*.
+# ⭐ THE RULE, and it holds for any counter of this bench: if the boxes are more
+#    than one and the facts are enough, **at least two boxes must be
+#    inhabited**.  If only one is inhabited, the first defendant is the
+#    classifier — `REVIEWER.md` §1: *the bench is the first defendant*.
 #
-# ⚠ E i tre esiti sono tre, non due: «nessun fatto» non e' «tutti nella stessa
-#   casella», ed e' esattamente la distinzione che E8 chiede.
+# ⚠ And the three outcomes are three, not two: «no fact» is not «all in the same
+#   box», and it is exactly the distinction E8 asks for.
 def tutto_in_una_casella(che_cosa, caselle, minimo=SOGLIA_MONOCATEGORIA):
-    """(sospetto, righe) — sospetto=True quando UNA sola casella e' abitata.
+    """(suspicious, lines) — suspicious=True when ONE single box is inhabited.
 
-    `caselle` e' {nome: quanti}.  ⛔ Non giudica i fatti: giudica **chi li ha
-    messi nelle caselle**, che e' l'unico imputato che nessun altro controllo
-    di questo file guarda."""
+    `caselle` is {name: how many}.  ⛔ It does not judge the facts: it judges
+    **whoever put them in the boxes**, which is the only defendant no other check
+    of this file looks at."""
     tot = sum(caselle.values())
     conto = " · ".join(f"{k}: {v}" for k, v in caselle.items())
     if tot == 0:
-        return False, [f"⚠ {che_cosa}: NESSUN fatto da classificare ({conto}) — "
-                       f"e «nessun fatto» non e' «tutti uguali»"]
+        return False, [f"⚠ {che_cosa}: NO fact to classify ({conto}) — "
+                       f"and «no fact» is not «all the same»"]
     abitate = [k for k, v in caselle.items() if v]
     if len(abitate) > 1 or tot < minimo:
-        return False, [f"⚠ {che_cosa}: {conto} (su {tot})"]
+        return False, [f"⚠ {che_cosa}: {conto} (out of {tot})"]
     return True, [
-        f"⛔ {che_cosa}: TUTTO IN UNA CASELLA SOLA — {conto} (su {tot}), e "
-        f"l'unica abitata e' «{abitate[0]}»",
-        f"⛔ un classificatore che su {tot} fatti non ne mette **nemmeno uno** "
-        f"nelle altre {len(caselle) - 1} caselle sta quasi sempre sbagliando: "
-        f"il primo imputato e' il BANCO, non il server (`REVIEWER.md` §1)",
-        f"⛔ ed e' la forma E8 — «vuoto» e «proibito» hanno lo stesso aspetto — "
-        f"applicata a un contatore: «i fatti sono tutti uguali» e «non so piu' "
-        f"leggere i fatti» qui hanno la stessa faccia",
-        f"⚠ da guardare per primo: l'appiglio con cui si legge la riga del "
-        f"registro.  Il 12 agosto 2026 e' bastata una spiegazione appesa in "
-        f"coda a «PAM ha risposto: ammesso» per farne 52 su 52 nella casella "
-        f"sbagliata, e B8 e' passato da 5 a 1 su un prodotto sano",
+        f"⛔ {che_cosa}: EVERYTHING IN ONE SINGLE BOX — {conto} (out of {tot}), and "
+        f"the only inhabited one is «{abitate[0]}»",
+        f"⛔ a classifier that out of {tot} facts puts **not even one** "
+        f"in the other {len(caselle) - 1} boxes is almost always wrong: "
+        f"the first defendant is the BENCH, not the server (`REVIEWER.md` §1)",
+        f"⛔ and it is form E8 — «empty» and «forbidden» look the same — "
+        f"applied to a counter: «the facts are all the same» and «I can no longer "
+        f"read the facts» here have the same face",
+        f"⚠ to look at first: the anchor with which the log line is "
+        f"read.  On 12 Aug 2026 an explanation appended at the tail of "
+        f"«PAM ha risposto: ammesso» was enough to put 52 out of 52 in the "
+        f"wrong box, and B8 went from 5 to 1 on a healthy product",
     ]
 
 
 def scrivi(uscita, rec):
-    """Una riga per fatto, scritta e **sincronizzata** subito.
+    """One line per fact, written and **synced** right away.
 
-    ⚠ Un file scritto e chiuso e' un fatto; una riga in un buffer e' una
-      speranza sul momento in cui qualcuno la vedra' (`LEZIONI.md` §1.9, settima
-      veste) — e questo processo muore e rinasce a ogni fase."""
+    ⚠ A file written and closed is a fact; a line in a buffer is a hope about
+      the moment someone will see it (`LEZIONI.md` §1.9, seventh guise) — and
+      this process dies and is reborn at every phase."""
     fuori = dict(BERSAGLIO)
     fuori.update(rec)
     with open(uscita, "a") as f:
@@ -833,11 +835,11 @@ def scrivi(uscita, rec):
 
 
 def esistenza(nome, deve_esistere):
-    """⛔ «Utente inesistente» si VERIFICA, non si suppone.
+    """⛔ «User does not exist» is VERIFIED, not assumed.
 
-    Se il nome che crediamo inesistente fosse un utente vero, «inesistente» e
-    «sbagliata» sarebbero **lo stesso caso** misurato due volte, e le due
-    mediane coinciderebbero per costruzione: il verde piu' vuoto di tutti."""
+    If the name we believe nonexistent were a real user, «inesistente» and
+    «sbagliata» would be **the same case** measured twice, and the two medians
+    would coincide by construction: the emptiest green of all."""
     try:
         pwd.getpwnam(nome)
         c_e = True
@@ -847,11 +849,11 @@ def esistenza(nome, deve_esistere):
 
 
 async def prova_indirizzi(indirizzi, porta):
-    """⛔ Il banco sa parlare da TUTT'E DUE gli indirizzi? — si chiede prima.
+    """⛔ Can the bench talk from BOTH addresses? — it is asked first.
 
-    ⚠ Si arriva a `ECCOMI` e si chiude: nessun `CREDENZIALI`, quindi **nessun
-      conto si muove** e nessun posto viene preso.  E' un controllo che non
-      costa niente al bilancio di §4.4-bis."""
+    ⚠ It gets to `ECCOMI` and closes: no `CREDENZIALI`, so **no count moves**
+      and no place is taken.  It is a check that costs nothing to the balance of
+      §4.4-bis."""
     for ind in indirizzi:
         gestore = None
         try:
@@ -862,11 +864,11 @@ async def prova_indirizzi(indirizzi, porta):
             cli.manda(inquadra(b3.T["CIAO"], b3.corpo_ciao()))
             await b3.attendi(cli, "ECCOMI", attesa=10)
         except Exception as e:  # noqa: BLE001
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ da «{ind}» non si arriva a ECCOMI: "
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ from «{ind}» one does not get to ECCOMI: "
                   f"{type(e).__name__}: {e}")
-            print(f"        il server dev'essere acceso su 0.0.0.0 e rispondere "
-                  f"su tutt'e due gli indirizzi, o il bilancio di §4.4-bis non "
-                  f"ha il margine che dichiara (B0.3)")
+            print(f"        the server must be running on 0.0.0.0 and answering "
+                  f"on both addresses, or the balance of §4.4-bis does not "
+                  f"have the margin it declares (B0.3)")
             return False
         finally:
             if gestore is not None:
@@ -874,30 +876,30 @@ async def prova_indirizzi(indirizzi, porta):
                     await gestore.__aexit__(None, None, None)
                 except Exception:  # noqa: BLE001
                     pass
-    print(f"    {VERDE}OK{GRIGIO}  il server risponde su tutt'e due gli "
-          f"indirizzi: {', '.join(indirizzi)}  (fino a ECCOMI, senza toccare "
-          f"nessun conto)")
+    print(f"    {VERDE}OK{GRIGIO}  the server answers on both "
+          f"addresses: {', '.join(indirizzi)}  (up to ECCOMI, without touching "
+          f"any count)")
     return True
 
 
 async def esegui(a, passi, tipo, etichetta, modo, confronta_modello=True):
-    """Esegue un piano gia' verificato, e scrive un record per tentativo.
+    """Runs an already verified plan, and writes one record per attempt.
 
-    ⚠ `confronta_modello=False` per l'unico caso in cui il modello **non puo'**
-      sapere la risposta: il tentativo dopo il riavvio del server, dove il ban
-      arriva dal DISCO e non dai fallimenti di questo giro.  Pretendere li' la
-      concordanza col modello darebbe rosso sul codice giusto, e il rosso
-      finirebbe sull'imputato sbagliato — che e' il difetto che `LEZIONI.md`
-      §1.9 chiama la settima veste."""
+    ⚠ `confronta_modello=False` for the only case in which the model **cannot**
+      know the answer: the attempt after the server restart, where the ban
+      arrives from DISK and not from the failures of this run.  Demanding there
+      agreement with the model would give red on the right code, and the red
+      would end up on the wrong defendant — which is the defect `LEZIONI.md`
+      §1.9 calls the seventh guise."""
     ok, esiti, righe = verifica_piano(passi, modo)
-    print(f"    -- piano di «{etichetta}»: {len(passi)} tentativi, modo «{modo}» "
-          f"(soglia {SOGLIA}, bilancio {BILANCIO}, finestra {FINESTRA_MIN} min)")
+    print(f"    -- plan of «{etichetta}»: {len(passi)} attempts, mode «{modo}» "
+          f"(threshold {SOGLIA}, balance {BILANCIO}, window {FINESTRA_MIN} min)")
     for r in righe:
         print(f"       {r}")
     if not ok:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ il piano non fa quel che deve: non parte. "
-              f"Un piano che sfora misurerebbe il ban credendo di misurare PAM; "
-              f"uno che non banna dove deve renderebbe cieco il controllo")
+        print(f"    {ROSSO}NO{GRIGIO}  ⛔ the plan does not do what it must: it does not start. "
+              f"A plan that overflows would measure the ban believing it measures PAM; "
+              f"one that does not ban where it must would make the check blind")
         return 2
     for i, p in enumerate(passi, 1):
         parola = a.parola if p["caso"] == "giusta" else a.sbagliata
@@ -907,9 +909,9 @@ async def esegui(a, passi, tipo, etichetta, modo, confronta_modello=True):
                     "blocco": a.blocco, "ordine": i, "caso": p["caso"],
                     "scaldata": p["scaldata"],
                     "classe": classifica(rec, p["caso"]),
-                    # ⭐ l'attesa del modello viaggia col tentativo: il verdetto
-                    #    la confronta con quel che e' arrivato, uno per uno,
-                    #    invece di guardare solo il totale.
+                    # ⭐ the model's expectation travels with the attempt: the
+                    #    verdict compares it with what arrived, one by one,
+                    #    instead of looking only at the total.
                     "atteso_modello": atteso_msg,
                     "atteso_motivo": atteso_motivo})
         scrivi(a.uscita, rec)
@@ -919,12 +921,12 @@ async def esegui(a, passi, tipo, etichetta, modo, confronta_modello=True):
         chiude = "" if rec["chiusura"] is None else \
             f"chiusura={MOTIVI.get(rec['chiusura'], hex(rec['chiusura']))}"
         if not confronta_modello:
-            concorda = "⚠ il modello non giudica qui (il ban viene dal disco)"
+            concorda = "⚠ the model does not judge here (the ban comes from disk)"
         elif rec["messaggio"] == atteso_msg and rec["motivo"] == atteso_motivo:
             concorda = ""
         else:
-            concorda = f"⛔ il modello diceva {atteso}"
-        marca = "scaldata" if p["scaldata"] else ""
+            concorda = f"⛔ the model said {atteso}"
+        marca = "warm-up" if p["scaldata"] else ""
         print(f"       {i:2d}. {p['caso']:12s} {p['indirizzo']:13s} "
               f"{p['nome']:16s} {ms} ms  "
               f"{rec['messaggio'] or rec['errore']:10s} {motivo:18s} "
@@ -933,47 +935,47 @@ async def esegui(a, passi, tipo, etichetta, modo, confronta_modello=True):
 
 
 def pagina_in_tls(a):
-    """⛔ In che lingua parla la pagina del ban, su QUESTO bersaglio.
+    """⛔ In which language the ban page speaks, on THIS target.
 
-    innesto   in chiaro — `01-b3-rcp-innesta.py` scrive `HTTP/1.1 200 OK` su un
-              fd nudo, e in tutto il file non c'e' una riga di TLS;
-    prodotto  in TLS — `SPECIFICHE.md` §11.5, e `01-p1-prodotto.sh` la
-              interroga con `curl -k https://`.
+    innesto   in plain text — `01-b3-rcp-innesta.py` writes `HTTP/1.1 200 OK` on a
+              bare fd, and in the whole file there is not one TLS line;
+    prodotto  in TLS — `SPECIFICHE.md` §11.5, and `01-p1-prodotto.sh`
+              queries it with `curl -k https://`.
 
-    ⚠ E IL POSTO GIUSTO DI QUESTA RIGA NON E' QUI: e' il profilo condiviso
-      (`01-b0-bersaglio.py`), accanto alle altre differenze fra i due server —
-      la riga d'avvio sul ban, il formato della pagina, il tetto d'inattivita'.
-      Sta scritto qui perche' la sera dell'11 agosto 2026 il profilo lo stanno
-      usando altri tre banchi, e una chiave nuova la si aggiunge quando non c'e'
-      nessun altro dentro.  ⛔ Finche' e' qui, e' una quinta copia di una
-      differenza — cioe' esattamente la forma che R12C.5 ha gia' fatto pagare:
-      si legge dal profilo appena la chiave esiste."""
+    ⚠ AND THE RIGHT PLACE FOR THIS LINE IS NOT HERE: it is the shared profile
+      (`01-b0-bersaglio.py`), next to the other differences between the two
+      servers — the start-up line about the ban, the page format, the
+      inactivity cap.  It is written here because on the evening of 11 Aug 2026
+      three other benches are using the profile, and a new key is added when
+      nobody else is inside.  ⛔ As long as it is here, it is a fifth copy of a
+      difference — that is exactly the shape R12C.5 has already made us pay
+      for: it is read from the profile as soon as the key exists."""
     return bool(a.prof.get("pagina_tls", a.bersaglio == "prodotto"))
 
 
 def guarda_pagina(a, indirizzo, etichetta, atteso_bannato):
-    """La pagina, letta e SCRITTA nel file dei fatti — e confrontata subito."""
+    """The page, read and WRITTEN in the facts file — and compared right away."""
     rec = leggi_pagina(indirizzo, a.porta, tls=pagina_in_tls(a))
     rec.update({"giro": a.giro, "tipo": "pagina", "etichetta": etichetta,
                 "atteso_bannato": atteso_bannato})
     scrivi(a.uscita, rec)
     if rec["errore"]:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ la pagina da «{indirizzo}» non si e' "
-              f"caricata: {rec['errore']}")
-        print(f"        §4.4-bis: «non un errore di rete, non un silenzio» — e "
-              f"un silenzio e' esattamente quel che ho appena ricevuto")
+        print(f"    {ROSSO}NO{GRIGIO}  ⛔ the page from «{indirizzo}» did not "
+              f"load: {rec['errore']}")
+        print(f"        §4.4-bis: «not a network error, not a silence» — and "
+              f"a silence is exactly what I have just received")
         return rec
-    quanto = "" if rec["ore"] is None else f" · mancano {rec['ore']}h {rec['minuti']}m"
-    print(f"    -- pagina da {indirizzo:13s} → HTTP {rec['stato']} · "
-          f"bannato={rec['bannato']} (atteso {atteso_bannato}) · "
-          f"«tentativi esauriti» {'presente' if rec['frase'] else 'ASSENTE'}"
-          f"{quanto} · {rec['byte']} byte")
+    quanto = "" if rec["ore"] is None else f" · {rec['ore']}h {rec['minuti']}m left"
+    print(f"    -- page from {indirizzo:13s} → HTTP {rec['stato']} · "
+          f"bannato={rec['bannato']} (expected {atteso_bannato}) · "
+          f"«attempts exhausted» {'present' if rec['frase'] else 'ABSENT'}"
+          f"{quanto} · {rec['byte']} bytes")
     return rec
 
 
 def sblocca_e_dichiara(a, indirizzi, perche, pretendi=None):
-    """⛔ Ogni sblocco si dichiara — B0.3: «o *il ban non e' scattato* e
-    *qualcuno l'ha tolto* hanno lo stesso aspetto»."""
+    """⛔ Every unblock is declared — B0.3: «or *the ban did not trigger* and
+    *someone removed it* look the same»."""
     esiti = []
     for ind in indirizzi:
         esito, dettaglio = cmd.sblocca(a.comando, ind)
@@ -982,14 +984,14 @@ def sblocca_e_dichiara(a, indirizzi, perche, pretendi=None):
                "preteso": pretendi}
         scrivi(a.uscita, rec)
         colore = ROSSO if esito is None else GRIGIO
-        print(f"    {colore}--{GRIGIO}  sblocco «{ind}» ({perche}): "
-              f"{esito or '⛔ NON HO PARLATO COL COMANDO'} — {dettaglio}")
+        print(f"    {colore}--{GRIGIO}  unblock «{ind}» ({perche}): "
+              f"{esito or '⛔ I DID NOT TALK TO THE COMMAND'} — {dettaglio}")
         esiti.append(esito)
     return esiti
 
 
 # ===========================================================================
-# Le statistiche
+# The statistics
 # ===========================================================================
 def quantile(xs, q):
     y = sorted(xs)
@@ -1000,7 +1002,7 @@ def quantile(xs, q):
 
 
 def mad(xs):
-    """Scarto assoluto mediano: la dispersione della famiglia della mediana."""
+    """Median absolute deviation: the dispersion of the median's family."""
     if len(xs) < 2:
         return float("nan")
     m = statistics.median(xs)
@@ -1008,10 +1010,10 @@ def mad(xs):
 
 
 def intervallo_differenza(xa, xb):
-    """L'intervallo al 95 % della differenza fra le due mediane, per ricampionamento.
+    """The 95 % interval of the difference between the two medians, by resampling.
 
-    ⭐ Il seme e' fisso: due esecuzioni del verdetto sugli stessi campioni devono
-       dare la **stessa** riga, o il banco diventa lui una sorgente di rumore."""
+    ⭐ The seed is fixed: two runs of the verdict on the same samples must give
+       the **same** line, or the bench itself becomes a source of noise."""
     r = random.Random(SEME)
     na, nb = len(xa), len(xb)
     diff = []
@@ -1026,90 +1028,90 @@ def intervallo_differenza(xa, xb):
 
 
 # ===========================================================================
-# Il registro del server: il secondo testimone, e NON e' l'arbitro
+# The server log: the second witness, and it is NOT the arbiter
 # ===========================================================================
 def leggi_registro(percorso):
-    """Che cosa dice il SERVER — per separare gli imputati, non per giudicare.
+    """What the SERVER says — to separate the defendants, not to judge.
 
-    ⛔ Non e' l'arbitro: il tempo che conta e' quello letto dal lato che riceve,
-       e il registro e' la stessa mano che ha scritto il codice.  Serve a
-       distinguere «a governare e' stato il ritardo fisso» da «a governare e'
-       stato PAM», e a dire quante vite del server e quali indirizzi ci sono
-       stati davvero.
+    ⛔ It is not the arbiter: the time that counts is the one read from the
+       receiving side, and the log is the same hand that wrote the code.  It
+       serves to distinguish «what governed was the fixed delay» from «what
+       governed was PAM», and to say how many server lives and which addresses
+       there really were.
 
-    ⚠ Se il registro non c'e' o non dice niente, non si inventa: si dichiara.
-      «Vuoto» e «non letto» sono due fatti diversi."""
+    ⚠ If the log is not there or says nothing, nothing is invented: it is declared.
+      «Empty» and «not read» are two different facts."""
     if not percorso or not os.path.exists(percorso):
-        return None, "il registro del server non e' stato letto (file assente)"
+        return None, "the server log was not read (missing file)"
     d = {"fissi": [], "ammessi": [], "respinti": [], "senza_pam": [],
          "indirizzi": set(),
          "avvii": [], "ban": [], "sbloccati": [], "non_bannati": [],
          "pagine": [], "carichi": [], "illeggibili": 0, "vite": 0,
-         # ⛔ Le tre caselle del CLASSIFICATORE, contate a parte dalle mediane:
-         #    servono a giudicare chi legge, non quel che e' stato letto.
-         "pam": {"ammesso": 0, "respinto": 0, "illeggibile": 0},
+         # ⛔ The three boxes of the CLASSIFIER, counted separately from the medians:
+         #    they serve to judge whoever reads, not what was read.
+         "pam": {"admitted": 0, "refused": 0, "illeggibile": 0},
          "pam_esempi": []}
     ultimo_pam = None
     try:
         with open(percorso, errors="replace") as f:
             for riga in f:
                 if R_PAM_RIGA in riga:
-                    # ⛔ L'ancora sta sul pezzo STABILE, non sulla fine della
-                    #    riga: quel che viene dopo la parola del verdetto e' di
-                    #    chi scrive il registro, e cambia (12 agosto 2026).
+                    # ⛔ The anchor is on the STABLE piece, not on the end of the
+                    #    line: what comes after the verdict's word belongs to
+                    #    whoever writes the log, and it changes (12 Aug 2026).
                     m = R_PAM.search(riga)
                     if m:
                         ultimo_pam = m.group(1)
                         d["pam"][ultimo_pam] += 1
                     else:
-                        # ⛔ E QUI NON SI RIPIEGA SU «respinto».  Fino al 12
-                        #    agosto 2026 una riga illeggibile e un respinto
-                        #    erano lo stesso fatto — E8 — e questo `None` e'
-                        #    la cura: un verdetto che non si e' capito non
-                        #    entra in nessuna delle due mediane, e si conta.
+                        # ⛔ AND HERE ONE DOES NOT FALL BACK ON «refused».  Until 12
+                        #    Aug 2026 an unreadable line and a refused one were the
+                        #    same fact — E8 — and this `None` is the cure: a verdict
+                        #    that was not understood enters neither of the two
+                        #    medians, and it is counted.
                         ultimo_pam = None
                         d["pam"]["illeggibile"] += 1
                         if len(d["pam_esempi"]) < 3:
                             d["pam_esempi"].append(riga.strip()[:150])
-                elif "il secondo fisso e' passato" in riga:
-                    # ⚠ Anche qui l'appiglio e' il pezzo stabile — «(N ms)» —
-                    #   e non «quel che sta dopo la prima parentesi».
+                elif "the fixed second has passed" in riga:
+                    # ⚠ Here too the anchor is the stable piece — «(N ms)» —
+                    #   and not «what comes after the first parenthesis».
                     m = re.search(r"\((-?\d+) ms\)", riga)
                     if not m:
                         continue
                     n = int(m.group(1))
                     d["fissi"].append(n)
-                    if ultimo_pam == "ammesso":
+                    if ultimo_pam == "admitted":
                         d["ammessi"].append(n)
-                    elif ultimo_pam == "respinto":
+                    elif ultimo_pam == "refused":
                         d["respinti"].append(n)
                     else:
                         d["senza_pam"].append(n)
                 elif " da=" in riga and ("respinto motivo" in riga or "ammesso utente" in riga):
-                    # ⛔ E NEMMENO QUESTA SI LEGGE DALLA FINE.  Era
+                    # ⛔ AND NOT EVEN THIS ONE IS READ FROM THE END.  It was
                     #    `riga.rsplit(" da=", 1)[1].strip().rsplit(":", 1)[0]`,
-                    #    cioe' «l'indirizzo e' l'ultima cosa della riga»: la
-                    #    stessa ancora che oggi ha accecato il verdetto di PAM,
-                    #    su una riga che `rcp.c:979` e `rcp.c:2700` possono
-                    #    allungare domani come hanno allungato quella.  ⇒ Si
-                    #    prende il campo `da=` e si ferma al primo spazio.
+                    #    that is «the address is the last thing on the line»: the
+                    #    same anchor that today blinded the PAM verdict, on a line
+                    #    that `rcp.c:979` and `rcp.c:2700` may lengthen tomorrow as
+                    #    they lengthened that one.  ⇒ The `da=` field is taken and
+                    #    it stops at the first space.
                     m = re.search(r"\bda=(\S+)", riga)
                     if m:
                         d["indirizzi"].add(m.group(1).rsplit(":", 1)[0])
                 elif R_BAN["caricati"] in riga:
                     d["vite"] += 1
-                    # ⛔⭐ E LA RIGA D'AVVIO E' SCRITTA DIVERSA NEI DUE SERVER.
+                    # ⛔⭐ AND THE START-UP LINE IS WRITTEN DIFFERENTLY IN THE TWO SERVERS.
                     #
                     #     innesto   «REMOTIX B3: ban caricati: N»
                     #     prodotto  «HH:MM:SS.mmm avvio  ban: <file>, N
                     #               indirizzi caricati»
                     #
-                    #  ⚠ Cercare la forma dell'innesto contro il prodotto
-                    #    avrebbe dato «vite = 0» e «il server non ha detto
-                    #    NIENTE sul ban all'avvio»: un rosso pieno su un server
-                    #    che quella riga la scrive, e il rosso sarebbe finito
-                    #    sull'imputato sbagliato.
-                    m = re.search(r"(-?\d+) indirizzi caricati", riga) or \
+                    #  ⚠ Looking for the graft's form against the product would
+                    #    have given «vite = 0» and «the server said NOTHING about
+                    #    the ban at start-up»: a full red on a server that does
+                    #    write that line, and the red would have ended up on the
+                    #    wrong defendant.
+                    m = re.search(r"(-?\d+) addresses loaded", riga) or \
                         re.search(r"ban caricati: (-?\d+)", riga)
                     d["carichi"].append(int(m.group(1)) if m else None)
                     d["avvii"].append(riga.strip())
@@ -1117,140 +1119,140 @@ def leggi_registro(percorso):
                     d["vite"] += 1
                     d["illeggibili"] += 1
                     d["avvii"].append(riga.strip())
-                elif "BANNATO l'indirizzo" in riga and "SBLOCCATO" not in riga:
+                elif "BANNED address" in riga and "UNBLOCKED" not in riga:
                     d["ban"].append(riga.strip())
-                elif "SBLOCCATO su comando" in riga:
+                elif "UNBLOCKED on command" in riga:
                     d["sbloccati"].append(riga.strip())
-                elif "NON era bannato, non ho tolto niente" in riga:
+                elif "it was NOT banned, I removed nothing" in riga:
                     d["non_bannati"].append(riga.strip())
                 elif R_BAN["pagina"] in riga:
                     d["pagine"].append(riga.strip())
     except OSError as e:
-        return None, f"il registro del server non si legge: {e}"
+        return None, f"the server log cannot be read: {e}"
     d["indirizzi"] = sorted(d["indirizzi"])
     if not d["fissi"] and not d["avvii"]:
-        return None, ("il registro c'e' ma non contiene ne' righe «il secondo "
-                      "fisso e' passato» ne' righe d'avvio: o non e' il registro "
-                      "di questo giro, o il server non e' quello con RCP innestato")
+        return None, ("the log is there but contains neither «the fixed second "
+                      "has passed» lines nor start-up lines: either it is not the "
+                      "log of this run, or the server is not the one with RCP grafted")
     return d, ""
 
 
 # ===========================================================================
-# ⛔⭐ CHI GOVERNA I TEMPI — e si MISURA, non si scrive nel testo del verdetto
+# ⛔⭐ WHO GOVERNS THE TIMES — and it is MEASURED, not written in the verdict's text
 # ===========================================================================
-# *Rilievo A18 della revisione R12-A, 11 agosto 2026.*  Fino a stanotte questa
-# risposta era **una frase costante**: qualunque coppia di mediane si separasse
-# — e per qualunque ragione — il verdetto stampava *«a governare i tempi e' PAM,
-# e la cura sta in `autenticazione.c` e nella pila PAM, non in `rcp.c`»*.  Il
-# numero che avrebbe dovuto sostenerla era calcolato due righe sopra e **non
-# condizionava niente**; col registro illeggibile diventava *«dopo una mediana
-# di None ms … a governare i tempi e' PAM»*.
+# *Finding A18 of review R12-A, 11 Aug 2026.*  Until tonight this answer was
+# **a constant sentence**: whichever pair of medians separated — and for
+# whatever reason — the verdict printed *«what governs the times is PAM, and the
+# cure is in `autenticazione.c` and in the PAM stack, not in `rcp.c`»*.  The
+# number that should have supported it was computed two lines above and
+# **conditioned nothing**; with the log unreadable it became *«after a median
+# of None ms … what governs the times is PAM»*.
 #
-# ⛔ Un verdetto che nomina sempre lo stesso imputato non sta diagnosticando:
-#    sta ripetendo una convinzione.  Ed e' la **settima veste** di `LEZIONI.md`
-#    §1.9 — *il rosso puntato sull'imputato sbagliato* — dentro il banco che
-#    quella lezione cita: manda a cercare in `autenticazione.c` e nella pila PAM
-#    chiunque abbia rallentato **il nostro percorso**, e piu' il posto e'
-#    plausibile piu' a lungo ci si resta.
+# ⛔ A verdict that always names the same defendant is not diagnosing: it is
+#    repeating a belief.  And it is the **seventh guise** of `LEZIONI.md` §1.9
+#    — *the red pointed at the wrong defendant* — inside the bench that quotes
+#    that lesson: it sends to look in `autenticazione.c` and in the PAM stack
+#    anyone who slowed down **our path**, and the more plausible the place the
+#    longer one stays there.
 #
-# ⭐ IL CASO CONCRETO CHE L'HA FATTO VEDERE (`[M]` 11 agosto 2026, riprodotto su
-#    fatti costruiti a mano): si mette due secondi di lavoro nostro sul percorso
-#    dell'`AMMESSO` — un `getpwnam` lento, una scrittura sincrona — e si lascia
-#    PAM a rispondere in 5 ms.  Il registro del server dice «il secondo fisso e'
-#    passato» a **1005 ms sui respinti e 1010 sugli ammessi**, cioe' il ritardo
-#    fisso ha coperto tutto e PAM non ha ritardato niente; la coppia
-#    «sbagliata − giusta» si separa di due secondi **per colpa nostra**; e il
-#    verdetto vecchio consegnava «e' PAM, la cura sta altrove».
+# ⭐ THE CONCRETE CASE THAT SHOWED IT (`[M]` 11 Aug 2026, reproduced on facts
+#    built by hand): two seconds of our own work are put on the path of the
+#    `AMMESSO` — a slow `getpwnam`, a synchronous write — and PAM is left to
+#    answer in 5 ms.  The server log says «the fixed second has passed» at
+#    **1005 ms on the refused and 1010 on the admitted**, that is the fixed delay
+#    covered everything and PAM delayed nothing; the pair «sbagliata − giusta»
+#    separates by two seconds **because of us**; and the old verdict handed over
+#    «it is PAM, the cure is elsewhere».
 #
-# ⛔ LA REGOLA, ED E' §1.11: per ogni prova indiretta si scrive che aspetto
-#    avrebbe il caso opposto.  Qui i due casi opposti hanno **due firme
-#    numeriche diverse nel registro del server**, e questa funzione le legge:
+# ⛔ THE RULE, AND IT IS §1.11: for every indirect proof one writes what the
+#    opposite case would look like.  Here the two opposite cases have **two
+#    different numeric signatures in the server log**, and this function reads them:
 #
-#      PAM ritarda i fallimenti   il server aspetta MOLTO oltre il secondo fisso
-#      (`pam_faildelay`)          prima di rispondere ai RESPINTI, e poco o
-#                                 niente prima degli AMMESSI  ⇒  respinti ≫ 1000
-#                                 e respinti ≫ ammessi, e il caso lento sul filo
-#                                 e' uno dei due respinti
-#      il ritardo e' NOSTRO       il server dichiara di aver risposto quasi
-#                                 subito dopo il secondo fisso (respinti ≈
-#                                 ammessi ≈ 1000) e le mediane si separano lo
-#                                 stesso — oppure e' l'AMMESSO ad essere lento,
-#                                 che e' il percorso in cui PAM non ha voce
+#      PAM delays the failures    the server waits WELL beyond the fixed second
+#      (`pam_faildelay`)          before answering the REFUSED, and little or
+#                                 nothing before the ADMITTED  ⇒  refused ≫ 1000
+#                                 and refused ≫ admitted, and the slow case on the
+#                                 wire is one of the two refused
+#      the delay is OURS          the server declares it answered almost right
+#                                 after the fixed second (refused ≈ admitted
+#                                 ≈ 1000) and the medians separate all the
+#                                 same — or it is the ADMITTED that is slow,
+#                                 which is the path where PAM has no say
 #
-# ⛔ E il terzo esito e' «non lo so», che e' quel che il verdetto vecchio non
-#    aveva: senza il registro non si nomina nessuno.
+# ⛔ And the third outcome is «I do not know», which is what the old verdict did
+#    not have: without the log nobody is named.
 def imputato_dei_tempi(serie, reg):
-    """(nome, righe) con nome in «PAM» · «NOSTRO» · None (non misurato)."""
+    """(name, lines) with name in «PAM» · «NOSTRO» · None (not measured)."""
     righe = []
     if reg is None:
-        return None, ["⛔ il registro del server non si e' letto: NESSUN "
-                      "imputato si puo' nominare, e nominarlo lo stesso "
-                      "sarebbe la settima veste di `LEZIONI.md` §1.9"]
+        return None, ["⛔ the server log was not read: NO "
+                      "defendant can be named, and naming one anyway "
+                      "would be the seventh guise of `LEZIONI.md` §1.9"]
     resp = statistics.median(reg["respinti"]) if reg["respinti"] else None
     amm = statistics.median(reg["ammessi"]) if reg["ammessi"] else None
     if resp is None or amm is None:
-        # ⛔ E QUI SI DICE ANCHE PERCHE' — 12 agosto 2026.  Fino a stamattina
-        #    questa riga si fermava a «il registro non porta le due mediane»,
-        #    che si legge come *«il server non le ha scritte»*.  ⛔ Ma il caso
-        #    che si e' presentato davvero e' l'altro — **le ha scritte, e sono
-        #    io che non le so piu' leggere** — e i due hanno lo stesso aspetto
-        #    (E8).  Chi legge il verdetto deve trovare qui il primo imputato.
-        righe = [f"⛔ il registro non porta le due mediane che servono "
-                 f"(respinti: {len(reg['respinti'])} righe · ammessi: "
-                 f"{len(reg['ammessi'])} righe): senza tutt'e due non si "
-                 f"distingue «PAM ritarda i fallimenti» da «il ritardo e' "
-                 f"nostro», e non si nomina nessuno"]
+        # ⛔ AND HERE IT ALSO SAYS WHY — 12 Aug 2026.  Until this morning this
+        #    line stopped at «the log does not carry the two medians», which
+        #    reads as *«the server did not write them»*.  ⛔ But the case that
+        #    really showed up is the other one — **it wrote them, and it is I who
+        #    can no longer read them** — and the two look the same (E8).  Whoever
+        #    reads the verdict must find the first defendant here.
+        righe = [f"⛔ the log does not carry the two medians that are needed "
+                 f"(refused: {len(reg['respinti'])} lines · admitted: "
+                 f"{len(reg['ammessi'])} lines): without both one cannot "
+                 f"tell «PAM delays the failures» from «the delay is "
+                 f"ours», and nobody is named"]
         _, righe_cieco = tutto_in_una_casella(
-            "e la classificazione che le riempie", reg["pam"])
+            "and the classification that fills them", reg["pam"])
         righe += righe_cieco
         return None, righe
     med = {c: statistics.median(serie[c]) for c in CASI if serie[c]}
     if not med:
-        return None, ["⛔ nessuna serie di campioni: non c'e' nessuna "
-                      "separazione da attribuire"]
+        return None, ["⛔ no series of samples: there is no "
+                      "separation to attribute"]
     lento = max(med, key=med.get)
     oltre_r, oltre_a = resp - RITARDO_FISSO, amm - RITARDO_FISSO
-    righe.append(f"quel che il SERVER dichiara di aver aspettato oltre il "
-                 f"secondo fisso: respinti {oltre_r:+.0f} ms · ammessi "
-                 f"{oltre_a:+.0f} ms  (margine {MARGINE_IMPUTATO:.0f} ms)")
-    righe.append(f"il caso piu' lento sul FILO: «{lento}» "
+    righe.append(f"what the SERVER declares it waited beyond the "
+                 f"fixed second: refused {oltre_r:+.0f} ms · admitted "
+                 f"{oltre_a:+.0f} ms  (margin {MARGINE_IMPUTATO:.0f} ms)")
+    righe.append(f"the slowest case on the WIRE: «{lento}» "
                  f"({med[lento]:.0f} ms)  ·  " +
                  " · ".join(f"{c} {med[c]:.0f}" for c in CASI if c in med))
     if oltre_r >= MARGINE_IMPUTATO and (resp - amm) >= MARGINE_IMPUTATO \
             and lento != "giusta":
-        righe.append("⇒ ⛔ A GOVERNARE I TEMPI E' **PAM**: il server ha "
-                     "aspettato oltre il secondo fisso SOLO sui fallimenti, "
-                     "che e' la firma di `pam_faildelay`, e il caso lento sul "
-                     "filo e' un respinto.  La cura sta in "
-                     "`banchi/rcp/autenticazione.c` e nella pila PAM, non in "
+        righe.append("⇒ ⛔ WHAT GOVERNS THE TIMES IS **PAM**: the server "
+                     "waited beyond the fixed second ONLY on the failures, "
+                     "which is the signature of `pam_faildelay`, and the slow "
+                     "case on the wire is a refused one.  The cure is in "
+                     "`banchi/rcp/autenticazione.c` and in the PAM stack, not in "
                      "`rcp.c`")
         return "PAM", righe
     if lento == "giusta" or (oltre_a - oltre_r) >= MARGINE_IMPUTATO:
-        righe.append("⇒ ⛔ L'IMPUTATO NON E' PAM: il percorso lento e' quello "
-                     "dell'AMMESSO, dove `pam_faildelay` non ha voce — "
-                     "`pam_faildelay` ritarda i FALLIMENTI.  Il ritardo e' "
-                     "NOSTRO, e si cerca sul cammino che porta ad `AMMESSO` "
-                     "(rcp.c: `S_ATTESA_VERDETTO` → `T_AMMESSO`), non nella "
-                     "pila PAM")
+        righe.append("⇒ ⛔ THE DEFENDANT IS NOT PAM: the slow path is that "
+                     "of the AMMESSO, where `pam_faildelay` has no say — "
+                     "`pam_faildelay` delays the FAILURES.  The delay is "
+                     "OURS, and it is looked for on the path leading to `AMMESSO` "
+                     "(rcp.c: `S_ATTESA_VERDETTO` → `T_AMMESSO`), not in the "
+                     "PAM stack")
         return "NOSTRO", righe
     if oltre_r < MARGINE_IMPUTATO and oltre_a < MARGINE_IMPUTATO:
-        righe.append("⇒ ⛔ L'IMPUTATO NON E' PAM: il server dichiara di aver "
-                     "risposto quasi subito dopo il secondo fisso in tutt'e "
-                     "due i versi — cioe' il ritardo fisso ha coperto tutto e "
-                     "PAM non ha ritardato niente — e le mediane si separano "
-                     "LO STESSO.  Il tempo si perde FUORI dal punto in cui il "
-                     "server lo misura: il nostro percorso, o la rete")
+        righe.append("⇒ ⛔ THE DEFENDANT IS NOT PAM: the server declares it "
+                     "answered almost right after the fixed second in both "
+                     "directions — that is the fixed delay covered everything and "
+                     "PAM delayed nothing — and the medians separate "
+                     "ALL THE SAME.  The time is lost OUTSIDE the point where the "
+                     "server measures it: our path, or the network")
         return "NOSTRO", righe
-    righe.append("⇒ ⚠ I NUMERI NON SEPARANO I DUE IMPUTATI: il registro dice "
-                 "che qualcuno ha aspettato oltre il secondo fisso, ma non nel "
-                 "verso che distingue PAM dal nostro percorso.  Non si nomina "
-                 "nessuno — «non lo so» e' un esito, «e' PAM» detto per "
-                 "abitudine non lo e'")
+    righe.append("⇒ ⚠ THE NUMBERS DO NOT SEPARATE THE TWO DEFENDANTS: the log says "
+                 "that someone waited beyond the fixed second, but not in the "
+                 "direction that tells PAM from our path.  Nobody is "
+                 "named — «I do not know» is an outcome, «it is PAM» said out "
+                 "of habit is not")
     return None, righe
 
 
 # ===========================================================================
-# Il verdetto
+# The verdict
 # ===========================================================================
 def _serie(campioni, caso):
     return [r["ms"] for r in campioni
@@ -1259,8 +1261,8 @@ def _serie(campioni, caso):
 
 def verdetto(a):
     if not os.path.exists(a.uscita):
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ non c'e' niente da giudicare: "
-              f"{a.uscita} non esiste")
+        print(f"    {ROSSO}NO{GRIGIO}  ⛔ there is nothing to judge: "
+              f"{a.uscita} does not exist")
         return 2
     dati = []
     with open(a.uscita) as f:
@@ -1268,31 +1270,31 @@ def verdetto(a):
             riga = riga.strip()
             if riga:
                 dati.append(json.loads(riga))
-    # ⛔ Un file di un ALTRO giro non e' un file vuoto, e non e' questo giro.
+    # ⛔ A file from ANOTHER run is not an empty file, and it is not this run.
     estranei = [r for r in dati if r.get("giro") != a.giro]
     if estranei:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ {len(estranei)} righe su {len(dati)} sono "
-              f"di un altro giro: non giudico un file stantio")
+        print(f"    {ROSSO}NO{GRIGIO}  ⛔ {len(estranei)} lines out of {len(dati)} are "
+              f"from another run: I do not judge a stale file")
         return 2
     if not dati:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ il file c'e' ed e' vuoto: nessun fatto")
+        print(f"    {ROSSO}NO{GRIGIO}  ⛔ the file is there and it is empty: no facts")
         return 2
 
-    # ⛔ DUE CONTATORI, E NON E' UN'INDULGENZA — e' `LEZIONI.md` §1.11 e la
-    #    regola dei «quattro esiti, non due».
+    # ⛔ TWO COUNTERS, AND IT IS NOT LENIENCY — it is `LEZIONI.md` §1.11 and the
+    #    rule of the «four outcomes, not two».
     #
-    #    `guasti` conta quel che questo banco ha il diritto di chiamare un
-    #    difetto NOSTRO.  `guasti_mediane` conta la sola cosa che §4.4-bis ha
-    #    gia' dichiarato `[?]` prima che questo banco esistesse: che a governare
-    #    i tempi dell'autenticazione **non e' il nostro ritardo, e' PAM**.
+    #    `guasti` counts what this bench has the right to call a defect of OURS.
+    #    `guasti_mediane` counts the only thing §4.4-bis had already declared
+    #    `[?]` before this bench existed: that what governs the times of the
+    #    authentication **is not our delay, it is PAM**.
     #
-    # ⛔ E la differenza non e' cosmetica: se le due cose finissero nello stesso
-    #    numero, B8 sarebbe **rosso per sempre** — e un banco sempre rosso non
-    #    fa fallire nessuna regressione, perche' nessuno lo guarda piu'.  ⚠ La
-    #    separazione delle mediane resta stampata a caratteri interi, l'esito
-    #    resta diverso da zero, e il colpevole viene NOMINATO: quel che si toglie
-    #    e' la confusione fra «il ban non funziona» e «PAM ritarda i
-    #    fallimenti», che sono due cure diverse in due file diversi.
+    # ⛔ And the difference is not cosmetic: if the two things ended up in the same
+    #    number, B8 would be **red forever** — and a bench that is always red makes
+    #    no regression fail, because nobody looks at it any more.  ⚠ The separation
+    #    of the medians stays printed in full, the outcome stays different from
+    #    zero, and the culprit is NAMED: what is removed is the confusion between
+    #    «the ban does not work» and «PAM delays the failures», which are two
+    #    different cures in two different files.
     guasti, guasti_mediane, sospeso = 0, 0, False
     campioni = [r for r in dati if r["tipo"] == "campione"]
     tentativi = [r for r in dati if r["tipo"] in ("campione", "ban", "controllo")]
@@ -1300,18 +1302,18 @@ def verdetto(a):
     sblocchi = [r for r in dati if r["tipo"] == "sblocco"]
     blocchi = sorted({r["blocco"] for r in campioni})
 
-    # ── 0. i denominatori ───────────────────────────────────────────────────
+    # ── 0. the denominators ─────────────────────────────────────────────────
     print()
-    print("    == I DENOMINATORI — su che cosa ha guardato questo giro")
-    print(f"    --  fatti registrati: {len(dati)}  (tentativi {len(tentativi)} · "
-          f"letture della pagina {len(pagine)} · sblocchi {len(sblocchi)})")
-    print(f"    --  blocchi di campioni: {len(blocchi)}  "
-          f"(fra un blocco e l'altro si sblocca, ed e' dichiarato)")
-    # ⛔ E un verdetto ha un denominatore: quante cose ha approvato
-    #    (`LEZIONI.md` §1.9 regola 6).  Se e' zero non si da' nessun esito.
+    print("    == THE DENOMINATORS — on what this run looked")
+    print(f"    --  facts recorded: {len(dati)}  (attempts {len(tentativi)} · "
+          f"page readings {len(pagine)} · unblocks {len(sblocchi)})")
+    print(f"    --  blocks of samples: {len(blocchi)}  "
+          f"(between one block and the next one unblocks, and it is declared)")
+    # ⛔ And a verdict has a denominator: how many things it approved
+    #    (`LEZIONI.md` §1.9 rule 6).  If it is zero no outcome is given.
     if not tentativi:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ ZERO tentativi: «tutti quelli provati "
-              f"sono andati bene» e' vero anche quando i provati sono zero")
+        print(f"    {ROSSO}NO{GRIGIO}  ⛔ ZERO attempts: «all those tested "
+              f"went well» is true even when the tested are zero")
         return 2
 
     serie = {}
@@ -1327,96 +1329,96 @@ def verdetto(a):
         per_ind = {}
         for r in buoni:
             per_ind[r["indirizzo"]] = per_ind.get(r["indirizzo"], 0) + 1
-        print(f"    --  {caso:12s} tenuti {len(buoni):3d} su {len(tenuti):3d} · "
-              f"scartati per scaldata {len(scaldate)} · "
-              f"⛔ risposte del ban {len(limitati)} · inattese {len(inattesi)} · "
-              f"errori {len(errori)} · indirizzi {per_ind}")
+        print(f"    --  {caso:12s} kept {len(buoni):3d} out of {len(tenuti):3d} · "
+              f"discarded as warm-up {len(scaldate)} · "
+              f"⛔ ban answers {len(limitati)} · unexpected {len(inattesi)} · "
+              f"errors {len(errori)} · addresses {per_ind}")
         if limitati:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ {len(limitati)} campioni di «{caso}» "
-                  f"hanno ricevuto TROPPI_TENTATIVI: il bilancio di §4.4-bis non "
-                  f"ha retto, e quei tempi sono del BAN, non di PAM")
-            print(f"        ⚠ quattro cause, e vanno separate: (1) lo sblocco fra "
-                  f"i blocchi non ha funzionato; (2) il piano sfora davvero; "
-                  f"(3) un blocco precedente ha lasciato dei fallimenti; "
-                  f"(4) il server conta piu' di quel che §4.4-bis dice")
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ {len(limitati)} samples of «{caso}» "
+                  f"received TROPPI_TENTATIVI: the balance of §4.4-bis did not "
+                  f"hold, and those times are the BAN's, not PAM's")
+            print(f"        ⚠ four causes, and they must be separated: (1) the unblock "
+                  f"between the blocks did not work; (2) the plan really overflows; "
+                  f"(3) a previous block left some failures; "
+                  f"(4) the server counts more than §4.4-bis says")
             guasti += 1
         if inattesi or errori:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ «{caso}»: {len(inattesi)} risposte "
-                  f"inattese e {len(errori)} errori — un caso che non riceve quel "
-                  f"che deve non e' un campione di quel caso")
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ «{caso}»: {len(inattesi)} unexpected "
+                  f"answers and {len(errori)} errors — a case that does not receive "
+                  f"what it must is not a sample of that case")
             for r in (inattesi + errori)[:3]:
                 print(f"        {r['messaggio'] or ''} {r['errore']}")
             guasti += 1
 
-    # ── 1. il secondo fisso ─────────────────────────────────────────────────
+    # ── 1. the fixed second ─────────────────────────────────────────────────
     print()
-    print(f"    == ⛔ Primo criterio: nessuna risposta di PAM prima di "
+    print(f"    == ⛔ First criterion: no PAM answer before "
           f"{RITARDO_FISSO:.0f} ms (§4.4-bis)")
     da_pam = [r for r in tentativi if r["classe"] == "atteso" and r["ms"] is not None]
     sotto = [r for r in da_pam if r["ms"] < RITARDO_FISSO]
-    print(f"    --  guardate {len(da_pam)} risposte (campioni, scaldate e giro "
-          f"del ban insieme: il ritardo fisso vale per TUTTE, «anche quando la "
-          f"risposta e' AMMESSO»)")
+    print(f"    --  looked at {len(da_pam)} answers (samples, warm-ups and ban "
+          f"run together: the fixed delay holds for ALL of them, «even when the "
+          f"answer is AMMESSO»)")
     if not da_pam:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ nessuna risposta da guardare")
+        print(f"    {ROSSO}NO{GRIGIO}  ⛔ no answer to look at")
         guasti += 1
     elif sotto:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ {len(sotto)} risposte sotto il secondo. "
-              f"La piu' veloce: {min(r['ms'] for r in sotto):.1f} ms")
+        print(f"    {ROSSO}NO{GRIGIO}  ⛔ {len(sotto)} responses below the second. "
+              f"The fastest: {min(r['ms'] for r in sotto):.1f} ms")
         for r in sotto[:5]:
             print(f"        {r['caso']:12s} {r['messaggio']} {r['ms']:.1f} ms")
         guasti += 1
     else:
-        print(f"    {VERDE}OK{GRIGIO}  {len(da_pam)} su {len(da_pam)} ≥ "
-              f"{RITARDO_FISSO:.0f} ms — la piu' veloce: "
+        print(f"    {VERDE}OK{GRIGIO}  {len(da_pam)} out of {len(da_pam)} ≥ "
+              f"{RITARDO_FISSO:.0f} ms — the fastest: "
               f"{min(r['ms'] for r in da_pam):.1f} ms")
-    # ⚠ E il rifiuto del ban si misura A PARTE, e NON fa ne' rosso ne' verde.
-    #   §4.4-bis dice che «il rifiuto di un indirizzo bannato non passa dal
-    #   secondo fisso»; `rcp.c` lo fa passare lo stesso, perche' decide DOPO
-    #   aver ricevuto `CREDENZIALI` — che e' l'unica strada che gli lascia un
-    #   `RESPINTO` da mandare, cioe' quel che B8 pretende.  Due letture, e la
-    #   differenza si misura invece di giudicarla.
+    # ⚠ And the ban's refusal is measured SEPARATELY, and it makes neither red nor green.
+    #   §4.4-bis says that «the refusal of a banned address does not go through the
+    #   fixed second»; `rcp.c` makes it go through anyway, because it decides AFTER
+    #   having received `CREDENZIALI` — which is the only road that leaves it a
+    #   `RESPINTO` to send, that is what B8 demands.  Two readings, and the
+    #   difference is measured instead of judged.
     del_ban = [r["ms"] for r in tentativi
                if r["classe"] == "limitatore" and r["ms"] is not None]
     if del_ban:
-        print(f"    --  ⚠ e le risposte TROPPI_TENTATIVI (che non passano da PAM): "
-              f"n={len(del_ban)}  mediana {statistics.median(del_ban):.1f} ms  "
+        print(f"    --  ⚠ and the TROPPI_TENTATIVI answers (which do not go through PAM): "
+              f"n={len(del_ban)}  median {statistics.median(del_ban):.1f} ms  "
               f"min {min(del_ban):.1f} ms")
-        print(f"        §4.4-bis dice che questo rifiuto «non passa dal secondo "
-              f"fisso»; rcp.c ce lo fa passare.  Il numero e' qui, e non e' un "
-              f"esito: e' un difetto del documento da chiudere in un verso o "
-              f"nell'altro")
+        print(f"        §4.4-bis says this refusal «does not go through the fixed "
+              f"second»; rcp.c makes it go through.  The number is here, and it is not an "
+              f"outcome: it is a defect of the document to be closed in one direction or "
+              f"the other")
     else:
-        print(f"    --  ⛔ nessuna risposta TROPPI_TENTATIVI in tutto il giro: il "
-              f"giro del ban qui sotto non puo' essere passato")
+        print(f"    --  ⛔ no TROPPI_TENTATIVI answer in the whole run: the "
+              f"ban run below cannot have passed")
 
-    # ── 2. le tre mediane ───────────────────────────────────────────────────
+    # ── 2. the three medians ────────────────────────────────────────────────
     print()
-    print("    == ⛔ Secondo criterio: le tre mediane, e se si separano")
+    print("    == ⛔ Second criterion: the three medians, and whether they separate")
     for caso in CASI:
         x = serie[caso]
         if not x:
-            print(f"    --  {caso:12s} n=0 — nessun campione")
+            print(f"    --  {caso:12s} n=0 — no samples")
             continue
         print(f"    --  {caso:12s} n={len(x):3d}  min {min(x):8.1f}  "
-              f"p25 {quantile(x, .25):8.1f}  mediana {statistics.median(x):8.1f}  "
+              f"p25 {quantile(x, .25):8.1f}  median {statistics.median(x):8.1f}  "
               f"p75 {quantile(x, .75):8.1f}  max {max(x):8.1f}  "
               f"MAD {mad(x):6.1f}   (ms)")
 
     magri = [c for c in CASI if len(serie[c]) < MINIMO_CAMPIONI]
     if magri:
-        print(f"    {GIALLO}??{GRIGIO}  ⚠ meno di {MINIMO_CAMPIONI} campioni per "
-              f"{', '.join(magri)}: il verdetto sulle mediane e' SOSPESO, non verde")
+        print(f"    {GIALLO}??{GRIGIO}  ⚠ fewer than {MINIMO_CAMPIONI} samples for "
+              f"{', '.join(magri)}: the verdict on the medians is SUSPENDED, not green")
         sospeso = True
 
     print()
-    print("    differenza delle mediane, con l'intervallo al 95 % che la contiene:")
+    print("    difference of the medians, with the 95 % interval that contains it:")
     for u, v in (("inesistente", "sbagliata"), ("inesistente", "giusta"),
                  ("sbagliata", "giusta")):
         xa, xb = serie[u], serie[v]
         if len(xa) < 3 or len(xb) < 3:
-            print(f"    {GIALLO}??{GRIGIO}  {u} − {v}: campioni insufficienti "
-                  f"({len(xa)} e {len(xb)})")
+            print(f"    {GIALLO}??{GRIGIO}  {u} − {v}: insufficient samples "
+                  f"({len(xa)} and {len(xb)})")
             sospeso = True
             continue
         d = statistics.median(xa) - statistics.median(xb)
@@ -1425,221 +1427,221 @@ def verdetto(a):
         contiene_zero = lo <= 0.0 <= hi
         n_ora = min(len(xa), len(xb))
         n_serve = int(n_ora * (risoluzione / RISOLUZIONE_VOLUTA) ** 2) + 1
-        marca = f"{ROSSO}SI DISTINGUONO{GRIGIO}" if not contiene_zero else (
-            f"{VERDE}indistinguibili{GRIGIO}" if risoluzione <= RISOLUZIONE_VOLUTA
-            else f"{GIALLO}SOSPESO{GRIGIO}")
+        marca = f"{ROSSO}DISTINGUISHABLE{GRIGIO}" if not contiene_zero else (
+            f"{VERDE}indistinguishable{GRIGIO}" if risoluzione <= RISOLUZIONE_VOLUTA
+            else f"{GIALLO}SUSPENDED{GRIGIO}")
         segreto = (u, v) == ("inesistente", "sbagliata")
-        nota = "  ⚠ e' QUESTA la coppia che dice i nomi degli utenti" if segreto \
-            else "  (⚠ questa coppia non porta nessun segreto: vedi sotto)"
+        nota = "  ⚠ THIS is the pair that tells the user names" if segreto \
+            else "  (⚠ this pair carries no secret: see below)"
         print(f"      {u:12s} − {v:12s} {d:+9.1f} ms   "
-              f"[{lo:+8.1f}; {hi:+8.1f}]   risoluzione ±{risoluzione:.1f} ms   "
+              f"[{lo:+8.1f}; {hi:+8.1f}]   resolution ±{risoluzione:.1f} ms   "
               f"{marca}{nota}")
         if not contiene_zero:
-            # ⛔⭐ E QUI LE TRE COPPIE NON VALGONO LA STESSA COSA, ED E' UN PUNTO
-            #    IN CUI I DOCUMENTI AMMETTONO DUE LETTURE.
+            # ⛔⭐ AND HERE THE THREE PAIRS ARE NOT WORTH THE SAME, AND IT IS A POINT
+            #    WHERE THE DOCUMENTS ALLOW TWO READINGS.
             #
-            #    `FASI.md` §01-filo-nudo B8 chiede **le tre mediane
-            #    indistinguibili**, e §4.4-bis vuole il ritardo fisso «anche
-            #    quando la risposta e' AMMESSO».  ⚠ Ma quel che §4.4 VIETA di
-            #    far sapere e' una cosa sola: se un nome utente esista — «il
-            #    server NON DEVE distinguere nel motivo fra utente inesistente e
-            #    parola d'ordine sbagliata».
+            #    `FASI.md` §01-filo-nudo B8 asks for **the three medians
+            #    indistinguishable**, and §4.4-bis wants the fixed delay «even
+            #    when the answer is AMMESSO».  ⚠ But what §4.4 FORBIDS letting be
+            #    known is one thing only: whether a user name exists — «the
+            #    server MUST NOT distinguish in the reason between user does not
+            #    exist and wrong password».
             #
-            #    ⛔ «Ammesso» contro «respinto», invece, il filo lo dice da se':
-            #       sono due MESSAGGI diversi, `AMMESSO` e `RESPINTO`.  Un
-            #       cronometro che li separa non aggiunge niente a quel che il
-            #       client legge gia' nel messaggio.
+            #    ⛔ «Admitted» against «refused», instead, the wire says by itself:
+            #       they are two different MESSAGES, `AMMESSO` and `RESPINTO`.  A
+            #       stopwatch that separates them adds nothing to what the client
+            #       already reads in the message.
             #
-            # ⭐ Quindi: la coppia «inesistente − sbagliata» che si separa e' un
-            #    difetto NOSTRO e va in rosso pieno.  Le altre due che si
-            #    separano vanno nel loro contatore, che porta a un esito
-            #    diverso e col colpevole nominato.  ⚠ Non si sceglie la lettura
-            #    comoda e non si tace: si eseguono tutt'e due e si dice quale
-            #    numero appartiene a quale.
+            # ⭐ So: the pair «inesistente − sbagliata» that separates is a defect
+            #    of OURS and goes into full red.  The other two that separate go
+            #    into their own counter, which leads to a different outcome with
+            #    the culprit named.  ⚠ The convenient reading is not chosen and
+            #    nothing is kept quiet: both are run and it is said which number
+            #    belongs to which.
             if segreto:
-                print(f"           ⛔ E QUESTA E' LA SEPARAZIONE CHE §4.4 VIETA: "
-                      f"col cronometro si legge se un nome utente esiste, che e' "
-                      f"esattamente la cosa che il divieto sul motivo esiste per "
-                      f"nascondere")
+                print(f"           ⛔ AND THIS IS THE SEPARATION §4.4 FORBIDS: "
+                      f"with the stopwatch one reads whether a user name exists, which is "
+                      f"exactly the thing the ban on the reason exists to "
+                      f"hide")
                 guasti += 1
             else:
-                print(f"           ⚠ questa separazione NON dice niente che il "
-                      f"filo non dica gia': «ammesso» e «respinto» sono due "
-                      f"MESSAGGI diversi (§4.4).  Conta lo stesso — "
-                      f"`FASI.md` §01-filo-nudo B8 chiede le TRE mediane "
-                      f"indistinguibili — ma nel suo contatore, e col colpevole "
-                      f"nominato in fondo")
+                print(f"           ⚠ this separation says NOTHING the "
+                      f"wire does not already say: «admitted» and «refused» are two "
+                      f"different MESSAGES (§4.4).  It counts anyway — "
+                      f"`FASI.md` §01-filo-nudo B8 asks for the THREE medians "
+                      f"indistinguishable — but in its own counter, and with the culprit "
+                      f"named at the end")
                 guasti_mediane += 1
         elif risoluzione > RISOLUZIONE_VOLUTA:
-            print(f"           ⚠ per arrivare a ±{RISOLUZIONE_VOLUTA:.0f} ms con "
-                  f"questo rumore servirebbero ~{n_serve} campioni per caso "
-                  f"(adesso {n_ora})")
+            print(f"           ⚠ to get to ±{RISOLUZIONE_VOLUTA:.0f} ms with "
+                  f"this noise ~{n_serve} samples per case would be needed "
+                  f"(now {n_ora})")
             sospeso = True
 
-    # ── 3. il giro del ban ──────────────────────────────────────────────────
+    # ── 3. the ban run ──────────────────────────────────────────────────────
     print()
-    print("    == ⛔ Il ban: tre fallite con TRE NOMI DIVERSI, poi la parola GIUSTA")
+    print("    == ⛔ The ban: three failed with THREE DIFFERENT NAMES, then the RIGHT password")
     giro = sorted([r for r in dati if r["tipo"] == "ban"], key=lambda r: r["ordine"])
     if len(giro) != 4:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ il giro del ban ha {len(giro)} tentativi "
-              f"invece di 4: non e' la sequenza che §4.4-bis descrive")
+        print(f"    {ROSSO}NO{GRIGIO}  ⛔ the ban run has {len(giro)} attempts "
+              f"instead of 4: it is not the sequence §4.4-bis describes")
         guasti += 1
     else:
         def nomina(msg, motivo):
             return MOTIVI.get(motivo, str(motivo)) if motivo is not None else (msg or "errore")
-        print(f"        nomi:     " + " ".join(f"{r['nome']:18s}" for r in giro))
-        print(f"        modello:  " + " ".join(
+        print(f"        names:    " + " ".join(f"{r['nome']:18s}" for r in giro))
+        print(f"        model:    " + " ".join(
             f"{nomina(r['atteso_modello'], r['atteso_motivo']):18s}" for r in giro))
-        print(f"        sul filo: " + " ".join(
+        print(f"        on wire:  " + " ".join(
             f"{nomina(r['messaggio'], r['motivo']):18s}" for r in giro))
-        # ⛔ I TRE NOMI DEVONO ESSERE DIVERSI, e lo confronta il banco.
+        # ⛔ THE THREE NAMES MUST BE DIFFERENT, and the bench compares it.
         nomi = [r["nome"] for r in giro[:3]]
         if len(set(nomi)) != 3:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ i tre nomi non sono diversi ({nomi}): "
-                  f"con lo stesso nome tre volte un server col vecchio contatore "
-                  f"PER NOME darebbe verde, e il banco proverebbe la regola "
-                  f"sbagliata")
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ the three names are not different ({nomi}): "
+                  f"with the same name three times a server with the old per-NAME "
+                  f"counter would give green, and the bench would prove the wrong "
+                  f"rule")
             guasti += 1
         else:
-            print(f"    {VERDE}OK{GRIGIO}  i tre nomi sono diversi: il conto "
-                  f"guarda l'indirizzo e non il nome (`DECISIONI.md` §1.9)")
+            print(f"    {VERDE}OK{GRIGIO}  the three names are different: the count "
+                  f"looks at the address and not at the name (`DECISIONI.md` §1.9)")
         divergenti = [r["ordine"] for r in giro
                       if r["messaggio"] != r["atteso_modello"]
                       or r["motivo"] != r["atteso_motivo"]]
         if divergenti:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ il filo e il modello di §4.4-bis si "
-                  f"dividono ai tentativi {divergenti}")
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ the wire and the model of §4.4-bis "
+                  f"split at attempts {divergenti}")
             guasti += 1
         quarto = giro[3]
         if quarto["motivo"] == TROPPI_TENTATIVI:
-            print(f"    {VERDE}OK{GRIGIO}  ⭐ il QUARTO tentativo aveva la parola "
-                  f"d'ordine GIUSTA ed e' stato rifiutato lo stesso, con "
-                  f"TROPPI_TENTATIVI: e' la riga che distingue un ban da un "
-                  f"contatore")
+            print(f"    {VERDE}OK{GRIGIO}  ⭐ the FOURTH attempt had the RIGHT "
+                  f"password and was refused anyway, with "
+                  f"TROPPI_TENTATIVI: it is the line that tells a ban from a "
+                  f"counter")
         else:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ il quarto tentativo — parola GIUSTA — "
-                  f"ha ricevuto {nomina(quarto['messaggio'], quarto['motivo'])} "
-                  f"invece di TROPPI_TENTATIVI")
-            print(f"        ⚠ e se e' AMMESSO, il ban non e' scattato: guarda il "
-                  f"registro del server qui sotto, riga «BANNATO l'indirizzo»")
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ the fourth attempt — RIGHT password — "
+                  f"received {nomina(quarto['messaggio'], quarto['motivo'])} "
+                  f"instead of TROPPI_TENTATIVI")
+            print(f"        ⚠ and if it is AMMESSO, the ban did not trigger: look at the "
+                  f"server log below, line «BANNED address»")
             guasti += 1
-        # ⛔ E la scheda gia' aperta: il motivo viaggia ANCHE nel codice di
-        #    chiusura della sessione (§3.1 punto 3, §4.4-bis punto 2), e si
-        #    verifica DAL LATO CHE RICEVE.
+        # ⛔ And the tab already open: the reason travels ALSO in the session
+        #    closing code (§3.1 point 3, §4.4-bis point 2), and it is verified
+        #    FROM THE RECEIVING SIDE.
         if quarto.get("chiusura") == TROPPI_TENTATIVI:
-            print(f"    {VERDE}OK{GRIGIO}  ⭐ e la sessione WebTransport si e' "
-                  f"chiusa con TROPPI_TENTATIVI nel codice d'errore "
-                  f"applicativo — letto dal lato che riceve (§3.1 punto 3)")
+            print(f"    {VERDE}OK{GRIGIO}  ⭐ and the WebTransport session "
+                  f"closed with TROPPI_TENTATIVI in the application error "
+                  f"code — read from the receiving side (§3.1 point 3)")
         else:
             c = quarto.get("chiusura")
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ il codice di chiusura della sessione "
-                  f"e' {MOTIVI.get(c, c)}, non TROPPI_TENTATIVI: la scheda gia' "
-                  f"aperta — quella che non ricarica la pagina — resterebbe ad "
-                  f"aspettare (§4.4-bis punto 2)")
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ the session closing code "
+                  f"is {MOTIVI.get(c, c)}, not TROPPI_TENTATIVI: the tab already "
+                  f"open — the one that does not reload the page — would stay "
+                  f"waiting (§4.4-bis point 2)")
             guasti += 1
 
-    # ── 4. i tre controlli che dicono NO ────────────────────────────────────
+    # ── 4. the three checks that say NO ─────────────────────────────────────
     print()
-    print("    == ⭐ I tre controlli che dicono NO")
+    print("    == ⭐ The three checks that say NO")
 
-    # 4a. un altro indirizzo entra subito
+    # 4a. another address gets in right away
     altro = [r for r in dati if r["tipo"] == "controllo"
              and r["etichetta"] == "altro-indirizzo"]
     if not altro:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ manca il controllo «un altro indirizzo "
-              f"entra»: senza, «il quarto e' rifiutato» e' compatibile con un "
-              f"server che ha smesso di funzionare")
+        print(f"    {ROSSO}NO{GRIGIO}  ⛔ the check «another address gets "
+              f"in» is missing: without it, «the fourth is refused» is compatible with a "
+              f"server that stopped working")
         guasti += 1
     elif all(r["messaggio"] == "AMMESSO" for r in altro):
-        print(f"    {VERDE}OK{GRIGIO}  1. un ALTRO indirizzo entra subito con le "
-              f"credenziali buone ({len(altro)} tentativi): il server non ha "
-              f"smesso di funzionare, e il conto e' per indirizzo")
+        print(f"    {VERDE}OK{GRIGIO}  1. ANOTHER address gets in right away with the "
+              f"good credentials ({len(altro)} attempts): the server has not "
+              f"stopped working, and the count is per address")
     else:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ 1. l'altro indirizzo NON entra: "
+        print(f"    {ROSSO}NO{GRIGIO}  ⛔ 1. the other address does NOT get in: "
               f"{[r['messaggio'] for r in altro]}")
-        print(f"        ⚠ quattro cause: (1) il ban non e' per indirizzo — il "
-              f"difetto; (2) quell'indirizzo ha un conto suo aperto; (3) PAM non "
-              f"consente di verificare quell'utente; (4) l'utente non esiste o "
-              f"non ha parola d'ordine")
+        print(f"        ⚠ four causes: (1) the ban is not per address — the "
+              f"defect; (2) that address has a count of its own open; (3) PAM does not "
+              f"allow verifying that user; (4) the user does not exist or "
+              f"has no password")
         guasti += 1
 
-    # 4b. l'azzeramento
+    # 4b. the reset
     azz = sorted([r for r in dati if r["tipo"] == "controllo"
                   and r["etichetta"] == "azzeramento"], key=lambda r: r["ordine"])
     if len(azz) != 5:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ 2. il controllo dell'azzeramento ha "
-              f"{len(azz)} tentativi invece di 5")
+        print(f"    {ROSSO}NO{GRIGIO}  ⛔ 2. the reset check has "
+              f"{len(azz)} attempts instead of 5")
         guasti += 1
     else:
         motivi = [r["motivo"] for r in azz]
         bloccati = [r["ordine"] for r in azz if r["motivo"] == TROPPI_TENTATIVI]
         if not bloccati and azz[2]["messaggio"] == "AMMESSO":
-            print(f"    {VERDE}OK{GRIGIO}  2. due falliti · UNO RIUSCITO · due "
-                  f"falliti: nessun blocco.  Se il successo non azzerasse, il "
-                  f"terzo fallito avrebbe fatto scattare il ban")
+            print(f"    {VERDE}OK{GRIGIO}  2. two failed · ONE SUCCEEDED · two "
+                  f"failed: no block.  If the success did not reset, the "
+                  f"third failed one would have made the ban trigger")
         else:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ 2. l'azzeramento non c'e' stato "
-                  f"(bloccati: {bloccati or 'nessuno'}; il terzo passo ha "
-                  f"ricevuto {azz[2]['messaggio']})")
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ 2. the reset did not happen "
+                  f"(blocked: {bloccati or 'none'}; the third step "
+                  f"received {azz[2]['messaggio']})")
             guasti += 1
-        # ⛔ E il controllo del controllo: la pagina deve dire che quell'indirizzo
-        #    NON e' bannato.  Senza, «nessun blocco» sarebbe compatibile con un
-        #    server che ha bannato e non lo dice.
+        # ⛔ And the check of the check: the page must say that address is NOT
+        #    banned.  Without it, «no block» would be compatible with a server
+        #    that banned and does not say so.
         dopo = [r for r in pagine if r["etichetta"] == "azzeramento-dopo"]
         if dopo and dopo[0].get("bannato") is False:
-            print(f"        ⭐ e la pagina lo conferma da fuori: quell'indirizzo "
-                  f"non e' bannato (il conto vale {len([m for m in motivi if m == CREDENZIALI_ERRATE])} "
-                  f"su {SOGLIA})")
+            print(f"        ⭐ and the page confirms it from outside: that address "
+                  f"is not banned (the count is {len([m for m in motivi if m == CREDENZIALI_ERRATE])} "
+                  f"out of {SOGLIA})")
         elif dopo:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ ma la pagina dice bannato="
-                  f"{dopo[0].get('bannato')}: il filo e la pagina non concordano")
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ but the page says bannato="
+                  f"{dopo[0].get('bannato')}: the wire and the page do not agree")
             guasti += 1
 
-    # 4c. la persistenza
+    # 4c. persistence
     print()
     prima = [r for r in pagine if r["etichetta"] == "bannato-prima"]
     dopo = [r for r in pagine if r["etichetta"] == "bannato-dopo-riavvio"]
     filo_dopo = [r for r in dati if r["tipo"] == "controllo"
                  and r["etichetta"] == "dopo-riavvio"]
     if not prima or not dopo:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ 3. la persistenza non e' stata provata "
-              f"(pagina prima: {len(prima)}, dopo il riavvio: {len(dopo)}): "
-              f"senza, il ban puo' vivere in memoria e un aggiornamento del "
-              f"pacchetto regala tre tentativi a chiunque — invariante I7")
+        print(f"    {ROSSO}NO{GRIGIO}  ⛔ 3. persistence was not proved "
+              f"(page before: {len(prima)}, after the restart: {len(dopo)}): "
+              f"without it, the ban may live in memory and a package update "
+              f"gives three attempts to anyone — invariant I7")
         guasti += 1
     elif dopo[0].get("bannato") is True and filo_dopo and \
             all(r["motivo"] == TROPPI_TENTATIVI for r in filo_dopo):
-        print(f"    {VERDE}OK{GRIGIO}  3. il ban SOPRAVVIVE al riavvio del "
-              f"server: dopo la seconda accensione la pagina lo dice ancora, e "
-              f"sul filo il tentativo con la parola giusta riceve ancora "
+        print(f"    {VERDE}OK{GRIGIO}  3. the ban SURVIVES the restart of the "
+              f"server: after the second start the page still says it, and "
+              f"on the wire the attempt with the right password still receives "
               f"TROPPI_TENTATIVI")
     else:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ 3. dopo il riavvio l'indirizzo non e' "
-              f"piu' bannato: pagina bannato={dopo[0].get('bannato')}, sul filo "
+        print(f"    {ROSSO}NO{GRIGIO}  ⛔ 3. after the restart the address is no "
+              f"longer banned: page bannato={dopo[0].get('bannato')}, on the wire "
               f"{[MOTIVI.get(r['motivo'], r['messaggio']) for r in filo_dopo]}")
         guasti += 1
 
-    # ── 5. quel che l'utente vede ───────────────────────────────────────────
+    # ── 5. what the user sees ───────────────────────────────────────────────
     print()
-    print("    == ⛔ Quel che l'utente vede: la pagina si carica LO STESSO")
-    # ⛔ E si dichiara che cosa questa lettura NON e', qui e non solo nei
-    #    commenti: chi legge un verdetto legge il verdetto.
-    print(f"    --  `[?]` letto con un socket, non con un browser: la frase la "
-          f"scrive il server nel corpo e nessuno script la costruisce, quindi "
-          f"quel che un browser mostrerebbe e' questo testo — ⚠ ma un motore "
-          f"vero non l'ha guardata, e `FASI.md` §01-filo-nudo B8 chiede il DOM "
-          f"«come per le otto frasi di B7»")
-    # ⛔ E DI QUALE SERVER PARLANO QUESTE TRE RIGHE — R12.2, e si stampa nel
-    #    verdetto perche' chi legge un verdetto legge il verdetto.
-    print(f"    --  ⛔ i tre marcatori cercati qui (`data-bannato`, "
-          f"`data-restano-ms`, «tentativi esauriti») li produce SOLO l'innesto "
-          f"di `01-b3-rcp-innesta.py`.  Il server di prodotto in `src/` scrive "
-          f"la stessa cosa in un formato senza un campo in comune: puntando "
-          f"questo banco li', queste tre righe diventerebbero rosse SU UN "
-          f"SERVER CHE IL BAN LO FA")
+    print("    == ⛔ What the user sees: the page loads ANYWAY")
+    # ⛔ And it is declared what this reading is NOT, here and not only in the
+    #    comments: whoever reads a verdict reads the verdict.
+    print(f"    --  `[?]` read with a socket, not with a browser: the phrase is "
+          f"written by the server in the body and no script builds it, so "
+          f"what a browser would show is this text — ⚠ but a real engine "
+          f"has not looked at it, and `FASI.md` §01-filo-nudo B8 asks for the DOM "
+          f"«as for the eight phrases of B7»")
+    # ⛔ AND WHICH SERVER THESE THREE LINES SPEAK OF — R12.2, and it is printed in the
+    #    verdict because whoever reads a verdict reads the verdict.
+    print(f"    --  ⛔ the three markers looked for here (`data-bannato`, "
+          f"`data-restano-ms`, «attempts exhausted») are produced ONLY by the graft "
+          f"of `01-b3-rcp-innesta.py`.  The product server in `src/` writes "
+          f"the same thing in a format without a field in common: pointing "
+          f"this bench there, these three lines would become red ON A "
+          f"SERVER THAT DOES BAN")
     if not pagine:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ nessuna lettura della pagina: il punto 1 "
-              f"di §4.4-bis non e' stato provato affatto")
+        print(f"    {ROSSO}NO{GRIGIO}  ⛔ no reading of the page: point 1 "
+              f"of §4.4-bis was not proved at all")
         guasti += 1
     for r in pagine:
         atteso = r["atteso_bannato"]
@@ -1649,8 +1651,8 @@ def verdetto(a):
         if atteso and buona:
             buona = r["ore"] is not None
         segno = f"{VERDE}OK{GRIGIO}" if buona else f"{ROSSO}NO{GRIGIO}"
-        print(f"    {segno}  {r['etichetta']:22s} da {r['indirizzo']:13s} → "
-              f"HTTP {r['stato']} · bannato={r['bannato']} (atteso {atteso}) · "
+        print(f"    {segno}  {r['etichetta']:22s} from {r['indirizzo']:13s} → "
+              f"HTTP {r['stato']} · bannato={r['bannato']} (expected {atteso}) · "
               f"frase={r['frase']} · ore={r['ore']} minuti={r['minuti']}"
               f"{' · ⛔ ' + r['errore'] if r['errore'] else ''}")
         if not buona:
@@ -1658,284 +1660,283 @@ def verdetto(a):
     bannate = [r for r in pagine if r["atteso_bannato"] and r["ore"] is not None]
     if bannate:
         ore = bannate[0]["ore"]
-        # ⚠ Le ore che mancano devono essere PLAUSIBILI: 12 appena bannati.  Un
-        #   «restano 0 ore» o un «restano 4 miliardi» direbbe che l'orologio
-        #   della pagina non e' quello della sessione — il difetto piu' facile
-        #   da fare e il piu' difficile da vedere.
+        # ⚠ The hours left must be PLAUSIBLE: 12 right after the ban.  A
+        #   «0 hours left» or a «4 billion left» would say that the page's clock
+        #   is not the session's — the easiest defect to make and the hardest
+        #   to see.
         if 1 <= ore <= BAN_ORE:
-            print(f"    {VERDE}OK{GRIGIO}  e le ore che mancano sono plausibili "
-                  f"({ore} su {BAN_ORE}): l'orologio della pagina e' quello "
-                  f"della sessione")
+            print(f"    {VERDE}OK{GRIGIO}  and the hours left are plausible "
+                  f"({ore} out of {BAN_ORE}): the page's clock is the "
+                  f"session's")
         else:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ la pagina dice che mancano {ore} ore, "
-                  f"e il ban dura {BAN_ORE}: i due orologi non sono lo stesso")
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ the page says {ore} hours are left, "
+                  f"and the ban lasts {BAN_ORE}: the two clocks are not the same")
             guasti += 1
 
-    # ── 6. lo sblocco — e si prova IN FONDO ─────────────────────────────────
+    # ── 6. the unblock — and it is tested AT THE END ────────────────────────
     print()
-    print("    == ⛔ Il comando di sblocco, provato IN FONDO (B0.3)")
+    print("    == ⛔ The unblock command, tested AT THE END (B0.3)")
     finali = [r for r in sblocchi if r["etichetta"].startswith("prova-")]
     if not finali:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ lo sblocco non e' stato provato su un ban "
-              f"vero: «tolto» e «non c'era» non sono stati distinti")
+        print(f"    {ROSSO}NO{GRIGIO}  ⛔ the unblock was not tested on a real "
+              f"ban: «removed» and «was not there» were not told apart")
         guasti += 1
     for r in finali:
         buono = r["esito"] == r["preteso"]
         segno = f"{VERDE}OK{GRIGIO}" if buono else f"{ROSSO}NO{GRIGIO}"
         print(f"    {segno}  {r['etichetta']:22s} «{r['indirizzo']}» → "
-              f"{r['esito']} (atteso {r['preteso']})")
+              f"{r['esito']} (expected {r['preteso']})")
         if not buono:
             guasti += 1
     dopo_sblocco = [r for r in dati if r["tipo"] == "controllo"
                     and r["etichetta"] == "dopo-sblocco"]
     if dopo_sblocco and all(r["messaggio"] == "AMMESSO" for r in dopo_sblocco):
-        print(f"    {VERDE}OK{GRIGIO}  ⭐ e dopo lo sblocco quell'indirizzo ENTRA: "
-              f"lo sblocco non ha solo cambiato una risposta, ha rimesso "
-              f"l'indirizzo dentro")
+        print(f"    {VERDE}OK{GRIGIO}  ⭐ and after the unblock that address GETS IN: "
+              f"the unblock did not only change an answer, it put the "
+              f"address back inside")
     else:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ dopo lo sblocco l'indirizzo non entra "
-              f"({[r['messaggio'] for r in dopo_sblocco] or 'non provato'})")
+        print(f"    {ROSSO}NO{GRIGIO}  ⛔ after the unblock the address does not get in "
+              f"({[r['messaggio'] for r in dopo_sblocco] or 'not tested'})")
         guasti += 1
 
-    # ── 7. il secondo testimone ─────────────────────────────────────────────
+    # ── 7. the second witness ───────────────────────────────────────────────
     print()
-    print("    == ⚠ Il registro del server — diagnosi e denominatore, NON arbitro")
+    print("    == ⚠ The server log — diagnosis and denominator, NOT arbiter")
     reg, perche = leggi_registro(a.registro)
     if reg is None:
         print(f"    --  {perche}")
-        # ⛔ Non e' l'arbitro, ma senza di lui due controlli qui sopra non hanno
-        #    il loro denominatore: si dice, invece di far finta di niente.
-        print(f"    {GIALLO}??{GRIGIO}  ⚠ senza il registro non posso dire quante "
-              f"vite del server ci sono state ne' quanti ban ha caricato: il "
-              f"verdetto sulla persistenza vale meno di quel che sembra")
+        # ⛔ It is not the arbiter, but without it two checks above do not have
+        #    their denominator: it is said, instead of pretending nothing.
+        print(f"    {GIALLO}??{GRIGIO}  ⚠ without the log I cannot say how many "
+              f"server lives there were nor how many bans it loaded: the "
+              f"verdict on persistence is worth less than it seems")
         sospeso = True
     else:
         def med(x):
-            return f"{statistics.median(x):.0f} ms" if x else "— (nessuna riga)"
-        print(f"    --  vite del server nel registro: {reg['vite']}  "
-              f"(attese 2: una per i campioni e il ban, una per la persistenza)")
+            return f"{statistics.median(x):.0f} ms" if x else "— (no lines)"
+        print(f"    --  server lives in the log: {reg['vite']}  "
+              f"(expected 2: one for the samples and the ban, one for persistence)")
         for r in reg["avvii"]:
             print(f"        {r}")
-        print(f"    --  «il secondo fisso e' passato»: n={len(reg['fissi'])}  "
-              f"mediana {med(reg['fissi'])}  "
-              f"(ammessi {med(reg['ammessi'])} su {len(reg['ammessi'])} · "
-              f"respinti {med(reg['respinti'])} su {len(reg['respinti'])} · "
-              f"senza verdetto leggibile: {len(reg['senza_pam'])})")
-        # ── ⛔ IL BANCO CIECO SI DEVE VEDERE — 12 agosto 2026 ────────────────
+        print(f"    --  «the fixed second has passed»: n={len(reg['fissi'])}  "
+              f"median {med(reg['fissi'])}  "
+              f"(admitted {med(reg['ammessi'])} out of {len(reg['ammessi'])} · "
+              f"refused {med(reg['respinti'])} out of {len(reg['respinti'])} · "
+              f"without a readable verdict: {len(reg['senza_pam'])})")
+        # ── ⛔ THE BLIND BENCH MUST SHOW — 12 Aug 2026 ───────────────────────
         #
-        # ⛔ Il giro di ricertificazione ha contato **52 righe e 0 ammessi** e
-        #    il banco non ha detto niente: ha solo smesso di poter nominare
-        #    l'imputato, e l'esito e' passato da 5 a 1 su un prodotto sano.
-        #    Queste righe sono il controllo che mancava, ed e' un controllo sul
-        #    BANCO, non sul server (`REVIEWER.md` §1).
+        # ⛔ The recertification run counted **52 lines and 0 admitted** and
+        #    the bench said nothing: it only stopped being able to name the
+        #    defendant, and the outcome went from 5 to 1 on a healthy product.
+        #    These lines are the check that was missing, and it is a check on the
+        #    BENCH, not on the server (`REVIEWER.md` §1).
         cieco, righe_cieco = tutto_in_una_casella(
-            "la classificazione delle risposte di PAM nel registro", reg["pam"])
+            "the classification of the PAM answers in the log", reg["pam"])
         for r in righe_cieco:
             print(f"    --  {r}")
         for r in reg["pam_esempi"]:
-            print(f"        riga che non ho saputo leggere: {r}")
+            print(f"        line I could not read: {r}")
         if cieco:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ IL GIUDICE E' CIECO: finche' questa "
-                  f"riga e' rossa nessuna mediana qui sopra vale, perche' non e' "
-                  f"detto che sia la mediana di quel che dichiara di essere")
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ THE JUDGE IS BLIND: as long as this "
+                  f"line is red no median above counts, because it is not "
+                  f"certain it is the median of what it declares to be")
             guasti += 1
         elif reg["pam"]["illeggibile"]:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ {reg['pam']['illeggibile']} righe "
-                  f"«{R_PAM_RIGA}» non si sono lasciate leggere: l'appiglio "
-                  f"«{R_PAM.pattern}» non trova piu' il verdetto, e un verdetto "
-                  f"non letto NON e' un respinto (E8)")
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ {reg['pam']['illeggibile']} lines "
+                  f"«{R_PAM_RIGA}» could not be read: the anchor "
+                  f"«{R_PAM.pattern}» no longer finds the verdict, and a verdict "
+                  f"not read is NOT a refused one (E8)")
             guasti += 1
         if reg["senza_pam"]:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ {len(reg['senza_pam'])} campioni del "
-                  f"secondo fisso non hanno un verdetto di PAM davanti: non "
-                  f"entrano in nessuna delle due mediane, e prima del 12 agosto "
-                  f"2026 sarebbero finiti tutti fra i RESPINTI in silenzio")
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ {len(reg['senza_pam'])} samples of the "
+                  f"fixed second have no PAM verdict before them: they "
+                  f"enter neither of the two medians, and before 12 Aug "
+                  f"2026 they would all have ended up among the REFUSED silently")
             guasti += 1
-        print(f"    --  se quel numero e' ~{RITARDO_FISSO:.0f} ms a governare e' "
-              f"stato il RITARDO FISSO; se e' molto piu' alto a governare e' "
-              f"stato PAM, e una separazione fra le mediane sarebbe di PAM")
-        print(f"    --  indirizzi di provenienza visti DAL SERVER: {reg['indirizzi']}")
-        print(f"    --  righe «BANNATO»: {len(reg['ban'])} · «SBLOCCATO su "
-              f"comando»: {len(reg['sbloccati'])} · «NON era bannato»: "
-              f"{len(reg['non_bannati'])} · pagine servite: {len(reg['pagine'])}")
+        print(f"    --  if that number is ~{RITARDO_FISSO:.0f} ms what governed "
+              f"was the FIXED DELAY; if it is much higher what governed "
+              f"was PAM, and a separation between the medians would be PAM's")
+        print(f"    --  source addresses seen BY THE SERVER: {reg['indirizzi']}")
+        print(f"    --  «BANNED» lines: {len(reg['ban'])} · «UNBLOCKED on "
+              f"command»: {len(reg['sbloccati'])} · «was NOT banned»: "
+              f"{len(reg['non_bannati'])} · pages served: {len(reg['pagine'])}")
         if len(reg["indirizzi"]) < 2:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ il server ha visto UN SOLO indirizzo: "
-                  f"il margine del bilancio non c'e' stato, e i controlli che "
-                  f"separano i due indirizzi non valgono (B0.3)")
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ the server saw ONE SINGLE address: "
+                  f"the margin of the balance was not there, and the checks that "
+                  f"separate the two addresses are not valid (B0.3)")
             guasti += 1
         if reg["vite"] < 2:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ il registro vede {reg['vite']} vite "
-                  f"del server: la persistenza si prova con un RIAVVIO, e qui "
-                  f"non ce n'e' stato uno")
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ the log sees {reg['vite']} lives "
+                  f"of the server: persistence is proved with a RESTART, and here "
+                  f"there was none")
             guasti += 1
         elif reg["carichi"] and reg["carichi"][-1] == 1:
-            print(f"    {VERDE}OK{GRIGIO}  ⭐ e la seconda accensione dichiara «ban "
-                  f"caricati: 1»: il ban e' tornato dal disco, non dalla memoria")
+            print(f"    {VERDE}OK{GRIGIO}  ⭐ and the second start declares «bans "
+                  f"loaded: 1»: the ban came back from disk, not from memory")
         else:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ la seconda accensione dichiara ban "
-                  f"caricati = {reg['carichi'][-1] if reg['carichi'] else 'niente'}, "
-                  f"atteso 1")
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ the second start declares bans "
+                  f"loaded = {reg['carichi'][-1] if reg['carichi'] else 'nothing'}, "
+                  f"expected 1")
             guasti += 1
         if reg["illeggibili"]:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ {reg['illeggibili']} accensioni non "
-                  f"hanno potuto leggere il file dei ban")
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ {reg['illeggibili']} starts could not "
+                  f"read the ban file")
             guasti += 1
-        # ⛔ E ogni sblocco si scrive nel registro (§4.4-bis): il banco lo
-        #    confronta col numero di sblocchi che ha CHIESTO, o «l'ha scritto»
-        #    resta una speranza.
+        # ⛔ And every unblock is written in the log (§4.4-bis): the bench
+        #    compares it with the number of unblocks it ASKED for, or «it wrote it»
+        #    stays a hope.
         chiesti = [r for r in sblocchi if r["esito"] is not None]
         scritti = len(reg["sbloccati"]) + len(reg["non_bannati"])
         if scritti >= len(chiesti) and chiesti:
-            print(f"    {VERDE}OK{GRIGIO}  ⭐ ogni sblocco e' finito nel registro: "
-                  f"{len(chiesti)} chiesti, {scritti} righe scritte "
-                  f"({len(reg['sbloccati'])} «tolto» + {len(reg['non_bannati'])} "
-                  f"«non era bannato»)")
+            print(f"    {VERDE}OK{GRIGIO}  ⭐ every unblock ended up in the log: "
+                  f"{len(chiesti)} asked for, {scritti} lines written "
+                  f"({len(reg['sbloccati'])} «removed» + {len(reg['non_bannati'])} "
+                  f"«was not banned»)")
         else:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ sblocchi chiesti {len(chiesti)}, "
-                  f"righe nel registro {scritti}: «ogni sblocco si scrive nel "
-                  f"registro, o un ban tolto e un ban mai scattato hanno lo "
-                  f"stesso aspetto» (§4.4-bis)")
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ unblocks asked for {len(chiesti)}, "
+                  f"lines in the log {scritti}: «every unblock is written in the "
+                  f"log, or a removed ban and a ban that never triggered have the "
+                  f"same look» (§4.4-bis)")
             guasti += 1
 
-    # ── 7-bis. ⛔ I DUE CRONOMETRI, e devono concordare ──────────────────────
+    # ── 7-bis. ⛔ THE TWO STOPWATCHES, and they must agree ───────────────────
     #
-    # ⛔ Rilievo A19: la certificazione di questo banco guasta i FATTI GIA'
-    #    REGISTRATI, quindi certifica il GIUDICE e non l'ACQUISIZIONE.  Un `t0`
-    #    spostato in un punto che tiene i numeri plausibili non lo vedrebbe
-    #    nessuno dei guasti costruiti a mano.  ⭐ Questa riga e' il controllo che
-    #    l'acquisizione manca: il SERVER cronometra lo stesso fatto per conto
-    #    suo, e i due numeri hanno un verso obbligato.
+    # ⛔ Finding A19: the certification of this bench breaks the FACTS ALREADY
+    #    RECORDED, so it certifies the JUDGE and not the ACQUISITION.  A `t0`
+    #    moved to a point that keeps the numbers plausible would be seen by none
+    #    of the faults built by hand.  ⭐ This line is the check the acquisition
+    #    lacks: the SERVER times the same fact on its own, and the two numbers
+    #    have a mandatory direction.
     #
-    #    Il client parte PRIMA di spedire `CREDENZIALI` e ferma DOPO aver letto
-    #    la risposta; il server parte quando `CREDENZIALI` arriva e ferma quando
-    #    decide.  L'intervallo del client CONTIENE quello del server: puo' solo
-    #    essere piu' grande.  ⛔ Se e' piu' piccolo, il cronometro del banco non
-    #    sta misurando l'intervallo che dichiara — ed e' un difetto DEL BANCO,
-    #    non del server, che e' precisamente quel che `REVIEWER.md` §1 mette per
-    #    primo.
+    #    The client starts BEFORE sending `CREDENZIALI` and stops AFTER having
+    #    read the answer; the server starts when `CREDENZIALI` arrives and stops
+    #    when it decides.  The client's interval CONTAINS the server's: it can
+    #    only be larger.  ⛔ If it is smaller, the bench's stopwatch is not
+    #    measuring the interval it declares — and it is a defect OF THE BENCH,
+    #    not of the server, which is precisely what `REVIEWER.md` §1 puts first.
     if reg is not None and reg["fissi"] and da_pam:
         print()
-        print("    == ⛔ I due cronometri sullo stesso fatto (B0.4: si stampa E "
-              "si confronta)")
+        print("    == ⛔ The two stopwatches on the same fact (B0.4: it is printed AND "
+              "compared)")
         med_cli = statistics.median([r["ms"] for r in da_pam])
         med_srv = statistics.median(reg["fissi"])
-        print(f"    --  client (dal lato che riceve) {med_cli:.0f} ms  ·  server "
-              f"(«il secondo fisso e' passato») {med_srv:.0f} ms  ·  differenza "
+        print(f"    --  client (from the receiving side) {med_cli:.0f} ms  ·  server "
+              f"(«the fixed second has passed») {med_srv:.0f} ms  ·  difference "
               f"{med_cli - med_srv:+.0f} ms")
         if med_cli >= med_srv - MARGINE_CRONOMETRI:
-            print(f"    {VERDE}OK{GRIGIO}  il cronometro del client contiene "
-                  f"quello del server, come deve: quel che il banco misura e' "
-                  f"l'intervallo che dichiara di misurare")
+            print(f"    {VERDE}OK{GRIGIO}  the client's stopwatch contains "
+                  f"the server's, as it must: what the bench measures is "
+                  f"the interval it declares to measure")
         else:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ I DUE CRONOMETRI NON CONCORDANO: il "
-                  f"client dice {med_cli:.0f} ms dove il server ne dichiara "
-                  f"{med_srv:.0f}, e l'intervallo del client CONTIENE quello "
-                  f"del server — non puo' essere piu' corto")
-            print(f"        ⛔ Il primo sospetto e' sul banco, non sul server "
-                  f"(`LEZIONI.md` §1.9 punto 3): `t0` di `un_tentativo()` "
-                  f"cronometra meno di quel che la sua docstring dichiara, e "
-                  f"tutte le mediane qui sopra sono di un altro intervallo")
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ THE TWO STOPWATCHES DO NOT AGREE: the "
+                  f"client says {med_cli:.0f} ms where the server declares "
+                  f"{med_srv:.0f}, and the client's interval CONTAINS that "
+                  f"of the server — it cannot be shorter")
+            print(f"        ⛔ The first suspicion is on the bench, not on the server "
+                  f"(`LEZIONI.md` §1.9 point 3): `t0` of `un_tentativo()` "
+                  f"times less than what its docstring declares, and "
+                  f"all the medians above are of another interval")
             guasti += 1
 
-    # ── 7-ter. ⛔ CHI GOVERNA I TEMPI, misurato ──────────────────────────────
+    # ── 7-ter. ⛔ WHO GOVERNS THE TIMES, measured ────────────────────────────
     imputato, righe_imputato = None, []
     if guasti_mediane:
         print()
-        print("    == ⛔ Le mediane si separano: CHI le separa — e si misura "
+        print("    == ⛔ The medians separate: WHO separates them — and it is measured "
               "(A18)")
         imputato, righe_imputato = imputato_dei_tempi(serie, reg)
         for r in righe_imputato:
             print(f"    --  {r}")
         if imputato == "NOSTRO":
-            # ⛔ E allora NON e' il `[?]` gia' dichiarato di §4.4-bis: e' un
-            #    difetto nostro, e va nel contatore dei rossi veri.  Tenerlo nel
-            #    contatore delle mediane vorrebbe dire concedere a un ritardo
-            #    che abbiamo scritto noi l'indulgenza scritta per PAM.
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ la separazione NON e' quella che "
-                  f"§4.4-bis ha gia' dichiarato `[?]`: e' un ritardo nostro, e "
-                  f"conta come un rosso pieno")
+            # ⛔ And then it is NOT the `[?]` already declared by §4.4-bis: it is a
+            #    defect of ours, and it goes into the counter of the real reds.
+            #    Keeping it in the medians counter would mean granting to a delay
+            #    we wrote ourselves the leniency written for PAM.
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ the separation is NOT the one "
+                  f"§4.4-bis has already declared `[?]`: it is a delay of ours, and "
+                  f"it counts as a full red")
             guasti += 1
         elif imputato is None:
-            print(f"    {GIALLO}??{GRIGIO}  ⚠ l'imputato non e' stato misurato: "
-                  f"il verdetto dira' CHE le mediane si separano e non DA CHI, "
-                  f"che e' meno di prima e piu' vero")
+            print(f"    {GIALLO}??{GRIGIO}  ⚠ the defendant was not measured: "
+                  f"the verdict will say THAT the medians separate and not BY WHOM, "
+                  f"which is less than before and more true")
 
-    # ── L'esito ─────────────────────────────────────────────────────────────
+    # ── The outcome ─────────────────────────────────────────────────────────
     print()
-    print(f"    == L'esito, e il suo denominatore: {len(tentativi)} tentativi, "
-          f"{len(pagine)} pagine, {len(sblocchi)} sblocchi")
+    print(f"    == The outcome, and its denominator: {len(tentativi)} attempts, "
+          f"{len(pagine)} pages, {len(sblocchi)} unblocks")
     if guasti:
         print(f"    {ROSSO}⛔ B8: {guasti} "
-              f"{'punto non passa' if guasti == 1 else 'punti non passano'}{GRIGIO}")
+              f"{'point does not pass' if guasti == 1 else 'points do not pass'}{GRIGIO}")
         if guasti_mediane:
-            print(f"    ⚠ e {guasti_mediane} coppie di mediane si separano, e "
-                  f"l'imputato e' «{imputato or 'NON MISURATO'}»:")
+            print(f"    ⚠ and {guasti_mediane} pairs of medians separate, and "
+                  f"the defendant is «{imputato or 'NOT MEASURED'}»:")
             for r in righe_imputato:
                 print(f"       {r}")
             if imputato != "NOSTRO":
-                print(f"    ⚠ guarda le mediane DOPO aver curato i {guasti} "
-                      f"punti qui sopra")
+                print(f"    ⚠ look at the medians AFTER having cured the {guasti} "
+                      f"points above")
         return 1
     if guasti_mediane:
-        # ⛔ IL QUINTO ESITO, e nasce da una misura, non da un'indulgenza — e da
-        #    stanotte l'imputato lo nomina `imputato_dei_tempi()`, che lo LEGGE
-        #    nei numeri, invece di una frase costante (A18).
-        print(f"    {ROSSO}⛔ B8: {guasti_mediane} coppie di mediane SI SEPARANO "
-              f"— «le tre mediane indistinguibili» di `FASI.md` §01-filo-nudo B8 "
-              f"non e' soddisfatta{GRIGIO}")
-        print(f"    ⭐ ma la coppia che porta il SEGRETO — «inesistente − "
-              f"sbagliata», l'unica che direbbe se un nome utente esiste — NON "
-              f"si separa: quel che §4.4 vieta non e' leggibile col cronometro")
-        print(f"    ⭐ e il ban passa per intero: scatta al terzo, rifiuta il "
-              f"quarto con la parola giusta, sopravvive al riavvio, lo dice "
-              f"nella pagina, e lo sblocco lo toglie")
+        # ⛔ THE FIFTH OUTCOME, and it is born from a measurement, not from leniency —
+        #    and since tonight the defendant is named by `imputato_dei_tempi()`,
+        #    which READS it in the numbers, instead of a constant sentence (A18).
+        print(f"    {ROSSO}⛔ B8: {guasti_mediane} pairs of medians DO SEPARATE "
+              f"— «the three medians indistinguishable» of `FASI.md` §01-filo-nudo B8 "
+              f"is not satisfied{GRIGIO}")
+        print(f"    ⭐ but the pair that carries the SECRET — «inesistente − "
+              f"sbagliata», the only one that would say whether a user name exists — does "
+              f"NOT separate: what §4.4 forbids is not readable with the stopwatch")
+        print(f"    ⭐ and the ban passes in full: it triggers at the third, refuses the "
+              f"fourth with the right password, survives the restart, says it "
+              f"in the page, and the unblock removes it")
         for r in righe_imputato:
             print(f"    ⚠ {r}")
         if imputato == "PAM":
-            print(f"    ⚠ E' il `[?]` che §4.4-bis ha gia' dichiarato il 10 "
-                  f"agosto 2026 e che il ban NON chiude: sono due proprieta' "
-                  f"diverse.  ⛔ Questo esito NON e' un verde, ed e' tenuto "
-                  f"separato dal rosso di sopra per una ragione sola — un "
-                  f"banco sempre rosso non fa fallire nessuna regressione, "
-                  f"perche' nessuno lo guarda piu'.")
+            print(f"    ⚠ It is the `[?]` that §4.4-bis already declared on 10 "
+                  f"Aug 2026 and that the ban does NOT close: they are two different "
+                  f"properties.  ⛔ This outcome is NOT a green, and it is kept "
+                  f"separate from the red above for one reason only — a "
+                  f"bench that is always red makes no regression fail, "
+                  f"because nobody looks at it any more.")
             return 5
-        # ⛔ Senza imputato misurato l'indulgenza del quinto esito non si
-        #    applica: e' scritta per PAM, e concederla a un ritardo di cui non
-        #    si sa la provenienza vorrebbe dire assolvere chiunque.
-        print(f"    ⛔ E l'imputato NON e' PAM (o non e' stato misurato): "
-              f"l'esito 5 — l'indulgenza del `[?]` gia' dichiarato — NON si "
-              f"applica, perche' e' scritta per `pam_faildelay` e non per un "
-              f"ritardo qualunque")
+        # ⛔ Without a measured defendant the leniency of the fifth outcome does not
+        #    apply: it is written for PAM, and granting it to a delay of unknown
+        #    origin would mean acquitting anyone.
+        print(f"    ⛔ And the defendant is NOT PAM (or it was not measured): "
+              f"outcome 5 — the leniency of the `[?]` already declared — does NOT "
+              f"apply, because it is written for `pam_faildelay` and not for "
+              f"any delay whatsoever")
         return 1
     if sospeso:
-        print(f"    {GIALLO}⚠ B8 SOSPESO: il ban passa, ma quel che ho guardato "
-              f"sulle mediane non basta a chiamarle «indistinguibili»{GRIGIO}")
-        print(f"    ⚠ «non ho visto una differenza» e «non c'e' una differenza» "
-              f"sono due cose diverse: rilancia con piu' blocchi")
+        print(f"    {GIALLO}⚠ B8 SUSPENDED: the ban passes, but what I looked at "
+              f"on the medians is not enough to call them «indistinguishable»{GRIGIO}")
+        print(f"    ⚠ «I did not see a difference» and «there is no difference» "
+              f"are two different things: run again with more blocks")
         return 3
-    print(f"    {VERDE}⭐ B8 passa: ogni risposta di PAM ≥ {RITARDO_FISSO:.0f} ms, "
-          f"le tre mediane non si separano oltre il rumore, il ban scatta al "
-          f"terzo e rifiuta il quarto con la parola giusta, sopravvive al "
-          f"riavvio, lo dice nella pagina, e lo sblocco lo toglie{GRIGIO}")
-    print(f"    ⚠ e vale fin dove si e' guardato: le risoluzioni sono stampate "
-          f"qui sopra, coppia per coppia")
+    print(f"    {VERDE}⭐ B8 passes: every PAM answer ≥ {RITARDO_FISSO:.0f} ms, "
+          f"the three medians do not separate beyond the noise, the ban triggers at the "
+          f"third and refuses the fourth with the right password, survives the "
+          f"restart, says it in the page, and the unblock removes it{GRIGIO}")
+    print(f"    ⚠ and it holds as far as one looked: the resolutions are printed "
+          f"above, pair by pair")
     return 0
 
 
 # ===========================================================================
-# ⛔⭐ LA CERTIFICAZIONE DEL BANCO — `LEZIONI.md` §1.2 e §1.3
+# ⛔⭐ THE CERTIFICATION OF THE BENCH — `LEZIONI.md` §1.2 and §1.3
 # ===========================================================================
-# *«Il banco si certifica prima della misura»*, e *«un banco che NON riproduce
-# non e' una prova di correttezza»*.  Qui si costruisce **un guasto per volta,
-# a mano**, dentro i fatti che il giro ha appena prodotto, e si pretende che il
-# verdetto diventi rosso **in quel punto** — non genericamente rosso.
+# *«The bench certifies itself before the measurement»*, and *«a bench that does
+# NOT reproduce is not a proof of correctness»*.  Here **one fault at a time is
+# built, by hand**, inside the facts the run has just produced, and the verdict is
+# required to turn red **at that point** — not generically red.
 #
-# ⛔ IL CRITERIO E' DUPLICE, E LA SECONDA META' E' QUELLA CHE CONTA: la frase
-#    attesa deve comparire nel verdetto **guasto** e **non** in quello sano.
-#    Un banco gia' rosso per un'altra ragione soddisferebbe la prima meta' da
-#    solo, e la certificazione direbbe «vede tutto» senza aver visto niente —
-#    che e' la forma di verde su insieme vuoto di `LEZIONI.md` §1.9 regola 6,
-#    trasferita alla certificazione.
+# ⛔ THE CRITERION IS TWOFOLD, AND THE SECOND HALF IS THE ONE THAT COUNTS: the
+#    expected sentence must appear in the **broken** verdict and **not** in the
+#    healthy one.  A bench already red for another reason would satisfy the
+#    first half by itself, and the certification would say «it sees everything»
+#    without having seen anything — which is the green-on-an-empty-set shape of
+#    `LEZIONI.md` §1.9 rule 6, transferred to the certification.
 def _prima(dati, **cerca):
     for r in dati:
         if all(r.get(k) == v for k, v in cerca.items()):
@@ -1944,7 +1945,7 @@ def _prima(dati, **cerca):
 
 
 def _guasti_possibili():
-    """(nome, funzione che rompe UNA cosa, frase che il verdetto DEVE dire)."""
+    """(name, function that breaks ONE thing, sentence the verdict MUST say)."""
     def quarto_ammesso(d, reg):
         r = [x for x in d if x.get("tipo") == "ban"]
         r[-1]["messaggio"], r[-1]["motivo"] = "AMMESSO", None
@@ -1962,11 +1963,10 @@ def _guasti_possibili():
         return d, reg
 
     def nomi_a_tempo(d, reg):
-        # ⛔ Il guasto che questo banco esiste per trovare: «utente inesistente»
-        #    risponde sistematicamente prima di «parola sbagliata», e col
-        #    cronometro si legge se un nome utente esiste.  ⚠ Due secondi sono
-        #    grossolani apposta: se il banco non vedesse nemmeno QUESTO, non
-        #    vedrebbe niente.
+        # ⛔ The fault this bench exists to find: «user does not exist» answers
+        #    systematically before «wrong password», and with the stopwatch one
+        #    reads whether a user name exists.  ⚠ Two seconds are coarse on
+        #    purpose: if the bench did not see even THIS, it would see nothing.
         for x in d:
             if x.get("tipo") == "campione" and x.get("caso") == "inesistente" \
                     and x.get("ms"):
@@ -2011,104 +2011,103 @@ def _guasti_possibili():
         return d, [r.replace("ban caricati: 1", "ban caricati: 0") for r in reg]
 
     def imputato_nostro(d, reg):
-        # ⛔ Il guasto che certifica la cura di A18: il ritardo si mette sul
-        #    percorso dell'AMMESSO — dove `pam_faildelay` non ha voce — e il
-        #    registro del server continua a dire che il secondo fisso ha
-        #    coperto tutto.  Il verdetto DEVE smettere di accusare PAM.
+        # ⛔ The fault that certifies the cure of A18: the delay is put on the
+        #    path of the AMMESSO — where `pam_faildelay` has no say — and the
+        #    server log keeps saying that the fixed second covered everything.
+        #    The verdict MUST stop accusing PAM.
         for x in d:
             if x.get("tipo") == "campione" and x.get("caso") == "giusta" \
                     and x.get("ms"):
                 x["ms"] += 2000.0
         fuori = []
         for r in reg:
-            if "il secondo fisso e' passato" in r:
-                fuori.append("il secondo fisso e' passato (1005 ms)\n")
+            if "the fixed second has passed" in r:
+                fuori.append("the fixed second has passed (1005 ms)\n")
             else:
                 fuori.append(r)
         return d, fuori
 
     def cronometro_scollato(d, reg):
-        # ⛔ Il guasto che certifica l'ACQUISIZIONE e non il giudice (A19):
-        #    `t0` spostato in un punto che tiene i numeri plausibili — qui
-        #    modellato dimezzandoli — e nessuno dei tredici guasti di prima se
-        #    ne sarebbe accorto.  Il secondo testimone si', perche' il
-        #    cronometro del client non puo' essere piu' corto di quello del
-        #    server.
+        # ⛔ The fault that certifies the ACQUISITION and not the judge (A19):
+        #    `t0` moved to a point that keeps the numbers plausible — here
+        #    modelled by halving them — and none of the thirteen faults before
+        #    would have noticed.  The second witness would, because the client's
+        #    stopwatch cannot be shorter than the server's.
         for x in d:
             if x.get("ms"):
                 x["ms"] = x["ms"] / 2.0
-        return d, [r if "il secondo fisso e' passato" not in r
-                   else "il secondo fisso e' passato (2500 ms)\n" for r in reg]
+        return d, [r if "the fixed second has passed" not in r
+                   else "the fixed second has passed (2500 ms)\n" for r in reg]
 
     def pam_illeggibile(d, reg):
-        # ⛔ IL GUASTO PAGATO IL 12 AGOSTO 2026, riprodotto: la riga di PAM
-        #    cambia forma e il banco non sa piu' leggerne il verdetto.  ⚠ Il
-        #    registro NON e' vuoto e le righe ci sono tutte — e' precisamente
-        #    quel che rende il difetto muto: si continua a contare, si continua
-        #    a stampare mediane, e il numero e' di un'altra cosa.
-        # ⭐ Il verdetto deve dire «TUTTO IN UNA CASELLA SOLA» e diventare
-        #    rosso: senza questa riga il banco tornerebbe cieco alla prossima
-        #    volta che qualcuno riscrive quella riga di `rcp.c`.
-        return d, [re.sub(r"(PAM ha risposto\b[^:]*:\s*)(ammesso|respinto)",
+        # ⛔ THE FAULT PAID FOR ON 12 AUG 2026, reproduced: the PAM line
+        #    changes shape and the bench can no longer read its verdict.  ⚠ The
+        #    log is NOT empty and the lines are all there — which is precisely
+        #    what makes the defect silent: one keeps counting, one keeps
+        #    printing medians, and the number is of something else.
+        # ⭐ The verdict must say «EVERYTHING IN ONE SINGLE BOX» and turn red:
+        #    without this line the bench would go blind again the next time
+        #    someone rewrites that line of `rcp.c`.
+        return d, [re.sub(r"(PAM answered\b[^:]*:\s*)(admitted|refused)",
                           r"\1esito-\2", r) for r in reg]
 
     def pam_tutti_respinti(d, reg):
-        # ⛔ La stessa cecita' senza la casella «illeggibile»: il classificatore
-        #    legge benissimo, e mette **tutto** dalla stessa parte.  E' la
-        #    fotografia esatta del 12 agosto — «52 righe, 0 ammessi» — e il
-        #    banco deve gridare anche in questa forma, o l'allarme starebbe
-        #    guardando l'appiglio invece del contatore.
-        return d, [re.sub(r"(PAM ha risposto\b[^:]*:\s*)ammesso",
-                          r"\1respinto", r) for r in reg]
+        # ⛔ The same blindness without the «unreadable» box: the classifier
+        #    reads perfectly well, and puts **everything** on the same side.  It is
+        #    the exact snapshot of 12 August — «52 lines, 0 admitted» — and the
+        #    bench must shout in this form too, or the alarm would be looking at
+        #    the anchor instead of the counter.
+        return d, [re.sub(r"(PAM answered\b[^:]*:\s*)admitted",
+                          r"\1refused", r) for r in reg]
 
     def nessun_tentativo(d, reg):
-        # ⛔ Il file NON e' vuoto: restano le pagine e gli sblocchi, e sparisce
-        #    ogni tentativo.  E' la forma piu' insidiosa di verde — «tutti
-        #    quelli provati sono andati bene» e' vero anche quando i provati
-        #    sono zero (`LEZIONI.md` §1.9 regola 6) — e un file vuoto la
-        #    proverebbe piu' debolmente, perche' un file vuoto lo nota chiunque.
+        # ⛔ The file is NOT empty: the pages and the unblocks stay, and every
+        #    attempt disappears.  It is the most insidious form of green — «all
+        #    those tested went well» is true even when the tested are zero
+        #    (`LEZIONI.md` §1.9 rule 6) — and an empty file would prove it more
+        #    weakly, because anyone notices an empty file.
         return [x for x in d
                 if x.get("tipo") not in ("campione", "ban", "controllo")], reg
 
     return [
-        ("il quarto tentativo, con la parola GIUSTA, e' AMMESSO",
-         quarto_ammesso, "il quarto tentativo — parola GIUSTA —"),
-        ("i tre nomi del giro del ban sono UGUALI",
-         nomi_uguali, "i tre nomi non sono diversi"),
-        ("una risposta di PAM arriva a 900 ms",
-         troppo_veloce, "risposte sotto il secondo"),
-        ("⛔ «utente inesistente» risponde 2 s prima di «parola sbagliata»",
-         nomi_a_tempo, "LA SEPARAZIONE CHE §4.4 VIETA"),
-        ("la pagina di un indirizzo bannato dice «non sei bannato»",
-         pagina_bugiarda, "bannato=False (atteso True)"),
-        ("la pagina bannata non contiene «tentativi esauriti»",
-         pagina_muta, "atteso True) · frase=False"),
-        ("la sessione si chiude con un codice diverso da TROPPI_TENTATIVI",
-         chiusura_storta, "il codice di chiusura della sessione"),
-        ("l'altro indirizzo NON entra",
-         altro_fuori, "l'altro indirizzo NON entra"),
-        ("il successo non azzera il conto",
-         niente_azzeramento, "l'azzeramento non c'e' stato"),
-        ("lo sblocco risponde «non era bannato» su un ban vero",
-         sblocco_cieco, "NON-BANNATO (atteso TOLTO)"),
-        ("la persistenza non e' stata provata (manca la pagina dopo il riavvio)",
-         niente_persistenza, "la persistenza non e' stata provata"),
-        ("la seconda accensione dichiara «ban caricati: 0»",
-         registro_smemorato, "la seconda accensione dichiara ban caricati"),
-        ("⛔ ZERO tentativi: «tutti quelli provati sono andati bene» su zero provati",
-         nessun_tentativo, "ZERO tentativi"),
-        ("⛔ il ritardo e' NOSTRO, sul percorso dell'AMMESSO, e PAM risponde in "
-         "5 ms (A18: il verdetto deve smettere di accusare PAM)",
-         imputato_nostro, "L'IMPUTATO NON E' PAM"),
-        ("⛔ il cronometro del CLIENT misura meno di quello del SERVER "
-         "(A19: `t0` spostato in un punto che tiene i numeri plausibili)",
-         cronometro_scollato, "I DUE CRONOMETRI NON CONCORDANO"),
-        ("⛔ la riga di PAM cambia forma e il verdetto non si legge piu' "
-         "(12 agosto 2026: il banco diventato cieco senza dirlo)",
-         pam_illeggibile, "TUTTO IN UNA CASELLA SOLA"),
-        ("⛔ ogni risposta di PAM finisce fra i RESPINTI — «52 righe, 0 "
-         "ammessi» — e il classificatore legge benissimo",
-         pam_tutti_respinti, "TUTTO IN UNA CASELLA SOLA"),
+        ("the fourth attempt, with the RIGHT password, is AMMESSO",
+         quarto_ammesso, "the fourth attempt — RIGHT password —"),
+        ("the three names of the ban run are THE SAME",
+         nomi_uguali, "the three names are not different"),
+        ("a PAM answer arrives at 900 ms",
+         troppo_veloce, "responses below the second"),
+        ("⛔ «user does not exist» answers 2 s before «wrong password»",
+         nomi_a_tempo, "THE SEPARATION §4.4 FORBIDS"),
+        ("the page of a banned address says «you are not banned»",
+         pagina_bugiarda, "bannato=False (expected True)"),
+        ("the banned page does not contain «attempts exhausted»",
+         pagina_muta, "expected True) · frase=False"),
+        ("the session closes with a code other than TROPPI_TENTATIVI",
+         chiusura_storta, "the session closing code"),
+        ("the other address does NOT get in",
+         altro_fuori, "the other address does NOT get in"),
+        ("the success does not reset the count",
+         niente_azzeramento, "the reset did not happen"),
+        ("the unblock answers «it was not banned» on a real ban",
+         sblocco_cieco, "NON-BANNATO (expected TOLTO)"),
+        ("persistence was not proved (the page after the restart is missing)",
+         niente_persistenza, "persistence was not proved"),
+        ("the second start declares «ban caricati: 0»",
+         registro_smemorato, "the second start declares bans loaded"),
+        ("⛔ ZERO attempts: «all those tested went well» on zero tested",
+         nessun_tentativo, "ZERO attempts"),
+        ("⛔ the delay is OURS, on the path of the AMMESSO, and PAM answers in "
+         "5 ms (A18: the verdict must stop accusing PAM)",
+         imputato_nostro, "THE DEFENDANT IS NOT PAM"),
+        ("⛔ the CLIENT's stopwatch measures less than the SERVER's "
+         "(A19: `t0` moved to a point that keeps the numbers plausible)",
+         cronometro_scollato, "THE TWO STOPWATCHES DO NOT AGREE"),
+        ("⛔ the PAM line changes shape and the verdict can no longer be read "
+         "(12 Aug 2026: the bench gone blind without saying so)",
+         pam_illeggibile, "EVERYTHING IN ONE SINGLE BOX"),
+        ("⛔ every PAM answer ends up among the REFUSED — «52 lines, 0 "
+         "admitted» — and the classifier reads perfectly well",
+         pam_tutti_respinti, "EVERYTHING IN ONE SINGLE BOX"),
     ]
 
 
@@ -2118,9 +2117,9 @@ def certifica(a):
     import contextlib
 
     if not os.path.exists(a.uscita):
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ non c'e' nessun giro da guastare: "
-              f"{a.uscita} non esiste.  La certificazione si fa **sui fatti di "
-              f"un giro vero**, o guasta un file che nessuno ha prodotto")
+        print(f"    {ROSSO}NO{GRIGIO}  ⛔ there is no run to break: "
+              f"{a.uscita} does not exist.  The certification is done **on the facts of "
+              f"a real run**, or it breaks a file nobody produced")
         return 2
     with open(a.uscita) as f:
         sani = [json.loads(r) for r in f if r.strip()]
@@ -2146,128 +2145,127 @@ def certifica(a):
         return esito, buf.getvalue()
 
     print()
-    print("    == ⛔ LA CERTIFICAZIONE: si costruisce il guasto e si pretende il rosso")
-    # ⛔ E SI DICHIARA CHE COSA QUESTA CERTIFICAZIONE **NON** CERTIFICA — A19.
-    #    Chi legge un verdetto legge il verdetto, non i commenti del file: senza
-    #    queste tre righe, «certificato» si legge come «B8 e' certificato», e
-    #    quel che e' certificato e' meta' di B8.
-    print("    --  ⛔ QUEL CHE QUESTA RIGA CERTIFICA: il GIUDICE.  I guasti si "
-          "costruiscono sui FATTI GIA' REGISTRATI, quindi provano che "
-          "`verdetto()` sa vedere un fatto storto, non che i fatti siano stati "
-          "presi bene")
-    print("    --  ⛔ QUEL CHE NON CERTIFICA: l'ACQUISIZIONE.  Un `t0` spostato "
-          "in un punto che tiene i numeri plausibili, un `RITARDO_CREDENZIALI` "
-          "tolto dal server, un innesto che non c'e': nessuno di questi vive "
-          "nei fatti registrati.  ⚠ Il solo guasto che ci arriva e' "
-          "«cronometro scollato», e ci arriva per il SECONDO TESTIMONE (il "
-          "registro del server), non per i fatti")
-    print("    --  ⛔ E il guasto che coprirebbe il resto — togliere "
-          "`RITARDO_CREDENZIALI` dal server — sta nel catalogo di "
-          "`01-b12-guasti.py` ed e' **catalogato e non eseguito**: e' un buco "
-          "di due file di due mani diverse, e va detto qui perche' e' qui che "
-          "si legge la parola «certificato»")
+    print("    == ⛔ THE CERTIFICATION: the fault is built and the red is demanded")
+    # ⛔ AND IT IS DECLARED WHAT THIS CERTIFICATION DOES **NOT** CERTIFY — A19.
+    #    Whoever reads a verdict reads the verdict, not the comments of the file:
+    #    without these three lines, «certified» reads as «B8 is certified», and
+    #    what is certified is half of B8.
+    print("    --  ⛔ WHAT THIS LINE CERTIFIES: the JUDGE.  The faults are "
+          "built on the FACTS ALREADY RECORDED, so they prove that "
+          "`verdetto()` can see a crooked fact, not that the facts were "
+          "taken well")
+    print("    --  ⛔ WHAT IT DOES NOT CERTIFY: the ACQUISITION.  A `t0` moved "
+          "to a point that keeps the numbers plausible, a `RITARDO_CREDENZIALI` "
+          "removed from the server, a graft that is not there: none of these lives "
+          "in the recorded facts.  ⚠ The only fault that reaches it is "
+          "«stopwatch out of step», and it reaches it through the SECOND WITNESS (the "
+          "server log), not through the facts")
+    print("    --  ⛔ And the fault that would cover the rest — removing "
+          "`RITARDO_CREDENZIALI` from the server — is in the catalogue of "
+          "`01-b12-guasti.py` and is **catalogued and not run**: it is a hole "
+          "of two files by two different hands, and it must be said here because it is here that "
+          "the word «certified» is read")
     esito_sano, testo_sano = gira(sani, reg_sano)
-    print(f"    --  il giro SANO, cosi' com'e': esito {esito_sano} "
-          f"({'verde' if esito_sano == 0 else 'sospeso' if esito_sano == 3 else 'rosso'})")
-    print(f"    --  fatti su cui si guasta: {len(sani)} · righe di registro: "
+    print(f"    --  the HEALTHY run, as it is: outcome {esito_sano} "
+          f"({'green' if esito_sano == 0 else 'suspended' if esito_sano == 3 else 'red'})")
+    print(f"    --  facts being broken: {len(sani)} · log lines: "
           f"{len(reg_sano)}")
 
     # ======================================================================
-    # ⛔⭐ IL CONTROLLO POSITIVO DELL'ANCORA — e non e' un guasto, e' il suo
-    #     rovescio: qui il verdetto NON deve cambiare
+    # ⛔⭐ THE POSITIVE CONTROL OF THE ANCHOR — and it is not a fault, it is its
+    #     reverse: here the verdict must NOT change
     # ======================================================================
-    # *Nato il 12 agosto 2026, dal difetto che ha reso cieco questo banco.*
+    # *Born on 12 Aug 2026, from the defect that made this bench blind.*
     #
-    # ⛔ I quindici guasti qui sotto provano che il giudice **sa diventare
-    #    rosso**.  Nessuno di loro prova la cosa che oggi e' costata un giro:
-    #    che il giudice **continui a leggere** quando chi scrive il registro
-    #    allunga una riga.  Un'ancora fragile passa tutti e quindici — era
-    #    fragile e li passava — perche' un'ancora rotta rende il banco rosso,
-    #    e i guasti chiedono proprio il rosso.
+    # ⛔ The fifteen faults below prove that the judge **can turn red**.  None of
+    #    them proves the thing that today cost a run: that the judge **keeps
+    #    reading** when whoever writes the log lengthens a line.  A fragile anchor
+    #    passes all fifteen — it was fragile and passed them — because a broken
+    #    anchor makes the bench red, and the faults ask precisely for red.
     #
-    # ⭐ Quindi si costruisce il contrario: si allunga il registro **nei tre
-    #    modi che sono gia' successi o che stanno per succedere**, e si pretende
-    #    che l'esito resti **identico** a quello sano.  ⚠ E' il controllo
-    #    positivo di `REVIEWER.md` §1 punto 5 applicato al lettore del registro:
-    #    «lo strumento sa ancora trovare quel che c'e' di sicuro?»
+    # ⭐ So the opposite is built: the log is lengthened **in the three ways that
+    #    have already happened or are about to happen**, and the outcome is
+    #    required to stay **identical** to the healthy one.  ⚠ It is the positive
+    #    control of `REVIEWER.md` §1 point 5 applied to the log reader: «can the
+    #    tool still find what is surely there?»
     falliti_ancora = 0
     def _allunga_pam(r):
-        # la cura di `DECISIONI.md` §1.10, com'e' arrivata davvero
+        # the cure of `DECISIONI.md` §1.10, as it really arrived
         if R_PAM_RIGA in r:
-            return r.rstrip("\n") + ("  ⚠ (per via SINCRONA: nessun gancio "
-                                     "asincrono collegato — il filo e' "
-                                     "rimasto fermo)\n")
+            return r.rstrip("\n") + ("  ⚠ (SYNCHRONOUSLY: no asynchronous "
+                                     "hook connected — the thread "
+                                     "stood still)\n")
         return r
 
     def _pratica_pam(r):
-        # la SECONDA forma della riga, che il prodotto scrive gia' (rcp.c:2636)
+        # the SECOND form of the line, which the product already writes (rcp.c:2636)
         if R_PAM_RIGA in r:
-            return r.replace("PAM ha risposto:",
-                             "PAM ha risposto (pratica 7):", 1)
+            return r.replace("PAM answered:",
+                             "PAM answered (request 7):", 1)
         return r
 
     def _allunga_da(r):
-        # l'indirizzo smette di essere l'ultima cosa della riga
+        # the address stops being the last thing on the line
         if " da=" in r and ("respinto motivo" in r or "ammesso utente" in r):
-            return r.rstrip("\n") + " · pratica=7 · via=asincrona\n"
+            return r.rstrip("\n") + " · request=7 · via=async\n"
         return r
 
     ancore = [
-        ("una spiegazione appesa in coda a «PAM ha risposto: …» "
-         "(la cura di §1.10, quella vera)", _allunga_pam),
-        ("un campo in piu' PRIMA dei due punti: «PAM ha risposto (pratica 7): "
-         "ammesso» (rcp.c:2636, la strada asincrona)", _pratica_pam),
-        ("l'indirizzo non e' piu' l'ultima cosa della riga «respinto "
+        ("an explanation appended at the tail of «PAM answered: …» "
+         "(the cure of §1.10, the real one)", _allunga_pam),
+        ("one more field BEFORE the colon: «PAM answered (request 7): "
+         "admitted» (rcp.c:2636, the asynchronous road)", _pratica_pam),
+        ("the address is no longer the last thing on the line «respinto "
          "motivo=… da=…»", _allunga_da),
     ]
     print()
-    print("    == ⭐ IL CONTROLLO POSITIVO DELL'ANCORA: il registro si allunga, "
-          "e il verdetto NON deve cambiare")
+    print("    == ⭐ THE POSITIVE CONTROL OF THE ANCHOR: the log gets longer, "
+          "and the verdict must NOT change")
     for nome, cambia in ancore:
         esito_a, testo_a = gira(sani, [cambia(r) for r in reg_sano])
-        cieco = "TUTTO IN UNA CASELLA SOLA" in testo_a
+        cieco = "EVERYTHING IN ONE SINGLE BOX" in testo_a
         buono = esito_a == esito_sano and not cieco
         segno = f"{VERDE}OK{GRIGIO}" if buono else f"{ROSSO}NO{GRIGIO}"
         perche = ""
         if cieco:
-            perche = ("  ⛔ e il giudice si e' accecato: l'ancora e' tornata "
-                      "a dipendere da quel che viene DOPO")
+            perche = ("  ⛔ and the judge went blind: the anchor went back "
+                      "to depending on what comes AFTER")
         elif not buono:
-            perche = (f"  ⛔ l'esito e' cambiato da {esito_sano} a {esito_a}: "
-                      f"il lettore del registro dipende da quel che gli si "
-                      f"appende in coda")
+            perche = (f"  ⛔ the outcome changed from {esito_sano} to {esito_a}: "
+                      f"the log reader depends on what is "
+                      f"appended to its tail")
         print(f"    {segno}  {nome}{perche}")
         if not buono:
             falliti_ancora += 1
-    print(f"    --  ⚠ e questo controllo non prova che il banco sia giusto: "
-          f"prova che **regge a un'aggiunta**.  Il rosso lo provano i guasti "
-          f"qui sotto")
+    print(f"    --  ⚠ and this check does not prove the bench is right: "
+          f"it proves that it **withstands an addition**.  The red is proved by the faults "
+          f"below")
 
     prove = _guasti_possibili()
-    print(f"    --  guasti costruiti a mano: {len(prove)}  ⛔ e questo e' il "
-          f"denominatore: un elenco di OK senza di lui non e' una misura")
+    print(f"    --  faults built by hand: {len(prove)}  ⛔ and this is the "
+          f"denominator: a list of OKs without it is not a measurement")
     falliti = 0
     for nome, rompi, frase in prove:
         dati, reg = rompi(_copy.deepcopy(sani), list(reg_sano))
         esito, testo = gira(dati, reg)
         vede = frase in testo
-        # ⛔ e la seconda meta' del criterio: il verdetto sano NON deve gia'
-        #    dirla, o questa riga non prova che il guasto sia stato visto.
+        # ⛔ and the second half of the criterion: the healthy verdict must NOT
+        #    already say it, or this line does not prove the fault was seen.
         gia = frase in testo_sano
-        # ⛔ E l'esito deve essere un ROSSO VERO (1) o «niente da giudicare» (2),
-        #    non il 5 delle mediane: se bastasse «diverso da zero», un giro in
-        #    cui PAM domina soddisferebbe questa riga **senza che il guasto sia
-        #    stato visto**, e la certificazione direbbe «vedo tutto» guardando
-        #    un esito che c'era gia'.
+        # ⛔ And the outcome must be a REAL RED (1) or «nothing to judge» (2),
+        #    not the 5 of the medians: if «different from zero» were enough, a run
+        #    in which PAM dominates would satisfy this line **without the fault
+        #    having been seen**, and the certification would say «I see
+        #    everything» looking at an outcome that was already there.
         buono = vede and esito in (1, 2) and not gia
         segno = f"{VERDE}OK{GRIGIO}" if buono else f"{ROSSO}NO{GRIGIO}"
         perche = ""
         if gia:
-            perche = "  ⛔ ma il giro SANO lo diceva gia': non prova niente"
+            perche = "  ⛔ but the HEALTHY run already said it: it proves nothing"
         elif not vede:
-            perche = f"  ⛔ il verdetto NON ha detto «{frase}» (esito {esito})"
+            perche = f"  ⛔ the verdict did NOT say «{frase}» (outcome {esito})"
         elif esito not in (1, 2):
-            perche = f"  ⛔ lo dice, ma l'esito e' {esito} e non un rosso vero"
+            perche = f"  ⛔ it says it, but the outcome is {esito} and not a real red"
         print(f"    {segno}  {nome}{perche}")
         if not buono:
             falliti += 1
@@ -2280,86 +2278,86 @@ def certifica(a):
 
     print()
     if falliti_ancora:
-        print(f"    {ROSSO}⛔ LA CERTIFICAZIONE NON PASSA: {falliti_ancora} "
-              f"allungamenti del registro su {len(ancore)} cambiano il verdetto."
+        print(f"    {ROSSO}⛔ THE CERTIFICATION DOES NOT PASS: {falliti_ancora} "
+              f"lengthenings of the log out of {len(ancore)} change the verdict."
               f"{GRIGIO}")
-        print(f"    ⚠ E' il difetto del 12 agosto 2026, vivo: il banco legge una "
-              f"riga del server ancorandosi a quel che oggi le sta in fondo, e "
-              f"la prossima aggiunta lo acceca di nuovo")
+        print(f"    ⚠ It is the defect of 12 Aug 2026, alive: the bench reads a "
+              f"line of the server anchoring itself to what today sits at its end, and "
+              f"the next addition blinds it again")
         return 1
     if falliti:
-        print(f"    {ROSSO}⛔ LA CERTIFICAZIONE NON PASSA: {falliti} guasti su "
-              f"{len(prove)} non fanno diventare rosso il banco.{GRIGIO}")
-        print(f"    ⚠ Finche' questa riga e' rossa, un verde di B8 non vuol dire "
-              f"niente: un banco che non riproduce non e' una prova di "
-              f"correttezza (`LEZIONI.md` §1.3)")
+        print(f"    {ROSSO}⛔ THE CERTIFICATION DOES NOT PASS: {falliti} faults out of "
+              f"{len(prove)} do not make the bench turn red.{GRIGIO}")
+        print(f"    ⚠ As long as this line is red, a green of B8 means "
+              f"nothing: a bench that does not reproduce is not a proof of "
+              f"correctness (`LEZIONI.md` §1.3)")
         return 1
-    print(f"    {VERDE}⭐ IL GIUDICE di B8 e' certificato: tutti e {len(prove)} i "
-          f"guasti costruiti a mano lo fanno diventare rosso, ciascuno nel suo "
-          f"punto — e i {len(ancore)} allungamenti del registro NON lo cambiano"
+    print(f"    {VERDE}⭐ THE JUDGE of B8 is certified: all {len(prove)} "
+          f"faults built by hand make it turn red, each at its own "
+          f"point — and the {len(ancore)} lengthenings of the log do NOT change it"
           f"{GRIGIO}")
-    print(f"    ⚠ e NON e' «B8 e' certificato»: l'acquisizione dei tempi resta "
-          f"coperta da un guasto solo (i due cronometri).  Le tre righe in "
-          f"cima dicono che cosa e' rimasto fuori")
+    print(f"    ⚠ and it is NOT «B8 is certified»: the acquisition of the times stays "
+          f"covered by a single fault (the two stopwatches).  The three lines at "
+          f"the top say what was left out")
     return 0
 
 
 def previsione(a):
-    print("== B8 — che cosa si misura, e che cosa mi aspetto PRIMA di misurare")
+    print("== B8 — what is measured, and what I expect BEFORE measuring")
     print()
-    print("  PARTE 1 — il secondo fisso e le tre mediane")
-    print("    inesistente  un utente che NON esiste (verificato con getpwnam)")
-    print("    sbagliata    l'utente vero, parola d'ordine sbagliata")
-    print("    giusta       l'utente vero, parola giusta  → AMMESSO")
-    print("    ⚠ la coppia «inesistente − sbagliata» e' quella che, se si separa,")
-    print("      regala i nomi degli utenti a chi cronometra.")
+    print("  PART 1 — the fixed second and the three medians")
+    print("    inesistente  a user that does NOT exist (verified with getpwnam)")
+    print("    sbagliata    the real user, wrong password")
+    print("    giusta       the real user, right password  → AMMESSO")
+    print("    ⚠ the pair «inesistente − sbagliata» is the one that, if it separates,")
+    print("      gives away the user names to whoever times it.")
     print()
-    print("  PARTE 2 — il ban (RCP.md §4.4-bis, DECISIONI.md §1.9)")
-    print(f"    {SOGLIA} autenticazioni fallite dallo stesso indirizzo dentro")
-    print(f"    {FINESTRA_MIN} minuti ⇒ quell'indirizzo e' fuori per {BAN_ORE} ore.")
+    print("  PART 2 — the ban (RCP.md §4.4-bis, DECISIONI.md §1.9)")
+    print(f"    {SOGLIA} failed authentications from the same address within")
+    print(f"    {FINESTRA_MIN} minutes ⇒ that address is out for {BAN_ORE} hours.")
     print()
-    print("  L'atteso, scritto qui prima dei numeri:")
-    print(f"    1. ogni risposta di PAM a CREDENZIALI ≥ {RITARDO_FISSO:.0f} ms;")
-    print("    2. le tre mediane indistinguibili secondo la regola dell'intervallo;")
-    print("    3. le prime tre fallite — CON TRE NOMI DIVERSI — ricevono")
-    print("       CREDENZIALI_ERRATE, e la terza fa scattare il ban;")
-    print("    4. ⛔ il QUARTO tentativo ha la parola GIUSTA e riceve")
-    print("       TROPPI_TENTATIVI, dentro un RESPINTO e non dentro un CONGEDO,")
-    print("       e la sessione si chiude con lo stesso codice;")
-    print("    5. un ALTRO indirizzo entra subito;")
-    print("    6. 2 falliti · 1 riuscito · 2 falliti NON bannano;")
-    print("    7. il ban sopravvive al riavvio del server (invariante I7);")
-    print("    8. la pagina si carica LO STESSO, con HTTP 200, dice «tentativi")
-    print(f"       esauriti» e quante ore mancano (~{BAN_ORE});")
-    print("    9. il comando di sblocco lo toglie, lo scrive nel registro, e la")
-    print("       seconda volta risponde «non era bannato».")
-    print("   10. ⛔ e il GIUDICE non dev'essere cieco: le risposte di PAM lette")
-    print("       nel registro devono cadere in ALMENO DUE caselle.  Tutte nella")
-    print("       stessa — «52 righe, 0 ammessi», 12 agosto 2026 — non e' «i")
-    print("       fatti sono tutti uguali»: e' «non so piu' leggere i fatti»,")
-    print("       cioe' la forma E8 su un contatore, e conta come un rosso.")
+    print("  The expected, written here before the numbers:")
+    print(f"    1. every PAM answer to CREDENZIALI ≥ {RITARDO_FISSO:.0f} ms;")
+    print("    2. the three medians indistinguishable according to the interval rule;")
+    print("    3. the first three failed — WITH THREE DIFFERENT NAMES — receive")
+    print("       CREDENZIALI_ERRATE, and the third makes the ban trigger;")
+    print("    4. ⛔ the FOURTH attempt has the RIGHT password and receives")
+    print("       TROPPI_TENTATIVI, inside a RESPINTO and not inside a CONGEDO,")
+    print("       and the session closes with the same code;")
+    print("    5. ANOTHER address gets in right away;")
+    print("    6. 2 failed · 1 succeeded · 2 failed do NOT ban;")
+    print("    7. the ban survives the server restart (invariant I7);")
+    print("    8. the page loads ANYWAY, with HTTP 200, says «attempts")
+    print(f"       exhausted» and how many hours are left (~{BAN_ORE});")
+    print("    9. the unblock command removes it, writes it in the log, and the")
+    print("       second time answers «it was not banned».")
+    print("   10. ⛔ and the JUDGE must not be blind: the PAM answers read")
+    print("       in the log must fall into AT LEAST TWO boxes.  All in the")
+    print("       same one — «52 lines, 0 admitted», 12 Aug 2026 — is not «the")
+    print("       facts are all the same»: it is «I can no longer read the facts»,")
+    print("       that is form E8 on a counter, and it counts as a red.")
     print()
-    print("  `[?]` E la previsione che puo' rendere SOSPESO il punto 2, scritta")
-    print("  adesso perche' domani sembri una previsione e non una scusa:")
-    print("    `banchi/rcp/autenticazione.c` usa il servizio PAM «login», e su")
-    print("    Debian `/etc/pam.d/login` porta `pam_faildelay.so delay=3000000`.")
-    print("    Se quel modulo e' nella pila, la strada del FALLIMENTO aspetta")
-    print("    ~3 s (±25 % per la randomizzazione di libpam) e quella del")
-    print("    SUCCESSO no: le mediane si separerebbero di secondi, e la")
-    print("    separazione NON sarebbe del ritardo fisso — sarebbe di quel che")
-    print("    PAM aggiunge sopra.  ⭐ A distinguere i due imputati e' la riga")
-    print("    «il secondo fisso e' passato (N ms)» del registro del server.")
-    print("    `[M]` 10 agosto 2026: mediana 2636 ms sui respinti.")
+    print("  `[?]` And the prediction that may make point 2 SUSPENDED, written")
+    print("  now so that tomorrow it looks like a prediction and not an excuse:")
+    print("    `banchi/rcp/autenticazione.c` uses the PAM service «login», and on")
+    print("    Debian `/etc/pam.d/login` carries `pam_faildelay.so delay=3000000`.")
+    print("    If that module is in the stack, the FAILURE road waits")
+    print("    ~3 s (±25 % for libpam's randomisation) and the SUCCESS road")
+    print("    does not: the medians would separate by seconds, and the")
+    print("    separation would NOT be the fixed delay's — it would be what")
+    print("    PAM adds on top.  ⭐ What tells the two defendants apart is the line")
+    print("    «the fixed second has passed (N ms)» of the server log.")
+    print("    `[M]` 10 Aug 2026: median 2636 ms on the refused.")
     print()
-    print(f"  I numeri della regola: soglia {SOGLIA} fallimenti per indirizzo,")
-    print(f"  bilancio {BILANCIO} per blocco, risoluzione voluta "
-          f"±{RISOLUZIONE_VOLUTA:.0f} ms, minimo {MINIMO_CAMPIONI} campioni per")
-    print(f"  caso, bootstrap {RIPETIZIONI} ripetizioni, seme {SEME}.")
+    print(f"  The numbers of the rule: threshold {SOGLIA} failures per address,")
+    print(f"  balance {BILANCIO} per block, wanted resolution "
+          f"±{RISOLUZIONE_VOLUTA:.0f} ms, minimum {MINIMO_CAMPIONI} samples per")
+    print(f"  case, bootstrap {RIPETIZIONI} repetitions, seed {SEME}.")
     return 0
 
 
 # ===========================================================================
-# Le fasi
+# The phases
 # ===========================================================================
 async def fase_campioni(a):
     inesistente = f"nessuno-b8-{a.blocco}"
@@ -2372,18 +2370,18 @@ async def fase_campioni(a):
 
 
 async def fase_ban_prima(a):
-    """⛔ Il giro del ban, e NESSUNO SBLOCCA QUI DENTRO (B0.3).
+    """⛔ The ban run, and NOBODY UNBLOCKS IN HERE (B0.3).
 
-    L'ordine e' scelto e non e' indifferente:
+    The order is chosen and it is not indifferent:
 
-      1. il controllo dell'azzeramento sul SECONDO indirizzo (che finisce a due
-         fallimenti, e la pagina lo conferma non bannato);
-      2. il ban sul PRIMO indirizzo, con tre nomi diversi, e il quarto con la
-         parola giusta;
-      3. il controllo «un altro indirizzo entra» — ⛔ **subito dopo** il rifiuto,
-         che e' l'unico posto in cui risponde alla domanda «il server e' ancora
-         vivo?»;
-      4. le due pagine.
+      1. the reset check on the SECOND address (which ends at two failures, and
+         the page confirms it not banned);
+      2. the ban on the FIRST address, with three different names, and the
+         fourth with the right password;
+      3. the check «another address gets in» — ⛔ **right after** the refusal,
+         which is the only place where it answers the question «is the server
+         still alive?»;
+      4. the two pages.
     """
     inesistente = "nessuno-b8-ban"
     if not await controlla_utenti(a, inesistente, *[n for n in NOMI_DEL_BAN
@@ -2391,7 +2389,7 @@ async def fase_ban_prima(a):
         return 2
 
     print()
-    print("    == ⭐ Controllo che dice NO n.2: 2 falliti · 1 riuscito · 2 falliti")
+    print("    == ⭐ Check that says NO no.2: 2 failed · 1 succeeded · 2 failed")
     passi = piano_azzeramento(a.indirizzi, a.utente, inesistente)
     e = await esegui(a, passi, "controllo", "azzeramento", "non-banna")
     if e:
@@ -2399,7 +2397,7 @@ async def fase_ban_prima(a):
     guarda_pagina(a, a.indirizzi[1], "azzeramento-dopo", False)
 
     print()
-    print("    == ⛔ Il giro del ban — tre nomi diversi, poi la parola GIUSTA")
+    print("    == ⛔ The ban run — three different names, then the RIGHT password")
     nomi = tuple(a.utente if n == "<utente>" else n for n in NOMI_DEL_BAN)
     passi = piano_ban(a.indirizzi, a.utente, nomi)
     e = await esegui(a, passi, "ban", "ban", "banna-al-4")
@@ -2407,7 +2405,7 @@ async def fase_ban_prima(a):
         return e
 
     print()
-    print("    == ⭐ Controllo che dice NO n.1: un ALTRO indirizzo entra subito")
+    print("    == ⭐ Check that says NO no.1: ANOTHER address gets in right away")
     passi = [{"caso": "giusta", "indirizzo": a.indirizzi[1], "nome": a.utente,
               "scaldata": False}]
     e = await esegui(a, passi, "controllo", "altro-indirizzo", "sotto-soglia")
@@ -2415,30 +2413,30 @@ async def fase_ban_prima(a):
         return e
 
     print()
-    print("    == ⛔ Quel che l'utente vede, adesso")
+    print("    == ⛔ What the user sees, now")
     guarda_pagina(a, a.indirizzi[0], "bannato-prima", True)
     guarda_pagina(a, a.indirizzi[1], "non-bannato-prima", False)
     return 0
 
 
 async def fase_ban_dopo(a):
-    """⭐ Dopo il riavvio: la persistenza, e poi lo sblocco — che si prova in fondo."""
+    """⭐ After the restart: persistence, and then the unblock — which is tested at the end."""
     print()
-    print("    == ⭐ Controllo che dice NO n.3: il ban sopravvive al RIAVVIO")
+    print("    == ⭐ Check that says NO no.3: the ban survives the RESTART")
     guarda_pagina(a, a.indirizzi[0], "bannato-dopo-riavvio", True)
     guarda_pagina(a, a.indirizzi[1], "non-bannato-dopo-riavvio", False)
     passi = [{"caso": "giusta", "indirizzo": a.indirizzi[0], "nome": a.utente,
               "scaldata": False}]
-    # ⚠ Il modello direbbe AMMESSO — non sa che il ban e' tornato dal disco — e
-    #   pretenderlo qui darebbe rosso sul codice giusto.  Il confronto lo fa il
-    #   verdetto, che sa che siamo dopo un riavvio.
+    # ⚠ The model would say AMMESSO — it does not know the ban came back from disk —
+    #   and demanding it here would give red on the right code.  The comparison is
+    #   done by the verdict, which knows we are after a restart.
     e = await esegui(a, passi, "controllo", "dopo-riavvio", "sotto-soglia",
                      confronta_modello=False)
     if e:
         return e
 
     print()
-    print("    == ⛔ E ADESSO lo sblocco, che fin qui non ha toccato niente")
+    print("    == ⛔ AND NOW the unblock, which so far has touched nothing")
     sblocca_e_dichiara(a, [a.indirizzi[0]], "prova-tolto", pretendi="TOLTO")
     guarda_pagina(a, a.indirizzi[0], "dopo-sblocco", False)
     sblocca_e_dichiara(a, [a.indirizzi[0]], "prova-non-bannato",
@@ -2449,93 +2447,92 @@ async def fase_ban_dopo(a):
 
 
 async def controlla_utenti(a, *inesistenti):
-    """⛔ Lo stato iniziale si dichiara e si VERIFICA (B0.1)."""
+    """⛔ The initial state is declared and VERIFIED (B0.1)."""
     ok = True
-    for nome, deve, che in [(a.utente, True, "l'utente vero")] + \
-            [(n, False, "un nome inesistente") for n in inesistenti]:
+    for nome, deve, che in [(a.utente, True, "the real user")] + \
+            [(n, False, "a nonexistent name") for n in inesistenti]:
         buono, c_e = esistenza(nome, deve)
-        stato = "esiste" if c_e else "non esiste"
+        stato = "exists" if c_e else "does not exist"
         if buono:
-            print(f"    {VERDE}OK{GRIGIO}  {che} «{nome}»: {stato}, come deve")
+            print(f"    {VERDE}OK{GRIGIO}  {che} «{nome}»: {stato}, as it must")
         else:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ {che} «{nome}»: {stato} — il "
-                  f"contrario di quel che questo banco presuppone")
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ {che} «{nome}»: {stato} — the "
+                  f"opposite of what this bench assumes")
             ok = False
     return ok
 
 
 def principale():
     p = argparse.ArgumentParser(
-        description="B8 — il secondo fisso, le tre mediane e il ban dell'indirizzo")
-    # ⛔ Nessun predefinito che nomini un bersaglio: 7447 e' l'innesto e 7448 il
-    #    prodotto, e un predefinito qui vorrebbe dire che «--bersaglio prodotto»
-    #    senza «--porta» misura l'innesto dichiarando il prodotto.
+        description="B8 — the fixed second, the three medians and the ban of the address")
+    # ⛔ No default that names a target: 7447 is the graft and 7448 the
+    #    product, and a default here would mean that «--bersaglio prodotto»
+    #    without «--porta» measures the graft while declaring the product.
     p.add_argument("--porta", type=int, required=True)
     p.add_argument("--indirizzi", default="127.0.0.1,192.168.0.2",
-                   help="⛔ due: raddoppiano il margine del bilancio e si "
-                        "vedono nel registro del server")
+                   help="⛔ two: they double the margin of the balance and "
+                        "show in the server log")
     p.add_argument("--utente", default="prova")
-    # ⛔ `parola-di-prova`, e la storia di questa riga vale il commento.
+    # ⛔ `parola-di-prova`, and the story of this line is worth the comment.
     #
-    #    Fino all'11 agosto 2026 qui c'era scritto `prova`, e ⛔ **nessuna
-    #    autenticazione di questo banco e' mai riuscita**: `01-b3-lancia.sh`,
-    #    `01-b6-lancia.sh` e `01-b7-lancia.sh` usano tutti e tre
-    #    `PAROLA=parola-di-prova`.  Il caso «giusta» riceveva
-    #    `CREDENZIALI_ERRATE` come gli altri due, cioe' ⛔ **i tre casi erano
-    #    due**, e la terza mediana era una copia della seconda.
+    #    Until 11 Aug 2026 here it said `prova`, and ⛔ **no authentication of
+    #    this bench ever succeeded**: `01-b3-lancia.sh`, `01-b6-lancia.sh` and
+    #    `01-b7-lancia.sh` all three use `PAROLA=parola-di-prova`.  The «giusta»
+    #    case received `CREDENZIALI_ERRATE` like the other two, that is ⛔ **the
+    #    three cases were two**, and the third median was a copy of the second.
     #
-    # ⚠ E il difetto non aveva un sintomo proprio: il banco diceva «risposte
-    #   inattese», che si legge come un guasto del server.  ⭐ Da oggi c'e' il
-    #   controllo positivo in `--stato-iniziale` — *«questo strumento sa
-    #   produrre un AMMESSO?»* — che e' `LEZIONI.md` §1.9 regola 2 applicata al
-    #   banco invece che alla misura, e costa un tentativo.
+    # ⚠ And the defect had no symptom of its own: the bench said «unexpected
+    #   answers», which reads as a server fault.  ⭐ From today there is the
+    #   positive control in `--stato-iniziale` — *«can this tool produce an
+    #   AMMESSO?»* — which is `LEZIONI.md` §1.9 rule 2 applied to the bench
+    #   instead of to the measurement, and it costs one attempt.
     p.add_argument("--parola", default="parola-di-prova")
-    # ⛔ D12: la strada che NON passa da `ps`.  Vince su `--parola` se ci sono
-    #    tutt'e due — un file scritto apposta e' sempre piu' recente di un
-    #    predefinito.
+    # ⛔ D12: the road that does NOT go through `ps`.  It wins over `--parola` if
+    #    both are there — a file written on purpose is always more recent than a
+    #    default.
     p.add_argument("--parola-file", default="",
-                   help="file 0600 con la sola parola d'ordine (⭐ D12: cosi' "
-                        "non finisce in `ps`)")
+                   help="0600 file with only the password (⭐ D12: this way "
+                        "it does not end up in `ps`)")
     p.add_argument("--sbagliata", default="questa-non-e-la-parola-di-nessuno")
     p.add_argument("--comando", default="/srv/src/b8-comando.sock",
-                   help="il socket del comando di sblocco di §4.4-bis")
+                   help="the socket of the unblock command of §4.4-bis")
     p.add_argument("--blocco", type=int, default=0)
     p.add_argument("--per-caso", type=int, default=2,
-                   help="terzine per blocco.  ⛔ 2 tiene i fallimenti a due per "
-                        "indirizzo, cioe' UNO sotto la soglia")
+                   help="triplets per block.  ⛔ 2 keeps the failures at two per "
+                        "address, that is ONE below the threshold")
     p.add_argument("--campioni", action="store_true")
     p.add_argument("--ban", choices=("prima", "dopo"))
     p.add_argument("--sblocca", default="",
-                   help="sblocca questi indirizzi (separati da virgola) e lo dichiara")
+                   help="unblock these addresses (comma-separated) and declare it")
     p.add_argument("--perche", default="fra-i-blocchi")
     p.add_argument("--stato-iniziale", action="store_true")
     p.add_argument("--verdetto", action="store_true")
     p.add_argument("--certifica", action="store_true",
-                   help="⛔ costruisce un guasto per volta nei fatti di un giro "
-                        "vero e pretende che il banco diventi rosso in QUEL punto")
+                   help="⛔ builds one fault at a time in the facts of a real "
+                        "run and demands that the bench turn red at THAT point")
     p.add_argument("--previsione", action="store_true")
-    # ⛔ `--giro` idem: lo dichiara il profilo comune (vedi la nota qui sotto).
-    # ⛔ `--uscita` NON si dichiara qui: lo dichiara il profilo comune del
-    #    bersaglio, `01-b0-bersaglio.py`, poche righe piu' sotto.  Dichiararlo
-    #    in tutt'e due i posti fa morire il banco all'avvio con
-    #    «conflicting option string: --uscita» — misurato l'11 agosto 2026, e
-    #    il giro si fermava PRIMA di accendere qualunque cosa.
-    # ⚠ E' la cucitura fra due autori dello stesso giorno: chi ha scritto il
-    #   profilo non sapeva che B8 avesse gia' quell'argomento, e chi ha scritto
-    #   B8 non sapeva che sarebbe arrivato un profilo.  Il predefinito di
-    #   allora — `b8-fatti.jsonl`, senza il bersaglio nel nome — e' proprio
-    #   quello che il profilo esiste per togliere: due bersagli nello stesso
-    #   file sono due misure che non si possono mettere in fila.
+    # ⛔ `--giro` likewise: the shared profile declares it (see the note below).
+    # ⛔ `--uscita` is NOT declared here: the shared target profile declares it,
+    #    `01-b0-bersaglio.py`, a few lines further down.  Declaring it in both
+    #    places makes the bench die at start-up with
+    #    «conflicting option string: --uscita» — measured on 11 Aug 2026, and
+    #    the run stopped BEFORE starting anything.
+    # ⚠ It is the seam between two authors of the same day: whoever wrote the
+    #   profile did not know B8 already had that argument, and whoever wrote
+    #   B8 did not know a profile would arrive.  The default of the time —
+    #   `b8-fatti.jsonl`, without the target in the name — is precisely the one
+    #   the profile exists to remove: two targets in the same file are two
+    #   measurements that cannot be put in a row.
     p.add_argument("--registro", default="")
-    # ⛔ Gli stessi quattro argomenti di B5, B6 e B7 — bersaglio obbligatorio e
-    #    senza predefinito, uscita, giro, md5 del binario.
+    # ⛔ The same four arguments as B5, B6 and B7 — mandatory target without a
+    #    default, output, run, md5 of the binary.
     b0.aggiungi_argomenti(p)
     a = p.parse_args()
     a.parola = parola_dagli_argomenti(a)
     a.indirizzi = [x for x in a.indirizzi.split(",") if x]
     a.prof = b0.profilo(a.bersaglio)
-    # ⛔ E da qui in poi OGNI riga del registro porta il bersaglio, la porta e
-    #    l'impronta md5 del binario misurato.
+    # ⛔ And from here on EVERY log line carries the target, the port and the md5
+    #    fingerprint of the measured binary.
     BERSAGLIO.update({"bersaglio": a.bersaglio, "porta": a.porta,
                       "md5": a.md5 or "ignota"})
     R_BAN.update({"caricati": a.prof["r_ban_caricati"],
@@ -2549,38 +2546,37 @@ def principale():
     if a.verdetto:
         return verdetto(a)
     if len(a.indirizzi) < 2:
-        print(f"    {ROSSO}NO{GRIGIO}  ⛔ servono DUE indirizzi di provenienza")
+        print(f"    {ROSSO}NO{GRIGIO}  ⛔ TWO source addresses are needed")
         return 2
 
-    # ⛔ E LA RIGA D'APERTURA DEL GIRO — che dice contro che cosa si misura, e
-    #    che cosa questo bersaglio fa di diverso.
+    # ⛔ AND THE OPENING LINE OF THE RUN — which says against what one measures, and
+    #    what this target does differently.
     scrivi(a.uscita, {"giro": a.giro, "tipo": "giro", "banco": "B8",
                       "eseguibile": a.prof["eseguibile"],
                       "indirizzi": a.indirizzi,
-                      # ⛔ La differenza che cambia il SIGNIFICATO di un rosso:
-                      #    se il file dei ban c'e' e non si legge, il prodotto
-                      #    RIFIUTA di partire (src/main.c: «non e' "zero ban",
-                      #    e' la protezione di §4.4-bis spenta.  Non si
-                      #    parte.»), mentre l'innesto parte e lo scrive.  ⚠ Su
-                      #    questo bersaglio quel caso non si osserva come una
-                      #    riga di registro: si osserva come «il server non si
-                      #    e' acceso».
+                      # ⛔ The difference that changes the MEANING of a red:
+                      #    if the ban file is there and cannot be read, the product
+                      #    REFUSES to start (src/main.c: «it is not "zero bans",
+                      #    it is the protection of §4.4-bis switched off.  One does
+                      #    not start.»), while the graft starts and writes it.  ⚠ On
+                      #    this target that case is not observed as a log line:
+                      #    it is observed as «the server did not start».
                       "ban_illeggibile_parte": a.prof["ban_illeggibile_parte"],
                       "righe_cercate": dict(R_BAN)})
 
     if a.stato_iniziale:
-        # ⛔ B0.1: si dichiara E si verifica da che stato si parte.  Qui lo stato
-        #    che conta e' triplo: il comando di sblocco esiste, i due indirizzi
-        #    non sono bannati, e la pagina sa dire di no.
+        # ⛔ B0.1: it is declared AND verified from which state one starts.  Here
+        #    the state that counts is threefold: the unblock command exists, the
+        #    two addresses are not banned, and the page can say no.
         vivo, che = cmd.ping(a.comando)
         if not vivo:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ il comando di sblocco non risponde: "
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ the unblock command does not answer: "
                   f"{che}")
-            print(f"        senza, questo banco non puo' ne' partire da uno stato "
-                  f"noto ne' rimettere la macchina a posto — e ogni banco "
-                  f"successivo resterebbe fuori per {BAN_ORE} ore (B0.3)")
+            print(f"        without it, this bench can neither start from a "
+                  f"known state nor put the machine back in order — and every "
+                  f"following bench would stay out for {BAN_ORE} hours (B0.3)")
             return 2
-        print(f"    {VERDE}OK{GRIGIO}  il comando di sblocco risponde ({che})")
+        print(f"    {VERDE}OK{GRIGIO}  the unblock command answers ({che})")
         sblocca_e_dichiara(a, a.indirizzi, "stato-iniziale")
         tutte = True
         for ind in a.indirizzi:
@@ -2588,28 +2584,28 @@ def principale():
             if r["errore"] or r["bannato"] is not False:
                 tutte = False
         if not tutte:
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ lo stato iniziale non e' quello "
-                  f"dichiarato: qualcuno e' gia' bannato, o la pagina non "
-                  f"risponde")
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ the initial state is not the "
+                  f"declared one: someone is already banned, or the page does not "
+                  f"answer")
             return 2
-        print(f"    {VERDE}OK{GRIGIO}  ⭐ e la pagina SA DIRE DI NO: senza questa "
-              f"riga, «tentativi esauriti» piu' tardi sarebbe compatibile con "
-              f"una pagina che lo dice sempre")
+        print(f"    {VERDE}OK{GRIGIO}  ⭐ and the page CAN SAY NO: without this "
+              f"line, «attempts exhausted» later would be compatible with "
+              f"a page that always says it")
 
-        # ⛔ IL CONTROLLO POSITIVO SULLO STRUMENTO — `LEZIONI.md` §1.9 regola 2:
-        #    *«ogni misura vuole un controllo positivo, sullo stesso strumento —
-        #    questo strumento sa trovare qualcosa che c'e' di sicuro?»*
+        # ⛔ THE POSITIVE CONTROL ON THE TOOL — `LEZIONI.md` §1.9 rule 2:
+        #    *«every measurement wants a positive control, on the same tool —
+        #    can this tool find something that is surely there?»*
         #
-        #    Qui la domanda e': **questo banco sa produrre un AMMESSO?**  Se non
-        #    lo sa — parola d'ordine sbagliata, utente senza password, PAM che
-        #    non gli parla — il caso «giusta» riceve `CREDENZIALI_ERRATE` come
-        #    gli altri due, ⛔ **i tre casi diventano due**, e la coppia
-        #    «sbagliata − giusta» sarebbe indistinguibile **per costruzione**:
-        #    il verde piu' vuoto che questo banco possa stampare.
+        #    Here the question is: **can this bench produce an AMMESSO?**  If it
+        #    cannot — wrong password, user without password, PAM that does not
+        #    talk to it — the «giusta» case receives `CREDENZIALI_ERRATE` like
+        #    the other two, ⛔ **the three cases become two**, and the pair
+        #    «sbagliata − giusta» would be indistinguishable **by construction**:
+        #    the emptiest green this bench can print.
         #
-        # ⚠ E costa un tentativo che non consuma niente: un'autenticazione
-        #   RIUSCITA azzera il conto di quell'indirizzo (§4.4-bis), quindi
-        #   lascia la macchina piu' pulita di come l'ha trovata.
+        # ⚠ And it costs an attempt that consumes nothing: a SUCCESSFUL
+        #   authentication resets the count of that address (§4.4-bis), so it
+        #   leaves the machine cleaner than it found it.
         r = asyncio.run(un_tentativo(a.indirizzi[0], a.porta, a.utente, a.parola))
         rec = dict(r)
         rec.update({"giro": a.giro, "tipo": "controllo",
@@ -2619,18 +2615,18 @@ def principale():
                     "atteso_modello": "AMMESSO", "atteso_motivo": None})
         scrivi(a.uscita, rec)
         if rec["messaggio"] != "AMMESSO":
-            print(f"    {ROSSO}NO{GRIGIO}  ⛔ il controllo positivo NON passa: con "
-                  f"l'utente «{a.utente}» e la parola che questo banco crede "
-                  f"giusta il server risponde "
+            print(f"    {ROSSO}NO{GRIGIO}  ⛔ the positive control does NOT pass: with "
+                  f"the user «{a.utente}» and the password this bench believes "
+                  f"right the server answers "
                   f"{rec['messaggio'] or rec['errore']} "
                   f"{MOTIVI.get(rec['motivo'], '')}")
-            print(f"        ⛔ senza un AMMESSO i tre casi sono DUE, e «le tre "
-                  f"mediane non si separano» sarebbe vero per costruzione.  "
-                  f"Guarda la parola d'ordine (gli altri banchi usano "
-                  f"«parola-di-prova»), non il server")
+            print(f"        ⛔ without an AMMESSO the three cases are TWO, and «the three "
+                  f"medians do not separate» would be true by construction.  "
+                  f"Look at the password (the other benches use "
+                  f"«parola-di-prova»), not at the server")
             return 2
-        print(f"    {VERDE}OK{GRIGIO}  ⭐ e questo banco SA produrre un AMMESSO "
-              f"({rec['ms']:.0f} ms): i tre casi sono davvero tre")
+        print(f"    {VERDE}OK{GRIGIO}  ⭐ and this bench CAN produce an AMMESSO "
+              f"({rec['ms']:.0f} ms): the three cases really are three")
         return 0
 
     if a.sblocca:
@@ -2643,68 +2639,69 @@ def principale():
         return asyncio.run(fase_ban_prima(a))
     if a.ban == "dopo":
         return asyncio.run(fase_ban_dopo(a))
-    print(f"    {ROSSO}NO{GRIGIO}  ⛔ non mi hai detto che cosa fare")
+    print(f"    {ROSSO}NO{GRIGIO}  ⛔ you did not tell me what to do")
     return 2
 
 
 # ---------------------------------------------------------------------------
-# ⛔ LA PAROLA D'ORDINE NON DEVE PASSARE DALLA RIGA DI COMANDO — difetto **D12**,
-#    curato il 12 agosto 2026.
+# ⛔ THE PASSWORD MUST NOT GO THROUGH THE COMMAND LINE — defect **D12**,
+#    cured on 12 Aug 2026.
 #
-# ⛔ `--parola` finisce nell'`argv` del processo, cioe' in `/proc/<pid>/cmdline`,
-#    che su Linux e' **leggibile da chiunque**: un `ps` lanciato da un altro
-#    utente durante il giro la stampa per intero.
+# ⛔ `--parola` ends up in the process `argv`, that is in `/proc/<pid>/cmdline`,
+#    which on Linux is **readable by anyone**: a `ps` launched by another user
+#    during the run prints it in full.
 #
-# ⭐ La strada buona esisteva gia' in casa e questa e' la sua estensione, non un
-#    secondo modo: `01-b10-secondo-utente.py` prende `--parola-file`, un file
-#    `0600` che il lanciatore scrive con `printf` — un **builtin** della shell,
-#    quindi nemmeno la scrittura passa per un processo con la parola in `argv` —
-#    e cancella con una `trap`.
+# ⭐ The good road already existed in the house and this is its extension, not a
+#    second way: `01-b10-secondo-utente.py` takes `--parola-file`, a `0600` file
+#    that the launcher writes with `printf` — a shell **builtin**, so not even
+#    the writing goes through a process with the password in `argv` — and
+#    deletes with a `trap`.
 #
-# ⚠ E `--parola` NON e' stata tolta, e non per pigrizia: dei chiamanti non
-#   ancora curati la passano ancora, e romperli **in silenzio** sarebbe peggio
-#   del difetto.  ⛔ Ma il ripiego si DICHIARA (`CODER.md` §4.2): un ripiego
-#   silenzioso produce due comportamenti sotto la stessa etichetta, che e' la
-#   forma **E2** — e qui i due comportamenti sono «il segreto e' protetto» e
-#   «il segreto e' pubblico».  ⇒ chi passa `--parola` se lo sente dire.
+# ⚠ And `--parola` was NOT removed, and not out of laziness: some callers not
+#   yet cured still pass it, and breaking them **silently** would be worse than
+#   the defect.  ⛔ But the fallback is DECLARED (`CODER.md` §4.2): a silent
+#   fallback produces two behaviours under the same label, which is form
+#   **E2** — and here the two behaviours are «the secret is protected» and
+#   «the secret is public».  ⇒ whoever passes `--parola` gets told.
 #
-# ⚠ E l'avviso guarda `sys.argv`, non il valore: il predefinito scritto nel
-#   codice non sta in nessuna riga di comando, e dirgli il contrario sarebbe un
-#   allarme che si impara a ignorare.
+# ⚠ And the warning looks at `sys.argv`, not at the value: the default written
+#   in the code is in no command line, and telling it otherwise would be an
+#   alarm one learns to ignore.
 def parola_dagli_argomenti(a):
-    """La parola d'ordine: da `--parola-file` se c'e', da `--parola` altrimenti.
+    """The password: from `--parola-file` if present, from `--parola` otherwise.
 
-    ⛔ E i tre modi di fallire si distinguono: «non si legge», «e' leggibile da
-    altri» e «e' vuoto» hanno tre cure diverse, e un file vuoto NON e' una
-    parola vuota — e' «il lanciatore non l'ha scritta» (`LEZIONI.md` §1.9).
+    ⛔ And the three ways of failing are told apart: «cannot be read», «is
+    readable by others» and «is empty» have three different cures, and an empty
+    file is NOT an empty password — it is «the launcher did not write it»
+    (`LEZIONI.md` §1.9).
     """
     percorso = getattr(a, "parola_file", "") or ""
     if percorso:
         try:
             modo = os.stat(percorso).st_mode & 0o077
         except OSError as e:
-            print(f"   ⛔ il file della parola «{percorso}» non si legge: {e}")
+            print(f"   ⛔ the password file «{percorso}» cannot be read: {e}")
             sys.exit(2)
         if modo:
-            print(f"   ⚠ «{percorso}» e' leggibile da altri (bit {modo:o}): il "
-                  f"segreto non e' protetto")
+            print(f"   ⚠ «{percorso}» is readable by others (bits {modo:o}): the "
+                  f"secret is not protected")
         try:
             with open(percorso, encoding="utf-8") as f:
                 parola = f.read().strip("\n")
         except OSError as e:
-            print(f"   ⛔ la parola non si legge da «{percorso}»: {e}")
+            print(f"   ⛔ the password cannot be read from «{percorso}»: {e}")
             sys.exit(2)
         if not parola:
-            print(f"   ⛔ il file della parola «{percorso}» e' VUOTO.  Non e'")
-            print("      «la parola e' vuota»: e' «il lanciatore non l'ha scritta».")
+            print(f"   ⛔ the password file «{percorso}» is EMPTY.  It is not")
+            print("      «the password is empty»: it is «the launcher did not write it».")
             sys.exit(2)
         return parola
     if any(x == "--parola" or x.startswith("--parola=") for x in sys.argv[1:]):
-        print("   ⚠ D12: la parola d'ordine e' arrivata da `--parola`, cioe' dalla")
-        print("     RIGA DI COMANDO: sta in `/proc/<pid>/cmdline` e la vede chiunque")
-        print("     faccia `ps` su questa macchina.  Il giro prosegue — il chiamante")
-        print("     non e' stato curato — ma non e' un giro riservato.")
-        print("     ⭐ La cura: `--parola-file <file 0600>`, come in B10.")
+        print("   ⚠ D12: the password arrived from `--parola`, that is from the")
+        print("     COMMAND LINE: it is in `/proc/<pid>/cmdline` and anyone who")
+        print("     runs `ps` on this machine sees it.  The run goes on — the caller")
+        print("     has not been cured — but it is not a private run.")
+        print("     ⭐ The cure: `--parola-file <0600 file>`, as in B10.")
     return a.parola
 
 

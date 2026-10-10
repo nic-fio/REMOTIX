@@ -1,38 +1,38 @@
 #!/usr/bin/env python3
-"""12-c20-veri — C20 COI BROWSER VERI: dopo «Esci» e un nuovo accesso dalla
-stessa pagina, lo schermo non lampeggia.
+"""12-c20-veri — C20 WITH REAL BROWSERS: after "Log out" and a new login from
+the same page, the screen does not flicker.
 
     python3 banchi/12-c20-veri.py --scatola gnome [--browser firefox,chrome]
         [--visibile] [--salva DIR] [--attesa-rientro 3]
 
-⛔ PERCHE' ESISTE.  `11-c20-…py` (la maglia della rete) usa il cliente Python,
-   e il 23 set 2026, sera, su gnome ha dato «non ho potuto guardare»: il
-   secondo accesso viene AMMESSO e un secondo dopo e' il CLIENTE a chiudere la
-   connessione (nel registro del server la chiusura e' silenziosa, cioe' in
-   drenaggio: l'ha chiesta l'altra parte).  Poi la maglia, arrendendosi, fa
-   `loginctl terminate-user` — ed e' quello il segnale 15 che si leggeva nel
-   giornale.  ⇒ Il cliente Python puo' indicare dove guardare, ⛔ ma non
-   certificare ne' scagionare: l'utente, 23 set 2026, *«i test vanno fatti con
-   i browser veri, non con emulatori»*.
+⛔ WHY IT EXISTS.  `11-c20-…py` (the network mesh) uses the Python client,
+   and on 23 Sep 2026, evening, on gnome it gave "I could not look": the
+   second login is ADMITTED and one second later it is the CLIENT that closes
+   the connection (in the server log the closing is silent, that is, in
+   draining: the other side asked for it).  Then the mesh, giving up, runs
+   `loginctl terminate-user` — and that is the signal 15 that was read in the
+   journal.  ⇒ The Python client can point where to look, ⛔ but it cannot
+   certify nor clear: the user, 23 Sep 2026, *"tests must be done with
+   real browsers, not with emulators"*.
 
-⭐ CHE COSA FA, per ogni browser (Firefox con Marionette, Chrome con CDP, i
-   guidatori sono quelli di `12-client-veri.py`, ⛔ non una copia):
-     1  apre la pagina, entra, aspetta il primo fotogramma non degenere
-     2  dentro la sessione, il gesto «Esci» DEL MENU (la tavola di C20)
-     3  aspetta che il prodotto dichiari la sessione finita (le due forme di
-        C20) e guarda che cosa fa la PAGINA: torna al modulo? con che frase?
-     4  dopo `--attesa-rientro` secondi rientra DALLA STESSA PAGINA, come fa
-        l'utente — e se il modulo non c'e', ricarica (e lo dice)
-     5  primo fotogramma, poi accende nella sessione la scena di C20 (luce
-        costante, bande che scorrono) e fotografa la tela per `--guarda-s`
-     6  giudica le luminanze col giudice di C20 (⛔ lo stesso, importato):
-        un lampeggio fra desktop, schermata d'uscita e nero e' ROSSO
-   Esiti: 0 verde · 1 rosso · 3 non ho potuto guardare, col motivo.
+⭐ WHAT IT DOES, for each browser (Firefox with Marionette, Chrome with CDP, the
+   drivers are those of `12-client-veri.py`, ⛔ not a copy):
+     1  opens the page, logs in, waits for the first non-degenerate frame
+     2  inside the session, the "Log out" gesture OF THE MENU (C20's table)
+     3  waits for the product to declare the session over (C20's two
+        forms) and looks at what the PAGE does: back to the form? with which sentence?
+     4  after `--attesa-rientro` seconds it logs in again FROM THE SAME PAGE, as
+        the user does — and if the form is not there, it reloads (and says so)
+     5  first frame, then it starts C20's scene in the session (constant
+        light, scrolling bands) and photographs the canvas for `--guarda-s`
+     6  judges the luminances with C20's judge (⛔ the same one, imported):
+        a flicker between desktop, logout screen and black is RED
+   Outcomes: 0 green · 1 red · 3 I could not look, with the reason.
 
-⚠ Si entra nella scatola con `fondamenta/strumenti/sshpw.py` e `sudo podman
-  exec rete11-<scatola>`: e' la stessa strada di `11-gancio.sh remoto`.
-⚠ L'inquilino e' `c20u7<n>`, dentro lo spazio di nomi della rete: se questo
-  banco morisse a meta', il gancio lo sgombera e C19 lo vede.
+⚠ The box is entered with `fondamenta/strumenti/sshpw.py` and `sudo podman
+  exec rete11-<scatola>`: it is the same route as `11-gancio.sh remoto`.
+⚠ The tenant is `c20u7<n>`, inside the network's namespace: if this bench
+  died halfway, the hook clears it out and C19 sees it.
 """
 import argparse
 import base64
@@ -67,7 +67,7 @@ VERDE, ROSSO, CIECO = VERI.VERDE, VERI.ROSSO, VERI.CIECO
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  DENTRO LA SCATOLA
+#  INSIDE THE BOX
 # ═══════════════════════════════════════════════════════════════════════════
 class Scatola:
     def __init__(self, nome):
@@ -75,10 +75,10 @@ class Scatola:
         self.contenitore = "rete11-%s" % nome
 
     def dentro(self, riga, secondi=90):
-        """(codice, uscita) di `riga` eseguita da root nella scatola.
+        """(code, output) of `riga` run as root in the box.
 
-        ⚠ La riga viaggia in base64: nessuna virgoletta da sfuggire su tre
-          gusci (tablet → ssh → sudo → podman → sh)."""
+        ⚠ The line travels in base64: no quote to escape across three
+          shells (tablet → ssh → sudo → podman → sh)."""
         b = base64.b64encode(riga.encode()).decode()
         remoto = ("sudo -S -p 'Password sudo: ' podman exec %s sh -c "
                   "\"$(echo %s | base64 -d)\"; echo \"@@codice=$?\""
@@ -87,7 +87,7 @@ class Scatola:
             r = subprocess.run([sys.executable, SSHPW, remoto], capture_output=True,
                                text=True, errors="replace", timeout=secondi)
         except subprocess.TimeoutExpired:
-            return None, "(nessuna risposta in %d s)" % secondi
+            return None, "(no answer in %d s)" % secondi
         testo = "\n".join(x for x in r.stdout.splitlines()
                           if not x.startswith("tput:") and "Password sudo" not in x)
         codice = None
@@ -112,7 +112,7 @@ class Scatola:
         return t.splitlines()
 
     def gesto_esci(self):
-        """(desktop, gesto) — la stessa domanda di C20, fatta dentro."""
+        """(desktop, gesture) — the same question as C20, asked inside."""
         for nome, ci_vuole, non_ci_vuole, gesto in C20.DESKTOP_E_GESTO:
             c, _ = self.dentro("command -v %s >/dev/null 2>&1" % ci_vuole, 30)
             if c != 0:
@@ -133,13 +133,13 @@ class Scatola:
     def accendi_scena(self, chi):
         c, t = self.dentro(
             "u=$(id -u %s); d=$(ls /run/user/$u 2>/dev/null | grep -E '^wayland-[0-9]+$' "
-            "| head -1); [ -n \"$d\" ] || { echo 'nessun socket wayland'; exit 2; }; "
-            "[ -f %s ] || { echo 'manca %s'; exit 2; }; "
+            "| head -1); [ -n \"$d\" ] || { echo 'no wayland socket'; exit 2; }; "
+            "[ -f %s ] || { echo 'missing %s'; exit 2; }; "
             "setsid runuser -u %s -- env XDG_RUNTIME_DIR=/run/user/$u WAYLAND_DISPLAY=$d "
             "MOZ_ENABLE_WAYLAND=1 XDG_SESSION_TYPE=wayland HOME=/home/%s "
             "firefox-esr --kiosk file://%s < /dev/null > /home/%s/.c20v-scena.log 2>&1 & "
             "for i in $(seq 1 40); do pgrep -u %s -f firefox-esr >/dev/null && "
-            "{ echo accesa; exit 0; }; sleep 0.25; done; echo 'non si e vista'; exit 1"
+            "{ echo started; exit 0; }; sleep 0.25; done; echo 'it was not seen'; exit 1"
             % (chi, SCENA_DENTRO, SCENA_DENTRO, chi, chi, SCENA_DENTRO, chi, chi), 60)
         return c == 0, t
 
@@ -149,7 +149,7 @@ class Scatola:
             % (chi, chi, parola), 60)
 
     def sgombera(self, chi):
-        # ⛔ `[c]20u7…`: `pkill -f` pescherebbe il guscio che lo esegue.
+        # ⛔ `[c]20u7…`: `pkill -f` would catch the shell that runs it.
         self.dentro("loginctl terminate-user %s >/dev/null 2>&1; "
                     "pkill -KILL -f 'runuser -u [%s]%s ' 2>/dev/null; "
                     "pkill -KILL -u %s >/dev/null 2>&1; sleep 0.5; "
@@ -159,10 +159,10 @@ class Scatola:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA PROVA DI UN BROWSER
+#  THE TEST OF ONE BROWSER
 # ═══════════════════════════════════════════════════════════════════════════
 def luminanza(png):
-    """La luminanza media della fotografia della tela, o None."""
+    """The mean luminance of the canvas photograph, or None."""
     try:
         from PIL import Image
         im = Image.open(io.BytesIO(png)).convert("L").resize(
@@ -174,20 +174,20 @@ def luminanza(png):
 
 
 def desktop_scuro_ma_vivo(e, m, s):
-    """⭐ (esito, motivo) del primo fotogramma, con la tolleranza del 4K.
+    """⭐ (outcome, reason) of the first frame, with the 4K tolerance.
 
-    ⛔ `[M]` 23 set 2026, xfce in 4K: lo sfondo della scatola e' NERO, e a
-       3840x2160 pannello, icone e orologio coprono il 2,7 % ⇒ il giudice di
-       `12-client-veri` (dominante >= 97 %) lo chiamava «degenere» — ma la
-       fotografia mostrava il desktop vero.  ⇒ Qui un desktop con fotogrammi
-       dipinti e ALMENO 40 colori distinti e' vivo: il giudizio vero di questo
-       banco e' la scena accesa dopo, non il primo fotogramma."""
+    ⛔ `[M]` 23 Sep 2026, xfce in 4K: the box's background is BLACK, and at
+       3840x2160 panel, icons and clock cover 2.7 % ⇒ the judge of
+       `12-client-veri` (dominant >= 97 %) called it "degenerate" — but the
+       photograph showed the real desktop.  ⇒ Here a desktop with painted
+       frames and AT LEAST 40 distinct colours is alive: the real judgement of
+       this bench is the scene started afterwards, not the first frame."""
     if e == VERDE:
         return e, m
     import re
-    c = re.search(r"colori distinti (\d+)", m or "")
+    c = re.search(r"distinct colours (\d+)", m or "")
     if (s or {}).get("dipinti") and c and int(c.group(1)) >= 40:
-        return VERDE, "desktop scuro ma vivo (%s colori distinti): %s" % (c.group(1), m)
+        return VERDE, "dark but alive desktop (%s distinct colours): %s" % (c.group(1), m)
     return e, m
 
 
@@ -203,18 +203,18 @@ def aspetta_riga(sc, segno, chi, forme, tetto):
 
 
 def dimensiona(g, nome, largo, alto):
-    """⭐ La finestra alla misura delle specifiche (4K), e si RILEGGE.
+    """⭐ The window at the size of the specification (4K), and it is READ BACK.
 
-    ⚠ Le guide di `12-client-veri.py` nascono a 1400x1000; qui la misura si
-      chiede dopo, e quel che vale e' `innerWidth` letto dalla pagina."""
+    ⚠ The drivers of `12-client-veri.py` are born at 1400x1000; here the size is
+      asked afterwards, and what counts is `innerWidth` read from the page."""
     try:
         if nome == "firefox":
             g.m.chiama("WebDriver:SetWindowRect",
                        {"x": 0, "y": 0, "width": largo, "height": alto})
         elif nome == "chrome":
-            # ⚠ `[M]` 23 set 2026, dentro labwc: la misura chiesta coi numeri
-            #   Chrome la ignora (restava 1376x888); lo stato «massimizzata» lo
-            #   onora il compositore.  Si chiede prima quello, poi i numeri.
+            # ⚠ `[M]` 23 Sep 2026, inside labwc: the size asked with numbers
+            #   Chrome ignores (it stayed 1376x888); the "maximised" state is
+            #   honoured by the compositor.  That is asked first, then the numbers.
             w = g.cdp.chiama("Browser.getWindowForTarget")
             wid = w.get("windowId") if isinstance(w, dict) else None
             if wid is None and isinstance(w, dict):
@@ -222,13 +222,13 @@ def dimensiona(g, nome, largo, alto):
             g.cdp.chiama("Browser.setWindowBounds", windowId=wid,
                          bounds={"windowState": "maximized"})
     except Exception as e:                       # noqa: BLE001
-        return "⚠ misura non cambiata: %s" % str(e)[:120]
+        return "⚠ size not changed: %s" % str(e)[:120]
     time.sleep(1)
     try:
-        return "finestra %sx%s (dpr %s)" % tuple(g.js(
+        return "window %sx%s (dpr %s)" % tuple(g.js(
             "return [innerWidth, innerHeight, devicePixelRatio]"))
     except Exception as e:                       # noqa: BLE001
-        return "⚠ misura non riletta: %s" % str(e)[:120]
+        return "⚠ size not read back: %s" % str(e)[:120]
 
 
 def un_browser(nome, o, sc, chi, gesto):
@@ -236,44 +236,44 @@ def un_browser(nome, o, sc, chi, gesto):
     esito = {"browser": nome}
     g = VERI.accendi_guida(nome, o)
     try:
-        print("   palco: %s" % g.palco(), flush=True)
+        print("   stage: %s" % g.palco(), flush=True)
         if o.largo:
             esito["finestra"] = dimensiona(g, nome, o.largo, o.alto)
             print("   %s" % esito["finestra"], flush=True)
         pr = VERI.Prova(g, o, o.url, o.parola)
 
-        # ── 1. il primo accesso ────────────────────────────────────────────
+        # ── 1. the first login ─────────────────────────────────────────────
         ok, m = pr.apri()
         if not ok:
-            return dict(esito, esito=CIECO, perche="la pagina non si apre: " + m)
+            return dict(esito, esito=CIECO, perche="the page does not open: " + m)
         e, m, s = pr.entra(o.parola)
         if e != VERDE:
-            return dict(esito, esito=CIECO, perche="primo accesso: " + m)
+            return dict(esito, esito=CIECO, perche="first login: " + m)
         e, m, s = pr.primo_fotogramma()
         e, m = desktop_scuro_ma_vivo(e, m, s)
-        print("   ⭐ primo accesso: %s" % m, flush=True)
+        print("   ⭐ first login: %s" % m, flush=True)
         if e != VERDE:
-            return dict(esito, esito=CIECO, perche="primo accesso senza immagine: " + m)
+            return dict(esito, esito=CIECO, perche="first login without image: " + m)
         time.sleep(o.primo_s)
 
-        # ── 2. «Esci», il gesto del menu ───────────────────────────────────
+        # ── 2. "Log out", the menu gesture ───────────────────────────────
         segno = sc.righe_registro()
         if segno is None:
-            return dict(esito, esito=CIECO, perche="non leggo il registro del server")
+            return dict(esito, esito=CIECO, perche="I cannot read the server log")
         c, t = sc.come_utente(chi, gesto)
         if c != 0:
-            return dict(esito, esito=CIECO, perche="il gesto «Esci» non ha risposto "
-                        "(codice %s): %s" % (c, t[-300:]))
+            return dict(esito, esito=CIECO, perche="the «Log out» gesture did not answer "
+                        "(code %s): %s" % (c, t[-300:]))
         t_esci = time.time()
         forma, riga = aspetta_riga(sc, segno, chi, [p for p, _d in C20.RIGHE_FINITA],
                                    o.attesa_uscita)
         if not forma:
-            return dict(esito, esito=CIECO, perche="%d s dopo «Esci» il prodotto non ha "
-                        "dichiarato la sessione finita" % o.attesa_uscita)
-        print("   ⭐ «Esci»: dopo %.1f s il prodotto dice «%s»"
+            return dict(esito, esito=CIECO, perche="%d s after «Log out» the product has not "
+                        "declared the session over" % o.attesa_uscita)
+        print("   ⭐ «Log out»: after %.1f s the product says «%s»"
               % (time.time() - t_esci, forma), flush=True)
 
-        # ── 3. che cosa fa la PAGINA ───────────────────────────────────────
+        # ── 3. what the PAGE does ──────────────────────────────────────────
         modulo, pagina = False, {}
         fine = time.time() + 30
         while time.time() < fine:
@@ -286,39 +286,39 @@ def un_browser(nome, o, sc, chi, gesto):
                 pass
             time.sleep(0.5)
         pagina = pr.stato()
-        print("   %s la pagina dopo «Esci»: modulo %s · esito «%s»"
-              % ("⭐" if modulo else "⚠", "VISIBILE" if modulo else "NON visibile",
+        print("   %s the page after «Log out»: form %s · outcome «%s»"
+              % ("⭐" if modulo else "⚠", "VISIBLE" if modulo else "NOT visible",
                  (pagina.get("esito") or "")[:120]), flush=True)
         esito["pagina_dopo_esci"] = {"modulo": modulo, "esito": pagina.get("esito")}
 
-        # ── 4. il nuovo accesso, DALLA STESSA PAGINA ───────────────────────
+        # ── 4. the new login, FROM THE SAME PAGE ───────────────────────────
         time.sleep(o.attesa_rientro)
         segno2 = sc.righe_registro() or segno
         if not modulo:
-            print("   ⚠ il modulo non c'e': ricarico, come farebbe l'utente", flush=True)
+            print("   ⚠ the form is not there: reloading, as the user would", flush=True)
             g.ricarica()
             ok, m = pr.apri_dopo_ricarica()
             if not ok:
-                return dict(esito, esito=CIECO, perche="dopo la ricarica: " + m)
+                return dict(esito, esito=CIECO, perche="after the reload: " + m)
         e, m, s = pr.entra(o.parola)
         if e != VERDE:
-            # ⛔ Qui il rosso e' del PRODOTTO: l'utente dopo «Esci» non rientra.
+            # ⛔ Here the red is the PRODUCT's: after "Log out" the user cannot get back in.
             coda = [x for x in (s or {}).get("registro", "").splitlines() if x.strip()][-6:]
-            return dict(esito, esito=ROSSO, perche="dopo «Esci» NON RIENTRA: %s" % m,
+            return dict(esito, esito=ROSSO, perche="after «Log out» it does NOT GET BACK IN: %s" % m,
                         pagina=coda, server=sc.registro_da(segno2, chi)[-25:])
         e, m, s = pr.primo_fotogramma()
         e, m = desktop_scuro_ma_vivo(e, m, s)
-        print("   %s secondo accesso: %s" % ("⭐" if e == VERDE else "⛔", m), flush=True)
+        print("   %s second login: %s" % ("⭐" if e == VERDE else "⛔", m), flush=True)
         if e != VERDE:
             return dict(esito, esito=ROSSO if e == ROSSO else CIECO,
-                        perche="secondo accesso senza immagine: " + m,
+                        perche="second login without image: " + m,
                         server=sc.registro_da(segno2, chi)[-25:])
 
-        # ── 5. la scena, e la tela fotografata ─────────────────────────────
+        # ── 5. the scene, and the canvas photographed ──────────────────────
         accesa, t = sc.accendi_scena(chi)
         if not accesa:
-            return dict(esito, esito=CIECO, perche="la scena non si accende: %s" % t[-160:])
-        print("   ⭐ scena accesa (%s)" % os.path.basename(SCENA_DENTRO), flush=True)
+            return dict(esito, esito=CIECO, perche="the scene does not start: %s" % t[-160:])
+        print("   ⭐ scene started (%s)" % os.path.basename(SCENA_DENTRO), flush=True)
         lum, d0 = [], (pr.stato().get("dipinti") or 0)
         fine = time.time() + o.guarda_s
         while time.time() < fine:
@@ -337,20 +337,20 @@ def un_browser(nome, o, sc, chi, gesto):
             time.sleep(o.passo_s)
         s = pr.stato()
         d1 = s.get("dipinti") or 0
-        print("   luminanze (%d fotografie, %d fotogrammi dipinti): %s"
+        print("   luminances (%d photographs, %d frames painted): %s"
               % (len(lum), d1 - d0, " ".join(str(x) for x in lum[:80])), flush=True)
         ep, salti, perche = C20.giudica_i_pixel(lum)
         server = sc.registro_da(segno2, chi)
         interessanti = [r for r in server if any(k in r for k in (
-            "figlio generato", "RACCOLTO", "E' FINITA", "se n'e' andato", "butto",
-            "RIAVVIO LA CATTURA", "congedo", "chiusa"))]
+            "child spawned", "REAPED", "IS OVER", "has gone", "throwing away",
+            "RESTARTING THE CAPTURE", "farewell", "closed"))]
         return dict(esito, esito=ep, perche=perche, salti=salti, fotografie=len(lum),
                     dipinti=d1 - d0, server=interessanti[-20:])
     finally:
         try:
             g.chiudi()
         except Exception as ex:                  # noqa: BLE001
-            print("   ⚠ chiusura del browser: %s" % ex)
+            print("   ⚠ closing the browser: %s" % ex)
 
 
 def main():
@@ -362,20 +362,20 @@ def main():
     a.add_argument("--visibile", action="store_true")
     a.add_argument("--salva", default="")
     a.add_argument("--primo-s", type=float, default=5.0,
-                   help="quanto resta il primo accesso prima di «Esci»")
+                   help="how long the first login stays before «Log out»")
     a.add_argument("--attesa-uscita", type=float, default=120.0)
     a.add_argument("--attesa-rientro", type=float, default=3.0,
-                   help="secondi fra la sessione finita e il nuovo accesso")
+                   help="seconds between the session ending and the new login")
     a.add_argument("--guarda-s", type=float, default=30.0)
     a.add_argument("--passo-s", type=float, default=0.2)
     a.add_argument("--tetto-s", type=int, default=45)
     a.add_argument("--porte-base", type=int, default=2951)
-    # ⭐ Le specifiche sono 4K (l'utente, 23 set 2026): la finestra si porta a
-    #   3840x2160.  `--largo 0` lascia la misura delle guide (1400x1000).
+    # ⭐ The specification is 4K (the user, 23 Sep 2026): the window is brought to
+    #   3840x2160.  `--largo 0` leaves the drivers' size (1400x1000).
     a.add_argument("--largo", type=int, default=3840)
     a.add_argument("--alto", type=int, default=2160)
     o = a.parse_args()
-    # ⚠ i campi che le guide e `Prova` di 12-client-veri si aspettano
+    # ⚠ the fields that the drivers and `Prova` of 12-client-veri expect
     o.url = "https://%s:%d/" % (o.host, PORTE[o.scatola])
     o.parola = C20.PAROLA
     o.scena, o.continuita_s, o.registro_cmd = "viva", 8, ""
@@ -385,25 +385,25 @@ def main():
     sc = Scatola(o.scatola)
     desktop, gesto = sc.gesto_esci()
     if not gesto:
-        print("⛔ non so come si dice «Esci» in %s ⇒ 3" % sc.contenitore)
+        print("⛔ I do not know how to say «Log out» in %s ⇒ 3" % sc.contenitore)
         return 3
     chi = "c20u7%02d" % random.randint(0, 99)
     o.utente = chi
-    print("⭐ 12-c20-veri · %s (%s) · %s · inquilino %s · browser %s · %s"
+    print("⭐ 12-c20-veri · %s (%s) · %s · tenant %s · browser %s · %s"
           % (sc.contenitore, desktop, o.url, chi, o.browser,
-             "finestre vere" if o.visibile else "HEADLESS"))
-    print("   «Esci» si dice: %s" % gesto)
+             "real windows" if o.visibile else "HEADLESS"))
+    print("   «Log out» is said: %s" % gesto)
     righe = []
     for b in [x.strip() for x in o.browser.split(",") if x.strip()]:
         sc.sgombera(chi)
         c, t = sc.crea(chi, o.parola)
         if c != 0:
-            print("⛔ non ho potuto creare %s: %s" % (chi, t[-200:]))
+            print("⛔ I could not create %s: %s" % (chi, t[-200:]))
             return 3
         try:
             r = un_browser(b, o, sc, chi, gesto)
         except Exception as e:                   # noqa: BLE001
-            r = {"browser": b, "esito": CIECO, "perche": "il banco e' caduto: %r" % e}
+            r = {"browser": b, "esito": CIECO, "perche": "the bench fell over: %r" % e}
         finally:
             sc.sgombera(chi)
         print("   ▶ %s: %s — %s" % (b, {0: "VERDE", 1: "ROSSO", 3: "NON HO POTUTO GUARDARE"}

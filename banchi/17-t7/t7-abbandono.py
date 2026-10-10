@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-# T7 fase 17 — l'orologio dell'abbandono su un desktop RITROVATO (nessun figlio).
-# Sul server come nicfio, serratura gia' presa, binario nuovo gia' nella scatola.
-#   python3 t7-abbandono.py DESKTOP [SECONDI]
-# Un utente entra col browser vero ed esce (browser chiuso: il desktop resta);
-# il servizio riparte con --abbandono-s SECONDI; il padre nuovo lo ritrova, e
-# allo scadere deve far nascere un figlio che CHIUDA il desktop.
+# T7 phase 17 — the abandonment clock on a desktop FOUND AGAIN (no child).
+# On the server as nicfio, lock already taken, new binary already in the box.
+#   python3 t7-abbandono.py DESKTOP [SECONDS]
+# A user enters with the real browser and leaves (browser closed: the desktop stays);
+# the service restarts with --abbandono-s SECONDS; the new parent finds it again, and
+# when time is up it must spawn a child that CLOSES the desktop.
 import json
 import os
 import subprocess
@@ -25,7 +25,7 @@ os.makedirs(EV, exist_ok=True)
 
 
 def log(m):
-    print("%s [%s abbandono] %s" % (time.strftime("%H:%M:%S"), D, m), flush=True)
+    print("%s [%s abandonment] %s" % (time.strftime("%H:%M:%S"), D, m), flush=True)
 
 
 def dentro(cmd, t=60):
@@ -49,7 +49,7 @@ E = S.Esiti(o)
 esito = {"desktop": D, "abbandono_s": SEC}
 with S.Sessione(o, "974", E) as s:
     ok, m = s.entra()
-    log("entra: %s %s" % (ok, m[:80]))
+    log("enter: %s %s" % (ok, m[:80]))
     time.sleep(5)
     s.spegni_browser()
     p0 = palco(s.chi)
@@ -62,10 +62,10 @@ with S.Sessione(o, "974", E) as s:
             "--certificati /var/lib/rete11/certificati --pagina /opt/remotix/pagina.html "
             "--ban-file /var/lib/rete11/ban --comando-socket /var/lib/rete11/comando.sock "
             "--rilievo /var/lib/rete11/rilievo --parlantina --journal" % (PORTA, SEC))
-    log("riavvio con --abbandono-s %d: %s" % (SEC, dentro(riga)[1].strip()[:120]))
+    log("restart with --abbandono-s %d: %s" % (SEC, dentro(riga)[1].strip()[:120]))
     time.sleep(SEC + 25)
-    c, t = dentro("journalctl -o short-unix --no-pager --since @%d | grep -a 'RITROVATO\\|ritrovati "
-                  "all\\|ABBANDONO\\|ne faccio nascere\\|ABBANDONATA\\|sessione grafica\\|non c.e. piu' "
+    c, t = dentro("journalctl -o short-unix --no-pager --since @%d | grep -a 'FOUND AGAIN\\|found again "
+                  "at\\|ABANDONMENT\\|I spawn one\\|ABANDONED\\|graphical session\\|no longer' "
                   "| cut -c1-330" % int(t0))
     with open(os.path.join(EV, "righe.txt"), "w") as f:
         f.write(t)

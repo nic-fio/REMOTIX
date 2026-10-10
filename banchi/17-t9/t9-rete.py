@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""t9-rete.py — fase 17, T9 (R22): che cosa ha mandato la VM «senza rete».
+"""t9-rete.py — phase 17, T9 (R22): what the "no network" VM sent.
 
     python3 t9-rete.py rete.pcap [DAL HH:MM:SS AL HH:MM:SS]
 
-Legge la cattura di QEMU (filter-dump sulla scheda della VM, i due versi) e separa:
-  - quel che ENTRA dagli inoltri del banco (ssh sulla 22, REMOTIX sulla 7447) e le sue risposte;
-  - i tentativi che la VM COMINCIA da sé: un SYN TCP, un datagramma UDP che non è una risposta
-    (porta d'origine diversa da 7447), ARP, DHCP, multicast; con l'ora (UTC) del primo e dell'ultimo.
-Con DAL/AL (UTC) dice quali tentativi cadono nella finestra dell'installazione: la prova di R22 è che
-lì non ce ne sia NESSUNO verso fuori (restrict=on li butterebbe comunque: qui si vede se ci sono).
+Reads the QEMU capture (filter-dump on the VM's interface, both directions) and separates:
+  - what COMES IN through the bench's forwards (ssh on 22, REMOTIX on 7447) and its replies;
+  - the attempts the VM STARTS by itself: a TCP SYN, a UDP datagram that is not a reply
+    (source port other than 7447), ARP, DHCP, multicast; with the time (UTC) of the first and the last.
+With DAL/AL (UTC) it says which attempts fall in the installation window: the proof of R22 is that
+there are NONE towards the outside there (restrict=on would drop them anyway: here we see whether there are any).
 """
 import collections
 import struct
@@ -20,7 +20,7 @@ dal = al = None
 if len(sys.argv) >= 6:
     dal, al = sys.argv[3], sys.argv[5]
 if len(b) < 24:
-    print("cattura vuota")
+    print("empty capture")
     sys.exit()
 e = "<" if b[:4] == b"\xd4\xc3\xb2\xa1" else ">"
 i, n = 24, 0
@@ -54,21 +54,21 @@ while i + 16 <= len(b):
             flag = p[ihl + 13] if len(p) > ihl + 13 else 0
             servizio = sp if dalla_vm else dp
             if servizio in (22, 7447):
-                entrata["TCP %d (inoltro del banco)" % servizio] += 1
+                entrata["TCP %d (bench forward)" % servizio] += 1
                 continue
             if dalla_vm and flag & 0x02 and not flag & 0x10:
                 chiave = "TCP %s → %s:%d" % (s, d, dp)
             elif dalla_vm:
-                chiave = "TCP %s → %s:%d (seguito)" % (s, d, dp)
+                chiave = "TCP %s → %s:%d (follow-up)" % (s, d, dp)
             else:
-                entrata["TCP da %s:%d" % (s, sp)] += 1
+                entrata["TCP from %s:%d" % (s, sp)] += 1
                 continue
         elif proto == 17:
             if (dalla_vm and sp == 7447) or (not dalla_vm and dp == 7447):
-                entrata["UDP 7447 (inoltro del banco, QUIC)"] += 1
+                entrata["UDP 7447 (bench forward, QUIC)"] += 1
                 continue
             if not dalla_vm:
-                entrata["UDP da %s:%d" % (s, sp)] += 1
+                entrata["UDP from %s:%d" % (s, sp)] += 1
                 continue
             chiave = "UDP %s:%d → %s:%d" % (s, sp, d, dp)
         else:
@@ -76,25 +76,25 @@ while i + 16 <= len(b):
                 continue
             chiave = "IP proto %d %s → %s" % (proto, s, d)
     elif dalla_vm:
-        chiave = {0x0806: "ARP", 0x86DD: "IPv6 (vicinato, multicast)"}.get(tipo, "ethertype %04x" % tipo)
+        chiave = {0x0806: "ARP", 0x86DD: "IPv6 (neighbour, multicast)"}.get(tipo, "ethertype %04x" % tipo)
     if chiave:
         t = tentativi.setdefault(chiave, [ora, ora, 0])
         t[1] = ora
         t[2] += 1
 
-print("%d pacchetti sulla scheda della VM (MAC %s)" % (n, ospite))
-print("in ENTRATA (gli inoltri del banco, e le risposte della VM):")
+print("%d packets on the VM's interface (MAC %s)" % (n, ospite))
+print("INCOMING (the bench's forwards, and the VM's replies):")
 for k, c in entrata.most_common():
     print("  %7d  %s" % (c, k))
-print("COMINCIATI dalla VM (primo · ultimo · pacchetti):")
+print("STARTED by the VM (first · last · packets):")
 nella = []
 for k, (a, z, c) in sorted(tentativi.items(), key=lambda x: x[1][0]):
     dentro = dal is not None and not (z < dal or a > al)
     if dentro:
         nella.append(k)
-    print("  %s · %s  %6d  %s%s" % (a, z, c, k, "   ← nella finestra dell'installazione" if dentro else ""))
+    print("  %s · %s  %6d  %s%s" % (a, z, c, k, "   ← in the installation window" if dentro else ""))
 if dal is not None:
     fuori = [k for k in nella if not k.startswith(("ARP", "IPv6", "UDP 0.0.0.0:68"))
              and "224.0.0." not in k and "239.255." not in k and "255.255.255.255" not in k]
-    print("finestra dell'installazione %s-%s UTC: %d tentativi verso fuori%s" %
-          (dal, al, len(fuori), (": " + "; ".join(fuori)) if fuori else " — NESSUN accesso alla rete"))
+    print("installation window %s-%s UTC: %d attempts towards the outside%s" %
+          (dal, al, len(fuori), (": " + "; ".join(fuori)) if fuori else " — NO network access"))

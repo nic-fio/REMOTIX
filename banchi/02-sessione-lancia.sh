@@ -1,105 +1,104 @@
 #!/bin/bash
 #
-# 02-sessione-lancia.sh — il banco della sotto-fase F2.1: la sessione GNOME
-# headless nasce, e nasce CON un monitor virtuale della misura chiesta.
+# 02-sessione-lancia.sh — the bench of sub-phase F2.1: the headless GNOME session
+# is born, and is born WITH a virtual monitor of the requested size.
 #
-#   bash 02-sessione-lancia.sh guarda        guarda e basta: non tocca niente
-#   bash 02-sessione-lancia.sh sano          la avvia CON --virtual-monitor
-#   bash 02-sessione-lancia.sh guasto        la avvia SENZA — la prova M9
-#   bash 02-sessione-lancia.sh dispositivi   quando nasce il puntatore virtuale
+#   bash 02-sessione-lancia.sh guarda        just looks: touches nothing
+#   bash 02-sessione-lancia.sh sano          starts it WITH --virtual-monitor
+#   bash 02-sessione-lancia.sh guasto        starts it WITHOUT — the M9 test
+#   bash 02-sessione-lancia.sh dispositivi   when the virtual pointer is born
 #   bash 02-sessione-lancia.sh ferma         Logout(2)
-#   bash 02-sessione-lancia.sh certifica     sano → guasto → risanato
-#   bash 02-sessione-lancia.sh come-al-riavvio  la fa rinascere SENZA nessun
-#                                            drop-in di questo banco: com'e'
-#                                            dopo un riavvio del server
-#   bash 02-sessione-lancia.sh guardia [...] la guardia da mettere davanti a una
-#                                            misura altrui (→ 02-sessione-guardia.sh)
+#   bash 02-sessione-lancia.sh certifica     healthy → fault → healed
+#   bash 02-sessione-lancia.sh come-al-riavvio  makes it be born again WITHOUT any
+#                                            drop-in of this bench: as it is
+#                                            after a server reboot
+#   bash 02-sessione-lancia.sh guardia [...] the guard to put in front of someone
+#                                            else's measurement (→ 02-sessione-guardia.sh)
 #
-# ⛔ GIRA SULL'HOST DI NIC-OS, non dentro il contenitore: la sessione grafica
-#    vive li', con logind, systemd --user e /dev/dri veri.
-#
-# ===========================================================================
-# ⛔ PERCHE' ESISTE, E NON E' «PER AVVIARE UNA SESSIONE»
-# ===========================================================================
-#
-# Avviare una sessione lo sa fare gia' `banchi/00-sessione-gnome.sh`, della
-# fase 0.  Quello che quel banco NON fa, e che e' tutto il motivo di questo
-# file, e' chiedere il MONITOR:
-#
-#   ⛔ `00-sessione-gnome.sh` non nomina mai `--virtual-monitor`, e nemmeno
-#      `--headless`: si affida al drop-in che `fondamenta/banco/provision-server.sh`
-#      (righe 224-231) scrive in /etc/systemd/user, che mette `--headless
-#      --no-x11` e **basta**.  ⇒ Ogni sessione avviata cosi' e' NERA.
-#
-#   ⭐ E non e' una deduzione.  `[M]` 12 agosto 2026, aprendo questo giro: la
-#      sessione GNOME viva su NIC-OS da due giorni — gnome-shell 214465,
-#      IsSessionRunning true, cinquanta nomi sul bus, Nautilus e il Terminale
-#      accesi — rispondeva a GetCurrentState con **zero monitor e zero monitor
-#      logici**.  Il guasto di `STUDI.md` §gnome §13 M9 non era da innestare: era
-#      addosso alla macchina, e nessuno se n'era accorto.
-#
-# ⇒ Un banco della fase 2 che misurasse la cattura su quella sessione leggerebbe
-#   zero fotogrammi e manderebbe a cercare il difetto dentro PipeWire.  Questo
-#   script esiste per rendere quel guasto IMPOSSIBILE DA CONFONDERE: lo sa
-#   accendere, lo sa spegnere, e lo strumento gli da' un numero suo.
+# ⛔ IT RUNS ON THE NIC-OS HOST, not inside the container: the graphical session
+#    lives there, with real logind, systemd --user and /dev/dri.
 #
 # ===========================================================================
-# ⛔ E UNA SECONDA COSA CHE LA SESSIONE NERA FA, E CHE NESSUN DOCUMENTO DICEVA
+# ⛔ WHY IT EXISTS, AND IT IS NOT «TO START A SESSION»
 # ===========================================================================
 #
-# `[M]` 12 agosto 2026, e l'ho pagata io: su una sessione headless con ZERO
-# monitor, `org.gnome.Shell.Screenshot.Screenshot` fa cadere gnome-shell.
+# Starting a session is something `banchi/00-sessione-gnome.sh`, from phase 0,
+# already does.  What that bench does NOT do, and which is the whole reason for this
+# file, is ask for the MONITOR:
+#
+#   ⛔ `00-sessione-gnome.sh` never names `--virtual-monitor`, nor even
+#      `--headless`: it relies on the drop-in that `fondamenta/banco/provision-server.sh`
+#      (lines 224-231) writes in /etc/systemd/user, which sets `--headless
+#      --no-x11` and **nothing else**.  ⇒ Every session started that way is BLACK.
+#
+#   ⭐ And it is not a deduction.  `[M]` 12 Aug 2026, opening this round: the
+#      GNOME session alive on NIC-OS for two days — gnome-shell 214465,
+#      IsSessionRunning true, fifty names on the bus, Nautilus and the Terminal
+#      running — answered GetCurrentState with **zero monitors and zero logical
+#      monitors**.  The fault of `STUDI.md` §gnome §13 M9 did not need injecting: it
+#      was on the machine already, and nobody had noticed.
+#
+# ⇒ A phase 2 bench that measured capture on that session would read
+#   zero frames and send you looking for the defect inside PipeWire.  This
+#   script exists to make that fault IMPOSSIBLE TO MISTAKE: it can switch it
+#   on, it can switch it off, and the tool gives it a number of its own.
+#
+# ===========================================================================
+# ⛔ AND A SECOND THING THE BLACK SESSION DOES, WHICH NO DOCUMENT SAID
+# ===========================================================================
+#
+# `[M]` 12 Aug 2026, and I paid for it myself: on a headless session with ZERO
+# monitors, `org.gnome.Shell.Screenshot.Screenshot` brings down gnome-shell.
 #
 #     CRITICAL: cogl_texture_2d_new_with_size: assertion 'width >= 1' failed
 #     WARNING : Failed to take screenshot: Failed to create 0x0 texture
 #
-# e siccome l'unita' porta `OnFailure=gnome-session-shutdown.target` con
-# `Restart=no`, se ne va **tutta la sessione**.  ⇒ La sessione nera non e' solo
-# «viva e nera»: e' **fragile**, e cade al primo che le chiede un fotogramma per
-# la via della Shell.  Chi vedesse cadere la sessione a meta' di una misura
-# cerchera' il difetto nel proprio codice.
+# and since the unit carries `OnFailure=gnome-session-shutdown.target` with
+# `Restart=no`, **the whole session** goes away.  ⇒ The black session is not only
+# «alive and black»: it is **fragile**, and falls at the first one who asks it for a
+# frame through the Shell.  Whoever saw the session fall in the middle of a
+# measurement would look for the defect in their own code.
 #
 # ===========================================================================
-# ⛔ IL DROP-IN: DOVE SI SCRIVE, E PERCHE' NON DOVE SEMBRA
+# ⛔ THE DROP-IN: WHERE IT IS WRITTEN, AND WHY NOT WHERE IT SEEMS
 # ===========================================================================
 #
-# `gnome-session` NON lancia gnome-shell: fa partire l'unita' d'utente
-# `org.gnome.Shell@wayland.service`, il cui `ExecStart` e' fisso.  Per cambiare
-# la riga di comando serve un drop-in — ed e' quel che `src/sessione.c:671` fa
-# **solo per KWin** (letto il 12 ago 2026: la riga e' proprio
-# `if (tipo == COMPOSITORE_KWIN && !scrivi_dropin(...))`, e sul ramo GNOME
-# `larghezza` e `altezza` non le legge nessuno).
+# `gnome-session` does NOT launch gnome-shell: it starts the user unit
+# `org.gnome.Shell@wayland.service`, whose `ExecStart` is fixed.  To change
+# the command line a drop-in is needed — and that is what `src/sessione.c:671` does
+# **only for KWin** (read on 12 Aug 2026: the line is exactly
+# `if (tipo == COMPOSITORE_KWIN && !scrivi_dropin(...))`, and on the GNOME branch
+# nobody reads `larghezza` and `altezza`).
 #
-# ⭐ Qui si scrive in `$XDG_RUNTIME_DIR/systemd/user.control/`, come fa v1 per
-#    KWin, per tre ragioni:
-#      1. non serve root — l'unita' e' d'UTENTE;
-#      2. sparisce da se' al riavvio: un banco non deve lasciare configurazione
-#         addosso alla macchina;
-#      3. il nome comincia per `zz-` **apposta**: i drop-in di tutte le
-#         cartelle si applicano in ordine di NOME FILE, e in
-#         /etc/systemd/user ce n'e' gia' uno che si chiama
-#         `remotix-headless.conf`.  `zz-…` viene dopo, quindi vince.
+# ⭐ Here it is written in `$XDG_RUNTIME_DIR/systemd/user.control/`, as v1 does for
+#    KWin, for three reasons:
+#      1. no root needed — the unit is a USER unit;
+#      2. it disappears by itself at reboot: a bench must not leave configuration
+#         on the machine;
+#      3. the name starts with `zz-` **on purpose**: the drop-ins of all the
+#         folders are applied in FILE NAME order, and in
+#         /etc/systemd/user there is already one called
+#         `remotix-headless.conf`.  `zz-…` comes after, so it wins.
 #
-# ⛔ E scritto non e' in vigore (E1).  Dopo ogni avvio si rilegge la riga di
-#    comando del PROCESSO, e se non combacia con quel che si e' chiesto, il
-#    verdetto e' DISACCORDO (uscita 6), non «va bene lo stesso».
+# ⛔ And written is not in force (E1).  After every start the command line of the
+#    PROCESS is read back, and if it does not match what was asked, the
+#    verdict is DISAGREEMENT (exit 6), not «fine all the same».
 #
 # ===========================================================================
-# ⛔ QUEL CHE QUESTO BANCO NON TOCCA, E COME SE NE ACCERTA
+# ⛔ WHAT THIS BENCH DOES NOT TOUCH, AND HOW IT MAKES SURE
 # ===========================================================================
 #
-# Su NIC-OS girano due server voluti, sulla **7448** e sulla **7501**, e non
-# sono di questo giro.  Vivono dentro il contenitore e non dipendono dalla
-# sessione grafica — ma «non dipendono» era un'ipotesi finche' non l'ho
-# guardata, quindi questo script CONTA i loro ascoltatori prima e dopo ogni
-# ciclo, e se il numero cala si ferma e lo dice.
+# On NIC-OS two wanted servers run, on **7448** and on **7501**, and they are
+# not part of this round.  They live inside the container and do not depend on the
+# graphical session — but «they do not depend» was a hypothesis until I
+# looked, so this script COUNTS their listeners before and after every
+# cycle, and if the number drops it stops and says so.
 #
-# ⭐ E la porta di questo banco, la **7511**, non serve a parlare con nessuno:
-#    e' il LUCCHETTO.  Una sessione grafica e' una per utente (invariante I2):
-#    due copie di questo banco che la ciclano insieme si darebbero due misure
-#    diverse sotto la stessa etichetta.  Chi non riesce a prendere la 7511 non
-#    parte.
-#
+# ⭐ And this bench's port, **7511**, does not serve to talk to anybody:
+#    it is the LOCK.  A graphical session is one per user (invariant I2):
+#    two copies of this bench cycling it together would give two different
+#    measurements under the same label.  Whoever cannot take 7511 does not
+#    start.
 set -uo pipefail
 
 QUI=$(cd "$(dirname "$0")" && pwd)
@@ -117,11 +116,11 @@ REGISTRO=$RUNTIME/remotix-sessione.log
 REGISTRO_SHELL=$RUNTIME/mutter.log
 DROPIN_DIR=$RUNTIME/systemd/user.control/org.gnome.Shell@wayland.service.d
 DROPIN=$DROPIN_DIR/zz-f21-monitor.conf
-# ⛔ Il drop-in PERSISTENTE, quello che scrive `fondamenta/banco/provision-server.sh`.
-#    Il nostro sta in $XDG_RUNTIME_DIR e sparisce da se' al riavvio — che e'
-#    giusto per un banco, ed e' esattamente il motivo per cui va guardato anche
-#    quest'altro: se il monitor lo tiene in piedi SOLO il nostro, la macchina
-#    torna nera al primo riavvio e il difetto ricomincia da capo.
+# ⛔ The PERSISTENT drop-in, the one written by `fondamenta/banco/provision-server.sh`.
+#    Ours lives in $XDG_RUNTIME_DIR and disappears by itself at reboot — which is
+#    right for a bench, and is exactly why this other one must be looked at
+#    too: if ONLY ours keeps the monitor up, the machine
+#    turns black at the first reboot and the defect starts all over again.
 DROPIN_PERSISTENTE=${DROPIN_PERSISTENTE:-/etc/systemd/user/org.gnome.Shell@wayland.service.d/remotix-headless.conf}
 
 ok()  { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
@@ -131,8 +130,8 @@ inf() { printf '    --  %s\n' "$*"; }
 log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 
 # ---------------------------------------------------------------------------
-# ⛔ IL LUCCHETTO SULLA 7511 — non un ascoltatore, un DIRITTO A CICLARE.
-# Si tiene con un processo `nc`/python che occupa la porta finche' vive.
+# ⛔ THE LOCK ON 7511 — not a listener, a RIGHT TO CYCLE.
+# It is held by an `nc`/python process that occupies the port while it lives.
 # ---------------------------------------------------------------------------
 PID_LUCCHETTO=""
 prendi_lucchetto()
@@ -144,21 +143,21 @@ s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 0)
 try:
     s.bind(('127.0.0.1', $PORTA_LUCCHETTO))
 except OSError as e:
-    print('occupata: %s' % e); sys.exit(1)
+    print('busy: %s' % e); sys.exit(1)
 s.listen(1)
-print('preso')
+print('taken')
 sys.stdout.flush()
 time.sleep(86400)
 " &
 	PID_LUCCHETTO=$!
 	sleep 1
 	if ! kill -0 "$PID_LUCCHETTO" 2>/dev/null; then
-		ko "⛔ la porta $PORTA_LUCCHETTO e' gia' occupata: un'altra copia di questo"
-		ko "   banco sta ciclando la sessione.  Non parto: due cicli insieme"
-		ko "   darebbero due misure diverse sotto la stessa etichetta."
+		ko "⛔ port $PORTA_LUCCHETTO is already taken: another copy of this"
+		ko "   bench is cycling the session.  I do not start: two cycles together"
+		ko "   would give two different measurements under the same label."
 		return 1
 	fi
-	ok "lucchetto preso sulla $PORTA_LUCCHETTO (pid $PID_LUCCHETTO)"
+	ok "lock taken on $PORTA_LUCCHETTO (pid $PID_LUCCHETTO)"
 	return 0
 }
 molla_lucchetto()
@@ -169,7 +168,7 @@ molla_lucchetto()
 trap molla_lucchetto EXIT
 
 # ---------------------------------------------------------------------------
-conta_ascoltatori() # $1 = porta
+conta_ascoltatori() # $1 = port
 {
 	ss -tuln | grep -c ":$1\b"
 }
@@ -180,7 +179,7 @@ vicini_prima()
 	for p in $PORTE_DA_NON_TOCCARE; do
 		VICINI="$VICINI $p:$(conta_ascoltatori "$p")"
 	done
-	inf "i vicini che non tocco, prima:$VICINI"
+	inf "the neighbours I do not touch, before:$VICINI"
 }
 
 vicini_dopo()
@@ -190,30 +189,29 @@ vicini_dopo()
 		atteso=$(echo "$VICINI" | tr ' ' '\n' | grep "^$p:" | cut -d: -f2)
 		n=$(conta_ascoltatori "$p")
 		if [ "$n" -lt "${atteso:-0}" ]; then
-			ko "⛔ sulla $p gli ascoltatori sono passati da $atteso a $n:"
-			ko "   ho toccato qualcosa che non era mio.  FERMO TUTTO."
+			ko "⛔ on $p the listeners went from $atteso to $n:"
+			ko "   I touched something that was not mine.  STOPPING EVERYTHING."
 			guai=1
 		fi
 	done
-	[ "$guai" -eq 0 ] && ok "i due server voluti sono ancora tutti e due in piedi"
+	[ "$guai" -eq 0 ] && ok "the two wanted servers are both still up"
 	return $guai
 }
 
 # ---------------------------------------------------------------------------
-# L'ambiente, composto da zero — la ricetta di `sessione.c:componi_ambiente`.
+# The environment, built from scratch — the recipe of `sessione.c:componi_ambiente`.
 #
-# ⛔ SHELL VUOTA: `gnome-session.in:3-14` si ri-esegue dentro una shell di LOGIN
-#    se `$SHELL` e' non vuota e sta in /etc/shells, e si riporta dentro
-#    `~/.profile`.  Il controllo vero e' `[ -n "$SHELL" ]`, quindi vuota e
-#    assente vanno tutt'e due bene — e v1 la lascia ASSENTE, perche' compone
-#    l'ambiente da zero e SHELL non la mette (zero occorrenze in `sessione.c`).
-#    Qui la si mette VUOTA, che e' la stessa cosa e si vede nel `/proc/…/environ`.
+# ⛔ EMPTY SHELL: `gnome-session.in:3-14` re-executes itself inside a LOGIN shell
+#    if `$SHELL` is non-empty and is in /etc/shells, and pulls in
+#    `~/.profile`.  The real check is `[ -n "$SHELL" ]`, so empty and
+#    absent are both fine — and v1 leaves it ABSENT, because it builds
+#    the environment from scratch and does not set SHELL (zero occurrences in `sessione.c`).
+#    Here it is set EMPTY, which is the same thing and shows in `/proc/…/environ`.
 #
-# ⛔ XDG_SESSION_TYPE=wayland SERVE: l'unita' della Shell porta
-#    `ConditionEnvironment=XDG_SESSION_TYPE=wayland` (verificato nel file
-#    installato su NIC-OS il 12 ago 2026), e senza il compositore non parte
-#    affatto — sessione monca, e nessuna riga che dica perche'.
-# ---------------------------------------------------------------------------
+# ⛔ XDG_SESSION_TYPE=wayland IS NEEDED: the Shell unit carries
+#    `ConditionEnvironment=XDG_SESSION_TYPE=wayland` (checked in the file
+#    installed on NIC-OS on 12 Aug 2026), and without it the compositor does not
+#    start at all — a crippled session, and no line saying why.
 avvia_sessione()
 {
 	env -i \
@@ -232,13 +230,13 @@ avvia_sessione()
 
 viva() { pgrep -u "$U" -x gnome-shell >/dev/null; }
 
-# ⛔ Il congedo e' `Logout(2)`, non `systemctl --user stop`: `gnome-session` non
-#    esce dopo aver avviato il target, apre un fifo e dorme (`STUDI.md` §gnome §3.2),
-#    e `Logout(1)` mostra il dialogo se esiste un inibitore — in una sessione
-#    non presidiata non gli risponde nessuno.
-# ⛔ E si aspetta `inactive`, NON «diverso da active»: `is-active` passa per
-#    `deactivating`, e ripartire li' dentro e' un'altra prima esecuzione
-#    (`FASI.md` §00-ambiente, difetto 4 della fase 0).
+# ⛔ The farewell is `Logout(2)`, not `systemctl --user stop`: `gnome-session` does not
+#    exit after starting the target, it opens a fifo and sleeps (`STUDI.md` §gnome §3.2),
+#    and `Logout(1)` shows the dialog if an inhibitor exists — in an unattended
+#    session nobody answers it.
+# ⛔ And it waits for `inactive`, NOT «other than active»: `is-active` passes through
+#    `deactivating`, and restarting in there is another first execution
+#    (`FASI.md` §00-ambiente, defect 4 of phase 0).
 ferma_e_aspetta()
 {
 	local scadenza=$((SECONDS + ${1:-60})) stato
@@ -259,7 +257,7 @@ ferma_e_aspetta()
 	return 1
 }
 
-attendi() # aspetta un EVENTO, con un tetto dichiarato
+attendi() # waits for an EVENT, with a declared ceiling
 {
 	local scadenza=$((SECONDS + ${1:-60}))
 	while [ $SECONDS -lt $scadenza ]; do
@@ -275,24 +273,24 @@ attendi() # aspetta un EVENTO, con un tetto dichiarato
 }
 
 # ---------------------------------------------------------------------------
-# ⛔ TRE modi, e il terzo e' nato il 12 agosto per una ragione che vale piu'
-#    degli altri due:
+# ⛔ THREE modes, and the third was born on 12 Aug for a reason that counts more
+#    than the other two:
 #
-#   con    il drop-in di questo banco CHIEDE il monitor        → la scena sana
-#   senza  il drop-in di questo banco NON lo chiede            → il guasto M9
-#   nudo   ⭐ NESSUN drop-in di questo banco: la sessione nasce con la sola
-#          configurazione PERSISTENTE della macchina, cioe' **com'e' dopo un
-#          riavvio**.  E' l'unico modo di misurare l'esito di un riavvio senza
-#          riavviare il server — che non si puo' fare, perche' dentro il
-#          contenitore girano due server voluti (7448, 7501) e il rootfs vive
+#   con    this bench's drop-in ASKS for the monitor           → the healthy scene
+#   senza  this bench's drop-in does NOT ask for it            → the M9 fault
+#   nudo   ⭐ NO drop-in of this bench: the session is born with only the
+#          PERSISTENT configuration of the machine, that is **as it is after a
+#          reboot**.  It is the only way to measure the outcome of a reboot without
+#          rebooting the server — which cannot be done, because inside the
+#          container two wanted servers run (7448, 7501) and the rootfs lives
 #          in RAM.
 #
-#   ⛔ E «nudo» NON E' UN RIAVVIO, e va detto ogni volta: non prova che /media
-#      si rimonti, che il rootfs torni, che qualcuno rilanci
-#      `provision-server.sh`.  Prova l'ULTIMO anello — data la configurazione
-#      persistente, una sessione appena nata ha il monitor? — che e'
-#      precisamente l'anello che il 10 agosto ha ceduto.  Gli altri anelli
-#      restano `[?]` finche' un riavvio vero non li tocca.
+#   ⛔ And «nudo» IS NOT A REBOOT, and it must be said every time: it does not prove that /media
+#      is remounted, that the rootfs comes back, that someone reruns
+#      `provision-server.sh`.  It proves the LAST link — given the persistent
+#      configuration, does a newborn session have the monitor? — which is
+#      precisely the link that gave way on 10 Aug.  The other links
+#      stay `[?]` until a real reboot touches them.
 scrivi_dropin() # $1 = "con" | "senza" | "nudo"
 {
 	case "$1" in
@@ -316,71 +314,71 @@ CONF
 		rm -f "$DROPIN"
 		rmdir "$DROPIN_DIR" 2>&1 | grep -v "Directory not empty" || true
 		;;
-	*) ko "⛔ modo di drop-in ignoto: $1"; return 1 ;;
+	*) ko "⛔ unknown drop-in mode: $1"; return 1 ;;
 	esac
 	systemctl --user daemon-reload || return 1
-	# ⛔ E si VERIFICA che il drop-in sia in vigore, non che sia scritto.
+	# ⛔ And it is CHECKED that the drop-in is in force, not that it is written.
 	local vigore
 	vigore=$(systemctl --user show -p ExecStart --value org.gnome.Shell@wayland.service)
-	inf "ExecStart in vigore: $vigore"
+	inf "ExecStart in force: $vigore"
 	case "$1:$vigore" in
-	con:*--virtual-monitor\ $MISURA*) ok "il drop-in CON monitor e' in vigore" ;;
+	con:*--virtual-monitor\ $MISURA*) ok "the drop-in WITH monitor is in force" ;;
 	senza:*--virtual-monitor*)
-		ko "⛔ ho chiesto SENZA e systemd dice ancora --virtual-monitor:"
-		ko "   un altro drop-in vince sul mio.  Non misuro."
+		ko "⛔ I asked for WITHOUT and systemd still says --virtual-monitor:"
+		ko "   another drop-in wins over mine.  I do not measure."
 		return 1 ;;
-	senza:*) ok "il drop-in SENZA monitor e' in vigore" ;;
+	senza:*) ok "the drop-in WITHOUT monitor is in force" ;;
 	nudo:*--virtual-monitor*)
-		ok "senza nessun drop-in mio il monitor lo chiede la configurazione"
-		ok "PERSISTENTE della macchina: e' quel che si trovera' al riavvio" ;;
+		ok "with no drop-in of mine the monitor is requested by the PERSISTENT"
+		ok "configuration of the machine: it is what will be found at reboot" ;;
 	nudo:*)
-		att "⚠ senza i drop-in di questo banco nessuno chiede il monitor:"
-		att "  e' esattamente quel che la macchina fa dopo un riavvio" ;;
+		att "⚠ without this bench's drop-ins nobody asks for the monitor:"
+		att "  it is exactly what the machine does after a reboot" ;;
 	*)
-		ko "⛔ ho chiesto CON $MISURA e systemd non lo dice: il mio drop-in"
-		ko "   non vince.  Non misuro — un banco che non impone la scena"
-		ko "   misura la scena di qualcun altro."
+		ko "⛔ I asked for WITH $MISURA and systemd does not say so: my drop-in"
+		ko "   does not win.  I do not measure — a bench that does not impose the scene"
+		ko "   measures someone else's scene."
 		return 1 ;;
 	esac
 	return 0
 }
 
 # ---------------------------------------------------------------------------
-# ⛔ «SANA ADESSO» NON E' «SANA DOPO IL RIAVVIO» — e la differenza si dice ogni
-#    volta, non si scopre.
+# ⛔ «HEALTHY NOW» IS NOT «HEALTHY AFTER THE REBOOT» — and the difference is said every
+#    time, not discovered.
 #
-# Il drop-in di questo banco vive in `$XDG_RUNTIME_DIR`, che il riavvio si porta
-# via insieme a tutto il rootfs (che su NIC-OS sta in RAM).  Se la sessione ha
-# il monitor solo grazie a lui, la macchina e' sana **per questa accensione** —
-# ed e' la stessa mezza verita' di `LEZIONI.md` §2.5-bis: un ripristino si prova
-# riavviando, non rileggendo lo script.
+# This bench's drop-in lives in `$XDG_RUNTIME_DIR`, which the reboot takes
+# away together with the whole rootfs (which on NIC-OS sits in RAM).  If the session has
+# the monitor only thanks to it, the machine is healthy **for this power-on** —
+# and it is the same half truth as `LEZIONI.md` §2.5-bis: a restore is proved
+# by rebooting, not by rereading the script.
 #
-# ⇒ Chi rende il monitor persistente e' `provision-server.sh` §4, che dopo ogni
-#   riavvio va rieseguito comunque.  Questa funzione guarda se quella riga c'e',
-#   e se non c'e' lo dice FORTE invece di lasciar credere che sia finita.
+# ⇒ What makes the monitor persistent is `provision-server.sh` §4, which after every
+#   reboot must be rerun anyway.  This function checks whether that line is there,
+#   and if it is not it says so LOUDLY instead of letting you believe it is done.
 # ---------------------------------------------------------------------------
 dilo_se_non_persiste()
 {
 	if [ ! -r "$DROPIN_PERSISTENTE" ]; then
-		att "⚠ il drop-in persistente non c'e' o non lo leggo:"
+		att "⚠ the persistent drop-in is not there or I cannot read it:"
 		att "  $DROPIN_PERSISTENTE"
-		att "  ⇒ dopo un riavvio del server la sessione torna NERA."
-		att "  Si rimette con: bash /media/REMOTIX/provision-server.sh monitor"
+		att "  ⇒ after a server reboot the session turns BLACK again."
+		att "  It is set right with: bash /media/REMOTIX/provision-server.sh monitor"
 		return 1
 	fi
 	if grep -q -- '--virtual-monitor' "$DROPIN_PERSISTENTE"; then
-		ok "e sopravvive al riavvio: --virtual-monitor sta anche nel drop-in"
-		inf "persistente ($DROPIN_PERSISTENTE), che provision-server.sh riscrive"
+		ok "and it survives the reboot: --virtual-monitor is also in the persistent"
+		inf "drop-in ($DROPIN_PERSISTENTE), which provision-server.sh rewrites"
 		return 0
 	fi
-	att "⚠⚠ SANA ADESSO, NERA AL PROSSIMO RIAVVIO."
-	att "  Il monitor lo tiene in piedi SOLO il drop-in di questo banco, che sta"
-	att "  in \$XDG_RUNTIME_DIR e il riavvio se lo porta via; quello persistente"
+	att "⚠⚠ HEALTHY NOW, BLACK AT THE NEXT REBOOT."
+	att "  ONLY this bench's drop-in keeps the monitor up, and it sits"
+	att "  in \$XDG_RUNTIME_DIR and the reboot takes it away; the persistent one"
 	att "  ($DROPIN_PERSISTENTE)"
-	att "  NON nomina --virtual-monitor — ed e' il difetto che ha tenuto questa"
-	att "  macchina nera dal 10 al 12 agosto (I7: la protezione sta nel"
-	att "  programma, non in una riga di configurazione che si puo' perdere)."
-	att "  Si cura con: bash /media/REMOTIX/provision-server.sh monitor"
+	att "  does NOT name --virtual-monitor — and it is the defect that kept this"
+	att "  machine black from 10 to 12 Aug (I7: the protection lives in the"
+	att "  program, not in a configuration line that can get lost)."
+	att "  It is cured with: bash /media/REMOTIX/provision-server.sh monitor"
 	return 1
 }
 
@@ -391,20 +389,20 @@ togli_dropin()
 	systemctl --user daemon-reload
 }
 
-# ⛔ LA RIGA DI COMANDO E' PIATTA, E LE DUE RESE SONO SCRITTE PER ESTESO —
-#    lacuna L3, 12 agosto 2026.
+# ⛔ THE COMMAND LINE IS FLAT, AND THE TWO FORMS ARE WRITTEN OUT IN FULL —
+#    gap L3, 12 Aug 2026.
 #
-# C'era un vettore: `local extra=(); [ -n "${2:-}" ] && extra=(--registra "$2")`,
-# e poi `"${extra[@]}"` in coda alla chiamata.  Due righe in meno, e ⛔ la
-# chiamata **fuori da ogni controllo statico**: `01-b0-chiamate.py` vedeva una
-# variabile sola dove argparse aspetta un'opzione, non poteva sapere se
-# portasse dentro un `--qualcosa`, e la dichiarava IGNOTA — ne' rossa ne'
-# verde.  E' la cucitura che ha gia' fatto uscire rosso un banco sano due
-# volte: B6 il 10 agosto, B7 l'11 (`01-b0-chiamate.py`, in testa).
+# There was an array: `local extra=(); [ -n "${2:-}" ] && extra=(--registra "$2")`,
+# and then `"${extra[@]}"` at the end of the call.  Two lines fewer, and ⛔ the
+# call **out of reach of any static check**: `01-b0-chiamate.py` saw a single
+# variable where argparse expects an option, could not know whether it
+# carried a `--something` inside, and declared it UNKNOWN — neither red nor
+# green.  It is the seam that has already made a healthy bench come out red twice:
+# B6 on 10 Aug, B7 on the 11th (`01-b0-chiamate.py`, in the header).
 #
-# ⚠ La ripetizione delle sei parole comuni e' il prezzo, e si paga: due righe
-#   leggibili valgono piu' di una riga che nessuno strumento sa leggere.
-misura() # $1 = etichetta della scena; $2 = file dove registrarla (facoltativo)
+# ⚠ Repeating the six common words is the price, and it is paid: two readable
+#   lines are worth more than one line that no tool can read.
+misura() # $1 = label of the scene; $2 = file to record it in (optional)
 {
 	if [ -n "${2:-}" ]; then
 		python3 "$STRUMENTO" --attesa "$MISURA" --dal-bus \
@@ -417,165 +415,165 @@ misura() # $1 = etichetta della scena; $2 = file dove registrarla (facoltativo)
 }
 
 # ---------------------------------------------------------------------------
-riparti() # $1 = con|senza ; $2 = etichetta ; $3 = file scena (facoltativo)
+riparti() # $1 = con|senza ; $2 = label ; $3 = scene file (optional)
 {
-	log "Rimetto la sessione da capo, drop-in «$1»"
+	log "I restart the session from scratch, drop-in «$1»"
 	if viva; then
-		ferma_e_aspetta 60 || { ko "⛔ non si e' fermata in 60 s"; return 9; }
-		ok "sessione fermata"
+		ferma_e_aspetta 60 || { ko "⛔ it did not stop within 60 s"; return 9; }
+		ok "session stopped"
 	else
-		inf "non c'era nessuna sessione da fermare"
+		inf "there was no session to stop"
 	fi
 	scrivi_dropin "$1" || return 9
 	: >"$REGISTRO"
 	avvia_sessione
 	if ! attendi 60; then
-		ko "⛔ la sessione NON e' partita entro 60 s.  Ultime righe:"
+		ko "⛔ the session did NOT start within 60 s.  Last lines:"
 		tail -n 25 "$REGISTRO" | sed 's/^/        /'
 		return 9
 	fi
-	ok "sessione partita: $(pgrep -a -u "$U" -x gnome-shell | head -1)"
-	# ⚠ La Shell prende il nome sul bus PRIMA di `meta_context_start()`
-	#   (`STUDI.md` §gnome §3.2): il nome non e' un indicatore di prontezza.  Si aspetta
-	#   che GetCurrentState risponda, che e' il fatto che serve a noi.
+	ok "session started: $(pgrep -a -u "$U" -x gnome-shell | head -1)"
+	# ⚠ The Shell takes its name on the bus BEFORE `meta_context_start()`
+	#   (`STUDI.md` §gnome §3.2): the name is not a readiness indicator.  We wait
+	#   for GetCurrentState to answer, which is the fact we need.
 	sleep 3
 	misura "$2" "${3:-}"
 	local e=$?
-	# ⛔ E si dice SUBITO se questa salute e' solo di oggi: chi ha appena letto
-	#    «SANA» e' esattamente chi deve sapere che al riavvio non lo sara' piu'.
+	# ⛔ And it says AT ONCE whether this health is only for today: whoever has just read
+	#    «HEALTHY» is exactly who must know that after the reboot it will not be any more.
 	[ "$1" = con ] && dilo_se_non_persiste
 	return $e
 }
 
 # ---------------------------------------------------------------------------
-# ⛔ QUANDO NASCE IL PUNTATORE VIRTUALE — la domanda che PIANO.md porta qui.
+# ⛔ WHEN THE VIRTUAL POINTER IS BORN — the question PIANO.md brings here.
 #
-# Il fatto misurato dalla sonda S7 il 10 agosto: in una sessione GNOME senza
-# dispositivi di input fisici, un client partito PRIMA che il puntatore di
-# `libei` esista non riceve niente — ne' rotella, ne' bottoni, ne' il movimento.
-# Partito DOPO riceve tutto.  `[M]` sull'ORDINE; la CAUSA e' `[?]`.
+# The fact measured by probe S7 on 10 Aug: in a GNOME session without
+# physical input devices, a client started BEFORE the `libei` pointer
+# exists receives nothing — no wheel, no buttons, not even motion.
+# Started AFTER, it receives everything.  `[M]` on the ORDER; the CAUSE is `[?]`.
 #
-# ⭐ E leggendo Mutter 48.7 la regola diventa piu' stretta di come il piano la
-#    scrive: `ensure_virtual_device()` e' chiamata dai gestori di
-#    `NotifyPointerMotion*` e `NotifyPointerButton(pressed)`, **non** da
+# ⭐ And reading Mutter 48.7 the rule becomes stricter than the plan
+#    writes it: `ensure_virtual_device()` is called by the handlers of
+#    `NotifyPointerMotion*` and `NotifyPointerButton(pressed)`, **not** by
 #    `Start()` (`meta-remote-desktop-session.c:290-321, 780-800, 940-960` [R]).
-#    ⇒ Il puntatore non nasce quando la sessione RemoteDesktop parte: nasce al
-#      PRIMO MOVIMENTO INIETTATO.  Un banco che aprisse l'applicazione dopo
-#      `Start()` ma prima del primo movimento misurerebbe la scena sbagliata
-#      credendo di aver rispettato l'ordine.
+#    ⇒ The pointer is not born when the RemoteDesktop session starts: it is born at
+#      the FIRST INJECTED MOTION.  A bench that opened the application after
+#      `Start()` but before the first motion would measure the wrong scene
+#      believing it had respected the order.
 #
-# Qui si misura la CAUSA `[?]`: un client Wayland tenuto vivo attraverso la
-# nascita del puntatore riceve un secondo `wl_seat.capabilities`, o no?
-#   · se NON lo riceve → la spiegazione del piano regge, e diventa `[M]`;
-#   · se lo riceve     → la spiegazione e' sbagliata e la causa e' altrove.
-# Il caso opposto e' scritto prima, come vuole `LEZIONI.md` §1.11.
+# Here the CAUSE `[?]` is measured: does a Wayland client kept alive across the
+# birth of the pointer receive a second `wl_seat.capabilities`, or not?
+#   · if it does NOT receive it → the plan's explanation holds, and becomes `[M]`;
+#   · if it receives it         → the explanation is wrong and the cause is elsewhere.
+# The opposite case is written beforehand, as `LEZIONI.md` §1.11 wants.
 # ---------------------------------------------------------------------------
 dispositivi()
 {
 	local traccia=$RUNTIME/f21-seat.log
-	log "0. Lo stato di partenza"
+	log "0. The starting state"
 	misura "dispositivi-partenza"; local e=$?
 	if [ "$e" -ne 0 ]; then
-		att "la sessione non e' sana (uscita $e): la misura dei dispositivi si"
-		att "fa lo stesso, ma il numero va letto sapendolo."
+		att "the session is not healthy (exit $e): the device measurement is"
+		att "done anyway, but the number must be read knowing it."
 	fi
 
-	log "1. Un client Wayland vivo, tenuto acceso ATTRAVERSO la nascita del puntatore"
-	# ⛔ E' il client «partito PRIMA» della sonda S7: deve restare vivo per
-	#    tutta la misura, o non si sta misurando l'ordine — si sta misurando
-	#    due client diversi.
+	log "1. A live Wayland client, kept on ACROSS the birth of the pointer"
+	# ⛔ It is the client «started BEFORE» of probe S7: it must stay alive for
+	#    the whole measurement, or the order is not being measured — two
+	#    different clients are.
 	: >"$traccia"
 	WAYLAND_DEBUG=1 WAYLAND_DISPLAY=wayland-0 XDG_RUNTIME_DIR="$RUNTIME" \
 	    timeout 90 foot -e sleep 85 >>"$traccia" 2>&1 &
 	local pid_client=$!
 	sleep 6
 	if ! kill -0 "$pid_client" 2>/dev/null; then
-		ko "⛔ il client non e' rimasto vivo: senza di lui non misuro niente"
-		inf "ultime righe della traccia:"
+		ko "⛔ the client did not stay alive: without it I measure nothing"
+		inf "last lines of the trace:"
 		tail -n 15 "$traccia" | sed 's/^/        /'
 		return 3
 	fi
-	ok "client vivo (pid $pid_client), traccia in $traccia"
+	ok "client alive (pid $pid_client), trace in $traccia"
 
-	# ⛔ I tre passi D-Bus NON si fanno con tre `gdbus call`: la sessione di
-	#    RemoteDesktop e' legata alla CONNESSIONE che l'ha creata, e `gdbus`
-	#    ne apre una nuova ogni volta.  Misurato il 12 ago 2026: `Start`
-	#    rispondeva «Object does not exist at path» e il puntatore non nasceva
-	#    mai — con il passo 3 che dava NO su una scena mai avvenuta.  Il
-	#    dettaglio sta in testa a `02-sessione-dispositivi.py`.
+	# ⛔ The three D-Bus steps are NOT done with three `gdbus call`: the
+	#    RemoteDesktop session is tied to the CONNECTION that created it, and `gdbus`
+	#    opens a new one every time.  Measured on 12 Aug 2026: `Start`
+	#    answered «Object does not exist at path» and the pointer was never
+	#    born — with step 3 giving NO on a scene that never happened.  The
+	#    details are in the header of `02-sessione-dispositivi.py`.
 	python3 "$QUI/02-sessione-dispositivi.py" --traccia "$traccia" --esiti "$ESITI"
 	local esito=$?
 
 	kill "$pid_client" 2>/dev/null
-	log "Le tracce restano in $traccia e $traccia.dopo"
+	log "The traces stay in $traccia and $traccia.dopo"
 	return $esito
 }
 
 # ---------------------------------------------------------------------------
-# ⛔ LA CERTIFICAZIONE — sano N → guasto M → risanato N, con i numeri
-#    SCRITTI PRIMA (mandato §3.3, e la regola nata l'11 agosto: chi scrive un
-#    banco lo certifica nello stesso giro).
+# ⛔ THE CERTIFICATION — healthy N → fault M → healed N, with the numbers
+#    WRITTEN BEFOREHAND (mandate §3.3, and the rule born on 11 Aug: whoever writes a
+#    bench certifies it in the same round).
 #
-#   atteso sano     0  (SANA)
-#   guasto innestato:  si toglie `--virtual-monitor` dal drop-in — cioe' M9 di
-#                      `STUDI.md` §gnome §13, il guasto fatto di proposito
-#   atteso guasto   1  (NERA: ZERO MONITOR)
-#   atteso risanato 0
+#   expected healthy 0  (HEALTHY)
+#   fault injected:     `--virtual-monitor` is removed from the drop-in — that is M9 of
+#                       `STUDI.md` §gnome §13, the fault made on purpose
+#   expected fault   1  (BLACK: ZERO MONITORS)
+#   expected healed  0
 #
-# ⛔ E il verdetto non e' «e' diventato rosso»: dev'essere diventato rosso NEL
-#    SUO PUNTO — la marca «NERA: ZERO MONITOR» e non un'altra.  Un banco che
-#    diventa rosso per un'altra ragione non e' certificato, e' fortunato.
+# ⛔ And the verdict is not «it turned red»: it must have turned red AT ITS
+#    POINT — the mark «BLACK: ZERO MONITORS» and not another.  A bench that
+#    turns red for another reason is not certified, it is lucky.
 # ---------------------------------------------------------------------------
 certifica()
 {
-	local A_SANO=0 A_GUASTO=1 MARCA_GUASTO="NERA: ZERO MONITOR"
-	log "Gli attesi, SCRITTI PRIMA del giro"
-	inf "sano: $A_SANO (SANA) · guasto: $A_GUASTO ($MARCA_GUASTO) · risanato: $A_SANO"
-	inf "misura chiesta: $MISURA"
+	local A_SANO=0 A_GUASTO=1 MARCA_GUASTO="BLACK: ZERO MONITORS"
+	log "The expectations, WRITTEN BEFORE the round"
+	inf "healthy: $A_SANO (HEALTHY) · fault: $A_GUASTO ($MARCA_GUASTO) · healed: $A_SANO"
+	inf "requested size: $MISURA"
 	vicini_prima
 
 	mkdir -p "$SCENE"
 
-	log "1. Il giro SANO — la sessione CON il monitor"
+	log "1. The HEALTHY round — the session WITH the monitor"
 	riparti con "certifica-sano" "$SCENE/sana.json"; local E_SANO=$?
-	log "2. Il GUASTO — la stessa sessione SENZA --virtual-monitor (M9)"
+	log "2. The FAULT — the same session WITHOUT --virtual-monitor (M9)"
 	riparti senza "certifica-guasto" "$SCENE/nera.json"; local E_GUASTO=$?
-	log "3. Il RISANATO — si rimette il monitor"
+	log "3. The HEALED — the monitor is put back"
 	riparti con "certifica-risanato" "$SCENE/sana-2.json"; local E_RIS=$?
 
-	log "Il verdetto, coi tre numeri accanto"
-	inf "sano $E_SANO · guasto $E_GUASTO · risanato $E_RIS"
+	log "The verdict, with the three numbers next to it"
+	inf "healthy $E_SANO · fault $E_GUASTO · healed $E_RIS"
 	local falle=0
-	[ "$E_SANO" -eq "$A_SANO" ] && ok "il sano e' l'atteso ($E_SANO)" || {
-		ko "⛔ il sano e' $E_SANO invece di $A_SANO: il soggetto e' rotto, e un"
-		ko "   banco il cui soggetto e' rotto NON si certifica"
+	[ "$E_SANO" -eq "$A_SANO" ] && ok "the healthy one is the expected ($E_SANO)" || {
+		ko "⛔ the healthy one is $E_SANO instead of $A_SANO: the subject is broken, and a"
+		ko "   bench whose subject is broken is NOT certified"
 		falle=$((falle+1)); }
-	[ "$E_GUASTO" -eq "$A_GUASTO" ] && ok "il guasto e' l'atteso ($E_GUASTO = $MARCA_GUASTO)" || {
-		ko "⛔ il guasto e' $E_GUASTO invece di $A_GUASTO: o il banco non lo vede,"
-		ko "   o e' rosso per un'altra ragione"
+	[ "$E_GUASTO" -eq "$A_GUASTO" ] && ok "the fault is the expected ($E_GUASTO = $MARCA_GUASTO)" || {
+		ko "⛔ the fault is $E_GUASTO instead of $A_GUASTO: either the bench does not see it,"
+		ko "   or it is red for another reason"
 		falle=$((falle+1)); }
-	[ "$E_RIS" -eq "$A_SANO" ] && ok "il risanato torna al sano ($E_RIS)" || {
-		ko "⛔ il risanato e' $E_RIS invece di $A_SANO: il guasto ha lasciato"
-		ko "   qualcosa, o il sano non era ripetibile"
+	[ "$E_RIS" -eq "$A_SANO" ] && ok "the healed one goes back to healthy ($E_RIS)" || {
+		ko "⛔ the healed one is $E_RIS instead of $A_SANO: the fault left"
+		ko "   something behind, or the healthy one was not repeatable"
 		falle=$((falle+1)); }
 
 	vicini_dopo || falle=$((falle+1))
 
 	if [ "$falle" -eq 0 ]; then
-		printf '\n    \033[1;32m⭐ F2.1 E'"'"' CERTIFICATO: sano %s → guasto %s (nel suo punto) → risanato %s\033[0m\n' \
+		printf '\n    \033[1;32m⭐ F2.1 IS CERTIFIED: healthy %s → fault %s (at its point) → healed %s\033[0m\n' \
 		    "$E_SANO" "$E_GUASTO" "$E_RIS"
-		printf '    --  e non e'"'"' «il banco e'"'"' giusto»: e'"'"' «il banco sa vedere QUESTO difetto».\n'
+		printf '    --  and it is not «the bench is right»: it is «the bench can see THIS defect».\n'
 		return 0
 	fi
-	printf '\n    \033[1;31m⛔ F2.1 NON E'"'"' CERTIFICATO: %s cose non tornano\033[0m\n' "$falle"
+	printf '\n    \033[1;31m⛔ F2.1 IS NOT CERTIFIED: %s things do not add up\033[0m\n' "$falle"
 	return 1
 }
 
 # ---------------------------------------------------------------------------
 case "${1:-guarda}" in
 guarda)
-	# ⛔ Sola lettura: non prende il lucchetto e non tocca niente.
-	log "Guardo e basta — non tocco niente"
+	# ⛔ Read only: it does not take the lock and touches nothing.
+	log "Just looking — I touch nothing"
 	vicini_prima
 	misura "${2:-guarda}"
 	e=$?
@@ -583,39 +581,39 @@ guarda)
 	exit $e
 	;;
 guardia)
-	# ⛔ La guardia da mettere DAVANTI a una misura altrui.  Sta in un file suo
-	#    perche' chi la usa non e' questo banco: sono F2.2..F2.6, e devono
-	#    poterla infilare davanti al proprio comando senza far partire niente.
+	# ⛔ The guard to put IN FRONT of someone else's measurement.  It sits in a file of
+	#    its own because whoever uses it is not this bench: they are F2.2..F2.6, and they must
+	#    be able to slip it in front of their own command without starting anything.
 	shift
 	exec bash "$QUI/02-sessione-guardia.sh" "$@"
 	;;
 sano)      prendi_lucchetto || exit 2; vicini_prima; riparti con "sano" "${2:-}"; e=$?; vicini_dopo || e=9; exit $e ;;
 guasto)    prendi_lucchetto || exit 2; vicini_prima; riparti senza "guasto" "${2:-}"; e=$?; vicini_dopo || e=9; exit $e ;;
 come-al-riavvio)
-	# ⭐ La prova della PERSISTENZA senza riavviare il server: si tolgono i
-	#    drop-in di questo banco e si fa rinascere la sessione con la sola
-	#    configurazione che al riavvio ci sarebbe comunque.
+	# ⭐ The PERSISTENCE test without rebooting the server: this bench's
+	#    drop-ins are removed and the session is born again with only the
+	#    configuration that would be there at reboot anyway.
 	prendi_lucchetto || exit 2
 	vicini_prima
 	riparti nudo "come-al-riavvio" "${2:-}"; e=$?
 	vicini_dopo || e=9
-	log "Che cosa dice questo numero, e che cosa NON dice"
+	log "What this number says, and what it does NOT say"
 	if [ "$e" -eq 0 ]; then
-		ok "⭐ una sessione appena nata SENZA nessun drop-in di questo banco ha"
-		ok "   il monitor: la cura sta nella configurazione persistente, e"
-		ok "   sopravvive alla sparizione di \$XDG_RUNTIME_DIR."
+		ok "⭐ a newborn session WITHOUT any drop-in of this bench has"
+		ok "   the monitor: the cure lives in the persistent configuration, and"
+		ok "   survives the disappearance of \$XDG_RUNTIME_DIR."
 	else
-		ko "⛔ senza i drop-in di questo banco la sessione esce $e: dopo un"
-		ko "   riavvio del server la macchina torna cosi'."
+		ko "⛔ without this bench's drop-ins the session exits $e: after a"
+		ko "   server reboot the machine goes back to this."
 	fi
-	att "⚠ e NON e' un riavvio: che /media si rimonti, che il rootfs torni e"
-	att "  che qualcuno rilanci provision-server.sh restano [?] finche' un"
-	att "  riavvio vero non li tocca (LEZIONI.md §2.5-bis)."
+	att "⚠ and it is NOT a reboot: that /media is remounted, that the rootfs comes back and"
+	att "  that someone reruns provision-server.sh stay [?] until a"
+	att "  real reboot touches them (LEZIONI.md §2.5-bis)."
 	exit $e
 	;;
 dispositivi) prendi_lucchetto || exit 2; dispositivi; exit $? ;;
-ferma)     prendi_lucchetto || exit 2; ferma_e_aspetta && { ok "fermata"; exit 0; } || { ko "⛔ non si e' fermata"; exit 1; } ;;
+ferma)     prendi_lucchetto || exit 2; ferma_e_aspetta && { ok "stopped"; exit 0; } || { ko "⛔ it did not stop"; exit 1; } ;;
 certifica) prendi_lucchetto || exit 2; certifica; exit $? ;;
-pulisci)   togli_dropin; ok "drop-in di F2.1 tolto: la macchina torna al suo"; exit 0 ;;
-*) echo "uso: $0 {guarda|sano|guasto|come-al-riavvio|dispositivi|ferma|certifica|pulisci|guardia [...]}" >&2; exit 2 ;;
+pulisci)   togli_dropin; ok "F2.1 drop-in removed: the machine goes back to its own"; exit 0 ;;
+*) echo "usage: $0 {guarda|sano|guasto|come-al-riavvio|dispositivi|ferma|certifica|pulisci|guardia [...]}" >&2; exit 2 ;;
 esac

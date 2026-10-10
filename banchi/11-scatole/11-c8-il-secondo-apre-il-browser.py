@@ -2,100 +2,100 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-11-c8 — ⭐⭐⭐ «IL SECONDO UTENTE APRE IL BROWSER»
+11-c8 — ⭐⭐⭐ «THE SECOND USER OPENS THE BROWSER»
 ===========================================================================
 
     python3 11-c8-il-secondo-apre-il-browser.py
     python3 11-c8-il-secondo-apre-il-browser.py --senza-cura
     python3 11-c8-il-secondo-apre-il-browser.py --certifica
 
-⛔ E' il COLLAUDO B della fase 11.  ⭐ E' anche, secondo tutt'e due i revisori
-   esterni, **la prova piu' importante della lista** — e nella prima stesura era
-   anche la piu' difficile da eseguire.  ⇒ L'utente ha sciolto il nodo il 26
-   agosto 2026 (`DECISIONI.md` §4.6-terdecies):
+⛔ It is ACCEPTANCE TEST B of phase 11.  ⭐ It is also, according to both external
+   reviewers, **the most important test of the list** — and in the first draft it was
+   also the hardest to run.  ⇒ The user untied the knot on 26
+   August 2026 (`DECISIONI.md` §4.6-terdecies):
 
-       *«Per quanto mi riguarda un container puo' anche avere 10 utenti,
-         e' un dato gia' misurato con GNOME.»*
+       *«As far as I am concerned a container can even have 10 users,
+         it is a figure already measured with GNOME.»*
 
-   ⇒ ⭐ **C8 sta in una scatola, con DUE inquilini.**  Non dieci: la domanda e'
-     la CORRETTEZZA a piu' utenti, non la capienza — quella e' gia' misurata e
-     non si rifa'.
-
----------------------------------------------------------------------------
-⛔⛔ IL GUASTO CHE QUESTA MAGLIA DEVE PRENDERE — e di chi e' la colpa
----------------------------------------------------------------------------
-
-`DECISIONI.md` §4.6-undecies, e la correzione dell'utente che ne cambia il
-bersaglio:
-
-  · `/etc/skel/.cache` di quella macchina e' un COLLEGAMENTO a `/tmp`.
-    ⭐⭐ E **NON E' UN GUASTO**: e' una **scelta voluta** del proprietario su
-    come deve funzionare il suo sistema operativo.  ⛔ Non c'e' niente da
-    riparare, e questa prova non lo ripara.
-  · ⛔ **Il difetto e' NOSTRO**: e' il prodotto che crea gli inquilini con
-    `useradd -m`, che copia lo scheletro ⇒ nascono TUTTI a scrivere nello
-    stesso posto.  Firefox tiene il profilo locale sotto `$HOME/.cache/mozilla`
-    = `/tmp/mozilla`, e ⛔ **il primo che apre il browser se lo prende a modo
-    0700**: dal secondo in poi il profilo non nasce, e la finestra che si apre
-    dice *«Your Firefox profile cannot be loaded»*.
-
-⇒ ⭐ **Il bersaglio della prova non e' il collegamento**: e' *«il secondo utente
-  apre il browser, si' o no?»*, su una macchina configurata come la vuole il
-  suo proprietario.  ⛔ Guardare il collegamento sarebbe guardare la CAUSA che
-  crediamo di conoscere invece dell'EFFETTO che ci interessa — e la cura
-  potrebbe cambiare senza che la prova se ne accorga.
+   ⇒ ⭐ **C8 sits in a box, with TWO tenants.**  Not ten: the question is
+     CORRECTNESS with several users, not capacity — that is already measured and
+     is not redone.
 
 ---------------------------------------------------------------------------
-⭐ COME GIUDICA — nel PIXEL, e senza sapere che aspetto abbia un desktop
+⛔⛔ THE FAULT THIS MESH MUST CATCH — and whose fault it is
 ---------------------------------------------------------------------------
 
-⛔ Il conto dei processi non serve: `[M]` diceva «1» con la finestra e senza.
-⛔ «Firefox e' vivo» non serve: nel guasto Firefox **e' vivo**, e mostra un
-   dialogo d'errore.
+`DECISIONI.md` §4.6-undecies, and the user's correction that changes its
+target:
 
-⇒ La prova apre nel browser una pagina di **colore `#FF00FF`** (`11-c8-pagina.html`)
-  e guarda **quanto schermo e' diventato di quel colore**, con una **tolleranza
-  dichiarata** — perche' i compositori applicano profili e riscalamenti, e un
-  `#FF00FF` torna indietro leggermente diverso (§4.3, rilievo di Gemini).
+  · `/etc/skel/.cache` of that machine is a LINK to `/tmp`.
+    ⭐⭐ And **IT IS NOT A FAULT**: it is a **deliberate choice** of the owner about
+    how his operating system must work.  ⛔ There is nothing to
+    repair, and this test does not repair it.
+  · ⛔ **The defect is OURS**: it is the product that creates the tenants with
+    `useradd -m`, which copies the skeleton ⇒ they are ALL born writing in the
+    same place.  Firefox keeps the local profile under `$HOME/.cache/mozilla`
+    = `/tmp/mozilla`, and ⛔ **the first one who opens the browser takes it with mode
+    0700**: from the second on the profile is not born, and the window that opens
+    says *«Your Firefox profile cannot be loaded»*.
 
-E si guarda **PRIMA e DOPO**, non solo dopo:
-
-    prima : la sessione e' viva e il desktop e' DISEGNATO (giudice di 10-f1)
-    dopo  : una fetta larga di schermo e' del colore della pagina
-
-⛔ Il «prima» non e' cerimonia: senza, un desktop che non nasce nemmeno darebbe
-   lo stesso identico esito di un browser che non parte — ⚠ due guasti diversi
-   con la stessa faccia, che e' il modo in cui questo progetto ha gia' perso
-   due diagnosi.
-
----------------------------------------------------------------------------
-⛔ COME SO CHE SA DARE ROSSO — `--senza-cura`
----------------------------------------------------------------------------
-
-`fasi/11…` §4.1, colonna «come so che sa dare rosso»: *«si disfa la cura della
-provvista ⇒ rosso»*.
-
-  senza `--senza-cura`  gli inquilini ricevono la cura di `src/provisiona.sh`:
-                        una `~/.cache` VERA, cartella loro, modo 0700
-  con `--senza-cura`    ⛔ la cura NON si applica: i due nascono come li faceva
-                        il codice del 25 agosto 2026 ⇒ **il secondo deve dare
-                        ROSSO**, o questa maglia non serve a niente
-
-⚠ E il terreno se lo prepara da se': la scatola parte con uno `/etc/skel`
-  pulito, e questa prova ci mette il collegamento a `/tmp` — ⛔ cioe'
-  **riproduce la configurazione della macchina vera**, che e' l'unica sulla
-  quale la domanda ha senso.  ⇒ Provare su uno scheletro pulito vorrebbe dire
-  rispondere a una domanda piu' facile di quella vera (§3.5).
+⇒ ⭐ **The target of the test is not the link**: it is *«does the second user
+  open the browser, yes or no?»*, on a machine configured as its
+  owner wants it.  ⛔ Looking at the link would be looking at the CAUSE we
+  believe we know instead of the EFFECT we care about — and the cure
+  could change without the test noticing.
 
 ---------------------------------------------------------------------------
-GLI ESITI (§4.5 del documento di fase)
+⭐ HOW IT JUDGES — in the PIXEL, and without knowing what a desktop looks like
 ---------------------------------------------------------------------------
 
-  0  ⭐ ho guardato: TUTT'E DUE gli inquilini hanno aperto il browser
-  1  ho guardato: almeno uno NON ce l'ha fatta            ⇒ rosso
-  3  ⛔ non ho potuto guardare (il server non c'era, il giudice non c'era,
-     nessun fotogramma e' arrivato) — ⛔ e NON e' un rosso
-  2  il terreno non regge, o l'uso e' sbagliato
+⛔ The process count is of no use: `[M]` it said «1» with the window and without.
+⛔ «Firefox is alive» is of no use: in the fault Firefox **is alive**, and shows an
+   error dialog.
+
+⇒ The test opens in the browser a page of **colour `#FF00FF`** (`11-c8-pagina.html`)
+  and looks at **how much of the screen has turned that colour**, with a **declared
+  tolerance** — because compositors apply profiles and rescaling, and a
+  `#FF00FF` comes back slightly different (§4.3, Gemini's finding).
+
+And we look **BEFORE and AFTER**, not only after:
+
+    before: the session is alive and the desktop is DRAWN (judge of 10-f1)
+    after : a wide slice of the screen is the colour of the page
+
+⛔ The «before» is not ceremony: without it, a desktop that is not even born would give
+   the very same outcome as a browser that does not start — ⚠ two different faults
+   with the same face, which is the way this project has already lost
+   two diagnoses.
+
+---------------------------------------------------------------------------
+⛔ HOW I KNOW IT CAN SAY RED — `--senza-cura`
+---------------------------------------------------------------------------
+
+`fasi/11…` §4.1, column «how I know it can say red»: *«the provisioning cure is
+undone ⇒ red»*.
+
+  without `--senza-cura` the tenants receive the cure of `src/provisiona.sh`:
+                        a REAL `~/.cache`, their own folder, mode 0700
+  with `--senza-cura`   ⛔ the cure is NOT applied: the two are born as the
+                        code of 25 August 2026 made them ⇒ **the second must give
+                        RED**, or this mesh is useless
+
+⚠ And it prepares the terrain by itself: the box starts with a clean
+  `/etc/skel`, and this test puts the link to `/tmp` in it — ⛔ i.e.
+  **it reproduces the configuration of the real machine**, which is the only one on
+  which the question makes sense.  ⇒ Testing on a clean skeleton would mean
+  answering an easier question than the real one (§3.5).
+
+---------------------------------------------------------------------------
+THE OUTCOMES (§4.5 of the phase document)
+---------------------------------------------------------------------------
+
+  0  ⭐ I looked: BOTH tenants opened the browser
+  1  I looked: at least one did NOT make it             ⇒ red
+  3  ⛔ I could not look (the server was not there, the judge was not there,
+     no frame arrived) — ⛔ and it is NOT a red
+  2  the terrain does not hold, or the usage is wrong
 ===========================================================================
 """
 import argparse
@@ -109,20 +109,20 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐ C1 E' LA CASA DEI DUE PASSI COMUNI A TUTTE E NOVE LE MAGLIE — §1.47
+# ⭐⭐ C1 IS THE HOME OF THE TWO STEPS COMMON TO ALL NINE MESHES — §1.47
 #
-# ⛔ Non e' comodita': una riga ripetuta in nove file e' **nove posti da cui
-#    divergere**, ed erano gia' divergiti.  Da `11-c1-nasce-e-si-vede.py`:
+# ⛔ It is not convenience: a line repeated in nine files is **nine places to
+#    diverge from**, and they had already diverged.  From `11-c1-nasce-e-si-vede.py`:
 #
-#   · `e_stato_ammesso(coda)`   — «il cliente e' stato AMMESSO?», che ⛔ non e'
-#        la parola dentro un testo: il cliente la stampa anche nei DUE messaggi
-#        di rifiuto, e sullo stdout (`01-b3-cliente.py:1315`, `:1322`, `:2560`).
-#   · `garantisci_i_gruppi(chi)` — i gruppi dei nodi `/dev/dri`, ⛔ senza i
-#        quali `[M]` la sessione nasce CIECA (0 su 4, zero fotogrammi,
-#        `fasi/10-…` §7.4) e questa maglia misurerebbe il buio.
+#   · `e_stato_ammesso(coda)`   — «was the client ADMITTED?», which ⛔ is not
+#        the word inside a text: the client prints it also in the TWO refusal
+#        messages, and on stdout (`01-b3-cliente.py:1315`, `:1322`, `:2560`).
+#   · `garantisci_i_gruppi(chi)` — the groups of the `/dev/dri` nodes, ⛔ without
+#        which `[M]` the session is born BLIND (0 of 4, zero frames,
+#        `fasi/10-…` §7.4) and this mesh would measure the darkness.
 #
-# ⛔ Se C1 non si carica si esce **3** e lo si dice: ⛔ non si ripiega in
-#    silenzio su un giudizio piu' povero.
+# ⛔ If C1 does not load we exit **3** and say so: ⛔ we do not silently fall back
+#    on a poorer judgement.
 # ═══════════════════════════════════════════════════════════════════════════
 _MESTIERI_C1 = ("e_stato_ammesso", "certifica_ammissione",
                 "garantisci_i_gruppi", "verdetto_gruppi", "certifica_gruppi")
@@ -130,10 +130,10 @@ _C1 = None
 
 
 def _carica_c1():
-    """⛔ E' un CARICATORE, non un giudice: trova il file, non decide niente.
+    """⛔ It is a LOADER, not a judge: it finds the file, it decides nothing.
 
-    ⚠ Si cerca accanto a me (nella scatola tutto sta in `/opt/remotix`) e un
-      piano piu' su, perche' nel deposito questa maglia sta in
+    ⚠ It is looked for next to me (in the box everything is in `/opt/remotix`) and one
+      level up, because in the repository this mesh sits in
       `banchi/11-scatole/`.
     """
     for base in (QUI, os.path.dirname(QUI)):
@@ -146,7 +146,7 @@ def _carica_c1():
             spec.loader.exec_module(m)
         except Exception:
             return None
-        # ⛔ Si VERIFICA che ci sia quel che serve, non ci si fida del nome del
+        # ⛔ We VERIFY that what is needed is there, we do not trust the name of the
         #    file (`CODER.md` §3.9).
         for mestiere in _MESTIERI_C1:
             if not callable(getattr(m, mestiere, None)):
@@ -160,68 +160,68 @@ def casa_di_c1():
     if _C1 is None:
         _C1 = _carica_c1()
     if _C1 is None:
-        print("⛔ non trovo `11-c1-nasce-e-si-vede.py` accanto a me, e da li'")
-        print("   vengono il predicato dell'ammissione e la garanzia dei")
-        print("   gruppi della scheda — che stanno in un posto solo (§1.47).")
-        print("⇒ non ho potuto guardare — ⛔ e NON e' un rosso (§4.5).")
+        print("⛔ I cannot find `11-c1-nasce-e-si-vede.py` next to me, and from there")
+        print("   come the admission predicate and the guarantee of the")
+        print("   card's groups — which live in one place only (§1.47).")
+        print("⇒ I could not look — ⛔ and it is NOT a red (§4.5).")
         sys.exit(3)
     return _C1
 
 
 def e_stato_ammesso(coda):
-    """⭐ `True` ammesso · `False` **RESPINTO** · `None` non ha detto niente.
+    """⭐ `True` admitted · `False` **TURNED AWAY** · `None` said nothing.
 
-    ⛔ `False` non e' un rosso del prodotto: un cliente respinto e' un cliente
-       respinto, e chi chiama dice «non ho potuto guardare» (**3**).
+    ⛔ `False` is not a product red: a client turned away is a client
+       turned away, and the caller says «I could not look» (**3**).
     """
     return casa_di_c1().e_stato_ammesso(coda)
 
 
 def garantisci_i_gruppi(chi, prefisso="   "):
-    """⭐⭐ I GRUPPI DELLA SCHEDA — `(esito, perche)`; `0` = si puo' misurare.
+    """⭐⭐ THE CARD'S GROUPS — `(esito, perche)`; `0` = it can be measured.
 
-    ⛔ Fino al 27 agosto 2026 questa maglia creava l'inquilino con
-       `usermod -aG video,render` **e non rileggeva**: due nomi inchiodati (che
-       sono di UNA distribuzione) e nessuna verifica — E1, «scritto non e' in
-       vigore».  ⭐ Il lavoro lo fa `attrezzi-gruppi-scheda.sh`, che legge i gid
-       dai NODI e rilegge confrontando i numeri.  ⛔ Non se ne fa una copia qui.
+    ⛔ Until 27 August 2026 this mesh created the tenant with
+       `usermod -aG video,render` **and did not read back**: two nailed-down names (which
+       belong to ONE distribution) and no verification — E1, «written is not in
+       force».  ⭐ The work is done by `attrezzi-gruppi-scheda.sh`, which reads the gids
+       from the NODES and reads back comparing the numbers.  ⛔ No copy of it is made here.
     """
     return casa_di_c1().garantisci_i_gruppi(chi, prefisso)
 
 # ---------------------------------------------------------------------------
-# ⛔ IL COLORE DEL BERSAGLIO E LA SUA TOLLERANZA — dichiarati qui e stampati in
-#    ogni esito, perche' «il browser ha disegnato» e' un verdetto, e un
-#    verdetto senza il suo metro e' un'opinione.
+# ⛔ THE COLOUR OF THE TARGET AND ITS TOLERANCE — declared here and printed in
+#    every outcome, because «the browser drew» is a verdict, and a
+#    verdict without its yardstick is an opinion.
 #
-# ⚠ La tolleranza NON e' prudenza generica: `fasi/11…` §4.3 accoglie il rilievo
-#   di Gemini — i compositori applicano profili di colore, la catena passa per
-#   una codifica H.264 in 4:2:0 (che sottocampiona proprio il croma, cioe' il
-#   canale dove sta tutta la differenza fra magenta e non-magenta), e pretendere
-#   il colore esatto vorrebbe dire una prova gia' morta.
-# ⛔ E la tolleranza si TARA, non si sceglie: `--certifica` contiene il caso
-#   «colore spostato di quanto la tolleranza ammette ⇒ deve restare VERDE» — che
-#   e' la stessa guardia che C1 ha sulla soglia dell'immagine.
+# ⚠ The tolerance is NOT generic prudence: `fasi/11…` §4.3 accepts Gemini's
+#   finding — compositors apply colour profiles, the chain goes through
+#   an H.264 encoding in 4:2:0 (which subsamples precisely the chroma, i.e. the
+#   channel where the whole difference between magenta and non-magenta lies), and demanding
+#   the exact colour would mean a test already dead.
+# ⛔ And the tolerance is CALIBRATED, not chosen: `--certifica` contains the case
+#   «colour shifted by as much as the tolerance allows ⇒ must stay GREEN» — which
+#   is the same guard C1 has on the image threshold.
 # ---------------------------------------------------------------------------
 COLORE = (0xFF, 0x00, 0xFF)
-TOLLERANZA = 48          # per canale, in livelli 0..255
-FRAZIONE_MINIMA = 0.25   # quanto schermo dev'essere di quel colore
+TOLLERANZA = 48          # per channel, in levels 0..255
+FRAZIONE_MINIMA = 0.25   # how much of the screen must be that colour
 
-# ⚠ 0,25 e non 0,90: fra il bordo della finestra, la barra di GNOME e le
-#   decorazioni, il browser a schermo intero non copre mai tutto.  ⛔ E una
-#   soglia troppo alta si romperebbe al primo desktop con una barra piu' larga,
-#   cioe' proprio alla fase 12 — che e' quel che questa fase esiste per evitare.
+# ⚠ 0.25 and not 0.90: between the window edge, the GNOME bar and the
+#   decorations, the full-screen browser never covers everything.  ⛔ And a
+#   threshold too high would break at the first desktop with a wider bar,
+#   i.e. precisely at phase 12 — which is what this phase exists to avoid.
 
 
 def giudice_immagini():
-    """⭐ Il giudice dei pixel si IMPORTA, non si riscrive.
+    """⭐ The pixel judge is IMPORTED, not rewritten.
 
-    ⛔ `10-f1-testimone.py` e' gia' tarato sul vero (25 agosto 2026: desktop
-       nero misurato, soglia del «quasi-nero» messa in mezzo al vuoto fra i due
-       mondi).  Riscriverne qui una copia vorrebbe dire avere due giudici che
-       possono divergere in silenzio — e il giorno che divergono, il rosso lo
-       darebbe quello sbagliato.
-    ⇒ Se non c'e', questa prova esce **3**: «non ho potuto guardare».  ⛔ Non si
-      ripiega su un giudizio piu' povero senza dirlo.
+    ⛔ `10-f1-testimone.py` is already calibrated on the real thing (25 August 2026: black
+       desktop measured, threshold of «near-black» put in the middle of the gap between the two
+       worlds).  Rewriting a copy here would mean having two judges that
+       can diverge silently — and the day they diverge, the red would be
+       given by the wrong one.
+    ⇒ If it is not there, this test exits **3**: «I could not look».  ⛔ We do not
+      fall back on a poorer judgement without saying so.
     """
     perc = os.path.join(QUI, "10-f1-testimone.py")
     if not os.path.exists(perc):
@@ -236,12 +236,12 @@ def giudice_immagini():
 
 
 def frazione_del_colore(percorso, colore=COLORE, tolleranza=TOLLERANZA):
-    """Quanta parte dell'immagine e' del colore cercato, entro la tolleranza.
+    """How much of the image is of the colour looked for, within the tolerance.
 
-    ⛔ Torna **`None`** se non ha potuto guardare — file che non c'e', file
-       vuoto, `numpy`/`Pillow` che mancano, PNG troncato.  ⚠ `None` non e'
-       «zero»: «non ho guardato» e «ho guardato e non c'era» sono due cose
-       diverse, e questo progetto ha gia' pagato per averle confuse.
+    ⛔ Returns **`None`** if it could not look — a file that is not there, an empty
+       file, `numpy`/`Pillow` missing, a truncated PNG.  ⚠ `None` is not
+       «zero»: «I did not look» and «I looked and it was not there» are two
+       different things, and this project has already paid for confusing them.
     """
     if not percorso or not os.path.exists(percorso) \
             or os.path.getsize(percorso) == 0:
@@ -254,32 +254,32 @@ def frazione_del_colore(percorso, colore=COLORE, tolleranza=TOLLERANZA):
         return None
     if img.ndim != 3 or img.shape[2] != 3 or img.size == 0:
         return None
-    # ⚠ La distanza si prende **canale per canale** (norma del massimo) e non
-    #   come somma: una somma lascerebbe passare un colore molto sbagliato su un
-    #   canale solo, purche' azzeccato sugli altri due.
+    # ⚠ The distance is taken **channel by channel** (max norm) and not
+    #   as a sum: a sum would let through a colour very wrong on a single
+    #   channel, provided it is right on the other two.
     scarto = np.abs(img - np.array(colore, dtype="int16")).max(axis=2)
     return float((scarto <= tolleranza).mean())
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⛔ LA CERTIFICAZIONE DEL GIUDICE — si dimostra che SA dare rosso, e verde
+# ⛔ THE JUDGE'S CERTIFICATION — it proves that it CAN give red, and green
 # ═══════════════════════════════════════════════════════════════════════════
 def certifica():
-    """⚠ E si dichiara che cosa copre e che cosa no.
+    """⚠ And it declares what it covers and what it does not.
 
-    COPRE: il lettore dei pixel — che il colore si ritrovi quando c'e', che NON
-    si ritrovi quando non c'e', ⭐ che una immagine **spostata di quanto la
-    tolleranza ammette** resti VERDE (o la soglia e' troppo stretta e la maglia
-    si butta fra due settimane), e che «non ho guardato» torni `None`.
-    ⛔ NON COPRE: che il browser sia davvero partito.  Quello lo dice
-    `--senza-cura` sul vero, ed e' l'altra meta' del collaudo.
+    COVERS: the pixel reader — that the colour is found when it is there, that it is NOT
+    found when it is not, ⭐ that an image **shifted by as much as the
+    tolerance allows** stays GREEN (or the threshold is too tight and the mesh
+    gets thrown away in two weeks), and that «I did not look» returns `None`.
+    ⛔ DOES NOT COVER: that the browser really started.  That is said by
+    `--senza-cura` on the real thing, and it is the other half of the acceptance test.
     """
     try:
         import numpy as np
         from PIL import Image
     except ImportError:
-        print("⛔ mancano numpy o Pillow: non posso nemmeno certificarmi")
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ numpy or Pillow is missing: I cannot even certify myself")
+        print("   ⇒ I could not look")
         return 3
     import tempfile
 
@@ -294,74 +294,74 @@ def certifica():
         Image.fromarray(a).save(p)
         return p
 
-    # ⭐ I casi, e ognuno c'e' per una ragione che si puo' dire in una riga.
+    # ⭐ The cases, and each one is there for a reason that can be said in one line.
     casi = []
-    # 1. la pagina c'e' tutta: il browser ha disegnato
-    casi.append(("pagina intera",
+    # 1. the whole page is there: the browser drew
+    casi.append(("whole page",
                  dipingi("a", COLORE, (0, 0, 0)), True))
-    # 2. il desktop senza browser: nessun magenta
-    casi.append(("desktop senza browser",
+    # 2. the desktop without browser: no magenta
+    casi.append(("desktop without browser",
                  dipingi("b", (58, 62, 70), (200, 200, 200)), False))
-    # 3. ⭐ IL CASO CHE TARA LA SOGLIA: il colore torna indietro SPOSTATO —
-    #    profili di colore, 4:2:0, riscalamenti.  Deve restare VERDE.
+    # 3. ⭐ THE CASE THAT CALIBRATES THE THRESHOLD: the colour comes back SHIFTED —
+    #    colour profiles, 4:2:0, rescaling.  It must stay GREEN.
     spostato = tuple(min(255, max(0, c + s))
                      for c, s in zip(COLORE, (-30, +30, -30)))
-    casi.append(("colore spostato di %s (dev'essere VERDE)" % (spostato,),
+    casi.append(("colour shifted by %s (must be GREEN)" % (spostato,),
                  dipingi("c", spostato, (0, 0, 0)), True))
-    # 4. e uno spostato TROPPO non deve passare, o la tolleranza non separa piu'
+    # 4. and one shifted TOO MUCH must not pass, or the tolerance no longer separates
     troppo = (0xFF, 0x90, 0xFF)
-    casi.append(("colore spostato TROPPO %s (dev'essere ROSSO)" % (troppo,),
+    casi.append(("colour shifted TOO MUCH %s (must be RED)" % (troppo,),
                  dipingi("d", troppo, (0, 0, 0)), False))
-    # 5. lo schermo nero: e' un rosso, non un «non lo so»
-    casi.append(("schermo nero", dipingi("e", (0, 0, 0)), False))
-    # 6. ⛔ la finestra c'e' ma copre poco: sotto la frazione minima
+    # 5. the black screen: it is a red, not an «I do not know»
+    casi.append(("black screen", dipingi("e", (0, 0, 0)), False))
+    # 6. ⛔ the window is there but covers little: below the minimum fraction
     piccola = np.zeros((216, 384, 3), dtype="uint8")
     piccola[:, :] = (58, 62, 70)
-    piccola[10:40, 10:80] = COLORE          # ~2,7 % dello schermo
+    piccola[10:40, 10:80] = COLORE          # ~2.7 % of the screen
     pp = os.path.join(lav, "f.png")
     Image.fromarray(piccola).save(pp)
-    casi.append(("una macchia piccola non e' una pagina", pp, False))
+    casi.append(("a small spot is not a page", pp, False))
 
-    print("== certificazione del giudice di C8 ==")
-    print("   colore %s · tolleranza ±%d per canale · frazione minima %.2f"
+    print("== certification of C8's judge ==")
+    print("   colour %s · tolerance ±%d per channel · minimum fraction %.2f"
           % (COLORE, TOLLERANZA, FRAZIONE_MINIMA))
     guai = 0
     for nome, png, atteso in casi:
         fr = frazione_del_colore(png)
         visto = (fr is not None and fr >= FRAZIONE_MINIMA)
         ok = (visto == atteso)
-        print("  %s  %-52s  frazione=%s  ⇒ %s (atteso %s)"
+        print("  %s  %-52s  fraction=%s  ⇒ %s (expected %s)"
               % ("OK " if ok else "NO ", nome,
-                 "non lo so" if fr is None else "%.3f" % fr,
-                 "pagina" if visto else "niente",
-                 "pagina" if atteso else "niente"))
+                 "unknown" if fr is None else "%.3f" % fr,
+                 "page" if visto else "nothing",
+                 "page" if atteso else "nothing"))
         if not ok:
             guai += 1
 
-    # 7. ⛔ E il caso che vale piu' di tutti: «non ho potuto guardare» dev'essere
-    #    `None`, non zero.  Un file che non c'e' NON e' uno schermo senza pagina.
-    for nome, perc in (("il file non c'e'", os.path.join(lav, "manca.png")),
-                       ("il file e' vuoto", os.path.join(lav, "vuoto.png"))):
-        if "vuoto" in nome:
+    # 7. ⛔ And the case worth more than all: «I could not look» must be
+    #    `None`, not zero.  A file that is not there is NOT a screen without a page.
+    for nome, perc in (("the file is not there", os.path.join(lav, "manca.png")),
+                       ("the file is empty", os.path.join(lav, "vuoto.png"))):
+        if "empty" in nome:
             open(perc, "wb").close()
         fr = frazione_del_colore(perc)
         ok = fr is None
-        print("  %s  %-52s  frazione=%s  ⇒ %s (atteso «non lo so»)"
+        print("  %s  %-52s  fraction=%s  ⇒ %s (expected «I do not know»)"
               % ("OK " if ok else "NO ", nome,
-                 "non lo so" if fr is None else "%.3f" % fr,
-                 "non lo so" if fr is None else "un numero"))
+                 "unknown" if fr is None else "%.3f" % fr,
+                 "unknown" if fr is None else "a number"))
         if not ok:
             guai += 1
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ⭐⭐ I GRUPPI DELLA SCHEDA — ⛔ il caso che oggi non c'era.
+    # ⭐⭐ THE CARD'S GROUPS — ⛔ the case that was missing before today.
     #
-    # ⛔ Un inquilino fuori dai gruppi dei nodi `/dev/dri` fa nascere una
-    #    sessione CIECA (`[M]` 0 su 4, zero fotogrammi, `fasi/10-…` §7.4) ⇒
-    #    questa maglia misurerebbe il buio.  ⭐ Si pretende che dica «non ho
-    #    potuto guardare», ⛔ e MAI rosso: e' un guasto del BANCO (§1.51).
-    # ⚠ I casi vivono in C1, col passo che certificano: ⛔ una copia qui
-    #   sarebbe un secondo posto da cui divergere (§1.47).
+    # ⛔ A tenant outside the groups of the `/dev/dri` nodes makes a
+    #    BLIND session be born (`[M]` 0 of 4, zero frames, `fasi/10-…` §7.4) ⇒
+    #    this mesh would measure the darkness.  ⭐ It is demanded that it says «I could
+    #    not look», ⛔ and NEVER red: it is a fault of the BENCH (§1.51).
+    # ⚠ The cases live in C1, with the step they certify: ⛔ a copy here
+    #   would be a second place to diverge from (§1.47).
     # ═══════════════════════════════════════════════════════════════════════
     print()
     guai_gr, _quanti_gr = casa_di_c1().certifica_gruppi("C8")
@@ -369,18 +369,18 @@ def certifica():
 
     print()
     if guai:
-        print("⛔ il giudice NON e' affidabile: %d casi sbagliati" % guai)
+        print("⛔ the judge is NOT reliable: %d cases wrong" % guai)
         return 1
-    print("⭐ il giudice vede la pagina quando c'e', non la vede quando non c'e',")
-    print("   ⭐ regge uno spostamento di colore, e dice «non lo so» invece di zero")
-    print("   ⭐ e i GRUPPI DELLA SCHEDA: un inquilino che non vede fa dire "
-          "«non ho potuto guardare», ⛔ mai rosso")
-    print("⚠ e questa certificazione copre IL LETTORE, non il browser (vedi in testa)")
+    print("⭐ the judge sees the page when it is there, does not see it when it is not,")
+    print("   ⭐ withstands a colour shift, and says «I do not know» instead of zero")
+    print("   ⭐ and the CARD'S GROUPS: a tenant that cannot see makes it say "
+          "«I could not look», ⛔ never red")
+    print("⚠ and this certification covers THE READER, not the browser (see the top)")
     return 0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# IL TERRENO — si prepara, e ⛔ si VERIFICA che sia in vigore (E1)
+# THE TERRAIN — it is prepared, and ⛔ it is VERIFIED to be in force (E1)
 # ═══════════════════════════════════════════════════════════════════════════
 def sh(comando, secondi=120):
     return subprocess.run(["/bin/sh", "-c", comando],
@@ -388,37 +388,37 @@ def sh(comando, secondi=120):
 
 
 def sgombra_il_posto_condiviso(base):
-    """⛔ «Da zero» vuol dire anche: **quel che ha lasciato il giro di prima**.
+    """⛔ «From zero» also means: **what the previous round left**.
 
-    `[M]` Il difetto vive in `/tmp/mozilla`, che il primo inquilino si prende a
-    modo 0700.  ⇒ Se restasse li' dal giro precedente, il PRIMO inquilino del
-    giro nuovo fallirebbe come il secondo — cioe' la prova direbbe rosso per la
-    ragione sbagliata, e chi legge concluderebbe una cosa falsa.
+    `[M]` The defect lives in `/tmp/mozilla`, which the first tenant takes with
+    mode 0700.  ⇒ If it stayed there from the previous round, the FIRST tenant of the
+    new round would fail like the second — i.e. the test would say red for the
+    wrong reason, and whoever reads would conclude something false.
 
-    ⚠⚠ E si toglie SOLO quel che e' di un inquilino di QUESTA prova.  ⛔ Un
-       `rm -rf /tmp/mozilla` secco cancellerebbe il profilo di chiunque altro —
-       ed e' esattamente la regola che `src/provisiona.sh` si e' data
-       («non si tocca `/tmp/mozilla` di chi ce l ha gia: non e nostro e non si
-       sa chi lo usa»).  Qui vale uguale: fuori dalla scatola questa riga
-       sarebbe un danno.
+    ⚠⚠ And ONLY what belongs to a tenant of THIS test is removed.  ⛔ A
+       plain `rm -rf /tmp/mozilla` would delete anyone else's profile —
+       and it is exactly the rule `src/provisiona.sh` gave itself
+       («do not touch the `/tmp/mozilla` of whoever already has it: it is not ours and
+       we do not know who uses it»).  Here it holds the same: outside the box this line
+       would be damage.
     """
     p = "/tmp/mozilla"
     chi = sh("stat -c %%U %s 2>/dev/null" % p).stdout.strip()
     if not chi:
         return None
     if not chi.startswith(base):
-        return "⚠ %s e' di «%s», che non e' un inquilino di questa prova: NON lo tocco" % (p, chi)
+        return "⚠ %s belongs to «%s», who is not a tenant of this test: I do NOT touch it" % (p, chi)
     sh("rm -rf %s" % p)
-    return "sgombrato %s, che era rimasto a «%s» dal giro prima" % (p, chi)
+    return "cleared %s, which had been left to «%s» from the previous round" % (p, chi)
 
 
 def prepara_lo_scheletro():
-    """⭐ Riproduce la configurazione della MACCHINA VERA: `/etc/skel/.cache`
-    come collegamento a `/tmp`.
+    """⭐ Reproduces the configuration of the REAL MACHINE: `/etc/skel/.cache`
+    as a link to `/tmp`.
 
-    ⛔ E non e' «introdurre un guasto»: e' una **scelta del proprietario della
-       macchina**, e la prova che gira su uno scheletro pulito risponde a una
-       domanda piu' facile di quella vera.
+    ⛔ And it is not «introducing a fault»: it is a **choice of the owner of the
+       machine**, and the test that runs on a clean skeleton answers an
+       easier question than the real one.
     """
     sh("rm -rf /etc/skel/.cache && ln -s /tmp /etc/skel/.cache")
     r = sh("readlink /etc/skel/.cache")
@@ -426,24 +426,24 @@ def prepara_lo_scheletro():
 
 
 def crea(chi, parola):
-    """Crea l'inquilino **come lo crea il prodotto**: `useradd -m`.
+    """Creates the tenant **as the product creates it**: `useradd -m`.
 
-    ⛔ `-m` copia lo scheletro, ed e' precisamente il passo da cui nasce il
-       difetto.  Usare una via piu' pulita qui vorrebbe dire provare un
-       prodotto diverso da quello consegnato.
+    ⛔ `-m` copies the skeleton, and it is precisely the step from which the
+       defect is born.  Using a cleaner road here would mean testing a
+       product different from the one delivered.
     """
     sh("loginctl terminate-user %s 2>/dev/null; pkill -KILL -u %s 2>/dev/null; "
        "userdel -r %s 2>/dev/null; rm -rf /home/%s" % (chi, chi, chi, chi))
-    # ⛔⛔ I GRUPPI DELLA SCHEDA NON STANNO PIU' DENTRO IL `useradd`.
-    #     `usermod -aG video,render` inchiodava due nomi — che sono di UNA
-    #     distribuzione — e ⛔ **non rileggeva**: `usermod` riuscito non vuol
-    #     dire «ci sta dentro» (E1, «scritto non e' in vigore»).
-    # ⭐ Li da' `attrezzi-gruppi-scheda.sh`, che li LEGGE dai nodi `/dev/dri` e
-    #   poi VERIFICA confrontando i numeri.  ⇒ Qui non c'e' piu' nessun nome di
-    #   gruppo e nessun numero.
-    # ⛔ E senza, `[M]` la sessione nasce CIECA (0 su 4, zero fotogrammi,
-    #   `fasi/10-…` §7.4): questa maglia misurerebbe il buio e lo chiamerebbe
-    #   difetto del prodotto.  ⇒ Non si misura: chi chiama esce **3**.
+    # ⛔⛔ THE CARD'S GROUPS ARE NO LONGER INSIDE THE `useradd`.
+    #     `usermod -aG video,render` nailed down two names — which belong to ONE
+    #     distribution — and ⛔ **did not read back**: a successful `usermod` does not
+    #     mean «it is in there» (E1, «written is not in force»).
+    # ⭐ They are given by `attrezzi-gruppi-scheda.sh`, which READS them from the `/dev/dri` nodes and
+    #   then VERIFIES comparing the numbers.  ⇒ Here there is no longer any group
+    #   name and no number.
+    # ⛔ And without them, `[M]` the session is born BLIND (0 of 4, zero frames,
+    #   `fasi/10-…` §7.4): this mesh would measure the darkness and call it
+    #   a product defect.  ⇒ We do not measure: the caller exits **3**.
     r = sh("useradd -m -s /bin/bash %s && "
            "printf '%s:%s\n' | chpasswd" % (chi, chi, parola))
     if r.returncode != 0:
@@ -455,10 +455,10 @@ def crea(chi, parola):
 
 
 def applica_la_cura(chi):
-    """⭐ Le stesse righe di `src/provisiona.sh`, e non una loro parafrasi.
+    """⭐ The same lines as `src/provisiona.sh`, and not a paraphrase of them.
 
-    ⚠ Non si tocca `/etc/skel` e non si tocca `/tmp/mozilla` di chi ce l'ha
-      gia': si da' una `~/.cache` vera SOLTANTO agli utenti che creiamo noi.
+    ⚠ `/etc/skel` is not touched and the `/tmp/mozilla` of whoever already has it
+      is not touched: a real `~/.cache` is given ONLY to the users we create.
     """
     c = "/home/%s/.cache" % chi
     sh("[ -L %s ] && rm -f %s; mkdir -p %s; chown %s:%s %s; chmod 700 %s"
@@ -466,16 +466,16 @@ def applica_la_cura(chi):
 
 
 def sa_scrivere_nella_cache(chi):
-    """⛔ «scritto non e' in vigore» (E1): non si guarda il collegamento, si
-       PROVA A SCRIVERE.
+    """⛔ «written is not in force» (E1): the link is not looked at, we
+       TRY TO WRITE.
 
-    ⚠⚠ E SI SCRIVE IN `~/.cache/**mozilla**`, non in `~/.cache` — ed e' una
-       correzione, non un dettaglio.  `[M]` 26 agosto 2026: la prima stesura
-       provava a scrivere in `~/.cache`, che col collegamento e' `/tmp`, ⛔ e
-       `/tmp` e' scrivibile da chiunque (modo 1777).  ⇒ Il predicato diceva
-       **si'** anche al secondo inquilino, cioe' **non vedeva mai il difetto**.
-    ⭐ Il posto che morde e' `/tmp/mozilla`, che il PRIMO si prende a modo 0700
-      — ed e' esattamente la misura di `src/provisiona.sh`: *«da `provanic3`,
+    ⚠⚠ AND WE WRITE IN `~/.cache/**mozilla**`, not in `~/.cache` — and it is a
+       correction, not a detail.  `[M]` 26 August 2026: the first draft
+       tried to write in `~/.cache`, which with the link is `/tmp`, ⛔ and
+       `/tmp` is writable by anyone (mode 1777).  ⇒ The predicate said
+       **yes** also to the second tenant, i.e. **it never saw the defect**.
+    ⭐ The place that bites is `/tmp/mozilla`, which the FIRST one takes with mode 0700
+      — and it is exactly the measurement of `src/provisiona.sh`: *«from `provanic3`,
       `mkdir -p ~/.cache/mozilla` → Permission denied»*.
     """
     r = sh("su -s /bin/sh -c 'mkdir -p ~/.cache/mozilla/.prova-c8 && "
@@ -484,14 +484,14 @@ def sa_scrivere_nella_cache(chi):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# LA PRESA — attaccarsi alla sessione e tirarne fuori un PNG, ⛔ QUI DENTRO
+# THE GRAB — attaching to the session and pulling a PNG out of it, ⛔ IN HERE
 # ═══════════════════════════════════════════════════════════════════════════
 def scatta(chi, parola, fuori, a, resta):
-    """Torna (png|None, quanti_fotogrammi|None, perche').
+    """Returns (png|None, how_many_frames|None, why).
 
-    ⛔ Tre esiti e non due: «il PNG c'e'», «non e' arrivato nessun fotogramma»,
-       «i fotogrammi sono arrivati ma non se n'e' fatta un'immagine» — e i due
-       ultimi sono *«non ho guardato»*, non «lo schermo era vuoto».
+    ⛔ Three outcomes and not two: «the PNG is there», «no frame arrived»,
+       «the frames arrived but no image was made of them» — and the last
+       two are *«I did not look»*, not «the screen was empty».
     """
     flusso = fuori + ".264"
     for f in (flusso, fuori):
@@ -506,99 +506,99 @@ def scatta(chi, parola, fuori, a, resta):
     coda = (r.stdout or "") + (r.stderr or "")
     quanti = None
     for riga in coda.splitlines():
-        if "[vid]" in riga and "nessun fotogramma" not in riga:
+        if "[vid]" in riga and "no frame" not in riga:
             try:
                 quanti = int(riga.split("[vid]", 1)[1].strip().split()[0])
             except Exception:
                 pass
-    # ⛔⛔ PRIMA DI DAR LA COLPA AL FILO, SI GUARDA SE IL CLIENTE E' ENTRATO.
+    # ⛔⛔ BEFORE BLAMING THE WIRE, WE LOOK AT WHETHER THE CLIENT GOT IN.
     #
-    # ⚠ Fino al 27 agosto 2026 questa maglia non lo chiedeva affatto: ⇒ un
-    #   RIFIUTO di credenziali usciva come *«nessun fotogramma e' arrivato dal
-    #   filo»* — un'accusa al filo per un cliente che non era nemmeno entrato.
-    #   ⛔ L'esito era gia' giusto (**3**, non un rosso), ⭐ ma la parola no, e
-    #   una diagnosi sbagliata costa quanto un verdetto sbagliato: chi legge va
-    #   a cercare il guasto nel posto che il banco gli ha indicato.
-    # ⛔ E il predicato NON e' `"AMMESSO" in coda`: il cliente stampa quella
-    #    parola anche nei due messaggi di rifiuto (`e_stato_ammesso()` in testa).
+    # ⚠ Until 27 August 2026 this mesh did not ask at all: ⇒ a
+    #   credentials REFUSAL came out as *«no frame arrived from the
+    #   wire»* — an accusation against the wire for a client that had not even got in.
+    #   ⛔ The outcome was already right (**3**, not a red), ⭐ but the word was not, and
+    #   a wrong diagnosis costs as much as a wrong verdict: whoever reads goes
+    #   looking for the fault in the place the bench pointed to.
+    # ⛔ And the predicate is NOT `"AMMESSO" in coda`: the client prints that
+    #    word also in the two refusal messages (`e_stato_ammesso()` at the top).
     ammesso = e_stato_ammesso(coda)
     if ammesso is not True:
         return None, None, (
-            "il cliente e' stato RESPINTO dal server" if ammesso is False
-            else "il cliente di prova non ha detto niente: non so se sia "
-                 "entrato")
+            "the client was TURNED AWAY by the server" if ammesso is False
+            else "the test client said nothing: I do not know whether it "
+                 "got in")
     if not quanti:
-        return None, None, ("nessun fotogramma e' arrivato dal filo "
-                            "(sessione non aperta, o palco che non consegna)")
-    # ⛔ `-update 1` tiene l'ULTIMO fotogramma: e' quel che il desktop mostra
-    #    adesso.  Il primo sarebbe la chiave d'apertura, cioe' un secondo fa.
+        return None, None, ("no frame arrived from the wire "
+                            "(session not opened, or stage that does not deliver)")
+    # ⛔ `-update 1` keeps the LAST frame: it is what the desktop shows
+    #    now.  The first would be the opening keyframe, i.e. a second ago.
     d = sh("ffmpeg -hide_banner -loglevel error -i %s -vsync 0 -update 1 -y %s"
            % (flusso, fuori), secondi=180)
     if d.returncode != 0 or not os.path.exists(fuori) \
             or os.path.getsize(fuori) == 0:
-        return None, quanti, ("%d fotogrammi sono arrivati ma ffmpeg non ne ha "
-                              "fatto un'immagine" % quanti)
+        return None, quanti, ("%d frames arrived but ffmpeg did not make "
+                              "an image of them" % quanti)
     return fuori, quanti, None
 
 
 def rende_la_pagina_da_solo(chi, a, fuori):
-    """⭐⭐ PROVA A — *«il browser rende la pagina»*, ⛔ **senza il palco di mezzo**.
+    """⭐⭐ TEST A — *«the browser renders the page»*, ⛔ **without the stage in between**.
 
-    Firefox si fa una fotografia da se' (`--screenshot`), da utente, sulla
-    macchina com'e' configurata.  ⇒ Il giudizio resta **nel pixel** — la pagina
-    c'e' o non c'e' — e ⭐ **prende esattamente il difetto di §4.6-undecies**:
-    per fotografare, Firefox deve prima **fare il suo profilo**, e con la
-    `~/.cache` condivisa il secondo inquilino non ci riesce.
+    Firefox takes a photograph of itself (`--screenshot`), as a user, on the
+    machine as it is configured.  ⇒ The judgement stays **in the pixel** — the page
+    is there or it is not — and ⭐ **it catches exactly the defect of §4.6-undecies**:
+    to photograph, Firefox must first **make its profile**, and with the
+    shared `~/.cache` the second tenant cannot.
 
-    ⛔⛔ E PERCHE' ESISTE, che e' la parte che va scritta invece che nascosta.
-    La forma piena di C8 vuole la pagina vista **attraverso il prodotto**, cioe'
-    dentro la sessione remota (`rende_la_pagina_nella_sessione`, prova B).
-    ⚠ Quella oggi **non si puo' misurare**: `[M]` 26 agosto 2026, dentro la
-    scatola **nessuna** sessione GNOME nuova nasce con un monitor — e' il
-    difetto APERTO della fase 10 §7.4 («la sessione che nasce cieca»), che sta
-    **a monte** di C8 e che C1 esiste apposta per prendere.
-    ⇒ ⭐ Un desktop nero non testimonia sul browser: chiamare quello «rosso di
-      C8» vorrebbe dire dare la colpa al browser di una cosa successa **prima
-      che il browser esistesse**.
+    ⛔⛔ AND WHY IT EXISTS, which is the part that must be written instead of hidden.
+    The full form of C8 wants the page seen **through the product**, i.e.
+    inside the remote session (`rende_la_pagina_nella_sessione`, test B).
+    ⚠ That today **cannot be measured**: `[M]` 26 August 2026, inside the
+    box **no** new GNOME session is born with a monitor — it is the
+    OPEN defect of phase 10 §7.4 («the session that is born blind»), which sits
+    **upstream** of C8 and which C1 exists precisely to catch.
+    ⇒ ⭐ A black desktop does not testify about the browser: calling that «red of
+      C8» would mean blaming the browser for something that happened **before
+      the browser existed**.
 
-    ⛔ E il limite si dichiara, per non spacciare questa prova per l'altra:
-      qui il browser disegna **nella sua finestra**, non **nella sessione
-      remota**.  ⇒ Quel che questa prova NON puo' vedere e' un difetto che
-      nascesse fra il browser e il palco.  ⚠ Non la sostituisce: **la precede**.
+    ⛔ And the limit is declared, so as not to pass this test off as the other:
+      here the browser draws **in its own window**, not **in the remote
+      session**.  ⇒ What this test can NOT see is a defect that
+      arose between the browser and the stage.  ⚠ It does not replace it: **it precedes it**.
     """
     if os.path.exists(fuori):
         os.unlink(fuori)
-    # ⚠ `HOME` esplicito e non ereditato: il difetto vive dentro `$HOME/.cache`,
-    #   e una prova che guardasse la home sbagliata direbbe verde per sempre.
-    # ⛔⛔ E IL TETTO E' SUO, non quello della prova B — `[M]` 26 agosto 2026,
-    #    e ci e' costato un rosso falso.  La prima stesura riusava
-    #    `--attesa-browser` (25 s): ⛔ il PRIMO avvio di Firefox in una scatola
-    #    fredda non ci sta dentro, e la prova dava **ROSSO A TUTT'E DUE** gli
-    #    inquilini, con la cura e senza.
-    #    ⚠ Cioe' il banco dava rosso per la ragione sbagliata — e con un rosso
-    #      cosi' il collaudo del guasto innestato non vale niente, perche' non
-    #      distingue piu' il guasto dal banco.  ⇒ `LEZIONI.md` §1.41.
+    # ⚠ `HOME` explicit and not inherited: the defect lives inside `$HOME/.cache`,
+    #   and a test that looked at the wrong home would say green forever.
+    # ⛔⛔ AND THE CEILING IS ITS OWN, not that of test B — `[M]` 26 August 2026,
+    #    and it cost us a false red.  The first draft reused
+    #    `--attesa-browser` (25 s): ⛔ the FIRST start of Firefox in a cold
+    #    box does not fit in it, and the test gave **RED TO BOTH**
+    #    tenants, with the cure and without.
+    #    ⚠ I.e. the bench gave red for the wrong reason — and with a red
+    #      like that the acceptance test of the grafted fault is worth nothing, because it no longer
+    #      distinguishes the fault from the bench.  ⇒ `LEZIONI.md` §1.41.
     #
-    # ⚠⚠ E IL TETTO GOVERNA UNA COSA DIVERSA DA QUELLA CHE SEMBRA — correzione
-    #    del 26 agosto 2026, trovata dal banco di C14 e non da questo.
-    #    `[M]` Con `timeout 1`, Firefox esce con **124** (ucciso) ⛔ **e il PNG
-    #    c'e' lo stesso, 30 135 byte**: scrive l'immagine e poi indugia a
-    #    chiudersi.  ⇒ Questo tetto non limita **lo scatto**: limita **l'uscita
-    #    del browser**.
-    #    ⭐ Il giudizio resta giusto, e per una ragione che va detta: si guarda
-    #      il **file**, non il codice d'uscita — un browser che ha disegnato ha
-    #      disegnato, anche se poi e' stato ucciso mentre si accomiatava.
-    #    ⛔ Ma il tetto resta largo lo stesso: il primo avvio in una scatola
-    #      fredda deve poter arrivare fino al disegno, e su quello il tetto
-    #      MORDE per davvero.
+    # ⚠⚠ AND THE CEILING GOVERNS A DIFFERENT THING FROM WHAT IT SEEMS — correction
+    #    of 26 August 2026, found by C14's bench and not by this one.
+    #    `[M]` With `timeout 1`, Firefox exits with **124** (killed) ⛔ **and the PNG
+    #    is there anyway, 30 135 bytes**: it writes the image and then lingers
+    #    before closing.  ⇒ This ceiling does not limit **the screenshot**: it limits **the exit
+    #    of the browser**.
+    #    ⭐ The judgement stays right, and for a reason that must be said: we look at
+    #      the **file**, not at the exit code — a browser that drew has
+    #      drawn, even if it was then killed while taking its leave.
+    #    ⛔ But the ceiling stays wide anyway: the first start in a cold
+    #      box must be able to get as far as the drawing, and on that the ceiling
+    #      really BITES.
     #
-    # ⛔⛔ E L'IMMAGINE SI FA SCRIVERE NELLA SUA CARTELLA, non nella nostra.
-    #    `[M]` 26 agosto 2026, e ci e' costato un secondo rosso falso: la
-    #    cartella di lavoro del banco e' di `root` a modo 0755, e Firefox gira
-    #    da UTENTE ⇒ ⛔ non poteva scriverci, e non produceva nessuna immagine.
-    #    ⚠ Il banco lo leggeva come «il browser non ha disegnato» — cioe' ⛔ **il
-    #      banco dava rosso a se stesso e lo attribuiva al prodotto**.
-    #    ⇒ Scatta in casa sua, e a portarla fuori ci pensa root dopo.
+    # ⛔⛔ AND THE IMAGE IS WRITTEN IN ITS OWN FOLDER, not in ours.
+    #    `[M]` 26 August 2026, and it cost us a second false red: the
+    #    bench's working folder belongs to `root` with mode 0755, and Firefox runs
+    #    as a USER ⇒ ⛔ it could not write there, and produced no image.
+    #    ⚠ The bench read it as «the browser did not draw» — i.e. ⛔ **the
+    #      bench gave red to itself and attributed it to the product**.
+    #    ⇒ It takes the screenshot in its own home, and root carries it out afterwards.
     suo = "/home/%s/.c8-scatto.png" % chi
     sh("rm -f %s" % suo)
     r = sh("runuser -u %s -- env HOME=/home/%s MOZ_HEADLESS=1 "
@@ -612,27 +612,27 @@ def rende_la_pagina_da_solo(chi, a, fuori):
 
 
 def apri_il_browser(chi, a):
-    """Accende il browser DENTRO la sessione dell'inquilino.
+    """Switches on the browser INSIDE the tenant's session.
 
-    ⛔ Il socket di Wayland si CERCA, non si indovina: il nome dipende da come
-       il compositore e' nato, e inchiodare `wayland-0` qui vorrebbe dire una
-       prova che funziona su un desktop e tace sugli altri — cioe' esattamente
-       il difetto che questa fase esiste per non introdurre.
+    ⛔ The Wayland socket is SEARCHED for, not guessed: the name depends on how
+       the compositor was born, and nailing down `wayland-0` here would mean a
+       test that works on one desktop and stays silent on the others — i.e. exactly
+       the defect this phase exists not to introduce.
     """
     uid = sh("id -u %s" % chi).stdout.strip()
     if not uid:
-        return None, "non so l'uid di %s" % chi
+        return None, "I do not know the uid of %s" % chi
     rtd = "/run/user/%s" % uid
     soc = sh("ls %s 2>/dev/null | grep -E '^wayland-[0-9]+$' | head -1" % rtd)
     display = soc.stdout.strip()
     if not display:
-        return None, ("in %s non c'e' nessun socket wayland: la sessione non ha "
-                      "un compositore a cui il browser possa parlare" % rtd)
+        return None, ("in %s there is no wayland socket: the session does not have "
+                      "a compositor the browser can talk to" % rtd)
     comando = (
-        # ⛔ `setsid` + stdin chiuso: senza, il browser finisce in un gruppo di
-        #    processi di SFONDO del terminale che ha lanciato la rete e il primo
-        #    `tcsetattr` se lo prende un SIGTTOU ⇒ resta in stato `T` dal primo
-        #    istante (22 set 2026, visto in C3 su tutte e tre le scatole).
+        # ⛔ `setsid` + stdin closed: without it, the browser ends up in a BACKGROUND
+        #    process group of the terminal that launched the net and the first
+        #    `tcsetattr` gets it a SIGTTOU ⇒ it stays in state `T` from the first
+        #    instant (22 Sep 2026, seen in C3 on all three boxes).
         "setsid runuser -u %s -- env XDG_RUNTIME_DIR=%s WAYLAND_DISPLAY=%s "
         "MOZ_ENABLE_WAYLAND=1 XDG_SESSION_TYPE=wayland HOME=/home/%s "
         "%s --kiosk file://%s < /dev/null > /tmp/c8-%s.log 2>&1 &"
@@ -646,8 +646,8 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--utente-base", default="c8u")
     p.add_argument("--quanti", type=int, default=2,
-                   help="⛔ DUE, e non dieci: la domanda e' la correttezza a "
-                        "piu' inquilini, non la capienza (D2 corretta)")
+                   help="⛔ TWO, and not ten: the question is correctness with "
+                        "several tenants, not capacity (D2 corrected)")
     p.add_argument("--parola", default="provanic2026")
     p.add_argument("--porta", type=int, default=8511)
     p.add_argument("--indirizzo", default="127.0.0.1")
@@ -656,22 +656,22 @@ def main():
     p.add_argument("--browser", default="firefox-esr")
     p.add_argument("--lavoro", default="/var/lib/rete11/c8")
     p.add_argument("--resta-prima", type=float, default=25.0,
-                   help="quanto si sta attaccati al primo scatto: il palco "
-                        "nasce in ~13 s, e una scadenza corta darebbe «non lo so»")
+                   help="how long to stay attached for the first screenshot: the stage "
+                        "is born in ~13 s, and a short deadline would give «I do not know»")
     p.add_argument("--resta-dopo", type=float, default=10.0)
     p.add_argument("--attesa-browser", type=float, default=25.0,
-                   help="quanto si da' al browser per disegnare la pagina")
+                   help="how long the browser is given to draw the page")
     p.add_argument("--senza-cura", action="store_true",
-                   help="⛔ IL GUASTO INNESTATO: non si applica la cura della "
-                        "provvista. Il secondo inquilino DEVE dare rosso")
+                   help="⛔ THE GRAFTED FAULT: the provisioning cure is not "
+                        "applied. The second tenant MUST give red")
     p.add_argument("--attesa-scatto", type=float, default=120.0,
-                   help="quanto si da' alla prova A. ⛔ Largo apposta: il PRIMO "
-                        "avvio di Firefox in una scatola fredda passa i 25 s, e "
-                        "un tetto stretto da un rosso che non e' del prodotto")
+                   help="how long test A is given. ⛔ Wide on purpose: the FIRST "
+                        "start of Firefox in a cold box exceeds 25 s, and "
+                        "a tight ceiling gives a red that is not the product's")
     p.add_argument("--senza-sessione", action="store_true",
-                   help="salta la prova B (la pagina vista DAL CLIENTE). ⚠ Da "
-                        "usare quando si sa gia' che le sessioni nascono cieche: "
-                        "risparmia due minuti e non cambia nessun giudizio")
+                   help="skips test B (the page seen FROM THE CLIENT). ⚠ To be "
+                        "used when it is already known that sessions are born blind: "
+                        "it saves two minutes and changes no judgement")
     p.add_argument("--certifica", action="store_true")
     a = p.parse_args()
 
@@ -679,155 +679,155 @@ def main():
         sys.exit(certifica())
 
     if os.geteuid() != 0:
-        print("⛔ va eseguita da amministratore: deve creare due inquilini")
+        print("⛔ it must be run as administrator: it has to create two tenants")
         sys.exit(2)
 
-    # ── il terreno, e le tre cose senza le quali non si giudica ────────────
+    # ── the terrain, and the three things without which we do not judge ────
     giudice = giudice_immagini()
     if giudice is None:
-        print("⛔ non trovo il giudice delle immagini (10-f1-testimone.py) accanto a me")
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ I cannot find the image judge (10-f1-testimone.py) next to me")
+        print("   ⇒ I could not look")
         sys.exit(3)
     if not os.path.exists(a.pagina):
-        print("⛔ non trovo la pagina bersaglio: %s" % a.pagina)
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ I cannot find the target page: %s" % a.pagina)
+        print("   ⇒ I could not look")
         sys.exit(3)
-    # ⚠ Il cliente di prova serve SOLO alla prova B.  ⭐ E questo e' il motivo
-    #   per cui la prova A gira in QUALUNQUE scatola, anche in una dove il
-    #   prodotto non c'e' nemmeno: non guarda attraverso il prodotto.
+    # ⚠ The test client serves ONLY test B.  ⭐ And this is the reason
+    #   why test A runs in ANY box, even in one where the
+    #   product is not even there: it does not look through the product.
     if not a.senza_sessione and not os.path.exists(a.cliente):
-        print("⛔ non trovo il cliente di prova: %s" % a.cliente)
-        print("   ⇒ non ho potuto guardare (⚠ con --senza-sessione non servirebbe)")
+        print("⛔ I cannot find the test client: %s" % a.cliente)
+        print("   ⇒ I could not look (⚠ with --senza-sessione it would not be needed)")
         sys.exit(3)
     if sh("command -v %s" % a.browser).returncode != 0:
-        print("⛔ nella scatola non c'e' %s: non posso chiedere a nessuno di "
-              "aprire una pagina" % a.browser)
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ the box does not have %s: I cannot ask anyone to "
+              "open a page" % a.browser)
+        print("   ⇒ I could not look")
         sys.exit(3)
     if sh("command -v ffmpeg").returncode != 0:
-        print("⛔ nella scatola non c'e' ffmpeg: i fotogrammi non diventano "
-              "un'immagine")
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ the box does not have ffmpeg: the frames do not become "
+              "an image")
+        print("   ⇒ I could not look")
         sys.exit(3)
 
     os.makedirs(a.lavoro, exist_ok=True)
     dove = prepara_lo_scheletro()
     resto = sgombra_il_posto_condiviso(a.utente_base)
 
-    print("== C8 — il secondo utente apre il browser ==")
-    print("   %d inquilini · porta %d · pagina %s"
+    print("== C8 — the second user opens the browser ==")
+    print("   %d tenants · port %d · page %s"
           % (a.quanti, a.porta, os.path.basename(a.pagina)))
-    print("   terreno: /etc/skel/.cache -> %s  (la configurazione della "
-          "macchina vera)" % (dove or "⛔ NON SONO RIUSCITO A METTERLO"))
-    print("   cura della provvista: %s"
-          % ("⛔ NON APPLICATA (guasto innestato: il secondo DEVE dare rosso)"
-             if a.senza_cura else "applicata, come src/provisiona.sh"))
-    print("   metro: colore %s ±%d, almeno il %.0f%% dello schermo"
+    print("   terrain: /etc/skel/.cache -> %s  (the configuration of the "
+          "real machine)" % (dove or "⛔ I COULD NOT PUT IT THERE"))
+    print("   provisioning cure: %s"
+          % ("⛔ NOT APPLIED (grafted fault: the second MUST give red)"
+             if a.senza_cura else "applied, as src/provisiona.sh"))
+    print("   yardstick: colour %s ±%d, at least %.0f%% of the screen"
           % (COLORE, TOLLERANZA, FRAZIONE_MINIMA * 100))
     if resto:
         print("   %s" % resto)
     print()
     if not dove:
-        print("⛔ non sono riuscito a preparare lo scheletro: il terreno non regge")
+        print("⛔ I could not prepare the skeleton: the terrain does not hold")
         sys.exit(2)
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ⛔⛔ DUE PROVE, E NON UNA — e la ragione va letta prima dei numeri
+    # ⛔⛔ TWO TESTS, AND NOT ONE — and the reason must be read before the numbers
     #
-    #   A · «il browser rende la pagina»            ⭐ si misura OGGI
-    #       Firefox si fotografa da se', da utente, sulla macchina com'e'
-    #       configurata.  Prende il difetto di §4.6-undecies per intero: per
-    #       fotografare deve prima farsi il profilo.
+    #   A · «the browser renders the page»          ⭐ it is measured TODAY
+    #       Firefox photographs itself, as a user, on the machine as it is
+    #       configured.  It catches the defect of §4.6-undecies in full: to
+    #       photograph it must first make its profile.
     #
-    #   B · «e la pagina si vede DAL CLIENTE»       ⚠ oggi non si misura
-    #       la stessa pagina, guardata attraverso il prodotto.  ⛔ `[M]` 26
-    #       agosto 2026: dentro la scatola NESSUNA sessione GNOME nuova nasce
-    #       con un monitor — e' il difetto APERTO della fase 10 §7.4, che sta
-    #       A MONTE di C8.  ⇒ La prova B dice «non ho potuto guardare» e
-    #       NOMINA il perche'; ⛔ non diventa un rosso di C8, perche' un
-    #       desktop nero non testimonia sul browser.
+    #   B · «and the page is seen FROM THE CLIENT»  ⚠ today it is not measured
+    #       the same page, looked at through the product.  ⛔ `[M]` 26
+    #       August 2026: inside the box NO new GNOME session is born
+    #       with a monitor — it is the OPEN defect of phase 10 §7.4, which sits
+    #       UPSTREAM of C8.  ⇒ Test B says «I could not look» and
+    #       NAMES the why; ⛔ it does not become a red of C8, because a
+    #       black desktop does not testify about the browser.
     #
-    # ⭐ E l'esito della maglia lo decide **A**.  ⚠ B lo puo' peggiorare — se
-    #   arriva a un giudizio e quel giudizio e' rosso — ⛔ mai migliorarlo.
+    # ⭐ And the mesh's outcome is decided by **A**.  ⚠ B can make it worse — if
+    #   it reaches a judgement and that judgement is red — ⛔ never better.
     # ═══════════════════════════════════════════════════════════════════════
     esiti = []
     for n in range(1, a.quanti + 1):
         chi = "%s%d" % (a.utente_base, n)
         fatto, perche = crea(chi, a.parola)
         if not fatto:
-            print("  %-6s  ?   non sono riuscito a crearlo: %s" % (chi, perche))
+            print("  %-6s  ?   I could not create it: %s" % (chi, perche))
             esiti.append({"chi": chi, "a": None, "b": None})
             continue
         if not a.senza_cura:
             applica_la_cura(chi)
         scrive = sa_scrivere_nella_cache(chi)
 
-        # ── PROVA A ────────────────────────────────────────────────────────
+        # ── TEST A ─────────────────────────────────────────────────────────
         pa = os.path.join(a.lavoro, "%s-A.png" % chi)
         png_a, detto = rende_la_pagina_da_solo(chi, a, pa)
         fra = frazione_del_colore(png_a) if png_a else None
-        # ⛔ «il profilo c e» non basta: col collegamento a `/tmp` quella
-        #    cartella e' CONDIVISA, e il secondo inquilino ci vedrebbe dentro il
-        #    profilo del PRIMO.  ⇒ Si guarda di CHI e'.
+        # ⛔ «the profile is there» is not enough: with the link to `/tmp` that
+        #    folder is SHARED, and the second tenant would see in it the
+        #    profile of the FIRST.  ⇒ We look at WHOSE it is.
         prof = sh("ls -d /home/%s/.cache/mozilla/firefox/*/ 2>/dev/null | head -1"
                   % chi).stdout.strip()
         padrone = sh("stat -c %%U /home/%s/.cache/mozilla 2>/dev/null" % chi).stdout.strip()
         if not prof:
-            profilo = "⛔ MAI NATO"
+            profilo = "⛔ NEVER BORN"
         elif padrone and padrone != chi:
-            profilo = "⛔ e' di «%s»" % padrone
+            profilo = "⛔ it belongs to «%s»" % padrone
         else:
-            profilo = "suo"
+            profilo = "its own"
         if fra is None:
             vista_a = False
-            comeche = ("⛔ il browser non ha nemmeno prodotto un'immagine"
-                       if png_a is None else "⛔ l'immagine non si e' lasciata leggere")
+            comeche = ("⛔ the browser did not even produce an image"
+                       if png_a is None else "⛔ the image could not be read")
         else:
             vista_a = fra >= FRAZIONE_MINIMA
-            comeche = "la pagina copre il %.1f%% dell'immagine" % (fra * 100)
-        print("  %-6s  A  %-3s  %-42s  (profilo: %s · sa scrivere in "
+            comeche = "the page covers %.1f%% of the image" % (fra * 100)
+        print("  %-6s  A  %-3s  %-42s  (profile: %s · can write in "
               "~/.cache/mozilla: %s)"
-              % (chi, "SI" if vista_a else "NO", comeche, profilo,
-                 "si'" if scrive else "⛔ NO"))
+              % (chi, "YES" if vista_a else "NO", comeche, profilo,
+                 "yes" if scrive else "⛔ NO"))
         if not vista_a and detto:
-            # ⭐ Il motivo accanto al sintomo: «non ha disegnato» da solo
-            #   nasconde tre guasti diversi, e il browser il suo lo dice.
-            print("            ⛔ dice: %s" % detto.replace("\n", " ")[:160])
+            # ⭐ The reason next to the symptom: «it did not draw» alone
+            #   hides three different faults, and the browser says its own.
+            print("            ⛔ it says: %s" % detto.replace("\n", " ")[:160])
 
-        # ── PROVA B ────────────────────────────────────────────────────────
+        # ── TEST B ─────────────────────────────────────────────────────────
         vista_b = None
         motivo_b = ""
         if a.senza_sessione:
-            motivo_b = "non chiesta (--senza-sessione)"
+            motivo_b = "not asked for (--senza-sessione)"
         else:
             png1 = os.path.join(a.lavoro, "%s-B-prima.png" % chi)
             p1, f1, err1 = scatta(chi, a.parola, png1, a, a.resta_prima)
             g1 = giudice.giudica(p1) if p1 else None
             if g1 is None:
-                motivo_b = ("⛔ non ho potuto guardare il desktop PRIMA: %s"
-                            % (err1 or "immagine illeggibile"))
+                motivo_b = ("⛔ I could not look at the desktop BEFORE: %s"
+                            % (err1 or "unreadable image"))
             elif g1["verdetto"] in ("nero", "quasi-nero"):
-                motivo_b = ("⛔ il desktop e' «%s» PRIMA del browser: e' il "
-                            "difetto della fase 10 §7.4, non C8" % g1["verdetto"])
+                motivo_b = ("⛔ the desktop is «%s» BEFORE the browser: it is the "
+                            "defect of phase 10 §7.4, not C8" % g1["verdetto"])
             else:
                 display, err = apri_il_browser(chi, a)
                 if display is None:
-                    motivo_b = "⛔ non ho potuto accendere il browser: %s" % err
+                    motivo_b = "⛔ I could not switch on the browser: %s" % err
                 else:
                     time.sleep(a.attesa_browser)
                     png2 = os.path.join(a.lavoro, "%s-B-dopo.png" % chi)
                     p2, f2, err2 = scatta(chi, a.parola, png2, a, a.resta_dopo)
                     frb = frazione_del_colore(p2) if p2 else None
                     if frb is None:
-                        motivo_b = ("⛔ non ho potuto guardare il desktop DOPO: %s"
-                                    % (err2 or "immagine illeggibile"))
+                        motivo_b = ("⛔ I could not look at the desktop AFTER: %s"
+                                    % (err2 or "unreadable image"))
                     else:
                         vista_b = frb >= FRAZIONE_MINIMA
-                        motivo_b = ("la pagina copre il %.1f%% dello schermo "
-                                    "(desktop prima: %s · fotogrammi %s/%s)"
+                        motivo_b = ("the page covers %.1f%% of the screen "
+                                    "(desktop before: %s · frames %s/%s)"
                                     % (frb * 100, g1["verdetto"], f1, f2))
         print("  %-6s  B  %-3s  %s"
-              % (chi, "SI" if vista_b else ("NO" if vista_b is False else "?"),
+              % (chi, "YES" if vista_b else ("NO" if vista_b is False else "?"),
                  motivo_b))
 
         esiti.append({"chi": chi, "a": vista_a, "b": vista_b})
@@ -843,52 +843,55 @@ def main():
     rb = sum(1 for e in esiti if e["b"] is True)
     fb = sum(1 for e in esiti if e["b"] is False)
     ib = sum(1 for e in esiti if e["b"] is None)
+    # ⛔ THESE TWO SUMMARY LINES STAY IN ITALIAN FOR NOW: `11-c14-…py` reads the
+    #    «A · …» one with a regular expression (`RIGA_A`), and its certification
+    #    quotes the «B · …» one.  ⇒ They change together with C14, not before.
     print("  A · il browser rende la pagina    : %d si' · ⛔ %d no · %d non giudicati"
           % (ra, fa, ia))
     print("  B · e la pagina si vede DAL CLIENTE: %d si' · ⛔ %d no · %d non giudicati"
           % (rb, fb, ib))
 
     if a.senza_cura:
-        # ⛔ Col guasto innestato l'esito si LEGGE AL CONTRARIO: qui il verde e'
-        #    un rosso.  ⭐ Una rete che non riesce piu' a dare rosso ha
-        #    esattamente l'aspetto di una rete che non trova niente (C13).
+        # ⛔ With the grafted fault the outcome is READ BACKWARDS: here green is
+        #    a red.  ⭐ A net that can no longer give red has
+        #    exactly the look of a net that finds nothing (C13).
         print()
         if fa + fb >= 1:
-            print("⭐ IL GUASTO INNESTATO E' STATO VISTO: %d inquilini su %d non hanno "
-                  "aperto il browser.  ⇒ questa maglia SA dare rosso" % (fa, len(esiti)))
-            # ⛔ E si dice anche CHI: se avesse dato rosso il PRIMO, la prova
-            #    starebbe misurando un'altra cosa (per esempio un residuo del
-            #    giro precedente), e il collaudo non varrebbe.
+            print("⭐ THE GRAFTED FAULT WAS SEEN: %d tenants out of %d did not "
+                  "open the browser.  ⇒ this mesh CAN say red" % (fa, len(esiti)))
+            # ⛔ And it is also said WHO: if the FIRST had given red, the test
+            #    would be measuring something else (for example a leftover of the
+            #    previous round), and the acceptance test would not count.
             primi = [e["chi"] for e in esiti if e["a"] is False]
-            print("   ⇒ non ce l'hanno fatta: %s" % ", ".join(primi))
+            print("   ⇒ they did not make it: %s" % ", ".join(primi))
             if esiti and esiti[0]["a"] is False:
-                print("   ⚠ ⛔ MA HA FALLITO ANCHE IL PRIMO: il guasto atteso morde dal "
-                      "SECONDO in poi.  ⇒ o il posto condiviso era gia' sporco, o "
-                      "quel che si sta misurando non e' il difetto di §4.6-undecies")
+                print("   ⚠ ⛔ BUT THE FIRST FAILED TOO: the expected fault bites from the "
+                      "SECOND on.  ⇒ either the shared place was already dirty, or "
+                      "what is being measured is not the defect of §4.6-undecies")
                 return 1
             return 0
         if ia + (ib if not a.senza_sessione else 0) and not (ra or rb):
-            print("⛔ non ho potuto giudicare: non posso dire se il guasto si "
-                  "sarebbe visto")
+            print("⛔ I could not judge: I cannot say whether the fault "
+                  "would have been seen")
             return 3
-        print("⛔⛔ IL GUASTO INNESTATO NON E' STATO VISTO: tutti hanno aperto il "
-              "browser anche senza la cura.")
-        print("    ⇒ o la cura non serviva, o questa maglia non guarda nel posto "
-              "giusto — e in tutt'e due i casi non ci si puo' fidare di lei.")
+        print("⛔⛔ THE GRAFTED FAULT WAS NOT SEEN: everyone opened the "
+              "browser even without the cure.")
+        print("    ⇒ either the cure was not needed, or this mesh does not look in the right "
+              "place — and in both cases it cannot be trusted.")
         return 1
 
     if fa or fb:
-        print("⛔ ROSSO: %d inquilini su %d non hanno aperto il browser"
+        print("⛔ RED: %d tenants out of %d did not open the browser"
               % (fa + fb, len(esiti)))
         return 1
     if ia:
-        print("⛔ non ho potuto guardare %d inquilini su %d nella prova A" % (ia, len(esiti)))
+        print("⛔ I could not look at %d tenants out of %d in test A" % (ia, len(esiti)))
         return 3
-    print("⭐ tutt'e %d gli inquilini hanno aperto il browser e la pagina si vede"
+    print("⭐ all %d tenants opened the browser and the page is seen"
           % len(esiti))
     if ib:
-        print("⚠ e la prova B (la pagina vista DAL CLIENTE) non ha potuto "
-              "giudicarne %d: e' scritto sopra il perche', e ⛔ non e' un verde"
+        print("⚠ and test B (the page seen FROM THE CLIENT) could not "
+              "judge %d of them: the why is written above, and ⛔ it is not a green"
               % ib)
     return 0
 

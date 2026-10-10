@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-f006 — F-006 RIDIMENSIONARE DAL BORDO (la maglia C22 dentro la suite)
+15-f006 — F-006 RESIZING FROM THE EDGE (the C22 mesh inside the suite)
 
     python3 15-f006-il-bordo-si-trascina.py --scatola lxqt --browser firefox [--guasto]
     python3 15-f006-il-bordo-si-trascina.py --certifica
 
-atteso: nella sessione una finestra vera di `firefox-esr` (la pagina nota di
-        C21); col pulsante sinistro premuto sul bordo destro e trascinato di
-        150 px, in uno dei punti di presa da -2 a +6 px dall'ultimo pixel ciano,
-        il bordo destro si sposta di almeno 100 px e il sinistro e l'alto
-        restano fermi (±4 px): RIDIMENSIONATA, non spostata.
-giudizio: `C22.prova_browser` (sana) — IMPORTATA: la finestra misurata nella
-        FOTOGRAFIA della tela prima e dopo ogni presa.
+expected: in the session a real `firefox-esr` window (C21's known
+        page); with the left button pressed on the right edge and dragged by
+        150 px, at one of the grip points from -2 to +6 px from the last cyan pixel,
+        the right edge moves by at least 100 px and the left and the top
+        stay still (±4 px): RESIZED, not moved.
+judgment: `C22.prova_browser` (healthy) — IMPORTED: the window measured in the
+        PHOTO of the canvas before and after each grip.
 
-GUASTO (quello di C22, `--senza-pulsante`): nella stessa sessione, dopo la
-        passata sana, lo stesso gesto negli stessi punti a pulsante ALZATO
-        (`C22.scansiona(..., premi=False)`) ⇒ la finestra non deve cambiare,
-        e la prova deve dare rosso.  Il controllo sano e' la passata sana
-        appena fatta (`C22.verdetto_col_guasto`).
+FAULT (C22's, `--senza-pulsante`): in the same session, after the
+        healthy pass, the same gesture at the same points with the button UP
+        (`C22.scansiona(..., premi=False)`) ⇒ the window must not change,
+        and the test must give red.  The healthy control is the healthy pass
+        just done (`C22.verdetto_col_guasto`).
 """
 import os
 import sys
@@ -30,8 +30,8 @@ G3 = S._carica("g3", os.path.join(S.QUI, "15-g3-comune.py"))
 C22 = G3.carica_maglia("c22", "11-c22-il-bordo-si-trascina.py")
 G3.traccia_la_ricerca(C22.C21)
 FUNZIONI = ("F-006",)
-ATTESO = ("trascinando il bordo destro di %d px col pulsante premuto il bordo destro si "
-          "sposta di almeno %d px, il sinistro e l'alto fermi (±%d px)"
+ATTESO = ("dragging the right edge by %d px with the button pressed the right edge "
+          "moves by at least %d px, the left and the top still (±%d px)"
           % (C22.SPINTA, C22.SOGLIA, C22.FERMO))
 
 
@@ -46,11 +46,11 @@ def corpo(o, E):
         oom0 = G3.uccisi_dal_server()
         segno = s.segno_registro()
         prima = G3.evidenze_ora(o)
-        # ⚠ la maglia usa il SUO `12-client-veri` (C22 → C21 → C20V → VERI)
+        # ⚠ the mesh uses ITS OWN `12-client-veri` (C22 → C21 → C20V → VERI)
         with G3.guida_prestata(C22.VERI, s.g):
             riga = C22.prova_browser(o.browser, o, s.sc, s.chi)
         if riga.get("esito") == S.CIECO:
-            s.foto("quando-non-si-guarda")        # che cosa c'era sulla tela
+            s.foto("quando-non-si-guarda")        # what was on the canvas
             riga["perche"] = riga.get("perche", "") + G3.spiega_cieco(oom0)
         server = s.registro_da(segno) if segno is not None else []
         ev = G3.evidenze_nuove(o, prima) + [s.salva_testo("server-f006.txt", server),
@@ -63,22 +63,22 @@ def corpo(o, E):
 
         if o.guasto:
             if "prese" not in riga:
-                E.guasto("F-006", None, "la passata sana non ha trascinato niente (%s): il "
-                         "guasto non si puo' innestare" % riga.get("perche"))
+                E.guasto("F-006", None, "the healthy pass did not drag anything (%s): the "
+                         "fault cannot be injected" % riga.get("perche"))
                 return
             sano = (riga["esito"], riga.get("perche", ""),
                     (riga["presa_px"], riga["spostamento_px"]) if "presa_px" in riga
                     else None)
             geo = s.geometria()
             prima = G3.evidenze_ora(o)
-            print("   ── GUASTO: lo stesso gesto a pulsante ALZATO ──", flush=True)
+            print("   ── FAULT: the same gesture with the button UP ──", flush=True)
             senza = C22.scansiona(s.g, geo, o, o.browser + "-guasto", False)
             if senza[0] == S.CIECO:
                 s.foto("guasto-quando-non-si-guarda")
                 senza = (senza[0], senza[1] + G3.spiega_cieco(oom0)) + tuple(senza[2:])
             eg, mg = C22.verdetto_col_guasto(senza[:3], sano)
             E.guasto("F-006", G3.DA_ESITO_GUASTO[eg], mg,
-                     atteso="a pulsante alzato nessun punto di presa ridimensiona",
+                     atteso="with the button up no grip point resizes",
                      osservato="; ".join(r[2] for r in senza[3]),
                      evidenze=G3.evidenze_nuove(o, prima))
 

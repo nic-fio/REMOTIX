@@ -1,19 +1,19 @@
 #!/bin/bash
-# 17-t3-impronta.sh — l'impronta di una VM «cliente» per R5 e R6 (fasi/17 §7.3, §8).
+# 17-t3-impronta.sh — the fingerprint of a "customer" VM for R5 and R6 (fasi/17 §7.3, §8).
 #
-#   (dentro la VM, da root)  bash 17-t3-impronta.sh > impronta.txt
-#   di solito:  bash 17-vm.sh ssh <m> 'sudo bash -s' < 17-t3-impronta.sh > <nome>.txt
+#   (inside the VM, as root)  bash 17-t3-impronta.sh > impronta.txt
+#   usually:  bash 17-vm.sh ssh <m> 'sudo bash -s' < 17-t3-impronta.sh > <name>.txt
 #
-# Una riga per fatto, ordinate, con la SEZIONE in testa: cosi' `diff` fra due
-# impronte dice che cosa e' cambiato e dove.  Sezioni:
-#   F  i file di /etc (sha256), /usr (dimensione e data: il contenuto lo fissa il
-#      pacchetto), /var/lib/remotix, /run/remotix, /var/lib/systemd/deb-systemd-*
-#   G  i gruppi e i loro membri · P  i conti · U  le unita' e il loro stato
-#   K  i pacchetti (versione, stato) · M  quelli installati a mano (apt-mark)
-#   C  la configurazione IN VIGORE di logind e sleep (non solo i file)
-#   S  le porte in ascolto (ss) · W  firewall (nft)
-# ⚠ Fuori per scelta: /var/log, le cache di apt, /var/lib/dpkg (se ne guarda
-#   l'effetto nelle sezioni K e M), /etc/ld.so.cache (la rifa ldconfig).
+# One line per fact, sorted, with the SECTION first: so `diff` between two
+# fingerprints says what changed and where.  Sections:
+#   F  the files of /etc (sha256), /usr (size and date: the content is fixed by the
+#      package), /var/lib/remotix, /run/remotix, /var/lib/systemd/deb-systemd-*
+#   G  groups and their members · P  accounts · U  units and their state
+#   K  packages (version, state) · M  those installed by hand (apt-mark)
+#   C  the configuration IN FORCE for logind and sleep (not just the files)
+#   S  listening ports (ss) · W  firewall (nft)
+# ⚠ Left out by choice: /var/log, the apt caches, /var/lib/dpkg (its
+#   effect is looked at in sections K and M), /etc/ld.so.cache (ldconfig rebuilds it).
 set -u
 export LC_ALL=C
 

@@ -1,57 +1,57 @@
 #!/bin/bash
-# 16-coda.sh — la CODA delle salite della fase 16: gira da sola, sul server, fino in fondo.
+# 16-coda.sh — the QUEUE of the phase 16 climbs: it runs by itself, on the server, to the end.
 #
-#   (sul server, come nicfio)
+#   (on the server, as nicfio)
 #   sudo systemd-run --unit=r16-coda --uid=nicfio -E XDG_RUNTIME_DIR=/run/user/1000 \
 #        -p TimeoutStopSec=1200 -p KillMode=mixed -p OOMPolicy=continue \
 #        bash /media/REMOTIX/src/controllo/banchi/16-stress/16-coda.sh intel gnome kde xfce lxqt
 #
-# ⛔ OOMPolicy=continue NON e' facoltativo: [M] 26 set 02:02, XFCE 4K a 12 utenti, la
-#    macchina (che fa girare anche i browser-cliente) ha finito la RAM e il kernel ha
-#    ucciso un Chrome; con la politica di serie (stop) systemd ha fermato TUTTA la coda.
-#    Un processo ucciso per memoria e' un gradino rosso da misurare, non la fine della notte.
-# ⛔ TimeoutStopSec=1200 e KillMode=mixed NON sono facoltativi: lo sgombero di una salita
-#    (attori fino a 120 s, inquilini, compositori, il server rimesso) dura ben piu' dei 90 s
-#    predefiniti, e con KillMode=control-group il SIGTERM arriverebbe INSIEME a tutti
-#    (attori, browser, sudo dello sgombero).  Con «mixed» lo riceve solo questa coda, che
-#    lo passa alla salita in corso e aspetta che abbia sgomberato; il SIGKILL a tutto il
-#    gruppo solo dopo 1200 s.
+# ⛔ OOMPolicy=continue is NOT optional: [M] 26 Sep 02:02, XFCE 4K at 12 users, the
+#    machine (which also runs the client browsers) ran out of RAM and the kernel
+#    killed a Chrome; with the default policy (stop) systemd stopped the WHOLE queue.
+#    A process killed for memory is a red rung to measure, not the end of the night.
+# ⛔ TimeoutStopSec=1200 and KillMode=mixed are NOT optional: the clean-up of a climb
+#    (actors up to 120 s, tenants, compositors, the server put back) lasts well over the
+#    default 90 s, and with KillMode=control-group the SIGTERM would arrive TOGETHER to all
+#    (actors, browsers, the sudo of the clean-up).  With «mixed» only this queue receives it, and
+#    it passes it to the climb in progress and waits for it to have cleaned up; the SIGKILL to the whole
+#    group only after 1200 s.
 #
-# ⭐ Perche' una coda e non una sessione di Claude che lancia le salite: la campagna dura
-#    la notte (fasi/16 §6, decisione dell'utente del 25 set: «senza un mio intervento»), e
-#    non deve dipendere da chi la sorveglia.  Se chi sorveglia si ferma, il server continua.
+# ⭐ Why a queue and not a Claude session that launches the climbs: the campaign lasts
+#    the night (fasi/16 §6, the user's decision of 25 Sep: «without any intervention of mine»), and
+#    must not depend on whoever watches it.  If the watcher stops, the server goes on.
 #
-# Per ogni desktop, la scala delle misure (§8): 4K; se la salita trova una rottura
-# (codice 1), la misura dopo riparte da 1 utente; se arriva a 16 (codice 0), desktop
-# successivo.  Codice 3 (BLOCKED o fermata da fuori): si riprova UNA volta dopo 2 minuti
-# con un nome nuovo (§14: le evidenze della prima restano), poi si passa oltre, dichiarato.
+# For each desktop, the ladder of sizes (§8): 4K; if the climb finds a break
+# (code 1), the next size starts again from 1 user; if it reaches 16 (code 0), next
+# desktop.  Code 3 (BLOCKED or stopped from outside): it retries ONCE after 2 minutes
+# with a new name (§14: the evidence of the first stays), then it moves on, declared.
 #
-# ⛔ Per fermarla fra una salita e l'altra: `touch /media/REMOTIX/misure/fase16/FERMA`.
-#    Per fermarla subito: `sudo systemctl stop r16-coda` (la coda passa il SIGTERM alla
-#    salita in corso, che chiude il livello come INTERROTTO — anche a meta' del controllo
-#    corto — e sgombera; poi la coda esce senza lanciarne altre).
+# ⛔ To stop it between one climb and the next: `touch /media/REMOTIX/misure/fase16/FERMA`.
+#    To stop it at once: `sudo systemctl stop r16-coda` (the queue passes the SIGTERM to the
+#    climb in progress, which closes the level as INTERROTTO — even in the middle of the short
+#    check — and cleans up; then the queue exits without launching others).
 #
-# ⭐ Nel registro, accanto al codice, l'ultimo livello GREEN VERO della salita (da
-#    salita.jsonl): «buono» per la salita comprende i DEGRADED non significativi (la
-#    regola di non-prosecuzione), il GREEN vero e' un'altra cosa e si scrive a parte.
+# ⭐ In the log, beside the code, the last TRUE GREEN level of the climb (from
+#    salita.jsonl): «good» for the climb includes the non-significant DEGRADED (the
+#    no-continuation rule), the true GREEN is something else and is written separately.
 #
-# ⭐ fasi/20 §7.0 (9 ott 2026, l'utente: «mi aspetto che l'intera suite duri meno dei 3 giorni
-#    di remotix»): dopo ogni salita la coda scrive in campagna.log il PREVENTIVO delle ore
-#    rimaste — fra il caso migliore (ogni desktop che manca regge alla prima misura) e il
-#    peggiore (scende per tutta la scala), con la durata media delle salite fatte;
-#    REMOTIX_16_DESKTOP_DOPO dice quanti desktop restano nelle campagne dopo questa.
+# ⭐ fasi/20 §7.0 (9 Oct 2026, the user: «I expect the whole suite to last less than the 3 days
+#    of remotix»): after every climb the queue writes in campagna.log the ESTIMATE of the hours
+#    left — between the best case (every missing desktop holds at the first size) and the
+#    worst (it goes down the whole ladder), with the mean duration of the climbs done;
+#    REMOTIX_16_DESKTOP_DOPO says how many desktops remain in the campaigns after this one.
 #
-# Variabili: REMOTIX_16_VIDEO (il file del profilo D), REMOTIX_16_FPS (la sua f),
-#            REMOTIX_16_MISURE (la scala, predefinita «4k 3k 2k fhd»),
-#            REMOTIX_16_IN_PIU (opzioni in piu' per 16-salita.py, es. «--scheda amd»).
+# Variables: REMOTIX_16_VIDEO (the file of profile D), REMOTIX_16_FPS (its f),
+#            REMOTIX_16_MISURE (the ladder, default «4k 3k 2k fhd»),
+#            REMOTIX_16_IN_PIU (extra options for 16-salita.py, e.g. «--scheda amd»).
 set -u
-SCHEDA=${1:?uso: 16-coda.sh intel|amd desktop...}
+SCHEDA=${1:?usage: 16-coda.sh intel|amd desktop...}
 shift
 DESKTOP=${*:-gnome kde xfce lxqt}
 QUI=$(cd "$(dirname "$0")" && pwd)
 MISURE_DIR=/media/REMOTIX/misure/fase16
-# ⭐ A5 (29 set): il file quadruplo (4 giri concatenati senza ricodifica, 42 min) — col file
-#   da 10,5 min il lettore ricominciava dentro le finestre di giudizio e fermava l'immagine 1-3 s.
+# ⭐ A5 (29 Sep): the fourfold file (4 loops concatenated without re-encoding, 42 min) — with the
+#   10.5 min file the player started over inside the judgement windows and froze the image 1-3 s.
 VIDEO=${REMOTIX_16_VIDEO:-$MISURE_DIR/video/bbb_sunflower_2160p_30fps_x4.mp4}
 FPS=${REMOTIX_16_FPS:-30}
 SCALA=${REMOTIX_16_MISURE:-4k 3k 2k fhd}
@@ -60,7 +60,7 @@ STATO=$MISURE_DIR/coda-$SCHEDA.jsonl
 mkdir -p "$MISURE_DIR"
 FATTE=0; SECONDI=0
 DOPO=${REMOTIX_16_DESKTOP_DOPO:-0}
-# preventivo <desktop corrente> <misure rimaste per lui> <desktop rimasti dopo di lui>
+# preventivo <current desktop> <sizes left for it> <desktops left after it>
 preventivo() {
 	python3 - "$FATTE" "$SECONDI" "$2" "$3" "$DOPO" "$(echo $SCALA | wc -w)" <<'PY' >>"$MISURE_DIR/campagna.log"
 import sys, datetime
@@ -68,7 +68,7 @@ f, s, qui, resto, dopo, scala = map(int, sys.argv[1:])
 m = s / f if f else 0
 lo = (qui + resto + dopo) * m if qui else (resto + dopo) * m
 hi = (qui + (resto + dopo) * scala) * m
-print("%s   preventivo: %d salite fatte, media %.0f min · restano fra %.1f e %.1f ore (fine fra il %s e il %s)" % (
+print("%s   estimate: %d climbs done, mean %.0f min · between %.1f and %.1f hours left (end between %s and %s)" % (
     datetime.datetime.now().strftime("%F %T"), f, m / 60, lo / 3600, hi / 3600,
     (datetime.datetime.now() + datetime.timedelta(seconds=lo)).strftime("%d/%m %H:%M"),
     (datetime.datetime.now() + datetime.timedelta(seconds=hi)).strftime("%d/%m %H:%M")))
@@ -80,7 +80,7 @@ segna() {  # desktop misura campagna codice ultimo_green
 	printf '{"t":"%s","scheda":"%s","desktop":"%s","misura":"%s","campagna":"%s","codice":%s,"ultimo_green":%s}\n' \
 		"$(date -Is)" "$SCHEDA" "$1" "$2" "$3" "$4" "${5:-null}" >>"$STATO"
 }
-# l'ultimo livello GREEN vero di una campagna (il piu' alto con classe GREEN in salita.jsonl)
+# the last true GREEN level of a campaign (the highest with class GREEN in salita.jsonl)
 ultimo_green() {
 	python3 - "$MISURE_DIR/$1/salita.jsonl" <<'PY' 2>/dev/null || echo null
 import json, sys
@@ -96,19 +96,19 @@ print(max(g) if g else "null")
 PY
 }
 
-# ⭐ il SIGTERM (systemctl stop, KillMode=mixed) arriva SOLO qui: lo si passa alla salita
-#   in corso e si aspetta che sgomberi; poi nessuna salita nuova
+# ⭐ the SIGTERM (systemctl stop, KillMode=mixed) arrives ONLY here: it is passed to the climb
+#   in progress and we wait for it to clean up; then no new climb
 FERMATA=0
 figlio=""
 ferma() {
 	FERMATA=1
-	dice "⚠ segnale: lo passo alla salita in corso (${figlio:-nessuna}) e aspetto che sgomberi"
+	dice "⚠ signal: passing it to the climb in progress (${figlio:-none}) and waiting for it to clean up"
 	[ -n "$figlio" ] && kill -TERM "$figlio" 2>/dev/null
 }
 trap ferma TERM INT
 
-dice "▶ coda $SCHEDA: desktop «$DESKTOP» · scala «$SCALA» · video $VIDEO (f=$FPS)"
-[ -f "$VIDEO" ] || { dice "⛔ il video non c'e': $VIDEO"; exit 2; }
+dice "▶ queue $SCHEDA: desktop «$DESKTOP» · ladder «$SCALA» · video $VIDEO (f=$FPS)"
+[ -f "$VIDEO" ] || { dice "⛔ the video is not there: $VIDEO"; exit 2; }
 
 N_DESKTOP=$(echo $DESKTOP | wc -w); I_DESKTOP=0
 for d in $DESKTOP; do
@@ -116,33 +116,33 @@ for d in $DESKTOP; do
 	I_MISURA=0
 	for m in $SCALA; do
 		I_MISURA=$((I_MISURA + 1))
-		if [ -e "$MISURE_DIR/FERMA" ]; then dice "⏹ FERMA trovato: mi fermo"; exit 0; fi
+		if [ -e "$MISURE_DIR/FERMA" ]; then dice "⏹ FERMA found: stopping"; exit 0; fi
 		esito=""
 		for tentativo in 1 2; do
 			camp="$SCHEDA-$m-$d"
 			[ "$tentativo" = 2 ] && camp="$camp-r2"
 			[ -e "$MISURE_DIR/$camp/salita.jsonl" ] && camp="$camp-$(date +%H%M)"
-			dice "── salita $camp (tentativo $tentativo)"
+			dice "── climb $camp (attempt $tentativo)"
 			# shellcheck disable=SC2086
 			T_SALITA=$(date +%s)
 			python3 "$QUI/16-salita.py" --scatola "$d" --campagna "$camp" --misura "$m" \
 				--video "$VIDEO" --fps-video "$FPS" ${REMOTIX_16_IN_PIU:-} \
 				>>"$MISURE_DIR/coda-$SCHEDA-salite.log" 2>&1 </dev/null &
 			figlio=$!
-			# ⚠ `wait` torna presto se arriva un segnale: si riaspetta finche' c'e'
+			# ⚠ `wait` returns early if a signal arrives: wait again while it is there
 			wait "$figlio"; c=$?
 			while kill -0 "$figlio" 2>/dev/null; do wait "$figlio"; c=$?; done
 			figlio=""
 			FATTE=$((FATTE + 1)); SECONDI=$((SECONDI + $(date +%s) - T_SALITA))
 			verde=$(ultimo_green "$camp")
 			segna "$d" "$m" "$camp" "$c" "$verde"
-			dice "   $camp: codice $c ($(python3 -c "import json,sys; s=json.load(open(sys.argv[1])); print('buono', s.get('ultimo_buono'), '· rottura', s.get('rottura'), '·', s.get('fase'))" "$MISURE_DIR/$camp/stato.json" 2>/dev/null || echo 'stato illeggibile')) · ultimo GREEN vero: $verde"
-			if [ "$FERMATA" = 1 ]; then dice "⏹ fermata da fuori: la salita ha sgomberato, esco"; exit 0; fi
+			dice "   $camp: code $c ($(python3 -c "import json,sys; s=json.load(open(sys.argv[1])); print('good', s.get('ultimo_buono'), '· break', s.get('rottura'), '·', s.get('fase'))" "$MISURE_DIR/$camp/stato.json" 2>/dev/null || echo 'state unreadable')) · last true GREEN: $verde"
+			if [ "$FERMATA" = 1 ]; then dice "⏹ stopped from outside: the climb has cleaned up, exiting"; exit 0; fi
 			if [ "$c" = 3 ] && [ "$tentativo" = 1 ]; then
-				dice "   ⚠ BLOCKED o interrotta: riprovo fra 2 minuti"
+				dice "   ⚠ BLOCKED or interrupted: retrying in 2 minutes"
 				sleep 120 &
 				figlio=$!; wait "$figlio"; figlio=""
-				if [ "$FERMATA" = 1 ]; then dice "⏹ fermata da fuori: esco"; exit 0; fi
+				if [ "$FERMATA" = 1 ]; then dice "⏹ stopped from outside: exiting"; exit 0; fi
 				continue
 			fi
 			esito=$c
@@ -155,10 +155,10 @@ for d in $DESKTOP; do
 		esac
 		preventivo "$d" "$restano_qui" "$((N_DESKTOP - I_DESKTOP))"
 		case "$esito" in
-		0) dice "✅ $d regge 16 utenti a $m (ultimo GREEN vero: $verde)"; break ;;
-		1) dice "↘ $d cede a $m (ultimo GREEN vero: $verde): scendo di misura" ;;
-		*) dice "⛔ $d a $m: due volte BLOCKED — passo al desktop dopo"; break ;;
+		0) dice "✅ $d holds 16 users at $m (last true GREEN: $verde)"; break ;;
+		1) dice "↘ $d gives way at $m (last true GREEN: $verde): going down a size" ;;
+		*) dice "⛔ $d at $m: BLOCKED twice — moving to the next desktop"; break ;;
 		esac
 	done
 done
-dice "⏹ coda $SCHEDA finita"
+dice "⏹ queue $SCHEDA finished"

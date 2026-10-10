@@ -1,42 +1,42 @@
 #!/usr/bin/env bash
 # ===========================================================================
-# 09-b79-terreno — il terreno del banco DELLE DUE CURE APPAIATE (agente NR4)
+# 09-b79-terreno — the ground of the bench OF THE TWO PAIRED CURES (agent NR4)
 #
-#   porta 7940 · utente `provanr4` (uid 1040) · albero /media/REMOTIX/src/09nr4-src
-#   lavoro /media/REMOTIX/tmp/09nr4 · unita' remotix-7940
+#   port 7940 · user `provanr4` (uid 1040) · tree /media/REMOTIX/src/09nr4-src
+#   work /media/REMOTIX/tmp/09nr4 · unit remotix-7940
 #
-# ⛔ NON RISCRIVE `07-b64-terreno.sh`: gli passa il MIO ambiente e lo chiama.
-#    E' modellato riga per riga su `09-b76-terreno.sh`, con **una** differenza,
-#    e la differenza e' il motivo per cui questo file esiste:
+# ⛔ IT DOES NOT REWRITE `07-b64-terreno.sh`: it passes it MY environment and calls it.
+#    It is modelled line by line on `09-b76-terreno.sh`, with **one** difference,
+#    and the difference is the reason this file exists:
 #
-# ⛔⭐ I SORGENTI SI PRENDONO DALL'ALBERO DI LAVORO, NON DA `git archive HEAD`.
-#     `09-b76-terreno.sh` prende HEAD apposta, perche' il 23 agosto su `src/`
-#     stavano lavorando altri due agenti e spedire la loro cartella a meta'
-#     modifica avrebbe voluto dire misurare su un binario che nessuno aveva
-#     deciso di spedire.
-#     ⭐ Adesso quegli agenti hanno chiuso, e HEAD e' **vecchio**: non porta ne'
-#       `--sgombra-soglia-ms` ne' `--niente-ritmo-adattivo` — cioe' le due cose che
-#       questo banco esiste per misurare — ne' i contatori `dgram_persi` /
-#       `dgram_falsi` e le righe `rete-quic` con `cwnd`, `srtt_us` e `giudizio=`.
-#     ⇒ Qui si spedisce l'albero di lavoro, e la sua identita' si DICHIARA con
-#       l'md5 dei sorgenti e del binario prodotto: un nome di cartella e'
-#       un'intenzione, l'md5 e' un fatto.
+# ⛔⭐ THE SOURCES ARE TAKEN FROM THE WORKING TREE, NOT FROM `git archive HEAD`.
+#     `09-b76-terreno.sh` takes HEAD on purpose, because on 23 August two other
+#     agents were working on `src/` and sending their folder in the middle of a
+#     change would have meant measuring on a binary that nobody had
+#     decided to send.
+#     ⭐ Now those agents have finished, and HEAD is **old**: it carries neither
+#       `--sgombra-soglia-ms` nor `--niente-ritmo-adattivo` — that is, the two things
+#       this bench exists to measure — nor the counters `dgram_persi` /
+#       `dgram_falsi` and the `rete-quic` lines with `cwnd`, `srtt_us` and `giudizio=`.
+#     ⇒ Here the working tree is sent, and its identity is DECLARED with
+#       the md5 of the sources and of the binary produced: a folder name is
+#       an intention, the md5 is a fact.
 #
-# ⛔ E il tar deve portare anche `banchi/rcp`: `src/costruisci.sh` confronta
-#    `rcp.c`/`rcp.h`/`autenticazione.c` con la copia gemella (rilievo R12.3), e
-#    senza quella cartella la costruzione FALLISCE.
+# ⛔ And the tar must also carry `banchi/rcp`: `src/costruisci.sh` compares
+#    `rcp.c`/`rcp.h`/`autenticazione.c` with the twin copy (finding R12.3), and
+#    without that folder the build FAILS.
 #
-# ⛔ Si porta anche `banchi/01-b4-validatore.py`: e' l'ARBITRO del formato
-#    §11.1, e il lettore della traccia di `09-b70-ritmo.py` lo cerca dentro
-#    l'albero.  `07-b64-terreno.sh porta` non lo spedisce.
+# ⛔ `banchi/01-b4-validatore.py` is carried too: it is the REFEREE of the
+#    §11.1 format, and the trace reader of `09-b70-ritmo.py` looks for it inside
+#    the tree.  `07-b64-terreno.sh porta` does not send it.
 #
-# ⛔ `enp7s0` non si tocca: qui non si tocca nessuna rete, ma il server nasce
-#    sulla 7940 e le 7900/7910/7920/7930/7931/7932 non sono mie.
+# ⛔ `enp7s0` is not touched: no network is touched here, but the server is born
+#    on 7940 and 7900/7910/7920/7930/7931/7932 are not mine.
 #
-# Uso (dal portatile):
-#     bash banchi/09-b79-terreno.sh porta      # tar dell'albero di lavoro + compila
+# Usage (from the laptop):
+#     bash banchi/09-b79-terreno.sh porta      # tar of the working tree + build
 #     bash banchi/09-b79-terreno.sh utente
-#     bash banchi/09-b79-terreno.sh accendi    # OPZIONI_SERVER='...' per le cure
+#     bash banchi/09-b79-terreno.sh accendi    # OPZIONI_SERVER='...' for the cures
 #     bash banchi/09-b79-terreno.sh stato
 #     bash banchi/09-b79-terreno.sh spegni
 # ===========================================================================
@@ -65,12 +65,12 @@ log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 PASSO=${1:-stato}
 case "$PASSO" in
 porta)
-	log "1 · I sorgenti DELL'ALBERO DI LAVORO in $ALBERO"
-	printf '    --  HEAD = %s (⚠ e NON e" quel che spedisco)\n' \
+	log "1 · The sources OF THE WORKING TREE in $ALBERO"
+	printf '    --  HEAD = %s (⚠ and it is NOT what I send)\n' \
 		"$(cd "$QUI" && git rev-parse --short HEAD)"
-	inf "md5 locale webtransport.c: $(md5sum "$QUI/src/webtransport.c" | cut -d' ' -f1)"
-	inf "md5 locale rcp.c:          $(md5sum "$QUI/src/rcp.c" | cut -d' ' -f1)"
-	# ⛔ `banchi/rcp` c'e' o `costruisci.sh` fallisce sul confronto gemello.
+	inf "local md5 webtransport.c: $(md5sum "$QUI/src/webtransport.c" | cut -d' ' -f1)"
+	inf "local md5 rcp.c:          $(md5sum "$QUI/src/rcp.c" | cut -d' ' -f1)"
+	# ⛔ `banchi/rcp` is there or `costruisci.sh` fails on the twin comparison.
 	tar -C "$QUI" --exclude='src/remotix' --exclude='src/*.o' -cf - \
 		src banchi/rcp \
 		banchi/01-b3-cliente.py banchi/01-b8-sblocca.py \
@@ -78,39 +78,39 @@ porta)
 		banchi/attrezzi-gruppi-scheda.sh banchi/07-b64-terreno.sh banchi/07-b64-scena.py banchi/07-b64-orecchio.py | \
 		gzip | ssh -o BatchMode=yes "$MACCHINA" \
 		"mkdir -p $ALBERO && tar -C $ALBERO -xzf -" || {
-		ko "⛔ i sorgenti non sono arrivati"; exit 2; }
-	ok "sorgenti in $ALBERO"
+		ko "⛔ the sources did not arrive"; exit 2; }
+	ok "sources in $ALBERO"
 
-	log "2 · Compilo dentro il contenitore sulla macchina di prova"
+	log "2 · Building inside the container on the test machine"
 	if ! ssh -o BatchMode=yes "$MACCHINA" \
 		"printf '%s\n' '$PAROLA_SUDO' | sudo -S -p '' bash /media/REMOTIX/enter.sh --root \
 		 'PREFISSO=/srv/src/b2/prefisso NGTCP2=/srv/src/b2/ngtcp2 NGHTTP3=/srv/src/b2/nghttp3 \
 		  bash $DENTRO_ALB/src/costruisci.sh 2>&1 | tail -20'"; then
-		ko "⛔ la compilazione e' fallita: NON accendo niente"
+		ko "⛔ the build failed: I do NOT start anything"
 		exit 2
 	fi
-	ok "compilato"
+	ok "built"
 
-	# ⛔⭐ E IL BINARIO CHE MISURO E' QUELLO CHE CREDO — si dichiara l'md5, e si
-	#     controlla che porti DAVVERO le due opzioni della fase.  Un binario
-	#     vecchio accetterebbe `--sgombra-soglia-ms` con un errore, e un errore
-	#     all'avvio ha la stessa faccia di un server che non parte.
-	log "3 · ⛔ CHE COSA HO COSTRUITO — md5 e le due opzioni, lette dal binario"
+	# ⛔⭐ AND THE BINARY I MEASURE IS THE ONE I THINK — the md5 is declared, and we
+	#     check that it REALLY carries the two options of the phase.  An old
+	#     binary would greet `--sgombra-soglia-ms` with an error, and an error
+	#     at startup looks the same as a server that does not start.
+	log "3 · ⛔ WHAT I BUILT — md5 and the two options, read from the binary"
 	ssh -o BatchMode=yes "$MACCHINA" \
 		"printf '%s\n' '$PAROLA_SUDO' | sudo -S -p '' bash -c \"
-		 echo md5 binario:      \\\$(md5sum $ALBERO/src/remotix | cut -d' ' -f1)
+		 echo md5 binary:       \\\$(md5sum $ALBERO/src/remotix | cut -d' ' -f1)
 		 echo md5 webtransport: \\\$(md5sum $ALBERO/src/webtransport.c | cut -d' ' -f1)
 		 for o in sgombra-soglia-ms niente-ritmo-adattivo; do
 		   if grep -qa -- --\\\$o $ALBERO/src/remotix; then
-		     echo \\\"opzione --\\\$o: ⭐ C'E' nel binario\\\"
+		     echo \\\"option --\\\$o: ⭐ PRESENT in the binary\\\"
 		   else
-		     echo \\\"opzione --\\\$o: ⛔ NON C'E'\\\"; fi
-		 done\"" || { ko "non ho potuto rileggere il binario"; exit 2; }
+		     echo \\\"option --\\\$o: ⛔ ABSENT\\\"; fi
+		 done\"" || { ko "I could not read the binary back"; exit 2; }
 	exit 0 ;;
 *)
-	# ⛔ Tutto il resto e' `07-b64-terreno.sh`, con il MIO ambiente esportato:
-	#    non se ne riscrive una riga.  ⭐ E `OPZIONI_SERVER` passa di li' fino
-	#    alla riga di comando del server: e' il solo posto in cui le due cure
-	#    si accendono.
+	# ⛔ Everything else is `07-b64-terreno.sh`, with MY environment exported:
+	#    not one line of it is rewritten.  ⭐ And `OPZIONI_SERVER` passes through there up to
+	#    the server's command line: it is the only place where the two cures
+	#    are turned on.
 	exec bash "$QUI/banchi/07-b64-terreno.sh" "$PASSO" ;;
 esac

@@ -1,33 +1,33 @@
 #!/bin/bash
 #
-# 01-b11-guasto.sh — gira SUL SERVER.  Accende e spegne il server GUASTO di B11.
+# 01-b11-guasto.sh — runs ON THE SERVER.  Turns the FAULTY server of B11 on and off.
 #
 #   bash /media/REMOTIX/src/01-b11-guasto.sh accendi
 #   bash /media/REMOTIX/src/01-b11-guasto.sh registro
-#   bash /media/REMOTIX/src/01-b11-guasto.sh spegni     ⛔ e RIMETTE il server sano
+#   bash /media/REMOTIX/src/01-b11-guasto.sh spegni     ⛔ and PUTS BACK the healthy server
 #
 # ---------------------------------------------------------------------------
-# ⛔ «SPEGNI» NON E' SOLO SPEGNERE
+# ⛔ "SPEGNI" IS NOT ONLY TURNING OFF
 #
-# I guasti di B11 sono righe che fanno **mentire il server**.  Un interruttore
-# cosi', se sopravvive alla fase, un giorno lo trova acceso qualcuno che non
-# sapeva esistesse — e il sintomo sarebbe «il server dichiara una versione che
-# non parla», due mesi dopo, senza che niente lo colleghi a un banco.
+# The B11 faults are lines that make **the server lie**.  A switch like
+# that, if it survives the phase, will one day be found turned on by someone who did not
+# know it existed — and the symptom would be "the server declares a version it does
+# not speak", two months later, with nothing linking it to a bench.
 #
-# ⭐ Per questo `spegni` ferma il processo **e ricostruisce il server sano**, e
-#    lo verifica: se dopo `spegni` la marca `REMOTIX B11` e' ancora nel
-#    sorgente, questo script lo dice a voce alta.
+# ⭐ That is why `spegni` stops the process **and rebuilds the healthy server**, and
+#    verifies it: if after `spegni` the mark `REMOTIX B11` is still in the
+#    source, this script says so out loud.
 #
-# ⛔ E LO VERIFICA DAI TRE LATI, dal 10 agosto 2026.  Prima guardava **solo il
-#    sorgente `.cc`**, cioe' il lato che non conta: quel che sopravvive alla
-#    fase e' il binario e il processo, non il testo.  Adesso si verifica
+# ⛔ AND IT VERIFIES IT FROM THREE SIDES, since 10 Aug 2026.  Before, it looked **only at the
+#    `.cc` source**, that is the side that does not count: what survives the
+#    phase is the binary and the process, not the text.  Now it verifies
 #
-#      il PROCESSO   e' davvero morto?  (prima il `kill` non aveva testimoni)
-#      la PORTA      risponde ancora qualcuno sulla 7447?  ⭐ e' il lato che
-#                    RICEVE, l'unico che sappia dire «e' rimasto acceso»
-#      i TRE FILE    i guasti stanno in `rcp.c`, nel `.cc` e nel `.h`
+#      the PROCESS   is it really dead?  (before, the `kill` had no witnesses)
+#      the PORT      is anyone still answering on 7447?  ⭐ it is the side that
+#                    RECEIVES, the only one that can say "it stayed on"
+#      the THREE FILES  the faults are in `rcp.c`, in the `.cc` and in the `.h`
 #
-#    (rilievi R5.10 e R5.18 della revisione avversariale del 10 agosto 2026.)
+#    (findings R5.10 and R5.18 of the adversarial review of 10 Aug 2026.)
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
@@ -37,15 +37,15 @@ DENTRO=/srv/src
 CERT=/media/REMOTIX/b2-certificati
 SERVER="$DENTRO/b2/ngtcp2/build/examples/bsslserver"
 LIBS="$DENTRO/b2/ngtcp2/build/lib"
-# ⛔ I GUASTI VIVONO IN TRE FILE, NON IN UNO.
+# ⛔ THE FAULTS LIVE IN THREE FILES, NOT IN ONE.
 #
-#    `01-b11-guasto-innesta.py` innesta in `rcp.c`, in
-#    `http3_server_proto_codec.cc` e nel `.h`, e **otto innesti su undici**
-#    stanno in `rcp.c`.  Decidere «i guasti ci sono» guardando il solo `.cc` e'
-#    la forma E1 — necessario preso per sufficiente: bastava che saltasse un
-#    innesto di `rcp.c` perche' il banco stampasse «costruito, e i guasti ci
-#    sono» e i casi che quel guasto doveva provocare cadessero col rosso
-#    puntato sulla PAGINA, che non c'entra niente.
+#    `01-b11-guasto-innesta.py` grafts into `rcp.c`, into
+#    `http3_server_proto_codec.cc` and into the `.h`, and **eight grafts out of eleven**
+#    are in `rcp.c`.  Deciding "the faults are there" by looking at the `.cc` alone is
+#    form E1 — necessary taken for sufficient: it was enough for one
+#    graft of `rcp.c` to be skipped for the bench to print "built, and the faults are
+#    there" and for the cases that fault was meant to provoke to fall with the red
+#    pointed at the PAGE, which has nothing to do with it.
 SORGENTI=(
 	"$DENTRO/b2/ngtcp2/examples/rcp.c"
 	"$DENTRO/b2/ngtcp2/examples/http3_server_proto_codec.cc"
@@ -53,7 +53,7 @@ SORGENTI=(
 )
 IND=192.168.0.2
 PORTA=7447
-FILTRO="B11|DOPO la fine|CONGEDO di commiato|congedo motivo|canale di controllo aperto"
+FILTRO="B11|AFTER the end|parting CONGEDO|congedo motivo|control channel opened"
 
 log()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ok()   { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
@@ -63,46 +63,46 @@ inf()  { printf '    --  %s\n' "$*"; }
 AZIONE=${1:-accendi}
 MARCHE_ATTESE=""
 
-# ⛔ Nessuna redirezione ATTORNO a enter.sh: si porterebbe via la richiesta di
-#    password di sudo, e lo script resterebbe fermo su una domanda che nessuno
-#    vede.  Dentro le virgolette invece e' del comando remoto.  ⭐ Questa prima
-#    chiamata e' quella che la chiede, e da qui in poi le credenziali sono
-#    valide: le letture che seguono possono catturare l'uscita.
-bash "$ENTRA" --root "true" || { ko "non si entra nel contenitore"; exit 2; }
+# ⛔ No redirection AROUND enter.sh: it would carry off sudo's password
+#    prompt, and the script would stay stuck on a question nobody
+#    sees.  Inside the quotes instead it belongs to the remote command.  ⭐ This first
+#    call is the one that asks for it, and from here on the credentials are
+#    valid: the reads that follow can capture the output.
+bash "$ENTRA" --root "true" || { ko "cannot enter the container"; exit 2; }
 
 # ---------------------------------------------------------------------------
-# ⛔ LA SENTINELLA: «vuoto» non e' «zero» (`REVIEWER.md` §1 domanda 4, forma E8)
+# ⛔ THE SENTINEL: "empty" is not "zero" (`REVIEWER.md` §1 question 4, form E8)
 #
-# `CHI=$(bash "$ENTRA" --root "ss -ulnp | grep ':$PORTA '")` diceva «porta
-# libera» in tre casi opposti: la porta e' davvero libera, `ss` non c'e' nel
-# contenitore, `enter.sh` non ha eseguito il comando.  Il terzo caso accendeva
-# un SECONDO server sulla porta di uno gia' acceso, il primo continuava a
-# rispondere, e B11 misurava **il server sbagliato** — che poteva essere quello
-# SANO, cioe' esattamente il difetto che il commento di `01-b11-lancia.sh`
-# dichiara di voler evitare.
+# `CHI=$(bash "$ENTRA" --root "ss -ulnp | grep ':$PORTA '")` said "port
+# free" in three opposite cases: the port is really free, `ss` is not in the
+# container, `enter.sh` did not execute the command.  The third case turned on
+# a SECOND server on the port of one already on, the first kept
+# answering, and B11 measured **the wrong server** — which could be the
+# HEALTHY one, that is exactly the defect the comment of `01-b11-lancia.sh`
+# declares it wants to avoid.
 #
-# ⭐ Qui il comando remoto stampa da se' il proprio stato d'uscita.  Se la riga
-#    `B11-FINE` non arriva, il comando non e' arrivato in fondo — e questo si
-#    distingue da «e' andato e non ha trovato niente».
-# ⚠ E cosi' la misura non poggia piu' sul fatto che `enter.sh` propaghi il
-#   codice d'uscita del comando che esegue, che nessuno ha mai verificato
-#   (rilievo R5.21, ancora aperto: si chiude con
+# ⭐ Here the remote command prints its own exit status by itself.  If the line
+#    `B11-FINE` does not arrive, the command did not reach the end — and this can be
+#    told apart from "it ran and found nothing".
+# ⚠ And so the measurement no longer rests on `enter.sh` propagating the
+#   exit code of the command it runs, which nobody has ever verified
+#   (finding R5.21, still open: it is closed with
 #   `bash /media/REMOTIX/enter.sh --root "exit 7"; echo $?`).
 USCITA=""
-dentro() # $1 = comando remoto.  Uscita in $USCITA, stato = quello del comando
+dentro() # $1 = remote command.  Output in $USCITA, status = that of the command
 {
 	local tutto stato
 	tutto=$(bash "$ENTRA" --root "$1"'; printf "\nB11-FINE=%s\n" $?')
 	stato=$(printf '%s\n' "$tutto" | sed -n 's/^B11-FINE=\([0-9][0-9]*\)$/\1/p' | tail -1)
 	USCITA=$(printf '%s\n' "$tutto" | grep -v '^B11-FINE=')
 	if [ -z "$stato" ]; then
-		return 125   # il comando non e' arrivato in fondo: non e' uno zero
+		return 125   # the command did not reach the end: it is not a zero
 	fi
 	return "$stato"
 }
 
-# Chi tiene la porta.  0 = occupata (le righe in $CHI) · 1 = libera · 2 = non
-# si sa, e «non si sa» non si arrotonda a «libera».
+# Who holds the port.  0 = taken (the lines in $CHI) · 1 = free · 2 = un-
+# known, and "unknown" is not rounded to "free".
 CHI=""
 chi_tiene_la_porta()
 {
@@ -110,26 +110,26 @@ chi_tiene_la_porta()
 	dentro "ss -ulnp"
 	st=$?
 	if [ "$st" -ne 0 ]; then
-		ko "⛔ «ss -ulnp» non ha risposto dentro il contenitore (uscita $st):"
+		ko "⛔ «ss -ulnp» did not answer inside the container (exit $st):"
 		printf '%s\n' "$USCITA" | tail -5 | sed 's/^/        /'
 		return 2
 	fi
-	# ⭐ IL CONTROLLO POSITIVO DELLO STRUMENTO: `ss -ulnp` stampa sempre almeno
-	#    la propria intestazione.  Se non stampa niente non ha guardato niente,
-	#    e uno strumento che non sa vedere quel che c'e' non puo' dire che
-	#    manchi qualcosa (`REVIEWER.md` §1 domanda 5).
+	# ⭐ THE POSITIVE CONTROL OF THE TOOL: `ss -ulnp` always prints at least
+	#    its own header.  If it prints nothing it has looked at nothing,
+	#    and a tool that cannot see what is there cannot say that
+	#    something is missing (`REVIEWER.md` §1 question 5).
 	if [ -z "$USCITA" ]; then
-		ko "⛔ «ss -ulnp» non ha stampato NIENTE, nemmeno l'intestazione:"
-		ko "   lo strumento e' muto, e il suo silenzio non e' una porta libera"
+		ko "⛔ «ss -ulnp» printed NOTHING, not even the header:"
+		ko "   the tool is mute, and its silence is not a free port"
 		return 2
 	fi
 	CHI=$(printf '%s\n' "$USCITA" | grep ":$PORTA ")
 	[ -n "$CHI" ]
 }
 
-# Quante marche di B11 ci sono in un file.  Il conto in $N; 2 = non si e'
-# potuto contare.  ⚠ `grep -c` esce 1 quando il conto e' zero e >=2 quando non
-# ha potuto leggere: sono due cose diverse e qui restano diverse.
+# How many B11 marks there are in a file.  The count in $N; 2 = it could not
+# be counted.  ⚠ `grep -c` exits 1 when the count is zero and >=2 when it could not
+# read: they are two different things and here they stay different.
 N=0
 marche()
 {
@@ -137,13 +137,13 @@ marche()
 	dentro "grep -c 'REMOTIX B11 GUASTO' $1"
 	st=$?
 	if [ "$st" -gt 1 ]; then
-		ko "⛔ non si e' potuto contare le marche in $1 (uscita $st):"
+		ko "⛔ the marks in $1 could not be counted (exit $st):"
 		printf '%s\n' "$USCITA" | tail -3 | sed 's/^/        /'
 		return 2
 	fi
 	N=$(printf '%s' "$USCITA" | tr -cd '0-9')
 	if [ -z "$N" ]; then
-		ko "⛔ il conteggio delle marche in $1 non ha prodotto un numero"
+		ko "⛔ the count of the marks in $1 did not produce a number"
 		return 2
 	fi
 	return 0
@@ -152,17 +152,17 @@ marche()
 ricostruisci() # $1 = "con-guasti" | "sano"
 {
 	local passo st
-	# ⛔ E OGNI PASSO SI PROVA.
+	# ⛔ AND EVERY STEP IS TESTED.
 	#
-	#    Le quattro invocazioni avevano tutte `> /dev/null` e **nessuna prova
-	#    dello stato d'uscita**.  Bastava far fallire il `git checkout --
-	#    examples` di `01-b2-ngtcp2-wt-innesta.py --togli` (albero non pulito,
-	#    permessi, `git` assente): la marca `REMOTIX B3` restava nel `.cc`,
-	#    `01-b3-rcp-innesta.py` prendeva il cortocircuito «l'innesto c'e'
-	#    gia'» — che restituisce **0** — e usciva PRIMA di ricopiare `rcp.c`.
-	#    ⚠ La ricostruzione del sorgente sano, cioe' l'unica cosa che impedisce
-	#      al server bugiardo di sopravvivere alla fase, non aveva nessun
-	#      testimone (rilievo R5.8).
+	#    The four invocations all had `> /dev/null` and **no test
+	#    of the exit status**.  It was enough to make the `git checkout --
+	#    examples` of `01-b2-ngtcp2-wt-innesta.py --togli` fail (tree not clean,
+	#    permissions, `git` absent): the mark `REMOTIX B3` stayed in the `.cc`,
+	#    `01-b3-rcp-innesta.py` took the short circuit "the graft is already
+	#    there" — which returns **0** — and exited BEFORE copying `rcp.c` again.
+	#    ⚠ The rebuilding of the healthy source, that is the only thing preventing
+	#      the lying server from surviving the phase, had no
+	#      witness (finding R5.8).
 	for passo in "01-b3-rcp-innesta.py --togli" \
 	             "01-b2-ngtcp2-wt-innesta.py --togli" \
 	             "01-b2-ngtcp2-wt-innesta.py" \
@@ -170,7 +170,7 @@ ricostruisci() # $1 = "con-guasti" | "sano"
 		dentro "python3 $DENTRO/$passo"
 		st=$?
 		if [ "$st" -ne 0 ]; then
-			ko "⛔ «$passo» e' fallito (uscita $st):"
+			ko "⛔ «$passo» failed (exit $st):"
 			printf '%s\n' "$USCITA" | tail -20 | sed 's/^/        /'
 			return 1
 		fi
@@ -180,35 +180,35 @@ ricostruisci() # $1 = "con-guasti" | "sano"
 		st=$?
 		printf '%s\n' "$USCITA" | sed 's/^/        /'
 		if [ "$st" -ne 0 ]; then
-			ko "⛔ l'innesto dei guasti di B11 e' fallito (uscita $st)"
+			ko "⛔ the graft of the B11 faults failed (exit $st)"
 			return 1
 		fi
-		# ⭐ IL DENOMINATORE LO CALCOLA CHI INNESTA, e lo stampa.  Qui non si
-		#    scrive a mano nessun numero: invecchierebbe col primo innesto che
-		#    qualcuno aggiunge alla tabella.
+		# ⭐ THE DENOMINATOR IS COMPUTED BY WHOEVER GRAFTS, and printed.  Here no
+		#    number is written by hand: it would age with the first graft
+		#    someone adds to the table.
 		MARCHE_ATTESE=$(printf '%s\n' "$USCITA" \
 			| sed -n 's/^== B11-MARCHE-ATTESE: \([0-9][0-9]*\)$/\1/p' | tail -1)
 		if [ -z "$MARCHE_ATTESE" ]; then
-			ko "⛔ l'innesto non ha dichiarato quante marche ci si aspetta:"
-			ko "   senza quel numero il controllo qui sotto non ha denominatore"
+			ko "⛔ the graft did not declare how many marks are expected:"
+			ko "   without that number the check below has no denominator"
 			return 1
 		fi
 	fi
-	# ⛔ E SI RESTITUISCE L'ESITO DI NINJA.
+	# ⛔ AND NINJA'S OUTCOME IS RETURNED.
 	#
-	#    Il primo giro del 10 agosto 2026 non lo guardava: si limitava a
-	#    controllare che `bsslserver` **esistesse ed fosse eseguibile**.  La
-	#    compilazione era fallita, il binario di due ore prima era ancora li',
-	#    e il banco ha acceso **il server SANO dichiarando di aver acceso quello
-	#    guasto**.  ⚠ Tutti i casi di B11 sarebbero falliti, e il rosso sarebbe
-	#    finito sulla PAGINA — che non c'entrava niente.
+	#    The first round of 10 Aug 2026 did not look at it: it only
+	#    checked that `bsslserver` **existed and was executable**.  The
+	#    compilation had failed, the binary from two hours before was still there,
+	#    and the bench turned on **the HEALTHY server declaring it had turned on the
+	#    faulty one**.  ⚠ All the B11 cases would have failed, and the red would have
+	#    landed on the PAGE — which had nothing to do with it.
 	#
-	# ⭐ «Il file c'e'» e «il file e' quello che ho appena costruito» sono due
-	#    domande diverse, e solo la seconda ha un denominatore.
+	# ⭐ "The file is there" and "the file is the one I just built" are two
+	#    different questions, and only the second has a denominator.
 	dentro "ninja -C $DENTRO/b2/ngtcp2/build bsslserver > $DENTRO/b11-compila.log 2>&1"
 	st=$?
 	if [ "$st" -ne 0 ]; then
-		ko "⛔ la compilazione e' FALLITA (uscita $st).  Il registro dice:"
+		ko "⛔ the compilation FAILED (exit $st).  The log says:"
 		dentro "grep -m6 -n error $DENTRO/b11-compila.log"
 		printf '%s\n' "$USCITA" | sed 's/^/        /'
 		return 1
@@ -216,7 +216,7 @@ ricostruisci() # $1 = "con-guasti" | "sano"
 	return 0
 }
 
-# Le marche di B11 su tutti e tre i sorgenti.  Il totale in $TOTALE.
+# The B11 marks across all three sources.  The total in $TOTALE.
 TOTALE=0
 conta_le_marche()
 {
@@ -224,7 +224,7 @@ conta_le_marche()
 	TOTALE=0
 	for f in "${SORGENTI[@]}"; do
 		marche "$f" || return 2
-		inf "$(basename "$f"): $N marche «REMOTIX B11 GUASTO»"
+		inf "$(basename "$f"): $N marks «REMOTIX B11 GUASTO»"
 		TOTALE=$((TOTALE + N))
 	done
 	return 0
@@ -232,40 +232,40 @@ conta_le_marche()
 
 case "$AZIONE" in
 registro)
-	# ⛔ Il registro del server e' il SECONDO TESTIMONE di B11: due delle
-	#    righe della tabella sono proprieta' NEGATIVE della pagina — «dopo
-	#    RESPINTO non riprova», «nessun battito applicativo» — e una proprieta'
-	#    negativa non si vede da dentro la pagina.
-	# ⭐ E il «CONGEDO di commiato» viaggia con loro: e' il testimone POSITIVO
-	#    della stessa regola — senza, «zero byte dopo la fine» sarebbe vero
-	#    anche per una pagina che non si e' mai congedata.
+	# ⛔ The server log is the SECOND WITNESS of B11: two of the
+	#    lines of the table are NEGATIVE properties of the page — "after
+	#    RESPINTO it does not retry", "no application heartbeat" — and a negative
+	#    property cannot be seen from inside the page.
+	# ⭐ And the "parting CONGEDO" travels with them: it is the POSITIVE witness
+	#    of the same rule — without it, "zero bytes after the end" would be true
+	#    even for a page that never said farewell.
 	#
-	# ⛔⭐ E IL TAGLIO IN CODA E' UN DENOMINATORE CHE MENTE, in tutt'e due i
-	#    versi, e per questo non c'e' piu'.
+	# ⛔⭐ AND THE CUT AT THE TAIL IS A DENOMINATOR THAT LIES, in both
+	#    directions, and that is why it is no longer there.
 	#
-	#    Era `tail -60`.  Il 10 agosto 2026, aggiungendo UNA riga in piu' a
-	#    questo filtro, i «guasti serviti» sono passati da 26 a 21 — e il
-	#    server non aveva cambiato niente: erano le righe vecchie, spinte
-	#    fuori dalla finestra dalle nuove.  ⚠ Il `tail -600` che l'aveva
-	#    sostituito aveva lo stesso difetto piu' in la': scarta le righe **piu'
-	#    vecchie**, cioe' quelle del PRIMO motore, e una riga «byte arrivati
-	#    DOPO la fine» del primo motore esce dalla finestra molto prima che il
-	#    conto dei casi se ne accorga — «zero byte dopo la fine» diventa il
-	#    verde piu' vuoto che ci sia (rilievo R5.9).
+	#    It was `tail -60`.  On 10 Aug 2026, adding ONE more line to
+	#    this filter, the "faults served" went from 26 to 21 — and the
+	#    server had not changed anything: it was the old lines, pushed
+	#    out of the window by the new ones.  ⚠ The `tail -600` that had
+	#    replaced it had the same defect further on: it discards the **oldest**
+	#    lines, that is those of the FIRST engine, and a "bytes arrived
+	#    AFTER the end" line of the first engine leaves the window long before the
+	#    count of the cases notices — "zero bytes after the end" becomes the
+	#    emptiest green there is (finding R5.9).
 	#
-	# ⭐ Al posto del tetto c'e' il CONTO: quante righe il filtro ha trovato si
-	#    dichiara qui, e chi legge di la' confronta con quante gliene sono
-	#    arrivate.  Un troncamento, da qualunque parte venga, si vede.
+	# ⭐ In place of the cap there is the COUNT: how many lines the filter found is
+	#    declared here, and whoever reads over there compares with how many
+	#    arrived.  A truncation, wherever it comes from, can be seen.
 	if [ ! -f "$FUORI/b11-server.log" ]; then
-		ko "⛔ $FUORI/b11-server.log non c'e'."
-		ko "   Non e' «zero righe»: e' una lettura che non si e' potuta fare, e"
-		ko "   il secondo testimone di B11 non ha niente da dire (forma E8)."
+		ko "⛔ $FUORI/b11-server.log is not there."
+		ko "   It is not «zero lines»: it is a read that could not be done, and"
+		ko "   the second witness of B11 has nothing to say (form E8)."
 		exit 7
 	fi
 	QUANTE=$(grep -Ec "$FILTRO" "$FUORI/b11-server.log")
 	ST=$?
 	if [ "$ST" -gt 1 ]; then
-		ko "⛔ non si e' potuto leggere il registro (grep e' uscito $ST)"
+		ko "⛔ the log could not be read (grep exited $ST)"
 		exit 7
 	fi
 	grep -E "$FILTRO" "$FUORI/b11-server.log"
@@ -273,29 +273,29 @@ registro)
 	exit 0
 	;;
 spegni)
-	log "1. ⛔ Si ferma il server GUASTO, e si verifica che sia MORTO"
-	# ⛔ Quel che va verificato e' IL PROCESSO, non il sorgente (forma E7).
+	log "1. ⛔ The FAULTY server is stopped, and it is verified that it is DEAD"
+	# ⛔ What must be verified is THE PROCESS, not the source (form E7).
 	#
-	#    Le tre righe di prima buttavano l'esito tre volte: `cat … 2>/dev/null`
-	#    (file dei PID assente ⇒ `P` vuoto ⇒ non si uccide niente), `[ -n "$P" ]
-	#    &&` senza ramo `else` (l'assenza del PID non era un errore), `kill $P
-	#    2>/dev/null || true`.  E il file dei PID veniva rimosso comunque,
-	#    portandosi via la traccia del processo superstite.
-	#    ⚠ Con `b11-server.pid` cancellato mentre il server gira, `spegni` non
-	#      uccideva niente, ricostruiva il sorgente sano, trovava il grep pulito
-	#      e stampava «⭐ il server e' quello vero» uscendo 0 — **con il server
-	#      bugiardo ancora acceso sulla 7447** (rilievo R5.18).
+	#    The three lines from before threw the outcome away three times: `cat … 2>/dev/null`
+	#    (PID file absent ⇒ `P` empty ⇒ nothing is killed), `[ -n "$P" ]
+	#    &&` without an `else` branch (the absence of the PID was not an error), `kill $P
+	#    2>/dev/null || true`.  And the PID file was removed anyway,
+	#    carrying away the trace of the surviving process.
+	#    ⚠ With `b11-server.pid` deleted while the server runs, `spegni` did not
+	#      kill anything, rebuilt the healthy source, found the grep clean
+	#      and printed "⭐ the server is the real one" exiting 0 — **with the lying
+	#      server still on at 7447** (finding R5.18).
 	P=""
 	if [ -f "$FUORI/b11-server.pid" ]; then
 		P=$(cat "$FUORI/b11-server.pid")
 	else
-		inf "⚠ $FUORI/b11-server.pid non c'e': non si sa QUALE processo fermare,"
-		inf "  e allora lo si chiede alla porta, che e' il lato che riceve"
+		inf "⚠ $FUORI/b11-server.pid is not there: it is not known WHICH process to stop,"
+		inf "  and so we ask the port, which is the side that receives"
 	fi
 	if [ -n "$P" ]; then
 		dentro "kill $P"
 		ST=$?
-		[ "$ST" -eq 0 ] || inf "⚠ «kill $P» ha risposto $ST: forse era gia' morto"
+		[ "$ST" -eq 0 ] || inf "⚠ «kill $P» answered $ST: maybe it was already dead"
 		I=0
 		STATO=0
 		while [ "$I" -lt 10 ]; do
@@ -306,133 +306,133 @@ spegni)
 			I=$((I + 1))
 		done
 		case "$STATO" in
-		1) ok "il processo $P e' morto (dopo $I secondi)" ;;
-		0) ko "⛔ il server guasto (PID $P) e' ANCORA VIVO dopo $I secondi."
-		   ko "   Non si prosegue: la fase resterebbe con un server che mente"
-		   ko "   acceso, e il prossimo che lo trova non sapra' da dove viene."
+		1) ok "process $P is dead (after $I seconds)" ;;
+		0) ko "⛔ the faulty server (PID $P) is STILL ALIVE after $I seconds."
+		   ko "   We do not go on: the phase would stay with a lying server"
+		   ko "   on, and the next one to find it will not know where it comes from."
 		   exit 6 ;;
-		*) ko "⛔ non si e' potuto sapere se il PID $P sia vivo (uscita $STATO)"
+		*) ko "⛔ it could not be known whether PID $P is alive (exit $STATO)"
 		   exit 6 ;;
 		esac
 	fi
 	chi_tiene_la_porta
 	ST=$?
 	case "$ST" in
-	1) ok "la porta $PORTA e' libera: non risponde piu' nessuno" ;;
-	0) ko "⛔ la porta $PORTA e' ANCORA TENUTA da qualcuno:"
+	1) ok "port $PORTA is free: nobody answers any more" ;;
+	0) ko "⛔ port $PORTA is STILL HELD by someone:"
 	   printf '%s\n' "$CHI" | sed 's/^/        /'
-	   ko "   ⚠ puo' essere il server SANO di B2 rimasto acceso: il PID e' li'"
-	   ko "   sopra.  In tutt'e due i casi la ripulitura non e' finita, e"
-	   ko "   dirlo adesso costa meno che scoprirlo al prossimo «accendi»."
+	   ko "   ⚠ it may be the HEALTHY B2 server left on: the PID is up"
+	   ko "   there.  In both cases the cleanup is not finished, and"
+	   ko "   saying so now costs less than discovering it at the next «accendi»."
 	   exit 6 ;;
 	*) exit 6 ;;
 	esac
-	# ⭐ Solo adesso si butta il file dei PID: e' la traccia del processo, e si
-	#    perde per ultima.
+	# ⭐ Only now is the PID file thrown away: it is the trace of the process, and it is
+	#    lost last.
 	rm -f "$FUORI/b11-server.pid"
 
-	log "2. ⛔ Si rimette il server SANO"
-	# ⛔ E L'ESITO DELLA RICOSTRUZIONE SI LEGGE.
+	log "2. ⛔ The HEALTHY server is put back"
+	# ⛔ AND THE OUTCOME OF THE REBUILD IS READ.
 	#
-	#    `ricostruisci sano` era una istruzione nuda: lo stesso stato d'uscita
-	#    che `accendi` prova (`if ! ricostruisci con-guasti`) qui veniva
-	#    buttato.  Bastava far fallire la ricostruzione del server sano perche'
-	#    sul disco restasse **il binario guasto** mentre il sorgente tornava
-	#    pulito: il grep qui sotto era verde, si stampava «il server e' quello
-	#    vero», e il prossimo `01-b2-lancia-wt.sh accendi` accendeva quel
-	#    binario (rilievo R5.1).
+	#    `ricostruisci sano` was a bare statement: the same exit status
+	#    that `accendi` tests (`if ! ricostruisci con-guasti`) was thrown
+	#    away here.  It was enough to make the rebuild of the healthy server fail for
+	#    **the faulty binary** to stay on disk while the source went back
+	#    clean: the grep below was green, "the server is the real
+	#    one" was printed, and the next `01-b2-lancia-wt.sh accendi` turned on that
+	#    binary (finding R5.1).
 	if ! ricostruisci sano; then
-		ko "⛔ LA RICOSTRUZIONE DEL SERVER SANO E' FALLITA."
-		ko "   Sul disco puo' esserci ancora il binario GUASTO, e il sorgente"
-		ko "   pulito non lo dice: si rimettono a mano gli innesti di B2 e B3."
+		ko "⛔ THE REBUILD OF THE HEALTHY SERVER FAILED."
+		ko "   On disk there may still be the FAULTY binary, and the clean"
+		ko "   source does not say so: put back the B2 and B3 grafts by hand."
 		exit 5
 	fi
 	conta_le_marche || exit 5
 	if [ "$TOTALE" -eq 0 ]; then
-		ok "⭐ nessuna traccia di B11 nei ${#SORGENTI[@]} sorgenti, e il binario"
-		ok "   e' quello appena ricostruito: il server e' quello vero"
+		ok "⭐ no trace of B11 in the ${#SORGENTI[@]} sources, and the binary"
+		ok "   is the one just rebuilt: the server is the real one"
 	else
-		ko "⛔ RESTANO $TOTALE righe di B11 nei sorgenti."
-		ko "   Un server che mente di proposito NON deve sopravvivere alla fase."
+		ko "⛔ $TOTALE lines of B11 REMAIN in the sources."
+		ko "   A server that lies on purpose must NOT survive the phase."
 		exit 5
 	fi
 	exit 0
 	;;
 accendi) ;;
-*) ko "azione sconosciuta: $AZIONE  (accendi | registro | spegni)"; exit 2 ;;
+*) ko "unknown action: $AZIONE  (accendi | registro | spegni)"; exit 2 ;;
 esac
 
 # ---------------------------------------------------------------------------
-log "1. La porta"
+log "1. The port"
 chi_tiene_la_porta
 ST=$?
 case "$ST" in
-1) ok "porta $PORTA libera — e lo dice «ss», non il silenzio" ;;
-0) ko "la porta $PORTA e' occupata:"
+1) ok "port $PORTA free — and «ss» says so, not the silence" ;;
+0) ko "port $PORTA is taken:"
    printf '%s\n' "$CHI" | sed 's/^/        /'
    exit 3 ;;
 *) exit 3 ;;
 esac
 
-log "2. Il server guasto si costruisce"
+log "2. The faulty server is built"
 if ! ricostruisci con-guasti; then
-	ko "   e NON si accende niente: il binario vecchio e' ancora sul disco, e"
-	ko "   accenderlo vorrebbe dire misurare un server SANO credendolo guasto"
+	ko "   and NOTHING is turned on: the old binary is still on disk, and"
+	ko "   turning it on would mean measuring a HEALTHY server believing it faulty"
 	exit 4
 fi
 conta_le_marche || exit 4
 if [ "$TOTALE" -ne "$MARCHE_ATTESE" ]; then
-	ko "⛔ sul disco ci sono $TOTALE marche di B11, e chi le ha innestate ne"
-	ko "   dichiara $MARCHE_ATTESE: i guasti che il banco crede di misurare non sono"
-	ko "   quelli che il server ha dentro, e il rosso finirebbe sulla PAGINA"
+	ko "⛔ on disk there are $TOTALE B11 marks, and whoever grafted them"
+	ko "   declares $MARCHE_ATTESE: the faults the bench believes it measures are not"
+	ko "   those the server has inside, and the red would land on the PAGE"
 	exit 4
 fi
-ok "costruito, e i guasti ci sono tutti: $TOTALE su $MARCHE_ATTESE attese, in ${#SORGENTI[@]} file"
+ok "built, and the faults are all there: $TOTALE of $MARCHE_ATTESE expected, in ${#SORGENTI[@]} files"
 
-log "3. Si accende"
+log "3. Turning on"
 rm -f "$FUORI/b11-server.log" "$FUORI/b11-server.pid"
-# ⚠ `--timeout=120s`: il caso «silenzio» tace otto secondi per provare che la
-#   pagina non manda un battito applicativo (§2.2).  Col tetto predefinito a
-#   30 s la connessione reggerebbe lo stesso, ma i casi in fila su una sola
-#   pagina no.
+# ⚠ `--timeout=120s`: the «silenzio» case stays quiet for eight seconds to prove that the
+#   page does not send an application heartbeat (§2.2).  With the default cap at
+#   30 s the connection would hold all the same, but the cases in a row on a single
+#   page would not.
 bash "$ENTRA" --root \
 	"nohup env LD_LIBRARY_PATH=$LIBS $SERVER --timeout=120s $IND $PORTA $CERT/sessione.key $CERT/sessione.pem < /dev/null > $DENTRO/b11-server.log 2>&1 & echo \$! > $DENTRO/b11-server.pid"
 sleep 2
 PID=$(cat "$FUORI/b11-server.pid" 2>/dev/null)
-# ⚠ `/proc/$PID` si legge di qui e non da dentro, ed e' corretto: quello di
-#   `enter.sh` e' un `chroot` (`fondamenta/banco/enter.sh`), che condivide lo spazio dei
-#   PID dell'ospite — non un contenitore con un suo spazio.
+# ⚠ `/proc/$PID` is read from here and not from inside, and that is correct: that of
+#   `enter.sh` is a `chroot` (`fondamenta/banco/enter.sh`), which shares the
+#   host's PID namespace — not a container with a namespace of its own.
 if [ -z "$PID" ] || [ ! -d "/proc/$PID" ]; then
-	ko "il server guasto non e' partito:"
+	ko "the faulty server did not start:"
 	sed 's/^/        /' "$FUORI/b11-server.log"
 	exit 4
 fi
-# ⛔ «VIVO» NON E' «IN ASCOLTO», ed e' la forma E1 in una riga sola.
+# ⛔ "ALIVE" IS NOT "LISTENING", and it is form E1 in a single line.
 #
-#    `01-b2-lancia-wt.sh` fa questa stessa verifica e spiega perche': «il
-#    server e' vivo ma non tiene nessuna porta UDP».  B11 ne conservava la
-#    meta' e buttava l'altra: un server ancora vivo a 2 s ma che avesse gia'
-#    fallito il `bind` faceva stampare «ok server GUASTO in ascolto», e tutti i
-#    casi cadevano col rosso sulla PAGINA (rilievo R5.13).
+#    `01-b2-lancia-wt.sh` does this same verification and explains why: "the
+#    server is alive but holds no UDP port".  B11 kept half of it
+#    and threw away the other: a server still alive at 2 s but that had already
+#    failed the `bind` made it print "ok FAULTY server listening", and all the
+#    cases fell with the red on the PAGE (finding R5.13).
 chi_tiene_la_porta
 ST=$?
 if [ "$ST" -ne 0 ]; then
-	ko "il server e' vivo (PID $PID) ma sulla porta $PORTA non c'e' nessuno:"
+	ko "the server is alive (PID $PID) but on port $PORTA there is nobody:"
 	sed 's/^/        /' "$FUORI/b11-server.log"
 	exit 4
 fi
 ASC=$(printf '%s\n' "$CHI" | grep "pid=$PID,")
 if [ -z "$ASC" ]; then
-	ko "⛔ la porta $PORTA e' tenuta da un ALTRO processo, non dal nostro $PID:"
+	ko "⛔ port $PORTA is held by ANOTHER process, not by our $PID:"
 	printf '%s\n' "$CHI" | sed 's/^/        /'
-	ko "   B11 misurerebbe il server sbagliato — che potrebbe essere quello SANO"
+	ko "   B11 would measure the wrong server — which could be the HEALTHY one"
 	exit 4
 fi
-ok "server GUASTO in ascolto, PID $PID"
+ok "FAULTY server listening, PID $PID"
 printf '%s\n' "$ASC" | sed 's/^/        /'
-inf "⛔ e' un server che mente di proposito: si spegne con «spegni», che"
-inf "   rimette anche il sorgente sano"
-inf "l'impronta del certificato della sessione, per la pagina:"
+inf "⛔ it is a server that lies on purpose: it is turned off with «spegni», which"
+inf "   also puts back the healthy source"
+inf "the fingerprint of the session certificate, for the page:"
 bash "$ENTRA" --root \
 	"openssl x509 -in $CERT/sessione.pem -outform der | openssl dgst -sha256 -binary | base64 -w0" \
 	| tail -1 | sed 's/^/        /'

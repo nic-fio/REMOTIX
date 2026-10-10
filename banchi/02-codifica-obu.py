@@ -1,49 +1,49 @@
 #!/usr/bin/env python3
-"""02-codifica-obu.py — la FORMA del flusso AV1, letta sui byte.
+"""02-codifica-obu.py — the SHAPE of the AV1 stream, read on the bytes.
 
     python3 02-codifica-obu.py --elenca   <file.obu>
     python3 02-codifica-obu.py --verifica <file.obu> [--chiavi-attese N]
     python3 02-codifica-obu.py --storpia  <file.obu> <modo> <uscita>
-                               modi: senza-sequenza | byte-girato | troncato
+                               modes: senza-sequenza | byte-girato | troncato
 
 ===========================================================================
-⛔ PERCHE' ESISTE — il secondo codec e' una DECISIONE DELL'UTENTE, non un di piu'
+⛔ WHY IT EXISTS — the second codec is a DECISION OF THE USER, not an extra
 
-`DECISIONI.md` §1.13, 12 agosto 2026: HEVC **con un ripiego negoziato**.  Il
-ripiego e' **AV1**, e la ragione e' un numero — `[M]` F2.5, quattro caselle su
-quattro (Chrome e Firefox, con GPU e senza), a 8 **e** a 10 bit, ⛔ e **con
-`prefer-software`**, mentre HEVC ne riempie una sola.
+`DECISIONI.md` §1.13, 12 Aug 2026: HEVC **with a negotiated fallback**.  The
+fallback is **AV1**, and the reason is a number — `[M]` F2.5, four cells out of
+four (Chrome and Firefox, with GPU and without), at 8 **and** at 10 bits, ⛔ and **with
+`prefer-software`**, while HEVC fills only one.
 
-⇒ Un banco che misurasse solo HEVC misurerebbe **il codec che su tre dispositivi
-  su quattro non arriva al pixel**.  Questo file e' il gemello di
-  `02-codifica-nal.py` per l'altro codec.
+⇒ A bench that measured only HEVC would measure **the codec that on three devices
+  out of four does not reach the pixel**.  This file is the twin of
+  `02-codifica-nal.py` for the other codec.
 
 ===========================================================================
-⛔ CHE COSA CAMBIA RISPETTO AD ANNEX-B, E CHE COSA NO
+⛔ WHAT CHANGES COMPARED TO ANNEX-B, AND WHAT DOES NOT
 
-**Cambia la forma**: niente codici di inizio, niente VPS/SPS/PPS.  Un flusso AV1
-e' una successione di **OBU**, ciascuno con la propria taglia, raggruppati in
-unita' temporali.  ⭐ E non c'e' nessun `hvcC` da cui difendersi: AV1 prende le
-unita' temporali cosi' come sono — *«una cucitura in meno»* (`DECISIONI.md`
+**The shape changes**: no start codes, no VPS/SPS/PPS.  An AV1 stream
+is a succession of **OBUs**, each with its own size, grouped in
+temporal units.  ⭐ And there is no `hvcC` to defend against: AV1 takes the
+temporal units as they are — *«one seam fewer»* (`DECISIONI.md`
 §1.13).
 
-**Non cambia la meta' che si dimentica**: la **sequence header OBU** deve stare
-davanti a **ogni** fotogramma chiave, esattamente come i parameter set davanti a
-ogni IDR.  Se sta solo in testa al flusso, un client che si collega dopo riceve
-una chiave nuda e il sintomo e' schermo nero **con i fotogrammi che arrivano**.
+**The half that gets forgotten does not change**: the **sequence header OBU** must sit
+in front of **every** keyframe, exactly like the parameter sets in front of
+every IDR.  If it sits only at the head of the stream, a client that connects later receives
+a naked keyframe and the symptom is a black screen **with the frames arriving**.
 
 ===========================================================================
-⚠ E UNA COSA CHE AV1 NON HA, E VA SAPUTA PRIMA
+⚠ AND SOMETHING AV1 DOES NOT HAVE, AND IT MUST BE KNOWN BEFOREHAND
 
-⛔ **SVT-AV1 non scrive nessuna confessione nel flusso.**  x265 ci mette un
-PREFIX_SEI di user data con la versione, `bitdepth=`, `annexb`, `bframes=` — ed
-e' il **secondo testimone** su cui `F2-3-codifica.md` §3.4 fonda la verifica di
-E2.  `[M]` 12 agosto 2026: in un flusso di libsvtav1 quella stringa **non c'e'**.
+⛔ **SVT-AV1 writes no confession in the stream.**  x265 puts a
+user-data PREFIX_SEI there with the version, `bitdepth=`, `annexb`, `bframes=` — and
+it is the **second witness** on which `F2-3-codifica.md` §3.4 bases the check of
+E2.  `[M]` 12 Aug 2026: in a libsvtav1 stream that string **is not there**.
 
-⇒ Su AV1 i testimoni indipendenti sarebbero **uno solo** (`ffprobe`), se il
-  prodotto non leggesse la **sequence header OBU da se'** — che e' quel che fa
-  `src/codificatore.c` (`leggi_sequenza_av1`).  ⭐ Quel lettore non e' un lusso:
-  su AV1 e' l'unico secondo testimone che esista, e non costa un byte sul filo.
+⇒ On AV1 the independent witnesses would be **only one** (`ffprobe`), if the
+  product did not read the **sequence header OBU by itself** — which is what
+  `src/codificatore.c` does (`leggi_sequenza_av1`).  ⭐ That reader is not a luxury:
+  on AV1 it is the only second witness there is, and it does not cost a byte on the wire.
 """
 
 import argparse
@@ -81,16 +81,16 @@ def leb128(dati, i):
 
 
 def elenca(percorso):
-    """⛔ Si cammina sugli OBU con la LORO taglia, non a occhio.
+    """⛔ It walks over the OBUs with THEIR size, not by eye.
 
-    Un lettore che cercasse un motivo di byte (come i codici di inizio di
-    Annex-B) troverebbe riscontri **dentro i dati entropici**, e direbbe di aver
-    visto OBU che non esistono.  Il campo `obu_has_size_field` esiste apposta, e
-    un flusso che non ce l'ha si dichiara invece di indovinarlo.
+    A reader that looked for a byte pattern (like the start codes of
+    Annex-B) would find matches **inside the entropy data**, and would say it had
+    seen OBUs that do not exist.  The `obu_has_size_field` field exists on purpose, and
+    a stream that does not have it is declared instead of guessed.
     """
     dati = open(percorso, "rb").read()
     if not dati:
-        raise SystemExit(f"⛔ {percorso} e' vuoto: zero byte non e' un flusso")
+        raise SystemExit(f"⛔ {percorso} is empty: zero bytes is not a stream")
     obu = []
     i = 0
     while i < len(dati):
@@ -98,8 +98,8 @@ def elenca(percorso):
         testa = dati[i]
         i += 1
         if testa & 0x80:
-            raise SystemExit(f"⛔ obu_forbidden_bit a 1 all'offset {inizio}: "
-                             f"non e' un flusso AV1 (o non comincia da un OBU)")
+            raise SystemExit(f"⛔ obu_forbidden_bit at 1 at offset {inizio}: "
+                             f"it is not an AV1 stream (or it does not start from an OBU)")
         tipo = (testa >> 3) & 0xF
         estensione = (testa >> 2) & 1
         ha_taglia = (testa >> 1) & 1
@@ -135,22 +135,22 @@ def verifica(percorso, chiavi_attese):
     guasti = []
 
     if not obu:
-        guasti.append("⛔ nessun OBU trovato: non e' un flusso AV1")
+        guasti.append("⛔ no OBU found: it is not an AV1 stream")
 
     tipi = [o["tipo"] for o in obu]
     if OBU_SEQUENCE_HEADER not in tipi:
-        guasti.append("⛔ nessuna SEQUENCE_HEADER: il flusso non porta con se' quel "
-                      "che serve a configurare il decodificatore")
+        guasti.append("⛔ no SEQUENCE_HEADER: the stream does not carry with it what "
+                      "is needed to configure the decoder")
 
-    # ⛔ Il primo fotogramma dev'essere una CHIAVE (RCP.md §5.2, e `VideoDecoder`
-    #    dopo `configure()` pretende un chunk `key` o solleva DataError).
+    # ⛔ The first frame must be a KEYFRAME (RCP.md §5.2, and `VideoDecoder`
+    #    after `configure()` requires a `key` chunk or raises DataError).
     fotogrammi = [o for o in obu if o["tipo"] in (OBU_FRAME, OBU_FRAME_HEADER)]
     if not fotogrammi:
-        guasti.append("⛔ nessun fotogramma: il flusso non porta pixel")
+        guasti.append("⛔ no frame: the stream carries no pixels")
     elif not fotogrammi[0].get("chiave"):
-        guasti.append("⛔ il PRIMO fotogramma non e' una chiave")
+        guasti.append("⛔ the FIRST frame is not a keyframe")
 
-    # ⛔ E la meta' che si dimentica: la sequenza davanti a OGNI chiave.
+    # ⛔ And the half that gets forgotten: the sequence in front of EVERY keyframe.
     gruppi = 0
     sequenza_vista = False
     for o in obu:
@@ -161,9 +161,9 @@ def verifica(percorso, chiavi_attese):
                 gruppi += 1
             sequenza_vista = False
     if gruppi < chiavi_attese:
-        guasti.append(f"⛔ la SEQUENCE_HEADER precede {gruppi} chiavi e ne doveva "
-                      f"precedere {chiavi_attese}: un client che si collega dopo "
-                      f"riceverebbe una chiave nuda")
+        guasti.append(f"⛔ the SEQUENCE_HEADER precedes {gruppi} keyframes and should have "
+                      f"preceded {chiavi_attese}: a client connecting later "
+                      f"would receive a naked keyframe")
 
     esito = {
         "file": e["file"], "byte_totali": e["byte_totali"], "obu_totali": len(obu),
@@ -179,23 +179,23 @@ def verifica(percorso, chiavi_attese):
 
 
 def storpia(percorso, modo, uscita):
-    """⛔ UN BANCO CHE NON HA MAI VISTO UN RIFIUTO NON SA VEDERLO.
+    """⛔ A BENCH THAT HAS NEVER SEEN A REFUSAL CANNOT SEE ONE.
 
-    I tre modi sono i gemelli esatti di quelli di `02-codifica-nal.py`, e il
-    primo e' il piu' importante: `senza-sequenza` e' cosa succederebbe se un
-    giorno qualcuno accendesse `GLOBAL_HEADER` anche su AV1, cioe' il difetto
-    che D1 esiste per non fare.
+    The three modes are the exact twins of those of `02-codifica-nal.py`, and the
+    first is the most important: `senza-sequenza` is what would happen if one
+    day someone switched on `GLOBAL_HEADER` on AV1 too, that is the defect
+    D1 exists not to make.
 
-    ⚠ E il punto in cui si gira il byte NON e' un dettaglio: `[M]` 12 agosto
-      2026 su HEVC, girare il byte 24 di un NAL cadeva ancora nell'INTESTAZIONE
-      dello slice e il fotogramma decodificato tornava **identico bit per bit**.
-      Qui si entra al 2 % del corpo del primo fotogramma, per la stessa ragione.
+    ⚠ And the point where the byte is flipped is NOT a detail: `[M]` 12 Aug
+      2026 on HEVC, flipping byte 24 of a NAL still fell into the slice HEADER
+      and the decoded frame came back **identical bit for bit**.
+      Here it goes in at 2 % of the body of the first frame, for the same reason.
     """
     dati = bytearray(open(percorso, "rb").read())
     e = elenca(percorso)
     obu = e["obu"]
     if not obu:
-        raise SystemExit("⛔ non si storpia un flusso che non si e' saputo leggere")
+        raise SystemExit("⛔ a stream that could not be read is not mangled")
 
     if modo == "senza-sequenza":
         fuori = bytearray()
@@ -204,22 +204,22 @@ def storpia(percorso, modo, uscita):
                 continue
             fine = obu[k + 1]["offset"] if k + 1 < len(obu) else len(dati)
             fuori += dati[o["offset"]:fine]
-        nota = "SEQUENCE_HEADER tolta, i fotogrammi lasciati"
+        nota = "SEQUENCE_HEADER removed, frames left"
     elif modo == "byte-girato":
         primo = next((o for o in obu if o["tipo"] in (OBU_FRAME, OBU_TILE_GROUP)), None)
         if primo is None:
-            raise SystemExit("⛔ nessun fotogramma da storpiare")
+            raise SystemExit("⛔ no frame to mangle")
         corpo = primo["offset"] + (primo["byte"] // 50)
         dove = min(corpo + 64, primo["offset"] + primo["byte"] - 1)
         dati[dove] ^= 0xFF
         fuori = dati
-        nota = f"un byte invertito all'offset {dove}, dentro il corpo del primo fotogramma"
+        nota = f"one byte inverted at offset {dove}, inside the body of the first frame"
     elif modo == "troncato":
         taglio = int(len(dati) * 0.60)
         fuori = dati[:taglio]
-        nota = f"tagliato a {taglio} byte su {len(dati)} (60 %)"
+        nota = f"cut at {taglio} bytes out of {len(dati)} (60 %)"
     else:
-        raise SystemExit(f"⛔ modo sconosciuto: {modo}")
+        raise SystemExit(f"⛔ unknown mode: {modo}")
 
     with open(uscita, "wb") as f:
         f.write(bytes(fuori))

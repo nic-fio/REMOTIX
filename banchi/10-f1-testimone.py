@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-10-f1-testimone — ⭐⭐ IL TESTIMONE CHE FA VEDERE IL DESKTOP REMOTO.
-                     Un'IMMAGINE, non un contatore.
+10-f1-testimone — ⭐⭐ THE WITNESS THAT SHOWS THE REMOTE DESKTOP.
+                     An IMAGE, not a counter.
 ===========================================================================
 
     python3 banchi/10-f1-testimone.py scatta --utente provanic1 \\
@@ -12,137 +12,137 @@
             --fuori /tmp/desktop.png --marca f1-taratura
     python3 banchi/10-f1-testimone.py --certifica
 
-Esce **0** se ha guardato e il giudizio chiesto regge · **1** se ha guardato e
-il giudizio NON regge (rosso) · ⛔ **3** se **non ha potuto guardare** — e il
-terzo esito non e' un rosso: e' *«non ho guardato»*, che in questo progetto e'
-una cosa diversa e va detta con parole diverse (`LEZIONI.md` §1.9, e la regola
-5 del preambolo: **`None` non e' zero**).
+Exits **0** if it looked and the judgement asked for holds · **1** if it looked
+and the judgement does NOT hold (red) · ⛔ **3** if it **could not look** — and
+the third outcome is not a red: it is *"I did not look"*, which in this project
+is a different thing and must be said with different words (`LEZIONI.md` §1.9,
+and rule 5 of the preamble: **`None` is not zero**).
 
 ===========================================================================
-⛔⛔ PERCHE' ESISTE — quattro strade provate, e nessun quadro
+⛔⛔ WHY IT EXISTS — four routes tried, and no picture
 ===========================================================================
 
-Fino al 25 agosto 2026 la fase 10 non si chiudeva per una ragione sola: ⛔ **non
-si riusciva a GUARDARE il desktop remoto.**  Il coordinamento aveva provato:
+Until 25 Aug 2026 phase 10 would not close for one reason only: ⛔ **nobody
+could LOOK at the remote desktop.**  The coordination had tried:
 
-  1. lo **scatto del figlio** — `SIGUSR1` al figlio col `--rilievo` acceso:
-     `cattura.bgrx` restava **a zero byte**;
-  2. la **fotografia dello schermo** del portatile — `grim` risponde
-     *«compositor doesn't support wlr-screencopy-unstable-v1»*: GNOME non lo da';
-  3. la **tela letta dalla pagina** (`canvas.toDataURL`) via Marionette — ⛔ ogni
-     riattacco faceva scadere la sessione WebDriver, e la riapertura **buttava
-     giu' la sessione RCP**: il server registrava *«non lo guarda piu' nessuno»*
-     pochi istanti dopo;
-  4. il **conteggio dei fotogrammi** — dice **quanti**, ⛔ non **che cosa**.
-
-===========================================================================
-⭐ LA STRADA SCELTA, E PERCHE' — «il cliente che decodifica»
-===========================================================================
-
-Questo testimone prende la **terza via del quadro dell'incarico**: si attacca
-alla sessione col **cliente di prova** (`banchi/01-b3-cliente.py`), si fa dare i
-fotogrammi **dal filo** con `--video-scrivi`, e li da' a **`ffmpeg`**, che sulla
-macchina di prova c'e'.  ⇒ Ne esce un **PNG**.
-
-⭐ Le tre ragioni per cui questa e' la strada, e non le altre:
-
-  · ⛔ **Non ha un browser dentro.**  La strada della tela e' morta sulla
-    fragilita' di WebDriver, non sui pixel: ogni riattacco riapriva la sessione
-    e staccava il cliente.  Qui non c'e' niente da riattaccare — **un processo
-    solo, che apre, guarda e chiude**.
-  · ⭐⭐ **Non rompe la sessione che sta guardando**, ed e' `[M]` sul registro del
-    server, non creduto — ⚠ **ma non nel modo che avevo scritto qui la prima
-    volta, e la correzione vale piu' della frase**.  Credevo che due clienti
-    dello stesso utente convivessero (I4, «occupati adesso: N»).  ⛔ **Non
-    convivono**: `[M]` 25 agosto 2026, 15:31 — con uno spettatore gia' attaccato
-    a `provanic1`, il testimone e' stato **RESPINTO**:
-        `posto NEGATO a provanic1 …: lo occupa un altro client di questo stesso
-         utente (occupati: 1) — quell'occupante ha dato un segno di vita 916 ms
-         fa, e lo sfratto NON e' scattato` · `congedo motivo=0x0f`
-    ⇒ ⭐ **E questo e' l'esito giusto**: il prodotto **non sfratta chi guarda per
-      far posto a chi arriva**, e il testimone — invece di inventarsi
-      un'immagine — dice **«NON HO GUARDATO»** e esce **3**.  `[M]` Lo
-      spettatore e' rimasto attaccato: nel registro, in quel tratto, **nessuna**
-      riga «l'ultima sessione se ne va» e **nessuna** «non lo guarda piu'
-      nessuno».
-    ⛔ **E il limite si dichiara**: finche' qualcuno guarda quella sessione, il
-      testimone **non puo' guardarla**.  ⚠ Non e' un ripiego da aggiungere: lo
-      sfratto esiste gia' e scatta sul cliente **muto** (soglia 15 000 ms) —
-      forzarlo qui vorrebbe dire staccare l'utente per fotografarlo.
-  · ⭐ **Gira da solo**, senza terminale e senza nessuno che guardi: e' la
-    condizione posta dall'incarico.
-
-⭐ E una cosa che il prodotto fa gia' bene, e che questo testimone sfrutta:
-   all'attacco su desktop **fermo** il figlio si costringe a consegnare —
-   `[M]` *«una CHIAVE e' dovuta e la scena e' ferma da 400 ms: riavvio il flusso
-   per farmi consegnare un fotogramma»*.  ⇒ Un solo fotogramma basta, e su un
-   desktop immobile il testimone vede lo stesso.  ⚠ Senza quella riga servirebbe
-   `--sveglia`, che invece resta l'ultima risorsa.
-
-⚠ **E si dichiara dove guarda**, perche' non e' l'ultimo anello: il testimone
-vede i pixel **DOPO il filo e PRIMA del decodificatore del browser** — cioe'
-esattamente i byte che Firefox riceverebbe.  ⛔ Quel che questo testimone **non**
-puo' vedere e' un difetto che nascesse **dentro** la tela della pagina (uno
-`drawImage` sbagliato, un `bitmaprenderer` storto).  ⇒ Per quelli serve la tela,
-e questo strumento non la sostituisce: **la precede**.
+  1. the **child's snapshot** — `SIGUSR1` to the child with `--rilievo` on:
+     `cattura.bgrx` stayed **at zero bytes**;
+  2. the **screenshot** of the laptop — `grim` answers
+     *"compositor doesn't support wlr-screencopy-unstable-v1"*: GNOME does not give it;
+  3. the **canvas read from the page** (`canvas.toDataURL`) via Marionette — ⛔ every
+     reattach made the WebDriver session expire, and reopening it **brought
+     down the RCP session**: the server logged *"nobody is watching it any more"*
+     a few moments later;
+  4. the **frame count** — it says **how many**, ⛔ not **what**.
 
 ===========================================================================
-⛔⛔ COME SI PROVA CHE IL TESTIMONE VEDE — ed e' la meta' che vale
+⭐ THE ROUTE CHOSEN, AND WHY — "the client that decodes"
 ===========================================================================
 
-Un testimone che restituisce un PNG **nero** e uno che restituisce il desktop
-**hanno la stessa faccia** dal lato del codice.  ⇒ Si tara, come ogni metro di
-questa fase (`LEZIONI.md` §1.33):
+This witness takes the **third way of the assignment's frame**: it attaches
+to the session with the **test client** (`banchi/01-b3-cliente.py`), gets the
+frames **from the wire** with `--video-scrivi`, and hands them to **`ffmpeg`**,
+which is on the test machine.  ⇒ Out comes a **PNG**.
 
-  1. ⭐ **il controllo positivo**: si dipinge nel desktop remoto una marca
-     **leggibile a macchina** (`04-b30-scena --movimento marca --giro NOME`) e si
-     verifica che il testimone la **ritrovi** — col **lettore certificato**
-     `banchi/03-marca.py`, che non e' di questo banco e non si tocca.  ⭐ La marca
-     porta dentro i pixel il **nome del giro**: non basta che ci sia *una* marca,
-     dev'essere **la mia**.  Un testimone che guardasse il desktop di un altro
-     inquilino qui darebbe **rosso**.
-  2. ⛔ **il controllo negativo**: col desktop **nero** il testimone deve dirlo,
-     non restituire un'immagine qualunque spacciandola per il desktop.  ⭐ Un PNG
-     che c'e' **non e'** un PNG che mostra qualcosa.
-     `[M]` Fatto sul vero, 25 agosto 2026: fondo di `provanic3` messo a
-     `#000000` ⇒ **QUASI-NERO**, media **0,28**, accesi **0,00121**.  ⭐ E sotto
-     la barra di GNOME il fotogramma e' nero **byte per byte** (accesi
-     0,00000000, luma massima 1): il metro non e' cieco, e' **sensibile a un
-     pixel su ottocento**.  ⛔ Un desktop GNOME non e' mai «tutto nero» —
-     l'orologio in alto non si spegne — ed e' per questo che c'e' «quasi-nero».
-  3. ⛔ **e se non ha potuto guardare torna `None`**: zero fotogrammi presi dal
-     filo, `ffmpeg` che non decodifica, la sessione che non si apre — sono
-     tutti *«non ho guardato»*, e **nessuno di loro e' «e' nero»**.
+⭐ The three reasons why this is the route, and not the others:
+
+  · ⛔ **It has no browser inside.**  The canvas route died on WebDriver's
+    fragility, not on the pixels: every reattach reopened the session
+    and detached the client.  Here there is nothing to reattach — **one single
+    process, which opens, looks and closes**.
+  · ⭐⭐ **It does not break the session it is watching**, and it is `[M]` on the
+    server log, not believed — ⚠ **but not in the way I wrote here the first
+    time, and the correction is worth more than the sentence**.  I believed two
+    clients of the same user could coexist (I4, "occupied now: N").  ⛔ **They do
+    not coexist**: `[M]` 25 Aug 2026, 15:31 — with a viewer already attached
+    to `provanic1`, the witness was **REFUSED**:
+        `slot DENIED to provanic1 …: another client of this same user holds it
+         (taken: 1) — that occupant gave a sign of life 916 ms ago, and the
+         eviction did NOT trigger` · `congedo motivo=0x0f`
+    ⇒ ⭐ **And this is the right outcome**: the product **does not evict whoever is
+      watching to make room for whoever arrives**, and the witness — instead of
+      making up an image — says **"I DID NOT LOOK"** and exits **3**.  `[M]` The
+      viewer stayed attached: in the log, in that stretch, **no**
+      line "the last session is leaving" and **no** "nobody is watching it any
+      more".
+    ⛔ **And the limit is declared**: as long as someone watches that session, the
+      witness **cannot look at it**.  ⚠ It is not a fallback to add: eviction
+      already exists and triggers on the **mute** client (threshold 15 000 ms) —
+      forcing it here would mean detaching the user to photograph them.
+  · ⭐ **It runs on its own**, with no terminal and nobody watching: it is the
+    condition set by the assignment.
+
+⭐ And one thing the product already does well, and that this witness exploits:
+   on attach to a **still** desktop the child forces itself to deliver —
+   `[M]` *"a KEYFRAME is due and the scene has been still for 400 ms: restarting
+   the stream to make myself deliver a frame"*.  ⇒ One single frame is enough,
+   and on a motionless desktop the witness sees all the same.  ⚠ Without that
+   line `--sveglia` would be needed, which instead remains the last resort.
+
+⚠ **And it is declared where it looks**, because it is not the last link: the
+witness sees the pixels **AFTER the wire and BEFORE the browser's decoder** — that
+is, exactly the bytes Firefox would receive.  ⛔ What this witness **cannot**
+see is a defect born **inside** the page's canvas (a wrong `drawImage`, a
+crooked `bitmaprenderer`).  ⇒ For those the canvas is needed, and this tool
+does not replace it: **it comes before it**.
 
 ===========================================================================
-⛔⛔ LA TRAPPOLA DELL'ESC — chi usa questo testimone la incontrera'
+⛔⛔ HOW ONE PROVES THE WITNESS SEES — and it is the half that counts
 ===========================================================================
 
-Per vedere le finestre come finestre bisogna **uscire dalla vista d'insieme** di
-GNOME, e si fa mandando **ESC** (`banchi/09-b72-tasto.py --tasti 1`, fase 9).
-⛔ **Ma ESC e' anche il tasto che chiude un dialogo modale.**
+A witness that returns a **black** PNG and one that returns the desktop
+**look the same** from the code's side.  ⇒ It is calibrated, like every gauge
+of this phase (`LEZIONI.md` §1.33):
 
-`[M]` 25 agosto 2026: Firefox nella sessione remota si ferma sul dialogo
-*«Profile Missing — Your Firefox profile cannot be loaded»*.  Mandando ESC prima
-di scattare, il dialogo **spariva** e lo scatto mostrava un desktop **vuoto** —
-cioe' esattamente il sintomo su cui la fase si era arenata: *«il processo e'
-vivo e qualcosa disegna, ma nessuno ha mai visto la sua finestra»*.
-⇒ ⭐ **Si scatta PRIMA senza ESC, e solo dopo, se serve, si manda ESC e si
-  riscatta.**  Due scatti, non uno — e la differenza fra i due e' un dato, non
-  un fastidio.
+  1. ⭐ **the positive control**: a **machine-readable** mark is painted on the
+     remote desktop (`04-b30-scena --movimento marca --giro NOME`) and it is
+     verified that the witness **finds it again** — with the **certified reader**
+     `banchi/03-marca.py`, which is not part of this bench and is not touched.  ⭐ The
+     mark carries the **round name** inside the pixels: it is not enough that *a*
+     mark is there, it must be **mine**.  A witness that looked at another
+     tenant's desktop would give **red** here.
+  2. ⛔ **the negative control**: with a **black** desktop the witness must say
+     so, not return any image passing it off as the desktop.  ⭐ A PNG
+     that exists **is not** a PNG that shows something.
+     `[M]` Done on the real thing, 25 Aug 2026: `provanic3`'s background set to
+     `#000000` ⇒ **QUASI-NERO**, mean **0.28**, lit **0.00121**.  ⭐ And below
+     the GNOME bar the frame is black **byte for byte** (lit
+     0.00000000, max luma 1): the gauge is not blind, it is **sensitive to one
+     pixel in eight hundred**.  ⛔ A GNOME desktop is never "all black" —
+     the clock at the top does not go off — and that is why "quasi-nero" exists.
+  3. ⛔ **and if it could not look it returns `None`**: zero frames taken from
+     the wire, `ffmpeg` not decoding, the session not opening — they are
+     all *"I did not look"*, and **none of them is "it is black"**.
 
 ===========================================================================
-⚠ DOVE GIRA CHE COSA, e perche' e' spezzato in due
+⛔⛔ THE ESC TRAP — whoever uses this witness will meet it
 ===========================================================================
 
-  · la **presa** (cliente + `ffmpeg`) gira **sulla macchina di prova, dentro il
-    contenitore**: li' c'e' `aioquic`, e sull'host no;
-  · la **lettura dei pixel** gira **qui**, sul portatile: `numpy` e `Pillow`
-    stanno qui e nel contenitore non ci sono.  ⚠ E' lo stesso confine che
-    `03-marca.py` dichiara da solo in `np_o_muori()`.
+To see windows as windows one must **leave GNOME's overview**, and it is done
+by sending **ESC** (`banchi/09-b72-tasto.py --tasti 1`, phase 9).
+⛔ **But ESC is also the key that closes a modal dialog.**
 
-⇒ Il PNG viaggia indietro con `scp`.  ⛔ E se `numpy` non c'e' nemmeno qui, il
-  testimone **non finge**: torna «non ho potuto giudicare», che e' `None`.
+`[M]` 25 Aug 2026: Firefox in the remote session stops on the dialog
+*"Profile Missing — Your Firefox profile cannot be loaded"*.  Sending ESC before
+the snapshot, the dialog **disappeared** and the snapshot showed an **empty**
+desktop — that is, exactly the symptom the phase had got stuck on: *"the process
+is alive and something draws, but nobody has ever seen its window"*.
+⇒ ⭐ **The snapshot is taken FIRST without ESC, and only afterwards, if needed,
+  ESC is sent and the snapshot retaken.**  Two snapshots, not one — and the
+  difference between the two is a fact, not a nuisance.
+
+===========================================================================
+⚠ WHAT RUNS WHERE, and why it is split in two
+===========================================================================
+
+  · the **grab** (client + `ffmpeg`) runs **on the test machine, inside the
+    container**: `aioquic` is there, and on the host it is not;
+  · the **pixel reading** runs **here**, on the laptop: `numpy` and `Pillow`
+    are here and in the container they are not.  ⚠ It is the same boundary that
+    `03-marca.py` declares by itself in `np_o_muori()`.
+
+⇒ The PNG travels back with `scp`.  ⛔ And if `numpy` is not here either, the
+  witness **does not pretend**: it returns "I could not judge", which is `None`.
 """
 
 import argparse
@@ -160,9 +160,9 @@ import time
 
 QUI = os.path.dirname(os.path.abspath(__file__))
 
-# ── i predefiniti della macchina di prova (tutti scavalcabili da riga di
-#    comando: ⛔ `CODER.md` §2-bis, una strada sola e nessuna variabile
-#    d'ambiente che cambi la grandezza misurata) ─────────────────────────────
+# ── the test machine's defaults (all overridable from the command line:
+#    ⛔ `CODER.md` §2-bis, one single route and no environment variable that
+#    changes the measured quantity) ──────────────────────────────────────────
 MACCHINA = "nicfio@192.168.0.2"
 PAROLA_SUDO = "nicfio"
 ENTRA = "/media/REMOTIX/enter.sh"
@@ -172,7 +172,7 @@ ALBERO = "/media/REMOTIX/src/10fin-src"
 LAV = "/media/REMOTIX/tmp/10f1"
 PAROLA_FILE = "/media/REMOTIX/tmp/10nic/parola"
 
-# ⚠ Dentro il contenitore i due innesti si vedono con altri nomi (`enter.sh`).
+# ⚠ Inside the container the two mounts show up under other names (`enter.sh`).
 def _dentro(percorso):
     if percorso.startswith("/media/REMOTIX/src/"):
         return "/srv/src/" + percorso[len("/media/REMOTIX/src/"):]
@@ -182,47 +182,47 @@ def _dentro(percorso):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# LE SOGLIE DEL GIUDIZIO — ⛔ dichiarate qui e stampate in ogni esito, perche'
-# «nero» e «disegnato» sono un verdetto, e un verdetto senza il suo metro e'
-# un'opinione.
+# THE JUDGEMENT THRESHOLDS — ⛔ declared here and printed in every outcome, because
+# "black" and "drawn" are a verdict, and a verdict without its gauge is
+# an opinion.
 # ═══════════════════════════════════════════════════════════════════════════
-LUMA_NERO = 16.0       # sotto questa luma un pixel e' «spento»
-FRAZIONE_NERO = 0.001  # meno dell'0,1 % di pixel accesi ⇒ lo schermo e' NERO
-# ⛔ «TINTA UNITA» SI MISURA SU QUANTO SCHERMO E' DEL COLORE PIU' COMUNE, non sul
-#    numero di colori distinti — e la prima stesura sbagliava proprio qui.
-#    `[M]` 25 agosto 2026, guasto G8 di `--certifica`: uno schermo **nero con
-#    sopra la marca** ha **due** colori soli (nero e bianco) e veniva
-#    dichiarato «tinta unita».  ⚠ Cioe' il testimone buttava via l'unica prova
-#    che aveva guardato davvero, e lo faceva con un verdetto plausibile.
-#    ⇒ Il criterio giusto e' **quanta parte dello schermo NON e' il fondo**.
+LUMA_NERO = 16.0       # below this luma a pixel is "off"
+FRAZIONE_NERO = 0.001  # less than 0.1 % of pixels lit ⇒ the screen is BLACK
+# ⛔ "FLAT COLOUR" IS MEASURED ON HOW MUCH OF THE SCREEN IS THE MOST COMMON COLOUR,
+#    not on the number of distinct colours — and the first draft got exactly this wrong.
+#    `[M]` 25 Aug 2026, fault G8 of `--certifica`: a **black screen with
+#    the mark on it** has only **two** colours (black and white) and was
+#    declared "flat colour".  ⚠ That is, the witness threw away the only proof
+#    that it had really looked, and did so with a plausible verdict.
+#    ⇒ The right criterion is **how much of the screen is NOT the background**.
 FRAZIONE_PIATTO = 0.001
-# ⭐⭐ «QUASI NERO» — e la soglia e' MISURATA, non scelta.  `[M]` 25 agosto 2026,
-#    il controllo negativo sul vero: desktop di `provanic3` col fondo messo a
-#    `#000000`, catturato dal filo.  Sotto la barra di GNOME (y ≥ 40) il
-#    fotogramma e' **nero byte per byte**: accesi 0,00000000, luma massima **1**.
-#    ⛔ Ma la barra in alto — 40 righe su 1080 — porta l'orologio e le icone, e
-#    con quelle lo schermo intero fa accesi **0,00121**: appena SOPRA la soglia
-#    del nero, cioe' un desktop GNOME non e' MAI «tutto nero».
-#    ⚠ Un testimone che si fermasse a «disegnato» direbbe il vero e non
-#      servirebbe a niente: quello schermo non ha niente sopra.
-#    ⇒ La media dei pixel separa i due mondi con un fattore cento:
-#         desktop nero + barra   media **0,28**
-#         desktop vero           media **34,3** (vuoto) … **106,9** (con la scena)
-#      La soglia si mette a **2,0**, cioe' in mezzo al vuoto fra i due.
+# ⭐⭐ "NEARLY BLACK" — and the threshold is MEASURED, not chosen.  `[M]` 25 Aug 2026,
+#    the negative control on the real thing: `provanic3`'s desktop with the background set to
+#    `#000000`, captured from the wire.  Below the GNOME bar (y ≥ 40) the
+#    frame is **black byte for byte**: lit 0.00000000, max luma **1**.
+#    ⛔ But the bar at the top — 40 rows out of 1080 — carries the clock and the icons, and
+#    with those the whole screen makes lit **0.00121**: just ABOVE the black
+#    threshold, that is, a GNOME desktop is NEVER "all black".
+#    ⚠ A witness that stopped at "drawn" would tell the truth and be of
+#      no use: that screen has nothing on it.
+#    ⇒ The pixel mean separates the two worlds by a factor of a hundred:
+#         black desktop + bar    mean **0.28**
+#         real desktop           mean **34.3** (empty) … **106.9** (with the scene)
+#      The threshold is set at **2.0**, that is, in the middle of the gap between the two.
 MEDIA_QUASI_NERO = 2.0
 
-# BT.709, la stessa matrice che dichiara `03-marca.py`: qui serve solo a fare
-# UN numero da tre canali.
+# BT.709, the same matrix `03-marca.py` declares: here it only serves to make
+# ONE number out of three channels.
 PESI_LUMA = (0.2126, 0.7152, 0.0722)
 
 
 def _marca_modulo():
-    """⭐ Il lettore certificato si IMPORTA, non si riscrive.
+    """⭐ The certified reader is IMPORTED, not rewritten.
 
-    ⛔ `03-marca.py` e' l'unica cosa della catena che non si tocca: e' lui che
-       decide se la marca c'e'.  Riscriverne la geometria qui vorrebbe dire
-       avere due lettori che possono divergere in silenzio — e il giorno che
-       divergono, il rosso lo darebbe quello sbagliato.
+    ⛔ `03-marca.py` is the only thing in the chain that is not touched: it is the one
+       that decides whether the mark is there.  Rewriting its geometry here would mean
+       having two readers that can diverge in silence — and the day they
+       diverge, the red would be given by the wrong one.
     """
     perc = os.path.join(QUI, "03-marca.py")
     if not os.path.exists(perc):
@@ -234,12 +234,12 @@ def _marca_modulo():
 
 
 def _numpy_o_niente():
-    """⛔ Torna `None` se non c'e', e chi chiama deve dire «non ho giudicato».
+    """⛔ Returns `None` if it is not there, and the caller must say "I did not judge".
 
-    ⚠ La tentazione era un ripiego in Python puro che «piu' o meno» dice se e'
-      nero.  Sarebbe un metro diverso da quello con cui si e' tarato, cioe' la
-      forma d'errore che l'incarico chiede di non fare: un numero al posto di
-      una misura.
+    ⚠ The temptation was a pure-Python fallback that says "more or less" whether it
+      is black.  It would be a different gauge from the one it was calibrated with, that is the
+      error form the assignment asks not to commit: a number in place of
+      a measurement.
     """
     try:
         import numpy
@@ -249,20 +249,20 @@ def _numpy_o_niente():
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐ IL GIUDIZIO SUI PIXEL — «c'e' un PNG» non e' «il PNG mostra qualcosa»
+# ⭐ THE JUDGEMENT ON THE PIXELS — "there is a PNG" is not "the PNG shows something"
 # ═══════════════════════════════════════════════════════════════════════════
 def giudica(percorso):
-    """Dato un PNG, dice **che cosa c'e' dentro**.
+    """Given a PNG, it says **what is inside**.
 
-    Torna un dizionario, oppure ⛔ **`None`** se non ha potuto guardare (file
-    che non c'e', file illeggibile, `numpy`/`Pillow` che mancano).
+    Returns a dictionary, or ⛔ **`None`** if it could not look (file
+    not there, unreadable file, `numpy`/`Pillow` missing).
 
-    Le chiavi:
+    The keys:
       verdetto   «nero» · «tinta-unita» · «disegnato»
       larghezza, altezza, media, dev, minimo, massimo
-      colori     quanti colori distinti
-      accesi     frazione di pixel con luma > LUMA_NERO
-      diversi    frazione di pixel che si scostano dal colore piu' comune
+      colori     how many distinct colours
+      accesi     fraction of pixels with luma > LUMA_NERO
+      diversi    fraction of pixels that differ from the most common colour
     """
     if not percorso or not os.path.exists(percorso):
         return None
@@ -275,8 +275,8 @@ def giudica(percorso):
         from PIL import Image
         img = np.asarray(Image.open(percorso).convert("RGB"))
     except Exception:
-        # ⛔ Un PNG troncato o non-PNG e' «non ho guardato», non «e' nero»:
-        #    e' esattamente la ferita che il preambolo chiama regola 5.
+        # ⛔ A truncated PNG or a non-PNG is "I did not look", not "it is black":
+        #    it is exactly the wound the preamble calls rule 5.
         return None
     if img.ndim != 3 or img.shape[2] != 3 or img.size == 0:
         return None
@@ -288,13 +288,13 @@ def giudica(percorso):
     accesi = float((luma > LUMA_NERO).mean())
 
     piatto = img.reshape(-1, 3)
-    # ⚠ Su 1920x1080 `np.unique` sulle righe costa; si campiona 1 pixel su 4 in
-    #   ciascuna direzione.  ⛔ E si DICE, perche' «colori distinti» qui vuol
-    #   dire «distinti nel campione», e su un'immagine con pochissimi colori —
-    #   che e' il caso che decide «tinta unita» — il campione li vede tutti.
+    # ⚠ On 1920x1080 `np.unique` on the rows is costly; 1 pixel in 4 is sampled in
+    #   each direction.  ⛔ And it is SAID, because "distinct colours" here means
+    #   "distinct in the sample", and on an image with very few colours —
+    #   which is the case that decides "flat colour" — the sample sees them all.
     campione = img[::4, ::4].reshape(-1, 3)
     colori = int(len(np.unique(campione, axis=0)))
-    # il colore piu' comune, e quanta parte dello schermo NON e' quello
+    # the most common colour, and how much of the screen is NOT that one
     vista = np.ascontiguousarray(campione).view(
         np.dtype((np.void, campione.dtype.itemsize * 3)))
     _u, conti = np.unique(vista, return_counts=True)
@@ -304,9 +304,9 @@ def giudica(percorso):
     if accesi < FRAZIONE_NERO:
         verdetto = "nero"
     elif media < MEDIA_QUASI_NERO:
-        # ⭐ «c'e' uno schermo, e sopra non c'e' niente» — e va detto con parole
-        #    sue, perche' e' l'esito che il controllo negativo deve produrre su
-        #    un desktop GNOME, dove la barra in alto non si spegne mai.
+        # ⭐ "there is a screen, and there is nothing on it" — and it must be said with
+        #    its own words, because it is the outcome the negative control must produce on
+        #    a GNOME desktop, where the bar at the top never goes off.
         verdetto = "quasi-nero"
     elif diversi < FRAZIONE_PIATTO:
         verdetto = "tinta-unita"
@@ -329,18 +329,18 @@ def giudica(percorso):
 
 
 def leggi_la_marca(percorso, giri):
-    """⭐ Il controllo positivo: la marca c'e', ed e' **la mia**?
+    """⭐ The positive control: is the mark there, and is it **mine**?
 
-    `giri` e' l'elenco dei nomi di giro che ho fatto girare io.  ⛔ L'inversione
-    e' un ELENCO e non un'indovinata: la marca porta 32 bit di FNV-1a, che non
-    si invertono (e' la regola che `03-marca.py` scrive da se').
+    `giri` is the list of round names I ran myself.  ⛔ The inversion
+    is a LIST and not a guess: the mark carries 32 bits of FNV-1a, which cannot
+    be inverted (it is the rule `03-marca.py` writes by itself).
 
-    Torna:
-      `None`                          ⛔ non ho potuto guardare (niente numpy,
-                                      niente lettore, fotogramma troppo piccolo
-                                      perche' la marca ci stia)
-      {"c_e": False, "perche": …}     la marca NON c'e' — ed e' un rosso, non un
-                                      «non lo so»
+    Returns:
+      `None`                          ⛔ I could not look (no numpy,
+                                      no reader, frame too small
+                                      for the mark to fit)
+      {"c_e": False, "perche": …}     the mark is NOT there — and it is a red, not an
+                                      "I don't know"
       {"c_e": True, "giro": …, "mio": bool, "disegno": …, "istante_us": …}
     """
     np = _numpy_o_niente()
@@ -356,10 +356,10 @@ def leggi_la_marca(percorso, giri):
         return None
     r = m.leggi_marca(img)
     if not r.get("c_e"):
-        # ⛔ LA DISTINZIONE CHE COSTA CARO SE SI PERDE: «la marca non ci
-        #    starebbe» (fotogramma troppo piccolo) e' **non ho guardato**;
-        #    «la marca non c'e'» e' un rosso.  `03-marca.py` le tiene gia'
-        #    separate mettendo la chiave `serve` solo nella prima.
+        # ⛔ THE DISTINCTION THAT COSTS DEARLY IF LOST: "the mark would not
+        #    fit" (frame too small) is **I did not look**;
+        #    "the mark is not there" is a red.  `03-marca.py` already keeps them
+        #    apart by putting the key `serve` only in the first.
         if "serve" in r:
             return None
         return {"c_e": False, "perche": r.get("perche"),
@@ -376,7 +376,7 @@ def leggi_la_marca(percorso, giri):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# LA PRESA — sulla macchina di prova, dentro il contenitore
+# THE GRAB — on the test machine, inside the container
 # ═══════════════════════════════════════════════════════════════════════════
 def _ssh(comando, secondi=180, macchina=MACCHINA):
     p = subprocess.run(["ssh", "-o", "BatchMode=yes", "-o",
@@ -388,14 +388,14 @@ def _ssh(comando, secondi=180, macchina=MACCHINA):
 
 def _nel_contenitore(script, secondi=180, macchina=MACCHINA,
                      parola_sudo=PAROLA_SUDO, lav=LAV):
-    """Fa girare uno script bash **dentro** il contenitore, da amministratore.
+    """Runs a bash script **inside** the container, as administrator.
 
-    ⛔ Lo script viaggia in **base64** e non dentro le virgolette: due livelli
-       di shell (ssh e `enter.sh -lc`) si mangiano gli apici, e un comando
-       storto qui darebbe un «zero fotogrammi» che somiglia in tutto a un
-       server muto.  ⚠ E' la forma d'errore E2 del catalogo dei banchi.
-    ⛔ E la parola di sudo passa da `printf`, che e' un builtin: non compare in
-       `argv` di nessun processo (`FASE10-PREAMBOLO` §«la macchina di prova»).
+    ⛔ The script travels in **base64** and not inside quotes: two levels
+       of shell (ssh and `enter.sh -lc`) eat the quotes, and a crooked
+       command here would give a "zero frames" that looks in every way like a
+       mute server.  ⚠ It is error form E2 of the bench catalogue.
+    ⛔ And the sudo password goes through `printf`, which is a builtin: it does not appear in
+       the `argv` of any process (`FASE10-PREAMBOLO` §"the test machine").
     """
     b64 = base64.b64encode(script.encode("utf-8")).decode("ascii")
     riga = ("printf '%%s' '%s' | base64 -d > %s/passo.sh && "
@@ -406,13 +406,13 @@ def _nel_contenitore(script, secondi=180, macchina=MACCHINA,
 
 
 def _leggi_esito_cliente(testo):
-    """Dal registro del cliente: **quanti fotogrammi sono ARRIVATI**.
+    """From the client log: **how many frames ARRIVED**.
 
-    ⛔ Torna `None` quando non e' arrivato niente — e non zero.  `LEZIONI.md`
-       §1.30 dice di contare quanta sollecitazione e' ARRIVATA prima di
-       giudicare: qui la sollecitazione **e'** il fotogramma, e un banco che
-       decodificasse un file vuoto direbbe «schermo nero» su un server che non
-       ha mai avuto occasione di mandare niente.
+    ⛔ Returns `None` when nothing arrived — and not zero.  `LEZIONI.md`
+       §1.30 says to count how much stimulus ARRIVED before
+       judging: here the stimulus **is** the frame, and a bench that
+       decoded an empty file would say "black screen" about a server that never
+       had a chance to send anything.
     """
     fotogrammi = None
     chiavi = None
@@ -423,9 +423,9 @@ def _leggi_esito_cliente(testo):
             sessione = r.strip()
         if "[vid]" not in r:
             continue
-        if "nessun fotogramma" in r:
+        if "no frame" in r:
             continue
-        # «   [vid]  12 fotogrammi (2 chiavi), 1920x1080, scritti in …»
+        # «   [vid]  12 frames (2 keys), 1920x1080, written to …»
         pezzi = r.split("[vid]", 1)[1].strip().split()
         try:
             fotogrammi = int(pezzi[0])
@@ -455,21 +455,21 @@ echo "=== CLIENTE rc=$? ==="
 cat "$LAV/cliente.log"
 echo "=== FFMPEG ==="
 if [ -s "$LAV/flusso.264" ]; then
-    # ⛔ `-update 1` riscrive SEMPRE lo stesso file: vince l'ULTIMO fotogramma
-    #    decodificato, che e' quello che il desktop mostra adesso.  Prendere il
-    #    primo darebbe la chiave d'apertura, cioe' lo schermo di un secondo fa.
+    # ⛔ `-update 1` ALWAYS rewrites the same file: the LAST decoded frame wins,
+    #    which is the one the desktop shows now.  Taking the
+    #    first would give the opening keyframe, that is the screen of a second ago.
     ffmpeg -hide_banner -loglevel error -i "$LAV/flusso.264" \
            -vsync 0 -update 1 -y "$LAV/scatto.png"
     echo "rc=$?"
-    ls -l "$LAV/scatto.png" 2>/dev/null || echo "⛔ nessuno scatto"
-    # ⭐⭐ E LA SEQUENZA, quando la si chiede (`--tutti`) — 25 agosto 2026.
+    ls -l "$LAV/scatto.png" 2>/dev/null || echo "⛔ no snapshot"
+    # ⭐⭐ AND THE SEQUENCE, when asked for (`--tutti`) — 25 Aug 2026.
     #
-    # ⛔ Non e' un lusso: **l'ultimo fotogramma da solo mente per omissione.**
-    #    `[M]` Il dialogo «Profile Missing» di Firefox e' stato trovato cosi' —
-    #    compariva a meta' della presa e spariva prima della fine, e sull'ultimo
-    #    scatto non c'era.  ⇒ Un desktop che ATTRAVERSA uno stato non lo mostra
-    #    nell'istante finale, e chi guarda solo quello conclude «non c'e'
-    #    niente» — che e' un `[?]` spacciato per un `[M]`.
+    # ⛔ It is not a luxury: **the last frame alone lies by omission.**
+    #    `[M]` Firefox's "Profile Missing" dialog was found this way —
+    #    it appeared halfway through the grab and vanished before the end, and on the last
+    #    snapshot it was not there.  ⇒ A desktop that PASSES THROUGH a state does not show it
+    #    at the final instant, and whoever looks only at that concludes "there is
+    #    nothing" — which is a `[?]` passed off as an `[M]`.
     if [ -n "$TUTTI" ] && [ -s "$LAV/flusso.264" ]; then
         echo "=== FFMPEG TUTTI ==="
         ffmpeg -hide_banner -loglevel error -i "$LAV/flusso.264" \
@@ -478,7 +478,7 @@ if [ -s "$LAV/flusso.264" ]; then
         ls "$LAV"/scatto-*.png 2>/dev/null | wc -l
     fi
 else
-    echo "⛔ il flusso e' vuoto o non c'e': niente da decodificare"
+    echo "⛔ the stream is empty or missing: nothing to decode"
 fi
 """
 
@@ -487,20 +487,20 @@ def scatta(utente, fuori, resta=6.0, porta=PORTA, indirizzo=INDIRIZZO,
            albero=ALBERO, lav=LAV, parola_file=PAROLA_FILE,
            macchina=MACCHINA, parola_sudo=PAROLA_SUDO, sveglia=None,
            loquace=False, tutti=False):
-    """⭐ Tira giu' un PNG del desktop remoto di `utente`, e lo scrive in `fuori`.
+    """⭐ Pulls down a PNG of `utente`'s remote desktop, and writes it to `fuori`.
 
-    Torna un dizionario con `png` e i conti della presa, oppure ⛔ **`None`** se
-    **non ha potuto guardare**.  ⚠ `None` non e' «lo schermo era nero».
+    Returns a dictionary with `png` and the grab's counts, or ⛔ **`None`** if
+    it **could not look**.  ⚠ `None` is not "the screen was black".
     """
     altro = ""
     if sveglia:
-        # ⭐ LA SVEGLIA, e serve per un motivo misurato: `[M]` il registro del
-        #    figlio dice «attese a vuoto (scena ferma: Mutter consegna solo
-        #    quando qualcosa cambia)».  Su un desktop **immobile** il palco puo'
-        #    non consegnare niente dopo la chiave d'apertura.  ⇒ Un cambio di
-        #    tela obbliga la catena a rifare un fotogramma intero.
-        # ⚠ Ma cambia quel che il desktop VEDE (si ridimensiona), quindi e'
-        #   SPENTA per predefinito e chi l'accende lo dichiara.
+        # ⭐ THE WAKE-UP, and it is needed for a measured reason: `[M]` the
+        #    child's log says "idle waits (still scene: Mutter delivers only
+        #    when something changes)".  On a **motionless** desktop the stage may
+        #    deliver nothing after the opening keyframe.  ⇒ A canvas change
+        #    forces the chain to redo a whole frame.
+        # ⚠ But it changes what the desktop SEES (it resizes), so it is
+        #   OFF by default and whoever turns it on declares it.
         altro = "--adatta %s@1.0 --adatta %dx%d@2.0" % (
             sveglia, 1920, 1080)
 
@@ -520,35 +520,35 @@ def scatta(utente, fuori, resta=6.0, porta=PORTA, indirizzo=INDIRIZZO,
     conti = _leggi_esito_cliente(out)
     if conti is None:
         return {"png": None, "conti": None,
-                "perche": ("⛔ NON HO GUARDATO: nessun fotogramma e' arrivato "
-                           "dal filo.  ⚠ Non e' «lo schermo era nero»: e' che "
-                           "il palco non ha consegnato niente, o la sessione "
-                           "non si e' aperta"),
+                "perche": ("⛔ I DID NOT LOOK: no frame arrived "
+                           "from the wire.  ⚠ It is not \"the screen was black\": it is that "
+                           "the stage delivered nothing, or the session "
+                           "did not open"),
                 "registro": (out + err)[-1500:]}
-    if "⛔ nessuno scatto" in out or "rc=0" not in out.split("=== FFMPEG ===")[-1]:
+    if "⛔ no snapshot" in out or "rc=0" not in out.split("=== FFMPEG ===")[-1]:
         return {"png": None, "conti": conti,
-                "perche": ("⛔ NON HO GUARDATO: %d fotogrammi sono arrivati ma "
-                           "`ffmpeg` non ha prodotto lo scatto"
+                "perche": ("⛔ I DID NOT LOOK: %d frames arrived but "
+                           "`ffmpeg` did not produce the snapshot"
                            % conti["fotogrammi"]),
                 "registro": (out + err)[-1500:]}
 
     os.makedirs(os.path.dirname(os.path.abspath(fuori)) or ".", exist_ok=True)
     if os.path.exists(fuori):
-        os.unlink(fuori)          # ⛔ mai giudicare il file di un giro prima
+        os.unlink(fuori)          # ⛔ never judge the file of an earlier round
     p = subprocess.run(["scp", "-o", "BatchMode=yes", "-q",
                         "%s:%s/scatto.png" % (macchina, lav), fuori],
                        capture_output=True, timeout=120)
     if p.returncode != 0 or not os.path.exists(fuori):
         return {"png": None, "conti": conti,
-                "perche": "⛔ NON HO GUARDATO: lo scatto non e' arrivato qui (%s)"
+                "perche": "⛔ I DID NOT LOOK: the snapshot did not arrive here (%s)"
                           % p.stderr.decode("utf-8", "replace").strip()[:200],
                 "registro": (out + err)[-1500:]}
     sequenza = []
     if tutti:
-        # ⭐ La sequenza sta ACCANTO allo scatto, con lo stesso nome piu' il
-        #   numero: chi guarda una cartella capisce da se' che sono lo stesso
-        #   giro.  ⚠ E se non arriva, NON si sporca l'esito dello scatto: lo
-        #   scatto e' arrivato, e questo e' un di piu' dichiarato.
+        # ⭐ The sequence sits NEXT TO the snapshot, with the same name plus the
+        #   number: whoever looks at a folder understands by themselves they are the same
+        #   round.  ⚠ And if it does not arrive, the snapshot's outcome is NOT soiled: the
+        #   snapshot arrived, and this is a declared extra.
         radice = os.path.splitext(os.path.abspath(fuori))[0]
         for vecchio in glob.glob(radice + "-[0-9][0-9][0-9].png"):
             os.unlink(vecchio)
@@ -568,18 +568,18 @@ def scatta(utente, fuori, resta=6.0, porta=PORTA, indirizzo=INDIRIZZO,
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⛔ IL CONTROLLO CHE NON SI PUO' SALTARE: il testimone DISTURBA la sessione?
+# ⛔ THE CHECK THAT CANNOT BE SKIPPED: does the witness DISTURB the session?
 # ═══════════════════════════════════════════════════════════════════════════
 def guarda_il_registro(righe_prima, macchina=MACCHINA,
                        parola_sudo=PAROLA_SUDO,
                        registro="/media/REMOTIX/tmp/10nic/registro.log"):
-    """⭐ Le righe del server scritte DA `righe_prima` IN POI, filtrate su quel
-       che direbbe un distacco altrui.
+    """⭐ The server lines written FROM `righe_prima` ONWARDS, filtered on what
+       someone else's detach would say.
 
-    ⛔ Serve al predicato *«il testimone non rompe la sessione che sta
-       osservando»*: il server lo scrive da se' — *«l'ULTIMA sessione di X se ne
-       va»*, *«non lo guarda piu' nessuno»*.  ⇒ Se quelle righe compaiono
-       mentre un altro cliente e' ancora attaccato, il testimone ha fatto danno.
+    ⛔ It serves the predicate *"the witness does not break the session it is
+       observing"*: the server writes it by itself — *"the LAST session of X is
+       leaving"*, *"nobody is watching it any more"*.  ⇒ If those lines appear
+       while another client is still attached, the witness did damage.
     """
     rc, out, _ = _ssh("printf '%%s\\n' %s | sudo -S -p '' tail -n +%d %s"
                       % (parola_sudo, righe_prima + 1, registro),
@@ -591,10 +591,10 @@ def guarda_il_registro(righe_prima, macchina=MACCHINA,
 
 def quante_righe(macchina=MACCHINA, parola_sudo=PAROLA_SUDO,
                  registro="/media/REMOTIX/tmp/10nic/registro.log"):
-    # ⛔ NON `wc -l < file`: la ridirezione RUBA lo standard input a `sudo -S`,
-    #    che allora chiede la parola a un terminale che non c'e' e — dopo tre
-    #    tentativi — ⚠ **fa scattare il conto dei fallimenti di sudo**.
-    #    `[M]` 25 agosto 2026, imparato sbagliandolo.
+    # ⛔ NOT `wc -l < file`: the redirection STEALS standard input from `sudo -S`,
+    #    which then asks for the password on a terminal that is not there and — after three
+    #    attempts — ⚠ **triggers sudo's failure count**.
+    #    `[M]` 25 Aug 2026, learnt by getting it wrong.
     rc, out, _ = _ssh("printf '%%s\\n' %s | sudo -S -p '' wc -l %s"
                       % (parola_sudo, registro), macchina=macchina)
     try:
@@ -604,15 +604,15 @@ def quante_righe(macchina=MACCHINA, parola_sudo=PAROLA_SUDO,
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⛔⛔ LA CERTIFICAZIONE — sano → guasto → risanato, e i guasti si FANNO GIRARE
+# ⛔⛔ THE CERTIFICATION — healthy → faulty → healed, and the faults are RUN
 # ═══════════════════════════════════════════════════════════════════════════
 def _dipingi(dove, larghezza, altezza, fondo, giro=None, disegno=7,
              istante_us=123456):
-    """Costruisce un fotogramma finto, col lettore certificato.
+    """Builds a fake frame, with the certified reader.
 
-    ⚠ E' l'unico posto dove questo banco DIPINGE: la marca la dipinge
-      `03-marca.py`, cioe' lo stesso file che poi la legge — che e' come si
-      certifica un lettore senza dover accendere la macchina.
+    ⚠ It is the only place where this bench PAINTS: the mark is painted by
+      `03-marca.py`, that is the same file that then reads it — which is how
+      a reader is certified without having to turn the machine on.
     """
     np = _numpy_o_niente()
     m = _marca_modulo()
@@ -626,7 +626,7 @@ def _dipingi(dove, larghezza, altezza, fondo, giro=None, disegno=7,
     elif fondo == "rumore":
         img = np.random.RandomState(7).randint(
             0, 256, (altezza, larghezza, 3), dtype=np.uint8)
-    else:                                   # «desktop»: una sfumatura
+    else:                                   # "desktop": a gradient
         yy = np.linspace(0, 1, altezza)[:, None]
         xx = np.linspace(0, 1, larghezza)[None, :]
         g = ((yy + xx) / 2 * 200 + 30).astype(np.uint8)
@@ -639,16 +639,16 @@ def _dipingi(dove, larghezza, altezza, fondo, giro=None, disegno=7,
 
 
 def certifica():
-    """⛔ Un banco non e' finito finche' non lo si e' visto dare ROSSO.
+    """⛔ A bench is not finished until it has been seen giving ROSSO.
 
-    Ogni predicato di questo testimone ha qui il suo guasto, e il guasto **gira**:
-    sano → guasto → risanato, contati e stampati.
+    Every predicate of this witness has its fault here, and the fault **runs**:
+    healthy → faulty → healed, counted and printed.
     """
     np = _numpy_o_niente()
     if np is None or _marca_modulo() is None:
-        print("⛔ NON HO POTUTO CERTIFICARE: senza `numpy`/`Pillow` e senza "
-              "`03-marca.py` accanto, la lettura dei pixel non si fa.\n"
-              "   ⚠ E questo NON e' un verde: e' il terzo esito.")
+        print("⛔ I COULD NOT CERTIFY: without `numpy`/`Pillow` and without "
+              "`03-marca.py` next to me, the pixel reading cannot be done.\n"
+              "   ⚠ And this is NOT a green: it is the third outcome.")
         return 3
 
     tmp = tempfile.mkdtemp(prefix="10-f1-certifica-")
@@ -657,140 +657,140 @@ def certifica():
 
     def prova(nome, che, atteso, ottenuto):
         ok = (atteso == ottenuto)
-        print("   %s %-42s atteso %-28s ottenuto %s"
+        print("   %s %-42s expected %-28s got %s"
               % ("✅" if ok else "⛔", nome + " · " + che,
                  repr(atteso), repr(ottenuto)))
         return ok
 
     print("═══ 10-f1-testimone --certifica ═══")
-    print("  ⭐ SANO → ⛔ GUASTO → ⭐ RISANATO, su ciascun predicato\n")
+    print("  ⭐ HEALTHY → ⛔ FAULTY → ⭐ HEALED, on each predicate\n")
 
-    # ── P1 · «zero fotogrammi» e' NON HO GUARDATO, non «nero» ───────────────
-    print("  P1 · il registro del cliente: quanti fotogrammi sono ARRIVATI")
+    # ── P1 · "zero frames" is I DID NOT LOOK, not "black" ──────────────────
+    print("  P1 · the client log: how many frames ARRIVED")
     sano = ("   ⭐ SESSIONE: stato=1 tela=1920x1080\n"
-            "   [vid]  12 fotogrammi (2 chiavi), 1920x1080, scritti in /x.264\n")
-    g1 = "   ⭐ SESSIONE: stato=1\n   [vid]  ⛔ nessun fotogramma preso dal filo\n"
-    g2 = "   ⛔ il cliente e' morto prima di aprire la sessione\n"
+            "   [vid]  12 frames (2 keys), 1920x1080, written to /x.264\n")
+    g1 = "   ⭐ SESSIONE: stato=1\n   [vid]  ⛔ no frame taken from the wire\n"
+    g2 = "   ⛔ the client died before opening the session\n"
     a = _leggi_esito_cliente(sano)
-    ok0 = prova("P1", "sano: 12 fotogrammi", 12, (a or {}).get("fotogrammi"))
-    ok1 = prova("P1", "guasto G1 «nessun fotogramma» ⇒ None",
+    ok0 = prova("P1", "healthy: 12 frames", 12, (a or {}).get("fotogrammi"))
+    ok1 = prova("P1", "fault G1 «no frame» ⇒ None",
                 None, _leggi_esito_cliente(g1))
-    ok2 = prova("P1", "guasto G2 «cliente morto» ⇒ None",
+    ok2 = prova("P1", "fault G2 «client dead» ⇒ None",
                 None, _leggi_esito_cliente(g2))
-    ok3 = prova("P1", "risanato: 12 fotogrammi", 12,
+    ok3 = prova("P1", "healed: 12 frames", 12,
                 (_leggi_esito_cliente(sano) or {}).get("fotogrammi"))
     buoni += ok0; rossi += (ok1 + ok2); risanati += ok3
     if not (ok0 and ok1 and ok2 and ok3): guasti.append("P1")
 
-    # ── P2 · il PNG che non c'e', o che non si legge, e' NON HO GUARDATO ────
-    print("\n  P2 · lo scatto: «non l'ho letto» non e' «e' nero»")
+    # ── P2 · the PNG that is not there, or cannot be read, is I DID NOT LOOK ─
+    print("\n  P2 · the snapshot: «I did not read it» is not «it is black»")
     vero = os.path.join(tmp, "vero.png")
     _dipingi(vero, 640, 480, "desktop")
-    ok0 = prova("P2", "sano: un PNG vero si giudica", "disegnato",
+    ok0 = prova("P2", "healthy: a real PNG is judged", "disegnato",
                 (giudica(vero) or {}).get("verdetto"))
-    ok1 = prova("P2", "guasto G3 file che non esiste ⇒ None",
+    ok1 = prova("P2", "fault G3 file that does not exist ⇒ None",
                 None, giudica(os.path.join(tmp, "non-c-e.png")))
     vuoto = os.path.join(tmp, "vuoto.png")
     open(vuoto, "wb").close()
-    ok2 = prova("P2", "guasto G4 file di 0 byte ⇒ None", None, giudica(vuoto))
+    ok2 = prova("P2", "fault G4 0-byte file ⇒ None", None, giudica(vuoto))
     rotto = os.path.join(tmp, "rotto.png")
     with open(rotto, "wb") as f:
-        f.write(open(vero, "rb").read()[:400])   # ⛔ PNG troncato a meta'
-    ok3 = prova("P2", "guasto G5 PNG troncato ⇒ None", None, giudica(rotto))
-    ok4 = prova("P2", "risanato", "disegnato", (giudica(vero) or {}).get("verdetto"))
+        f.write(open(vero, "rb").read()[:400])   # ⛔ PNG truncated halfway
+    ok3 = prova("P2", "fault G5 truncated PNG ⇒ None", None, giudica(rotto))
+    ok4 = prova("P2", "healed", "disegnato", (giudica(vero) or {}).get("verdetto"))
     buoni += ok0; rossi += (ok1 + ok2 + ok3); risanati += ok4
     if not (ok0 and ok1 and ok2 and ok3 and ok4): guasti.append("P2")
 
-    # ── P3 · il verdetto sui pixel: nero, tinta unita, disegnato ────────────
-    print("\n  P3 · il verdetto: ⛔ «un PNG che c'e'» non e' «un PNG che mostra»")
+    # ── P3 · the verdict on the pixels: black, flat colour, drawn ───────────
+    print("\n  P3 · the verdict: ⛔ «a PNG that exists» is not «a PNG that shows»")
     nero = os.path.join(tmp, "nero.png"); _dipingi(nero, 640, 480, "nero")
     grigio = os.path.join(tmp, "grigio.png"); _dipingi(grigio, 640, 480, "grigio-pieno")
-    ok0 = prova("P3", "sano: la sfumatura e' «disegnato»", "disegnato",
+    ok0 = prova("P3", "healthy: the gradient is «disegnato»", "disegnato",
                 (giudica(vero) or {}).get("verdetto"))
-    ok1 = prova("P3", "guasto G6 schermo nero ⇒ «nero»", "nero",
+    ok1 = prova("P3", "fault G6 black screen ⇒ «nero»", "nero",
                 (giudica(nero) or {}).get("verdetto"))
-    ok2 = prova("P3", "guasto G7 tinta unita ⇒ «tinta-unita»", "tinta-unita",
+    ok2 = prova("P3", "fault G7 flat colour ⇒ «tinta-unita»", "tinta-unita",
                 (giudica(grigio) or {}).get("verdetto"))
-    # ⭐ G8 e' il caso che separa i due sbagli opposti: uno schermo NERO con
-    #    sopra la marca NON e' nero — e un testimone che dicesse «nero» qui
-    #    butterebbe via l'unica prova che ha guardato davvero.
+    # ⭐ G8 is the case that separates the two opposite mistakes: a BLACK screen with
+    #    the mark on it is NOT black — and a witness that said "black" here
+    #    would throw away the only proof that it really looked.
     nero_marca = os.path.join(tmp, "nero-marca.png")
     _dipingi(nero_marca, 640, 480, "nero", giro="f1-t")
-    ok3 = prova("P3", "guasto G8 nero + marca ⇒ «disegnato»", "disegnato",
+    ok3 = prova("P3", "fault G8 black + mark ⇒ «disegnato»", "disegnato",
                 (giudica(nero_marca) or {}).get("verdetto"))
-    # ⭐ G12 — IL CONTROLLO NEGATIVO DEL VERO, rifatto qui in miniatura: uno
-    #    schermo nero con sopra SOLO una barra chiara in alto (che e' quel che
-    #    GNOME non spegne mai).  ⛔ Non e' «nero» — nessun desktop GNOME lo e' —
-    #    ma non e' nemmeno «disegnato»: sopra non c'e' niente.
+    # ⭐ G12 — THE NEGATIVE CONTROL OF THE REAL THING, redone here in miniature: a
+    #    black screen with ONLY a light bar at the top on it (which is what
+    #    GNOME never turns off).  ⛔ It is not "black" — no GNOME desktop is —
+    #    but it is not "drawn" either: there is nothing on it.
     quasi = os.path.join(tmp, "quasi-nero.png")
-    # ⚠ E la barra finta e' TARATA SU QUELLA VERA, non disegnata a occhio: `[M]`
-    #   nella barra di GNOME (40 righe) e' acceso il **3,3 %** dei pixel, e sullo
-    #   schermo intero fanno una media di **0,279**.  Qui: 16x160 px bianchi =
-    #   2 560 px = media 0,315.  ⛔ Una barra finta piu' grossa del vero farebbe
-    #   passare il guasto per il motivo sbagliato — ed e' successo alla prima
-    #   stesura, con un blocco da 500x40 che dava media 2,46.
+    # ⚠ And the fake bar is CALIBRATED ON THE REAL ONE, not drawn by eye: `[M]`
+    #   in the GNOME bar (40 rows) **3.3 %** of the pixels are lit, and over the
+    #   whole screen they make a mean of **0.279**.  Here: 16x160 white px =
+    #   2 560 px = mean 0.315.  ⛔ A fake bar bigger than the real one would make
+    #   the fault pass for the wrong reason — and it happened in the first
+    #   draft, with a 500x40 block that gave a mean of 2.46.
     _img = np.zeros((1080, 1920, 3), np.uint8)
-    _img[8:24, 860:1020] = 255          # ⇐ l'orologio della barra
+    _img[8:24, 860:1020] = 255          # ⇐ the bar's clock
     from PIL import Image as _Immagine
     _Immagine.fromarray(_img).save(quasi)
-    ok5 = prova("P3", "guasto G12 nero + barra in alto ⇒ «quasi-nero»",
+    ok5 = prova("P3", "fault G12 black + bar at the top ⇒ «quasi-nero»",
                 "quasi-nero", (giudica(quasi) or {}).get("verdetto"))
-    ok4 = prova("P3", "risanato", "nero", (giudica(nero) or {}).get("verdetto"))
+    ok4 = prova("P3", "healed", "nero", (giudica(nero) or {}).get("verdetto"))
     buoni += ok0; rossi += (ok1 + ok2 + ok3 + ok5); risanati += ok4
     if not ok5: guasti.append("P3")
     if not (ok0 and ok1 and ok2 and ok3 and ok4): guasti.append("P3")
 
-    # ── P4 · la marca: c'e', e soprattutto e' LA MIA ────────────────────────
-    print("\n  P4 · la taratura: la marca c'e', ed e' del MIO giro")
+    # ── P4 · the mark: it is there, and above all it is MINE ────────────────
+    print("\n  P4 · the calibration: the mark is there, and it is from MY round")
     con = os.path.join(tmp, "con-marca.png")
     _dipingi(con, 1280, 720, "desktop", giro="f1-taratura", disegno=41)
     r = leggi_la_marca(con, ["f1-taratura"])
-    ok0 = prova("P4", "sano: marca trovata, ed e' mia",
+    ok0 = prova("P4", "healthy: mark found, and it is mine",
                 (True, True, 41),
                 ((r or {}).get("c_e"), (r or {}).get("mio"), (r or {}).get("disegno")))
     senza = os.path.join(tmp, "senza-marca.png")
     _dipingi(senza, 1280, 720, "desktop")
     r1 = leggi_la_marca(senza, ["f1-taratura"])
-    ok1 = prova("P4", "guasto G9 nessuna marca ⇒ rosso (non None)",
+    ok1 = prova("P4", "fault G9 no mark ⇒ red (not None)",
                 (True, False), (r1 is not None, (r1 or {}).get("c_e")))
-    # ⛔ G10: la marca c'e' ma e' di un ALTRO giro — cioe' sto guardando il
-    #    desktop di qualcun altro.  E' il guasto che nessun conteggio di
-    #    fotogrammi potrebbe mai dare.
+    # ⛔ G10: the mark is there but from ANOTHER round — that is, I am looking at
+    #    someone else's desktop.  It is the fault no frame count
+    #    could ever give.
     altrui = os.path.join(tmp, "altrui.png")
     _dipingi(altrui, 1280, 720, "desktop", giro="di-un-altro")
     r2 = leggi_la_marca(altrui, ["f1-taratura"])
-    ok2 = prova("P4", "guasto G10 marca di un ALTRO giro ⇒ «non e' mia»",
+    ok2 = prova("P4", "fault G10 mark from ANOTHER round ⇒ «not mine»",
                 (True, False), ((r2 or {}).get("c_e"), (r2 or {}).get("mio")))
-    # ⛔ G11: il fotogramma e' troppo piccolo perche' la marca ci stia.  Qui
-    #    «la marca non c'e'» sarebbe FALSO: non ho potuto guardare.
+    # ⛔ G11: the frame is too small for the mark to fit.  Here
+    #    "the mark is not there" would be FALSE: I could not look.
     minuscolo = os.path.join(tmp, "minuscolo.png")
     _dipingi(minuscolo, 200, 100, "desktop")
-    ok3 = prova("P4", "guasto G11 fotogramma troppo piccolo ⇒ None",
+    ok3 = prova("P4", "fault G11 frame too small ⇒ None",
                 None, leggi_la_marca(minuscolo, ["f1-taratura"]))
     r3 = leggi_la_marca(con, ["f1-taratura"])
-    ok4 = prova("P4", "risanato", (True, True),
+    ok4 = prova("P4", "healed", (True, True),
                 ((r3 or {}).get("c_e"), (r3 or {}).get("mio")))
     buoni += ok0; rossi += (ok1 + ok2 + ok3); risanati += ok4
     if not (ok0 and ok1 and ok2 and ok3 and ok4): guasti.append("P4")
 
     print("\n───────────────────────────────────────────────────────────────")
-    print("  sano %d · guasto %d · risanato %d" % (buoni, rossi, risanati))
+    print("  healthy %d · faulty %d · healed %d" % (buoni, rossi, risanati))
     if guasti:
-        print("  ⛔ NON CERTIFICATO: %s" % ", ".join(guasti))
+        print("  ⛔ NOT CERTIFIED: %s" % ", ".join(guasti))
         return 1
-    print("  ✅ certificato: 4 predicati, 12 guasti innestati, tutti hanno morso")
+    print("  ✅ certified: 4 predicates, 12 faults grafted, all of them bit")
     return 0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 def main():
     p = argparse.ArgumentParser(
-        description="il testimone che fa vedere il desktop remoto")
+        description="the witness that shows the remote desktop")
     p.add_argument("che", nargs="?", default="scatta", choices=("scatta",))
     p.add_argument("--utente", default="provanic1")
-    p.add_argument("--fuori", default="", help="dove scrivere il PNG, QUI")
+    p.add_argument("--fuori", default="", help="where to write the PNG, HERE")
     p.add_argument("--resta", type=float, default=6.0,
-                   help="quanti secondi restare attaccati a guardare")
+                   help="how many seconds to stay attached watching")
     p.add_argument("--porta", type=int, default=PORTA)
     p.add_argument("--indirizzo", default=INDIRIZZO)
     p.add_argument("--albero", default=ALBERO)
@@ -799,22 +799,22 @@ def main():
     p.add_argument("--macchina", default=MACCHINA)
     p.add_argument("--parola-sudo", default=PAROLA_SUDO)
     p.add_argument("--marca", default="",
-                   help="⭐ il nome del giro che mi aspetto DENTRO i pixel: "
-                        "senza, il testimone dice solo che cosa vede; con, "
-                        "dice anche se sta guardando il desktop GIUSTO")
+                   help="⭐ the round name I expect INSIDE the pixels: "
+                        "without it, the witness only says what it sees; with it, "
+                        "it also says whether it is looking at the RIGHT desktop")
     p.add_argument("--sveglia", default="",
-                   help="⚠ LxH — cambia la tela per obbligare il palco a "
-                        "rifare un fotogramma su un desktop immobile.  "
-                        "⛔ Cambia quel che il desktop vede: spento per "
-                        "predefinito, e chi lo accende lo dichiara")
+                   help="⚠ WxH — changes the canvas to force the stage to "
+                        "redo a frame on a motionless desktop.  "
+                        "⛔ It changes what the desktop sees: off by "
+                        "default, and whoever turns it on declares it")
     p.add_argument("--tutti", action="store_true",
-                   help="⭐ tira giu' anche TUTTI i fotogrammi della presa, "
-                        "accanto allo scatto e con lo stesso nome piu' il "
-                        "numero.  ⛔ Serve quando il desktop ATTRAVERSA uno "
-                        "stato invece di restarci: `[M]` il dialogo «Profile "
-                        "Missing» di Firefox compariva a meta' della presa e "
-                        "sull'ultimo fotogramma non c'era piu'")
-    p.add_argument("--json", default="", help="dove scrivere l'esito in JSON")
+                   help="⭐ also pulls down ALL the frames of the grab, "
+                        "next to the snapshot and with the same name plus the "
+                        "number.  ⛔ It is needed when the desktop PASSES THROUGH a "
+                        "state instead of staying in it: `[M]` Firefox's «Profile "
+                        "Missing» dialog appeared halfway through the grab and "
+                        "was no longer there on the last frame")
+    p.add_argument("--json", default="", help="where to write the outcome as JSON")
     p.add_argument("--loquace", action="store_true")
     p.add_argument("--certifica", action="store_true")
     a = p.parse_args()
@@ -823,7 +823,7 @@ def main():
         return certifica()
 
     if not a.fuori:
-        print("⛔ senza `--fuori` non so dove mettere l'immagine")
+        print("⛔ without `--fuori` I do not know where to put the image")
         return 2
 
     t0 = time.time()
@@ -837,8 +837,8 @@ def main():
              "sveglia": a.sveglia or None}
 
     if e["png"] is None:
-        # ⛔ IL TERZO ESITO.  Non e' un rosso e non e' un verde.
-        print("⛔ NON HO GUARDATO — e questo non e' «lo schermo era nero».")
+        # ⛔ THE THIRD OUTCOME.  It is not a red and it is not a green.
+        print("⛔ I DID NOT LOOK — and this is not «the screen was black».")
         print("   %s" % e["perche"])
         if a.loquace:
             print(e.get("registro", ""))
@@ -850,8 +850,8 @@ def main():
 
     g = giudica(e["png"])
     if g is None:
-        print("⛔ NON HO GIUDICATO: lo scatto c'e' (%s) ma non ho potuto "
-              "leggerne i pixel (manca `numpy`/`Pillow` qui?)." % e["png"])
+        print("⛔ I DID NOT JUDGE: the snapshot is there (%s) but I could not "
+              "read its pixels (`numpy`/`Pillow` missing here?)." % e["png"])
         fuori.update({"guardato": True, "png": e["png"], "conti": e["conti"],
                       "giudizio": None, "marca": None})
         if a.json:
@@ -859,16 +859,16 @@ def main():
         return 3
 
     c = e["conti"]
-    print("⭐ HO GUARDATO «%s» sulla porta %d" % (a.utente, a.porta))
-    print("   dal filo   %d fotogrammi (%d chiavi), %s"
+    print("⭐ I LOOKED AT «%s» on port %d" % (a.utente, a.porta))
+    print("   from the wire  %d frames (%d keys), %s"
           % (c["fotogrammi"], c["chiavi"], c["misura"]))
-    print("   lo scatto  %s  (%dx%d)" % (e["png"], g["larghezza"], g["altezza"]))
-    print("   il quadro  ⇒ %s   media %.1f · dev %.1f · colori %d · "
-          "accesi %.4f · diversi dal fondo %.4f"
+    print("   the snapshot   %s  (%dx%d)" % (e["png"], g["larghezza"], g["altezza"]))
+    print("   the picture    ⇒ %s   mean %.1f · dev %.1f · colours %d · "
+          "lit %.4f · different from background %.4f"
           % (g["verdetto"].upper(), g["media"], g["dev"], g["colori"],
              g["accesi"], g["diversi"]))
-    print("   le soglie  luma nero %.0f · nero sotto %.4f di accesi · quasi "
-          "nero sotto media %.1f · tinta unita sotto %.4f di diversi"
+    print("   the thresholds black luma %.0f · black below %.4f lit · nearly "
+          "black below mean %.1f · flat colour below %.4f different"
           % (LUMA_NERO, FRAZIONE_NERO, MEDIA_QUASI_NERO, FRAZIONE_PIATTO))
     fuori.update({"guardato": True, "png": e["png"], "conti": c, "giudizio": g})
 
@@ -878,20 +878,20 @@ def main():
         m = leggi_la_marca(e["png"], giri)
         fuori["marca"] = m
         if m is None:
-            print("   ⛔ LA MARCA: non ho potuto leggerla (fotogramma troppo "
-                  "piccolo, o manca il lettore).  ⚠ Non e' «non c'e'»")
+            print("   ⛔ THE MARK: I could not read it (frame too "
+                  "small, or the reader is missing).  ⚠ It is not «it is not there»")
             esito = 3
         elif not m["c_e"]:
-            print("   ⛔ LA MARCA NON C'E' — %s" % m["perche"])
+            print("   ⛔ THE MARK IS NOT THERE — %s" % m["perche"])
             esito = 1
         elif not m["mio"]:
-            print("   ⛔ LA MARCA C'E' MA NON E' MIA: giro 0x%08x, e i miei "
-                  "erano %s.  ⚠ Sto guardando il desktop di qualcun altro"
+            print("   ⛔ THE MARK IS THERE BUT IT IS NOT MINE: round 0x%08x, and mine "
+                  "were %s.  ⚠ I am looking at someone else's desktop"
                   % (m["giro_numero"], giri))
             esito = 1
         else:
-            print("   ⭐ LA MARCA C'E' ED E' MIA: giro «%s», disegno %d, "
-                  "contrasto %.3f  ⇒ **il testimone sta guardando QUEL desktop**"
+            print("   ⭐ THE MARK IS THERE AND IT IS MINE: round «%s», drawing %d, "
+                  "contrast %.3f  ⇒ **the witness is looking at THAT desktop**"
                   % (m["giro"], m["disegno"], m["contrasto"] or 0.0))
     else:
         fuori["marca"] = None

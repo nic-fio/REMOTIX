@@ -2,27 +2,27 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-appunti-gtk — L'ARBITRO DEGLI APPUNTI CHE FUNZIONA ANCHE SU GNOME
+appunti-gtk — THE CLIPBOARD ARBITER THAT WORKS ON GNOME TOO
 ===========================================================================
 
-    python3 appunti-gtk.py copia «testo» [secondi]   mette il testo e RESTA
-    python3 appunti-gtk.py incolla                   stampa quel che c'e'
+    python3 appunti-gtk.py copia «text» [seconds]    puts the text and STAYS
+    python3 appunti-gtk.py incolla                   prints what is there
 
-⛔ PERCHE' ESISTE — `[M]` 19-20 settembre 2026, fase 12.  `wl-clipboard`
-   (`wl-copy`, `wl-paste`) parla `zwlr_data_control_manager_v1`: KWin ce l'ha,
-   ⛔ **Mutter no**.  Su GNOME i due comandi restano APPESI fino al `timeout`
-   (uscita 124) — aspettano un fuoco che una sessione senza schermo non da' —
-   e la maglia C17 degli appunti non poteva guardare (esito 3).
+⛔ WHY IT EXISTS — `[M]` 19-20 September 2026, phase 12.  `wl-clipboard`
+   (`wl-copy`, `wl-paste`) speaks `zwlr_data_control_manager_v1`: KWin has it,
+   ⛔ **Mutter does not**.  On GNOME the two commands stay HUNG until the `timeout`
+   (exit 124) — they wait for a focus that a session without a screen does not give —
+   and the C17 clipboard mesh could not look (outcome 3).
 
-⭐ LA STRADA GIUSTA E' QUELLA DELLE APPLICAZIONI: `wl_data_device`, cioe' la
-   clipboard che usano Firefox, il terminale e tutto il resto.  Qui si arriva
-   con GTK (`python3-gi`), che **non e' nostro** e non ha mai sentito parlare
-   di RCP: e' un arbitro esterno, come vuole il banco.
-⛔ E serve una FINESTRA VERA, presentata e col fuoco: la clipboard di Wayland
-   si concede a chi ha il fuoco, e una finestra che non si mostra non ce l'ha.
+⭐ THE RIGHT ROAD IS THE APPLICATIONS' ONE: `wl_data_device`, that is the
+   clipboard used by Firefox, the terminal and everything else.  Here we get there
+   with GTK (`python3-gi`), which **is not ours** and has never heard
+   of RCP: it is an external arbiter, as the bench wants.
+⛔ And it needs a REAL WINDOW, presented and focused: the Wayland clipboard
+   is granted to whoever has the focus, and a window that does not show itself does not have it.
 
-⚠ Vale su GNOME **e** su KDE: dove c'e' `wl-clipboard` si puo' continuare a
-  usare quello, ma la differenza fra i due desktop smette di essere un muro.
+⚠ It holds on GNOME **and** on KDE: where `wl-clipboard` exists you can keep
+  using that, but the difference between the two desktops stops being a wall.
 """
 import sys
 
@@ -34,24 +34,24 @@ from gi.repository import Gdk, GLib, Gtk  # noqa: E402
 
 
 def finestra(app):
-    """Una finestra vera, piccola e presentata: senza fuoco niente clipboard."""
-    f = Gtk.ApplicationWindow(application=app, title="REMOTIX appunti")
+    """A real window, small and presented: without focus, no clipboard."""
+    f = Gtk.ApplicationWindow(application=app, title="REMOTIX clipboard")
     f.set_default_size(160, 60)
-    f.set_child(Gtk.Label(label="appunti"))
+    f.set_child(Gtk.Label(label="clipboard"))
     f.present()
     return f
 
 
 def al_fuoco(f, fatto):
-    """⭐⭐ SI ASPETTA IL FUOCO, E NON SI FA NIENTE PRIMA — 20 set 2026.
+    """⭐⭐ WE WAIT FOR THE FOCUS, AND DO NOTHING BEFORE — 20 Sep 2026.
 
-    ⛔ `[M]` Su GNOME la clipboard si concede a chi ha la finestra ATTIVA, e in
-       una sessione remota nessuno clicca: la finestra c'e' e il fuoco no, quindi
-       copiare e incollare falliscono in silenzio.  ⇒ Il banco il clic lo manda
-       davvero, passando da REMOTIX (come C4 col tasto), e qui si aspetta che
-       arrivi: `is-active` e' Mutter che dice «adesso sei tu».
-    ⚠ Su KWin il fuoco alla sola finestra arriva da se': la stessa riga vale per
-      tutt'e due i desktop.
+    ⛔ `[M]` On GNOME the clipboard is granted to whoever has the ACTIVE window, and in
+       a remote session nobody clicks: the window is there and the focus is not, so
+       copy and paste fail silently.  ⇒ The bench really sends the click,
+       going through REMOTIX (like C4 with the key), and here we wait for it to
+       arrive: `is-active` is Mutter saying «now it is you».
+    ⚠ On KWin the focus reaches the only window by itself: the same line holds for
+      both desktops.
     """
     if f.is_active():
         fatto()
@@ -60,21 +60,21 @@ def al_fuoco(f, fatto):
 
 
 def copia(testo, secondi):
-    """Mette il testo negli appunti QUANDO ha il fuoco, e RESTA vivo a servirlo.
+    """Puts the text on the clipboard WHEN it has the focus, and STAYS alive to serve it.
 
-    ⛔ Non si esce subito: su Wayland la selezione la serve il processo che la
-       offre — chi esce se la porta via, ed e' il difetto che fa dire «copiato»
-       a un desktop che non ha piu' niente.
+    ⛔ We do not exit right away: on Wayland the selection is served by the process that
+       offers it — whoever exits takes it away, and that is the defect that makes a desktop
+       that no longer has anything say «copied».
     """
     def avviato(app):
         f = finestra(app)
 
         def adesso():
             Gdk.Display.get_default().get_clipboard().set(testo)
-            print("copiato A FUOCO: %d caratteri, resto vivo %g s"
+            print("copied WITH FOCUS: %d characters, staying alive %g s"
                   % (len(testo), secondi), flush=True)
 
-        print("finestra aperta, aspetto il fuoco", flush=True)
+        print("window open, waiting for focus", flush=True)
         al_fuoco(f, adesso)
         GLib.timeout_add_seconds(int(secondi), lambda: (app.quit(), False)[1])
 
@@ -84,7 +84,7 @@ def copia(testo, secondi):
 
 
 def incolla():
-    """Legge gli appunti della sessione e li stampa (niente = riga vuota)."""
+    """Reads the session clipboard and prints it (nothing = empty line)."""
     esito = {"testo": ""}
 
     def avviato(app):
@@ -94,13 +94,13 @@ def incolla():
             try:
                 esito["testo"] = clip.read_text_finish(ris) or ""
             except GLib.Error as e:
-                print("⛔ non ho potuto leggere: %s" % e.message, file=sys.stderr)
+                print("⛔ could not read: %s" % e.message, file=sys.stderr)
             app.quit()
 
         def adesso():
             Gdk.Display.get_default().get_clipboard().read_text_async(None, letto)
 
-        print("finestra aperta, aspetto il fuoco", file=sys.stderr, flush=True)
+        print("window open, waiting for focus", file=sys.stderr, flush=True)
         al_fuoco(f, adesso)
         GLib.timeout_add_seconds(25, lambda: (app.quit(), False)[1])
 

@@ -1,68 +1,68 @@
-# Lo stato ISO: che cosa cambia rispetto a cloud + DESKTOP (fasi/17 §7.2)
+# The ISO state: what changes compared with cloud + DESKTOP (fasi/17 §7.2)
 
-La macchina ISO è installata **dall'ISO ufficiale**, con l'installatore automatico della
-distribuzione (`17-vm.sh da-iso <macchina>-iso`, risposte in `iso-risposte/`), su un disco nuovo
-e con firmware UEFI. Rispetto alle scelte di serie, le risposte aggiungono solo tre cose, tutte
-dentro l'installazione: il server ssh dove di serie non c'è, la chiave del banco e sudo senza
-parola (`/etc/sudoers.d/90-banco`). Lingua italiana, tastiera it, fuso Europe/Rome: come un
-cliente italiano.
+The ISO machine is installed **from the official ISO**, with the distribution's automatic
+installer (`17-vm.sh da-iso <machine>-iso`, answers in `iso-risposte/`), on a new disk
+and with UEFI firmware. Compared with the default choices, the answers add only three things, all
+inside the installation: the ssh server where there is none by default, the bench key and passwordless
+sudo (`/etc/sudoers.d/90-banco`). Italian language, it keyboard, Europe/Rome time zone: like an
+Italian customer.
 
-Il confronto si fa con `17-vm.sh impronta <macchina> cliente` e `impronta <macchina>-iso iso`.
-La macchina parte dalla foto in sola lettura (`-snapshot`) e su porte sue (k=6). I file stanno
-sul server: `…/<macchina>{,-iso}/{impronta,pacchetti,unita}-{cliente,iso}.txt`. Tutto misurato
-il 29 set 2026 `[M]`.
+The comparison is made with `17-vm.sh impronta <machine> cliente` and `impronta <machine>-iso iso`.
+The machine starts from the read-only snapshot (`-snapshot`) and on its own ports (k=6). The files are
+on the server: `…/<machine>{,-iso}/{impronta,pacchetti,unita}-{cliente,iso}.txt`. All measured
+on 29 Sep 2026 `[M]`.
 
-## Le macchine
+## The machines
 
-| macchina | fatta | tempo | ISO e installatore |
+| machine | done | time | ISO and installer |
 |---|---|---|---|
 | debian13-gnome | ✅ | 10 min | debian-13.7.0-amd64-netinst, preseed |
-| ubuntu2604-gnome | ✅ | 11 min | ubuntu-26.04.1-desktop, autoinstall (la strada del desktop va fino in fondo) |
+| ubuntu2604-gnome | ✅ | 11 min | ubuntu-26.04.1-desktop, autoinstall (the desktop path goes all the way) |
 | fedora44-gnome | ✅ | 7 min | Fedora-Everything-netinst 44-1.7, kickstart, `@^workstation-product-environment` |
 | alma10-gnome | ✅ | 7 min | AlmaLinux-10.2 boot, kickstart, `@^graphical-server-environment` |
-| arch-kde | ✅ | ~10 min | archlinux-2026.09.01, archinstall 4.4, profilo Desktop/KDE Plasma, sddm |
-| tumbleweed-kde | ✅ | 14 min | Tumbleweed NET Snapshot20260924, AutoYaST, i pattern del ruolo KDE di serie |
+| arch-kde | ✅ | ~10 min | archlinux-2026.09.01, archinstall 4.4, Desktop/KDE Plasma profile, sddm |
+| tumbleweed-kde | ✅ | 14 min | Tumbleweed NET Snapshot20260924, AutoYaST, the default KDE role's patterns |
 
-Tutte le ISO sono verificate con la sha256 del sito ufficiale. Dopo il riavvio, su ogni macchina
-ssh ha risposto, sudo funziona e `graphical.target` è attivo.
+All the ISOs are verified with the sha256 from the official site. After the reboot, on every machine
+ssh answered, sudo works and `graphical.target` is active.
 
-## Le differenze che contano per l'installatore
+## The differences that matter for the installer
 
-| | cloud + DESKTOP (foto `cliente`) | ISO (foto `iso`) |
+| | cloud + DESKTOP (`cliente` snapshot) | ISO (`iso` snapshot) |
 |---|---|---|
-| **gruppi dell'utente** | solo il suo gruppo, dappertutto (cloud-init) | Debian: `cdrom floppy sudo audio dip video plugdev users netdev scanner bluetooth lpadmin`, cioè **`video` c'è già**; Ubuntu: `adm cdrom sudo dip plugdev users lpadmin lxd`, senza `video`; Fedora, Alma e Arch: `wheel`; Tumbleweed: nessuno. **`render` non c'è mai.** |
-| **firewall** | Fedora: zona `public` (ssh mdns dhcpv6); Alma: `public` (ssh cockpit dhcpv6); **Tumbleweed: nessun firewall**; Debian e Arch: nessuno; Ubuntu: ufw installato ma spento | **Fedora: zona `FedoraWorkstation`, con 1025-65535 tcp/udp APERTE** (la 7447 passa senza fare niente); Alma: `public` (ssh cockpit dhcpv6) come la cloud, quindi la 7447 è chiusa; **Tumbleweed: firewalld acceso, `public` con solo dhcpv6 e ssh (ssh aperto da noi), quindi la 7447 è chiusa**; Debian e Arch: nessuno; Ubuntu: ufw spento |
-| **SELinux / AppArmor** | Fedora, Alma, Tumbleweed: SELinux Enforcing; Debian, Ubuntu: AppArmor; Arch: niente | uguale. Su Tumbleweed SELinux è Enforcing in tutt'e due, con `selinux-policy-targeted`. |
-| **rete** | Debian e Ubuntu: **systemd-networkd + netplan `50-cloud-init.yaml`** (NM c'è ma non gestisce la scheda), resolved acceso; Arch: **networkd + resolved, NM spento**; Fedora, Alma, Tumbleweed: NetworkManager | **NetworkManager dappertutto**. Ubuntu: netplan `01-network-manager-all.yaml`. resolved: acceso su Ubuntu e Fedora, spento su Debian, Arch e Tumbleweed. |
-| **display manager** | gdm (Debian, Ubuntu, Fedora, Alma), sddm (Arch), `display-manager.service` (Tumbleweed) | uguale, ma Tumbleweed usa `display-manager-legacy.service` con **accesso automatico** (`DISPLAYMANAGER_AUTOLOGIN="nicfio"`, la casella di serie), quindi c'è già una sessione aperta sullo schermo |
-| **disco e foto di sistema** | ext4 (Debian, Ubuntu), btrfs (Fedora, Arch), xfs (Alma, Tumbleweed); nessuno snapper | Debian ext4 + swap su partizione; Ubuntu ext4 + `/swap.img`; Fedora btrfs + zram; Alma **LVM** + xfs; Arch ext4 + zram; **Tumbleweed btrfs con snapper** (config `root`, 3 foto già dopo l'installazione; `/` è `/@/.snapshots/1/snapshot`). Quindi ogni zypper di REMOTIX lascia una foto pre/post. |
-| **raccomandati** | **Tumbleweed Minimal-VM: `solver.onlyRequires = true`** (`/usr/etc/zypp/zypp.conf.d/no-recommends.conf`); gli altri come di serie | **Tumbleweed: raccomandati installati**, 2706 pacchetti contro 1057 (+1701: PackageKit, Firefox, gstreamer-plugins-good, pipewire-pulseaudio/jack, VLC, i pattern `office`, `multimedia`, `games`, `kde_pim`…); apt con raccomandati su Debian e Ubuntu, dnf con i deboli, come nelle cloud |
-| **pacchetti** | Ubuntu: il desktop cloud è `ubuntu-desktop` pieno (+219: git, deja-dup, gnome-calendar, lvm2…) | Ubuntu: l'ISO mette `ubuntu-desktop-minimal` (la «selezione predefinita»), più snap (snap-store, firmware-updater, desktop-security-center); Fedora: **`noopenh264`** al posto di `openh264`/`mozilla-openh264` della cloud; Arch: `intel-media-driver`, vulkan-intel/radeon/nouveau, xf86-video-*, linux-firmware, `pipewire-jack`/`-alsa` (la cloud ha `jack2`); Debian: nftables installato ma senza regole, exim4 non c'è |
-| **root** | bloccata dappertutto | bloccata dappertutto, **tranne Tumbleweed: stessa parola dell'utente** (la casella di serie) |
-| **PAM** | `pam_faillock`: Arch in 5 file, Tumbleweed in 2, gli altri in 0 | uguale |
-| **in ascolto** | Debian e Fedora: LLMNR 5355 (resolved), exim su 25 (Debian) | niente 5355 su Debian; cups 631 quasi dappertutto; Arch solo 22 |
-| **firmware** | BIOS (SeaBIOS) | UEFI (OVMF, senza Secure Boot) |
-| **cloud-init** | c'è dappertutto | non c'è |
+| **user's groups** | only their own group, everywhere (cloud-init) | Debian: `cdrom floppy sudo audio dip video plugdev users netdev scanner bluetooth lpadmin`, i.e. **`video` is already there**; Ubuntu: `adm cdrom sudo dip plugdev users lpadmin lxd`, without `video`; Fedora, Alma and Arch: `wheel`; Tumbleweed: none. **`render` is never there.** |
+| **firewall** | Fedora: zone `public` (ssh mdns dhcpv6); Alma: `public` (ssh cockpit dhcpv6); **Tumbleweed: no firewall**; Debian and Arch: none; Ubuntu: ufw installed but off | **Fedora: zone `FedoraWorkstation`, with 1025-65535 tcp/udp OPEN** (7447 passes without doing anything); Alma: `public` (ssh cockpit dhcpv6) like the cloud one, so 7447 is closed; **Tumbleweed: firewalld on, `public` with only dhcpv6 and ssh (ssh opened by us), so 7447 is closed**; Debian and Arch: none; Ubuntu: ufw off |
+| **SELinux / AppArmor** | Fedora, Alma, Tumbleweed: SELinux Enforcing; Debian, Ubuntu: AppArmor; Arch: nothing | the same. On Tumbleweed SELinux is Enforcing in both, with `selinux-policy-targeted`. |
+| **network** | Debian and Ubuntu: **systemd-networkd + netplan `50-cloud-init.yaml`** (NM is there but does not manage the interface), resolved on; Arch: **networkd + resolved, NM off**; Fedora, Alma, Tumbleweed: NetworkManager | **NetworkManager everywhere**. Ubuntu: netplan `01-network-manager-all.yaml`. resolved: on for Ubuntu and Fedora, off for Debian, Arch and Tumbleweed. |
+| **display manager** | gdm (Debian, Ubuntu, Fedora, Alma), sddm (Arch), `display-manager.service` (Tumbleweed) | the same, but Tumbleweed uses `display-manager-legacy.service` with **automatic login** (`DISPLAYMANAGER_AUTOLOGIN="nicfio"`, the default box), so there is already a session open on the screen |
+| **disk and system snapshots** | ext4 (Debian, Ubuntu), btrfs (Fedora, Arch), xfs (Alma, Tumbleweed); no snapper | Debian ext4 + swap on a partition; Ubuntu ext4 + `/swap.img`; Fedora btrfs + zram; Alma **LVM** + xfs; Arch ext4 + zram; **Tumbleweed btrfs with snapper** (config `root`, 3 snapshots already after installation; `/` is `/@/.snapshots/1/snapshot`). So every REMOTIX zypper leaves a pre/post snapshot. |
+| **recommends** | **Tumbleweed Minimal-VM: `solver.onlyRequires = true`** (`/usr/etc/zypp/zypp.conf.d/no-recommends.conf`); the others as default | **Tumbleweed: recommends installed**, 2706 packages against 1057 (+1701: PackageKit, Firefox, gstreamer-plugins-good, pipewire-pulseaudio/jack, VLC, the `office`, `multimedia`, `games`, `kde_pim` patterns…); apt with recommends on Debian and Ubuntu, dnf with weak deps, as in the cloud ones |
+| **packages** | Ubuntu: the cloud desktop is full `ubuntu-desktop` (+219: git, deja-dup, gnome-calendar, lvm2…) | Ubuntu: the ISO installs `ubuntu-desktop-minimal` (the "default selection"), plus snaps (snap-store, firmware-updater, desktop-security-center); Fedora: **`noopenh264`** instead of the cloud's `openh264`/`mozilla-openh264`; Arch: `intel-media-driver`, vulkan-intel/radeon/nouveau, xf86-video-*, linux-firmware, `pipewire-jack`/`-alsa` (the cloud has `jack2`); Debian: nftables installed but with no rules, exim4 is not there |
+| **root** | locked everywhere | locked everywhere, **except Tumbleweed: same password as the user** (the default box) |
+| **PAM** | `pam_faillock`: Arch in 5 files, Tumbleweed in 2, the others in 0 | the same |
+| **listening** | Debian and Fedora: LLMNR 5355 (resolved), exim on 25 (Debian) | no 5355 on Debian; cups 631 almost everywhere; Arch only 22 |
+| **firmware** | BIOS (SeaBIOS) | UEFI (OVMF, without Secure Boot) |
+| **cloud-init** | there everywhere | not there |
 
-## In breve: che cosa vuol dire per l'installatore
+## In short: what it means for the installer
 
-1. **La porta 7447 è chiusa su Alma e Tumbleweed ISO**, ed è aperta senza fare niente su Fedora
-   Workstation. Sulla cloud Tumbleweed invece non c'è nessun firewall: una prova solo su DESKTOP
-   non vedrebbe il firewall da aprire.
-2. **I gruppi `video`/`render`**: su Debian ISO `video` c'è già; `render` non c'è da nessuna parte.
-3. **La rete sulle cloud Debian, Ubuntu e Arch non è NetworkManager**: le macchine vere sì.
-4. **Tumbleweed ISO**: accesso automatico acceso (c'è già un desktop aperto), snapper su btrfs (foto
-   a ogni zypper), raccomandati installati, root con la parola dell'utente.
-5. **Alma ISO su LVM**, **Fedora ISO con `noopenh264`**, **Ubuntu ISO col desktop minimo**.
+1. **Port 7447 is closed on Alma and Tumbleweed ISO**, and is open without doing anything on Fedora
+   Workstation. On the cloud Tumbleweed instead there is no firewall at all: a test only on DESKTOP
+   would not see the firewall to open.
+2. **The `video`/`render` groups**: on Debian ISO `video` is already there; `render` is nowhere.
+3. **The network on the Debian, Ubuntu and Arch cloud images is not NetworkManager**: the real machines are.
+4. **Tumbleweed ISO**: automatic login on (there is already a desktop open), snapper on btrfs (a snapshot
+   at every zypper), recommends installed, root with the user's password.
+5. **Alma ISO on LVM**, **Fedora ISO with `noopenh264`**, **Ubuntu ISO with the minimal desktop**.
 
-## Note del banco
+## Bench notes
 
-- Arch: il primo giro di archinstall è fallito, perché `sector_size: null` non passa in 4.4. Serve
-  `{"unit": "B", "value": 512}`, ed è corretto. Al secondo giro il copione `da-iso` si è fermato
-  senza messaggio dopo l'installazione (archinstall rc=0), per una causa non trovata. Primo avvio,
-  impronta, spegnimento e foto li ho fatti a mano, coi comandi del banco.
-- Tumbleweed: la ISO NET offre quattro prodotti (Aeon, Kalpa, MicroOS, openSUSE), e AutoYaST vuole
-  `<products>openSUSE</products>`. L'ho aggiunto.
-- L'impronta leggeva SELinux con `getenforce`, che su openSUSE non è nel PATH dell'utente, e dava
-  «assente». Ora legge `/sys/fs/selinux/enforce`. Sulle due Tumbleweed l'ho controllato a mano:
+- Arch: the first archinstall run failed, because `sector_size: null` does not pass in 4.4. It needs
+  `{"unit": "B", "value": 512}`, and it is fixed. On the second run the `da-iso` script stopped
+  without a message after the installation (archinstall rc=0), for a cause not found. First boot,
+  fingerprint, power-off and snapshot I did by hand, with the bench's commands.
+- Tumbleweed: the NET ISO offers four products (Aeon, Kalpa, MicroOS, openSUSE), and AutoYaST wants
+  `<products>openSUSE</products>`. I added it.
+- The fingerprint read SELinux with `getenforce`, which on openSUSE is not in the user's PATH, and gave
+  "absent". Now it reads `/sys/fs/selinux/enforce`. On the two Tumbleweed machines I checked by hand:
   Enforcing.

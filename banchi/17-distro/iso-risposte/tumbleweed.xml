@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <!DOCTYPE profile>
 <!--
-  REMOTIX fase 17 — openSUSE Tumbleweed dall'ISO NET, installazione automatica (AutoYaST).
-  I pattern sono quelli del ruolo di serie «Desktop con KDE Plasma» (control.xml di
-  openSUSE: kde x11 base enhanced_base x11_yast yast2_basis); SELinux enforcing e
-  firewalld acceso come di serie; l'accesso automatico dell'utente e la stessa parola
-  per root sono le caselle GIA' spuntate dell'installatore. Il partizionamento non si
-  scrive: si prende la proposta (btrfs con snapper). Le aggiunte del banco: [banco].
-  Segnaposti riempiti da 17-vm.sh: @UTENTE@ @HASH@ @CHIAVE@ @NOME@
+  REMOTIX phase 17 — openSUSE Tumbleweed from the NET ISO, automatic installation (AutoYaST).
+  The patterns are those of the default role "Desktop con KDE Plasma" (openSUSE's
+  control.xml: kde x11 base enhanced_base x11_yast yast2_basis); SELinux enforcing and
+  firewalld on as default; the user's automatic login and the same password
+  for root are the installer's ALREADY ticked boxes. Partitioning is not
+  written: the proposal is taken (btrfs with snapper). The bench's additions: [banco].
+  Placeholders filled in by 17-vm.sh: @UTENTE@ @HASH@ @CHIAVE@ @NOME@
 -->
 <profile xmlns="http://www.suse.com/1.0/yast2ns" xmlns:config="http://www.suse.com/1.0/configns">
   <general>
@@ -34,7 +34,7 @@
     <hosts config:type="list"/>
   </host>
   <software>
-    <!-- la NET offre quattro prodotti (Aeon, Kalpa, MicroOS, openSUSE): si sceglie Tumbleweed -->
+    <!-- the NET offers four products (Aeon, Kalpa, MicroOS, openSUSE): Tumbleweed is chosen -->
     <products config:type="list">
       <product>openSUSE</product>
     </products>
@@ -65,7 +65,7 @@
       <fullname>@UTENTE@</fullname>
       <encrypted config:type="boolean">true</encrypted>
       <user_password>@HASH@</user_password>
-      <!-- [banco] la chiave del banco -->
+      <!-- [banco] the bench key -->
       <authorized_keys config:type="list">
         <listentry>@CHIAVE@</listentry>
       </authorized_keys>
@@ -79,7 +79,7 @@
   <services-manager>
     <default_target>graphical</default_target>
     <services>
-      <!-- [banco] sshd: sul ruolo desktop e' spento di serie -->
+      <!-- [banco] sshd: off by default in the desktop role -->
       <enable config:type="list">
         <service>sshd</service>
       </enable>
@@ -92,7 +92,7 @@
         <filename>rx-banco.sh</filename>
         <interpreter>shell</interpreter>
         <source><![CDATA[
-# [banco] sudo senza parola, e ssh aperto nel firewall (di serie e' chiuso)
+# [banco] passwordless sudo, and ssh opened in the firewall (closed by default)
 echo '@UTENTE@ ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/90-banco
 chmod 440 /etc/sudoers.d/90-banco
 firewall-offline-cmd --zone=public --add-service=ssh

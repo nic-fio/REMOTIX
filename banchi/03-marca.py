@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""03-marca.py — IL LETTORE DELLA MARCA della scena della fase 3.
+"""03-marca.py — THE MARK READER of the phase 3 scene.
 
     python3 03-marca.py leggi  fotogramma.rgb24 --larghezza 1280 --altezza 720
     python3 03-marca.py leggi  fotogramma.png
@@ -7,66 +7,66 @@
     python3 03-marca.py conta  --shm remotix-scena
 
 ===========================================================================
-⛔ CHE COSA DEVE SAPER DIRE, E LA META' CHE SI DIMENTICA
+⛔ WHAT IT MUST BE ABLE TO SAY, AND THE HALF THAT GETS FORGOTTEN
 
-Il mandato: *«il lettore della marca: la funzione che, dato un fotogramma
-decodificato, restituisce il numero del disegno e l'istante — e ⛔ che sa
-anche dire "la marca non c'e'".  Un rilevatore che dice sempre si' misura zero
-ed e' felice a torto»* (`STUDI.md` §web §6.3, controllo **P3**).
+The mandate: *«the mark reader: the function that, given a decoded
+frame, returns the drawing number and the instant — and ⛔ that can
+also say "the mark is not there".  A detector that always says yes measures zero
+and is wrongly happy»* (`STUDI.md` §web §6.3, check **P3**).
 
-⇒ `leggi_marca()` ha DUE uscite, non una:
+⇒ `leggi_marca()` has TWO outputs, not one:
 
     {"c_e": True,  "disegno": 41, "istante_us": 987654321, "giro": 0x…, …}
-    {"c_e": False, "perche": "il CRC non torna …", "contrasto": 0.31, …}
+    {"c_e": False, "perche": "the CRC does not match …", "contrasto": 0.31, …}
 
-⛔ E `c_e: False` porta SEMPRE il perche', perche' «non c'e' la marca», «il
-   fotogramma e' piu' piccolo del blocco» e «il contrasto e' troppo basso»
-   sono tre diagnosi diverse che mandano a cercare in tre posti diversi.
-   `LEZIONI.md` §1.9: una lettura negata non e' una lettura che dice zero.
-
-===========================================================================
-⛔ I TRE SETACCI, E QUANTO VALGONO
-
-Perche' un rumore qualunque non passi per una marca, ci sono tre filtri in
-fila.  I numeri non sono a sentimento:
-
-  1. **contrasto**  la differenza fra il 90° e il 10° percentile delle 144
-     celle dev'essere ≥ 0,25 (su 0..1).  ⚠ Da sola non basta e non e' pensata
-     per bastare: mezzo desktop ha piu' contrasto di cosi'.  Serve a dire
-     «qui non c'e' segnale binario» invece di decidere a caso una soglia fra
-     due valori quasi uguali;
-  2. **sync**  gli 8 bit di testa devono valere esattamente 0xB2.  Un blocco
-     di rumore ci azzecca 1 volta su 256;
-  3. **CRC-16**  sui 15 byte del corpo.  Ci azzecca 1 volta su 65 536.
-
-  ⇒ falso positivo per posizione provata ≈ 1 / 16 700 000.  ⛔ E il numero
-    delle posizioni provate NON e' uno: la ricerca prova (2·R+1)² scorrimenti
-    (25 di riposo), quindi il conto vero e' ≈ 1 / 670 000.  Sta scritto qui
-    perche' il controllo negativo della certificazione lo METTE ALLA PROVA su
-    migliaia di fotogrammi di rumore, invece di fidarsi di questo calcolo.
+⛔ And `c_e: False` ALWAYS carries the why, because «the mark is not there», «the
+   frame is smaller than the block» and «the contrast is too low»
+   are three different diagnoses that send you looking in three different places.
+   `LEZIONI.md` §1.9: a denied read is not a read that says zero.
 
 ===========================================================================
-⛔ PERCHE' LA LETTURA REGGE LA CODIFICA CON PERDITA
+⛔ THE THREE SIEVES, AND WHAT THEY ARE WORTH
 
-Il mandato lo chiede e vieta di darlo per scontato.  Le difese, e ciascuna
-contro un difetto preciso della codifica:
+So that any noise does not pass for a mark, there are three filters in
+a row.  The numbers are not guesswork:
 
-  · **si legge il CENTRO della cella**, non la cella intera: il quadrato
-    centrale al 50 % del lato (12 px su 24).  Il *ringing* di HEVC vive sui
-    bordi del blocco, e i bordi qui non si guardano;
-  · **si legge la LUMINANZA**, e i due livelli sono bianco pieno e nero
-    pieno: 255 livelli di escursione.  Il 4:2:0 tocca la crominanza, e la
-    marca nella crominanza non ci sta;
-  · **la soglia e' RELATIVA** — la mediana fra il 10° e il 90° percentile
-    delle celle di QUESTO fotogramma — invece che a 128.  Cosi' regge un
-    guadagno o uno scarto (gamma limitata letta come piena, per esempio) che
-    sposterebbe una soglia fissa;
-  · **si scorre di ±R pixel** cercando la posizione che passa i tre setacci:
-    una tela che sposta l'immagine di un pixel non fa sparire la marca.
+  1. **contrast**  the difference between the 90th and 10th percentile of the 144
+     cells must be ≥ 0.25 (on 0..1).  ⚠ On its own it is not enough and is not meant
+     to be: half a desktop has more contrast than that.  It serves to say
+     «there is no binary signal here» instead of picking a threshold at random between
+     two nearly equal values;
+  2. **sync**  the 8 leading bits must be exactly 0xB2.  A block
+     of noise hits it 1 time in 256;
+  3. **CRC-16**  over the 15 body bytes.  It hits it 1 time in 65,536.
 
-⛔ E «regge» non e' un'opinione: `03-scena-certifica.sh` codifica la marca
-   con x265 Main10 a QP crescente e dice **fino a che QP** si rilegge.  Se un
-   giorno il codificatore cambia, quel numero cambia e si vede.
+  ⇒ false positive per position tried ≈ 1 / 16,700,000.  ⛔ And the number
+    of positions tried is NOT one: the search tries (2·R+1)² offsets
+    (25 by default), so the true count is ≈ 1 / 670,000.  It is written here
+    because the negative control of the certification PUTS IT TO THE TEST on
+    thousands of noise frames, instead of trusting this calculation.
+
+===========================================================================
+⛔ WHY THE READING SURVIVES LOSSY ENCODING
+
+The mandate asks for it and forbids taking it for granted.  The defences, each
+against a specific defect of the encoding:
+
+  · **the CENTRE of the cell is read**, not the whole cell: the central
+    square at 50 % of the side (12 px out of 24).  HEVC *ringing* lives on the
+    block edges, and the edges are not looked at here;
+  · **the LUMINANCE is read**, and the two levels are full white and full
+    black: 255 levels of swing.  4:2:0 touches the chrominance, and the
+    mark does not live in the chrominance;
+  · **the threshold is RELATIVE** — the midpoint between the 10th and 90th percentile
+    of the cells of THIS frame — instead of 128.  This way it survives a
+    gain or an offset (limited range read as full, for example) that
+    would move a fixed threshold;
+  · **it shifts by ±R pixels** looking for the position that passes the three sieves:
+    a canvas that moves the image by one pixel does not make the mark disappear.
+
+⛔ And «survives» is not an opinion: `03-scena-certifica.sh` encodes the mark
+   with x265 Main10 at increasing QP and says **up to which QP** it reads back.  If one
+   day the encoder changes, that number changes and it shows.
 """
 import argparse
 import hashlib
@@ -77,43 +77,43 @@ import struct
 import sys
 import time
 
-# ⛔⭐ NUMPY SI CARICA QUANDO SERVE, NON ALL'IMPORT — 13 agosto 2026.
+# ⛔⭐ NUMPY IS LOADED WHEN NEEDED, NOT AT IMPORT — 13 Aug 2026.
 #
-# Il coordinatore riporta che su NIC-OS **numpy non c'e'**.  Con
-# `import numpy` in testa, `03-marca.py conta` — che numpy non lo usa affatto,
-# perche' legge un blocco di memoria condivisa con `struct` — moriva su
-# NIC-OS con un ImportError che parla di una libreria, non del problema.
+# The coordinator reports that on NIC-OS **numpy is not there**.  With
+# `import numpy` at the top, `03-marca.py conta` — which does not use numpy at all,
+# because it reads a shared memory block with `struct` — died on
+# NIC-OS with an ImportError that talks about a library, not about the problem.
 #
-# ⇒ il tappo sta DENTRO questo file e non fuori: `conta` funziona ovunque, e
-#   chi chiede `leggi` o `dipingi` senza numpy riceve una frase che dice **che
-#   cosa fare**, non il nome di un modulo mancante.
-# ⚠ E `nome` e `conta` restano usabili da NIC-OS, che e' dove i banchi girano.
+# ⇒ the plug is INSIDE this file and not outside: `conta` works everywhere, and
+#   whoever asks for `leggi` or `dipingi` without numpy gets a sentence that says **what
+#   to do**, not the name of a missing module.
+# ⚠ And `nome` and `conta` stay usable from NIC-OS, which is where the benches run.
 _np = None
 
 
 def np_o_muori(che):
-    """numpy, oppure una frase che dice dove si fa la lettura."""
+    """numpy, or a sentence that says where the reading is done."""
     global _np
     if _np is None:
         try:
             import numpy
         except ImportError:
             raise SystemExit(
-                "⛔ «%s» ha bisogno di numpy, e su questa macchina non c'e'.\n"
-                "   ⚠ Non e' un difetto della marca: e' che la LETTURA DEI PIXEL "
-                "si fa dove numpy c'e' (su CHUWI).\n"
-                "   ⭐ Quel che funziona QUI senza numpy: «03-marca.py conta» (i "
-                "disegni del client, letti dal blocco condiviso) e «03-marca.py "
-                "nome» (il numero a 32 bit di un giro).\n"
-                "   ⇒ o si copia il fotogramma dove numpy c'e', o si installa "
+                "⛔ «%s» needs numpy, and this machine does not have it.\n"
+                "   ⚠ It is not a defect of the mark: the PIXEL READING "
+                "is done where numpy is (on CHUWI).\n"
+                "   ⭐ What works HERE without numpy: «03-marca.py conta» (the "
+                "client's drawings, read from the shared block) and «03-marca.py "
+                "nome» (the 32-bit number of a round).\n"
+                "   ⇒ either copy the frame to where numpy is, or install "
                 "python3-numpy." % che)
         _np = numpy
     return _np
 
 # ───────────────────────────────────────────────────────────────────────────
-# LA GEOMETRIA — ⛔ deve coincidere con `03-scena.c`.  Chi cambia un numero
-# qui e non la' rompe la lettura, e la certificazione (controllo P6) se ne
-# accorge invece di lasciarlo scoprire a una misura sbagliata.
+# THE GEOMETRY — ⛔ must match `03-scena.c`.  Whoever changes a number
+# here and not there breaks the reading, and the certification (check P6)
+# notices instead of leaving it to be discovered by a wrong measurement.
 # ───────────────────────────────────────────────────────────────────────────
 SYNC      = 0xB2
 VERSIONE  = 0x01
@@ -124,12 +124,12 @@ CELLA     = 24
 MARGINE   = 32
 QUIETE    = 12
 
-CONTRASTO_MINIMO = 0.25              # vedi §«i tre setacci»
+CONTRASTO_MINIMO = 0.25              # see §«the three sieves»
 RICERCA          = 2                 # ± px
 
-# BT.709, che e' la matrice che F2.3 sceglie e che il resto della catena
-# dichiara.  ⚠ Qui serve solo a fare UN numero da tre canali: bianco e nero
-# danno lo stesso risultato con qualunque matrice sensata.
+# BT.709, which is the matrix F2.3 chooses and that the rest of the chain
+# declares.  ⚠ Here it only serves to make ONE number out of three channels: white and black
+# give the same result with any sensible matrix.
 PESI_LUMA = (0.2126, 0.7152, 0.0722)
 
 
@@ -154,7 +154,7 @@ GEOMETRIA = MarcaGeometria()
 
 # ───────────────────────────────────────────────────────────────────────────
 def fnv1a32(s):
-    """Lo stesso nome corto che `03-scena.c` mette nella marca."""
+    """The same short name that `03-scena.c` puts in the mark."""
     h = 2166136261
     for b in s.encode("utf-8"):
         h ^= b
@@ -163,7 +163,7 @@ def fnv1a32(s):
 
 
 def crc16(dati):
-    """CRC-16/CCITT-FALSE — poly 0x1021, init 0xFFFF, senza riflessioni."""
+    """CRC-16/CCITT-FALSE — poly 0x1021, init 0xFFFF, no reflection."""
     c = 0xFFFF
     for b in dati:
         c ^= b << 8
@@ -173,7 +173,7 @@ def crc16(dati):
 
 
 def componi_carico(disegno, istante_us, giro_numero):
-    """I 18 byte della marca, nell'ordine in cui finiscono nelle celle."""
+    """The 18 bytes of the mark, in the order in which they end up in the cells."""
     corpo = struct.pack(">BII", VERSIONE, giro_numero & 0xFFFFFFFF,
                         disegno & 0xFFFFFFFF)
     t = istante_us & 0xFFFFFFFFFFFF                     # 48 bit
@@ -192,21 +192,21 @@ def carico_in_bit(tutto, quanti):
 
 
 # ───────────────────────────────────────────────────────────────────────────
-# IL PITTORE.  ⛔ Serve al CONTROLLO POSITIVO e basta: la scena vera la
-# dipinge `03-scena.c`.  Che i due dipingano la stessa cosa non si assume —
-# `03-scena-certifica.sh` (P6) legge con questo lettore un fotogramma dipinto
-# dalla C e confronta con quel che la C ha dichiarato.
+# THE PAINTER.  ⛔ It serves the POSITIVE CONTROL and nothing else: the real scene is
+# painted by `03-scena.c`.  That the two paint the same thing is not assumed —
+# `03-scena-certifica.sh` (P6) reads with this reader a frame painted
+# by the C and compares with what the C declared.
 # ───────────────────────────────────────────────────────────────────────────
 def dipingi_marca(img, disegno, istante_us, giro_numero, geo=GEOMETRIA):
-    """Dipinge la marca DENTRO `img` (uint8 [h,w,3]).  Ritorna `img`."""
+    """Paints the mark INTO `img` (uint8 [h,w,3]).  Returns `img`."""
     np_o_muori("dipingi_marca")
     tutto = componi_carico(disegno, istante_us, giro_numero)
     bit = carico_in_bit(tutto, geo.bit)
     x0, y0, w, h = geo.blocco()
     H, W = img.shape[:2]
     if y0 + h + geo.quiete > H or x0 + w + geo.quiete > W:
-        raise ValueError("⛔ la marca non ci sta: serve almeno %dx%d, l'immagine "
-                         "e' %dx%d" % (x0 + w + geo.quiete, y0 + h + geo.quiete, W, H))
+        raise ValueError("⛔ the mark does not fit: it needs at least %dx%d, the image "
+                         "is %dx%d" % (x0 + w + geo.quiete, y0 + h + geo.quiete, W, H))
     img[max(0, y0 - geo.quiete):y0 + h + geo.quiete,
         max(0, x0 - geo.quiete):x0 + w + geo.quiete] = 0
     for i in range(geo.bit):
@@ -219,7 +219,7 @@ def dipingi_marca(img, disegno, istante_us, giro_numero, geo=GEOMETRIA):
 
 
 # ───────────────────────────────────────────────────────────────────────────
-# ⭐⛔ IL LETTORE
+# ⭐⛔ THE READER
 # ───────────────────────────────────────────────────────────────────────────
 def _luma(img):
     np = np_o_muori("leggi_marca")
@@ -229,17 +229,17 @@ def _luma(img):
         return a.astype(np.float64) / 255.0
     if a.ndim == 3 and a.shape[2] >= 3:
         return (a[:, :, :3].astype(np.float64) @ pesi) / 255.0
-    raise ValueError("l'immagine non e' ne' grigia ne' a tre canali: %s" % (a.shape,))
+    raise ValueError("the image is neither grey nor three-channel: %s" % (a.shape,))
 
 
 def _celle(y, geo, dx, dy):
-    """La luminanza media del CENTRO di ciascuna cella, in ordine di bit."""
+    """The mean luminance of the CENTRE of each cell, in bit order."""
     x0, y0, _, _ = geo.blocco()
     x0 += dx
     y0 += dy
     np = np_o_muori("leggi_marca")
     c = geo.cella
-    dentro = max(2, c // 4)              # si legge il quadrato centrale al 50 %
+    dentro = max(2, c // 4)              # the central square at 50 % is read
     val = np.empty(geo.bit, dtype=np.float64)
     for i in range(geo.bit):
         r, k = divmod(i, geo.colonne)
@@ -257,8 +257,8 @@ def _prova_posizione(y, geo, dx, dy):
     contrasto = alto - basso
     esito = {"contrasto": round(contrasto, 4), "scorrimento_provato": [dx, dy]}
     if contrasto < CONTRASTO_MINIMO:
-        esito["perche"] = ("il contrasto fra le celle e' %.3f, sotto il minimo "
-                           "%.2f: qui non c'e' un segnale a due livelli"
+        esito["perche"] = ("the contrast between the cells is %.3f, below the minimum "
+                           "%.2f: there is no two-level signal here"
                            % (contrasto, CONTRASTO_MINIMO))
         return None, esito
     soglia = (alto + basso) / 2.0
@@ -271,15 +271,15 @@ def _prova_posizione(y, geo, dx, dy):
     byte = bytes(byte)
 
     if byte[0] != SYNC:
-        esito["perche"] = ("i primi 8 bit valgono 0x%02X invece del sync 0x%02X"
+        esito["perche"] = ("the first 8 bits are 0x%02X instead of the sync 0x%02X"
                            % (byte[0], SYNC))
         return None, esito
     corpo, crc_letto = byte[1:16], struct.unpack(">H", byte[16:18])[0]
     crc_atteso = crc16(corpo)
     if crc_letto != crc_atteso:
-        esito["perche"] = ("il sync c'e' ma il CRC non torna: letto 0x%04X, "
-                           "calcolato 0x%04X ⇒ la marca c'era e si e' rotta, "
-                           "oppure e' un caso" % (crc_letto, crc_atteso))
+        esito["perche"] = ("the sync is there but the CRC does not match: read 0x%04X, "
+                           "computed 0x%04X ⇒ the mark was there and broke, "
+                           "or it is chance" % (crc_letto, crc_atteso))
         return None, esito
 
     versione = corpo[0]
@@ -287,12 +287,12 @@ def _prova_posizione(y, geo, dx, dy):
     disegno = struct.unpack(">I", corpo[5:9])[0]
     istante = int.from_bytes(corpo[9:15], "big")
     if versione != VERSIONE:
-        # ⛔ Un CRC che torna con una versione che non conosciamo NON e'
-        #    «marca assente»: e' una marca di un'altra stesura, e leggerla con
-        #    il nostro schema darebbe numeri sbagliati che sembrano giusti.
-        esito["perche"] = ("marca della versione %d, questo lettore legge la %d: "
-                           "i campi non stanno nello stesso posto e leggerla "
-                           "darebbe numeri plausibili e falsi" % (versione, VERSIONE))
+        # ⛔ A CRC that matches with a version we do not know is NOT
+        #    «mark absent»: it is a mark from another draft, and reading it with
+        #    our layout would give wrong numbers that look right.
+        esito["perche"] = ("mark of version %d, this reader reads version %d: "
+                           "the fields are not in the same place and reading it "
+                           "would give plausible and false numbers" % (versione, VERSIONE))
         esito["versione_marca"] = versione
         return None, esito
 
@@ -304,12 +304,12 @@ def _prova_posizione(y, geo, dx, dy):
 
 
 def leggi_marca(img, geo=GEOMETRIA, ricerca=RICERCA):
-    """⭐ Dato un fotogramma, dice se la marca c'e' e che cosa dice.
+    """⭐ Given a frame, says whether the mark is there and what it says.
 
-    Ritorna un dizionario con SEMPRE la chiave `c_e`:
+    Returns a dictionary that ALWAYS has the key `c_e`:
       c_e = True   → `disegno`, `istante_us`, `giro`, `contrasto`,
                      `scorrimento_provato`
-      c_e = False  → `perche` (⛔ mai assente), piu' quel che si e' potuto vedere
+      c_e = False  → `perche` (⛔ never absent), plus whatever could be seen
     """
     y = _luma(img)
     H, W = y.shape
@@ -317,21 +317,21 @@ def leggi_marca(img, geo=GEOMETRIA, ricerca=RICERCA):
     serve_w, serve_h = x0 + w + ricerca, y0 + h + ricerca
     if W < serve_w or H < serve_h:
         return {"c_e": False,
-                "perche": ("⛔ non ho potuto GUARDARE: il fotogramma e' %dx%d e il "
-                           "blocco della marca finisce a %dx%d.  ⚠ Non e' «la marca "
-                           "non c'e'»: e' «la marca non ci starebbe»"
+                "perche": ("⛔ I could not LOOK: the frame is %dx%d and the "
+                           "mark block ends at %dx%d.  ⚠ It is not «the mark "
+                           "is not there»: it is «the mark would not fit»"
                            % (W, H, serve_w, serve_h)),
                 "misura": [W, H], "serve": [serve_w, serve_h]}
 
-    # ⛔ L'ORDINE DELLE POSIZIONE NON E' INDIFFERENTE, e la prima stesura lo
-    #    faceva sbagliare — trovato girando, 13 agosto 2026.  Scorrendo da
-    #    (−2,−2) in su, un fotogramma PERFETTAMENTE allineato veniva letto bene
-    #    ma dichiarava `scorrimento: [-2,-2]`: la cella e' larga 24 px e si
-    #    legge al centro, quindi due pixel di scarto passano lo stesso.  Il
-    #    carico usciva giusto e il numero accanto era falso — ed e' il tipo di
-    #    numero che finisce in un documento come misura.
-    # ⇒ si prova (0,0) per primo e poi a raggio crescente: chi dichiara uno
-    #   scorrimento lo ha davvero.
+    # ⛔ THE ORDER OF THE POSITIONS IS NOT IRRELEVANT, and the first draft
+    #    got it wrong — found by running, 13 Aug 2026.  Scanning from
+    #    (−2,−2) upwards, a PERFECTLY aligned frame was read correctly
+    #    but declared `scorrimento: [-2,-2]`: the cell is 24 px wide and is
+    #    read at the centre, so two pixels of offset pass anyway.  The
+    #    payload came out right and the number beside it was false — and it is the kind of
+    #    number that ends up in a document as a measurement.
+    # ⇒ (0,0) is tried first and then at increasing radius: whoever declares an
+    #   offset really has it.
     ordine = sorted(
         ((dx, dy) for dy in range(-ricerca, ricerca + 1)
                   for dx in range(-ricerca, ricerca + 1)),
@@ -347,96 +347,96 @@ def leggi_marca(img, geo=GEOMETRIA, ricerca=RICERCA):
         if migliore is None or esito["contrasto"] > migliore["contrasto"]:
             migliore = esito
     fuori = {"c_e": False, "posizioni_provate": (2 * ricerca + 1) ** 2}
-    fuori.update(migliore or {"perche": "nessuna posizione provata"})
-    fuori["perche"] = ("la marca NON c'e' in nessuno dei %d scorrimenti provati "
-                       "(± %d px).  Il migliore diceva: %s"
+    fuori.update(migliore or {"perche": "no position tried"})
+    fuori["perche"] = ("the mark is NOT there in any of the %d offsets tried "
+                       "(± %d px).  The best one said: %s"
                        % (fuori["posizioni_provate"], ricerca, fuori.get("perche")))
     return fuori
 
 
 # ───────────────────────────────────────────────────────────────────────────
-# IL CONTEGGIO DEI DISEGNI DEL CLIENT — letto da fuori, dal blocco condiviso.
+# THE COUNT OF THE CLIENT'S DRAWINGS — read from outside, from the shared block.
 #
-# ⛔ §1.1: «accanto va contato quanto disegna il client: e' il controllo che
-#    dice se il tetto e' del compositore o della scena».
+# ⛔ §1.1: «alongside, count how much the client draws: it is the check that
+#    says whether the ceiling belongs to the compositor or to the scene».
 # ───────────────────────────────────────────────────────────────────────────
 STATO_MAGIA = 0x524D5853
 STATO_VERSIONE = 2
-# ⛔ Deve corrispondere a `struct stato_condiviso` di `03-scena.c`.  `magia` e
-#    `versione` esistono perche' un disallineamento dia un RIFIUTO invece di
-#    numeri a caso.
+# ⛔ Must match `struct stato_condiviso` of `03-scena.c`.  `magia` and
+#    `versione` exist so that a misalignment gives a REFUSAL instead of
+#    random numbers.
 FORMATO_STATO = "<4I Q 5Q 5Q 10I i 3I 64s 32s 64s 64s 4Q 4I"
 
 
 def leggi_conteggio(nome_shm="remotix-scena"):
-    """Ritorna i conti del client, o `{"c_e": False, "perche": …}`."""
+    """Returns the client's counts, or `{"c_e": False, "perche": …}`."""
     percorso = "/dev/shm/" + nome_shm
     if not os.path.exists(percorso):
         return {"c_e": False,
-                "perche": ("⛔ «%s» non esiste: la scena non e' mai partita, "
-                           "oppure ha un altro nome (--shm).  ⚠ Non e' «ha "
-                           "disegnato zero volte»" % percorso)}
+                "perche": ("⛔ «%s» does not exist: the scene never started, "
+                           "or it has another name (--shm).  ⚠ It is not «it "
+                           "drew zero times»" % percorso)}
     taglia = struct.calcsize(FORMATO_STATO)
     with open(percorso, "rb") as f:
         with mmap.mmap(f.fileno(), 0, prot=mmap.PROT_READ) as m:
             if len(m) < taglia:
                 return {"c_e": False,
-                        "perche": "«%s» e' %d byte, ne servono %d: la struttura "
-                                  "non e' quella" % (percorso, len(m), taglia)}
-            # ⛔ Seqlock: si legge due volte e si pretende `seq` pari e uguale.
-            #    Senza, si puo' prendere un `disegno` nuovo con un `istante`
-            #    vecchio e credere a un ritardo mai esistito.
-            # ⛔⭐ IL SEQLOCK, E IL DIFETTO CHE CI STAVA DENTRO — 13 agosto 2026.
+                        "perche": "«%s» is %d bytes, %d are needed: the structure "
+                                  "is not that one" % (percorso, len(m), taglia)}
+            # ⛔ Seqlock: read twice and demand `seq` even and equal.
+            #    Without it, one can take a new `disegno` with an old
+            #    `istante` and believe in a delay that never existed.
+            # ⛔⭐ THE SEQLOCK, AND THE DEFECT THAT WAS INSIDE IT — 13 Aug 2026.
             #
-            # La prima stesura provava 50 volte **di fila, senza respiro**.  Con
-            # una scena sana (60 disegni/s = 120 tocchi di `seq` al secondo) non
-            # falliva mai.  Con una scena in CORSA A VUOTO (misurato: 1034
-            # disegni/s, piu' altrettanti richiami di presentazione ⇒ oltre
-            # 4000 tocchi al secondo) 50 tentativi stretti si perdono la corsa,
-            # e il lettore rispondeva *«il blocco non si e' mai fermato»*.
+            # The first draft tried 50 times **in a row, without a breath**.  With
+            # a healthy scene (60 drawings/s = 120 touches of `seq` per second) it
+            # never failed.  With a scene in a BUSY LOOP (measured: 1034
+            # drawings/s, plus as many presentation callbacks ⇒ over
+            # 4000 touches per second) 50 tight attempts lose the race,
+            # and the reader answered *«the block never stood still»*.
             #
-            # ⭐ ED E' LA DIAGNOSI SBAGLIATA: il blocco non e' rotto, e' il
-            #   SCRITTORE che sta correndo a vuoto.  Chi leggeva quella frase
-            #   andava a cercare un difetto della memoria condivisa — che e'
-            #   esattamente dove il difetto NON era.
+            # ⭐ AND IT IS THE WRONG DIAGNOSIS: the block is not broken, it is the
+            #   WRITER that is spinning in a busy loop.  Whoever read that sentence
+            #   went looking for a defect in the shared memory — which is
+            #   exactly where the defect was NOT.
             #
-            # ⇒ due cure, e la seconda vale piu' della prima:
-            #   1. si riprova piu' a lungo e con una pausa, cosi' la finestra
-            #      fra due scritture si trova;
-            #   2. ⛔ se anche cosi' non si trova, si NOMINA il sospetto giusto
-            #      invece di accusare il blocco.
-            # ⛔⭐⭐ IL SEQLOCK, E LA DIAGNOSI CHE HO SBAGLIATO DUE VOLTE
-            #      PRIMA DI MISURARLA — 13 agosto 2026.
+            # ⇒ two cures, and the second is worth more than the first:
+            #   1. retry for longer and with a pause, so the window
+            #      between two writes is found;
+            #   2. ⛔ if even so it is not found, NAME the right suspect
+            #      instead of blaming the block.
+            # ⛔⭐⭐ THE SEQLOCK, AND THE DIAGNOSIS I GOT WRONG TWICE
+            #      BEFORE MEASURING IT — 13 Aug 2026.
             #
-            # Il sintomo riportato dallo step 1 era *«il blocco condiviso smette
-            # di rispondere»*.  Il coordinatore sospettava contesa del seqlock;
-            # io ho sospettato lo stesso e ho allargato i tentativi.  ⛔ **Tutti
-            # e due sbagliati, e misurato**: col lettore di prima (50 tentativi
-            # stretti, senza pausa) puntato su una scena in corsa a vuoto —
-            # 1034 disegni/s, oltre 4000 tocchi di `seq` al secondo — le letture
-            # riuscite sono state **200 su 200**.  La contesa non c'entra.
+            # The symptom reported by step 1 was *«the shared block stops
+            # answering»*.  The coordinator suspected seqlock contention;
+            # I suspected the same and widened the attempts.  ⛔ **Both
+            # wrong, and measured**: with the old reader (50 tight attempts,
+            # no pause) pointed at a scene in a busy loop —
+            # 1034 drawings/s, over 4000 touches of `seq` per second — the successful
+            # reads were **200 out of 200**.  Contention has nothing to do with it.
             #
-            # ⭐ LA CAUSA VERA, e si riproduce ogni volta invece che a caso:
-            #   un blocco lasciato da una scena morta **a meta' scrittura** ha
-            #   `seq` **DISPARI PER SEMPRE**.  Nessun numero di tentativi lo
-            #   trovera' mai pari: il lettore vecchio falliva **3 volte su 3**,
-            #   e non «ogni tanto».
+            # ⭐ THE REAL CAUSE, and it reproduces every time instead of at random:
+            #   a block left by a scene that died **mid-write** has
+            #   `seq` **ODD FOREVER**.  No number of attempts will ever
+            #   find it even: the old reader failed **3 times out of 3**,
+            #   not «now and then».
             #
-            # ⭐⭐ E LE DUE COSE SONO LO STESSO DIFETTO, per una strada che
-            #   nessuno dei due aveva visto: una scena in corsa a vuoto **non
-            #   torna piu' al ciclo principale**, quindi ignora `--secondi`
-            #   (misurato: 6 s chiesti, 146 s vissuti) ⇒ il banco la **uccide**
-            #   ⇒ la morte cade a meta' scrittura ⇒ `seq` resta dispari.
-            #   **Una causa sola, due sintomi, cuciti dal colpo che la ferma.**
+            # ⭐⭐ AND THE TWO THINGS ARE THE SAME DEFECT, by a path that
+            #   neither of us had seen: a scene in a busy loop **never
+            #   returns to the main loop**, so it ignores `--secondi`
+            #   (measured: 6 s asked, 146 s lived) ⇒ the bench **kills** it
+            #   ⇒ the death falls mid-write ⇒ `seq` stays odd.
+            #   **One cause only, two symptoms, stitched together by the blow that stops it.**
             #
-            # ⇒ da cui i tre esiti che questo ciclo deve saper distinguere, e
-            #   che mandano a cercare in tre posti diversi:
-            #     · `seq` pari e stabile           → si legge
-            #     · `seq` NON e' mai cambiato ed e' dispari → lo scrittore e'
-            #       morto o fermo con la scrittura aperta.  ⛔ NON e' «troppo
-            #       veloce»: e' un relitto
-            #     · `seq` cambia in continuazione ma non si azzecca mai pari →
-            #       quello si' sarebbe contesa (mai osservato)
+            # ⇒ hence the three outcomes this loop must be able to tell apart,
+            #   which send you looking in three different places:
+            #     · `seq` even and stable           → it is read
+            #     · `seq` NEVER changed and is odd → the writer is
+            #       dead or stopped with the write open.  ⛔ It is NOT «too
+            #       fast»: it is a wreck
+            #     · `seq` changes continuously but is never caught even →
+            #       that really would be contention (never observed)
             campioni = 0
             primo_seq = struct.unpack(FORMATO_STATO, m[:taglia])[4]
             ultimo_seq = primo_seq
@@ -457,21 +457,21 @@ def leggi_conteggio(nome_shm="remotix-scena"):
                 vivo_relitto = os.path.exists("/proc/%d" % pid_relitto)
                 if fermo:
                     perche = (
-                        "⛔ «%s» e' un RELITTO: `seq` vale %d — dispari — e NON "
-                        "e' cambiato in %d tentativi.  Una scrittura e' rimasta "
-                        "aperta, cioe' la scena e' morta (o e' ferma) a meta'.  "
-                        "⚠ Il processo %d %s.  ⛔ Nessun numero di tentativi lo "
-                        "trovera' mai pari: non si aspetta, si riparte la scena "
-                        "(il blocco si riazzera all'avvio)."
+                        "⛔ «%s» is a WRECK: `seq` is %d — odd — and has NOT "
+                        "changed in %d attempts.  A write was left "
+                        "open, i.e. the scene died (or is stuck) halfway.  "
+                        "⚠ Process %d %s.  ⛔ No number of attempts will ever "
+                        "find it even: do not wait, restart the scene "
+                        "(the block is reset at startup)."
                         % (percorso, ultimo_seq, campioni, pid_relitto,
-                           "e' ancora vivo — allora e' BLOCCATO, non morto"
-                           if vivo_relitto else "non esiste piu'"))
+                           "is still alive — so it is STUCK, not dead"
+                           if vivo_relitto else "no longer exists"))
                 else:
                     perche = (
-                        "⛔ `seq` cambia (%d → %d in %d tentativi) e non l'ho "
-                        "mai preso pari: questa si' e' contesa.  ⚠ Non e' mai "
-                        "stata osservata nemmeno con una scena a 1034 "
-                        "disegni/s — se la vedi, riportala."
+                        "⛔ `seq` changes (%d → %d in %d attempts) and I never "
+                        "caught it even: this really is contention.  ⚠ It was never "
+                        "observed, not even with a scene at 1034 "
+                        "drawings/s — if you see it, report it."
                         % (primo_seq, ultimo_seq, campioni))
                 return {"c_e": False, "fidato": False, "campioni": campioni,
                         "seq": int(ultimo_seq), "relitto": bool(fermo),
@@ -488,69 +488,69 @@ def leggi_conteggio(nome_shm="remotix-scena"):
 
     if magia != STATO_MAGIA:
         return {"c_e": False,
-                "perche": "«%s» non e' un blocco di 03-scena (magia 0x%08X)"
+                "perche": "«%s» is not a 03-scena block (magic 0x%08X)"
                           % (percorso, magia)}
     if versione != STATO_VERSIONE:
         return {"c_e": False,
-                "perche": ("⛔ blocco di versione %d, questo lettore legge la %d: "
-                           "i campi non stanno nello stesso posto"
+                "perche": ("⛔ block of version %d, this reader reads version %d: "
+                           "the fields are not in the same place"
                            % (versione, STATO_VERSIONE))}
     vivo = os.path.exists("/proc/%d" % pid)
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ⛔⭐ IL VERDETTO SUL NUMERO, NON SOLO IL NUMERO.
+    # ⛔⭐ THE VERDICT ON THE NUMBER, NOT ONLY THE NUMBER.
     #
-    # Chiesto dal coordinatore il 13 agosto 2026: *«un conto di 540/s su un
-    # monitor a 60 Hz e' un fatto osservabile: va ACCUSATO, non consegnato.
-    # Finche' non c'e' quel rilevatore, ogni cella misurata con la tua scena da
-    # un banco d'altri e' `[?]`, non `[M]`.»*
+    # Asked by the coordinator on 13 Aug 2026: *«a count of 540/s on a
+    # 60 Hz monitor is an observable fact: it must be FLAGGED, not handed over.
+    # Until that detector exists, every cell measured with your scene by
+    # someone else's bench is `[?]`, not `[M]`.»*
     #
-    # ⇒ `leggi_conteggio()` non restituisce piu' soltanto dei conti: restituisce
-    #   `fidato` e, quando e' falso, **l'elenco delle ragioni**.  Un banco che
-    #   legge questi numeri e non guarda `fidato` sta facendo apposta quel che
-    #   §2.2 vieta.
+    # ⇒ `leggi_conteggio()` no longer returns only counts: it returns
+    #   `fidato` and, when it is false, **the list of reasons**.  A bench that
+    #   reads these numbers and does not look at `fidato` is deliberately doing what
+    #   §2.2 forbids.
     #
-    # ⚠ E le ragioni sono di DUE specie, tenute separate:
-    #     · quelle che la scena ha misurato su sé stessa (rientri, callback in
-    #       volo) — sono cause, e valgono a qualunque frequenza;
-    #     · quelle che il lettore calcola da fuori (ritmo contro refresh, blocco
-    #       stantio, scrittore morto) — sono sintomi, e servono a prendere i
-    #       casi in cui la scena non ha potuto accorgersene da sé (per esempio
-    #       una scena uccisa a meta').
+    # ⚠ And the reasons are of TWO kinds, kept separate:
+    #     · those the scene measured on itself (re-entries, callbacks in
+    #       flight) — they are causes, and hold at any frequency;
+    #     · those the reader computes from outside (rate against refresh, stale
+    #       block, dead writer) — they are symptoms, and serve to catch the
+    #       cases where the scene could not notice by itself (for example
+    #       a scene killed halfway).
     # ═══════════════════════════════════════════════════════════════════════
     perche = []
     if rientri:
-        perche.append("⛔ %d RIENTRI: `disegna()` e' stata chiamata dentro sé "
-                      "stessa — un gestore di eventi ha disegnato" % rientri)
+        perche.append("⛔ %d RE-ENTRIES: `disegna()` was called inside "
+                      "itself — an event handler drew" % rientri)
     if callback_in_volo_massimo > 1:
-        perche.append("⛔ fino a %d `wl_surface.frame` IN VOLO insieme (ne e' "
-                      "ammesso 1): la scena disegna senza essere invitata, e "
-                      "il ritmo si moltiplica per quel numero"
+        perche.append("⛔ up to %d `wl_surface.frame` IN FLIGHT together (1 is "
+                      "allowed): the scene draws without being invited, and "
+                      "the rate is multiplied by that number"
                       % callback_in_volo_massimo)
     if corse_a_vuoto:
-        perche.append("⛔ %d giri di CORSA A VUOTO" % corse_a_vuoto)
+        perche.append("⛔ %d BUSY-LOOP rounds" % corse_a_vuoto)
 
-    # il ritmo medio dall'avvio, contro il refresh dichiarato dall'uscita
+    # the mean rate since startup, against the refresh declared by the output
     ritmo = None
     durata = (ultimo_disegno - avvio_mono) / 1e6 if ultimo_disegno > avvio_mono else 0
     if durata > 0.5:
         ritmo = disegni / durata
         if refresh_mhz > 0 and ritmo > 1.5 * (refresh_mhz / 1000.0):
-            perche.append("⛔ %.0f disegni/s su un monitor a %.1f Hz: piu' di "
-                          "una volta e mezza il refresh non e' un ritmo, e' "
-                          "una corsa a vuoto"
+            perche.append("⛔ %.0f drawings/s on a %.1f Hz monitor: more than "
+                          "one and a half times the refresh is not a rate, it is "
+                          "a busy loop"
                           % (ritmo, refresh_mhz / 1000.0))
     if not vivo:
-        # ⚠ NON e' «i numeri sono sbagliati»: sono l'ULTIMA fotografia di una
-        #   scena che non c'e' piu'.  Consegnarli come correnti sarebbe la
-        #   misura di ieri spacciata per quella di oggi.
-        perche.append("⚠ il processo %d che ha scritto questo blocco NON e' "
-                      "piu' vivo: questi sono i suoi ultimi numeri, non i "
-                      "numeri di adesso" % pid)
+        # ⚠ It is NOT «the numbers are wrong»: they are the LAST snapshot of a
+        #   scene that is no longer there.  Handing them over as current would be
+        #   yesterday's measurement passed off as today's.
+        perche.append("⚠ process %d that wrote this block is NO "
+                      "longer alive: these are its last numbers, not the "
+                      "numbers of now" % pid)
 
     return {
         "c_e": True, "vivo": vivo, "pid": int(pid), "seq": int(seq),
-        # ⭐ il verdetto, e viene PRIMA dei numeri perche' li governa
+        # ⭐ the verdict, and it comes BEFORE the numbers because it governs them
         "fidato": (not perche),
         "perche_non_fidato": perche,
         "rientri": int(rientri), "corse_a_vuoto": int(corse_a_vuoto),
@@ -563,8 +563,8 @@ def leggi_conteggio(nome_shm="remotix-scena"):
         "disegni": int(disegni), "commit": int(commit),
         "presentati": int(presentati), "attese": int(attese),
         "scarti_presentazione": int(scarti),
-        # ⛔ Il campo che distingue «zero presentati» da «presentati non
-        #    misurabili su questo compositore» (`LEZIONI.md` §1.9).
+        # ⛔ The field that tells «zero presented» from «presented not
+        #    measurable on this compositor» (`LEZIONI.md` §1.9).
         "presentazione_disponibile": bool(pres_disp),
         "avvio_monotonico_us": int(avvio_mono), "avvio_reale_us": int(avvio_reale),
         "ultimo_disegno_us": int(ultimo_disegno),
@@ -579,10 +579,10 @@ def leggi_conteggio(nome_shm="remotix-scena"):
         "danno": ["preciso", "pieno"][int(danno)] if danno < 2 else int(danno),
         "schermo_intero": bool(schermo_intero),
         "versione_scena": versione_scena.split(b"\0")[0].decode("utf-8", "replace"),
-        # ⛔ «chiesta» e' la nostra intenzione; «confermata» e' quel che il
-        #    COMPOSITORE ha detto con `wl_surface.enter`.  Vuota NON vuol dire
-        #    «su nessuna»: vuol dire «nessun enter ancora arrivato», e i due
-        #    casi mandano a cercare in due posti diversi (`LEZIONI.md` §1.9).
+        # ⛔ «chiesta» (requested) is our intention; «confermata» (confirmed) is what the
+        #    COMPOSITOR said with `wl_surface.enter`.  Empty does NOT mean
+        #    «on none»: it means «no enter has arrived yet», and the two
+        #    cases send you looking in two different places (`LEZIONI.md` §1.9).
         "uscita_chiesta": uscita_chiesta.split(b"\0")[0].decode("utf-8", "replace") or None,
         "uscita_confermata": (uscita_confermata.split(b"\0")[0]
                               .decode("utf-8", "replace") or None),
@@ -591,17 +591,17 @@ def leggi_conteggio(nome_shm="remotix-scena"):
 
 # ───────────────────────────────────────────────────────────────────────────
 def carica(percorso, larghezza=None, altezza=None):
-    """.rgb24 grezzo (vuole le misure), .png / .ppm via Pillow."""
+    """raw .rgb24 (needs the dimensions), .png / .ppm via Pillow."""
     est = os.path.splitext(percorso)[1].lower()
     if est in (".rgb24", ".rgb", ".raw"):
         if not larghezza or not altezza:
-            raise SystemExit("⛔ «%s» e' grezzo: senza --larghezza e --altezza non "
-                             "so che forma abbia, e indovinarla vorrebbe dire "
-                             "leggere la marca nel posto sbagliato" % percorso)
+            raise SystemExit("⛔ «%s» is raw: without --larghezza and --altezza I do not "
+                             "know its shape, and guessing it would mean "
+                             "reading the mark in the wrong place" % percorso)
         dati = open(percorso, "rb").read()
         atteso = larghezza * altezza * 3
         if len(dati) < atteso:
-            raise SystemExit("⛔ «%s»: %d byte, ne servivano %d per %dx%d rgb24"
+            raise SystemExit("⛔ «%s»: %d bytes, %d were needed for %dx%d rgb24"
                              % (percorso, len(dati), atteso, larghezza, altezza))
         np = np_o_muori("carica")
         return np.frombuffer(dati[:atteso], np.uint8).reshape(altezza, larghezza, 3)
@@ -611,10 +611,10 @@ def carica(percorso, larghezza=None, altezza=None):
 
 
 def main():
-    p = argparse.ArgumentParser(description="il lettore della marca della scena")
+    p = argparse.ArgumentParser(description="the scene's mark reader")
     s = p.add_subparsers(dest="che", required=True)
 
-    q = s.add_parser("leggi", help="dato un fotogramma, dice se la marca c'e'")
+    q = s.add_parser("leggi", help="given a frame, says whether the mark is there")
     q.add_argument("file")
     q.add_argument("--larghezza", type=int)
     q.add_argument("--altezza", type=int)
@@ -623,7 +623,7 @@ def main():
     q.add_argument("--quiete", type=int, default=QUIETE)
     q.add_argument("--ricerca", type=int, default=RICERCA)
 
-    d = s.add_parser("dipingi", help="⚠ solo per il controllo positivo")
+    d = s.add_parser("dipingi", help="⚠ only for the positive control")
     d.add_argument("file")
     d.add_argument("--larghezza", type=int, default=1280)
     d.add_argument("--altezza", type=int, default=720)
@@ -633,47 +633,47 @@ def main():
     d.add_argument("--cella", type=int, default=CELLA)
     d.add_argument("--fondo", default="grigio", choices=("grigio", "nero", "rumore"))
 
-    c = s.add_parser("conta", help="i disegni del client, letti da fuori")
+    c = s.add_parser("conta", help="the client's drawings, read from outside")
     c.add_argument("--shm", default="remotix-scena")
 
-    n = s.add_parser("nome", help="il numero a 32 bit di un nome di giro")
+    n = s.add_parser("nome", help="the 32-bit number of a round name")
     n.add_argument("giro")
 
-    # ⭐⛔ LA RIAPERTURA DEL CONTROLLO `giro` DI M8.
+    # ⭐⛔ THE REOPENING OF M8'S `giro` CHECK.
     #
-    # `fasi/rapporti/F2-6-giudizio.md`, 13 agosto 2026: il controllo `giro` di
-    # M8 e' **NON APPLICABILE per costruzione**, perche' *«e' il nome del giro
-    # DEL BANCO, il prodotto non lo conosce e il protocollo non ha un campo per
-    # dirglielo»*.
+    # `fasi/rapporti/F2-6-giudizio.md`, 13 Aug 2026: M8's `giro` check
+    # is **NOT APPLICABLE by construction**, because *«it is the name of the round
+    # OF THE BENCH, the product does not know it and the protocol has no field to
+    # tell it»*.
     #
-    # ⇒ Con la marca il nome del giro viaggia **dentro i pixel**: il banco lo
-    #   dipinge nella scena, il prodotto lo trasporta senza saperlo, e il banco
-    #   se lo rilegge dal fotogramma dipinto.  ⭐ E' meglio del controllo che
-    #   M8 non poteva fare, perche' non chiede niente all'imputato: glielo
-    #   LEGGE ADDOSSO.
+    # ⇒ With the mark the round name travels **inside the pixels**: the bench
+    #   paints it into the scene, the product carries it without knowing, and the bench
+    #   reads it back from the painted frame.  ⭐ It is better than the check
+    #   M8 could not do, because it asks nothing of the accused: it
+    #   READS IT OFF THEM.
     #
-    # ⛔ E l'inversione e' un ELENCO, non un'indovinata: la marca porta 32 bit
-    #   di FNV-1a, che non si invertono.  Chi chiama dichiara i giri che ha
-    #   fatto girare; se il numero letto non e' nessuno di quelli, si scrive il
-    #   numero grezzo — e M8 diventa rosso, che e' l'esito giusto.
-    # ⛔ E se la marca NON c'e', `giro` esce **null**: M8 dichiara il controllo
-    #   NON ESEGUITO.  Scriverci dentro il giro in corso sarebbe la costante
-    #   che faceva passare, cioe' il falso verde del 13 agosto.
+    # ⛔ And the inversion is a LIST, not a guess: the mark carries 32 bits
+    #   of FNV-1a, which cannot be inverted.  The caller declares the rounds it
+    #   ran; if the number read is none of those, the raw number is
+    #   written — and M8 turns red, which is the right outcome.
+    # ⛔ And if the mark is NOT there, `giro` comes out **null**: M8 declares the check
+    #   NOT RUN.  Writing the current round into it would be the constant
+    #   that made it pass, i.e. the false green of 13 August.
     idn = s.add_parser("identita",
-                       help="⭐ costruisce l'--identita-pagina di M8 leggendo il "
-                            "giro DAI PIXEL")
+                       help="⭐ builds M8's --identita-pagina by reading the "
+                            "round FROM THE PIXELS")
     idn.add_argument("file")
     idn.add_argument("--larghezza", type=int)
     idn.add_argument("--altezza", type=int)
     idn.add_argument("--giri", required=True,
-                     help="i nomi dei giri noti, separati da virgola: e' "
-                          "l'elenco con cui si inverte il numero della marca")
+                     help="the names of the known rounds, comma-separated: it is "
+                          "the list used to invert the mark's number")
     idn.add_argument("--fuori", required=True)
     idn.add_argument("--dipinto-dopo-reset", choices=("si", "no"),
-                     help="⚠ se non lo dichiari, M8 NON finge di averlo guardato")
+                     help="⚠ if you do not declare it, M8 does NOT pretend to have looked")
     idn.add_argument("--fin-ricevuto", choices=("si", "no"))
     idn.add_argument("--dipinto", choices=("si", "no"))
-    idn.add_argument("--conti", help="il JSON dei conti della pagina")
+    idn.add_argument("--conti", help="the JSON of the page's counts")
 
     a = p.parse_args()
 
@@ -714,12 +714,12 @@ def main():
     if a.che == "conta":
         r = leggi_conteggio(a.shm)
         print(json.dumps(r, ensure_ascii=False, indent=1))
-        # ⛔⭐ LO STATO D'USCITA PORTA IL VERDETTO, non solo la leggibilita'.
-        #    0 = numeri leggibili E fidati · 1 = non leggibile · ⭐ 2 = leggibili
-        #    ma NON FIDATI.  Uno script che facesse `conta | jq .disegni` senza
-        #    guardare `fidato` prenderebbe lo stesso un numero: con il 2, `set -e`
-        #    lo ferma.  ⚠ Tre stati e non due, perche' «non ho potuto leggere» e
-        #    «ho letto ma non ci credo» mandano a cercare in due posti diversi.
+        # ⛔⭐ THE EXIT STATUS CARRIES THE VERDICT, not only readability.
+        #    0 = numbers readable AND trusted · 1 = not readable · ⭐ 2 = readable
+        #    but NOT TRUSTED.  A script doing `conta | jq .disegni` without
+        #    looking at `fidato` would still get a number: with 2, `set -e`
+        #    stops it.  ⚠ Three states and not two, because «I could not read» and
+        #    «I read but I do not believe it» send you looking in two different places.
         if not r.get("c_e"):
             return 1
         return 0 if r.get("fidato") else 2
@@ -734,19 +734,19 @@ def main():
         noti = {fnv1a32(g.strip()): g.strip() for g in a.giri.split(",") if g.strip()}
         d = {"da": "03-marca.py identita",
              "sorgente": os.path.abspath(a.file),
-             "come": ("⭐ il giro e' LETTO DAI PIXEL del fotogramma dipinto, non "
-                      "dichiarato dal prodotto: la marca lo porta dentro la "
-                      "scena e il prodotto la trasporta senza saperlo"),
+             "come": ("⭐ the round is READ FROM THE PIXELS of the painted frame, not "
+                      "declared by the product: the mark carries it inside the "
+                      "scene and the product carries the mark without knowing"),
              "giri_noti": {str(k): v for k, v in noti.items()}}
         if not r["c_e"]:
-            # ⛔ Marca assente ⇒ `giro: None`.  M8 dichiara il controllo NON
-            #    ESEGUITO invece di darlo per passato.
+            # ⛔ Mark absent ⇒ `giro: None`.  M8 declares the check NOT
+            #    RUN instead of counting it as passed.
             d["giro"] = None
             d["marca"] = {"c_e": False, "perche": r.get("perche")}
             d["non_applicabile"] = {
-                "giro": ("⛔ la marca NON e' nei pixel del fotogramma dipinto: "
-                         "%s.  ⚠ Qui non si indovina il giro in corso — sarebbe "
-                         "la costante che fa passare" % (r.get("perche") or "")[:160])}
+                "giro": ("⛔ the mark is NOT in the pixels of the painted frame: "
+                         "%s.  ⚠ Here we do not guess the current round — it would be "
+                         "the constant that makes it pass" % (r.get("perche") or "")[:160])}
         else:
             d["marca"] = {"c_e": True, "disegno": r["disegno"],
                           "istante_us": r["istante_us"], "giro_numero": r["giro"],

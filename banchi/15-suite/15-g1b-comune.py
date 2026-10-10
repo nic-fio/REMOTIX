@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-g1b-comune — gli attrezzi del gruppo G1b («il desktop si comporta da desktop
-remoto»: F-010, F-029, F-030).  Importato, non eseguito.
+15-g1b-comune — the tools of group G1b («the desktop behaves as a remote
+desktop»: F-010, F-029, F-030).  Imported, not executed.
 
-  · clic e tasti VERI dati al browser (CDP `Input.dispatch*` su Chrome, azioni
-    W3C di Marionette su Firefox), in coordinate del DESKTOP;
-  · l'OCR della fotografia (tesseract, se c'e': vedi `TESSERACT`);
-  · la lettura di un campo DENTRO la sessione dell'inquilino.
+  · REAL clicks and keys given to the browser (CDP `Input.dispatch*` on Chrome, W3C
+    Marionette actions on Firefox), in DESKTOP coordinates;
+  · the OCR of the photo (tesseract, if present: see `TESSERACT`);
+  · the reading of a field INSIDE the tenant's session.
 """
 import io
 import os
@@ -16,10 +16,10 @@ import subprocess
 import tempfile
 import time
 
-# ⭐ tesseract NON e' installato nel sistema del server (rootfs in RAM, e le
-#   prove non installano pacchetti): e' ESTRATTO dai .deb di Trixie
-#   (tesseract-ocr 5.5.0, libtesseract5, libleptonica6, dati eng/ita/osd) in
-#   una cartella del disco persistente, senza root.  Si rifa' con:
+# ⭐ tesseract is NOT installed in the server's system (rootfs in RAM, and the
+#   tests do not install packages): it is EXTRACTED from Trixie's .debs
+#   (tesseract-ocr 5.5.0, libtesseract5, libleptonica6, eng/ita/osd data) into
+#   a folder of the persistent disk, without root.  It is redone with:
 #     cd /tmp && apt-get download tesseract-ocr libtesseract5 libleptonica6 \
 #        tesseract-ocr-eng tesseract-ocr-osd tesseract-ocr-ita && \
 #     for f in *.deb; do dpkg-deb -x $f /media/REMOTIX/strumenti/tesseract; done
@@ -31,11 +31,11 @@ def ocr_disponibile():
 
 
 def ocr(png, riquadro=None, ingrandisci=2, psm=11, soglia=None):
-    """Le parole lette nella foto: [(testo, x, y, w, h, fiducia)] in pixel
-    della FOTO (non del ritaglio).  None se tesseract non c'e'.
-    `soglia`: il ritaglio si porta a testo SCURO su fondo chiaro (si inverte
-    se e' scuro in media) e si binarizza — `[M]` 24 set 2026: il menu scuro di
-    GNOME in grigio non si legge, binarizzato a 110 si'."""
+    """The words read in the photo: [(text, x, y, w, h, confidence)] in pixels
+    of the PHOTO (not of the crop).  None if tesseract is not there.
+    `soglia`: the crop is brought to DARK text on a light background (it is inverted
+    if it is dark on average) and binarised — `[M]` 24 Sep 2026: GNOME's dark menu
+    in grey cannot be read, binarised at 110 it can."""
     if not ocr_disponibile():
         return None
     from PIL import Image, ImageOps, ImageStat
@@ -83,8 +83,8 @@ def testo_di(parole):
 
 
 def cerca_parola(parole, modello):
-    """La prima parola (testo, x, y, w, h, conf) che corrisponde a `modello`
-    (regex, senza maiuscole/minuscole)."""
+    """The first word (text, x, y, w, h, conf) that matches `modello`
+    (regex, case-insensitive)."""
     rx = re.compile(modello, re.I)
     for p in parole or []:
         if rx.search(p[0]):
@@ -93,8 +93,8 @@ def cerca_parola(parole, modello):
 
 
 def cerca_frase(parole, modello):
-    """Come `cerca_parola` ma su righe ricostruite: torna (frase, x, y) del
-    primo gruppo di parole vicine (stessa riga) che corrisponde."""
+    """Like `cerca_parola` but on rebuilt lines: returns (sentence, x, y) of the
+    first group of close words (same line) that matches."""
     rx = re.compile(modello, re.I)
     righe = []
     for p in sorted(parole or [], key=lambda q: (round(q[2] / 12), q[1])):
@@ -111,7 +111,7 @@ def cerca_frase(parole, modello):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  IL MOUSE E I TASTI, VERI
+#  THE MOUSE AND THE KEYS, REAL
 # ═══════════════════════════════════════════════════════════════════════════
 def dal_desktop_al_vetro(geo, X, Y):
     return (geo["left"] + (geo["bx0"] + X * geo["sx"]) * geo["vx"],
@@ -124,7 +124,7 @@ def dalla_foto_al_desktop(geo, pw, ph, px, py):
 
 
 def clic_desktop(s, geo, X, Y, bottone=0):
-    """Un clic vero nel punto (X, Y) del desktop.  bottone 0 sinistro, 2 destro."""
+    """A real click at the point (X, Y) of the desktop.  bottone 0 left, 2 right."""
     g = s.g
     x, y = dal_desktop_al_vetro(geo, X, Y)
     if hasattr(g, "cdp"):
@@ -132,8 +132,8 @@ def clic_desktop(s, geo, X, Y, bottone=0):
         try:
             g.cdp.chiama("Input.dispatchMouseEvent", type="mouseMoved", x=x, y=y)
         except RuntimeError:
-            # ⚠ `[M]` 24 set 2026, server a carico 40: «Internal error» sul
-            #   primo evento; il secondo passa
+            # ⚠ `[M]` 24 Sep 2026, server at load 40: «Internal error» on the
+            #   first event; the second goes through
             time.sleep(1.5)
             g.cdp.chiama("Input.dispatchMouseEvent", type="mouseMoved", x=x, y=y)
         time.sleep(0.15)
@@ -157,7 +157,7 @@ def muovi_desktop(s, geo, X, Y):
     s.g.muovi(x, y)
 
 
-#  nome: (key, code, vk, WebDriver, bit dei modificatori CDP)
+#  name: (key, code, vk, WebDriver, CDP modifier bit)
 TASTI = {
     "Alt": ("Alt", "AltLeft", 18, "", 1),
     "Control": ("Control", "ControlLeft", 17, "", 2),
@@ -187,8 +187,8 @@ def _tasto(nome):
 
 
 def combinazione(g, nomi, tieni_ms=120):
-    """Preme i tasti in ordine, li tiene, li rilascia al contrario (una
-    combinazione vera: Alt giu', Tab giu', Tab su, Alt su)."""
+    """Presses the keys in order, holds them, releases them in reverse (a
+    real combination: Alt down, Tab down, Tab up, Alt up)."""
     tasti = [_tasto(n) for n in nomi]
     if hasattr(g, "cdp"):
         mod = 0
@@ -217,8 +217,8 @@ def combinazione(g, nomi, tieni_ms=120):
 
 
 def fuoco_sulla_tela(s, geo):
-    """Toglie il fuoco dal modulo e porta il puntatore sulla tela, come fa
-    l'utente prima di scrivere (senza cliccare: un clic cadrebbe nel desktop)."""
+    """Takes the focus away from the form and brings the pointer onto the canvas, as
+    the user does before writing (without clicking: a click would land in the desktop)."""
     try:
         s.g.js("if (document.activeElement && document.activeElement.blur) "
                "document.activeElement.blur(); "
@@ -231,7 +231,7 @@ def fuoco_sulla_tela(s, geo):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LE FOTO
+#  THE PHOTOS
 # ═══════════════════════════════════════════════════════════════════════════
 def immagine(png):
     from PIL import Image
@@ -239,7 +239,7 @@ def immagine(png):
 
 
 def differenza(png_a, png_b, riquadro=None, passo=4, soglia=40):
-    """La frazione dei pixel campionati che cambia fra due foto (0..1)."""
+    """The fraction of the sampled pixels that changes between two photos (0..1)."""
     a, b = immagine(png_a), immagine(png_b)
     if a.size != b.size:
         return 1.0
@@ -287,18 +287,18 @@ def misura_png(png):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  DENTRO LA SESSIONE
+#  INSIDE THE SESSION
 # ═══════════════════════════════════════════════════════════════════════════
 def nella_sessione(s, comando, secondi=60):
-    """(codice, uscita) di `comando` eseguito come l'inquilino, con
-    l'ambiente della sua sessione grafica (e l'XDG_CONFIG_DIRS del suo
-    compositore, che su KDE porta il KIOSK di REMOTIX)."""
+    """(code, output) of `comando` executed as the tenant, with
+    the environment of their graphical session (and the XDG_CONFIG_DIRS of their
+    compositor, which on KDE carries REMOTIX's KIOSK)."""
     return s.nella_sessione(comando, secondi, fondo=False)
 
 
 def ambiente_di(s, processo):
-    """Una variabile d'ambiente per nome, letta da /proc/<pid>/environ del
-    primo processo dell'inquilino che si chiama `processo`: {nome: valore}."""
+    """An environment variable by name, read from /proc/<pid>/environ of the
+    tenant's first process named `processo`: {name: value}."""
     c, t = s.sc.dentro(
         "p=$(pgrep -u %s -x %s | head -1); [ -n \"$p\" ] || exit 4; "
         "tr '\\0' '\\n' < /proc/$p/environ" % (s.chi, processo), 30)
@@ -313,12 +313,12 @@ def ambiente_di(s, processo):
 
 
 def riquadro_cambiato(png_a, png_b, cella=8, soglia=60, margine=24, minimo=3, vicino=None):
-    """⭐ Dove si e' aperto qualcosa: il riquadro (x0, y0, x1, y1) della MACCHIA
-    PIU' GRANDE di celle cambiate fra due foto (celle di `cella` px, un pixel
-    per cella, 8-vicini con un passo di tolleranza).  Serve a ritagliare il
-    menu aperto per l'OCR: tesseract su un ritaglio largo di sfondo sbaglia la
-    soglia e non legge niente (`[M]` 24 set 2026, GNOME: «Log Out…» letto nel
-    ritaglio stretto, perso in quello largo).  None se non cambia niente."""
+    """⭐ Where something opened: the box (x0, y0, x1, y1) of the LARGEST BLOB
+    of changed cells between two photos (cells of `cella` px, one pixel
+    per cell, 8-neighbours with one step of tolerance).  It serves to crop
+    the open menu for the OCR: tesseract on a crop wide with background gets the
+    threshold wrong and reads nothing (`[M]` 24 Sep 2026, GNOME: «Log Out…» read in the
+    narrow crop, lost in the wide one).  None if nothing changes."""
     a, b = immagine(png_a), immagine(png_b)
     if a.size != b.size:
         return None
@@ -361,12 +361,12 @@ def riquadro_cambiato(png_a, png_b, cella=8, soglia=60, margine=24, minimo=3, vi
 
 
 def leggi_riquadro(png, riquadro, ingrandisci=3):
-    """OCR del riquadro in tre letture (grigio psm 11; binarizzato a 110 psm 6;
-    a 150 psm 11).  Torna (righe, testo): le RIGHE di ogni lettura, messe
-    insieme — una voce letta da una sola delle tre conta (per le vietate si
-    vuole il piu' sensibile).  (None, motivo) se tesseract non c'e'."""
+    """OCR of the box in three readings (grey psm 11; binarised at 110 psm 6;
+    at 150 psm 11).  Returns (lines, text): the LINES of each reading, put
+    together — an entry read by only one of the three counts (for the forbidden ones
+    the most sensitive is wanted).  (None, reason) if tesseract is not there."""
     if not ocr_disponibile():
-        return None, "tesseract non c'e' in %s" % TESSERACT
+        return None, "tesseract is not in %s" % TESSERACT
     tutte = []
     for psm, soglia in ((11, None), (6, 110), (11, 150)):
         p = ocr(png, riquadro, ingrandisci=ingrandisci, psm=psm, soglia=soglia) or []
@@ -376,8 +376,8 @@ def leggi_riquadro(png, riquadro, ingrandisci=3):
 
 
 def parole_lette():
-    """Le parole (con la posizione) delle letture fatte da `leggi_riquadro`
-    dall'ultima `azzera_parole()`."""
+    """The words (with the position) of the readings made by `leggi_riquadro`
+    since the last `azzera_parole()`."""
     return list(getattr(leggi_riquadro, "parole", []))
 
 
@@ -386,12 +386,12 @@ def azzera_parole():
 
 
 def righe_di(parole, passo_y=14):
-    """Le parole rimesse in righe: [(frase, x, y)] ordinate dall'alto.  Una
-    riga = le parole col centro alla stessa altezza (±passo_y), in ordine di x.
-    Le tre letture danno doppioni: dentro una riga si tolgono le parole che
-    si sovrappongono a una gia' presa, e si tolgono le righe uguali vicine.
-    ⚠ Due menu affiancati alla stessa altezza finiscono nella stessa riga: per
-      il giudizio va bene (si cercano parole, non si contano voci)."""
+    """The words put back into lines: [(sentence, x, y)] sorted from the top.  A
+    line = the words with the centre at the same height (±passo_y), in x order.
+    The three readings give duplicates: within a line the words overlapping one
+    already taken are removed, and equal close lines are removed.
+    ⚠ Two side-by-side menus at the same height end up in the same line: for
+      the judgment that is fine (words are looked for, entries are not counted)."""
     righe = []
     for p in sorted(parole or [], key=lambda q: q[2] + q[4] / 2):
         cy = p[2] + p[4] / 2
@@ -414,12 +414,12 @@ def righe_di(parole, passo_y=14):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LE FINESTRE NOTE (GTK4: c'e' in tutte e quattro le scatole)
+#  THE KNOWN WINDOWS (GTK4: it is in all four boxes)
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐ Una finestra PIENA di un colore puro, con un app_id suo: su GNOME Alt+Tab
-#   passa fra APPLICAZIONI, e due finestre dello stesso programma sarebbero
-#   una sola voce.  `[M]` 24 set 2026: GTK3 c'e' solo nella scatola gnome,
-#   GTK4 in tutte.
+# ⭐ A window FILLED with a pure colour, with an app_id of its own: on GNOME Alt+Tab
+#   switches between APPLICATIONS, and two windows of the same program would be
+#   a single entry.  `[M]` 24 Sep 2026: GTK3 is only in the gnome box,
+#   GTK4 in all.
 FINESTRA_GTK = r'''
 import sys
 import gi
@@ -428,9 +428,9 @@ from gi.repository import Gtk, Gdk
 import time
 from gi.repository import GLib
 nome, colore, largo, alto = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
-# opzionale: un secondo colore e un periodo — la finestra cambia colore da sola
-# (colore se (ora // periodo) e' pari, altro se dispari), SENZA input: e' la
-# prova che l'immagine e' viva e non un fotogramma congelato
+# optional: a second colour and a period — the window changes colour by itself
+# (colore if (now // periodo) is even, altro if odd), WITHOUT input: it is the
+# proof that the image is live and not a frozen frame
 altro = sys.argv[5] if len(sys.argv) > 5 else None
 periodo = int(sys.argv[6]) if len(sys.argv) > 6 else 30
 app = Gtk.Application(application_id="org.remotix.c15" + nome)
@@ -461,7 +461,7 @@ app.run([])
 
 
 def metti_finestra(s):
-    """Scrive il programma della finestra nella casa dell'inquilino."""
+    """Writes the window's program in the tenant's home."""
     import base64
     b = base64.b64encode(FINESTRA_GTK.encode()).decode()
     return s.sc.dentro("echo %s | base64 -d > /home/%s/.c15-finestra.py && chown %s: "
@@ -480,7 +480,7 @@ MAGENTA = (255, 0, 255)
 
 
 def conta_colori(png, colori, passo=6, toll=50):
-    """{colore: frazione dei pixel campionati vicini a quel colore}."""
+    """{colour: fraction of the sampled pixels close to that colour}."""
     im = immagine(png)
     px = im.load()
     n = 0
@@ -497,8 +497,8 @@ def conta_colori(png, colori, passo=6, toll=50):
 
 
 def vivi(png, passo=6, soglia=24):
-    """La frazione dei pixel NON quasi neri: uno schermo spento e' tutto nero,
-    anche dove il desktop era gia' scuro (XFCE nasce con lo sfondo nero)."""
+    """The fraction of NOT nearly black pixels: a turned-off screen is all black,
+    even where the desktop was already dark (XFCE is born with a black background)."""
     im = immagine(png)
     px = im.load()
     n = v = 0
@@ -511,9 +511,9 @@ def vivi(png, passo=6, soglia=24):
 
 
 def aspetta_apertura(s, png_prima, nome, vicino, tetto_s=10.0, lato_min=120):
-    """Fotografa finche' vicino al clic si apre qualcosa di almeno
-    `lato_min` x `lato_min` px (un menu, non l'evidenza di un pulsante).
-    Torna (png, percorso, riquadro | None)."""
+    """Photographs until near the click something of at least
+    `lato_min` x `lato_min` px opens (a menu, not a button's highlight).
+    Returns (png, path, box | None)."""
     fine = time.time() + tetto_s
     png, dove, r = None, "", None
     while True:
@@ -527,13 +527,13 @@ def aspetta_apertura(s, png_prima, nome, vicino, tetto_s=10.0, lato_min=120):
             return png, dove, r
 
 
-# ⭐ `[M]` 24 set 2026: su una tela FERMA (il desktop non cambia, REMOTIX non
-#   manda fotogrammi) `Page.captureScreenshot` di Chrome nel labwc senza schermo
-#   impiega ~60 s — aspetta un fotogramma che nessuno disegna.  Un puntino di
-#   1 px che cambia colore a ogni foto da' al compositore del browser un danno
-#   da disegnare, e la foto torna subito.  Sta nell'angolo in alto a sinistra
-#   della PAGINA, fuori dalla tela? No: la tela copre tutto — sta SOPRA, 1 px,
-#   e cambia fra due grigi quasi uguali; nei giudizi pesa 1 pixel su 8 milioni.
+# ⭐ `[M]` 24 Sep 2026: on a STILL canvas (the desktop does not change, REMOTIX sends no
+#   frames) Chrome's `Page.captureScreenshot` in the headless labwc
+#   takes ~60 s — it waits for a frame nobody draws.  A 1 px dot
+#   that changes colour at every photo gives the browser's compositor some damage
+#   to draw, and the photo comes back at once.  Is it in the top-left corner
+#   of the PAGE, outside the canvas? No: the canvas covers everything — it sits ON TOP, 1 px,
+#   and changes between two nearly equal greys; in the judgments it weighs 1 pixel in 8 million.
 JS_PUNGOLO = r"""
 let p = document.getElementById('c15-pungolo');
 if (!p) { p = document.createElement('div'); p.id = 'c15-pungolo';
@@ -552,10 +552,10 @@ def pungola(s):
 
 
 def foto(s, nome, scala=1.0, tentativi=3):
-    """La foto della tela, RITENTATA (`[M]` 24 set 2026: col server a carico
-    25-50 la cattura a 4K di Chrome scade).  `scala` < 1 solo su Chrome (CDP
-    la sa ridurre; Marionette no): per i giudizi sui colori basta la meta',
-    per l'OCR serve la scala 1.  Torna (png | None, percorso | motivo)."""
+    """The photo of the canvas, RETRIED (`[M]` 24 Sep 2026: with the server at load
+    25-50 Chrome's 4K capture times out).  `scala` < 1 only on Chrome (CDP
+    can reduce it; Marionette cannot): for the colour judgments half is enough,
+    for the OCR scale 1 is needed.  Returns (png | None, path | reason)."""
     import base64
     ultimo = ""
     for _ in range(tentativi):
@@ -566,7 +566,7 @@ def foto(s, nome, scala=1.0, tentativi=3):
                            "if(!t) return null; const b=t.getBoundingClientRect();"
                            "return [b.left, b.top, b.width, b.height];")
                 if not r:
-                    ultimo = "la tela non c'e'"
+                    ultimo = "the canvas is not there"
                     time.sleep(2)
                     continue
                 c = s.g.cdp.chiama("Page.captureScreenshot", format="png",
@@ -581,14 +581,14 @@ def foto(s, nome, scala=1.0, tentativi=3):
                         f.write(png)
                 return png, dove
             except Exception as e:               # noqa: BLE001
-                ultimo = "fotografia fallita: %s" % str(e)[:200]
-                passo("⚠ foto %s: %s" % (nome, ultimo))
+                ultimo = "photo failed: %s" % str(e)[:200]
+                passo("⚠ photo %s: %s" % (nome, ultimo))
         else:
             png, dove = s.foto(nome)
             if png:
                 return png, dove
             ultimo = dove
-            passo("⚠ foto %s: %s" % (nome, ultimo))
+            passo("⚠ photo %s: %s" % (nome, ultimo))
         time.sleep(3)
     return None, ultimo
 
@@ -597,5 +597,5 @@ _T0 = time.time()
 
 
 def passo(testo):
-    """Una riga col tempo trascorso dall'avvio: dove va il tempo della prova."""
+    """A line with the time elapsed since the start: where the test's time goes."""
     print("   [%5.0f s] %s" % (time.time() - _T0, testo), flush=True)

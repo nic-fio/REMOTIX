@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-g1b-esplora — ATTREZZO DI DIAGNOSI del gruppo G1b (non certifica niente).
+15-g1b-esplora — DIAGNOSIS TOOL of group G1b (it certifies nothing).
 
     python3 15-g1b-esplora.py --scatola kde --browser chrome --evidenze DIR \
         --passi 'foto:a;clic:100,2140;attendi:2;foto:b;tasti:Alt+Tab;dentro:comando'
 
-Entra in una sessione nuova (inquilino c15099u<n>), esegue i passi, fotografa.
-Coordinate in pixel del DESKTOP.
+Logs into a new session (tenant c15099u<n>), runs the steps, photographs.
+Coordinates in DESKTOP pixels.
 """
 import os
 import sys
@@ -26,7 +26,7 @@ def extra(a):
 def corpo(o, E):
     with S.Sessione(o, "099", E) as s:
         ok, m = s.entra()
-        print("entra:", ok, m, flush=True)
+        print("login:", ok, m, flush=True)
         if not ok:
             raise S.Bloccata(m)
         time.sleep(4)
@@ -38,10 +38,10 @@ def corpo(o, E):
             passi = base64.b64decode(passi[4:]).decode()
         for p in passi.split(";"):
             tipo, _, arg = p.partition(":")
-            G1B.passo("passo %s" % p)
+            G1B.passo("step %s" % p)
             if tipo in ("foto", "foto1"):
                 png, dove = G1B.foto(s, arg, scala=0.5 if tipo == "foto" else 1)
-                print("foto", dove, flush=True)
+                print("photo", dove, flush=True)
             elif tipo == "clic":
                 x, y = [float(v) for v in arg.split(",")]
                 G1B.clic_desktop(s, geo, x, y)
@@ -63,7 +63,7 @@ def corpo(o, E):
                 png, dove = G1B.foto(s, "m", scala=0.5)
                 k = G1B.conta_colori(png, (G1B.CIANO, (255, 255, 0)))
                 st = s.pr.stato() or {}
-                print("misura", [round(v, 3) for v in k.values()],
+                print("measure", [round(v, 3) for v in k.values()],
                       {x: st.get(x) for x in ("dipinti", "consegnati", "decodificati")}, flush=True)
             elif tipo == "js":
                 print(s.g.js(arg), flush=True)
@@ -71,7 +71,7 @@ def corpo(o, E):
                 print(s.sc.dentro(arg, 60), flush=True)
             elif tipo == "sess":
                 print(s.nella_sessione(arg, 60, fondo=False), flush=True)
-        E.metti("F-099", S.PASS, "esplorazione")
+        E.metti("F-099", S.PASS, "exploration")
 
 
 if __name__ == "__main__":

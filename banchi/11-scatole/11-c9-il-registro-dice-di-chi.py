@@ -2,232 +2,232 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-11-c9 — ⭐⭐ «IL REGISTRO DICE DI CHI PARLA» — la maglia del multi-inquilino
+11-c9 — ⭐⭐ «THE LOG SAYS WHO IS SPEAKING» — the multi-tenant mesh
 ===========================================================================
 
     python3 11-c9-il-registro-dice-di-chi.py --porta 8514
     python3 11-c9-il-registro-dice-di-chi.py --certifica
-    python3 11-c9-il-registro-dice-di-chi.py --togli-nome tutto   (il guasto)
+    python3 11-c9-il-registro-dice-di-chi.py --togli-nome tutto   (the fault)
 
-⛔ Perche' esiste, in una riga: **il prodotto e' multi-inquilino**.  Con due
-   sessioni vive insieme, una riga senza nome e' una riga che **non si puo'
-   attribuire** — e la diagnosi diventa indovinare.
+⛔ Why it exists, in one line: **the product is multi-tenant**.  With two
+   sessions alive together, a line without a name is a line that **cannot be
+   attributed** — and the diagnosis becomes guessing.
 
-`[M]` 25 agosto 2026, `fasi/10-…md` §6.7, ed e' la misura che ha fatto nascere
-la cura R10-A4: con **quattro** sessioni vere, solo il **4,2 %** delle righe di
-diagnosi diceva di chi parlava, e chi provava a indovinare il nome **sbagliava
-96 volte su 100** — cioe' mandava a guardare il desktop di un altro.
+`[M]` 25 August 2026, `fasi/10-…md` §6.7, and it is the measurement that gave birth to
+the cure R10-A4: with **four** real sessions, only **4.2 %** of the diagnosis
+lines said who was speaking, and whoever tried to guess the name **got it wrong
+96 times out of 100** — i.e. sent people to look at someone else's desktop.
 
 ---------------------------------------------------------------------------
-⛔⛔ LA REGOLA PIU' DIFFICILE E' **QUALE RIGA DEVE PORTARE IL NOME**
+⛔⛔ THE HARDEST RULE IS **WHICH LINE MUST CARRY THE NAME**
 ---------------------------------------------------------------------------
 
-E le due risposte comode sono tutt'e due sbagliate, ognuna a modo suo:
+And the two convenient answers are both wrong, each in its own way:
 
-  «TUTTE»            ⛔ falso, e da' **rosso per sempre**: le righe d'avvio
-                     precedono qualunque inquilino, e nominarne uno sarebbe
-                     inventarlo.  `LEZIONI.md` §1.49 — un rosso che non si puo'
-                     far diventare verde e' peggio di nessuna maglia.
-  «QUELLE CHE CE     ⛔ vuoto: non puo' **mai** dare rosso.  `LEZIONI.md` §1.44
-   L'HANNO»          — il predicato che non poteva fallire e aveva l'aspetto di
-                     uno che passa.
+  «ALL»              ⛔ false, and gives **red forever**: the start-up lines
+                     precede any tenant, and naming one would be
+                     inventing it.  `LEZIONI.md` §1.49 — a red that cannot be
+                     made green is worse than no mesh.
+  «THOSE THAT        ⛔ empty: it can **never** give red.  `LEZIONI.md` §1.44
+   HAVE IT»          — the predicate that could not fail and had the look of
+                     one that passes.
 
-⇒ ⭐ **L'insieme obbligato va DICHIARATO, e difeso.**  Questo e' il nostro.
+⇒ ⭐ **The mandatory set must be DECLARED, and defended.**  This is ours.
 
-  UNA RIGA E' OBBLIGATA SE VALGONO TUTT'E DUE:
+  A LINE IS MANDATORY IF BOTH HOLD:
 
-    1. ⭐ **sta nella FINESTRA** — cioe' nella fetta di registro che va dal
-       segno posato **prima** di aprire i due inquilini fino alla fine.
-       ⛔ La finestra NON si indovina dal contenuto: e' la fetta, e basta.
-       ⇒ L'avvio del server resta fuori **per costruzione**, non per una regola
-         che deve riconoscerlo — ed e' la ragione per cui questa maglia non
-         puo' dare il rosso perpetuo di §1.49.
-       ⚠ E c'e' un prezzo, dichiarato: cosi' C9 giudica **solo quel che e'
-         successo mentre guardava**.  Un registro vecchio si giudica con
-         `--da-file`, e allora la finestra e' tutto il file (lo si dice).
+    1. ⭐ **it sits in the WINDOW** — i.e. in the log slice that goes from the
+       mark placed **before** opening the two tenants until the end.
+       ⛔ The window is NOT guessed from the content: it is the slice, and that is all.
+       ⇒ The server start-up stays outside **by construction**, not by a rule
+         that has to recognise it — and it is the reason why this mesh cannot
+         give the perpetual red of §1.49.
+       ⚠ And there is a price, declared: this way C9 judges **only what
+         happened while it was watching**.  An old log is judged with
+         `--da-file`, and then the window is the whole file (it is said).
 
-    2. ⭐ **la sua AREA e' un'area di sessione** — un'area che esiste soltanto
-       perche' esiste una sessione:
+    2. ⭐ **its AREA is a session area** — an area that exists only
+       because a session exists:
 
            figlio · sessione · video · cattura · cursore · input ·
            audio · suono · tastiera · appunti
 
-  E QUEL CHE E' **ESENTE**, con la ragione di ciascuno — ⛔ nessuna esenzione
-  per comodita':
+  AND WHAT IS **EXEMPT**, with the reason for each — ⛔ no exemption
+  for convenience:
 
-    · ⛔ **fuori dalla finestra** — non c'e' nessun inquilino da nominare.
-    · ⛔ **le aree del SERVER**: `avvio` `cert` `budget`.  Parlano della
-      macchina, non di un inquilino: il budget in vigore e' di **tutti**, e il
-      certificato pure.  ⚠ E `budget` resta esente **anche quando nomina uno**
-      («verdetto per «c9u1»»): l'area dice del server, la riga e' un verdetto.
-    · ⚠ **le aree del SALUTO**: `quic` `wt` `rcp` `pagina`.  ⛔ La stessa area
-      serve **due momenti**: la stretta di mano — quando l'utente non si e'
-      ancora nominato, e `wt_chi()` torna `""` **apposta** (`webtransport.c`
-      §897: chi non sa tace) — e il dialogo dopo, che il nome ce l'ha.
-      ⇒ Dalla riga sola i due momenti **non si distinguono**, e un obbligo qui
-        sarebbe un rosso su una riga che ha ragione a tacere.
-      ⭐ Percio' non sono obbligate, ⛔ **ma si contano e si stampano a parte**:
-        e' li' che il difetto tornerebbe a nascondersi, e un'esenzione che non
-        si vede e' un'esenzione di cui nessuno si accorge.
-    · ⭐ **le righe di RIEPILOGO SU TUTTI**, e sono UNA famiglia sola, nominata
-      per esteso qui sotto (`SEGNI_DI_RIEPILOGO`): la riga del guardiano porta
-      `inquilini=N`, cioe' e' un conto **su tutti** — nominarne uno sarebbe
-      **falso**.  ⚠ Senza questa esenzione C9 darebbe **un rosso al minuto**,
-      per sempre, su una riga che ha ragione.
+    · ⛔ **outside the window** — there is no tenant to name.
+    · ⛔ **the SERVER areas**: `avvio` `cert` `budget`.  They speak of the
+      machine, not of a tenant: the budget in force is **everyone's**, and so is the
+      certificate.  ⚠ And `budget` stays exempt **even when it names one**
+      («verdict for «c9u1»»): the area speaks of the server, the line is a verdict.
+    · ⚠ **the GREETING areas**: `quic` `wt` `rcp` `pagina`.  ⛔ The same area
+      serves **two moments**: the handshake — when the user has not
+      named themselves yet, and `wt_chi()` returns `""` **on purpose** (`webtransport.c`
+      §897: whoever does not know keeps quiet) — and the dialogue afterwards, which has the name.
+      ⇒ From the line alone the two moments **cannot be told apart**, and an obligation here
+        would be a red on a line that is right to keep quiet.
+      ⭐ That is why they are not mandatory, ⛔ **but they are counted and printed separately**:
+        it is there that the defect would go back into hiding, and an exemption that
+        cannot be seen is an exemption nobody notices.
+    · ⭐ **the SUMMARY lines ABOUT EVERYONE**, and they are ONE family only, named
+      in full below (`SEGNI_DI_RIEPILOGO`): the guardian's line carries
+      `inquilini=N`, i.e. it is a count **about everyone** — naming one would be
+      **false**.  ⚠ Without this exemption C9 would give **one red per minute**,
+      forever, on a line that is right.
 
 ---------------------------------------------------------------------------
-⭐ E «AVERE IL NOME» VUOL DIRE DUE COSE, E SI CONTANO SEPARATE
+⭐ AND «HAVING THE NAME» MEANS TWO THINGS, AND THEY ARE COUNTED SEPARATELY
 ---------------------------------------------------------------------------
 
-  1. ⭐ **nella parentesi d'identita'** — `HH:MM:SS.mmm area   [nome] corpo`.
-     E' la forma canonica: la compone `registro.c riga()`, in un posto solo, e
-     un attrezzo la legge per colonna.
-  2. ⚠ **soltanto nel corpo** — la riga dice «c9u1» in mezzo alla prosa, fra
-     virgolette basse, e la parentesi non c'e'.
+  1. ⭐ **in the identity brackets** — `HH:MM:SS.mmm area   [name] body`.
+     It is the canonical form: it is composed by `registro.c riga()`, in one place only, and
+     a tool reads it by column.
+  2. ⚠ **only in the body** — the line says «c9u1» in the middle of the prose, between
+     guillemets, and the brackets are not there.
 
-⛔ La seconda **conta come attribuibile** — un uomo che legge il registro sa di
-   chi si parla, e chiamarla rossa sarebbe un falso allarme su 1 riga su 4
-   (`[M]` qui sotto).  ⚠ **Ma e' fragile**, e va detto: la prosa cambia quando
-   qualcuno riscrive un messaggio, la parentesi no.  ⇒ Si stampa il suo conto,
-   sempre, ⭐ **e questa maglia lo consegna come RILIEVO, non come verdetto**.
+⛔ The second **counts as attributable** — a man reading the log knows
+   who is being spoken of, and calling it red would be a false alarm on 1 line in 4
+   (`[M]` below).  ⚠ **But it is fragile**, and it must be said: the prose changes when
+   someone rewrites a message, the brackets do not.  ⇒ Its count is printed,
+   always, ⭐ **and this mesh delivers it as a FINDING, not as a verdict**.
 
-`[M]` 26 agosto 2026, scatola `rete11-lxqt`, due inquilini vivi insieme
-(`c9u1`, `c9u2`) per 45 s, 5 752 righe di fetta, server con `--parlantina`:
+`[M]` 26 August 2026, box `rete11-lxqt`, two tenants alive together
+(`c9u1`, `c9u2`) for 45 s, 5 752 lines of slice, server with `--parlantina`:
 
-       righe obbligate                    5 490
-       col nome NELLA PARENTESI           4 084   (74,4 %)
-       col nome SOLO NEL CORPO            1 402   (25,5 %)  ⚠ tutte del PADRE
-       ⛔ SENZA NOME DA NESSUNA PARTE         4   (0,1 %) ⇒ **ROSSO**
-       attribuite a c9u1 / c9u2         2 799 / 2 687   ⭐ la forma forte regge
+       mandatory lines                    5 490
+       with the name IN THE BRACKETS      4 084   (74.4 %)
+       with the name ONLY IN THE BODY     1 402   (25.5 %)  ⚠ all from the PARENT
+       ⛔ WITHOUT A NAME ANYWHERE             4   (0.1 %) ⇒ **RED**
+       attributed to c9u1 / c9u2        2 799 / 2 687   ⭐ the strong form holds
 
-⛔⛔ E LE QUATTRO SONO UN DIFETTO VERO DEL PRODOTTO, non del banco.  Ecco le
-    otto righe vere, prese dalla fetta del giro ufficiale — ⭐ e si legge da
-    sole:
+⛔⛔ AND THE FOUR ARE A REAL DEFECT OF THE PRODUCT, not of the bench.  Here are the
+    eight real lines, taken from the slice of the official round — ⭐ and they read
+    by themselves (the product's text of the time; 10 Oct 2026, in English):
 
-       20:19:47.887 rcp      [c9u1] ritmo di [127.0.0.1]:40258: arretrato…
-       20:19:47.895 tastiera modificatore 7: si preferisce il tasto 100 a 84…
-       20:19:47.895 tastiera disposizione in vigore: it [Italian]
-       20:19:47.895 rcp      [c9u1] posto PRESO da c9u1 via […]:40258 (1)
+       20:19:47.887 rcp      [c9u1] rate of [127.0.0.1]:40258: arretrato…
+       20:19:47.895 tastiera modifier 7: key 100 is preferred to 84…
+       20:19:47.895 tastiera layout in force: it [Italian]
+       20:19:47.895 rcp      [c9u1] slot TAKEN by c9u1 via […]:40258 (1)
        …
-       20:19:49.914 figlio   [c9u2] senza palco e QUALCUNO GUARDA…
-       20:19:49.918 tastiera modificatore 7: si preferisce il tasto 100 a 84…
-       20:19:49.918 tastiera disposizione in vigore: it [Italian]
-       20:19:49.918 rcp      [c9u2] posto PRESO da c9u2 via […]:46239 (2)
+       20:19:49.914 figlio   [c9u2] without a stage and SOMEONE IS WATCHING…
+       20:19:49.918 tastiera modifier 7: key 100 is preferred to 84…
+       20:19:49.918 tastiera layout in force: it [Italian]
+       20:19:49.918 rcp      [c9u2] slot TAKEN by c9u2 via […]:46239 (2)
 
-    `[R]` `tastiera.c:486` (`registro_dice`) e `:342` (`registro_dettaglio`)
-    scrivono **nel PADRE**, che non ha identita' di processo — e nel padre
-    l'identita' e' della RIGA, non del processo (`registro.h`).  Nessuna delle
-    due passa da `registro_dice_di()`.
-    ⇒ Due righe per inquilino, **identiche parola per parola**, e con due
-      inquilini vivi ⛔ **non c'e' modo di dire quale sia di chi**: la seconda
-      coppia si potrebbe attribuire a `c9u1` con la stessa plausibilita'.
-    ⭐ Con UN inquilino solo si attribuivano per esclusione — ⛔ **ed e'
-      esattamente la ragione per cui questa maglia ne apre DUE.**
-    ⇒ La cura sta in due righe: `registro_dice_di(REG_TASTIERA, chi, …)` e
-      `registro_dettaglio_di(…)`, col nome che il padre gia' ha in mano
-      (e' lo stesso che scrive nella riga `rcp` due millisecondi dopo).
-
----------------------------------------------------------------------------
-⚠ E LA PARLANTINA — che cosa cambia, e che cosa no
----------------------------------------------------------------------------
-
-`11-accendi.sh server` accende il prodotto con `--parlantina`, e quell'opzione
-accende `registro_dettaglio*()`.  ⛔ **La domanda va posta, e la risposta e'
-misurata invece che dedotta.**
-
-`[M]` 26 agosto 2026, stessa scatola, stessi due inquilini, giro di controllo
-col server riacceso **senza** `--parlantina`:
-
-                              con parlantina     senza
-       righe della fetta            5 752        4 158
-       righe obbligate              5 490        3 990
-       col nome nella parentesi     4 084        2 586   (74,4 % → 64,8 %)
-       col nome solo nel corpo      1 402        1 402   ⭐ IDENTICHE
-       ⛔ SENZA NOME                    4            2
-       esito                            1            1   ⭐ rosso tutt'e due
-
-⭐ **IL VERDETTO NON CAMBIA: rosso in tutt'e due i modi.**  ⚠ Ma il conto si',
-   e le due cose vanno dette insieme:
-
-  · `tastiera.c:486` («disposizione in vigore») e' `registro_dice()` ⇒ esce
-    **sempre**, ed e' il rosso che regge senza parlantina;
-  · `tastiera.c:342` («modificatore N: si preferisce…») e' `registro_dettaglio()`
-    ⇒ ⛔ **senza parlantina non esiste**, e con lei sono altre due righe rosse;
-  · ⭐ le 1 402 righe «solo nel corpo» sono **le stesse identiche**: il difetto
-    del padre non e' un fatto della parlantina, e' un fatto del padre.
-
-⇒ ⭐ **Con la parlantina si guardano piu' righe** — e sono proprio quelle che
-   `[M]` §6.7 misurava allo 0,0 % prima della cura R10-A4.  ⛔ Chi fa girare C9
-   su un server muto non sta misurando una cosa diversa: **ne sta misurando di
-   meno**, e la percentuale col nome nella parentesi scende di 10 punti perche'
-   spariscono le righe di dettaglio, che il nome ce l'hanno quasi tutte.
-   ⚠ Il gancio la fa girare col server di `11-accendi.sh`, cioe' **con** la
-     parlantina: e' la condizione in cui i numeri qui sopra sono stati presi.
+    `[R]` `tastiera.c:486` (`registro_dice`) and `:342` (`registro_dettaglio`)
+    write **in the PARENT**, which has no process identity — and in the parent
+    the identity belongs to the LINE, not to the process (`registro.h`).  Neither of the
+    two goes through `registro_dice_di()`.
+    ⇒ Two lines per tenant, **identical word for word**, and with two
+      tenants alive ⛔ **there is no way of saying which is whose**: the second
+      pair could be attributed to `c9u1` with the same plausibility.
+    ⭐ With ONE tenant only they were attributed by exclusion — ⛔ **and it is
+      exactly the reason why this mesh opens TWO.**
+    ⇒ The cure lies in two lines: `registro_dice_di(REG_TASTIERA, chi, …)` and
+      `registro_dettaglio_di(…)`, with the name the parent already has in hand
+      (it is the same one it writes in the `rcp` line two milliseconds later).
 
 ---------------------------------------------------------------------------
-⛔ IL GUASTO INNESTATO — e qui si puo' fare **sui dati veri**
+⚠ AND THE CHATTER — what changes, and what does not
 ---------------------------------------------------------------------------
 
-  · `--certifica` : ⭐ obbligatorio, registri **fabbricati**: uno col nome
-    (⇒ verde), uno senza (⇒ rosso), uno vuoto (⇒ 3, «non lo so»), piu' i casi
-    che tengono onesto l'insieme obbligato (§1.44, §1.49).
-  · `--togli-nome parentesi|corpo|tutto` : ⭐⭐ **il guasto sui dati VERI, senza
-    ricompilare il prodotto**.  Si apre il giro normale, e la fetta appena
-    letta viene sfregiata in memoria prima di essere giudicata:
-        `parentesi` toglie `[nome] ` subito dopo l'area — la forma canonica;
-        `corpo`     sostituisce il nome dentro la prosa;
-        `tutto`     tutt'e due ⇒ ⛔ deve diventare ROSSO su quasi tutto.
-    ⚠ Il registro sul disco **non si tocca**: si sfregia la copia.
-    `[M]` 26 agosto 2026, sulla fetta vera del giro ufficiale (5 490 righe
-    obbligate), righe che restano SENZA NOME:
-        senza guasto   →      4   (0,1 %)   ⇒ rosso, ed e' il difetto vero
-        `corpo`        →  1 406  (25,6 %)   ⚠ la parentesi regge da sola
-        `parentesi`    →  3 614  (65,8 %)   ⚠ 1 876 lo ripetono nella prosa
-        `tutto`        →  5 490 (100,0 %)   ⛔ tutto rosso
-    ⇒ ⭐ Il giudice **sa** dare rosso sui dati veri, e i quattro numeri sono
-      **diversi fra loro**: cioe' sta guardando davvero **due** posti, non uno
-      che finge di essere due.
+`11-accendi.sh server` starts the product with `--parlantina`, and that option
+switches on `registro_dettaglio*()`.  ⛔ **The question must be asked, and the answer is
+measured instead of deduced.**
 
-⭐ E la meta' che si dimentica sempre (`LEZIONI.md` §1.49): si prova anche il
-   verso opposto — **tolto il guasto, torna verde**.  La certificazione lo fa.
+`[M]` 26 August 2026, same box, same two tenants, control round
+with the server restarted **without** `--parlantina`:
 
----------------------------------------------------------------------------
-⛔ QUEL CHE C9 **NON** GUARDA — e va scritto, o qualcuno se ne fidera' troppo
----------------------------------------------------------------------------
+                              with chatter       without
+       lines of the slice           5 752        4 158
+       mandatory lines              5 490        3 990
+       with name in brackets        4 084        2 586   (74.4 % → 64.8 %)
+       with name only in the body   1 402        1 402   ⭐ IDENTICAL
+       ⛔ WITHOUT A NAME                4            2
+       outcome                          1            1   ⭐ red both
 
-  · ⛔ **non guarda se il nome e' QUELLO GIUSTO**: guarda che ci sia.  Una riga
-    di `c9u1` marcata `[c9u2]` per C9 e' verde.  ⚠ Prenderla vorrebbe dire
-    sapere che cosa stava facendo ogni sessione, cioe' un'altra maglia.
-  · ⛔ **non guarda le aree del saluto** (`quic` `wt` `rcp` `pagina`): le conta
-    e le stampa, non le giudica — la ragione e' scritta sopra.
-  · ⛔ **non guarda il contenuto della riga**: che sia utile, vera o completa
-    non e' affare suo.
-  · ⛔ **non guarda le righe che il registro NON ha scritto**: se una famiglia
-    intera di messaggi sparisse, C9 direbbe verde su quel che resta.
-  · ⚠ **non guarda oltre la finestra**: quel che e' successo prima del segno
-    non e' giudicato (e con `--da-file` la finestra e' tutto il file, il che e'
-    un'altra cosa e viene detto).
+⭐ **THE VERDICT DOES NOT CHANGE: red in both modes.**  ⚠ But the count does,
+   and the two things must be said together:
+
+  · `tastiera.c:486` («layout in force») is `registro_dice()` ⇒ it comes out
+    **always**, and it is the red that holds without chatter;
+  · `tastiera.c:342` («modifier N: key … is preferred…») is `registro_dettaglio()`
+    ⇒ ⛔ **without chatter it does not exist**, and with it there are two more red lines;
+  · ⭐ the 1 402 lines «only in the body» are **the very same**: the defect
+    of the parent is not a fact of the chatter, it is a fact of the parent.
+
+⇒ ⭐ **With the chatter more lines are looked at** — and they are precisely those that
+   `[M]` §6.7 measured at 0.0 % before the cure R10-A4.  ⛔ Whoever runs C9
+   on a silent server is not measuring a different thing: **they are measuring
+   less of it**, and the percentage with the name in the brackets drops by 10 points because
+   the detail lines disappear, which almost all have the name.
+   ⚠ The hook runs it with the server of `11-accendi.sh`, i.e. **with** the
+     chatter: it is the condition in which the numbers above were taken.
 
 ---------------------------------------------------------------------------
-⚠ IL TEMPO, misurato invece che stimato
+⛔ THE GRAFTED FAULT — and here it can be done **on the real data**
+---------------------------------------------------------------------------
 
-`[M]` 26 agosto 2026: **50 secondi** il giro vero (`--resta 45`), meno di un
-secondo la certificazione.  ⛔ Nella famiglia veloce **non ci sta**: il tetto e'
-180 s ed e' gia' pieno a 153 (§5.1).  ⇒ C9 sta in `tutto` e in `desktop-nuovo`,
-e il gancio lo dichiara.  ⚠ Chi la vuole piu' corta abbassi `--resta`, ⛔ ma
-sappia che cosa compra: meno righe guardate, non un'altra prova.
+  · `--certifica` : ⭐ mandatory, **fabricated** logs: one with the name
+    (⇒ green), one without (⇒ red), one empty (⇒ 3, «I do not know»), plus the cases
+    that keep the mandatory set honest (§1.44, §1.49).
+  · `--togli-nome parentesi|corpo|tutto` : ⭐⭐ **the fault on the REAL data, without
+    recompiling the product**.  The normal round is opened, and the slice just
+    read is defaced in memory before being judged:
+        `parentesi` removes `[name] ` right after the area — the canonical form;
+        `corpo`     replaces the name inside the prose;
+        `tutto`     both ⇒ ⛔ it must turn RED on almost everything.
+    ⚠ The log on disk **is not touched**: the copy is defaced.
+    `[M]` 26 August 2026, on the real slice of the official round (5 490 mandatory
+    lines), lines left WITHOUT A NAME:
+        no fault       →      4   (0.1 %)   ⇒ red, and it is the real defect
+        `corpo`        →  1 406  (25.6 %)   ⚠ the brackets hold on their own
+        `parentesi`    →  3 614  (65.8 %)   ⚠ 1 876 repeat it in the prose
+        `tutto`        →  5 490 (100.0 %)   ⛔ all red
+    ⇒ ⭐ The judge **can** give red on the real data, and the four numbers are
+      **different from each other**: i.e. it is really looking at **two** places, not one
+      that pretends to be two.
+
+⭐ And the half that always gets forgotten (`LEZIONI.md` §1.49): the opposite direction
+   is tested too — **with the fault removed, it is green again**.  The certification does it.
 
 ---------------------------------------------------------------------------
-GLI ESITI (§4.5 del documento di fase)
+⛔ WHAT C9 DOES **NOT** LOOK AT — and it must be written, or someone will trust it too much
+---------------------------------------------------------------------------
 
-  0  ⭐ ogni riga obbligata dice di chi parla
-  1  ⛔ almeno una riga obbligata non si puo' attribuire  ⇒ rosso
-  3  ⛔ non ho potuto guardare — il registro non c'e', la fetta e' vuota,
-     ⛔ **l'insieme obbligato e' VUOTO** (§1.44: un insieme vuoto non e' un
-     verde), oppure i due inquilini non sono entrati tutt'e due (⭐ la forma
-     forte e' DUE, e con uno solo questa maglia non ha provato quel che dice
-     di provare) — ⛔ e NON e' un rosso
-  2  il terreno non regge, o l'uso e' sbagliato
+  · ⛔ **it does not look at whether the name is THE RIGHT ONE**: it looks at it being there.  A line
+    of `c9u1` marked `[c9u2]` is green for C9.  ⚠ Catching it would mean
+    knowing what every session was doing, i.e. another mesh.
+  · ⛔ **it does not look at the greeting areas** (`quic` `wt` `rcp` `pagina`): it counts them
+    and prints them, it does not judge them — the reason is written above.
+  · ⛔ **it does not look at the content of the line**: whether it is useful, true or complete
+    is none of its business.
+  · ⛔ **it does not look at the lines the log did NOT write**: if a whole family
+    of messages disappeared, C9 would say green on what remains.
+  · ⚠ **it does not look beyond the window**: what happened before the mark
+    is not judged (and with `--da-file` the window is the whole file, which is
+    another thing and is said).
+
+---------------------------------------------------------------------------
+⚠ THE TIME, measured instead of estimated
+
+`[M]` 26 August 2026: **50 seconds** the real round (`--resta 45`), less than a
+second the certification.  ⛔ In the fast family **it does not fit**: the ceiling is
+180 s and it is already full at 153 (§5.1).  ⇒ C9 sits in `tutto` and in `desktop-nuovo`,
+and the hook declares it.  ⚠ Whoever wants it shorter can lower `--resta`, ⛔ but
+should know what they are buying: fewer lines looked at, not another test.
+
+---------------------------------------------------------------------------
+THE OUTCOMES (§4.5 of the phase document)
+
+  0  ⭐ every mandatory line says who is speaking
+  1  ⛔ at least one mandatory line cannot be attributed  ⇒ red
+  3  ⛔ I could not look — the log is not there, the slice is empty,
+     ⛔ **the mandatory set is EMPTY** (§1.44: an empty set is not a
+     green), or the two tenants did not both get in (⭐ the strong
+     form is TWO, and with one only this mesh has not tested what it says
+     it tests) — ⛔ and it is NOT a red
+  2  the terrain does not hold, or the usage is wrong
 ===========================================================================
 """
 import argparse
@@ -239,32 +239,32 @@ import sys
 import time
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐ «IL CLIENTE E' STATO AMMESSO?» — ⛔ IL PREDICATO SI IMPORTA, NON SI
-#     RISCRIVE.  La casa e' `11-c1-nasce-e-si-vede.py`, e ce n'e' UNA (§1.47).
+# ⭐⭐ «WAS THE CLIENT ADMITTED?» — ⛔ THE PREDICATE IS IMPORTED, NOT
+#     REWRITTEN.  Its home is `11-c1-nasce-e-si-vede.py`, and there is ONE (§1.47).
 #
-# ⛔ Fino al 27 agosto 2026 qui c'era `"AMMESSO" in uscita`, ⭐ e non poteva
-#    dire di no: `[R]` `01-b3-cliente.py` stampa quella parola anche nei **due
-#    messaggi di rifiuto** — «CONGEDO invece di AMMESSO: motivo …» (:1315) e
-#    «atteso AMMESSO, arrivato …» (:1322) — e li stampa sullo **stdout**, che
-#    e' esattamente dove si guardava.  ⇒ Un predicato che non puo' fallire,
-#    `LEZIONI.md` §1.44: la maglia si credeva entrata **anche quando era stata
-#    respinta**, e poi giudicava il buio che ne seguiva come un difetto del
-#    prodotto.
-# ⚠ Era in CINQUE maglie con la stessa riga.  ⇒ Curarla cinque volte sarebbe
-#   stato creare cinque posti da cui divergere di nuovo (§1.47): sta in C1, e
-#   le altre quattro la importano da li'.
-# ⛔ E se non si riesce a importarla si esce **3** e lo si dice, ⇒ ⛔ non si
-#   ripiega in silenzio sul predicato povero — che e' il difetto stesso.
+# ⛔ Until 27 August 2026 there was `"AMMESSO" in uscita` here, ⭐ and it could not
+#    say no: `[R]` `01-b3-cliente.py` prints that word also in the **two
+#    refusal messages** — «CONGEDO instead of AMMESSO: reason …» (:1315) and
+#    «expected AMMESSO, arrived …» (:1322) — and prints them on **stdout**, which
+#    is exactly where it looked.  ⇒ A predicate that cannot fail,
+#    `LEZIONI.md` §1.44: the mesh believed it had got in **even when it had been
+#    turned away**, and then judged the darkness that followed as a defect of the
+#    product.
+# ⚠ It was in FIVE meshes with the same line.  ⇒ Curing it five times would have
+#   been creating five places to diverge from again (§1.47): it lives in C1, and
+#   the other four import it from there.
+# ⛔ And if it cannot be imported we exit **3** and say so, ⇒ ⛔ we do not
+#   silently fall back on the poor predicate — which is the defect itself.
 # ═══════════════════════════════════════════════════════════════════════════
 _QUI_C1 = os.path.dirname(os.path.abspath(__file__))
 _C1 = None
 
 
 def _carica_c1():
-    """⛔ E' un CARICATORE, non un giudice: trova il file, non decide niente.
+    """⛔ It is a LOADER, not a judge: it finds the file, it decides nothing.
 
-    ⚠ Si cerca accanto a me (dentro la scatola tutto sta in `/opt/remotix`) e
-      un piano piu' su, come fanno C2, C3 e C6 coi loro giudici importati.
+    ⚠ It is looked for next to me (inside the box everything is in `/opt/remotix`) and
+      one level up, as C2, C3 and C6 do with their imported judges.
     """
     for p in (os.path.join(_QUI_C1, "11-c1-nasce-e-si-vede.py"),
               os.path.join(os.path.dirname(_QUI_C1), "11-scatole",
@@ -277,14 +277,14 @@ def _carica_c1():
             spec.loader.exec_module(m)
         except Exception:
             return None
-        # ⛔ Si VERIFICA che ci sia quel che serve, invece di fidarsi del nome
-        #    del file (`CODER.md` §3.9).
+        # ⛔ We VERIFY that what is needed is there, instead of trusting the name
+        #    of the file (`CODER.md` §3.9).
         if not callable(getattr(m, "e_stato_ammesso", None)):
             return None
         if not callable(getattr(m, "certifica_ammissione", None)):
             return None
-        # ⭐ E da C1 viene anche la garanzia dei gruppi della scheda: stessa
-        #    ragione, stesso posto solo (§1.47).
+        # ⭐ And from C1 also comes the guarantee of the card's groups: same
+        #    reason, same single place (§1.47).
         for mestiere in ("garantisci_i_gruppi", "verdetto_gruppi",
                          "certifica_gruppi"):
             if not callable(getattr(m, mestiere, None)):
@@ -298,106 +298,106 @@ def casa_dell_ammissione():
     if _C1 is None:
         _C1 = _carica_c1()
     if _C1 is None:
-        print("⛔ non trovo `11-c1-nasce-e-si-vede.py` accanto a me, e da li'")
-        print("   viene il predicato «il cliente e' stato AMMESSO?» — che sta")
-        print("   in un posto solo apposta (§1.47).")
-        print("⇒ non ho potuto guardare — ⛔ e NON e' un rosso (§4.5).")
+        print("⛔ I cannot find `11-c1-nasce-e-si-vede.py` next to me, and from there")
+        print("   comes the predicate «was the client ADMITTED?» — which lives")
+        print("   in one place only on purpose (§1.47).")
+        print("⇒ I could not look — ⛔ and it is NOT a red (§4.5).")
         sys.exit(3)
     return _C1
 
 
 def e_stato_ammesso(coda):
-    """⭐ `True` ammesso · `False` **RESPINTO** · `None` non ha detto niente.
+    """⭐ `True` admitted · `False` **TURNED AWAY** · `None` said nothing.
 
-    ⛔ `False` non e' un rosso del prodotto: un cliente respinto e' un cliente
-       respinto, e chi chiama esce **3**.
+    ⛔ `False` is not a product red: a client turned away is a client
+       turned away, and the caller exits **3**.
     """
     return casa_dell_ammissione().e_stato_ammesso(coda)
 
 
 def garantisci_i_gruppi(chi, prefisso="   "):
-    """⭐⭐ I GRUPPI DELLA SCHEDA — ⛔ e anche questo sta in un posto solo (C1).
+    """⭐⭐ THE CARD'S GROUPS — ⛔ and this too lives in one place only (C1).
 
-    Torna `(esito, perche)`: `0` = l'inquilino vede e si puo' misurare,
-    `3` = ⛔ NON si misura.
+    Returns `(esito, perche)`: `0` = the tenant sees and it can be measured,
+    `3` = ⛔ it is NOT measured.
 
-    ⛔ Fino al 27 agosto 2026 questa maglia creava l'inquilino con
-       `usermod -aG video,render` **e non rileggeva**: due nomi inchiodati (che
-       sono di UNA distribuzione) e nessuna verifica.  ⭐ `[M]` senza i gruppi
-       dei nodi `/dev/dri` la sessione nasce CIECA — 0 su 4, mai in 90 s, zero
-       fotogrammi — e questa maglia avrebbe misurato il buio chiamandolo
-       difetto del prodotto (`fasi/10-…` §7.4).
-    ⭐ Il lavoro lo fa `attrezzi-gruppi-scheda.sh`, che legge i gid dai NODI e
-       rilegge confrontando i numeri.  ⛔ Non se ne fa una copia qui (§1.47).
+    ⛔ Until 27 August 2026 this mesh created the tenant with
+       `usermod -aG video,render` **and did not read back**: two nailed-down names (which
+       belong to ONE distribution) and no verification.  ⭐ `[M]` without the groups
+       of the `/dev/dri` nodes the session is born BLIND — 0 of 4, never in 90 s, zero
+       frames — and this mesh would have measured the darkness calling it
+       a product defect (`fasi/10-…` §7.4).
+    ⭐ The work is done by `attrezzi-gruppi-scheda.sh`, which reads the gids from the NODES and
+       reads back comparing the numbers.  ⛔ No copy of it is made here (§1.47).
     """
     return casa_dell_ammissione().garantisci_i_gruppi(chi, prefisso)
 
 # ---------------------------------------------------------------------------
-# ⛔ L'INSIEME OBBLIGATO, DICHIARATO QUI E STAMPATO IN OGNI ESITO.
-#    Un verdetto senza il suo metro e' un'opinione (C11, stessa regola).
+# ⛔ THE MANDATORY SET, DECLARED HERE AND PRINTED IN EVERY OUTCOME.
+#    A verdict without its yardstick is an opinion (C11, same rule).
 # ---------------------------------------------------------------------------
 
-# Le aree che esistono soltanto perche' esiste una sessione.  ⭐ Prese dai
-# `#define` del prodotto: `registro.h` (REG_*) piu' i quattro `#define AREA` di
-# `cattura.c`, `mutter.c` (= "cattura"), `cursore.c` e `input.c`.
+# The areas that exist only because a session exists.  ⭐ Taken from the
+# product's `#define`s: `registro.h` (REG_*) plus the four `#define AREA` of
+# `cattura.c`, `mutter.c` (= "cattura"), `cursore.c` and `input.c`.
 AREE_DI_SESSIONE = ("figlio", "sessione", "video", "cattura", "cursore",
                     "input", "audio", "suono", "tastiera", "appunti",
-                    # ⭐ fase 14 (src/forma.c, 24 set 2026): il dizionario della
-                    #   forma del cursore, scritto dal figlio COL nome
-                    #   dell'inquilino.  `[M]` giro 1 della suite, 25 set: senza
-                    #   questa voce C9 dava 3 su kde, xfce e lxqt (D-012).
+                    # ⭐ phase 14 (src/forma.c, 24 Sep 2026): the dictionary of the
+                    #   cursor shape, written by the child WITH the name
+                    #   of the tenant.  `[M]` round 1 of the suite, 25 Sep: without
+                    #   this entry C9 gave 3 on kde, xfce and lxqt (D-012).
                     "forma")
 
-# ⚠ La stessa area serve il saluto e il dialogo: non si giudicano, si contano.
+# ⚠ The same area serves the greeting and the dialogue: they are not judged, they are counted.
 AREE_DEL_SALUTO = ("quic", "wt", "rcp", "pagina")
 
-# ⛔ Parlano della macchina, non di un inquilino.
+# ⛔ They speak of the machine, not of a tenant.
 #
-# ⚠⚠ E LE TRE LISTE SONO ESAUSTIVE **PER DICHIARAZIONE**: un'area che non sta
-#    in nessuna delle tre non e' esente — e' un buco, e `analizza` la conta e la
-#    NOMINA (vedi li').  ⛔ Ricopiare a mano l'elenco del prodotto e' il
-#    difetto strutturale di questa maglia: C10 l'elenco lo **legge** dalla
-#    sorgente di verita' (`src/Makefile`), qui non c'e' un posto solo da
-#    leggere — i `#define` stanno in `registro.h`, in `figlio.h`, in
-#    `appunti.h` e in quattro `#define AREA` sparsi.  ⇒ La difesa non e'
-#    l'elenco: e' che quel che l'elenco non conosce **si veda**.
+# ⚠⚠ AND THE THREE LISTS ARE EXHAUSTIVE **BY DECLARATION**: an area that is not
+#    in any of the three is not exempt — it is a hole, and `analizza` counts it and
+#    NAMES it (see there).  ⛔ Copying the product's list by hand is the
+#    structural defect of this mesh: C10 **reads** the list from the
+#    source of truth (`src/Makefile`), here there is no single place to
+#    read — the `#define`s are in `registro.h`, in `figlio.h`, in
+#    `appunti.h` and in four scattered `#define AREA`.  ⇒ The defence is not
+#    the list: it is that what the list does not know **is seen**.
 AREE_DEL_SERVER = ("avvio", "cert", "budget")
 
-# ⭐ L'UNICA esenzione per contenuto, e va nominata per esteso: una riga che
-#    porta un conto SU TUTTI gli inquilini non puo' nominarne uno.
-#    `sessione guardiano: chiamate=0 … inquilini=2 …` esce ogni 60 s.
+# ⭐ The ONLY exemption by content, and it must be named in full: a line that
+#    carries a count ABOUT ALL the tenants cannot name one.
+#    `sessione guardiano: chiamate=0 … inquilini=2 …` comes out every 60 s.
 SEGNI_DI_RIEPILOGO = ("inquilini=",)
 
-# ⛔ La riga del prodotto, presa alla lettera da `registro.c riga()`:
-#       "%s.%03ld %-7s [%s] "   oppure   "%s.%03ld %-7s "
-#    ⚠ L'identita' e' riconosciuta SOLO subito dopo l'area.  Serve, e si vede:
-#      «tastiera disposizione in vigore: it [Italian]» ha una parentesi in coda,
-#      ⛔ e chiamarla identita' vorrebbe dire attribuire quella riga a un
-#      inquilino di nome «Italian» — cioe' un verde comprato con un errore.
-#    ⚠ I caratteri ammessi sono quelli che `registro.c` lascia passare quando
-#      ripulisce l'identificatore: tutto il resto diventa `_`.
+# ⛔ The product's line, taken to the letter from `registro.c riga()`:
+#       "%s.%03ld %-7s [%s] "   or   "%s.%03ld %-7s "
+#    ⚠ The identity is recognised ONLY right after the area.  It is needed, and it shows:
+#      «tastiera layout in force: it [Italian]» has a bracket at the end,
+#      ⛔ and calling it identity would mean attributing that line to a
+#      tenant called «Italian» — i.e. a green bought with an error.
+#    ⚠ The characters allowed are those `registro.c` lets through when
+#      it cleans the identifier: everything else becomes `_`.
 RIGA = re.compile(r"^(\d\d:\d\d:\d\d\.\d\d\d) (\S+) +"
                   r"(?:\[([0-9A-Za-z._@:\-]{1,48})\] )?(.*)$")
 
 
 class Conto(object):
-    """Il conto, e si stampa sempre — verde o rosso."""
+    """The count, and it is always printed — green or red."""
 
     def __init__(self):
         self.totali = 0
-        self.orfane = 0          # ⛔ righe senza marca temporale (registro.c)
+        self.orfane = 0          # ⛔ lines without a timestamp (registro.c)
         self.obbligate = 0
         self.parentesi = 0
         self.solo_corpo = 0
-        self.senza = []          # (area, corpo) delle righe rosse
+        self.senza = []          # (area, body) of the red lines
         self.esenti_area = 0
         self.esenti_riepilogo = 0
         self.saluto = 0
         self.saluto_con_nome = 0
-        self.per_inquilino = {}  # nome -> quante righe obbligate sue
-        self.altri_nomi = {}     # parentesi con un nome NON dichiarato
-        # ⛔⛔ Le aree che NESSUNA delle tre liste conosce — vedi `analizza`.
-        #     `area -> quante righe`, ⭐ e si stampano PER NOME.
+        self.per_inquilino = {}  # name -> how many mandatory lines of its own
+        self.altri_nomi = {}     # brackets with a name NOT declared
+        # ⛔⛔ The areas that NONE of the three lists knows — see `analizza`.
+        #     `area -> how many lines`, ⭐ and they are printed BY NAME.
         self.sconosciute = {}
 
     def righe_sconosciute(self):
@@ -405,10 +405,10 @@ class Conto(object):
 
 
 def analizza(testo, nomi):
-    """⭐ Il giudice, e non tocca ne' rete ne' disco: si certifica.
+    """⭐ The judge, and it touches neither network nor disk: it is certified.
 
-    `testo` e' **la finestra** (la fetta), `nomi` gli inquilini DICHIARATI.
-    ⛔ Torna `None` se non c'e' niente da guardare: «non lo so» non e' zero.
+    `testo` is **the window** (the slice), `nomi` the DECLARED tenants.
+    ⛔ Returns `None` if there is nothing to look at: «I do not know» is not zero.
     """
     if not testo:
         return None
@@ -419,11 +419,11 @@ def analizza(testo, nomi):
         c.totali += 1
         m = RIGA.match(r)
         if not m:
-            # ⛔ Riga orfana: `registro.c` dichiara che sotto carico due
-            #    scritture si potevano accavallare, e la cura del 21 agosto
-            #    2026 (una sola `write` per riga) esiste per questo.  ⚠ Una
-            #    riga che non si sa nemmeno di che area sia non e' giudicabile:
-            #    si conta a parte, e NON si conta come verde.
+            # ⛔ Orphan line: `registro.c` declares that under load two
+            #    writes could overlap, and the cure of 21 August
+            #    2026 (a single `write` per line) exists for this.  ⚠ A
+            #    line of which one does not even know the area is not judgeable:
+            #    it is counted separately, and NOT counted as green.
             c.orfane += 1
             continue
         _quando, area, ident, corpo = m.group(1), m.group(2), m.group(3), m.group(4)
@@ -436,25 +436,25 @@ def analizza(testo, nomi):
             continue
         if area not in AREE_DI_SESSIONE:
             # ═══════════════════════════════════════════════════════════════
-            # ⛔⛔ E UN'AREA CHE NESSUNA DELLE TRE LISTE CONOSCE **NON E'**
-            #     «roba del server».
+            # ⛔⛔ AND AN AREA THAT NONE OF THE THREE LISTS KNOWS **IS NOT**
+            #     «server stuff».
             #
-            # ⚠ Fino al 27 ago 2026 qui c'era solo `c.esenti_area += 1`, e
-            #   `stampa_conto` presentava il conto sotto l'etichetta
-            #   *«esenti — aree del server (avvio cert budget)»*.  ⇒ Tutto
-            #   quel che non stava nelle tre liste finiva **muto** dentro
-            #   quella riga: `[D]` cinquecento righe di un'area inventata
-            #   davano verdetto **0** — ⛔ C9 verde su 500 righe che non aveva
-            #   guardato, con la faccia di quando le guarda.
+            # ⚠ Until 27 Aug 2026 there was only `c.esenti_area += 1` here, and
+            #   `stampa_conto` presented the count under the label
+            #   *«exempt — server areas (avvio cert budget)»*.  ⇒ Everything
+            #   that was not in the three lists ended up **mute** inside
+            #   that line: `[D]` five hundred lines of an invented area
+            #   gave verdict **0** — ⛔ C9 green on 500 lines it had not
+            #   looked at, with the face it has when it looks.
             #
-            # ⭐ E l'ironia e' che questa maglia la frase giusta ce l'ha gia'
-            #   scritta in testa, per le aree del saluto: **un'esenzione che
-            #   non si vede e' un'esenzione di cui nessuno si accorge.**
-            # ⇒ Adesso un'area sconosciuta e' NOMINATA e CONTATA a parte, e
-            #   fa esito **3** — non un rosso (non e' colpa del prodotto), e
-            #   ⛔ soprattutto non un verde.  ⚠ Non e' un rosso perpetuo
-            #   (§1.49): si spegne appena qualcuno mette l'area nuova nella
-            #   lista giusta, che e' esattamente il gesto che serve.
+            # ⭐ And the irony is that this mesh already has the right sentence
+            #   written at the top, for the greeting areas: **an exemption that
+            #   cannot be seen is an exemption nobody notices.**
+            # ⇒ Now an unknown area is NAMED and COUNTED separately, and
+            #   gives outcome **3** — not a red (it is not the product's fault), and
+            #   ⛔ above all not a green.  ⚠ It is not a perpetual red
+            #   (§1.49): it goes off as soon as someone puts the new area in the
+            #   right list, which is exactly the gesture needed.
             # ═══════════════════════════════════════════════════════════════
             if area in AREE_DEL_SERVER:
                 c.esenti_area += 1
@@ -471,7 +471,7 @@ def analizza(testo, nomi):
             if ident in nomi:
                 c.per_inquilino[ident] = c.per_inquilino.get(ident, 0) + 1
             else:
-                # ⚠ Attribuita, ma a qualcuno che non avevo dichiarato: si dice.
+                # ⚠ Attributed, but to someone I had not declared: it is said.
                 c.altri_nomi[ident] = c.altri_nomi.get(ident, 0) + 1
         elif nel_corpo:
             c.solo_corpo += 1
@@ -482,85 +482,85 @@ def analizza(testo, nomi):
 
 
 def verdetto_ammissione(quanti_ammessi, quanti_aperti):
-    """⭐⭐ «Ho abbastanza inquilini per fare la prova che dico di fare?»
+    """⭐⭐ «Do I have enough tenants to do the test I say I do?»
 
-    ⛔ Separato dal resto apposta, come `verdetto()`: una regola che si legge in
-       dieci righe e si CERTIFICA vale piu' di un `if` in mezzo al `main`.
+    ⛔ Separated from the rest on purpose, like `verdetto()`: a rule that reads in
+       ten lines and is CERTIFIED is worth more than an `if` in the middle of `main`.
 
-    Torna `(esito, perche)` — `0` vuol dire «vai avanti», ⛔ non «verde».
+    Returns `(esito, perche)` — `0` means «go on», ⛔ not «green».
 
-    ⭐ La forma forte di C9 e' **DUE inquilini vivi INSIEME**.  Se non sono
-       entrati tutt'e due, quella prova non e' stata fatta — ⛔ e non fatta non
-       vuol dire fallita: un cliente RESPINTO non e' un prodotto rotto.
-    ⚠ `quanti_aperti == 0` vuol dire `--da-file`: non li ho aperti io, non
-      pretendo niente.
+    ⭐ The strong form of C9 is **TWO tenants alive TOGETHER**.  If they did not
+       both get in, that test was not done — ⛔ and not done does not
+       mean failed: a client TURNED AWAY is not a broken product.
+    ⚠ `quanti_aperti == 0` means `--da-file`: I did not open them myself, I do not
+      demand anything.
     """
     if quanti_aperti == 0:
-        return 0, "non ho aperto io gli inquilini: giudico quel che c'e'"
+        return 0, "I did not open the tenants myself: I judge what is there"
     if quanti_ammessi < quanti_aperti:
-        return 3, ("sono entrati %d inquilini su %d: la forma forte — DUE vivi "
-                   "insieme — non e' stata provata" % (quanti_ammessi,
-                                                       quanti_aperti))
-    return 0, "tutti gli inquilini aperti sono entrati"
+        return 3, ("%d tenants out of %d got in: the strong form — TWO alive "
+                   "together — was not tested" % (quanti_ammessi,
+                                                  quanti_aperti))
+    return 0, "all the opened tenants got in"
 
 
 def verdetto(c, quanti_attesi):
-    """Dal conto all'esito di §4.5.  ⛔ Separato dall'analisi apposta: cosi' la
-       regola sul «non lo so» si legge in dieci righe e si certifica.
+    """From the count to the outcome of §4.5.  ⛔ Separated from the analysis on purpose: so the
+       rule on «I do not know» reads in ten lines and is certified.
 
-       `quanti_attesi` = quanti inquilini il banco ha APERTO lui.  ⭐ 0 vuol
-       dire «non li ho aperti io» (`--da-file`), e allora la forma forte non
-       si pretende: si giudica quel che c'e'.
+       `quanti_attesi` = how many tenants the bench opened ITSELF.  ⭐ 0 means
+       «I did not open them myself» (`--da-file`), and then the strong form is not
+       demanded: what is there is judged.
     """
     if c is None:
-        return 3, "la fetta di registro e' vuota: non c'e' niente da guardare"
+        return 3, "the log slice is empty: there is nothing to look at"
     if c.totali and c.orfane == c.totali:
-        return 3, ("tutte le %d righe sono orfane (nessuna marca temporale): "
-                   "non so nemmeno di che area siano" % c.totali)
-    # ⛔⛔ IL GUARDIANO DI §1.44, ed e' la riga piu' importante di questa
-    #    funzione: un insieme obbligato VUOTO passerebbe qualunque controllo.
-    #    «Zero righe obbligate, zero senza nome» ha esattamente l'aspetto di un
-    #    verde, e non ha guardato niente.
+        return 3, ("all %d lines are orphans (no timestamp): "
+                   "I do not even know which area they belong to" % c.totali)
+    # ⛔⛔ THE GUARDIAN OF §1.44, and it is the most important line of this
+    #    function: an EMPTY mandatory set would pass any check.
+    #    «Zero mandatory lines, zero without a name» looks exactly like a
+    #    green, and has looked at nothing.
     if c.obbligate == 0:
-        return 3, ("⛔ NESSUNA riga obbligata nella finestra: il giudizio "
-                   "sarebbe verde senza aver guardato niente (LEZIONI §1.44)")
-    # ⛔⛔ E L'ORDINE DI QUESTI DUE CONTROLLI NON E' INDIFFERENTE — 26 agosto
-    #    2026, ⭐ e l'ha trovato la certificazione di questa stessa maglia.
+        return 3, ("⛔ NO mandatory line in the window: the judgement "
+                   "would be green without having looked at anything (LEZIONI §1.44)")
+    # ⛔⛔ AND THE ORDER OF THESE TWO CHECKS IS NOT INDIFFERENT — 26 August
+    #    2026, ⭐ and it was found by the certification of this very mesh.
     #
-    #    Nella prima stesura la guardia della «forma forte» veniva PRIMA.  ⇒ Col
-    #    guasto innestato (`--togli-nome tutto`) nessuna riga nomina piu'
-    #    nessuno, quindi «gli inquilini che parlano» sono ZERO, ⛔ e la maglia
-    #    rispondeva **3** dove doveva rispondere **1**: cioe' il caso «si toglie
-    #    il nome ⇒ rosso» — la ragione per cui C9 esiste — non dava rosso.
+    #    In the first draft the «strong form» guard came FIRST.  ⇒ With the
+    #    grafted fault (`--togli-nome tutto`) no line names anyone any more,
+    #    so «the tenants that speak» are ZERO, ⛔ and the mesh
+    #    answered **3** where it had to answer **1**: i.e. the case «the name
+    #    is removed ⇒ red» — the reason why C9 exists — did not give red.
     #
-    # ⭐ LA REGOLA, ed e' piu' larga del bug: **un ROSSO non ha bisogno della
-    #    forma forte per essere creduto; un VERDE si.**  Se una riga obbligata
-    #    non si puo' attribuire, quello e' un fatto, e vale anche se e' entrato
-    #    un inquilino solo.  La forma forte serve a dire che il VERDE e' stato
-    #    guadagnato con due inquilini vivi insieme, non con uno.
-    # ⇒ Percio' il rosso si decide prima, e la guardia resta sotto.
+    # ⭐ THE RULE, and it is wider than the bug: **a RED does not need the
+    #    strong form to be believed; a GREEN does.**  If a mandatory line
+    #    cannot be attributed, that is a fact, and it holds even if only one
+    #    tenant got in.  The strong form serves to say that the GREEN was
+    #    earned with two tenants alive together, not with one.
+    # ⇒ That is why the red is decided first, and the guard stays below.
     if c.senza:
-        return 1, ("%d righe obbligate su %d non si possono attribuire"
+        return 1, ("%d mandatory lines out of %d cannot be attributed"
                    % (len(c.senza), c.obbligate))
-    # ⛔⛔ E UN VERDE NON SI DA' SU RIGHE CHE NON SI SONO SAPUTE CLASSIFICARE.
-    #    ⚠ Sta DOPO il rosso, per la stessa regola di sopra: un rosso trovato
-    #      e' un giudizio gia' dato e non si annacqua in «non lo so».
+    # ⛔⛔ AND A GREEN IS NOT GIVEN ON LINES THAT COULD NOT BE CLASSIFIED.
+    #    ⚠ It sits AFTER the red, by the same rule as above: a red found
+    #      is a judgement already given and it is not watered down into «I do not know».
     if c.sconosciute:
-        return 3, ("⛔ %d righe di %d aree che NON so classificare (%s): non "
-                   "sono ne' giudicate ne' esenti, e un verde che le ignora "
-                   "sarebbe un verde che non le ha guardate (§1.44)"
+        return 3, ("⛔ %d lines of %d areas I do NOT know how to classify (%s): they "
+                   "are neither judged nor exempt, and a green that ignores them "
+                   "would be a green that has not looked at them (§1.44)"
                    % (c.righe_sconosciute(), len(c.sconosciute),
                       " ".join(sorted(c.sconosciute))))
     if quanti_attesi >= 2 and len(c.per_inquilino) < 2:
-        return 3, ("⭐ la forma forte e' DUE inquilini insieme, e nella "
-                   "finestra ne parla %d: un VERDE cosi' non e' guadagnato"
+        return 3, ("⭐ the strong form is TWO tenants together, and in the "
+                   "window %d speaks: a GREEN like that is not earned"
                    % len(c.per_inquilino))
-    return 0, "tutte le %d righe obbligate dicono di chi parlano" % c.obbligate
+    return 0, "all %d mandatory lines say who is speaking" % c.obbligate
 
 
 # ---------------------------------------------------------------------------
-# ⛔ IL GUASTO SUI DATI VERI — senza ricompilare il prodotto, e senza toccare
-#    il registro sul disco: si sfregia **la copia in memoria**.
+# ⛔ THE FAULT ON THE REAL DATA — without recompiling the product, and without touching
+#    the log on disk: **the in-memory copy** is defaced.
 # ---------------------------------------------------------------------------
 def sfregia(testo, nomi, come):
     if come in ("parentesi", "tutto"):
@@ -577,58 +577,58 @@ def sfregia(testo, nomi, come):
 # ---------------------------------------------------------------------------
 def stampa_conto(c, nomi, esito, perche):
     print()
-    print("  ⭐ IL CONTO — e si stampa sempre, verde o rosso:")
-    print("     righe totali nella finestra        %6d" % c.totali)
+    print("  ⭐ THE COUNT — and it is always printed, green or red:")
+    print("     total lines in the window          %6d" % c.totali)
     if c.orfane:
-        print("     ⚠ di cui ORFANE (senza l'ora)      %6d   ⛔ non giudicabili"
+        print("     ⚠ of which ORPHANS (no time)       %6d   ⛔ not judgeable"
               % c.orfane)
-    print("     ⛔ righe OBBLIGATE                  %6d" % c.obbligate)
+    print("     ⛔ MANDATORY lines                  %6d" % c.obbligate)
     if c.obbligate:
-        print("        · col nome NELLA PARENTESI       %6d   (%4.1f %%)"
+        print("        · with the name IN THE BRACKETS  %6d   (%4.1f %%)"
               % (c.parentesi, 100.0 * c.parentesi / c.obbligate))
-        print("        · col nome SOLO NEL CORPO        %6d   (%4.1f %%)  ⚠"
+        print("        · with the name ONLY IN THE BODY %6d   (%4.1f %%)  ⚠"
               % (c.solo_corpo, 100.0 * c.solo_corpo / c.obbligate))
-        print("        · ⛔ SENZA NOME                  %6d   (%4.1f %%)"
+        print("        · ⛔ WITHOUT A NAME              %6d   (%4.1f %%)"
               % (len(c.senza), 100.0 * len(c.senza) / c.obbligate))
-    print("     esenti — aree del server           %6d   (%s)"
+    print("     exempt — server areas              %6d   (%s)"
           % (c.esenti_area, " ".join(AREE_DEL_SERVER)))
-    # ⛔⛔ E le aree che nessuno conosce si stampano PER NOME, sempre: una
-    #     esenzione che non si vede e' un'esenzione di cui nessuno si accorge.
+    # ⛔⛔ And the areas nobody knows are printed BY NAME, always: an
+    #     exemption that cannot be seen is an exemption nobody notices.
     if c.sconosciute:
-        print("     ⛔⛔ AREE CHE NON SO CLASSIFICARE  %6d   righe, in %d aree"
+        print("     ⛔⛔ AREAS I CANNOT CLASSIFY       %6d   lines, in %d areas"
               % (c.righe_sconosciute(), len(c.sconosciute)))
         for area, q in sorted(c.sconosciute.items(), key=lambda x: -x[1]):
-            print("        · %-12s %6d   ⛔ ne' obbligata ne' esente: nessuno"
-                  " l'ha mai giudicata" % (area, q))
-        print("        ⇒ va messa in una delle tre liste in testa a questa")
-        print("          maglia (di sessione · del saluto · del server).")
-    print("     esenti — riepiloghi su TUTTI       %6d   (portano «%s»)"
+            print("        · %-12s %6d   ⛔ neither mandatory nor exempt: nobody"
+                  " has ever judged it" % (area, q))
+        print("        ⇒ it must be put in one of the three lists at the top of this")
+        print("          mesh (session · greeting · server).")
+    print("     exempt — summaries about EVERYONE  %6d   (they carry «%s»)"
           % (c.esenti_riepilogo, "» «".join(SEGNI_DI_RIEPILOGO)))
-    print("     ⚠ aree del saluto, NON giudicate   %6d   di cui col nome %d"
+    print("     ⚠ greeting areas, NOT judged       %6d   of which with the name %d"
           % (c.saluto, c.saluto_con_nome))
-    print("       (%s — la stessa area serve la stretta di mano e il dialogo)"
+    print("       (%s — the same area serves the handshake and the dialogue)"
           % " ".join(AREE_DEL_SALUTO))
     print()
-    print("  ⭐ e la FORMA FORTE — righe obbligate attribuite, per inquilino:")
+    print("  ⭐ and the STRONG FORM — mandatory lines attributed, per tenant:")
     for n in nomi:
         print("       %-12s %6d" % (n, c.per_inquilino.get(n, 0)))
     for n, q in sorted(c.altri_nomi.items()):
-        print("       ⚠ %-10s %6d   (nome NON dichiarato a questa maglia)" % (n, q))
+        print("       ⚠ %-10s %6d   (name NOT declared to this mesh)" % (n, q))
     print()
     if c.solo_corpo:
-        print("  ⚠ RILIEVO, non verdetto: %d righe obbligate (%.1f %%) nominano"
+        print("  ⚠ FINDING, not verdict: %d mandatory lines (%.1f %%) name"
               % (c.solo_corpo, 100.0 * c.solo_corpo / max(1, c.obbligate)))
-        print("    l'inquilino SOLO nella prosa, non nella parentesi d'identita'.")
-        print("    ⛔ Sono attribuibili — un uomo che legge sa di chi si parla —")
-        print("       ma la prosa cambia quando qualcuno riscrive un messaggio,")
-        print("       e la parentesi no.  ⇒ Si conta, e non si giudica.")
+        print("    the tenant ONLY in the prose, not in the identity brackets.")
+        print("    ⛔ They are attributable — a man who reads knows who is meant —")
+        print("       but the prose changes when someone rewrites a message,")
+        print("       and the brackets do not.  ⇒ It is counted, and not judged.")
         print()
     if c.senza:
-        print("  ⛔⛔ ROSSO — %d righe obbligate NON si possono attribuire."
+        print("  ⛔⛔ RED — %d mandatory lines can NOT be attributed."
               % len(c.senza))
-        print("     ⭐ E con DUE inquilini vivi non e' un dettaglio: sono righe")
-        print("        identiche parola per parola, una per inquilino, e non c'e'")
-        print("        modo di dire quale sia di chi.")
+        print("     ⭐ And with TWO tenants alive it is not a detail: they are lines")
+        print("        identical word for word, one per tenant, and there is no")
+        print("        way to say which is whose.")
         viste = {}
         for area, corpo in c.senza:
             chiave = (area, re.sub(r"\d+", "N", corpo)[:110])
@@ -636,181 +636,183 @@ def stampa_conto(c, nomi, esito, perche):
         for (area, corpo), q in sorted(viste.items(), key=lambda x: -x[1])[:12]:
             print("       %4d × %-9s %s" % (q, area, corpo))
     print()
-    print("  esito %d — %s" % (esito, perche))
+    print("  outcome %d — %s" % (esito, perche))
 
 
 # ---------------------------------------------------------------------------
 def certifica():
-    """⛔ Il giudice deve saper dire VERDE, ROSSO e «NON LO SO» — e va fatto
-       girare, non immaginato (§3.6).
+    """⛔ The judge must be able to say GREEN, RED and «I DO NOT KNOW» — and it must be
+       run, not imagined (§3.6).
 
-       ⚠ E si dichiara che cosa copre: **la lettura e la regola**.  ⛔ NON copre
-         che il prodotto scriva le righe giuste, ne' che il nome sia quello
-         vero — vedi «quel che C9 non guarda» in testa.
+       ⚠ And it declares what it covers: **the reading and the rule**.  ⛔ It does NOT cover
+         that the product writes the right lines, nor that the name is the
+         real one — see «what C9 does not look at» at the top.
     """
     N = ["c9u1", "c9u2"]
+    # ⚠ The bodies follow the English text of the product (10 Oct 2026); the judge
+    #   does not read them except for the names, so the verdicts do not change.
     sano = (
         "20:07:42.262 rcp     [c9u1] ammesso utente=c9u1 da=[127.0.0.1]:58048\n"
-        "20:07:44.294 figlio  [c9u1] entro nel montaggio del palco (tela 1920x1080)\n"
-        "20:07:44.301 figlio  [c9u2] entro nel montaggio del palco (tela 1920x1080)\n"
+        "20:07:44.294 figlio  [c9u1] entering the stage mounting (canvas 1920x1080)\n"
+        "20:07:44.301 figlio  [c9u2] entering the stage mounting (canvas 1920x1080)\n"
         "20:07:45.100 sessione [c9u1] monitor 1/1: connettore «Meta-0»\n"
-        "20:07:45.200 cattura [c9u2] tela CHIESTA al produttore: 1920x1080\n")
+        "20:07:45.200 cattura [c9u2] canvas REQUESTED from the producer: 1920x1080\n")
 
     casi = [
-        # nome, testo, attesi, esito atteso, controllo in piu' (o None)
-        ("⭐ tutte le righe obbligate hanno il nome", sano, 2, 0, None),
-        # ⛔ IL GUASTO: si toglie la parentesi ⇒ deve diventare rosso.
-        ("⛔ si toglie il nome dalla parentesi ⇒ ROSSO",
+        # name, text, expected, expected outcome, extra check (or None)
+        ("⭐ all mandatory lines have the name", sano, 2, 0, None),
+        # ⛔ THE FAULT: the brackets are removed ⇒ it must turn red.
+        ("⛔ the name is removed from the brackets ⇒ RED",
          sfregia(sano, N, "tutto"), 2, 1, None),
-        # ⭐ E la meta' che si dimentica (LEZIONI §1.49): tolto il guasto,
-        #    torna verde.  E' lo STESSO testo di prima, non sfregiato.
-        ("⭐ e tolto il guasto torna VERDE (§1.49)", sano, 2, 0, None),
-        ("⛔ registro vuoto ⇒ «non lo so», non verde", "", 2, 3, None),
-        # ⛔ §1.44: solo righe d'avvio.  «Tutte» direbbe rosso; «quelle che ce
-        #    l'hanno» direbbe verde.  ⭐ La risposta giusta e' «non lo so».
-        ("⛔ solo righe d'AVVIO: nessuna obbligata ⇒ «non lo so» (§1.44)",
-         "15:20:51.193 avvio   REMOTIX — fase 1, il filo nudo\n"
-         "15:20:51.195 cert    ⭐ due certificati, due impronte\n"
-         "15:20:51.196 quic    ascolto UDP su 0.0.0.0:8514\n", 2, 3, None),
-        # ⛔⛔ IL CASO CHE SPIEGA PERCHE' LA FINESTRA E' LA FETTA, e va letto.
-        #    `avvio` e `cert` sono esenti per AREA, quindi non danno fastidio.
-        #    ⛔ Ma «figlio ⭐ tabella dei figli accesa» e' l'area `figlio` — di
-        #       sessione — scritta dal PADRE all'avvio, quando nessun inquilino
-        #       esiste ancora.  ⇒ Dentro una finestra e' un ROSSO, e sarebbe un
-        #       rosso per sempre (§1.49).
-        #    ⭐ La cura non e' un'eccezione: e' che la finestra normale comincia
-        #       DOPO il segno, e quella riga non ci entra mai.  Con `--da-file`
-        #       ci entra, ed e' il prezzo dichiarato di quella modalita'.
-        ("⛔ con --da-file l'AVVIO entra in finestra e da' rosso: e' il prezzo",
-         "15:20:51.193 avvio   REMOTIX — fase 1, il filo nudo\n"
-         "15:20:51.194 figlio  ⭐ tabella dei figli accesa: fino a 10\n" + sano,
+        # ⭐ And the half that gets forgotten (LEZIONI §1.49): with the fault removed,
+        #    it is green again.  It is the SAME text as before, not defaced.
+        ("⭐ and with the fault removed it is GREEN again (§1.49)", sano, 2, 0, None),
+        ("⛔ empty log ⇒ «I do not know», not green", "", 2, 3, None),
+        # ⛔ §1.44: only start-up lines.  «All» would say red; «those that have
+        #    it» would say green.  ⭐ The right answer is «I do not know».
+        ("⛔ only START-UP lines: none mandatory ⇒ «I do not know» (§1.44)",
+         "15:20:51.193 avvio   REMOTIX — phase 1, the bare wire\n"
+         "15:20:51.195 cert    ⭐ two certificates, two fingerprints\n"
+         "15:20:51.196 quic    listening over UDP on 0.0.0.0:8514\n", 2, 3, None),
+        # ⛔⛔ THE CASE THAT EXPLAINS WHY THE WINDOW IS THE SLICE, and it must be read.
+        #    `avvio` and `cert` are exempt by AREA, so they do not bother.
+        #    ⛔ But «figlio ⭐ children table on» is the `figlio` area — a
+        #       session area — written by the PARENT at start-up, when no tenant
+        #       exists yet.  ⇒ Inside a window it is a RED, and it would be a
+        #       red forever (§1.49).
+        #    ⭐ The cure is not an exception: it is that the normal window starts
+        #       AFTER the mark, and that line never enters it.  With `--da-file`
+        #       it does, and it is the declared price of that mode.
+        ("⛔ with --da-file the START-UP enters the window and gives red: it is the price",
+         "15:20:51.193 avvio   REMOTIX — phase 1, the bare wire\n"
+         "15:20:51.194 figlio  ⭐ children table on: up to 10\n" + sano,
          2, 1, lambda c: len(c.senza) == 1 and c.esenti_area == 1),
-        # ⛔ La riga di riepilogo del guardiano: esente, o sarebbe un rosso al
-        #    minuto per sempre.
-        ("⭐ il riepilogo su TUTTI e' esente (o e' un rosso al minuto)",
+        # ⛔ The guardian's summary line: exempt, or it would be a red per
+        #    minute forever.
+        ("⭐ the summary about EVERYONE is exempt (or it is a red per minute)",
          sano + "20:08:45.559 sessione guardiano: chiamate=2 inquilini=2 "
                 "giri_fermi=0\n", 2, 0,
          lambda c: c.esenti_riepilogo == 1),
-        # ⚠ Il nome solo nella prosa: attribuibile, contato a parte.
-        ("⚠ nome SOLO nel corpo ⇒ verde, ma contato a parte",
-         sano + "20:07:46.000 figlio  «c9u1»: il palco per la tela 1920x1080 "
-                "non c'e' ANCORA\n", 2, 0,
+        # ⚠ The name only in the prose: attributable, counted separately.
+        ("⚠ name ONLY in the body ⇒ green, but counted separately",
+         sano + "20:07:46.000 figlio  «c9u1»: the stage for the canvas 1920x1080 "
+                "is NOT there YET\n", 2, 0,
          lambda c: c.solo_corpo == 1),
-        # ⛔ LA TRAPPOLA VERA, e viene dai dati misurati: una parentesi in CODA
-        #    non e' un'identita'.  Se lo fosse, questa riga sarebbe attribuita a
-        #    un inquilino di nome «Italian» ⇒ verde comprato con un errore.
-        ("⛔ «it [Italian]» NON e' un'identita' ⇒ ROSSO (la riga vera)",
-         sano + "20:07:42.270 tastiera disposizione in vigore: it [Italian]\n",
+        # ⛔ THE REAL TRAP, and it comes from the measured data: a bracket at the END
+        #    is not an identity.  If it were, this line would be attributed to
+        #    a tenant called «Italian» ⇒ a green bought with an error.
+        ("⛔ «it [Italian]» is NOT an identity ⇒ RED (the real line)",
+         sano + "20:07:42.270 tastiera layout in force: it [Italian]\n",
          2, 1, lambda c: len(c.senza) == 1),
-        # ⛔ Le aree del saluto senza nome non sono rosse — e si contano.
-        ("⛔ una riga di SALUTO senza nome non e' rossa (e si conta)",
-         sano + "20:07:41.261 quic    connessione nuova da [127.0.0.1]:58048\n",
+        # ⛔ The greeting areas without a name are not red — and they are counted.
+        ("⛔ a GREETING line without a name is not red (and it is counted)",
+         sano + "20:07:41.261 quic    new connection from [127.0.0.1]:58048\n",
          2, 0, lambda c: c.saluto == 2 and c.saluto_con_nome == 1),
-        # ⛔ Le aree del server: esenti anche quando nominano qualcuno.
-        ("⛔ `budget verdetto per «c9u1»` e' esente: l'area e' del server",
-         sano + "20:07:42.250 budget  verdetto per «c9u1»: ⭐ AMMESSO\n",
+        # ⛔ The server areas: exempt even when they name someone.
+        ("⛔ `budget verdict for «c9u1»` is exempt: the area is the server's",
+         sano + "20:07:42.250 budget  verdict for «c9u1»: ⭐ AMMESSO\n",
          2, 0, lambda c: c.esenti_area == 1 and not c.sconosciute),
 
         # ═══════════════════════════════════════════════════════════════════
-        # ⛔⛔ IL CASO CHE OGGI NON C'ERA, e avrebbe preso il difetto del
-        #     27 ago 2026: un'area di sessione NUOVA — un `#define REG_…` che
-        #     domani qualcuno aggiunge al prodotto — cadeva fra gli «esenti —
-        #     aree del server» **senza dire niente**.  `[D]` 500 righe di
-        #     un'area mai vista davano verdetto **0**.
-        # ⚠ Le 2 righe obbligate del testo sano ci sono e vanno bene: il
-        #   punto e' proprio che il verde sarebbe stato «guadagnato» su due
-        #   righe ignorando le altre cinquecento.
+        # ⛔⛔ THE CASE THAT WAS MISSING BEFORE TODAY, and it would have caught the defect of
+        #     27 Aug 2026: a NEW session area — a `#define REG_…` that
+        #     tomorrow someone adds to the product — fell among the «exempt —
+        #     server areas» **without saying anything**.  `[D]` 500 lines of
+        #     an area never seen gave verdict **0**.
+        # ⚠ The 2 mandatory lines of the healthy text are there and are fine: the
+        #   point is precisely that the green would have been «earned» on two
+        #   lines ignoring the other five hundred.
         # ═══════════════════════════════════════════════════════════════════
-        ("⛔⛔ 500 righe di un'area MAI VISTA ⇒ «non lo so», ⛔ NON un verde",
+        ("⛔⛔ 500 lines of an area NEVER SEEN ⇒ «I do not know», ⛔ NOT a green",
          sano + "".join("20:09:%02d.%03d penna   [c9u1] traccia %d\n"
                         % (i // 60, i % 1000, i) for i in range(500)),
          2, 3, lambda c: c.sconosciute.get("penna") == 500
                          and c.esenti_area == 0),
 
-        ("⛔ e basta UNA riga di un'area sconosciuta: non c'e' una soglia",
+        ("⛔ and ONE line of an unknown area is enough: there is no threshold",
          sano + "20:09:01.000 penna   [c9u1] traccia 1\n", 2, 3,
          lambda c: c.sconosciute.get("penna") == 1),
 
-        # ⭐ E la meta' che si dimentica (§1.49): messa l'area nella lista
-        #   giusta, il 3 si spegne.  ⚠ Qui si simula proprio cosi': l'area
-        #   sconosciuta e' `avvio`, che nella lista del server c'e' gia'.
-        ("⭐ …e un'area CONOSCIUTA del server non fa scattare niente (§1.49)",
-         sano + "20:09:01.000 avvio   una riga d'avvio qualunque\n", 2, 0,
+        # ⭐ And the half that gets forgotten (§1.49): with the area put in the
+        #   right list, the 3 goes off.  ⚠ Here it is simulated exactly so: the
+        #   unknown area is `avvio`, which is already in the server's list.
+        ("⭐ …and a KNOWN area of the server does not trigger anything (§1.49)",
+         sano + "20:09:01.000 avvio   any start-up line\n", 2, 0,
          lambda c: not c.sconosciute and c.esenti_area == 1),
 
-        # ⛔ Un rosso vero vince sul «non lo so»: l'ordine dei due controlli
-        #    e' quello, e va provato invece che ricordato.
-        ("⛔ un'area sconosciuta NON annacqua un rosso gia' trovato",
+        # ⛔ A real red wins over «I do not know»: the order of the two checks
+        #    is that one, and it must be tested instead of remembered.
+        ("⛔ an unknown area does NOT water down a red already found",
          sano + "20:09:01.000 penna   [c9u1] traccia 1\n"
-                "20:07:42.270 tastiera disposizione in vigore: it [Italian]\n",
+                "20:07:42.270 tastiera layout in force: it [Italian]\n",
          2, 1, lambda c: c.sconosciute.get("penna") == 1 and len(c.senza) == 1),
-        # ⭐ LA FORMA FORTE: due aperti, uno solo parla ⇒ «non lo so».
-        ("⭐ due aperti e uno solo parla ⇒ «non lo so», NON verde",
-         "20:07:44.294 figlio  [c9u1] entro nel montaggio del palco\n", 2, 3, None),
-        # ⚠ ...ma con --da-file (nessuno aperto da me) uno solo va benissimo.
-        ("⚠ con --da-file (0 aperti da me) un inquilino solo e' giudicabile",
-         "20:07:44.294 figlio  [c9u1] entro nel montaggio del palco\n", 0, 0, None),
-        # ⛔ Righe orfane: tutte orfane ⇒ non lo so.
-        ("⛔ tutte le righe orfane ⇒ «non lo so»",
-         "il palco per la tela 1920x1080 non c'e' ANCORA\nun'altra riga rotta\n",
+        # ⭐ THE STRONG FORM: two opened, only one speaks ⇒ «I do not know».
+        ("⭐ two opened and only one speaks ⇒ «I do not know», NOT green",
+         "20:07:44.294 figlio  [c9u1] entering the stage mounting\n", 2, 3, None),
+        # ⚠ ...but with --da-file (none opened by me) a single one is fine.
+        ("⚠ with --da-file (0 opened by me) a single tenant is judgeable",
+         "20:07:44.294 figlio  [c9u1] entering the stage mounting\n", 0, 0, None),
+        # ⛔ Orphan lines: all orphans ⇒ I do not know.
+        ("⛔ all lines orphan ⇒ «I do not know»",
+         "the stage for the canvas 1920x1080 is NOT there YET\nanother broken line\n",
          2, 3, None),
-        # ⚠ Un nome NON dichiarato: attribuito, non «senza nome».
-        ("⚠ una parentesi con un nome non dichiarato e' ATTRIBUITA",
-         sano + "20:07:44.500 figlio  [provanic7] entro nel montaggio\n", 2, 0,
+        # ⚠ A name NOT declared: attributed, not «without a name».
+        ("⚠ a bracket with an undeclared name is ATTRIBUTED",
+         sano + "20:07:44.500 figlio  [provanic7] entering the stage mounting\n", 2, 0,
          lambda c: c.altri_nomi.get("provanic7") == 1 and not c.senza),
-        # ⭐ Il guasto sui DATI VERI, verso «corpo»: la parentesi resta, e la
-        #    riga resta attribuibile ⇒ verde.  Serve a dimostrare che le due
-        #    forme sono davvero contate separate.
-        ("⭐ sfregiato solo il CORPO: la parentesi regge ⇒ verde",
+        # ⭐ The fault on the REAL DATA, «corpo» direction: the brackets stay, and the
+        #    line stays attributable ⇒ green.  It serves to prove that the two
+        #    forms are really counted separately.
+        ("⭐ only the BODY defaced: the brackets hold ⇒ green",
          sfregia(sano, N, "corpo"), 0, 0, None),
     ]
 
-    print("== certificazione del giudice di C9 ==")
-    print("   ⛔ copre LA LETTURA E LA REGOLA — non che il prodotto scriva le")
-    print("      righe giuste, ne' che il nome sia quello vero (vedi in testa)\n")
+    print("== certification of C9's judge ==")
+    print("   ⛔ it covers THE READING AND THE RULE — not that the product writes the")
+    print("      right lines, nor that the name is the real one (see the top)\n")
     guai = 0
     for nome, testo, attesi, atteso, extra in casi:
         c = analizza(testo, N)
         e, perche = verdetto(c, attesi)
         ok = (e == atteso) and (extra is None or (c is not None and extra(c)))
-        print("  %s  %-62s  esito %d (atteso %d)"
+        print("  %s  %-62s  outcome %d (expected %d)"
               % ("OK " if ok else "NO ", nome[:62], e, atteso))
         if not ok:
             guai += 1
-            print("        ⛔ perche': %s" % perche)
+            print("        ⛔ why: %s" % perche)
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ⭐⭐ LA GUARDIA DELL'AMMISSIONE — ⛔ il caso che oggi non c'era.
-    #    C9 apre DUE inquilini: se il server li respinge, il registro resta
-    #    vuoto e il verdetto vecchio l'avrebbe messo in conto al PRODOTTO.
+    # ⭐⭐ THE ADMISSION GUARD — ⛔ the case that was missing before today.
+    #    C9 opens TWO tenants: if the server turns them away, the log stays
+    #    empty and the old verdict would have charged it to the PRODUCT.
     # ═══════════════════════════════════════════════════════════════════════
     print()
-    print("  ── la guardia dell'ammissione: quanti sono entrati DAVVERO")
+    print("  ── the admission guard: how many REALLY got in")
     casi_amm = [
-        ("⭐ tutt'e due entrati ⇒ si va avanti", 2, 2, 0),
-        ("⛔ uno solo su due ⇒ 3, la forma forte non e' stata provata", 1, 2, 3),
-        ("⛔ nessuno dei due (respinti) ⇒ 3, ⛔ NON un rosso", 0, 2, 3),
-        ("⚠ `--da-file`: non li ho aperti io ⇒ si giudica quel che c'e'",
+        ("⭐ both got in ⇒ go on", 2, 2, 0),
+        ("⛔ only one of two ⇒ 3, the strong form was not tested", 1, 2, 3),
+        ("⛔ neither of the two (turned away) ⇒ 3, ⛔ NOT a red", 0, 2, 3),
+        ("⚠ `--da-file`: I did not open them myself ⇒ what is there is judged",
          0, 0, 0),
-        ("⭐ tre su tre ⇒ si va avanti (non e' inchiodato a due)", 3, 3, 0),
+        ("⭐ three of three ⇒ go on (it is not nailed down to two)", 3, 3, 0),
     ]
     for nome, amm, ape, atteso in casi_amm:
         e, perche = verdetto_ammissione(amm, ape)
         ok = e == atteso
         if not ok:
             guai += 1
-        print("  %s  %-62s  esito %d (atteso %d)"
+        print("  %s  %-62s  outcome %d (expected %d)"
               % ("OK " if ok else "NO ", nome[:62], e, atteso))
 
-    # ⭐⭐ E IL PREDICATO «AMMESSO» — vive in C1, e si certifica coi casi di C1:
-    #    ⛔ una copia dei casi qui sarebbe un secondo posto da cui divergere.
+    # ⭐⭐ AND THE «AMMESSO» PREDICATE — it lives in C1, and it is certified with C1's cases:
+    #    ⛔ a copy of the cases here would be a second place to diverge from.
     print()
     guai_amm, quanti_amm = casa_dell_ammissione().certifica_ammissione("C9")
     guai += guai_amm
 
-    # ⭐⭐ E I CASI DEI GRUPPI DELLA SCHEDA — ⛔ l'altro caso che non c'era:
-    #    un inquilino senza i gruppi dei nodi ⇒ «non ho potuto guardare», ⛔
-    #    mai rosso.  Vivono in C1 col passo che certificano.
+    # ⭐⭐ AND THE CARD GROUPS CASES — ⛔ the other case that was missing:
+    #    a tenant without the groups of the nodes ⇒ «I could not look», ⛔
+    #    never red.  They live in C1 with the step they certify.
     print()
     guai_gr, quanti_gr = casa_dell_ammissione().certifica_gruppi("C9")
     guai += guai_gr
@@ -818,13 +820,13 @@ def certifica():
     quanti = len(casi) + len(casi_amm) + quanti_amm + quanti_gr
     print()
     if guai:
-        print("⛔ il giudice NON e' affidabile: %d casi su %d sbagliati"
+        print("⛔ the judge is NOT reliable: %d cases out of %d wrong"
               % (guai, quanti))
         return 1
-    print("⭐ %d casi su %d: il giudice sa dire verde, rosso e «non lo so»."
+    print("⭐ %d cases out of %d: the judge can say green, red and «I do not know»."
           % (quanti, quanti))
-    print("⛔ E sa dire «non lo so» anche quando l'insieme obbligato e' VUOTO —")
-    print("   che e' il modo in cui una maglia smette di guardare senza dirlo.")
+    print("⛔ And it can say «I do not know» even when the mandatory set is EMPTY —")
+    print("   which is the way a mesh stops looking without saying so.")
     return 0
 
 
@@ -838,12 +840,12 @@ def leggi(percorso):
 
 
 def apri_inquilini(a, nomi):
-    """⭐ LA FORMA FORTE: i due si aprono INSIEME, non uno dopo l'altro.
+    """⭐ THE STRONG FORM: the two are opened TOGETHER, not one after the other.
 
-    ⛔ E «da zero» comprende «da zero rispetto a me stesso di ieri»: l'utente si
-       cancella **prima** di crearlo, o dal secondo giro in poi non e' piu'
-       nuovo (`LEZIONI.md`, C1, 26 agosto 2026).
-    Torna (segno, ammessi) oppure (None, …) se il terreno non regge.
+    ⛔ And «from zero» includes «from zero with respect to myself of yesterday»: the user is
+       deleted **before** creating it, or from the second round on it is no longer
+       new (`LEZIONI.md`, C1, 26 August 2026).
+    Returns (segno, ammessi) or (None, …) if the terrain does not hold.
     """
     for chi in nomi:
         subprocess.run(
@@ -852,45 +854,45 @@ def apri_inquilini(a, nomi):
              "pkill -KILL -u %s 2>/dev/null; "
              "userdel -r %s 2>/dev/null; rm -rf /home/%s"
              % (chi, chi, chi, chi)], capture_output=True, text=True)
-        # ⛔ I gruppi della scheda non stanno piu' dentro il `useradd`: li da'
-        #    l'attrezzo, che li LEGGE dai nodi `/dev/dri` e poi RILEGGE.
+        # ⛔ The card's groups are no longer inside the `useradd`: they are given by
+        #    the tool, which READS them from the `/dev/dri` nodes and then READS BACK.
         fatto = subprocess.run(
             ["/bin/sh", "-c",
              "useradd -m -s /bin/bash %s && "
              "printf '%s:%s\n' | chpasswd" % (chi, chi, a.parola)],
             capture_output=True, text=True)
         if fatto.returncode != 0:
-            print("⛔ non riesco a creare l'inquilino «%s»: %s"
+            print("⛔ I cannot create the tenant «%s»: %s"
                   % (chi, fatto.stderr.strip()[:90]))
             return None, []
-        # ⛔⛔ E SENZA I GRUPPI DELLA SCHEDA NON SI MISURA: `[M]` la sessione
-        #     nasce cieca, e un registro che non nomina nessuno perche' nessuno
-        #     ha mai visto niente non e' un difetto di attribuzione.
-        #     ⇒ `None` ⇒ il chiamante esce **2/3**, ⛔ mai rosso.
+        # ⛔⛔ AND WITHOUT THE CARD'S GROUPS WE DO NOT MEASURE: `[M]` the session
+        #     is born blind, and a log that names nobody because nobody
+        #     has ever seen anything is not an attribution defect.
+        #     ⇒ `None` ⇒ the caller exits **2/3**, ⛔ never red.
         e_gr, perche_gr = garantisci_i_gruppi(chi, prefisso="  ")
         if e_gr != 0:
             print("  %s" % perche_gr)
             return None, []
 
-    # ⛔ Si segna DOVE siamo nel registro PRIMA di aprire: la finestra e' la
-    #    fetta, e cosi' l'avvio del server resta fuori per costruzione.
+    # ⛔ We mark WHERE we are in the log BEFORE opening: the window is the
+    #    slice, and so the server start-up stays outside by construction.
     #
-    # ⛔⛔ E IL SEGNO SI PRENDE IN CARATTERI, NON IN BYTE — 26 agosto 2026, e
-    #    questa riga e' costata un VERDE FALSO, il primo giro vero.
+    # ⛔⛔ AND THE MARK IS TAKEN IN CHARACTERS, NOT IN BYTES — 26 August 2026, and
+    #    this line cost a FALSE GREEN, the first real round.
     #
-    #    La prima stesura diceva `segno = os.path.getsize(...)`, cioe' **byte**,
-    #    e poi tagliava `fetta = testo[segno:]`, cioe' **caratteri**.  ⛔ Il
-    #    registro di questo prodotto e' pieno di ⭐ ⛔ ⚠ «» — tre byte l'uno —
-    #    quindi il taglio cadeva **molto piu' avanti** del segno: `[M]` la fetta
-    #    ha perso le sue prime righe, ⛔ fra cui le due righe `tastiera` che
-    #    sono l'unico rosso vero di questa scatola.
-    #    ⇒ La maglia ha detto **0 righe senza nome, esito 0 — verde**, mentre il
-    #      registro sul disco le aveva, alle 20:17:47 e alle 20:17:49.
+    #    The first draft said `segno = os.path.getsize(...)`, i.e. **bytes**,
+    #    and then cut `fetta = testo[segno:]`, i.e. **characters**.  ⛔ The
+    #    log of this product is full of ⭐ ⛔ ⚠ «» — three bytes each —
+    #    so the cut fell **much further on** than the mark: `[M]` the slice
+    #    lost its first lines, ⛔ among them the two `tastiera` lines that
+    #    are the only real red of this box.
+    #    ⇒ The mesh said **0 lines without a name, outcome 0 — green**, while the
+    #      log on disk had them, at 20:17:47 and at 20:17:49.
     #
-    # ⚠ E il segnale che l'ha fatta scoprire e' stampato qui sotto: **1 riga
-    #   ORFANA**.  Un taglio in mezzo a una riga ne produce esattamente una, e
-    #   una fetta presa a un a-capo non ne produce nessuna.  ⇒ Il conto delle
-    #   orfane non e' un ornamento: e' la spia che il taglio e' sbagliato.
+    # ⚠ And the signal that made it be discovered is printed below: **1 ORPHAN
+    #   line**.  A cut in the middle of a line produces exactly one, and
+    #   a slice taken at a newline produces none.  ⇒ The orphan count
+    #   is not an ornament: it is the warning light that the cut is wrong.
     testo = leggi(a.registro)
     if testo is None:
         return None, []
@@ -903,9 +905,9 @@ def apri_inquilini(a, nomi):
              "--porta", str(a.porta), "--utente", chi, "--parola", a.parola,
              "--resta", str(a.resta)],
             stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)))
-        # ⚠ Uno sfasamento piccolo e DICHIARATO: due `ATTACCA` nello stesso
-        #   millisecondo non sono la prova che si vuole fare — la prova e' «due
-        #   VIVI INSIEME», e ci restano insieme per tutto il `--resta`.
+        # ⚠ A small and DECLARED offset: two `ATTACCA` in the same
+        #   millisecond are not the test one wants to do — the test is «two
+        #   ALIVE TOGETHER», and they stay together for the whole `--resta`.
         time.sleep(a.sfasamento)
 
     ammessi = []
@@ -915,11 +917,11 @@ def apri_inquilini(a, nomi):
         except subprocess.TimeoutExpired:
             q.kill()
             uscita = ""
-        # ⛔ NON `"AMMESSO" in uscita`: la parola c'e' anche nei due rifiuti, e
-        #    ci arriva sullo stdout — vedi `e_stato_ammesso()` in testa.
-        #    ⚠ Qui il difetto mordeva due volte: C9 apre **due** inquilini, e
-        #    con due rifiuti la lista `ammessi` sarebbe stata piena mentre il
-        #    registro restava vuoto ⇒ un rosso inventato sul prodotto.
+        # ⛔ NOT `"AMMESSO" in uscita`: the word is also in the two refusals, and
+        #    it arrives on stdout — see `e_stato_ammesso()` at the top.
+        #    ⚠ Here the defect bit twice: C9 opens **two** tenants, and
+        #    with two refusals the `ammessi` list would have been full while the
+        #    log stayed empty ⇒ a red invented on the product.
         stato = e_stato_ammesso(uscita)
         if stato is True:
             ammessi.append(chi)
@@ -927,16 +929,16 @@ def apri_inquilini(a, nomi):
             coda = [r.strip() for r in (uscita or "").strip().splitlines()
                     if r.strip() and not r.startswith("==")]
             print("  ⛔ «%s» %s — %s"
-                  % (chi, "e' stato RESPINTO" if stato is False
-                     else "non ha detto NIENTE",
-                     coda[-1][:80] if coda else "e non ha detto perche'"))
+                  % (chi, "was TURNED AWAY" if stato is False
+                     else "said NOTHING",
+                     coda[-1][:80] if coda else "and did not say why"))
     return segno, ammessi
 
 
 def sgombra(nomi):
-    """⭐ Della PROPRIA cartella soltanto, per nome: mai un modello globale —
-       nella fase 10 un `pkill -f` globale ha rischiato di uccidere il lavoro di
-       un'altra prova in corso."""
+    """⭐ Of ONE'S OWN folder only, by name: never a global pattern —
+       in phase 10 a global `pkill -f` risked killing the work of
+       another test in progress."""
     for chi in nomi:
         subprocess.run(["loginctl", "terminate-user", chi],
                        capture_output=True, text=True)
@@ -950,26 +952,26 @@ def sgombra(nomi):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--inquilini", default="c9u1,c9u2",
-                   help="⭐ DUE, e insieme: e' la forma forte della maglia")
+                   help="⭐ TWO, and together: it is the strong form of the mesh")
     p.add_argument("--parola", default="provanic2026")
     p.add_argument("--porta", type=int, default=8514)
     p.add_argument("--indirizzo", default="127.0.0.1")
     p.add_argument("--registro", default="/var/lib/rete11/registro.log")
     p.add_argument("--cliente", default="/opt/remotix/01-b3-cliente.py")
     p.add_argument("--resta", type=float, default=45.0,
-                   help="quanto restano vivi INSIEME")
+                   help="how long they stay alive TOGETHER")
     p.add_argument("--sfasamento", type=float, default=2.0,
-                   help="quanto passa fra l'apertura del primo e del secondo")
+                   help="how long passes between opening the first and the second")
     p.add_argument("--da-file", default="",
-                   help="⚠ giudica un registro gia' scritto invece di aprire "
-                        "due inquilini: ⛔ allora la FINESTRA e' tutto il file")
+                   help="⚠ judges an already written log instead of opening "
+                        "two tenants: ⛔ then the WINDOW is the whole file")
     p.add_argument("--salva-fetta", default="",
-                   help="⭐ scrive qui la fetta giudicata: ⛔ un verdetto che "
-                        "non si puo' rileggere non si puo' contestare")
+                   help="⭐ writes the judged slice here: ⛔ a verdict that "
+                        "cannot be reread cannot be contested")
     p.add_argument("--togli-nome", default="no",
                    choices=("no", "parentesi", "corpo", "tutto"),
-                   help="⛔ IL GUASTO INNESTATO SUI DATI VERI, senza "
-                        "ricompilare: sfregia la COPIA in memoria della fetta")
+                   help="⛔ THE GRAFTED FAULT ON THE REAL DATA, without "
+                        "recompiling: it defaces the in-memory COPY of the slice")
     p.add_argument("--certifica", action="store_true")
     a = p.parse_args()
 
@@ -978,17 +980,17 @@ def main():
 
     nomi = [n for n in a.inquilini.split(",") if n]
 
-    print("== C9 — il registro dice DI CHI parla? ==")
-    print("   ⭐ la forma forte: DUE inquilini vivi INSIEME (%s), e ogni riga"
+    print("== C9 — does the log say WHO is speaking? ==")
+    print("   ⭐ the strong form: TWO tenants alive TOGETHER (%s), and every line"
           % ", ".join(nomi))
-    print("      che riguarda una sessione deve dire QUALE delle due.")
+    print("      that concerns a session must say WHICH of the two.")
     print()
-    print("   l'insieme OBBLIGATO, dichiarato:")
-    print("     aree di sessione : %s" % " ".join(AREE_DI_SESSIONE))
-    print("     esenti (server)  : %s" % " ".join(AREE_DEL_SERVER))
-    print("     non giudicate    : %s   ⚠ il saluto non ha ancora un nome"
+    print("   the MANDATORY set, declared:")
+    print("     session areas    : %s" % " ".join(AREE_DI_SESSIONE))
+    print("     exempt (server)  : %s" % " ".join(AREE_DEL_SERVER))
+    print("     not judged       : %s   ⚠ the greeting does not have a name yet"
           % " ".join(AREE_DEL_SALUTO))
-    print("     esente per conto : le righe che portano «%s»"
+    print("     exempt by count  : the lines that carry «%s»"
           % "» «".join(SEGNI_DI_RIEPILOGO))
     print()
 
@@ -996,54 +998,54 @@ def main():
     if a.da_file:
         fetta = leggi(a.da_file)
         if fetta is None:
-            print("⛔ non riesco a leggere %s ⇒ non ho potuto guardare" % a.da_file)
+            print("⛔ I cannot read %s ⇒ I could not look" % a.da_file)
             sys.exit(3)
-        print("   ⚠ --da-file: la finestra e' TUTTO il file «%s»." % a.da_file)
-        print("     ⛔ Quindi ci sono dentro anche le righe d'avvio, che sono")
-        print("        esenti per area — ma un file che non contenga nessuna")
-        print("        riga obbligata dara' «non lo so», e non un verde.")
+        print("   ⚠ --da-file: the window is the WHOLE file «%s»." % a.da_file)
+        print("     ⛔ So the start-up lines are inside too, which are")
+        print("        exempt by area — but a file that contains no")
+        print("        mandatory line will give «I do not know», and not a green.")
     else:
         if not os.path.exists(a.cliente):
-            print("⛔ non trovo il cliente di prova «%s»" % a.cliente)
-            print("   ⇒ non ho potuto guardare")
+            print("⛔ I cannot find the test client «%s»" % a.cliente)
+            print("   ⇒ I could not look")
             sys.exit(3)
         if leggi(a.registro) is None:
-            print("⛔ non riesco a leggere il registro «%s»" % a.registro)
-            print("   ⇒ non ho potuto guardare")
+            print("⛔ I cannot read the log «%s»" % a.registro)
+            print("   ⇒ I could not look")
             sys.exit(3)
         if len(nomi) < 2:
-            print("⛔ servono DUE inquilini: con uno solo questa maglia non")
-            print("   proverebbe quel che dice di provare  ⇒ uso sbagliato")
+            print("⛔ TWO tenants are needed: with only one this mesh would not")
+            print("   test what it says it tests  ⇒ wrong usage")
             sys.exit(2)
 
-        print("   apro i due, porta %d, e restano vivi insieme %.0f s…"
+        print("   I open the two, port %d, and they stay alive together %.0f s…"
               % (a.porta, a.resta))
         segno, ammessi = apri_inquilini(a, nomi)
         if segno is None:
-            print("⛔ il terreno non regge: non sono riuscito a preparare gli")
-            print("   inquilini  ⇒ 2")
+            print("⛔ the terrain does not hold: I could not prepare the")
+            print("   tenants  ⇒ 2")
             sgombra(nomi)
             sys.exit(2)
-        print("   ammessi: %s" % (", ".join(ammessi) if ammessi else "⛔ nessuno"))
+        print("   admitted: %s" % (", ".join(ammessi) if ammessi else "⛔ nobody"))
         # ═══════════════════════════════════════════════════════════════════
-        # ⛔⛔ LA GUARDIA CHE NON C'ERA — e senza di lei la cura di «AMMESSO»
-        #     non sarebbe servita a niente in questa maglia.
+        # ⛔⛔ THE GUARD THAT WAS NOT THERE — and without it the cure of «AMMESSO»
+        #     would have served no purpose in this mesh.
         #
-        # `ammessi` si stampava e basta: ⇒ con i due clienti RESPINTI C9
-        # proseguiva, trovava la fetta di registro vuota o dimezzata, e usciva
-        # con un verdetto sul PRODOTTO.  ⛔ La forma forte di C9 e' «DUE
-        # inquilini vivi INSIEME»: se non sono entrati tutt'e due, non e' stata
-        # provata — e non provata non vuol dire rotta.
-        # ⇒ Esito **3**, ⛔ e non e' un rosso (§4.5).
+        # `ammessi` was only printed: ⇒ with the two clients TURNED AWAY C9
+        # went on, found the log slice empty or halved, and exited
+        # with a verdict on the PRODUCT.  ⛔ The strong form of C9 is «TWO
+        # tenants alive TOGETHER»: if they did not both get in, it was not
+        # tested — and not tested does not mean broken.
+        # ⇒ Outcome **3**, ⛔ and it is not a red (§4.5).
         # ═══════════════════════════════════════════════════════════════════
         e_amm, perche_amm = verdetto_ammissione(len(ammessi), len(nomi))
         if e_amm != 0:
             print()
             print("  ⛔ %s," % perche_amm)
-            print("     quindi non c'e' niente di cui giudicare l'attribuzione.")
-            print("  ⇒ non ho potuto guardare, esito %d — ⛔ e un cliente"
+            print("     so there is nothing whose attribution to judge.")
+            print("  ⇒ I could not look, outcome %d — ⛔ and a client"
                   % e_amm)
-            print("     RESPINTO non e' un prodotto rotto (§4.5, §1.51).")
+            print("     TURNED AWAY is not a broken product (§4.5, §1.51).")
             sgombra(nomi)
             sys.exit(e_amm)
         fetta = leggi(a.registro)
@@ -1055,23 +1057,23 @@ def main():
         try:
             with open(a.salva_fetta, "w") as f:
                 f.write(fetta)
-            print("   ⭐ fetta giudicata scritta in «%s» (%d righe): il verdetto"
+            print("   ⭐ judged slice written in «%s» (%d lines): the verdict"
                   % (a.salva_fetta, len(fetta.splitlines())))
-            print("      si puo' rileggere, e quindi contestare.")
+            print("      can be reread, and therefore contested.")
         except OSError as e:
-            print("   ⚠ non sono riuscito a salvare la fetta: %s" % e)
+            print("   ⚠ I could not save the slice: %s" % e)
 
     prima = None
     if a.togli_nome != "no":
         prima = analizza(fetta, nomi)
         fetta = sfregia(fetta or "", nomi, a.togli_nome)
         print()
-        print("   ⛔⛔ GUASTO INNESTATO SUI DATI VERI: «%s»" % a.togli_nome)
-        print("      il registro sul disco NON e' stato toccato: e' sfregiata")
-        print("      la copia in memoria.  ⇒ Il giudizio qui sotto DEVE essere")
-        print("      piu' rosso di quello vero, o questa maglia non sa mordere.")
+        print("   ⛔⛔ GRAFTED FAULT ON THE REAL DATA: «%s»" % a.togli_nome)
+        print("      the log on disk was NOT touched: what is defaced is")
+        print("      the in-memory copy.  ⇒ The judgement below MUST be")
+        print("      redder than the real one, or this mesh cannot bite.")
         if prima is not None:
-            print("      (senza guasto: %d obbligate, %d senza nome)"
+            print("      (without fault: %d mandatory, %d without a name)"
                   % (prima.obbligate, len(prima.senza)))
 
     c = analizza(fetta, nomi)
@@ -1079,60 +1081,60 @@ def main():
     if c is None:
         print()
         print("  ⛔ %s" % perche)
-        print("  esito 3 — e ⛔ non e' un rosso (§4.5).")
+        print("  outcome 3 — and ⛔ it is not a red (§4.5).")
         sys.exit(3)
     stampa_conto(c, nomi, esito, perche)
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ⛔⛔ COL GUASTO INNESTATO L'ESITO SI LEGGE AL CONTRARIO — e senza queste
-    #     righe C13 diventa una bugia.
+    # ⛔⛔ WITH THE GRAFTED FAULT THE OUTCOME IS READ BACKWARDS — and without these
+    #     lines C13 becomes a lie.
     #
-    # `11-gancio.sh`, in `esegui_maglia`, scrive nel registro
-    # `ha_visto_il_guasto: true` quando una maglia innestata esce **0**.  ⛔ La
-    # prima stesura di questa maglia usciva col verdetto grezzo (**1**), cioe'
-    # proprio nel giro del rosso avrebbe scritto `ha_visto_il_guasto: false`.
-    # `[M]` 26 agosto 2026, primo giro del cablaggio: preso cosi'.
+    # `11-gancio.sh`, in `esegui_maglia`, writes in the log
+    # `ha_visto_il_guasto: true` when a grafted mesh exits **0**.  ⛔ The
+    # first draft of this mesh exited with the raw verdict (**1**), i.e.
+    # precisely in the round of the red it would have written `ha_visto_il_guasto: false`.
+    # `[M]` 26 August 2026, first round of the wiring: caught this way.
     #
-    # ⭐⭐ E NON BASTA INVERTIRE, e questa e' la parte che conta: C9 oggi e'
-    #    rossa **anche senza guasto** (le due righe di `src/tastiera.c`).  ⇒ Un
-    #    semplice «rosso ⇒ visto» direbbe «il guasto e' stato visto» anche se
-    #    l iniezione non avesse fatto NIENTE, e la certificazione della rete
-    #    poggerebbe su un difetto del prodotto invece che sul guasto iniettato.
-    #    ⛔ E' la forma d errore di `LEZIONI.md` §1.44: un predicato che non
-    #      puo' fallire.
-    # ⇒ Si pretendono DUE cose: il verdetto e' rosso, **e** le righe senza nome
-    #   sono di piu' di quante ne aveva lasciate il difetto vero.
+    # ⭐⭐ AND INVERTING IS NOT ENOUGH, and this is the part that matters: C9 today is
+    #    red **even without the fault** (the two lines of `src/tastiera.c`).  ⇒ A
+    #    simple «red ⇒ seen» would say «the fault was seen» even if
+    #    the injection had done NOTHING, and the certification of the net
+    #    would rest on a defect of the product instead of on the injected fault.
+    #    ⛔ It is the form of error of `LEZIONI.md` §1.44: a predicate that cannot
+    #      fail.
+    # ⇒ TWO things are demanded: the verdict is red, **and** the lines without a name
+    #   are more than those the real defect had left.
     # ═══════════════════════════════════════════════════════════════════════
     if a.togli_nome != "no":
         senza_prima = len(prima.senza) if prima is not None else 0
         senza_dopo = len(c.senza)
         print()
-        print("   ⛔ IL GUASTO INNESTATO — e qui l'esito si legge AL CONTRARIO")
-        print("      righe senza nome: %d senza il guasto  ⇒  %d col guasto"
+        print("   ⛔ THE GRAFTED FAULT — and here the outcome is read BACKWARDS")
+        print("      lines without a name: %d without the fault  ⇒  %d with the fault"
               % (senza_prima, senza_dopo))
         if esito == 1 and senza_dopo > senza_prima:
-            print("   ⭐ IL GUASTO E' STATO VISTO — C9 sa ancora dare rosso,")
-            print("      e il rosso viene DAL GUASTO, non dal difetto che c'era gia'.")
+            print("   ⭐ THE FAULT WAS SEEN — C9 can still say red,")
+            print("      and the red comes FROM THE FAULT, not from the defect that was already there.")
             sys.exit(0)
         if esito == 1:
-            print("   ⛔⛔ rosso, ma NON per colpa del guasto: le righe senza")
-            print("      nome sono le stesse di prima ⇒ l'iniezione non ha morso.")
+            print("   ⛔⛔ red, but NOT because of the fault: the lines without a")
+            print("      name are the same as before ⇒ the injection did not bite.")
             sys.exit(1)
-        # ⛔⛔ E SI INVERTONO SOLO 0 E 1 — `LEZIONI.md` §4.5, e C7 lo faceva gia'
-        #     nel modo giusto tre file piu' in la'.  ⚠ Fino al 27 ago 2026 qui
-        #     si usciva **1** qualunque cosa fosse successo: un giro innestato
-        #     che non aveva potuto guardare (i due inquilini non entrano ⇒
-        #     `verdetto` torna 3) diceva a schermo *«ho guardato e non regge»*,
-        #     che e' falso.  ⇒ Il 2 e il 3 non sono giudizi, e si lasciano
-        #     passare come sono.
+        # ⛔⛔ AND ONLY 0 AND 1 ARE INVERTED — `LEZIONI.md` §4.5, and C7 already did it
+        #     the right way three files further on.  ⚠ Until 27 Aug 2026 here
+        #     it exited **1** whatever had happened: a grafted round
+        #     that could not look (the two tenants do not get in ⇒
+        #     `verdetto` returns 3) said on screen *«I looked and it does not hold»*,
+        #     which is false.  ⇒ 2 and 3 are not judgements, and they are let
+        #     through as they are.
         if esito == 0:
-            print("   ⛔⛔ IL GUASTO **NON** E' STATO VISTO: si e' tolto il nome")
-            print("      a tutte le righe e C9 dice comunque VERDE.")
+            print("   ⛔⛔ THE FAULT WAS **NOT** SEEN: the name was removed")
+            print("      from all the lines and C9 still says GREEN.")
             sys.exit(1)
-        print("   ⚠ NON HO POTUTO GUARDARE (esito %d) — ⛔ e questo NON e' «il"
+        print("   ⚠ I COULD NOT LOOK (outcome %d) — ⛔ and this is NOT «the"
               % esito)
-        print("     guasto non e' stato visto»: e' una prova che non e' girata.")
-        print("     ⇒ esco %d, e il 2 e il 3 non si rovesciano (§4.5)." % esito)
+        print("     fault was not seen»: it is a test that did not run.")
+        print("     ⇒ I exit %d, and 2 and 3 are not turned upside down (§4.5)." % esito)
         sys.exit(esito)
 
     sys.exit(esito)

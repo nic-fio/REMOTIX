@@ -1,58 +1,58 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-f021 — F-021 «ESCI» DAL MENU: la sessione finisce, i programmi si chiudono,
-          la pagina torna al modulo, niente rinascita; e chi rientra ne apre
-          una NUOVA, pulita
+15-f021 — F-021 «EXIT» FROM THE MENU: the session ends, the programs close,
+          the page goes back to the form, no rebirth; and whoever comes back in opens
+          a NEW, clean one
 
     python3 15-f021-esci.py --scatola lxqt --browser chrome [--guasto]
 
-⭐ CHE COSA FA, in una sessione sola (inquilino c15021u<n>), come l'utente:
-   1  entra dal browser vero; dentro la sessione apre un PROGRAMMA vero
-      (firefox-esr con la scena di C20, il suo processo e' il testimone)
-   2  il gesto «Esci» (vedi GESTO, sotto) e la guardia:
-        F  il prodotto dichiara la sessione finita (`C20.RIGHE_FINITA`)
-        M  la PAGINA torna al modulo (campo `#modulo` visibile) e la riga
-           `#esito` dice «la sessione e' terminata» (`pagina.html` 0x10)
-        P  i processi dell'inquilino: nessuno, salvo quelli di ESENTI
-           (`ps -u`), e il programma aperto al punto 1 non c'e' piu'
-        N  ⛔ per GUARDIA_S secondi dopo la fine, nel registro del server
-           nessuna nascita per questo inquilino («LA FACCIO NASCERE»,
-           «formato negoziato»): niente rinascita
-   3  un nuovo accesso DALLA STESSA PAGINA (se il modulo non c'e': ricarica,
-      e lo si dice) ⇒ primo fotogramma, e
-        R  NUOVA: il registro dice «LA FACCIO NASCERE» dopo il rientro (una
-           sessione ripresa non la dice: il figlio la trova viva)
-        C  PULITA: il programma del punto 1 non c'e'
-   Esito: PASS solo se F M P N R C.  Un gesto che non risponde, una pagina
-   che non si apre ⇒ BLOCKED.
+⭐ WHAT IT DOES, in a single session (tenant c15021u<n>), like the user:
+   1  logs in from the real browser; inside the session opens a real PROGRAM
+      (firefox-esr with C20's scene, its process is the witness)
+   2  the «Exit» gesture (see GESTO, below) and the guard:
+        F  the product declares the session ended (`C20.RIGHE_FINITA`)
+        M  the PAGE goes back to the form (field `#modulo` visible) and the
+           `#esito` line says «the session has ended» (`pagina.html` 0x10)
+        P  the tenant's processes: none, except those in ESENTI
+           (`ps -u`), and the program opened at point 1 is no longer there
+        N  ⛔ for GUARDIA_S seconds after the end, in the server log
+           no birth for this tenant («I AM MAKING IT BE BORN»,
+           «negotiated format»): no rebirth
+   3  a new login FROM THE SAME PAGE (if the form is not there: reload,
+      and say so) ⇒ first frame, and
+        R  NEW: the log says «I AM MAKING IT BE BORN» after the re-entry (a
+           resumed session does not say it: the child finds it alive)
+        C  CLEAN: the program of point 1 is not there
+   Outcome: PASS only if F M P N R C.  A gesture that does not answer, a page
+   that does not open ⇒ BLOCKED.
 
-⚠ GESTO — dichiarato.  Non il clic sul menu col mouse del browser: e' il
-  METODO che la voce «Esci» del menu raggiunge, la tavola di C20
-  (`DESKTOP_E_GESTO`, la stessa di `12-c20-veri.py`, importata):
+⚠ GESTURE — declared.  Not the click on the menu with the browser's mouse: it is the
+  METHOD the «Exit» menu entry reaches, C20's table
+  (`DESKTOP_E_GESTO`, the same as `12-c20-veri.py`, imported):
      GNOME  org.gnome.SessionManager.Logout(1)
      KDE    org.kde.Shutdown.logout
      XFCE   xfce4-session-logout --logout --fast
      LXQt   org.lxqt.session.logout
-  Perche': il menu e' diverso nei quattro desktop (GNOME: tre clic e un
-  dialogo col conto alla rovescia; KDE: lanciatore, «Esci», conferma; XFCE e
-  LXQt: menu classico), e a 3840x2160 le voci andrebbero TROVATE sulla
-  fotografia — una prova di riconoscimento d'immagine, non dell'uscita.
-  Quel che il prodotto vede (il compositore che se ne va, il gestore di
-  sessione che chiude) e' lo stesso: il difetto 6 della fase 14 (la
-  rinascita su LXQt) si riproduceva con questo gesto (C24, 16 su 20).
+  Why: the menu is different in the four desktops (GNOME: three clicks and a
+  dialog with a countdown; KDE: launcher, «Exit», confirmation; XFCE and
+  LXQt: classic menu), and at 3840x2160 the entries would have to be FOUND in the
+  photo — an image-recognition test, not an exit test.
+  What the product sees (the compositor going away, the session
+  manager closing) is the same: defect 6 of phase 14 (the
+  rebirth on LXQt) was reproduced with this gesture (C24, 16 out of 20).
 
-⛔ IL GUASTO INNESTATO (nella stessa sessione, dopo la passata sana) — due, e
-   devono essere visti TUTT'E DUE:
-   G1 «Esci a vuoto»: al posto del gesto una chiamata D-Bus innocua (GetId del
-      bus di sessione, risponde 0 e non fa niente) ⇒ la sessione NON finisce
-      ⇒ il giudice DEVE dire FAIL (F, M, P rossi).
-   G2 «rientro dentro la guardia»: «Esci» vero, e appena la pagina e' tornata
-      al modulo il banco rientra SUBITO ⇒ una sessione nasce dentro la
-      finestra di GUARDIA_S ⇒ il giudice DEVE dire FAIL per rinascita (N).
-      ⚠ Prova che il giudice LEGGE una nascita dopo la fine e la chiama
-      rosso; nella passata sana il banco non rientra mai dentro la finestra
-      ⇒ ogni nascita che vi compare e' del prodotto.
+⛔ THE INJECTED FAULT (in the same session, after the healthy pass) — two, and
+   BOTH must be seen:
+   G1 «empty Exit»: instead of the gesture a harmless D-Bus call (GetId of the
+      session bus, answers 0 and does nothing) ⇒ the session does NOT end
+      ⇒ the judge MUST say FAIL (F, M, P red).
+   G2 «re-entry inside the guard»: real «Exit», and as soon as the page is back
+      at the form the bench comes back in AT ONCE ⇒ a session is born inside the
+      GUARDIA_S window ⇒ the judge MUST say FAIL for rebirth (N).
+      ⚠ It proves that the judge READS a birth after the end and calls it
+      red; in the healthy pass the bench never comes back in inside the window
+      ⇒ every birth that appears there is the product's.
 """
 import os
 import re
@@ -67,30 +67,30 @@ FUNZIONI = ("F-021",)
 
 C20 = S.C20V.C20
 RIGHE_FINITA = [p for p, _d in C20.RIGHE_FINITA]
-NASCITE = ("LA FACCIO NASCERE", "formato negoziato")
-FRASE_PAGINA = "terminata"                       # pagina.html, MESSAGGI[0x10]
+NASCITE = ("I AM MAKING IT BE BORN", "negotiated format")
+FRASE_PAGINA = "has ended"                       # pagina.html, MESSAGGI[0x10]
 GUARDIA_S = 25.0
 TETTO_FINITA = 60.0
 TETTO_PROCESSI = 30.0
-# ⭐ I processi dell'inquilino che possono restare dopo «Esci», e perche' —
-#   si giudica dal GRUPPO DI CONTROLLO (/proc/<pid>/cgroup), non dal nome:
-#   remotix        il FIGLIO del prodotto (gira col suo uid, nel gruppo del
-#                  server): per disegno resta, e il rientro nasce in lui (I2;
-#                  C24: «il secondo accesso nasce nel figlio sopravvissuto»).
-#   user@<uid>.service/…/*.service e init.scope   il GESTORE D'UTENTE di
-#                  systemd e i suoi servizi (dbus, pipewire, wireplumber…):
-#                  vivono quanto il gestore d'utente, che resta finche' logind
-#                  ha una sessione dell'utente — quella del figlio.  Non li ha
-#                  aperti l'utente e non sono la sessione grafica.
-#   ⛔ CONTANO: tutto quel che sta in una `session-N.scope` (il desktop e i
-#      programmi aperti da lui, LXQt/XFCE) e in una `app-*.scope` (i programmi
-#      aperti da GNOME e KDE), e ogni altro posto.  L'elenco intero sta
-#      nell'«osservato».
+# ⭐ The tenant's processes that may remain after «Exit», and why —
+#   judged by the CONTROL GROUP (/proc/<pid>/cgroup), not by the name:
+#   remotix        the product's CHILD (runs with its uid, in the server's
+#                  group): by design it stays, and the re-entry is born in it (I2;
+#                  C24: «the second login is born in the surviving child»).
+#   user@<uid>.service/…/*.service and init.scope   systemd's USER MANAGER
+#                  and its services (dbus, pipewire, wireplumber…):
+#                  they live as long as the user manager, which stays as long as logind
+#                  has a session of the user — the child's.  The user did not
+#                  open them and they are not the graphical session.
+#   ⛔ THEY COUNT: everything in a `session-N.scope` (the desktop and the
+#      programs it opened, LXQt/XFCE) and in an `app-*.scope` (the programs
+#      opened by GNOME and KDE), and every other place.  The whole list is
+#      in the «observed».
 ESENTI = ("remotix",)
 
 
 def esente(voce):
-    """`voce` = «nome|cgroup».  Vedi ESENTI qui sopra — pura."""
+    """`voce` = «name|cgroup».  See ESENTI above — pure."""
     nome, _, cg = voce.partition("|")
     if nome in ESENTI:
         return True
@@ -102,17 +102,17 @@ def esente(voce):
 
 
 PROGRAMMA = "firefox-esr"
-# ⚠ Le righe del server che dicono «il filo della pagina e' caduto» (rcp.c,
-#   webtransport.c): con dieci banchi sullo stesso server il ciclo del padre
-#   si e' fermato fino a 17 s (24 set, «rimasto indietro di … ms»), e Chrome
-#   ha chiuso il trasporto PRIMA che «Esci» arrivasse.
-FILO_CADUTO = ("la pagina ha CHIUSO la sessione", "STACCATO per silenzio")
+# ⚠ The server lines saying «the page's wire dropped» (rcp.c,
+#   webtransport.c): with ten benches on the same server the parent's loop
+#   stopped for up to 17 s (24 Sep, «fell behind by … ms»), and Chrome
+#   closed the transport BEFORE «Exit» arrived.
+FILO_CADUTO = ("the page CLOSED the WebTransport session", "DETACHED for silence")
 GESTO_A_VUOTO = ("busctl --user call org.freedesktop.DBus /org/freedesktop/DBus "
                  "org.freedesktop.DBus GetId")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  I GIUDICI — puri
+#  THE JUDGES — pure
 # ═══════════════════════════════════════════════════════════════════════════
 def e_di(riga, chi):
     return ("[%s]" % chi) in riga or ("«%s»" % chi) in riga
@@ -131,66 +131,66 @@ def residui(voci):
 
 
 def giudica_uscita(d):
-    """⭐ (esito, ragione) dell'uscita dai campi misurati:
-         finita   la forma di RIGHE_FINITA vista, o None
-         modulo   il modulo e' visibile nella pagina
-         frase    il testo di #esito
-         rimasti  i processi dell'inquilino non esenti (lista, o None)
-         programma  il programma del punto 1 c'e' ancora
-         nascite  le righe di nascita dopo la fine (lista, o None)
-    ⛔ La rinascita si guarda PRIMA di tutto: nel difetto 6 il prodotto dice
-       «e' finita» e poi la fa nascere, e un verde letto sulla fine sarebbe il
-       difetto che passa."""
+    """⭐ (outcome, reason) of the exit from the measured fields:
+         finita   the RIGHE_FINITA form seen, or None
+         modulo   the form is visible in the page
+         frase    the text of #esito
+         rimasti  the tenant's non-exempt processes (list, or None)
+         programma  the program of point 1 is still there
+         nascite  the birth lines after the end (list, or None)
+    ⛔ The rebirth is looked at BEFORE everything: in defect 6 the product says
+       «it is over» and then makes it be born, and a green read on the end would be the
+       defect slipping through."""
     if not d.get("finita") and d.get("filo_caduto") and not d.get("nascite"):
-        # ⚠ il filo della pagina e' caduto PRIMA che la fine arrivasse: il
-        #   prodotto non aveva nessuno a cui dirla, e la pagina non l'ha potuta
-        #   sentire ⇒ non ho potuto guardare (mai un FAIL, mai un PASS)
-        return S.BLOCKED, ("il filo della pagina e' caduto prima della fine («%s»): "
-                           "non ho potuto guardare l'uscita" % d["filo_caduto"][:140])
+        # ⚠ the page's wire dropped BEFORE the end arrived: the
+        #   product had nobody to tell it to, and the page could not
+        #   hear it ⇒ I could not look (never a FAIL, never a PASS)
+        return S.BLOCKED, ("the page's wire dropped before the end («%s»): "
+                           "I could not look at the exit" % d["filo_caduto"][:140])
     muta = d.get("pagina_letta") is False and not d.get("nascite")
     guai = []
     if d.get("nascite"):
-        guai.append("dopo «Esci» la sessione RINASCE (%d righe; la prima: %s)"
+        guai.append("after «Exit» the session IS REBORN (%d lines; the first: %s)"
                     % (len(d["nascite"]), d["nascite"][0].strip()[:120]))
     if not d.get("finita"):
-        guai.append("il prodotto non dichiara la sessione finita")
+        guai.append("the product does not declare the session ended")
     if muta and d.get("finita") and not d.get("rimasti") and not d.get("programma"):
-        return S.BLOCKED, ("la fine e' dichiarata e i programmi sono chiusi, ma la pagina "
-                           "non ha mai risposto al banco: non ho potuto guardarla")
+        return S.BLOCKED, ("the end is declared and the programs are closed, but the page "
+                           "never answered the bench: I could not look at it")
     if not d.get("modulo"):
-        guai.append("la pagina NON torna al modulo")
+        guai.append("the page does NOT go back to the form")
     if FRASE_PAGINA not in (d.get("frase") or ""):
-        guai.append("la pagina non dice «la sessione e' terminata» (dice «%s»)"
+        guai.append("the page does not say «the session has ended» (it says «%s»)"
                     % (d.get("frase") or "")[:80])
     if d.get("programma"):
-        guai.append("il programma aperto nella sessione (%s) e' ancora vivo" % PROGRAMMA)
+        guai.append("the program opened in the session (%s) is still alive" % PROGRAMMA)
     if d.get("rimasti"):
-        guai.append("restano processi dell'inquilino: %s" % " ".join(d["rimasti"])[:160])
+        guai.append("tenant's processes remain: %s" % " ".join(d["rimasti"])[:160])
     if guai:
         return S.FAIL, " · ".join(guai)
     if d.get("rimasti") is None or d.get("nascite") is None:
-        return S.BLOCKED, "non ho potuto leggere i processi o il registro"
-    return S.PASS, ("finita («%s»), la pagina al modulo con «%s», nessun processo "
-                    "dell'inquilino (esenti: %s), nessuna nascita in %.0f s"
+        return S.BLOCKED, "I could not read the processes or the log"
+    return S.PASS, ("ended («%s»), the page at the form with «%s», no process "
+                    "of the tenant (exempt: %s), no birth in %.0f s"
                     % (d["finita"], (d.get("frase") or "")[:60], "/".join(ESENTI),
                        d.get("guardia", GUARDIA_S)))
 
 
 def giudica_rientro(d):
-    """(esito, ragione) del rientro: entrato, nuova (nascita vista), pulita."""
+    """(outcome, reason) of the re-entry: got in, new (birth seen), clean."""
     if not d.get("entrato"):
-        return S.FAIL, "dopo «Esci» NON si rientra: %s" % d.get("perche", "")
+        return S.FAIL, "after «Exit» you do NOT get back in: %s" % d.get("perche", "")
     guai = []
     if not d.get("nuova"):
-        guai.append("il rientro non fa nascere una sessione nuova (nessun «LA FACCIO "
-                    "NASCERE»: ripresa?)")
+        guai.append("the re-entry does not make a new session be born (no «I AM MAKING IT "
+                    "BE BORN»: resumed?)")
     if d.get("programma"):
-        guai.append("la sessione del rientro NON e' pulita: %s c'e' ancora%s" % (
+        guai.append("the re-entry's session is NOT clean: %s is still there%s" % (
             PROGRAMMA, (" — " + d["chi_lo_riapre"].splitlines()[0][:160])
             if d.get("chi_lo_riapre") else ""))
     if guai:
         return S.FAIL, " · ".join(guai)
-    return S.PASS, "rientro: sessione NUOVA («LA FACCIO NASCERE») e pulita"
+    return S.PASS, "re-entry: NEW session («I AM MAKING IT BE BORN») and clean"
 
 
 def certifica():
@@ -200,83 +200,83 @@ def certifica():
         nonlocal guai
         ok = ottenuto == atteso
         guai += not ok
-        print("  %s %-62s %s (atteso %s)" % ("OK " if ok else "NO ", nome, ottenuto, atteso))
+        print("  %s %-62s %s (expected %s)" % ("OK " if ok else "NO ", nome, ottenuto, atteso))
 
     buona = {"finita": "E' FINITA", "modulo": True,
-             "frase": "la sessione e' terminata: i programmi sono stati chiusi",
+             "frase": "the session has ended: the programs were closed",
              "rimasti": [], "programma": False, "nascite": []}
     g = lambda **k: giudica_uscita(dict(buona, **k))[0]           # noqa: E731
-    p("⭐ tutto in ordine ⇒ PASS", g(), S.PASS)
-    p("⛔ finita E poi rinata ⇒ FAIL", g(nascite=["figlio [c15021u1] LA FACCIO NASCERE"]),
+    p("⭐ everything in order ⇒ PASS", g(), S.PASS)
+    p("⛔ ended AND then reborn ⇒ FAIL", g(nascite=["figlio [c15021u1] I AM MAKING IT BE BORN"]),
       S.FAIL)
-    p("⛔ non finita (Esci a vuoto) ⇒ FAIL", g(finita=None, modulo=False, frase="Ammesso",
+    p("⛔ not ended (empty Exit) ⇒ FAIL", g(finita=None, modulo=False, frase="Admitted",
                                              programma=True), S.FAIL)
-    p("⛔ la pagina resta sul desktop ⇒ FAIL", g(modulo=False), S.FAIL)
-    p("⛔ al modulo ma senza la frase ⇒ FAIL", g(frase="errore di rete"), S.FAIL)
-    p("⛔ un processo rimasto ⇒ FAIL", g(rimasti=["pcmanfm-qt"]), S.FAIL)
-    p("⚠ filo caduto prima della fine ⇒ BLOCKED",
-      g(finita=None, modulo=False, frase="", filo_caduto="la pagina ha CHIUSO la sessione"),
+    p("⛔ the page stays on the desktop ⇒ FAIL", g(modulo=False), S.FAIL)
+    p("⛔ at the form but without the sentence ⇒ FAIL", g(frase="network error"), S.FAIL)
+    p("⛔ a process left ⇒ FAIL", g(rimasti=["pcmanfm-qt"]), S.FAIL)
+    p("⚠ wire dropped before the end ⇒ BLOCKED",
+      g(finita=None, modulo=False, frase="", filo_caduto="the page CLOSED the WebTransport session"),
       S.BLOCKED)
-    p("⛔ filo caduto MA rinata ⇒ FAIL",
-      g(finita=None, filo_caduto="x", nascite=["[c15021u1] LA FACCIO NASCERE"]), S.FAIL)
-    p("⚠ la pagina non risponde al banco ⇒ BLOCKED",
+    p("⛔ wire dropped BUT reborn ⇒ FAIL",
+      g(finita=None, filo_caduto="x", nascite=["[c15021u1] I AM MAKING IT BE BORN"]), S.FAIL)
+    p("⚠ the page does not answer the bench ⇒ BLOCKED",
       g(modulo=False, frase="", pagina_letta=False), S.BLOCKED)
-    p("⛔ la pagina risponde e non e' al modulo ⇒ FAIL",
+    p("⛔ the page answers and is not at the form ⇒ FAIL",
       g(modulo=False, frase="", pagina_letta=True), S.FAIL)
-    p("⚠ processi non letti ⇒ BLOCKED, mai PASS", g(rimasti=None), S.BLOCKED)
-    p("⚠ registro non letto ⇒ BLOCKED, mai PASS", g(nascite=None), S.BLOCKED)
+    p("⚠ processes not read ⇒ BLOCKED, never PASS", g(rimasti=None), S.BLOCKED)
+    p("⚠ log not read ⇒ BLOCKED, never PASS", g(nascite=None), S.BLOCKED)
     U = "0::/user.slice/user-4013.slice/user@4013.service"
-    p("⭐ il figlio e il gestore d'utente non contano",
+    p("⭐ the child and the user manager do not count",
       residui(["remotix|0::/system.slice/rete11-server.service", "systemd|%s/init.scope" % U,
                "pipewire|%s/session.slice/pipewire.service" % U]), [])
-    p("⛔ il desktop nella session scope conta",
+    p("⛔ the desktop in the session scope counts",
       residui(["lxqt-panel|0::/user.slice/user-4013.slice/session-5.scope"]),
       ["lxqt-panel|0::/user.slice/user-4013.slice/session-5.scope"])
-    p("⛔ un programma aperto da GNOME (app-*.scope) conta",
+    p("⛔ a program opened by GNOME (app-*.scope) counts",
       len(residui(["firefox|%s/app.slice/app-gnome-firefox-12.scope" % U])), 1)
-    p("⛔ un processo senza gruppo leggibile conta", residui(["x|"]), ["x|"])
-    fin = ["figlio  [c15021u1] ⭐ ... LA FACCIO NASCERE io (tela 3840x2160)",
-           "figlio  [c15021u10] LA FACCIO NASCERE", "cattura [c15021u1] formato negoziato"]
-    p("⚠ le nascite di c15021u10 non sono di c15021u1", len(nascite_in(fin, "c15021u1")), 2)
-    p("⭐ rientro nuovo e pulito ⇒ PASS",
+    p("⛔ a process without a readable group counts", residui(["x|"]), ["x|"])
+    fin = ["figlio  [c15021u1] ⭐ ... I AM MAKING IT BE BORN (canvas 3840x2160)",
+           "figlio  [c15021u10] I AM MAKING IT BE BORN", "cattura [c15021u1] negotiated format"]
+    p("⚠ the births of c15021u10 are not c15021u1's", len(nascite_in(fin, "c15021u1")), 2)
+    p("⭐ new and clean re-entry ⇒ PASS",
       giudica_rientro({"entrato": True, "nuova": True, "programma": False})[0], S.PASS)
-    p("⛔ rientro ripreso ⇒ FAIL",
+    p("⛔ resumed re-entry ⇒ FAIL",
       giudica_rientro({"entrato": True, "nuova": False, "programma": False})[0], S.FAIL)
-    p("⛔ rientro col programma di prima ⇒ FAIL",
+    p("⛔ re-entry with the previous program ⇒ FAIL",
       giudica_rientro({"entrato": True, "nuova": True, "programma": True})[0], S.FAIL)
-    p("⛔ non rientra ⇒ FAIL", giudica_rientro({"entrato": False})[0], S.FAIL)
-    p("⭐ le forme della fine vengono da C20", len(RIGHE_FINITA), 2)
+    p("⛔ does not get back in ⇒ FAIL", giudica_rientro({"entrato": False})[0], S.FAIL)
+    p("⭐ the forms of the end come from C20", len(RIGHE_FINITA), 2)
 
-    # ⭐ la lettura del registro: VUOTO non e' NON LETTO (giro 1, gnome/firefox)
+    # ⭐ reading the log: EMPTY is not NOT READ (round 1, gnome/firefox)
     class Finta:
         def __init__(self, uscita):
             self.uscita = uscita
 
         def dentro(self, _riga, _secondi=60):
-            return (None, self.uscita) if self.uscita.startswith("(nessuna") else (1, self.uscita)
+            return (None, self.uscita) if self.uscita.startswith("(no answer") else (1, self.uscita)
 
     class FintaSessione:
         chi = "c15021u1"
 
         def __init__(self, uscita):
             self.sc = Finta(uscita)
-    p("⭐ registro letto e vuoto (GNOME dopo «Esci») ⇒ [] e non None",
+    p("⭐ log read and empty (GNOME after «Exit») ⇒ [] and not None",
       registro(FintaSessione("@@fine"), 10), [])
-    p("⭐ una riga ⇒ la riga", registro(FintaSessione(
-        "x [c15021u1] LA FACCIO NASCERE\n@@fine"), 10), ["x [c15021u1] LA FACCIO NASCERE"])
-    p("⚠ registro non letto ⇒ None", registro(FintaSessione("(nessuna risposta in 60 s)"), 10),
+    p("⭐ one line ⇒ the line", registro(FintaSessione(
+        "x [c15021u1] I AM MAKING IT BE BORN\n@@fine"), 10), ["x [c15021u1] I AM MAKING IT BE BORN"])
+    p("⚠ log not read ⇒ None", registro(FintaSessione("(no answer in 60 s)"), 10),
       None)
     d = dict(buona, nascite=nascite_in([], "c15021u1"))
-    p("⭐ ⇒ e con la fetta vuota l'uscita e' giudicabile (PASS)", giudica_uscita(d)[0], S.PASS)
-    print("⛔ %d casi sbagliati" % guai if guai else "⭐ i giudici dicono quel che devono")
+    p("⭐ ⇒ and with the empty slice the exit is judgeable (PASS)", giudica_uscita(d)[0], S.PASS)
+    print("⛔ %d wrong cases" % guai if guai else "⭐ the judges say what they must")
     return 1 if guai else 0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA PROVA
+#  THE TEST
 # ═══════════════════════════════════════════════════════════════════════════
 def _ritenta(f, volte=3):
-    """⚠ Il server e' di dieci banchi: una lettura che non risponde si rifa'."""
+    """⚠ The server belongs to ten benches: a read that does not answer is redone."""
     for _ in range(volte):
         v = f()
         if v is not None:
@@ -286,16 +286,16 @@ def _ritenta(f, volte=3):
 
 
 def registro(s, segno):
-    """⭐ Le righe dell'inquilino dal `segno` in poi: una LISTA (anche vuota) se
-    il registro si e' letto, None se no.
+    """⭐ The tenant's lines from `segno` onwards: a LIST (even empty) if
+    the log was read, None if not.
 
-    ⛔ Non `s.registro_da(…) or None`: su GNOME, dopo «Esci», il figlio se ne
-       va e per l'inquilino non si scrive PIU' niente ⇒ la fetta e' VUOTA, ed
-       e' una risposta, non un silenzio.  Finche' `Scatola.dentro` passava da
-       ssh la fetta non era mai vuota (c'era la riga «password:» di sshpw) e
-       il difetto del banco non si vedeva; col `podman exec` locale (25 set)
-       si' ⇒ BLOCKED su gnome/firefox nel giro 1 e nella bonifica.
-       ⇒ Il marcatore @@fine dice che il comando e' arrivato in fondo."""
+    ⛔ Not `s.registro_da(…) or None`: on GNOME, after «Exit», the child goes
+       away and NOTHING more is written for the tenant ⇒ the slice is EMPTY, and
+       it is an answer, not a silence.  As long as `Scatola.dentro` went through
+       ssh the slice was never empty (there was sshpw's «password:» line) and
+       the bench defect could not be seen; with the local `podman exec` (25 Sep)
+       it could ⇒ BLOCKED on gnome/firefox in round 1 and in the clean-up.
+       ⇒ The @@fine marker says the command got to the end."""
     def una():
         c, t = s.sc.dentro("tail -n +%d %s | grep -a -F -- '%s'; echo @@fine"
                            % (int(segno) + 1, S.C20V.REGISTRO, s.chi), 60)
@@ -307,9 +307,9 @@ def registro(s, segno):
 
 
 def aspetta_il_bus(s, tetto=30):
-    """⭐ Il bus di sessione dell'inquilino c'e' (il socket /run/user/<uid>/bus):
-    il gesto «Esci» ci parla.  ⛔ Subito dopo un rientro su GNOME il gestore
-    d'utente puo' non averlo ancora ⇒ «Failed to connect to user scope bus»."""
+    """⭐ The tenant's session bus is there (the socket /run/user/<uid>/bus):
+    the «Exit» gesture talks to it.  ⛔ Right after a re-entry on GNOME the user
+    manager may not have it yet ⇒ «Failed to connect to user scope bus»."""
     fine = time.time() + tetto
     while time.time() < fine:
         c, _t = s.sc.dentro("test -S /run/user/$(id -u %s)/bus" % s.chi, 20)
@@ -320,8 +320,8 @@ def aspetta_il_bus(s, tetto=30):
 
 
 def fai_il_gesto(s, gesto, tetto=30):
-    """(codice, uscita) del gesto; se il bus o il servizio non ci sono ANCORA
-    (sessione appena nata) lo si ritenta fino a `tetto`."""
+    """(code, output) of the gesture; if the bus or the service are not there YET
+    (session just born) it is retried up to `tetto`."""
     aspetta_il_bus(s, tetto)
     fine = time.time() + tetto
     while True:
@@ -334,7 +334,7 @@ def fai_il_gesto(s, gesto, tetto=30):
 
 
 def processi(s):
-    """«nome|cgroup» per ogni processo dell'inquilino, o None."""
+    """«name|cgroup» for every process of the tenant, or None."""
     def una():
         c, t = s.sc.dentro(
             "for p in $(pgrep -u %s); do printf '@@p %%s|%%s\\n' \"$(cat /proc/$p/comm "
@@ -353,23 +353,23 @@ def programma_vivo(s):
 
 
 def apri_programma(s):
-    """firefox-esr con la scena di C20, DENTRO la sessione (come C20)."""
+    """firefox-esr with C20's scene, INSIDE the session (like C20)."""
     ok, t = s.sc.accendi_scena(s.chi)
     if not ok:
-        return False, "il programma non si apre nella sessione: %s" % t[-160:]
+        return False, "the program does not open in the session: %s" % t[-160:]
     fine = time.time() + 20
     while time.time() < fine:
         if programma_vivo(s):
-            time.sleep(3)                  # la finestra si disegna
-            return True, "%s aperto" % PROGRAMMA
+            time.sleep(3)                  # the window draws itself
+            return True, "%s opened" % PROGRAMMA
         time.sleep(1)
-    return False, "%s non e' fra i processi dell'inquilino dopo 20 s" % PROGRAMMA
+    return False, "%s is not among the tenant's processes after 20 s" % PROGRAMMA
 
 
 def leggi_pagina(s, tetto):
-    """(modulo visibile, frase di #esito, letta) aspettando fino a `tetto`.
-    `letta` e' False se la pagina non ha MAI risposto al banco (browser in
-    stallo: `[M]` 25 set, Chrome sotto carico 50, CDP «timed out»)."""
+    """(form visible, sentence of #esito, read) waiting up to `tetto`.
+    `letta` is False if the page NEVER answered the bench (browser
+    stalled: `[M]` 25 Sep, Chrome under load 50, CDP «timed out»)."""
     fine = time.time() + tetto
     modulo, frase, letta = False, "", False
     while time.time() < fine:
@@ -400,14 +400,14 @@ def aspetta_finita(s, segno, tetto):
 
 
 def esci_e_guarda(s, gesto, tetto_finita=TETTO_FINITA, rientra_subito=False, nome="esci"):
-    """Il gesto e le quattro guardie F M P N.  Torna (dati, evidenze) o
-    solleva Bloccata."""
+    """The gesture and the four guards F M P N.  Returns (data, evidence) or
+    raises Bloccata."""
     segno = _ritenta(s.segno_registro)
     if segno is None:
-        raise S.Bloccata("non leggo il registro del server")
+        raise S.Bloccata("I cannot read the server log")
     c, t = fai_il_gesto(s, gesto)
     if c != 0:
-        raise S.Bloccata("il gesto «Esci» non ha risposto (codice %s): %s" % (c, t[-200:]))
+        raise S.Bloccata("the «Exit» gesture did not answer (code %s): %s" % (c, t[-200:]))
     t0 = time.time()
     finita, _r = aspetta_finita(s, segno, tetto_finita)
     d = {"finita": finita}
@@ -416,10 +416,10 @@ def esci_e_guarda(s, gesto, tetto_finita=TETTO_FINITA, rientra_subito=False, nom
     segno_fine = (_ritenta(s.segno_registro) if finita else None) or segno
     d["modulo"], d["frase"], d["pagina_letta"] = leggi_pagina(s, 30 if finita else 5)
     if rientra_subito and d["modulo"]:
-        # ⛔ G2: il banco rientra DENTRO la guardia
+        # ⛔ G2: the bench comes back in INSIDE the guard
         e, m, _st = s.pr.entra(s.parola)
-        d["rientro_guasto"] = "%s: %s" % ({S.VERDE: "ammesso"}.get(e, "non ammesso"), m[:80])
-    # P — i processi: si aspetta che se ne vadano, fino a TETTO_PROCESSI
+        d["rientro_guasto"] = "%s: %s" % ({S.VERDE: "admitted"}.get(e, "not admitted"), m[:80])
+    # P — the processes: wait for them to go away, up to TETTO_PROCESSI
     fine = time.time() + (TETTO_PROCESSI if finita else 3)
     while True:
         nomi = processi(s)
@@ -429,7 +429,7 @@ def esci_e_guarda(s, gesto, tetto_finita=TETTO_FINITA, rientra_subito=False, nom
         if (d["rimasti"] == [] and not d["programma"]) or time.time() >= fine:
             break
         time.sleep(2)
-    # N — la guardia: TUTTA (il verde e' un'assenza)
+    # N — the guard: ALL of it (the green is an absence)
     resto = GUARDIA_S - (time.time() - t0)
     if resto > 0:
         time.sleep(resto)
@@ -438,21 +438,21 @@ def esci_e_guarda(s, gesto, tetto_finita=TETTO_FINITA, rientra_subito=False, nom
         tutta = registro(s, segno) or []
         d["filo_caduto"] = next((r.strip() for r in tutta if e_di(r, s.chi) and any(
             k in r for k in FILO_CADUTO)), None)
-    fetta = registro(s, segno_fine)       # [] = letto e vuoto (GNOME), None = non letto
+    fetta = registro(s, segno_fine)       # [] = read and empty (GNOME), None = not read
     d["nascite"] = nascite_in(fetta, s.chi)
-    print("      [%s] segno %s→%s · fetta %s righe · processi %s · nascite %s" % (
+    print("      [%s] mark %s→%s · slice %s lines · processes %s · births %s" % (
         nome, segno, segno_fine, None if fetta is None else len(fetta),
         None if d["rimasti"] is None else len(d["rimasti"]),
         None if d["nascite"] is None else len(d["nascite"])), flush=True)
-    ev = [s.salva_testo("server-%s.txt" % nome, registro(s, segno) or ["(non letto)"])]
+    ev = [s.salva_testo("server-%s.txt" % nome, registro(s, segno) or ["(not read)"])]
     return d, ev
 
 
 def rientra(s):
-    """Il nuovo accesso dalla stessa pagina: (dati, evidenze)."""
+    """The new login from the same page: (data, evidence)."""
     segno = _ritenta(s.segno_registro)
     if segno is None:
-        return {"entrato": False, "perche": "non leggo il registro del server"}, []
+        return {"entrato": False, "perche": "I cannot read the server log"}, []
     d = {"ricaricata": False}
     m = s.g.js(S.VERI.JS_MODULO)
     if not (m and m.get("modulo") and m.get("visibile")):
@@ -460,20 +460,20 @@ def rientra(s):
         s.g.ricarica()
         ok, perche = s.pr.apri_dopo_ricarica()
         if not ok:
-            return dict(d, entrato=False, perche="dopo la ricarica: " + perche), []
+            return dict(d, entrato=False, perche="after the reload: " + perche), []
     ok, m = s.entra(apri=False)
     d["entrato"], d["perche"] = ok, m
     if not ok:
         return d, [s.salva_testo("server-rientro.txt", registro(s, segno) or [])]
     fetta = registro(s, segno) or []
-    d["nuova"] = any("LA FACCIO NASCERE" in r and e_di(r, s.chi) for r in fetta)
+    d["nuova"] = any("I AM MAKING IT BE BORN" in r and e_di(r, s.chi) for r in fetta)
     time.sleep(3)
     d["programma"] = programma_vivo(s)
     png, dove = s.foto("rientro")
     ev = [s.salva_testo("server-rientro.txt", fetta)] + ([dove] if dove else [])
     if d["programma"]:
-        # ⭐ chi l'ha riaperto?  il padre del processo e il salvataggio della
-        #   sessione del desktop (KDE: ksmserverrc)
+        # ⭐ who reopened it?  the parent of the process and the desktop's
+        #   session saving (KDE: ksmserverrc)
         _c, t = s.sc.dentro(
             "for p in $(pgrep -u %(c)s -x %(p)s); do pp=$(awk '{print $4}' /proc/$p/stat); "
             "echo \"$p padre $pp $(cat /proc/$pp/comm) · $(tr '\\0' ' ' < /proc/$p/cmdline "
@@ -482,30 +482,30 @@ def rientra(s):
             "| head -40" % {"c": s.chi, "p": PROGRAMMA}, 40)
         d["chi_lo_riapre"] = (t or "").strip()
         ev.append(s.salva_testo("rientro-programma-riaperto.txt", t or ""))
-        print("   ⚠ %s riaperto al rientro:\n%s" % (PROGRAMMA, (t or "")[:900]), flush=True)
+        print("   ⚠ %s reopened at the re-entry:\n%s" % (PROGRAMMA, (t or "")[:900]), flush=True)
     return d, ev
 
 
 def rimetti_in_piedi(s):
-    """Una sessione viva col programma aperto, per rifare un'uscita."""
+    """A live session with the program open, to redo an exit."""
     r, _ev = rientra(s)
     if not r.get("entrato"):
-        return False, "non rientro: %s" % r.get("perche")
+        return False, "not getting back in: %s" % r.get("perche")
     return apri_programma(s)
 
 
 def uscita(s, gesto, nome, **k):
-    """Un'uscita guardata e giudicata; se il filo e' caduto prima della fine
-    (BLOCKED), la si rifa' UNA volta da una sessione nuova."""
+    """An exit watched and judged; if the wire dropped before the end
+    (BLOCKED), it is redone ONCE from a new session."""
     for tentativo in (1, 2):
         d, ev = esci_e_guarda(s, gesto, nome="%s-%d" % (nome, tentativo), **k)
         e, p = giudica_uscita(d)
         if not (e == S.BLOCKED and d.get("filo_caduto")) or tentativo == 2:
             break
-        print("   ⚠ %s: %s — rifaccio" % (nome, p), flush=True)
+        print("   ⚠ %s: %s — redoing it" % (nome, p), flush=True)
         ok, m = rimetti_in_piedi(s)
         if not ok:
-            return d, ev, S.BLOCKED, p + " · e non ho potuto rifarla: " + m
+            return d, ev, S.BLOCKED, p + " · and I could not redo it: " + m
     return d, ev, e, p
 
 
@@ -513,10 +513,10 @@ def corpo(o, E):
     with S.Sessione(o, "021", E) as s:
         desktop, gesto = s.sc.gesto_esci()
         if o.gesto:
-            desktop, gesto = "%s (gesto dato a mano)" % o.scatola, o.gesto
+            desktop, gesto = "%s (gesture given by hand)" % o.scatola, o.gesto
         if not gesto:
-            raise S.Bloccata("non so come si dice «Esci» in %s" % s.sc.contenitore)
-        print("   «Esci» (%s): %s" % (desktop, gesto), flush=True)
+            raise S.Bloccata("I do not know how to say «Exit» in %s" % s.sc.contenitore)
+        print("   «Exit» (%s): %s" % (desktop, gesto), flush=True)
         ok, m = s.entra()
         if not ok:
             raise S.Bloccata(m)
@@ -526,63 +526,63 @@ def corpo(o, E):
         png, dove = s.foto("prima-di-esci")
         ev0 = [dove] if dove else []
 
-        # ── la passata sana ───────────────────────────────────────────────
+        # ── the healthy pass ───────────────────────────────────────────────
         d, ev, esito, perche = uscita(s, gesto, "esci")
-        oss = ("finita=%s dopo %s s · modulo=%s · «%s» · processi dopo: %s · nascite=%d"
+        oss = ("ended=%s after %s s · form=%s · «%s» · processes after: %s · births=%d"
                % (d.get("finita"), d.get("finita_s"), d.get("modulo"),
                   (d.get("frase") or "")[:70],
-                  " ".join(v.split("|")[0] for v in d.get("tutti") or []) or "nessuno",
+                  " ".join(v.split("|")[0] for v in d.get("tutti") or []) or "none",
                   len(d.get("nascite") or [])))
-        print("   uscita: %s — %s" % (esito, oss), flush=True)
-        ev.append(s.salva_testo("processi-dopo-esci.txt", d.get("tutti") or ["(nessuno)"]))
+        print("   exit: %s — %s" % (esito, oss), flush=True)
+        ev.append(s.salva_testo("processi-dopo-esci.txt", d.get("tutti") or ["(none)"]))
         viva = False
         if esito == S.PASS:
             r, ev2 = rientra(s)
             viva = bool(r.get("entrato"))
             esito, p2 = giudica_rientro(r)
-            perche = perche + " · " + p2 + (" (⚠ il modulo non c'era: ricaricata)"
+            perche = perche + " · " + p2 + (" (⚠ the form was not there: reloaded)"
                                              if r.get("ricaricata") else "")
             ev += ev2
-            oss += " · rientro: %s" % p2
+            oss += " · re-entry: %s" % p2
         E.metti("F-021", esito, perche,
-                atteso="«Esci» ⇒ finita, programmi chiusi, pagina al modulo con «la sessione "
-                       "e' terminata», nessuna nascita in %.0f s; il rientro apre una "
-                       "sessione NUOVA e pulita" % GUARDIA_S,
+                atteso="«Exit» ⇒ ended, programs closed, page at the form with «the session "
+                       "has ended», no birth in %.0f s; the re-entry opens a "
+                       "NEW and clean session" % GUARDIA_S,
                 osservato=oss, evidenze=ev0 + ev + [s.salva_console()],
                 gesto=gesto)
 
         if not o.guasto:
             return
-        # serve una sessione viva da cui partire.  ⛔ Non dal campo della pagina
-        #   (`R.schermo.sessione` puo' restare dopo il congedo): se il rientro
-        #   della passata sana non c'e' stato, si rientra.  `[M]` 25 set, giro 1
-        #   e bonifica su gnome/firefox: senza rientro il G1 parlava a un bus
-        #   che non c'era piu' ⇒ BLOCKED.
+        # a live session to start from is needed.  ⛔ Not from the page's field
+        #   (`R.schermo.sessione` can remain after the farewell): if the re-entry
+        #   of the healthy pass did not happen, we come back in.  `[M]` 25 Sep, round 1
+        #   and clean-up on gnome/firefox: without re-entry G1 talked to a bus
+        #   that was no longer there ⇒ BLOCKED.
         if not viva:
             r, _ev = rientra(s)
             if not r.get("entrato"):
-                E.guasto("F-021", None, "nessuna sessione viva per il guasto: %s"
+                E.guasto("F-021", None, "no live session for the fault: %s"
                          % r.get("perche"))
                 return
-        # ── G1 «Esci a vuoto» ─────────────────────────────────────────────
+        # ── G1 «empty Exit» ───────────────────────────────────────────────
         d1, _ev = esci_e_guarda(s, GESTO_A_VUOTO, tetto_finita=15, nome="guasto-a-vuoto")
         e1, p1 = giudica_uscita(d1)
-        print("   G1 a vuoto: %s — %s" % (e1, p1[:200]), flush=True)
-        # ── G2 «rientro dentro la guardia» ────────────────────────────────
+        print("   G1 empty: %s — %s" % (e1, p1[:200]), flush=True)
+        # ── G2 «re-entry inside the guard» ────────────────────────────────
         d2, _ev, e2, p2 = uscita(s, gesto, "guasto-rientro", rientra_subito=True)
         rinata = e2 == S.FAIL and bool(d2.get("nascite"))
-        print("   G2 rientro subito (%s): %s — %s" % (d2.get("rientro_guasto"), e2, p2[:200]),
+        print("   G2 immediate re-entry (%s): %s — %s" % (d2.get("rientro_guasto"), e2, p2[:200]),
               flush=True)
         if not d2.get("finita") or "rientro_guasto" not in d2:
-            E.guasto("F-021", None, "G2 non innestato: l'uscita vera non e' finita o "
-                     "la pagina non e' tornata al modulo (%s)" % p2[:200])
+            E.guasto("F-021", None, "G2 not injected: the real exit did not end or "
+                     "the page did not go back to the form (%s)" % p2[:200])
             return
         E.guasto("F-021", e1 == S.FAIL and rinata,
-                 "G1 Esci a vuoto ⇒ %s (%s) · G2 rientro dentro la guardia ⇒ %s (%s)"
+                 "G1 empty Exit ⇒ %s (%s) · G2 re-entry inside the guard ⇒ %s (%s)"
                  % (e1, p1[:120], e2, p2[:120]))
 
 
 if __name__ == "__main__":
     sys.exit(S.esegui(__doc__, FUNZIONI, corpo, certifica, extra=lambda a: a.add_argument(
-        "--gesto", default="", help="un altro gesto «Esci» (diagnosi: es. XFCE senza "
-        "--fast, che salva la sessione come il dialogo del menu)")))
+        "--gesto", default="", help="another «Exit» gesture (diagnosis: e.g. XFCE without "
+        "--fast, which saves the session like the menu dialog)")))

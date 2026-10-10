@@ -1,33 +1,33 @@
 #!/bin/bash
 #
-# 04-b28-lancia.sh — il banco del MODO A TOCCO (anello A8 della fase 4).
+# 04-b28-lancia.sh — the bench for TOUCH MODE (link A8 of phase 4).
 #
-#   bash banchi/04-b28-lancia.sh              certifica il giudice, poi gira
+#   bash banchi/04-b28-lancia.sh              certifies the judge, then runs
 #   bash banchi/04-b28-lancia.sh --solo-certifica
 #
 # ---------------------------------------------------------------------------
-# ⚠ LA SCENA, DICHIARATA — e si verifica dall'altro capo, non qui
+# ⚠ THE SCENE, DECLARED — and it is verified from the other end, not here
 #
-# Il browser si apre sul desktop VERO dell'utente.  ⛔ Non si sposta su uno
-# schermo finto per far tornare i conti: quel che la scena era davvero lo
-# scrive il raccoglitore in ogni riga di `04-b28-esiti.jsonl`, letto
-# dall'ambiente e dallo `userAgent` del browser — non da questa intestazione,
-# che invecchierebbe in silenzio.
+# The browser opens on the user's REAL desktop.  ⛔ It is not moved to a
+# fake screen to make the numbers add up: what the scene really was is
+# written by the collector in every line of `04-b28-esiti.jsonl`, read
+# from the environment and from the browser's `userAgent` — not from this
+# header, which would go stale in silence.
 #
-# ⛔ E IL TOCCO LO DICHIARA IL BANCO: `Emulation.setTouchEmulationEnabled`.
-#    ⚠ Quel che se ne ricava e' l'EMULAZIONE, non un dito (`LEZIONI.md` §1.11):
-#      da qui escono i confini del RICONOSCITORE — che sono deterministici — e
-#      **nessun numero su come si comporta una mano vera**.  Il giudizio sui
-#      gesti resta di Nic, con un dito.
+# ⛔ AND TOUCH IS DECLARED BY THE BENCH: `Emulation.setTouchEmulationEnabled`.
+#    ⚠ What comes out of it is the EMULATION, not a finger (`LEZIONI.md` §1.11):
+#      from here come the boundaries of the RECOGNISER — which are deterministic —
+#      and **no number on how a real hand behaves**.  The judgement on the
+#      gestures stays with Nic, with a finger.
 #
-# ⛔ PORTE 7671-7675, e sono le mie (mandato A8):
-#     7671  il servitore del banco (serve `src/pagina.html` e raccoglie i byte)
-#     7672  la porta di diagnosi di Chrome
-#   Non si tocca 7448 · 7501 · 7561 · 7571, ne' le porte degli altri anelli.
+# ⛔ PORTS 7671-7675, and they are mine (mandate A8):
+#     7671  the bench's server (serves `src/pagina.html` and collects the bytes)
+#     7672  Chrome's debugging port
+#   7448 · 7501 · 7561 · 7571 are not touched, nor the ports of the other links.
 #
-# ⛔ E IL PROFILO DI CHROME E' NUOVO E SUO: un profilo condiviso con la sessione
-#    dell'utente porterebbe dentro le sue schede, le sue estensioni e il suo
-#    stato di permessi — cioe' una scena che cambia da un giro all'altro.
+# ⛔ AND THE CHROME PROFILE IS NEW AND ITS OWN: a profile shared with the
+#    user's session would bring in their tabs, their extensions and their
+#    permission state — that is, a scene that changes from one run to the next.
 # ---------------------------------------------------------------------------
 set -u
 
@@ -40,28 +40,28 @@ REGISTRO="$QUI/04-b28-registro.jsonl"
 
 cd "$RADICE" || exit 2
 
-echo "══ 1. IL GIUDICE SI CERTIFICA PRIMA DELLA MISURA (CODER.md §3.3) ══"
+echo "══ 1. THE JUDGE IS CERTIFIED BEFORE THE MEASUREMENT (CODER.md §3.3) ══"
 python3 "$QUI/04-b28-gesti.py" --certifica
 CERT=$?
 if [ "$CERT" -ne 0 ]; then
-  echo "⛔ il giudice non e' certificato: non si misura niente."
+  echo "⛔ the judge is not certified: nothing is measured."
   exit 3
 fi
 if [ "${1:-}" = "--solo-certifica" ]; then exit 0; fi
 
 echo
-echo "══ 2. LA SCENA ══"
-echo "  utente        $(id -un) (uid $(id -u))"
-echo "  sessione      XDG_SESSION_TYPE=${XDG_SESSION_TYPE:-?} "\
+echo "══ 2. THE SCENE ══"
+echo "  user          $(id -un) (uid $(id -u))"
+echo "  session       XDG_SESSION_TYPE=${XDG_SESSION_TYPE:-?} "\
 "WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-?} DISPLAY=${DISPLAY:-?}"
 echo "  browser       $(google-chrome --version 2>&1)"
-echo "  ⚠ la finestra si apre sul desktop VERO, e il tocco e' DICHIARATO dal"
-echo "    banco (CDP): quel che si misura sono i confini del riconoscitore."
+echo "  ⚠ the window opens on the REAL desktop, and touch is DECLARED by the"
+echo "    bench (CDP): what is measured are the boundaries of the recogniser."
 
 for p in "$PORTA" "$DIAGNOSI"; do
   if ss -ltn 2>/dev/null | grep -q ":$p "; then
-    echo "⛔ la porta $p e' gia' occupata: mi fermo invece di misurare la"
-    echo "   pagina di qualcun altro."
+    echo "⛔ port $p is already taken: I stop instead of measuring"
+    echo "   someone else's page."
     exit 4
   fi
 done
@@ -80,23 +80,23 @@ google-chrome \
   --window-size=1500,900 \
   "about:blank" >"$PROFILO/chrome.log" 2>&1 &
 CHROME=$!
-echo "  chrome pid $CHROME, diagnosi su $DIAGNOSI, profilo $PROFILO"
+echo "  chrome pid $CHROME, debugging on $DIAGNOSI, profile $PROFILO"
 
-# ⛔ Il colpo di grazia e' registrato: se il banco muore, la finestra non resta
-#    aperta sul desktop dell'utente.
+# ⛔ The coup de grâce is registered: if the bench dies, the window does not stay
+#    open on the user's desktop.
 trap 'kill "$CHROME" 2>/dev/null; wait "$CHROME" 2>/dev/null' EXIT
 
 sleep 3
 
 echo
-echo "══ 4. LA MISURA ══"
+echo "══ 4. THE MEASUREMENT ══"
 python3 "$QUI/04-b28-gesti.py" --gira --porta "$PORTA" \
         --diagnosi "$DIAGNOSI" --registro "$REGISTRO"
 ESITO=$?
 
 echo
-echo "══ 5. DOVE SI RICONTROLLA ══"
-echo "  esiti     $QUI/04-b28-esiti.jsonl"
-echo "  registro  $REGISTRO   (i byte, in esadecimale, gesto per gesto)"
-echo "  rigiudica python3 banchi/04-b28-gesti.py --verdetto $REGISTRO"
+echo "══ 5. WHERE TO RECHECK ══"
+echo "  outcomes  $QUI/04-b28-esiti.jsonl"
+echo "  log       $REGISTRO   (the bytes, in hexadecimal, gesture by gesture)"
+echo "  rejudge   python3 banchi/04-b28-gesti.py --verdetto $REGISTRO"
 exit "$ESITO"

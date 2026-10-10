@@ -1,75 +1,75 @@
 #!/usr/bin/env python3
-"""02-codifica-nal.py — la FORMA del flusso HEVC, letta sui byte.
+"""02-codifica-nal.py — the SHAPE of the HEVC stream, read on the bytes.
 
     python3 02-codifica-nal.py --elenca   <file.hevc>
     python3 02-codifica-nal.py --verifica <file.hevc> [--idr-attesi N]
     python3 02-codifica-nal.py --storpia  <file.hevc> <modo> <uscita>
-                               modi: senza-parametri | byte-girato | troncato
+                               modes: senza-parametri | byte-girato | troncato
 
 ===========================================================================
-⛔ PERCHE' ESISTE — la forma del flusso e' una DECISIONE, non un dettaglio
+⛔ WHY IT EXISTS — the shape of the stream is a DECISION, not a detail
 
-`VideoDecoder` del browser accetta **due formati alternativi ed esclusivi**, e
-non sono intercambiabili (`web/rapporti/S2-decodifica.md` §3.5, `[S]` dalla
-registrazione HEVC del W3C):
+The browser's `VideoDecoder` accepts **two alternative and exclusive formats**, and
+they are not interchangeable (`web/rapporti/S2-decodifica.md` §3.5, `[S]` from the
+W3C HEVC registration):
 
-  **hevc**   — con una `description` (un `HEVCDecoderConfigurationRecord`,
-               l'`hvcC`), e i NAL preceduti da un prefisso di **lunghezza**;
-  **annexb** — senza `description`, e i NAL separati da **codici di inizio**
-               `00 00 01`.  Qui il chunk `key` deve portare **anche tutti i
-               parameter set** necessari a decodificarlo.
+  **hevc**   — with a `description` (an `HEVCDecoderConfigurationRecord`,
+               the `hvcC`), and the NALs preceded by a **length** prefix;
+  **annexb** — without `description`, and the NALs separated by **start codes**
+               `00 00 01`.  Here the `key` chunk must carry **also all the
+               parameter sets** needed to decode it.
 
-⭐ **F2.3 sceglie Annex-B senza `description`.**  Le ragioni stanno nel
-rapporto (`fasi/rapporti/F2-3-codifica.md` §3); quel che riguarda questo file e'
-la **conseguenza verificabile**: se si spedisce Annex-B, allora il primo chunk
-deve contenere, in quest'ordine e prima di qualunque dato di figura,
-**VPS (32), SPS (33), PPS (34)** e poi una figura **IDR (19 o 20)**.
+⭐ **F2.3 chooses Annex-B without `description`.**  The reasons are in the
+report (`fasi/rapporti/F2-3-codifica.md` §3); what concerns this file is
+the **verifiable consequence**: if Annex-B is sent, then the first chunk
+must contain, in this order and before any picture data,
+**VPS (32), SPS (33), PPS (34)** and then an **IDR (19 or 20)** picture.
 
-⛔ E questo si controlla sui BYTE, non sull'etichetta che ci mettiamo noi.
-Chromium fa esattamente la stessa cosa e non si fida della nostra etichetta:
-`video_decoder.cc:206-214` chiama `media::mp4::HEVC::AnalyzeAnnexB()` dopo ogni
-`configure()`/`flush()`, e se il chunk marcato `key` non contiene un IDR con i
-suoi parameter set **rifiuta**, con un messaggio che nomina il nostro esatto
-errore possibile: *«A key frame is required after configure() or flush(). If
+⛔ And this is checked on the BYTES, not on the label we put on it.
+Chromium does exactly the same thing and does not trust our label:
+`video_decoder.cc:206-214` calls `media::mp4::HEVC::AnalyzeAnnexB()` after every
+`configure()`/`flush()`, and if the chunk marked `key` does not contain an IDR with its
+parameter sets it **refuses**, with a message that names our exact
+possible error: *«A key frame is required after configure() or flush(). If
 you're using HEVC formatted H.265 you must fill out the description field»*
 (`S2-decodifica.md` §3.6, `[R]`).
 
-⇒ ⭐ Questo file e' **il pezzo di Chromium che possiamo eseguire a casa nostra**.
-   Se sbagliamo forma, lo scopre qui invece che in fase 2.5, dove il sintomo
-   sarebbe «la pagina resta nera» e la ricerca comincerebbe dal posto sbagliato.
+⇒ ⭐ This file is **the piece of Chromium we can run at home**.
+   If we get the shape wrong, it finds out here instead of in phase 2.5, where the symptom
+   would be «the page stays black» and the search would start from the wrong place.
 
 ===========================================================================
-⛔ E LA META' CHE SI DIMENTICA: I PARAMETER SET DAVANTI A **OGNI** IDR
+⛔ AND THE HALF THAT GETS FORGOTTEN: THE PARAMETER SETS IN FRONT OF **EVERY** IDR
 
-Un fotogramma solo li ha per forza.  Il guaio arriva quando gli IDR sono tanti
-(fase 3) e i parameter set stanno **solo** in testa al flusso: un client che si
-collega dopo, o che riparte da un `flush()`, riceve un IDR **nudo** e non
-decodifica niente.  Il sintomo e' schermo nero **con i fotogrammi che
-arrivano** — lo stesso sintomo che `codificatore.c` di v1 aveva gia' comprato
-una volta, e per questo v1 vieta `AV_CODEC_FLAG_GLOBAL_HEADER` con un commento
-a `src/codificatore.c:268-272`.
+A single frame has them necessarily.  The trouble comes when the IDRs are many
+(phase 3) and the parameter sets sit **only** at the head of the stream: a client that
+connects later, or restarts from a `flush()`, receives a **naked** IDR and decodes
+nothing.  The symptom is a black screen **with the frames
+arriving** — the same symptom v1's `codificatore.c` had already paid for
+once, and that is why v1 forbids `AV_CODEC_FLAG_GLOBAL_HEADER` with a comment
+at `src/codificatore.c:268-272`.
 
-⇒ `--verifica --idr-attesi N` pretende **N gruppi VPS+SPS+PPS**, non uno.
+⇒ `--verifica --idr-attesi N` requires **N VPS+SPS+PPS groups**, not one.
 
 ===========================================================================
-⛔ E `--storpia`: UN BANCO CHE NON HA MAI VISTO UN RIFIUTO NON SA VEDERLO
+⛔ AND `--storpia`: A BENCH THAT HAS NEVER SEEN A REFUSAL CANNOT SEE ONE
 
-`REVIEWER.md` §1 punto 5 e `CODER.md` §3.10.  Un giro in cui tutto passa non
-dimostra che il banco sappia bocciare: dimostra solo che non ha bocciato.  I
-tre modi qui sotto sono i tre modi in cui un flusso puo' essere rotto **senza
-smettere di sembrare un flusso**:
+`REVIEWER.md` §1 point 5 and `CODER.md` §3.10.  A round in which everything passes does not
+prove that the bench can reject: it only proves that it did not reject.  The
+three modes below are the three ways a stream can be broken **without
+ceasing to look like a stream**:
 
-  `senza-parametri` — VPS/SPS/PPS tolti, l'IDR lasciato.  ⭐ E' il modo che
-      corrisponde all'errore vero che stiamo cercando di non fare: e' cosa
-      succede se un giorno qualcuno accendesse `GLOBAL_HEADER`.  Il
-      decodificatore indipendente **deve** produrre **zero** fotogrammi;
-  `byte-girato` — un byte del primo slice invertito.  Il decodificatore deve
-      **protestare**, o consegnare pixel diversi dal sorgente;
-  `troncato` — il flusso tagliato al 60 %.  Meno fotogrammi, o un errore.
+  `senza-parametri` — VPS/SPS/PPS removed, the IDR left.  ⭐ It is the mode that
+      corresponds to the real error we are trying not to make: it is what
+      happens if one day someone switched on `GLOBAL_HEADER`.  The
+      independent decoder **must** produce **zero** frames;
+  `byte-girato` — one byte of the first slice inverted.  The decoder must
+      **protest**, or deliver pixels different from the source;
+  `troncato` — the stream cut at 60 %.  Fewer frames, or an error.
 
-⚠ Nessuno dei tre rompe la sintassi dei codici di inizio: se li rompesse, si
-  starebbe provando che ffmpeg sa riconoscere un file che non e' un file, che
-  non e' la stessa cosa e non serve a nessuno.
+⚠ None of the three breaks the syntax of the start codes: if it did, it
+  would be proving that ffmpeg can recognise a file that is not a file, which
+  is not the same thing and serves nobody.
 """
 
 import argparse
@@ -77,7 +77,7 @@ import json
 import os
 import sys
 
-# I tipi di NAL che ci interessano (H.265, ISO/IEC 23008-2 tabella 7-1).
+# The NAL types we care about (H.265, ISO/IEC 23008-2 table 7-1).
 NOMI = {
     19: "IDR_W_RADL", 20: "IDR_N_LP", 21: "CRA_NUT",
     32: "VPS", 33: "SPS", 34: "PPS", 35: "AUD", 36: "EOS", 37: "EOB",
@@ -86,16 +86,16 @@ NOMI = {
 }
 PARAMETRI = (32, 33, 34)
 IDR = (19, 20)
-VCL_MASSIMO = 31          # i tipi 0..31 sono dati di figura (VCL)
+VCL_MASSIMO = 31          # types 0..31 are picture data (VCL)
 
 
 def trova_inizi(dati):
-    """Gli offset dei codici di inizio Annex-B, e la loro lunghezza (3 o 4).
+    """The offsets of the Annex-B start codes, and their length (3 or 4).
 
-    ⛔ Si distingue `00 00 01` da `00 00 00 01`: sono tutti e due leciti, e un
-       parser che ne conoscesse uno solo salterebbe meta' dei NAL **senza
-       lamentarsi** — cioe' direbbe «questo flusso non ha il PPS» di un flusso
-       che ce l'ha.  Un falso rosso costa quanto un falso verde.
+    ⛔ `00 00 01` is told from `00 00 00 01`: both are legal, and a
+       parser that knew only one would skip half the NALs **without
+       complaining** — that is it would say «this stream has no PPS» of a stream
+       that has it.  A false red costs as much as a false green.
     """
     inizi = []
     i, n = 0, len(dati)
@@ -114,7 +114,7 @@ def trova_inizi(dati):
 def elenca(percorso):
     dati = open(percorso, "rb").read()
     if not dati:
-        raise SystemExit(f"⛔ {percorso} e' vuoto: zero byte non e' un flusso")
+        raise SystemExit(f"⛔ {percorso} is empty: zero bytes is not a stream")
     inizi = trova_inizi(dati)
     nal = []
     for k, (off, lungo) in enumerate(inizi):
@@ -131,21 +131,21 @@ def elenca(percorso):
 
 
 def verifica(percorso, idr_attesi):
-    """⛔ La forma pretesa, e ogni pretesa dice PERCHE'."""
+    """⛔ The required shape, and every requirement says WHY."""
     e = elenca(percorso)
     nal = e["nal"]
     tipi = [n["tipo"] for n in nal]
     guasti = []
 
     if not nal:
-        guasti.append("⛔ nessun NAL trovato: non e' un flusso Annex-B")
+        guasti.append("⛔ no NAL found: it is not an Annex-B stream")
 
-    # 1 — il primo NAL che non sia un delimitatore dev'essere il VPS
-    utili = [t for t in tipi if t not in (35, 38)]      # senza AUD e riempimento
+    # 1 — the first NAL that is not a delimiter must be the VPS
+    utili = [t for t in tipi if t not in (35, 38)]      # without AUD and filler
     if not utili or utili[0] != 32:
-        guasti.append(f"⛔ il flusso non comincia con il VPS (32): comincia con {utili[:4]}")
+        guasti.append(f"⛔ the stream does not start with the VPS (32): it starts with {utili[:4]}")
 
-    # 2 — prima del primo dato di figura devono esserci VPS, SPS, PPS
+    # 2 — before the first picture data there must be VPS, SPS, PPS
     prima = []
     for t in tipi:
         if t <= VCL_MASSIMO:
@@ -153,21 +153,21 @@ def verifica(percorso, idr_attesi):
         prima.append(t)
     for atteso in PARAMETRI:
         if atteso not in prima:
-            guasti.append(f"⛔ manca il {NOMI[atteso]} ({atteso}) PRIMA del primo "
-                          f"dato di figura: un chunk `key` in Annex-B deve portare "
-                          f"tutti i parameter set (S2-decodifica.md §3.5)")
+            guasti.append(f"⛔ the {NOMI[atteso]} ({atteso}) is missing BEFORE the first "
+                          f"picture data: a `key` chunk in Annex-B must carry "
+                          f"all the parameter sets (S2-decodifica.md §3.5)")
 
-    # 3 — il primo dato di figura dev'essere un IDR
+    # 3 — the first picture data must be an IDR
     vcl = [t for t in tipi if t <= VCL_MASSIMO]
     if not vcl:
-        guasti.append("⛔ nessun dato di figura: il flusso non porta pixel")
+        guasti.append("⛔ no picture data: the stream carries no pixels")
     elif vcl[0] not in IDR:
-        guasti.append(f"⛔ il PRIMO fotogramma non e' un fotogramma chiave: "
-                      f"il primo NAL di figura e' {NOMI.get(vcl[0], vcl[0])}.  "
-                      f"`VideoDecoder` dopo `configure()` pretende un chunk `key` "
-                      f"o solleva DataError (S2-decodifica.md §3.6)")
+        guasti.append(f"⛔ the FIRST frame is not a keyframe: "
+                      f"the first picture NAL is {NOMI.get(vcl[0], vcl[0])}.  "
+                      f"`VideoDecoder` after `configure()` requires a `key` chunk "
+                      f"or raises DataError (S2-decodifica.md §3.6)")
 
-    # 4 — i parameter set ripetuti davanti a OGNI IDR
+    # 4 — the parameter sets repeated in front of EVERY IDR
     gruppi = 0
     visti = set()
     for t in tipi:
@@ -178,15 +178,15 @@ def verifica(percorso, idr_attesi):
                 gruppi += 1
             visti = set()
     if gruppi < idr_attesi:
-        guasti.append(f"⛔ i parameter set precedono {gruppi} IDR e ne dovevano "
-                      f"precedere {idr_attesi}: un client che si collega dopo "
-                      f"riceverebbe un IDR nudo (v1 src/codificatore.c:268-272)")
+        guasti.append(f"⛔ the parameter sets precede {gruppi} IDRs and should have "
+                      f"preceded {idr_attesi}: a client connecting later "
+                      f"would receive a naked IDR (v1 src/codificatore.c:268-272)")
 
-    # 5 — nessuna traccia di prefisso di lunghezza al posto del codice di inizio
+    # 5 — no trace of a length prefix instead of the start code
     if len(dati_len := open(percorso, "rb").read(4)) == 4 and dati_len[:3] not in (
             b"\x00\x00\x00", b"\x00\x00\x01"):
-        guasti.append("⛔ i primi byte non sono un codice di inizio: sembra un "
-                      "flusso a prefisso di lunghezza (formato `hevc`/hvcC), non Annex-B")
+        guasti.append("⛔ the first bytes are not a start code: it looks like a "
+                      "length-prefixed stream (`hevc`/hvcC format), not Annex-B")
 
     esito = {
         "file": e["file"], "byte_totali": e["byte_totali"],
@@ -204,41 +204,41 @@ def verifica(percorso, idr_attesi):
 
 
 def confessione(percorso):
-    """⭐ CHE COSA HA FATTO DAVVERO IL CODIFICATORE — chiesto a LUI, non dedotto.
+    """⭐ WHAT THE ENCODER REALLY DID — asked of IT, not deduced.
 
-    `CODER.md` §3.7: *non si deduce il mittente, lo si chiede.*  §3.9: *quando un
-    componente puo' decidere da se', digli cosa fare — e VERIFICA CHE ABBIA
-    OBBEDITO.*  E' la forma d'errore **E2** di `REVIEWER.md` §2, e in un
-    codificatore e' quella di casa: *«il codificatore che ripiega in CPU senza
-    dirlo»*.
+    `CODER.md` §3.7: *the sender is not deduced, it is asked.*  §3.9: *when a
+    component can decide by itself, tell it what to do — and CHECK THAT IT
+    OBEYED.*  It is error form **E2** of `REVIEWER.md` §2, and in an
+    encoder it is the household one: *«the encoder that falls back to CPU without
+    saying so»*.
 
-    ⭐ Qui non serve dedurre niente, perche' **x265 scrive la propria confessione
-       dentro il flusso**: un PREFIX_SEI di tipo 5 (user data unregistered) con
-       la versione, la profondita' di bit e l'elenco COMPLETO delle opzioni che
-       ha davvero usato — comprese quelle che nessuno ha chiesto.
+    ⭐ Here nothing needs deducing, because **x265 writes its own confession
+       inside the stream**: a PREFIX_SEI of type 5 (user data unregistered) with
+       the version, the bit depth and the COMPLETE list of the options it
+       really used — including those nobody asked for.
 
-    Le voci che questo banco legge, e perche':
+    The entries this bench reads, and why:
 
-      `bitdepth=10`     ⛔ la profondita' VERA con cui ha lavorato, detta da lui.
-                           `ffprobe` la ricava dall'SPS, che e' un secondo
-                           testimone: due testimoni indipendenti, non uno;
-      `annexb`          ⭐ la FORMA del flusso, confermata dal produttore;
-      `repeat-headers`  ⛔ i parameter set davanti a ogni IDR (la meta' che si
-                           dimentica, e che morde in fase 3, non qui);
-      `bframes=N`       ⚠ quel che NESSUNO ha chiesto e lui fa lo stesso.
+      `bitdepth=10`     ⛔ the REAL depth it worked with, said by itself.
+                           `ffprobe` derives it from the SPS, which is a second
+                           witness: two independent witnesses, not one;
+      `annexb`          ⭐ the SHAPE of the stream, confirmed by the producer;
+      `repeat-headers`  ⛔ the parameter sets in front of every IDR (the half that gets
+                           forgotten, and that bites in phase 3, not here);
+      `bframes=N`       ⚠ what NOBODY asked for and it does anyway.
 
-    ⚠ E la dipendenza va dichiarata: questa confessione esiste perche' x265 ha
-      `info=1` acceso di suo.  ⛔ Il banco lo tiene acceso **di proposito** — e'
-      il suo strumento.  Se un giorno il prodotto lo spegnesse per risparmiare
-      byte, questo controllo sparirebbe **in silenzio**: allora resterebbe il
-      solo `ffprobe`, e va saputo prima invece che scoperto dopo.
+    ⚠ And the dependency must be declared: this confession exists because x265 has
+      `info=1` on by default.  ⛔ The bench keeps it on **on purpose** — it is
+      its tool.  If one day the product switched it off to save
+      bytes, this check would disappear **silently**: then only
+      `ffprobe` would remain, and it must be known beforehand instead of discovered afterwards.
     """
     dati = open(percorso, "rb").read()
     i = dati.find(b"x265 (build")
     if i < 0:
         return {"confessione": False,
-                "perche": "nessun SEI di x265 nel flusso: o non l'ha fatto x265, "
-                          "o `info=0`.  ⛔ Resta il solo ffprobe come testimone"}
+                "perche": "no x265 SEI in the stream: either x265 did not make it, "
+                          "or `info=0`.  ⛔ Only ffprobe is left as a witness"}
     fine = dati.find(b"\x00", i)
     testo = dati[i:fine if fine > i else i + 4000].decode("ascii", "replace")
     voci = testo.split()
@@ -267,7 +267,7 @@ def storpia(percorso, modo, uscita):
     e = elenca(percorso)
     nal = e["nal"]
     if not nal:
-        raise SystemExit("⛔ non si storpia un flusso che non si e' saputo leggere")
+        raise SystemExit("⛔ a stream that could not be read is not mangled")
 
     if modo == "senza-parametri":
         tenuti = bytearray()
@@ -277,41 +277,41 @@ def storpia(percorso, modo, uscita):
             fine = nal[k + 1]["offset"] if k + 1 < len(nal) else len(dati)
             tenuti += dati[n["offset"]:fine]
         fuori = tenuti
-        nota = "VPS/SPS/PPS tolti, i dati di figura lasciati"
+        nota = "VPS/SPS/PPS removed, picture data left"
     elif modo == "byte-girato":
         primo = next((n for n in nal if n["tipo"] <= VCL_MASSIMO), None)
         if primo is None:
-            raise SystemExit("⛔ nessun dato di figura da storpiare")
-        # ⛔ DOVE si gira il byte NON e' un dettaglio — misurato il 12 agosto 2026.
+            raise SystemExit("⛔ no picture data to mangle")
+        # ⛔ WHERE the byte is flipped is NOT a detail — measured on 12 Aug 2026.
         #
-        #    La prima stesura girava il byte 24 del NAL.  Su un fotogramma
-        #    1920x1080 quel byte cade ancora dentro l'INTESTAZIONE dello slice, e
-        #    ⛔ **il fotogramma decodificato e' tornato IDENTICO al sorgente, bit
-        #    per bit**, con ffmpeg uscito 0.  Il controllo negativo non innestava
-        #    nessun guasto: e' la trappola n.2 di `01-b12-guasti.py` — *«il guasto
-        #    che non e' stato innestato lascia il codice sano, il banco resta
-        #    verde, e chi legge conclude che il banco non vede il guasto»*.
+        #    The first draft flipped byte 24 of the NAL.  On a
+        #    1920x1080 frame that byte still falls inside the slice HEADER, and
+        #    ⛔ **the decoded frame came back IDENTICAL to the source, bit
+        #    for bit**, with ffmpeg exiting 0.  The negative control injected
+        #    no fault: it is trap no. 2 of `01-b12-guasti.py` — *«the fault
+        #    that was not injected leaves the code healthy, the bench stays
+        #    green, and whoever reads concludes that the bench does not see the fault»*.
         #
-        #    ⭐ Girando lo stesso byte al **2 % del corpo** — cioe' nei dati
-        #    entropici veri — i campioni diversi sono passati da **0 a 4 710 663
-        #    su 6 220 800** `[M]`.  ⛔ E ffmpeg e' uscito **0 in tutti e due i
-        #    casi**: lo stato d'uscita non distingueva le due cose.
+        #    ⭐ Flipping the same byte at **2 % of the body** — that is in the real
+        #    entropy data — the differing samples went from **0 to 4,710,663
+        #    out of 6,220,800** `[M]`.  ⛔ And ffmpeg exited **0 in both
+        #    cases**: the exit status did not tell the two things apart.
         #
-        #    ⇒ Si salta l'intestazione del NAL (2 byte) e si entra nel corpo per
-        #      il 2 %, con un fondo di 64 byte per gli slice piccoli.
+        #    ⇒ The NAL header (2 bytes) is skipped and it goes into the body for
+        #      2 %, with a floor of 64 bytes for small slices.
         corpo = primo["offset"] + primo["prefisso"] + 2
         dentro = max(64, primo["byte"] // 50)
         dove = min(corpo + dentro, primo["offset"] + primo["prefisso"] + primo["byte"] - 1)
         dati[dove] ^= 0xFF
         fuori = dati
-        nota = (f"un byte invertito all'offset {dove}, al {100 * dentro / max(1, primo['byte']):.1f} % "
-                f"del corpo del primo slice (lungo {primo['byte']} byte)")
+        nota = (f"one byte inverted at offset {dove}, at {100 * dentro / max(1, primo['byte']):.1f} % "
+                f"of the body of the first slice ({primo['byte']} bytes long)")
     elif modo == "troncato":
         taglio = int(len(dati) * 0.60)
         fuori = dati[:taglio]
-        nota = f"tagliato a {taglio} byte su {len(dati)} (60 %)"
+        nota = f"cut at {taglio} bytes out of {len(dati)} (60 %)"
     else:
-        raise SystemExit(f"⛔ modo sconosciuto: {modo}")
+        raise SystemExit(f"⛔ unknown mode: {modo}")
 
     with open(uscita, "wb") as f:
         f.write(bytes(fuori))

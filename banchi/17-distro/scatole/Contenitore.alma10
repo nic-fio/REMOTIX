@@ -1,11 +1,11 @@
-# Contenitore.alma10 — fase 17: la scatola «cliente» di AlmaLinux 10 col desktop DESKTOP (solo gnome =
-# «Server with GUI», kde = «KDE Plasma Workspaces» da EPEL con CRB: gli stessi di 17-vm.sh vesti; XFCE e
-# LXQt non esistono per Alma 10, fasi/17 §3). EPEL qui serve AL DESKTOP KDE, come al cliente: l'H.264
-# della scheda (RPM Fusion) resta dell'amministratore. Il resto come Contenitore.debian13.
+# Contenitore.alma10 — phase 17: the "customer" box of AlmaLinux 10 with the desktop DESKTOP (only gnome =
+# "Server with GUI", kde = "KDE Plasma Workspaces" from EPEL with CRB: the same as 17-vm.sh vesti; XFCE and
+# LXQt do not exist for Alma 10, fasi/17 §3). EPEL here serves THE KDE DESKTOP, as for the customer: the GPU's
+# H.264 (RPM Fusion) remains the administrator's. The rest as in Contenitore.debian13.
 FROM quay.io/almalinuxorg/almalinux:10
 ARG DESKTOP
 ARG PORTA_SSH=8600
-RUN case "$DESKTOP" in gnome|kde) ;; *) echo "DESKTOP=«$DESKTOP»: su Alma 10 solo gnome|kde" >&2; exit 2 ;; esac
+RUN case "$DESKTOP" in gnome|kde) ;; *) echo "DESKTOP=\"$DESKTOP\": on Alma 10 only gnome|kde" >&2; exit 2 ;; esac
 RUN dnf -y install systemd dbus sudo procps-ng iproute ca-certificates curl openssh-server shadow-utils dnf-plugins-core \
     && dnf clean all
 RUN if [ "$DESKTOP" = gnome ]; then dnf -y group install "Server with GUI"; \

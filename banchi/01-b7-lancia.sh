@@ -1,61 +1,60 @@
 #!/bin/bash
 #
-# 01-b7-lancia.sh — gira SUL SERVER.  B7: il congedo, dal lato che riceve.
+# 01-b7-lancia.sh — runs ON THE SERVER.  B7: the farewell, from the receiving side.
 #
-#   BERSAGLIO=innesto  bash .../01-b7-lancia.sh              tutto
-#   BERSAGLIO=prodotto bash .../01-b7-lancia.sh solo tempo   un caso solo
-#   BERSAGLIO=innesto  bash .../01-b7-lancia.sh elenco       le previsioni
-#   BERSAGLIO=prodotto bash .../01-b7-lancia.sh frasi        e le frasi di §8.2
+#   BERSAGLIO=innesto  bash .../01-b7-lancia.sh              everything
+#   BERSAGLIO=prodotto bash .../01-b7-lancia.sh solo tempo   a single case
+#   BERSAGLIO=innesto  bash .../01-b7-lancia.sh elenco       the predictions
+#   BERSAGLIO=prodotto bash .../01-b7-lancia.sh frasi        and the sentences of §8.2
 #
-# ⛔ `BERSAGLIO` E' OBBLIGATORIA — vedi `01-b0-bersaglio.sh`.
+# ⛔ `BERSAGLIO` IS MANDATORY — see `01-b0-bersaglio.sh`.
 #
 # ---------------------------------------------------------------------------
-# ⛔⭐ CHE COSA CAMBIA PUNTANDO B7 AL PRODOTTO — la previsione, scritta PRIMA
+# ⛔⭐ WHAT CHANGES WHEN B7 IS POINTED AT THE PRODUCT — the prediction, written BEFORE
 #
-# | cosa | innesto | prodotto | perche' |
+# | what | graft | product | why |
 # |---|---|---|---|
-# | ⭐ **i motivi provocabili** | **7** su 15 | ⛔ **8** su 15 | `src/main.c` congeda tutte le sessioni con `SERVER_IN_CHIUSURA` `0x0C` prima di uscire, e ASPETTA fino a 2 s che i byte escano.  L'innesto non ha nessun percorso di spegnimento (grep: zero occorrenze in `01-b3-rcp-innesta.py`).  ⛔ **Se B7 puntato al prodotto continua a dire «7 su 7», il denominatore e' sbagliato e il banco guarda dall'altra parte** |
-# | il caso `server-in-chiusura` | non esiste | ⭐ esiste, e **spegne il server** | gira per ultimo, in un'invocazione sua, e B0.5 non gli si applica: la morte del server E' la cosa provata |
-# | dove si misura l'esclusione di `0x0C` | `rcp/rcp.c` + `01-b3-rcp-innesta.py`, attesi **zero** | `main.c` + `trasporto.c` + `webtransport.c` + `rcp.c`, attesi **piu' di zero** | ⛔ `rcp.c` e' identico byte per byte nei due server: cercarlo li' direbbe «zero» su tutt'e due, ed e' un denominatore letto dove la cosa NON succede |
-# | `§3.1 punto 1` nel registro | riga `REMOTIX B3: congedo motivo=0xNN` | riga `HH:MM:SS.mmm rcp congedo motivo=0xNN` | ⛔ la scrive `rcp.c`, uguale — a cambiare e' **il prefisso**.  Cercare «REMOTIX B3: » avrebbe dato «punto 1 assente» su TUTTI i casi del prodotto |
-# | gli altri sei motivi | uguali | uguali | li decide `rcp.c`, identico |
-# | `gia-attiva-remota` (0x0F) | il posto si libera alla morte della CONNESSIONE | ⭐ si libera alla chiusura dello **stream** | `src/webtransport.c` `wt_stream_chiuso()`.  ⚠ Col cliente di prova i due istanti coincidono, quindi qui **non** ci si aspetta differenza: la differenza la vede un browser (B11, `[M]` 7 «posto NEGATO» su 9 con Chrome) |
-# | il tetto d'inattivita' | 120 s, chiesto da noi | ⛔ 30 s, **non scelto da noi** | `IDLE_MS` in `src/trasporto.c`.  Il caso `tempo-scaduto` tace 20 s: ci sta sotto i 30, ma il margine passa da 100 s a 10 s |
-# | l'eco di B2 sugli stream | c'e' | ⛔ non c'e' | `scarta_stream_di_troppo()`: «i byte si buttano e NON si rimandano indietro».  B7 non la aspetta mai, quindi non lo tocca — ⚠ ma nessuno strumento nuovo la deve aspettare |
+# | ⭐ **the reasons that can be provoked** | **7** out of 15 | ⛔ **8** out of 15 | `src/main.c` says farewell to all the sessions with `SERVER_IN_CHIUSURA` `0x0C` before exiting, and WAITS up to 2 s for the bytes to go out.  The graft has no shutdown path (grep: zero occurrences in `01-b3-rcp-innesta.py`).  ⛔ **If B7 pointed at the product keeps saying «7 out of 7», the denominator is wrong and the bench is looking the other way** |
+# | the `server-in-chiusura` case | does not exist | ⭐ exists, and **shuts the server down** | it runs last, in an invocation of its own, and B0.5 does not apply to it: the death of the server IS the thing proved |
+# | where the exclusion of `0x0C` is measured | `rcp/rcp.c` + `01-b3-rcp-innesta.py`, expected **zero** | `main.c` + `trasporto.c` + `webtransport.c` + `rcp.c`, expected **more than zero** | ⛔ `rcp.c` is identical byte for byte in the two servers: looking for it there would say «zero» on both, and it is a denominator read where the thing does NOT happen |
+# | `§3.1 point 1` in the log | line `REMOTIX B3: congedo motivo=0xNN` | line `HH:MM:SS.mmm rcp congedo motivo=0xNN` | ⛔ `rcp.c` writes it, the same — what changes is **the prefix**.  Looking for «REMOTIX B3: » would have given «point 1 absent» on ALL the product's cases |
+# | the other six reasons | same | same | they are decided by `rcp.c`, identical |
+# | `gia-attiva-remota` (0x0F) | the place is freed at the death of the CONNECTION | ⭐ it is freed at the closing of the **stream** | `src/webtransport.c` `wt_stream_chiuso()`.  ⚠ With the test client the two instants coincide, so here **no** difference is expected: a browser sees the difference (B11, `[M]` 7 «place DENIED» out of 9 with Chrome) |
+# | the inactivity cap | 120 s, requested by us | ⛔ 30 s, **not chosen by us** | `IDLE_MS` in `src/trasporto.c`.  The `tempo-scaduto` case keeps quiet for 20 s: it fits under the 30, but the margin goes from 100 s to 10 s |
+# | B2's echo on the streams | present | ⛔ not present | `scarta_stream_di_troppo()`: «the bytes are thrown away and NOT sent back».  B7 never waits for it, so it does not touch it — ⚠ but no new tool must wait for it |
 #
-# ⛔ CON UN FILTRO IL GIRO E' PARZIALE, E LO DICE.  L'esito verde si legge «i
-#    casi selezionati passano», mai «B7 passa».  ⚠ E un filtro che non combacia
-#    con nessun nome esce **2**, non 0: «non ho niente da misurare» non e'
-#    «tutto passato».
+# ⛔ WITH A FILTER THE RUN IS PARTIAL, AND IT SAYS SO.  The green outcome reads «the
+#    selected cases pass», never «B7 passes».  ⚠ And a filter that matches no
+#    name exits **2**, not 0: «I have nothing to measure» is not
+#    «everything passed».
 #
 # ---------------------------------------------------------------------------
-# ⛔ CHE COSA PROVA
+# ⛔ WHAT IT TESTS
 #
-# `RCP.md` §8.1: *«il congedo si verifica dal lato che lo riceve, mai dal
-# registro di chi lo manda»*.  In v1, per **tre fasi**, il server scriveva
-# «congedo il client» mentre il client scriveva «errore di rete»
+# `RCP.md` §8.1: *«the farewell is verified from the side that receives it, never
+# from the log of whoever sends it»*.  In v1, for **three phases**, the server wrote
+# «farewell to the client» while the client wrote «network error»
 # (`LEZIONI.md` §1.7).
 #
-# ⛔ E le strade sono DUE (§3.1): il `CONGEDO` sul canale di controllo **e** il
-#    codice del motivo nella chiusura della sessione WebTransport.  Si contano
-#    **separatamente**, con due denominatori, perche' il 10 agosto 2026 la
-#    seconda mancava in **quattordici casi su trentasei** e nessun banco se
-#    n'era accorto: bastava che arrivasse la prima.
+# ⛔ And the roads are TWO (§3.1): the `CONGEDO` on the control channel **and** the
+#    reason code in the closing of the WebTransport session.  They are counted
+#    **separately**, with two denominators, because on 10 Aug 2026 the second
+#    was missing in **fourteen cases out of thirty-six** and no bench had
+#    noticed: it was enough for the first to arrive.
 #
-# ⛔ Il guasto di `FASI.md` §01-filo-nudo §C1 — «si toglie la spedizione del
-#    `CONGEDO` e si lascia il codice nella chiusura» — deve far diventare
-#    ROSSO questo banco.  Se resta verde sta facendo una `||` dove serve una
-#    `&&`.
+# ⛔ The fault of `FASI.md` §01-filo-nudo §C1 — «the sending of the `CONGEDO` is
+#    removed and the code in the closing is left» — must turn this bench RED.
+#    If it stays green it is doing an `||` where an `&&` is needed.
 #
 # ---------------------------------------------------------------------------
-# ⛔ E IL REGISTRO DEL SERVER SI LEGGE IN DUE PUNTI SOLI, DICHIARATI
+# ⛔ AND THE SERVER LOG IS READ AT TWO POINTS ONLY, DECLARED
 #
-#   · §3.1 **punto 1** — la riga «che cosa non ho capito», che e' per
-#     definizione una riga di chi chiude: e' il punto 1 a chiederla;
-#   · il verso **client→server** — dove chi riceve E' il server.
+#   · §3.1 **point 1** — the line «what I did not understand», which is by
+#     definition a line of whoever closes: it is point 1 that asks for it;
+#   · the **client→server** direction — where whoever receives IS the server.
 #
-# Il motivo che il server MANDA lo giudicano sempre e solo le due strade, lette
-# sul filo dal cliente di prova.
+# The reason the server SENDS is always and only judged by the two roads, read
+# on the wire by the test client.
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
@@ -66,44 +65,44 @@ UTENTE=prova
 PAROLA=parola-di-prova
 
 # ---------------------------------------------------------------------------
-# ⛔ LA PAROLA D'ORDINE NON PASSA PIU' DALLA RIGA DI COMANDO — difetto **D12**,
-#    curato il 12 agosto 2026.
+# ⛔ THE PASSWORD NO LONGER GOES THROUGH THE COMMAND LINE — defect **D12**,
+#    cured on 12 Aug 2026.
 #
-# ⛔ QUI LA PAROLA finiva dentro la stringa che `bash $ENTRA --root "…"` riceve
-#    come argomento: cioe' nell'`argv` di `bash`, in quello di `sudo` e in
-#    quello di `python3`.  `/proc/<pid>/cmdline` su Linux e' **leggibile da
-#    chiunque**, e un `ps` lanciato da un altro utente durante il giro la
-#    stampava per intero.  ⚠ E i banchi di questa macchina girano mentre ci
-#    lavorano altri.
+# ⛔ HERE THE PASSWORD ended up inside the string that `bash $ENTRA --root "…"`
+#    receives as an argument: that is in the `argv` of `bash`, in that of `sudo`
+#    and in that of `python3`.  `/proc/<pid>/cmdline` on Linux is **readable by
+#    anyone**, and a `ps` launched by another user during the run printed it in
+#    full.  ⚠ And the benches on this machine run while others are working on
+#    it.
 #
-# ⭐ LA STRADA E' QUELLA GIA' IN CASA (`banchi/01-b10-lancia.sh`), e non un
-#    secondo modo: un file `0600` scritto con `printf` — un **builtin** della
-#    shell, quindi nemmeno la scrittura passa per un processo con la parola in
-#    `argv` — passato al banco come `--parola-file`, e cancellato con una
-#    `trap` anche se il giro muore a meta'.
+# ⭐ THE ROAD IS THE ONE ALREADY IN THE HOUSE (`banchi/01-b10-lancia.sh`), and not
+#    a second way: a `0600` file written with `printf` — a shell **builtin**, so
+#    not even the writing goes through a process with the password in `argv` —
+#    passed to the bench as `--parola-file`, and deleted with a `trap` even if
+#    the run dies halfway.
 #
-# ⚠ Nel `cmdline` finisce il PERCORSO, non la parola, e il file e' `0600`:
-#   chi non e' noi non lo apre.
-# ⚠ E il nome porta la sigla del banco: due giri che scrivessero lo stesso
-#   file si cancellerebbero la parola a vicenda — la stessa forma che ha fatto
-#   nascere il `PREFISSO` di `01-p5-accendi.sh`.
+# ⚠ What ends up in the `cmdline` is the PATH, not the password, and the file is
+#   `0600`: whoever is not us does not open it.
+# ⚠ And the name carries the bench's tag: two runs writing the same file would
+#   delete each other's password — the same shape that gave birth to the
+#   `PREFISSO` of `01-p5-accendi.sh`.
 PAROLA_FUORI=$FUORI/tmp/b7-parola
 PAROLA_DENTRO=$DENTRO/tmp/b7-parola
 
 ripulisci_parola() { rm -f "$PAROLA_FUORI"; }
 trap ripulisci_parola EXIT
 
-# ⛔ `umask` IN UNA SOTTOSHELL — la riga che B10 ha pagato con un giro intero:
-#    `umask 077` nudo resta addosso a tutto quel che viene dopo, compresi i
-#    comandi mandati dentro il contenitore, e li' fa scrivere a root dei file
-#    che poi `nicfio` non rilegge piu'.
+# ⛔ `umask` IN A SUBSHELL — the line B10 paid for with a whole run:
+#    a bare `umask 077` stays on everything that comes after, including the
+#    commands sent inside the container, and there it makes root write files
+#    that `nicfio` can then no longer read.
 mkdir -p "$FUORI/tmp" \
 	&& ( umask 077; : > "$PAROLA_FUORI" ) \
 	&& chmod 600 "$PAROLA_FUORI" \
-	|| { printf '    ⛔ non si scrive %s: il giro non parte\n' "$PAROLA_FUORI"; exit 2; }
+	|| { printf '    ⛔ cannot write %s: the run does not start\n' "$PAROLA_FUORI"; exit 2; }
 printf '%s\n' "$PAROLA" > "$PAROLA_FUORI"
 
-# ⛔ Il bersaglio: una forma sola per i quattro banchi, in un file solo.
+# ⛔ The target: a single shape for the four benches, in a single file.
 SIGLA=b7
 
 log()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
@@ -115,16 +114,16 @@ inf()  { printf '    --  %s\n' "$*"; }
 . "$FUORI/01-b0-bersaglio.sh"
 IND=$B_IND
 PORTA=$B_PORTA
-# ⛔ La radice dei sorgenti da cui si misura l'esclusione di 0x0C: dipende dal
-#    bersaglio, e NON e' `rcp.c` da solo.
+# ⛔ The root of the sources from which the exclusion of 0x0C is measured: it
+#    depends on the target, and it is NOT `rcp.c` alone.
 DENTRO_SORG=$DENTRO
 
 AZIONE=${1:-tutto}
 FILTRO=${2:-}
 
-log "Credenziali per il contenitore"
-bash "$ENTRA" --root "true" || { ko "non si entra nel contenitore"; exit 2; }
-ok "sudo validato"
+log "Credentials for the container"
+bash "$ENTRA" --root "true" || { ko "cannot enter the container"; exit 2; }
+ok "sudo validated"
 
 if [ "$AZIONE" = elenco ]; then
 	bash "$ENTRA" --root "python3 $DENTRO/01-b7-congedo.py --bersaglio $B_NOME --elenco"
@@ -135,160 +134,161 @@ FRASI=
 [ "$AZIONE" = frasi ] && FRASI=--frasi
 
 # ---------------------------------------------------------------------------
-# ⛔ 1. IL SERVER SI PREPARA — e le due strade non sono la stessa.
+# ⛔ 1. THE SERVER IS PREPARED — and the two roads are not the same.
 #
-#   innesto   gli innesti si tolgono e si rimettono, si conta la marca nei
-#             sorgenti, si compila guardando l'esito del costruttore, e poi si
-#             prende l'impronta md5 del binario;
-#   prodotto  ⛔ NON si ricompila — `src/` non e' di questo banco, e un banco
-#             che ricompila quel che misura si toglie il testimone indipendente
-#             — e ci si ferma se il binario e' piu' vecchio di un sorgente.
-#             `[M]` 11 agosto 2026: lo era, di un'ora.
+#   innesto   the grafts are removed and put back, the mark is counted in the
+#             sources, it is compiled looking at the builder's outcome, and then
+#             the md5 fingerprint of the binary is taken;
+#   prodotto  ⛔ it is NOT recompiled — `src/` does not belong to this bench, and a
+#             bench that recompiles what it measures removes its own independent
+#             witness — and one stops if the binary is older than a source.
+#             `[M]` 11 Aug 2026: it was, by an hour.
 #
-# ⛔ NESSUNA REDIREZIONE ATTORNO A `enter.sh`: si porterebbe via la richiesta di
-#    password di sudo, e lo script resterebbe ad aspettare una domanda che
-#    nessuno vede.  Le redirezioni stanno dentro le virgolette del comando
-#    remoto (vedi `01-b0-bersaglio.sh`).
+# ⛔ NO REDIRECTION AROUND `enter.sh`: it would take away the sudo password
+#    prompt, and the script would stay waiting for a question nobody sees.
+#    The redirections go inside the quotes of the remote command (see
+#    `01-b0-bersaglio.sh`).
 bersaglio_pronto || exit 3
 
-# ⛔ E LA CHIUSURA RIMANDATA DEV'ESSERCI, perche' e' precisamente la cura del
-#    difetto che B7 esiste per sorvegliare: senza, la capsula di chiusura non
-#    parte su nessuna violazione trovata al primo messaggio — 14 casi su 36, il
-#    10 agosto 2026.  ⚠ Trovarla assente non e' un rosso di B7: e' il banco che
-#    dice «stai per misurare un server diverso da quello che credi».
-# ⚠ E il file dove sta cambia col bersaglio: nell'innesto e' il codec innestato,
-#   nel prodotto e' `webtransport.c` (`chiudi_sessione()`).
+# ⛔ AND THE DEFERRED CLOSING MUST BE THERE, because it is precisely the cure of
+#    the defect B7 exists to watch over: without it, the closing capsule does not
+#    leave on any violation found at the first message — 14 cases out of 36, on
+#    10 Aug 2026.  ⚠ Finding it absent is not a B7 red: it is the bench saying
+#    «you are about to measure a server different from the one you believe».
+# ⚠ And the file where it lives changes with the target: in the graft it is the
+#   grafted codec, in the product it is `webtransport.c` (`chiudi_sessione()`).
 if [ "$B_NOME" = innesto ]; then
 	DOVE_RIMANDO=$DENTRO/b2/ngtcp2/examples/http3_server_proto_codec.cc
 else
 	DOVE_RIMANDO=$DENTRO/remotix/webtransport.c
 fi
-RIMANDO=$(bash "$ENTRA" --root "grep -c 'RIMANDATA' $DOVE_RIMANDO" | tr -cd '0-9')
+RIMANDO=$(bash "$ENTRA" --root "grep -c 'DEFERRED' $DOVE_RIMANDO" | tr -cd '0-9')
 if [ "${RIMANDO:-0}" -ge 1 ]; then
-	ok "la chiusura rimandata (§3.1 punto 3) c'e' in $(basename "$DOVE_RIMANDO")"
+	ok "the deferred closing (§3.1 point 3) is in $(basename "$DOVE_RIMANDO")"
 else
-	ko "⚠ la chiusura RIMANDATA non c'e' in $DOVE_RIMANDO: se la seconda"
-	ko "  strada risultera' assente, la causa e' QUESTA e non il modulo RCP"
+	ko "⚠ the DEFERRED closing is not in $DOVE_RIMANDO: if the second"
+	ko "  road turns out absent, the cause is THIS and not the RCP module"
 fi
 
 # ---------------------------------------------------------------------------
-# ⛔ 2. LO STATO INIZIALE DEL BAN — B0.1, B0.2, B0.3.
+# ⛔ 2. THE INITIAL STATE OF THE BAN — B0.1, B0.2, B0.3.
 #
-# B7 fallisce **un** tentativo di autenticazione (B0.3 lo dice), cioe' consuma
-# uno dei tre di §4.4-bis: da solo non banna, ma sommato a un residuo di un
-# altro giro si'.  ⛔ E sul prodotto il ban sta su FILE: un ban di ieri
-# renderebbe rosso tutto quel che segue, con il rosso sull'imputato sbagliato.
-log "2. Lo stato iniziale del ban (B0.1, B0.2)"
+# B7 fails **one** authentication attempt (B0.3 says so), that is it consumes
+# one of the three of §4.4-bis: alone it does not ban, but added to a residue
+# from another run it does.  ⛔ And on the product the ban is on FILE: a ban from
+# yesterday would turn red everything that follows, with the red on the wrong
+# defendant.
+log "2. The initial state of the ban (B0.1, B0.2)"
 bersaglio_butta_il_ban
 
 # ---------------------------------------------------------------------------
-log "3. Il server si accende"
-inf "⚠ tetto d'inattivita' \$B_IDLE_LUNGO = $B_IDLE_LUNGO ms: il caso"
-inf "  «tempo-scaduto» tace per venti secondi, e un tetto piu' corto"
-inf "  chiuderebbe la connessione per conto suo — il banco leggerebbe «e'"
-inf "  caduta» dove non e' caduto niente, e per giunta SENZA motivo, cioe'"
-inf "  proprio la forma che B7 deve saper distinguere da un congedo"
+log "3. The server starts"
+inf "⚠ inactivity cap \$B_IDLE_LUNGO = $B_IDLE_LUNGO ms: the case"
+inf "  «tempo-scaduto» keeps quiet for twenty seconds, and a shorter cap"
+inf "  would close the connection on its own — the bench would read «it"
+inf "  dropped» where nothing dropped, and on top of that WITHOUT a reason, that is"
+inf "  precisely the shape B7 must be able to tell from a farewell"
 if [ "$B_IDLE_SCELTA" = no ]; then
-	inf "⛔ e su questo bersaglio quel numero non lo scegliamo noi (IDLE_MS in"
-	inf "   src/trasporto.c): il margine sopra i 20 s passa da 100 s a 10 s"
+	inf "⛔ and on this target we do not choose that number (IDLE_MS in"
+	inf "   src/trasporto.c): the margin above the 20 s goes from 100 s to 10 s"
 fi
 bersaglio_accendi filo "$B_IDLE_LUNGO" || exit 4
 PID=$B_PID
 
-inf "il comando di sblocco risponde? (PING — il denominatore di B0.3)"
-bersaglio_ping || { ko "⛔ il comando di sblocco non risponde: in fondo non"
-                    ko "   potrei rimettere la macchina a posto"
+inf "does the unblock command answer? (PING — the denominator of B0.3)"
+bersaglio_ping || { ko "⛔ the unblock command does not answer: at the end I could not"
+                    ko "   put the machine back in order"
                     bersaglio_spegni; exit 4; }
 
-# ⛔ 3-bis. HO MISURATO IL SERVER CHE HO DICHIARATO?
-log "3-bis. L'impronta del bersaglio (LEZIONI.md §1.9, corollario 5)"
+# ⛔ 3-bis. DID I MEASURE THE SERVER I DECLARED?
+log "3-bis. The target's fingerprint (LEZIONI.md §1.9, corollary 5)"
 bersaglio_impronta
 case $? in
 0) : ;;
-*) ko "⛔ mi fermo: i numeri finirebbero sul bersaglio sbagliato"
+*) ko "⛔ I stop: the numbers would end up on the wrong target"
    bersaglio_spegni; exit 6 ;;
 esac
 
 fermare() { bersaglio_spegni; }
 
 # ---------------------------------------------------------------------------
-log "4. Il congedo, dal lato che riceve"
+log "4. The farewell, from the receiving side"
 OPZ=$(bersaglio_opzioni_python)
 COMUNE="--indirizzo $IND $OPZ --utente $UTENTE --parola-file $PAROLA_DENTRO \
 	--registro $B_LOG --pagina $DENTRO/01-b11-pagina.html --dentro $DENTRO_SORG"
 if [ -n "$FILTRO" ]; then
 	bash "$ENTRA" --root "python3 -u $DENTRO/01-b7-congedo.py $COMUNE --solo $FILTRO"
 else
-	# ⛔ Il giro normale ESCLUDE `server-in-chiusura`, che spegne il server:
-	#    gira dopo, con il server riacceso apposta (punto 7).
+	# ⛔ The normal run EXCLUDES `server-in-chiusura`, which shuts the server down:
+	#    it runs afterwards, with the server restarted on purpose (point 7).
 	bash "$ENTRA" --root "python3 -u $DENTRO/01-b7-congedo.py $COMUNE $FRASI --escludi server-in-chiusura"
 fi
 ESITO=$?
 
 # ---------------------------------------------------------------------------
-log "5. ⛔ Il server e' ancora vivo? — B0.5, dal di fuori"
-inf "il banco lo chiede a ogni caso; questo lo chiede al SISTEMA, che e' un"
-inf "testimone diverso: un processo puo' rispondere e avere gia' perso i figli"
+log "5. ⛔ Is the server still alive? — B0.5, from outside"
+inf "the bench asks it at every case; this asks the SYSTEM, which is a"
+inf "different witness: a process can answer and have already lost its children"
 if [ -d "/proc/$PID" ]; then
-	ok "il processo $PID c'e' ancora"
+	ok "process $PID is still there"
 else
-	ko "⛔ IL SERVER E' MORTO durante il banco"
+	ko "⛔ THE SERVER DIED during the bench"
 	ESITO=1
 fi
 
 # ---------------------------------------------------------------------------
-log "6. Le due strade, come le ha scritte il server"
-inf "⚠ QUESTO NON E' IL VERDETTO — il verdetto e' quello del punto 4, letto dal"
-inf "  lato che riceve (§8.1).  Qui si guarda l'altra meta' della stessa storia:"
-inf "  se le due colonne non si somigliano, il registro e il filo raccontano due"
-inf "  cose diverse, ed e' la forma di difetto che §3.1 punto 3 esiste per"
-inf "  smascherare"
+log "6. The two roads, as the server wrote them"
+inf "⚠ THIS IS NOT THE VERDICT — the verdict is that of point 4, read from the"
+inf "  receiving side (§8.1).  Here one looks at the other half of the same story:"
+inf "  if the two columns do not resemble each other, the log and the wire tell two"
+inf "  different things, and it is the defect shape §3.1 point 3 exists to"
+inf "  unmask"
 if [ -f "$B_LOG_FUORI" ]; then
-	# ⛔ Si conta e si stampa: un `grep -c` che dice 0 e un file che non si
-	#    legge sono due fatti diversi, e il ramo qui sotto li tiene separati.
+	# ⛔ It is counted and printed: a `grep -c` that says 0 and a file that cannot
+	#    be read are two different facts, and the branch below keeps them apart.
 	C1=$(grep -c "congedo motivo=" "$B_LOG_FUORI")
-	C2=$(grep -c "chiusa la sessione WebTransport" "$B_LOG_FUORI")
-	C3=$(grep -c "chiusura della sessione RIMANDATA" "$B_LOG_FUORI")
-	inf "congedi spediti (§3.1 punto 2, dal lato di chi manda): ${C1:-0}"
-	inf "chiusure di sessione USCITE (§3.1 punto 3):             ${C2:-0}"
-	inf "chiusure soltanto RIMANDATE:                            ${C3:-0}"
+	C2=$(grep -c "closed the WebTransport session" "$B_LOG_FUORI")
+	C3=$(grep -c "session closure DEFERRED" "$B_LOG_FUORI")
+	inf "farewells sent (§3.1 point 2, from the sender's side): ${C1:-0}"
+	inf "session closings that WENT OUT (§3.1 point 3):         ${C2:-0}"
+	inf "closings only DEFERRED:                                ${C3:-0}"
 	if [ "${C3:-0}" -gt "${C2:-0}" ]; then
-		ko "⛔ ${C3} chiusure rimandate e solo ${C2} uscite: qualche capsula"
-		ko "   non e' mai partita — e' il difetto delle 14 su 36 del 10 agosto"
+		ko "⛔ ${C3} closings deferred and only ${C2} gone out: some capsule"
+		ko "   never left — it is the defect of the 14 out of 36 of 10 August"
 	fi
 	grep "congedo motivo=" "$B_LOG_FUORI" | tail -8 | sed 's/^/        /'
 else
-	ko "⛔ IL REGISTRO NON SI LEGGE: $B_LOG_FUORI non esiste"
-	ko "   non e' il server che non ha scritto — e' che non si legge"
-	ko "   (volume non mappato? server mai partito? nome cambiato?)"
+	ko "⛔ THE LOG CANNOT BE READ: $B_LOG_FUORI does not exist"
+	ko "   it is not the server that did not write — it is that it cannot be read"
+	ko "   (volume not mapped? server never started? name changed?)"
 	ESITO=1
 fi
 
 # ---------------------------------------------------------------------------
-# ⭐⛔ 7. IL GIRO DELLO SPEGNIMENTO — e su questo bersaglio esiste, sull'altro no.
+# ⭐⛔ 7. THE SHUTDOWN RUN — and on this target it exists, on the other it does not.
 #
-# `SERVER_IN_CHIUSURA` `0x0C` non si provoca con un byte storto: lo provoca un
-# `SIGTERM`.  ⛔ Quindi questo caso **spegne il server**, gira per ultimo e in
-# un'invocazione sua, e B0.5 non gli si applica — la morte del server E' la cosa
-# provata, e il banco lo dichiara invece di darsi un rosso da solo.
+# `SERVER_IN_CHIUSURA` `0x0C` is not provoked with a crooked byte: a `SIGTERM`
+# provokes it.  ⛔ So this case **shuts the server down**, runs last and in an
+# invocation of its own, and B0.5 does not apply to it — the death of the server
+# IS the thing proved, and the bench declares it instead of giving itself a red.
 #
-# ⚠ E il server si riaccende apposta: quello del punto 3 e' ancora vivo, e lo si
-#   spegne prima, per bene, guardando che la porta si liberi.
-log "7. ⭐ Il giro dello spegnimento (SERVER_IN_CHIUSURA 0x0C)"
+# ⚠ And the server is restarted on purpose: the one of point 3 is still alive, and
+#   it is shut down first, properly, watching the port get freed.
+log "7. ⭐ The shutdown run (SERVER_IN_CHIUSURA 0x0C)"
 if [ "$B_SPEGNIMENTO" != si ]; then
-	inf "⚠ SALTATO: il bersaglio «$B_NOME» non ha nessun percorso di"
-	inf "  spegnimento, e i suoi motivi provocabili sono SETTE.  ⛔ Questo non"
-	inf "  e' un caso che manca: e' un caso che su questo server non esiste, e"
-	inf "  l'esclusione l'ha MISURATA il banco col grep, non io con un commento"
+	inf "⚠ SKIPPED: the target «$B_NOME» has no shutdown"
+	inf "  path, and its reasons that can be provoked are SEVEN.  ⛔ This is not"
+	inf "  a missing case: it is a case that does not exist on this server, and"
+	inf "  the exclusion was MEASURED by the bench with grep, not by me with a comment"
 elif [ -n "$FILTRO" ]; then
-	inf "⚠ SALTATO: giro parziale (filtro «$FILTRO»)"
+	inf "⚠ SKIPPED: partial run (filter «$FILTRO»)"
 else
 	fermare
-	inf "il server si riaccende: quello di prima ha gia' misurato, e questo"
-	inf "caso lo spegnera'"
+	inf "the server is restarted: the previous one has already measured, and this"
+	inf "case will shut it down"
 	if bersaglio_accendi spegnimento "$B_IDLE_LUNGO"; then
 		PID=$B_PID
-		bersaglio_impronta || { ko "⛔ non e' il bersaglio dichiarato"; ESITO=6; }
+		bersaglio_impronta || { ko "⛔ it is not the declared target"; ESITO=6; }
 		if [ "${ESITO:-0}" -ne 6 ]; then
 			OPZ2=$(bersaglio_opzioni_python)
 			bash "$ENTRA" --root "python3 -u $DENTRO/01-b7-congedo.py \
@@ -297,37 +297,37 @@ else
 				--dentro $DENTRO_SORG --pid-server $PID \
 				--solo server-in-chiusura"
 			ESITO_SPEGN=$?
-			# ⛔ E QUI IL SERVER DEVE ESSERE MORTO, non vivo: e' l'unico punto
-			#    del banco in cui B0.5 si legge al contrario.  ⚠ Un server
-			#    ancora vivo dopo un SIGTERM non e' «resistente»: e' un server
-			#    che non ha eseguito il percorso che si stava misurando.
+			# ⛔ AND HERE THE SERVER MUST BE DEAD, not alive: it is the only point
+			#    of the bench where B0.5 is read backwards.  ⚠ A server still
+			#    alive after a SIGTERM is not «resilient»: it is a server that did
+			#    not run the path being measured.
 			#
-			# ⛔⭐ MA GLI SI DA' IL TEMPO CHE LUI STESSO DICHIARA — 11 agosto 2026.
+			# ⛔⭐ BUT IT IS GIVEN THE TIME IT ITSELF DECLARES — 11 Aug 2026.
 			#
-			#     Questa riga guardava `/proc/$PID` SUBITO, e fino a oggi era
-			#     giusta per accidente: il server rinunciava dopo tre decimi di
-			#     secondo.  ⛔ Curato il difetto di §3.1 punto 3, `src/main.c`
-			#     aspetta ora fino a **4 s** perche' la capsula di chiusura esca
-			#     davvero — e questo banco dichiarava morto un server che stava
-			#     facendo esattamente la cosa che il caso esiste per provare.
+			#     This line looked at `/proc/$PID` IMMEDIATELY, and until today it
+			#     was right by accident: the server gave up after three tenths of
+			#     a second.  ⛔ With the defect of §3.1 point 3 cured, `src/main.c`
+			#     now waits up to **4 s** for the closing capsule to really go
+			#     out — and this bench declared dead a server that was doing
+			#     exactly the thing the case exists to prove.
 			#
-			# ⚠ L'attesa e' LIMITATA e dichiarata: 8 s, cioe' il budget del
-			#   server piu' il doppio del margine.  Un'attesa senza fondo
-			#   trasformerebbe «non muore mai» in «il banco si e' piantato».
+			# ⚠ The wait is BOUNDED and declared: 8 s, that is the server's budget
+			#   plus twice the margin.  A bottomless wait would turn «it never
+			#   dies» into «the bench froze».
 			ATTESO_MORTE=8
 			for _ in $(seq $((ATTESO_MORTE * 10))); do
 				[ -d "/proc/$PID" ] || break
 				sleep 0.1
 			done
 			if [ -d "/proc/$PID" ]; then
-				ko "⛔ il server e' ANCORA VIVO dopo il SIGTERM: il percorso di"
-				ko "   spegnimento di src/main.c non e' stato eseguito, e il"
-				ko "   congedo 0x0C che il banco ha (o non ha) letto non viene"
-				ko "   da li'.  ⚠ Non e' un verde: e' una misura da rifare"
+				ko "⛔ the server is STILL ALIVE after the SIGTERM: the shutdown"
+				ko "   path of src/main.c was not run, and the"
+				ko "   0x0C farewell the bench did (or did not) read does not come"
+				ko "   from there.  ⚠ It is not a green: it is a measurement to redo"
 				ESITO_SPEGN=1
 				bersaglio_spegni
 			else
-				ok "il server e' sparito dopo il SIGTERM, come deve"
+				ok "the server disappeared after the SIGTERM, as it must"
 				B_PID=""
 			fi
 			if [ "$ESITO_SPEGN" -ne 0 ] && [ "${ESITO:-0}" -eq 0 ]; then
@@ -335,62 +335,62 @@ else
 			fi
 		fi
 	else
-		ko "⛔ il server non si riaccende: il giro dello spegnimento NON e'"
-		ko "   stato fatto, e questo non e' «passato»"
+		ko "⛔ the server does not restart: the shutdown run was NOT"
+		ko "   done, and this is not «passed»"
 		[ "${ESITO:-0}" -eq 0 ] && ESITO=4
 	fi
 fi
 
 # ---------------------------------------------------------------------------
-# ⛔ 8. SI RIMETTE LA MACCHINA A POSTO, E LO SI DICHIARA — B0.3.
-#    B7 fallisce un tentativo: da solo non banna, ma il residuo si toglie e si
-#    dice quale dei tre esiti e' arrivato.  ⚠ Qui l'atteso e' «NON-BANNATO»: un
-#    «TOLTO» vorrebbe dire che qualcosa ha fatto tre fallimenti, e sarebbe una
-#    notizia sullo stato iniziale, non una pulizia.
-log "8. Lo sblocco finale, dichiarato (B0.3)"
+# ⛔ 8. THE MACHINE IS PUT BACK IN ORDER, AND IT IS DECLARED — B0.3.
+#    B7 fails one attempt: alone it does not ban, but the residue is removed and
+#    it is said which of the three outcomes arrived.  ⚠ Here the expected is
+#    «NON-BANNATO»: a «TOLTO» would mean something made three failures, and it
+#    would be news about the initial state, not a clean-up.
+log "8. The final unblock, declared (B0.3)"
 if [ -n "${B_PID:-}" ]; then
-	inf "⚠ atteso «NON-BANNATO»: B7 fallisce UN tentativo su tre, e da solo"
-	inf "  non banna.  Un «TOLTO» qui sarebbe una notizia sullo stato iniziale"
+	inf "⚠ expected «NON-BANNATO»: B7 fails ONE attempt out of three, and alone"
+	inf "  it does not ban.  A «TOLTO» here would be news about the initial state"
 	bersaglio_sblocca dopo-b7 "$IND" || \
-		ko "⚠ lo sblocco finale non e' andato: guarda la riga qui sopra"
+		ko "⚠ the final unblock did not go through: look at the line above"
 else
-	# ⛔ E questo NON e' «sbloccato»: e' «non ho parlato con nessuno», che e' il
-	#    terzo esito di `01-b8-sblocca.py` e il piu' importante dei tre.
-	inf "⚠ NESSUNO SBLOCCO: il server e' gia' spento (l'ha spento il giro dello"
-	inf "  spegnimento), quindi il comando non ha nessuno con cui parlare."
-	inf "  ⛔ Il ban resta com'era nel file «$B_BAN», che e' di B7 soltanto e si"
-	inf "     butta al prossimo giro: nessun altro banco lo legge"
+	# ⛔ And this is NOT «unblocked»: it is «I talked to nobody», which is the
+	#    third outcome of `01-b8-sblocca.py` and the most important of the three.
+	inf "⚠ NO UNBLOCK: the server is already off (the shutdown run turned it"
+	inf "  off), so the command has nobody to talk to."
+	inf "  ⛔ The ban stays as it was in the file «$B_BAN», which is B7's only and"
+	inf "     is thrown away at the next run: no other bench reads it"
 fi
 
 fermare
 
-log "Esito"
-# ⛔ QUATTRO ESITI, NON DUE.  `01-b7-congedo.py` esce 2 quando il filtro non ha
-#    selezionato niente, e 3 quando lo STRUMENTO non si e' certificato: un
-#    banco non certificato non e' un rosso del server, ed e' l'unico modo di
-#    non far passare per difetto del prodotto un difetto del banco.
+log "Outcome"
+# ⛔ FOUR OUTCOMES, NOT TWO.  `01-b7-congedo.py` exits 2 when the filter selected
+#    nothing, and 3 when the TOOL did not certify itself: an uncertified bench
+#    is not a server red, and it is the only way not to pass off a bench defect
+#    as a product defect.
 case "$ESITO" in
 0)
 	if [ -n "$FILTRO" ]; then
-		ok "⭐ i casi «$FILTRO» passano contro «$B_NOME»"
-		inf "⚠ e questo NON e' «B7 passa»: il giro era parziale"
+		ok "⭐ the cases «$FILTRO» pass against «$B_NOME»"
+		inf "⚠ and this is NOT «B7 passes»: the run was partial"
 	else
-		ok "⭐ B7 passa contro «$B_NOME» — $( [ "$B_SPEGNIMENTO" = si ] \
-			&& printf 'OTTO motivi provocabili' || printf 'SETTE motivi provocabili' )"
-		inf "⚠ e non e' «B7 passa»: l'altro bersaglio e' un altro programma,"
-		inf "  con un denominatore diverso, e questo giro non ne dice niente"
+		ok "⭐ B7 passes against «$B_NOME» — $( [ "$B_SPEGNIMENTO" = si ] \
+			&& printf 'EIGHT reasons that can be provoked' || printf 'SEVEN reasons that can be provoked' )"
+		inf "⚠ and it is not «B7 passes»: the other target is another program,"
+		inf "  with a different denominator, and this run says nothing about it"
 	fi
 	;;
-2) ko "⛔ B7: non c'e' stato niente da misurare (filtro «$FILTRO»)" ;;
+2) ko "⛔ B7: there was nothing to measure (filter «$FILTRO»)" ;;
 3)
-	ko "⛔ B7 NON HA MISURATO: lo strumento non si e' certificato"
-	ko "   ⚠ questo NON e' un rosso del server: e' il banco che si e'"
-	ko "     fermato prima di produrre un numero di cui non risponde"
+	ko "⛔ B7 DID NOT MEASURE: the tool did not certify itself"
+	ko "   ⚠ this is NOT a server red: it is the bench that"
+	ko "     stopped before producing a number it does not answer for"
 	;;
-6) ko "⛔ B7: NON HO MISURATO — il bersaglio non e' quello dichiarato"
-   ko "   ⚠ non e' un rosso del server: e' il banco che si e' fermato prima"
-   ko "     di attribuire numeri al programma sbagliato" ;;
-*) ko "⛔ B7: qualcosa non passa contro «$B_NOME»" ;;
+6) ko "⛔ B7: I DID NOT MEASURE — the target is not the declared one"
+   ko "   ⚠ it is not a server red: it is the bench that stopped before"
+   ko "     attributing numbers to the wrong program" ;;
+*) ko "⛔ B7: something does not pass against «$B_NOME»" ;;
 esac
-inf "il registro completo resta in $B_LOG_FUORI"
+inf "the full log stays in $B_LOG_FUORI"
 exit "$ESITO"

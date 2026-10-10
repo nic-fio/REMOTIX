@@ -1,44 +1,44 @@
 #!/bin/bash
-# 19-nv-macchina.sh — il banco NVIDIA, SULLA MACCHINA A NOLEGGIO, da root.
+# 19-nv-macchina.sh — the NVIDIA bench, ON THE RENTED MACHINE, as root.
 #
-#   bash /opt/remotix-nv/albero/banchi/19-nvidia/19-nv-macchina.sh PASSO
+#   bash /opt/remotix-nv/albero/banchi/19-nvidia/19-nv-macchina.sh STEP
 #
-# Di solito non lo lancia una persona: lo lancia `19-nvidia.sh` dal portatile
-# (`tutto IP`), in un'unita' di systemd che sopravvive alla caduta di ssh.
+# Usually no person launches it: `19-nvidia.sh` launches it from the laptop
+# (`tutto IP`), in a systemd unit that survives ssh dropping.
 #
-# I PASSI, nell'ordine di `tutto` (fasi/19-nvidia.md §2.4, compito del 1 ott 2026):
-#   aggiorna     una Ubuntu PIU' VECCHIA della 26.04 la porta alla 26.04 con do-release-upgrade,
-#                    un salto e un riavvio alla volta (20.04 ⇒ 22.04 ⇒ 24.04 ⇒ 26.04): i noleggiatori
-#                    offrono Ubuntu, e non sempre la 26.04 (5 ott 2026). ⛔ «pulisci» NON lo disfa
-#   controlli    (a) scheda, driver, nodi DRM, ICD, vulkaninfo con
-#                    VK_KHR_video_encode_h264/h265; e la FOTOGRAFIA della macchina
-#                    com'era (pacchetti, /etc/apt, utenti, unita'): serve a «pulisci»
-#   driver       il driver NVIDIA col suo ICD Vulkan e nvidia-drm modeset=1, SOLO
-#                    se mancano; se tocca il nucleo esce con 10 = riavvio
-#   dipendenze   (b) XFCE sotto labwc, gli attrezzi delle prove, Firefox ESR, Chrome,
-#                    l'utente del banco `rxbanco`
-#   remotix      (b) REMOTIX dal .deb di `fase-19` CON L'INSTALLATORE (piano, applica):
-#                    il rifiuto, se c'e', e' gia' un risultato
-#   codifica     (c) `remotix --prova-codifica` h264 e hevc: deve dire strada «vulkan»
-#   confronto    (d) `banchi/19-vulkan/19-confronto.sh` sulla NVIDIA (qualita',
-#                    decodifica di ogni fotogramma, tela nuova, tela in CICLO, chiave, tetto)
-#   suite        (e) il sottoinsieme della suite della fase 15 (F-001 F-002 F-003 F-011
-#                    F-013 F-016 F-018) su XFCE sotto labwc senza schermo, Firefox e Chrome
-#   raccogli     (f) registri ed evidenze in UN archivio, da portare sul portatile
-#   pulisci      (g) la macchina come l'abbiamo trovata (vuole l'archivio gia' portato via)
-#   stato        dove si e' arrivati
-#   tutto        dal primo all'ultimo prima di «pulisci», saltando quelli gia' fatti
+# THE STEPS, in the order of `tutto` (fasi/19-nvidia.md §2.4, task of 1 Oct 2026):
+#   aggiorna     an Ubuntu OLDER than 26.04 is brought to 26.04 with do-release-upgrade,
+#                    one hop and one reboot at a time (20.04 ⇒ 22.04 ⇒ 24.04 ⇒ 26.04): the rental companies
+#                    offer Ubuntu, and not always 26.04 (5 Oct 2026). ⛔ "pulisci" does NOT undo it
+#   controlli    (a) card, driver, DRM nodes, ICD, vulkaninfo with
+#                    VK_KHR_video_encode_h264/h265; and the SNAPSHOT of the machine
+#                    as it was (packages, /etc/apt, users, units): "pulisci" needs it
+#   driver       the NVIDIA driver with its Vulkan ICD and nvidia-drm modeset=1, ONLY
+#                    if missing; if it touches the kernel it exits with 10 = reboot
+#   dipendenze   (b) XFCE under labwc, the test tools, Firefox ESR, Chrome,
+#                    the bench user `rxbanco`
+#   remotix      (b) REMOTIX from the `fase-19` .deb WITH THE INSTALLER (plan, apply):
+#                    the refusal, if any, is already a result
+#   codifica     (c) `remotix --prova-codifica` h264 and hevc: must say route "vulkan"
+#   confronto    (d) `banchi/19-vulkan/19-confronto.sh` on the NVIDIA (quality,
+#                    decoding of every frame, new canvas, canvas in a LOOP, keyframe, ceiling)
+#   suite        (e) the subset of the phase 15 suite (F-001 F-002 F-003 F-011
+#                    F-013 F-016 F-018) on XFCE under headless labwc, Firefox and Chrome
+#   raccogli     (f) logs and evidence in ONE archive, to take to the laptop
+#   pulisci      (g) the machine as we found it (wants the archive already taken away)
+#   stato        how far we got
+#   tutto        from the first to the last before "pulisci", skipping those already done
 #
-# Uscita: 0 verde · 1 rosso · 3 non ho potuto guardare · 10 serve un riavvio
-# (poi si rilancia `tutto`, e riparte dal passo dopo).
-# Variabili: PORTA (7447), FORZA=1 (va avanti anche dopo un controllo rosso), PROVE=f003,f013 e
-# BROWSER_SUITE=firefox (solo quelle prove / quel browser, per ripetere una prova), DESKTOP_NV=gnome
-# (GNOME in piu' di XFCE, e la suite su GNOME; =kde: Plasma, e GNOME tolto; =lxqt: LXQt, e gli altri tolti), CLIENTE_SCHEDA=1
-# (i browser disegnano sulla scheda: solo controprova),
-# RIFAI="passo passo" (rifa' passi gia' fatti), LAVORO (/var/lib/remotix-nv).
+# Exit: 0 green · 1 red · 3 could not look · 10 a reboot is needed
+# (then `tutto` is run again, and it resumes from the next step).
+# Variables: PORTA (7447), FORZA=1 (goes on even after a red check), PROVE=f003,f013 and
+# BROWSER_SUITE=firefox (only those tests / that browser, to repeat a test), DESKTOP_NV=gnome
+# (GNOME in addition to XFCE, and the suite on GNOME; =kde: Plasma, and GNOME removed; =lxqt: LXQt, and the others removed), CLIENTE_SCHEDA=1
+# (the browsers draw on the card: counter-test only),
+# RIFAI="step step" (redoes steps already done), LAVORO (/var/lib/remotix-nv).
 #
-# ⛔ Le prestazioni NON si giudicano qui: i tempi che i banchi scrivono restano
-#    nelle evidenze, il giudizio e' del comportamento (decodifica, strada, prove).
+# ⛔ Performance is NOT judged here: the times the benches write stay
+#    in the evidence, the judgement is on behaviour (decoding, route, tests).
 set -u
 export LC_ALL=C.UTF-8 DEBIAN_FRONTEND=noninteractive
 QUI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -58,7 +58,7 @@ ok()     { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()     { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 avviso() { printf '    \033[1;33m!!\033[0m  %s\n' "$*"; }
 log()    { printf '\n\033[1m== %s · %s\033[0m\n' "$(date +%H:%M:%S)" "$*"; }
-# una riga per passo in passi.txt: il riassunto che il portatile mostra alla fine
+# one line per step in passi.txt: the summary the laptop shows at the end
 esito()  { printf '%s\t%s\t%s\t%s\n' "$(date -Is)" "$1" "$2" "$3" >> "$EVID/passi.txt"; }
 
 distro() { . /etc/os-release; echo "${ID:-?} ${VERSION_ID:-?}"; }
@@ -70,7 +70,7 @@ famiglia() {
 	esac
 }
 
-# il nodo DRM di rendering della NVIDIA (renderD128…), "" se non c'e'
+# the NVIDIA's DRM render node (renderD128…), "" if absent
 nodo_nvidia() {
 	local n d
 	for n in /dev/dri/renderD*; do
@@ -81,7 +81,7 @@ nodo_nvidia() {
 	return 1
 }
 
-# il file ICD della NVIDIA (nvidia_icd.json, nvidia_icd.x86_64.json…), "" se non c'e'
+# the NVIDIA's ICD file (nvidia_icd.json, nvidia_icd.x86_64.json…), "" if absent
 icd_nvidia() {
 	local f
 	for f in /usr/share/vulkan/icd.d/nvidia_icd*.json /etc/vulkan/icd.d/nvidia_icd*.json; do
@@ -90,17 +90,17 @@ icd_nvidia() {
 	return 1
 }
 
-# i pacchetti dell'elenco che il deposito ha davvero
-# un pacchetto VERO col suo candidato: «apt-cache show» dice si' anche a un nome solo citato
-# (`[M]` 1 ott 2026, Ubuntu 26.04: firefox-esr e' «Candidate: (none)» e show esce con 0)
+# the packages of the list that the repository really has
+# a REAL package with its candidate: "apt-cache show" says yes even to a name only mentioned
+# (`[M]` 1 Oct 2026, Ubuntu 26.04: firefox-esr is "Candidate: (none)" and show exits with 0)
 candidato() { apt-cache policy "$1" 2>/dev/null | awk '/Candidate:/{print $2}' | grep -q -v -e "(none)" -e "^$"; }
 disponibili() { local p; for p; do candidato "$p" && echo "$p"; done; }
 
-# installati: «ii», ma anche «it»/«iU» (installato, coi trigger o la configurazione in sospeso)
+# installed: "ii", but also "it"/"iU" (installed, with triggers or configuration pending)
 installati() { dpkg-query -W -f='${db:Status-Abbrev} ${Package}\n' 2>/dev/null | awk '$1 ~ /^i/{print $2}' | sort -u; }
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA FOTOGRAFIA DELLA MACCHINA COM'ERA (una volta sola: e' il «prima» di pulisci)
+#  THE SNAPSHOT OF THE MACHINE AS IT WAS (once only: it is pulisci's "before")
 # ═══════════════════════════════════════════════════════════════════════════
 fotografa_prima() {
 	[ -f "$PRIMA/fatta" ] && return 0
@@ -114,44 +114,44 @@ fotografa_prima() {
 	[ -e /etc/remotix ] && echo si > "$PRIMA/etc-remotix"
 	cat /proc/cmdline > "$PRIMA/cmdline.txt"
 	date -Is > "$PRIMA/fatta"
-	ok "fotografata la macchina com'era: $(wc -l < "$PRIMA/pacchetti.txt") pacchetti, $(wc -l < "$PRIMA/utenti.txt") utenti"
+	ok "snapshot of the machine as it was: $(wc -l < "$PRIMA/pacchetti.txt") packages, $(wc -l < "$PRIMA/utenti.txt") users"
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  (a) I CONTROLLI
+#  (a) THE CHECKS
 # ═══════════════════════════════════════════════════════════════════════════
-# Ubuntu vecchia ⇒ un salto di versione e un riavvio (uscita 10); la 26.04 o Debian 13 ⇒ niente.
-# ⛔ Irreversibile: la macchina si restituisce aggiornata, e «pulisci» lo dichiara.
+# Old Ubuntu ⇒ a version hop and a reboot (exit 10); 26.04 or Debian 13 ⇒ nothing.
+# ⛔ Irreversible: the machine is returned upgraded, and "pulisci" declares it.
 aggiorna() {
-	log "(0) la versione del sistema"
+	log "(0) the system version"
 	. /etc/os-release
 	if [ "${ID:-}" != ubuntu ] || [ "$(famiglia)" != altra ]; then
-		ok "$(distro): niente da aggiornare"
+		ok "$(distro): nothing to upgrade"
 		return 0
 	fi
 	local da=$VERSION_ID f="$EVID/aggiorna-$VERSION_ID.txt"
-	case "$da" in 20.04|22.04|24.04) ;; *) ko "ubuntu $da: so salire solo da 20.04, 22.04 e 24.04"; esito aggiorna ROSSO "ubuntu $da"; return 1 ;; esac
-	[ "$(id -u)" = 0 ] || { ko "serve root"; return 1; }
-	# do-release-upgrade si rifiuta se il sistema non e' aggiornato o aspetta un riavvio
-	log "ubuntu $da: prima aggiorno i pacchetti della $da"
+	case "$da" in 20.04|22.04|24.04) ;; *) ko "ubuntu $da: I can only upgrade from 20.04, 22.04 and 24.04"; esito aggiorna ROSSO "ubuntu $da"; return 1 ;; esac
+	[ "$(id -u)" = 0 ] || { ko "root is required"; return 1; }
+	# do-release-upgrade refuses if the system is not up to date or is waiting for a reboot
+	log "ubuntu $da: first upgrading the packages of $da"
 	{ "${APT[@]}" update && "${APT[@]}" dist-upgrade && "${APT[@]}" install ubuntu-release-upgrader-core; } > "$f" 2>&1 \
-		|| { ko "aggiornamento della $da non riuscito ($f)"; esito aggiorna ROSSO "dist-upgrade $da"; return 1; }
+		|| { ko "upgrade of $da failed ($f)"; esito aggiorna ROSSO "dist-upgrade $da"; return 1; }
 	if [ -f /var/run/reboot-required ]; then
 		touch "$LAVORO/riavvio-chiesto"
-		log "la $da aggiornata chiede un riavvio prima del salto"
+		log "the upgraded $da asks for a reboot before the hop"
 		return 10
 	fi
 	sed -i -E 's/^Prompt=.*/Prompt=lts/' /etc/update-manager/release-upgrades 2>/dev/null
-	log "ubuntu $da: salto alla versione LTS dopo (mezz'ora o piu')"
-	# -f DistUpgradeViewNonInteractive: nessuna domanda, i file di configurazione cambiati si tengono
+	log "ubuntu $da: hop to the next LTS version (half an hour or more)"
+	# -f DistUpgradeViewNonInteractive: no questions, changed configuration files are kept
 	if ! do-release-upgrade -f DistUpgradeViewNonInteractive >> "$f" 2>&1; then
-		# prima della .1 il salto fra LTS non e' ancora offerto: -d lo forza
+		# before the .1 the hop between LTS is not offered yet: -d forces it
 		if grep -q -i "no new release" "$f"; then
-			avviso "il salto non e' ancora offerto: lo forzo con -d"
+			avviso "the hop is not offered yet: forcing it with -d"
 			do-release-upgrade -d -f DistUpgradeViewNonInteractive >> "$f" 2>&1 \
-				|| { ko "do-release-upgrade -d non riuscito ($f)"; esito aggiorna ROSSO "salto da $da"; return 1; }
+				|| { ko "do-release-upgrade -d failed ($f)"; esito aggiorna ROSSO "hop from $da"; return 1; }
 		else
-			ko "do-release-upgrade non riuscito ($f)"; esito aggiorna ROSSO "salto da $da"; return 1
+			ko "do-release-upgrade failed ($f)"; esito aggiorna ROSSO "hop from $da"; return 1
 		fi
 	fi
 	esito aggiorna RIAVVIO "ubuntu $da ⇒ $(. /etc/os-release; echo "$VERSION_ID")"
@@ -160,41 +160,41 @@ aggiorna() {
 }
 
 controlli() {
-	log "(a) i controlli iniziali"
+	log "(a) the initial checks"
 	local f="$EVID/controlli.txt" rosso=0 manca_driver=0
 	: > "$f"
 	scrivi() { printf '%s: %s\n' "$1" "$2" >> "$f"; }
-	[ "$(id -u)" = 0 ] || { ko "serve root"; return 1; }
+	[ "$(id -u)" = 0 ] || { ko "root is required"; return 1; }
 	scrivi distribuzione "$(. /etc/os-release; echo "$PRETTY_NAME")"
 	scrivi nucleo "$(uname -r)"
-	scrivi processore "$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2- | sed 's/^ //') ($(nproc) fili)"
+	scrivi processore "$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2- | sed 's/^ //') ($(nproc) threads)"
 	scrivi memoria "$(awk '/MemTotal/{printf "%.0f GiB", $2/1048576}' /proc/meminfo)"
 	if [ "$(famiglia)" = altra ]; then
-		ko "distribuzione $(distro): REMOTIX vuole Debian 13 o Ubuntu 26.04 (OpenSSL 3.5, labwc, libei)"
+		ko "distribution $(distro): REMOTIX wants Debian 13 or Ubuntu 26.04 (OpenSSL 3.5, labwc, libei)"
 		scrivi verdetto.distribuzione ROSSO; rosso=1
 	else
-		ok "distribuzione $(distro)"
+		ok "distribution $(distro)"
 		scrivi verdetto.distribuzione VERDE
 	fi
 	fotografa_prima
-	# gli attrezzi del controllo: pochi, e se li mettiamo noi li toglie «pulisci»
+	# the check's tools: few, and if we install them "pulisci" removes them
 	if ! command -v vulkaninfo >/dev/null || ! command -v lspci >/dev/null; then
 		"${APT[@]}" update >/dev/null 2>&1
 		"${APT[@]}" install --no-install-recommends vulkan-tools pciutils >/dev/null 2>&1 \
-			&& ok "vulkan-tools e pciutils installati per guardare" || avviso "vulkan-tools/pciutils non installati"
+			&& ok "vulkan-tools and pciutils installed to look" || avviso "vulkan-tools/pciutils not installed"
 	fi
-	# la scheda, dal bus: c'e' anche senza driver
+	# the card, from the bus: it is there even without a driver
 	local pci
 	pci=$(lspci -nn 2>/dev/null | grep -i -E 'vga|3d|display' | grep -i '10de' || true)
 	if [ -z "$pci" ]; then
-		ko "nessuna scheda NVIDIA sul bus PCI"
+		ko "no NVIDIA card on the PCI bus"
 		scrivi verdetto.scheda ROSSO; rosso=1
 	else
-		ok "scheda: $pci"
+		ok "card: $pci"
 		scrivi scheda "$pci"
 	fi
 	lspci -nnk > "$EVID/lspci.txt" 2>&1
-	# il driver
+	# the driver
 	local nome="" ver="" maggiore=0
 	if command -v nvidia-smi >/dev/null && nvidia-smi >/dev/null 2>&1; then
 		nome=$(nvidia-smi --query-gpu=name --format=csv,noheader | head -1)
@@ -205,26 +205,26 @@ controlli() {
 		if [ "${maggiore:-0}" -ge 550 ] 2>/dev/null; then
 			ok "driver NVIDIA $ver ($nome)"
 		else
-			ko "driver NVIDIA $ver: serve 550 o piu' (Vulkan Video encode)"
+			ko "NVIDIA driver $ver: 550 or newer is required (Vulkan Video encode)"
 			scrivi verdetto.driver ROSSO; rosso=1
 		fi
-		# ⛔ le schede da calcolo senza NVENC (A100, H100…): Vulkan Video encode non c'e'
+		# ⛔ the compute cards without NVENC (A100, H100…): Vulkan Video encode is not there
 		if echo "$nome" | grep -q -E '(^|[ -])(A100|A800|A30|H100|H200|H800|B100|B200|GH200)([ -]|$)'; then
-			ko "$nome non ha il codificatore video (NVENC): qui REMOTIX non puo' codificare"
+			ko "$nome has no video encoder (NVENC): REMOTIX cannot encode here"
 			scrivi verdetto.nvenc ROSSO; rosso=1
 		fi
-		grep -i -A3 'Encoder Stats' "$EVID/nvidia-smi.txt" > /dev/null 2>&1 && scrivi nvenc "statistiche dell'encoder presenti in nvidia-smi -q"
+		grep -i -A3 'Encoder Stats' "$EVID/nvidia-smi.txt" > /dev/null 2>&1 && scrivi nvenc "encoder statistics present in nvidia-smi -q"
 	else
-		avviso "nvidia-smi non risponde: il driver non c'e' (o non e' caricato) ⇒ lo mette il passo «driver»"
+		avviso "nvidia-smi does not answer: the driver is missing (or not loaded) ⇒ the \"driver\" step installs it"
 		scrivi driver.versione nessuno; manca_driver=1
 	fi
-	# i moduli e modeset
+	# the modules and modeset
 	local ms
 	ms=$(cat /sys/module/nvidia_drm/parameters/modeset 2>/dev/null || echo "?")
 	scrivi nvidia_drm.modeset "$ms"
 	grep -E '^nvidia' /proc/modules > "$EVID/moduli.txt" 2>&1
-	[ "$ms" = Y ] && ok "nvidia-drm modeset=Y" || avviso "nvidia-drm modeset=$ms ⇒ il passo «driver» lo mette a 1 (serve a GBM, cioe' a labwc sulla scheda)"
-	# i nodi DRM
+	[ "$ms" = Y ] && ok "nvidia-drm modeset=Y" || avviso "nvidia-drm modeset=$ms ⇒ the \"driver\" step sets it to 1 (GBM needs it, i.e. labwc on the card)"
+	# the DRM nodes
 	local n d riga=""
 	for n in /dev/dri/card* /dev/dri/renderD*; do
 		[ -e "$n" ] || continue
@@ -237,22 +237,22 @@ controlli() {
 	scrivi nodo.nvidia "${nv:-nessuno}"
 	if [ -n "$nv" ]; then
 		if [ "$nv" = renderD128 ]; then
-			ok "la NVIDIA e' renderD128 (il nodo su cui codifica il server)"
+			ok "the NVIDIA is renderD128 (the node the server encodes on)"
 		else
-			avviso "la NVIDIA e' $nv, non renderD128: il SERVER codifica su renderD128 ($riga) ⇒ la suite (e) non e' valida e si salta; (c) e (d) si fanno sul nodo giusto"
+			avviso "the NVIDIA is $nv, not renderD128: the SERVER encodes on renderD128 ($riga) ⇒ suite (e) is not valid and is skipped; (c) and (d) are done on the right node"
 			scrivi verdetto.nodo GIALLO
 		fi
 	elif [ $manca_driver = 0 ]; then
-		ko "il driver c'e' ma nessun renderD* e' della NVIDIA (nvidia-drm non caricato?)"
+		ko "the driver is there but no renderD* belongs to the NVIDIA (nvidia-drm not loaded?)"
 		scrivi verdetto.nodo ROSSO; rosso=1
 	fi
-	# l'ICD e vulkaninfo
+	# the ICD and vulkaninfo
 	local icd
 	icd=$(icd_nvidia || true)
 	scrivi icd "${icd:-nessuno}"
 	ls -l /usr/share/vulkan/icd.d /etc/vulkan/icd.d > "$EVID/icd.txt" 2>&1
 	if [ -z "$icd" ]; then
-		avviso "nessun ICD Vulkan della NVIDIA ⇒ lo mette il passo «driver» (e l'installatore, senza, direbbe RX-GPU-004)"
+		avviso "no NVIDIA Vulkan ICD ⇒ the \"driver\" step installs it (and the installer, without it, would say RX-GPU-004)"
 	elif command -v vulkaninfo >/dev/null; then
 		VK_DRIVER_FILES=$icd VK_ICD_FILENAMES=$icd vulkaninfo > "$EVID/vulkaninfo.txt" 2>&1
 		VK_DRIVER_FILES=$icd VK_ICD_FILENAMES=$icd vulkaninfo --summary > "$EVID/vulkaninfo-riassunto.txt" 2>&1
@@ -262,43 +262,43 @@ controlli() {
 			if grep -q "$e" "$EVID/vulkaninfo.txt"; then scrivi "vulkan.$e" si; else scrivi "vulkan.$e" NO; mancano="$mancano $e"; fi
 		done
 		if [ -z "$mancano" ]; then
-			ok "vulkaninfo: codifica H.264 e H.265, dmabuf, modificatori, nodo DRM"
+			ok "vulkaninfo: H.264 and H.265 encoding, dmabuf, modifiers, DRM node"
 		else
-			ko "vulkaninfo: mancano$mancano"
+			ko "vulkaninfo: missing$mancano"
 			case "$mancano" in *encode*) scrivi verdetto.vulkan ROSSO; rosso=1 ;; esac
 		fi
 	fi
-	if [ $rosso = 0 ]; then scrivi verdetto VERDE; ok "controlli VERDI"; esito controlli VERDE "$nome $ver $nv"
-	else scrivi verdetto ROSSO; ko "controlli ROSSI (vedi $f)"; esito controlli ROSSO "vedi controlli.txt"; fi
+	if [ $rosso = 0 ]; then scrivi verdetto VERDE; ok "checks GREEN"; esito controlli VERDE "$nome $ver $nv"
+	else scrivi verdetto ROSSO; ko "checks RED (see $f)"; esito controlli ROSSO "see controlli.txt"; fi
 	return $rosso
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  IL DRIVER (solo se manca qualcosa; il nucleo ⇒ riavvio)
+#  THE DRIVER (only if something is missing; the kernel ⇒ reboot)
 # ═══════════════════════════════════════════════════════════════════════════
 driver() {
-	log "il driver NVIDIA, il suo ICD Vulkan, modeset"
+	log "the NVIDIA driver, its Vulkan ICD, modeset"
 	local riavvio=0 fam
 	fam=$(famiglia)
 	"${APT[@]}" update >/dev/null 2>&1
 	if ! nvidia-smi >/dev/null 2>&1; then
-		avviso "il driver manca: lo installo dalla distribuzione"
+		avviso "the driver is missing: installing it from the distribution"
 		if [ "$fam" = debian ]; then
-			# non-free e non-free-firmware (la fotografia di /etc/apt e' in prima/)
+			# non-free and non-free-firmware (the snapshot of /etc/apt is in prima/)
 			sed -i -E '/^Components:/{/non-free( |$)/!s/$/ contrib non-free non-free-firmware/}' /etc/apt/sources.list.d/*.sources 2>/dev/null
 			[ -f /etc/apt/sources.list ] && sed -i -E '/^deb /{/non-free( |$)/!s/$/ contrib non-free non-free-firmware/}' /etc/apt/sources.list
 			"${APT[@]}" update >/dev/null 2>&1
 			"${APT[@]}" install "linux-headers-$(uname -r)" nvidia-driver nvidia-vulkan-icd firmware-misc-nonfree \
 				$(disponibili libnvidia-egl-gbm1 libnvidia-egl-wayland1) > "$EVID/driver-installa.txt" 2>&1 \
-				|| { ko "installazione del driver fallita (driver-installa.txt)"; esito driver ROSSO "installazione fallita"; return 1; }
+				|| { ko "driver installation failed (driver-installa.txt)"; esito driver ROSSO "installation failed"; return 1; }
 		else
 			"${APT[@]}" install ubuntu-drivers-common > "$EVID/driver-installa.txt" 2>&1
 			ubuntu-drivers devices >> "$EVID/driver-installa.txt" 2>&1
-			# ⛔ non «--gpgpu»: quello e' il driver senza grafica, SENZA libnvidia-gl (niente ICD Vulkan)
+			# ⛔ not "--gpgpu": that is the driver without graphics, WITHOUT libnvidia-gl (no Vulkan ICD)
 			ubuntu-drivers install >> "$EVID/driver-installa.txt" 2>&1 \
-				|| { ko "ubuntu-drivers install fallito (driver-installa.txt)"; esito driver ROSSO "installazione fallita"; return 1; }
+				|| { ko "ubuntu-drivers install failed (driver-installa.txt)"; esito driver ROSSO "installation failed"; return 1; }
 		fi
-		ok "driver installato: serve un riavvio"
+		ok "driver installed: a reboot is needed"
 		riavvio=1
 	fi
 	if ! icd_nvidia >/dev/null; then
@@ -312,79 +312,79 @@ driver() {
 			dpkg-query -W -f='${Package}\n' 2>/dev/null | grep -q -E "^nvidia-(headless|utils|driver)-$m-server$" && srv=-server
 			pk="libnvidia-gl-$m$srv"
 		fi
-		avviso "l'ICD Vulkan della NVIDIA manca (driver «senza grafica»?): $pk"
+		avviso "the NVIDIA Vulkan ICD is missing (\"headless\" driver?): $pk"
 		"${APT[@]}" install "$pk" >> "$EVID/driver-installa.txt" 2>&1 \
-			&& ok "ICD: $(icd_nvidia || echo 'ANCORA NIENTE')" \
-			|| { ko "$pk non si installa: il driver non e' quello della distribuzione? Rimedio a mano"; esito driver ROSSO "ICD mancante"; return 1; }
+			&& ok "ICD: $(icd_nvidia || echo 'STILL NOTHING')" \
+			|| { ko "$pk does not install: is the driver not the distribution's? Fix by hand"; esito driver ROSSO "ICD missing"; return 1; }
 	fi
 	local ms
 	ms=$(cat /sys/module/nvidia_drm/parameters/modeset 2>/dev/null || echo "?")
 	if [ "$ms" != Y ] && ! grep -q -s 'nvidia-drm modeset=1' /etc/modprobe.d/*.conf; then
 		echo 'options nvidia-drm modeset=1' > /etc/modprobe.d/remotix-nv.conf
 		command -v update-initramfs >/dev/null && update-initramfs -u >> "$EVID/driver-installa.txt" 2>&1
-		ok "nvidia-drm modeset=1 in /etc/modprobe.d/remotix-nv.conf (lo toglie «pulisci»): serve un riavvio"
+		ok "nvidia-drm modeset=1 in /etc/modprobe.d/remotix-nv.conf (\"pulisci\" removes it): a reboot is needed"
 		riavvio=1
 	fi
 	if [ $riavvio = 1 ]; then
-		esito driver RIAVVIO "driver/ICD/modeset cambiati"
+		esito driver RIAVVIO "driver/ICD/modeset changed"
 		touch "$LAVORO/riavvio-chiesto"
 		return 10
 	fi
-	ok "driver, ICD e modeset a posto: niente da fare"
+	ok "driver, ICD and modeset in place: nothing to do"
 	esito driver VERDE "$(nvidia-smi --query-gpu=driver_version --format=csv,noheader | head -1)"
 	return 0
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  (b) LE DIPENDENZE: il desktop leggero, gli attrezzi delle prove, i browser
+#  (b) THE DEPENDENCIES: the light desktop, the test tools, the browsers
 # ═══════════════════════════════════════════════════════════════════════════
-# La memoria di scorta (5 ott 2026: la macchina a noleggio puo' avere 8 GB, il banco ne chiedeva 16).
-# Senza, a memoria finita il sistema uccide il browser a meta' prova, e il rosso sembrerebbe del
-# prodotto.  Sotto i 12 GiB e senza scorta: un file da 4 GiB, che «pulisci» toglie.
+# The spare memory (5 Oct 2026: the rented machine may have 8 GB, the bench asked for 16).
+# Without it, when memory runs out the system kills the browser mid-test, and the red would look like the
+# product's.  Under 12 GiB and without swap: a 4 GiB file, which "pulisci" removes.
 SCORTA=/remotix-nv.scorta
 scorta() {
 	local kib
 	kib=$(awk '/MemTotal/{print $2}' /proc/meminfo)
-	if [ "$kib" -ge $((12 * 1048576)) ]; then ok "memoria $((kib / 1048576)) GiB: la scorta non serve"; return 0; fi
-	if [ -n "$(swapon --noheadings 2>/dev/null)" ]; then ok "memoria $((kib / 1048576)) GiB, scorta gia' presente: $(swapon --noheadings --show=NAME,SIZE | tr '\n' ' ')"; return 0; fi
+	if [ "$kib" -ge $((12 * 1048576)) ]; then ok "memory $((kib / 1048576)) GiB: no swap needed"; return 0; fi
+	if [ -n "$(swapon --noheadings 2>/dev/null)" ]; then ok "memory $((kib / 1048576)) GiB, swap already present: $(swapon --noheadings --show=NAME,SIZE | tr '\n' ' ')"; return 0; fi
 	if fallocate -l 4G "$SCORTA" 2>/dev/null || dd if=/dev/zero of="$SCORTA" bs=1M count=4096 status=none; then
 		chmod 600 "$SCORTA"
 		if mkswap "$SCORTA" > /dev/null 2>&1 && swapon "$SCORTA" 2>/dev/null; then
-			ok "memoria $((kib / 1048576)) GiB ⇒ scorta di 4 GiB accesa ($SCORTA)"
+			ok "memory $((kib / 1048576)) GiB ⇒ 4 GiB swap turned on ($SCORTA)"
 			return 0
 		fi
 	fi
 	rm -f "$SCORTA"
-	avviso "memoria $((kib / 1048576)) GiB e la scorta non si accende: un rosso per memoria finita va letto nel registro del kernel (oom)"
+	avviso "memory $((kib / 1048576)) GiB and the swap does not turn on: a red from memory running out must be read in the kernel log (oom)"
 }
 
 dipendenze() {
-	log "(b) le dipendenze: XFCE sotto labwc, attrezzi, Firefox ESR, Chrome"
+	log "(b) the dependencies: XFCE under labwc, tools, Firefox ESR, Chrome"
 	local fam
 	fam=$(famiglia)
 	if [ "$fam" = ubuntu ] && ! grep -q -s -E '^Components:.*universe' /etc/apt/sources.list.d/ubuntu.sources; then
 		sed -i -E '/^Components:/{/universe/!s/$/ universe/}' /etc/apt/sources.list.d/ubuntu.sources
-		ok "universe acceso (labwc, xfdesktop4, glslc stanno li')"
+		ok "universe enabled (labwc, xfdesktop4, glslc live there)"
 	fi
 	"${APT[@]}" update > "$EVID/dipendenze.txt" 2>&1
 	scorta
-	# il desktop come nella scatola rete11-xfce (banchi/11-scatole/Contenitore.xfce), senza scatola
+	# the desktop as in the rete11-xfce box (banchi/11-scatole/Contenitore.xfce), without a box
 	local desktop=(labwc xfce4-session xfce4-panel xfdesktop4 xfce4-terminal thunar xwayland wlr-randr
 		dbus-user-session libpam-systemd sudo fonts-dejavu-core pipewire pipewire-pulse wireplumber wl-clipboard)
-	# ⭐ DESKTOP_NV=gnome (6 ott 2026, scelta dell'utente: il tempo di noleggio che resta su GNOME):
-	#    GNOME in PIU' di XFCE. Il prodotto, trovati tutti e due, sceglie GNOME (sessione.c,
-	#    riconosci_desktop); su Ubuntu la sessione di serie «ubuntu» (D8). Come la scatola
-	#    rete11-gnome (Contenitore.gnome), senza gdm: la sessione la accende il prodotto
+	# ⭐ DESKTOP_NV=gnome (6 Oct 2026, user's choice: the remaining rental time on GNOME):
+	#    GNOME IN ADDITION to XFCE. The product, finding both, chooses GNOME (sessione.c,
+	#    riconosci_desktop); on Ubuntu the default "ubuntu" session (D8). Like the
+	#    rete11-gnome box (Contenitore.gnome), without gdm: the product starts the session
 	[ "${DESKTOP_NV:-xfce}" = gnome ] && desktop+=(ubuntu-session gnome-shell gnome-session
 		gnome-terminal nautilus)
-	# ⭐ DESKTOP_NV=kde (6 ott 2026, scelta dell'utente): Plasma come la scatola rete11-kde
-	#    (Contenitore.kde). ⛔ Con GNOME presente il prodotto sceglie GNOME (riconosci_desktop):
-	#    `gnome-session` si TOGLIE prima, e lo si dice
-	# ⭐ DESKTOP_NV=lxqt (6 ott 2026, scelta dell'utente): LXQt come la scatola rete11-lxqt
-	#    (Contenitore.lxqt). ⛔ Il prodotto sceglie KDE prima di XFCE e XFCE prima di LXQt
-	#    (riconosci_desktop): `plasma-workspace` e `xfce4-session` si TOLGONO prima
+	# ⭐ DESKTOP_NV=kde (6 Oct 2026, user's choice): Plasma like the rete11-kde box
+	#    (Contenitore.kde). ⛔ With GNOME present the product chooses GNOME (riconosci_desktop):
+	#    `gnome-session` is REMOVED first, and that is said
+	# ⭐ DESKTOP_NV=lxqt (6 Oct 2026, user's choice): LXQt like the rete11-lxqt box
+	#    (Contenitore.lxqt). ⛔ The product chooses KDE before XFCE and XFCE before LXQt
+	#    (riconosci_desktop): `plasma-workspace` and `xfce4-session` are REMOVED first
 	if [ "${DESKTOP_NV:-xfce}" = lxqt ]; then
-		# ⚠ e i pacchetti di XFCE escono dall'elenco, o l'installazione qui sotto li rimetterebbe
+		# ⚠ and the XFCE packages leave the list, or the installation below would put them back
 		local tieni=() x
 		for x in "${desktop[@]}"; do
 			case $x in xfce4-*|xfdesktop4|thunar) ;; *) tieni+=("$x") ;; esac
@@ -395,28 +395,28 @@ dipendenze() {
 		for via in plasma-workspace xfce4-session gnome-session-bin; do
 			dpkg-query -W "$via" > /dev/null 2>&1 || continue
 			"${APT[@]}" remove "$via" >> "$EVID/dipendenze.txt" 2>&1 \
-				&& ok "$via tolto: il prodotto deve trovare LXQt"
+				&& ok "$via removed: the product must find LXQt"
 		done
 	fi
 	if [ "${DESKTOP_NV:-xfce}" = kde ]; then
 		desktop+=(kwin-wayland plasma-workspace plasma-desktop powerdevil konsole dolphin)
 		if dpkg-query -W gnome-session-bin > /dev/null 2>&1; then
 			"${APT[@]}" remove gnome-session-bin >> "$EVID/dipendenze.txt" 2>&1 \
-				&& ok "gnome-session-bin tolto: il prodotto deve trovare Plasma, non GNOME"
+				&& ok "gnome-session-bin removed: the product must find Plasma, not GNOME"
 		fi
 	fi
-	# gli attrezzi delle prove: ffmpeg/ffplay (F-013 e il banco 19 MISURANO con ffmpeg: non entra nel
-	# prodotto), python3 con PIL e numpy (il giudice dei pixel), e quel che serve a compilare il banco 19
+	# the test tools: ffmpeg/ffplay (F-013 and bench 19 MEASURE with ffmpeg: it does not go into the
+	# product), python3 with PIL and numpy (the pixel judge), and what is needed to compile bench 19
 	local attrezzi=(ffmpeg python3 python3-numpy python3-pil curl ca-certificates gnupg vulkan-tools
 		gcc libc6-dev pkg-config libva-dev libvulkan-dev libgbm-dev libdrm-dev glslc)
-	# la scheda: il ponte GBM/EGL della NVIDIA, se il driver e' quello della distribuzione
+	# the card: the NVIDIA GBM/EGL bridge, if the driver is the distribution's
 	local nv=()
 	[ "$fam" = debian ] && mapfile -t nv < <(disponibili libnvidia-egl-gbm1 libnvidia-egl-wayland1)
 	if ! "${APT[@]}" install --no-install-recommends "${desktop[@]}" "${attrezzi[@]}" "${nv[@]}" >> "$EVID/dipendenze.txt" 2>&1; then
-		ko "apt-get install fallito (dipendenze.txt)"; esito dipendenze ROSSO "apt fallito"; return 1
+		ko "apt-get install failed (dipendenze.txt)"; esito dipendenze ROSSO "apt failed"; return 1
 	fi
-	ok "desktop e attrezzi"
-	# Firefox ESR: Debian ce l'ha; su Ubuntu «firefox» e' uno snap ⇒ il deposito di Mozilla
+	ok "desktop and tools"
+	# Firefox ESR: Debian has it; on Ubuntu "firefox" is a snap ⇒ Mozilla's repository
 	if [ "$fam" = ubuntu ] && ! candidato firefox-esr; then
 		install -d -m 0755 /etc/apt/keyrings
 		curl -fsSL https://packages.mozilla.org/apt/repo-signing-key.gpg -o /etc/apt/keyrings/packages.mozilla.org.asc
@@ -426,38 +426,38 @@ dipendenze() {
 	fi
 	"${APT[@]}" install --no-install-recommends firefox-esr libpci3 >> "$EVID/dipendenze.txt" 2>&1 \
 		&& ok "Firefox ESR: $(firefox-esr --version 2>/dev/null)" \
-		|| { ko "firefox-esr non si installa"; esito dipendenze ROSSO "firefox-esr"; return 1; }
-	# ⭐ 5 ott 2026, `[M]` RTX 4090: Firefox ESR 153 (deposito di Mozilla) alla prima apertura mette
-	#    la finestra «Welcome to Firefox / Terms of Use» SOPRA la pagina di prova, e F-003 non la
-	#    trova.  Le scatole hanno la 140, che non la mostra.  ⇒ La si salta con una regola di
-	#    Firefox (la toglie «pulisci» insieme al pacchetto: e' nella sua cartella).
+		|| { ko "firefox-esr does not install"; esito dipendenze ROSSO "firefox-esr"; return 1; }
+	# ⭐ 5 Oct 2026, `[M]` RTX 4090: Firefox ESR 153 (Mozilla's repository) on first start puts
+	#    the "Welcome to Firefox / Terms of Use" window ABOVE the test page, and F-003 does not
+	#    find it.  The boxes have 140, which does not show it.  ⇒ It is skipped with a Firefox
+	#    policy ("pulisci" removes it together with the package: it is in its folder).
 	mkdir -p /usr/lib/firefox-esr/distribution
 	printf '%s\n' '{"policies": {"SkipTermsOfUse": true, "DisableTelemetry": true, "DontCheckDefaultBrowser": true, "OverrideFirstRunPage": "", "OverridePostUpdatePage": ""}}' \
 		> /usr/lib/firefox-esr/distribution/policies.json
-	# ⭐ 5 ott 2026, `[M]`: il pacchetto di Mozilla fa girare Firefox come «firefox-bin», quello di
-	#    Debian come «firefox-esr» — e le prove della suite (F-016/F-017) cercano e uccidono la scena
-	#    per NOME (`pgrep -x firefox-esr`).  ⇒ Le prove restano IDENTICHE e si allinea il nome: un
-	#    collegamento fisico col nome giusto, nella cartella di Firefox (la toglie «pulisci»).
-	# ⛔ 6 ott 2026: era «solo se il collegamento manca» — dopo un `pulisci` e un giro nuovo il
-	#    collegamento fisico c'era ancora e /usr/bin/firefox-esr no ⇒ F-016 BLOCKED. Si rifà sempre
+	# ⭐ 5 Oct 2026, `[M]`: Mozilla's package runs Firefox as "firefox-bin", Debian's
+	#    as "firefox-esr" — and the suite's tests (F-016/F-017) look for and kill the scene
+	#    by NAME (`pgrep -x firefox-esr`).  ⇒ The tests stay IDENTICAL and the name is aligned: a
+	#    hard link with the right name, in Firefox's folder ("pulisci" removes it).
+	# ⛔ 6 Oct 2026: it was "only if the link is missing" — after a `pulisci` and a new run the
+	#    hard link was still there and /usr/bin/firefox-esr was not ⇒ F-016 BLOCKED. Always redone
 	if [ -x /usr/lib/firefox-esr/firefox-bin ]; then
 		ln -f /usr/lib/firefox-esr/firefox-bin /usr/lib/firefox-esr/firefox-esr
 		ln -sfn /usr/lib/firefox-esr/firefox-esr /usr/bin/firefox-esr
 		touch "$LAVORO/firefox-esr-nome"
 	fi
-	# Chrome: il .deb di Google (si porta il suo deposito: lo toglie «pulisci» con /etc/apt)
+	# Chrome: Google's .deb (it brings its repository: "pulisci" removes it with /etc/apt)
 	if ! command -v google-chrome >/dev/null; then
 		curl -fsSL -o /var/tmp/google-chrome.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
 			&& "${APT[@]}" install /var/tmp/google-chrome.deb >> "$EVID/dipendenze.txt" 2>&1
 		rm -f /var/tmp/google-chrome.deb
 	fi
 	command -v google-chrome >/dev/null && ok "Chrome: $(google-chrome --version 2>/dev/null)" \
-		|| { ko "Chrome non si installa"; esito dipendenze ROSSO chrome; return 1; }
-	# il «firefox» che i banchi lanciano (07-b46: `firefox --marionette`) e' il firefox-esr
+		|| { ko "Chrome does not install"; esito dipendenze ROSSO chrome; return 1; }
+	# the "firefox" the benches launch (07-b46: `firefox --marionette`) is firefox-esr
 	mkdir -p "$VALIGIA/bin"
 	ln -sf "$(command -v firefox-esr)" "$VALIGIA/bin/firefox"
-	# l'utente del banco: i browser NON girano da root; sudo senza parola per entrare «nella scatola»
-	# (che qui e' la macchina stessa); linger per avere /run/user/<uid> e il suo labwc
+	# the bench user: the browsers do NOT run as root; passwordless sudo to get "into the box"
+	# (which here is the machine itself); linger to have /run/user/<uid> and its labwc
 	if ! id "$UTENTE_BANCO" >/dev/null 2>&1; then
 		useradd -m -s /bin/bash "$UTENTE_BANCO"
 	fi
@@ -482,10 +482,10 @@ dipendenze() {
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  (b) REMOTIX, CON L'INSTALLATORE
+#  (b) REMOTIX, WITH THE INSTALLER
 # ═══════════════════════════════════════════════════════════════════════════
 remotix() {
-	log "(b) REMOTIX dal .deb, con l'installatore"
+	log "(b) REMOTIX from the .deb, with the installer"
 	local fam deb ri="$VALIGIA/bin/remotix-install" e=0
 	fam=$(famiglia)
 	case $fam in
@@ -493,34 +493,34 @@ remotix() {
 	ubuntu) deb=$(ls "$VALIGIA"/pacchetti/remotix_*ubuntu26.04*_amd64.deb 2>/dev/null | head -1) ;;
 	*) deb="" ;;
 	esac
-	[ -n "$deb" ] || { ko "nessun .deb per $(distro) in $VALIGIA/pacchetti"; esito remotix ROSSO "manca il .deb"; return 1; }
-	ok "pacchetto: $(basename "$deb")"
-	# il controllo preliminare dell'installatore (in sola lettura): RX-GPU-*, la strada vulkan, l'ICD
+	[ -n "$deb" ] || { ko "no .deb for $(distro) in $VALIGIA/pacchetti"; esito remotix ROSSO "the .deb is missing"; return 1; }
+	ok "package: $(basename "$deb")"
+	# the installer's preliminary check (read only): RX-GPU-*, the vulkan route, the ICD
 	"$ri" check > "$EVID/installatore-verifica.txt" 2>&1
 	"$ri" check --json > "$EVID/installatore-verifica.json" 2>&1
 	grep -o -E 'RX-[A-Z0-9]+-[0-9]+' "$EVID/installatore-verifica.txt" | sort -u | tr '\n' ' ' > "$LAVORO/codici-verifica"
-	ok "verifica: codici $(cat "$LAVORO/codici-verifica")"
-	# il pacchetto unico in piccolo (DECISIONI §10.36): la cartella packages/<bersaglio>/ col .deb, e
-	# `install` che risponde «y» alla domanda come una persona
+	ok "check: codes $(cat "$LAVORO/codici-verifica")"
+	# the single package in small (DECISIONI §10.36): the packages/<target>/ folder with the .deb, and
+	# `install` answering "y" to the question like a person
 	local bers
 	case $fam in debian) bers=debian13 ;; ubuntu) bers=ubuntu2604 ;; esac
 	rm -rf "$LAVORO/bundle"; mkdir -p "$LAVORO/bundle/$bers"; cp "$deb" "$LAVORO/bundle/$bers/"
 	if printf 'y\n' | "$ri" install --bundle "$LAVORO/bundle" --port "$PORTA" --users "$UTENTE_BANCO" \
 		> "$EVID/installatore-applica.txt" 2>&1; then
-		ok "l'installatore ha installato REMOTIX"
+		ok "the installer installed REMOTIX"
 		echo installatore > "$LAVORO/come-installato"
 	else
 		e=$?
-		ko "l'installatore NON ha installato (uscita $e): $(tail -n 3 "$EVID/installatore-applica.txt" 2>/dev/null | tr '\n' ' ' | cut -c1-300)"
-		avviso "⇒ il rifiuto e' un risultato (evidenze installatore-*); per andare avanti coi passi c-e il pacchetto si mette col gestore"
+		ko "the installer did NOT install (exit $e): $(tail -n 3 "$EVID/installatore-applica.txt" 2>/dev/null | tr '\n' ' ' | cut -c1-300)"
+		avviso "⇒ the refusal is a result (evidence installatore-*); to go on with steps c-e the package is installed with the package manager"
 		"${APT[@]}" install "$deb" > "$EVID/remotix-apt.txt" 2>&1 \
-			|| { ko "nemmeno apt lo installa (remotix-apt.txt)"; esito remotix ROSSO "non installato"; return 1; }
+			|| { ko "not even apt installs it (remotix-apt.txt)"; esito remotix ROSSO "not installed"; return 1; }
 		usermod -aG video,render "$UTENTE_BANCO"
 		echo apt > "$LAVORO/come-installato"
 	fi
-	# ⭐ il server del banco: stessa unita' del prodotto, con due cose dichiarate e reversibili:
-	#   il nome nel certificato (si entra da 127.0.0.1) e il registro di dettaglio; e lo stderr in un
-	#   FILE, come nelle scatole (/var/lib/rete11/registro.log): la suite lo legge riga per riga
+	# ⭐ the bench's server: the same unit as the product, with two declared and reversible things:
+	#   the name in the certificate (entry from 127.0.0.1) and the detailed log; and stderr to a
+	#   FILE, as in the boxes (/var/lib/rete11/registro.log): the suite reads it line by line
 	mkdir -p /etc/remotix/remotix.conf.d /etc/systemd/system/remotix.service.d
 	printf 'REMOTIX_PORTA=%s\nREMOTIX_OPZIONI=--nome 127.0.0.1 --parlantina\n' "$PORTA" > /etc/remotix/remotix.conf.d/remotix-nv.conf
 	printf '[Service]\nStandardOutput=append:%s/registro.log\nStandardError=append:%s/registro.log\n' "$LAVORO" "$LAVORO" \
@@ -534,32 +534,32 @@ remotix() {
 		sleep 1
 	done
 	if [ $pronto = 1 ]; then
-		ok "il server ascolta su $PORTA"
+		ok "the server listens on $PORTA"
 	else
-		ko "il server non ascolta su $PORTA dopo 60 s"; tail -n 20 "$LAVORO/registro.log" 2>/dev/null | sed 's/^/      /'
-		esito remotix ROSSO "non ascolta"; return 1
+		ko "the server is not listening on $PORTA after 60 s"; tail -n 20 "$LAVORO/registro.log" 2>/dev/null | sed 's/^/      /'
+		esito remotix ROSSO "not listening"; return 1
 	fi
-	grep -a -E 'strada|QUESTO SERVER NON SA|ECCOMI|offerti|⛔' "$LAVORO/registro.log" | head -20 > "$EVID/server-avvio.txt"
+	grep -a -E 'route|THIS SERVER CANNOT|ECCOMI|offered|⛔' "$LAVORO/registro.log" | head -20 > "$EVID/server-avvio.txt"
 	"$ri" status > "$EVID/installatore-certifica.txt" 2>&1; local c=$?
-	ok "certifica: uscita $c"
-	esito remotix VERDE "$(cat "$LAVORO/come-installato") · verifica: $(cat "$LAVORO/codici-verifica") · certifica $c"
+	ok "certify: exit $c"
+	esito remotix VERDE "$(cat "$LAVORO/come-installato") · check: $(cat "$LAVORO/codici-verifica") · certify $c"
 	return 0
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  (c) LA PROVA DELLA CODIFICA
+#  (c) THE ENCODING TEST
 # ═══════════════════════════════════════════════════════════════════════════
 codifica() {
 	log "(c) remotix --prova-codifica"
 	local nv f="$EVID/prova-codifica.txt" rosso=0 c riga
 	nv=$(nodo_nvidia || true)
-	[ -x "$BIN" ] || { ko "manca $BIN"; esito codifica ROSSO "binario assente"; return 1; }
+	[ -x "$BIN" ] || { ko "missing $BIN"; esito codifica ROSSO "binary absent"; return 1; }
 	: > "$f"
-	prova() {  # prova ETICHETTA ARGOMENTI…
+	prova() {  # prova LABEL ARGUMENTS…
 		local et=$1; shift
 		"$@" > "$LAVORO/prova.json" 2> "$EVID/prova-codifica-$et.registro"; c=$?
 		riga=$(tail -n 1 "$LAVORO/prova.json")
-		printf '%s\tcodice %s\t%s\n' "$et" "$c" "$riga" | tee -a "$f"
+		printf '%s\tcode %s\t%s\n' "$et" "$c" "$riga" | tee -a "$f"
 	}
 	local cod
 	for cod in h264 hevc; do
@@ -570,32 +570,32 @@ codifica() {
 		prova "$cod-come-$UTENTE_BANCO" runuser -u "$UTENTE_BANCO" -- "$BIN" --prova-codifica "$cod"
 	done
 	if [ $rosso = 0 ]; then
-		ok "H.264 e HEVC sulla scheda, strada vulkan"
-		esito codifica VERDE "h264 e hevc: strada vulkan"
+		ok "H.264 and HEVC on the card, route vulkan"
+		esito codifica VERDE "h264 and hevc: route vulkan"
 	else
-		ko "la strada non e' «vulkan» per H.264 e HEVC (vedi prova-codifica.txt)"
-		esito codifica ROSSO "vedi prova-codifica.txt"
+		ko "the route is not \"vulkan\" for H.264 and HEVC (see prova-codifica.txt)"
+		esito codifica ROSSO "see prova-codifica.txt"
 	fi
 	return $rosso
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  (d) IL BANCO 19-CONFRONTO SULLA NVIDIA
+#  (d) THE 19-CONFRONTO BENCH ON THE NVIDIA
 # ═══════════════════════════════════════════════════════════════════════════
 confronto() {
-	log "(d) banchi/19-vulkan/19-confronto.sh sulla NVIDIA"
+	log "(d) banchi/19-vulkan/19-confronto.sh on the NVIDIA"
 	local nv u="$LAVORO/confronto"
 	nv=$(nodo_nvidia || true)
-	[ -n "$nv" ] || { ko "nessun nodo NVIDIA"; esito confronto ROSSO "niente nodo"; return 1; }
+	[ -n "$nv" ] || { ko "no NVIDIA node"; esito confronto ROSSO "no node"; return 1; }
 	mkdir -p "$u"
-	# ⭐ niente «vaapi» fra i motori: sulla NVIDIA VA-API non codifica (nvidia-vaapi-driver solo decodifica)
+	# ⭐ no "vaapi" among the engines: on the NVIDIA VA-API does not encode (nvidia-vaapi-driver only decodes)
 	ALBERO=$ALBERO USCITA=$u NODO_RADEON=${nv#renderD} MOTORI="vulkan scheda" ORDINE_PRODOTTO=1 \
 		bash "$ALBERO/banchi/19-vulkan/19-confronto.sh" tutto > "$EVID/confronto.txt" 2>&1
 	local c=$?
 	cp -f "$u/esiti.jsonl" "$u/tabella.txt" "$u"/capacita-*.json "$EVID/" 2>/dev/null
 	local tot buone
 	tot=$(grep -c . "$u/esiti.jsonl" 2>/dev/null || echo 0)
-	# buona = codice 0, OGNI fotogramma decodificato da ffmpeg (FOTOGRAMMI del banco, 120), nessun errore
+	# good = code 0, EVERY frame decoded by ffmpeg (the bench's FOTOGRAMMI, 120), no error
 	buone=$(python3 - "$u/esiti.jsonl" "${FOTOGRAMMI:-120}" <<'EOF' 2>/dev/null
 import json, sys
 n = 0
@@ -610,52 +610,52 @@ print(n)
 EOF
 )
 	if [ "$c" = 0 ] && [ "$tot" -gt 0 ] && [ "${buone:-0}" = "$tot" ]; then
-		ok "19-confronto: $buone prove su $tot col codice 0 e ogni fotogramma decodificato"
+		ok "19-confronto: $buone tests out of $tot with code 0 and every frame decoded"
 		esito confronto VERDE "$buone/$tot"
 		return 0
 	fi
-	ko "19-confronto: uscita $c, $buone prove buone su $tot (confronto.txt, esiti.jsonl)"
-	esito confronto ROSSO "$buone/$tot, uscita $c"
+	ko "19-confronto: exit $c, $buone good tests out of $tot (confronto.txt, esiti.jsonl)"
+	esito confronto ROSSO "$buone/$tot, exit $c"
 	return 1
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  (e) LA SUITE: XFCE sotto labwc (lo accende il prodotto), i browser in un labwc loro
+#  (e) THE SUITE: XFCE under labwc (the product starts it), the browsers in a labwc of their own
 # ═══════════════════════════════════════════════════════════════════════════
 suite() {
-	log "(e) la suite della fase 15, sottoinsieme, su XFCE"
+	log "(e) the phase 15 suite, subset, on XFCE"
 	local nv u uid sock="" modo=finestra
 	nv=$(nodo_nvidia || true)
 	u="$LAVORO/suite"
 	mkdir -p "$u"
 	chown "$UTENTE_BANCO:" "$u" 2>/dev/null
 	if [ "$nv" != renderD128 ]; then
-		ko "il server codifica su renderD128 e la NVIDIA e' «${nv:-nessuno}»: la suite qui non direbbe niente della NVIDIA"
-		esito suite NON-GUARDATA "la NVIDIA non e' renderD128"
+		ko "the server encodes on renderD128 and the NVIDIA is \"${nv:-none}\": the suite here would say nothing about the NVIDIA"
+		esito suite NON-GUARDATA "the NVIDIA is not renderD128"
 		return 3
 	fi
-	ss -ltn | grep -q ":$PORTA " || { ko "il server non ascolta su $PORTA"; esito suite NON-GUARDATA "server spento"; return 3; }
+	ss -ltn | grep -q ":$PORTA " || { ko "the server is not listening on $PORTA"; esito suite NON-GUARDATA "server off"; return 3; }
 	uid=$(id -u "$UTENTE_BANCO")
-	# il compositore DEI BROWSER, come banchi/15-suite/15-compositori.sh: labwc senza schermo a
-	# 3840x2160. ⚠ Disegna in software (pixman): e' il cliente, e non deve dipendere dalla scheda
-	# che si sta provando. La sessione di XFCE invece la accende il PRODOTTO, sulla scheda
-	# ⭐ 6 ott 2026: le scene che le prove aprono DENTRO la sessione (F-021: `accendi_scena`)
-	#    le cercano in /opt/remotix, dove stanno sulle scatole. Se la cartella non c'era, e'
-	#    nostra: `pulisci` la toglie
+	# THE BROWSERS' compositor, like banchi/15-suite/15-compositori.sh: headless labwc at
+	# 3840x2160. ⚠ It draws in software (pixman): it is the client, and must not depend on the card
+	# under test. The XFCE session instead is started by the PRODUCT, on the card
+	# ⭐ 6 Oct 2026: the scenes the tests open INSIDE the session (F-021: `accendi_scena`)
+	#    are looked for in /opt/remotix, where they live on the boxes. If the folder was not there, it is
+	#    ours: `pulisci` removes it
 	if [ ! -d /opt/remotix ]; then mkdir -p /opt/remotix && touch "$LAVORO/opt-remotix-nostra"; fi
 	cp "$ALBERO"/banchi/11-scatole/11-c*-scena.html /opt/remotix/ 2>/dev/null
 	chmod 755 /opt/remotix; chmod 644 /opt/remotix/*.html 2>/dev/null
 	pkill -u "$UTENTE_BANCO" -x labwc 2>/dev/null
-	# ⛔ 5 ott 2026: `pkill` non aspetta. Se il labwc di prima e' ancora vivo, il suo
-	#    «wayland-0» finisce nell'elenco di «prima», il nuovo rinasce con lo STESSO nome e qui
-	#    sotto non si vede niente di nuovo ⇒ browser HEADLESS (784x512) per un giro di fila
+	# ⛔ 5 Oct 2026: `pkill` does not wait. If the previous labwc is still alive, its
+	#    "wayland-0" ends up in the "prima" list, the new one is reborn with the SAME name and
+	#    below nothing new is seen ⇒ HEADLESS browsers (784x512) for a whole run
 	local j
 	for j in $(seq 1 40); do pgrep -u "$UTENTE_BANCO" -x labwc > /dev/null || break; sleep 0.25; done
 	local prima
 	prima=$(ls "/run/user/$uid" 2>/dev/null | grep -E '^wayland-[0-9]+$' | sort)
-	# ⭐ CLIENTE_SCHEDA=1 (5 ott 2026): il compositore dei browser sulla scheda (gles2) invece
-	#    che in software — SOLO per la controprova «il rosso è del cliente in software?». Il
-	#    giro lo dichiara, e un giro così NON vale come suite della NVIDIA
+	# ⭐ CLIENTE_SCHEDA=1 (5 Oct 2026): the browsers' compositor on the card (gles2) instead
+	#    of in software — ONLY for the counter-test "is the red the software client's?". The
+	#    run declares it, and such a run does NOT count as the NVIDIA suite
 	local rend=pixman
 	[ "${CLIENTE_SCHEDA:-0}" = 1 ] && rend=gles2
 	runuser -u "$UTENTE_BANCO" -- env -u WAYLAND_DISPLAY -u DISPLAY XDG_RUNTIME_DIR="/run/user/$uid" \
@@ -673,11 +673,11 @@ suite() {
 		usc=$(runuser -u "$UTENTE_BANCO" -- env XDG_RUNTIME_DIR="/run/user/$uid" WAYLAND_DISPLAY="$sock" wlr-randr 2>/dev/null | awk 'NR==1{print $1}')
 		runuser -u "$UTENTE_BANCO" -- env XDG_RUNTIME_DIR="/run/user/$uid" WAYLAND_DISPLAY="$sock" \
 			wlr-randr --output "$usc" --custom-mode 3840x2160 >> "$u/compositore-browser.log" 2>&1
-		ok "il compositore dei browser: $sock ($usc 3840x2160, $rend)"
-		[ "$rend" = pixman ] || avviso "⛔ CLIENTE_SCHEDA=1: i browser disegnano sulla scheda — controprova, NON la suite della NVIDIA"
+		ok "the browsers' compositor: $sock ($usc 3840x2160, $rend)"
+		[ "$rend" = pixman ] || avviso "⛔ CLIENTE_SCHEDA=1: the browsers draw on the card — counter-test, NOT the NVIDIA suite"
 	else
 		modo=headless
-		avviso "il labwc dei browser non e' nato (compositore-browser.log): i browser vanno HEADLESS, e lo si dichiara"
+		avviso "the browsers' labwc was not born (compositore-browser.log): the browsers go HEADLESS, and that is declared"
 	fi
 	local sistema
 	sistema="$(. /etc/os-release; echo "$PRETTY_NAME") · $(nvidia-smi --query-gpu=name,driver_version --format=csv,noheader 2>/dev/null | head -1) · ${DESKTOP_NV:-xfce} · browser: $modo"
@@ -693,23 +693,23 @@ suite() {
 		> "$EVID/suite-rapporto.txt" 2>&1
 	python3 "$ALBERO/banchi/15-suite/15-rapporto.py" --registro "$u/registro.jsonl" --giro 19-nvidia \
 		--html "$EVID/suite-rapporto.html" > /dev/null 2>&1
-	# quale strada hanno preso le sessioni vere, e se labwc e' andato sulla scheda o su pixman
-	grep -a -E 'strada (vulkan|vaapi)|pixman|NON SA CODIFICARE|DEVICE_LOST|Xid' "$LAVORO/registro.log" | sort | uniq -c | sort -rn | head -30 \
+	# which route the real sessions took, and whether labwc went on the card or on pixman
+	grep -a -E 'route (vulkan|vaapi)|pixman|CANNOT ENCODE|DEVICE_LOST|Xid' "$LAVORO/registro.log" | sort | uniq -c | sort -rn | head -30 \
 		> "$EVID/suite-strade.txt"
 	tail -n 3 "$EVID/suite.txt" | sed 's/^/      /'
 	case $c in
-	0) ok "suite VERDE"; esito suite VERDE "$(tail -n 1 "$EVID/suite.txt")" ;;
-	3) avviso "suite con prove non guardate"; esito suite NON-GUARDATA "$(tail -n 1 "$EVID/suite.txt")" ;;
-	*) ko "suite ROSSA"; esito suite ROSSO "$(tail -n 1 "$EVID/suite.txt")" ;;
+	0) ok "suite GREEN"; esito suite VERDE "$(tail -n 1 "$EVID/suite.txt")" ;;
+	3) avviso "suite with tests not looked at"; esito suite NON-GUARDATA "$(tail -n 1 "$EVID/suite.txt")" ;;
+	*) ko "suite RED"; esito suite ROSSO "$(tail -n 1 "$EVID/suite.txt")" ;;
 	esac
 	return $c
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  (f) RACCOGLI
+#  (f) COLLECT
 # ═══════════════════════════════════════════════════════════════════════════
 raccogli() {
-	log "(f) raccolgo registri ed evidenze"
+	log "(f) collecting logs and evidence"
 	journalctl -b --no-pager > "$EVID/journal.txt" 2>&1
 	journalctl -k -b --no-pager > "$EVID/nucleo.txt" 2>&1
 	grep -i -E 'NVRM|Xid|nvidia' "$EVID/nucleo.txt" > "$EVID/nucleo-nvidia.txt" 2>/dev/null
@@ -719,162 +719,162 @@ raccogli() {
 	cp -f "$LAVORO/piano.json" "$EVID/" 2>/dev/null
 	local nome
 	nome="remotix-nv-$(hostname -s)-$(date +%Y%m%d-%H%M).tar.gz"
-	# i flussi e le sorgenti grezze del banco 19 restano fuori: pesano, e gli esiti li descrivono
+	# the streams and raw sources of bench 19 stay out: they are heavy, and the outcomes describe them
 	tar -C "$LAVORO" -czf "$LAVORO/$nome" --exclude='*.bin' --exclude='*.bgrx' \
 		evidenze confronto suite prima 2>/dev/null
 	echo "$nome" > "$LAVORO/archivio"
 	sha256sum "$LAVORO/$nome" | cut -d' ' -f1 > "$LAVORO/archivio.sha256"
-	ok "archivio: $LAVORO/$nome ($(du -h "$LAVORO/$nome" | cut -f1))"
+	ok "archive: $LAVORO/$nome ($(du -h "$LAVORO/$nome" | cut -f1))"
 	esito raccogli VERDE "$nome"
 }
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  (g) PULISCI: la macchina come l'abbiamo trovata
+#  (g) PULISCI: the machine as we found it
 # ═══════════════════════════════════════════════════════════════════════════
 pulisci() {
-	log "(g) pulisco"
+	log "(g) cleaning"
 	if [ ! -f "$LAVORO/raccolto" ] && [ "${FORZA:-0}" != 1 ]; then
-		ko "l'archivio non risulta portato sul portatile ($LAVORO/raccolto): prima «19-nvidia.sh raccogli IP» (o FORZA=1)"
+		ko "the archive does not appear to have been taken to the laptop ($LAVORO/raccolto): first \"19-nvidia.sh raccogli IP\" (or FORZA=1)"
 		return 1
 	fi
-	[ -f "$PRIMA/fatta" ] || { ko "manca la fotografia di com'era la macchina ($PRIMA): non so che cosa togliere"; return 1; }
+	[ -f "$PRIMA/fatta" ] || { ko "the snapshot of how the machine was is missing ($PRIMA): I do not know what to remove"; return 1; }
 	local riavvio=0 u
-	# 1. le prove e i processi del banco
+	# 1. the bench's tests and processes
 	systemctl stop remotix-nv-banco.service 2>/dev/null
 	for u in $(getent passwd | cut -d: -f1 | grep -E "^($UTENTE_BANCO|c[0-9]+b?u[0-9]+)$"); do
 		loginctl terminate-user "$u" 2>/dev/null
 		pkill -KILL -u "$u" 2>/dev/null
 	done
 	[ -f "$LAVORO/opt-remotix-nostra" ] && rm -rf /opt/remotix
-	# 2. REMOTIX: con l'installatore se l'ha messo lui, poi i nostri due file
+	# 2. REMOTIX: with the installer if it installed it, then our two files
 	if [ -x /usr/bin/remotix-install ] || [ -x "$VALIGIA/bin/remotix-install" ]; then
 		local ri=/usr/bin/remotix-install
 		[ -x $ri ] || ri=$VALIGIA/bin/remotix-install
 		if printf 'y\n' | $ri uninstall --purge > "$LAVORO/disinstalla.txt" 2>&1; then
-			ok "REMOTIX disinstallato dall'installatore"
+			ok "REMOTIX uninstalled by the installer"
 		else
-			avviso "l'installatore non ha disinstallato (disinstalla.txt): tolgo col gestore"
+			avviso "the installer did not uninstall (disinstalla.txt): removing with the package manager"
 		fi
 	fi
 	systemctl disable --now remotix.service 2>/dev/null
 	rm -f /etc/remotix/remotix.conf.d/remotix-nv.conf /etc/systemd/system/remotix.service.d/remotix-nv.conf
 	rmdir /etc/systemd/system/remotix.service.d 2>/dev/null
 	systemctl daemon-reload
-	# 3. gli utenti del banco (gli altri utenti nuovi, creati dai pacchetti, si DICHIARANO)
+	# 3. the bench users (the other new users, created by the packages, are DECLARED)
 	for u in $(getent passwd | cut -d: -f1 | grep -E "^($UTENTE_BANCO|c[0-9]+b?u[0-9]+)$"); do
 		loginctl disable-linger "$u" 2>/dev/null
 		userdel -r "$u" > /dev/null 2>&1 || userdel "$u" 2>/dev/null
 		rm -rf "/home/${u:?}"
 	done
 	rm -f /etc/sudoers.d/remotix-nv
-	# 3-ter. Firefox: la regola e il nome allineato (prima dei pacchetti: sono nella sua cartella)
+	# 3-ter. Firefox: the policy and the aligned name (before the packages: they are in its folder)
 	rm -f /usr/lib/firefox-esr/distribution/policies.json
 	if [ -f "$LAVORO/firefox-esr-nome" ]; then
 		rm -f /usr/lib/firefox-esr/firefox-esr
 		ln -sfn ../lib/firefox-esr/firefox /usr/bin/firefox-esr
 	fi
-	# 3-bis. la memoria di scorta, se l'avevamo messa noi
-	if [ -f "$SCORTA" ]; then swapoff "$SCORTA" 2>/dev/null; rm -f "$SCORTA"; ok "scorta tolta"; fi
-	# 4. modeset, se l'avevamo messo noi
+	# 3-bis. the spare memory, if we had added it
+	if [ -f "$SCORTA" ]; then swapoff "$SCORTA" 2>/dev/null; rm -f "$SCORTA"; ok "swap removed"; fi
+	# 4. modeset, if we had set it
 	if [ -f /etc/modprobe.d/remotix-nv.conf ]; then
 		rm -f /etc/modprobe.d/remotix-nv.conf
 		command -v update-initramfs >/dev/null && update-initramfs -u > /dev/null 2>&1
 		riavvio=1
 	fi
-	# 5. i pacchetti NUOVI (quelli che non c'erano nella fotografia), driver compreso se l'abbiamo messo noi
+	# 5. the NEW packages (those not in the snapshot), driver included if we installed it
 	local nuovi
 	nuovi=$(comm -13 "$PRIMA/pacchetti.txt" <(installati))
 	if [ -n "$nuovi" ]; then
 		echo "$nuovi" > "$LAVORO/pacchetti-tolti.txt"
 		echo "$nuovi" | grep -q -E '^(nvidia-driver|nvidia-kernel|nvidia-dkms|linux-headers|linux-modules-nvidia)' && riavvio=1
-		# ⛔ PRIMA la simulazione: se apt, per togliere i nuovi, toglierebbe anche UN SOLO pacchetto
-		#    che c'era, non si toglie niente e lo si dice (`[M]` 1 ott 2026, prova nel contenitore:
-		#    un purge cieco si e' fermato a meta' sul «sudo» e ha lasciato dpkg in sospeso)
+		# ⛔ FIRST the simulation: if apt, to remove the new ones, would also remove EVEN ONE package
+		#    that was there, nothing is removed and that is said (`[M]` 1 Oct 2026, test in the container:
+		#    a blind purge stopped half-way on "sudo" and left dpkg pending)
 		local tolti fuori
 		# shellcheck disable=SC2086
 		tolti=$(SUDO_FORCE_REMOVE=yes apt-get -s purge $nuovi 2>/dev/null | awk '/^Purg /{print $2}' | sed 's/:.*//' | sort -u)
 		fuori=$(comm -12 "$PRIMA/pacchetti.txt" <(echo "$tolti"))
 		if [ -n "$fuori" ]; then
-			avviso "apt toglierebbe anche pacchetti che c'erano: $(echo "$fuori" | tr '\n' ' ') ⇒ non tolgo niente col gestore"
+			avviso "apt would also remove packages that were there: $(echo "$fuori" | tr '\n' ' ') ⇒ removing nothing with the package manager"
 		else
 			# shellcheck disable=SC2086
 			SUDO_FORCE_REMOVE=yes "${APT[@]}" purge $nuovi > "$LAVORO/purge.txt" 2>&1 \
-				&& ok "tolti $(echo "$nuovi" | wc -l) pacchetti nuovi" \
-				|| avviso "apt-get purge con errori (purge.txt)"
+				&& ok "removed $(echo "$nuovi" | wc -l) new packages" \
+				|| avviso "apt-get purge with errors (purge.txt)"
 		fi
 		dpkg --configure -a > /dev/null 2>&1
 	fi
-	# 6. /etc/apt com'era (depositi di Google e Mozilla, non-free, universe)
+	# 6. /etc/apt as it was (Google and Mozilla repositories, non-free, universe)
 	rm -rf /etc/apt
 	tar -C / -xpf "$PRIMA/etc-apt.tar"
 	"${APT[@]}" update > /dev/null 2>&1
-	ok "/etc/apt com'era"
+	ok "/etc/apt as it was"
 	if [ ! -f "$PRIMA/etc-remotix" ]; then rm -rf /etc/remotix /var/lib/remotix; fi
-	# 7. che cosa resta diverso, detto
+	# 7. what is still different, said
 	local dopo_p dopo_u
 	dopo_p=$(comm -3 "$PRIMA/pacchetti.txt" <(installati) | tr -d '\t' | tr '\n' ' ')
 	dopo_u=$(comm -13 "$PRIMA/utenti.txt" <(getent passwd | cut -d: -f1 | sort) | tr '\n' ' ')
 	{
-		echo "pacchetti diversi da prima: ${dopo_p:-nessuno}"
-		echo "utenti in piu' (dai pacchetti): ${dopo_u:-nessuno}"
-		echo "riavvio consigliato: $([ $riavvio = 1 ] && echo si || echo no)"
+		echo "packages different from before: ${dopo_p:-none}"
+		echo "extra users (from the packages): ${dopo_u:-none}"
+		echo "reboot recommended: $([ $riavvio = 1 ] && echo yes || echo no)"
 	} | tee "$LAVORO/pulito.txt" | sed 's/^/    /'
-	[ $riavvio = 1 ] && avviso "RIAVVIO CONSIGLIATO: driver o modeset tolti"
-	ok "pulito (la valigia $VALIGIA e $LAVORO li toglie il portatile, a script finito)"
+	[ $riavvio = 1 ] && avviso "REBOOT RECOMMENDED: driver or modeset removed"
+	ok "clean (the suitcase $VALIGIA and $LAVORO are removed by the laptop, once the script ends)"
 	return 0
 }
 
 stato() {
-	log "a che punto siamo"
+	log "where we are"
 	local p
 	for p in aggiorna controlli driver dipendenze remotix codifica confronto suite raccogli; do
-		if [ -f "$FATTO/$p" ]; then printf '    %-11s fatto  %s\n' "$p" "$(cat "$FATTO/$p")"; else printf '    %-11s —\n' "$p"; fi
+		if [ -f "$FATTO/$p" ]; then printf '    %-11s done   %s\n' "$p" "$(cat "$FATTO/$p")"; else printf '    %-11s —\n' "$p"; fi
 	done
 	[ -f "$EVID/passi.txt" ] && { echo; sed 's/^/    /' "$EVID/passi.txt"; }
 }
 
-# un passo, ricordandosi che e' stato fatto (con l'uscita): «tutto» non lo rifa'
+# a step, remembering that it was done (with the exit code): "tutto" does not redo it
 passo() {
 	local p=$1 c
 	"$p"; c=$?
-	[ $c != 10 ] && echo "uscita $c · $(date -Is)" > "$FATTO/$p"
+	[ $c != 10 ] && echo "exit $c · $(date -Is)" > "$FATTO/$p"
 	return $c
 }
 
 tutto() {
 	local p c peggio=0
-	# dopo il riavvio chiesto dal passo «driver» si rifanno i controlli e il driver: il verdetto
-	# di (a) dev'essere sul driver vero, quello caricato adesso
+	# after the reboot asked for by the "driver" step the checks and the driver are redone: the verdict
+	# of (a) must be on the real driver, the one loaded now
 	if [ -f "$LAVORO/riavvio-chiesto" ]; then
 		rm -f "$LAVORO/riavvio-chiesto" "$FATTO/controlli" "$FATTO/driver"
-		log "dopo il riavvio: rifaccio controlli e driver"
+		log "after the reboot: redoing checks and driver"
 	fi
 	for p in aggiorna controlli driver dipendenze remotix codifica confronto suite raccogli; do
 		case " ${RIFAI:-} " in *" $p "*) rm -f "$FATTO/$p" ;; esac
 		if [ -f "$FATTO/$p" ] && [ "$p" != raccogli ]; then
-			log "$p: gia' fatto ($(cat "$FATTO/$p")), salto"
+			log "$p: already done ($(cat "$FATTO/$p")), skipping"
 			continue
 		fi
 		passo "$p"; c=$?
 		case $c in
-		10) log "SERVE UN RIAVVIO: poi si rilancia «tutto»"; return 10 ;;
+		10) log "A REBOOT IS NEEDED: then \"tutto\" is run again"; return 10 ;;
 		0) ;;
 		*)
 			[ $c -gt $peggio ] && peggio=$c
 			if [ "$p" = controlli ] && [ "${FORZA:-0}" != 1 ]; then
-				log "controlli ROSSI: mi fermo (FORZA=1 per andare avanti lo stesso)"
+				log "checks RED: stopping (FORZA=1 to go on anyway)"
 				raccogli
 				return 1
 			fi
 			if [ "$p" = dipendenze ] || [ "$p" = remotix ]; then
-				log "$p non riuscito: senza, i passi dopo non hanno senso"
+				log "$p failed: without it, the later steps make no sense"
 				raccogli
 				return 1
 			fi
 			;;
 		esac
 	done
-	log "FINE"
+	log "END"
 	sed 's/^/    /' "$EVID/passi.txt"
 	return $peggio
 }
@@ -885,7 +885,7 @@ aggiorna|controlli|driver|dipendenze|remotix|codifica|confronto|suite)
 	passo "$AZIONE"; c=$? ;;
 raccogli|pulisci|stato) "$AZIONE"; c=$? ;;
 tutto) tutto; c=$? ;;
-*) echo "uso: $0 aggiorna|controlli|driver|dipendenze|remotix|codifica|confronto|suite|raccogli|pulisci|stato|tutto"; exit 2 ;;
+*) echo "usage: $0 aggiorna|controlli|driver|dipendenze|remotix|codifica|confronto|suite|raccogli|pulisci|stato|tutto"; exit 2 ;;
 esac
 echo "$c" > "$LAVORO/uscita"
 exit "$c"

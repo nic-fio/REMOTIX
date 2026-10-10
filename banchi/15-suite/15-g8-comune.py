@@ -1,29 +1,29 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-g8-comune — gli aiuti del gruppo G8 («gli utenti, la parola, il ban»)
+15-g8-comune — the helpers of group G8 («the users, the password, the ban»)
 
-    python3 15-g8-comune.py accendi|spegni|sblocca|stato <desktop>   (lo chiama 15-g8-server.sh)
+    python3 15-g8-comune.py accendi|spegni|sblocca|stato <desktop>   (called by 15-g8-server.sh)
 
-Che cosa c'e' qui (importato da 15-f025, 15-f026, 15-f027, 15-n027 con
-`suite._carica`, non copiato):
+What is here (imported by 15-f025, 15-f026, 15-f027, 15-n027 with
+`suite._carica`, not copied):
 
-  MioServer     ⭐ il SECONDO server del prodotto dentro una scatola: stesso
-                binario /opt/remotix/remotix, unita' systemd `rete15-g8`, porta
-                862x, ban-file, socket di comando, rilievo e registro SUOI in
-                /var/lib/rete15-g8/.  ⛔ Serve a tutto cio' che sbaglia la
-                parola: tre errori bannano 192.168.0.2 per 12 ore, e sul server
-                della scatola (8511-8514) fermerebbero tutti.  Il ban e' in
-                memoria del PROCESSO e nel SUO file: quello dell'85xx non lo vede.
-  scena_colore  una finestra `firefox-esr --kiosk` nella sessione dell'inquilino,
-                tutta di un COLORE noto, con un campo di testo a fuoco; un piccolo
-                servitore annota nella casa dell'inquilino ogni tasto e ogni
-                valore del campo (il «valore di un campo» della suite), e serve il
-                colore da un file — cambiare quel file cambia la scena (il guasto).
-  frazioni      quanta parte della fotografia e' di ciascun colore noto.
-  ferma/riprendi  SIGSTOP/SIGCONT all'albero di processi di un browser: il
-                client resta «attaccato» ma TACE — il fantasma di §5.1.
-  leggi_pagina  esito, classe, ban, avviso della pagina, senza toccarla.
+  MioServer     ⭐ the SECOND product server inside a box: same
+                binary /opt/remotix/remotix, systemd unit `rete15-g8`, port
+                862x, and ITS OWN ban-file, command socket, survey and log in
+                /var/lib/rete15-g8/.  ⛔ It serves everything that gets the
+                password wrong: three errors ban 192.168.0.2 for 12 hours, and on the box's
+                server (8511-8514) they would stop everybody.  The ban is in
+                the PROCESS's memory and in ITS file: the 85xx's does not see it.
+  scena_colore  a `firefox-esr --kiosk` window in the tenant's session,
+                all of a known COLOUR, with a focused text field; a small
+                server writes down in the tenant's home every key and every
+                value of the field (the suite's «value of a field»), and serves the
+                colour from a file — changing that file changes the scene (the fault).
+  frazioni      how much of the photo is of each known colour.
+  ferma/riprendi  SIGSTOP/SIGCONT to a browser's process tree: the
+                client stays «attached» but IS SILENT — the ghost of §5.1.
+  leggi_pagina  outcome, class, ban, notice of the page, without touching it.
 """
 import base64
 import copy
@@ -43,12 +43,12 @@ import suite as S                                                     # noqa: E4
 C23 = S._carica("c23_g8", os.path.join(S.BANCHI, "11-scatole",
                                        "11-c23-maiusc-e-frecce-selezionano.py"))
 
-# ⛔ Le porte del gruppo G8 — solo queste (mandato comune).
+# ⛔ The ports of group G8 — only these (common mandate).
 PORTE_MIE = {"gnome": 8621, "kde": 8622, "xfce": 8623, "lxqt": 8624}
 BASE_BROWSER = {"gnome": 4900, "kde": 4910, "xfce": 4920, "lxqt": 4930}
-# il secondo e il terzo browser dello stesso tipo: base+50 e base+54
+# the second and the third browser of the same type: base+50 and base+54
 SPOSTA_BROWSER = (0, 50, 54)
-# il servitore della scena: base+5+i (Firefox N, Chrome N+1, Android N+2 sono dei browser)
+# the scene's server: base+5+i (Firefox N, Chrome N+1, Android N+2 belong to the browsers)
 SPOSTA_SCENA = 5
 UNITA = "rete15-g8"
 DIR = "/var/lib/rete15-g8"
@@ -58,29 +58,29 @@ SOCK = DIR + "/comando.sock"
 BAN_85XX = "/var/lib/rete11/ban"
 INDIRIZZO = "192.168.0.2"
 
-# Le frasi della pagina (src/pagina.html, `MOTIVO`), per sottostringa.
+# The page's sentences (src/pagina.html, `MOTIVO`), by substring.
 FRASE = {
-    0x07: "utente o parola d'ordine non corretti",
-    0x08: "i tentativi da questo indirizzo sono esauriti",
-    0x0F: "occupato da un altro client",
+    0x07: "incorrect username or password",
+    0x08: "attempts from this address are used up",
+    0x0F: "taken by another client",
 }
-# ⚠ I rifiuti che NON sono la cosa provata: sotto carico (10 agenti, carico
-#   ~50) la stretta di mano scade (0x0D) o la sonda dei codec del browser non
-#   fa in tempo (0x09).  Col server della scatola si riprova; mai col server
-#   G8 dopo una parola sbagliata (potrebbe contare).
-AMBIENTE = ("tempo scaduto durante la stretta di mano",
-            "non hanno niente in comune da parlare", "Non si collega")
+# ⚠ The refusals that are NOT the thing tested: under load (10 agents, load
+#   ~50) the handshake times out (0x0D) or the browser's codec probe does not
+#   make it in time (0x09).  With the box's server we retry; never with the
+#   G8 server after a wrong password (it might count).
+AMBIENTE = ("timed out during the handshake",
+            "have nothing in common to speak", "Cannot connect")
 
 
 def dentro(sc, riga, secondi=90):
-    """`Scatola.dentro` senza la riga del «password:» di sshpw."""
+    """`Scatola.dentro` without sshpw's «password:» line."""
     c, t = sc.dentro(riga, secondi)
     t = "\n".join(x for x in (t or "").splitlines() if "'s password:" not in x)
     return c, t
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  IL SERVER MIO
+#  MY SERVER
 # ═══════════════════════════════════════════════════════════════════════════
 class MioServer:
     def __init__(self, desktop, sc=None):
@@ -92,7 +92,7 @@ class MioServer:
         return (
             "mkdir -p %(d)s; systemctl stop %(u)s 2>/dev/null; "
             "systemctl reset-failed %(u)s 2>/dev/null; "
-            "echo \"=== accensione $(date -u +%%FT%%TZ) ===\" >> %(r)s; "
+            "echo \"=== startup $(date -u +%%FT%%TZ) ===\" >> %(r)s; "
             "systemd-run --unit=%(u)s --working-directory=/opt/remotix "
             "--property=StandardOutput=append:%(r)s --property=StandardError=append:%(r)s "
             "--property=KillMode=mixed /opt/remotix/remotix --indirizzo 0.0.0.0 "
@@ -102,20 +102,20 @@ class MioServer:
             % {"d": DIR, "u": UNITA, "r": REGISTRO, "p": self.porta, "b": BAN, "s": SOCK})
 
     def accendi(self, tetto=30):
-        """(True, righe) quando il registro dice «pronto: https» DOPO l'accensione."""
+        """(True, lines) when the log says «ready: https» AFTER the startup."""
         n0 = self.righe_registro() or 0
         c, t = dentro(self.sc, self.comando_accensione() + "echo acceso", 60)
         if c != 0:
             return False, "systemd-run: %s" % t[-300:]
         fine = time.time() + tetto
         while time.time() < fine:
-            _c, t = dentro(self.sc, "tail -n +%d %s | grep -a -m1 'pronto: https'"
+            _c, t = dentro(self.sc, "tail -n +%d %s | grep -a -m1 'ready: https'"
                                    % (n0 + 1, REGISTRO), 30)
-            if "pronto: https" in (t or ""):
+            if "ready: https" in (t or ""):
                 return True, t.strip()
             time.sleep(1)
         _c, t = dentro(self.sc, "tail -n 8 %s" % REGISTRO, 30)
-        return False, "non ha detto «pronto» in %d s: %s" % (tetto, t[-400:])
+        return False, "did not say «ready» in %d s: %s" % (tetto, t[-400:])
 
     def spegni(self):
         c, t = dentro(self.sc, "systemctl stop %s 2>&1; systemctl reset-failed %s 2>/dev/null; "
@@ -127,7 +127,7 @@ class MioServer:
         return (t or "").strip().endswith("active") and "inactive" not in (t or "")
 
     def parla(self, riga):
-        """Una riga sul socket di comando (src/comando.c): PING, SBLOCCA <ind>."""
+        """A line on the command socket (src/comando.c): PING, SBLOCCA <ind>."""
         prog = ("import socket,sys; s=socket.socket(socket.AF_UNIX); s.settimeout(5); "
                 "s.connect(%r); s.sendall(%r.encode()); print(s.recv(300).decode().strip())"
                 % (SOCK, riga + "\n"))
@@ -157,7 +157,7 @@ class MioServer:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA SCENA DI UN COLORE, col campo di testo e il quaderno
+#  THE SCENE OF A COLOUR, with the text field and the notebook
 # ═══════════════════════════════════════════════════════════════════════════
 PAGINA_SCENA = """<!doctype html><meta charset=utf-8><title>REMOTIX G8</title>
 <style>
@@ -205,7 +205,7 @@ def rgb(c):
 
 
 def accendi_scena(sc, chi, porta, colore, attesa=45):
-    """Servitore + `firefox-esr --kiosk` nella sessione di `chi`; aspetta «caricata»."""
+    """Server + `firefox-esr --kiosk` in the session of `chi`; waits for «caricata»."""
     b = lambda s: base64.b64encode(s.encode()).decode()     # noqa: E731
     pag = PAGINA_SCENA.replace("__C__", rgb(colore))
     c, t = dentro(sc, 
@@ -222,15 +222,15 @@ def accendi_scena(sc, chi, porta, colore, attesa=45):
         "sed -n 's/.*pid=\\([0-9]*\\).*/\\1/p' | head -1)/cmdline 2>/dev/null && break; sleep 0.3; done; "
         "d=''; for i in $(seq 1 40); do d=$(ls /run/user/$u 2>/dev/null | "
         "grep -E '^wayland-[0-9]+$' | head -1); [ -n \"$d\" ] && break; sleep 0.5; done; "
-        "[ -n \"$d\" ] || {{ echo 'nessun socket wayland'; exit 2; }}; sleep 1; "
+        "[ -n \"$d\" ] || {{ echo 'no wayland socket'; exit 2; }}; sleep 1; "
         "setsid runuser -u {c} -- env XDG_RUNTIME_DIR=/run/user/$u WAYLAND_DISPLAY=$d "
         "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$u/bus MOZ_ENABLE_WAYLAND=1 "
         "XDG_SESSION_TYPE=wayland HOME=$h firefox-esr --no-remote --new-instance "
         "--profile $h/.g8-profilo --kiosk http://127.0.0.1:{p}/ "
         "</dev/null >$h/.g8-firefox.log 2>&1 & "
         "for i in $(seq 1 {n}); do grep -q caricata $h/g8.log && {{ echo accesa; exit 0; }}; "
-        "sleep 0.5; done; echo 'la scena non ha detto «caricata»'; tail -n 5 $h/.g8-firefox.log; "
-        "echo '-- servitore:'; ss -ltn | grep ':{p} ' ; pgrep -a -u {c} | cut -c1-150 | tail -n 8; "
+        "sleep 0.5; done; echo 'the scene did not say «caricata»'; tail -n 5 $h/.g8-firefox.log; "
+        "echo '-- server:'; ss -ltn | grep ':{p} ' ; pgrep -a -u {c} | cut -c1-150 | tail -n 8; "
         "exit 1".format(c=chi, p=porta, srv=b(SERVITORE), pag=b(pag),
                         pref=b(S.C21.PREFERENZE), col=rgb(colore), n=attesa * 2), attesa + 60)
     return c == 0, t
@@ -247,7 +247,7 @@ def quaderno(sc, chi):
 
 
 def valore(righe):
-    """L'ultimo valore del campo annotato (o "" se mai scritto)."""
+    """The last value of the field written down (or "" if never written)."""
     v = ""
     for r in righe:
         if r.startswith("V "):
@@ -263,10 +263,10 @@ def tasti(righe):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LE FOTOGRAFIE
+#  THE PHOTOS
 # ═══════════════════════════════════════════════════════════════════════════
 def frazioni(png, colori, toll=60, riduci=8):
-    """{nome: frazione dei pixel vicini a quel colore} — o None."""
+    """{name: fraction of the pixels close to that colour} — or None."""
     try:
         from PIL import Image
         im = Image.open(io.BytesIO(png)).convert("RGB")
@@ -287,11 +287,11 @@ def frazioni(png, colori, toll=60, riduci=8):
 
 
 def aspetta_colore(s, nome_foto, colori, voluto, soglia=0.5, tetto=40):
-    """Fotografa finche' il colore `voluto` copre `soglia` o scade il tetto; la
-    fotografia che decide si SALVA nelle evidenze.
-    Torna (frazioni o None, percorso della foto, motivo)."""
+    """Photographs until the colour `voluto` covers `soglia` or the cap expires; the
+    photo that decides is SAVED in the evidence.
+    Returns (fractions or None, path of the photo, reason)."""
     fine = time.time() + tetto
-    fr, perche = None, "nessuna fotografia"
+    fr, perche = None, "no photo"
     while True:
         png, perche = _foto_muta(s)
         if png:
@@ -309,25 +309,25 @@ def aspetta_colore(s, nome_foto, colori, voluto, soglia=0.5, tetto=40):
 
 
 def _foto_muta(s):
-    """Una fotografia che NON si salva (i tentativi dell'attesa)."""
+    """A photo that is NOT saved (the attempts of the wait)."""
     try:
         png = S.C21.foto_piena(s.g)
     except Exception as e:                       # noqa: BLE001
-        return None, "fotografia fallita: %s" % str(e)[:200]
-    return (png, "") if png else (None, "la tela non si fotografa")
+        return None, "photo failed: %s" % str(e)[:200]
+    return (png, "") if png else (None, "the canvas cannot be photographed")
 
 
 def fr_testo(fr):
     if not fr:
-        return "(nessuna misura)"
+        return "(no measurement)"
     return ", ".join("%s %.1f%%" % (k, 100 * v) for k, v in fr.items())
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  I BROWSER: un secondo e un terzo dello stesso tipo, il fantasma
+#  THE BROWSERS: a second and a third of the same type, the ghost
 # ═══════════════════════════════════════════════════════════════════════════
 def o_per(o, i):
-    """Una copia delle opzioni per il browser numero `i` (0, 1, 2)."""
+    """A copy of the options for browser number `i` (0, 1, 2)."""
     o2 = copy.copy(o)
     o2.porte_base = o.porte_base + SPOSTA_BROWSER[i]
     if o.evidenze:
@@ -370,13 +370,13 @@ def _cmdline(pid):
 
 
 def ferma(g, stop=True):
-    """⛔ Il FANTASMA: il client resta attaccato per il server ma non manda piu'
-    un pacchetto.  SIGSTOP (o SIGCONT) —
-      Chrome   al solo servizio di rete (`network.mojom.NetworkService`, dove
-               vive QUIC): il browser e CDP restano vivi, la pagina anche;
-      Firefox  a TUTTO l'albero (la rete sta nel processo padre o in quello
-               «socket»); Marionette riprende dopo il SIGCONT.
-    Torna quanti processi."""
+    """⛔ The GHOST: the client stays attached for the server but no longer sends
+    a packet.  SIGSTOP (or SIGCONT) —
+      Chrome   to the network service only (`network.mojom.NetworkService`, where
+               QUIC lives): the browser and CDP stay alive, the page too;
+      Firefox  to the WHOLE tree (the network is in the parent process or in the
+               «socket» one); Marionette resumes after the SIGCONT.
+    Returns how many processes."""
     p = getattr(g, "p", None)
     if p is None:
         return 0
@@ -398,7 +398,7 @@ def riprendi(g):
 
 
 def muovi_un_po(s, volte=3):
-    """Il segno di vita di un utente vero: il puntatore si muove sulla tela."""
+    """A real user's sign of life: the pointer moves on the canvas."""
     try:
         geo = s.geometria()
         for k in range(volte):
@@ -440,7 +440,7 @@ def leggi_pagina(g):
 
 
 def carica(g, url, attesa=20):
-    """Apre `url` e aspetta il documento completo; torna leggi_pagina()."""
+    """Opens `url` and waits for the complete document; returns leggi_pagina()."""
     ok, perche = g.vai(url)
     fine = time.time() + attesa
     p = {}
@@ -458,8 +458,8 @@ def carica(g, url, attesa=20):
 
 
 def tenta_tenace(s, utente, parola, tetto=30, volte=3):
-    """`tenta`, riprovando quando il rifiuto e' dell'AMBIENTE (vedi `AMBIENTE`).
-    Torna (ammesso, stato, [rifiuti d'ambiente visti])."""
+    """`tenta`, retrying when the refusal is the ENVIRONMENT's (see `AMBIENTE`).
+    Returns (admitted, state, [environment refusals seen])."""
     visti = []
     for _ in range(volte):
         amm, st = tenta(s, utente, parola, tetto)
@@ -477,8 +477,8 @@ def tenta_senza_ricarica(s, utente, parola, tetto=30):
 
 
 def tenta(s, utente, parola, tetto=30, ricarica=True):
-    """Ricarica la pagina, manda utente e parola, e aspetta un verdetto.
-    Torna (ammesso: True/False/None, stato della pagina)."""
+    """Reloads the page, sends user and password, and waits for a verdict.
+    Returns (admitted: True/False/None, state of the page)."""
     if ricarica:
         s.pr.apri()
     vecchio = s.o.utente
@@ -488,13 +488,13 @@ def tenta(s, utente, parola, tetto=30, ricarica=True):
     finally:
         s.o.utente = vecchio
     if r != "mandato":
-        return None, {"esito": "non ho potuto compilare il modulo: %s" % r}
+        return None, {"esito": "I could not fill in the form: %s" % r}
     fine = time.time() + tetto
     st = {}
     while time.time() < fine:
         st = s.stato()
         if st.get("sessione") and st.get("esito_classe") == "bene" \
-                and (st.get("esito") or "").startswith("Ammesso"):
+                and (st.get("esito") or "").startswith("Admitted"):
             return True, st
         if st.get("esito_classe") == "male" and st.get("esito") \
                 and "Collego" not in (st.get("esito") or ""):
@@ -504,7 +504,7 @@ def tenta(s, utente, parola, tetto=30, ricarica=True):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA RIGA DI COMANDO (per 15-g8-server.sh)
+#  THE COMMAND LINE (for 15-g8-server.sh)
 # ═══════════════════════════════════════════════════════════════════════════
 def main():
     if len(sys.argv) < 3 or sys.argv[1] not in ("accendi", "spegni", "sblocca", "stato") \
@@ -515,18 +515,18 @@ def main():
     m = MioServer(d)
     if cosa == "accendi":
         ok, t = m.accendi()
-        print(("⭐ acceso %s sulla %d: %s" if ok else "⛔ %s %d NON acceso: %s")
+        print(("⭐ on %s at %d: %s" if ok else "⛔ %s %d NOT on: %s")
               % (d, m.porta, t))
         return 0 if ok else 1
     if cosa == "spegni":
         ok, t = m.spegni()
-        print("spento %s (%s)" % (d, t.splitlines()[-1] if t else "?"))
+        print("stopped %s (%s)" % (d, t.splitlines()[-1] if t else "?"))
         return 0
     if cosa == "sblocca":
         print(m.sblocca(sys.argv[3] if len(sys.argv) > 3 else INDIRIZZO))
         return 0
-    print("unita': %s · PING: %s · ban: «%s» · ban dell'85xx: «%s»"
-          % ("attiva" if m.acceso() else "NON attiva", m.parla("PING"), m.file_ban(),
+    print("unit: %s · PING: %s · ban: «%s» · ban of the 85xx: «%s»"
+          % ("active" if m.acceso() else "NOT active", m.parla("PING"), m.file_ban(),
              m.file_ban(BAN_85XX)))
     return 0
 

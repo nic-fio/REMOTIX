@@ -1,69 +1,69 @@
 #!/usr/bin/env python3
-"""01-b2-ngtcp2-wt-innesta.py — innesta lo strato WebTransport nell'esempio di ngtcp2.
+"""01-b2-ngtcp2-wt-innesta.py — grafts the WebTransport layer into the ngtcp2 example.
 
-    python3 01-b2-ngtcp2-wt-innesta.py            innesta (o dice che c'e' gia')
-    python3 01-b2-ngtcp2-wt-innesta.py --togli    rimette l'esempio com'era
-
----------------------------------------------------------------------------
-⛔ PERCHE' UN INNESTO E NON UN SERVER NOSTRO
-
-`banchi/01-b2-costruisci-ngtcp2.sh` l'ha gia' scritto, ed e' la regola di B2:
-**si parte da dove parte chiunque**, cioe' dal server d'esempio del progetto.
-Un server nostro dal foglio bianco misurerebbe la nostra pazienza — il ciclo
-UDP, il TLS, i timer di ritrasmissione — e non la libreria.  Quel che B2 deve
-misurare e' **quanto collante resta a noi PER WEBTRANSPORT**, e il modo di
-misurarlo e' aggiungere quello strato a un HTTP/3 che gia' funziona e contare
-le righe.
-
-⭐ E il conto viene da se': dopo l'innesto, `git diff --stat` nell'albero di
-   ngtcp2 dice quante righe sono cambiate sotto `examples/`.
-
-⚠ **«Cambiate» non e' «nostre», e qui c'era scritto che non era una stima.**
-  `git diff` non sa attribuire una riga: misura tutto quel che e' cambiato in
-  quella cartella, **da chiunque**.  Vale come conto NOSTRO solo se l'albero
-  era pulito prima — e per questo lo script adesso lo **guarda e lo dice**,
-  invece di darlo per acquisito (`LEZIONI.md` §1.9, quarta regola: un
-  denominatore si legge dove la cosa succede).
-  ⚠ E una riga **modificata** compare fra le aggiunte: «aggiunte» e' un limite
-  superiore di «nostre», non il loro numero esatto.
+    python3 01-b2-ngtcp2-wt-innesta.py            grafts (or says it is already there)
+    python3 01-b2-ngtcp2-wt-innesta.py --togli    puts the example back as it was
 
 ---------------------------------------------------------------------------
-⛔ CHE COSA MANCA A `ngtcp2`+`nghttp3`, IN CONCRETO
+⛔ WHY A GRAFT AND NOT A SERVER OF OUR OWN
 
-Il censimento del 9 agosto diceva «le fondamenta si', lo strato no».  Adesso
-si sa **quali** sono i tre buchi, perche' sono i tre punti che questo file
-tocca:
+`banchi/01-b2-costruisci-ngtcp2.sh` has already written it, and it is the rule of B2:
+**we start where anyone starts**, that is from the project's example server.
+A server of our own from a blank page would measure our patience — the UDP
+loop, the TLS, the retransmission timers — and not the library.  What B2 must
+measure is **how much glue is left to us FOR WEBTRANSPORT**, and the way to
+measure it is to add that layer to an HTTP/3 that already works and count
+the lines.
 
-  1. ⛔ **Non si puo' annunciare WebTransport.**  `nghttp3_settings` ha
-     `enable_connect_protocol` e `h3_datagram` — le due che stanno negli RFC —
-     e nient'altro; l'API pubblica offre `submit_request`, `submit_info`,
-     `submit_response`, `submit_trailers`, `submit_shutdown_notice`, e
-     **nessun modo di mettere un'impostazione arbitraria** sullo stream di
-     controllo.  `SETTINGS_WT_MAX_SESSIONS`, che e' quel che i browser
-     cercano, non passa di li'.  Si riscrive il SETTINGS che nghttp3 sta
-     scrivendo, mentre lo scrive.
+⭐ And the count comes by itself: after the graft, `git diff --stat` in the
+   ngtcp2 tree says how many lines changed under `examples/`.
 
-  2. ⛔ **Gli stream WebTransport vanno sottratti a nghttp3.**  Cominciano col
-     tipo di frame `0x41` seguito dal numero della sessione, e nghttp3
-     leggerebbe quel numero come una LUNGHEZZA.
-
-  3. ⛔ **E i byte che tornano indietro non hanno una strada.**  nghttp3 non
-     conosce quegli stream, quindi non li mettera' mai fra i vettori da
-     scrivere: la coda d'uscita e' nostra.
-
-⚠ Nessuno dei tre e' un difetto di ngtcp2 o di nghttp3: fanno HTTP/3, e
-  WebTransport non e' HTTP/3.  E' esattamente il prezzo che §6.4 voleva
-  conoscere prima di scegliere.
+⚠ **"Changed" is not "ours", and here it used to say it was not an estimate.**
+  `git diff` cannot attribute a line: it measures everything that changed in
+  that folder, **by anyone**.  It counts as OUR count only if the tree
+  was clean before — and that is why the script now **looks and says so**,
+  instead of taking it for granted (`LEZIONI.md` §1.9, fourth rule: a
+  denominator is read where the thing happens).
+  ⚠ And a **modified** line shows up among the additions: "added" is an upper
+  bound of "ours", not their exact number.
 
 ---------------------------------------------------------------------------
-⛔ COME QUESTO SCRIPT EVITA DI MENTIRE
+⛔ WHAT `ngtcp2`+`nghttp3` LACK, IN CONCRETE TERMS
 
-Ogni innesto ha un **appiglio**, cioe' un pezzo di codice loro che deve
-comparire **una volta sola**.  Se compare zero volte o due, lo script si ferma
-e dice quante ne ha trovate: e' la quarta regola di `LEZIONI.md` §1.9 — un
-denominatore, non solo un risultato.  ⚠ Un innesto che «non trova l'appiglio»
-e tira dritto produrrebbe un server che compila, non fa WebTransport, e non lo
-dice.
+The survey of 9 Aug said "the foundations yes, the layer no".  Now
+we know **which** the three holes are, because they are the three points this file
+touches:
+
+  1. ⛔ **WebTransport cannot be announced.**  `nghttp3_settings` has
+     `enable_connect_protocol` and `h3_datagram` — the two that are in the RFCs —
+     and nothing else; the public API offers `submit_request`, `submit_info`,
+     `submit_response`, `submit_trailers`, `submit_shutdown_notice`, and
+     **no way of putting an arbitrary setting** on the control
+     stream.  `SETTINGS_WT_MAX_SESSIONS`, which is what browsers
+     look for, does not go through there.  We rewrite the SETTINGS that nghttp3 is
+     writing, while it writes it.
+
+  2. ⛔ **The WebTransport streams must be taken away from nghttp3.**  They start with
+     frame type `0x41` followed by the session number, and nghttp3
+     would read that number as a LENGTH.
+
+  3. ⛔ **And the bytes going back have no road.**  nghttp3 does not
+     know those streams, so it will never put them among the vectors to
+     write: the output queue is ours.
+
+⚠ None of the three is a defect of ngtcp2 or of nghttp3: they do HTTP/3, and
+  WebTransport is not HTTP/3.  It is exactly the price §6.4 wanted
+  to know before choosing.
+
+---------------------------------------------------------------------------
+⛔ HOW THIS SCRIPT AVOIDS LYING
+
+Every graft has a **foothold**, that is a piece of their code that must
+appear **once only**.  If it appears zero times or twice, the script stops
+and says how many it found: it is the fourth rule of `LEZIONI.md` §1.9 — a
+denominator, not only a result.  ⚠ A graft that "does not find the foothold"
+and carries on would produce a server that compiles, does not do WebTransport, and does not
+say so.
 """
 import os
 import subprocess
@@ -75,9 +75,9 @@ MARCA = "REMOTIX B2"
 MARCA_B3 = "REMOTIX B3"
 MARCA_B11 = "REMOTIX B11 GUASTO"
 
-# ⛔ I file che questo innesto tocca.  Servono a `--togli` per VERIFICARE di
-#    aver tolto: lo stato d'uscita di `git` dice che git non ha protestato, non
-#    che la marca sia sparita.
+# ⛔ The files this graft touches.  `--togli` needs them to VERIFY that it
+#    removed: the exit status of `git` says git did not complain, not
+#    that the mark is gone.
 FILE_TOCCATI = [
     "http3_server_proto_codec.h",
     "http3_server_proto_codec.cc",
@@ -86,29 +86,29 @@ FILE_TOCCATI = [
     "tls_server_session_boringssl.cc",
 ]
 
-# ⛔ I file che B3 copia dentro `examples/`.  Git non tocca i file non
-#    tracciati, quindi dopo `--togli` restano li' e nessuno lo dice.
+# ⛔ The files B3 copies into `examples/`.  Git does not touch untracked
+#    files, so after `--togli` they stay there and nobody says so.
 FILE_DI_B3 = ["rcp.c", "rcp.h", "autenticazione.c"]
 
 # ---------------------------------------------------------------------------
-# I pezzi di codice, in fondo al file per non spezzare la lettura.
-# Ogni voce e': (file, appiglio, sostituto, nome leggibile)
+# The pieces of code, at the bottom of the file so as not to break the reading.
+# Every entry is: (file, foothold, replacement, readable name)
 # ---------------------------------------------------------------------------
 
 
 def innesti():
     return [
-        # ── 1. Le intestazioni che servono ai tipi nuovi ────────────────────
+        # ── 1. The headers the new types need ───────────────────────────────
         (
             "http3_server_proto_codec.h",
             "#include <vector>\n#include <expected>\n#include <optional>\n",
             "#include <vector>\n#include <expected>\n#include <optional>\n"
-            "// ⭐ REMOTIX B2 — per la coda d'uscita e la classificazione degli stream\n"
+            "// ⭐ REMOTIX B2 — for the output queue and the classification of streams\n"
             "#include <array>\n#include <deque>\n#include <span>\n"
             "#include <string>\n#include <unordered_map>\n",
-            "intestazioni del codec",
+            "codec headers",
         ),
-        # ── 2. Lo stato dello strato WebTransport ───────────────────────────
+        # ── 2. The state of the WebTransport layer ──────────────────────────
         (
             "http3_server_proto_codec.h",
             "  Handler *handler_;\n"
@@ -116,15 +116,15 @@ def innesti():
             "  ngtcp2_ccerr &last_error_;\n"
             "  nghttp3_conn *httpconn_{};\n"
             "};\n",
-            """  // ═══ ⭐ REMOTIX B2 — lo strato WebTransport ══════════════════════════
+            """  // ═══ ⭐ REMOTIX B2 — the WebTransport layer ═════════════════════════
   //
-  // ⛔ Sta qui e non nella libreria perche' nghttp3 non ha un posto dove
-  //    metterlo: fa HTTP/3, e WebTransport non e' HTTP/3.  Le righe da qui
-  //    in giu' sono il collante di `DECISIONI.md` §6.4, e si contano.
+  // ⛔ It is here and not in the library because nghttp3 has no place to
+  //    put it: it does HTTP/3, and WebTransport is not HTTP/3.  The lines from here
+  //    down are the glue of `DECISIONI.md` §6.4, and they are counted.
   enum class WtEsito {
-    MIO,     // e' roba WebTransport: l'ho gestita io
-    ATTENDI, // non ho ancora abbastanza byte per decidere
-    HTTP3,   // non e' WebTransport: passala a nghttp3
+    MIO,     // it is WebTransport stuff: I handled it
+    ATTENDI, // I do not have enough bytes yet to decide
+    HTTP3,   // it is not WebTransport: pass it to nghttp3
   };
 
   struct WtUscita {
@@ -135,92 +135,92 @@ def innesti():
 
   std::expected<void, Error> wt_apri_sessione(Stream *stream);
   size_t wt_riscrivi_impostazioni(const nghttp3_vec *vec, size_t veccnt);
-  // ⛔ `fin` non e' un di piu': RCP.md §4.2 dice che «un FIN su quello stream,
-  //    da una qualunque delle due parti, chiude la sessione», e senza questo
-  //    parametro l'informazione non entra qui in nessun modo — per gli stream
-  //    che riconosciamo noi nemmeno nghttp3 la vede, perche' torniamo prima.
+  // ⛔ `fin` is not an extra: RCP.md §4.2 says that "a FIN on that stream,
+  //    from either side, closes the session", and without this
+  //    parameter the information does not get in here in any way — for the streams
+  //    we recognise not even nghttp3 sees it, because we return first.
   WtEsito wt_smista(int64_t stream_id, std::span<const uint8_t> data, bool fin,
                     std::vector<uint8_t> &riunito);
   void wt_accoda(int64_t stream_id, std::span<const uint8_t> dati);
 
  public:
-  // ⛔⭐ LA CAPSULA CON CUI IL CLIENT CHIUDE LA SESSIONE.
+  // ⛔⭐ THE CAPSULE WITH WHICH THE CLIENT CLOSES THE SESSION.
   //
-  //    Una sessione WebTransport non finisce solo quando muore la
-  //    connessione: il client la chiude mandando `CLOSE_WEBTRANSPORT_SESSION`
-  //    (capsula 0x2843) sullo stream della CONNECT, **con un codice e una
-  //    ragione dentro**.  ⚠ Fino al 10 agosto 2026 questo server non la
-  //    leggeva: quei byte finivano nel corpo HTTP e nessuno li guardava.
+  //    A WebTransport session does not end only when the connection
+  //    dies: the client closes it by sending `CLOSE_WEBTRANSPORT_SESSION`
+  //    (capsule 0x2843) on the CONNECT stream, **with a code and a
+  //    reason inside**.  ⚠ Until 10 Aug 2026 this server did not read
+  //    it: those bytes ended up in the HTTP body and nobody looked at them.
   //
-  // ⭐ E' pubblica perche' la chiama `http_recv_data`, che sta in uno spazio
-  //    anonimo fuori dalla classe.
+  // ⭐ It is public because `http_recv_data` calls it, and that sits in an
+  //    anonymous namespace outside the class.
   void wt_capsula(int64_t stream_id, std::span<const uint8_t> dati);
 
  private:
-  // ⚠ Che cosa SIGNIFICHI la chiusura del client non lo decide questo strato:
-  //   qui il corpo e' vuoto, e B3 ci innesta la riga di RCP.
+  // ⚠ What the client's closing MEANS is not decided by this layer:
+  //   here the body is empty, and B3 grafts the RCP line into it.
   //
-  // ⛔ E IL CODICE ARRIVA SU 32 BIT, NON SU 8.  La capsula ne porta quattro di
-  //    byte, e troncarlo al byte basso faceva entrare a verbale `0x0100` come
-  //    `0x00` — cioe' come il **solo** valore che RCP.md §3.1 vieta
-  //    esplicitamente («chiusura senza motivo … NON DEVE essere usato»).  Chi
-  //    lo riceve controlla che sia uno dei motivi di §8.2, e se non lo e' lo
-  //    dice: §3 chiede di scrivere che cosa non si e' capito, non di supplire.
+  // ⛔ AND THE CODE ARRIVES ON 32 BITS, NOT ON 8.  The capsule carries four
+  //    bytes of it, and truncating it to the low byte entered `0x0100` in the record as
+  //    `0x00` — that is as the **only** value RCP.md §3.1 explicitly
+  //    forbids ("closing without a reason … MUST NOT be used").  Whoever
+  //    receives it checks that it is one of the reasons of §8.2, and if it is not
+  //    says so: §3 asks to write what was not understood, not to fill in.
   void wt_chiusa_dal_client(uint32_t codice);
 
-  // ⛔ IL FIN DEL CLIENT SUL CANALE DI CONTROLLO.  RCP.md §4.2: «un FIN su
-  //    quello stream, da una qualunque delle due parti, chiude la sessione.
-  //    Chi lo riceve DEVE considerarla finita».  ⚠ Era l'unica delle due
-  //    direzioni che nessuno aveva percorso: la pagina che chiude la parte
-  //    scrivente del canale e tiene viva la connessione lasciava il posto del
-  //    registro occupato finche' non moriva la connessione — e una connessione
-  //    un browser la tiene viva.
+  // ⛔ THE CLIENT'S FIN ON THE CONTROL CHANNEL.  RCP.md §4.2: "a FIN on
+  //    that stream, from either side, closes the session.
+  //    Whoever receives it MUST consider it ended".  ⚠ It was the only one of the two
+  //    directions nobody had walked: the page that closes the writing side
+  //    of the channel and keeps the connection alive left the slot in the
+  //    register occupied until the connection died — and a connection
+  //    a browser keeps alive.
   //
-  // ⚠ Vuota qui per la stessa ragione di sopra: che cosa sia «finita» lo sa
-  //   RCP, non il trasporto.  B3 ci innesta la riga.
+  // ⚠ Empty here for the same reason as above: what "ended" is, RCP
+  //   knows, not the transport.  B3 grafts the line into it.
   void wt_fin_dal_client(int64_t stream_id);
 
   Handler *handler_;
   ngtcp2_conn *conn_;
   ngtcp2_ccerr &last_error_;
   nghttp3_conn *httpconn_{};
-  // lo stream di controllo HTTP/3: serve a riconoscerlo in scrittura, che e'
-  // l'unico istante in cui si possa dire al browser che parliamo WebTransport
+  // the HTTP/3 control stream: needed to recognise it when writing, which is
+  // the only instant in which the browser can be told we speak WebTransport
   int64_t wt_ctrl_id_{-1};
   bool wt_impostazioni_scritte_{false};
   bool wt_guasto_{false};
   std::array<uint8_t, 256> wt_impbuf_;
   size_t wt_impbuf_len_{0};
-  // ⛔ Quanti byte del SETTINGS riscritto sono GIA' USCITI, e quanti byte di
-  //    nghttp3 quel buffer sostituisce.  Servono perche' una scrittura
-  //    **parziale** e' un esito normale di `ngtcp2_conn_writev_stream` — non
-  //    un guasto — e prima uccideva la connessione: adesso si riprende dal
-  //    punto in cui si era arrivati, come si fa da sempre per `wt_uscita_`.
+  // ⛔ How many bytes of the rewritten SETTINGS have ALREADY LEFT, and how many bytes of
+  //    nghttp3 that buffer replaces.  They are needed because a **partial**
+  //    write is a normal outcome of `ngtcp2_conn_writev_stream` — not
+  //    a fault — and it used to kill the connection: now we resume from the
+  //    point we had reached, as has always been done for `wt_uscita_`.
   size_t wt_impbuf_off_{0};
   size_t wt_impbuf_orig_{0};
-  // gli stream bidirezionali del client: quelli di cui non si sa ancora che
-  // cosa siano, quelli che sono WebTransport, quelli che non lo sono
+  // the client's bidirectional streams: those of which we do not know yet what
+  // they are, those that are WebTransport, those that are not
   std::unordered_map<int64_t, std::vector<uint8_t>> wt_incerti_;
   std::unordered_map<int64_t, int64_t> wt_streams_;
   std::unordered_map<int64_t, bool> wt_nonwt_;
   std::deque<WtUscita> wt_uscita_;
   int64_t wt_sessione_{-1};
-  // ⛔ La coda nostra e' bloccata per QUESTA passata di scrittura: ngtcp2 ha
-  //    detto STREAM_DATA_BLOCKED, e riprovare dentro la stessa passata
-  //    sarebbe un ciclo che non avanza.  Si azzera in cima a `write_pkt`.
+  // ⛔ Our queue is blocked for THIS write pass: ngtcp2 has
+  //    said STREAM_DATA_BLOCKED, and retrying inside the same pass
+  //    would be a loop that does not advance.  It is reset at the top of `write_pkt`.
   bool wt_coda_bloccata_{false};
-  // i byte della CONNECT che non compongono ancora una capsula intera
+  // the bytes of the CONNECT that do not make up a whole capsule yet
   std::vector<uint8_t> wt_capsbuf_;
-  // ⛔ Quanti byte di una capsula gia' giudicata TROPPO GRANDE restano da
-  //    buttare mentre passano.  RCP.md §6.1: «la lunghezza si controlla prima
-  //    di allocare» — e aspettare i byte invece di allocarli e' lo stesso
-  //    regalo, fatto piu' lentamente.
+  // ⛔ How many bytes of a capsule already judged TOO BIG are still to be
+  //    thrown away as they pass.  RCP.md §6.1: "the length is checked before
+  //    allocating" — and waiting for the bytes instead of allocating them is the same
+  //    gift, given more slowly.
   uint64_t wt_capsalta_{0};
 };
 """,
-            "lo stato dello strato WebTransport",
+            "the state of the WebTransport layer",
         ),
-        # ── 3. Le due impostazioni che nghttp3 sa fare da se' ───────────────
+        # ── 3. The two settings nghttp3 can do by itself ────────────────────
         (
             "http3_server_proto_codec.cc",
             "  settings.qpack_max_dtable_capacity = 4096;\n"
@@ -228,79 +228,78 @@ def innesti():
             "  settings.qpack_max_dtable_capacity = 4096;\n"
             "  settings.qpack_blocked_streams = 100;\n"
             "\n"
-            "  // ⭐ REMOTIX B2 — le due che nghttp3 sa fare da se', e sono negli RFC.\n"
-            "  settings.enable_connect_protocol = 1; // RFC 9220, l'extended CONNECT\n"
+            "  // ⭐ REMOTIX B2 — the two nghttp3 can do by itself, and they are in the RFCs.\n"
+            "  settings.enable_connect_protocol = 1; // RFC 9220, the extended CONNECT\n"
             "  settings.h3_datagram = 1;             // RFC 9297 (RCP.md §2.2)\n",
-            "le impostazioni che nghttp3 conosce",
+            "the settings nghttp3 knows",
         ),
-        # ── 4. Il numero dello stream di controllo ──────────────────────────
+        # ── 4. The number of the control stream ─────────────────────────────
         (
             "http3_server_proto_codec.cc",
             "  if (auto rv = nghttp3_conn_bind_control_stream(httpconn_, ctrl_stream_id);\n",
-            "  // ⭐ REMOTIX B2 — si tiene il numero: quando nghttp3 scrivera' il suo\n"
-            "  //    SETTINGS su questo stream sara' l'unica occasione di aggiungerci\n"
-            "  //    le due dichiarazioni di WebTransport.\n"
+            "  // ⭐ REMOTIX B2 — the number is kept: when nghttp3 writes its\n"
+            "  //    SETTINGS on this stream it will be the only chance to add\n"
+            "  //    the two WebTransport declarations to it.\n"
             "  wt_ctrl_id_ = ctrl_stream_id;\n"
             "\n"
             "  if (auto rv = nghttp3_conn_bind_control_stream(httpconn_, ctrl_stream_id);\n",
-            "il numero dello stream di controllo",
+            "the number of the control stream",
         ),
-        # ── 5. La guardia in cima al ciclo di scrittura ─────────────────────
+        # ── 5. The guard at the top of the write loop ───────────────────────
         (
             "http3_server_proto_codec.cc",
             "  std::array<nghttp3_vec, 16> vec;\n\n  for (;;) {\n",
             "  std::array<nghttp3_vec, 16> vec;\n"
             "\n"
-            "  // ⭐ REMOTIX B2 — una passata di scrittura comincia qui, e la coda\n"
-            "  //    nostra riparte SBLOCCATA: `wt_coda_bloccata_` vale per una\n"
-            "  //    passata sola.  ⚠ Sta fuori dal ciclo apposta — azzerarlo\n"
-            "  //    dentro rimetterebbe in gioco lo stesso elemento a ogni giro,\n"
-            "  //    che e' precisamente il ciclo che non avanza.\n"
+            "  // ⭐ REMOTIX B2 — a write pass starts here, and our queue\n"
+            "  //    restarts UNBLOCKED: `wt_coda_bloccata_` holds for one\n"
+            "  //    pass only.  ⚠ It is outside the loop on purpose — resetting it\n"
+            "  //    inside would put the same element back in play at every round,\n"
+            "  //    which is precisely the loop that does not advance.\n"
             "  wt_coda_bloccata_ = false;\n"
             "\n"
             "  for (;;) {\n"
-            "    // ⭐ REMOTIX B2 — se la riscrittura delle impostazioni ha perso il\n"
-            "    //    conto, ci si ferma: uno stream di controllo sfasato e' peggio\n"
-            "    //    di una connessione chiusa.\n"
-            "    // ⚠ NON e' il caso della scrittura PARZIALE, che e' un esito\n"
-            "    //   normale e si riprende alla passata dopo: vedi `wt_conta`.\n"
+            "    // ⭐ REMOTIX B2 — if the rewriting of the settings has lost\n"
+            "    //    count, we stop: an out-of-step control stream is worse\n"
+            "    //    than a closed connection.\n"
+            "    // ⚠ It is NOT the case of the PARTIAL write, which is a normal\n"
+            "    //   outcome and is resumed at the next pass: see `wt_conta`.\n"
             "    if (wt_guasto_) {\n"
             "      return NGTCP2_ERR_CALLBACK_FAILURE;\n"
             "    }\n"
             "\n",
-            "la guardia del ciclo di scrittura",
+            "the guard of the write loop",
         ),
-        # ── 6. La scelta di che cosa scrivere ───────────────────────────────
+        # ── 6. The choice of what to write ──────────────────────────────────
         (
             "http3_server_proto_codec.cc",
             "    ngtcp2_ssize ndatalen;\n"
             "    auto v = vec.data();\n"
             "    auto vcnt = static_cast<size_t>(sveccnt);\n",
             """    // ═══ ⭐ REMOTIX B2 ═══════════════════════════════════════════════════
-    // Due cose che nghttp3 non sa fare, e vanno fatte proprio qui:
-    //   1. aggiungere le impostazioni WebTransport al SETTINGS che sta
-    //      scrivendo lui — non c'e' un altro momento;
-    //   2. mandare byte su uno stream che lui NON CONOSCE, che altrimenti
-    //      non uscirebbe mai dalla macchina.
+    // Two things nghttp3 cannot do, and they must be done right here:
+    //   1. adding the WebTransport settings to the SETTINGS that it is
+    //      writing itself — there is no other moment;
+    //   2. sending bytes on a stream it DOES NOT KNOW, which otherwise
+    //      would never leave the machine.
     std::array<nghttp3_vec, 1> wt_vec;
     size_t wt_orig = 0;
     bool wt_mio = false;
 
     if (sveccnt > 0 && stream_id == wt_ctrl_id_ && !wt_impostazioni_scritte_) {
-      // ⛔ La riscrittura si fa UNA VOLTA SOLA.  Se la passata di prima ne ha
-      //    spedito solo un pezzo (`wt_impbuf_off_ > 0`), nghttp3 ci rioffre
-      //    gli stessi byte — non gli abbiamo ancora detto di averli consumati
-      //    — e ricomporre il buffer da capo rispedirebbe il pezzo gia' uscito.
+      // ⛔ The rewriting is done ONCE ONLY.  If the previous pass sent
+      //    only a piece of it (`wt_impbuf_off_ > 0`), nghttp3 offers us again
+      //    the same bytes — we have not told it yet that we consumed them
+      //    — and rebuilding the buffer from scratch would resend the piece already gone.
       if (wt_impbuf_off_ == 0) {
         wt_impbuf_orig_ =
           wt_riscrivi_impostazioni(vec.data(), static_cast<size_t>(sveccnt));
       }
       wt_orig = wt_impbuf_orig_;
     }
-
-    // ⛔ E la coda nostra si SALTA per tutta questa passata se ngtcp2 ha gia'
-    //    detto «bloccato» su di lei: vedi il ramo STREAM_DATA_BLOCKED piu'
-    //    sotto.  Riprovare adesso non farebbe avanzare il ciclo.
+    // ⛔ And our queue is SKIPPED for this whole pass if ngtcp2 has already
+    //    said "blocked" on it: see the STREAM_DATA_BLOCKED branch further
+    //    down.  Retrying now would not make the loop advance.
     if (sveccnt <= 0 && !wt_coda_bloccata_ && !wt_uscita_.empty()) {
       auto &u = wt_uscita_.front();
       stream_id = u.stream_id;
@@ -324,46 +323,46 @@ def innesti():
       vcnt = 1;
     }
 
-    // Quanti byte DI NGHTTP3 sono stati consumati.  Se il suo buffer e' stato
-    // sostituito, il numero che ngtcp2 restituisce e' il NOSTRO, e dirglielo
-    // sfaserebbe i suoi conti.
+    // How many bytes OF NGHTTP3 were consumed.  If its buffer was
+    // replaced, the number ngtcp2 returns is OURS, and telling it
+    // would put its accounts out of step.
     auto wt_conta = [&](ngtcp2_ssize n) -> uint64_t {
       auto c = as_unsigned(n);
       if (!wt_orig) {
         return c;
       }
-      // ⛔⭐ E UNA SCRITTURA PARZIALE NON E' UN GUASTO.
+      // ⛔⭐ AND A PARTIAL WRITE IS NOT A FAULT.
       //
-      //    `ndatalen` minore della lunghezza offerta e' un esito NORMALE di
-      //    `ngtcp2_conn_writev_stream`: nello stream frame ci va quel che
-      //    avanza nel pacchetto.  I ~24 byte del SETTINGS riscritto viaggiano
-      //    nel primo volo dopo la stretta di mano, quello che porta anche
-      //    HANDSHAKE_DONE, i NEW_CONNECTION_ID e l'eventuale NEW_TOKEN: con un
-      //    client che annuncia `max_udp_payload_size` vicino a 1200 e una
-      //    connection id di 20 byte, li' dentro 24 byte non ci stanno.
+      //    `ndatalen` smaller than the offered length is a NORMAL outcome of
+      //    `ngtcp2_conn_writev_stream`: into the stream frame goes whatever
+      //    is left in the packet.  The ~24 bytes of the rewritten SETTINGS travel
+      //    in the first flight after the handshake, the one that also carries
+      //    HANDSHAKE_DONE, the NEW_CONNECTION_IDs and any NEW_TOKEN: with a
+      //    client that announces `max_udp_payload_size` close to 1200 and a
+      //    20-byte connection id, 24 bytes do not fit in there.
       //
-      // ⛔ Prima qui MORIVA LA CONNESSIONE, mentre dieci righe piu' sotto la
-      //    coda nostra la stessa scrittura parziale la gestiva con `u.off`.
-      //    Due politiche opposte per lo stesso esito, nello stesso modulo.
+      // ⛔ Before, here THE CONNECTION DIED, while ten lines further down
+      //    our queue handled the same partial write with `u.off`.
+      //    Two opposite policies for the same outcome, in the same module.
       if (c > wt_impbuf_len_ - wt_impbuf_off_) {
-        // ⛔ Questo si': ngtcp2 dichiara di aver preso PIU' di quel che gli e'
-        //    stato offerto.  Non e' recuperabile e non e' distinguibile da un
-        //    conto sbagliato nostro: lo stream di controllo sarebbe sfasato.
+        // ⛔ This yes: ngtcp2 declares it took MORE than what it was
+        //    offered.  It is not recoverable and cannot be told apart from a
+        //    wrong count of ours: the control stream would be out of step.
         std::println(stderr,
-                     "REMOTIX B2: impostazioni, conto impossibile ({} presi su "
-                     "{} offerti)",
+                     "REMOTIX B2: settings, impossible count ({} taken of "
+                     "{} offered)",
                      c, wt_impbuf_len_ - wt_impbuf_off_);
         wt_guasto_ = true;
         return 0;
       }
       wt_impbuf_off_ += static_cast<size_t>(c);
       if (wt_impbuf_off_ < wt_impbuf_len_) {
-        // Si riprende dalla passata dopo, e a nghttp3 non si dice ancora
-        // niente: i suoi byte li avra' consumati soltanto quando il buffer
-        // riscritto sara' uscito tutto.
+        // We resume at the next pass, and nghttp3 is not told anything
+        // yet: it will have consumed its bytes only when the rewritten
+        // buffer has gone out entirely.
         std::println(stderr,
-                     "REMOTIX B2: impostazioni, {} byte su {} — il resto alla "
-                     "passata dopo",
+                     "REMOTIX B2: settings, {} bytes of {} — the rest at the "
+                     "next pass",
                      wt_impbuf_off_, wt_impbuf_len_);
         return 0;
       }
@@ -383,9 +382,9 @@ def innesti():
       return nghttp3_conn_add_write_offset(httpconn_, stream_id, wt_conta(n));
     };
 """,
-            "la scelta di che cosa scrivere",
+            "the choice of what to write",
         ),
-        # ── 7. I due rami del blocco, che non valgono per i nostri stream ───
+        # ── 7. The two blocking branches, which do not apply to our streams ─
         (
             "http3_server_proto_codec.cc",
             "      case NGTCP2_ERR_STREAM_DATA_BLOCKED:\n"
@@ -398,33 +397,33 @@ def innesti():
             "        continue;\n",
             "      case NGTCP2_ERR_STREAM_DATA_BLOCKED:\n"
             "        assert(ndatalen == -1);\n"
-            "        // ⭐ REMOTIX B2 — nghttp3 non conosce gli stream WebTransport:\n"
-            "        //    dirgli di bloccarne uno sarebbe un errore su uno stream che\n"
-            "        //    per lui non esiste.\n"
+            "        // ⭐ REMOTIX B2 — nghttp3 does not know the WebTransport streams:\n"
+            "        //    telling it to block one would be an error on a stream that\n"
+            "        //    for it does not exist.\n"
             "        //\n"
-            "        // ⛔⭐ E I BYTE NON SI BUTTANO: QUESTO E' UN CANALE AFFIDABILE.\n"
+            "        // ⛔⭐ AND THE BYTES ARE NOT THROWN AWAY: THIS IS A RELIABLE CHANNEL.\n"
             "        //\n"
-            "        //    Qui c'era `pop_front()`, che scartava l'elemento INTERO —\n"
-            "        //    compreso il caso `u.off > 0`, cioe' quando una parte era\n"
-            "        //    gia' uscita sul filo.  Il messaggio dopo si saldava a quei\n"
-            "        //    byte monchi, e il client leggeva un `tipo`/`lunghezza`\n"
-            "        //    inventato: RCP.md §6.1 gli impone di chiudere con\n"
-            "        //    ERRORE_PROTOCOLLO.  ⛔ Era il SERVER a fabbricare la\n"
-            "        //    violazione del client, e nel registro c'era scritto «byte\n"
-            "        //    buttati» — che descriveva la perdita senza dire che aveva\n"
-            "        //    corrotto lo stream, e senza avvisare RCP di niente.\n"
+            "        //    Here there was `pop_front()`, which discarded the WHOLE element —\n"
+            "        //    including the case `u.off > 0`, that is when a part had\n"
+            "        //    already gone out on the wire.  The next message welded itself to those\n"
+            "        //    truncated bytes, and the client read an invented\n"
+            "        //    `tipo`/`lunghezza`: RCP.md §6.1 requires it to close with\n"
+            "        //    ERRORE_PROTOCOLLO.  ⛔ It was the SERVER fabricating the\n"
+            "        //    client's violation, and the log said \"bytes\n"
+            "        //    thrown away\" — which described the loss without saying it had\n"
+            "        //    corrupted the stream, and without warning RCP of anything.\n"
             "        //\n"
-            "        // ⚠ E STREAM_DATA_BLOCKED non e' un guasto: e' la condizione\n"
-            "        //   normale e transitoria che si scioglie col primo\n"
-            "        //   MAX_STREAM_DATA.  Si salta la coda nostra per questa\n"
-            "        //   passata e si riprova alla prossima — che arriva col\n"
-            "        //   pacchetto che porta il credito.\n"
+            "        // ⚠ And STREAM_DATA_BLOCKED is not a fault: it is the normal\n"
+            "        //   and transient condition that dissolves with the first\n"
+            "        //   MAX_STREAM_DATA.  Our queue is skipped for this\n"
+            "        //   pass and retried at the next — which comes with the\n"
+            "        //   packet that carries the credit.\n"
             "        if (wt_mio) {\n"
             "          auto &u = wt_uscita_.front();\n"
             "          std::println(stderr,\n"
-            "                       \"REMOTIX B2: stream {} bloccato: {} byte RESTANO \"\n"
-            "                       \"in coda ({} gia' usciti), si riprova alla \"\n"
-            "                       \"passata dopo\",\n"
+            "                       \"REMOTIX B2: stream {} blocked: {} bytes STAY \"\n"
+            "                       \"queued ({} already gone), retrying at the \"\n"
+            "                       \"next pass\",\n"
             "                       stream_id, u.dati.size() - u.off, u.off);\n"
             "          wt_coda_bloccata_ = true;\n"
             "          continue;\n"
@@ -439,9 +438,9 @@ def innesti():
             "        }\n"
             "        nghttp3_conn_shutdown_stream_write(httpconn_, stream_id);\n"
             "        continue;\n",
-            "i due rami del blocco",
+            "the two blocking branches",
         ),
-        # ── 8. I due punti che avanzano l'offset ────────────────────────────
+        # ── 8. The two points that advance the offset ───────────────────────
         (
             "http3_server_proto_codec.cc",
             "      case NGTCP2_ERR_WRITE_MORE:\n"
@@ -451,9 +450,9 @@ def innesti():
             "            rv != 0) {\n",
             "      case NGTCP2_ERR_WRITE_MORE:\n"
             "        assert(ndatalen >= 0);\n"
-            "        // ⭐ REMOTIX B2 — passa da wt_avanza: vedi sopra\n"
+            "        // ⭐ REMOTIX B2 — goes through wt_avanza: see above\n"
             "        if (auto rv = wt_avanza(ndatalen); rv != 0) {\n",
-            "l'avanzamento nel ramo WRITE_MORE",
+            "the advance in the WRITE_MORE branch",
         ),
         (
             "http3_server_proto_codec.cc",
@@ -462,24 +461,24 @@ def innesti():
             "                                                  as_unsigned(ndatalen));\n"
             "          rv != 0) {\n",
             "    if (ndatalen >= 0) {\n"
-            "      // ⭐ REMOTIX B2 — idem\n"
+            "      // ⭐ REMOTIX B2 — ditto\n"
             "      if (auto rv = wt_avanza(ndatalen); rv != 0) {\n",
-            "l'avanzamento finale",
+            "the final advance",
         ),
-        # ── 9. Lo smistamento in lettura ────────────────────────────────────
+        # ── 9. The sorting on read ──────────────────────────────────────────
         (
             "http3_server_proto_codec.cc",
             "  if (!httpconn_) {\n    return {};\n  }\n\n"
             "  auto nconsumed = nghttp3_conn_read_stream2(\n",
             "  if (!httpconn_) {\n    return {};\n  }\n\n"
-            "  // ⭐ REMOTIX B2 — gli stream WebTransport non sono affari di nghttp3:\n"
-            "  //    leggerebbe 0x41 come un tipo di frame sconosciuto e poi il numero\n"
-            "  //    della sessione come una LUNGHEZZA, sballando tutto il resto.\n"
-            "  //    ⛔ E il FIN viaggia con loro: RCP.md §4.2 lo rende la fine\n"
-            "  //       della sessione, e per uno stream che gestiamo noi qui e'\n"
-            "  //       l'ULTIMO posto in cui si puo' vedere — sotto si torna\n"
-            "  //       prima di `nghttp3_conn_read_stream2`, quindi nemmeno\n"
-            "  //       nghttp3 lo incontra.\n"
+            "  // ⭐ REMOTIX B2 — the WebTransport streams are none of nghttp3's business:\n"
+            "  //    it would read 0x41 as an unknown frame type and then the number\n"
+            "  //    of the session as a LENGTH, throwing off all the rest.\n"
+            "  //    ⛔ And the FIN travels with them: RCP.md §4.2 makes it the end\n"
+            "  //       of the session, and for a stream we handle ourselves this is\n"
+            "  //       the LAST place where it can be seen — below we return\n"
+            "  //       before `nghttp3_conn_read_stream2`, so not even\n"
+            "  //       nghttp3 meets it.\n"
             "  std::vector<uint8_t> wt_riunito;\n"
             "  switch (wt_smista(stream_id, data,\n"
             "                    (flags & NGTCP2_STREAM_DATA_FLAG_FIN) != 0,\n"
@@ -495,31 +494,31 @@ def innesti():
             "  }\n"
             "\n"
             "  auto nconsumed = nghttp3_conn_read_stream2(\n",
-            "lo smistamento in lettura",
+            "the sorting on read",
         ),
-        # ── 9-bis. ⛔⭐ LA CAPSULA CON CUI IL CLIENT CHIUDE LA SESSIONE ───────
-        #    Il corpo della CONNECT non e' un corpo: e' un flusso di capsule
-        #    (RFC 9297), e dentro ci viaggia `CLOSE_WEBTRANSPORT_SESSION` con
-        #    il codice e la ragione.  ⚠ Qui finiva nel registro di debug e
-        #    nient'altro — cioe' il server non sapeva **perche'** il client se
-        #    ne fosse andato, e `RCP.md` §3.1 punto 3 fa viaggiare il motivo
-        #    proprio di li'.
+        # ── 9-bis. ⛔⭐ THE CAPSULE WITH WHICH THE CLIENT CLOSES THE SESSION ──
+        #    The body of the CONNECT is not a body: it is a flow of capsules
+        #    (RFC 9297), and inside it travels `CLOSE_WEBTRANSPORT_SESSION` with
+        #    the code and the reason.  ⚠ Here it ended up in the debug log and
+        #    nothing else — that is, the server did not know **why** the client
+        #    had gone away, and `RCP.md` §3.1 point 3 makes the reason travel
+        #    precisely from there.
         #
-        # ⭐ Trovato dal banco B11 il 10 agosto 2026: Firefox **azzera** lo
-        #    stream di controllo buttando il `CONGEDO` gia' in coda, e il
-        #    motivo arriva solo dentro la capsula.  Senza leggerla, di quel
-        #    motore si sarebbe detto «non si congeda» — che e' falso.
+        # ⭐ Found by bench B11 on 10 Aug 2026: Firefox **resets** the
+        #    control stream throwing away the `CONGEDO` already queued, and the
+        #    reason arrives only inside the capsule.  Without reading it, of that
+        #    engine one would have said "it does not say farewell" — which is false.
         (
             "http3_server_proto_codec.cc",
             "  auto pc = static_cast<ProtoCodec *>(user_data);\n"
             "  pc->http_consume(stream_id, datalen);\n",
             "  auto pc = static_cast<ProtoCodec *>(user_data);\n"
-            "  // ⭐ REMOTIX B2 — il corpo della CONNECT e' un flusso di capsule.\n"
+            "  // ⭐ REMOTIX B2 — the body of the CONNECT is a flow of capsules.\n"
             "  pc->wt_capsula(stream_id, {data, datalen});\n"
             "  pc->http_consume(stream_id, datalen);\n",
-            "la capsula di chiusura in lettura",
+            "the closing capsule on read",
         ),
-        # ── 10. L'intestazione :protocol ────────────────────────────────────
+        # ── 10. The :protocol header ────────────────────────────────────────
         (
             "http3_server_proto_codec.cc",
             "  case NGHTTP3_QPACK_TOKEN__AUTHORITY:\n"
@@ -529,79 +528,79 @@ def innesti():
             "  case NGHTTP3_QPACK_TOKEN__AUTHORITY:\n"
             "    stream->authority = std::string{v.base, v.base + v.len};\n"
             "    break;\n"
-            "  // ⭐ REMOTIX B2 — l'intestazione che distingue una CONNECT estesa da\n"
-            "  //    una CONNECT normale (RFC 9220).\n"
+            "  // ⭐ REMOTIX B2 — the header that tells an extended CONNECT from\n"
+            "  //    a normal CONNECT (RFC 9220).\n"
             "  case NGHTTP3_QPACK_TOKEN__PROTOCOL:\n"
             "    stream->protocol = std::string{v.base, v.base + v.len};\n"
             "    break;\n"
             "  }\n",
-            "l'intestazione :protocol",
+            "the :protocol header",
         ),
-        # ── 11. La CONNECT estesa ───────────────────────────────────────────
+        # ── 11. The extended CONNECT ────────────────────────────────────────
         (
             "http3_server_proto_codec.cc",
             "ProtoCodec::http_end_request_headers(Stream *stream) {\n"
             "  if (config.early_response) {\n",
             "ProtoCodec::http_end_request_headers(Stream *stream) {\n"
-            "  // ⭐ REMOTIX B2 — e' qui che nasce la sessione WebTransport.\n"
+            "  // ⭐ REMOTIX B2 — this is where the WebTransport session is born.\n"
             "  if (stream->method == \"CONNECT\" && stream->protocol == \"webtransport\") {\n"
             "    return wt_apri_sessione(stream);\n"
             "  }\n"
             "\n"
             "  if (config.early_response) {\n",
-            "la CONNECT estesa",
+            "the extended CONNECT",
         ),
-        # ── 12. Il corpo dello strato ───────────────────────────────────────
+        # ── 12. The body of the layer ───────────────────────────────────────
         (
             "http3_server_proto_codec.cc",
             "std::expected<void, Error> ProtoCodec::setup_httpconn() {\n",
-            None,  # riempito sotto da CORPO
-            "il corpo dello strato WebTransport",
+            None,  # filled below from CORPO
+            "the body of the WebTransport layer",
         ),
-        # ── 13. Il campo :protocol nello Stream ─────────────────────────────
+        # ── 13. The :protocol field in the Stream ───────────────────────────
         (
             "server.h",
             "  std::string authority;\n  std::string status_resp_body;\n",
             "  std::string authority;\n"
-            "  // ⭐ REMOTIX B2 — il :protocol della CONNECT estesa, e il segno che\n"
-            "  //    questo stream E' la sessione (non si chiude come una richiesta)\n"
+            "  // ⭐ REMOTIX B2 — the :protocol of the extended CONNECT, and the sign that\n"
+            "  //    this stream IS the session (it does not close like a request)\n"
             "  std::string protocol;\n"
             "  bool wt_session{};\n"
             "  std::string status_resp_body;\n",
-            "il campo :protocol",
+            "the :protocol field",
         ),
-        # ── 14. I parametri di trasporto ────────────────────────────────────
+        # ── 14. The transport parameters ────────────────────────────────────
         (
             "server.cc",
             "  params.max_idle_timeout = config.timeout;\n",
             "  params.max_idle_timeout = config.timeout;\n"
-            "  // ⛔ REMOTIX B2 — RCP.md §2.3: il server DEVE concedere al client\n"
-            "  //    almeno **16** stream unidirezionali «in ogni momento».  Il\n"
-            "  //    loro esempio ne concede 3 — quanti ne vuole HTTP/3 per il\n"
-            "  //    controllo e QPACK — e con quel credito il client non\n"
-            "  //    aprirebbe nemmeno lo stream di input: il sintomo sarebbe\n"
-            "  //    «il desktop non risponde», non «credito esaurito».\n"
-            "  //    ⚠ Trovato il 10 agosto misurando le proprieta' che restavano,\n"
-            "  //      e NON dalla sessione che si apriva lo stesso: la sessione\n"
-            "  //      si apre benissimo con 3.\n"
-            "  // \u26d4\u2b50 DICIANNOVE, NON SEDICI — rilievo R12-A.42, 11 agosto\n"
-            "  //    2026, e l'ha trovato B12 certificando B2.\n"
-            "  //    `RCP.md` \u00a72.3: «almeno 16 DISPONIBILI in ogni momento,\n"
-            "  //    cioe' almeno 19 DICHIARATI al livello QUIC» — perche' HTTP/3\n"
-            "  //    se ne prende 3 per se' (controllo + le due tabelle di QPACK)\n"
-            "  //    prima che RCP ne veda uno.\n"
-            "  //    \u26d4 Con 16 dichiarati la sonda del trasporto misura 13\n"
-            "  //    disponibili, e B2 e' rosso SUL CODICE SANO. \u26a0 Il server di\n"
-            "  //    prodotto (`src/trasporto.c:584`) dichiarava gia' 19: il\n"
-            "  //    riquadro di \u00a72.3 era arrivato la' e non qui.\n"
+            "  // ⛔ REMOTIX B2 — RCP.md §2.3: the server MUST grant the client\n"
+            "  //    at least **16** unidirectional streams \"at any moment\".  Their\n"
+            "  //    example grants 3 — as many as HTTP/3 wants for the\n"
+            "  //    control and QPACK — and with that credit the client would not\n"
+            "  //    even open the input stream: the symptom would be\n"
+            "  //    \"the desktop does not respond\", not \"credit exhausted\".\n"
+            "  //    ⚠ Found on 10 Aug while measuring the properties that remained,\n"
+            "  //      and NOT from the session, which opened all the same: the session\n"
+            "  //      opens perfectly well with 3.\n"
+            "  // ⛔⭐ NINETEEN, NOT SIXTEEN — finding R12-A.42, 11 Aug\n"
+            "  //    2026, and B12 found it while certifying B2.\n"
+            "  //    `RCP.md` §2.3: \"at least 16 AVAILABLE at any moment,\n"
+            "  //    that is at least 19 DECLARED at the QUIC level\" — because HTTP/3\n"
+            "  //    takes 3 of them for itself (control + the two QPACK tables)\n"
+            "  //    before RCP sees one.\n"
+            "  //    ⛔ With 16 declared the transport probe measures 13\n"
+            "  //    available, and B2 is red ON THE HEALTHY CODE. ⚠ The product\n"
+            "  //    server (`src/trasporto.c:584`) already declared 19: the\n"
+            "  //    box of §2.3 had reached there and not here.\n"
             "  if (params.initial_max_streams_uni < 19) {\n"
             "    params.initial_max_streams_uni = 19;\n"
             "  }\n"
-            "  // ⭐ REMOTIX B2 — RCP.md §2.2: i datagram DEVONO essere abilitati\n"
-            "  //    sulla connessione HTTP/3 (e' l'audio).  ⛔ E senza QUESTO\n"
-            "  //    parametro di trasporto, annunciare SETTINGS_H3_DATAGRAM=1 e' un\n"
-            "  //    errore di protocollo: il cliente di prova lo rifiuta con\n"
-            "  //    «H3_DATAGRAM requires max_datagram_frame_size».\n"
+            "  // ⭐ REMOTIX B2 — RCP.md §2.2: datagrams MUST be enabled\n"
+            "  //    on the HTTP/3 connection (it is the audio).  ⛔ And without THIS\n"
+            "  //    transport parameter, announcing SETTINGS_H3_DATAGRAM=1 is a\n"
+            "  //    protocol error: the test client refuses it with\n"
+            "  //    \"H3_DATAGRAM requires max_datagram_frame_size\".\n"
             "  params.max_datagram_frame_size = 65536;\n"
             "  std::println(stderr,\n"
             "               \"REMOTIX B2: max_idle_timeout={}ms max_datagram_frame_size={} \"\n"
@@ -610,35 +609,35 @@ def innesti():
             "               params.max_datagram_frame_size,\n"
             "               params.initial_max_streams_bidi,\n"
             "               params.initial_max_streams_uni);\n",
-            "i parametri di trasporto",
+            "the transport parameters",
         ),
-        # ── 15. ⛔ Il 0-RTT, che il loro esempio accende ─────────────────────
+        # ── 15. ⛔ 0-RTT, which their example turns on ───────────────────────
         (
             "tls_server_session_boringssl.cc",
             "  SSL_set_early_data_enabled(ssl_, 1);\n",
-            "  // ⛔ REMOTIX B2 — RCP.md §2.3: il server NON DEVE offrire 0-RTT.\n"
+            "  // ⛔ REMOTIX B2 — RCP.md §2.3: the server MUST NOT offer 0-RTT.\n"
             "  //\n"
-            "  //    I dati 0-RTT si possono RIPETERE, e il secondo messaggio di\n"
-            "  //    RCP e' `CREDENZIALI`.  Il guadagno sarebbe un giro di rete su\n"
-            "  //    una sessione che dura ore.\n"
+            "  //    0-RTT data can be REPLAYED, and the second message of\n"
+            "  //    RCP is `CREDENZIALI`.  The gain would be one network round trip on\n"
+            "  //    a session that lasts hours.\n"
             "  //\n"
-            "  // ⚠ Il loro esempio lo accende, ed e' la norma: `FASI.md` §01-filo-nudo\n"
-            "  //   lo aveva PREVISTO — «le librerie QUIC lo offrono per impostazione\n"
-            "  //   predefinita» — e aveva anche scritto perche' nessun banco\n"
-            "  //   funzionale se ne accorgerebbe: **il sintomo non esiste**.  La\n"
-            "  //   sessione si apre uguale, i byte tornano uguali.  Si vede solo\n"
-            "  //   guardando i biglietti di sessione sul filo, ed e' cosi' che e'\n"
-            "  //   saltato fuori il 10 agosto 2026 `[M]`.\n"
+            "  // ⚠ Their example turns it on, and it is the norm: `FASI.md` §01-filo-nudo\n"
+            "  //   had FORESEEN it — \"QUIC libraries offer it by default\"\n"
+            "  //   — and had also written why no functional bench\n"
+            "  //   would notice: **the symptom does not exist**.  The\n"
+            "  //   session opens the same, the bytes come back the same.  It is seen only\n"
+            "  //   by looking at the session tickets on the wire, and that is how it\n"
+            "  //   came out on 10 Aug 2026 `[M]`.\n"
             "  SSL_set_early_data_enabled(ssl_, 0);\n",
-            "il 0-RTT, spento",
+            "0-RTT, turned off",
         ),
     ]
 
 
 CORPO = r'''namespace {
-// ⭐ REMOTIX B2 — un intero variabile di QUIC (RFC 9000 §16).  Serve tre volte
-//    e non c'e' in nessuna delle due librerie: nghttp3 il suo se lo tiene per
-//    se'.  Sedici righe che sono gia' collante.
+// ⭐ REMOTIX B2 — a QUIC variable-length integer (RFC 9000 §16).  It is needed three times
+//    and is in neither of the two libraries: nghttp3 keeps its own for
+//    itself.  Sixteen lines that are already glue.
 size_t wt_scrivi_varint(uint8_t *dest, uint64_t v) {
   if (v < 64) {
     dest[0] = static_cast<uint8_t>(v);
@@ -663,8 +662,8 @@ size_t wt_scrivi_varint(uint8_t *dest, uint64_t v) {
   return 8;
 }
 
-// Restituisce 0 se i byte non bastano: «non lo so ancora» e «zero» sono due
-// cose diverse, e confonderle e' `LEZIONI.md` §1.9.
+// Returns 0 if the bytes are not enough: "I do not know yet" and "zero" are two
+// different things, and confusing them is `LEZIONI.md` §1.9.
 size_t wt_leggi_varint(uint64_t *v, const uint8_t *src, size_t len) {
   if (len == 0) {
     return 0;
@@ -680,32 +679,32 @@ size_t wt_leggi_varint(uint64_t *v, const uint8_t *src, size_t len) {
   return n;
 }
 
-// ⛔ I due numeri con cui un server dichiara WebTransport, e sono DUE perche'
-//    le bozze in circolazione sono due:
+// ⛔ The two numbers with which a server declares WebTransport, and they are TWO because
+//    there are two drafts in circulation:
 //
-//      0x2b603742  SETTINGS_ENABLE_WEBTRANSPORT   bozza 02
-//      0xc671706a  SETTINGS_WT_MAX_SESSIONS       bozza 07 e oltre
+//      0x2b603742  SETTINGS_ENABLE_WEBTRANSPORT   draft 02
+//      0xc671706a  SETTINGS_WT_MAX_SESSIONS       draft 07 and later
 //
-// ⚠ E la differenza non e' accademica: `aioquic` 1.2 — il nostro cliente di
-//   prova — implementa la **02** [R] `h3/connection.py:90`, mentre i browser
-//   di oggi cercano la **07**.  Un server che ne mandasse una sola
-//   funzionerebbe con meta' dei nostri strumenti e non con l'altra meta', e
-//   la meta' che funziona sarebbe quella sbagliata da cui trarre conclusioni.
-//   Si mandano tutt'e due: un'impostazione sconosciuta si ignora.
+// ⚠ And the difference is not academic: `aioquic` 1.2 — our test
+//   client — implements **02** [R] `h3/connection.py:90`, while today's browsers
+//   look for **07**.  A server that sent only one of them
+//   would work with half of our tools and not with the other half, and
+//   the half that works would be the wrong one to draw conclusions from.
+//   Both are sent: an unknown setting is ignored.
 constexpr uint64_t WT_ENABLE_WEBTRANSPORT = 0x2b603742ULL;
 constexpr uint64_t WT_MAX_SESSIONS = 0xc671706aULL;
 
-// ⛔⭐ IL TETTO DI UNA CAPSULA, E SI CONTROLLA PRIMA DI TENERE I BYTE.
+// ⛔⭐ THE CAP OF A CAPSULE, AND IT IS CHECKED BEFORE KEEPING THE BYTES.
 //
-// `RCP.md` §6.1: «un ricevente che alloca `lunghezza` byte e poi verifica ha
-// gia' regalato un megabyte a chiunque sappia scrivere sei byte».  ⚠ Qui non
-// si allocava: si **aspettava** — che e' lo stesso regalo fatto piu'
-// lentamente, e senza nemmeno un tetto.
+// `RCP.md` §6.1: "a receiver that allocates `lunghezza` bytes and then checks has
+// already given away a megabyte to anyone who can write six bytes".  ⚠ Here nothing
+// was allocated: it **waited** — which is the same gift given more
+// slowly, and without even a cap.
 //
-// ⭐ Il numero e' quel che serve alla sola capsula che ci riguarda:
-// `CLOSE_WEBTRANSPORT_SESSION` porta un codice a 32 bit e una ragione che
-// WebTransport limita a **1024 byte**.  Piu' i due interi variabili di testa,
-// che al massimo sono otto ciascuno.
+// ⭐ The number is what the only capsule that concerns us needs:
+// `CLOSE_WEBTRANSPORT_SESSION` carries a 32-bit code and a reason that
+// WebTransport limits to **1024 bytes**.  Plus the two variable-length integers at the head,
+// which are at most eight each.
 constexpr uint64_t WT_CAPSULA_MAX = 1024 + 4;
 
 nghttp3_ssize wt_niente_dati(nghttp3_conn *conn, int64_t stream_id,
@@ -718,17 +717,17 @@ nghttp3_ssize wt_niente_dati(nghttp3_conn *conn, int64_t stream_id,
   (void)pflags;
   (void)user_data;
   (void)stream_user_data;
-  // ⛔ Lo stream della CONNECT estesa NON si chiude: E' la sessione.  Un
-  //    lettore che dicesse «ho finito» ci metterebbe sopra il FIN, e la
-  //    sessione morirebbe nell'istante in cui si apre.
+  // ⛔ The stream of the extended CONNECT does NOT close: it IS the session.  A
+  //    reader that said "I am done" would put the FIN on it, and the
+  //    session would die the instant it opens.
   return NGHTTP3_ERR_WOULDBLOCK;
 }
 } // namespace
 
 size_t ProtoCodec::wt_riscrivi_impostazioni(const nghttp3_vec *vec,
                                             size_t veccnt) {
-  // Quel che nghttp3 vuole scrivere: il tipo dello stream di controllo (0x00)
-  // seguito dal frame SETTINGS.
+  // What nghttp3 wants to write: the type of the control stream (0x00)
+  // followed by the SETTINGS frame.
   std::vector<uint8_t> orig;
   for (size_t i = 0; i < veccnt; ++i) {
     orig.insert(orig.end(), vec[i].base, vec[i].base + vec[i].len);
@@ -741,8 +740,8 @@ size_t ProtoCodec::wt_riscrivi_impostazioni(const nghttp3_vec *vec,
   auto n = wt_leggi_varint(&tipo_stream, orig.data(), orig.size());
   if (n == 0 || tipo_stream != 0x00) {
     std::println(stderr,
-                 "REMOTIX B2: lo stream di controllo non comincia per 0x00 "
-                 "(e' {}): non tocco niente",
+                 "REMOTIX B2: the control stream does not start with 0x00 "
+                 "(it is {}): touching nothing",
                  tipo_stream);
     return 0;
   }
@@ -751,7 +750,7 @@ size_t ProtoCodec::wt_riscrivi_impostazioni(const nghttp3_vec *vec,
   uint64_t tipo_frame = 0;
   n = wt_leggi_varint(&tipo_frame, orig.data() + p, orig.size() - p);
   if (n == 0 || tipo_frame != 0x04) {
-    std::println(stderr, "REMOTIX B2: il primo frame non e' SETTINGS (e' {})",
+    std::println(stderr, "REMOTIX B2: the first frame is not SETTINGS (it is {})",
                  tipo_frame);
     return 0;
   }
@@ -765,11 +764,11 @@ size_t ProtoCodec::wt_riscrivi_impostazioni(const nghttp3_vec *vec,
   p += n;
 
   if (p + lung != orig.size()) {
-    // ⛔ C'e' altro dopo SETTINGS, oppure SETTINGS e' arrivato a pezzi.  Non
-    //    si riscrive alla cieca: si dice, e si lascia stare.  Il server
-    //    restera' senza WebTransport, e la misura lo vedra' subito.
+    // ⛔ There is something else after SETTINGS, or SETTINGS arrived in pieces.  It is not
+    //    rewritten blindly: we say so, and leave it alone.  The server
+    //    will stay without WebTransport, and the measurement will see it at once.
     std::println(stderr,
-                 "REMOTIX B2: SETTINGS non e' tutto qui ({} + {} != {})", p,
+                 "REMOTIX B2: SETTINGS is not all here ({} + {} != {})", p,
                  lung, orig.size());
     return 0;
   }
@@ -783,12 +782,12 @@ size_t ProtoCodec::wt_riscrivi_impostazioni(const nghttp3_vec *vec,
 
   std::array<uint8_t, 16> testa;
   size_t t = 0;
-  t += wt_scrivi_varint(testa.data() + t, 0x00); // tipo dello stream
+  t += wt_scrivi_varint(testa.data() + t, 0x00); // type of the stream
   t += wt_scrivi_varint(testa.data() + t, 0x04); // SETTINGS
   t += wt_scrivi_varint(testa.data() + t, lung + a);
 
   if (t + lung + a > wt_impbuf_.size()) {
-    std::println(stderr, "REMOTIX B2: SETTINGS troppo grande per il buffer");
+    std::println(stderr, "REMOTIX B2: SETTINGS too big for the buffer");
     return 0;
   }
 
@@ -805,31 +804,31 @@ size_t ProtoCodec::wt_riscrivi_impostazioni(const nghttp3_vec *vec,
   wt_impbuf_len_ = o;
 
   std::println(stderr,
-               "REMOTIX B2: SETTINGS riscritto — {} byte di nghttp3 + {} "
-               "nostri (ENABLE_WEBTRANSPORT e WT_MAX_SESSIONS)",
+               "REMOTIX B2: SETTINGS rewritten — {} bytes from nghttp3 + {} "
+               "of ours (ENABLE_WEBTRANSPORT and WT_MAX_SESSIONS)",
                orig.size(), a);
 
   return orig.size();
 }
 
-// ⛔⭐ LE CAPSULE DELLA CONNECT, E LA SOLA CHE CI RIGUARDA.
+// ⛔⭐ THE CAPSULES OF THE CONNECT, AND THE ONLY ONE THAT CONCERNS US.
 //
-// Il corpo di una CONNECT estesa e' un flusso di capsule (RFC 9297): varint
-// tipo, varint lunghezza, corpo.  Di tutte, qui se ne guarda **una**:
-// `CLOSE_WEBTRANSPORT_SESSION` (0x2843), che porta un codice a 32 bit e una
-// ragione in UTF-8 — ed e' la SECONDA STRADA di `RCP.md` §3.1 punto 3, quella
-// per cui il motivo arriva anche quando i byte del canale non partono.
+// The body of an extended CONNECT is a flow of capsules (RFC 9297): varint
+// type, varint length, body.  Of all of them, only **one** is looked at here:
+// `CLOSE_WEBTRANSPORT_SESSION` (0x2843), which carries a 32-bit code and a
+// reason in UTF-8 — and it is the SECOND ROAD of `RCP.md` §3.1 point 3, the one
+// by which the reason arrives even when the bytes of the channel do not leave.
 //
-// ⚠ Si accumula, perche' una capsula puo' arrivare a pezzi; e si scarta il
-//   resto senza rumore, perche' un flusso di capsule sconosciute non e' un
-//   errore (RFC 9297 §3.2 dice di ignorarle).
+// ⚠ It accumulates, because a capsule can arrive in pieces; and the
+//   rest is discarded without noise, because a flow of unknown capsules is not an
+//   error (RFC 9297 §3.2 says to ignore them).
 void ProtoCodec::wt_capsula(int64_t stream_id, std::span<const uint8_t> dati) {
   if (stream_id != wt_sessione_ || dati.empty()) {
     return;
   }
-  // ⛔ I byte di una capsula gia' giudicata troppo grande si buttano MENTRE
-  //    PASSANO, senza tenerli: e' l'unico modo di non farsi riempire la
-  //    memoria da chi sa scrivere due interi variabili.
+  // ⛔ The bytes of a capsule already judged too big are thrown away AS THEY
+  //    PASS, without keeping them: it is the only way not to let the memory be
+  //    filled by whoever can write two variable-length integers.
   if (wt_capsalta_ > 0) {
     uint64_t n = wt_capsalta_ < dati.size()
                    ? wt_capsalta_
@@ -843,9 +842,9 @@ void ProtoCodec::wt_capsula(int64_t stream_id, std::span<const uint8_t> dati) {
   wt_capsbuf_.insert(wt_capsbuf_.end(), dati.begin(), dati.end());
   for (;;) {
     uint64_t tipo = 0, lung = 0;
-    // ⚠ Qui il buffer non puo' crescere senza fine: un intero variabile e' al
-    //   massimo 8 byte, quindi con 8 byte il tipo si legge sempre e con 16 si
-    //   legge sempre anche la lunghezza.
+    // ⚠ Here the buffer cannot grow without end: a variable-length integer is at
+    //   most 8 bytes, so with 8 bytes the type can always be read and with 16
+    //   the length can always be read too.
     auto a = wt_leggi_varint(&tipo, wt_capsbuf_.data(), wt_capsbuf_.size());
     if (a == 0) {
       return;
@@ -855,25 +854,25 @@ void ProtoCodec::wt_capsula(int64_t stream_id, std::span<const uint8_t> dati) {
     if (b == 0) {
       return;
     }
-    // ⛔⭐ E LA LUNGHEZZA SI CONTROLLA QUI, PRIMA DI ASPETTARE I BYTE.
+    // ⛔⭐ AND THE LENGTH IS CHECKED HERE, BEFORE WAITING FOR THE BYTES.
     //
-    //    L'ingresso che questo chiude: la pagina manda, sullo stream della
-    //    CONNECT, un tipo di capsula sconosciuto e una lunghezza di 2^62-1;
-    //    poi manda dati, all'infinito.  Nessuna capsula si completava mai,
-    //    quindi `erase` non veniva mai chiamata, `wt_capsbuf_` cresceva di
-    //    ogni byte che arrivava — e `http_consume` continuava ad allargare il
-    //    credito, quindi il client poteva spedire senza fine.  ⛔ Su una
-    //    connessione che non ha ancora superato la stretta di mano di RCP.
+    //    The input this closes: the page sends, on the CONNECT
+    //    stream, an unknown capsule type and a length of 2^62-1;
+    //    then it sends data, forever.  No capsule was ever completed,
+    //    so `erase` was never called, `wt_capsbuf_` grew by
+    //    every byte that arrived — and `http_consume` kept widening the
+    //    credit, so the client could send without end.  ⛔ On a
+    //    connection that has not yet passed the RCP handshake.
     //
-    // ⚠ E la variante non ostile e' altrettanto vera: una capsula legittima
-    //   ma sconosciuta di mezzo gigabyte veniva bufferizzata TUTTA per poi
-    //   essere scartata.  RFC 9297 §3.2 permette di saltarla senza tenerla, ed
-    //   e' quel che si fa adesso.
+    // ⚠ And the non-hostile variant is just as true: a legitimate
+    //   but unknown capsule of half a gigabyte was buffered ENTIRELY only to
+    //   be discarded.  RFC 9297 §3.2 allows skipping it without keeping it, and
+    //   that is what is done now.
     if (lung > WT_CAPSULA_MAX) {
       std::println(stderr,
-                   "REMOTIX B2: capsula {:#x} lunga {} byte, oltre il tetto di "
-                   "{}: si SALTA senza tenerla (RFC 9297 §3.2; RCP.md §6.1, la "
-                   "lunghezza si controlla prima di allocare)",
+                   "REMOTIX B2: capsule {:#x} {} bytes long, beyond the cap of "
+                   "{}: SKIPPED without keeping it (RFC 9297 §3.2; RCP.md §6.1, the "
+                   "length is checked before allocating)",
                    tipo, lung, WT_CAPSULA_MAX);
       uint64_t qui = wt_capsbuf_.size() - a - b;
       uint64_t presi = qui < lung ? qui : lung;
@@ -887,7 +886,7 @@ void ProtoCodec::wt_capsula(int64_t stream_id, std::span<const uint8_t> dati) {
       continue;
     }
     if (wt_capsbuf_.size() < a + b + lung) {
-      return; // sta sotto il tetto: si puo' aspettare che arrivi tutta
+      return; // it is below the cap: we can wait for all of it to arrive
     }
     const uint8_t *corpo = wt_capsbuf_.data() + a + b;
     if (tipo == 0x2843 && lung >= 4) {
@@ -897,13 +896,13 @@ void ProtoCodec::wt_capsula(int64_t stream_id, std::span<const uint8_t> dati) {
                         static_cast<uint32_t>(corpo[3]);
       std::string ragione{corpo + 4, corpo + lung};
       std::println(stderr,
-                   "REMOTIX B2: la pagina ha CHIUSO la sessione WebTransport: "
-                   "codice {:#x} «{}»",
+                   "REMOTIX B2: the page CLOSED the WebTransport session: "
+                   "code {:#x} «{}»",
                    codice, ragione);
-      // ⛔ Il codice si consegna INTERO.  Troncarlo al byte basso faceva
-      //    entrare `0x0100` a verbale come `0x00`, cioe' come il solo valore
-      //    che RCP.md §3.1 vieta — e i due registri della stessa chiusura si
-      //    contraddicevano a due righe di distanza.
+      // ⛔ The code is delivered WHOLE.  Truncating it to the low byte made
+      //    `0x0100` enter the record as `0x00`, that is as the only value
+      //    RCP.md §3.1 forbids — and the two logs of the same closing
+      //    contradicted each other two lines apart.
       wt_chiusa_dal_client(codice);
     }
     wt_capsbuf_.erase(wt_capsbuf_.begin(),
@@ -911,9 +910,9 @@ void ProtoCodec::wt_capsula(int64_t stream_id, std::span<const uint8_t> dati) {
   }
 }
 
-// ⚠ Vuote apposta: quel che la chiusura del client e la fine del canale
-//   SIGNIFICHINO non lo sa lo strato WebTransport — lo sa il protocollo, e RCP
-//   arriva con B3.
+// ⚠ Empty on purpose: what the client's closing and the end of the channel
+//   MEAN the WebTransport layer does not know — the protocol knows, and RCP
+//   arrives with B3.
 void ProtoCodec::wt_chiusa_dal_client(uint32_t codice) { (void)codice; }
 
 void ProtoCodec::wt_fin_dal_client(int64_t stream_id) { (void)stream_id; }
@@ -927,8 +926,8 @@ ProtoCodec::WtEsito ProtoCodec::wt_smista(int64_t stream_id,
                                           std::span<const uint8_t> data,
                                           bool fin,
                                           std::vector<uint8_t> &riunito) {
-  // Solo gli stream bidirezionali aperti dal client: la CONNECT estesa e gli
-  // stream WebTransport arrivano tutti di li'.
+  // Only the bidirectional streams opened by the client: the extended CONNECT and the
+  // WebTransport streams all arrive from there.
   if ((stream_id & 0x03) != 0x00) {
     return WtEsito::HTTP3;
   }
@@ -938,19 +937,19 @@ ProtoCodec::WtEsito ProtoCodec::wt_smista(int64_t stream_id,
   }
 
   if (wt_streams_.contains(stream_id)) {
-    // ⭐ Uno stream WebTransport gia' riconosciuto: il carico utile torna
-    //    indietro sullo stesso stream.  E' il «byte che torna» di B2 — e
-    //    «la sessione si apre» senza «i byte tornano» e' il tipo di verde
-    //    che questo banco esiste per non produrre.
+    // ⭐ A WebTransport stream already recognised: the payload goes back
+    //    on the same stream.  It is the "byte that comes back" of B2 — and
+    //    "the session opens" without "the bytes come back" is the kind of green
+    //    this bench exists not to produce.
     if (!data.empty()) {
       wt_accoda(stream_id, data);
       ngtcp2_conn_extend_max_stream_offset(conn_, stream_id, data.size());
       ngtcp2_conn_extend_max_offset(conn_, data.size());
     }
-    // ⛔ E IL FIN SI GUARDA DOPO I BYTE, non prima: gli ultimi byte sono
-    //    arrivati **insieme** a lui e vanno consegnati mentre la sessione e'
-    //    ancora viva, o chi li riceve li leggerebbe come byte spediti dopo la
-    //    fine — cioe' come una violazione del client che non c'e' stata.
+    // ⛔ AND THE FIN IS LOOKED AT AFTER THE BYTES, not before: the last bytes
+    //    arrived **together** with it and must be delivered while the session is
+    //    still alive, or whoever receives them would read them as bytes sent after the
+    //    end — that is as a client violation that did not happen.
     if (fin) {
       wt_fin_dal_client(stream_id);
     }
@@ -960,15 +959,15 @@ ProtoCodec::WtEsito ProtoCodec::wt_smista(int64_t stream_id,
   auto &pref = wt_incerti_[stream_id];
   pref.insert(pref.end(), data.begin(), data.end());
   if (pref.size() < 2) {
-    // ⚠ E NON si allarga la finestra: quei byte non li ha ancora presi
-    //    nessuno, e contarli adesso e poi di nuovo falserebbe il credito.
+    // ⚠ And the window is NOT widened: nobody has taken those bytes
+    //    yet, and counting them now and then again would falsify the credit.
     return WtEsito::ATTENDI;
   }
 
-  // ⛔ Il tipo di frame WEBTRANSPORT_STREAM e' 0x41 — ma un intero variabile
-  //    non lo scrive in un byte: 0x41 vale 65, e in un byte ce ne stanno 63.
-  //    Sul filo sono DUE byte, 0x40 0x41, ed e' per questo che due bastano a
-  //    decidere.  Un frame HEADERS comincia per 0x01, uno DATA per 0x00.
+  // ⛔ The WEBTRANSPORT_STREAM frame type is 0x41 — but a variable-length integer
+  //    does not write it in one byte: 0x41 is 65, and one byte holds 63.
+  //    On the wire they are TWO bytes, 0x40 0x41, and that is why two are enough to
+  //    decide.  A HEADERS frame starts with 0x01, a DATA one with 0x00.
   if (pref[0] == 0x40 && pref[1] == 0x41) {
     uint64_t sessione = 0;
     auto n = wt_leggi_varint(&sessione, pref.data() + 2, pref.size() - 2);
@@ -980,15 +979,15 @@ ProtoCodec::WtEsito ProtoCodec::wt_smista(int64_t stream_id,
                                pref.end()};
     wt_streams_[stream_id] = static_cast<int64_t>(sessione);
     wt_incerti_.erase(stream_id);
-    std::println(stderr, "REMOTIX B2: stream {} e' WebTransport, sessione {}",
+    std::println(stderr, "REMOTIX B2: stream {} is WebTransport, session {}",
                  stream_id, sessione);
     if (!resto.empty()) {
       wt_accoda(stream_id, resto);
     }
     ngtcp2_conn_extend_max_stream_offset(conn_, stream_id, consumati);
     ngtcp2_conn_extend_max_offset(conn_, consumati);
-    // ⛔ Anche qui: lo stream puo' essere riconosciuto e finito nello stesso
-    //    pacchetto (RCP.md §4.2, il FIN da una qualunque delle due parti).
+    // ⛔ Here too: the stream can be recognised and finished in the same
+    //    packet (RCP.md §4.2, the FIN from either side).
     if (fin) {
       wt_fin_dal_client(stream_id);
     }
@@ -1002,13 +1001,13 @@ ProtoCodec::WtEsito ProtoCodec::wt_smista(int64_t stream_id,
 }
 
 std::expected<void, Error> ProtoCodec::wt_apri_sessione(Stream *stream) {
-  // ⛔ RCP.md §2.2: il server NON DEVE accettare una sessione WebTransport su
-  //    un percorso diverso, e il rifiuto e' **404** (rilievo R1.24, che ha
-  //    scelto uno dei tre stati che erano tutti leciti).  E si scrive nel
-  //    registro: e' §3 applicata al primo byte.
+  // ⛔ RCP.md §2.2: the server MUST NOT accept a WebTransport session on
+  //    a different path, and the refusal is **404** (finding R1.24, which
+  //    chose one of the three statuses that were all legitimate).  And it is written in the
+  //    log: it is §3 applied to the first byte.
   if (stream->uri != "/rcp/1") {
     std::println(stderr,
-                 "REMOTIX B2: ⛔ sessione WebTransport RIFIUTATA, percorso {}",
+                 "REMOTIX B2: ⛔ WebTransport session REFUSED, path {}",
                  stream->uri);
     return send_status_response(stream, 404);
   }
@@ -1033,7 +1032,7 @@ std::expected<void, Error> ProtoCodec::wt_apri_sessione(Stream *stream) {
   wt_sessione_ = stream->stream_id;
   stream->wt_session = true;
   std::println(stderr,
-               "REMOTIX B2: ⭐ sessione WebTransport APERTA su {} (stream {})",
+               "REMOTIX B2: ⭐ WebTransport session OPEN on {} (stream {})",
                stream->uri, stream->stream_id);
 
   return {};
@@ -1053,19 +1052,19 @@ def scrivi(percorso, testo):
 
 
 def righe_di_commento(righe):
-    """⛔ UNA REGOLA SOLA PER I COMMENTI, E LA STESSA NEI TRE INNESTI.
+    """⛔ A SINGLE RULE FOR COMMENTS, AND THE SAME IN THE THREE GRAFTS.
 
-    Il 10 agosto 2026 i tre script ne avevano tre diverse sulla stessa
-    grandezza — `//` qui, `//`+`/*`+`*` in B3, `*`+`/*` in quello di quiche —
-    e la seconda classificava come COMMENTO due righe di C++ vero che stanno
-    nel corpo innestato da questo file:
+    On 10 Aug 2026 the three scripts had three different ones for the same
+    quantity — `//` here, `//`+`/*`+`*` in B3, `*`+`/*` in the quiche one —
+    and the second classified as a COMMENT two lines of real C++ that are
+    in the body grafted by this file:
 
         *v = src[0] & 0x3f;
         *v = (*v << 8) | src[i];
 
-    ⚠ Sono dereferenziazioni, e cominciano per `*`.  Qui l'asterisco vale come
-      commento solo quando e' la continuazione di un blocco `/* … */`, cioe'
-      quando e' seguito da uno spazio o quando chiude il blocco.
+    ⚠ They are dereferences, and they start with `*`.  Here the asterisk counts as
+      a comment only when it is the continuation of a `/* … */` block, that is
+      when it is followed by a space or when it closes the block.
     """
     return sum(1 for r in righe
                if r.strip().startswith(("//", "/*", "* ", "*/"))
@@ -1073,36 +1072,36 @@ def righe_di_commento(righe):
 
 
 def togli():
-    # ⛔ E SI DICE CHE COSA SI PORTA VIA.
+    # ⛔ AND WE SAY WHAT WE TAKE AWAY.
     #
-    #    `git checkout -- examples` rimette a posto TUTTA la cartella: se sopra
-    #    c'e' l'innesto di B3, o i guasti di B11, o una prova fatta a mano,
-    #    spariscono anche quelli.  Il messaggio di prima diceva soltanto «si
-    #    rimette l'esempio com'era», cioe' meno di quel che il comando fa.
-    print("== Si rimette l'esempio com'era")
+    #    `git checkout -- examples` puts back the WHOLE folder: if on top
+    #    there is the B3 graft, or the B11 faults, or a test done by hand,
+    #    those disappear too.  The message before said only "the example
+    #    is put back as it was", that is less than what the command does.
+    print("== Putting the example back as it was")
     prima = ""
     for f in FILE_TOCCATI:
         try:
             prima += leggi(f"{ESEMPI}/{f}")
         except FileNotFoundError:
             pass
-    for marca, chi in ((MARCA_B3, "l'innesto di B3"),
-                       (MARCA_B11, "i guasti di B11")):
+    for marca, chi in ((MARCA_B3, "the B3 graft"),
+                       (MARCA_B11, "the B11 faults")):
         if marca in prima:
-            print(f"   ⚠ c'e' anche {chi}: sparisce insieme a questo.")
+            print(f"   ⚠ {chi} is there too: it disappears together with this one.")
     r = subprocess.run(["git", "-C", ALBERO, "checkout", "--", "examples"])
     if r.returncode != 0:
-        print(f"   ⛔ git checkout e' fallito (uscita {r.returncode}):"
-              " non si e' tolto niente.")
+        print(f"   ⛔ git checkout failed (exit {r.returncode}):"
+              " nothing was removed.")
         return r.returncode
 
-    # ⛔ E SI VERIFICA DI AVER TOLTO.
+    # ⛔ AND WE VERIFY THAT WE REMOVED.
     #
-    #    Lo stato d'uscita di git dice che git non ha protestato, non che la
-    #    marca sia sparita: e' la quarta regola di `LEZIONI.md` §1.9 — «zero» e
-    #    «sono fallita» non devono avere la stessa faccia.  L'unica lettura che
-    #    vale e' rileggere i file.  `01-b11-guasto.sh` questo controllo lo fa
-    #    gia' per la propria marca; qui mancava.
+    #    The exit status of git says git did not complain, not that the
+    #    mark is gone: it is the fourth rule of `LEZIONI.md` §1.9 — "zero" and
+    #    "I failed" must not have the same face.  The only reading that
+    #    counts is rereading the files.  `01-b11-guasto.sh` already does this check
+    #    for its own mark; here it was missing.
     resta = 0
     for f in FILE_TOCCATI:
         try:
@@ -1110,22 +1109,22 @@ def togli():
         except FileNotFoundError:
             n = 0
         if n:
-            print(f"   NO  restano {n} righe con «{MARCA}» in {f}")
+            print(f"   NO  {n} lines with «{MARCA}» remain in {f}")
             resta += n
     if resta:
-        print(f"   ⛔ {resta} tracce di «{MARCA}» sopravvivono:"
-              " l'esempio NON e' com'era.")
+        print(f"   ⛔ {resta} traces of «{MARCA}» survive:"
+              " the example is NOT as it was.")
         return 3
-    print(f"   OK  nessuna traccia di «{MARCA}» nei {len(FILE_TOCCATI)}"
-          " file toccati")
+    print(f"   OK  no trace of «{MARCA}» in the {len(FILE_TOCCATI)}"
+          " files touched")
 
-    # ⚠ E i file NON TRACCIATI git non li tocca: se B3 e' passato di qui, i
-    #   suoi tre file restano orfani dentro un esempio «com'era».
+    # ⚠ And git does not touch UNTRACKED files: if B3 has been here, its
+    #   three files stay orphaned inside an example "as it was".
     orfani = [f for f in FILE_DI_B3 if os.path.exists(f"{ESEMPI}/{f}")]
     if orfani:
-        print(f"   ⚠ restano in examples/ i file di B3: {', '.join(orfani)}")
-        print("     git checkout non tocca i file non tracciati; li porta via"
-              " 01-b3-rcp-innesta.py --togli")
+        print(f"   ⚠ the B3 files remain in examples/: {', '.join(orfani)}")
+        print("     git checkout does not touch untracked files;"
+              " 01-b3-rcp-innesta.py --togli takes them away")
     return 0
 
 
@@ -1134,29 +1133,29 @@ def main():
         return togli()
 
     lista = innesti()
-    # Il pezzo 12 e' il corpo, che sta in una costante a parte per leggibilita'.
+    # Piece 12 is the body, which is in a separate constant for readability.
     lista = [
         (f, a, (CORPO + a) if s is None else s, n) for (f, a, s, n) in lista
     ]
 
-    print("== L'innesto dello strato WebTransport nell'esempio di ngtcp2")
-    print(f"   albero: {ESEMPI}")
-    print(f"   {len(lista)} innesti da applicare\n")
+    print("== Grafting the WebTransport layer into the ngtcp2 example")
+    print(f"   tree: {ESEMPI}")
+    print(f"   {len(lista)} grafts to apply\n")
 
-    # Gia' fatto?
+    # Already done?
     if MARCA in leggi(f"{ESEMPI}/http3_server_proto_codec.cc"):
-        print("   ⚠ l'innesto c'e' gia': non si tocca niente.")
-        print("     per rifarlo da capo: --togli, poi di nuovo questo comando")
+        print("   ⚠ the graft is already there: touching nothing.")
+        print("     to redo it from scratch: --togli, then this command again")
         return 0
 
-    # ⛔ IL DENOMINATORE DEL CONTO DELLE RIGHE, LETTO PRIMA DI TOCCARE NIENTE.
+    # ⛔ THE DENOMINATOR OF THE LINE COUNT, READ BEFORE TOUCHING ANYTHING.
     #
-    #    `git diff -- examples` misura tutto quel che e' cambiato in quella
-    #    cartella, da chiunque: e' il conto NOSTRO solo se prima non c'era
-    #    nient'altro.  Si guarda adesso, non dopo, perche' dopo la nostra
-    #    modifica c'e' dentro e non si distingue piu'.
-    #    ⚠ I file non tracciati (`??`) non entrano nel diff, quindi non
-    #      sporcano il conto: si ignorano qui.
+    #    `git diff -- examples` measures everything that changed in that
+    #    folder, by anyone: it is OUR count only if there was
+    #    nothing else before.  We look now, not afterwards, because after our
+    #    change it is in there and can no longer be told apart.
+    #    ⚠ Untracked files (`??`) do not enter the diff, so they do not
+    #      dirty the count: they are ignored here.
     sporchi = [
         r for r in subprocess.run(
             ["git", "-C", ALBERO, "status", "--porcelain", "--", "examples"],
@@ -1169,33 +1168,33 @@ def main():
     for percorso, appiglio, sostituto, nome in lista:
         if percorso not in testi:
             testi[percorso] = leggi(f"{ESEMPI}/{percorso}")
-        # ⛔ IL CONTROLLO CHE RENDE ONESTO TUTTO IL RESTO: l'appiglio deve
-        #    comparire UNA VOLTA SOLA.  Zero vuol dire che il loro esempio e'
-        #    cambiato sotto di noi; due, che si sta innestando alla cieca.
+        # ⛔ THE CHECK THAT MAKES ALL THE REST HONEST: the foothold must
+        #    appear ONCE ONLY.  Zero means their example has
+        #    changed under us; two, that we are grafting blindly.
         n = testi[percorso].count(appiglio)
         stato = "OK " if n == 1 else "NO "
-        print(f"   {stato} {nome:38s} appiglio trovato {n} volta/e  [{percorso}]")
+        print(f"   {stato} {nome:38s} foothold found {n} time(s)  [{percorso}]")
         if n != 1:
             guasti += 1
             continue
         testi[percorso] = testi[percorso].replace(appiglio, sostituto, 1)
 
     if guasti:
-        print(f"\n   ⛔ {guasti} appigli su {len(lista)} non sono UNO: non si scrive niente.")
-        print("      L'esempio di ngtcp2 e' cambiato: gli innesti vanno riletti.")
+        print(f"\n   ⛔ {guasti} footholds of {len(lista)} are not ONE: writing nothing.")
+        print("      The ngtcp2 example has changed: the grafts must be reread.")
         return 2
 
     for percorso, testo in testi.items():
         scrivi(f"{ESEMPI}/{percorso}", testo)
-    print(f"\n   OK  {len(lista)} innesti su {len(lista)}, in {len(testi)} file")
+    print(f"\n   OK  {len(lista)} grafts of {len(lista)}, in {len(testi)} files")
 
-    # ⭐ Il conto delle righe, che e' il dato di §6.4 e non una stima.
+    # ⭐ The line count, which is the datum of §6.4 and not an estimate.
     #
-    # ⚠ Il conto si fa QUI, in Python, e non con una pipeline di shell: il
-    #   primo tentativo del 10 agosto passava `grep -c` attraverso tre shell
-    #   annidate, le virgolette si sono rotte, e ha stampato «0 commenti, 0
-    #   righe vuote» su un file che ne ha 85 e 42.  Un altro falso zero.
-    print("\n== Quante righe sono cambiate sotto examples/ — il dato di §6.4")
+    # ⚠ The count is done HERE, in Python, and not with a shell pipeline: the
+    #   first attempt of 10 Aug passed `grep -c` through three nested
+    #   shells, the quotes broke, and it printed "0 comments, 0
+    #   blank lines" on a file that has 85 and 42.  Another false zero.
+    print("\n== How many lines changed under examples/ — the datum of §6.4")
     subprocess.run(
         ["git", "-C", ALBERO, "diff", "--stat", "--", "examples"],
     )
@@ -1207,27 +1206,27 @@ def main():
     agg = [r[1:] for r in d if r.startswith("+") and not r.startswith("+++")]
     vuote = sum(1 for r in agg if not r.strip())
     comm = righe_di_commento(agg)
-    print(f"\n   righe aggiunte : {len(agg)}")
-    print(f"     vuote        : {vuote}")
-    print(f"     di commento  : {comm}")
-    print(f"     ⭐ di CODICE  : {len(agg) - vuote - comm}")
+    print(f"\n   added lines    : {len(agg)}")
+    print(f"     blank        : {vuote}")
+    print(f"     comment      : {comm}")
+    print(f"     ⭐ CODE       : {len(agg) - vuote - comm}")
 
-    # ⛔ E IL DENOMINATORE SI STAMPA ACCANTO AL NUMERO, non si sottintende.
+    # ⛔ AND THE DENOMINATOR IS PRINTED NEXT TO THE NUMBER, not implied.
     if sporchi:
-        print("\n   ⛔ E QUESTO CONTO NON E' ATTRIBUIBILE A NOI: prima")
-        print("      dell'innesto questi file erano gia' modificati —")
+        print("\n   ⛔ AND THIS COUNT CANNOT BE ATTRIBUTED TO US: before")
+        print("      the graft these files were already modified —")
         for r in sporchi:
             print(f"        {r}")
-        print("      git diff non sa di chi sia una riga: misura la cartella.")
+        print("      git diff does not know whose a line is: it measures the folder.")
     else:
-        print("\n   ⭐ e l'albero era PULITO prima dell'innesto (git status)")
-        print("      — che e' l'unica cosa che rende «cambiate» = «nostre».")
-    print("\n   ⚠ «aggiunte» resta un limite superiore: una riga MODIFICATA")
-    print("     (per esempio SSL_set_early_data_enabled a 0) compare fra le")
-    print("     aggiunte, e la sua riga vecchia fra le tolte.")
-    print("\n   ⚠ E' lo strato WebTransport, NON un server: sotto c'e' il loro")
-    print("     HTTP/3 completo.  Il numero risponde a «quanto collante resta a")
-    print("     noi», che e' la domanda di §6.4 — non a «quanto pesa il server».")
+        print("\n   ⭐ and the tree was CLEAN before the graft (git status)")
+        print("      — which is the only thing that makes \"changed\" = \"ours\".")
+    print("\n   ⚠ \"added\" remains an upper bound: a MODIFIED line")
+    print("     (for example SSL_set_early_data_enabled to 0) shows up among the")
+    print("     additions, and its old line among the removed ones.")
+    print("\n   ⚠ It is the WebTransport layer, NOT a server: underneath there is their")
+    print("     complete HTTP/3.  The number answers \"how much glue is left to")
+    print("     us\", which is the question of §6.4 — not \"how much the server weighs\".")
     return 0
 
 

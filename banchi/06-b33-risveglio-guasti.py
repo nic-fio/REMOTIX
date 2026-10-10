@@ -1,209 +1,217 @@
 #!/usr/bin/env python3
-"""06-b33-risveglio-guasti.py — ⛔ I GUASTI INNESTATI del banco di §7.1.
+"""06-b33-risveglio-guasti.py — ⛔ THE INJECTED FAULTS of the §7.1 bench.
 
     python3 06-b33-risveglio-guasti.py --elenco
     python3 06-b33-risveglio-guasti.py --albero /media/REMOTIX/src/06-i-src \\
         --guasto RG1
 
-⛔ Si innesta in una COPIA dell'albero, mai nell'originale: chi chiama salva i
-   file sani PRIMA e li rimette DOPO (`06-b33-risveglio-certifica.sh`).
+⛔ It injects into a COPY of the tree, never into the original: the caller saves
+   the healthy files BEFORE and puts them back AFTER
+   (`06-b33-risveglio-certifica.sh`).
 
 ===========================================================================
-⛔ PERCHE' QUESTO FILE ESISTE, E PERCHE' NON BASTAVA `06-b33-guasti.py`
+⛔ WHY THIS FILE EXISTS, AND WHY `06-b33-guasti.py` WAS NOT ENOUGH
 ===========================================================================
 
-`06-b33-guasti.py` innesta guasti in `input.c` e li giudica con la scena del
-**ridimensionamento**.  ⛔ Dal 21 agosto 2026 quella scena non basta piu', e per
-una ragione che va scritta perche' nessuno la riscopra:
+`06-b33-guasti.py` injects faults into `input.c` and judges them with the
+**resize** scene.  ⛔ Since 21 August 2026 that scene is no longer enough, and
+for a reason that must be written down so that nobody rediscovers it:
 
-  ⭐ La cura di `figlio.c:3964` rilascia tutto **prima** di
-    `cattura_ridimensiona()`.  ⇒ In quella scena, col prodotto SANO, non c'e'
-    piu' niente di premuto al momento del ricambio: `segna_orfani()` **non viene
-    chiamata affatto**, e il guasto G3 — che la toglie — non cambia una virgola.
-    `[M]` Certificazione del 21 agosto: G3 innestato accende **zero** casi.
+  ⭐ The cure at `figlio.c:3964` releases everything **before**
+    `cattura_ridimensiona()`.  ⇒ In that scene, with the HEALTHY product,
+    nothing is pressed any more at the moment of the replacement:
+    `segna_orfani()` **is not called at all**, and fault G3 — which removes
+    it — does not change a thing.
+    `[M]` Certification of 21 August: G3 injected lights up **zero** cases.
 
-⇒ La scena in cui gli orfani nascono davvero e' quella di **questo** banco: un
-  pulsante tenuto giu' durante un `cattura_risveglia()`, che la cura di `:3964`
-  non copre (§7.1).  ⭐ Il controllo positivo di G3 vive qui, ed e' `RG2`.
-
-===========================================================================
-⛔ I GUASTI, E IL CASO CHE CIASCUNO DEVE CAMBIARE
-===========================================================================
-
-⚠ E qui non si chiede «quale caso diventa ROSSO», ma **quali verdetti
-  CAMBIANO** rispetto al giro sano.  La ragione e' che gli attesi di questo
-  banco hanno tre colori: togliendo la cura «C» i casi T3 e T4 non diventano
-  rossi, tornano `DIFETTO_VIVO` — che e' il colore giusto per un difetto
-  misurato, e un confronto che guardasse solo il rosso non li vedrebbe.
-
-  RG1  «la cura C non scatta»            ⇒ T3 e T4 tornano DIFETTO_VIVO
-  RG2  «gli orfani dei PULSANTI non si segnano»  ⇒ T1 T3 T4 T7
-       ⭐ e' l'ex G3, che in `06-b33` non e' piu' certificabile
-  RG3  ⛔ NON-GUASTO MISURATO: «il riattacco non chiude il descrittore vecchio»
-       ⇒ **nessun caso cambia**, e la scoperta vale piu' del guasto
-  RG4  ⛔ SECONDO NON-GUASTO MISURATO: «non si manda il distacco a libei»
-       ⇒ **nessun caso cambia** — e insieme a RG3 dice la cosa vera
-  RG5  «ne' distacco ne' chiusura: il contesto vecchio resta vivo»
-       ⇒ T3 T4 T5 T7.  ⭐ e' il guasto che chiude la domanda
+⇒ The scene in which orphans are really born is the one of **this** bench: a
+  button held down during a `cattura_risveglia()`, which the cure at `:3964`
+  does not cover (§7.1).  ⭐ The positive control of G3 lives here, and it is
+  `RG2`.
 
 ===========================================================================
-⛔⛔ E UNA MIA SPIEGAZIONE E' STATA SMENTITA DALLA MISURA — 21 agosto 2026
+⛔ THE FAULTS, AND THE CASE EACH ONE MUST CHANGE
 ===========================================================================
 
-Avevo scritto, e il coordinatore l'aveva presa come specifica, che *«la cura non
-puo' stare in `input.c`, perche' finche' il descrittore messo da parte da
-`mutter.c` resta aperto il socket e' ancora connesso e Mutter non vede nessun
-distacco»*.  ⛔ **RG3 la smentisce**: tolto il `close()`, la guarigione funziona
-lo stesso e **nessun caso cambia**.
+⚠ And here the question is not "which case turns RED", but **which verdicts
+  CHANGE** compared with the healthy round.  The reason is that the
+  expectations of this bench have three colours: removing cure "C" the cases
+  T3 and T4 do not turn red, they go back to `DIFETTO_VIVO` — which is the
+  right colour for a measured defect, and a comparison that looked only at
+  red would not see them.
 
-⛔⛔ E LA MIA SECONDA SPIEGAZIONE E' STATA SMENTITA A SUA VOLTA.  Avevo detto:
-     *«allora e' `ei_disconnect()` che manda il distacco come messaggio di
-     protocollo»*, e avevo scritto RG4 per provarlo.  ⛔ `[M]` **Anche RG4 non
-     cambia niente.**
+  RG1  "cure C does not kick in"              ⇒ T3 and T4 go back to DIFETTO_VIVO
+  RG2  "the orphans of the BUTTONS are not marked"  ⇒ T1 T3 T4 T7
+       ⭐ it is the former G3, which in `06-b33` can no longer be certified
+  RG3  ⛔ MEASURED NON-FAULT: "the reattach does not close the old descriptor"
+       ⇒ **no case changes**, and the discovery is worth more than the fault
+  RG4  ⛔ SECOND MEASURED NON-FAULT: "the detach is not sent to libei"
+       ⇒ **no case changes** — and together with RG3 it tells the true thing
+  RG5  "neither detach nor close: the old context stays alive"
+       ⇒ T3 T4 T5 T7.  ⭐ it is the fault that closes the question
 
-⇒ ⭐ **Le due strade sono RIDONDANTI, e ciascuna basta da sola**:
-     · `ei_disconnect()` manda il distacco di protocollo;
-     · `ei_unref()` + il `close()` di `mutter.c` chiudono l'ultimo descrittore
-       del socket, e Mutter vede l'EOF.
-   ⇒ Togliendone UNA la guarigione regge (RG3, RG4).  `RG5` le toglie
-     **tutt'e due** ed e' l'unico guasto che la rompe.
+===========================================================================
+⛔⛔ AND ONE OF MY EXPLANATIONS WAS REFUTED BY THE MEASUREMENT — 21 August 2026
+===========================================================================
 
-⚠ La lezione, e vale piu' della meccanica: **due ipotesi consecutive, tutt'e due
-  plausibili, tutt'e due smentite dal guasto innestato.**  Nessuna delle due
-  sarebbe stata scoperta rileggendo il codice — e la prima era gia' scritta in
-  `mutter.h` come se fosse un fatto (`CODER.md` §4.6: `[R]` non e' `[M]`).
+I had written, and the coordinator had taken it as a specification, that *"the
+cure cannot live in `input.c`, because as long as the descriptor set aside by
+`mutter.c` stays open the socket is still connected and Mutter sees no
+detach"*.  ⛔ **RG3 refutes it**: with the `close()` removed, the healing works
+all the same and **no case changes**.
 
-⭐ `mutter_eis_riattacca()` resta necessaria comunque, e questo NON e' stato
-  smentito: dopo il distacco il descrittore messo da parte e' morto, e uno NUOVO
-  lo puo' chiedere solo chi ha il bus e il percorso della sessione.
+⛔⛔ AND MY SECOND EXPLANATION WAS REFUTED IN TURN.  I had said:
+     *"then it is `ei_disconnect()` that sends the detach as a protocol
+     message"*, and I had written RG4 to prove it.  ⛔ `[M]` **RG4 does not
+     change anything either.**
+
+⇒ ⭐ **The two paths are REDUNDANT, and each one is enough on its own**:
+     · `ei_disconnect()` sends the protocol detach;
+     · `ei_unref()` + the `close()` in `mutter.c` close the last descriptor
+       of the socket, and Mutter sees the EOF.
+   ⇒ Removing ONE of them the healing holds (RG3, RG4).  `RG5` removes
+     **both** and is the only fault that breaks it.
+
+⚠ The lesson, and it is worth more than the mechanics: **two consecutive
+  hypotheses, both plausible, both refuted by the injected fault.**  Neither of
+  the two would have been discovered by rereading the code — and the first was
+  already written in `mutter.h` as if it were a fact (`CODER.md` §4.6: `[R]` is
+  not `[M]`).
+
+⭐ `mutter_eis_riattacca()` remains necessary anyway, and this was NOT
+  refuted: after the detach the descriptor set aside is dead, and a NEW one
+  can be asked for only by whoever has the bus and the session path.
 """
 import argparse
 import os
 import sys
 
-# (file, descrizione, casi che devono CAMBIARE, cerca, sostituisci)
+# (file, description, cases that must CHANGE, search, replace)
 GUASTI = {
-    # ⛔ RG1 — la cura «C» esiste ma non viene mai chiamata.  E' il controllo
-    #    positivo della cura stessa: se togliendola il banco resta verde, il
-    #    verde non era della cura.
+    # ⛔ RG1 — cure "C" exists but is never called.  It is the positive
+    #    control of the cure itself: if removing it the bench stays green, the
+    #    green was not the cure's.
     "RG1": (
         "src/input.c",
-        "la cura «C» non scatta: `guarisci()` non viene mai chiamata",
+        "cure \"C\" does not kick in: `guarisci()` is never called",
         "T3 T4",
         """	if (in->guarigione_dovuta && !in->caduto)
 		guarisci(in);""",
-        """	/* guasto RG1 innestato: la cura «C» non scatta */
+        """	/* fault RG1 injected: cure "C" does not kick in */
 	(void) guarisci;""",
     ),
-    # ⛔ RG2 — l'ex G3, spostato nella scena dove gli orfani nascono davvero.
-    #    ⚠ Tocca SOLO i pulsanti: nella scena si tiene giu' anche il Ctrl, e la
-    #      chiamata dei TASTI resta — quindi la guarigione scatta lo stesso e
-    #      T3/T4 NON cambiano.  ⭐ E' voluto: cosi' il guasto e' chirurgico e
-    #      accende un caso solo, e il confronto per uguaglianza lo pretende.
+    # ⛔ RG2 — the former G3, moved into the scene where orphans are really born.
+    #    ⚠ It touches ONLY the buttons: in the scene the Ctrl is held down too,
+    #      and the call for the KEYS stays — so the healing kicks in anyway and
+    #      T3/T4 do NOT change.  ⭐ It is intended: this way the fault is
+    #      surgical and lights up a single case, and the equality comparison
+    #      demands it.
     "RG2": (
         "src/input.c",
-        "gli orfani dei PULSANTI non si segnano: il registro torna a dire «fatto»",
-        # ⛔ L'ATTESO E' STATO CORRETTO DALLA MISURA, non il verdetto — 21 ago
-        #    2026.  Avevo dichiarato «solo T1», ragionando che il Ctrl tenuto giu'
-        #    avrebbe fatto scattare `segna_orfani()` dei TASTI e quindi la
-        #    guarigione.  ⛔ Falso, ed e' `[M]`: al cambio di viewport la tastiera
-        #    **non ricambia** (`remove_viewport_devices` guarda solo TOUCH e
-        #    POINTER_ABSOLUTE), quindi `dispositivo_tolto()` non viene mai
-        #    chiamata per lei e i suoi orfani non si segnano mai.  ⇒ In questa
-        #    scena la bandiera della guarigione dipende **solo dai pulsanti**.
+        "the orphans of the BUTTONS are not marked: the log goes back to saying \"done\"",
+        # ⛔ THE EXPECTATION WAS CORRECTED BY THE MEASUREMENT, not the verdict —
+        #    21 Aug 2026.  I had declared "only T1", reasoning that the Ctrl held
+        #    down would have triggered the KEYS' `segna_orfani()` and therefore
+        #    the healing.  ⛔ False, and it is `[M]`: at the viewport change the
+        #    keyboard **is not replaced** (`remove_viewport_devices` looks only
+        #    at TOUCH and POINTER_ABSOLUTE), so `dispositivo_tolto()` is never
+        #    called for it and its orphans are never marked.  ⇒ In this scene
+        #    the healing flag depends **only on the buttons**.
         "T1 T3 T4 T7",
         """		segna_orfani(in, in->bottoni, in->bottoni_orfani, MAX_BOTTONE, in->quanti_bottoni,
-		             "pulsanti");""",
-        """		/* guasto RG2 innestato: gli orfani dei pulsanti non si segnano */""",
+		             "buttons");""",
+        """		/* fault RG2 injected: the orphans of the buttons are not marked */""",
     ),
-    # ⛔⛔ RG3 — IL NON-GUASTO MISURATO, e la scoperta vale piu' del guasto.
+    # ⛔⛔ RG3 — THE MEASURED NON-FAULT, and the discovery is worth more than the fault.
     #
-    #      L'avevo dichiarato «il piu' prezioso dei tre», con questa ragione:
-    #      *«`input_apri()` fa un `dup` del descrittore che `mutter.c` tiene da
-    #      parte, e finche' QUELLO resta aperto il socket e' ancora connesso ⇒
-    #      Mutter non vede nessun distacco»*.  E avevo scritto accanto: *«se
-    #      questo guasto non cambiasse niente, vorrebbe dire che la chiusura non
-    #      serve»*.
+    #      I had declared it "the most precious of the three", with this reason:
+    #      *"`input_apri()` does a `dup` of the descriptor that `mutter.c` keeps
+    #      aside, and as long as THAT one stays open the socket is still
+    #      connected ⇒ Mutter sees no detach"*.  And I had written next to it:
+    #      *"if this fault changed nothing, it would mean that the close is not
+    #      needed"*.
     #
-    # ⛔ `[M]` 21 agosto 2026: **non cambia niente**.  ⇒ La mia spiegazione era
-    #    sbagliata, e la riga sopra e' l'unica ragione per cui lo so.
+    # ⛔ `[M]` 21 August 2026: **nothing changes**.  ⇒ My explanation was
+    #    wrong, and the line above is the only reason I know it.
     #
-    # ⭐ Il distacco lo manda `ei_disconnect()` come messaggio di protocollo, e
-    #   Mutter esegue `meta_eis_client_disconnect()` senza aspettare l'EOF del
-    #   socket.  Lo prova RG4.
+    # ⭐ The detach is sent by `ei_disconnect()` as a protocol message, and
+    #   Mutter runs `meta_eis_client_disconnect()` without waiting for the EOF
+    #   of the socket.  RG4 proves it.
     #
-    # ⚠ Il guasto RESTA nell'elenco con l'atteso «nessuno», come G1 in
-    #   `06-b33-guasti.py`: un non-guasto misurato e' informazione, e toglierlo
-    #   farebbe riscoprire la stessa ipotesi sbagliata fra un mese.
+    # ⚠ The fault STAYS in the list with the expectation "none", like G1 in
+    #   `06-b33-guasti.py`: a measured non-fault is information, and removing
+    #   it would make someone rediscover the same wrong hypothesis in a month.
     "RG3": (
         "src/mutter.c",
-        "NON-GUASTO MISURATO: il riattacco non chiude il descrittore vecchio",
+        "MEASURED NON-FAULT: the reattach does not close the old descriptor",
         "",
         """	if (sessione->eis >= 0)
 	{
 		close(sessione->eis);""",
         """	if (sessione->eis >= 0)
 	{
-		/* guasto RG3 innestato: NON si chiude */""",
+		/* fault RG3 injected: it is NOT closed */""",
     ),
-    # ⛔⛔ RG4 — IL SECONDO NON-GUASTO MISURATO.
+    # ⛔⛔ RG4 — THE SECOND MEASURED NON-FAULT.
     #
-    #      Nato perche' RG3 aveva smentito la prima spiegazione, e serviva sapere
-    #      quale fosse quella giusta.  Avevo dichiarato «T3 T4», convinto che il
-    #      distacco fosse il messaggio di protocollo di `ei_disconnect()`.
-    #      ⛔ `[M]` 21 agosto 2026: **non cambia niente nemmeno lui**.
+    #      Born because RG3 had refuted the first explanation, and we needed to
+    #      know which one was right.  I had declared "T3 T4", convinced that
+    #      the detach was the protocol message of `ei_disconnect()`.
+    #      ⛔ `[M]` 21 August 2026: **nothing changes with it either**.
     #
-    # ⇒ ⭐ Le due strade sono RIDONDANTI: `ei_disconnect()` manda il distacco, e
-    #     `ei_unref()` + il `close()` di `mutter.c` fanno vedere a Mutter l'EOF
-    #     del socket.  Ciascuna basta da sola — ed e' `RG5` a provarlo,
-    #     togliendole tutt'e due.
+    # ⇒ ⭐ The two paths are REDUNDANT: `ei_disconnect()` sends the detach, and
+    #     `ei_unref()` + the `close()` in `mutter.c` make Mutter see the EOF
+    #     of the socket.  Each one is enough on its own — and it is `RG5` that
+    #     proves it, removing both.
     "RG4": (
         "src/input.c",
-        "SECONDO NON-GUASTO MISURATO: non si manda il distacco a libei",
+        "SECOND MEASURED NON-FAULT: the detach is not sent to libei",
         "",
         """	ei_disconnect(in->ei);
 	ei_unref(in->ei);""",
-        """	/* guasto RG4 innestato: niente distacco, si molla e basta */
+        """	/* fault RG4 injected: no detach, it just lets go */
 	ei_unref(in->ei);""",
     ),
-    # ⛔⛔ RG5 — IL GUASTO CHE CHIUDE LA DOMANDA.  Toglie **tutt'e due** le
-    #      strade: niente distacco di protocollo E niente chiusura del contesto
-    #      (quindi il `dup` di `libei` resta aperto, e il socket non muore
-    #      nemmeno quando `mutter.c` chiude il suo).
+    # ⛔⛔ RG5 — THE FAULT THAT CLOSES THE QUESTION.  It removes **both**
+    #      paths: no protocol detach AND no closing of the context (so the
+    #      `libei` `dup` stays open, and the socket does not die even when
+    #      `mutter.c` closes its own).
     #
-    # ⇒ Se questo NON rompesse la guarigione, vorrebbe dire che il posto si
-    #   sblocca per una terza ragione che non abbiamo ancora capito — e allora
-    #   la cura «C» sarebbe un verde di cui non conosciamo la causa.
+    # ⇒ If this did NOT break the healing, it would mean that the seat gets
+    #   unstuck for a third reason we have not understood yet — and then cure
+    #   "C" would be a green whose cause we do not know.
     #
-    # ⚠ Il contesto vecchio viene abbandonato (perdita di memoria e di un
-    #   descrittore): e' un guasto, non una proposta.
+    # ⚠ The old context is abandoned (a leak of memory and of a descriptor): it
+    #   is a fault, not a proposal.
     "RG5": (
         "src/input.c",
-        "ne' distacco ne' chiusura: il contesto vecchio resta vivo e connesso",
-        # ⛔ L'ATTESO E' STATO CORRETTO DALLA MISURA — avevo dichiarato «T3 T4», e
-        #    cambia anche **T5** (il rilascio del Ctrl).  ⚠ La ragione regge e
-        #    vale la pena scriverla, perche' distingue RG5 da RG2:
-        #      · in RG2 la guarigione NON scatta, quindi la tastiera non ricambia
-        #        mai (non e' un dispositivo di viewport) e il suo rilascio arriva
-        #        ⇒ T5 resta verde;
-        #      · in RG5 la guarigione SCATTA — nasce un contesto nuovo con una
-        #        tastiera nuova — ⛔ ma il vecchio canale non muore, quindi
-        #        `drop_device()` non gira: il Ctrl resta giu' sul dispositivo
-        #        vecchio e il rilascio sul nuovo lo ingoia `handle_key`.
-        #    ⭐ E' la stessa forma del pulsante, sulla tastiera: la prima volta
-        #      che questo progetto la vede accadere davvero.
+        "neither detach nor close: the old context stays alive and connected",
+        # ⛔ THE EXPECTATION WAS CORRECTED BY THE MEASUREMENT — I had declared
+        #    "T3 T4", and **T5** changes too (the release of the Ctrl).  ⚠ The
+        #    reason holds and is worth writing down, because it tells RG5 from
+        #    RG2:
+        #      · in RG2 the healing does NOT kick in, so the keyboard is never
+        #        replaced (it is not a viewport device) and its release arrives
+        #        ⇒ T5 stays green;
+        #      · in RG5 the healing KICKS IN — a new context is born with a new
+        #        keyboard — ⛔ but the old channel does not die, so
+        #        `drop_device()` does not run: the Ctrl stays down on the old
+        #        device and the release on the new one is swallowed by
+        #        `handle_key`.
+        #    ⭐ It is the same shape as the button, on the keyboard: the first
+        #      time this project sees it really happen.
         "T3 T4 T5 T7",
         """	ei_disconnect(in->ei);
 	ei_unref(in->ei);
 	in->ei = NULL;""",
-        """	/* guasto RG5 innestato: il contesto vecchio resta VIVO e connesso */
+        """	/* fault RG5 injected: the old context stays ALIVE and connected */
 	in->ei = NULL;""",
     ),
 }
 
 
 def main():
-    p = argparse.ArgumentParser(description="06-b33 §7.1 — i guasti innestati")
+    p = argparse.ArgumentParser(description="06-b33 §7.1 — the injected faults")
     p.add_argument("--elenco", action="store_true")
     p.add_argument("--albero", default="")
     p.add_argument("--guasto", default="")
@@ -212,14 +220,14 @@ def main():
     if a.elenco:
         for nome, (f, desc, casi, _c, _s) in GUASTI.items():
             print("%s  %s  [%s]" % (nome, desc, f))
-            print("    ⇒ devono CAMBIARE: %s" % (casi or "nessuno"))
+            print("    ⇒ must CHANGE: %s" % (casi or "none"))
         return 0
 
     if not a.albero or not a.guasto:
-        print("⛔ servono --albero e --guasto (oppure --elenco)", file=sys.stderr)
+        print("⛔ --albero and --guasto are needed (or --elenco)", file=sys.stderr)
         return 2
     if a.guasto not in GUASTI:
-        print("⛔ guasto ignoto: %s" % a.guasto, file=sys.stderr)
+        print("⛔ unknown fault: %s" % a.guasto, file=sys.stderr)
         return 2
 
     rel, _desc, _casi, cerca, sost = GUASTI[a.guasto]
@@ -227,18 +235,18 @@ def main():
     with open(percorso, encoding="utf-8") as f:
         testo = f.read()
 
-    # ⛔ SI CONTA, e una sola occorrenza e' un requisito: un'ancora che compare
-    #    due volte innesterebbe due guasti, e uno dei due nessuno lo sa.
+    # ⛔ IT IS COUNTED, and a single occurrence is a requirement: an anchor that
+    #    appears twice would inject two faults, and nobody knows about one of them.
     quante = testo.count(cerca)
     if quante != 1:
-        print("⛔ l'ancora di %s compare %d volte in %s (ne serve UNA): il guasto NON "
-              "si innesta, e questo NON e' «il guasto non fa niente»"
+        print("⛔ the anchor of %s appears %d times in %s (ONE is needed): the fault is NOT "
+              "injected, and this is NOT \"the fault does nothing\""
               % (a.guasto, quante, rel), file=sys.stderr)
         return 3
 
     with open(percorso, "w", encoding="utf-8") as f:
         f.write(testo.replace(cerca, sost, 1))
-    print("⭐ %s innestato in %s" % (a.guasto, rel))
+    print("⭐ %s injected into %s" % (a.guasto, rel))
     return 0
 
 

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-# T2 fase 17 — il lato DENTRO la scatola (gira da root con podman exec).
-#   t2box.py foto UTENTE              → le fotografie di PRIMA/DOPO, testo
-#   t2box.py sorveglia UTENTE DIR SEC → registra nascite/morti ogni 50 ms e
-#                                       attacca strace ai processi dell'utente
+# T2 phase 17 — the side INSIDE the box (runs as root with podman exec).
+#   t2box.py foto USER                → the BEFORE/AFTER snapshots, text
+#   t2box.py sorveglia USER DIR SEC   → records births/deaths every 50 ms and
+#                                       attaches strace to the user's processes
 import json
 import os
 import subprocess
@@ -68,7 +68,7 @@ def foto(u):
     print("### rete11-server\n" + sh("systemctl show rete11-server -p MainPID -p KillMode -p ActiveState -p ControlGroup"))
     pr = processi()
     padre = sh("systemctl show -p MainPID --value rete11-server")
-    print("### processi dell'utente (uid %s) e del padre %s" % (uid, padre))
+    print("### processes of the user (uid %s) and of the parent %s" % (uid, padre))
     for p in sorted(pr.values(), key=lambda x: x["pid"]):
         if str(p["uid"]) == uid or str(p["pid"]) == padre or str(p["ppid"]) == padre:
             print("%6d %6d sid=%-6d uid=%-5s %-16s %-70s %s" % (
@@ -80,7 +80,7 @@ def sorveglia(u, dir_, sec):
     padre = sh("systemctl show -p MainPID --value rete11-server")
     pr = processi()
     bersagli = [p for p in pr.values() if p["uid"] == uid or str(p["pid"]) == padre]
-    # strace: un file per processo (-ff non serve: -o con piu' -p scrive [pid N])
+    # strace: one file per process (-ff not needed: -o with several -p writes [pid N])
     args = [STRACE, "-tt", "-e", "trace=none", "-e", "signal=all", "-o", dir_ + "/strace.txt"]
     for p in bersagli:
         args += ["-p", str(p["pid"])]

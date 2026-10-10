@@ -1,104 +1,106 @@
 #!/usr/bin/env python3
-"""01-b9-letture.py — ⭐ B9: i punti in cui `RCP.md` ammetteva DUE letture.
+"""01-b9-letture.py — ⭐ B9: the points where `RCP.md` allowed TWO readings.
 
-    python3 01-b9-letture.py                 l'inventario, con i byte a confronto
-    python3 01-b9-letture.py --byte          e stampa gli esadecimali per esteso
-    python3 01-b9-letture.py --elenco        solo i titoli, senza costruire niente
+    python3 01-b9-letture.py                 the inventory, with the bytes compared
+    python3 01-b9-letture.py --byte          and prints the hex in full
+    python3 01-b9-letture.py --elenco        only the titles, without building anything
 
-⚠ Gira DOVUNQUE: non tocca la rete e non vuole un server.  Legge due file —
-  `RCP.md` e `01-b3-cliente.py` — e costruisce byte.  Il pezzo che vuole un
-  server e' un altro file, `01-b9-sonda.py`, e dice quale delle due letture ha
-  scelto il SERVER.
-
-===========================================================================
-⛔ CHE COSA E' QUESTO BANCO, E PERCHE' NON HA UN «PASSA»
-
-`FASI.md` §01-filo-nudo B9, ultima riga della tabella:
-
-    ⚠ **l'esito piu' prezioso non e' «passa»**: e' **ogni punto in cui chi lo
-      scrive ha dovuto scegliere** perche' `RCP.md` ammetteva due letture.
-      Quei punti vanno in «che cosa NON ha funzionato», e sono difetti **del
-      documento**.
-
-⛔ Da cui la forma di questo file: **non e' un banco che promuove il cliente di
-   prova**, e' un banco che **conta i punti in cui il documento non decideva**.
-   Il numero che consegna e' quello, e il verde qui sotto vuol dire soltanto
-   *«l'inventario e' intero e ogni voce regge»*, mai *«RCP e' senza ambiguita'»*.
-
-⭐ E ogni voce porta **il byte che cambia sul filo fra le due letture**, non una
-   spiegazione: se due letture producessero gli stessi byte non sarebbero due
-   letture, sarebbero due modi di dire la stessa cosa.  ⛔ Questo file lo
-   **verifica**, voce per voce (`controlla_byte`), e una voce i cui due byte
-   combaciano e' un difetto **di questo banco** — diventa rossa.
+⚠ It runs ANYWHERE: it does not touch the network and does not want a server.  It
+  reads two files — `RCP.md` and `01-b3-cliente.py` — and builds bytes.  The piece
+  that wants a server is another file, `01-b9-sonda.py`, and it says which of the
+  two readings the SERVER chose.
 
 ===========================================================================
-⛔ LO STATO INIZIALE, E QUI E' DI CARTA (B0.1)
+⛔ WHAT THIS BENCH IS, AND WHY IT HAS NO «PASS»
 
-Un banco che legge dei documenti ha per stato iniziale **il testo che ha
-letto**.  `RCP.md` e `01-b3-cliente.py` cambiano sotto i piedi — li scrivono
-altri, anche stanotte — e una voce che cita una riga sparita starebbe
-descrivendo un documento che non esiste piu'.
+`FASI.md` §01-filo-nudo B9, last line of the table:
 
-⛔ Da cui: ogni voce dichiara i suoi **appigli** — pezzi di testo esatti che
-   devono comparire nei due file — e il banco li cerca **prima** di dare
-   qualunque verdetto.  Un appiglio che non si trova NON e' «la voce e'
-   sbagliata»: e' `[?]` **il documento e' cambiato sotto il banco**, che e' una
-   terza cosa e ha una cura diversa (rileggere, non correggere).
+    ⚠ **the most precious outcome is not «passes»**: it is **every point where
+      whoever writes it had to choose** because `RCP.md` allowed two readings.
+      Those points go into «what did NOT work», and they are defects **of the
+      document**.
 
-⚠ E i due file si cercano **accanto a questo**, cioe' nella copia che sta
-  girando: leggere un `RCP.md` di un'altra copia direbbe di un documento che
-  non e' quello contro cui il cliente di prova e' stato scritto.
+⛔ Hence the shape of this file: **it is not a bench that promotes the test
+   client**, it is a bench that **counts the points where the document did not
+   decide**.  The number it delivers is that one, and the green below means only
+   *«the inventory is whole and every entry holds»*, never *«RCP is without
+   ambiguity»*.
 
-===========================================================================
-⛔ IL DENOMINATORE, E LE QUATTRO COLONNE CHE NON SONO LA STESSA COSA
-
-  VOCI          quante volte il documento ammetteva due letture;
-  CON APPIGLI   di quelle, quante si sono potute **verificare sul testo** oggi;
-  SUL FILO      di quelle, quante producono **byte diversi** — cioe' quante un
-                banco puo' andare a guardare;
-  PROVATE       ⛔ di quelle, quante sono state misurate **sul comportamento**
-                del cliente di prova invece che sulla sua citazione.  E' la
-                colonna nata dal rilievo A8 (11 agosto 2026): un appiglio si
-                puo' lasciare in piedi mentre il comportamento cambia, e per
-                una notte questo banco e' stato verde su un cliente che aveva
-                gia' cambiato lettura.  Il riquadro sta sopra `estrai_funzioni`.
-
-⛔ Le tre non coincidono mai, e stamparne una sola sarebbe la forma di
-   `LEZIONI.md` §1.9: *«il verdetto su zero cose»* e *«il denominatore falso»*.
-   La voce **R3.27** e' quella che lo dimostra: e' una vera ambiguita', e sul
-   filo **non cambia nessun byte della richiesta** — cambia *quando* arriva il
-   `CONGEDO`, e nel caso peggiore *se* arriva.  E' dichiarata cosi', invece di
-   essere gonfiata con un byte inventato per far tornare la colonna.
+⭐ And every entry carries **the byte that changes on the wire between the two
+   readings**, not an explanation: if two readings produced the same bytes they
+   would not be two readings, they would be two ways of saying the same thing.
+   ⛔ This file **verifies** it, entry by entry (`controlla_byte`), and an entry
+   whose two bytes match is a defect **of this bench** — it turns red.
 
 ===========================================================================
-⛔ IL MECCANISMO DI B9, E QUESTO FILE NON LO PUO' GARANTIRE
+⛔ THE INITIAL STATE, AND HERE IT IS MADE OF PAPER (B0.1)
 
-`FASI.md` §01-filo-nudo B9: la separazione fra chi scrive il cliente di prova e
-chi scrive il server **dev'essere un meccanismo, non una regola** — *«chi
-scrive il cliente riceve `RCP.md` e i suoi riferimenti, e non l'albero del
-server e della pagina»*.
+A bench that reads documents has as its initial state **the text it read**.
+`RCP.md` and `01-b3-cliente.py` change under its feet — others write them, even
+tonight — and an entry that quotes a line that has disappeared would be
+describing a document that no longer exists.
 
-⚠ **Questo file non e' quel meccanismo e non lo dimostra.**  Dice solo che cosa
-  il cliente di prova ha scelto, leggendo il cliente di prova.  ⛔ Se chi lo ha
-  scritto avesse guardato `rcp/rcp.c`, le scelte combacerebbero con quelle del
-  server **e questo file stamperebbe le stesse righe**: la concordanza non
-  saprebbe distinguere «hanno letto lo stesso documento» da «hanno copiato».
-  E' il guasto **B9** che B12 costruisce apposta (*«il cliente di prova che ha
-  letto il C»*), e senza quello questa riga resta una dichiarazione.
+⛔ Hence: every entry declares its **anchors** — exact pieces of text that must
+   appear in the two files — and the bench looks for them **before** giving any
+   verdict.  An anchor that is not found is NOT «the entry is wrong»: it is
+   `[?]` **the document changed under the bench**, which is a third thing and
+   has a different cure (rereading, not correcting).
+
+⚠ And the two files are looked for **next to this one**, that is in the copy
+  that is running: reading an `RCP.md` from another copy would speak of a
+  document that is not the one the test client was written against.
 
 ===========================================================================
-⭐ E LE DUE VOCI CHE VALGONO PIU' DELLE ALTRE
+⛔ THE DENOMINATOR, AND THE FOUR COLUMNS THAT ARE NOT THE SAME THING
 
-  L4  la coda di byte in fondo al corpo: il **cliente di prova** la tollera e
-      il **validatore di B4** la rifiuta.  Sono i nostri due lettori indipendenti
-      di §6.1, e hanno letto **due cose diverse** — cioe' esattamente l'oggetto
-      che B9 esiste per produrre, trovato in casa e non in teoria;
+  VOCI          how many times the document allowed two readings;
+  CON APPIGLI   of those, how many could be **verified on the text** today;
+  SUL FILO      of those, how many produce **different bytes** — that is how
+                many a bench can go and look at;
+  PROVATE       ⛔ of those, how many were measured **on the behaviour** of the
+                test client instead of on its quotation.  It is the column born
+                from finding A8 (11 Aug 2026): an anchor can be left standing
+                while the behaviour changes, and for one night this bench was
+                green on a client that had already changed reading.  The box is
+                above `estrai_funzioni`.
 
-  L11 la versione nel `CIAO` quando il percorso e' `/rcp/1`: §9 ordina di
-      dichiarare **la piu' alta che si sa parlare**, §2.2 dice che una versione
-      diversa dal percorso e' `VERSIONE_INCOMPATIBILE`.  Per un client che
-      parlasse 1 **e** 2 le due righe ordinano il contrario, e oggi non morde
-      solo perche' RCP/2 non esiste.
+⛔ The three never coincide, and printing only one of them would be the shape of
+   `LEZIONI.md` §1.9: *«the verdict on zero things»* and *«the false
+   denominator»*.  The entry **R3.27** is the one that proves it: it is a real
+   ambiguity, and on the wire **no byte of the request changes** — what changes
+   is *when* the `CONGEDO` arrives, and in the worst case *whether* it arrives.
+   It is declared that way, instead of being inflated with an invented byte to
+   make the column add up.
+
+===========================================================================
+⛔ THE MECHANISM OF B9, AND THIS FILE CANNOT GUARANTEE IT
+
+`FASI.md` §01-filo-nudo B9: the separation between whoever writes the test client
+and whoever writes the server **must be a mechanism, not a rule** — *«whoever
+writes the client receives `RCP.md` and its references, and not the tree of the
+server and of the page»*.
+
+⚠ **This file is not that mechanism and does not prove it.**  It only says what
+  the test client chose, by reading the test client.  ⛔ If whoever wrote it had
+  looked at `rcp/rcp.c`, the choices would match the server's **and this file
+  would print the same lines**: the agreement could not tell «they read the same
+  document» from «they copied».  It is fault **B9** that B12 builds on purpose
+  (*«the test client that read the C»*), and without it this line stays a
+  declaration.
+
+===========================================================================
+⭐ AND THE TWO ENTRIES THAT ARE WORTH MORE THAN THE OTHERS
+
+  L4  the tail of bytes at the end of the body: the **test client** tolerates it
+      and the **B4 validator** rejects it.  They are our two independent readers
+      of §6.1, and they read **two different things** — that is exactly the
+      object B9 exists to produce, found at home and not in theory;
+
+  L11 the version in the `CIAO` when the path is `/rcp/1`: §9 orders declaring
+      **the highest one can speak**, §2.2 says that a version different from the
+      path is `VERSIONE_INCOMPATIBILE`.  For a client that spoke 1 **and** 2 the
+      two lines order the opposite, and today it does not bite only because
+      RCP/2 does not exist.
 """
 import argparse
 import ast
@@ -111,13 +113,14 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 
 
 def cerca_in_su(nome, da):
-    """Cerca `nome` risalendo le cartelle.  ⛔ Restituisce None se non c'e'.
+    """Looks for `nome` walking up the folders.  ⛔ Returns None if it is not there.
 
-    ⚠ Non e' comodita': B12 fa girare una COPIA di questo banco dentro
-      `01-b12-copie/`, cioe' una cartella piu' in giu' — e un percorso calcolato
-      con un solo `dirname` porterebbe a un `RCP.md` che non c'e'.  Il banco
-      uscirebbe «non ho potuto leggere» **mentre B12 sta misurando tutt'altro**,
-      e la certificazione registrerebbe un rosso della causa sbagliata.
+    ⚠ It is not convenience: B12 runs a COPY of this bench inside
+      `01-b12-copie/`, that is one folder further down — and a path computed
+      with a single `dirname` would lead to an `RCP.md` that is not there.  The
+      bench would exit «I could not read» **while B12 is measuring something
+      else entirely**, and the certification would record a red with the wrong
+      cause.
     """
     d = da
     for _ in range(6):
@@ -139,12 +142,12 @@ VERDE, ROSSO, GIALLO, GRIGIO = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0
 
 
 # ===========================================================================
-# I mattoni del filo, riscritti QUI e non importati dal cliente di prova.
+# The bricks of the wire, rewritten HERE and not imported from the test client.
 #
-# ⛔ Non e' duplicazione per distrazione: se questo file importasse `inquadra()`
-#    dal cliente, le due letture di §6.1 uscirebbero **tutt'e due** dalla
-#    lettura del cliente, e la voce L4 confronterebbe il cliente con se stesso.
-#    I byte delle due letture si costruiscono a mano, dal documento.
+# ⛔ It is not duplication by distraction: if this file imported `inquadra()`
+#    from the client, the two readings of §6.1 would **both** come out of the
+#    client's reading, and entry L4 would compare the client with itself.
+#    The bytes of the two readings are built by hand, from the document.
 # ===========================================================================
 def u16(v):
     return struct.pack("!H", v)
@@ -155,16 +158,16 @@ def u32(v):
 
 
 def stringa(t):
-    """§6.0: `u16 lunghezza` + `lunghezza` byte di UTF-8, senza terminatore."""
+    """§6.0: `u16 length` + `length` bytes of UTF-8, without terminator."""
     b = t.encode("utf-8") if isinstance(t, str) else t
     return u16(len(b)) + b
 
 
 def inquadratura(tipo, corpo, lunghezza=None):
-    """§6.1: `u16 tipo` · `u32 lunghezza` · corpo.
+    """§6.1: `u16 type` · `u32 length` · body.
 
-    `lunghezza` si puo' forzare: serve alla voce L4, dove il punto e' proprio
-    che il numero dichiarato e quel che il tipo prevede non coincidono.
+    `lunghezza` can be forced: it serves entry L4, where the point is precisely
+    that the declared number and what the type expects do not coincide.
     """
     return u16(tipo) + u32(len(corpo) if lunghezza is None else lunghezza) + corpo
 
@@ -188,25 +191,25 @@ def eccomi(voci):
 
 
 def capsula_chiusura(codice, larghezza=4, dentro_data=True):
-    """La capsula `CLOSE_WEBTRANSPORT_SESSION` (0x2843), come la vede il filo.
+    """The `CLOSE_WEBTRANSPORT_SESSION` capsule (0x2843), as the wire sees it.
 
-    ⚠ Il tipo e la lunghezza sono interi variabili di QUIC: `0x2843` sta su due
-      byte con i due bit alti a `01`, cioe' `0x68 0x43`.
+    ⚠ The type and the length are QUIC variable-length integers: `0x2843` fits
+      in two bytes with the two high bits at `01`, that is `0x68 0x43`.
     """
     corpo = codice.to_bytes(larghezza, "big")
     capsula = b"\x68\x43" + bytes([len(corpo)]) + corpo
     if not dentro_data:
         return capsula
-    # RFC 9297: sul filo della CONNECT le capsule viaggiano dentro i frame DATA
+    # RFC 9297: on the wire of the CONNECT the capsules travel inside DATA frames
     return b"\x00" + bytes([len(capsula)]) + capsula
 
 
 # ===========================================================================
-# L'INVENTARIO.
+# THE INVENTORY.
 #
-# ⛔ Ogni voce dichiara i suoi APPIGLI prima di dichiarare la sua tesi: una
-#    citazione che non si trova piu' e' una voce che parla di un altro
-#    documento, e va detto invece di essere creduta.
+# ⛔ Every entry declares its ANCHORS before declaring its thesis: a quotation
+#    that can no longer be found is an entry that speaks of another document,
+#    and it must be said instead of believed.
 # ===========================================================================
 VOCI = []
 
@@ -225,20 +228,20 @@ def voce(sigla, dove, domanda, lettura_a, lettura_b, scelta, morde,
 # ── L1 ──────────────────────────────────────────────────────────────────────
 voce(
     "L1", "§4.3",
-    "`ECCOMI` porta l'ELENCO dei codec del server, o LA SCELTA?",
-    "A — l'elenco: §4.3 dice «capacita' del server», e la scelta viaggia solo "
-    "nel registro del server e poi nel campo `codec` dell'intestazione del "
-    "fotogramma (§6.2)",
-    "B — la scelta: §4.3 dice «Chi sceglie e' il server», e l'unico posto in "
-    "cui il client potrebbe leggerla e' questa capacita'",
-    "il cliente di prova **non legge nessuna capacita' di `ECCOMI`**: legge i "
-    "due byte della versione e butta il resto.  E' la lettura A per omissione, "
-    "cioe' la scelta fatta senza accorgersi di sceglierla",
-    "alla fase 2, sul primo fotogramma: un client che avesse letto B "
-    "configurerebbe il decodificatore sul primo elemento dell'elenco e "
-    "indovinerebbe **finche' l'ordine del server coincide con l'intersezione**. "
-    "Il sintomo, lontano da qui, e' «il browser non apre il flusso» — lo stesso "
-    "del rilievo O12 su `video.livello`",
+    "Does `ECCOMI` carry the server's LIST of codecs, or THE CHOICE?",
+    "A — the list: §4.3 says «capabilities of the server», and the choice travels only "
+    "in the server log and then in the `codec` field of the frame "
+    "header (§6.2)",
+    "B — the choice: §4.3 says «The server is the one who chooses», and the only place "
+    "where the client could read it is this capability",
+    "the test client **reads no capability of `ECCOMI`**: it reads the "
+    "two bytes of the version and throws away the rest.  It is reading A by omission, "
+    "that is the choice made without noticing it was making it",
+    "in phase 2, on the first frame: a client that had read B "
+    "would configure the decoder on the first element of the list and "
+    "would guess right **as long as the server's order coincides with the intersection**. "
+    "The symptom, far from here, is «the browser does not open the stream» — the same "
+    "as finding O12 on `video.livello`",
     appigli_rcp=[
         "| **ECCOMI** | server → client. Versione scelta, capacità del server |",
         "⛔ **Chi sceglie è il server**, dentro l'intersezione",
@@ -250,61 +253,61 @@ voce(
                 ("audio.codec", "opus,pcm")]),
         eccomi([("video.codec", "hevc"), ("video.profondita", "8"),
                 ("audio.codec", "opus")]),
-        "il valore di `video.codec` dentro `ECCOMI`: `0008 «hevc,av1»` contro "
-        "`0004 «hevc»` — e con lui la `lunghezza` u32 dell'inquadratura",
+        "the value of `video.codec` inside `ECCOMI`: `0008 «hevc,av1»` against "
+        "`0004 «hevc»` — and with it the u32 `lunghezza` of the framing",
     ),
 )
 
 # ── L2 ──────────────────────────────────────────────────────────────────────
 voce(
-    "L2", "§3.1 punto 3",
-    "Il «codice d'errore applicativo pari al codice del motivo» quanto e' "
-    "largo, e ci va il motivo nudo o il motivo mappato?",
-    "A — il motivo nudo dentro i 32 bit della capsula: `00 00 00 0D`",
-    "B — il motivo trasformato dalla mappatura che WebTransport su HTTP/3 "
-    "impone ai codici d'errore, che sparpaglia i valori bassi su tutto lo "
-    "spazio di HTTP/3",
-    "il cliente di prova legge **l'ultimo dei quattro byte** e lo prende per il "
-    "motivo (`_capsula_chiusura`, `return b[j + 3]`): e' la lettura A, **e in "
-    "piu' tronca** — un codice sopra 255 gli arriverebbe come un altro motivo, "
-    "senza una riga che lo dica",
-    "il giorno in cui un'implementazione applicasse la mappatura, il motivo "
-    "arriverebbe come un numero enorme e il lettore ne stamperebbe il byte "
-    "basso: **un motivo sbagliato invece di un errore**, che e' peggio di un "
-    "silenzio (§3.1: «il terzo punto e' quello che salva le diagnosi»)",
+    "L2", "§3.1 point 3",
+    "How wide is the «application error code equal to the reason code», "
+    "and does the bare reason go there or the mapped reason?",
+    "A — the bare reason inside the 32 bits of the capsule: `00 00 00 0D`",
+    "B — the reason transformed by the mapping that WebTransport over HTTP/3 "
+    "imposes on error codes, which scatters the low values over the whole "
+    "HTTP/3 space",
+    "the test client reads **the last of the four bytes** and takes it for the "
+    "reason (`_capsula_chiusura`, `return b[j + 3]`): it is reading A, **and on "
+    "top it truncates** — a code above 255 would reach it as another reason, "
+    "without a line saying so",
+    "the day an implementation applied the mapping, the reason "
+    "would arrive as a huge number and the reader would print its low "
+    "byte: **a wrong reason instead of an error**, which is worse than a "
+    "silence (§3.1: «the third point is the one that saves the diagnoses»)",
     appigli_rcp=[
         "**DEVE** chiudere la **sessione WebTransport** con il codice d'errore "
         "applicativo pari al\n   **codice del motivo** di §8.2",
     ],
-    appigli_cliente=["return b[j + 3]      # i quattro byte del codice, il piu' basso"],
+    appigli_cliente=["return b[j + 3]      # the four bytes of the code, the lowest"],
     byte=lambda: (
         capsula_chiusura(0x0D),
         capsula_chiusura(0x52E4A40FA8DB + 0x0D, larghezza=8),
-        "i byte del codice dentro la capsula `0x2843`: `00 00 00 0D` contro "
-        "otto byte di un valore mappato — e la capsula stessa cambia lunghezza",
+        "the bytes of the code inside the `0x2843` capsule: `00 00 00 0D` against "
+        "eight bytes of a mapped value — and the capsule itself changes length",
     ),
-    nota="⚠ `RCP.md` non dichiara la larghezza del campo in nessun punto: la "
-         "dichiara solo il formato di WebTransport, che RCP non nomina.",
+    nota="⚠ `RCP.md` does not declare the width of the field anywhere: only "
+         "the WebTransport format declares it, which RCP does not name.",
 )
 
 # ── L3 ──────────────────────────────────────────────────────────────────────
 voce(
-    "L3", "§3.1 punto 2 contro §4.2",
-    "Dopo il `CONGEDO`, il canale di controllo si chiude con un FIN, oppure "
-    "si chiude solo la sessione?",
-    "A — `CONGEDO` **con** il FIN sul canale di controllo, poi la chiusura "
-    "della sessione: §4.2 dice che il FIN su quello stream **e'** la fine "
-    "della sessione, quindi e' il modo piu' esplicito di dirla",
-    "B — `CONGEDO` **senza** FIN, e la fine la dichiara solo la chiusura della "
-    "sessione (§3.1 punto 3)",
-    "il cliente di prova non manda mai un `CONGEDO`; e quando spedisce "
-    "qualunque cosa usa `end_stream=False`, cioe' la lettura B.  ⛔ E dal lato "
-    "che riceve chiama il FIN «il canale di controllo si e' chiuso», che e' un "
-    "esito **diverso** da «sessione chiusa dal server»",
-    "chi aspetta il FIN per dichiarare finita la sessione resta appeso contro "
-    "chi chiude solo la sessione; e chi manda il FIN **prima** della chiusura "
-    "fa scattare §4.2 per primo, cosi' il pari registra «canale chiuso» invece "
-    "del motivo.  E' la stessa famiglia del rilievo R1.4, sullo stesso punto",
+    "L3", "§3.1 point 2 against §4.2",
+    "After the `CONGEDO`, does the control channel close with a FIN, or "
+    "does only the session close?",
+    "A — `CONGEDO` **with** the FIN on the control channel, then the closing "
+    "of the session: §4.2 says that the FIN on that stream **is** the end "
+    "of the session, so it is the most explicit way of saying it",
+    "B — `CONGEDO` **without** FIN, and the end is declared only by the closing of the "
+    "session (§3.1 point 3)",
+    "the test client never sends a `CONGEDO`; and when it sends "
+    "anything it uses `end_stream=False`, that is reading B.  ⛔ And on the side "
+    "that receives it calls the FIN «the control channel has closed», which is "
+    "a **different** outcome from «session closed by the server»",
+    "whoever waits for the FIN to declare the session over stays hanging against "
+    "whoever closes only the session; and whoever sends the FIN **before** the closing "
+    "makes §4.2 trigger first, so the peer records «channel closed» instead "
+    "of the reason.  It is the same family as finding R1.4, on the same point",
     appigli_rcp=[
         "⛔ **In byte**: un FIN su quello stream, da una qualunque delle due parti, "
         "chiude la sessione.",
@@ -312,39 +315,39 @@ voce(
     ],
     appigli_cliente=[
         "self._quic.send_stream_data(self.controllo, dati, end_stream=False)",
-        'self._cade("il canale di controllo si e\' chiuso")',
+        'self._cade("the control channel has closed")',
     ],
     byte=lambda: (
         inquadratura(0x000C, bytes([0x01]) + stringa("")) + b"<FIN>",
         inquadratura(0x000C, bytes([0x01]) + stringa("")),
-        "il bit FIN del frame STREAM che porta il `CONGEDO` — gli stessi byte "
-        "di carico, un bit di trasporto in piu'",
+        "the FIN bit of the STREAM frame carrying the `CONGEDO` — the same payload "
+        "bytes, one transport bit more",
     ),
-    nota="⚠ Il `<FIN>` qui sopra e' scritto in chiaro perche' NON e' un byte "
-         "del carico: e' un bit dell'intestazione del frame STREAM di QUIC, e "
-         "fingere di poterlo stampare come carico sarebbe una bugia comoda.",
+    nota="⚠ The `<FIN>` above is written in plain text because it is NOT a byte "
+         "of the payload: it is a bit of the header of the QUIC STREAM frame, and "
+         "pretending to be able to print it as payload would be a convenient lie.",
 )
 
 # ── L4 ──────────────────────────────────────────────────────────────────────
 voce(
     "L4", "§6.1",
-    "⭐ Byte in piu' in fondo al corpo, con la `lunghezza` che li conta: sono "
-    "una violazione o sono riserva per le versioni future?",
-    "A — violazione: §6.1 vuole che `lunghezza` sia «il numero esatto dei byte "
-    "del corpo», e un corpo piu' lungo di quel che il tipo prevede e' «una "
-    "lunghezza incoerente con quel che il tipo prevede» ⇒ `ERRORE_PROTOCOLLO`",
-    "B — riserva: `lunghezza` e' autorevole, si leggono i campi che il tipo "
-    "dichiara e il resto si salta.  E' l'unico modo in cui §9 potrebbe "
-    "allargare un messaggio senza cambiare versione maggiore",
-    "⛔ **I nostri due lettori hanno scelto diversamente**: il cliente di prova "
-    "legge `lunghezza` byte e passa il corpo cosi' com'e' senza mai verificare "
-    "di averlo consumato tutto (lettura B, tollerante); il validatore di B4 ha "
-    "una registrazione apposta — `10-coda-di-spazzatura.rcpreg` — cioe' la "
-    "lettura A",
-    "e' il difetto che questo banco esiste per trovare: **l'arbitro e il "
-    "secondo lettore non leggono la stessa specifica**.  Finche' nessuno manda "
-    "byte in piu' non succede niente; il giorno in cui succede, uno dei due "
-    "dice conforme e l'altro chiude la connessione",
+    "⭐ Extra bytes at the end of the body, with the `lunghezza` counting them: are they "
+    "a violation or are they a reserve for future versions?",
+    "A — violation: §6.1 wants `lunghezza` to be «the exact number of bytes "
+    "of the body», and a body longer than what the type expects is «a "
+    "length inconsistent with what the type expects» ⇒ `ERRORE_PROTOCOLLO`",
+    "B — reserve: `lunghezza` is authoritative, the fields the type "
+    "declares are read and the rest is skipped.  It is the only way §9 could "
+    "widen a message without changing the major version",
+    "⛔ **Our two readers chose differently**: the test client "
+    "reads `lunghezza` bytes and passes the body on as it is without ever checking "
+    "that it consumed it all (reading B, tolerant); the B4 validator has "
+    "a recording on purpose — `10-coda-di-spazzatura.rcpreg` — that is "
+    "reading A",
+    "it is the defect this bench exists to find: **the arbiter and the "
+    "second reader do not read the same specification**.  As long as nobody sends "
+    "extra bytes nothing happens; the day it happens, one of the two "
+    "says compliant and the other closes the connection",
     appigli_rcp=[
         "⛔ `lunghezza` **DEVE** essere il numero esatto dei byte del corpo.",
         "Un ricevente che legge una\nlunghezza incoerente con quel che il tipo "
@@ -359,26 +362,26 @@ voce(
             [("audio.codec", "opus,pcm"), ("video.profondita", "8")])),
         (lambda c: inquadratura(0x0001, c + b"\xDE\xAD\xBE\xEF"))(u16(1) + capacita(
             [("audio.codec", "opus,pcm"), ("video.profondita", "8")])),
-        "quattro byte in coda al corpo e la `lunghezza` u32 piu' alta di "
-        "quattro: `0000002A` contro `0000002E`",
+        "four bytes at the tail of the body and the u32 `lunghezza` higher by "
+        "four: `0000002A` against `0000002E`",
     ),
 )
 
 # ── L5 ──────────────────────────────────────────────────────────────────────
 voce(
     "L5", "§4.3",
-    "Una capacita' **assente** e' un elenco vuoto o una cosa non negoziata?",
-    "A — assente = elenco vuoto: l'intersezione e' vuota, e §4.3 impone "
+    "Is an **absent** capability an empty list or a thing not negotiated?",
+    "A — absent = empty list: the intersection is empty, and §4.3 imposes "
     "`NIENTE_IN_COMUNE`",
-    "B — assente = non negoziata: la riga che obbliga riguarda solo `pcm` e "
-    "`8`, e per il resto chi tace non ha chiesto niente",
-    "il cliente di prova dichiara **sempre** tutte e otto le capacita', quindi "
-    "⚠ **non ha scelto: ha evitato la domanda**.  E averla evitata vuol dire "
-    "che nessuna delle sue esecuzioni la fara' mai emergere",
-    "il primo client altrui che tacesse su `video.codec` — perche' non decodifica "
-    "video, per esempio un client di soli appunti — riceverebbe `NIENTE_IN_COMUNE` "
-    "o entrerebbe, a seconda di chi ha scritto il server, e nessuno dei due "
-    "sarebbe fuori specifica",
+    "B — absent = not negotiated: the line that obliges concerns only `pcm` and "
+    "`8`, and for the rest whoever keeps quiet asked for nothing",
+    "the test client **always** declares all eight capabilities, so "
+    "⚠ **it did not choose: it avoided the question**.  And having avoided it means "
+    "that none of its runs will ever make it come out",
+    "the first foreign client that kept quiet about `video.codec` — because it does not decode "
+    "video, for example a clipboard-only client — would receive `NIENTE_IN_COMUNE` "
+    "or would get in, depending on who wrote the server, and neither of the two "
+    "would be outside the specification",
     appigli_rcp=[
         "⛔ Se l'intersezione di `video.codec` è **vuota**, il server **DEVE** "
         "congedare con\n`NIENTE_IN_COMUNE`.",
@@ -390,30 +393,30 @@ voce(
         ciao(voci=[("video.codec", "hevc,av1"), ("video.profondita", "8,10"),
                    ("audio.codec", "opus,pcm")]),
         ciao(voci=[("video.profondita", "8,10"), ("audio.codec", "opus,pcm")]),
-        "il campo `quante` dell'elenco delle capacita': `0003` contro `0002`, e "
-        "ventidue byte in meno",
+        "the `quante` field of the capability list: `0003` against `0002`, and "
+        "twenty-two bytes fewer",
     ),
 )
 
 # ── L6 ──────────────────────────────────────────────────────────────────────
 voce(
-    "L6", "§4.6 righe 1 e 4  ·  la `[?]` R3.27 — ⭐ CHIUSA l'11 agosto 2026",
-    "Da quale istante parte il primo tetto: la fine del TLS, l'apertura della "
-    "sessione WebTransport, o l'apertura del canale di controllo?",
-    "A — la fine del TLS, alla lettera di §4.6 ⛔ **ritirata dal documento**",
-    "B — l'apertura della sessione, o del canale: sono gli istanti che il "
-    "server puo' davvero osservare, e fra il TLS e la sessione passa almeno un "
-    "giro di rete",
-    "⭐ **B, e adesso lo dice il documento, non solo il banco.**  §4.6 riga 1 "
-    "conta dall'**apertura del canale di controllo**, e la riga 4 — nuova — "
-    "mette un tetto di 5 s anche fra sessione e canale.  ⚠ Il cliente di prova "
-    "continua a non scegliere: non misura tetti.  Chi aveva scelto era **B6**, "
-    "e la scelta del banco e' diventata la lettera del documento",
-    "una sessione aperta e un canale di controllo **mai aperto**: alla lettera "
-    "di A il tetto e' gia' scaduto e la connessione dev'essere finita; alla "
-    "lettura B non le sta addosso nessun tetto e **resta li'**, che e' proprio "
-    "la cosa che §4.6 esiste per impedire.  ⭐ Ed e' esattamente il buco che la "
-    "riga 4 e' nata per chiudere: `DECISIONI.md` §7.17",
+    "L6", "§4.6 lines 1 and 4  ·  the `[?]` R3.27 — ⭐ CLOSED on 11 Aug 2026",
+    "From which instant does the first cap start: the end of TLS, the opening of the "
+    "WebTransport session, or the opening of the control channel?",
+    "A — the end of TLS, to the letter of §4.6 ⛔ **withdrawn from the document**",
+    "B — the opening of the session, or of the channel: they are the instants the "
+    "server can really observe, and between TLS and the session at least one "
+    "network round trip passes",
+    "⭐ **B, and now the document says it, not only the bench.**  §4.6 line 1 "
+    "counts from the **opening of the control channel**, and line 4 — new — "
+    "puts a 5 s cap also between session and channel.  ⚠ The test client "
+    "still does not choose: it does not measure caps.  The one who had chosen was **B6**, "
+    "and the bench's choice became the letter of the document",
+    "a session open and a control channel **never opened**: to the letter "
+    "of A the cap has already expired and the connection must be over; with "
+    "reading B no cap sits on it and **it stays there**, which is precisely "
+    "the thing §4.6 exists to prevent.  ⭐ And it is exactly the hole that "
+    "line 4 was born to close: `DECISIONI.md` §7.17",
     appigli_rcp=[
         "| ⭐ **apertura del canale di controllo** *(il primo stream "
         "bidirezionale della sessione)* | `CIAO` ricevuto | **5 s** |",
@@ -421,42 +424,42 @@ voce(
         "di controllo** | **5 s**",
     ],
     byte=None,
-    nota="⛔ **Nessun byte cambia**, e va detto invece di inventarne uno: le "
-         "due letture mandano lo stesso `CIAO` (o lo stesso silenzio).  Cambia "
-         "**quando** arriva il `CONGEDO(TEMPO_SCADUTO)`, e nel caso della "
-         "sessione senza canale cambia **se** arriva.  E' la voce che tiene "
-         "onesta la colonna «sul filo».\n"
-         "  ⭐ **E QUESTA VOCE E' LA PROVA CHE B9 SERVE, misurata l'11 agosto "
-         "2026.**  L'appiglio citato qui era la vecchia riga 1 di §4.6 — quella "
-         "che partiva dalla fine del TLS — e B9 e' uscito **3**: l'appiglio non "
-         "si trovava piu', perche' `RCP.md` era stato corretto quello stesso "
-         "giorno, da noi, sulla misura di B6.  ⛔ Nessun altro banco se ne "
-         "sarebbe accorto: gli altri sarebbero diventati **piu' verdi**, non "
-         "meno.  ⚠ E l'ambiguita' non e' «sparita»: e' stata **decisa**, il che "
-         "e' un esito diverso e va scritto come tale.\n"
-         "  ⛔ **E LA PRIMA STESURA DI QUESTA NOTA CITAVA LA MARCA A LETTERE**, "
-         "cioe' la frase che B12 cerca nell'uscita rossa per attribuire il "
-         "rosso al guasto.  Con quella dentro, la marca compariva **anche nel "
-         "giro sano** — e una marca che compare in tutt'e due i giri non e' una "
-         "marca, e' un modo di certificare senza guardare (la stessa trappola "
-         "gia' scritta nel guasto di C2).  ⭐ Preso dal giro di certificazione "
-         "dell'11 agosto, in cui il banco ha morso chi lo stava certificando.",
+    nota="⛔ **No byte changes**, and it must be said instead of inventing one: the "
+         "two readings send the same `CIAO` (or the same silence).  What changes is "
+         "**when** the `CONGEDO(TEMPO_SCADUTO)` arrives, and in the case of the "
+         "session without a channel it changes **whether** it arrives.  It is the entry that keeps "
+         "the «on the wire» column honest.\n"
+         "  ⭐ **AND THIS ENTRY IS THE PROOF THAT B9 IS USEFUL, measured on 11 Aug "
+         "2026.**  The anchor quoted here was the old line 1 of §4.6 — the one "
+         "that started from the end of TLS — and B9 exited **3**: the anchor could "
+         "no longer be found, because `RCP.md` had been corrected that very "
+         "day, by us, on B6's measurement.  ⛔ No other bench would have "
+         "noticed: the others would have become **greener**, not "
+         "less.  ⚠ And the ambiguity has not «disappeared»: it has been **decided**, which "
+         "is a different outcome and must be written as such.\n"
+         "  ⛔ **AND THE FIRST DRAFT OF THIS NOTE QUOTED THE MARK IN FULL**, "
+         "that is the sentence B12 looks for in the red output to attribute the "
+         "red to the fault.  With that inside, the mark appeared **also in the "
+         "healthy run** — and a mark that appears in both runs is not a "
+         "mark, it is a way of certifying without looking (the same trap "
+         "already written in the fault of C2).  ⭐ Caught by the certification run "
+         "of 11 August, in which the bench bit whoever was certifying it.",
 )
 
 # ── L7 ──────────────────────────────────────────────────────────────────────
 voce(
     "L7", "§2.2",
-    "La CONNECT estesa che apre la sessione deve portare un `origin`?",
-    "A — si': ogni browser lo manda, e un server che lo controlla e' conforme "
-    "perche' RCP non gli vieta di controllarlo",
-    "B — no: §2.2 detta il **percorso** e nient'altro dell'intestazione, "
-    "quindi l'`origin` non e' di RCP",
-    "il cliente di prova **lo manda**, copiando il browser.  ⚠ E' una scelta "
-    "prudente che ha un prezzo: mandandolo, il cliente di prova **non puo' piu' "
-    "scoprire** se il server lo pretende — l'arbitro si e' adattato all'imputato",
-    "il primo client che non sia un browser: se il server controlla l'`origin`, "
-    "quel client si vede rifiutare la CONNECT e la diagnosi che ne esce e' uno "
-    "stato HTTP, cioe' fuori da RCP e fuori da tutti i motivi di §8.2",
+    "Must the extended CONNECT that opens the session carry an `origin`?",
+    "A — yes: every browser sends it, and a server that checks it is compliant "
+    "because RCP does not forbid it to check it",
+    "B — no: §2.2 dictates the **path** and nothing else of the header, "
+    "so the `origin` does not belong to RCP",
+    "the test client **sends it**, copying the browser.  ⚠ It is a "
+    "prudent choice that has a price: by sending it, the test client **can no longer "
+    "find out** whether the server demands it — the arbiter adapted itself to the defendant",
+    "the first client that is not a browser: if the server checks the `origin`, "
+    "that client sees the CONNECT refused and the diagnosis that comes out of it is an "
+    "HTTP status, that is outside RCP and outside all the reasons of §8.2",
     appigli_rcp=[
         "| **l'indirizzo della sessione** | `https://<host>:<porta>/rcp/1` |",
         "⛔ **Il server NON DEVE accettare una sessione WebTransport su un percorso "
@@ -467,28 +470,28 @@ voce(
         b":method CONNECT\n:protocol webtransport\n:path /rcp/1\n"
         b"origin https://192.168.0.2:7447\n",
         b":method CONNECT\n:protocol webtransport\n:path /rcp/1\n",
-        "il campo `origin` dentro l'intestazione della CONNECT estesa — una "
-        "riga di intestazione in piu', compressa da QPACK",
+        "the `origin` field inside the header of the extended CONNECT — one "
+        "more header line, compressed by QPACK",
     ),
-    nota="⚠ I due blocchi qui sopra sono i campi **prima** di QPACK: stamparli "
-         "compressi darebbe due stringhe che dipendono dalla tabella dinamica, "
-         "cioe' due numeri che non si possono confrontare.",
+    nota="⚠ The two blocks above are the fields **before** QPACK: printing them "
+         "compressed would give two strings that depend on the dynamic table, "
+         "that is two numbers that cannot be compared.",
 )
 
 # ── L8 ──────────────────────────────────────────────────────────────────────
 voce(
     "L8", "§4.5",
-    "Un `desktop` fuori dai sei nomi: e' un campo fuori intervallo (§3) o e' "
-    "una stringa di diagnosi da non guardare?",
-    "A — §3 si applica: «un campo fuori intervallo» e' nell'elenco di §3, "
-    "quindi il client chiude con `ERRORE_PROTOCOLLO`",
-    "B — non si guarda: §4.5 dice, nello stesso paragrafo, che il client **NON "
-    "DEVE** cambiare comportamento in base al suo valore",
-    "il cliente di prova lo stampa e non lo controlla: lettura B",
-    "il giorno in cui il server imparasse un settimo desktop — o scrivesse "
-    "`plasma6` invece di `kde` — meta' delle implementazioni chiuderebbe la "
-    "sessione appena aperta.  ⚠ Le due letture stanno in **sei righe**, una "
-    "sotto l'altra, e sono opposte",
+    "A `desktop` outside the six names: is it an out-of-range field (§3) or is it "
+    "a diagnostic string not to be looked at?",
+    "A — §3 applies: «an out-of-range field» is in the list of §3, "
+    "so the client closes with `ERRORE_PROTOCOLLO`",
+    "B — it is not looked at: §4.5 says, in the same paragraph, that the client **MUST "
+    "NOT** change behaviour based on its value",
+    "the test client prints it and does not check it: reading B",
+    "the day the server learned a seventh desktop — or wrote "
+    "`plasma6` instead of `kde` — half of the implementations would close the "
+    "session just opened.  ⚠ The two readings are in **six lines**, one "
+    "under the other, and they are opposite",
     appigli_rcp=[
         "└── stringa desktop             uno fra: gnome · kde · xfce · lxqt · "
         "cinnamon · sconosciuto",
@@ -499,29 +502,29 @@ voce(
     byte=lambda: (
         inquadratura(0x0007, bytes([1]) + u32(1920) + u32(1080) + stringa("gnome")),
         inquadratura(0x0007, bytes([1]) + u32(1920) + u32(1080) + stringa("plasma6")),
-        "la stringa `desktop` in fondo a `SESSIONE`: `0005 «gnome»` contro "
-        "`0007 «plasma6»` — e la connessione che sopravvive o cade",
+        "the `desktop` string at the end of `SESSIONE`: `0005 «gnome»` against "
+        "`0007 «plasma6»` — and the connection that survives or drops",
     ),
 )
 
 # ── L9 ──────────────────────────────────────────────────────────────────────
 voce(
-    "L9", "§11.1 contro §6.0",
-    "Nel blocco della registrazione, che cosa si scrive in `stream` quando "
-    "l'identificatore non si conosce?",
-    "A — l'identificatore vero, sempre: §11.1 dice «l'identificatore dello "
-    "stream QUIC» e non prevede un caso in cui manchi",
-    "B — zero, come «assente»",
-    "⛔ il cliente di prova scrive **sempre zero** — "
-    "`struct.pack(\"!BBQIH\", verso, 0x00, 0, ...)` — cioe' la lettura B.  Ma "
-    "§6.0 vieta esattamente questo: *«ogni intero ha un solo significato di "
-    "«assente», e va dichiarato dove serve: non esistono valori sentinella "
-    "impliciti»*, e **zero e' un identificatore di stream legale** (e' quello "
-    "della CONNECT)",
-    "chi legge la registrazione per capire su quale stream e' passato un "
-    "messaggio legge zero e crede allo zero.  ⚠ E il validatore non se ne puo' "
-    "accorgere: un campo che vale sempre zero e un campo assente hanno lo "
-    "stesso aspetto — la forma E8",
+    "L9", "§11.1 against §6.0",
+    "In the recording block, what is written in `stream` when "
+    "the identifier is not known?",
+    "A — the real identifier, always: §11.1 says «the identifier of the "
+    "QUIC stream» and does not foresee a case in which it is missing",
+    "B — zero, as «absent»",
+    "⛔ the test client **always writes zero** — "
+    "`struct.pack(\"!BBQIH\", verso, 0x00, 0, ...)` — that is reading B.  But "
+    "§6.0 forbids exactly this: *«every integer has a single meaning of "
+    "«absent», and it must be declared where needed: there are no implicit "
+    "sentinel values»*, and **zero is a legal stream identifier** (it is the one "
+    "of the CONNECT)",
+    "whoever reads the recording to understand on which stream a "
+    "message passed reads zero and believes the zero.  ⚠ And the validator cannot "
+    "notice: a field that is always zero and an absent field look the "
+    "same — form E8",
     appigli_rcp=[
         " ├── u64      stream         l'identificatore dello stream QUIC",
         "⛔ **Ogni intero ha un solo significato di «assente»**, e va dichiarato "
@@ -531,27 +534,27 @@ voce(
     byte=lambda: (
         struct.pack("!BBQIH", 1, 0x00, 4, 12, 0),
         struct.pack("!BBQIH", 1, 0x00, 0, 12, 0),
-        "gli otto byte di `stream` in testa a ogni blocco: "
-        "`00 00 00 00 00 00 00 04` contro `00 00 00 00 00 00 00 00`",
+        "the eight bytes of `stream` at the head of every block: "
+        "`00 00 00 00 00 00 00 04` against `00 00 00 00 00 00 00 00`",
     ),
 )
 
 # ── L10 ─────────────────────────────────────────────────────────────────────
 voce(
-    "L10", "§8.1 contro §4.4",
-    "Il client, quando chiude, DEVE mandare `CONGEDO`: e dopo un `RESPINTO`?",
-    "A — si', ed e' l'unica cosa che gli resta da dire: la regola di §4.4 "
-    "vieta di **riprovare**, non di congedarsi",
-    "B — no: dopo `RESPINTO` la sessione e' finita per il server, e ogni byte "
-    "che arriva dopo e' byte di troppo",
-    "il cliente di prova **non manda mai un `CONGEDO`, in nessun caso**: chiude "
-    "e basta.  ⚠ Non e' la lettura B — e' la terza, «non applico §8.1 a me "
-    "stesso», e vuol dire che il secondo lettore **non esercita mai** l'obbligo "
-    "che §8.1 mette su chi chiude",
-    "il caso e' gia' costato un rosso: il server contava come «byte dopo la "
-    "fine» anche il congedo conforme della pagina, e B11 ha messo un rosso "
-    "addosso alla pagina mentre faceva quel che §8.1 le impone (§4.4, riquadro "
-    "del 10 agosto 2026)",
+    "L10", "§8.1 against §4.4",
+    "The client, when it closes, MUST send `CONGEDO`: and after a `RESPINTO`?",
+    "A — yes, and it is the only thing it has left to say: the rule of §4.4 "
+    "forbids **retrying**, not taking leave",
+    "B — no: after `RESPINTO` the session is over for the server, and every byte "
+    "that arrives afterwards is a byte too many",
+    "the test client **never sends a `CONGEDO`, in any case**: it closes "
+    "and that is it.  ⚠ It is not reading B — it is the third, «I do not apply §8.1 to "
+    "myself», and it means that the second reader **never exercises** the obligation "
+    "that §8.1 puts on whoever closes",
+    "the case has already cost a red: the server counted as «bytes after the "
+    "end» also the page's compliant farewell, and B11 put a red "
+    "on the page while it was doing what §8.1 requires of it (§4.4, box "
+    "of 10 Aug 2026)",
     appigli_rcp=[
         "⛔ **E dopo `RESPINTO` al client resta una cosa sola che può dire: "
         "`CONGEDO`.**",
@@ -561,28 +564,28 @@ voce(
     byte=lambda: (
         inquadratura(0x000C, bytes([0x01]) + stringa("")),
         b"",
-        "un'inquadratura di undici byte contro **niente**: `000C 00000003 01 "
-        "0000` contro il silenzio",
+        "a framing of eleven bytes against **nothing**: `000C 00000003 01 "
+        "0000` against the silence",
     ),
 )
 
 # ── L11 ─────────────────────────────────────────────────────────────────────
 voce(
-    "L11", "§9 contro §2.2",
-    "⭐ Che versione mette nel `CIAO` un client che ne sa parlare DUE, su un "
-    "percorso `/rcp/1`?",
-    "A — **2**: §9 dice «`CIAO` porta la versione maggiore che il client sa "
-    "parlare», senza condizioni",
-    "B — **1**: §2.2 dice che le due DEVONO coincidere, e un `CIAO(2)` su "
-    "`/rcp/1` e' `VERSIONE_INCOMPATIBILE`",
-    "il cliente di prova scrive `1` a mano, perche' ne sa parlare una sola: "
-    "⚠ **la domanda non gli si e' posta**, e non se la porra' finche' RCP/2 "
-    "non esistera'",
-    "il primo client che parli 1 e 2: seguendo §9 dichiara 2 su `/rcp/1` e si "
-    "fa congedare; seguendo §2.2 dichiara 1 e **non potra' mai negoziare la "
-    "versione piu' alta**, perche' l'unico posto in cui la puo' chiedere e' il "
-    "percorso, che pero' e' quello che sta gia' usando.  ⛔ Le due righe non si "
-    "citano a vicenda, ed e' la forma esatta del rilievo R1.2",
+    "L11", "§9 against §2.2",
+    "⭐ Which version does a client that can speak TWO put in the `CIAO`, on a "
+    "path `/rcp/1`?",
+    "A — **2**: §9 says «`CIAO` carries the major version the client can "
+    "speak», without conditions",
+    "B — **1**: §2.2 says the two MUST coincide, and a `CIAO(2)` on "
+    "`/rcp/1` is `VERSIONE_INCOMPATIBILE`",
+    "the test client writes `1` by hand, because it can speak only one: "
+    "⚠ **the question was never put to it**, and it will not put it to itself until RCP/2 "
+    "exists",
+    "the first client that speaks 1 and 2: following §9 it declares 2 on `/rcp/1` and gets "
+    "sent away; following §2.2 it declares 1 and **will never be able to negotiate the "
+    "highest version**, because the only place where it can ask for it is the "
+    "path, which however is the one it is already using.  ⛔ The two lines do not "
+    "quote each other, and it is the exact shape of finding R1.2",
     appigli_rcp=[
         "`CIAO` porta la versione maggiore che il client sa parlare; `ECCOMI` "
         "quella scelta dal server.",
@@ -593,28 +596,28 @@ voce(
     byte=lambda: (
         ciao(versione=2),
         ciao(versione=1),
-        "i due byte di `versione` in testa al corpo del `CIAO`: `0002` contro "
-        "`0001` — due byte, e una connessione che vive o muore",
+        "the two bytes of `versione` at the head of the body of the `CIAO`: `0002` against "
+        "`0001` — two bytes, and a connection that lives or dies",
     ),
 )
 
 # ── L12 ─────────────────────────────────────────────────────────────────────
 voce(
-    "L12", "§4.5 contro §7.1",
-    "I limiti 320×240-7680×4320 e la parita' valgono anche per `vista_*` "
-    "dentro `ATTACCA`?",
-    "A — si': §4.5 detta i limiti a due righe dal disegno che contiene "
-    "`vista_larghezza` e `vista_altezza`, e non distingue",
-    "B — no: la vista non ha i vincoli della tela, «qualunque misura da 1×1 in "
-    "su e' legale, dispari compresa»",
-    "il cliente di prova manda **vista = tela** (`--larghezza`/`--altezza` per "
-    "tutti e quattro i campi): ⚠ ancora una volta la domanda evitata, non "
-    "risposta",
-    "una finestra stretta a 300 pixel — il caso concreto che il rilievo R1.17 "
-    "descrive — passa o fa cadere la sessione a seconda di chi ha scritto il "
-    "server.  ⭐ **La risposta esiste** ed e' B, ma sta in §7.1, cioe' nella "
-    "sezione del messaggio `VISTA`: chi implementa `ATTACCA` leggendo §4.5 non "
-    "ha nessun motivo di andarci",
+    "L12", "§4.5 against §7.1",
+    "Do the limits 320×240-7680×4320 and the parity also hold for `vista_*` "
+    "inside `ATTACCA`?",
+    "A — yes: §4.5 dictates the limits two lines away from the drawing that contains "
+    "`vista_larghezza` and `vista_altezza`, and does not distinguish",
+    "B — no: the view does not have the canvas constraints, «any size from 1×1 "
+    "up is legal, odd included»",
+    "the test client sends **view = canvas** (`--larghezza`/`--altezza` for "
+    "all four fields): ⚠ once again the question avoided, not "
+    "answered",
+    "a window narrowed to 300 pixels — the concrete case finding R1.17 "
+    "describes — passes or makes the session drop depending on who wrote the "
+    "server.  ⭐ **The answer exists** and it is B, but it is in §7.1, that is in the "
+    "section of the `VISTA` message: whoever implements `ATTACCA` by reading §4.5 "
+    "has no reason to go there",
     appigli_rcp=[
         "⛔ **I limiti, e sono normativi**: larghezza e altezza della tela "
         "**DEVONO** stare fra **320×240** e",
@@ -628,19 +631,19 @@ voce(
                      + stringa("it")),
         inquadratura(0x0006, u32(1920) + u32(1080) + u32(300) + u32(801)
                      + stringa("it")),
-        "gli otto byte di `vista_larghezza` e `vista_altezza`: "
-        "`00000780 00000438` contro `0000012C 00000321` — sotto il minimo e "
-        "dispari",
+        "the eight bytes of `vista_larghezza` and `vista_altezza`: "
+        "`00000780 00000438` against `0000012C 00000321` — below the minimum and "
+        "odd",
     ),
-    nota="⚠ Questa e' un'ambiguita' di **collocazione**, non di contenuto: il "
-         "documento decide, ma decide in un'altra sezione.  Conta lo stesso, "
-         "perche' chi legge §4.5 non sa di dover cercare.",
+    nota="⚠ This is an ambiguity of **placement**, not of content: the "
+         "document decides, but it decides in another section.  It counts anyway, "
+         "because whoever reads §4.5 does not know they have to look.",
 )
 
 
 # ===========================================================================
 def leggi(percorso):
-    """⛔ «Non ho potuto leggere» non e' «non c'e'» (`LEZIONI.md` §1.9)."""
+    """⛔ «I could not read» is not «it is not there» (`LEZIONI.md` §1.9)."""
     try:
         with open(percorso, encoding="utf-8") as f:
             return f.read(), None
@@ -649,25 +652,25 @@ def leggi(percorso):
 
 
 def normalizza(t):
-    """Toglie gli a capo e gli spazi doppi: un appiglio non deve cadere per
-    una riga riavvolta a 100 colonne invece che a 98."""
+    """Removes line breaks and double spaces: an anchor must not fall because of
+    a line wrapped at 100 columns instead of 98."""
     return " ".join(t.split())
 
 
 def controlla_byte(v):
-    """⛔ Due letture che producono gli stessi byte non sono due letture.
+    """⛔ Two readings that produce the same bytes are not two readings.
 
-    Restituisce (esito, testo).  `esito` e' uno fra:
-      "diversi"      le due letture si vedono sul filo;
-      "senza-byte"   la voce dichiara di non cambiare nessun byte (L6);
-      "UGUALI"       ⛔ difetto DI QUESTO BANCO: la voce non separa niente.
+    Returns (outcome, text).  `esito` is one of:
+      "diversi"      the two readings show on the wire;
+      "senza-byte"   the entry declares it changes no byte (L6);
+      "UGUALI"       ⛔ defect OF THIS BENCH: the entry separates nothing.
     """
     if v["byte"] is None:
-        return "senza-byte", "nessun byte cambia — dichiarato nella voce"
+        return "senza-byte", "no byte changes — declared in the entry"
     a, b, che = v["byte"]()
     if a == b:
-        return "UGUALI", ("⛔ le due letture producono gli stessi byte: la voce "
-                          "non separa niente")
+        return "UGUALI", ("⛔ the two readings produce the same bytes: the entry "
+                          "separates nothing")
     return "diversi", che
 
 
@@ -675,66 +678,66 @@ def esadecimale(b, quanti=48):
     if not isinstance(b, (bytes, bytearray)):
         return str(b)
     t = b[:quanti].hex(" ")
-    return t + (f"  … (+{len(b) - quanti} byte)" if len(b) > quanti else "")
+    return t + (f"  … (+{len(b) - quanti} bytes)" if len(b) > quanti else "")
 
 
 # ===========================================================================
-# ⛔⭐ LA PROVA DI COMPORTAMENTO — e nasce dal rilievo A8, 11 agosto 2026
+# ⛔⭐ THE BEHAVIOUR TEST — and it is born from finding A8, 11 Aug 2026
 # ===========================================================================
-# ⛔ CHE COSA NON ANDAVA, E VA LETTO PRIMA DI TOCCARE QUESTA PARTE.
+# ⛔ WHAT WAS WRONG, AND IT MUST BE READ BEFORE TOUCHING THIS PART.
 #
-# Fino a stanotte questo banco verificava le sue voci in un modo solo: gli
-# **appigli**, cioe' pezzi di testo esatti che devono comparire nei due file.
-# La revisione R12-A lo ha portato alla lettura opposta e ha lasciato la
-# citazione dov'era:
+# Until tonight this bench verified its entries in one way only: the
+# **anchors**, that is exact pieces of text that must appear in the two files.
+# Review R12-A brought it to the opposite reading and left the quotation where
+# it was:
 #
-#     si cambia il cliente di prova alla **lettura A** — la coda in piu' si
-#     TAGLIA — ma si lascia intatta, riga per riga, la stringa che L4 cita
-#     (`corpo = bytes(self.arrivati[6:6 + lung])`) e si aggiunge il troncamento
-#     nelle righe successive.
+#     the test client is changed to **reading A** — the extra tail is
+#     CUT — but the string L4 quotes is left intact, line by line
+#     (`corpo = bytes(self.arrivati[6:6 + lung])`) and the truncation is added
+#     in the following lines.
 #
-# ⛔ B9 restava **verde, 12 voci su 12**, e continuava a stampare *«⭐ SCELTO …
-#    il cliente di prova legge `lunghezza` byte e passa il corpo cosi' com'e' …
-#    (lettura B, tollerante)»* — che a quel punto era **falso**.
+# ⛔ B9 stayed **green, 12 entries out of 12**, and kept printing *«⭐ SCELTO …
+#    the test client reads `lunghezza` bytes and passes the body on as it is …
+#    (reading B, tolerant)»* — which at that point was **false**.
 #
-# ⛔ Quindi il guasto che B12 costruisce per certificare B9 diventava rosso
-#    perche' **cancellava una citazione**, non perche' il secondo lettore si
-#    fosse allineato al primo: la certificazione dimostrava che B9 sa vedere *un
-#    testo cambiato* — che B9 dichiara apertamente di saper fare — e **non** quel
-#    che il catalogo di B12 scrive di aver certificato.
+# ⛔ So the fault B12 builds to certify B9 turned red because **it deleted a
+#    quotation**, not because the second reader had aligned with the first: the
+#    certification proved that B9 can see *a changed text* — which B9 openly
+#    declares it can do — and **not** what B12's catalogue writes it certified.
 #
-# ⭐ LA CURA: per le voci in cui la scelta del cliente **si vede sul filo**, la
-#    si MISURA invece di citarla.  Si costruiscono qui i byte delle due letture,
-#    si danno **al codice vero del cliente di prova**, e si guarda quale delle
-#    due esce.  Una citazione la si puo' lasciare in piedi mentre il
-#    comportamento cambia; un comportamento no.
+# ⭐ THE CURE: for the entries in which the client's choice **shows on the wire**,
+#    it is MEASURED instead of quoted.  The bytes of the two readings are built
+#    here, given **to the real code of the test client**, and one looks at which
+#    of the two comes out.  A quotation can be left standing while the behaviour
+#    changes; a behaviour cannot.
 #
-# ⛔ E PERCHE' QUESTO NON CONTRADDICE IL RIQUADRO IN CIMA («i mattoni del filo
-#    si riscrivono qui e non si importano dal cliente»).  Sono due usi opposti:
-#    li' il cliente sarebbe stato la **fonte** dei byte, e la voce avrebbe
-#    confrontato il cliente con se stesso; qui il cliente e' l'**imputato**, e i
-#    byte glieli portiamo noi, costruiti dal documento.  Un banco che porta
-#    l'imputato in aula non sta copiando dall'imputato.
+# ⛔ AND WHY THIS DOES NOT CONTRADICT THE BOX AT THE TOP («the bricks of the wire
+#    are rewritten here and not imported from the client»).  They are two
+#    opposite uses: there the client would have been the **source** of the bytes,
+#    and the entry would have compared the client with itself; here the client is
+#    the **defendant**, and we bring it the bytes, built from the document.  A
+#    bench that brings the defendant into court is not copying from the defendant.
 #
-# ⚠ E si estrae senza IMPORTARE, perche' `01-b3-cliente.py` importa `aioquic`
-#   e questo banco «gira DOVUNQUE: non tocca la rete e non vuole un server».
-#   Si prendono dal sorgente le funzioni che servono e si compilano da sole.
+# ⚠ And it is extracted without IMPORTING, because `01-b3-cliente.py` imports
+#   `aioquic` and this bench «runs ANYWHERE: it does not touch the network and does
+#   not want a server».  The needed functions are taken from the source and
+#   compiled on their own.
 def estrai_funzioni(testo, nomi):
-    """Le funzioni indicate, prese dal sorgente e rese chiamabili.
+    """The indicated functions, taken from the source and made callable.
 
-    Restituisce `(spazio, errore)`: uno dei due e' sempre `None`.
-    ⛔ Se una funzione non c'e' piu' NON si finge di averla provata: e' la
-       stessa terza cosa degli appigli — «il testo e' cambiato sotto il banco»."""
+    Returns `(space, error)`: one of the two is always `None`.
+    ⛔ If a function is no longer there one does NOT pretend to have tested it: it
+       is the same third thing as the anchors — «the text changed under the bench»."""
     try:
         albero = ast.parse(testo)
     except SyntaxError as e:
-        return None, f"il cliente di prova non si compila: {e}"
-    # ⛔ Si prendono TUTTE le funzioni di primo livello del cliente, non solo
-    #    quelle chieste: una funzione che ne chiama un'altra e non la trova
-    #    solleverebbe `NameError`, e un `NameError` ha la stessa faccia di «il
-    #    lettore ha rifiutato l'inquadratura» — cioe' la prova direbbe «lettura
-    #    A» avendo misurato la mia estrazione invece del cliente.  E' la faccia
-    #    comune di vuoto e proibito, spostata dentro il banco.
+        return None, f"the test client does not compile: {e}"
+    # ⛔ ALL the top-level functions of the client are taken, not only those
+    #    asked for: a function that calls another and does not find it would
+    #    raise `NameError`, and a `NameError` has the same face as «the reader
+    #    refused the framing» — that is the test would say «reading A» having
+    #    measured my extraction instead of the client.  It is the common face of
+    #    empty and forbidden, moved inside the bench.
     presi, visti = [], []
     for nodo in albero.body:
         if isinstance(nodo, ast.FunctionDef):
@@ -747,20 +750,20 @@ def estrai_funzioni(testo, nomi):
             visti.append(nodo.name)
     persi = [n for n in nomi if n not in visti]
     if persi:
-        return None, (f"non trovo piu' {persi} nel cliente di prova: la prova "
-                      f"di comportamento non si puo' fare")
+        return None, (f"I no longer find {persi} in the test client: the behaviour "
+                      f"test cannot be done")
     modulo = ast.Module(body=presi, type_ignores=[])
     ast.fix_missing_locations(modulo)
     spazio = {"struct": struct}
     try:
         exec(compile(modulo, CLIENTE, "exec"), spazio)  # noqa: S102
     except Exception as e:  # noqa: BLE001
-        return None, f"le funzioni estratte non si compilano: {e}"
+        return None, f"the extracted functions do not compile: {e}"
     return spazio, None
 
 
 class _Coda:
-    """Il minimo che `_sfoglia` chiede: un `put_nowait`."""
+    """The minimum `_sfoglia` asks for: a `put_nowait`."""
 
     def __init__(self):
         self.dentro = []
@@ -770,7 +773,7 @@ class _Coda:
 
 
 class _Finto:
-    """Il minimo che `_sfoglia` chiede di `self`: i byte arrivati e la coda."""
+    """The minimum `_sfoglia` asks of `self`: the bytes that arrived and the queue."""
 
     def __init__(self, dati):
         self.arrivati = bytearray(dati)
@@ -778,12 +781,12 @@ class _Finto:
 
 
 def prova_L4(sp):
-    """Il cliente di prova, davanti a byte in piu' in coda al corpo.
+    """The test client, in front of extra bytes at the tail of the body.
 
-    ⛔ E il caso opposto e' scritto, come vuole `LEZIONI.md` §1.11:
-       lettura B (tollerante) ⇒ il corpo consegnato e' lungo `lunghezza`, coda
-       compresa;  lettura A ⇒ il corpo consegnato e' piu' corto, oppure non
-       arriva nessun messaggio perche' il lettore ha rifiutato l'inquadratura."""
+    ⛔ And the opposite case is written, as `LEZIONI.md` §1.11 wants:
+       reading B (tolerant) ⇒ the delivered body is `lunghezza` long, tail
+       included;  reading A ⇒ the delivered body is shorter, or no message
+       arrives because the reader refused the framing."""
     dentro = u16(1) + capacita([("audio.codec", "opus,pcm"),
                                 ("video.profondita", "8")])
     con_coda = dentro + b"\xDE\xAD\xBE\xEF"
@@ -792,51 +795,51 @@ def prova_L4(sp):
     try:
         sp["_sfoglia"](c)
     except (NameError, AttributeError) as e:
-        # ⛔ Questi due NON sono «il lettore ha rifiutato»: sono «io non ho
-        #    portato in aula tutto l'imputato».  Chiamarli lettura A vorrebbe
-        #    dire dare a un difetto del banco la faccia di un difetto del
-        #    cliente — la settima veste di `LEZIONI.md` §1.9.
-        return "?", (f"l'estrazione e' incompleta: `_sfoglia` chiama qualcosa "
-                     f"che non ho preso ({type(e).__name__}: {e})")
+        # ⛔ These two are NOT «the reader refused»: they are «I did not bring
+        #    the whole defendant into court».  Calling them reading A would mean
+        #    giving a bench defect the face of a client defect — the seventh guise
+        #    of `LEZIONI.md` §1.9.
+        return "?", (f"the extraction is incomplete: `_sfoglia` calls something "
+                     f"I did not take ({type(e).__name__}: {e})")
     except Exception as e:  # noqa: BLE001
-        return "A", (f"il lettore ha sollevato {type(e).__name__} sui byte in "
-                     f"piu': e' la lettura A (violazione), non la B")
+        return "A", (f"the reader raised {type(e).__name__} on the extra "
+                     f"bytes: it is reading A (violation), not B")
     if len(c.messaggi.dentro) != 1:
-        return "?", (f"il lettore ha consegnato {len(c.messaggi.dentro)} "
-                     f"messaggi invece di 1: non e' ne' A ne' B, e' un terzo "
-                     f"comportamento che nessuna delle due letture descrive")
+        return "?", (f"the reader delivered {len(c.messaggi.dentro)} "
+                     f"messages instead of 1: it is neither A nor B, it is a third "
+                     f"behaviour that neither of the two readings describes")
     _tipo, corpo, _grezzo = c.messaggi.dentro[0]
     if corpo == con_coda:
-        return "B", (f"il corpo consegnato e' lungo {len(corpo)} byte — "
-                     f"`lunghezza` intera, coda compresa: **lettura B**, "
-                     f"tollerante, com'e' scritto nella voce")
-    return "A", (f"il corpo consegnato e' lungo {len(corpo)} byte invece di "
-                 f"{len(con_coda)}: la coda e' stata TAGLIATA, cioe' **lettura "
-                 f"A** — e la voce dice B")
+        return "B", (f"the delivered body is {len(corpo)} bytes long — "
+                     f"whole `lunghezza`, tail included: **reading B**, "
+                     f"tolerant, as written in the entry")
+    return "A", (f"the delivered body is {len(corpo)} bytes long instead of "
+                 f"{len(con_coda)}: the tail was CUT, that is **reading "
+                 f"A** — and the entry says B")
 
 
 def prova_L2(sp):
-    """Il cliente di prova, davanti a un codice di chiusura piu' largo di 4 byte.
+    """The test client, in front of a closing code wider than 4 bytes.
 
-    ⛔ Il caso opposto: se un giorno leggesse i codici larghi per intero, la
-       riga «e in piu' tronca» della voce sarebbe falsa e andrebbe riscritta."""
+    ⛔ The opposite case: if one day it read wide codes in full, the line «and
+       on top it truncates» of the entry would be false and would have to be rewritten."""
     stretto = sp["_capsula_chiusura"](capsula_chiusura(0x0D))
     largo_v = 0x52E4A40FA8DB + 0x0D
     largo = sp["_capsula_chiusura"](capsula_chiusura(largo_v, larghezza=8))
     if stretto[0] != 0x0D:
-        return "?", (f"su un codice di 4 byte il lettore torna {stretto[0]!r} "
-                     f"invece di 13: non e' piu' la lettura A che la voce "
-                     f"descrive")
+        return "?", (f"on a 4-byte code the reader returns {stretto[0]!r} "
+                     f"instead of 13: it is no longer the reading A the entry "
+                     f"describes")
     if largo[0] == largo_v:
-        return "?", (f"su un codice di 8 byte il lettore torna il valore "
-                     f"INTERO ({largo_v:#x}): non tronca piu', e la voce va "
-                     f"riscritta")
-    return "A", (f"codice di 4 byte → {stretto[0]:#04x} (giusto); codice di 8 "
-                 f"byte {largo_v:#x} → {largo[0]:#04x} — ⛔ **un motivo "
-                 f"diverso**, che e' il danno che la voce descrive")
+        return "?", (f"on an 8-byte code the reader returns the WHOLE "
+                     f"value ({largo_v:#x}): it no longer truncates, and the entry must be "
+                     f"rewritten")
+    return "A", (f"4-byte code → {stretto[0]:#04x} (right); 8-byte "
+                 f"code {largo_v:#x} → {largo[0]:#04x} — ⛔ **a different "
+                 f"reason**, which is the damage the entry describes")
 
 
-# (sigla, quali funzioni servono, la prova, che cosa la voce dichiara)
+# (code, which functions are needed, the test, what the entry declares)
 PROVE = [
     ("L4", ("_sfoglia",), prova_L4, "B"),
     ("L2", ("_varint", "_capsula_chiusura"), prova_L2, "A"),
@@ -844,18 +847,18 @@ PROVE = [
 
 
 def principale(a):
-    print("== ⭐ B9 — i punti in cui `RCP.md` ammetteva DUE letture")
-    print("   L'esito piu' prezioso di B9 non e' «passa»: e' questo elenco.")
+    print("== ⭐ B9 — the points where `RCP.md` allowed TWO readings")
+    print("   The most precious outcome of B9 is not «passes»: it is this list.")
     print("   (fasi/01-filo-nudo.md, B9 · PIANO.md §1.1)\n")
 
     if a.elenco:
         for v in VOCI:
             print(f"  {v['sigla']:4s} {v['dove']:22s} {v['domanda']}")
-        print(f"\n  {len(VOCI)} voci.  Senza --elenco si costruiscono i byte.")
+        print(f"\n  {len(VOCI)} entries.  Without --elenco the bytes are built.")
         return 0
 
-    # ── B0.1: lo stato iniziale, che qui e' di carta ───────────────────────
-    print("== ⛔ Lo stato iniziale (B0.1): i due testi che questo banco ha letto")
+    # ── B0.1: the initial state, which here is made of paper ───────────────
+    print("== ⛔ The initial state (B0.1): the two texts this bench read")
     testi, mancanti = {}, []
     for nome, percorso in (("RCP.md", RCP_MD), ("01-b3-cliente.py", CLIENTE)):
         t, errore = leggi(percorso)
@@ -864,37 +867,37 @@ def principale(a):
             mancanti.append(nome)
         else:
             imp = hashlib.sha256(t.encode("utf-8")).hexdigest()[:16]
-            print(f"    {VERDE}OK{GRIGIO}  {nome:18s} {len(t):7d} byte · "
-                  f"impronta {imp}")
+            print(f"    {VERDE}OK{GRIGIO}  {nome:18s} {len(t):7d} bytes · "
+                  f"fingerprint {imp}")
             testi[nome] = t
     if mancanti:
-        print(f"\n    {ROSSO}⛔ senza i testi non c'e' nessun inventario da "
-              f"verificare: non e' un rosso delle voci{GRIGIO}")
+        print(f"\n    {ROSSO}⛔ without the texts there is no inventory to "
+              f"verify: it is not a red of the entries{GRIGIO}")
         return 4
-    print(f"    --  i due percorsi: {RCP_MD}")
-    print(f"                        {CLIENTE}")
-    print("    ⚠ le impronte servono al prossimo giro: se cambiano e le voci")
-    print("      no, qualcuno ha corretto il documento e nessuno ha riletto\n")
+    print(f"    --  the two paths: {RCP_MD}")
+    print(f"                       {CLIENTE}")
+    print("    ⚠ the fingerprints serve the next run: if they change and the entries")
+    print("      do not, someone corrected the document and nobody reread\n")
 
-    # ── LE VOCI ────────────────────────────────────────────────────────────
-    conti = {"voci dell'inventario": [0, 0],
-             "voci con TUTTI gli appigli al loro posto": [0, 0],
-             "voci che cambiano BYTE sul filo": [0, 0],
-             "⛔ voci PROVATE sul comportamento del cliente": [0, 0],
-             "⛔ voci che separano davvero le due letture": [0, 0]}
-    conti["voci dell'inventario"] = [len(VOCI), len(VOCI)]
+    # ── THE ENTRIES ────────────────────────────────────────────────────────
+    conti = {"entries of the inventory": [0, 0],
+             "entries with ALL the anchors in place": [0, 0],
+             "entries that change BYTES on the wire": [0, 0],
+             "⛔ entries TESTED on the client's behaviour": [0, 0],
+             "⛔ entries that really separate the two readings": [0, 0]}
+    conti["entries of the inventory"] = [len(VOCI), len(VOCI)]
     scollegate, rotte, smentite, non_provate = [], [], [], []
 
     for v in VOCI:
         print(f"== {v['sigla']}  ·  {v['dove']}")
         print(f"   {v['domanda']}")
-        print(f"     lettura A   {v['a']}")
-        print(f"     lettura B   {v['b']}")
-        print(f"     ⭐ SCELTO   {v['scelta']}")
-        print(f"     ⛔ MORDE    {v['morde']}")
+        print(f"     reading A   {v['a']}")
+        print(f"     reading B   {v['b']}")
+        print(f"     ⭐ CHOSEN   {v['scelta']}")
+        print(f"     ⛔ BITES    {v['morde']}")
 
-        # gli appigli
-        conti["voci con TUTTI gli appigli al loro posto"][1] += 1
+        # the anchors
+        conti["entries with ALL the anchors in place"][1] += 1
         persi = []
         for testo, quali in ((testi["RCP.md"], v["appigli_rcp"]),
                              (testi["01-b3-cliente.py"], v["appigli_cliente"])):
@@ -904,54 +907,54 @@ def principale(a):
                     persi.append(ap)
         if persi:
             scollegate.append((v["sigla"], persi))
-            print(f"     {GIALLO}[?]{GRIGIO} {len(persi)} appigli su "
-                  f"{len(v['appigli_rcp']) + len(v['appigli_cliente'])} non si "
-                  f"trovano piu': il testo e' cambiato sotto il banco")
+            print(f"     {GIALLO}[?]{GRIGIO} {len(persi)} anchors out of "
+                  f"{len(v['appigli_rcp']) + len(v['appigli_cliente'])} can no "
+                  f"longer be found: the text changed under the bench")
             for ap in persi:
                 print(f"          «{normalizza(ap)[:88]}»")
         else:
-            conti["voci con TUTTI gli appigli al loro posto"][0] += 1
+            conti["entries with ALL the anchors in place"][0] += 1
             n = len(v["appigli_rcp"]) + len(v["appigli_cliente"])
-            print(f"     {VERDE}OK{GRIGIO}  {n} appigli su {n} al loro posto "
-                  f"nei due testi")
+            print(f"     {VERDE}OK{GRIGIO}  {n} anchors out of {n} in place "
+                  f"in the two texts")
 
-        # i byte
+        # the bytes
         esito, che = controlla_byte(v)
-        conti["⛔ voci che separano davvero le due letture"][1] += 1
+        conti["⛔ entries that really separate the two readings"][1] += 1
         if esito == "diversi":
-            conti["voci che cambiano BYTE sul filo"][0] += 1
-            conti["voci che cambiano BYTE sul filo"][1] += 1
-            conti["⛔ voci che separano davvero le due letture"][0] += 1
+            conti["entries that change BYTES on the wire"][0] += 1
+            conti["entries that change BYTES on the wire"][1] += 1
+            conti["⛔ entries that really separate the two readings"][0] += 1
             print(f"     {VERDE}BYTE{GRIGIO}  {che}")
             if a.byte:
                 x, y, _ = v["byte"]()
                 print(f"          A: {esadecimale(x)}")
                 print(f"          B: {esadecimale(y)}")
         elif esito == "senza-byte":
-            conti["voci che cambiano BYTE sul filo"][1] += 1
-            conti["⛔ voci che separano davvero le due letture"][0] += 1
+            conti["entries that change BYTES on the wire"][1] += 1
+            conti["⛔ entries that really separate the two readings"][0] += 1
             print(f"     {GIALLO}BYTE{GRIGIO}  {che}")
         else:
             rotte.append(v["sigla"])
-            conti["voci che cambiano BYTE sul filo"][1] += 1
+            conti["entries that change BYTES on the wire"][1] += 1
             print(f"     {ROSSO}BYTE{GRIGIO}  {che}")
         if v["nota"]:
             print(f"     {v['nota']}")
         print()
 
-    # ── ⛔ LA PROVA DI COMPORTAMENTO (A8) ──────────────────────────────────
-    print("== ⛔ La prova di COMPORTAMENTO: il cliente di prova messo davanti "
-          "ai byte")
-    print("   ⭐ Un appiglio si puo' lasciare in piedi mentre il comportamento "
-          "cambia: la")
-    print("      revisione R12-A ha portato il cliente alla lettura opposta "
-          "lasciando intatta")
-    print("      la stringa che L4 cita, e questo banco e' rimasto VERDE.  "
-          "Queste righe")
-    print("      misurano quale lettura il cliente **esegue**, non quale "
-          "citazione porta.")
+    # ── ⛔ THE BEHAVIOUR TEST (A8) ──────────────────────────────────────────
+    print("== ⛔ The BEHAVIOUR test: the test client put in front "
+          "of the bytes")
+    print("   ⭐ An anchor can be left standing while the behaviour "
+          "changes: the")
+    print("      review R12-A brought the client to the opposite reading "
+          "leaving intact")
+    print("      the string L4 quotes, and this bench stayed GREEN.  "
+          "These lines")
+    print("      measure which reading the client **executes**, not which "
+          "quotation it carries.")
     for sigla, funzioni, prova, dichiarata in PROVE:
-        conti["⛔ voci PROVATE sul comportamento del cliente"][1] += 1
+        conti["⛔ entries TESTED on the client's behaviour"][1] += 1
         spazio, errore = estrai_funzioni(testi["01-b3-cliente.py"], funzioni)
         if spazio is None:
             non_provate.append((sigla, errore))
@@ -959,104 +962,104 @@ def principale(a):
             continue
         vista, perche = prova(spazio)
         if vista == "?":
-            # ⛔ «Non l'ho potuta misurare» e' la terza cosa, e ha il suo colore.
+            # ⛔ «I could not measure it» is the third thing, and it has its colour.
             non_provate.append((sigla, perche))
             print(f"   {GIALLO}[?]{GRIGIO} {sigla}: {perche}")
         elif vista == dichiarata:
-            conti["⛔ voci PROVATE sul comportamento del cliente"][0] += 1
-            print(f"   {VERDE}OK{GRIGIO}  {sigla}: la voce dichiara la lettura "
-                  f"{dichiarata} e il cliente ESEGUE la {vista}")
+            conti["⛔ entries TESTED on the client's behaviour"][0] += 1
+            print(f"   {VERDE}OK{GRIGIO}  {sigla}: the entry declares reading "
+                  f"{dichiarata} and the client EXECUTES {vista}")
             print(f"          {perche}")
         else:
             smentite.append((sigla, dichiarata, vista, perche))
-            print(f"   {ROSSO}NO{GRIGIO}  ⛔ {sigla}: la voce dichiara la "
-                  f"lettura {dichiarata}, il cliente ESEGUE «{vista}»")
+            print(f"   {ROSSO}NO{GRIGIO}  ⛔ {sigla}: the entry declares "
+                  f"reading {dichiarata}, the client EXECUTES «{vista}»")
             print(f"          {perche}")
-    print(f"   --  funzioni prese dal sorgente del cliente senza importarlo "
-          f"(niente aioquic): "
+    print(f"   --  functions taken from the client's source without importing it "
+          f"(no aioquic): "
           f"{', '.join(sorted({f for _s, fs, _p, _d in PROVE for f in fs}))}")
     print()
 
-    # ── IL DENOMINATORE ────────────────────────────────────────────────────
-    print("    == quel che questo giro ha davvero guardato")
-    # ⛔ Solo l'ultima riga e' un passa/non passa.  Le altre tre sono
-    #    DENOMINATORI, e un denominatore che non fa il pieno non e' un rosso:
-    #    la riga «cambiano BYTE» non lo fara' mai, perche' L6 dichiara di non
-    #    cambiare nessun byte.  Colorarla di rosso insegnerebbe a chi legge che
-    #    quel rosso e' normale — cioe' a non guardare piu' i rossi.
-    GIUDIZIO = "⛔ voci che separano davvero le due letture"
+    # ── THE DENOMINATOR ────────────────────────────────────────────────────
+    print("    == what this run really looked at")
+    # ⛔ Only the last line is a pass/fail.  The other three are
+    #    DENOMINATORS, and a denominator that is not full is not a red:
+    #    the line «change BYTES» will never be, because L6 declares it changes
+    #    no byte.  Colouring it red would teach whoever reads that that red is
+    #    normal — that is to no longer look at the reds.
+    GIUDIZIO = "⛔ entries that really separate the two readings"
     for che, (buoni, tot) in conti.items():
         if tot == 0:
-            print(f"    --  {che:46s} nessun caso lo ha sollecitato")
+            print(f"    --  {che:46s} no case triggered it")
             continue
-        if che in (GIUDIZIO, "⛔ voci PROVATE sul comportamento del cliente"):
+        if che in (GIUDIZIO, "⛔ entries TESTED on the client's behaviour"):
             col = VERDE if buoni == tot else ROSSO
         else:
             col = VERDE if buoni == tot else GIALLO
-        print(f"    {col}{buoni:3d} su {tot:3d}{GRIGIO}  {che}"
-              + ("   (denominatore, non un giudizio)" if che != GIUDIZIO else ""))
+        print(f"    {col}{buoni:3d} out of {tot:3d}{GRIGIO}  {che}"
+              + ("   (denominator, not a judgement)" if che != GIUDIZIO else ""))
 
-    # ⛔ ZERO VOCI NON E' «NESSUNA AMBIGUITA'».
+    # ⛔ ZERO ENTRIES IS NOT «NO AMBIGUITY».
     if not VOCI:
-        print(f"\n    {ROSSO}⛔ ZERO voci: questo non e' «RCP e' senza "
-              f"ambiguita'», e' un inventario vuoto{GRIGIO}")
+        print(f"\n    {ROSSO}⛔ ZERO entries: this is not «RCP is without "
+              f"ambiguity», it is an empty inventory{GRIGIO}")
         return 2
 
     print()
-    # ⛔ E LE SMENTITE VENGONO PRIMA DI TUTTO, perche' sono l'unico rosso che
-    #    dice «quel che questo file racconta del cliente non e' vero oggi».
+    # ⛔ AND THE REFUTED ONES COME BEFORE EVERYTHING, because they are the only red
+    #    that says «what this file tells about the client is not true today».
     if smentite:
-        print(f"    {ROSSO}⛔ B9: {len(smentite)} voci sono SMENTITE dal "
-              f"comportamento del cliente di prova{GRIGIO}")
+        print(f"    {ROSSO}⛔ B9: {len(smentite)} entries are REFUTED by the "
+              f"behaviour of the test client{GRIGIO}")
         for sigla, dichiarata, vista, perche in smentite:
-            print(f"       {sigla}: la voce dice «lettura {dichiarata}», il "
-                  f"cliente esegue «{vista}» — {perche}")
-        print("       ⛔ Non e' un difetto del documento: e' che la voce "
-              "descrive un cliente")
-        print("          che non esiste piu'.  Va riletta e riscritta PRIMA di "
-              "essere creduta,")
-        print("          e la scelta nuova va portata in «che cosa NON ha "
-              "funzionato».")
+            print(f"       {sigla}: the entry says «reading {dichiarata}», the "
+                  f"client executes «{vista}» — {perche}")
+        print("       ⛔ It is not a defect of the document: it is that the entry "
+              "describes a client")
+        print("          that no longer exists.  It must be reread and rewritten BEFORE "
+              "being believed,")
+        print("          and the new choice must be brought into «what did NOT "
+              "work».")
         return 1
     if non_provate:
-        print(f"    {GIALLO}[?] B9: {len(non_provate)} voci non si sono potute "
-              f"provare sul comportamento{GRIGIO}")
+        print(f"    {GIALLO}[?] B9: {len(non_provate)} entries could not be "
+              f"tested on the behaviour{GRIGIO}")
         for sigla, errore in non_provate:
             print(f"       {sigla}: {errore}")
-        print("       ⛔ «Non l'ho potuta provare» non e' «passa»: senza queste "
-              "righe il")
-        print("          banco torna a poggiare sulle sole citazioni, che e' "
-              "quel che il")
-        print("          rilievo A8 ha rotto.")
+        print("       ⛔ «I could not test it» is not «passes»: without these "
+              "lines the")
+        print("          bench goes back to resting on the quotations alone, which is "
+              "what")
+        print("          finding A8 broke.")
         return 3
     if rotte:
-        print(f"    {ROSSO}⛔ B9: {len(rotte)} voci non separano niente "
+        print(f"    {ROSSO}⛔ B9: {len(rotte)} entries separate nothing "
               f"({', '.join(rotte)}){GRIGIO}")
-        print("       Due letture con gli stessi byte non sono due letture:")
-        print("       il difetto e' DI QUESTO BANCO, non del documento.")
+        print("       Two readings with the same bytes are not two readings:")
+        print("       the defect is OF THIS BENCH, not of the document.")
         return 1
     if scollegate:
-        print(f"    {GIALLO}[?] B9: l'inventario e' intero, ma "
-              f"{len(scollegate)} voci citano un testo che non c'e' piu'"
+        print(f"    {GIALLO}[?] B9: the inventory is whole, but "
+              f"{len(scollegate)} entries quote a text that is no longer there"
               f"{GRIGIO}")
         for sigla, persi in scollegate:
-            print(f"       {sigla}: {len(persi)} appigli persi")
-        print("       ⛔ Non e' «la voce e' sbagliata»: e' che RCP.md o il")
-        print("          cliente di prova sono cambiati, e la voce va riletta")
-        print("          prima di essere creduta.")
+            print(f"       {sigla}: {len(persi)} anchors lost")
+        print("       ⛔ It is not «the entry is wrong»: it is that RCP.md or the")
+        print("          test client changed, and the entry must be reread")
+        print("          before being believed.")
         return 3
-    print(f"    {VERDE}⭐ B9: {len(VOCI)} punti in cui il documento non "
-          f"decideva, tutti verificati sul testo di oggi{GRIGIO}")
-    print("       ⚠ E questo NON vuol dire che siano soli: vuol dire che sono")
-    print("         questi quelli trovati leggendo RCP.md una seconda volta.")
+    print(f"    {VERDE}⭐ B9: {len(VOCI)} points where the document did not "
+          f"decide, all verified on today's text{GRIGIO}")
+    print("       ⚠ And this does NOT mean they are the only ones: it means they are")
+    print("         the ones found by reading RCP.md a second time.")
     return 0
 
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(
-        description="B9 — i punti in cui RCP.md ammetteva due letture")
+        description="B9 — the points where RCP.md allowed two readings")
     p.add_argument("--byte", action="store_true",
-                   help="stampa gli esadecimali delle due letture")
+                   help="print the hex of the two readings")
     p.add_argument("--elenco", action="store_true",
-                   help="solo i titoli, senza costruire niente")
+                   help="only the titles, without building anything")
     sys.exit(principale(p.parse_args()))

@@ -1,46 +1,46 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-16-attore — UN UTENTE SIMULATO della fase 16 (fasi/16-stress-e-capacita.md §4, §5, §7)
+16-attore — A SIMULATED USER of phase 16 (fasi/16-stress-e-capacita.md §4, §5, §7)
 
     python3 16-attore.py --scatola gnome|kde|xfce|lxqt --utente N (1..16) \\
         --wayland wayland-K --dir DIR --seme S \\
         [--largo 3840 --alto 2160] [--porte-base P] [--video URL] [--host 192.168.0.2]
     python3 16-attore.py --certifica
 
-Gira SUL SERVER come nicfio (e' lui a mettere l'ambiente dei banchi 15: labwc
-`--wayland`, `sudo podman exec` locale).  Un processo = una persona:
+Runs ON THE SERVER as nicfio (it is nicfio who sets up the environment of the 15 benches: labwc
+`--wayland`, local `sudo podman exec`).  One process = one person:
 
-  browser   N dispari Firefox (Marionette, porta P), N pari Chrome (CDP, porta P+1)
-  profilo   N%4: 1 A navigazione · 2 B file manager · 3 C terminale · 0 D video 4K
-  inquilino c16<NNN>u<N> (es. c16001u1), parola casuale, creato qui e SGOMBERATO
-            sempre all'uscita (fine normale, SIGTERM, SIGINT, eccezione).
-            ⛔ Una sola prova d'accesso, con la parola giusta: mai un ban.
+  browser   odd N Firefox (Marionette, port P), even N Chrome (CDP, port P+1)
+  profile   N%4: 1 A browsing · 2 B file manager · 3 C terminal · 0 D 4K video
+  tenant    c16<NNN>u<N> (e.g. c16001u1), random password, created here and CLEARED
+            always on exit (normal end, SIGTERM, SIGINT, exception).
+            ⛔ One single access attempt, with the right password: never a ban.
 
-  1. crea l'inquilino, accende il browser nel suo labwc, prepara la casa;
-  2. ENTRA: misura accesso (invio → «Ammesso») e primo fotogramma (invio →
-     `dipinti > 0`), poi guarda che il desktop non sia degenere ⇒ nascita.json;
-  3. lancia l'applicazione del profilo DENTRO la sessione (16-lavori.py);
-  4. lavora in ciclo fino a SIGTERM, con input VERO dal browser e il ritmo
-     estratto da random.Random(«seme:utente») — ripetibile fra le campagne.
+  1. creates the tenant, turns on the browser in its labwc, prepares the home;
+  2. ENTERS: measures access (submit → «Admitted») and first frame (submit →
+     `dipinti > 0`), then checks that the desktop is not degenerate ⇒ nascita.json;
+  3. launches the profile's application INSIDE the session (16-lavori.py);
+  4. works in a loop until SIGTERM, with REAL input from the browser and the rhythm
+     drawn from random.Random(«seed:user») — repeatable across campaigns.
 
-  DIR/utente-NN/stato.jsonl   SOLO righe di stato, ogni 5 s, nello schema di
+  DIR/utente-NN/stato.jsonl   ONLY state rows, every 5 s, in the schema of
                               16-classifica.py: t, profilo, inquilino, conti
-                              (cumulativi: consegnati dipinti salt buchi tard
-                              ricevuti suonati BUCHI mancati), diario (la riga
-                              «audio: …» della pagina COM'E'), giro
+                              (cumulative: consegnati dipinti salt buchi tard
+                              ricevuti suonati BUCHI mancati), diario (the page's
+                              «audio: …» line AS IT IS), giro
                               (REMOTIX.giro: visti, campioni), input
                               [{ok, latenza_ms, azione}], blocco_max_ms, lavoro,
-                              caduta, errori; e in piu' diario_letto, delta,
+                              caduta, errori; and also diario_letto, delta,
                               azioni, verifiche, dettagli_lavoro, eventi
   DIR/utente-NN/eventi.jsonl  inizio, nascita, applicazione, foto, errore, fine
-  DIR/utente-NN/nascita.json  {accesso_ms, primo_fotogramma_ms (ore in ms
-                              dall'epoca), nascita_ms (la durata), esito "ok"|…}
-  SIGUSR1                     foto piena della tela in DIR/utente-NN/foto-<t>.png
-  all'uscita                  console-<browser>.txt e registro-pagina.txt
+  DIR/utente-NN/nascita.json  {accesso_ms, primo_fotogramma_ms (times in ms
+                              from the epoch), nascita_ms (the duration), esito "ok"|…}
+  SIGUSR1                     full photo of the canvas in DIR/utente-NN/foto-<t>.png
+  on exit                     console-<browser>.txt and registro-pagina.txt
 
-Codice d'uscita: 0 fermato da SIGTERM/SIGINT dopo aver lavorato · 1 l'accesso o
-l'avvio non sono riusciti · 2 errore del banco.
+Exit code: 0 stopped by SIGTERM/SIGINT after having worked · 1 the access or
+the start did not succeed · 2 bench error.
 """
 import argparse
 import importlib.util as _iu
@@ -73,23 +73,23 @@ L = _carica("lavori16", os.path.join(QUI, "16-lavori.py"))
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  IL RITMO — una persona, ripetibile (funzione pura)
+#  THE RHYTHM — one person, repeatable (pure function)
 # ═══════════════════════════════════════════════════════════════════════════
 class Ritmo:
-    """Pause, scelte e velocita' di battitura di UNA persona.  ⭐ Tutto da
-    `random.Random("remotix16:<seme>:<utente>")`: la stessa salita rifatta
-    (Intel/Radeon) ha le stesse scelte nello stesso ordine; utenti diversi
-    hanno ritmi diversi anche con lo stesso seme."""
+    """Pauses, choices and typing speed of ONE person.  ⭐ Everything from
+    `random.Random("remotix16:<seme>:<utente>")`: the same climb redone
+    (Intel/Radeon) has the same choices in the same order; different users
+    have different rhythms even with the same seed."""
 
     def __init__(self, seme, utente, sorgente=None):
         self.r = sorgente or random.Random("remotix16:%s:%d" % (seme, utente))
-        self.base_ms = self.r.uniform(110, 240)        # battuta media della persona
-        self.lentezza = self.r.uniform(0.7, 1.5)       # scala delle sue pause
+        self.base_ms = self.r.uniform(110, 240)        # the person's mean keystroke
+        self.lentezza = self.r.uniform(0.7, 1.5)       # scale of their pauses
 
     def battuta_ms(self):
         v = self.r.lognormvariate(math.log(self.base_ms), 0.35)
         if self.r.random() < 0.04:
-            v += self.r.uniform(300, 900)              # un'esitazione
+            v += self.r.uniform(300, 900)              # a hesitation
         return max(40.0, min(1500.0, v))
 
     def tenuta_ms(self):
@@ -121,7 +121,7 @@ class Ritmo:
 
 
 def impronta(ritmo, n=300):
-    """La sequenza di `n` estrazioni di tutti i tipi (per la certificazione)."""
+    """The sequence of `n` draws of all kinds (for the certification)."""
     out = []
     for i in range(n):
         out += [round(ritmo.battuta_ms(), 6), round(ritmo.pausa_s(("gesto", "breve", "leggere")[i % 3]), 6),
@@ -130,15 +130,15 @@ def impronta(ritmo, n=300):
 
 
 def ripetibile(fabbrica, n=300):
-    """⭐ Due ritmi dalla stessa fabbrica danno la stessa sequenza?"""
+    """⭐ Do two rhythms from the same factory give the same sequence?"""
     return impronta(fabbrica(), n) == impronta(fabbrica(), n)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  IL DIARIO DELLA PAGINA — la riga «audio: …» che la pagina manda ogni 5 s
-#  (src/pagina.html ~6970), letta com'e' (funzione pura)
+#  THE PAGE'S DIARY — the «audio: …» line the page sends every 5 s
+#  (src/pagina.html ~6970), read as it is (pure function)
 # ═══════════════════════════════════════════════════════════════════════════
-# nomi della meta' audio (prima di « | ») e della meta' pagina (dopo)
+# names of the audio half (before « | ») and of the page half (after)
 _AUDIO = {"ricevuti": "ricevuti", "suonati": "suonati", "BUCHI": "BUCHI", "vecchi": "vecchi",
           "tardivi": "tardivi", "fuori": "audio_fuori_ordine", "rec": "recuperati",
           "dop": "doppioni", "pieni": "pieni", "errori": "audio_errori", "mancati": "mancati",
@@ -155,8 +155,8 @@ def _intero(t):
 
 
 def leggi_riga_diario(riga):
-    """⭐ La riga del diario ⇒ dict.  Un campo che non c'e' resta None («non
-    letto»), MAI zero: un zero inventato e' un verde falso."""
+    """⭐ The diary line ⇒ dict.  A field that is not there stays None («not
+    read»), NEVER zero: an invented zero is a false green."""
     if not riga or not riga.startswith("audio: "):
         return None
     audio, _, pagina = riga[len("audio: "):].partition(" | ")
@@ -183,9 +183,9 @@ def leggi_riga_diario(riga):
 
 
 def differenze(prima, dopo, nomi):
-    """Le crescite dei contatori fra due letture.  ⚠ Un contatore che CALA (la
-    pagina ricaricata, la sessione rinata) non e' una crescita negativa: e'
-    «azzerato», e il suo delta e' None."""
+    """The growths of the counters between two readings.  ⚠ A counter that DROPS (the
+    page reloaded, the session reborn) is not a negative growth: it is
+    «reset», and its delta is None."""
     out, azzerati = {}, []
     for n in nomi:
         a, b = (prima or {}).get(n), (dopo or {}).get(n)
@@ -226,17 +226,17 @@ return { riga: riga, lung: t.length, giro: giro, dipinti_t: dt, gesti_t: gt, nuo
 CONTI_DELTA = ("consegnati", "dipinti", "salt", "buchi", "tard", "chiavi_chieste",
                "ricevuti", "suonati", "BUCHI", "mancati")
 
-# ⭐ La sonda dei dipinti: nella pagina VERA, ogni 10 ms guarda `conti.dipinti`
-#   e annota l'ora (Date.now: lo stesso orologio dell'attore, stessa macchina)
-#   di ogni cambio.  JS_DIARIO li prende e svuota ogni 5 s.
+# ⭐ The paint probe: in the REAL page, every 10 ms it looks at `conti.dipinti`
+#   and notes the time (Date.now: the same clock as the actor, same machine)
+#   of every change.  JS_DIARIO takes them and empties them every 5 s.
 SONDA_DIPINTI = r"""
 (function () {
   if (window.__C16) return;
   const C = window.__C16 = { t: [], g: [], ultimo: null };
-  /* ⭐ L'ora dei GESTI come la pagina li riceve (stesso orologio dei dipinti):
-     `ore_dei_tasti` la ricostruiva dal ritorno di Marionette, e una catena
-     trattenuta metteva il tasto DOPO il suo stesso eco (fasi/20 §3-bis.2).
-     In cattura su window: arriva prima di ogni gestore della pagina. */
+  /* ⭐ The time of the GESTURES as the page receives them (same clock as the paints):
+     `ore_dei_tasti` rebuilt it from the return of Marionette, and a held-back
+     chain put the key AFTER its own echo (fasi/20 §3-bis.2).
+     In capture on window: it arrives before any handler of the page. */
   const g = function (tipo) {
     return function (e) {
       C.g.push([Date.now(), tipo, tipo === 'k' ? String(e.key) : '']);
@@ -258,10 +258,10 @@ SONDA_DIPINTI = r"""
 
 
 def conti_classifica(c, diario):
-    """⭐ I contatori CUMULATIVI coi nomi che legge 16-classifica.py: dalla
-    pagina (`REMOTIX.schermo.conti`) e, per l'audio, dalla riga del diario.
-    Solo quelli che ci sono: un None qui farebbe credere al classificatore
-    di averlo letto."""
+    """⭐ The CUMULATIVE counters with the names 16-classifica.py reads: from the
+    page (`REMOTIX.schermo.conti`) and, for the audio, from the diary line.
+    Only those that are there: a None here would make the classifier believe
+    it had read it."""
     out = {}
     c = c or {}
     for mio, suo in (("consegnati", "consegnati"), ("dipinti", "dipinti"), ("salt", "saltati_coda"),
@@ -286,13 +286,13 @@ return G && G.campioni ? { visti: G.visti, campioni: G.campioni.map(x => Math.ro
 
 
 def campioni_nuovi(prima, dopo):
-    """⭐ I campioni del GIRO arrivati fra due letture di `REMOTIX.giro`
-    ({visti, campioni: gli ultimi 200}): gli ultimi `dopo.visti − prima.visti`.
-    Prese SOLO attorno a una battitura a eco immediato, sono il ritardo del
-    PRODOTTO (il carattere compare subito), senza il tempo di reazione
-    dell'applicazione (una pagina che carica, una finestra che si apre).
-    ⚠ Se ne sono arrivati piu' di quanti la lista ne tiene, si prendono quelli
-    che ci sono; una lettura mancata ⇒ nessun campione (mai inventati)."""
+    """⭐ The ROUND samples arrived between two readings of `REMOTIX.giro`
+    ({visti, campioni: the last 200}): the last `dopo.visti − prima.visti`.
+    Taken ONLY around typing with immediate echo, they are the delay of the
+    PRODUCT (the character appears at once), without the reaction time
+    of the application (a page loading, a window opening).
+    ⚠ If more arrived than the list holds, those
+    that are there are taken; a missed reading ⇒ no sample (never invented)."""
     if not prima or not dopo or dopo.get("campioni") is None:
         return []
     n = (dopo.get("visti") or 0) - (prima.get("visti") or 0)
@@ -302,10 +302,10 @@ def campioni_nuovi(prima, dopo):
 
 
 def attese_impulsi(impulsi, dipinti_t, ora, tetto_s=5.0):
-    """⭐ Per ogni impulso (un input che DEVE cambiare l'immagine), l'attesa
-    fino al primo dipinto DOPO di lui.  ⇒ (attese in s, impulsi ancora aperti).
-    Un impulso senza dipinto da piu' di `tetto_s` si chiude con l'attesa fin
-    qui (e' un blocco, non si butta)."""
+    """⭐ For every impulse (an input that MUST change the image), the wait
+    until the first paint AFTER it.  ⇒ (waits in s, impulses still open).
+    An impulse without a paint for more than `tetto_s` is closed with the wait so
+    far (it is a freeze, it is not thrown away)."""
     attese, aperti = [], []
     pt = sorted(dipinti_t)
     for e in sorted(impulsi):
@@ -320,39 +320,39 @@ def attese_impulsi(impulsi, dipinti_t, ora, tetto_s=5.0):
 
 
 def pausa_piu_lunga(dipinti_t, da, a):
-    """⭐ Il fermo piu' lungo dell'immagine in [da, a] (video: deve sempre
-    cambiare), bordi compresi: dall'ultimo dipinto prima di `da`, fino ad `a`."""
+    """⭐ The longest still of the image in [da, a] (video: it must always
+    change), edges included: from the last paint before `da`, up to `a`."""
     pt = sorted(dipinti_t)
     prima = [x for x in pt if x <= da]
     punti = ([prima[-1]] if prima else [da]) + [x for x in pt if da < x <= a] + [a]
     return max((y - x for x, y in zip(punti, punti[1:])), default=a - da)
 
 
-TETTO_DEGENERE_S = 15      # §9: il desktop non degenere entro 15 s dall'accesso (FAIL oltre)
+TETTO_DEGENERE_S = 15      # §9: the desktop not degenerate within 15 s of access (FAIL beyond)
 
 
 def esito_nascita(verde, rosso):
-    """(esito, nota) di nascita.json dal giudizio del desktop.  ⭐ Solo un ROSSO
-    (ancora degenere al tetto) e' «degenere»; un giudizio che non si e' potuto
-    dare (fotografia cieca) NON e' un difetto del prodotto: «ok», con la nota."""
+    """(outcome, note) of nascita.json from the judgement of the desktop.  ⭐ Only a RED
+    (still degenerate at the cap) is «degenere»; a judgement that could not be
+    given (blind photo) is NOT a defect of the product: «ok», with the note."""
     if verde:
         return "ok", None
     if rosso:
         return "degenere", None
-    return "ok", "desktop non misurato (la fotografia non si e' potuta giudicare)"
+    return "ok", "desktop not measured (the photo could not be judged)"
 
 
 def lavora_dopo_nascita(nascita):
-    """⭐ L'attore lavora se ha il primo fotogramma (la sessione c'e'), anche
-    con un desktop degenere o non guardato: il carico non si toglie."""
+    """⭐ The actor works if it has the first frame (the session is there), even
+    with a degenerate or unchecked desktop: the load is not removed."""
     return bool(nascita.get("primo_fotogramma_ms")) and "rifiut" not in str(nascita.get("esito"))
 
 
 def ore_dei_tasti(t_ritorno, durate_ms):
-    """⭐ L'ora di ogni tasto di una catena Marionette, ricavata dal RITORNO di
-    `PerformActions` (che torna quando l'ultima pausa e' finita): il tasto i e'
-    stato premuto `somma(durate[i:])` prima.  ⛔ Con l'ora presa PRIMA della
-    chiamata, il ritardo di Marionette sotto carico finiva nel «blocco»."""
+    """⭐ The time of every key of a Marionette chain, derived from the RETURN of
+    `PerformActions` (which returns when the last pause is over): key i was
+    pressed `sum(durate[i:])` before.  ⛔ With the time taken BEFORE the
+    call, Marionette's delay under load ended up in the «freeze»."""
     out, resto = [], sum(durate_ms) / 1000.0
     for d in durate_ms:
         out.append(t_ritorno - resto)
@@ -361,9 +361,9 @@ def ore_dei_tasti(t_ritorno, durate_ms):
 
 
 def gesto_combacia(atteso, ricevuto):
-    """Il gesto battuto dall'attore e quello ricevuto dalla pagina sono lo
-    stesso tipo; per un carattere stampabile anche lo stesso tasto (un Invio,
-    un Tab, un tasto speciale: basta il tipo, i nomi cambiano fra i motori)."""
+    """The gesture typed by the actor and the one received by the page are the
+    same kind; for a printable character also the same key (an Enter,
+    a Tab, a special key: the kind is enough, the names change between engines)."""
     tipo, tasto = atteso
     if ricevuto[1] != tipo:
         return False
@@ -371,22 +371,22 @@ def gesto_combacia(atteso, ricevuto):
     if tipo == "k" and tasto and stampabile(tasto):
         return ricevuto[2] == tasto
     if tipo == "k":
-        # un tasto speciale non si confonde con una lettera battuta senza attesa prima di lui
+        # a special key is not confused with a letter typed without a wait before it
         return not stampabile(ricevuto[2] or "")
     return True
 
 
 def allinea_impulsi(pendenti, gesti, tolleranza_s=0.25, indietro_s=10.0):
-    """⭐ L'ora VERA degli impulsi: per ogni impulso dell'attore (ora stimata,
-    gesto), nell'ordine, il primo gesto ancora libero dello stesso tipo che la
-    pagina ha ricevuto non oltre `tolleranza_s` dopo la stima.  ⇒ le ore da
-    usare (quella della pagina, o la stima se la pagina non l'ha visto: un
-    gesto che non arriva resta un impulso, e se l'immagine non cambia e' un
-    blocco vero).  `gesti`: [[ms, tipo, tasto], …] della sonda.
-    ⚠ La stima di `ore_dei_tasti` non e' mai PRIMA del gesto vero: una catena
-    trattenuta da Marionette sposta in AVANTI tutti i tasti battuti prima
-    della fermata, fino oltre il loro eco, e l'attesa diventava quella del
-    dipinto successivo (il cursore che lampeggia: ~1,1 s, fasi/20 §3-bis.2)."""
+    """⭐ The TRUE time of the impulses: for every impulse of the actor (estimated time,
+    gesture), in order, the first still-free gesture of the same kind that the
+    page received no later than `tolleranza_s` after the estimate.  ⇒ the times to
+    use (the page's, or the estimate if the page did not see it: a
+    gesture that does not arrive stays an impulse, and if the image does not change it is a
+    real freeze).  `gesti`: [[ms, kind, key], …] from the probe.
+    ⚠ The estimate of `ore_dei_tasti` is never BEFORE the real gesture: a chain
+    held back by Marionette moves FORWARD all the keys typed before
+    the stop, until beyond their echo, and the wait became that of the
+    next paint (the blinking cursor: ~1.1 s, fasi/20 §3-bis.2)."""
     gs = sorted(((g[0] / 1000.0, g[1], g[2] if len(g) > 2 else "") for g in (gesti or [])),
                 key=lambda g: g[0])
     out, j = [], 0
@@ -407,11 +407,11 @@ def allinea_impulsi(pendenti, gesti, tolleranza_s=0.25, indietro_s=10.0):
 
 
 class Fine(Exception):
-    """SIGTERM / SIGINT: si smette di lavorare e si sgombera."""
+    """SIGTERM / SIGINT: work stops and the tenant is cleared."""
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA CERTIFICAZIONE — le funzioni pure, con i GUASTI INNESTATI
+#  THE CERTIFICATION — the pure functions, with INJECTED FAULTS
 # ═══════════════════════════════════════════════════════════════════════════
 RIGA_ESEMPIO = ("audio: ricevuti 1200 suonati 1188 BUCHI 2 vecchi 3 tardivi 0 fuori 5 rec 1 "
                 "dop 0 pieni 0 errori 0 mancati 7 volte 3 usciti 1180 tagliati 0 sospesi 0 "
@@ -429,177 +429,177 @@ def certifica():
         if not vero:
             guai.append(cosa)
 
-    print("── il ritmo")
-    prova("stesso seme e utente ⇒ stessa sequenza", ripetibile(lambda: Ritmo("s1", 3)))
-    prova("utenti diversi ⇒ sequenze diverse",
+    print("── the rhythm")
+    prova("same seed and user ⇒ same sequence", ripetibile(lambda: Ritmo("s1", 3)))
+    prova("different users ⇒ different sequences",
           impronta(Ritmo("s1", 3)) != impronta(Ritmo("s1", 4)))
-    prova("semi diversi ⇒ sequenze diverse",
+    prova("different seeds ⇒ different sequences",
           impronta(Ritmo("s1", 3)) != impronta(Ritmo("s2", 3)))
-    # ⛔ GUASTO: un ritmo senza seme (dall'orologio) deve risultare NON ripetibile
-    prova("GUASTO visto: ritmo senza seme ⇒ non ripetibile",
+    # ⛔ FAULT: a rhythm without a seed (from the clock) must turn out NOT repeatable
+    prova("FAULT seen: rhythm without seed ⇒ not repeatable",
           not ripetibile(lambda: Ritmo("s1", 3, sorgente=random.Random())))
     r = Ritmo("s1", 5)
     b = [r.battuta_ms() for _ in range(3000)]
     media = sum(b) / len(b)
-    prova("battute fra 40 e 1500 ms, media umana (80-400 ms)",
-          min(b) >= 40 and max(b) <= 1500 and 80 <= media <= 400, "media %.0f ms" % media)
+    prova("keystrokes between 40 and 1500 ms, human mean (80-400 ms)",
+          min(b) >= 40 and max(b) <= 1500 and 80 <= media <= 400, "mean %.0f ms" % media)
     pp = {k: [r.pausa_s(k) for _ in range(500)] for k in ("gesto", "breve", "leggere")}
-    prova("pause: gesto < breve < leggere (in media)",
+    prova("pauses: gesto < breve < leggere (on average)",
           sum(pp["gesto"]) < sum(pp["breve"]) < sum(pp["leggere"]),
           " ".join("%s %.1f s" % (k, sum(v) / len(v)) for k, v in pp.items()))
     basi = {round(Ritmo("s1", n).base_ms) for n in range(1, 17)}
-    prova("16 persone, 16 velocita' diverse", len(basi) == 16, str(sorted(basi)))
+    prova("16 people, 16 different speeds", len(basi) == 16, str(sorted(basi)))
 
-    print("── il diario della pagina")
+    print("── the page's diary")
     d = leggi_riga_diario(RIGA_ESEMPIO)
-    prova("riga d'esempio letta", d is not None)
+    prova("sample line read", d is not None)
     atteso = {"ricevuti": 1200, "suonati": 1188, "BUCHI": 2, "mancati": 7, "mancati_volte": 3,
               "audio_fuori_ordine": 5, "video_fuori": 5100, "video_consegnati": 5210,
               "video_dipinti": 5000, "salt": 90, "buchi": 1, "dipinti": 5000, "coda_ms": 270,
               "tasti": 88, "AV_ms": 7, "fuoco": "si", "schermo": "acceso", "ctx": "running"}
     storti = {k: (d or {}).get(k) for k, v in atteso.items() if (d or {}).get(k) != v}
-    prova("ogni campo al suo valore (i due «fuori» NON confusi)", not storti, str(storti))
-    # ⛔ GUASTO: la riga senza BUCHI ⇒ BUCHI None (non letto), mai 0
+    prova("every field at its value (the two «fuori» NOT confused)", not storti, str(storti))
+    # ⛔ FAULT: the line without BUCHI ⇒ BUCHI None (not read), never 0
     g = leggi_riga_diario(RIGA_ESEMPIO.replace(" BUCHI 2", ""))
-    prova("GUASTO visto: BUCHI tolto dalla riga ⇒ None, non zero", g and g["BUCHI"] is None,
+    prova("FAULT seen: BUCHI removed from the line ⇒ None, not zero", g and g["BUCHI"] is None,
           "BUCHI=%r" % (g or {}).get("BUCHI"))
-    # ⛔ GUASTO: BUCHI cambiato ⇒ il valore letto cambia
+    # ⛔ FAULT: BUCHI changed ⇒ the value read changes
     g = leggi_riga_diario(RIGA_ESEMPIO.replace(" BUCHI 2", " BUCHI 41"))
-    prova("GUASTO visto: BUCHI 41 ⇒ letto 41", g and g["BUCHI"] == 41)
+    prova("FAULT seen: BUCHI 41 ⇒ read 41", g and g["BUCHI"] == 41)
     g = leggi_riga_diario(RIGA_ESEMPIO.split(" | ")[0])
-    prova("GUASTO visto: senza la meta' pagina ⇒ video None", g and g["video_dipinti"] is None
+    prova("FAULT seen: without the page half ⇒ video None", g and g["video_dipinti"] is None
           and g["salt"] is None)
-    prova("una riga d'altro ⇒ None", leggi_riga_diario("MISURA qualcosa") is None)
+    prova("a line about something else ⇒ None", leggi_riga_diario("MISURA something") is None)
     dd, az = differenze({"dipinti": 100, "buchi": 1}, {"dipinti": 160, "buchi": 1},
                         ("dipinti", "buchi", "salt"))
-    prova("differenze: crescita e campo mancante", dd == {"dipinti": 60, "buchi": 0, "salt": None}
+    prova("differences: growth and missing field", dd == {"dipinti": 60, "buchi": 0, "salt": None}
           and not az, str(dd))
-    # ⛔ GUASTO: la pagina ricaricata azzera i contatori ⇒ «azzerato», non un delta negativo
+    # ⛔ FAULT: the reloaded page resets the counters ⇒ «reset», not a negative delta
     dd, az = differenze({"dipinti": 900}, {"dipinti": 12}, ("dipinti",))
-    prova("GUASTO visto: contatore che cala ⇒ azzerato, delta None",
+    prova("FAULT seen: counter that drops ⇒ reset, delta None",
           dd["dipinti"] is None and az == ["dipinti"])
 
-    print("── i contatori per il classificatore")
+    print("── the counters for the classifier")
     cc = conti_classifica({"consegnati": 10, "dipinti": 9, "saltati_coda": 1, "buchi": 0,
                            "tardive": 0, "chiavi_chieste": 2}, d)
-    prova("nomi del classificatore, audio dal diario", cc == {
+    prova("classifier names, audio from the diary", cc == {
         "consegnati": 10, "dipinti": 9, "salt": 1, "buchi": 0, "tard": 0, "chiavi_chieste": 2,
         "ricevuti": 1200, "suonati": 1188, "BUCHI": 2, "mancati": 7}, str(cc))
     cc = conti_classifica(None, None)
-    prova("GUASTO visto: niente pagina ⇒ nessun contatore (non zeri)", cc == {}, str(cc))
+    prova("FAULT seen: no page ⇒ no counter (not zeros)", cc == {}, str(cc))
     cc = conti_classifica(None, d)
-    prova("senza conti diretti ⇒ dal diario (video X→Y)", cc.get("consegnati") == 5210
+    prova("without direct counters ⇒ from the diary (video X→Y)", cc.get("consegnati") == 5210
           and cc.get("dipinti") == 5000, str(cc))
 
-    print("── il giro a eco (solo le battiture)")
+    print("── the echo round (typing only)")
     g0 = {"visti": 10, "campioni": [30.0] * 10}
-    g1 = {"visti": 11, "campioni": [30.0] * 10 + [1136.0]}            # un clic che carica una pagina
+    g1 = {"visti": 11, "campioni": [30.0] * 10 + [1136.0]}            # a click that loads a page
     g2 = {"visti": 16, "campioni": [30.0] * 10 + [1136.0] + [41.0, 38.5, 44.0, 40.2, 39.9]}
-    eco = campioni_nuovi(g1, g2)                                      # attorno alla sola battitura
-    prova("i 5 campioni della battitura, e solo quelli", eco == [41.0, 38.5, 44.0, 40.2, 39.9],
+    eco = campioni_nuovi(g1, g2)                                      # around the typing only
+    prova("the 5 samples of the typing, and only those", eco == [41.0, 38.5, 44.0, 40.2, 39.9],
           str(eco))
-    # ⛔ GUASTO: la differenza presa dall'inizio (prima del clic) si porta dentro il 1136
+    # ⛔ FAULT: the difference taken from the start (before the click) carries in the 1136
     tutto = campioni_nuovi(g0, g2)
-    prova("GUASTO visto: senza la lettura prima della battitura il clic di caricamento entra",
+    prova("FAULT seen: without the reading before the typing the loading click gets in",
           1136.0 in tutto and 1136.0 not in eco, str(tutto))
-    prova("lettura mancata ⇒ nessun campione", campioni_nuovi(None, g2) == []
+    prova("missed reading ⇒ no sample", campioni_nuovi(None, g2) == []
           and campioni_nuovi(g2, g2) == [])
     g3 = {"visti": 500, "campioni": [float(i) for i in range(200)]}
-    prova("piu' campioni della lista ⇒ quelli che ci sono", len(campioni_nuovi(g0, g3)) == 200)
+    prova("more samples than the list ⇒ those that are there", len(campioni_nuovi(g0, g3)) == 200)
 
-    print("── il blocco dell'immagine")
+    print("── the freeze of the image")
     at, ap = attese_impulsi([10.0, 12.0, 19.5], [10.2, 10.25, 13.5], 20.0)
-    prova("attese: 0,2 s e 1,5 s, l'ultimo ancora aperto",
+    prova("waits: 0.2 s and 1.5 s, the last still open",
           [round(x, 2) for x in at] == [0.2, 1.5] and ap == [19.5], "%s %s" % (at, ap))
-    # ⛔ GUASTO: l'immagine non cambia piu' dopo l'input ⇒ l'attesa diventa un blocco
+    # ⛔ FAULT: the image no longer changes after the input ⇒ the wait becomes a freeze
     at, ap = attese_impulsi([10.0], [9.0], 16.0)
-    prova("GUASTO visto: nessun dipinto dopo l'input ⇒ blocco di 6 s", at == [6.0] and not ap,
+    prova("FAULT seen: no paint after the input ⇒ freeze of 6 s", at == [6.0] and not ap,
           str(at))
     pl = pausa_piu_lunga([x / 30.0 for x in range(0, 300)], 2.0, 9.9)
-    prova("video a 30 al secondo ⇒ fermo di ~33 ms", 0.03 <= pl <= 0.04, "%.3f s" % pl)
+    prova("video at 30 per second ⇒ still of ~33 ms", 0.03 <= pl <= 0.04, "%.3f s" % pl)
     buco = [x / 30.0 for x in range(0, 300) if not 150 <= x < 210]
     pl = pausa_piu_lunga(buco, 2.0, 9.9)
-    # ⛔ GUASTO: 2 s senza fotogrammi in mezzo al video ⇒ visto
-    prova("GUASTO visto: 2 s senza fotogrammi ⇒ fermo di 2 s", 1.9 <= pl <= 2.1, "%.3f s" % pl)
+    # ⛔ FAULT: 2 s without frames in the middle of the video ⇒ seen
+    prova("FAULT seen: 2 s without frames ⇒ still of 2 s", 1.9 <= pl <= 2.1, "%.3f s" % pl)
     pl = pausa_piu_lunga([1.0, 1.1], 2.0, 7.0)
-    prova("GUASTO visto: video fermo da prima della finestra ⇒ fermo intero", pl >= 5.9,
+    prova("FAULT seen: video stuck since before the window ⇒ whole still", pl >= 5.9,
           "%.1f s" % pl)
 
-    print("── le verifiche dell'input")
+    print("── the input checks")
     st = "ls -la ~/prova16 #k3\nfind /usr/share -name '*.png' | head -n 60 #k4\n"
-    prova("storia: la riga esatta c'e'", L.storia_contiene(st, "ls -la ~/prova16 #k3"))
-    # ⛔ GUASTO visto il 27 set (LXQt): Canc + Invio non cancellava mai — il
-    #   dialogo di pcmanfm-qt ha «No» come predefinito.  ⇒ Maiusc+Canc e «y».
+    prova("history: the exact line is there", L.storia_contiene(st, "ls -la ~/prova16 #k3"))
+    # ⛔ FAULT seen on 27 Sep (LXQt): Del + Enter never deleted — the
+    #   pcmanfm-qt dialog has «No» as default.  ⇒ Shift+Del and «y».
     pc = {s: L.piano_cancella(s) for s in ("gnome", "kde", "xfce", "lxqt")}
-    prova("GUASTO visto: su LXQt si cancella con Maiusc+Canc e si risponde «y», mai Invio",
+    prova("FAULT seen: on LXQt deletion is Shift+Del and the answer «y», never Enter",
           pc["lxqt"][:3] == (["Shift"], "Delete", "y") and pc["lxqt"][4] is True, str(pc["lxqt"]))
-    prova("sugli altri desktop Canc, e l'Invio solo se serve",
+    prova("on the other desktops Del, and Enter only if needed",
           all(pc[s] == ([], "Delete", "Enter", 2.5, False) for s in ("gnome", "kde", "xfce")))
-    # ⛔ GUASTO: un carattere perso nel tragitto ⇒ KO
-    prova("GUASTO visto: un carattere perso ⇒ KO",
+    # ⛔ FAULT: a character lost on the way ⇒ KO
+    prova("FAULT seen: a lost character ⇒ KO",
           not L.storia_contiene(st, "ls -la ~/prova16 #k4")
           and not L.storia_contiene("ls -la ~/prova1 #k3\n", "ls -la ~/prova16 #k3"))
-    # ⛔ GUASTO visto il 27 set (LXQt): qterminal senza SHELL apriva dash ⇒ la
-    #   storia di bash non si scriveva mai, «prima riga NON arrivata» tre volte
+    # ⛔ FAULT seen on 27 Sep (LXQt): qterminal without SHELL opened dash ⇒ the
+    #   bash history was never written, «first line NOT arrived» three times
     ps = ("263 255 lxqt-session\n900 263 qterminal\n905 900 dash\n910 263 pcmanfm-qt\n"
           "1000 263 gnome-terminal-\n1001 1000 bash\n")
-    prova("GUASTO visto: sotto qterminal c'e' dash, e si vede",
+    prova("FAULT seen: under qterminal there is dash, and it shows",
           L.shell_sotto(ps, "qterminal") == ["dash"], str(L.shell_sotto(ps, "qterminal")))
-    prova("sotto gnome-terminal-server (nome tagliato a 15) c'e' bash",
+    prova("under gnome-terminal-server (name cut at 15) there is bash",
           L.shell_sotto(ps, "gnome-terminal") == ["bash"])
-    prova("terminale assente ⇒ nessuna shell, non un errore",
+    prova("terminal absent ⇒ no shell, not an error",
           L.shell_sotto(ps, "konsole") == [] and L.shell_sotto("", "qterminal") == []
-          and L.shell_sotto("riga storta\n", "qterminal") == [])
-    prova("su LXQt qterminal si lancia con bash esplicito",
+          and L.shell_sotto("crooked line\n", "qterminal") == [])
+    prova("on LXQt qterminal is launched with explicit bash",
           L.APP["lxqt"]["term"][0] == "qterminal -e bash")
     q = L.leggi_quaderno("1727.500 carica testo 0 9000\n1727.900 scroll testo 1200 9000\n"
                          "rotta\n1728.1 video yt t=12.40 stato=1 q=hd2160 livelli=hd2160,hd1440\n")
-    prova("quaderno: tre righe buone, la rotta scartata", len(q) == 3 and q[1][1] == "scroll"
+    prova("notebook: three good lines, the broken one discarded", len(q) == 3 and q[1][1] == "scroll"
           and q[1][2] == ["testo", "1200", "9000"], str(q))
     v = L.leggi_video(q[2][2])
-    prova("video: t, stato, qualita'", v.get("t") == 12.4 and v.get("stato") == 1
+    prova("video: t, state, quality", v.get("t") == 12.4 and v.get("stato") == 1
           and v.get("q") == "hd2160", str(v))
-    prova("fonte video: YouTube e file", L.fonte_video("https://www.youtube.com/watch?v=LXb3EKWsInQ")
+    prova("video source: YouTube and file", L.fonte_video("https://www.youtube.com/watch?v=LXb3EKWsInQ")
           == ("yt", "LXb3EKWsInQ") and L.fonte_video("file:///rete11/v.mp4") == ("file", "/rete11/v.mp4")
           and L.fonte_video("ftp://x")[0] is None)
 
-    print("── il campo di testo della pagina locale (A)")
+    print("── the text field of the local page (A)")
     pag = L.pagine_a()
-    prova("le pagine A non tolgono il fuoco al campo da sole",
+    prova("the A pages do not take the focus away from the field by themselves",
           not any(L.campo_lascia_da_solo(h) for h in pag.values()))
-    prova("il campo si lascia con Esc e lo dice («lascia»)",
+    prova("the field is left with Esc and it says so («lascia»)",
           all("'Escape'" in pag[n + ".html"] and "manda('lascia '" in pag[n + ".html"]
               for n in L.PAGINE_A))
-    # ⛔ GUASTO: la pagina di prima (blur a 1,5 s dall'ultimo tasto) ⇒ vista
+    # ⛔ FAULT: the earlier page (blur at 1.5 s from the last key) ⇒ seen
     vecchia = pag["testo.html"].replace(
         "tN = setTimeout(", "tB = setTimeout(() => nota.blur(), 1500); tN = setTimeout(")
-    prova("GUASTO visto: il blur a tempo nella pagina ⇒ riconosciuto",
+    prova("FAULT seen: the timed blur in the page ⇒ recognised",
           L.campo_lascia_da_solo(vecchia))
     e_ok = (1727.5, "testo", ["testo", "alfa", "rete", "server"])
-    prova("frase battuta = frase nel campo ⇒ ok", L.frase_nel_campo(e_ok, "alfa rete server"))
-    # ⛔ GUASTO: le lettere dopo una pausa lunga finite fuori dal campo ⇒ KO
+    prova("typed phrase = phrase in the field ⇒ ok", L.frase_nel_campo(e_ok, "alfa rete server"))
+    # ⛔ FAULT: the letters after a long pause ended up outside the field ⇒ KO
     e_ko = (1727.5, "testo", ["testo", "alfa", "re"])
-    prova("GUASTO visto: lettere perse ⇒ KO", not L.frase_nel_campo(e_ko, "alfa rete server"))
+    prova("FAULT seen: lost letters ⇒ KO", not L.frase_nel_campo(e_ko, "alfa rete server"))
 
-    print("── l'ora dei gesti (dal ritorno della chiamata)")
+    print("── the time of the gestures (from the return of the call)")
     ore = ore_dei_tasti(100.0, [200, 300, 500])
-    prova("tre tasti di 200/300/500 ms tornati a 100 s ⇒ 99,0 / 99,2 / 99,5",
+    prova("three keys of 200/300/500 ms returned at 100 s ⇒ 99.0 / 99.2 / 99.5",
           [round(x, 3) for x in ore] == [99.0, 99.2, 99.5], str(ore))
-    # ⛔ GUASTO: Marionette in ritardo di 2 s: il dipinto del tasto arriva a
-    #   100,05 s; con l'ora PROGRAMMATA dalla partenza (97,0) il blocco e' ~3 s,
-    #   con l'ora dal ritorno e' ~0,55 s
+    # ⛔ FAULT: Marionette 2 s late: the paint of the key arrives at
+    #   100.05 s; with the time SCHEDULED from the departure (97.0) the freeze is ~3 s,
+    #   with the time from the return it is ~0.55 s
     programmate = [97.0, 97.2, 97.5]
     at_vecchie, _ = attese_impulsi(programmate[:1], [100.05], 101.0)
     at_nuove, _ = attese_impulsi(ore[:1], [100.05], 101.0)
-    prova("GUASTO visto: il ritardo di Marionette NON finisce nel blocco",
+    prova("FAULT seen: Marionette's delay does NOT end up in the freeze",
           at_vecchie[0] > 2.5 and at_nuove[0] < 1.2,
-          "prima %.2f s, ora %.2f s" % (at_vecchie[0], at_nuove[0]))
+          "before %.2f s, now %.2f s" % (at_vecchie[0], at_nuove[0]))
 
-    print("── l'ora dei gesti (dalla pagina)")
-    # ⛔ GUASTO visto il 7 ott (fasi/20 §3-bis.2, intel-f20-fhd-xfce): Marionette trattiene
-    #   la catena 1,0 s DOPO l'ultimo tasto.  Tasti veri a 100,0/100,2/100,5, eco dipinti
-    #   30 ms dopo ciascuno, il cursore che lampeggia a 102,0; la catena torna a 102,0
-    #   invece che a 101,0 ⇒ la stima mette ogni tasto 1 s dopo il suo eco.
+    print("── the time of the gestures (from the page)")
+    # ⛔ FAULT seen on 7 Oct (fasi/20 §3-bis.2, intel-f20-fhd-xfce): Marionette holds back
+    #   the chain 1.0 s AFTER the last key.  Real keys at 100.0/100.2/100.5, echo painted
+    #   30 ms after each, the blinking cursor at 102.0; the chain returns at 102.0
+    #   instead of 101.0 ⇒ the estimate puts every key 1 s after its echo.
     veri = [100.0, 100.2, 100.5]
     dipinti = [100.03, 100.23, 100.53, 102.0]
     stime = ore_dei_tasti(102.0, [200, 300, 500])
@@ -607,85 +607,85 @@ def certifica():
     gesti = [[int(x * 1000), "k", c] for x, c in zip(veri, "abc")]
     allineate = allinea_impulsi([(t, ("k", c)) for t, c in zip(stime, "abc")], gesti)
     at_pagina, _ = attese_impulsi(allineate, dipinti, 103.0)
-    prova("GUASTO visto: con la stima di Marionette trattenuta il blocco e' ~1 s",
+    prova("FAULT seen: with the held-back Marionette estimate the freeze is ~1 s",
           max(at_stime) > 0.9, "%.2f s" % max(at_stime))
-    prova("con l'ora della pagina il ritardo di Marionette NON diventa blocco",
+    prova("with the page's time Marionette's delay does NOT become a freeze",
           max(at_pagina) < 0.05 and [round(x, 3) for x in allineate] == veri,
-          "%.3f s, ore %s" % (max(at_pagina), allineate))
-    # un tasto che la pagina non ha mai ricevuto resta un impulso (a ora stimata) ⇒ blocco vero
+          "%.3f s, times %s" % (max(at_pagina), allineate))
+    # a key the page never received stays an impulse (at the estimated time) ⇒ real freeze
     persi = allinea_impulsi([(t, ("k", c)) for t, c in zip(stime, "abc")], gesti[:2])
     at_persi, ap_persi = attese_impulsi(persi, dipinti[:2], 108.0)
-    prova("GUASTO visto: un tasto mai arrivato alla pagina resta un blocco",
+    prova("FAULT seen: a key that never reached the page stays a freeze",
           persi[2] == stime[2] and max(at_persi) > 5.0, "%s %s" % (at_persi, ap_persi))
     al = allinea_impulsi([(10.0, ("k", "x")), (10.3, ("k", "")), (10.6, ("p", "")), (10.9, ("w", ""))],
                          [[9800, "k", "y"], [9850, "k", "x"], [10100, "k", "Enter"],
                           [10400, "p", ""], [10700, "w", ""], [10750, "w", ""]])
-    prova("ogni gesto col suo tipo e, per un carattere, col suo tasto",
+    prova("every gesture with its kind and, for a character, with its key",
           [round(x, 2) for x in al] == [9.85, 10.1, 10.4, 10.7], str(al))
-    prova("niente sonda ⇒ le stime di prima", allinea_impulsi([(5.0, ("k", "a"))], None) == [5.0])
-    prova("un Invio atteso non prende le lettere battute senza attesa prima di lui",
+    prova("no probe ⇒ the earlier estimates", allinea_impulsi([(5.0, ("k", "a"))], None) == [5.0])
+    prova("an expected Enter does not take the letters typed without a wait before it",
           allinea_impulsi([(10.5, ("k", ""))], [[10000, "k", "l"], [10100, "k", "s"],
                                                 [10200, "k", "Enter"]]) == [10.2])
-    prova("un gesto di molto PRIMA della stima non e' il suo",
+    prova("a gesture from well BEFORE the estimate is not its own",
           allinea_impulsi([(50.0, ("k", "a"))], [[20000, "k", "a"]]) == [50.0])
-    prova("un gesto molto DOPO la stima non e' il suo",
+    prova("a gesture well AFTER the estimate is not its own",
           allinea_impulsi([(5.0, ("k", "a"))], [[9000, "k", "a"]]) == [5.0])
 
-    print("── la nascita")
-    prova("desktop verde ⇒ ok", esito_nascita(True, False) == ("ok", None))
-    prova("degenere al tetto ⇒ «degenere»", esito_nascita(False, True)[0] == "degenere")
+    print("── the birth")
+    prova("green desktop ⇒ ok", esito_nascita(True, False) == ("ok", None))
+    prova("degenerate at the cap ⇒ «degenere»", esito_nascita(False, True)[0] == "degenere")
     es, nota = esito_nascita(False, False)
-    prova("non guardato ⇒ ok con la nota «non misurato»", es == "ok" and "non misurato" in nota)
-    prova("il tetto del degenere e' la soglia FAIL di §9 (15 s)", TETTO_DEGENERE_S == 15)
-    prova("con il primo fotogramma l'attore LAVORA (anche degenere)",
+    prova("not checked ⇒ ok with the note «not measured»", es == "ok" and "not measured" in nota)
+    prova("the degenerate cap is the FAIL threshold of §9 (15 s)", TETTO_DEGENERE_S == 15)
+    prova("with the first frame the actor WORKS (even degenerate)",
           lavora_dopo_nascita({"primo_fotogramma_ms": 1, "esito": "degenere"})
           and lavora_dopo_nascita({"primo_fotogramma_ms": 1, "esito": "ok"}))
-    # ⛔ GUASTO: senza primo fotogramma, o rifiutato ⇒ non lavora (non e' in sessione)
-    prova("GUASTO visto: nessun fotogramma o rifiuto ⇒ non lavora",
+    # ⛔ FAULT: without first frame, or refused ⇒ does not work (it is not in session)
+    prova("FAULT seen: no frame or refusal ⇒ does not work",
           not lavora_dopo_nascita({"primo_fotogramma_ms": None, "esito": "nessun_fotogramma"})
           and not lavora_dopo_nascita({"esito": "rifiuto"}))
 
-    print("── la finestra nella foto")
+    print("── the window in the photo")
     try:
         from PIL import Image, ImageDraw
         a = Image.new("RGB", (960, 540), (0, 0, 0))
-        ImageDraw.Draw(a).rectangle([880, 0, 930, 12], fill=(200, 200, 200))    # orologio
+        ImageDraw.Draw(a).rectangle([880, 0, 930, 12], fill=(200, 200, 200))    # clock
         b = a.copy()
         dr = ImageDraw.Draw(b)
-        dr.rectangle([880, 0, 930, 12], fill=(90, 90, 90))                       # l'orologio cambia
-        dr.rectangle([200, 100, 700, 420], outline=(220, 220, 220), width=3)     # finestra scura
-        dr.rectangle([200, 100, 700, 130], fill=(60, 60, 200))                   # sua testata
+        dr.rectangle([880, 0, 930, 12], fill=(90, 90, 90))                       # the clock changes
+        dr.rectangle([200, 100, 700, 420], outline=(220, 220, 220), width=3)     # dark window
+        dr.rectangle([200, 100, 700, 130], fill=(60, 60, 200))                   # its title bar
         dr.text((220, 200), "user@host:~$ ls", fill=(200, 200, 200))
         r = L.rett_finestra(a, b)
-        prova("finestra scura su fondo nero trovata (%s)" % (r,), r is not None and
+        prova("dark window on black background found (%s)" % (r,), r is not None and
               abs(r[0] - 200) <= 16 and abs(r[1] - 100) <= 16 and abs(r[2] - 700) <= 16
               and abs(r[3] - 420) <= 16)
         c = a.copy()
         ImageDraw.Draw(c).rectangle([880, 0, 930, 12], fill=(90, 90, 90))
-        # ⛔ GUASTO: cambia solo l'orologio ⇒ nessuna finestra
-        prova("GUASTO visto: cambia solo l'orologio ⇒ nessuna finestra",
+        # ⛔ FAULT: only the clock changes ⇒ no window
+        prova("FAULT seen: only the clock changes ⇒ no window",
               L.rett_finestra(a, c) is None)
     except ImportError:
-        prova("PIL c'e'", False)
+        prova("PIL is there", False)
 
-    print("── utenti, profili, browser")
+    print("── users, profiles, browsers")
     prof = "".join(L.profilo_di(n) for n in range(1, 17))
-    prova("profili 1..16 = ABCD×4", prof == "ABCD" * 4, prof)
+    prova("profiles 1..16 = ABCD×4", prof == "ABCD" * 4, prof)
     br = [L.browser_di(n) for n in range(1, 17)]
-    prova("dispari Firefox, pari Chrome", all(b == ("firefox" if n % 2 else "chrome")
+    prova("odd Firefox, even Chrome", all(b == ("firefox" if n % 2 else "chrome")
                                              for n, b in zip(range(1, 17), br)))
     sg = re.compile(r"^c[0-9]+b?u[0-9]+$")
     nomi = [L.inquilino_di(n) for n in range(1, 17)]
-    prova("inquilini riconosciuti dallo sgombero e tutti diversi",
+    prova("tenants recognised by the clean-up and all different",
           all(sg.match(x) for x in nomi) and len(set(nomi)) == 16, "%s … %s" % (nomi[0], nomi[-1]))
     porte = {L.porta_interna(d, n) for d in DESKTOP for n in range(1, 17)}
-    prova("porte interne tutte diverse (4 desktop × 16)", len(porte) == 64)
-    print("⛔ CERTIFICAZIONE FALLITA (%d)" % len(guai) if guai else "⭐ CERTIFICATO")
+    prova("internal ports all different (4 desktops × 16)", len(porte) == 64)
+    print("⛔ CERTIFICATION FAILED (%d)" % len(guai) if guai else "⭐ CERTIFIED")
     return 1 if guai else 0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  L'AMBIENTE — prima di importare la suite (legge REMOTIX_SUL_SERVER all'import)
+#  THE ENVIRONMENT — before importing the suite (it reads REMOTIX_SUL_SERVER at import)
 # ═══════════════════════════════════════════════════════════════════════════
 def ambiente(o):
     u = os.getuid()
@@ -697,7 +697,7 @@ def ambiente(o):
         "MOZ_ENABLE_WAYLAND": "1",
         "REMOTIX_CHROME_OPZIONI": "--ozone-platform=wayland --disable-backgrounding-occluded-windows "
                                   "--disable-renderer-backgrounding --disable-background-timer-throttling "
-                                  # ⭐ le opzioni in piu' della salita (es. --render-node-override)
+                                  # ⭐ the extra options of the climb (e.g. --render-node-override)
                                   + os.environ.get("REMOTIX_16_CHROME_IN_PIU", ""),
     })
     os.environ["REMOTIX_CHROME_OPZIONI"] = os.environ["REMOTIX_CHROME_OPZIONI"].strip()
@@ -710,32 +710,32 @@ def argomenti():
     a.add_argument("--certifica", action="store_true")
     a.add_argument("--scatola", choices=DESKTOP)
     a.add_argument("--utente", type=int)
-    a.add_argument("--wayland", help="il socket del labwc di questo utente (wayland-K)")
-    a.add_argument("--dir", help="la cartella delle evidenze della salita")
+    a.add_argument("--wayland", help="the socket of this user's labwc (wayland-K)")
+    a.add_argument("--dir", help="the folder of the climb's evidence")
     a.add_argument("--seme", default="0")
     a.add_argument("--largo", type=int, default=3840)
     a.add_argument("--alto", type=int, default=2160)
     a.add_argument("--porte-base", type=int, default=0,
-                   help="Firefox P, Chrome P+1 (di serie 9700 + 4·N)")
+                   help="Firefox P, Chrome P+1 (by default 9700 + 4·N)")
     a.add_argument("--video", default="",
-                   help="utenti D: URL YouTube, o un file (percorso DENTRO la scatola, /rete11/…)")
+                   help="D users: YouTube URL, or a file (path INSIDE the box, /rete11/…)")
     a.add_argument("--host", default="192.168.0.2")
-    a.add_argument("--tetto-s", type=int, default=60, help="tetto dell'accesso e del primo fotogramma")
+    a.add_argument("--tetto-s", type=int, default=60, help="cap of the access and of the first frame")
     o = a.parse_args()
     if o.certifica:
         return o
     for k in ("scatola", "utente", "wayland", "dir"):
         if getattr(o, k) in (None, ""):
-            a.error("serve --%s" % k)
+            a.error("--%s is needed" % k)
     if not 1 <= o.utente <= 99:
-        a.error("--utente fra 1 e 16 (fino a 99 per il sovraccarico)")
+        a.error("--utente between 1 and 16 (up to 99 for overload)")
     if not o.porte_base:
         o.porte_base = 9700 + 4 * o.utente
     return o
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  L'ATTORE
+#  THE ACTOR
 # ═══════════════════════════════════════════════════════════════════════════
 class Attore:
     def __init__(self, o, S, G2):
@@ -756,7 +756,7 @@ class Attore:
         self.errori_finestra = []
         self.giro_eco_finestra = []
         self.impulsi = []
-        self.impulsi_pendenti = []       # (ora stimata, gesto): l'ora vera la dice la pagina
+        self.impulsi_pendenti = []       # (estimated time, gesture): the page tells the true time
         self.dipinti_t = []
         self.entrato = False
         self.muti = 0
@@ -773,13 +773,13 @@ class Attore:
         self.verifiche = {"ok": 0, "ko": 0}
         self.ver_finestra = []
         self.reg_da = 0
-        self.prec = None                   # (ora, conti, diario) della riga precedente
+        self.prec = None                   # (time, counters, diary) of the previous row
         self.foto_size = None
 
-    # -- le righe -------------------------------------------------------------
-    #  stato.jsonl: SOLO le righe di stato (ogni 5 s), nello schema che legge
-    #  16-classifica.py; gli eventi vanno in eventi.jsonl E nella riga di stato
-    #  dopo (campo `eventi`), cosi' non si perdono e non sporcano le finestre.
+    # -- the rows --------------------------------------------------------------
+    #  stato.jsonl: ONLY the state rows (every 5 s), in the schema that
+    #  16-classifica.py reads; the events go into eventi.jsonl AND into the next state
+    #  row (field `eventi`), so they are not lost and do not dirty the windows.
     def _testa(self, evento):
         return {"t": round(time.time(), 3), "utente": self.n, "profilo": self.profilo,
                 "browser": self.browser, "versione": getattr(self, "esiti", None)
@@ -810,32 +810,32 @@ class Attore:
              "latenza_ms": None if lat_ms is None else round(lat_ms), "det": det}
         self.ver_finestra.append(v)
         if not ok:
-            print("   [%02d %s] ⚠ input NON verificato: %s" % (self.n, self.profilo, v), flush=True)
+            print("   [%02d %s] ⚠ input NOT verified: %s" % (self.n, self.profilo, v), flush=True)
 
     def impulso(self, t, gesto=None):
-        """Un input che DEVE cambiare l'immagine (un carattere battuto, un Invio
-        nel terminale, un clic su un collegamento, una tacca che scorre).
-        `gesto` (tipo, tasto): ("k", carattere), ("p", "") clic, ("w", "") tacca;
-        con lui l'ora la decide la pagina (`allinea_impulsi`), `t` e' la stima."""
+        """An input that MUST change the image (a typed character, an Enter
+        in the terminal, a click on a link, a notch that scrolls).
+        `gesto` (kind, key): ("k", character), ("p", "") click, ("w", "") notch;
+        with it the page decides the time (`allinea_impulsi`), `t` is the estimate."""
         self.impulsi_pendenti.append((t, gesto))
 
-    # -- il cuore: segnali, foto, stato ---------------------------------------
+    # -- the heart: signals, photos, state ------------------------------------
     def cuore(self):
-        """⭐ Il punto SICURO: qui (e solo qui) il SIGTERM diventa `Fine`.
-        ⛔ `[M]` 25 set 2026: interrotta a meta' di una chiamata, Marionette
-        restava con la risposta pendente e la chiamata dopo leggeva quella —
-        il registro della pagina all'uscita non si salvava piu'."""
+        """⭐ The SAFE point: here (and only here) the SIGTERM becomes `Fine`.
+        ⛔ `[M]` 25 Sep 2026: interrupted in the middle of a call, Marionette
+        was left with the pending answer and the next call read that one —
+        the page's log on exit was no longer saved."""
         if self.fermati:
-            raise Fine("segnale")
+            raise Fine("signal")
         if self.voglio_foto:
             self.voglio_foto = False
             self.scatta()
         if time.time() >= self.prossimo_stato:
             self.in_ritardo = time.time() - self.prossimo_stato if self.prossimo_stato else 0.0
             self.scrivi_stato()
-            # ⚠ la prossima fra 5 s DA ORA, non sulla griglia: dopo una riga in
-            #   ritardo, una seconda a 0,7 s di distanza sarebbe per il
-            #   classificatore «5 s senza fotogrammi» (`[M]` 25 set, utente D)
+            # ⚠ the next one in 5 s FROM NOW, not on the grid: after a late
+            #   row, a second one 0.7 s apart would be for the
+            #   classifier «5 s without frames» (`[M]` 25 Sep, user D)
             self.prossimo_stato = time.time() + 5.0
 
     def dorme(self, secondi):
@@ -848,20 +848,20 @@ class Attore:
             time.sleep(min(0.25, resto))
 
     def arma_sonda(self):
-        """La sonda dei dipinti nella pagina (ogni 10 ms: l'ora di ogni cambio)."""
+        """The paint probe in the page (every 10 ms: the time of every change)."""
         try:
-            with self.G2.tetto(20, "la sonda"):
+            with self.G2.tetto(20, "the probe"):
                 self.g.js(self.S.VERI._inietta(SONDA_DIPINTI))
             return True
         except Exception as e:                   # noqa: BLE001
-            self.evento("errore", testo="sonda dei dipinti non armata: %s" % str(e)[:200])
+            self.evento("errore", testo="paint probe not armed: %s" % str(e)[:200])
             return False
 
     def scrivi_stato(self):
         if self.g is None:
             return
         try:
-            with self.G2.tetto(20, "il diario"):
+            with self.G2.tetto(20, "the diary"):
                 p = self.g.js(JS_DIARIO, self.reg_da) or {}
         except Exception as e:                   # noqa: BLE001
             p = {"errore": str(e)[:200]}
@@ -871,19 +871,19 @@ class Attore:
         conti = conti_classifica(p.get("conti"), diario)
         errori = []
         if p.get("errore"):
-            errori.append("la pagina non risponde al banco: " + p["errore"])
+            errori.append("the page does not answer the bench: " + p["errore"])
             self.muti += 1
         else:
             self.muti = 0
-        # ⭐ la caduta: dopo l'ingresso la pagina non e' piu' in sessione
+        # ⭐ the drop: after entry the page is no longer in session
         caduta = bool(self.entrato and not p.get("errore") and not p.get("sessione"))
         if caduta:
-            errori.append("la pagina non e' piu' in sessione (schermo %s, esito «%s»)"
+            errori.append("the page is no longer in session (screen %s, outcome «%s»)"
                           % (p.get("schermo"), p.get("esito")))
-        # ⭐ il blocco piu' lungo: dai tempi dei dipinti e dagli impulsi
+        # ⭐ the longest freeze: from the paint times and the impulses
         pt = [x / 1000.0 for x in (p.get("dipinti_t") or [])]
         self.dipinti_t = [x for x in self.dipinti_t if x > ora - 30] + pt
-        # ⭐ gli impulsi all'ora in cui la PAGINA ha ricevuto il gesto
+        # ⭐ the impulses at the time the PAGE received the gesture
         allineati = allinea_impulsi(self.impulsi_pendenti, p.get("gesti_t"))
         dalla_pagina = sum(1 for a, (st, _g) in zip(allineati, self.impulsi_pendenti) if a != st)
         tot_impulsi = len(self.impulsi_pendenti)
@@ -919,7 +919,7 @@ class Attore:
             campi["pagina"] = p["nuove"]
         if isinstance(p.get("lung"), int):
             self.reg_da = p["lung"]
-        # ⚠ quanto e' arrivata tardi questa riga (un gesto lungo la trattiene)
+        # ⚠ how late this row arrived (a long gesture holds it back)
         campi["in_ritardo_s"] = round(getattr(self, "in_ritardo", 0.0), 2)
         campi.update({"azioni": dict(self.azioni), "azioni_finestra": self.fatte_finestra,
                       "verifiche": dict(self.verifiche)})
@@ -941,10 +941,10 @@ class Attore:
         v = getattr(self.lavoro, "ultimo_video", None) or {}
         return self.entrato and v.get("stato") == 1
 
-    # -- le foto ----------------------------------------------------------------
+    # -- the photos -------------------------------------------------------------
     def png(self):
         self.G2.davanti(self.g)
-        with self.G2.tetto(30, "la fotografia"):
+        with self.G2.tetto(30, "the photo"):
             return self.C21.foto_piena(self.g)
 
     def scatta(self):
@@ -955,7 +955,7 @@ class Attore:
             self.evento("foto", ok=False, perche=str(e)[:200])
             return
         if not png:
-            self.evento("foto", ok=False, perche="la tela non si fotografa")
+            self.evento("foto", ok=False, perche="the canvas cannot be photographed")
             return
         f = os.path.join(self.cartella, "foto-%d.png" % int(t * 1000))
         with open(f, "wb") as h:
@@ -986,30 +986,32 @@ class Attore:
     def preferenze_interne(self):
         return self.C21.PREFERENZE
 
-    # -- l'accesso ------------------------------------------------------------
+    # -- the access ------------------------------------------------------------
     def entra(self):
         s, VERI = self.s, self.S.VERI
         n = {"inquilino": self.chi, "browser": self.browser, "versione": self.esiti.versione,
              "scatola": self.o.scatola, "misura": [self.o.largo, self.o.alto]}
         ok, m = s.pr.apri()
         if not ok:
-            n.update(esito="pagina_non_aperta", motivo="la pagina non si apre: " + m)
+            n.update(esito="pagina_non_aperta", motivo="the page does not open: " + m)
             return n
         t0 = time.time()
         r = s.g.js(VERI.JS_ENTRA, self.chi, self.parola)
         if r != "mandato":
-            n.update(esito="modulo_non_compilato", motivo="il modulo non si compila: %s" % r)
+            n.update(esito="modulo_non_compilato", motivo="the form cannot be filled in: %s" % r)
             return n
         ammesso = primo = None
         st = {}
         while time.time() < t0 + self.o.tetto_s:
             st = s.pr.stato()
             ora = time.time()
+            # ⚠ both forms of the page's outcome: the old (Italian) page of the running
+            #   campaign and the new (English) one
             if ammesso is None and st.get("sessione") and st.get("esito_classe") == "bene" \
-                    and (st.get("esito") or "").startswith("Ammesso"):
+                    and (st.get("esito") or "").startswith(("Ammesso", "Admitted")):
                 ammesso = ora
             if st.get("esito_classe") == "male" and st.get("esito"):
-                n.update(esito="rifiuto", motivo="rifiuto: «%s»" % st["esito"],
+                n.update(esito="rifiuto", motivo="refusal: «%s»" % st["esito"],
                          accesso_ms=round(t0 * 1000))
                 return n
             if (st.get("dipinti") or 0) > 0:
@@ -1017,25 +1019,25 @@ class Attore:
                 ammesso = ammesso or ora
                 break
             if self.fermati:
-                raise Fine("segnale")
+                raise Fine("signal")
             time.sleep(0.1)
-        # ⭐ nello schema di 16-classifica: ore in ms dall'epoca, e la durata a parte
+        # ⭐ in the schema of 16-classifica: times in ms from the epoch, and the duration separately
         n["accesso_ms"] = round(t0 * 1000)
         n["ammesso_ms"] = round(ammesso * 1000) if ammesso else None
         n["primo_fotogramma_ms"] = round(primo * 1000) if primo else None
         n["nascita_ms"] = round((primo - t0) * 1000) if primo else None
         n["ammissione_ms"] = round((ammesso - t0) * 1000) if ammesso else None
         if not primo:
-            n.update(esito="nessun_fotogramma", motivo="nessun fotogramma in %d s (esito «%s»)"
+            n.update(esito="nessun_fotogramma", motivo="no frame in %d s (outcome «%s»)"
                      % (self.o.tetto_s, st.get("esito")))
             return n
-        # ⚠ il giudizio «non degenere» fotografa fino al tetto: `[M]` 25 set,
-        #   xfce ha lo sfondo NERO e lo aspettava 60 s ⇒ tetto corto, e il
-        #   desktop scuro ma vivo lo riconosce `desktop_scuro_ma_vivo`.
-        # ⛔ Il tetto e' la soglia FAIL di §9: «degenere» solo se lo e' ANCORA a
-        #   15 s dall'ACCESSO (non 8 s dal primo fotogramma: sotto carico lo
-        #   splash di Plasma dura di piu', e non e' un desktop rotto).  Se il
-        #   primo fotogramma arriva gia' oltre, un ultimo sguardo di 3 s.
+        # ⚠ the «not degenerate» judgement photographs up to the cap: `[M]` 25 Sep,
+        #   xfce has a BLACK background and waited 60 s for it ⇒ short cap, and the
+        #   dark but alive desktop is recognised by `desktop_scuro_ma_vivo`.
+        # ⛔ The cap is the FAIL threshold of §9: «degenere» only if it STILL is at
+        #   15 s from ACCESS (not 8 s from the first frame: under load the
+        #   Plasma splash lasts longer, and it is not a broken desktop).  If the
+        #   first frame arrives already beyond, one last look of 3 s.
         tetto, self.o.tetto_s = self.o.tetto_s, max(3, int(math.ceil(
             t0 + TETTO_DEGENERE_S - time.time())))
         try:
@@ -1050,7 +1052,7 @@ class Attore:
         n["motivo"] = m
         return n
 
-    # -- tutto ------------------------------------------------------------------
+    # -- everything -------------------------------------------------------------
     def corri(self):
         o, S = self.o, self.S
         self.esiti = S.Esiti(o)
@@ -1062,7 +1064,7 @@ class Attore:
                     misura=[o.largo, o.alto], video=o.video or None, pid=os.getpid())
         codice = 2
         try:
-            self.s.__enter__()                   # crea l'inquilino, accende il browser
+            self.s.__enter__()                   # creates the tenant, turns on the browser
             self.g = self.s.g
             self.lavoro = L.LAVORI[self.profilo](self)
             self.lavoro.prepara()
@@ -1072,22 +1074,22 @@ class Attore:
             self.evento("nascita", **nascita)
             if not lavora_dopo_nascita(nascita):
                 codice = 1
-                self.aspetta_la_fine("accesso non riuscito")
+                self.aspetta_la_fine("access failed")
                 return codice
-            # ⭐ un desktop «degenere» o non guardato ha pero' i fotogrammi: la
-            #   sessione c'e' e l'attore LAVORA — il carico non si toglie (la
-            #   nascita la giudica la classifica, da nascita.json)
+            # ⭐ a «degenerate» or unchecked desktop does have the frames: the
+            #   session is there and the actor WORKS — the load is not removed (the
+            #   birth is judged by the classification, from nascita.json)
             self.entrato = True
             self.arma_sonda()
             self.geo = self.s.geometria()
             self.desktop = (self.geo["tl"], self.geo["ta"])
             self.mani = Mani(self)
-            print("   [%02d] sveglia: %s" % (self.n, self.C21.sveglia(self.g, self.geo)), flush=True)
-            # ⭐ IL CLIC DI BENVENUTO, su un punto vuoto del desktop, prima di ogni
-            #   applicazione: e' il gesto dell'utente che sveglia l'audio della
-            #   pagina.  ⛔ `[M]` 25 set, utente D senza: 6090 blocchi ricevuti,
-            #   0 suonati, `ctx suspended` (l'accesso e' un modulo riempito dal
-            #   banco, non un gesto; l'ESC della sveglia non attiva).
+            print("   [%02d] wake-up: %s" % (self.n, self.C21.sveglia(self.g, self.geo)), flush=True)
+            # ⭐ THE WELCOME CLICK, on an empty spot of the desktop, before any
+            #   application: it is the user gesture that wakes up the page's
+            #   audio.  ⛔ `[M]` 25 Sep, user D without it: 6090 blocks received,
+            #   0 played, `ctx suspended` (the access is a form filled in by the
+            #   bench, not a gesture; the wake-up's ESC does not activate).
             self.dorme(1.0)
             self.mani.clic(self.desktop[0] * 0.55, self.desktop[1] * 0.55)
             self.dorme(1.0)
@@ -1100,7 +1102,7 @@ class Attore:
                 self.dorme(10)
             else:
                 codice = 1
-                self.aspetta_la_fine("l'applicazione non parte")
+                self.aspetta_la_fine("the application does not start")
                 return codice
             errori = 0
             while True:
@@ -1108,7 +1110,7 @@ class Attore:
                     t_passo = time.time()
                     self.lavoro.passo()
                     if time.time() - t_passo > 45 and self.profilo != "D":
-                        print("   [%02d] ⚠ un passo di %.0f s" % (self.n, time.time() - t_passo),
+                        print("   [%02d] ⚠ a step of %.0f s" % (self.n, time.time() - t_passo),
                               flush=True)
                     errori = 0
                 except Fine:
@@ -1131,8 +1133,8 @@ class Attore:
         return codice
 
     def aspetta_la_fine(self, perche):
-        """⚠ Un utente che non e' riuscito a entrare resta a disposizione
-        (stato, foto) finche' l'orchestratore non lo ferma: non sparisce."""
+        """⚠ A user that did not manage to enter stays available
+        (state, photo) until the orchestrator stops it: it does not disappear."""
         self.evento("in_attesa", perche=perche)
         while True:
             self.dorme(5)
@@ -1145,7 +1147,7 @@ class Attore:
                 except Exception:                # noqa: BLE001
                     pass
                 try:
-                    with self.G2.tetto(20, "il registro della pagina"):
+                    with self.G2.tetto(20, "the page's log"):
                         reg = self.g.js("const r=document.getElementById('registro');"
                                         "return r ? r.textContent : '';") or ""
                     with open(os.path.join(self.cartella, "registro-pagina.txt"), "w") as f:
@@ -1158,9 +1160,9 @@ class Attore:
                     pass
         finally:
             try:
-                self.s.__exit__(None, None, None)     # chiude il browser e SGOMBERA
+                self.s.__exit__(None, None, None)     # closes the browser and CLEARS
             except Exception as e:               # noqa: BLE001
-                print("   ⚠ uscita: %s" % e, flush=True)
+                print("   ⚠ exit: %s" % e, flush=True)
             _c, t = self.sc.dentro("id %s >/dev/null 2>&1 && echo RESTA || echo via" % self.chi, 30)
             self.evento("fine", sgomberato=(t or "").strip().endswith("via"), azioni=self.azioni,
                         verifiche=self.verifiche)
@@ -1169,7 +1171,7 @@ class Attore:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LE MANI — input VERO dal browser, coordinate del DESKTOP remoto
+#  THE HANDS — REAL input from the browser, coordinates of the remote DESKTOP
 # ═══════════════════════════════════════════════════════════════════════════
 class Mani:
     def __init__(self, att):
@@ -1187,7 +1189,7 @@ class Mani:
         return self.a.C21.dal_desktop_al_vetro(self.a.geo, X, Y)
 
     def _cammino(self, X, Y):
-        """Il puntatore ci va a passi, non di colpo."""
+        """The pointer gets there in steps, not all at once."""
         vx, vy = self.vetro(X, Y)
         R = self.a.ritmo
         passi = []
@@ -1205,16 +1207,16 @@ class Mani:
         self.G2.mouse(self.g, self._cammino(X, Y))
         return time.time()
 
-    # ⭐ Ogni gesto torna l'ora dell'evento decisivo (la pressione, la prima
-    #   tacca, il tasto), ricavata dal RITORNO della chiamata al browser meno le
-    #   pause programmate DOPO di lui.  ⛔ `[M]` 25 set: l'ora di dopo la
-    #   chiamata, senza togliere le pause, metteva la storia di bash 200 ms
-    #   «prima» dell'Invio; ⛔ revisione 25 set: l'ora di PRIMA della chiamata
-    #   metteva il ritardo di Marionette/CDP sotto carico (e il bringToFront)
-    #   nel «blocco» del prodotto.
+    # ⭐ Every gesture returns the time of the decisive event (the press, the first
+    #   notch, the key), derived from the RETURN of the call to the browser minus the
+    #   pauses scheduled AFTER it.  ⛔ `[M]` 25 Sep: the time after the
+    #   call, without removing the pauses, put the bash history 200 ms
+    #   «before» the Enter; ⛔ review 25 Sep: the time BEFORE the call
+    #   put Marionette/CDP's delay under load (and the bringToFront)
+    #   in the product's «freeze».
     def _wd(self, azioni):
-        """Marionette: PerformActions ⇒ l'ora del suo RITORNO (prima del
-        ReleaseActions, che non c'entra col gesto)."""
+        """Marionette: PerformActions ⇒ the time of its RETURN (before the
+        ReleaseActions, which has nothing to do with the gesture)."""
         self.g.m.chiama("WebDriver:PerformActions", {"actions": azioni})
         t = time.time()
         self.g.m.chiama("WebDriver:ReleaseActions")
@@ -1243,7 +1245,7 @@ class Mani:
         return t
 
     def rotella(self, X, Y, tacche, atteso=False):
-        """`tacche` > 0 in giu', < 0 in su; una tacca = 120 (una rotella vera)."""
+        """`tacche` > 0 down, < 0 up; one notch = 120 (a real wheel)."""
         self.muovi(X, Y)
         vx, vy = self.pos
         R = self.a.ritmo
@@ -1251,11 +1253,11 @@ class Mani:
         t = None
         if hasattr(self.g, "cdp"):
             self.G2.davanti(self.g)
-            with self.G2.tetto(60, "la rotella"):
+            with self.G2.tetto(60, "the wheel"):
                 for _ in range(abs(tacche)):
                     self.g.cdp.chiama("Input.dispatchMouseEvent", type="mouseWheel", x=vx, y=vy,
                                       deltaX=0, deltaY=dy)
-                    t = t or time.time()             # la prima tacca, al ritorno
+                    t = t or time.time()             # the first notch, at the return
                     time.sleep(R.intero(40, 160) / 1000.0)
         else:
             az, pause = [], 0
@@ -1273,7 +1275,7 @@ class Mani:
         return t
 
     def premi(self, nome, atteso=False):
-        """Un tasto: giu', pausa, su', pausa (come `G2.tasti`)."""
+        """One key: down, pause, up, pause (like `G2.tasti`)."""
         P = self.G2.PAUSA_MS
         v = self.G2.SPECIALI[nome][3] if nome in self.G2.SPECIALI else nome
         if hasattr(self.g, "cdp") or v is None:
@@ -1297,29 +1299,29 @@ class Mani:
 
     def giro(self):
         try:
-            with self.G2.tetto(15, "il giro"):
+            with self.G2.tetto(15, "the round"):
                 return self.g.js(JS_GIRO)
         except Exception:                        # noqa: BLE001
             return None
 
     def batti(self, testo, atteso=True, eco=False):
-        """Ogni carattere un tasto vero, col ritmo della persona.  `atteso`: ogni
-        carattere deve comparire (eco) ⇒ e' un impulso per il blocco.  `eco`:
-        il carattere compare SUBITO (terminale, campo di testo) ⇒ i campioni del
-        giro arrivati durante la battitura vanno in `giro_eco`."""
+        """Every character a real key, with the person's rhythm.  `atteso`: every
+        character must appear (echo) ⇒ it is an impulse for the freeze.  `eco`:
+        the character appears AT ONCE (terminal, text field) ⇒ the round samples
+        arrived during the typing go into `giro_eco`."""
         g_prima = self.giro() if eco else None
         self._batti(testo, atteso)
         fine = time.time()
         if eco:
-            time.sleep(0.4)                      # l'eco degli ultimi caratteri
+            time.sleep(0.4)                      # the echo of the last characters
             self.a.giro_eco_finestra += campioni_nuovi(g_prima, self.giro())
         return fine
 
     def _batti(self, testo, atteso):
         R = self.a.ritmo
         tempi = [(R.tenuta_ms(), R.battuta_ms()) for _ in testo]
-        # ⚠ a pezzi di ~1,5 s, col cuore in mezzo: una riga lunga battuta in una
-        #   catena sola tratteneva la riga di stato fino a 10 s (`[M]` 25 set)
+        # ⚠ in pieces of ~1.5 s, with the heart in between: a long line typed in a
+        #   single chain held back the state row up to 10 s (`[M]` 25 Sep)
         pezzi, pezzo, dur = [], [], 0.0
         for c, tb in zip(testo, tempi):
             pezzo.append((c, tb))
@@ -1334,13 +1336,13 @@ class Mani:
                 self.a.cuore()
             if hasattr(self.g, "cdp"):
                 self.G2.davanti(self.g)
-                with self.G2.tetto(30, "la battitura"):
+                with self.G2.tetto(30, "the typing"):
                     for c, (ten, bat) in pz:
                         cd, vk = self.G2.codice_di(c)
                         self.g.cdp.chiama("Input.dispatchKeyEvent", type="keyDown", key=c, code=cd,
                                           windowsVirtualKeyCode=vk, text=c, unmodifiedText=c)
                         if atteso:
-                            self.a.impulso(time.time(), ("k", c))     # stima: al RITORNO del keyDown
+                            self.a.impulso(time.time(), ("k", c))     # estimate: at the RETURN of the keyDown
                         time.sleep(ten / 1000.0)
                         self.g.cdp.chiama("Input.dispatchKeyEvent", type="keyUp", key=c, code=cd,
                                           windowsVirtualKeyCode=vk)
@@ -1352,8 +1354,8 @@ class Mani:
                            {"type": "keyUp", "value": c},
                            {"type": "pause", "duration": int(max(0, bat - ten))}]
                     durate.append(int(ten) + int(max(0, bat - ten)))
-                # ⭐ l'ora di ogni tasto dal RITORNO della catena (ore_dei_tasti), non
-                #   programmata dalla partenza: il ritardo di Marionette non e' un blocco
+                # ⭐ the time of every key from the RETURN of the chain (ore_dei_tasti), not
+                #   scheduled from the departure: Marionette's delay is not a freeze
                 t_ret = self._wd([{"type": "key", "id": "tastiera", "actions": az}])
                 if atteso:
                     for k, (c, _tb) in zip(ore_dei_tasti(t_ret, durate), pz):
@@ -1371,20 +1373,20 @@ def main():
     sys.path.insert(0, SUITE)
     import suite as S                                                 # noqa: E402
     G2 = S._carica("g2scena", os.path.join(SUITE, "15-g2-scena.py"))
-    # ⭐ i tasti che servono ai lavori e che la tabella di G2 non ha
+    # ⭐ the keys the jobs need and that G2's table lacks
     G2.SPECIALI.setdefault("Delete", ("Delete", "Delete", 46, "", 0))
     G2.SPECIALI.setdefault("Home", ("Home", "Home", 36, "", 0))
     G2.SPECIALI.setdefault("PageDown", ("PageDown", "PageDown", 34, "", 0))
     G2.SPECIALI.setdefault("PageUp", ("PageUp", "PageUp", 33, "", 0))
-    # i campi che `Sessione` e le guide di 12-client-veri si aspettano
+    # the fields that `Sessione` and the guides of 12-client-veri expect
     o.browser = L.browser_di(o.utente)
     o.guasto = False
     o.visibile = True
     o.porta = 0
     o.evidenze = os.path.join(o.dir, "utente-%02d" % o.utente)
     o.url = "https://%s:%d/" % (o.host, S.PORTE[o.scatola])
-    # ⭐ per misurare una strada della pagina (es. «?tela=gl», anomalia A1): si aggiunge
-    #   all'indirizzo, e si dichiara nello stato; vuota = la pagina di serie
+    # ⭐ to measure a route of the page (e.g. «?tela=gl», anomaly A1): it is appended
+    #   to the address, and declared in the state; empty = the default page
     if os.environ.get("REMOTIX_16_URL_EXTRA"):
         o.url += os.environ["REMOTIX_16_URL_EXTRA"]
     o.scena, o.continuita_s, o.registro_cmd, o.lascia_acceso, o.salva = "viva", 8, "", False, ""
@@ -1398,7 +1400,7 @@ def main():
     signal.signal(signal.SIGTERM, _fine)
     signal.signal(signal.SIGINT, _fine)
     signal.signal(signal.SIGUSR1, _foto)
-    print("⭐ attore %02d · %s · profilo %s · %s · %s · %s" % (
+    print("⭐ actor %02d · %s · profile %s · %s · %s · %s" % (
         o.utente, o.scatola, att.profilo, o.browser, o.wayland, att.chi), flush=True)
     return att.corri()
 

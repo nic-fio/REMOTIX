@@ -1,18 +1,18 @@
 #!/bin/bash
-# 19-confronto.sh — Vulkan Video (`src/vulkanvideo.c`) contro VA-API (il prodotto,
-# `src/codificatore.c` + `src/vadiretta.c`) sulla STESSA scheda, sul server,
-# dentro `enter.sh --root` (serve l'accesso ai nodi DRM).  ⭐ Dall'innesto (1 ott
-# 2026) c'e' il terzo motore `scheda`: il prodotto integrato che sceglie per
-# capacita' (sulla Radeon: Vulkan dentro codificatore.c).
+# 19-confronto.sh — Vulkan Video (`src/vulkanvideo.c`) against VA-API (the product,
+# `src/codificatore.c` + `src/vadiretta.c`) on the SAME card, on the server,
+# inside `enter.sh --root` (access to the DRM nodes is needed).  ⭐ Since the graft (1 Oct
+# 2026) there is the third engine `scheda`: the integrated product that chooses by
+# capability (on the Radeon: Vulkan inside codificatore.c).
 #
 #   bash /media/REMOTIX/enter.sh --root 'bash /srv/src/f19-vulkan/albero/banchi/19-vulkan/19-confronto.sh [costruisci|tutto|corto|capacita|intel]'
 #
-# Si aspetta in $ALBERO (default /srv/src/f19-vulkan/albero) l'albero del
-# worktree (src/ e banchi/).  Scrive in $USCITA (default /srv/src/f19-vulkan/tmp/confronto):
-# i flussi, i registri, `esiti.jsonl` (una riga per prova) e la tabella (`19-tabella.py`).
+# Expects in $ALBERO (default /srv/src/f19-vulkan/albero) the worktree's
+# tree (src/ and banchi/).  Writes to $USCITA (default /srv/src/f19-vulkan/tmp/confronto):
+# the streams, the logs, `esiti.jsonl` (one line per test) and the table (`19-tabella.py`).
 #
-# ⚠ ffmpeg/ffprobe qui sono SOLO strumenti di misura (decodifica, PSNR/SSIM,
-#   profilo/livello): non entrano nel prodotto.
+# ⚠ ffmpeg/ffprobe here are ONLY measuring tools (decoding, PSNR/SSIM,
+#   profile/level): they do not go into the product.
 set -u
 ALBERO=${ALBERO:-/srv/src/f19-vulkan/albero}
 USCITA=${USCITA:-/srv/src/f19-vulkan/tmp/confronto}
@@ -20,8 +20,8 @@ AZIONE=${1:-tutto}
 FOTOGRAMMI=${FOTOGRAMMI:-120}
 NODO_RADEON=${NODO_RADEON:-129}
 NODO_INTEL=${NODO_INTEL:-128}
-# ⭐ i motori del confronto (fase 19, banco NVIDIA): sulla NVIDIA VA-API non codifica, e il
-#    banco `banchi/19-nvidia/` chiede MOTORI="vulkan scheda"
+# ⭐ the engines of the comparison (phase 19, NVIDIA bench): on NVIDIA VA-API does not encode, and the
+#    bench `banchi/19-nvidia/` asks for MOTORI="vulkan scheda"
 MOTORI=${MOTORI:-vaapi vulkan scheda}
 FPS=60
 mkdir -p "$USCITA"
@@ -30,10 +30,10 @@ cd "$ALBERO" || exit 1
 costruisci() {
 	local F="-std=gnu11 -O2 -g -D_GNU_SOURCE -I$ALBERO/src -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers"
 	bash banchi/19-vulkan/19-shader.sh || return 1
-	echo "== costruisco 19-confronto"
+	echo "== building 19-confronto"
 	local RIPIEGO="" RIPIEGO_LIBS=""
 	if [ -f src/ripiego.c ]; then
-		# l'albero di partenza (fase-10-cure) ha ancora il ripiego software: si collega per compilare il prodotto
+		# the starting tree (fase-10-cure) still has the software fallback: it is linked to compile the product
 		RIPIEGO="src/ripiego.c $(pkg-config --cflags openh264 SvtAv1Enc)"
 		RIPIEGO_LIBS="$(pkg-config --libs SvtAv1Enc) -ldl"
 	fi
@@ -42,12 +42,12 @@ costruisci() {
 		src/vulkanvideo.c src/codificatore.c src/vadiretta.c src/scrittore_bit.c src/colori709.c \
 		src/registro.c $RIPIEGO $(pkg-config --libs libva libva-drm gbm vulkan) $RIPIEGO_LIBS -lm || return 1
 	if nm -u "$USCITA/19-confronto" | grep -qE ' (av_|avcodec_|sws_)'; then
-		echo "⛔ il banco chiama ffmpeg"; return 1
+		echo "⛔ the bench calls ffmpeg"; return 1
 	fi
-	echo "== costruito"
+	echo "== built"
 }
 
-# prova NOME MOTORE NODO CODEC PROF MISURA STRADA [argomenti extra…]
+# prova NAME ENGINE NODE CODEC DEPTH SIZE PATH [extra arguments…]
 prova() {
 	local nome=$1 motore=$2 nodo=$3 codec=$4 prof=$5 misura=$6 strada=$7; shift 7
 	local flusso="$USCITA/$nome-$motore.bin" registro="$USCITA/$nome-$motore.registro"
@@ -84,7 +84,7 @@ prova() {
 	byte=$(stat -c %s "$flusso" 2>/dev/null)
 	printf '{"prova":"%s","versione":"%s","nodo":"renderD%s","codec":"%s","profondita":%s,"misura":"%s","strada":"%s","extra":"%s","codice":%s,"secondi":%.2f,"byte_flusso":%s,"decodificati":"%s","errori_decodifica":%s,"ffprobe":"%s","psnr":"%s","ssim":"%s","banco":%s}\n' \
 		"$nome" "$motore" "$nodo" "$codec" "$prof" "$misura" "$strada" "$*" "$codice" "$(awk "BEGIN{print $t1 - $t0}")" "${byte:-0}" "${decodificati:-?}" "${errori_dec:-0}" "$probe" "$psnr" "$ssim" "$json" >> "$USCITA/esiti.jsonl"
-	echo "   $nome $motore: codice $codice · ${byte:-0} byte · decodificati ${decodificati:-?} · psnr ${psnr:-—} · ssim ${ssim:-—} · $probe"
+	echo "   $nome $motore: code $codice · ${byte:-0} bytes · decoded ${decodificati:-?} · psnr ${psnr:-—} · ssim ${ssim:-—} · $probe"
 }
 
 matrice() {
@@ -96,29 +96,29 @@ matrice() {
 			for strada in $strade; do
 				local nome="D$nodo-$codec$prof-$misura-$strada"
 				echo "== $nome"
-				# ⭐ dall'innesto: `scheda` = il prodotto integrato (per capacita': Vulkan sulla Radeon)
+				# ⭐ since the graft: `scheda` = the integrated product (by capability: Vulkan on the Radeon)
 				for motore in $MOTORI; do
 					prova "$nome" "$motore" "$nodo" "$codec" "$prof" "$misura" "$strada"
 				done
 			done
 		done
 	done
-	# a caldo: chiave a richiesta, tela nuova, tetto di banda, qualita' nuova
+	# hot: key on request, new canvas, bandwidth cap, new quality
 	for codec in h264 hevc; do
 		local base="D$nodo-${codec}8-1920x1080"
-		echo "== $base chiave a richiesta / tela nuova / tetto / qualita'"
+		echo "== $base key on request / new canvas / cap / quality"
 		for motore in $MOTORI; do
 			prova "$base-chiave" "$motore" "$nodo" "$codec" 8 1920x1080 scheda --chiave-a 40
 			prova "$base-tela" "$motore" "$nodo" "$codec" 8 1920x1080 scheda --ridimensiona-a 60:1280x720
 			prova "$base-tetto" "$motore" "$nodo" "$codec" 8 1920x1080 scheda --tetto 20
-			# un tetto che MORDE: 2 Mbit/s (filo 1,6, punto 1,2) su una scena che a QP 26 ne costa ~8
+			# a cap that BITES: 2 Mbit/s (wire 1.6, target 1.2) on a scene that at QP 26 costs ~8
 			prova "$base-tetto2" "$motore" "$nodo" "$codec" 8 1920x1080 scheda --tetto 2
 		done
 		prova "$base-qualita" vulkan "$nodo" "$codec" 8 1920x1080 scheda --qualita-a 60:36
-		# ⭐ la tela in CICLO (il difetto della Radeon, F-018/P-C: 4K→2560→4K): ogni 20 fotogrammi
-		#   la misura cambia (la lista parte dalla misura iniziale: il primo cambio va alla seconda),
-		#   cinque cambi in 120; con ORDINE_PRODOTTO=1 le lastre si rifanno PRIMA che
-		#   il codificatore si riapra, come in `wlroots.c`
+		# ⭐ the canvas in a CYCLE (the Radeon defect, F-018/P-C: 4K→2560→4K): every 20 frames
+		#   the size changes (the list starts from the initial size: the first change goes to the second),
+		#   five changes in 120; with ORDINE_PRODOTTO=1 the slabs are remade BEFORE
+		#   the encoder reopens, as in `wlroots.c`
 		for motore in $MOTORI; do
 			prova "D$nodo-${codec}8-3840x2160-ciclo" "$motore" "$nodo" "$codec" 8 3840x2160 scheda \
 				--ciclo 20:3840x2160,2560x1440
@@ -126,11 +126,11 @@ matrice() {
 	done
 }
 
-# ⚠ L'ESPERIMENTO Intel: ANV codifica solo dietro `ANV_DEBUG=video-encode`
-# (sperimentale, non di serie): si dichiara, non si promette.
+# ⚠ The Intel EXPERIMENT: ANV encodes only behind `ANV_DEBUG=video-encode`
+# (experimental, not default): it is declared, not promised.
 intel() {
 	local nodo=$NODO_INTEL
-	echo "== capacita' Intel senza e con ANV_DEBUG=video-encode"
+	echo "== Intel capabilities without and with ANV_DEBUG=video-encode"
 	"$USCITA/19-confronto" --capacita /dev/dri/renderD$nodo | tee "$USCITA/capacita-intel.json"
 	ANV_DEBUG=video-encode "$USCITA/19-confronto" --capacita /dev/dri/renderD$nodo | tee "$USCITA/capacita-intel-anv-debug.json"
 	for codec in h264 hevc; do
@@ -156,5 +156,5 @@ tutto|corto)
 	python3 banchi/19-vulkan/19-tabella.py "$USCITA/esiti.jsonl" | tee "$USCITA/tabella.txt"
 	rm -f "$USCITA"/sorgente-*.bgrx
 	;;
-*) echo "azione ignota: $AZIONE"; exit 2 ;;
+*) echo "unknown action: $AZIONE"; exit 2 ;;
 esac

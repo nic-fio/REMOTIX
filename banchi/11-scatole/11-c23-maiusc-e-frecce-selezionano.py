@@ -2,114 +2,114 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-11-c23 — ⭐⭐ «MAIUSC E FRECCE SELEZIONANO»
+11-c23 — ⭐⭐ «SHIFT AND ARROWS SELECT»
 ===========================================================================
 
     python3 11-c23-maiusc-e-frecce-selezionano.py --scatola gnome [--browser firefox,chrome]
     python3 11-c23-maiusc-e-frecce-selezionano.py --scatola lxqt --porta 8524 \\
-            --contenitore rete14-lxqt            # una scatola di sviluppo
+            --contenitore rete14-lxqt            # a development box
     python3 11-c23-maiusc-e-frecce-selezionano.py --scatola gnome --senza-maiusc
     python3 11-c23-maiusc-e-frecce-selezionano.py --certifica
 
-    che cosa deve essere vero : Maiusc+frecce SELEZIONANO nel desktop remoto,
-                                e il Maiusc non resta incastrato — su GNOME,
-                                KDE, XFCE e LXQt (l'utente, 24 set 2026:
-                                «rimane un ultimo controllo: che la selezione
-                                con Maiusc+frecce sia implementata su tutti i
-                                DE»)
-    da dove parte             : ⛔ da zero, un inquilino NUOVO (`c23u<n>`)
-    che cosa guarda           : ⛔ **LA FOTOGRAFIA** del campo remoto: il valore
-                                si legge dai pixel della tela, non da un
-                                contatore degli eventi
-    come so che sa dare rosso : `--senza-maiusc` (le stesse sequenze senza mai
-                                premere Maiusc: niente selezione) ⇒ ROSSO
+    what must be true         : Shift+arrows SELECT in the remote desktop,
+                                and Shift does not stay stuck — on GNOME,
+                                KDE, XFCE and LXQt (the user, 24 Sep 2026:
+                                «one last check remains: that selection
+                                with Shift+arrows is implemented on all the
+                                DEs»)
+    where it starts from      : ⛔ from scratch, a NEW tenant (`c23u<n>`)
+    what it looks at          : ⛔ **THE PHOTOGRAPH** of the remote field: the value
+                                is read from the canvas pixels, not from an
+                                event counter
+    how I know it can give red: `--senza-maiusc` (the same sequences without ever
+                                pressing Shift: no selection) ⇒ RED
 
-⛔⛔ PERCHE' ESISTE.
-   `[M]` 24 set 2026, su tutti e quattro i desktop: Maiusc+Sinistra partiva
-   dalla pagina come `105↓ 105↑` — il Maiusc gia' giu' si recuperava solo se
-   c'era anche Ctrl/Alt/Super ⇒ la freccia muoveva il cursore e NON
-   selezionava.  E dopo una lettera battuta col Maiusc giu' la pagina credeva
-   il Maiusc ancora premuto mentre il server lo aveva gia' rilasciato.  La cura
-   e' in `src/pagina.html` (`cl_su_keydown`, commit 694f77f, due meta'); questa
-   maglia e' la prova che resta, sui quattro desktop.
-   ⚠ Coi BROWSER VERI (l'utente, 23 set 2026: *«i test vanno fatti con i
-     browser veri, non con emulatori»*): il difetto era proprio nel modo in cui
-     la pagina legge gli eventi DEL BROWSER (`getModifierState`, `ev.code`), e
-     il cliente Python quegli eventi non li ha.
+⛔⛔ WHY IT EXISTS.
+   `[M]` 24 Sep 2026, on all four desktops: Shift+Left left
+   the page as `105↓ 105↑` — the Shift already down was recovered only if
+   there was also Ctrl/Alt/Super ⇒ the arrow moved the cursor and did NOT
+   select.  And after a letter typed with Shift down the page believed
+   Shift still pressed while the server had already released it.  The cure
+   is in `src/pagina.html` (`cl_su_keydown`, commit 694f77f, two halves); this
+   mesh is the test that remains, on the four desktops.
+   ⚠ With the REAL BROWSERS (the user, 23 Sep 2026: *«the tests must be done with the
+     real browsers, not with emulators»*): the defect was precisely in the way
+     the page reads THE BROWSER's events (`getModifierState`, `ev.code`), and
+     the Python client does not have those events.
 
-⭐ CHE COSA FA, per ogni browser (Firefox con Marionette, Chrome con CDP: i
-   guidatori sono quelli di `banchi/12-client-veri.py`, la scatola quella di
-   `banchi/12-c20-veri.py`, la sveglia e la geometria quelle di
-   `11-c21-sul-bordo-la-forma-cambia.py` — ⛔ importati, non copiati):
-     1  crea l'inquilino `c23u<n>`, entra, aspetta il primo fotogramma
-     2  la SVEGLIA di C21 (un ESC vero: su GNOME la sessione nasce nella vista
-        d'insieme)
-     3  nella sessione accende un piccolo servitore (`python3`) e
-        `firefox-esr --kiosk` sulla SCENA: un <input> sempre a fuoco
-     4  per ogni caso (`CASI`): pulisce il campo (Ctrl+A, Canc indietro),
-        batte la BASE, e poi la sequenza da provare — con TASTI VERI dati al
+⭐ WHAT IT DOES, for each browser (Firefox with Marionette, Chrome with CDP: the
+   drivers are those of `banchi/12-client-veri.py`, the box that of
+   `banchi/12-c20-veri.py`, the wake-up and the geometry those of
+   `11-c21-sul-bordo-la-forma-cambia.py` — ⛔ imported, not copied):
+     1  creates the tenant `c23u<n>`, logs in, waits for the first frame
+     2  C21's WAKE-UP (a real ESC: on GNOME the session is born in the
+        overview)
+     3  in the session starts a small server (`python3`) and
+        `firefox-esr --kiosk` on the SCENE: an <input> always focused
+     4  for each case (`CASI`): cleans the field (Ctrl+A, Backspace),
+        types the BASE, and then the sequence to test — with REAL KEYS given to the
         browser (`WebDriver:PerformActions`, `Input.dispatchKeyEvent`)
-     5  fotografa la tela e LEGGE il valore del campo dai pixel
+     5  photographs the canvas and READS the value of the field from the pixels
 
-⭐⭐ LA SCENA — il valore si vede, due volte.
-   · IN GRANDE, nel campo stesso: e' per chi guarda le fotografie salvate
-     (`--salva`), cioe' per l'utente.
-   · E COME STRISCIA DI COLORI sotto il campo: una casella per carattere, del
-     colore che `ALFABETO` da' a quel carattere (e grigio `VUOTO` dove il
-     valore e' finito), fra due caselle bianche di MARCA.  ⇒ La maglia legge
-     il valore dalla fotografia senza riconoscere le lettere: prende il colore
-     al centro di ogni casella e cerca il piu' vicino nella tavolozza.
-     ⛔ La tavolozza e' scritta UNA volta, qui, e infilata nella pagina: il
-       colore che la pagina dipinge e quello che il giudice cerca non possono
-       divergere (la stessa ragione della scena di C4).
-     ⚠ I colori sono i 27 vertici e punti medi del cubo RGB (0, 128, 255 per
-       canale): due colori distano almeno 127, e la tolleranza e' 60 — la
-       catena passa per H.264 4:2:0, che sottocampiona il croma (§4.3 di fase
-       11), ma su caselle di ~270 px il croma al centro arriva intero.
-   · Il servitore scrive anche, in un file dell'inquilino, ogni keydown della
-     pagina remota e ogni valore del campo: ⛔ NON giudica — e' la diagnosi
-     del rosso (quale tasto e' arrivato, con quale Maiusc).
+⭐⭐ THE SCENE — the value shows, twice.
+   · IN LARGE, in the field itself: it is for whoever looks at the saved photographs
+     (`--salva`), that is for the user.
+   · AND AS A STRIP OF COLOURS under the field: one box per character, of the
+     colour `ALFABETO` gives to that character (and grey `VUOTO` where the
+     value has ended), between two white MARK boxes.  ⇒ The mesh reads
+     the value from the photograph without recognising the letters: it takes the colour
+     at the centre of each box and looks for the nearest in the palette.
+     ⛔ The palette is written ONCE, here, and put into the page: the
+       colour the page paints and the one the judge looks for cannot
+       diverge (the same reason as C4's scene).
+     ⚠ The colours are the 27 vertices and midpoints of the RGB cube (0, 128, 255 per
+       channel): two colours are at least 127 apart, and the tolerance is 60 — the
+       chain goes through H.264 4:2:0, which subsamples the chroma (§4.3 of phase
+       11), but on boxes of ~270 px the chroma at the centre arrives whole.
+   · The server also writes, in a file of the tenant, every keydown of the
+     remote page and every value of the field: ⛔ it does NOT judge — it is the diagnosis
+     of the red (which key arrived, with which Shift).
 
-⭐ I CASI — quelli della cura, misurati il 24 set 2026 su rete14-lxqt:
-     1  «abcdef», Maiusc+Sinistra×3, Y                ⇒ «abcY»
-     2  «uno due», Ctrl+Maiusc+Sinistra, z             ⇒ «uno z»
-     3  «abcdef», Maiusc giu', Sinistra, A, Maiusc su, b
+⭐ THE CASES — those of the cure, measured on 24 Sep 2026 on rete14-lxqt:
+     1  «abcdef», Shift+Left×3, Y                     ⇒ «abcY»
+     2  «uno due», Ctrl+Shift+Left, z                  ⇒ «uno z»
+     3  «abcdef», Shift down, Left, A, Shift up, b
                                                       ⇒ «abcdeAb»
-        (il caso a rischio: dopo la lettera il Maiusc NON resta incastrato,
-         e la «b» esce minuscola)
-     4  «abcdef», Maiusc giu', Sinistra, A, Sinistra×2, X, Maiusc su, q
+        (the risky case: after the letter Shift does NOT stay stuck,
+         and the «b» comes out lowercase)
+     4  «abcdef», Shift down, Left, A, Left×2, X, Shift up, q
                                                       ⇒ «abcdXq»
-        (la seconda meta' della cura: DOPO la lettera, col Maiusc ancora giu',
-         le frecce selezionano ancora.  `[M]` senza quella meta' ⇒ «abcdXqeA»)
-   ⭐ L'atteso non e' solo scritto a mano: `simula()` applica la sequenza a un
-     campo di testo finto, e `--certifica` controlla che dia l'atteso — e che
-     la stessa sequenza SENZA Maiusc dia un'altra cosa (il guasto si vede).
+        (the second half of the cure: AFTER the letter, with Shift still down,
+         the arrows still select.  `[M]` without that half ⇒ «abcdXqeA»)
+   ⭐ The expected value is not only written by hand: `simula()` applies the sequence to a
+     fake text field, and `--certifica` checks that it gives the expected value — and that
+     the same sequence WITHOUT Shift gives something else (the fault shows).
 
-⛔ I TRE CONTROLLI POVERI, per ogni caso:
-     1  dopo la pulizia la striscia c'e' ed e' VUOTA  — se no, 3: la scena non
-        e' in vigore (o il campo non si pulisce) e non testimonia
-     2  dopo la base la striscia dice LA BASE          — se no, 3: se la
-        scrittura semplice non arriva e' di C4, non di C23; e cosi' un rosso
-        qui viene SOLO dalla selezione
-     3  dopo la sequenza la striscia dice L'ATTESO     — se no, ROSSO, col
-        valore visto e la coda dei keydown remoti
-   ⚠ Si fotografa piu' volte fino a `ATTESA_S`: qui non si misura la latenza,
-     e un fotogramma in ritardo non e' un difetto di selezione.
+⛔ THE THREE POOR CHECKS, for each case:
+     1  after the cleaning the strip is there and is EMPTY  — if not, 3: the scene is not
+        in force (or the field does not clean) and does not bear witness
+     2  after the base the strip says THE BASE          — if not, 3: if
+        plain typing does not arrive it is C4's, not C23's; and so a red
+        here comes ONLY from the selection
+     3  after the sequence the strip says THE EXPECTED VALUE — if not, RED, with the
+        value seen and the tail of the remote keydowns
+   ⚠ It photographs several times until `ATTESA_S`: here latency is not measured,
+     and a late frame is not a selection defect.
 
-⛔ COME SO CHE SA DARE ROSSO — `--senza-maiusc`.
-   Le stesse sequenze, tolti il «Maiusc giu'» e il «Maiusc su»: le lettere
-   restano della loro forma (la «Y» e' ancora «Y»), ⇒ l'unica differenza e'
-   che le frecce muovono invece di selezionare, e ogni caso deve dare ROSSO.
-   ⛔ Si legge AL CONTRARIO, come ogni guasto della rete (`11-gancio.sh`,
-     `esegui_maglia`): 0 = il guasto e' stato VISTO (tutti i casi rossi),
-     1 = NON visto (un caso e' tornato lo stesso), 3 = non ho potuto guardare.
+⛔ HOW I KNOW IT CAN GIVE RED — `--senza-maiusc`.
+   The same sequences, with the «Shift down» and «Shift up» removed: the letters
+   keep their form (the «Y» is still «Y»), ⇒ the only difference is
+   that the arrows move instead of selecting, and every case must give RED.
+   ⛔ It reads THE OTHER WAY ROUND, like every fault of the net (`11-gancio.sh`,
+     `esegui_maglia`): 0 = the fault was SEEN (all cases red),
+     1 = NOT seen (a case came out right anyway), 3 = I could not look.
 
-⚠ ESITI: 0 verde · 1 rosso · 3 «non ho potuto guardare», col motivo.
+⚠ OUTCOMES: 0 green · 1 red · 3 «I could not look», with the reason.
 
-⚠ DOVE GIRA: come C21, sull'ospite coi browser veri (`REMOTIX_SUL_SERVER=1`,
-  `labwc` senza schermo), e nella scatola con `podman exec`.  L'inquilino e'
-  `c23u<n>` (modello di C19 `^c[0-9]+b?u[0-9]+$`): se il banco morisse a
-  meta', il gancio lo sgombera.
+⚠ WHERE IT RUNS: like C21, on the host with the real browsers (`REMOTIX_SUL_SERVER=1`,
+  screenless `labwc`), and in the box with `podman exec`.  The tenant is
+  `c23u<n>` (C19's pattern `^c[0-9]+b?u[0-9]+$`): if the bench died
+  half-way, the hook clears it out.
 """
 import argparse
 import base64
@@ -134,8 +134,8 @@ def _carica(nome, file):
     return m
 
 
-# ⛔ Importati, non copiati: C21 porta con se' `12-c20-veri` (la scatola) e
-#   `12-client-veri` (i browser) — uno solo in memoria, e l'ESC gia' in tabella.
+# ⛔ Imported, not copied: C21 brings `12-c20-veri` (the box) and
+#   `12-client-veri` (the browsers) along — only one in memory, and the ESC already in the table.
 C21 = _carica("c21", os.path.join(QUI, "11-c21-sul-bordo-la-forma-cambia.py"))
 C20V = C21.C20V
 VERI = C21.VERI
@@ -146,29 +146,29 @@ NOME_ESITO = C21.NOME_ESITO
 MODELLO_INQUILINO = re.compile(r"^c23u[0-9]+$")
 
 # ---------------------------------------------------------------------------
-# ⛔ I NUMERI — ciascuno col suo perche'.
+# ⛔ THE NUMBERS — each with its reason.
 # ---------------------------------------------------------------------------
-# Fra un evento e l'altro: piu' della ripetizione piu' corta di un umano, e
-# abbastanza perche' ogni tasto viaggi da solo (`[M]` c95: 90 ms bastano).
+# Between one event and the next: more than a human's shortest repeat, and
+# enough for every key to travel on its own (`[M]` c95: 90 ms are enough).
 PAUSA_MS = 90
-# Quanto si aspetta che la fotografia dica il valore: non e' una latenza, e'
-# un tetto oltre il quale il valore non arriva piu'.
+# How long we wait for the photograph to say the value: it is not a latency, it is
+# a ceiling beyond which the value no longer arrives.
 ATTESA_S = 6.0
 FOTO_OGNI_S = 0.7
-# La tolleranza sul colore di una casella: meta' della distanza minima fra due
-# colori della tavolozza (127) meno un margine.
+# The tolerance on a box's colour: half the minimum distance between two
+# colours of the palette (127) minus a margin.
 TOLLERANZA = 60
-# ⭐ La striscia, in frazioni della finestra del kiosk (= il desktop): larga e
-#   in mezzo, lontana da barre e cassetti anche se il kiosk non li coprisse.
+# ⭐ The strip, in fractions of the kiosk window (= the desktop): wide and
+#   in the middle, far from bars and drawers even if the kiosk did not cover them.
 CASELLE = 14
-STRISCIA_X0, STRISCIA_X1 = 0.04, 0.96      # dalla marca sinistra alla destra
+STRISCIA_X0, STRISCIA_X1 = 0.04, 0.96      # from the left mark to the right one
 STRISCIA_Y0, STRISCIA_Y1 = 0.55, 0.75
-# Il campione al centro di ogni casella: +/- questa frazione della casella.
+# The sample at the centre of each box: +/- this fraction of the box.
 CAMPIONE = 0.2
 
-# ⭐ LA TAVOLOZZA.  Riservati: VUOTO (casella senza carattere), ALTRO (un
-#   carattere fuori dall'alfabeto, o il valore troppo lungo), MARCA (i due
-#   estremi della striscia).  Le lettere prendono gli altri colori in ordine.
+# ⭐ THE PALETTE.  Reserved: VUOTO (box without a character), ALTRO (a
+#   character outside the alphabet, or the value too long), MARCA (the two
+#   ends of the strip).  The letters take the other colours in order.
 VUOTO = (128, 128, 128)
 ALTRO = (0, 0, 0)
 MARCA = (255, 255, 255)
@@ -186,12 +186,12 @@ for _c in [c for c in _cubo() if c not in (VUOTO, ALTRO, MARCA)][:len(ALFABETO)]
 assert len(COLORI) == len(ALFABETO)
 
 # ---------------------------------------------------------------------------
-# ⭐ I TASTI.  Un passo e' («giu»|«su», nome).  Le lettere si scrivono GIA'
-#   nella forma che il browser riporta (`ev.key`): «Y», non «y» + Maiusc.
-#   ⇒ Il guasto puo' togliere il Maiusc senza cambiare le lettere.
+# ⭐ THE KEYS.  A step is («giu»|«su», name).  The letters are written ALREADY
+#   in the form the browser reports (`ev.key`): «Y», not «y» + Shift.
+#   ⇒ The fault can remove Shift without changing the letters.
 # ---------------------------------------------------------------------------
 SPECIALI = {
-    #  nome        key          code          vk  WebDriver   bit CDP
+    #  name        key          code          vk  WebDriver   CDP bit
     "Shift":     ("Shift",     "ShiftLeft",   16, "", 8),
     "Control":   ("Control",   "ControlLeft", 17, "", 2),
     "ArrowLeft": ("ArrowLeft", "ArrowLeft",   37, "", 0),
@@ -211,41 +211,41 @@ def scrivi(testo):
 
 
 def col(mod, passi):
-    """`passi` col modificatore `mod` tenuto giu'."""
+    """`passi` with the modifier `mod` held down."""
     return [("giu", mod)] + passi + [("su", mod)]
 
 
 PULISCI = col("Control", premi("a")) + premi("Backspace")
 
-# (titolo, base, sequenza, atteso)
+# (title, base, sequence, expected)
 CASI = [
-    ("1 Maiusc+Sinistra×3, Y", "abcdef",
+    ("1 Shift+Left×3, Y", "abcdef",
      col("Shift", premi("ArrowLeft") * 3 + premi("Y")), "abcY"),
-    ("2 Ctrl+Maiusc+Sinistra, z", "uno due",
+    ("2 Ctrl+Shift+Left, z", "uno due",
      col("Control", col("Shift", premi("ArrowLeft"))) + premi("z"), "uno z"),
-    ("3 RISCHIO Maiusc giu', Sinistra, A, Maiusc su, b", "abcdef",
+    ("3 RISK Shift down, Left, A, Shift up, b", "abcdef",
      col("Shift", premi("ArrowLeft") + premi("A")) + premi("b"), "abcdeAb"),
-    ("4 RISCHIO+ Maiusc giu', Sinistra, A, Sinistra×2, X, Maiusc su, q", "abcdef",
+    ("4 RISK+ Shift down, Left, A, Left×2, X, Shift up, q", "abcdef",
      col("Shift", premi("ArrowLeft") + premi("A") + premi("ArrowLeft") * 2 + premi("X"))
      + premi("q"), "abcdXq"),
 ]
 
 
 def senza_maiusc(passi):
-    """⛔ IL GUASTO: le stesse sequenze senza mai premere Maiusc."""
+    """⛔ THE FAULT: the same sequences without ever pressing Shift."""
     return [p for p in passi if p[1] != "Shift"]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LE FUNZIONI PURE
+#  THE PURE FUNCTIONS
 # ═══════════════════════════════════════════════════════════════════════════
 def simula(passi, valore=""):
-    """⭐ Un campo di testo finto: applica i passi e torna il valore.
+    """⭐ A fake text field: applies the steps and returns the value.
 
-    La semantica e' quella di un <input> di Firefox/GTK: la lettera sostituisce
-    la selezione; Sinistra senza Maiusc con una selezione la chiude al suo
-    inizio; Ctrl+Sinistra salta all'inizio della parola; Ctrl+A seleziona
-    tutto; Canc indietro cancella la selezione o il carattere prima."""
+    The semantics is that of a Firefox/GTK <input>: the letter replaces
+    the selection; Left without Shift with a selection closes it at its
+    start; Ctrl+Left jumps to the start of the word; Ctrl+A selects
+    everything; Backspace deletes the selection or the character before."""
     ancora = fuoco = len(valore)
     giu = set()
     for tipo, nome in passi:
@@ -288,7 +288,7 @@ def simula(passi, valore=""):
 
 
 def centri_caselle():
-    """[(fx, fy)] dei centri: marca, CASELLE caselle, marca — in frazioni."""
+    """[(fx, fy)] of the centres: mark, CASELLE boxes, mark — in fractions."""
     passo = (STRISCIA_X1 - STRISCIA_X0) / (CASELLE + 2)
     fy = (STRISCIA_Y0 + STRISCIA_Y1) / 2
     return [(STRISCIA_X0 + (i + 0.5) * passo, fy) for i in range(CASELLE + 2)]
@@ -299,7 +299,7 @@ def _dist(a, b):
 
 
 def nome_colore(c):
-    """(nome, distanza) del colore della tavolozza piu' vicino."""
+    """(name, distance) of the nearest palette colour."""
     tutti = [("MARCA", MARCA), ("VUOTO", VUOTO), ("ALTRO", ALTRO)] + \
         [(k, v) for k, v in COLORI.items()]
     k, v = min(tutti, key=lambda kv: _dist(kv[1], c))
@@ -307,11 +307,11 @@ def nome_colore(c):
 
 
 def leggi_striscia(campiona):
-    """⭐ Il valore del campo dalla fotografia.
+    """⭐ The value of the field from the photograph.
 
-    `campiona(fx, fy, rx, ry)` torna il colore (mediano) del rettangolo
-    centrato in (fx, fy) di semiampiezza (rx, ry), in frazioni del desktop.
-    Torna (valore o None, perche')."""
+    `campiona(fx, fy, rx, ry)` returns the (median) colour of the rectangle
+    centred in (fx, fy) with half-width (rx, ry), in fractions of the desktop.
+    Returns (value or None, why)."""
     cc = centri_caselle()
     passo = (STRISCIA_X1 - STRISCIA_X0) / (CASELLE + 2)
     rx, ry = passo * CAMPIONE, (STRISCIA_Y1 - STRISCIA_Y0) * CAMPIONE
@@ -320,15 +320,15 @@ def leggi_striscia(campiona):
         c = campiona(fx, fy, rx, ry)
         k, d = nome_colore(c)
         if d > TOLLERANZA:
-            return None, "casella %d illeggibile: %s dista %d dal piu' vicino (%s)" % (
+            return None, "box %d unreadable: %s is %d away from the nearest (%s)" % (
                 i, c, d, k)
         nomi.append(k)
     if nomi[0] != "MARCA" or nomi[-1] != "MARCA":
-        return None, "la striscia non si vede: agli estremi %s e %s invece delle marche" % (
+        return None, "the strip does not show: at the ends %s and %s instead of the marks" % (
             nomi[0], nomi[-1])
     corpo = nomi[1:-1]
     if "MARCA" in corpo:
-        return None, "una marca in mezzo alla striscia: %s" % corpo
+        return None, "a mark in the middle of the strip: %s" % corpo
     v = ""
     fine = False
     for k in corpo:
@@ -336,14 +336,14 @@ def leggi_striscia(campiona):
             fine = True
             continue
         if fine:
-            return None, "un carattere dopo una casella vuota: %s" % corpo
+            return None, "a character after an empty box: %s" % corpo
         v += "�" if k == "ALTRO" else k
     return v, ""
 
 
 def campionatore(im, geo):
-    """`campiona()` su un'immagine PIL della tela, con la geometria di C21:
-    frazione del desktop ⇒ pixel del desktop ⇒ pixel della fotografia."""
+    """`campiona()` on a PIL image of the canvas, with C21's geometry:
+    fraction of the desktop ⇒ desktop pixel ⇒ photograph pixel."""
     pw, ph = im.size
 
     def al_pixel(fx, fy):
@@ -364,16 +364,16 @@ def campionatore(im, geo):
 
 
 def giudica_caso(titolo, base, atteso, vuoto, visto_base, visto):
-    """(esito, motivo) di un caso, dai tre valori letti nelle fotografie."""
+    """(outcome, reason) of a case, from the three values read in the photographs."""
     if vuoto != "":
-        return CIECO, "%s: dopo la pulizia la striscia non e' vuota (%r): la scena non " \
-            "testimonia" % (titolo, vuoto)
+        return CIECO, "%s: after the cleaning the strip is not empty (%r): the scene does not " \
+            "bear witness" % (titolo, vuoto)
     if visto_base != base:
-        return CIECO, "%s: la base %r non e' arrivata (visto %r): la scrittura semplice " \
-            "e' di C4, non si giudica la selezione" % (titolo, base, visto_base)
+        return CIECO, "%s: the base %r did not arrive (seen %r): plain typing " \
+            "is C4's, the selection is not judged" % (titolo, base, visto_base)
     if visto == atteso:
         return VERDE, "%s: %r ⇒ %r" % (titolo, base, visto)
-    return ROSSO, "%s: %r ⇒ %r invece di %r" % (titolo, base, visto, atteso)
+    return ROSSO, "%s: %r ⇒ %r instead of %r" % (titolo, base, visto, atteso)
 
 
 def esito_complessivo(esiti):
@@ -381,18 +381,18 @@ def esito_complessivo(esiti):
 
 
 def esito_col_guasto(esiti):
-    """⛔ Al contrario: 0 se OGNI caso e' rosso (il guasto si vede ovunque)."""
+    """⛔ The other way round: 0 if EVERY case is red (the fault shows everywhere)."""
     if CIECO in esiti:
         return CIECO
     return VERDE if all(e == ROSSO for e in esiti) else ROSSO
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA CERTIFICAZIONE DELLE FUNZIONI PURE
+#  THE CERTIFICATION OF THE PURE FUNCTIONS
 # ═══════════════════════════════════════════════════════════════════════════
 def _foto_finta(valore, geo, spost=(0, 0), rumore=25, seme=7):
-    """Una tela dipinta come la scena, con uno spostamento (una barra che il
-    kiosk non copre) e del rumore (la codifica)."""
+    """A canvas painted like the scene, with a shift (a bar the
+    kiosk does not cover) and some noise (the encoding)."""
     from PIL import Image, ImageDraw
     rnd = random.Random(seme)
     im = Image.new("RGB", (geo["bw"], geo["bh"]), (32, 32, 32))
@@ -410,7 +410,7 @@ def _foto_finta(valore, geo, spost=(0, 0), rumore=25, seme=7):
 
 
 def certifica():
-    print("⭐ 11-c23 · CERTIFICAZIONE DELLE FUNZIONI PURE")
+    print("⭐ 11-c23 · CERTIFICATION OF THE PURE FUNCTIONS")
     guai, fatte = [], []
 
     def prova(cosa, vero, dettaglio=""):
@@ -420,84 +420,84 @@ def certifica():
         if not vero:
             guai.append(cosa)
 
-    # 1. la tavolozza: colori distinti ben oltre il doppio della tolleranza
+    # 1. the palette: colours distinct well beyond twice the tolerance
     tutti = [MARCA, VUOTO, ALTRO] + list(COLORI.values())
     dmin = min(_dist(a, b) for i, a in enumerate(tutti) for b in tutti[i + 1:])
-    prova("tavolozza: %d colori, distanza minima %d > 2×%d" % (len(tutti), dmin, TOLLERANZA),
+    prova("palette: %d colours, minimum distance %d > 2×%d" % (len(tutti), dmin, TOLLERANZA),
           dmin > 2 * TOLLERANZA)
-    prova("ogni carattere dei casi e' nell'alfabeto",
+    prova("every character of the cases is in the alphabet",
           all(c in ALFABETO for _t, b, s, a in CASI for c in b + a
               + "".join(n for _x, n in s if len(n) == 1)))
-    # 2. il campo finto: l'atteso scritto a mano e' quello che la sequenza da'
+    # 2. the fake field: the expected value written by hand is what the sequence gives
     for t, base, seq, atteso in CASI:
         v = simula(scrivi(base) + seq)
-        prova("simula %s ⇒ %r" % (t.split()[0], atteso), v == atteso, "da' %r" % v)
+        prova("simula %s ⇒ %r" % (t.split()[0], atteso), v == atteso, "gives %r" % v)
         vg = simula(scrivi(base) + senza_maiusc(seq))
-        prova("simula %s SENZA Maiusc ⇒ un'altra cosa" % t.split()[0], vg != atteso,
-              "da' %r" % vg)
-    prova("simula: la pulizia svuota il campo", simula(PULISCI, "abc") == "")
-    # ⭐ il caso 4 con la sola prima meta' della cura: dopo la lettera il Maiusc
-    #   e' SU per il server ⇒ le due Sinistra muovono.  `[M]` c95: «abcdXqeA».
+        prova("simula %s WITHOUT Shift ⇒ something else" % t.split()[0], vg != atteso,
+              "gives %r" % vg)
+    prova("simula: the cleaning empties the field", simula(PULISCI, "abc") == "")
+    # ⭐ case 4 with only the first half of the cure: after the letter Shift
+    #   is UP for the server ⇒ the two Lefts move.  `[M]` c95: «abcdXqeA».
     vecchia = scrivi("abcdef") + col("Shift", premi("ArrowLeft") + premi("A")) \
         + premi("ArrowLeft") * 2 + premi("X") + premi("q")
-    prova("simula il caso 4 com'era prima della meta' 2 ⇒ «abcdXqeA» (il [M] di c95)",
-          simula(vecchia) == "abcdXqeA", "da' %r" % simula(vecchia))
-    # 3. la striscia si legge dai pixel
+    prova("simula case 4 as it was before half 2 ⇒ «abcdXqeA» (the [M] of c95)",
+          simula(vecchia) == "abcdXqeA", "gives %r" % simula(vecchia))
+    # 3. the strip is read from the pixels
     try:
         from PIL import Image                     # noqa: F401
     except ImportError:
-        print("⛔ PIL non c'e': non posso certificare la lettura ⇒ 3")
+        print("⛔ PIL is not there: I cannot certify the reading ⇒ 3")
         return 3
     geo = {"tl": 1920, "ta": 1080, "bw": 1920, "bh": 1080, "bx0": 0, "by0": 0,
            "sx": 1.0, "sy": 1.0}
     for v in ("", "abcY", "uno z", "abcdeAb", "abcdXqeA", "abcdefabcdefab"):
         for sp in ((0, 0), (0, 40), (-30, 25)):
             letto, perche = leggi_striscia(campionatore(_foto_finta(v, geo, sp), geo))
-            prova("striscia %r spostata %s ⇒ si rilegge" % (v, sp), letto == v,
-                  "letto %r %s" % (letto, perche))
+            prova("strip %r shifted %s ⇒ it reads back" % (v, sp), letto == v,
+                  "read %r %s" % (letto, perche))
     letto, perche = leggi_striscia(campionatore(_foto_finta("abc@", geo), geo))
-    prova("un carattere fuori alfabeto ⇒ il segno di sostituzione", letto == "abc�",
-          "letto %r %s" % (letto, perche))
-    # la tela piu' grande della foto (Chrome la riduce) e con i margini neri
+    prova("a character outside the alphabet ⇒ the replacement sign", letto == "abc�",
+          "read %r %s" % (letto, perche))
+    # the canvas bigger than the photo (Chrome shrinks it) and with black margins
     geo2 = {"tl": 3840, "ta": 2160, "bw": 1920, "bh": 1200, "bx0": 0, "by0": 60,
             "sx": 0.5, "sy": 0.5}
     from PIL import Image
     tela = Image.new("RGB", (1920, 1200), (0, 0, 0))
     tela.paste(_foto_finta("abcY", {"bw": 1920, "bh": 1080}), (0, 60))
     letto, perche = leggi_striscia(campionatore(tela, geo2))
-    prova("tela 4K in un buffer con margini ⇒ si rilegge", letto == "abcY",
-          "letto %r %s" % (letto, perche))
+    prova("4K canvas in a buffer with margins ⇒ it reads back", letto == "abcY",
+          "read %r %s" % (letto, perche))
     letto, perche = leggi_striscia(campionatore(Image.new("RGB", (1920, 1080), (90, 60, 30)),
                                                 geo))
-    prova("senza striscia ⇒ None (non si giudica)", letto is None, perche)
-    # 4. i giudici
-    prova("giudica: atteso ⇒ VERDE",
+    prova("without a strip ⇒ None (no judgement)", letto is None, perche)
+    # 4. the judges
+    prova("giudica: expected ⇒ GREEN",
           giudica_caso("t", "abcdef", "abcY", "", "abcdef", "abcY")[0] == VERDE)
-    prova("giudica: il Maiusc non seleziona ⇒ ROSSO",
+    prova("giudica: Shift does not select ⇒ RED",
           giudica_caso("t", "abcdef", "abcY", "", "abcdef", "abcYdef")[0] == ROSSO)
-    prova("giudica: la base non arriva ⇒ 3",
+    prova("giudica: the base does not arrive ⇒ 3",
           giudica_caso("t", "abcdef", "abcY", "", "abc", "abcY")[0] == CIECO)
-    prova("giudica: la pulizia non svuota ⇒ 3",
+    prova("giudica: the cleaning does not empty ⇒ 3",
           giudica_caso("t", "abcdef", "abcY", "xx", "abcdef", "abcY")[0] == CIECO)
-    prova("col guasto: tutti rossi ⇒ 0 (visto)", esito_col_guasto([ROSSO] * 4) == VERDE)
-    prova("col guasto: uno verde ⇒ 1 (non visto)",
+    prova("with the fault: all red ⇒ 0 (seen)", esito_col_guasto([ROSSO] * 4) == VERDE)
+    prova("with the fault: one green ⇒ 1 (not seen)",
           esito_col_guasto([ROSSO, VERDE, ROSSO, ROSSO]) == ROSSO)
-    prova("col guasto: un cieco ⇒ 3", esito_col_guasto([ROSSO, CIECO]) == CIECO)
+    prova("with the fault: one blind ⇒ 3", esito_col_guasto([ROSSO, CIECO]) == CIECO)
     print()
     if guai:
-        print("⛔ CERTIFICAZIONE FALLITA: %d prove su %d" % (len(guai), len(fatte)))
+        print("⛔ CERTIFICATION FAILED: %d tests out of %d" % (len(guai), len(fatte)))
         return 1
-    print("⭐ CERTIFICATO (%d prove): l'atteso e' quel che un campo fa con quei tasti, "
-          "senza Maiusc\n   viene un'altra cosa, e il valore si rilegge dai pixel anche "
-          "spostato e sporcato." % len(fatte))
+    print("⭐ CERTIFIED (%d tests): the expected value is what a field does with those keys, "
+          "without Shift\n   something else comes out, and the value reads back from the pixels even "
+          "shifted and dirtied." % len(fatte))
     return 0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  DENTRO LA SCATOLA — la scena
+#  INSIDE THE BOX — the scene
 # ═══════════════════════════════════════════════════════════════════════════
 def pagina_scena():
-    """⭐ La pagina, con la tavolozza di QUESTO programma infilata dentro."""
+    """⭐ The page, with THIS program's palette put inside."""
     tav = {k: "rgb(%d,%d,%d)" % v for k, v in COLORI.items()}
     passo = (STRISCIA_X1 - STRISCIA_X0) / (CASELLE + 2) * 100
     return """<!doctype html><meta charset=utf-8><title>REMOTIX C23</title>
@@ -527,7 +527,7 @@ setInterval(()=>{ if(document.activeElement!==f) f.focus(); dipingi(); },300);
                 "w": passo, "y0": STRISCIA_Y0 * 100, "h": (STRISCIA_Y1 - STRISCIA_Y0) * 100}
 
 
-# Il servitore della scena: serve la pagina e annota quel che la pagina dice.
+# The scene's server: it serves the page and notes what the page says.
 SERVITORE = r'''
 import http.server, sys
 PAG = open(sys.argv[2], "rb").read()
@@ -547,7 +547,7 @@ http.server.ThreadingHTTPServer(("127.0.0.1", int(sys.argv[1])), H).serve_foreve
 
 
 def accendi_la_scena(sc, chi, porta):
-    """Servitore + `firefox-esr --kiosk` nella sessione; aspetta «caricata»."""
+    """Server + `firefox-esr --kiosk` in the session; waits for «caricata»."""
     b = lambda s: base64.b64encode(s.encode()).decode()     # noqa: E731
     c, t = sc.dentro(
         "set -e; h=/home/{c}; mkdir -p $h/.c23-profilo; "
@@ -559,14 +559,14 @@ def accendi_la_scena(sc, chi, porta):
         "</dev/null >/dev/null 2>&1 & "
         "d=''; for i in $(seq 1 40); do d=$(ls /run/user/$u 2>/dev/null | "
         "grep -E '^wayland-[0-9]+$' | head -1); [ -n \"$d\" ] && break; sleep 0.5; done; "
-        "[ -n \"$d\" ] || {{ echo 'nessun socket wayland'; exit 2; }}; sleep 1; "
+        "[ -n \"$d\" ] || {{ echo 'no wayland socket'; exit 2; }}; sleep 1; "
         "setsid runuser -u {c} -- env XDG_RUNTIME_DIR=/run/user/$u WAYLAND_DISPLAY=$d "
         "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$u/bus MOZ_ENABLE_WAYLAND=1 "
         "XDG_SESSION_TYPE=wayland HOME=$h firefox-esr --no-remote --new-instance "
         "--profile $h/.c23-profilo --kiosk http://127.0.0.1:{p}/ "
         "</dev/null >$h/.c23-firefox.log 2>&1 & "
-        "for i in $(seq 1 80); do grep -q caricata $h/c23.log && {{ echo accesa; exit 0; }}; "
-        "sleep 0.5; done; echo 'la scena non ha detto «caricata»'; tail -5 $h/.c23-firefox.log; "
+        "for i in $(seq 1 80); do grep -q caricata $h/c23.log && {{ echo started; exit 0; }}; "
+        "sleep 0.5; done; echo 'the scene did not say «caricata»'; tail -5 $h/.c23-firefox.log; "
         "exit 1".format(c=chi, p=porta, srv=b(SERVITORE), pag=b(pagina_scena()),
                         pref=b(C21.PREFERENZE)), 90)
     return c == 0, t
@@ -578,10 +578,10 @@ def leggi_il_quaderno(sc, chi):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  I TASTI VERI
+#  THE REAL KEYS
 # ═══════════════════════════════════════════════════════════════════════════
 def manda(g, passi):
-    """⭐ Tasti VERI dati al browser: `Input.dispatchKeyEvent` o le azioni W3C."""
+    """⭐ REAL keys given to the browser: `Input.dispatchKeyEvent` or the W3C actions."""
     if hasattr(g, "cdp"):
         mod = 0
         for tipo, nome in passi:
@@ -615,16 +615,16 @@ def manda(g, passi):
 
 
 def fotografa_e_leggi(g, geo, voluto, salva, nome):
-    """Fotografa finche' la striscia dice `voluto` o finisce `ATTESA_S`.
-    Torna (valore letto o None, perche')."""
+    """Photographs until the strip says `voluto` or `ATTESA_S` runs out.
+    Returns (value read or None, why)."""
     from PIL import Image
     fine = time.time() + ATTESA_S
-    letto, perche, png = None, "nessuna fotografia", None
+    letto, perche, png = None, "no photograph", None
     while True:
         try:
             png = C21.foto_piena(g)
         except Exception as e:                   # noqa: BLE001
-            png, perche = None, "fotografia fallita: %s" % str(e)[:120]
+            png, perche = None, "photograph failed: %s" % str(e)[:120]
         if png:
             im = Image.open(io.BytesIO(png)).convert("RGB")
             letto, perche = leggi_striscia(campionatore(im, geo))
@@ -640,43 +640,43 @@ def fotografa_e_leggi(g, geo, voluto, salva, nome):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA PROVA DI UN BROWSER
+#  THE TEST OF ONE BROWSER
 # ═══════════════════════════════════════════════════════════════════════════
 def osserva(nome, o, sc, chi):
-    """Torna la riga del browser, con `esiti` dei casi (o `esito` CIECO)."""
+    """Returns the browser's row, with the cases' `esiti` (or `esito` CIECO)."""
     print("\n══ %s ══════════════════════════════" % nome.upper(), flush=True)
     riga = {"browser": nome}
     g = VERI.accendi_guida(nome, o)
     try:
-        print("   palco: %s" % g.palco(), flush=True)
+        print("   stage: %s" % g.palco(), flush=True)
         if o.largo:
             print("   %s" % C20V.dimensiona(g, nome, o.largo, o.alto), flush=True)
         pr = VERI.Prova(g, o, o.url, o.parola)
         ok, m = pr.apri()
         if not ok:
-            return dict(riga, esito=CIECO, perche="la pagina non si apre: " + m)
+            return dict(riga, esito=CIECO, perche="the page does not open: " + m)
         e, m, s = pr.entra(o.parola)
         if e != VERDE:
-            return dict(riga, esito=CIECO, perche="l'accesso: " + m)
+            return dict(riga, esito=CIECO, perche="the login: " + m)
         e, m, s = pr.primo_fotogramma()
         e, m = C20V.desktop_scuro_ma_vivo(e, m, s)
-        print("   ⭐ primo fotogramma: %s" % m, flush=True)
+        print("   ⭐ first frame: %s" % m, flush=True)
         if e != VERDE:
-            return dict(riga, esito=CIECO, perche="senza immagine non si guarda: " + m)
+            return dict(riga, esito=CIECO, perche="without an image there is no looking: " + m)
         geo = g.js(C21.JS_GEOMETRIA)
         if not geo:
-            return dict(riga, esito=CIECO, perche="`REMOTIX_PUNTATORE.geometria` non c'e'")
-        print("   tela %sx%s · buffer %sx%s" % (geo["tl"], geo["ta"], geo["bw"], geo["bh"]),
+            return dict(riga, esito=CIECO, perche="`REMOTIX_PUNTATORE.geometria` is not there")
+        print("   canvas %sx%s · buffer %sx%s" % (geo["tl"], geo["ta"], geo["bw"], geo["bh"]),
               flush=True)
-        # ⭐ la sveglia di C21: su GNOME la sessione nasce nella vista d'insieme
-        print("   sveglia: %s" % C21.sveglia(g, geo), flush=True)
+        # ⭐ C21's wake-up: on GNOME the session is born in the overview
+        print("   wake-up: %s" % C21.sveglia(g, geo), flush=True)
         ok, t = accendi_la_scena(sc, chi, o.porta_scena)
-        print("   scena: %s" % ((t or "?").splitlines() or ["?"])[-1], flush=True)
+        print("   scene: %s" % ((t or "?").splitlines() or ["?"])[-1], flush=True)
         if not ok:
-            return dict(riga, esito=CIECO, perche="la scena non si accende: %s" % t[-300:])
+            return dict(riga, esito=CIECO, perche="the scene does not start: %s" % t[-300:])
         time.sleep(3)
-        # ⚠ Un clic nel campo remoto: la finestra nuova prende il fuoco della
-        #   tastiera anche dove il desktop non glielo da' da se'.
+        # ⚠ A click in the remote field: the new window takes the keyboard
+        #   focus even where the desktop does not give it by itself.
         x, y = C21.dal_desktop_al_vetro(geo, geo["tl"] * 0.5, geo["ta"] * 0.26)
         g.clic(x, y)
         time.sleep(1.0)
@@ -697,14 +697,14 @@ def osserva(nome, o, sc, chi):
             if es == CIECO and (vuoto is None or vb is None):
                 msg += " — %s" % (pv or pb)
             elif visto is None:
-                es, msg = CIECO, "%s: la striscia non si legge dopo la sequenza: %s" % (
+                es, msg = CIECO, "%s: the strip cannot be read after the sequence: %s" % (
                     titolo, pvi)
             quad = leggi_il_quaderno(sc, chi)[n0:]
             tasti = [r[2:] for r in quad if r.startswith("K ")]
             print("   %s %s" % ({VERDE: "⭐ 0", ROSSO: "⛔ 1", CIECO: "⚠ 3"}[es], msg),
                   flush=True)
             if es != VERDE:
-                print("        keydown remoti: %s" % " | ".join(tasti)[:400], flush=True)
+                print("        remote keydowns: %s" % " | ".join(tasti)[:400], flush=True)
             esiti.append(es)
             casi.append({"caso": corto, "esito": es, "visto": visto, "atteso": atteso,
                          "keydown_remoti": tasti})
@@ -714,13 +714,13 @@ def osserva(nome, o, sc, chi):
             st = g.js("return REMOTIX.input_classico.stato().tasti_premuti")
         except Exception as ex:                  # noqa: BLE001
             st = "? (%s)" % str(ex)[:80]
-        print("   tasti premuti per la pagina, alla fine: %s" % (st,), flush=True)
+        print("   keys pressed for the page, at the end: %s" % (st,), flush=True)
         return dict(riga, esiti=esiti, casi=casi, tasti_premuti_alla_fine=st)
     finally:
         try:
             g.chiudi()
         except Exception as ex:                  # noqa: BLE001
-            print("   ⚠ chiusura del browser: %s" % ex)
+            print("   ⚠ closing the browser: %s" % ex)
 
 
 def giudica_browser(riga, guasto):
@@ -729,15 +729,15 @@ def giudica_browser(riga, guasto):
     es = riga["esiti"]
     if not guasto:
         e = esito_complessivo(es)
-        perche = {VERDE: "tutti e %d i casi tornano" % len(es),
-                  ROSSO: "%d casi su %d non tornano" % (es.count(ROSSO), len(es)),
-                  CIECO: "un caso non si e' potuto guardare"}[e]
+        perche = {VERDE: "all %d cases come out right" % len(es),
+                  ROSSO: "%d cases out of %d do not come out right" % (es.count(ROSSO), len(es)),
+                  CIECO: "one case could not be looked at"}[e]
         return dict(riga, esito=e, perche=perche)
     e = esito_col_guasto(es)
-    perche = {VERDE: "⭐ GUASTO VISTO: senza Maiusc tutti e %d i casi sono rossi" % len(es),
-              ROSSO: "⛔ GUASTO NON VISTO: senza Maiusc %d casi tornano lo stesso"
+    perche = {VERDE: "⭐ FAULT SEEN: without Shift all %d cases are red" % len(es),
+              ROSSO: "⛔ FAULT NOT SEEN: without Shift %d cases come out right all the same"
                      % es.count(VERDE),
-              CIECO: "col guasto un caso non si e' potuto guardare"}[e]
+              CIECO: "with the fault one case could not be looked at"}[e]
     return dict(riga, esito=e, perche=perche)
 
 
@@ -745,17 +745,17 @@ def main():
     a = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     a.add_argument("--scatola", choices=sorted(PORTE))
-    a.add_argument("--porta", type=int, help="la porta del prodotto (di norma quella "
-                   "della scatola della rete)")
-    a.add_argument("--contenitore", default="", help="il contenitore podman, se non e' "
-                   "rete11-<scatola> (le scatole di sviluppo rete14-*)")
+    a.add_argument("--porta", type=int, help="the product's port (normally that "
+                   "of the net's box)")
+    a.add_argument("--contenitore", default="", help="the podman container, if it is not "
+                   "rete11-<scatola> (the development boxes rete14-*)")
     a.add_argument("--host", default="192.168.0.2")
     a.add_argument("--browser", default="firefox,chrome")
     a.add_argument("--visibile", action="store_true",
-                   help="finestre vere (nel compositore annidato) invece di headless")
-    a.add_argument("--salva", default="", help="cartella per le fotografie")
+                   help="real windows (in the nested compositor) instead of headless")
+    a.add_argument("--salva", default="", help="folder for the photographs")
     a.add_argument("--senza-maiusc", action="store_true",
-                   help="GUASTO INNESTATO: le stesse sequenze senza mai premere Maiusc")
+                   help="INJECTED FAULT: the same sequences without ever pressing Shift")
     a.add_argument("--certifica", action="store_true")
     a.add_argument("--tetto-s", type=int, default=45)
     a.add_argument("--porte-base", type=int, default=3231)
@@ -767,7 +767,7 @@ def main():
     if not o.scatola and o.porta:
         o.scatola = {p: s for s, p in PORTE.items()}.get(o.porta)
     if not o.scatola:
-        print("⛔ serve --scatola, o una --porta della rete (%s)" % PORTE)
+        print("⛔ --scatola is needed, or a --porta of the net (%s)" % PORTE)
         return 3
     porta = o.porta or PORTE[o.scatola]
     o.url = "https://%s:%d/" % (o.host, porta)
@@ -785,19 +785,19 @@ def main():
     o.utente = chi
     print("⭐ 11-c23 · %s · %s · inquilino %s · browser %s · %s%s"
           % (sc.contenitore, o.url, chi, o.browser,
-             "finestre vere" if o.visibile else "HEADLESS",
-             " · ⛔ GUASTO INNESTATO --senza-maiusc" if o.senza_maiusc else ""))
+             "real windows" if o.visibile else "HEADLESS",
+             " · ⛔ INJECTED FAULT --senza-maiusc" if o.senza_maiusc else ""))
     righe = []
     for b in [x.strip() for x in o.browser.split(",") if x.strip()]:
         sc.sgombera(chi)
         c, t = sc.crea(chi, o.parola)
         if c != 0:
-            print("⛔ non ho potuto creare %s: %s" % (chi, t[-200:]))
+            print("⛔ I could not create %s: %s" % (chi, t[-200:]))
             return 3
         try:
             r = giudica_browser(osserva(b, o, sc, chi), o.senza_maiusc)
         except Exception as e:                   # noqa: BLE001
-            r = {"browser": b, "esito": CIECO, "perche": "il banco e' caduto: %r" % e}
+            r = {"browser": b, "esito": CIECO, "perche": "the bench fell over: %r" % e}
         finally:
             sc.sgombera(chi)
         print("   ▶ %s: %s — %s" % (b, NOME_ESITO.get(r["esito"], r["esito"]),
@@ -808,10 +808,10 @@ def main():
     esito = ROSSO if ROSSO in v else (CIECO if CIECO in v else VERDE)
     print()
     if o.senza_maiusc:
-        print({VERDE: "⭐ IL GUASTO INNESTATO E' STATO VISTO (esito 0: al contrario, "
-                      "come ogni guasto della rete)",
-               ROSSO: "⛔⛔ IL GUASTO INNESTATO NON E' STATO VISTO",
-               CIECO: "⚠ col guasto innestato NON ho potuto guardare ⇒ 3"}[esito])
+        print({VERDE: "⭐ THE INJECTED FAULT WAS SEEN (outcome 0: the other way round, "
+                      "like every fault of the net)",
+               ROSSO: "⛔⛔ THE INJECTED FAULT WAS NOT SEEN",
+               CIECO: "⚠ with the injected fault I could NOT look ⇒ 3"}[esito])
     else:
         print("%s C23(%s): %s" % ({VERDE: "⭐", ROSSO: "⛔⛔", CIECO: "⚠"}[esito],
                                   o.scatola, NOME_ESITO[esito]))

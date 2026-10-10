@@ -1,42 +1,42 @@
 /*
- * 06-b34-tabella.c — ⛔ L'ATTESO SI DICHIARA PRIMA, E LO CALCOLA IL CODICE.
+ * 06-b34-tabella.c — ⛔ THE EXPECTED RESULT IS DECLARED FIRST, AND THE CODE COMPUTES IT.
  *
- * Sottofase 6.2, *la tastiera che rinasce*.
+ * Sub-phase 6.2, *the keyboard that is reborn*.
  *
- * `CODER.md` §3.3 vuole l'atteso dichiarato prima della misura, e §3.6 dice
- * come ottenerlo al prezzo piu' basso: **si isola UNA funzione e la si chiama
- * da fuori**, invece di fare un altro giro di banco.
+ * `CODER.md` §3.3 wants the expected result declared before the measurement, and §3.6
+ * says how to get it at the lowest price: **isolate ONE function and call it from
+ * outside**, instead of doing another bench round.
  *
- * Qui si chiede a `tastiera.c` — lo stesso file che gira nel prodotto — quale
- * posizione evdev produce ciascun carattere di prova in ciascuna disposizione.
- * ⇒ La tabella che ne esce **e' l'atteso** del banco `06-b34`, e non e' una
- *   mia opinione: e' quel che il prodotto fara'.
+ * Here `tastiera.c` — the same file that runs in the product — is asked which
+ * evdev position produces each test character in each layout.
+ * ⇒ The table that comes out **is the expected result** of bench `06-b34`, and it
+ *   is not my opinion: it is what the product will do.
  *
  * ---------------------------------------------------------------------------
- * ⛔⛔ PERCHE' `it` → `us` NON BASTA, E CI VUOLE ANCHE `de`
+ * ⛔⛔ WHY `it` → `us` IS NOT ENOUGH, AND `de` IS NEEDED TOO
  *
- * Il mandato diceva *«per esempio `it` → `us`, dove `z`/`y` e le accentate si
- * spostano»*.  ⛔ **La prima meta' e' falsa**: `it` e `us` sono **tutt'e due
- * QWERTY**, e `z` sta sul tasto 44 in tutte e due.  Lo scambio `z`/`y` e' di
- * **`de`** (QWERTZ).  Chi provasse `it` → `us` con la `z` misurerebbe due
- * disposizioni che su quel carattere **sono la stessa**, e un banco che non
- * distingue non e' un banco.
+ * The brief said *«for example `it` → `us`, where `z`/`y` and the accented letters
+ * move»*.  ⛔ **The first half is false**: `it` and `us` are **both
+ * QWERTY**, and `z` is on key 44 in both.  The `z`/`y` swap belongs to
+ * **`de`** (QWERTZ).  Whoever tested `it` → `us` with the `z` would measure two
+ * layouts that on that character **are the same**, and a bench that does not
+ * discriminate is not a bench.
  *
- * ⇒ Le prove servono a due cose diverse, e vanno tenute separate:
+ * ⇒ The tests serve two different purposes, and must be kept separate:
  *
- *   `it` → `us`   distingue sulle **accentate** e sui **segni**: `è` esiste su
- *                 `it` e **non esiste affatto** su `us`; la `@` e' AltGr+ò su
- *                 `it` e Maiusc+2 su `us`.  ⚠ Un carattere che sparisce e uno
- *                 che si sposta: due forme di guasto diverse;
+ *   `it` → `us`   discriminates on the **accented letters** and the **symbols**: `è`
+ *                 exists on `it` and **does not exist at all** on `us`; the `@` is
+ *                 AltGr+ò on `it` and Shift+2 on `us`.  ⚠ A character that vanishes
+ *                 and one that moves: two different forms of fault;
  *
- *   `it` → `de`   distingue sulla **`z`**, ed e' la prova PIU' CATTIVA delle
- *                 due — l'unica in cui il carattere sbagliato **esiste**.  Con
- *                 la keymap vecchia si manda il tasto 44, che su `de` fa
- *                 uscire una **`y`**: ⛔ non un carattere mancante, **UN
- *                 CARATTERE DIVERSO**, che `RCP.md` §7.3 vieta e che nessuno
- *                 collegherebbe mai alla disposizione.
+ *   `it` → `de`   discriminates on the **`z`**, and it is the NASTIER test of the
+ *                 two — the only one in which the wrong character **exists**.  With
+ *                 the old keymap key 44 is sent, which on `de` produces a
+ *                 **`y`**: ⛔ not a missing character, **A DIFFERENT
+ *                 CHARACTER**, which `RCP.md` §7.3 forbids and which nobody
+ *                 would ever connect to the layout.
  *
- *   costruire:  cc -O2 -o 06-b34-tabella 06-b34-tabella.c ../src/tastiera.c \
+ *   build:      cc -O2 -o 06-b34-tabella 06-b34-tabella.c ../src/tastiera.c \
  *                  ../src/registro.c $(pkg-config --cflags --libs xkbcommon glib-2.0)
  */
 #include <stdio.h>
@@ -45,51 +45,51 @@
 
 #include "../src/tastiera.h"
 
-/* ⛔ I caratteri di prova, e accanto la ragione di ciascuno: una prova senza
- *    la sua ragione e' una prova che il prossimo togliera' perche' «non serve». */
+/* ⛔ The test characters, and next to each its reason: a test without
+ *    its reason is a test the next person will remove because «it is not needed». */
 static const struct
 {
 	unsigned cp;
 	const char *utf8;
 	const char *perche;
 } PROVE[] = {
-	{0x0061, "a", "⭐ IL CANARINO: sta sul tasto 30 in tutte e tre. Se NON arriva, "
-	              "la prova non e' rossa: e' INVALIDA (il fuoco non e' sul testimone)"},
-	{0x007A, "z", "⛔ la prova cattiva: 44 su it/us, 21 su de — con la keymap vecchia "
-	              "su de esce una «y», cioe' un carattere DIVERSO"},
-	{0x0079, "y", "il gemello della z"},
-	{0x00E8, "e-grave", "⛔ esiste su it, NON esiste su us: qui il guasto e' un'ASSENZA"},
-	{0x0040, "chiocciola", "si sposta: AltGr+ò su it, Maiusc+2 su us"},
-	{0x00F2, "o-grave", "come la è: solo su it"},
-	{0x005C, "backslash", "un segno che si sposta fra tutte e tre"},
+	{0x0061, "a", "⭐ THE CANARY: it is on key 30 in all three. If it does NOT arrive, "
+	              "the test is not red: it is INVALID (the focus is not on the witness)"},
+	{0x007A, "z", "⛔ the nasty test: 44 on it/us, 21 on de — with the old keymap "
+	              "on de a «y» comes out, that is a DIFFERENT character"},
+	{0x0079, "y", "the twin of the z"},
+	{0x00E8, "e-grave", "⛔ exists on it, does NOT exist on us: here the fault is an ABSENCE"},
+	{0x0040, "at-sign", "moves: AltGr+ò on it, Shift+2 on us"},
+	{0x00F2, "o-grave", "like the è: only on it"},
+	{0x005C, "backslash", "a symbol that moves among all three"},
 	{0, NULL, NULL},
 };
 
 static const char *DISPOSIZIONI[] = {"it", "us", "de", "de(neo)", NULL};
 
-/* ⛔⭐ E DAL 21 AGOSTO 2026 IL PROGRAMMA RISPONDE A UNA SECONDA DOMANDA, che
- *     e' quella su cui il mandato di A3 insiste:
+/* ⛔⭐ AND SINCE 21 AUGUST 2026 THE PROGRAM ANSWERS A SECOND QUESTION, which
+ *     is the one the A3 brief insists on:
  *
- *       «QUALI DISPOSIZIONI HA DAVVERO QUESTA MACCHINA?»
+ *       «WHICH LAYOUTS DOES THIS MACHINE REALLY HAVE?»
  *
- * ⛔ La fonte di verita' non e' un elenco scritto a mano — ne' il mio ne' quello
- *    di `rcp.c` — ma il sistema: `xkeyboard-config` sotto `libxkbcommon`.  Qui
- *    la domanda si gira a `src/tastiera.c`, che e' lo stesso file che nel
- *    prodotto risponde al gancio `disposizione_esiste` (`webtransport.c:1626`).
- *    ⇒ Quel che esce di qui **e' quel che il prodotto rispondera'**, e non e'
- *      una mia opinione.
+ * ⛔ The source of truth is not a hand-written list — neither mine nor the one
+ *    in `rcp.c` — but the system: `xkeyboard-config` under `libxkbcommon`.  Here
+ *    the question is passed to `src/tastiera.c`, which is the same file that in
+ *    the product answers the `disposizione_esiste` hook (`webtransport.c:1626`).
+ *    ⇒ What comes out of here **is what the product will answer**, and it is not
+ *      my opinion.
  *
- *   `06-b34-tabella elenco < <lista di nomi>`   una riga per nome, «SI»/«NO»
+ *   `06-b34-tabella elenco < <list of names>`   one line per name, «SI»/«NO»
  *
- * ⚠ Serve a due cose diverse, e vanno tenute separate:
- *    · a costruire l'atteso del caso 7 (le disposizioni esotiche);
- *    · a spazzare tutte le 99 disposizioni e le 341 varianti che
- *      `/usr/share/X11/xkb/rules/evdev.lst` dichiara, per trovare quelle che il
- *      sistema HA e che il **controllo di forma** di `rcp.c` butterebbe via
- *      prima ancora di chiedere.  ⛔ Quella e' la forma D1 sopravvissuta alla
- *      cura del 16 agosto: la cura ha portato la domanda a XKB, ma davanti al
- *      gancio e' rimasto un secondo elenco scritto a mano — l'alfabeto ammesso
- *      nel nome.
+ * ⚠ It serves two different purposes, and they must be kept separate:
+ *    · building the expected result of case 7 (the exotic layouts);
+ *    · sweeping all 99 layouts and 341 variants that
+ *      `/usr/share/X11/xkb/rules/evdev.lst` declares, to find those the
+ *      system HAS and that the **shape check** of `rcp.c` would throw away
+ *      before even asking.  ⛔ That is the D1 form that survived the
+ *      cure of 16 August: the cure took the question to XKB, but in front of the
+ *      hook a second hand-written list remained — the alphabet allowed
+ *      in the name.
  */
 static int elenco(void)
 {
@@ -114,7 +114,7 @@ static int elenco(void)
 		}
 		else
 		{
-			printf("NO  %-32s %s\n", riga, sbaglio ? sbaglio : "senza motivo");
+			printf("NO  %-32s %s\n", riga, sbaglio ? sbaglio : "no reason given");
 		}
 		free(sbaglio);
 		fflush(stdout);
@@ -122,11 +122,11 @@ static int elenco(void)
 	return 0;
 }
 
-/* ⛔ Le prove del CASO 7 — «una disposizione esotica produce il carattere
- *    giusto?».  ⚠ Il canarino NON e' sempre la `a`: su `gr` il tasto 30 fa una
- *    `α`, e un canarino che non esiste nella disposizione trasformerebbe ogni
- *    prova in «INVALIDA» per colpa del banco.  ⇒ Il canarino di ciascuna
- *    disposizione lo sceglie questo programma, chiedendolo alla disposizione. */
+/* ⛔ The tests of CASE 7 — «does an exotic layout produce the right
+ *    character?».  ⚠ The canary is NOT always the `a`: on `gr` key 30 makes an
+ *    `α`, and a canary that does not exist in the layout would turn every
+ *    test into «INVALID» through the bench's fault.  ⇒ The canary of each
+ *    layout is chosen by this program, by asking the layout. */
 static const struct
 {
 	const char *disp;
@@ -134,25 +134,25 @@ static const struct
 	const char *nome;
 	const char *perche;
 } ESOTICHE[] = {
-	{"hu", 0x0171, "u-doppioacuto (ű)", "⛔ hu: era RIFIUTATA dall'elenco fisso. Non esiste su it/us/de"},
-	{"hu", 0x0151, "o-doppioacuto (ő)", "il gemello della ű"},
-	{"hu", 0x007A, "z", "⛔ hu e' QWERTZ come de: la z si sposta rispetto a it"},
-	{"tr", 0x0131, "i-senza-punto (ı)", "⛔ tr: era RIFIUTATA. Il carattere piu' turco che c'e'"},
-	{"tr", 0x011F, "g-breve (ğ)", "il gemello della ı"},
-	{"gr", 0x03B1, "alfa (α)", "⛔ gr: era RIFIUTATA, e non e' nemmeno latina"},
-	{"ua", 0x0457, "ji ucraina (ї)", "⛔ ua: era RIFIUTATA. Cirillico, e diverso dal russo"},
-	{"it", 0x0171, "u-doppioacuto (ű)", "⭐ IL CONTROLLO NEGATIVO: su it NON deve esistere"},
-	{"it", 0x0131, "i-senza-punto (ı)", "⭐ il controllo negativo della ı"},
+	{"hu", 0x0171, "u-double-acute (ű)", "⛔ hu: was REJECTED by the fixed list. Does not exist on it/us/de"},
+	{"hu", 0x0151, "o-double-acute (ő)", "the twin of the ű"},
+	{"hu", 0x007A, "z", "⛔ hu is QWERTZ like de: the z moves relative to it"},
+	{"tr", 0x0131, "dotless-i (ı)", "⛔ tr: was REJECTED. The most Turkish character there is"},
+	{"tr", 0x011F, "g-breve (ğ)", "the twin of the ı"},
+	{"gr", 0x03B1, "alpha (α)", "⛔ gr: was REJECTED, and it is not even Latin"},
+	{"ua", 0x0457, "Ukrainian yi (ї)", "⛔ ua: was REJECTED. Cyrillic, and different from Russian"},
+	{"it", 0x0171, "u-double-acute (ű)", "⭐ THE NEGATIVE CONTROL: on it it must NOT exist"},
+	{"it", 0x0131, "dotless-i (ı)", "⭐ the negative control of the ı"},
 	{NULL, 0, NULL, NULL},
 };
 
-/* I candidati canarino, in ordine: il primo che la disposizione sa produrre. */
+/* The canary candidates, in order: the first one the layout can produce. */
 static const unsigned CANARINI[] = {0x0061, 0x0031, 0x0020, 0};
 
 static int esotiche(void)
 {
-	printf("# 06-b34 caso 7 — l'atteso delle disposizioni ESOTICHE\n");
-	printf("# calcolato da `src/tastiera.c`, cioe' dal prodotto (CODER.md §3.3 e §3.6)\n\n");
+	printf("# 06-b34 case 7 — the expected result of the EXOTIC layouts\n");
+	printf("# computed by `src/tastiera.c`, that is by the product (CODER.md §3.3 and §3.6)\n\n");
 	for (int i = 0; ESOTICHE[i].disp; i++)
 	{
 		char *sbaglio = NULL;
@@ -163,9 +163,9 @@ static int esotiche(void)
 
 		if (!t)
 		{
-			printf("%-4s U+%04X %-20s ⛔ DISPOSIZIONE NON APERTA: %s\n",
+			printf("%-4s U+%04X %-20s ⛔ LAYOUT NOT OPENED: %s\n",
 			       ESOTICHE[i].disp, ESOTICHE[i].cp, ESOTICHE[i].nome,
-			       sbaglio ? sbaglio : "senza motivo");
+			       sbaglio ? sbaglio : "no reason given");
 			free(sbaglio);
 			continue;
 		}
@@ -183,8 +183,8 @@ static int esotiche(void)
 				              (unsigned) codici[k]);
 			printf("%-9s", buf);
 		}
-		/* ⛔ E il canarino si sceglie QUI, chiedendolo: un canarino che la
-		 *    disposizione non sa produrre renderebbe ogni prova INVALIDA. */
+		/* ⛔ And the canary is chosen HERE, by asking: a canary that the
+		 *    layout cannot produce would make every test INVALID. */
 		{
 			unsigned can = 0;
 			for (int c = 0; CANARINI[c]; c++)
@@ -197,9 +197,9 @@ static int esotiche(void)
 				}
 			}
 			if (can)
-				printf(" canarino=U+%04X", can);
+				printf(" canary=U+%04X", can);
 			else
-				printf(" ⛔ NESSUN CANARINO");
+				printf(" ⛔ NO CANARY");
 		}
 		printf("   %s\n", ESOTICHE[i].perche);
 		tastiera_chiudi(t);
@@ -207,11 +207,11 @@ static int esotiche(void)
 	return 0;
 }
 
-/* ⛔ `posizione <disposizione> <U+xxxx> …` — la domanda secca, per costruire
- *    l'atteso di una prova nuova senza ricompilare niente.  ⚠ Serve a
- *    SCEGLIERE il carattere che discrimina: fra `de` e `de(T3)` la maggior
- *    parte dei caratteri e' la stessa, e una prova su un carattere comune
- *    sarebbe verde anche con la variante buttata via. */
+/* ⛔ `posizione <layout> <U+xxxx> …` — the plain question, to build
+ *    the expected result of a new test without recompiling anything.  ⚠ It serves to
+ *    CHOOSE the character that discriminates: between `de` and `de(T3)` most
+ *    characters are the same, and a test on a common character
+ *    would be green even with the variant thrown away. */
 static int posizione(int argc, char **argv)
 {
 	char *sbaglio = NULL;
@@ -219,7 +219,7 @@ static int posizione(int argc, char **argv)
 
 	if (!t)
 	{
-		printf("⛔ %s NON APERTA: %s\n", argv[2], sbaglio ? sbaglio : "senza motivo");
+		printf("⛔ %s NOT OPENED: %s\n", argv[2], sbaglio ? sbaglio : "no reason given");
 		free(sbaglio);
 		return 1;
 	}
@@ -254,9 +254,9 @@ int main(int argc, char **argv)
 	if (argc > 3 && strcmp(argv[1], "posizione") == 0)
 		return posizione(argc, argv);
 
-	printf("# 06-b34 — l'atteso, calcolato da `src/tastiera.c` (CODER.md §3.3)\n");
-	printf("# posizione = i codici EVDEV che il prodotto manderebbe, in ordine\n");
-	printf("# «-» = NON producibile: RCP.md §7.3 obbliga a non mandare NIENTE\n\n");
+	printf("# 06-b34 — the expected result, computed by `src/tastiera.c` (CODER.md §3.3)\n");
+	printf("# position = the EVDEV codes the product would send, in order\n");
+	printf("# «-» = NOT producible: RCP.md §7.3 requires sending NOTHING\n\n");
 
 	for (int d = 0; DISPOSIZIONI[d]; d++)
 	{
@@ -265,12 +265,12 @@ int main(int argc, char **argv)
 
 		if (!t)
 		{
-			printf("DISPOSIZIONE %-9s ⛔ NON APERTA: %s\n", DISPOSIZIONI[d],
-			       sbaglio ? sbaglio : "senza motivo");
+			printf("LAYOUT %-9s ⛔ NOT OPENED: %s\n", DISPOSIZIONI[d],
+			       sbaglio ? sbaglio : "no reason given");
 			free(sbaglio);
 			continue;
 		}
-		printf("DISPOSIZIONE %-9s (%s)\n", DISPOSIZIONI[d], tastiera_disposizione(t));
+		printf("LAYOUT %-9s (%s)\n", DISPOSIZIONI[d], tastiera_disposizione(t));
 		for (int i = 0; PROVE[i].utf8; i++)
 		{
 			uint16_t codici[TASTIERA_MAX_POSIZIONI];
@@ -291,7 +291,7 @@ int main(int argc, char **argv)
 		tastiera_chiudi(t);
 	}
 
-	printf("# le ragioni delle prove\n");
+	printf("# the reasons for the tests\n");
 	for (int i = 0; PROVE[i].utf8; i++)
 		printf("#   %-12s %s\n", PROVE[i].utf8, PROVE[i].perche);
 	return 0;

@@ -1,75 +1,74 @@
 #!/bin/bash
 #
-# 01-b8-lancia.sh — gira SUL SERVER.  B8: il secondo fisso, e IL BAN dell'indirizzo.
+# 01-b8-lancia.sh — runs ON THE SERVER.  B8: the fixed second, and THE BAN of the address.
 #
-#   BERSAGLIO=innesto  bash .../01-b8-lancia.sh             10 blocchi
-#   BERSAGLIO=prodotto bash .../01-b8-lancia.sh 3           un giro corto
-#   BERSAGLIO=prodotto bash .../01-b8-lancia.sh previsione  senza misurare
-#   BERSAGLIO=innesto  bash .../01-b8-lancia.sh costruisci  rimette gli innesti
+#   BERSAGLIO=innesto  bash .../01-b8-lancia.sh             10 blocks
+#   BERSAGLIO=prodotto bash .../01-b8-lancia.sh 3           a short run
+#   BERSAGLIO=prodotto bash .../01-b8-lancia.sh previsione  without measuring
+#   BERSAGLIO=innesto  bash .../01-b8-lancia.sh costruisci  puts the grafts back
 #
-# ⛔ `BERSAGLIO` E' OBBLIGATORIA — vedi `01-b0-bersaglio.sh`.
+# ⛔ `BERSAGLIO` IS MANDATORY — see `01-b0-bersaglio.sh`.
 #
 # ---------------------------------------------------------------------------
-# ⛔⭐ CHE COSA CAMBIA PUNTANDO B8 AL PRODOTTO — la previsione, scritta PRIMA
+# ⛔⭐ WHAT CHANGES WHEN B8 IS POINTED AT THE PRODUCT — the prediction, written BEFORE
 #
-# | cosa | innesto | prodotto | perche' |
+# | what | graft | product | why |
 # |---|---|---|---|
-# | il secondo fisso e le tre mediane | uguali | uguali | li governa `rcp.c` + `autenticazione.c` + PAM.  ⚠ `rcp.c` e' identico byte per byte; `autenticazione.c` **no**, ed e' l'unico punto in cui una differenza sarebbe VERA e non di misura |
-# | ⚠ il `[?]` di PAM (mediana 2636 ms sui respinti) | aperto | ⛔ **atteso uguale**, e il giro contro il prodotto NON lo chiude | a governare i tempi e' PAM, non noi: cambiare server non cambia la pila PAM |
-# | il ban: soglia 3, finestra 5 min, 12 ore | uguali | uguali | `rcp.c`, identico |
-# | ⛔ **la riga d'avvio sul ban** | `REMOTIX B3: ban caricati: N` | `HH:MM:SS.mmm avvio  ban: <file>, N indirizzi caricati` | ⛔ due stringhe diverse.  Cercare la prima contro il prodotto avrebbe dato «il server non ha detto NIENTE sul ban all'avvio» — rosso pieno su un server che lo dice |
-# | ⛔ **file dei ban illeggibile** | il server parte e lo scrive | ⛔ il server **NON PARTE** | `src/main.c`: *«non e' "zero ban", e' la protezione di §4.4-bis spenta.  Non si parte.»*  ⚠ Su questo bersaglio quel caso non si osserva come una riga: si osserva come «il server non si e' acceso», e il banco lo dichiara |
-# | la pagina del ban | `pagina TCP a …` | `GET / da … (indirizzo BANNATO)` | ⭐ e i quattro appigli che B8 legge — `data-bannato`, `data-restano-ms`, «tentativi esauriti», `id="ore"`/`id="minuti"` — nel prodotto CI SONO: li ha messi il rilievo R12.2 apposta, dopo essersi accorti che senza il banco avrebbe dato tre rossi su un server che il ban lo fa |
-# | il comando di sblocco | `SBLOCCA` / `PING`, stesso protocollo | ⭐ identico, `src/comando.c` | ⛔ **ed e' la meta' che nessuno ha mai fatto**: `01-b8-sblocca.py` non e' mai stato puntato al prodotto |
-# | i due indirizzi (127.0.0.1 e 192.168.0.2) | ok su 0.0.0.0 | ok su 0.0.0.0 | ⚠ il certificato del prodotto porta il SAN `192.168.0.2`, ma il cliente di prova non verifica (`ssl.CERT_NONE`): il SAN non morde qui |
-# | il tetto d'inattivita' | 120 s | 30 s | ⚠ B8 non tace mai piu' di pochi secondi: non lo tocca |
+# | the fixed second and the three medians | same | same | they are governed by `rcp.c` + `autenticazione.c` + PAM.  ⚠ `rcp.c` is identical byte for byte; `autenticazione.c` is **not**, and it is the only point where a difference would be REAL and not of measurement |
+# | ⚠ the PAM `[?]` (median 2636 ms on the refused) | open | ⛔ **expected the same**, and the run against the product does NOT close it | it is PAM that governs the times, not us: changing server does not change the PAM stack |
+# | the ban: threshold 3, window 5 min, 12 hours | same | same | `rcp.c`, identical |
+# | ⛔ **the start-up line about the ban** | `REMOTIX B3: ban caricati: N` | `HH:MM:SS.mmm avvio  ban: <file>, N indirizzi caricati` | ⛔ two different strings.  Looking for the first against the product would have given «the server said NOTHING about the ban at start-up» — full red on a server that does say it |
+# | ⛔ **unreadable ban file** | the server starts and writes it | ⛔ the server **DOES NOT START** | `src/main.c`: *«it is not "zero bans", it is the protection of §4.4-bis switched off.  One does not start.»*  ⚠ On this target that case is not observed as a line: it is observed as «the server did not start», and the bench declares it |
+# | the ban page | `pagina TCP a …` | `GET / da … (indirizzo BANNATO)` | ⭐ and the four anchors B8 reads — `data-bannato`, `data-restano-ms`, «tentativi esauriti», `id="ore"`/`id="minuti"` — ARE THERE in the product: finding R12.2 put them there on purpose, after realising that without them the bench would have given three reds on a server that does ban |
+# | the unblock command | `SBLOCCA` / `PING`, same protocol | ⭐ identical, `src/comando.c` | ⛔ **and it is the half nobody ever did**: `01-b8-sblocca.py` has never been pointed at the product |
+# | the two addresses (127.0.0.1 and 192.168.0.2) | ok on 0.0.0.0 | ok on 0.0.0.0 | ⚠ the product's certificate carries the SAN `192.168.0.2`, but the test client does not verify (`ssl.CERT_NONE`): the SAN does not bite here |
+# | the inactivity cap | 120 s | 30 s | ⚠ B8 never keeps quiet for more than a few seconds: it does not touch it |
 #
 # ---------------------------------------------------------------------------
-# ⛔ CHE COSA MISURA — e la spiegazione lunga sta in `01-b8-cronometro.py`
+# ⛔ WHAT IT MEASURES — and the long explanation is in `01-b8-cronometro.py`
 #
-# `RCP.md` §4.4 vieta di distinguere nel MOTIVO fra «utente inesistente» e
-# «parola sbagliata».  §4.4-bis impone il **ritardo fisso di un secondo** perche'
-# quella distinzione non si legga col **cronometro**, e — dal 10 agosto 2026,
-# per decisione dell'utente — **il ban dell'indirizzo**: tre autenticazioni
-# fallite dallo stesso indirizzo dentro cinque minuti, e quell'indirizzo e' fuori
-# per dodici ore.
-#
-# ---------------------------------------------------------------------------
-# ⛔ DUE VITE DEL SERVER, NON DODICI — e questa e' la differenza piu' grande
-#
-# La forma precedente di questo banco spegneva e riaccendeva il processo **a
-# ogni blocco**, e lo scriveva in testa al file: *«l'unico modo di ripartire da
-# contatori azzerati e' un processo nuovo — `rcp_azzera_registro_sessioni()`
-# esiste ma non la chiama nessuno»*.  ⭐ Adesso la chiama qualcuno: §4.4-bis
-# vuole un **comando di sblocco**, l'11 agosto 2026 e' nato lato ospite, e
-# `01-b8-sblocca.py` e' il lato di chi comanda.
-#
-# Le due vite che restano hanno una ragione ciascuna:
-#
-#   la prima    i campioni del secondo fisso, e tutto il giro del ban;
-#   la seconda  ⛔ **solo** per provare che il ban SOPRAVVIVE al riavvio —
-#               invariante I7, e senza quella riga il ban vive in memoria e un
-#               aggiornamento del pacchetto regala tre tentativi a chiunque.
-#
-# ⛔ E LO SBLOCCO NON SI CHIAMA MAI DENTRO IL GIRO DEL BAN (regola B0.3): gli
-#    sblocchi di questo banco sono in tre posti, tutti dichiarati e tutti
-#    stampati — prima di cominciare, fra un blocco di campioni e l'altro, e in
-#    fondo, dove lo sblocco non e' un attrezzo ma **la cosa provata**.
+# `RCP.md` §4.4 forbids distinguishing in the REASON between «user does not exist»
+# and «wrong password».  §4.4-bis imposes the **fixed delay of one second** so that
+# that distinction cannot be read with the **stopwatch**, and — since 10 Aug 2026,
+# by the user's decision — **the ban of the address**: three failed
+# authentications from the same address within five minutes, and that address is
+# out for twelve hours.
 #
 # ---------------------------------------------------------------------------
-# ⛔ E PERCHE' IL SERVER SI ACCENDE SU 0.0.0.0
+# ⛔ TWO LIVES OF THE SERVER, NOT TWELVE — and this is the biggest difference
 #
-# Il conto di §4.4-bis e' **per indirizzo di provenienza**.  Su `0.0.0.0` la
-# stessa macchina raggiunge il server come `127.0.0.1` e come `192.168.0.2`: due
-# chiavi diverse, due fallimenti ciascuna per blocco, e il margine sotto la
-# soglia di tre.  ⭐ E non si crede sulla parola: il registro del server scrive
-# `da=<indirizzo>:<porta>`, e il verdetto **conta quanti indirizzi distinti ha
-# visto il server** (`LEZIONI.md` §1.9: un denominatore si legge dove la cosa
-# succede).
+# The previous form of this bench turned the process off and on again **at
+# every block**, and wrote it at the top of the file: *«the only way to start
+# again from reset counters is a new process — `rcp_azzera_registro_sessioni()`
+# exists but nobody calls it»*.  ⭐ Now someone calls it: §4.4-bis wants an
+# **unblock command**, on 11 Aug 2026 it was born on the host side, and
+# `01-b8-sblocca.py` is the side of whoever commands.
 #
-# ⛔ Nessuna redirezione ATTORNO a `enter.sh` (si porterebbe via la richiesta di
-#    password di sudo) e nessuna sottoshell in secondo piano: la regola del 10
-#    agosto 2026, pagata quattro volte.
+# The two lives that remain each have a reason:
+#
+#   the first    the samples of the fixed second, and the whole ban run;
+#   the second   ⛔ **only** to prove that the ban SURVIVES the restart —
+#                invariant I7, and without that line the ban lives in memory and
+#                a package update gives three attempts to anyone.
+#
+# ⛔ AND THE UNBLOCK IS NEVER CALLED INSIDE THE BAN RUN (rule B0.3): the
+#    unblocks of this bench are in three places, all declared and all printed —
+#    before starting, between one block of samples and the next, and at the
+#    end, where the unblock is not a tool but **the thing proved**.
+#
+# ---------------------------------------------------------------------------
+# ⛔ AND WHY THE SERVER STARTS ON 0.0.0.0
+#
+# The count of §4.4-bis is **per source address**.  On `0.0.0.0` the same machine
+# reaches the server as `127.0.0.1` and as `192.168.0.2`: two different keys, two
+# failures each per block, and the margin below the threshold of three.  ⭐ And it
+# is not taken at its word: the server log writes `da=<indirizzo>:<porta>`, and
+# the verdict **counts how many distinct addresses the server saw**
+# (`LEZIONI.md` §1.9: a denominator is read where the thing happens).
+#
+# ⛔ No redirection AROUND `enter.sh` (it would take away the sudo password
+#    prompt) and no background subshell: the rule of 10 Aug 2026, paid for four
+#    times.
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
@@ -78,53 +77,52 @@ FUORI=/media/REMOTIX/src
 DENTRO=/srv/src
 SORG=$DENTRO/b2/ngtcp2/examples/http3_server_proto_codec.cc
 SORG_MAIN=$DENTRO/b2/ngtcp2/examples/server.cc
-PER_CASO=2          # terzine per blocco: 2 fallimenti per indirizzo, soglia 3
-# ⛔ E LE CREDENZIALI STANNO QUI, IN CHIARO E ACCANTO A QUELLE DEGLI ALTRI
-#    BANCHI.  Fino all'11 agosto 2026 questo banco si portava dentro il proprio
-#    valore predefinito — `prova` — mentre `01-b3-lancia.sh`, `01-b6-lancia.sh` e
-#    `01-b7-lancia.sh` usano tutti e tre `parola-di-prova`: nessuna
-#    autenticazione di B8 e' mai riuscita, e il caso «giusta» era una copia del
-#    caso «sbagliata».  ⚠ Un valore predefinito nascosto in un altro file e' un
-#    valore che nessuno confronta.
+PER_CASO=2          # triplets per block: 2 failures per address, threshold 3
+# ⛔ AND THE CREDENTIALS ARE HERE, IN CLEAR AND NEXT TO THOSE OF THE OTHER
+#    BENCHES.  Until 11 Aug 2026 this bench carried its own default value
+#    inside — `prova` — while `01-b3-lancia.sh`, `01-b6-lancia.sh` and
+#    `01-b7-lancia.sh` all three use `parola-di-prova`: no B8 authentication
+#    ever succeeded, and the «right» case was a copy of the «wrong» case.
+#    ⚠ A default value hidden in another file is a value nobody compares.
 UTENTE=prova
 PAROLA=parola-di-prova
 
 # ---------------------------------------------------------------------------
-# ⛔ LA PAROLA D'ORDINE NON PASSA PIU' DALLA RIGA DI COMANDO — difetto **D12**,
-#    curato il 12 agosto 2026.
+# ⛔ THE PASSWORD NO LONGER GOES THROUGH THE COMMAND LINE — defect **D12**,
+#    cured on 12 Aug 2026.
 #
-# ⛔ QUI LA PAROLA finiva dentro la stringa che `bash $ENTRA --root "…"` riceve
-#    come argomento: cioe' nell'`argv` di `bash`, in quello di `sudo` e in
-#    quello di `python3`.  `/proc/<pid>/cmdline` su Linux e' **leggibile da
-#    chiunque**, e un `ps` lanciato da un altro utente durante il giro la
-#    stampava per intero.  ⚠ E i banchi di questa macchina girano mentre ci
-#    lavorano altri.
+# ⛔ HERE THE PASSWORD ended up inside the string that `bash $ENTRA --root "…"`
+#    receives as an argument: that is in the `argv` of `bash`, in that of `sudo`
+#    and in that of `python3`.  `/proc/<pid>/cmdline` on Linux is **readable by
+#    anyone**, and a `ps` launched by another user during the run printed it in
+#    full.  ⚠ And the benches on this machine run while others are working on
+#    it.
 #
-# ⭐ LA STRADA E' QUELLA GIA' IN CASA (`banchi/01-b10-lancia.sh`), e non un
-#    secondo modo: un file `0600` scritto con `printf` — un **builtin** della
-#    shell, quindi nemmeno la scrittura passa per un processo con la parola in
-#    `argv` — passato al banco come `--parola-file`, e cancellato con una
-#    `trap` anche se il giro muore a meta'.
+# ⭐ THE ROAD IS THE ONE ALREADY IN THE HOUSE (`banchi/01-b10-lancia.sh`), and not
+#    a second way: a `0600` file written with `printf` — a shell **builtin**, so
+#    not even the writing goes through a process with the password in `argv` —
+#    passed to the bench as `--parola-file`, and deleted with a `trap` even if
+#    the run dies halfway.
 #
-# ⚠ Nel `cmdline` finisce il PERCORSO, non la parola, e il file e' `0600`:
-#   chi non e' noi non lo apre.
-# ⚠ E il nome porta la sigla del banco: due giri che scrivessero lo stesso
-#   file si cancellerebbero la parola a vicenda — la stessa forma che ha fatto
-#   nascere il `PREFISSO` di `01-p5-accendi.sh`.
+# ⚠ What ends up in the `cmdline` is the PATH, not the password, and the file is
+#   `0600`: whoever is not us does not open it.
+# ⚠ And the name carries the bench's tag: two runs writing the same file would
+#   delete each other's password — the same shape that gave birth to the
+#   `PREFISSO` of `01-p5-accendi.sh`.
 PAROLA_FUORI=$FUORI/tmp/b8-parola
 PAROLA_DENTRO=$DENTRO/tmp/b8-parola
 
 ripulisci_parola() { rm -f "$PAROLA_FUORI"; }
 trap ripulisci_parola EXIT
 
-# ⛔ `umask` IN UNA SOTTOSHELL — la riga che B10 ha pagato con un giro intero:
-#    `umask 077` nudo resta addosso a tutto quel che viene dopo, compresi i
-#    comandi mandati dentro il contenitore, e li' fa scrivere a root dei file
-#    che poi `nicfio` non rilegge piu'.
+# ⛔ `umask` IN A SUBSHELL — the line B10 paid for with a whole run:
+#    a bare `umask 077` stays on everything that comes after, including the
+#    commands sent inside the container, and there it makes root write files
+#    that `nicfio` can then no longer read.
 mkdir -p "$FUORI/tmp" \
 	&& ( umask 077; : > "$PAROLA_FUORI" ) \
 	&& chmod 600 "$PAROLA_FUORI" \
-	|| { printf '    ⛔ non si scrive %s: il giro non parte\n' "$PAROLA_FUORI"; exit 2; }
+	|| { printf '    ⛔ cannot write %s: the run does not start\n' "$PAROLA_FUORI"; exit 2; }
 printf '%s\n' "$PAROLA" > "$PAROLA_FUORI"
 
 log()  { printf '\n\033[1m== %s\033[0m\n' "$*"; }
@@ -132,33 +130,33 @@ ok()   { printf '    \033[1;32mOK\033[0m  %s\n' "$*"; }
 ko()   { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf()  { printf '    --  %s\n' "$*"; }
 
-# ⛔ Il bersaglio: una forma sola per i quattro banchi, in un file solo.
+# ⛔ The target: a single shape for the four benches, in a single file.
 SIGLA=b8
 # shellcheck source=01-b0-bersaglio.sh
 . "$FUORI/01-b0-bersaglio.sh"
 
 # ---------------------------------------------------------------------------
-# ⛔⭐ LA SCENA SI PUO' SPOSTARE, E SERVE A UNA COSA SOLA: FAR GIRARE QUESTO
-#     BANCO SOTTO B12 SENZA CHE I DUE SI PESTINO I PIEDI — 11 agosto 2026.
+# ⛔⭐ THE SCENE CAN BE MOVED, AND IT SERVES ONE THING ONLY: RUNNING THIS
+#     BENCH UNDER B12 WITHOUT THE TWO STEPPING ON EACH OTHER'S TOES — 11 Aug 2026.
 #
-# `01-b12-lancia.sh` adesso certifica B8 **chiamando questo file** invece di
-# riscrivere a mano la sua sequenza (era la radice del suo giro sano non verde:
-# gli mancavano le due vite, la pagina e lo sblocco su un ban vero).  ⛔ Ma un
-# giro di certificazione non puo' prendersi la porta 7447 e il file dei ban del
-# bersaglio, che sono di chiunque altro stia misurando in quel momento.
+# `01-b12-lancia.sh` now certifies B8 **by calling this file** instead of
+# rewriting its sequence by hand (it was the root of its healthy run not being
+# green: it lacked the two lives, the page and the unblock on a real ban).  ⛔ But
+# a certification run cannot take port 7447 and the target's ban file, which
+# belong to anyone else measuring at that moment.
 #
-# ⚠ E LE TRE VARIABILI SONO SENZA PREDEFINITO SPOSTATO: se non si passano, la
-#   scena resta ESATTAMENTE quella del profilo (`01-b0-bersaglio.sh`), cioe' un
-#   giro a mano non cambia di un byte.  Un predefinito diverso qui sarebbe il
-#   modo piu' comodo di misurare su una scena che nessuno ha dichiarato.
-# ⛔ E si STAMPA, sempre: una scena spostata in silenzio e' un numero che
-#    domani nessuno sa piu' dove e' stato preso.
+# ⚠ AND THE THREE VARIABLES HAVE NO MOVED DEFAULT: if they are not passed, the
+#   scene stays EXACTLY that of the profile (`01-b0-bersaglio.sh`), that is a
+#   run by hand does not change by one byte.  A different default here would be
+#   the most convenient way of measuring on a scene nobody declared.
+# ⛔ And it is PRINTED, always: a scene moved silently is a number that tomorrow
+#    nobody knows any more where it was taken.
 if [ -n "${B8_PORTA:-}${B8_BAN:-}${B8_COMANDO:-}" ]; then
 	B_PORTA=${B8_PORTA:-$B_PORTA}
 	B_BAN=${B8_BAN:-$B_BAN}
 	B_COMANDO=${B8_COMANDO:-$B_COMANDO}
-	printf '\n    --  ⚠ SCENA SPOSTATA (B8_PORTA/B8_BAN/B8_COMANDO):\n'
-	printf '        porta %s · ban %s · comando %s\n' "$B_PORTA" "$B_BAN" "$B_COMANDO"
+	printf '\n    --  ⚠ SCENE MOVED (B8_PORTA/B8_BAN/B8_COMANDO):\n'
+	printf '        port %s · ban %s · command %s\n' "$B_PORTA" "$B_BAN" "$B_COMANDO"
 fi
 PORTA=$B_PORTA
 LEGAME=$B_LEGAME
@@ -170,9 +168,9 @@ GIRO=$B_GIRO
 AZIONE=${1:-10}
 
 # ---------------------------------------------------------------------------
-log "Credenziali per il contenitore"
-bash "$ENTRA" --root "true" || { ko "non si entra nel contenitore"; exit 2; }
-ok "sudo validato"
+log "Credentials for the container"
+bash "$ENTRA" --root "true" || { ko "cannot enter the container"; exit 2; }
+ok "sudo validated"
 
 if [ "$AZIONE" = previsione ]; then
 	bash "$ENTRA" --root "python3 $DENTRO/01-b8-cronometro.py --bersaglio $B_NOME --porta $PORTA --previsione"
@@ -180,122 +178,121 @@ if [ "$AZIONE" = previsione ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# ⛔ `costruisci` — e sta qui perche' l'11 agosto 2026 l'innesto e' cambiato: il
-#    ban lato ospite vive in `server.cc`, che fino a ieri questo innesto non
-#    toccava.  Un binario di ieri non ha ne' la pagina in TCP ne' il comando di
-#    sblocco, e il sintomo sarebbe «il banco non riesce a sbloccare» — cioe' il
-#    rosso sull'imputato sbagliato.
+# ⛔ `costruisci` — and it is here because on 11 Aug 2026 the graft changed: the
+#    host-side ban lives in `server.cc`, which until yesterday this graft did
+#    not touch.  A binary from yesterday has neither the TCP page nor the
+#    unblock command, and the symptom would be «the bench cannot unblock» — that
+#    is the red on the wrong defendant.
 if [ "$AZIONE" = costruisci ] && [ "$B_NOME" != innesto ]; then
-	ko "⛔ «costruisci» esiste solo per l'innesto: il prodotto non lo ricompila"
-	ko "   questo banco.  ⛔ Un banco che ricompila quel che misura si toglie il"
-	ko "   testimone indipendente.  Si rifa' con:"
+	ko "⛔ «costruisci» exists only for the graft: the product is not recompiled"
+	ko "   by this bench.  ⛔ A bench that recompiles what it measures removes its own"
+	ko "   independent witness.  It is redone with:"
 	ko "     bash $ENTRA --root \"bash $DENTRO/remotix/costruisci.sh\""
 	exit 2
 fi
 if [ "$AZIONE" = costruisci ]; then
-	log "1. Gli innesti si tolgono e si rimettono"
-	inf "⛔ applicarne uno sopra l'altro lascerebbe due copie dello stesso"
-	inf "   codice, e la seconda non si vede"
+	log "1. The grafts are removed and put back"
+	inf "⛔ applying one on top of the other would leave two copies of the same"
+	inf "   code, and the second one cannot be seen"
 	bash "$ENTRA" --root "python3 $DENTRO/01-b3-rcp-innesta.py --togli > /dev/null"
 	bash "$ENTRA" --root "python3 $DENTRO/01-b2-ngtcp2-wt-innesta.py --togli > /dev/null"
 	bash "$ENTRA" --root "python3 $DENTRO/01-b2-ngtcp2-wt-innesta.py" \
 		| grep -E "appiglio|righe|CODICE" | sed 's/^/        /'
 	bash "$ENTRA" --root "python3 $DENTRO/01-b3-rcp-innesta.py" \
 		| grep -E "appiglio|NO |file nostri" | sed 's/^/        /'
-	# ⛔ E si CONTA l'innesto nei due file, prima di compilare: un innesto che
-	#    non trova un appiglio stampa «NO» e va avanti.
+	# ⛔ And the graft is COUNTED in the two files, before compiling: a graft that
+	#    does not find an anchor prints «NO» and goes on.
 	QUANTI=$(bash "$ENTRA" --root "grep -c 'REMOTIX B3' $SORG_MAIN" | tr -cd '0-9')
 	if [ "${QUANTI:-0}" -lt 5 ]; then
-		ko "⛔ il ban lato ospite NON e' in server.cc (righe «REMOTIX B3»: ${QUANTI:-0})"
-		ko "   si compilerebbe un server senza pagina in TCP e senza comando di"
-		ko "   sblocco, e B8 darebbe rosso su cose che il server non ha mai avuto"
+		ko "⛔ the host-side ban is NOT in server.cc («REMOTIX B3» lines: ${QUANTI:-0})"
+		ko "   one would compile a server without the TCP page and without the unblock"
+		ko "   command, and B8 would give red on things the server never had"
 		exit 3
 	fi
-	ok "il ban lato ospite e' in server.cc ($QUANTI righe «REMOTIX B3»)"
-	log "2. Si compila"
+	ok "the host-side ban is in server.cc ($QUANTI «REMOTIX B3» lines)"
+	log "2. It is compiled"
 	rm -f "$FUORI/b8-compila.log"
 	if ! bash "$ENTRA" --root \
 		"ninja -C $DENTRO/b2/ngtcp2/build bsslserver > $DENTRO/b8-compila.log 2>&1"; then
-		ko "la compilazione e' fallita:"
+		ko "the build failed:"
 		if [ -f "$FUORI/b8-compila.log" ]; then
 			tail -30 "$FUORI/b8-compila.log" | sed 's/^/        /'
 		else
-			ko "   ⛔ e il registro di compilazione NON ESISTE: non e' ninja che"
-			ko "      ha taciuto, e' che non si e' arrivati a lanciarlo"
+			ko "   ⛔ and the build log DOES NOT EXIST: it is not ninja that"
+			ko "      kept quiet, it is that it never got as far as launching it"
 		fi
 		exit 3
 	fi
-	ok "compilato — adesso rilancia «01-b8-lancia.sh <blocchi>»"
+	ok "compiled — now run «01-b8-lancia.sh <blocks>» again"
 	exit 0
 fi
 
 case "$AZIONE" in
 	''|*[!0-9]*)
-		ko "argomento sconosciuto: «$AZIONE»  (un numero | previsione | costruisci)"
+		ko "unknown argument: «$AZIONE»  (a number | previsione | costruisci)"
 		exit 2 ;;
 esac
 BLOCCHI=$AZIONE
 if [ "$BLOCCHI" -lt 1 ]; then
-	ko "zero blocchi: non c'e' niente da misurare, e non e' «tutto passato»"
+	ko "zero blocks: there is nothing to measure, and it is not «everything passed»"
 	exit 2
 fi
 
 # ---------------------------------------------------------------------------
-# ⛔ LO STATO INIZIALE SI DICHIARA E SI VERIFICA — B0.1.
+# ⛔ THE INITIAL STATE IS DECLARED AND VERIFIED — B0.1.
 #
-#    ⛔ E qui lo stato che sopravvive di piu' e' IL FILE DEI BAN: dal 10 agosto
-#       2026 sta su disco, quindi sopravvive anche al riavvio del server (B0.2).
-#       Un ban di ieri renderebbe rosso tutto quel che segue, e il rosso
-#       finirebbe sull'imputato sbagliato — quindi il file si BUTTA, e lo si
-#       dice.  ⚠ E' un banco: in produzione buttare quel file e' togliere la
-#       protezione a tutti.
-log "1. Lo stato iniziale"
+#    ⛔ And here the state that survives longest is THE BAN FILE: since 10 Aug
+#       2026 it is on disk, so it survives even the server restart (B0.2).
+#       A ban from yesterday would turn red everything that follows, and the red
+#       would end up on the wrong defendant — so the file is THROWN AWAY, and it
+#       is said.  ⚠ It is a bench: in production throwing away that file is
+#       removing the protection from everyone.
+log "1. The initial state"
 rm -f "$B_ESITI_FUORI" "$FUORI/b8-$B_NOME-server.log" "$FUORI/b8-stato.txt"
 bersaglio_butta_il_ban
-inf "giro: $GIRO  ·  bersaglio: $B_NOME  ·  binario md5 ${B_MD5:-ignota}"
-inf "blocchi: $BLOCCHI  ·  campioni tenuti per caso: $((BLOCCHI * PER_CASO))"
+inf "run: $GIRO  ·  target: $B_NOME  ·  binary md5 ${B_MD5:-unknown}"
+inf "blocks: $BLOCCHI  ·  samples kept per case: $((BLOCCHI * PER_CASO))"
 
-inf "⚠ vite del server: 2 (una per i campioni e il ban, una per la persistenza)"
-inf "⚠ durata dell'ordine di $(( BLOCCHI * 6 * 4 / 60 + 2 ))–$(( BLOCCHI * 6 * 6 / 60 + 4 )) minuti"
-inf "⚠ e fa $((BLOCCHI * 4 + 9)) autenticazioni FALLITE sull'utente di prova: se un"
-inf "  giorno la pila PAM avesse un pam_faillock, quell'utente si bloccherebbe"
+inf "⚠ server lives: 2 (one for the samples and the ban, one for persistence)"
+inf "⚠ duration of the order of $(( BLOCCHI * 6 * 4 / 60 + 2 ))–$(( BLOCCHI * 6 * 6 / 60 + 4 )) minutes"
+inf "⚠ and it does $((BLOCCHI * 4 + 9)) FAILED authentications on the test user: if one"
+inf "  day the PAM stack had a pam_faillock, that user would get locked"
 
-# ⛔ CHE SERVER E' QUELLO CHE STO PER ACCENDERE — e sull'innesto i file sono DUE.
-#    Un binario senza l'innesto di RCP non risponderebbe a `CIAO`; uno senza il
-#    ban lato ospite non servirebbe nessuna pagina in TCP e non aprirebbe nessun
-#    socket di comando.  ⚠ Un binario piu' VECCHIO del sorgente innestato e' un
-#    binario che quell'innesto non ce l'ha (`LEZIONI.md` §1.9, ottava veste), e
-#    `bersaglio_pronto` lo verifica per tutt'e due i bersagli prendendo anche
-#    l'impronta md5.
-# ⛔⭐ E C'E' UN CASO IN CUI RIMETTERE GLI INNESTI E RICOMPILARE E' IL DIFETTO,
-#     NON LA CURA — 11 agosto 2026, ed e' il motivo per cui B6 stava in catalogo
-#     come «non eseguibile».
+# ⛔ WHICH SERVER IT IS THAT I AM ABOUT TO START — and on the graft the files are TWO.
+#    A binary without the RCP graft would not answer `CIAO`; one without the
+#    host-side ban would serve no TCP page and would open no command socket.
+#    ⚠ A binary OLDER than the grafted source is a binary that does not have
+#    that graft (`LEZIONI.md` §1.9, eighth guise), and `bersaglio_pronto`
+#    verifies it for both targets also taking the md5 fingerprint.
+# ⛔⭐ AND THERE IS A CASE IN WHICH PUTTING THE GRAFTS BACK AND RECOMPILING IS THE
+#     DEFECT, NOT THE CURE — 11 Aug 2026, and it is the reason B6 was in the
+#     catalogue as «not runnable».
 #
-# `bersaglio_pronto`, sull'innesto, TOGLIE e rimette i due innesti (che
-# ricopiano `rcp/rcp.c` dentro `examples/`) e poi compila.  ⛔ Sotto B12, al
-# passo 2/3, il guasto vive proprio in `examples/rcp.c`: rimettere gli innesti
-# lo cancellerebbe, la compilazione produrrebbe un binario SANO, e il banco
-# resterebbe verde.  ⇒ La certificazione direbbe «B8 non vede il guasto» di un
-# guasto che non c'era piu' — un falso rosso che accusa il banco al posto
-# dell'orchestratore.
+# `bersaglio_pronto`, on the graft, REMOVES and puts back the two grafts (which
+# recopy `rcp/rcp.c` into `examples/`) and then compiles.  ⛔ Under B12, at
+# step 2/3, the fault lives precisely in `examples/rcp.c`: putting the grafts back
+# would delete it, the build would produce a HEALTHY binary, and the bench would
+# stay green.  ⇒ The certification would say «B8 does not see the fault» of a
+# fault that was no longer there — a false red that accuses the bench instead of
+# the orchestrator.
 #
-# ⭐ Con `B8_NON_RICOSTRUIRE=1` si misura il binario CHE C'E', e non si perde
-#    niente di quel che conta: la verifica vera resta tutta —
-#    `b0_binario_e_sorgenti` prende l'impronta md5 e ⛔ **rifiuta un binario
-#    piu' vecchio di un sorgente**, che e' precisamente la trappola di R12-A.6.
-#    ⚠ E' la stessa regola che questo file applica gia' al prodotto: «un banco
-#      che ricompila quel che misura si toglie il testimone indipendente».
+# ⭐ With `B8_NON_RICOSTRUIRE=1` the binary THAT IS THERE is measured, and nothing
+#    that counts is lost: the real verification stays whole —
+#    `b0_binario_e_sorgenti` takes the md5 fingerprint and ⛔ **refuses a binary
+#    older than a source**, which is precisely the trap of R12-A.6.
+#    ⚠ It is the same rule this file already applies to the product: «a bench
+#      that recompiles what it measures removes its own independent witness».
 if [ "${B8_NON_RICOSTRUIRE:-0}" = 1 ]; then
-	log "1-ter. ⚠ Non si rimettono gli innesti e non si compila"
-	inf "⛔ B8_NON_RICOSTRUIRE=1: si misura il binario che c'e' — sotto B12"
-	inf "   rimettere gli innesti cancellerebbe il guasto da examples/rcp.c"
-	inf "   e il banco sarebbe verde su un server che il guasto non ce l'ha"
-	inf "⚠ resta la verifica che conta: md5 del binario, e il binario NON"
-	inf "  dev'essere piu' vecchio di nessun sorgente"
+	log "1-ter. ⚠ The grafts are not put back and nothing is compiled"
+	inf "⛔ B8_NON_RICOSTRUIRE=1: the binary that is there is measured — under B12"
+	inf "   putting the grafts back would delete the fault from examples/rcp.c"
+	inf "   and the bench would be green on a server that does not have the fault"
+	inf "⚠ the check that counts stays: md5 of the binary, and the binary must NOT"
+	inf "  be older than any source"
 	if [ "$B_NOME" = innesto ]; then
-		# ⚠ Il glob e' lo stesso di `bersaglio_pronto`: e' una copia, ed e'
-		#   dichiarata.  Il giorno in cui si aggiunge un sorgente all'innesto
-		#   va aggiunto in tutt'e due i posti.
+		# ⚠ The glob is the same as `bersaglio_pronto`: it is a copy, and it is
+		#   declared.  The day a source is added to the graft it must be added in
+		#   both places.
 		b0_binario_e_sorgenti \
 			"$DENTRO/b2/ngtcp2/examples/*.cc $DENTRO/b2/ngtcp2/examples/*.c $DENTRO/rcp/rcp.c" \
 			|| exit 3
@@ -306,221 +303,221 @@ else
 	bersaglio_pronto || exit 3
 fi
 
-# ⛔ E sotto B12 il conto delle righe «REMOTIX B3» qui sotto resta, ed e' giusto
-#    che resti: dice che il server che sto per accendere ha lo strato RCP e il
-#    ban lato ospite.  Il guasto di B12 non tocca quelle righe.
+# ⛔ And under B12 the count of the «REMOTIX B3» lines below stays, and it is right
+#    that it stays: it says the server I am about to start has the RCP layer and
+#    the host-side ban.  The B12 fault does not touch those lines.
 if [ "$B_NOME" = innesto ]; then
 	bash "$ENTRA" --root \
 		"{ grep -c 'REMOTIX B3' $SORG; grep -c 'REMOTIX B3' $SORG_MAIN; } > $DENTRO/b8-stato.txt 2>&1"
 	if [ ! -f "$FUORI/b8-stato.txt" ]; then
-		ko "non ho potuto guardare lo stato del server: il file non c'e'"
+		ko "I could not look at the state of the server: the file is not there"
 		exit 2
 	fi
 	INNESTO=$(sed -n 1p "$FUORI/b8-stato.txt")
 	OSPITE=$(sed -n 2p "$FUORI/b8-stato.txt")
 	case "$INNESTO$OSPITE" in
-		''|*[!0-9]*) ko "non ho potuto contare l'innesto di RCP nei sorgenti:"
+		''|*[!0-9]*) ko "I could not count the RCP graft in the sources:"
 		             sed 's/^/        /' "$FUORI/b8-stato.txt"; exit 2 ;;
 	esac
 	if [ "$INNESTO" -lt 3 ]; then
-		ko "⛔ l'innesto di RCP NON e' nel codec ($INNESTO righe «REMOTIX B3»)"
-		ko "   questo server non parla RCP: «01-b8-lancia.sh costruisci»"
+		ko "⛔ the RCP graft is NOT in the codec ($INNESTO «REMOTIX B3» lines)"
+		ko "   this server does not speak RCP: «01-b8-lancia.sh costruisci»"
 		exit 3
 	fi
 	if [ "$OSPITE" -lt 5 ]; then
-		ko "⛔ il BAN LATO OSPITE non e' in server.cc ($OSPITE righe)"
-		ko "   niente pagina in TCP e niente comando di sblocco:"
+		ko "⛔ the HOST-SIDE BAN is not in server.cc ($OSPITE lines)"
+		ko "   no TCP page and no unblock command:"
 		ko "   «BERSAGLIO=innesto ... 01-b8-lancia.sh costruisci»"
 		exit 3
 	fi
-	ok "l'innesto e' nei due file (codec $INNESTO righe · ospite $OSPITE)"
+	ok "the graft is in the two files (codec $INNESTO lines · host $OSPITE)"
 else
-	# ⭐ Sul prodotto il pezzo equivalente e' il socket di comando, e si MISURA
-	#    nel sorgente prima di accendere: senza, ogni sblocco di questo giro
-	#    uscirebbe 3 e il sintomo sarebbe «il banco non riesce a sbloccare»,
-	#    cioe' il rosso sull'imputato sbagliato.
-	# ⛔ E questa e' «la meta' che nessuno ha fatto» di B0.3: puntare
-	#    `01-b8-sblocca.py` al prodotto, che oggi non e' mai stato provato.
+	# ⭐ On the product the equivalent piece is the command socket, and it is
+	#    MEASURED in the source before starting: without it, every unblock of this
+	#    run would exit 3 and the symptom would be «the bench cannot unblock»,
+	#    that is the red on the wrong defendant.
+	# ⛔ And this is «the half nobody did» of B0.3: pointing `01-b8-sblocca.py` at
+	#    the product, which has never been tried as of today.
 	QUANTI=$(bash "$ENTRA" --root "grep -c 'SBLOCCA ' $DENTRO/remotix/comando.c" | tr -cd '0-9')
 	if [ "${QUANTI:-0}" -ge 1 ]; then
-		ok "il comando di sblocco e' in comando.c ($QUANTI righe «SBLOCCA »)"
-		inf "⛔ e questa e' la PRIMA volta che 01-b8-sblocca.py viene puntato al"
-		inf "   prodotto: se il PING piu' sotto non risponde, il primo sospetto"
-		inf "   e' su questa cucitura, non sul ban"
+		ok "the unblock command is in comando.c ($QUANTI «SBLOCCA » lines)"
+		inf "⛔ and this is the FIRST time 01-b8-sblocca.py is pointed at the"
+		inf "   product: if the PING further down does not answer, the first suspicion"
+		inf "   is on this seam, not on the ban"
 	else
-		ko "⛔ «SBLOCCA » non compare in comando.c: questo prodotto non ha il"
-		ko "   comando di sblocco, e B0.3 resterebbe senza il suo strumento"
+		ko "⛔ «SBLOCCA » does not appear in comando.c: this product does not have the"
+		ko "   unblock command, and B0.3 would stay without its tool"
 		exit 3
 	fi
 fi
 
 # ---------------------------------------------------------------------------
-# ⛔ 1-bis. LA CERTIFICAZIONE CHE IL FILO NON PUO' FARE, E SI FA **PRIMA**.
+# ⛔ 1-bis. THE CERTIFICATION THE WIRE CANNOT DO, AND IT IS DONE **FIRST**.
 #
-# `01-b8-prova-ban.c` prova i tre pezzi del ban che sul filo si vedrebbero solo
-# aspettando dodici ore, riavviando una macchina o rompendo i permessi di un
-# file che gira da root — dove root i permessi li ignora.
+# `01-b8-prova-ban.c` tests the three pieces of the ban that on the wire would be
+# seen only by waiting twelve hours, rebooting a machine or breaking the
+# permissions of a file run by root — where root ignores permissions.
 #
-# ⛔ RILIEVO A20, 11 agosto 2026: fino a stanotte `grep -rn "01-b8-prova-ban"`
-#    su tutto l'albero non trovava **nessun chiamante**.  Una certificazione che
-#    nessuno esegue non e' una certificazione: e' un file che dice di essere una
-#    prova.  Adesso la chiama questo giro, e il suo stato d'uscita conta.
+# ⛔ FINDING A20, 11 Aug 2026: until tonight `grep -rn "01-b8-prova-ban"` on the
+#    whole tree found **no caller**.  A certification that nobody runs is not a
+#    certification: it is a file that says it is a test.  Now this run calls it,
+#    and its exit status counts.
 #
-# ⛔ E si esegue da UTENTE NORMALE, non dentro il contenitore: la sezione 4 —
-#    «zero ban» contro «non ho potuto leggere» — da root sarebbe verde per
-#    costruzione, ed e' precisamente il controllo piu' vuoto di tutti.  Il file
-#    lo sa e si fa rosso da se' se lo si lancia da root.
-log "1-bis. ⛔ La certificazione fuori dal filo (LEZIONI.md §1.2: PRIMA)"
-# ⛔ DOVE GIRA, e la distinzione e' stata pagata l'11 agosto 2026.
+# ⛔ And it is run as a NORMAL USER, not inside the container: section 4 —
+#    «zero bans» against «I could not read» — as root would be green by
+#    construction, and it is precisely the emptiest check of all.  The file
+#    knows it and turns itself red if launched as root.
+log "1-bis. ⛔ The certification off the wire (LEZIONI.md §1.2: FIRST)"
+# ⛔ WHERE IT RUNS, and the distinction was paid for on 11 Aug 2026.
 #
-#    Questo passo girava sull'OSPITE, e il commento qui sopra diceva «fuori dal
-#    contenitore».  ⛔ Ma il vincolo vero e' «da UTENTE NORMALE» — la sezione 4
-#    distingue «zero ban» da «non ho potuto leggere», e da root sarebbe verde
-#    per costruzione — mentre «fuori dal contenitore» era solo il posto in cui
-#    capitava di essere.
+#    This step ran on the HOST, and the comment above said «outside the
+#    container».  ⛔ But the real constraint is «as a NORMAL USER» — section 4
+#    tells «zero bans» from «I could not read», and as root it would be green by
+#    construction — while «outside the container» was only the place where it
+#    happened to be.
 #
-#    E sull'ospite `gcc` NON C'E': `[M]` 11 agosto 2026, il giro si fermava qui
-#    con uscita 3.  ⭐ Il banco lo dichiarava bene — «non e' passata: e' un pezzo
-#    di B8 che nessuno ha provato» — ma restava non eseguito.
+#    And on the host `gcc` IS NOT THERE: `[M]` 11 Aug 2026, the run stopped here
+#    with exit 3.  ⭐ The bench declared it well — «it did not pass: it is a piece
+#    of B8 nobody tested» — but it stayed not run.
 #
-# ⭐ La cura tiene tutt'e due i vincoli: dentro il contenitore, dove gcc c'e',
-#    e SENZA `--root`, dove si e' utente normale (id 1000).  Il file si fa rosso
-#    da se' se lo si lancia da root, quindi il vincolo resta sorvegliato da lui
-#    e non da questo commento.
-# ⛔⭐ E QUI C'ERA LA TRAPPOLA CHE QUESTO STESSO FILE VIETA IN TESTA — misurata
-#     l'11 agosto 2026, sera, alla prima esecuzione non interattiva.
+# ⭐ The cure keeps both constraints: inside the container, where gcc is there,
+#    and WITHOUT `--root`, where one is a normal user (id 1000).  The file turns
+#    itself red if launched as root, so the constraint stays watched over by it
+#    and not by this comment.
+# ⛔⭐ AND HERE THERE WAS THE TRAP THIS VERY FILE FORBIDS AT THE TOP — measured
+#     on 11 Aug 2026, evening, at the first non-interactive run.
 #
-# La riga era `bash "$ENTRA" "gcc …" 2>"$FUORI/b8-prova-ban.log"`: una
-# redirezione **ATTORNO** a `enter.sh`.  ⛔ `enter.sh` chiama `sudo -v -S -p
-# Password`, che stampa la richiesta su **stderr** e legge da stdin: con stderr
-# dirottato su file, la richiesta non arriva a chi guarda, ⇒ nessuno risponde,
-# ⇒ il giro resta appeso per sempre su una domanda che non si vede.
-# `[M]` `ps` sul server: `sudo -v -S -p Password sudo:` fermo, e il banco fermo
-# con lui al passo 1-bis.
+# The line was `bash "$ENTRA" "gcc …" 2>"$FUORI/b8-prova-ban.log"`: a
+# redirection **AROUND** `enter.sh`.  ⛔ `enter.sh` calls `sudo -v -S -p
+# Password`, which prints the prompt on **stderr** and reads from stdin: with
+# stderr diverted to a file, the prompt does not reach whoever is watching, ⇒
+# nobody answers, ⇒ the run hangs forever on a question that cannot be seen.
+# `[M]` `ps` on the server: `sudo -v -S -p Password sudo:` stuck, and the bench
+# stuck with it at step 1-bis.
 #
-# ⚠ E NON SI ERA MAI VISTO perche' da un terminale vero la richiesta era gia'
-#   stata soddisfatta dalla prima riga del banco, e il timestamp di sudo copriva
-#   il resto del giro: il difetto compare solo quando quel credito e' scaduto —
-#   cioe' sui giri lunghi e su quelli lanciati da un'altra macchina.  ⛔ E' la
-#   quarta veste della stessa trappola, dentro il file che la descrive.
-# ⭐ La cura e' quella scritta in cima a `01-b12-lancia.sh`: la redirezione va
-#    DENTRO le virgolette, e il file lo si legge dopo.
+# ⚠ AND IT HAD NEVER BEEN SEEN because from a real terminal the prompt had
+#   already been satisfied by the first line of the bench, and sudo's timestamp
+#   covered the rest of the run: the defect appears only when that credit has
+#   expired — that is on long runs and on those launched from another machine.
+#   ⛔ It is the fourth guise of the same trap, inside the file that describes it.
+# ⭐ The cure is the one written at the top of `01-b12-lancia.sh`: the
+#    redirection goes INSIDE the quotes, and the file is read afterwards.
 PB=/srv/src/tmp/b8-prova-ban.$$
 rm -f "$FUORI/b8-prova-ban.log"
 if ! bash "$ENTRA" "gcc -std=c11 -Wall -Wextra -I$DENTRO/rcp -o $PB \
 	$DENTRO/01-b8-prova-ban.c $DENTRO/rcp/rcp.c > $DENTRO/b8-prova-ban.log 2>&1"; then
-	ko "⛔ 01-b8-prova-ban.c non compila contro $DENTRO/rcp/rcp.c:"
+	ko "⛔ 01-b8-prova-ban.c does not compile against $DENTRO/rcp/rcp.c:"
 	tail -20 "$FUORI/b8-prova-ban.log" | sed 's/^/        /'
-	ko "   ⚠ e «non compila» NON e' «passa»: l'ottava veste di LEZIONI.md §1.9"
-	ko "   dice di guardare l'esito del costruttore, non la presenza del file"
+	ko "   ⚠ and «does not compile» is NOT «passes»: the eighth guise of LEZIONI.md §1.9"
+	ko "   says to look at the builder's outcome, not at the presence of the file"
 	exit 3
 fi
 bash "$ENTRA" "$PB"
 PROVA_BAN=$?
-# ⛔ E anche qui la redirezione va DENTRO: `>/dev/null 2>&1` attorno a
-#    `enter.sh` nasconde la richiesta di password esattamente come sopra.
+# ⛔ And here too the redirection goes INSIDE: `>/dev/null 2>&1` around
+#    `enter.sh` hides the password prompt exactly as above.
 bash "$ENTRA" "rm -f $PB > /dev/null 2>&1"
 if [ "$PROVA_BAN" -ne 0 ]; then
-	ko "⛔ la certificazione fuori dal filo NON passa (uscita $PROVA_BAN):"
-	ko "   finche' e' rossa, i tre pezzi del ban che il filo non vede non sono"
-	ko "   provati da niente, e il verde del giro qui sotto vale meno"
+	ko "⛔ the certification off the wire does NOT pass (exit $PROVA_BAN):"
+	ko "   as long as it is red, the three pieces of the ban the wire does not see are"
+	ko "   proved by nothing, and the green of the run below is worth less"
 	exit 3
 fi
-ok "certificazione fuori dal filo: passata (il denominatore lo stampa lei)"
+ok "certification off the wire: passed (it prints the denominator itself)"
 
 # ---------------------------------------------------------------------------
-# ⛔ E la previsione si stampa PRIMA dei numeri, o non e' una previsione.
-log "2. Che cosa mi aspetto, prima di misurare"
-# ⛔ RILIEVO R12-A.33, 11 agosto 2026, trovato da `01-b0-chiamate.py`.
-#    Questa riga chiamava il cronometro **senza `--bersaglio` e senza
-#    `--porta`**, che sono obbligatori da quando esiste il profilo condiviso.
-#    `[M]` sul server: *«error: the following arguments are required: --porta,
-#    --bersaglio»*.  ⇒ La previsione **non e' mai stata stampata**, e il passo
-#    che questo banco chiama «prima di misurare» era, da giorni, una riga di
-#    uso di argparse.  ⚠ E non faceva fallire niente: il giro proseguiva.
-#    ⭐ La riga giusta esisteva gia' venti righe piu' su (l'azione `previsione`).
+# ⛔ And the prediction is printed BEFORE the numbers, or it is not a prediction.
+log "2. What I expect, before measuring"
+# ⛔ FINDING R12-A.33, 11 Aug 2026, found by `01-b0-chiamate.py`.
+#    This line called the stopwatch **without `--bersaglio` and without
+#    `--porta`**, which are mandatory since the shared profile exists.
+#    `[M]` on the server: *«error: the following arguments are required: --porta,
+#    --bersaglio»*.  ⇒ The prediction **was never printed**, and the step this
+#    bench calls «before measuring» had been, for days, an argparse usage line.
+#    ⚠ And it made nothing fail: the run went on.
+#    ⭐ The right line already existed twenty lines further up (the `previsione` action).
 bash "$ENTRA" --root "python3 $DENTRO/01-b8-cronometro.py --bersaglio $B_NOME --porta $PORTA --previsione" \
-	|| ko "⚠ la previsione non si e' stampata: il giro prosegue, ma senza"
+	|| ko "⚠ the prediction was not printed: the run goes on, but without it"
 
 # ---------------------------------------------------------------------------
-# ⛔ `bersaglio_opzioni_python` porta con se' --bersaglio, --porta, --uscita,
-#    --md5 e --giro: gli stessi cinque di B5, B6 e B7, in un posto solo.
+# ⛔ `bersaglio_opzioni_python` carries with it --bersaglio, --porta, --uscita,
+#    --md5 and --giro: the same five as B5, B6 and B7, in a single place.
 CRONO="python3 -u $DENTRO/01-b8-cronometro.py $(bersaglio_opzioni_python) \
 	--indirizzi $INDIRIZZI --comando $COMANDO \
 	--utente $UTENTE --parola-file $PAROLA_DENTRO"
 
-ACCENDI() # $1 = perche'
+ACCENDI() # $1 = why
 {
-	# ⛔ L'accensione sta in `bersaglio_accendi`: passa `--ban-file` e
-	#    `--comando-socket` nella sintassi che quel bersaglio capisce
-	#    (`--ban-file=X` per l'innesto, `--ban-file X` per il prodotto),
-	#    controlla la porta prima, e rifiuta un tetto che non sa dare.
+	# ⛔ The start lives in `bersaglio_accendi`: it passes `--ban-file` and
+	#    `--comando-socket` in the syntax that target understands
+	#    (`--ban-file=X` for the graft, `--ban-file X` for the product),
+	#    checks the port first, and refuses a cap it cannot give.
 	if ! bersaglio_accendi "$(printf '%s' "$1" | tr ' ' '-')" "$B_IDLE_LUNGO"; then
-		ko "il server non si e' acceso per «$1»"
+		ko "the server did not start for «$1»"
 		if [ "$B_NOME" = prodotto ]; then
-			ko "   ⛔ e su questo bersaglio «non parte» ha una causa in piu':"
-			ko "   se «$BAN_FILE» c'e' e non si legge, il prodotto RIFIUTA di"
-			ko "   partire apposta (src/main.c).  Non e' «zero ban»."
+			ko "   ⛔ and on this target «does not start» has one more cause:"
+			ko "   if «$BAN_FILE» is there and cannot be read, the product REFUSES to"
+			ko "   start on purpose (src/main.c).  It is not «zero bans»."
 		fi
 		return 4
 	fi
 	PID=$B_PID
-	# ⛔ E SUBITO L'IMPRONTA: e' il server che ho dichiarato?
+	# ⛔ AND RIGHT AWAY THE FINGERPRINT: is it the server I declared?
 	bersaglio_impronta || return 4
-	# ⛔ E si guarda che cosa ha DETTO all'avvio sul ban: «zero ban» e «non ho
-	#    potuto leggere il file» sono due fatti diversi, e la riga che li
-	#    distingue e' l'unica prova che la persistenza e' accesa.
+	# ⛔ And one looks at what it SAID at start-up about the ban: «zero bans» and
+	#    «I could not read the file» are two different facts, and the line that
+	#    tells them apart is the only proof that persistence is on.
 	#
-	# ⛔ RILIEVO A21, 11 agosto 2026: fino a stanotte questa parte STAMPAVA e
-	#    non confrontava niente — «si stampa *e* si confronta, e lo stato
-	#    d'uscita e' quello del confronto» (B0.4) — e se il registro non fosse
-	#    esistito `grep` avrebbe scritto su stderr e lo script sarebbe
-	#    proseguito senza una parola.  Cioe' l'accensione dichiarava, nel
-	#    commento due righe piu' su, un controllo che non faceva: le due cose
-	#    che quel commento dice di distinguere restavano indistinte proprio li'.
-	#    ⚠ Il verdetto poi le guarda (`leggi_registro`), ma chi legge il giro
-	#      dal vivo crede a questa riga, ed e' un'ora prima.
-	inf "quel che ha detto del ban all'avvio (stampato E confrontato — B0.4):"
+	# ⛔ FINDING A21, 11 Aug 2026: until tonight this part PRINTED and compared
+	#    nothing — «it is printed *and* compared, and the exit status is that of
+	#    the comparison» (B0.4) — and if the log had not existed `grep` would
+	#    have written on stderr and the script would have gone on without a word.
+	#    That is, the start declared, in the comment two lines above, a check it
+	#    did not do: the two things that comment says it tells apart stayed
+	#    indistinct precisely there.
+	#    ⚠ The verdict then looks at them (`leggi_registro`), but whoever reads the
+	#      run live believes this line, and it is an hour earlier.
+	inf "what it said about the ban at start-up (printed AND compared — B0.4):"
 	if [ ! -f "$B_LOG_FUORI" ]; then
-		ko "⛔ il registro del server NON ESISTE ($B_LOG_FUORI): non e' «il"
-		ko "   server non ha detto niente sul ban», e' che non ho potuto guardare"
+		ko "⛔ the server log DOES NOT EXIST ($B_LOG_FUORI): it is not «the"
+		ko "   server said nothing about the ban», it is that I could not look"
 		return 4
 	fi
-	grep -E "$B_R_BAN_CARICATI|$B_R_BAN_ILLEGGIBILE|ban lato ospite|pagina e' servita|$B_R_PAGINA|comando di sblocco" \
+	grep -E "$B_R_BAN_CARICATI|$B_R_BAN_ILLEGGIBILE|ban lato ospite|pagina e' servita|$B_R_PAGINA|unblock command" \
 		"$B_LOG_FUORI" | sed 's/^/        /'
-	# ⛔⭐ E LE DUE RIGHE SONO SCRITTE DIVERSE NEI DUE SERVER — vengono dal
-	#     profilo, non da qui.
+	# ⛔⭐ AND THE TWO LINES ARE WRITTEN DIFFERENTLY IN THE TWO SERVERS — they come
+	#     from the profile, not from here.
 	#       innesto   «ban caricati: N»  ·  «NON HO POTUTO LEGGERE il file dei ban»
 	#       prodotto  «ban: <file>, N indirizzi caricati»  ·  «c'e' e NON si e'
-	#                 potuto leggere»  — ⛔ e in quel caso il prodotto NON PARTE
-	#                 affatto, quindi qui non ci si arriva nemmeno.
+	#                 potuto leggere»  — ⛔ and in that case the product does NOT
+	#                 START at all, so one does not even get here.
 	CARICHI=$(grep -c "$B_R_BAN_CARICATI" "$B_LOG_FUORI")
 	ILLEGGIBILI=$(grep -c "$B_R_BAN_ILLEGGIBILE" "$B_LOG_FUORI")
-	SOCKET=$(grep -c "il comando di sblocco ascolta su" "$B_LOG_FUORI")
+	SOCKET=$(grep -c "the unblock command listens on" "$B_LOG_FUORI")
 	if [ "$ILLEGGIBILI" -gt 0 ]; then
-		ko "⛔ il server dichiara di NON aver potuto leggere il file dei ban."
-		ko "   ⛔ Questo NON e' «zero ban»: la persistenza di §4.4-bis parte da"
-		ko "   uno stato ignoto, e ogni riga sul ban che segue vale meno di zero"
+		ko "⛔ the server declares it could NOT read the ban file."
+		ko "   ⛔ This is NOT «zero bans»: the persistence of §4.4-bis starts from"
+		ko "   an unknown state, and every line about the ban that follows is worth less than zero"
 		return 4
 	fi
 	if [ "$CARICHI" -eq 0 ]; then
-		ko "⛔ il server non ha detto NIENTE sul ban all'avvio (nessuna riga"
-		ko "   «ban caricati:» e nessuna riga «NON HO POTUTO LEGGERE»)."
-		ko "   ⛔ E' proprio la coppia che questo controllo esiste per separare:"
-		ko "   senza una delle due, «zero ban» e «non ho potuto guardare» hanno"
-		ko "   la stessa faccia (LEZIONI.md §1.9 regola 1)"
+		ko "⛔ the server said NOTHING about the ban at start-up (no"
+		ko "   «bans loaded» line and no «COULD NOT READ» line)."
+		ko "   ⛔ It is precisely the pair this check exists to separate:"
+		ko "   without one of the two, «zero bans» and «I could not look» have"
+		ko "   the same face (LEZIONI.md §1.9 rule 1)"
 		return 4
 	fi
-	ok "il server ha dichiarato lo stato del ban: $CARICHI righe «ban caricati:»"
-	ok "   e 0 righe «non ho potuto leggere» — sono due fatti, e sono distinti"
+	ok "the server declared the state of the ban: $CARICHI «bans loaded» lines"
+	ok "   and 0 «could not read» lines — they are two facts, and they are distinct"
 	if [ "$SOCKET" -eq 0 ]; then
-		ko "⛔ il comando di sblocco NON e' in ascolto: «$COMANDO» non e' nato."
-		ko "   Senza, ogni sblocco di questo giro esce 3 e B0.3 non si applica —"
-		ko "   e il sintomo, piu' avanti, sarebbe «il banco non riesce a"
-		ko "   sbloccare», cioe' il rosso sull'imputato sbagliato"
+		ko "⛔ the unblock command is NOT listening: «$COMANDO» was not born."
+		ko "   Without it, every unblock of this run exits 3 and B0.3 does not apply —"
+		ko "   and the symptom, further on, would be «the bench cannot"
+		ko "   unblock», that is the red on the wrong defendant"
 		return 4
 	fi
-	ok "il comando di sblocco ascolta (B0.3 ha lo strumento che pretende)"
+	ok "the unblock command is listening (B0.3 has the tool it demands)"
 	return 0
 }
 
@@ -530,70 +527,69 @@ SPEGNI()
 	if [ -f "$B_LOG_FUORI" ]; then
 		cat "$B_LOG_FUORI" >> "$FUORI/b8-$B_NOME-server.log"
 	else
-		printf '(nessun registro per questa vita)\n' >> "$FUORI/b8-$B_NOME-server.log"
+		printf '(no log for this life)\n' >> "$FUORI/b8-$B_NOME-server.log"
 	fi
 	bersaglio_spegni
 }
 
-VIVO() # ⛔ B0.5: dopo ogni prova il server dev'essere ancora li'
+VIVO() # ⛔ B0.5: after every test the server must still be there
 {
 	if [ -n "${PID:-}" ] && [ -d "/proc/$PID" ]; then
-		ok "il server e' ancora vivo dopo «$1» (PID $PID)"
+		ok "the server is still alive after «$1» (PID $PID)"
 		return 0
 	fi
-	ko "⛔ IL SERVER E' MORTO durante «$1»"
+	ko "⛔ THE SERVER DIED during «$1»"
 	return 4
 }
 
 # ---------------------------------------------------------------------------
-log "3. La PRIMA vita del server — i campioni e il giro del ban"
+log "3. The FIRST life of the server — the samples and the ban run"
 ACCENDI "prima vita" || exit 4
 
-log "3.0  Lo stato iniziale, dichiarato E verificato (B0.1)"
-inf "⛔ e questo sblocco e' PRIMA del giro, non dentro (B0.3)"
+log "3.0  The initial state, declared AND verified (B0.1)"
+inf "⛔ and this unblock is BEFORE the run, not inside it (B0.3)"
 bash "$ENTRA" --root "$CRONO --stato-iniziale"
 if [ $? -ne 0 ]; then
-	ko "⛔ lo stato iniziale non e' quello dichiarato: mi fermo"
-	ko "   misurare da uno stato ignoto vuol dire misurare la storia della macchina"
-	SPEGNI "prima vita (stato iniziale fallito)"
+	ko "⛔ the initial state is not the declared one: I stop"
+	ko "   measuring from an unknown state means measuring the machine's history"
+	SPEGNI "first life (initial state failed)"
 	exit 2
 fi
 
-# ⛔ LA SCALDATA E' UN BLOCCO INTERO, IL NUMERO ZERO — forma E9.
-#    Le prime connessioni della vita di un processo pagano la cache fredda, i
-#    moduli di PAM che si aprono, le arene di malloc che crescono.  ⚠ Qui non si
-#    lascia al caso: il blocco 0 e' una terzina — **uno per caso**, quindi la
-#    strada del successo *e* quella del fallimento — ed e' scartato **per regola
-#    scritta prima**, mai a posteriori.  ⭐ E si stampa lo stesso, coi suoi
-#    tempi: scartare in silenzio e' il modo piu' comodo di nascondere un numero
-#    scomodo.
-log "3.0b  la SCALDATA — una terzina, scartata per regola scritta prima (E9)"
+# ⛔ THE WARM-UP IS A WHOLE BLOCK, NUMBER ZERO — form E9.
+#    The first connections of a process's life pay for the cold cache, the PAM
+#    modules being opened, the malloc arenas growing.  ⚠ Here it is not left to
+#    chance: block 0 is a triplet — **one per case**, so the success road *and*
+#    the failure road — and it is discarded **by a rule written before**, never
+#    afterwards.  ⭐ And it is printed anyway, with its times: discarding silently
+#    is the most convenient way of hiding an awkward number.
+log "3.0b  the WARM-UP — a triplet, discarded by a rule written before (E9)"
 bash "$ENTRA" --root "$CRONO --campioni --blocco 0 --per-caso 1"
-VIVO "la scaldata" || exit 4
+VIVO "the warm-up" || exit 4
 bash "$ENTRA" --root "$CRONO --sblocca $INDIRIZZI --perche dopo-la-scaldata"
 
 b=1
 while [ "$b" -le "$BLOCCHI" ]; do
-	log "3.$b  blocco $b di $BLOCCHI — $((PER_CASO * 3)) tentativi"
+	log "3.$b  block $b of $BLOCCHI — $((PER_CASO * 3)) attempts"
 	bash "$ENTRA" --root "$CRONO --campioni --blocco $b --per-caso $PER_CASO"
 	ESITO=$?
-	VIVO "blocco $b" || exit 4
+	VIVO "block $b" || exit 4
 	if [ "$ESITO" -eq 2 ]; then
-		ko "⛔ il blocco $b non e' partito (piano o stato iniziale): mi fermo"
-		ko "   meglio nessun campione che campioni presi fuori dal bilancio"
-		SPEGNI "prima vita (blocco $b non partito)"
+		ko "⛔ block $b did not start (plan or initial state): I stop"
+		ko "   better no samples than samples taken outside the balance"
+		SPEGNI "first life (block $b did not start)"
 		exit 2
 	fi
 	if [ "$ESITO" -ne 0 ]; then
-		ko "il blocco $b e' finito male (uscita $ESITO): mi fermo"
-		SPEGNI "prima vita (blocco $b fallito)"
+		ko "block $b ended badly (exit $ESITO): I stop"
+		SPEGNI "first life (block $b failed)"
 		exit "$ESITO"
 	fi
-	# ⛔ LO SBLOCCO FRA UN BLOCCO E L'ALTRO, E SI DICHIARA — B0.3.
-	#    E' la scelta di questo banco fra le due che B8 ammette: «variare
-	#    l'indirizzo di provenienza» o «sbloccare fra un blocco e l'altro».
-	#    ⚠ Cambia quel che la misura sta misurando, e per questo si stampa: i
-	#      campioni sono presi SEMPRE col conto sotto soglia.
+	# ⛔ THE UNBLOCK BETWEEN ONE BLOCK AND THE NEXT, AND IT IS DECLARED — B0.3.
+	#    It is this bench's choice between the two B8 allows: «vary the source
+	#    address» or «unblock between one block and the next».
+	#    ⚠ It changes what the measurement is measuring, and that is why it is
+	#      printed: the samples are ALWAYS taken with the count below threshold.
 	if [ "$b" -lt "$BLOCCHI" ]; then
 		bash "$ENTRA" --root "$CRONO --sblocca $INDIRIZZI --perche fra-i-blocchi"
 	fi
@@ -601,52 +597,52 @@ while [ "$b" -le "$BLOCCHI" ]; do
 done
 
 # ---------------------------------------------------------------------------
-# ⛔ E ADESSO IL GIRO DEL BAN — con uno sblocco PRIMA, e nessuno dentro.
-log "4. ⛔ Il giro del ban — e da qui in poi NESSUNO sblocca niente (B0.3)"
-inf "lo sblocco qui sotto e' l'ULTIMO prima del giro: serve a partire da un"
-inf "conto azzerato, ed e' dichiarato.  ⚠ Se fallisse, il giro del ban se ne"
-inf "   accorgerebbe lo stesso — il bilancio dei blocchi tiene ogni indirizzo a"
-inf "   due fallimenti, cioe' uno sotto la soglia"
+# ⛔ AND NOW THE BAN RUN — with an unblock BEFORE, and none inside.
+log "4. ⛔ The ban run — and from here on NOBODY unblocks anything (B0.3)"
+inf "the unblock below is the LAST before the run: it serves to start from a"
+inf "reset count, and it is declared.  ⚠ If it failed, the ban run would notice"
+inf "   anyway — the balance of the blocks keeps every address at"
+inf "   two failures, that is one below the threshold"
 bash "$ENTRA" --root "$CRONO --sblocca $INDIRIZZI --perche prima-del-giro-del-ban"
 bash "$ENTRA" --root "$CRONO --ban prima"
 ESITO_BAN=$?
-VIVO "il giro del ban" || exit 4
+VIVO "the ban run" || exit 4
 if [ "$ESITO_BAN" -eq 2 ]; then
-	ko "⛔ il giro del ban non e' partito: il verdetto sarebbe cieco"
-	SPEGNI "prima vita (giro del ban non partito)"
+	ko "⛔ the ban run did not start: the verdict would be blind"
+	SPEGNI "first life (ban run did not start)"
 	exit 2
 fi
 
-SPEGNI "prima vita"
+SPEGNI "first life"
 
 # ---------------------------------------------------------------------------
-# ⛔ LA SECONDA VITA — e serve a UNA cosa sola: l'invariante I7.
-log "5. ⭐ La SECONDA vita del server — il ban sopravvive al riavvio?"
-inf "⛔ il file dei ban NON si tocca: e' l'unica strada per cui il ban puo'"
-inf "   tornare, e buttarlo qui vorrebbe dire provare il contrario di quel che"
-inf "   si vuole provare"
+# ⛔ THE SECOND LIFE — and it serves ONE thing only: invariant I7.
+log "5. ⭐ The SECOND life of the server — does the ban survive the restart?"
+inf "⛔ the ban file is NOT touched: it is the only road by which the ban can"
+inf "   come back, and throwing it away here would mean proving the opposite of"
+inf "   what one wants to prove"
 ACCENDI "seconda vita" || exit 4
 bash "$ENTRA" --root "$CRONO --ban dopo"
 ESITO_DOPO=$?
-VIVO "la persistenza e lo sblocco" || exit 4
+VIVO "persistence and the unblock" || exit 4
 
-# ⛔ E si rimette la macchina a posto PRIMA del verdetto, e lo si dichiara:
-#    B0.3 dice che ogni banco che sblocca lo dichiara.  Senza questa riga il
-#    banco successivo troverebbe un indirizzo fuori per dodici ore.
-log "6. Si rimette la macchina a posto (B0.3)"
+# ⛔ And the machine is put back in order BEFORE the verdict, and it is declared:
+#    B0.3 says every bench that unblocks declares it.  Without this line the
+#    next bench would find an address out for twelve hours.
+log "6. The machine is put back in order (B0.3)"
 bash "$ENTRA" --root "$CRONO --sblocca $INDIRIZZI --perche pulizia-finale"
-SPEGNI "seconda vita"
+SPEGNI "second life"
 
 # ---------------------------------------------------------------------------
-log "7. Il verdetto — lo confronta il banco, non chi legge (B0.4)"
-# ⛔ E IL VERDETTO SI SCRIVE ANCHE SU FILE, dentro le virgolette di `enter.sh` —
-#    mai una redirezione ATTORNO, che si porterebbe via la richiesta di
-#    password.  ⭐ Serve a chi certifica questo banco: `01-b12-lancia.sh` deve
-#    poter cercare la MARCA del guasto nell'uscita, e l'uscita di un lanciatore
-#    che gira FUORI dal contenitore non si puo' catturare (e' la stessa
-#    soluzione che C2 usa da sempre: il banco scrive, l'orchestratore legge).
-# ⚠ E si stampa lo stesso, riga per riga: un verdetto che finisce solo in un
-#   file e' un verdetto che dal vivo nessuno legge.
+log "7. The verdict — the bench compares it, not whoever reads (B0.4)"
+# ⛔ AND THE VERDICT IS ALSO WRITTEN TO A FILE, inside the quotes of `enter.sh` —
+#    never a redirection AROUND it, which would take away the password prompt.
+#    ⭐ It serves whoever certifies this bench: `01-b12-lancia.sh` must be able to
+#    look for the fault's MARK in the output, and the output of a launcher that
+#    runs OUTSIDE the container cannot be captured (it is the same solution C2
+#    has always used: the bench writes, the orchestrator reads).
+# ⚠ And it is printed anyway, line by line: a verdict that ends up only in a
+#   file is a verdict nobody reads live.
 VERDETTO_FUORI="$FUORI/b8-verdetto-$B_NOME.txt"
 rm -f "$VERDETTO_FUORI"
 bash "$ENTRA" --root "$CRONO --verdetto --registro $DENTRO/b8-$B_NOME-server.log > $DENTRO/b8-verdetto-$B_NOME.txt 2>&1"
@@ -654,58 +650,58 @@ ESITO=$?
 if [ -f "$VERDETTO_FUORI" ]; then
 	cat "$VERDETTO_FUORI"
 else
-	ko "⛔ il verdetto NON ha scritto il suo file ($VERDETTO_FUORI): non e'"
-	ko "   «non ha detto niente», e' che non si e' arrivati a leggerlo"
+	ko "⛔ the verdict did NOT write its file ($VERDETTO_FUORI): it is not"
+	ko "   «it said nothing», it is that one never got as far as reading it"
 fi
 
 # ---------------------------------------------------------------------------
-# ⛔ E IL BANCO SI CERTIFICA — `LEZIONI.md` §1.2, e si fa DOPO perche' si guasta
-#    quel che il giro ha appena prodotto.  Un guasto per volta, costruito a
-#    mano, e il verdetto deve diventare rosso **in quel punto**: un banco che non
-#    riproduce non e' una prova di correttezza (§1.3).
-log "8. ⛔ La certificazione: si costruisce il guasto e si pretende il rosso"
+# ⛔ AND THE BENCH CERTIFIES ITSELF — `LEZIONI.md` §1.2, and it is done AFTER
+#    because what the run has just produced is what gets broken.  One fault at a
+#    time, built by hand, and the verdict must turn red **at that point**: a
+#    bench that does not reproduce is not a proof of correctness (§1.3).
+log "8. ⛔ The certification: the fault is built and the red is demanded"
 bash "$ENTRA" --root "$CRONO --certifica --registro $DENTRO/b8-$B_NOME-server.log"
 CERT=$?
 if [ "$CERT" -ne 0 ]; then
-	ko "⛔ la certificazione del GIUDICE non passa: finche' e' rossa, un verde"
-	ko "   di B8 non vuol dire niente"
+	ko "⛔ the certification of the JUDGE does not pass: as long as it is red, a green"
+	ko "   of B8 means nothing"
 fi
 
-log "Esito"
-# ⛔ QUATTRO ESITI, NON DUE.  «Non si separano» e «non ho guardato abbastanza da
-#    poterlo dire» sono due fatti con due cure diverse, e dare loro lo stesso
-#    colore e' la forma E8 applicata a un verdetto.
-# ⛔ CINQUE ESITI, NON DUE.  «Non si separano», «non ho guardato abbastanza da
-#    poterlo dire», «si separano ma il colpevole e' PAM» e «il ban non funziona»
-#    sono quattro fatti con quattro cure diverse, in quattro file diversi: dare
-#    loro lo stesso colore e' la forma E8 applicata a un verdetto.
+log "Outcome"
+# ⛔ FOUR OUTCOMES, NOT TWO.  «They do not separate» and «I did not look enough to
+#    be able to say it» are two facts with two different cures, and giving them
+#    the same colour is form E8 applied to a verdict.
+# ⛔ FIVE OUTCOMES, NOT TWO.  «They do not separate», «I did not look enough to be
+#    able to say it», «they separate but the culprit is PAM» and «the ban does not
+#    work» are four facts with four different cures, in four different files:
+#    giving them the same colour is form E8 applied to a verdict.
 case "$ESITO" in
-	0) ok "⭐ B8 passa contro «$B_NOME» — e le risoluzioni qui sopra dicono fin"
-	   ok "   dove ha guardato.  ⚠ L'altro bersaglio e' un altro programma" ;;
-	5) ko "⛔ B8: il BAN passa per intero, ma le mediane SI SEPARANO"
-	   inf "⛔ e l'esito 5 si da' SOLO quando l'imputato e' stato MISURATO ed e'"
-	   inf "PAM: il verdetto qui sopra stampa i due numeri del registro del"
-	   inf "server che lo sostengono (quanto ha aspettato oltre il secondo fisso"
-	   inf "sui respinti e sugli ammessi) e quale caso e' il piu' lento sul filo."
-	   inf "La cura sta in banchi/rcp/autenticazione.c e nella pila PAM: e' il"
-	   inf "[?] che RCP.md §4.4-bis ha gia' dichiarato, e che il ban non chiude."
-	   inf "⚠ Se l'imputato fosse stato un altro — o non misurabile — questo"
-	   inf "giro sarebbe uscito 1, non 5: l'indulgenza e' scritta per PAM." ;;
-	3) ko "⚠ B8 SOSPESO: rilancia con piu' blocchi (adesso $BLOCCHI)" ;;
-	2) ko "⛔ B8: non c'e' stato niente da giudicare" ;;
-	*) ko "⛔ B8: qualcosa non passa" ;;
+	0) ok "⭐ B8 passes against «$B_NOME» — and the resolutions above say how far"
+	   ok "   it looked.  ⚠ The other target is another program" ;;
+	5) ko "⛔ B8: the BAN passes in full, but the medians DO SEPARATE"
+	   inf "⛔ and outcome 5 is given ONLY when the defendant has been MEASURED and is"
+	   inf "PAM: the verdict above prints the two numbers from the server log"
+	   inf "that support it (how long it waited beyond the fixed second"
+	   inf "on the refused and on the admitted) and which case is the slowest on the wire."
+	   inf "The cure is in banchi/rcp/autenticazione.c and in the PAM stack: it is the"
+	   inf "[?] that RCP.md §4.4-bis has already declared, and that the ban does not close."
+	   inf "⚠ If the defendant had been another — or not measurable — this"
+	   inf "run would have exited 1, not 5: the leniency is written for PAM." ;;
+	3) ko "⚠ B8 SUSPENDED: run again with more blocks (now $BLOCCHI)" ;;
+	2) ko "⛔ B8: there was nothing to judge" ;;
+	*) ko "⛔ B8: something does not pass" ;;
 esac
 if [ "$ESITO_DOPO" -ne 0 ]; then
-	ko "⚠ e la fase della persistenza e' uscita $ESITO_DOPO: il verdetto qui"
-	ko "  sopra dice quali righe mancano"
+	ko "⚠ and the persistence phase exited $ESITO_DOPO: the verdict"
+	ko "  above says which lines are missing"
 fi
-# ⛔ E la certificazione entra nell'esito, invece di restare una riga che si
-#    legge di sfuggita: un banco non certificato non promuove niente.
+# ⛔ And the certification enters the outcome, instead of staying a line read
+#    in passing: an uncertified bench promotes nothing.
 if [ "$CERT" -ne 0 ] && [ "$ESITO" -eq 0 ]; then
-	ko "⛔ ...ma il banco NON e' certificato: l'esito diventa rosso"
+	ko "⛔ ...but the bench is NOT certified: the outcome becomes red"
 	ESITO=1
 fi
-inf "i fatti, uno per riga: $B_ESITI_FUORI  (ogni riga porta il bersaglio)"
-inf "il registro del server, tutt'e due le vite: $FUORI/b8-$B_NOME-server.log"
-inf "il file dei ban: $BAN_FILE (⚠ resta li' apposta, per guardarlo)"
+inf "the facts, one per line: $B_ESITI_FUORI  (every line carries the target)"
+inf "the server log, both lives: $FUORI/b8-$B_NOME-server.log"
+inf "the ban file: $BAN_FILE (⚠ it stays there on purpose, to look at it)"
 exit "$ESITO"

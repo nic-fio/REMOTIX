@@ -1,15 +1,15 @@
 #!/bin/bash
-# 15-rifai-scatole.sh — rifà DA ZERO le scatole rete11-* prima di un giro della suite.
+# 15-rifai-scatole.sh — rebuilds FROM SCRATCH the rete11-* boxes before a round of the suite.
 #
-#   (sul server, come nicfio)  bash 15-rifai-scatole.sh [gnome kde xfce lxqt]
+#   (on the server, as nicfio)  bash 15-rifai-scatole.sh [gnome kde xfce lxqt]
 #
-# ⛔ Distrugge e ricrea i contenitori: ogni sessione aperta dentro (anche `nictest`
-#    dell'utente) muore.  Si lancia solo col via dell'utente (fasi/15 «Come si
-#    esegue»; permesso dato il 25 set 2026, regola in .claude/settings.local.json).
-# Per ogni desktop, una scatola alla volta (il lucchetto della scheda):
-#   accendi  = contenitore NUOVO dall'immagine
-#   prodotto = binario e pagina di /media/REMOTIX/rete11/prodotto
-#   server   = il server del prodotto sulla sua porta
+# ⛔ It destroys and recreates the containers: every session open inside (even the user's
+#    `nictest`) dies.  It is launched only with the user's go-ahead (fasi/15 «How it is
+#    run»; permission given on 25 Sep 2026, rule in .claude/settings.local.json).
+# For each desktop, one box at a time (the card's padlock):
+#   accendi  = NEW container from the image
+#   prodotto = binary and page from /media/REMOTIX/rete11/prodotto
+#   server   = the product's server on its port
 set -u
 DESKTOP=${*:-gnome kde xfce lxqt}
 cd /media/REMOTIX/rete11 || exit 2
@@ -18,12 +18,12 @@ for d in $DESKTOP; do
 	echo "=== $d $(date +%T)"
 	for passo in accendi prodotto server; do
 		if ! printf '%s\n' "${REMOTIX_PAROLA_SUDO:-$(awk '/^pass:/{print $2; exit}' "$HOME/SERVER.ssh" 2>/dev/null)}" | sudo -S -p '' bash 11-accendi.sh "$passo" "$d" >"/tmp/rifai-$d-$passo.log" 2>&1; then
-			echo "⛔ $d $passo non riuscito: $(tail -2 "/tmp/rifai-$d-$passo.log" | tr '\n' ' ')"
+			echo "⛔ $d $passo failed: $(tail -2 "/tmp/rifai-$d-$passo.log" | tr '\n' ' ')"
 			esito=1
 		else
-			echo "   $passo: $(grep -a -E '⭐|✅|ok|ascolta' "/tmp/rifai-$d-$passo.log" | tail -1)"
+			echo "   $passo: $(grep -a -E '⭐|✅|ok|listens' "/tmp/rifai-$d-$passo.log" | tail -1)"
 		fi
 	done
 done
-echo "FINE $(date +%T) · binario $(md5sum prodotto/remotix | cut -c1-8) · pagina $(md5sum prodotto/pagina.html | cut -c1-8)"
+echo "END $(date +%T) · binary $(md5sum prodotto/remotix | cut -c1-8) · page $(md5sum prodotto/pagina.html | cut -c1-8)"
 exit $esito

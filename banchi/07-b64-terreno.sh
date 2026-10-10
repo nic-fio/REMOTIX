@@ -1,32 +1,32 @@
 #!/usr/bin/env bash
 #
 # ===========================================================================
-# 07-b64-terreno — il terreno dell'agente A8: utente `provar7`, albero,
-#                  server sulla 7801.
+# 07-b64-terreno — the ground of agent A8: user `provar7`, tree,
+#                  server on 7801.
 # ===========================================================================
 #
-# ⛔ ISOLAMENTO, e per questo banco vale doppio perche' tocca la RETE:
-#      porta **7801** · albero `/media/REMOTIX/src/07-r-src` ·
-#      lavoro `/media/REMOTIX/tmp/07-r` · utente **provar7** (uid 1018) ·
-#      unita' `remotix-7801.service`, ban-file, socket e certificati propri.
+# ⛔ ISOLATION, and for this bench it counts double because it touches the NETWORK:
+#      port **7801** · tree `/media/REMOTIX/src/07-r-src` ·
+#      work `/media/REMOTIX/tmp/07-r` · user **provar7** (uid 1018) ·
+#      unit `remotix-7801.service`, its own ban-file, socket and certificates.
 #
-#    ⛔⛔ NON SI TOCCANO: la **7700**, la **7730** (il server dell'utente, ed e'
-#         acceso) e l'utente **`prova`**.  Il ban di §4.4-bis e' per INDIRIZZO e
-#         dura 12 ore: un banco che lo fa scattare mette fuori uso tutti gli
-#         altri, perche' partono tutti dallo stesso indirizzo.
+#    ⛔⛔ NOT TO BE TOUCHED: **7700**, **7730** (the user's server, and it is
+#         on) and the user **`prova`**.  The ban of §4.4-bis is per ADDRESS and
+#         lasts 12 hours: a bench that triggers it puts all the others
+#         out of action, because they all start from the same address.
 #
-# ⛔ D12 — la parola d'ordine non passa MAI dalla riga di comando: si scrive in
-#    un file `0600` e la si da' a `chpasswd` sullo stdin.
+# ⛔ D12 — the password NEVER goes through the command line: it is written to
+#    a `0600` file and given to `chpasswd` on stdin.
 #
-# ⛔ Il gruppo **`render`**: senza, la sessione grafica non apre il nodo DRM e
-#    il sintomo e' «il desktop non parte», che assomiglia a dieci altre cose.
+# ⛔ The **`render`** group: without it, the graphical session does not open the DRM node and
+#    the symptom is «the desktop does not start», which looks like ten other things.
 #
-# ⛔ `enable-linger`, o il gestore d'utente muore con l'ultima sessione logind e
-#    `/run/user/<uid>` sparisce sotto i piedi di PipeWire.
+# ⛔ `enable-linger`, or the user manager dies with the last logind session and
+#    `/run/user/<uid>` vanishes from under PipeWire's feet.
 #
-# Uso (dal portatile):
+# Usage (from the laptop):
 #     bash banchi/07-b64-terreno.sh utente
-#     bash banchi/07-b64-terreno.sh porta          # sorgenti + compila
+#     bash banchi/07-b64-terreno.sh porta          # sources + build
 #     bash banchi/07-b64-terreno.sh accendi
 #     bash banchi/07-b64-terreno.sh spegni
 #     bash banchi/07-b64-terreno.sh stato
@@ -46,7 +46,7 @@ DENTRO_ALB=${DENTRO_ALB:-/srv/src/07-r-src}
 DENTRO_LAV=${DENTRO_LAV:-/srv/remotix/tmp/07-r}
 UNITA=${UNITA:-remotix-$PORTA}
 
-# ⛔ Le porte che NON sono mie: si CONTANO prima e dopo, e non si toccano mai.
+# ⛔ The ports that are NOT mine: they are COUNTED before and after, and never touched.
 VICINE="7700 7710 7720 7730"
 
 log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
@@ -55,125 +55,125 @@ ko()  { printf '    \033[1;31mNO\033[0m  %s\n' "$*"; }
 inf() { printf '    --  %s\n' "$*"; }
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐ I GRUPPI DELLA SCHEDA SI DANNO IN UN POSTO SOLO — `attrezzi-gruppi-scheda.sh`
+# ⭐ THE CARD GROUPS ARE GIVEN IN ONE PLACE ONLY — `attrezzi-gruppi-scheda.sh`
 #
-# ⛔ Qui c'era `usermod -aG render,video` (o niente affatto), coi NOMI
-#    INCHIODATI e senza rileggere: due difetti in una riga sola.  La ragione
-#    per cui la cura sta in un file a parte, e i numeri che la giustificano,
-#    stanno nel riquadro in testa a quel file — ⛔ non si ricopiano qui, o
-#    diventano dieci posti da cui divergere (`LEZIONI.md` §1.47).
+# ⛔ Here there was `usermod -aG render,video` (or nothing at all), with the NAMES
+#    HARD-CODED and without reading back: two defects in a single line.  The reason
+#    why the cure lives in a separate file, and the numbers that justify it,
+#    are in the box at the top of that file — ⛔ they are not copied here, or
+#    they become ten places to diverge from (`LEZIONI.md` §1.47).
 # ═══════════════════════════════════════════════════════════════════════════
 GRUPPI_SCHEDA_SH=${GRUPPI_SCHEDA_SH:-$(cd "$(dirname "$0")" && pwd)/attrezzi-gruppi-scheda.sh}
-[ -f "$GRUPPI_SCHEDA_SH" ] || { ko "⛔ manca $GRUPPI_SCHEDA_SH: senza, l'inquilino nascerebbe CIECO"; exit 2; }
+[ -f "$GRUPPI_SCHEDA_SH" ] || { ko "⛔ $GRUPPI_SCHEDA_SH is missing: without it, the tenant would be born BLIND"; exit 2; }
 . "$GRUPPI_SCHEDA_SH"
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# LA META' CHE GIRA SULLA MACCHINA DI PROVA, DA ROOT
+# THE HALF THAT RUNS ON THE TEST MACHINE, AS ROOT
 # ═══════════════════════════════════════════════════════════════════════════
 if [ "${1:-}" = "--sul-server" ]; then
 	PASSO=${2:-stato}
-	[ "$(id -u)" -eq 0 ] || { ko "⛔ «--sul-server» va eseguito DA ROOT"; exit 2; }
+	[ "$(id -u)" -eq 0 ] || { ko "⛔ «--sul-server» must be run AS ROOT"; exit 2; }
 	mkdir -p "$LAV" 2>/dev/null
 
 	vicini() {
 		local r="" p
 		for p in $VICINE; do r="$r$p:$(ss -tuln 2>/dev/null | grep -c ":$p\b") "; done
-		printf '%s— ascoltatori NON miei (si contano, non si toccano)' "$r"
+		printf '%s— listeners NOT mine (counted, not touched)' "$r"
 	}
 
 	case "$PASSO" in
 	utente)
-		log "L'utente del banco: $UTENTE (uid $UID_B)"
+		log "The bench user: $UTENTE (uid $UID_B)"
 		inf "$(vicini)"
 		C_ERA_GIA=no
 		if id "$UTENTE" >/dev/null 2>&1; then
 			C_ERA_GIA=si
-			ok "c'e' gia' — non lo rifaccio"
+			ok "already there — I do not redo it"
 		else
 			useradd -m -u "$UID_B" -s /bin/bash "$UTENTE" || {
-				ko "⛔ useradd non e' riuscito"; exit 2; }
-			ok "creato"
+				ko "⛔ useradd did not succeed"; exit 2; }
+			ok "created"
 		fi
-		# ⛔ D12: la parola in un file 0600, mai in argv.  `chpasswd` la legge
-		#    dallo stdin, e il file lo cancelliamo subito dopo.
+		# ⛔ D12: the password in a 0600 file, never in argv.  `chpasswd` reads it
+		#    from stdin, and we delete the file right after.
 		#
-		# ⛔⛔ E NON SI RIFA' A UN UTENTE CHE ESISTE GIA' — 25 agosto 2026.
+		# ⛔⛔ AND IT IS NOT REDONE FOR A USER THAT ALREADY EXISTS — 25 August 2026.
 		#
-		#   `[M]` In fase 10 gli utenti sono CONDIVISI fra piu' banchi, e questo
-		#   passo riscriveva la parola a ogni chiamata: l'ultimo che chiamava
-		#   `utente` vinceva, e gli altri leggevano «credenziali errate» su una
-		#   macchina sana.
-		#   ⛔⛔ E ogni respinto consuma uno dei TRE tentativi del ban per
-		#     INDIRIZZO (`RCP.md` §4.4-bis), che dura DODICI ORE e mette fuori
-		#     uso ogni altro banco che parta da qui.
+		#   `[M]` In phase 10 the users are SHARED among several benches, and this
+		#   step rewrote the password at every call: the last one to call
+		#   `utente` won, and the others read «wrong credentials» on a
+		#   healthy machine.
+		#   ⛔⛔ And every rejection uses up one of the THREE attempts of the per-ADDRESS
+		#     ban (`RCP.md` §4.4-bis), which lasts TWELVE HOURS and puts out of
+		#     action every other bench that starts from here.
 		#
-		#   ⇒ Se l'utente c'era gia', la parola NON si tocca.  Chi ha davvero
-		#     bisogno di riposarla lo chiede: `RIFAI_PAROLA=1`.
+		#   ⇒ If the user was already there, the password is NOT touched.  Whoever really
+		#     needs to set it again asks for it: `RIFAI_PAROLA=1`.
 		if [ "${C_ERA_GIA:-no}" = si ] && [ "${RIFAI_PAROLA:-0}" != 1 ]; then
-			ok "⭐ parola NON toccata: l'utente c'era gia' (RIFAI_PAROLA=1 per forzare)"
+			ok "⭐ password NOT touched: the user was already there (RIFAI_PAROLA=1 to force)"
 		else
 			( umask 077; printf '%s:%s\n' "$UTENTE" "$PAROLA_UTENTE" > "$LAV/.chp" )
 			chmod 600 "$LAV/.chp"
-			chpasswd < "$LAV/.chp" || { ko "⛔ chpasswd fallito"; rm -f "$LAV/.chp"; exit 2; }
+			chpasswd < "$LAV/.chp" || { ko "⛔ chpasswd failed"; rm -f "$LAV/.chp"; exit 2; }
 			rm -f "$LAV/.chp"
-			ok "parola d'ordine posta (dallo stdin, mai in argv — D12)"
+			ok "password set (from stdin, never in argv — D12)"
 		fi
-		# ⛔ Qui c'erano i due nomi INCHIODATI e nessuna rilettura.
+		# ⛔ Here there were the two HARD-CODED names and no reading back.
 		gruppi_scheda_dai_a "$UTENTE" || exit 3
-		ok "gruppi: $(id -nG "$UTENTE")"
-		loginctl enable-linger "$UTENTE" || { ko "⛔ enable-linger fallito"; exit 2; }
-		ok "linger acceso: /run/user/$UID_B vivra' anche senza nessuno collegato"
+		ok "groups: $(id -nG "$UTENTE")"
+		loginctl enable-linger "$UTENTE" || { ko "⛔ enable-linger failed"; exit 2; }
+		ok "linger on: /run/user/$UID_B will live even with nobody connected"
 		ls -ld "/run/user/$UID_B" 2>&1 | sed 's/^/        /'
-		# La parola che serve al cliente, in un file 0600 dentro il lavoro.
+		# The password the client needs, in a 0600 file inside the work directory.
 		( umask 077; printf '%s\n' "$PAROLA_UTENTE" > "$LAV/parola" )
 		chmod 600 "$LAV/parola"
-		ok "la parola sta in $LAV/parola, 0600 (il cliente la legge con --parola-file)"
+		ok "the password is in $LAV/parola, 0600 (the client reads it with --parola-file)"
 		exit 0 ;;
 
 	accendi)
-		log "Il server del banco, sulla $PORTA — unita' $UNITA.service"
+		log "The bench server, on $PORTA — unit $UNITA.service"
 		inf "$(vicini)"
 		mkdir -p "$LAV/certificati" "$LAV/rilievo"; chmod 1777 "$LAV/rilievo"
-		chmod 755 "$LAV"   # ⚠ `provar7` deve poter leggere il file del tono
+		chmod 755 "$LAV"   # ⚠ `provar7` must be able to read the tone file
 		: > "$LAV/registro.log"
 
 		B2=/media/REMOTIX/src/b2
 		export LD_LIBRARY_PATH="$B2/ngtcp2/build/lib:$B2/prefisso/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-		# ⛔ La trappola 1 di `riavvia-7700.sh`: senza questo controllo il binario
-		#    prende la ngtcp2 di sistema, parte benissimo e ABORTA al primo che
-		#    si collega.  Si verifica PRIMA di accendere.
+		# ⛔ Trap 1 of `riavvia-7700.sh`: without this check the binary
+		#    takes the system ngtcp2, starts just fine and ABORTS at the first one that
+		#    connects.  It is checked BEFORE starting.
 		MANCA=$(ldd "$ALBERO/src/remotix" | grep -E 'ngtcp2|nghttp3' | grep -vc "$B2" || true)
 		if [ "$MANCA" != "0" ]; then
-			ko "⛔ NON parto: ngtcp2/nghttp3 non verrebbero da $B2 —"
+			ko "⛔ I do NOT start: ngtcp2/nghttp3 would not come from $B2 —"
 			ldd "$ALBERO/src/remotix" | grep -E 'ngtcp2|nghttp3' | sed 's/^/        /'
 			exit 2
 		fi
-		ok "ldd: ngtcp2 e nghttp3 vengono da $B2"
+		ok "ldd: ngtcp2 and nghttp3 come from $B2"
 
 		systemctl stop "$UNITA.service" 2>/dev/null
 		systemctl reset-failed "$UNITA.service" 2>/dev/null
 		i=0
 		while ss -uln 2>/dev/null | grep -q ":$PORTA " && [ $i -lt 50 ]; do i=$((i+1)); sleep 0.2; done
 
-		# ⛔ Unita' di SISTEMA, non `setsid` da questa ssh: `pam_systemd` non
-		#    crea una seconda sessione di logind per il figlio e `/run/user/<uid>`
-		#    non esiste — trappola 4 di `riavvia-7700.sh`.
-		# ⛔ E le DUE proprieta' che questo banco misura: `LimitRTPRIO=20` e
-		#    `LimitNICE=-11`.  ⚠ Si possono togliere dal lanciatore
-		#    (SENZA_RT=1) — ed e' il controllo positivo di R26.
-		# ⭐ `RTPRIO=` si puo' cambiare dal lanciatore, ed e' l'A/B di R26: 20 e'
-		#    quel che l'unita' concede oggi, 95 e' quel che PipeWire vorrebbe.
+		# ⛔ A SYSTEM unit, not `setsid` from this ssh: `pam_systemd` does not
+		#    create a second logind session for the child and `/run/user/<uid>`
+		#    does not exist — trap 4 of `riavvia-7700.sh`.
+		# ⛔ And the TWO properties this bench measures: `LimitRTPRIO=20` and
+		#    `LimitNICE=-11`.  ⚠ They can be removed from the launcher
+		#    (SENZA_RT=1) — and that is the positive control of R26.
+		# ⭐ `RTPRIO=` can be changed from the launcher, and it is the A/B of R26: 20 is
+		#    what the unit grants today, 95 is what PipeWire would want.
 		RT_PROP=(--property=LimitRTPRIO=${RTPRIO:-20} --property=LimitNICE=-11)
 		if [ "${SENZA_RT:-0}" = 1 ]; then
 			RT_PROP=(--property=LimitRTPRIO=0)
-			inf "⛔ SENZA_RT=1: l'unita' NON concede il tempo reale (controllo di R26)"
+			inf "⛔ SENZA_RT=1: the unit does NOT grant real time (control of R26)"
 		fi
-		inf "l'unita' concede LimitRTPRIO=${SENZA_RT:+0}${RTPRIO:-20}"
-		# ⭐ `--parlantina`: il figlio senza parlantina TACE IN SILENZIO.
+		inf "the unit grants LimitRTPRIO=${SENZA_RT:+0}${RTPRIO:-20}"
+		# ⭐ `--parlantina`: the child without chatter KEEPS SILENT.
 		# shellcheck disable=SC2086
 		systemd-run \
-			--unit="$UNITA" --collect --description="REMOTIX, banco 07-b64 (A8)" \
+			--unit="$UNITA" --collect --description="REMOTIX, bench 07-b64 (A8)" \
 			--working-directory="$ALBERO/src" \
 			--setenv=LD_LIBRARY_PATH="$LD_LIBRARY_PATH" \
 			--property=StandardOutput=append:$LAV/registro.log \
@@ -188,7 +188,7 @@ if [ "${1:-}" = "--sul-server" ]; then
 			--comando-socket "$LAV/comando.sock" \
 			--rilievo "$LAV/rilievo" \
 			${OPZIONI_SERVER:-} \
-			--parlantina >/dev/null || { ko "⛔ systemd-run ha rifiutato"; exit 2; }
+			--parlantina >/dev/null || { ko "⛔ systemd-run refused"; exit 2; }
 
 		i=0; PID=0
 		while [ $i -lt 50 ]; do
@@ -197,24 +197,24 @@ if [ "${1:-}" = "--sul-server" ]; then
 			i=$((i+1)); sleep 0.1
 		done
 		if [ "$PID" = "0" ] || [ -z "$PID" ]; then
-			ko "⛔ il server non e' partito — le ultime righe:"
+			ko "⛔ the server did not start — the last lines:"
 			tail -20 "$LAV/registro.log" | sed 's/^/        /'
 			exit 2
 		fi
-		ok "server $PID sulla porta $PORTA"
-		# ⛔⛔ E I LIMITI SI LEGGONO DOPO L'`exec`, NON APPENA C'E' UN PID.
+		ok "server $PID on port $PORTA"
+		# ⛔⛔ AND THE LIMITS ARE READ AFTER THE `exec`, NOT AS SOON AS THERE IS A PID.
 		#
-		#     `[M]` 21 agosto 2026, e il banco ha mentito due volte prima che me
-		#     ne accorgessi: `systemctl show -p MainPID` pubblica il pid **della
-		#     forcata**, e i rlimit dell'unita' li applica quel figlio subito
-		#     PRIMA di `execve`.  ⇒ Chi legge `/proc/PID/limits` in quella
-		#     finestra vede i limiti di **systemd**, cioe' `0 0`, e scrive
-		#     «l'unita' non concede il tempo reale» su un'unita' che lo concede.
-		#     ⚠ E' un rosso su codice giusto, la forma di `LEZIONI.md` §2.3.
+		#     `[M]` 21 August 2026, and the bench lied twice before I
+		#     noticed: `systemctl show -p MainPID` publishes the pid **of the
+		#     fork**, and the unit's rlimits are applied by that child right
+		#     BEFORE `execve`.  ⇒ Whoever reads `/proc/PID/limits` in that
+		#     window sees **systemd**'s limits, that is `0 0`, and writes
+		#     «the unit does not grant real time» on a unit that grants it.
+		#     ⚠ It is a red on correct code, the form of `LEZIONI.md` §2.3.
 		#
-		# ⇒ Si aspetta che il pid sia DAVVERO il nostro binario, e solo allora
-		#   si legge.  ⭐ E se non lo diventa, lo si dichiara invece di leggere
-		#   quel che capita.
+		# ⇒ We wait until the pid is REALLY our binary, and only then
+		#   do we read.  ⭐ And if it does not become so, we declare it instead of reading
+		#   whatever happens to be there.
 		i=0
 		while [ $i -lt 50 ]; do
 			case "$(readlink -f "/proc/$PID/exe" 2>/dev/null)" in
@@ -223,114 +223,114 @@ if [ "${1:-}" = "--sul-server" ]; then
 			i=$((i+1)); sleep 0.1
 		done
 		if [ $i -ge 50 ]; then
-			ko "⚠ dopo 5 s /proc/$PID/exe non e' ancora «remotix»: NON leggo i limiti"
+			ko "⚠ after 5 s /proc/$PID/exe is not yet «remotix»: I do NOT read the limits"
 		else
 			grep -E 'Max realtime|Max nice' "/proc/$PID/limits" | sed 's/^/        LIM /'
 		fi
-		# ⛔⛔ E «ACCESO» VUOL DIRE CHE QUALCUNO ASCOLTA — 25 agosto 2026.
+		# ⛔⛔ AND «ON» MEANS THAT SOMEONE IS LISTENING — 25 August 2026.
 		#
-		#   `[M]` Con un'opzione che il binario non conosce, il server stampa la
-		#   propria guida ed esce: `systemd-run` ha gia' pubblicato un MainPID,
-		#   e questo passo diceva «OK server 1265806 sulla porta 8260» **uscendo
-		#   ZERO**, con l'unita' gia' `inactive/success` e **nessun ascoltatore**.
+		#   `[M]` With an option the binary does not know, the server prints its
+		#   own help and exits: `systemd-run` has already published a MainPID,
+		#   and this step said «OK server 1265806 on port 8260» **exiting
+		#   ZERO**, with the unit already `inactive/success` and **no listener**.
 		#
-		#   ⛔ Un banco che si fidasse di quell'uscita direbbe «acceso», poi «la
-		#     tabella non si riempie», e finirebbe per ACCUSARE IL PRODOTTO di un
-		#     difetto che era **un'opzione inesistente**.  E' «silenzio invece di
-		#     rosso» (`LEZIONI.md` §1.29) un piano piu' su: nel terreno.
+		#   ⛔ A bench that trusted that exit would say «on», then «the
+		#     table does not fill up», and would end up BLAMING THE PRODUCT for a
+		#     defect that was **a non-existent option**.  It is «silence instead of
+		#     red» (`LEZIONI.md` §1.29) one floor up: in the ground.
 		#
-		# ⇒ Il terreno non dichiara acceso finche' non vede un ASCOLTATORE sulla
-		#   porta.  Se non c'e', si stampano le ultime righe del registro — che
-		#   sono quelle che dicono **perche'** — e si esce ROSSI.
+		# ⇒ The ground does not declare on until it sees a LISTENER on the
+		#   port.  If there is none, the last lines of the log are printed — which
+		#   are the ones that say **why** — and we exit RED.
 		i=0
 		while [ $i -lt 50 ]; do
 			ss -uln 2>/dev/null | grep -q ":$PORTA " && break
 			i=$((i+1)); sleep 0.1
 		done
 		if [ $i -ge 50 ]; then
-			ko "⛔⛔ NESSUNO ASCOLTA sulla $PORTA dopo 5 s: il server NON e' acceso"
-			inf "unita': $(systemctl is-active "$UNITA.service" 2>/dev/null) · le ultime righe:"
+			ko "⛔⛔ NOBODY IS LISTENING on $PORTA after 5 s: the server is NOT on"
+			inf "unit: $(systemctl is-active "$UNITA.service" 2>/dev/null) · the last lines:"
 			tail -25 "$LAV/registro.log" | sed 's/^/        /'
 			exit 2
 		fi
-		ok "⭐ qualcuno ascolta sulla $PORTA — questo, non il pid, e' «acceso»"
+		ok "⭐ someone is listening on $PORTA — this, not the pid, is «on»"
 		inf "$(vicini)"
 		exit 0 ;;
 
 	sblocca)
-		log "Lo sblocco dell'indirizzo — §4.4-bis"
+		log "Unblocking the address — §4.4-bis"
 		bash /media/REMOTIX/enter.sh --root \
 			"python3 $DENTRO_ALB/banchi/01-b8-sblocca.py --socket $DENTRO_LAV/comando.sock $IND"
-		inf "sblocco di $IND: uscita $?"
+		inf "unblock of $IND: exit $?"
 		exit 0 ;;
 
 	spegni)
-		log "Spengo $UNITA.service (e SOLO quella)"
+		log "Stopping $UNITA.service (and ONLY that one)"
 		systemctl stop "$UNITA.service" 2>/dev/null
 		systemctl reset-failed "$UNITA.service" 2>/dev/null
-		ok "spento · $(vicini)"
+		ok "stopped · $(vicini)"
 		exit 0 ;;
 
 	*)
-		log "Stato"
+		log "Status"
 		inf "$(vicini)"
-		inf "unita': $(systemctl is-active "$UNITA.service" 2>/dev/null)"
-		inf "carico: $(uptime | sed 's/.*average/media/')"
+		inf "unit: $(systemctl is-active "$UNITA.service" 2>/dev/null)"
+		inf "load: $(uptime | sed 's/.*average/average/')"
 		exit 0 ;;
 	esac
 fi
 
 # ═══════════════════════════════════════════════════════════════════════════
-# LA META' CHE GIRA SUL PORTATILE
+# THE HALF THAT RUNS ON THE LAPTOP
 # ═══════════════════════════════════════════════════════════════════════════
 QUI=$(cd "$(dirname "$0")/.." && pwd)
 SUL_SERVER="bash $ALBERO/banchi/$(basename "$0") --sul-server"
 
-# ⛔ Il copione remoto e' un FILE gia' sulla macchina, e `sudo -S` riceve solo
-#    la parola: `printf … | sudo -S bash -s` darebbe a bash uno stdin vuoto, e
-#    «non ha fatto niente» avrebbe la stessa faccia di «ha funzionato».
-# ⛔ E niente `</dev/null` in coda: quel redirect vince su `sudo -S`, che allora
-#    non legge piu' la parola («no password was provided»).
+# ⛔ The remote script is a FILE already on the machine, and `sudo -S` receives only
+#    the password: `printf … | sudo -S bash -s` would give bash an empty stdin, and
+#    «it did nothing» would look the same as «it worked».
+# ⛔ And no `</dev/null` at the end: that redirect wins over `sudo -S`, which then
+#    no longer reads the password («no password was provided»).
 remoto() { ssh -o BatchMode=yes "$MACCHINA" \
 	"printf '%s\n' '$PAROLA_SUDO' | sudo -S -p '' env $1 $SUL_SERVER $2"; }
 
 PASSO=${1:-stato}
 case "$PASSO" in
 porta)
-	log "1 · Porto i sorgenti in $ALBERO"
-	# ⛔ SENZA `sudo`: `printf … | sudo -S` mangerebbe lo stdin, che qui E' lo
-	#    stream del `tar`.  E non serve: /media/REMOTIX/src e' di `nicfio`.
-	# ⛔ Si porta anche `banchi/rcp`: il Makefile si rifiuta di compilare se non
-	#    puo' confrontare le due copie di `rcp.c` (R12.3).
-	# ⛔ E si ESCLUDONO oggetti e binario del portatile: spedendoli, `make`
-	#    troverebbe tutto aggiornato e resterebbe il binario del portatile — la
-	#    forma D5, «un binario stantio resta verde».
+	log "1 · Carrying the sources to $ALBERO"
+	# ⛔ WITHOUT `sudo`: `printf … | sudo -S` would eat stdin, which here IS the
+	#    `tar` stream.  And it is not needed: /media/REMOTIX/src belongs to `nicfio`.
+	# ⛔ `banchi/rcp` is carried too: the Makefile refuses to build if it cannot
+	#    compare the two copies of `rcp.c` (R12.3).
+	# ⛔ And the laptop's objects and binary are EXCLUDED: if they were sent, `make`
+	#    would find everything up to date and the laptop's binary would remain — the
+	#    D5 form, «a stale binary stays green».
 	tar -C "$QUI" --exclude='*.o' --exclude='src/remotix' -czf - \
 		src banchi/rcp \
 		banchi/01-b3-cliente.py banchi/01-b8-sblocca.py \
 		banchi/07-b42-giudice.py \
 		banchi/attrezzi-gruppi-scheda.sh banchi/07-b64-terreno.sh banchi/07-b64-scena.py banchi/07-b64-orecchio.py | \
 		ssh -o BatchMode=yes "$MACCHINA" "mkdir -p $ALBERO && tar -C $ALBERO -xzf -" || {
-		ko "⛔ i sorgenti non sono arrivati"; exit 2; }
-	ok "sorgenti in $ALBERO"
+		ko "⛔ the sources did not arrive"; exit 2; }
+	ok "sources in $ALBERO"
 
-	log "2 · Compilo dentro il contenitore"
+	log "2 · Building inside the container"
 	if ! ssh -o BatchMode=yes "$MACCHINA" \
 		"printf '%s\n' '$PAROLA_SUDO' | sudo -S -p '' bash /media/REMOTIX/enter.sh --root \
 		 'PREFISSO=/srv/src/b2/prefisso NGTCP2=/srv/src/b2/ngtcp2 NGHTTP3=/srv/src/b2/nghttp3 \
 		  bash $DENTRO_ALB/src/costruisci.sh 2>&1 | tail -20'"; then
-		ko "⛔ la compilazione e' fallita: NON accendo niente"
+		ko "⛔ the build failed: I do NOT start anything"
 		exit 2
 	fi
-	ok "compilato"
+	ok "built"
 	exit 0 ;;
 utente)
-	# ⛔ `RIFAI_PAROLA` DEVE ATTRAVERSARE L'ssh — 25 agosto 2026.
-	#   La cura di stamattina (non rifare la parola a un utente che esiste
-	#   gia') l'aveva messa nella meta' che gira SUL SERVER, ma la variabile
-	#   non era in questo elenco: `RIFAI_PAROLA=1` non arrivava di la' e non
-	#   faceva niente.  ⚠ E il modo in cui falliva e' il solito: nessun
-	#   errore, nessuna riga, la parola semplicemente non veniva rifatta.
+	# ⛔ `RIFAI_PAROLA` MUST CROSS THE ssh — 25 August 2026.
+	#   This morning's cure (do not redo the password of a user that already
+	#   exists) had been put in the half that runs ON THE SERVER, but the variable
+	#   was not in this list: `RIFAI_PAROLA=1` did not get over there and did
+	#   nothing.  ⚠ And the way it failed is the usual one: no
+	#   error, no line, the password simply was not redone.
 	remoto "UTENTE=$UTENTE UID_B=$UID_B PAROLA_UTENTE=$PAROLA_UTENTE LAV=$LAV RIFAI_PAROLA=${RIFAI_PAROLA:-0}" utente ;;
 accendi)
 	remoto "PORTA=$PORTA IND=$IND ALBERO=$ALBERO LAV=$LAV UNITA=$UNITA SENZA_RT=${SENZA_RT:-0} RTPRIO=${RTPRIO:-20} OPZIONI_SERVER='${OPZIONI_SERVER:-}'" accendi ;;

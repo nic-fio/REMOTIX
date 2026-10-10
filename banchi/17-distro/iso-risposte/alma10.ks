@@ -1,6 +1,6 @@
-# REMOTIX fase 17 — AlmaLinux 10 dall'ISO boot, kickstart, «Server with GUI».
-# SELinux e firewalld restano come di serie. Le sole aggiunte del banco sono segnate con [banco].
-# Segnaposti riempiti da 17-vm.sh: @UTENTE@ @HASH@ @CHIAVE@ @NOME@
+# REMOTIX phase 17 — AlmaLinux 10 from the boot ISO, kickstart, "Server with GUI".
+# SELinux and firewalld stay as default. The only additions of the bench are marked with [banco].
+# Placeholders filled in by 17-vm.sh: @UTENTE@ @HASH@ @CHIAVE@ @NOME@
 lang it_IT.UTF-8
 keyboard --xlayouts=it
 timezone Europe/Rome --utc
@@ -10,13 +10,13 @@ repo --name=AppStream --baseurl=https://repo.almalinux.org/almalinux/10/AppStrea
 
 zerombr
 clearpart --all --initlabel --disklabel=gpt
-# La proposta di serie: LVM con xfs
+# The default proposal: LVM with xfs
 autopart
 bootloader
 
 rootpw --lock
 user --name=@UTENTE@ --groups=wheel --password=@HASH@ --iscrypted
-# [banco] la chiave del banco
+# [banco] the bench key
 sshkey --username=@UTENTE@ "@CHIAVE@"
 
 %packages
@@ -24,7 +24,7 @@ sshkey --username=@UTENTE@ "@CHIAVE@"
 %end
 
 %post
-# [banco] sudo senza parola
+# [banco] passwordless sudo
 echo '@UTENTE@ ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/90-banco
 chmod 440 /etc/sudoers.d/90-banco
 %end

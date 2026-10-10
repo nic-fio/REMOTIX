@@ -1,7 +1,7 @@
-#### REMOTIX fase 17 — Debian 13 dall'ISO netinst, installazione automatica (preseed)
-# Le scelte sono quelle di SERIE dell'installatore, come le farebbe un cliente
-# italiano che preme «Avanti»; le sole aggiunte del banco sono segnate con [banco].
-# Segnaposti riempiti da 17-vm.sh: @UTENTE@ @HASH@ @CHIAVE@ @NOME@
+#### REMOTIX phase 17 — Debian 13 from the netinst ISO, automatic installation (preseed)
+# The choices are the installer's DEFAULTS, as an Italian customer pressing
+# "Avanti" would make them; the only additions of the bench are marked with [banco].
+# Placeholders filled in by 17-vm.sh: @UTENTE@ @HASH@ @CHIAVE@ @NOME@
 
 d-i debian-installer/locale string it_IT.UTF-8
 d-i debian-installer/language string it
@@ -19,8 +19,8 @@ d-i mirror/http/hostname string deb.debian.org
 d-i mirror/http/directory string /debian
 d-i mirror/http/proxy string
 
-# Nessuna parola per root: l'installatore allora mette il primo utente nel gruppo
-# sudo (e' la scelta che l'installatore propone quando root resta vuota).
+# No password for root: the installer then puts the first user in the sudo
+# group (it is the choice the installer offers when root is left empty).
 d-i passwd/root-login boolean false
 d-i passwd/user-fullname string @UTENTE@
 d-i passwd/username string @UTENTE@
@@ -30,7 +30,7 @@ d-i clock-setup/utc boolean true
 d-i time/zone string Europe/Rome
 d-i clock-setup/ntp boolean true
 
-# Il disco intero, «tutti i file in una partizione» (la proposta di serie)
+# The whole disk, "all files in one partition" (the default proposal)
 d-i partman-auto/method string regular
 d-i partman-auto/choose_recipe select atomic
 d-i partman-partitioning/confirm_write_new_label boolean true
@@ -47,8 +47,8 @@ d-i apt-setup/non-free-firmware boolean true
 d-i apt-setup/services-select multiselect security, updates
 d-i apt-setup/disable-cdrom-entries boolean true
 
-# I compiti proposti di serie: ambiente desktop + GNOME + utilita' di sistema.
-# [banco] ssh-server: non e' di serie, serve per guidare la macchina.
+# The tasks offered by default: desktop environment + GNOME + system utilities.
+# [banco] ssh-server: not a default, needed to drive the machine.
 tasksel tasksel/first multiselect desktop, gnome-desktop, standard, ssh-server
 d-i pkgsel/upgrade select safe-upgrade
 popularity-contest popularity-contest/participate boolean false
@@ -58,5 +58,5 @@ d-i grub-installer/bootdev string default
 d-i finish-install/reboot_in_progress note
 d-i cdrom-detect/eject boolean false
 
-# [banco] la chiave del banco e sudo senza parola, DENTRO l'installazione
+# [banco] the bench key and passwordless sudo, INSIDE the installation
 d-i preseed/late_command string in-target sh -c 'install -d -m 700 -o @UTENTE@ -g @UTENTE@ /home/@UTENTE@/.ssh && echo "@CHIAVE@" > /home/@UTENTE@/.ssh/authorized_keys && chown @UTENTE@:@UTENTE@ /home/@UTENTE@/.ssh/authorized_keys && chmod 600 /home/@UTENTE@/.ssh/authorized_keys && echo "@UTENTE@ ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/90-banco && chmod 440 /etc/sudoers.d/90-banco'

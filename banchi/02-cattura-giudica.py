@@ -1,103 +1,103 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-02-cattura-giudica.py — il giudice dei PIXEL della sotto-fase F2.2.
+02-cattura-giudica.py — the judge of the PIXELS of sub-phase F2.2.
 
-⛔ PERCHE' ESISTE — e non e' «un controllo in piu'»
+⛔ WHY IT EXISTS — and it is not «one more check»
 
-Lo strumento della fase 0, `misura-cattura`, e' certificato e riproduce i 36 ± 2
-fotogrammi di Mutter.  ⛔ Ma i pixel non li guarda mai: `su_processo` legge
-`type`, `fd`, `chunk->stride`, il danno e la sequenza, e rimette il buffer in
-coda senza toccare `piano->data`.
+The phase 0 tool, `misura-cattura`, is certified and reproduces Mutter's 36 ± 2
+frames.  ⛔ But it never looks at the pixels: `su_processo` reads
+`type`, `fd`, `chunk->stride`, the damage and the sequence, and puts the buffer back in
+the queue without touching `piano->data`.
 
-⇒ **Un fotogramma NERO E VALIDO passerebbe la fase 0 con il massimo dei voti.**
-  36 al secondo, quattro buffer riciclati, danno parziale, zero salti: tutto
-  verde, e sullo schermo il nulla.  ⛔ E il nero non e' teorico — `STUDI.md` §gnome §3.1:
-  in headless `needs_outputs=false`, quindi senza `--virtual-monitor` la sessione
-  parte **viva, completa e nera**; `PIANO.md`, fase 2: *«una sessione nera e
-  perfettamente viva e' la cosa che si scambia per un difetto di cattura, e si
-  cerca per mezza giornata dalla parte sbagliata»*.
+⇒ **A BLACK AND VALID frame would pass phase 0 with full marks.**
+  36 per second, four recycled buffers, partial damage, zero skips: all
+  green, and on the screen nothing.  ⛔ And the black is not theoretical — `STUDI.md` §gnome §3.1:
+  in headless mode `needs_outputs=false`, so without `--virtual-monitor` the session
+  starts **alive, complete and black**; `PIANO.md`, phase 2: *«a black and
+  perfectly alive session is the thing that gets mistaken for a capture defect, and
+  you search for half a day on the wrong side»*.
 
-Questo programma e' l'unica cosa del progetto che apre il fotogramma e guarda.
-
----------------------------------------------------------------------------
-⛔ PERCHE' STA IN UN FILE SEPARATO DA CHI CATTURA
-
-Perche' il guasto si possa innestare **nei pixel**.  Il produttore scrive un
-`.raw` e un manifesto; il giudice li legge.  Fra i due si puo' infilare un
-fotogramma nero della stessa identica misura, con lo stesso identico manifesto —
-che e' esattamente il guasto peggiore di questa sotto-fase — senza toccare ne'
-il produttore ne' il giudice.  ⭐ Un banco che non si puo' guastare non si puo'
-certificare (`PIANO.md` §0.3 punto 4).
+This program is the only thing in the project that opens the frame and looks.
 
 ---------------------------------------------------------------------------
-⛔ LA SCENA E' DICHIARATA, E LA FIRMA E' SCELTA PER SOPRAVVIVERE AL COLORE
+⛔ WHY IT SITS IN A FILE SEPARATE FROM WHOEVER CAPTURES
 
-`CODER.md` §3.2: la scena si dichiara e si muove sempre.  La fase 0 usava
-`weston-simple-egl -f -o` — che si muove benissimo ma **nei pixel non e'
-riconoscibile**: un triangolo che gira non ha una firma, e F2.6 (il confronto dei
-pixel) non avrebbe niente da confrontare.
-
-La scena di F2.2 e' quindi **«bandiera»**: le sette barre SMPTE a tutto schermo,
-ferme, piu' un blocco bianco che scorre in basso a ogni fotogramma.
-
-  | perche' le sette barre | una firma **ferma**, che sta nei pixel e non nel
-  |                        | tempo: un'immagine ferma si giudica su di essa
-  | perche' il blocco che  | Mutter consegna un fotogramma **solo se qualcosa
-  | scorre                 | cambia** (`LEZIONI.md` §4 trappola 8). Senza il
-  |                        | blocco, su un desktop fermo non arriverebbe nulla
-  |                        | e lo zero sarebbe legittimo — ma inutile
-  | perche' il blocco sta  | cosi' la firma **non dipende dall'istante** in cui
-  | in un angolo           | il fotogramma e' stato preso, e due giri diversi si
-  |                        | possono confrontare
-
-⭐ E LA FIRMA NON E' UN ELENCO DI COLORI ASSOLUTI, di proposito.  Fra ffmpeg,
-mpv, il 4:2:0 e la matrice colore (601 contro 709) i valori RGB assoluti si
-spostano di decine di unita', e un giudice che pretendesse `(191,191,0)` sarebbe
-rosso su una scena perfetta.  Si controllano invece **tre proprieta' che nessuna
-matrice colore puo' invertire**:
-
-  F1  sette bande, ciascuna **uniforme al suo interno**
-  F2  la **luminanza cala** da sinistra a destra su tutte e sette — e' il disegno
-      stesso delle barre SMPTE, e vale sia con i pesi 601 sia con i 709
-  F3  la **firma dei canali** di ciascuna banda (quale canale domina): grigio,
-      giallo, ciano, verde, magenta, rosso, blu
-
-⛔ Un fotogramma nero fallisce tutte e tre.  Un grigio uniforme fallisce F2 e F3
-   ma **passa F1**: ed e' apposta, perche' e' cosi' che si distingue «nero» da
-   «non e' la scena» da «e' la scena».  Tre esiti, non due.
+So that the fault can be injected **into the pixels**.  The producer writes a
+`.raw` and a manifest; the judge reads them.  Between the two one can slip a
+black frame of the very same size, with the very same manifest —
+which is exactly the worst fault of this sub-phase — without touching either
+the producer or the judge.  ⭐ A bench that cannot be broken cannot be
+certified (`PIANO.md` §0.3 point 4).
 
 ---------------------------------------------------------------------------
-⛔ ZERO NON E' FALLIMENTO (`REVIEWER.md` §1 punto 4)
+⛔ THE SCENE IS DECLARED, AND THE SIGNATURE IS CHOSEN TO SURVIVE COLOUR
 
-  uscita 0  verde: il fotogramma c'e', e' quello chiesto, e contiene la scena
-  uscita 1  rosso: c'e' un fotogramma e qualcosa non torna. La marca dice cosa
-  uscita 3  ⭐ non c'e' niente da giudicare — zero fotogrammi, dichiarato tale
-            dal produttore. E' un risultato, non un guasto
-  uscita 2  il GIUDICE e' fallito: file illeggibile, manifesto storto, oppure
-            ⛔ **il controllo positivo in coda non e' passato** — nel qual caso
-            questo programma si dichiara NON CERTIFICATO e non giudica nulla
+`CODER.md` §3.2: the scene is declared and always moves.  Phase 0 used
+`weston-simple-egl -f -o` — which moves very well but **is not
+recognisable in the pixels**: a spinning triangle has no signature, and F2.6 (the pixel
+comparison) would have nothing to compare.
+
+The F2.2 scene is therefore **«bandiera»**: the seven SMPTE bars full screen,
+still, plus a white block that slides along the bottom at every frame.
+
+  | why the seven bars     | a **still** signature, which lives in the pixels and not in
+  |                        | time: a still image is judged on it
+  | why the sliding        | Mutter delivers a frame **only if something
+  | block                  | changes** (`LEZIONI.md` §4 trap 8). Without the
+  |                        | block, on a still desktop nothing would arrive
+  |                        | and zero would be legitimate — but useless
+  | why the block sits     | so the signature **does not depend on the instant** at which
+  | in a corner            | the frame was taken, and two different rounds can
+  |                        | be compared
+
+⭐ AND THE SIGNATURE IS NOT A LIST OF ABSOLUTE COLOURS, on purpose.  Between ffmpeg,
+mpv, 4:2:0 and the colour matrix (601 against 709) the absolute RGB values
+shift by tens of units, and a judge that required `(191,191,0)` would be
+red on a perfect scene.  Instead **three properties that no
+colour matrix can invert** are checked:
+
+  F1  seven bands, each one **uniform inside**
+  F2  the **luma decreases** from left to right on all seven — it is the very
+      design of the SMPTE bars, and it holds both with the 601 and with the 709 weights
+  F3  the **channel signature** of each band (which channel dominates): grey,
+      yellow, cyan, green, magenta, red, blue
+
+⛔ A black frame fails all three.  A uniform grey fails F2 and F3
+   but **passes F1**: and that is on purpose, because that is how «black» is told from
+   «it is not the scene» from «it is the scene».  Three outcomes, not two.
 
 ---------------------------------------------------------------------------
-⛔ IL CONTROLLO POSITIVO GIRA A OGNI ESECUZIONE, IN CODA
+⛔ ZERO IS NOT FAILURE (`REVIEWER.md` §1 point 4)
 
-`LEZIONI.md` §1.9, seconda regola: *«questo strumento sa trovare qualcosa che c'e'
-di sicuro?»*.  Uno strumento che non ha mai trovato niente non e' pulito: e' non
-certificato.  Alla fine di ogni giro il giudice fabbrica da se' tre fotogrammi e
-si guarda addosso:
-
-  la bandiera sintetica  → deve dire VERDE
-  il nero pieno          → deve dire ROSSO con la marca FOTOGRAMMA NERO
-  il grigio uniforme     → deve dire ROSSO con la marca SCENA NON RICONOSCIUTA
-                            (⛔ e **non** FOTOGRAMMA NERO: se un giudice chiamasse
-                             nero un grigio, la sua diagnosi peggiore sarebbe
-                             sbagliata proprio nel caso in cui serve)
-
-Se anche uno solo dei tre non risponde com'e' scritto qui sopra, il verdetto sul
-fotogramma vero **non viene emesso**: esce 2.
+  exit 0  green: the frame is there, it is the one requested, and it contains the scene
+  exit 1  red: there is a frame and something does not add up. The mark says what
+  exit 3  ⭐ there is nothing to judge — zero frames, declared as such
+          by the producer. It is a result, not a fault
+  exit 2  the JUDGE failed: unreadable file, crooked manifest, or
+          ⛔ **the positive control at the end did not pass** — in which case
+          this program declares itself NOT CERTIFIED and judges nothing
 
 ---------------------------------------------------------------------------
-uso:
+⛔ THE POSITIVE CONTROL RUNS AT EVERY EXECUTION, AT THE END
+
+`LEZIONI.md` §1.9, second rule: *«can this tool find something that is surely
+there?»*.  A tool that has never found anything is not clean: it is
+uncertified.  At the end of every round the judge builds three frames by itself and
+looks at itself:
+
+  the synthetic flag     → must say VERDE
+  the full black         → must say ROSSO with the mark FOTOGRAMMA NERO
+  the uniform grey       → must say ROSSO with the mark SCENA NON RICONOSCIUTA
+                            (⛔ and **not** FOTOGRAMMA NERO: if a judge called
+                             a grey black, its worst diagnosis would be
+                             wrong precisely in the case where it is needed)
+
+If even one of the three does not answer as written above, the verdict on the
+real frame **is not issued**: it exits 2.
+
+---------------------------------------------------------------------------
+usage:
   02-cattura-giudica.py --manifesto PREFISSO.json [--quale primo|regime|tutti]
                         [--scena bandiera|ignota] [--json USCITA.json]
   02-cattura-giudica.py --solo-controllo-positivo
@@ -112,46 +112,46 @@ import time
 
 VERDE, ROSSO, GIALLO, GRIGIO = "\033[1;32m", "\033[1;31m", "\033[1;33m", "\033[0m"
 
-# ── Le soglie, tutte in un posto e tutte con la ragione accanto ────────────
+# ── The thresholds, all in one place and all with the reason next to them ──
 #
-# ⛔ Si scrivono qui e non sparse nel codice perche' una soglia scelta dopo aver
-#    visto il numero e' un atteso allargato finche' torna — la strada disonesta
-#    che `01-b12-guasti.py` ha insegnato a non prendere.
+# ⛔ They are written here and not scattered in the code because a threshold chosen after
+#    seeing the number is a widened expectation as long as it holds — the dishonest road
+#    that `01-b12-guasti.py` taught us not to take.
 SOGLIE = {
-    # Sotto questa luminanza media (0-255) il fotogramma si chiama NERO.  Il
-    # nero vero e' 0; si lascia margine per un nero non perfettamente nero (una
-    # sessione che disegna uno sfondo scurissimo resta un guasto da vedere).
+    # Below this average luma (0-255) the frame is called BLACK.  Real
+    # black is 0; margin is left for a black that is not perfectly black (a
+    # session that draws a very dark background stays a fault to be seen).
     "nero_luma_media": 8.0,
-    # …e insieme: nessun pixel campionato oltre questa soglia.  Due condizioni,
-    # non una: un fotogramma nero con un solo puntatore bianco non e' «nero»,
-    # ed e' un'informazione diversa.
+    # …and together: no sampled pixel beyond this threshold.  Two conditions,
+    # not one: a black frame with a single white pointer is not «black»,
+    # and it is a different piece of information.
     "nero_luma_massima": 24.0,
-    # Sotto questa deviazione standard su tutto il fotogramma campionato,
-    # l'immagine e' UNIFORME (una tinta piatta).  Nero e uniforme sono due
-    # marche diverse.
+    # Below this standard deviation over the whole sampled frame,
+    # the image is UNIFORM (a flat tint).  Black and uniform are two
+    # different marks.
     "uniforme_scarto": 3.0,
-    # Dentro una banda: scarto massimo ammesso su ciascun canale.  Il 4:2:0 e
-    # il rumore di codifica sporcano, ma dentro una banda piena restano pochi
-    # livelli.
+    # Inside a band: maximum deviation allowed on each channel.  4:2:0 and
+    # encoding noise dirty things, but inside a full band few
+    # levels remain.
     "banda_scarto": 12.0,
-    # Fra due bande adiacenti: la luminanza deve calare almeno di tanto.  Il
-    # salto piu' piccolo nelle barre SMPTE e' verde→magenta, ~33 livelli con i
-    # pesi 601 e ~82 con i 709; 8 e' largo e resta molto sotto.
+    # Between two adjacent bands: luma must drop at least this much.  The
+    # smallest jump in the SMPTE bars is green→magenta, ~33 levels with the
+    # 601 weights and ~82 with the 709; 8 is broad and stays well below.
     "salto_luma": 8.0,
-    # La firma dei canali: quanto un canale «dominante» deve staccare uno
-    # «spento» perche' si possa dire che domina.
+    # The channel signature: how much a «dominant» channel must stand out from an
+    # «off» one for it to be said that it dominates.
     "canale_stacco": 40.0,
-    # Fra `primo` e `regime`: quanti pixel campionati devono differire perche'
-    # si possa dire che il buffer e' cambiato davvero.
+    # Between `primo` and `regime`: how many sampled pixels must differ for it
+    # to be said that the buffer really changed.
     "cambiato_frazione": 0.02,
 }
 
-# ⛔ LA FIRMA DELLE SETTE BARRE SMPTE, scritta PRIMA di guardare il fotogramma.
+# ⛔ THE SIGNATURE OF THE SEVEN SMPTE BARS, written BEFORE looking at the frame.
 #
-#    Per ciascuna banda: quali canali devono essere ALTI e quali BASSI.  Sono le
-#    barre a 75 %: grigio, giallo, ciano, verde, magenta, rosso, blu.
-#    ⚠ Il grigio non ha ne' alti ne' bassi: e' la banda in cui i tre canali
-#      devono essere VICINI FRA LORO, ed e' un vincolo, non un'assenza.
+#    For each band: which channels must be HIGH and which LOW.  They are the
+#    75 % bars: grey, yellow, cyan, green, magenta, red, blue.
+#    ⚠ Grey has neither highs nor lows: it is the band in which the three channels
+#      must be CLOSE TO EACH OTHER, and it is a constraint, not an absence.
 BANDE = [
     ("grigio",  [],           [],          True),
     ("giallo",  ["R", "G"],   ["B"],       False),
@@ -162,45 +162,45 @@ BANDE = [
     ("blu",     ["B"],        ["R", "G"],  False),
 ]
 
-# Il pixel e' BGRx/BGRA a 32 bit — l'unico formato che Mutter consegna
-# (`STUDI.md` §gnome §8.3: «Solo BGRx e BGRA», R32 confermata riga per riga).
+# The pixel is 32-bit BGRx/BGRA — the only format Mutter delivers
+# (`STUDI.md` §gnome §8.3: «Only BGRx and BGRA», R32 confirmed line by line).
 BYTE_PER_PIXEL = 4
 
 # ===========================================================================
-# ⛔ QUALI MARCHE SONO ROSSE SU QUALE FOTOGRAMMA — e non e' un'indulgenza
+# ⛔ WHICH MARKS ARE RED ON WHICH FRAME — and it is not leniency
 #
-# Il fotogramma `primo` e' preso PRIMA che la scena esista: e' il desktop nudo,
-# appena montato il monitor virtuale.  Pretendere li' la scena dichiarata — o
-# anche solo pretendere che non sia una tinta piatta — vorrebbe dire scrivere una
-# prova che da' ROSSO su un banco perfettamente sano.  E' la voce 2 di
-# `FASI.md` §00-ambiente: *«la prova dell'headless cercava una frase che, se tutto
-# va bene, non compare mai»* — su una sessione sana avrebbe dato rosso per
-# sempre.  Uno sfondo GNOME a tinta unita e' plausibile, e non e' un difetto.
+# The `primo` frame is taken BEFORE the scene exists: it is the bare desktop,
+# just after mounting the virtual monitor.  Requiring the declared scene there — or
+# even just requiring that it not be a flat tint — would mean writing a
+# test that gives RED on a perfectly healthy bench.  It is item 2 of
+# `FASI.md` §00-ambiente: *«the headless test looked for a sentence that, if everything
+# goes well, never appears»* — on a healthy session it would have given red
+# forever.  A solid-colour GNOME background is plausible, and it is not a defect.
 #
-# ⭐ MA IL NERO SU `primo` RESTA ROSSO, ed e' il punto: un desktop nudo NERO e'
-#    la firma esatta della sessione senza monitor virtuale — viva, completa e
-#    nera (`STUDI.md` §gnome §3.1, prova M9 di §13).  E' il guasto che questa sotto-fase
-#    esiste per vedere, e sul `primo` si vede prima che altrove.
+# ⭐ BUT BLACK ON `primo` STAYS RED, and it is the point: a BLACK bare desktop is
+#    the exact signature of the session without a virtual monitor — alive, complete and
+#    black (`STUDI.md` §gnome §3.1, test M9 of §13).  It is the fault this sub-phase
+#    exists to see, and on `primo` it shows earlier than elsewhere.
 MARCHE_ROSSE = {
     "primo":  {"FOTOGRAMMA NERO", "BYTE NON TORNANO",
                "MISURA DIVERSA DA QUELLA CHIESTA", "FILE ASSENTE"},
-    # Sul `regime` la scena e' dichiarata viva: li' tutto conta.
-    "regime": None,   # None = tutte
+    # On `regime` the scene is declared alive: there everything counts.
+    "regime": None,   # None = all
 }
 
 
 # ===========================================================================
-#  La lettura: si legge POCO, e per righe
+#  The reading: little is read, and by rows
 # ===========================================================================
 def luma(r, g, b):
-    """Rec.601.  ⚠ La scelta della matrice NON conta per quel che si controlla:
-    l'ordine decrescente delle sette barre vale sia con i pesi 601 sia con i
-    709 — e' proprio il disegno delle barre.  Si sceglie una e la si dichiara."""
+    """Rec.601.  ⚠ The choice of matrix does NOT matter for what is checked:
+    the decreasing order of the seven bars holds both with the 601 and with the
+    709 weights — it is precisely the design of the bars.  One is chosen and declared."""
     return 0.299 * r + 0.587 * g + 0.114 * b
 
 
 class Fotogramma:
-    """Un `.raw` come PipeWire l'ha consegnato: righe di `stride` byte, BGRx."""
+    """A `.raw` as PipeWire delivered it: rows of `stride` bytes, BGRx."""
 
     def __init__(self, percorso, larghezza, altezza, stride, colore):
         self.percorso = percorso
@@ -222,7 +222,7 @@ class Fotogramma:
         return self._righe[y]
 
     def pixel(self, x, y):
-        """Restituisce (R, G, B).  ⛔ L'ordine dei byte e' BGRx: B, G, R, x."""
+        """Returns (R, G, B).  ⛔ The byte order is BGRx: B, G, R, x."""
         r = self.riga(y)
         i = x * BYTE_PER_PIXEL
         if i + 3 > len(r):
@@ -231,13 +231,13 @@ class Fotogramma:
 
 
 def campiona_griglia(fg, passo_x=24, passo_y=24):
-    """Un reticolo su tutto il fotogramma: serve al nero e all'uniforme.
+    """A grid over the whole frame: it serves black and uniform.
 
-    ⚠ Si campiona invece di leggere tutto: a 1920×1080 il file e' 8 MB, e
-      leggerlo intero in Python a ogni giro renderebbe il banco lento senza
-      rispondere a una domanda in piu'.  Il reticolo di ~3600 punti copre ogni
-      riquadro di 24×24 px: un fotogramma nero non ha nessun posto in cui
-      nascondersi."""
+    ⚠ It samples instead of reading everything: at 1920×1080 the file is 8 MB, and
+      reading it whole in Python at every round would make the bench slow without
+      answering one more question.  The grid of ~3600 points covers every
+      24×24 px square: a black frame has nowhere to
+      hide."""
     punti = []
     y = 0
     while y < fg.altezza:
@@ -261,14 +261,14 @@ def media_e_scarto(valori):
 
 
 # ===========================================================================
-#  I controlli
+#  The checks
 # ===========================================================================
 def controlla_nero(fg, rilievi, misure):
     punti = campiona_griglia(fg)
     if not punti:
         rilievi.append(("BYTE NON TORNANO",
-                        "il reticolo non ha trovato nemmeno un pixel leggibile: "
-                        "stride o altezza non combaciano con i byte del file"))
+                        "the grid did not find even one readable pixel: "
+                        "stride or height do not match the bytes of the file"))
         return
     lume = [luma(*p) for p in punti]
     media, scarto = media_e_scarto(lume)
@@ -280,43 +280,43 @@ def controlla_nero(fg, rilievi, misure):
 
     if media <= SOGLIE["nero_luma_media"] and massima <= SOGLIE["nero_luma_massima"]:
         rilievi.append(("FOTOGRAMMA NERO",
-                        "luminanza media %.2f (soglia %.1f) e massima %.2f (soglia %.1f) "
-                        "su %d punti: il fotogramma e' valido e non contiene nulla. "
-                        "E' il guasto peggiore di F2.2 — STUDI.md §gnome §3.1, sessione viva, "
-                        "completa e nera"
+                        "average luma %.2f (threshold %.1f) and maximum %.2f (threshold %.1f) "
+                        "over %d points: the frame is valid and contains nothing. "
+                        "It is the worst fault of F2.2 — STUDI.md §gnome §3.1, alive, "
+                        "complete and black session"
                         % (media, SOGLIE["nero_luma_media"], massima,
                            SOGLIE["nero_luma_massima"], len(punti))))
         return
     if scarto <= SOGLIE["uniforme_scarto"]:
         rilievi.append(("FOTOGRAMMA UNIFORME",
-                        "scarto della luminanza %.2f (soglia %.1f) su %d punti: una tinta "
-                        "piatta, non nera. ⚠ Non e' «nero», ed e' una diagnosi diversa: "
-                        "un buffer mai dipinto, o riempito di grigio"
+                        "luma deviation %.2f (threshold %.1f) over %d points: a flat "
+                        "tint, not black. ⚠ It is not «black», and it is a different diagnosis: "
+                        "a buffer never painted, or filled with grey"
                         % (scarto, SOGLIE["uniforme_scarto"], len(punti))))
 
 
 def misura_profondita(fg, misure):
-    """⛔ I BIT VERI SI CONTANO, non si leggono sull'etichetta.
+    """⛔ REAL BITS ARE COUNTED, not read on the label.
 
-    Chiesto da F2.3 (la codifica) come **cucitura**, e il guasto che ci sta
-    dietro e' quello che F2.3 chiama **F2.3-A**:
+    Asked by F2.3 (encoding) as a **seam**, and the fault behind it
+    is the one F2.3 calls **F2.3-A**:
 
-      *se la cattura consegna 8 bit, tutta la catena resta verde e l'etichetta
-      continua a dire Main10.*  ⛔ Nessuno se ne accorge guardando l'immagine,
-      perche' viene bene lo stesso.
+      *if capture delivers 8 bits, the whole chain stays green and the label
+      keeps saying Main10.*  ⛔ Nobody notices by looking at the image,
+      because it comes out fine anyway.
 
-    Il numero che lo smaschera, `[M]` da F2.3: **877 livelli distinti e 0,25 di
-    multipli di 4** su un fotogramma a 10 bit veri, contro **220 livelli e
-    1,000** su uno passato per 8 bit.
+    The number that unmasks it, `[M]` from F2.3: **877 distinct levels and 0.25 of
+    multiples of 4** on a real 10-bit frame, against **220 levels and
+    1.000** on one passed through 8 bits.
 
-    ⭐ Qui il conto si fa **gia' alla cattura**, cosi' il difetto ha un imputato
-       PRIMA di entrare nel codificatore.  ⚠ E con una differenza che va detta:
-       il buffer di Mutter e' BGRx a **8 bit per canale** (`STUDI.md` §gnome §8.3 `[R]`),
-       quindi i livelli qui si contano su 256 e non su 1024.  La domanda che
-       questo conto risponde non e' «sono dieci bit?» — la risposta e' no per
-       costruzione — ma **«sono almeno otto bit veri, o e' un percorso piu'
-       povero promosso?»**.  Un canale che prendesse solo 64 valori distinti,
-       tutti multipli di 4, sarebbe un percorso a 6 bit sotto un'etichetta a 8.
+    ⭐ Here the count is done **already at capture**, so the defect has a defendant
+       BEFORE entering the encoder.  ⚠ And with a difference that must be said:
+       Mutter's buffer is BGRx at **8 bits per channel** (`STUDI.md` §gnome §8.3 `[R]`),
+       so the levels here are counted out of 256 and not out of 1024.  The question
+       this count answers is not «is it ten bits?» — the answer is no by
+       construction — but **«is it at least eight real bits, or a poorer path
+       promoted?»**.  A channel that took only 64 distinct values,
+       all multiples of 4, would be a 6-bit path under an 8-bit label.
     """
     punti = campiona_griglia(fg, 8, 8)
     if not punti:
@@ -335,40 +335,40 @@ def misura_profondita(fg, misure):
         }
     misure["profondita"]["campioni"] = len(punti)
     misure["profondita"]["⚠ come si legge"] = (
-        "il conto dei livelli distinti su TUTTO il fotogramma dipende dalla scena: "
-        "sette barre piatte ne hanno una ventina per costruzione, e li' un numero "
-        "basso non dice niente sui bit. Il conto che vuol dire qualcosa e' quello "
-        "sulla SFUMATURA (profondita_sfumatura), che attraversa tutti i 256 livelli.")
-    # ⛔ E IL RANGE SI MISURA, non si assume — anche quando il produttore lo
-    #    dichiara.  Se tutti e tre i canali stessero dentro 16-235 su una scena
-    #    che arriva a 0 e a 255, qualcuno lungo la strada avrebbe applicato un
-    #    range limitato senza dirlo.  ⚠ Non e' un rosso: e' una misura, e
-    #    dipende dalla scena.  Si scrive, e chi la legge sa cosa guarda.
+        "the count of distinct levels over the WHOLE frame depends on the scene: "
+        "seven flat bars have about twenty by construction, and there a "
+        "low number says nothing about the bits. The count that means something is the one "
+        "on the GRADIENT (profondita_sfumatura), which crosses all 256 levels.")
+    # ⛔ AND THE RANGE IS MEASURED, not assumed — even when the producer
+    #    declares it.  If all three channels stayed within 16-235 on a scene
+    #    that reaches 0 and 255, someone along the road would have applied a
+    #    limited range without saying so.  ⚠ It is not a red: it is a measurement, and
+    #    it depends on the scene.  It is written, and whoever reads it knows what they are looking at.
     mn = min(misure["profondita"][c]["minimo"] for c in "RGB")
     mx = max(misure["profondita"][c]["massimo"] for c in "RGB")
     misure["profondita"]["range_misurato"] = (
-        "sospetto LIMITATO (nessun canale sotto 16 ne' sopra 235)"
-        if mn >= 16 and mx <= 235 else "compatibile con PIENO (min %d, max %d)" % (mn, mx))
+        "suspected LIMITED (no channel below 16 nor above 235)"
+        if mn >= 16 and mx <= 235 else "compatible with FULL (min %d, max %d)" % (mn, mx))
 
 
 def misura_profondita_sfumatura(fg, misure):
-    """⭐ IL CONTO DEI BIT SI FA DOVE I BIT SI VEDONO: sulla sfumatura.
+    """⭐ THE BIT COUNT IS DONE WHERE THE BITS SHOW: on the gradient.
 
-    La scena «bandiera» porta, sotto le barre, una **rampa da nero a bianco larga
-    tutto lo schermo**: 1920 px per 256 livelli, cioe' ogni livello ripetuto ~7,5
-    volte.  ⛔ E' l'unica parte dell'immagine su cui «quanti livelli distinti» sia
-    una domanda sui BIT e non sulla scena.
+    The «bandiera» scene carries, under the bars, a **ramp from black to white as wide
+    as the screen**: 1920 px for 256 levels, that is every level repeated ~7.5
+    times.  ⛔ It is the only part of the image on which «how many distinct levels» is
+    a question about the BITS and not about the scene.
 
-    Il guasto che questo numero smaschera e' **F2.3-A**: se la catena passa da 8
-    bit e l'etichetta dice Main10, l'immagine viene bene lo stesso e tutto resta
-    verde.  Il numero di F2.3, `[M]`: **877 livelli distinti e 0,25 di multipli di
-    4** a 10 bit veri, contro **220 e 1,000** dopo un passaggio a 8 bit.
+    The fault this number unmasks is **F2.3-A**: if the chain goes through 8
+    bits and the label says Main10, the image comes out fine anyway and everything stays
+    green.  The F2.3 number, `[M]`: **877 distinct levels and 0.25 of multiples of
+    4** at real 10 bits, against **220 and 1.000** after a passage through 8 bits.
 
-    ⚠ Qui il fondo scala e' 256 e non 1024, perche' il buffer di Mutter e' BGRx
-      (`STUDI.md` §gnome §8.3 `[R]`).  Quindi la domanda a cui questo conto risponde e'
-      **«sono almeno otto bit veri?»** — l'atteso e' ~256 livelli distinti e una
-      frazione di multipli di 4 vicina a 0,25.  ⛔ Una frazione di multipli di 4
-      pari a 1,000 direbbe che qualcuno lungo la strada e' passato per 6 bit.
+    ⚠ Here the full scale is 256 and not 1024, because Mutter's buffer is BGRx
+      (`STUDI.md` §gnome §8.3 `[R]`).  So the question this count answers is
+      **«is it at least eight real bits?»** — the expectation is ~256 distinct levels and a
+      fraction of multiples of 4 close to 0.25.  ⛔ A fraction of multiples of 4
+      equal to 1.000 would say that someone along the road went through 6 bits.
     """
     y0 = int(fg.altezza) - 240
     y1 = int(fg.altezza) - 150
@@ -399,20 +399,20 @@ def misura_profondita_sfumatura(fg, misure):
                 sum(1 for x in v[c] if x % 4 == 0) / len(v[c]), 3),
         }
     d["⚠ per F2.3"] = (
-        "atteso su 8 bit veri: livelli distinti vicini a 256 e multipli di 4 "
-        "vicini a 0,25. Una frazione di 1,000 direbbe che la strada e' passata "
-        "per meno bit di quelli che l'etichetta dichiara — e' F2.3-A visto "
-        "gia' alla cattura.")
+        "expected on 8 real bits: distinct levels close to 256 and multiples of 4 "
+        "close to 0.25. A fraction of 1.000 would say that the road went "
+        "through fewer bits than the label declares — it is F2.3-A seen "
+        "already at capture.")
     misure["profondita_sfumatura"] = d
 
 
 def controlla_byte(fg, atteso_larghezza, atteso_altezza, rilievi, misure):
-    """⛔ I byte devono tornare con lo stride DICHIARATO, non con larghezza*4.
+    """⛔ The bytes must add up with the DECLARED stride, not with width*4.
 
-    `cattura.h` di v1, prima riga: *«lo stride si legge dal chunk del buffer, mai
-    calcolato come larghezza*4. Il produttore allinea le righe come gli conviene,
-    e dedurlo produce immagini oblique»*.  Qui non si deduce: si confronta quel
-    che il produttore ha dichiarato con i byte che ci sono."""
+    v1's `cattura.h`, first line: *«the stride is read from the buffer chunk, never
+    computed as width*4. The producer aligns the rows as it pleases,
+    and deducing it produces slanted images»*.  Here nothing is deduced: what
+    the producer declared is compared with the bytes that are there."""
     minimo = fg.larghezza * BYTE_PER_PIXEL
     atteso = fg.stride * fg.altezza
     misure["byte_nel_file"] = fg.byte
@@ -422,34 +422,34 @@ def controlla_byte(fg, atteso_larghezza, atteso_altezza, rilievi, misure):
 
     if fg.stride < minimo:
         rilievi.append(("BYTE NON TORNANO",
-                        "stride dichiarato %d, ma servono almeno %d byte per una riga di "
-                        "%d pixel a 32 bit" % (fg.stride, minimo, fg.larghezza)))
+                        "declared stride %d, but at least %d bytes are needed for a row of "
+                        "%d pixels at 32 bits" % (fg.stride, minimo, fg.larghezza)))
     if fg.byte < atteso:
         rilievi.append(("BYTE NON TORNANO",
-                        "il file ha %d byte, ne servono %d (stride %d × altezza %d): "
-                        "il fotogramma e' TRONCATO" % (fg.byte, atteso, fg.stride, fg.altezza)))
+                        "the file has %d bytes, %d are needed (stride %d × height %d): "
+                        "the frame is TRUNCATED" % (fg.byte, atteso, fg.stride, fg.altezza)))
     elif fg.byte > atteso:
         misure["byte_in_piu"] = fg.byte - atteso
 
     if atteso_larghezza and (fg.larghezza != atteso_larghezza or fg.altezza != atteso_altezza):
         rilievi.append(("MISURA DIVERSA DA QUELLA CHIESTA",
-                        "chiesti %d×%d, negoziati %d×%d. ⛔ Su Mutter e' un guasto: il "
-                        "monitor virtuale si chiede e lui lo fa della misura chiesta "
-                        "(cattura.h, `misura_negoziabile` FALSO). Su KWin sarebbe la "
-                        "risposta normale — ed e' per questo che le due colonne stanno "
-                        "separate invece di essere confrontate a mente"
+                        "requested %d×%d, negotiated %d×%d. ⛔ On Mutter it is a fault: the "
+                        "virtual monitor is requested and it makes it of the requested size "
+                        "(cattura.h, `misura_negoziabile` FALSE). On KWin it would be the "
+                        "normal answer — and that is why the two columns stay "
+                        "separate instead of being compared mentally"
                         % (atteso_larghezza, atteso_altezza, fg.larghezza, fg.altezza)))
 
 
 def leggi_bande(fg):
-    """Legge le sette bande sulla riga di firma e restituisce le loro misure."""
-    y = int(fg.altezza * 0.25)          # dentro la zona delle sette barre
+    """Reads the seven bands on the signature row and returns their measurements."""
+    y = int(fg.altezza * 0.25)          # inside the zone of the seven bars
     larghezza_banda = fg.larghezza / 7.0
     bande = []
     for i in range(7):
-        # ⛔ Si campiona il CUORE della banda, non il bordo: il 4:2:0 sfuma i
-        #    passaggi su due pixel per lato, e un campione sul bordo misurerebbe
-        #    la sfumatura invece della banda.
+        # ⛔ The CORE of the band is sampled, not the edge: 4:2:0 blurs the
+        #    transitions over two pixels per side, and a sample on the edge would measure
+        #    the blur instead of the band.
         x0 = int(i * larghezza_banda + larghezza_banda * 0.25)
         x1 = int(i * larghezza_banda + larghezza_banda * 0.75)
         erre, gi, bi = [], [], []
@@ -476,52 +476,52 @@ def controlla_firma(fg, rilievi, misure):
     misure["bande"] = bande
     if any(b["campioni"] == 0 for b in bande):
         rilievi.append(("SCENA NON RICONOSCIUTA",
-                        "una banda non ha nemmeno un campione: la riga di firma non si legge"))
+                        "a band has not even one sample: the signature row cannot be read"))
         return
 
-    # F1 — ciascuna banda uniforme al suo interno
+    # F1 — each band uniform inside
     sporche = [(i, b["scarto_max"]) for i, b in enumerate(bande)
                if b["scarto_max"] > SOGLIE["banda_scarto"]]
-    # F2 — la luminanza cala da sinistra a destra
+    # F2 — luma decreases from left to right
     salti = [round(bande[i]["luma"] - bande[i + 1]["luma"], 1) for i in range(6)]
     misure["salti_luma"] = salti
     non_cala = [i for i, s in enumerate(salti) if s < SOGLIE["salto_luma"]]
-    # F3 — la firma dei canali
+    # F3 — the channel signature
     sbagliate = []
     for i, (nome, alti, bassi, vicini) in enumerate(BANDE):
         b = bande[i]
         val = {"R": b["R"], "G": b["G"], "B": b["B"]}
         if vicini:
             if max(val.values()) - min(val.values()) > SOGLIE["canale_stacco"]:
-                sbagliate.append((nome, "i tre canali dovrebbero essere vicini: %s" % val))
+                sbagliate.append((nome, "the three channels should be close: %s" % val))
             continue
         piu_basso_alto = min(val[c] for c in alti)
         piu_alto_basso = max(val[c] for c in bassi)
         if piu_basso_alto - piu_alto_basso < SOGLIE["canale_stacco"]:
-            sbagliate.append((nome, "%s dovrebbero dominare su %s, e invece %s"
+            sbagliate.append((nome, "%s should dominate over %s, and instead %s"
                               % ("+".join(alti), "+".join(bassi), val)))
 
     if sporche or non_cala or sbagliate:
         motivi = []
         if sporche:
-            motivi.append("F1 — bande non uniformi: %s" % sporche)
+            motivi.append("F1 — bands not uniform: %s" % sporche)
         if non_cala:
-            motivi.append("F2 — la luminanza non cala fra le bande %s (salti %s, soglia %.1f)"
+            motivi.append("F2 — luma does not decrease between bands %s (jumps %s, threshold %.1f)"
                           % ([(i, i + 1) for i in non_cala], salti, SOGLIE["salto_luma"]))
         if sbagliate:
-            motivi.append("F3 — firma dei canali: %s" % sbagliate)
+            motivi.append("F3 — channel signature: %s" % sbagliate)
         rilievi.append(("SCENA NON RICONOSCIUTA",
-                        "il fotogramma non e' nero ma non e' la scena dichiarata «bandiera». "
+                        "the frame is not black but it is not the declared «bandiera» scene. "
                         + " · ".join(motivi)))
 
 
 def controlla_cambiato(a, b, rilievi, misure):
-    """⛔ `primo` e `regime` devono essere DIVERSI.
+    """⛔ `primo` and `regime` must be DIFFERENT.
 
-    Se fossero identici, il produttore ci starebbe restituendo lo stesso buffer
-    due volte — ed e' la forma esatta della trappola 8 di `LEZIONI.md` §4: chi si
-    collega a un desktop fermo resta al nero finche' non si muove qualcosa, e la
-    schermata vecchia ha lo stesso aspetto di una nuova."""
+    If they were identical, the producer would be giving us the same buffer
+    twice — and it is the exact form of trap 8 of `LEZIONI.md` §4: whoever
+    connects to a still desktop stays on black until something moves, and the
+    old screen looks the same as a new one."""
     pa = campiona_griglia(a)
     pb = campiona_griglia(b)
     n = min(len(pa), len(pb))
@@ -534,42 +534,42 @@ def controlla_cambiato(a, b, rilievi, misure):
     misure["frazione_diversa"] = round(frazione, 4)
     if frazione < SOGLIE["cambiato_frazione"]:
         rilievi.append(("IL BUFFER NON E' CAMBIATO",
-                        "fra `primo` e `regime` solo %d punti su %d differiscono (%.2f %%, "
-                        "soglia %.2f %%): il produttore potrebbe averci restituito lo stesso "
-                        "buffer, e una schermata vecchia ha lo stesso aspetto di una nuova"
+                        "between `primo` and `regime` only %d points out of %d differ (%.2f %%, "
+                        "threshold %.2f %%): the producer might have given us back the same "
+                        "buffer, and an old screen looks the same as a new one"
                         % (diversi, n, frazione * 100, SOGLIE["cambiato_frazione"] * 100)))
 
 
 # ===========================================================================
-#  Il giudizio di un fotogramma
+#  The judgement of a frame
 # ===========================================================================
 def giudica_uno(percorso, larghezza, altezza, stride, colore, scena,
                 chiesto_larghezza, chiesto_altezza):
     rilievi, misure = [], {}
     if not os.path.exists(percorso):
-        return [("FILE ASSENTE", "non c'e' nessun file da giudicare: %s" % percorso)], misure, None
+        return [("FILE ASSENTE", "there is no file to judge: %s" % percorso)], misure, None
     fg = Fotogramma(percorso, larghezza, altezza, stride, colore)
     controlla_byte(fg, chiesto_larghezza, chiesto_altezza, rilievi, misure)
     misura_profondita(fg, misure)
     if scena == "bandiera":
         misura_profondita_sfumatura(fg, misure)
     controlla_nero(fg, rilievi, misure)
-    # ⛔ La firma si controlla SOLO se il fotogramma non e' gia' nero o uniforme:
-    #    su un nero fallirebbe anche lei, e tre marche per una causa sola fanno
-    #    sembrare tre difetti quel che ne e' uno.
+    # ⛔ The signature is checked ONLY if the frame is not already black or uniform:
+    #    on a black one it would fail too, and three marks for a single cause make
+    #    what is one defect look like three.
     marche = [m for m, _ in rilievi]
     if scena == "bandiera" and "FOTOGRAMMA NERO" not in marche:
         controlla_firma(fg, rilievi, misure)
     elif scena != "bandiera":
-        misure["firma"] = "non controllata: scena «%s», nessuna firma dichiarata" % scena
+        misure["firma"] = "not checked: scene «%s», no signature declared" % scena
     return rilievi, misure, fg
 
 
 # ===========================================================================
-#  ⛔ IL CONTROLLO POSITIVO — gira in coda a OGNI esecuzione
+#  ⛔ THE POSITIVE CONTROL — runs at the end of EVERY execution
 # ===========================================================================
 def fabbrica(percorso, larghezza, altezza, stride, che):
-    """Fabbrica un `.raw` BGRx: «bandiera», «nero» o «grigio»."""
+    """Builds a BGRx `.raw`: «bandiera», «nero» or «grigio»."""
     colori = [(191, 191, 191), (191, 191, 0), (0, 191, 191), (0, 191, 0),
               (191, 0, 191), (191, 0, 0), (0, 0, 191)]
     with open(percorso, "wb") as f:
@@ -591,26 +591,26 @@ def fabbrica(percorso, larghezza, altezza, stride, che):
 
 
 def controllo_positivo(cartella, righe):
-    """⛔ Lo strumento sa trovare qualcosa che c'e' di sicuro, e sa NON trovarlo?
+    """⛔ Can the tool find something that is surely there, and can it NOT find it?
 
-    Tre prove, e l'atteso di ciascuna e' scritto qui sopra, non dopo il giro.
-    ⚠ Si usa un fotogramma piccolo (280×140): la fabbrica e' in Python puro e a
-      1920×1080 costerebbe secondi a ogni esecuzione, senza rispondere a una
-      domanda in piu' — la firma sta nelle proporzioni, non nella misura."""
+    Three tests, and the expectation of each is written up here, not after the round.
+    ⚠ A small frame is used (280×140): the factory is pure Python and at
+      1920×1080 it would cost seconds at every execution, without answering one
+      more question — the signature lies in the proportions, not in the size."""
     L, A = 280, 140
     S = L * BYTE_PER_PIXEL
-    #  nome                che        marche PRETESE          marche VIETATE
+    #  name                what       REQUIRED marks          FORBIDDEN marks
     prove = [
-        ("bandiera sintetica", "bandiera", [],                        ["FOTOGRAMMA NERO",
+        ("synthetic flag",     "bandiera", [],                        ["FOTOGRAMMA NERO",
                                                                        "SCENA NON RICONOSCIUTA",
                                                                        "FOTOGRAMMA UNIFORME",
                                                                        "BYTE NON TORNANO"]),
-        ("nero pieno",         "nero",     ["FOTOGRAMMA NERO"],       []),
-        # ⛔ LA PROVA CHE VALE DOPPIO, e la colonna «vietate» e' la meta' che
-        #    conta: un giudice che chiamasse NERO un grigio sbaglierebbe la sua
-        #    diagnosi peggiore proprio nel caso in cui serve.  Pretendere solo
-        #    «dice qualcosa di rosso» non lo distinguerebbe.
-        ("grigio uniforme",    "grigio",   ["SCENA NON RICONOSCIUTA",
+        ("full black",         "nero",     ["FOTOGRAMMA NERO"],       []),
+        # ⛔ THE TEST THAT COUNTS DOUBLE, and the «forbidden» column is the half that
+        #    counts: a judge that called a grey BLACK would get its
+        #    worst diagnosis wrong precisely in the case where it is needed.  Requiring only
+        #    «it says something red» would not tell it apart.
+        ("uniform grey",       "grigio",   ["SCENA NON RICONOSCIUTA",
                                             "FOTOGRAMMA UNIFORME"],   ["FOTOGRAMMA NERO"]),
     ]
     tutto_bene = True
@@ -625,14 +625,14 @@ def controllo_positivo(cartella, righe):
         mancano = [m for m in pretese if m not in marche]
         di_troppo = [m for m in vietate if m in marche]
         ok = not mancano and not di_troppo
-        detto = "detto %s" % (marche or "verde")
+        detto = "said %s" % (marche or "green")
         if mancano:
-            detto += " ⛔ mancano %s" % mancano
+            detto += " ⛔ missing %s" % mancano
         if di_troppo:
-            detto += " ⛔ di troppo %s" % di_troppo
-        righe.append(("  controllo positivo — %s" % nome,
-                      "atteso %s / vietate %s, %s"
-                      % (pretese or "verde", vietate or "—", detto), ok))
+            detto += " ⛔ extra %s" % di_troppo
+        righe.append(("  positive control — %s" % nome,
+                      "expected %s / forbidden %s, %s"
+                      % (pretese or "green", vietate or "—", detto), ok))
         tutto_bene = tutto_bene and ok
     return tutto_bene
 
@@ -658,14 +658,14 @@ def main():
         return 0 if ok else 2
 
     if not o.manifesto:
-        print("⛔ serve --manifesto PREFISSO.json", file=sys.stderr)
+        print("⛔ --manifesto PREFISSO.json is needed", file=sys.stderr)
         return 2
 
     try:
         with open(o.manifesto) as f:
             man = json.load(f)
     except Exception as e:
-        print("⛔ il manifesto non si legge: %s" % e, file=sys.stderr)
+        print("⛔ the manifest cannot be read: %s" % e, file=sys.stderr)
         return 2
 
     verdetto = {
@@ -678,24 +678,24 @@ def main():
         "fotogrammi": {},
     }
 
-    print("\n\033[1m== il giudizio dei pixel — %s ==\033[0m" % man.get("etichetta"))
-    print("   produttore: %s (uscita %s)" % (man.get("esito"), man.get("uscita")))
+    print("\n\033[1m== the judgement of the pixels — %s ==\033[0m" % man.get("etichetta"))
+    print("   producer: %s (exit %s)" % (man.get("esito"), man.get("uscita")))
 
-    # ⛔ ZERO NON E' FALLIMENTO, e qui e' il punto in cui si separano.
+    # ⛔ ZERO IS NOT FAILURE, and here is the point where they part.
     if man.get("uscita") == 3 or man.get("esito") == "ZERO FOTOGRAMMI":
-        print("%s--%s  ZERO FOTOGRAMMI: non c'e' niente da giudicare, e non e' un rosso.\n"
-              "      Il flusso e' stato attivo per tutta la presa e il desktop non e'\n"
-              "      cambiato: su Mutter e' il comportamento dichiarato (LEZIONI.md §4\n"
-              "      trappola 8), non un guasto. ⚠ Ma con una scena dichiarata VIVA e'\n"
-              "      un'informazione pesante: vuol dire che la scena non dipingeva."
+        print("%s--%s  ZERO FRAMES: there is nothing to judge, and it is not a red.\n"
+              "      The stream was active for the whole take and the desktop did not\n"
+              "      change: on Mutter it is the declared behaviour (LEZIONI.md §4\n"
+              "      trap 8), not a fault. ⚠ But with a scene declared ALIVE it is\n"
+              "      heavy information: it means the scene was not painting."
               % (GIALLO, GRIGIO))
         verdetto["verdetto"] = "ZERO FOTOGRAMMI"
         codice = 3
         rilievi_tutti = []
     elif str(man.get("esito", "")).startswith("TIPO DICHIARATO"):
-        print("%s--%s  strada DMA-BUF: il tipo di buffer e' dichiarato, i pixel NON si\n"
-              "      leggono da qui (il descrittore vive sulla scheda). Questo giro\n"
-              "      risponde a «di che tipo e' il buffer», non a «cosa c'e' dentro»."
+        print("%s--%s  DMA-BUF road: the buffer type is declared, the pixels are NOT\n"
+              "      read from here (the descriptor lives on the card). This round\n"
+              "      answers «what type is the buffer», not «what is inside»."
               % (GIALLO, GRIGIO))
         verdetto["verdetto"] = "SOLO IL TIPO"
         codice = 3
@@ -707,26 +707,26 @@ def main():
         altezza = neg.get("altezza") or chi.get("altezza")
         colore = neg.get("colore", "?")
 
-        # ⛔ IL TIPO DI BUFFER SI RIPORTA CON CHI LO DICE, mai dedotto.
+        # ⛔ THE BUFFER TYPE IS REPORTED WITH WHOEVER SAYS IT, never deduced.
         buf = man.get("buffer", {})
-        print("   buffer:     tipi visti %s · distinti riciclati %s"
+        print("   buffer:     types seen %s · distinct recycled %s"
               % (buf.get("tipi_visti"), buf.get("distinti_riciclati")))
-        print("               chi lo dice: %s" % buf.get("chi_lo_dice"))
-        print("   negoziato:  %s×%s %s, modificatore %s"
+        print("               who says it: %s" % buf.get("chi_lo_dice"))
+        print("   negotiated: %s×%s %s, modifier %s"
               % (larghezza, altezza, colore, neg.get("modificatore")))
-        print("   chiesto:    %s×%s %s, strada %s"
+        print("   requested:  %s×%s %s, road %s"
               % (chi.get("larghezza"), chi.get("altezza"), chi.get("colore"), chi.get("strada")))
-        # ⛔ LE TRE COSE CHE F2.3 CHIEDE DICHIARATE si stampano PRIMA dei
-        #    pixel: chi legge questo giro deve vederle senza cercarle.
+        # ⛔ THE THREE THINGS F2.3 ASKS TO BE DECLARED are printed BEFORE the
+        #    pixels: whoever reads this round must see them without looking for them.
         cons = man.get("consegna_a_F2_3", {})
         if cons:
-            print("\n   \033[1m── quel che si consegna a F2.3, dichiarato ──\033[0m")
-            print("      bit per canale: %s   (%s)"
+            print("\n   \033[1m── what is handed to F2.3, declared ──\033[0m")
+            print("      bits per channel: %s   (%s)"
                   % (cons.get("bit_per_canale"), cons.get("bit_per_canale_chi_lo_dice")))
             print("      range:          %s" % cons.get("range"))
-            print("      matrice:        %s" % cons.get("matrice"))
-            print("      trasferimento:  %s" % cons.get("trasferimento"))
-            print("      primari:        %s" % cons.get("primari"))
+            print("      matrix:         %s" % cons.get("matrice"))
+            print("      transfer:       %s" % cons.get("trasferimento"))
+            print("      primaries:      %s" % cons.get("primari"))
             print("      %s" % cons.get("⛔ F2.3-A"))
             print("      %s" % cons.get("⚠ sulla matrice"))
         for av in man.get("avvertenze", []):
@@ -738,52 +738,52 @@ def main():
         for q in quali:
             f = man.get(q)
             if not f and q == "regime" and o.scena == "fermo":
-                # ⭐ SULLA SCENA «fermo» L'ATTESO E' ROVESCIATO, e va detto qui.
+                # ⭐ ON THE «fermo» SCENE THE EXPECTATION IS REVERSED, and it must be said here.
                 #
-                # `fermo` e' il CASO OPPOSTO dichiarato: nessuno dipinge, e su
-                # Mutter un fotogramma arriva **solo se qualcosa cambia**
-                # (`LEZIONI.md` §4 trappola 8).  ⇒ Qui l'assenza del `regime` e'
-                # la risposta giusta, non un rilievo: chiamarla rossa vorrebbe
-                # dire scrivere una prova che da' rosso su un banco sano — la
-                # voce 2 di `FASI.md` §00-ambiente.
+                # `fermo` is the declared OPPOSITE CASE: nobody paints, and on
+                # Mutter a frame arrives **only if something changes**
+                # (`LEZIONI.md` §4 trap 8).  ⇒ Here the absence of `regime` is
+                # the right answer, not a finding: calling it red would
+                # mean writing a test that gives red on a healthy bench — item
+                # 2 of `FASI.md` §00-ambiente.
                 #
-                # ⛔ E il rovescio e' un rilievo vero: se sulla scena `fermo`
-                #    ARRIVASSE un fotogramma di regime, vorrebbe dire che sullo
-                #    schermo si muove qualcosa che non abbiamo dichiarato — e
-                #    ogni misura fatta su quello schermo misurerebbe anche
-                #    quello.
-                print("%s--%s  ⭐ scena «fermo»: il «regime» NON c'e', ed e' l'ATTESO.\n"
-                      "      Nessuno dipingeva, e Mutter consegna solo quando qualcosa\n"
-                      "      cambia. E' lo zero legittimo della trappola 8, non un rosso."
+                # ⛔ And the reverse is a real finding: if on the `fermo` scene
+                #    a steady-state frame ARRIVED, it would mean that on the
+                #    screen something moves that we did not declare — and
+                #    every measurement made on that screen would measure
+                #    that too.
+                print("%s--%s  ⭐ «fermo» scene: the «regime» is NOT there, and it is the EXPECTATION.\n"
+                      "      Nobody was painting, and Mutter delivers only when something\n"
+                      "      changes. It is the legitimate zero of trap 8, not a red."
                       % (GIALLO, GRIGIO))
                 verdetto["zero_legittimo_confermato"] = True
                 continue
             if f and q == "regime" and o.scena == "fermo":
                 rilievi_tutti.append((q, "QUALCOSA SI MUOVEVA E NON L'ABBIAMO DICHIARATO",
-                                      "sulla scena «fermo» non doveva arrivare nessun "
-                                      "fotogramma di regime, e ne e' arrivato uno: sullo "
-                                      "schermo si muove qualcosa che il banco non conosce, "
-                                      "e ogni misura su quello schermo misura anche quello"))
-                print("%sNO%s  ⛔ sulla scena «fermo» e' arrivato un fotogramma di regime"
+                                      "on the «fermo» scene no steady-state "
+                                      "frame should have arrived, and one did: on the "
+                                      "screen something moves that the bench does not know, "
+                                      "and every measurement on that screen measures that too"))
+                print("%sNO%s  ⛔ on the «fermo» scene a steady-state frame arrived"
                       % (ROSSO, GRIGIO))
             if not f:
-                # ⛔ «NON C'E'» NON E' «VA BENE» — e questo giudice ci e' cascato.
+                # ⛔ «IT IS NOT THERE» IS NOT «FINE» — and this judge fell for it.
                 #
-                # Il 12 agosto 2026, al primo giro vero, il produttore ha preso
-                # solo il fotogramma `primo` (la scena dipingeva su un altro
-                # schermo) e questo giudice ha stampato una riga gialla e ha
-                # concluso **VERDE**.  Un banco verde col difetto vivo e' la
-                # peggiore delle prove, perche' da' fiducia (`CODER.md` §4.6).
+                # On 12 Aug 2026, at the first real round, the producer took
+                # only the `primo` frame (the scene was painting on another
+                # screen) and this judge printed a yellow line and
+                # concluded **VERDE**.  A green bench with the defect alive is the
+                # worst of proofs, because it gives confidence (`CODER.md` §4.6).
                 #
-                # E' la forma E8: il silenzio scambiato per zero.  Il fotogramma
-                # che manca e' quello che RISPONDE alla domanda di F2.2 — e
-                # senza di lui non c'e' nessun verde da dare.
+                # It is form E8: silence mistaken for zero.  The frame
+                # that is missing is the one that ANSWERS the question of F2.2 — and
+                # without it there is no green to give.
                 rilievi_tutti.append((q, "IL FOTOGRAMMA MANCA",
-                                      "il produttore non ha preso «%s». Se manca il "
-                                      "«regime», non c'e' nessun fotogramma con la scena "
-                                      "dentro: il verde non si da'" % q))
-                print("%sNO%s  ⛔ «%s» NON C'E' nel manifesto, e non e' un'assenza innocua: "
-                      "e' la domanda di F2.2 rimasta senza risposta" % (ROSSO, GRIGIO, q))
+                                      "the producer did not take «%s». If the "
+                                      "«regime» is missing, there is no frame with the scene "
+                                      "inside: no green is given" % q))
+                print("%sNO%s  ⛔ «%s» IS NOT in the manifest, and it is not a harmless absence: "
+                      "it is the question of F2.2 left unanswered" % (ROSSO, GRIGIO, q))
                 continue
             percorso = f["file"]
             if not os.path.isabs(percorso):
@@ -791,11 +791,11 @@ def main():
             rilievi, misure, fg = giudica_uno(percorso, larghezza, altezza, f["stride"], colore,
                                               o.scena if q == "regime" else "ignota",
                                               chi.get("larghezza"), chi.get("altezza"))
-            # ⚠ La firma si pretende solo sul fotogramma di REGIME.  Il `primo`
-            #   e' preso PRIMA che la scena esista — pretendere la bandiera li'
-            #   sarebbe rosso su un banco che funziona, che e' la voce 2 di
-            #   `FASI.md` §00-ambiente (una prova che cerca una frase che, se
-            #   tutto va bene, non compare mai).
+            # ⚠ The signature is required only on the STEADY-STATE frame.  The `primo`
+            #   is taken BEFORE the scene exists — requiring the flag there
+            #   would be red on a bench that works, which is item 2 of
+            #   `FASI.md` §00-ambiente (a test that looks for a sentence that, if
+            #   everything goes well, never appears).
             misure["danno"] = f.get("danno")
             misure["seq"] = f.get("seq")
             misure["indice_fra_gli_arrivati"] = f.get("indice_fra_gli_arrivati")
@@ -806,33 +806,33 @@ def main():
                             for m, d in rilievi],
                 "misure": misure}
             letti[q] = fg
-            print("\n   ── %s ── (danno %s, seq %s, fotogramma n° %s fra gli arrivati)"
+            print("\n   ── %s ── (damage %s, seq %s, frame no. %s among those arrived)"
                   % (q, f.get("danno"), f.get("seq"), f.get("indice_fra_gli_arrivati")))
-            print("      luminanza media %s · massima %s · scarto %s su %s punti"
+            print("      average luma %s · maximum %s · deviation %s over %s points"
                   % (misure.get("luma_media"), misure.get("luma_massima"),
                      misure.get("luma_scarto"), misure.get("punti_campionati")))
-            print("      byte %s (attesi %s = stride %s × altezza %s)"
+            print("      bytes %s (expected %s = stride %s × height %s)"
                   % (misure.get("byte_nel_file"), misure.get("byte_attesi_stride_per_altezza"),
                      misure.get("stride_dichiarato"), altezza))
             pr = misure.get("profondita")
             if pr:
-                print("      profondita' misurata su %d campioni — %s"
+                print("      depth measured on %d samples — %s"
                       % (pr["campioni"], pr["range_misurato"]))
                 for c in "RGB":
                     d = pr[c]
-                    print("        %s  min %-4d max %-4d livelli distinti %-4d/256"
-                          "  multipli di 2 %.3f · di 4 %.3f · di 8 %.3f"
+                    print("        %s  min %-4d max %-4d distinct levels %-4d/256"
+                          "  multiples of 2 %.3f · of 4 %.3f · of 8 %.3f"
                           % (c, d["minimo"], d["massimo"], d["livelli_distinti"],
                              d["frazione_multipli_di_2"], d["frazione_multipli_di_4"],
                              d["frazione_multipli_di_8"]))
             sf = misure.get("profondita_sfumatura")
             if sf:
-                print("      ⭐ sulla SFUMATURA (righe %d-%d, %d campioni) — il conto che"
-                      " vuol dire qualcosa sui bit:" % (sf["riga_da"], sf["riga_a"],
+                print("      ⭐ on the GRADIENT (rows %d-%d, %d samples) — the count that"
+                      " means something about the bits:" % (sf["riga_da"], sf["riga_a"],
                                                         sf["campioni"]))
                 for c in "RGB":
-                    print("        %s  livelli distinti %-4d/256   multipli di 4 %.3f"
-                          "   (atteso su 8 bit veri: ~256 e ~0,250)"
+                    print("        %s  distinct levels %-4d/256   multiples of 4 %.3f"
+                          "   (expected on 8 real bits: ~256 and ~0.250)"
                           % (c, sf[c]["livelli_distinti"], sf[c]["frazione_multipli_di_4"]))
             if "bande" in misure:
                 for nome, b in zip([n for n, _, _, _ in BANDE], misure["bande"]):
@@ -840,27 +840,27 @@ def main():
                           % (nome, b["R"], b["G"], b["B"], b["luma"], b["scarto_max"]))
             rosse = MARCHE_ROSSE.get(q)
             for m, d in rilievi:
-                # ⛔ Un avviso NON e' un rosso, e la differenza si stampa: due
-                #    esiti sotto lo stesso colore sarebbero due misure sotto la
-                #    stessa etichetta (forma E2).
+                # ⛔ A warning is NOT a red, and the difference is printed: two
+                #    outcomes under the same colour would be two measurements under the
+                #    same label (form E2).
                 if rosse is None or m in rosse:
                     print("      %sNO%s  %s — %s" % (ROSSO, GRIGIO, m, d))
                     rilievi_tutti.append((q, m, d))
                 else:
                     print("      %s⚠%s   %s — %s" % (GIALLO, GRIGIO, m, d))
-                    print("            (avviso, non rosso: sul «%s» la scena non c'e'"
-                          " ancora — vedi MARCHE_ROSSE)" % q)
+                    print("            (warning, not red: on the «%s» the scene is not there"
+                          " yet — see MARCHE_ROSSE)" % q)
             if not rilievi:
-                print("      %sOK%s  nessun rilievo" % (VERDE, GRIGIO))
+                print("      %sOK%s  no finding" % (VERDE, GRIGIO))
 
-        # ⛔ E il confronto fra i due, che nessuno dei due da solo puo' dare.
+        # ⛔ And the comparison between the two, which neither of the two alone can give.
         if letti.get("primo") and letti.get("regime"):
             rc, mc = [], {}
             controlla_cambiato(letti["primo"], letti["regime"], rc, mc)
             verdetto["confronto_primo_regime"] = {
                 "rilievi": [{"marca": m, "perche": d} for m, d in rc], "misure": mc}
-            print("\n   ── primo contro regime ──")
-            print("      punti diversi %s su %s (%s %%)"
+            print("\n   ── primo against regime ──")
+            print("      differing points %s out of %s (%s %%)"
                   % (mc.get("punti_diversi_fra_primo_e_regime"),
                      mc.get("punti_campionati", "—"),
                      round((mc.get("frazione_diversa") or 0) * 100, 2)))
@@ -868,22 +868,22 @@ def main():
                 print("      %sNO%s  %s — %s" % (ROSSO, GRIGIO, m, d))
                 rilievi_tutti.append(("confronto", m, d))
             if not rc:
-                print("      %sOK%s  il buffer e' cambiato: non e' una schermata vecchia"
+                print("      %sOK%s  the buffer changed: it is not an old screen"
                       % (VERDE, GRIGIO))
 
-        # ⭐ E la risposta alla domanda che i documenti si contraddicono su:
-        #    un fotogramma con danno PARZIALE e' comunque INTERO?
+        # ⭐ And the answer to the question the documents contradict each other on:
+        #    is a frame with PARTIAL damage nevertheless WHOLE?
         reg = man.get("regime") or {}
         if reg.get("danno") == "parziale":
             firma_ok = not any(q == "regime" and m == "SCENA NON RICONOSCIUTA"
                                for q, m, _ in rilievi_tutti)
             nero = any(q == "regime" and m == "FOTOGRAMMA NERO" for q, m, _ in rilievi_tutti)
             verdetto["danno_parziale_ma_intero"] = bool(firma_ok and not nero)
-            print("\n   ⭐ il fotogramma di regime porta danno PARZIALE e la scena %s"
-                  % ("SI VEDE INTERA ⇒ il buffer e' intero (STUDI.md §gnome §8.1: blit dell'intero "
-                     "framebuffer), non un diff (cattura.h di v1)"
+            print("\n   ⭐ the steady-state frame carries PARTIAL damage and the scene %s"
+                  % ("IS SEEN WHOLE ⇒ the buffer is whole (STUDI.md §gnome §8.1: blit of the whole "
+                     "framebuffer), not a diff (v1's cattura.h)"
                      if firma_ok and not nero else
-                     "NON si vede intera ⇒ il sospetto va sul diff di cattura.h"))
+                     "is NOT seen whole ⇒ suspicion falls on the diff of cattura.h"))
 
         for fg in letti.values():
             if fg:
@@ -891,8 +891,8 @@ def main():
         codice = 1 if rilievi_tutti else 0
         verdetto["verdetto"] = "ROSSO" if rilievi_tutti else "VERDE"
 
-    # ── ⛔ IL CONTROLLO POSITIVO, IN CODA A OGNI ESECUZIONE ────────────────
-    print("\n\033[1m== il controllo positivo dello strumento ==\033[0m")
+    # ── ⛔ THE POSITIVE CONTROL, AT THE END OF EVERY EXECUTION ─────────────
+    print("\n\033[1m== the positive control of the tool ==\033[0m")
     ok_cp = controllo_positivo(cartella, righe_cp)
     for t, d, buono in righe_cp:
         print("%s%s%s%s — %s" % (VERDE if buono else ROSSO, t, GRIGIO, " OK" if buono else " NO", d))
@@ -900,10 +900,10 @@ def main():
                                       "prove": [{"prova": t.strip(), "esito": d, "ok": b}
                                                 for t, d, b in righe_cp]}
     if not ok_cp:
-        print("\n%s⛔ IL GIUDICE NON E' CERTIFICATO%s: il controllo positivo non e' passato.\n"
-              "   Il verdetto sul fotogramma vero NON viene emesso — uno strumento che non\n"
-              "   sa trovare quel che c'e' di sicuro non e' pulito, e' non certificato\n"
-              "   (LEZIONI.md §1.9, seconda regola)." % (ROSSO, GRIGIO))
+        print("\n%s⛔ THE JUDGE IS NOT CERTIFIED%s: the positive control did not pass.\n"
+              "   The verdict on the real frame is NOT issued — a tool that cannot\n"
+              "   find what is surely there is not clean, it is uncertified\n"
+              "   (LEZIONI.md §1.9, second rule)." % (ROSSO, GRIGIO))
         verdetto["verdetto"] = "GIUDICE NON CERTIFICATO"
         codice = 2
 
@@ -911,7 +911,7 @@ def main():
         with open(o.json, "w") as f:
             json.dump(verdetto, f, ensure_ascii=False, indent=1)
 
-    print("\n\033[1mVERDETTO: %s\033[0m (uscita %d)" % (verdetto["verdetto"], codice))
+    print("\n\033[1mVERDICT: %s\033[0m (exit %d)" % (verdetto["verdetto"], codice))
     return codice
 
 

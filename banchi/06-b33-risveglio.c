@@ -1,94 +1,95 @@
 /*
- * 06-b33-risveglio.c — ⛔⛔ LA SECONDA PORTA DEL CLIC CHE MUORE.
+ * 06-b33-risveglio.c — ⛔⛔ THE SECOND DOOR OF THE DYING CLICK.
  *
- * Sottofase 6.1, §7.1 del documento di fase: *«ogni `cattura_risveglia()`
- * ricrea i dispositivi di `libei`: 3 risvegli, 3 ricambi, con ZERO
- * `ADATTA_TELA`»*.  ⇒ Il clic che muore ha una porta che **non dipende dalla
- * tela**, e si apre proprio mentre l'utente tiene premuto il mouse su un
- * desktop fermo.
+ * Sub-phase 6.1, §7.1 of the phase document: *"every `cattura_risveglia()`
+ * recreates the `libei` devices: 3 wake-ups, 3 replacements, with ZERO
+ * `ADATTA_TELA`"*.  ⇒ The dying click has a door that **does not depend on the
+ * canvas**, and it opens precisely while the user holds the mouse pressed on a
+ * still desktop.
  *
- *   ./06-b33-risveglio [--tela 1264x800]     apre, e aspetta comandi su stdin
- *
- * ---------------------------------------------------------------------------
- * ⛔ CHE COS'E' QUESTO PROGRAMMA, E CHE COSA NON E'
- *
- * ⭐ E' `CODER.md` §3.6 alla lettera — *«isola UNA funzione, e chiamala da
- *    fuori»*.  Collega i moduli del PRODOTTO (`src/cattura.c`, `src/input.c`,
- *    `src/mutter.c`, `src/tastiera.c`) e chiama `cattura_risveglia()` — **la
- *    stessa funzione che il figlio chiama quando la scena e' ferma e una chiave
- *    e' dovuta** (`figlio.c:6365`).  ⛔ Non c'e' QUIC, non c'e' `rcp.c`, non
- *    c'e' il formato dei messaggi.
- *
- * ⛔⛔ **E NON E' LA MISURA.**  Quel che questo programma stampa e' il registro
- *      di CHI MANDA, e `CODER.md` §3.8 dice che non vale niente: dice che
- *      abbiamo chiamato una funzione, non che il desktop ha ricevuto qualcosa.
- *      ⇒ Il verdetto lo da' il **testimone dentro la sessione**
- *      (`06-b33-testimone.c`), e lo legge `06-b33-risveglio.py`.
- *
- * ⚠ L'unica cosa che questo programma misura da se' — e la misura, non la
- *   deduce — e' `ricambi_puntatore`, letto da `input_conto()`, che e' una
- *   finestra sullo stato interno di `input.c` e non una riga di registro.
+ *   ./06-b33-risveglio [--tela 1264x800]     opens, and waits for commands on stdin
  *
  * ---------------------------------------------------------------------------
- * ⛔ PERCHE' USA `cattura.c` E NON UN CONSUMATORE SCRITTO QUI
+ * ⛔ WHAT THIS PROGRAM IS, AND WHAT IT IS NOT
  *
- * `04-b24-iniezione.c` si scrive il suo consumatore PipeWire a mano, ed e'
- * giusto per quel che misura (l'input, dove la cattura e' solo il pretesto che
- * fa nascere il viewport).  ⛔ Qui no: **l'imputato E' `cattura_risveglia()`**.
- * Un risveglio scritto a mano nel banco misurerebbe l'idea che ho io di come
- * funziona, non quel che il prodotto fa — e le due cose divergono esattamente
- * il giorno in cui `cattura.c` cambia.
+ * ⭐ It is `CODER.md` §3.6 to the letter — *"isolate ONE function, and call it
+ *    from outside"*.  It links the PRODUCT modules (`src/cattura.c`,
+ *    `src/input.c`, `src/mutter.c`, `src/tastiera.c`) and calls
+ *    `cattura_risveglia()` — **the same function the child calls when the
+ *    scene is still and a key is owed** (`figlio.c:6365`).  ⛔ There is no
+ *    QUIC, no `rcp.c`, no message format.
  *
- * ⚠ E `cattura_avvia()` porta con se' i quattro parametri di consumo
- *   (`ParamBuffers` e i tre `ParamMeta`), che un consumatore scritto a mano non
- *   ha: quella differenza cambia la rinegoziazione, cioe' proprio la cosa che
- *   si sta guardando.
+ * ⛔⛔ **AND IT IS NOT THE MEASUREMENT.**  What this program prints is the log
+ *      of THE SENDER, and `CODER.md` §3.8 says it is worth nothing: it says
+ *      we called a function, not that the desktop received anything.
+ *      ⇒ The verdict is given by the **witness inside the session**
+ *      (`06-b33-testimone.c`), and read by `06-b33-risveglio.py`.
  *
- * ---------------------------------------------------------------------------
- * ⛔ IL CONSUMATORE DEVE CONSUMARE, O IL VIEWPORT NON NASCE
- *
- * `[R]` `meta-screen-cast-virtual-stream-src.c:279-283`: il flusso diventa
- * *configured* — e solo allora Mutter aggiunge il viewport da cui nasce il
- * dispositivo assoluto — dentro `..._src_enable`, cioe' **quando qualcuno
- * comincia davvero a leggere i fotogrammi**.  ⇒ Il ciclo dei comandi chiama
- * `cattura_prendi()` a ogni giro, con attesa zero.
+ * ⚠ The only thing this program measures by itself — and it measures it, it
+ *   does not deduce it — is `ricambi_puntatore`, read from `input_conto()`,
+ *   which is a window on the internal state of `input.c` and not a log line.
  *
  * ---------------------------------------------------------------------------
- * ⭐⭐ E LA CATENA CHE QUESTO BANCO PROVA A SMENTIRE, tutta `[R]` in Mutter 48.7
+ * ⛔ WHY IT USES `cattura.c` AND NOT A CONSUMER WRITTEN HERE
  *
- *   1. `cattura_risveglia()` chiama `pw_stream_update_params()` sul flusso gia'
- *      aperto (`src/cattura.c:1392`);
- *   2. il produttore rinegozia: `MetaScreenCastStreamSrc` si spegne e si
- *      riaccende, e `meta_screen_cast_virtual_stream_src_enable()`
- *      (`:263-290`) chiama `meta_eis_viewport_notify_changed()`;
- *   3. `on_viewport_changed` (`meta-eis.c:319-323`) emette **`viewports-changed`**;
- *   4. `update_viewports` (`meta-eis-client.c:1049-1062`) chiama
- *      `remove_viewport_devices` — che ⛔ **NON passa da `drop_device()`** — e
- *      poi `add_abs_pointer_devices`.
+ * `04-b24-iniezione.c` writes its own PipeWire consumer by hand, and that is
+ * right for what it measures (input, where the capture is only the pretext
+ * that makes the viewport be born).  ⛔ Not here: **the defendant IS
+ * `cattura_risveglia()`**.  A wake-up written by hand in the bench would
+ * measure my idea of how it works, not what the product does — and the two
+ * diverge exactly on the day `cattura.c` changes.
  *
- * ⇒ Se la catena e' vera, un `risveglia` con `BTN_LEFT` giu' porta
- *   `ricambi_puntatore` a +1 **senza che nessuno abbia toccato la tela**, e da
- *   li' il pulsante e' un ORFANO: il suo rilascio non arriva a nessuno e il
- *   desktop non prende piu' un clic (`meta-seat-impl.c:899-908`).
- *
- * ⛔ L'ipotesi da smentire e' quella scritta in §7.1.  Se `ricambi_puntatore`
- *   NON sale, §7.1 e' falsa e va corretta — e questo banco lo deve poter dire.
+ * ⚠ And `cattura_avvia()` brings along the four consumption parameters
+ *   (`ParamBuffers` and the three `ParamMeta`), which a hand-written consumer
+ *   does not have: that difference changes the renegotiation, that is,
+ *   precisely the thing being looked at.
  *
  * ---------------------------------------------------------------------------
- * I COMANDI (uno per riga; ogni risposta comincia con «B33R: »)
+ * ⛔ THE CONSUMER MUST CONSUME, OR THE VIEWPORT IS NOT BORN
+ *
+ * `[R]` `meta-screen-cast-virtual-stream-src.c:279-283`: the stream becomes
+ * *configured* — and only then does Mutter add the viewport from which the
+ * absolute device is born — inside `..._src_enable`, that is, **when someone
+ * really starts reading the frames**.  ⇒ The command loop calls
+ * `cattura_prendi()` at every turn, with zero wait.
+ *
+ * ---------------------------------------------------------------------------
+ * ⭐⭐ AND THE CHAIN THIS BENCH TRIES TO REFUTE, all `[R]` in Mutter 48.7
+ *
+ *   1. `cattura_risveglia()` calls `pw_stream_update_params()` on the already
+ *      open stream (`src/cattura.c:1392`);
+ *   2. the producer renegotiates: `MetaScreenCastStreamSrc` turns off and on
+ *      again, and `meta_screen_cast_virtual_stream_src_enable()`
+ *      (`:263-290`) calls `meta_eis_viewport_notify_changed()`;
+ *   3. `on_viewport_changed` (`meta-eis.c:319-323`) emits **`viewports-changed`**;
+ *   4. `update_viewports` (`meta-eis-client.c:1049-1062`) calls
+ *      `remove_viewport_devices` — which ⛔ **does NOT go through
+ *      `drop_device()`** — and then `add_abs_pointer_devices`.
+ *
+ * ⇒ If the chain is true, a `risveglia` with `BTN_LEFT` down brings
+ *   `ricambi_puntatore` to +1 **without anybody touching the canvas**, and from
+ *   there on the button is an ORPHAN: its release reaches nobody and the
+ *   desktop no longer takes a click (`meta-seat-impl.c:899-908`).
+ *
+ * ⛔ The hypothesis to refute is the one written in §7.1.  If
+ *   `ricambi_puntatore` does NOT go up, §7.1 is false and must be corrected —
+ *   and this bench must be able to say so.
+ *
+ * ---------------------------------------------------------------------------
+ * THE COMMANDS (one per line; every answer starts with "B33R: ")
  *
  *   punta X Y            input_puntatore
  *   pulsante C P         input_pulsante        (C evdev: BTN_LEFT = 272)
  *   posizione C P        input_posizione       (C evdev: KEY_LEFTCTRL = 29)
  *   lettera N            input_lettera
- *   risveglia            ⭐⭐ `cattura_risveglia()`, LA FUNZIONE DEL PRODOTTO
- *   ridimensiona L A     `cattura_ridimensiona()` — il caso GIA' NOTO (§4.6),
- *                        che serve da confronto: la porta che si sapeva
+ *   risveglia            ⭐⭐ `cattura_risveglia()`, THE PRODUCT'S FUNCTION
+ *   ridimensiona L A     `cattura_ridimensiona()` — the ALREADY KNOWN case (§4.6),
+ *                        which serves as a comparison: the door we knew about
  *   ritela L A           input_ritela
- *   rilascia             input_rilascia_tutto  → stampa QUANTI ne ha rilasciati
- *   dormi MS             ⛔ dorme CONTINUANDO a girare libei e a consumare
- *   stato                il conto, i ricambi, gli orfani, i fotogrammi
- *   fine                 esce pulito
+ *   rilascia             input_rilascia_tutto  → prints HOW MANY it released
+ *   dormi MS             ⛔ sleeps WHILE KEEPING libei running and consuming
+ *   stato                the count, the replacements, the orphans, the frames
+ *   fine                 exits cleanly
  */
 #include <errno.h>
 #include <gio/gio.h>
@@ -105,9 +106,10 @@
 #include "registro.h"
 #include "tastiera.h"
 
-/* ⛔ Le due finestre di banco di `src/input.c`: NON stanno in `input.h`, che e'
- *    il contratto del PRODOTTO e appartiene al coordinatore.  Si dichiarano
- *    qui, con la stessa firma — cambiargliela sotto romperebbe `04-b24`. */
+/* ⛔ The two bench windows of `src/input.c`: they are NOT in `input.h`, which
+ *    is the PRODUCT contract and belongs to the coordinator.  They are
+ *    declared here, with the same signature — changing it under them would
+ *    break `04-b24`. */
 extern void input_conto(const Input *, unsigned *tasti, unsigned *pulsanti,
                         unsigned *ricambi_puntatore, unsigned *ricambi_tastiera, int *pronto);
 extern unsigned input_orfani(const Input *);
@@ -132,12 +134,12 @@ static void dilo(const char *forma, ...)
 }
 
 /*
- * ⛔ UN GIRO DEL CICLO, e le due cose che deve fare stanno insieme apposta:
- *    girare `libei` (o i `DEVICE_ADDED` non si vedono mai) e CONSUMARE (o il
- *    viewport non nasce, `[R]` sopra).  ⚠ Chiamarne una sola e' il difetto che
- *    fa misurare un silenzio e chiamarlo guasto.
+ * ⛔ ONE TURN OF THE LOOP, and the two things it must do sit together on
+ *    purpose: run `libei` (or the `DEVICE_ADDED` are never seen) and CONSUME
+ *    (or the viewport is not born, `[R]` above).  ⚠ Calling only one of them is
+ *    the defect that makes one measure a silence and call it a fault.
  *
- * Ritorna FALSE se il canale di input e' caduto.
+ * Returns FALSE if the input channel has dropped.
  */
 static gboolean gira_una_volta(void)
 {
@@ -148,10 +150,10 @@ static gboolean gira_una_volta(void)
 		return FALSE;
 	if (cat)
 	{
-		/* ⛔ Attesa ZERO: chi consuma qui non deve rallentare il ciclo, deve
-		 *    solo esserci.  ⚠ E lo zero NON e' un guasto: su Wayland un
-		 *    desktop fermo non consegna niente, ed e' precisamente la scena
-		 *    che questo banco vuole. */
+		/* ⛔ ZERO wait: whoever consumes here must not slow the loop down, it
+		 *    must only be there.  ⚠ And zero is NOT a fault: on Wayland a
+		 *    still desktop delivers nothing, and that is precisely the scene
+		 *    this bench wants. */
 		if (cattura_prendi(cat, 0.0, &fermo, &sbaglio) == CATTURA_PRESA_FATTA)
 		{
 			fotogrammi++;
@@ -176,9 +178,9 @@ static void stampa_stato(const char *quando)
 	     na);
 }
 
-/* ⛔ Dorme CONTINUANDO a girare: un `g_usleep` secco perderebbe i
- *    `DEVICE_REMOVED`/`DEVICE_ADDED` che arrivano 8-24 ms dopo il risveglio, e
- *    il banco direbbe «nessun ricambio» misurando la propria sordita'. */
+/* ⛔ Sleeps WHILE KEEPING the loop running: a plain `g_usleep` would lose the
+ *    `DEVICE_REMOVED`/`DEVICE_ADDED` that arrive 8-24 ms after the wake-up, and
+ *    the bench would say "no replacement" while measuring its own deafness. */
 static gboolean dormi_girando(int ms)
 {
 	gint64 scadenza = g_get_monotonic_time() + (gint64) ms * 1000;
@@ -217,10 +219,10 @@ static void comando(char *riga)
 	{
 		int quanti = input_rilascia_tutto(canale);
 
-		/* ⛔ IL NUMERO, perche' il banco possa contarlo — `RCP.md` §11.  ⚠ E si
-		 *    stampa anche l'orfano: «rilasciati 0» e «ce n'era uno che non si
-		 *    poteva rilasciare» sono due fatti diversi. */
-		dilo("RILASCIATI %d (orfani rimasti %u)", quanti, input_orfani(canale));
+		/* ⛔ THE NUMBER, so that the bench can count it — `RCP.md` §11.  ⚠ And
+		 *    the orphan is printed too: "released 0" and "there was one that
+		 *    could not be released" are two different facts. */
+		dilo("RELEASED %d (orphans left %u)", quanti, input_orfani(canale));
 		return;
 	}
 	if (g_str_equal(riga, "risveglia"))
@@ -229,25 +231,26 @@ static void comando(char *riga)
 		gboolean esito;
 
 		/*
-		 * ⛔⛔ IL CUORE DEL BANCO.  Si legge il conto PRIMA, si chiama la
-		 *      funzione del prodotto, si gira per 400 ms — che e' il fondo che
-		 *      `figlio.c` mette fra un risveglio e l'altro — e si rilegge.
+		 * ⛔⛔ THE HEART OF THE BENCH.  The count is read BEFORE, the product
+		 *      function is called, the loop runs for 400 ms — which is the
+		 *      floor `figlio.c` puts between one wake-up and the next — and it
+		 *      is read again.
 		 *
-		 * ⚠ I 400 ms non sono un'attesa prudente: `[M]` §4.6 dice che il
-		 *   ricambio arriva **8-24 ms dopo**, e 400 e' venti volte tanto.  Un
-		 *   banco che aspettasse 10 ms misurerebbe la propria fretta.
+		 * ⚠ The 400 ms are not a cautious wait: `[M]` §4.6 says the
+		 *   replacement arrives **8-24 ms later**, and 400 is twenty times as
+		 *   much.  A bench that waited 10 ms would measure its own haste.
 		 */
 		input_conto(canale, NULL, NULL, &prima, NULL, NULL);
 		esito = cattura_risveglia(cat);
 		risvegli++;
 		if (!dormi_girando(400))
 		{
-			dilo("ERRORE: il canale di input e' caduto durante il risveglio");
+			dilo("ERRORE: the input channel dropped during the wake-up");
 			exit(4);
 		}
 		input_conto(canale, NULL, NULL, &dopo, NULL, NULL);
-		dilo("RISVEGLIO n.%lu esito=%d ricambi_puntatore %u → %u (delta %d) "
-		     "⛔ e NESSUNO ha toccato la tela",
+		dilo("WAKE-UP n.%lu esito=%d ricambi_puntatore %u → %u (delta %d) "
+		     "⛔ and NOBODY touched the canvas",
 		     risvegli, (int) esito, prima, dopo, (int) dopo - (int) prima);
 		return;
 	}
@@ -255,10 +258,10 @@ static void comando(char *riga)
 	{
 		if (!dormi_girando((int) a1))
 		{
-			dilo("ERRORE: il canale di input e' caduto durante l'attesa");
+			dilo("ERRORE: the input channel dropped during the wait");
 			exit(4);
 		}
-		dilo("dormito %ld ms", a1);
+		dilo("slept %ld ms", a1);
 		return;
 	}
 	if (sscanf(riga, "punta %ld %ld", &a1, &a2) == 2)
@@ -294,23 +297,23 @@ static void comando(char *riga)
 		unsigned prima = 0, dopo = 0;
 		CatturaRitela esito;
 
-		/* ⛔ LA PORTA GIA' NOTA, §4.6: serve da confronto.  Se il ricambio
-		 *    arrivasse SOLO di qui, §7.1 sarebbe falsa — ed e' l'unico modo di
-		 *    saperlo, perche' un numero senza il suo confronto non distingue
-		 *    «il risveglio ricambia» da «ricambia sempre tutto». */
+		/* ⛔ THE ALREADY KNOWN DOOR, §4.6: it serves as a comparison.  If the
+		 *    replacement arrived ONLY from here, §7.1 would be false — and it is
+		 *    the only way to know, because a number without its comparison does
+		 *    not tell "the wake-up replaces" from "everything always replaces". */
 		input_conto(canale, NULL, NULL, &prima, NULL, NULL);
 		esito = cattura_ridimensiona(cat, (uint32_t) a1, (uint32_t) a2);
 		if (!dormi_girando(400))
 		{
-			dilo("ERRORE: il canale di input e' caduto durante il ridimensionamento");
+			dilo("ERRORE: the input channel dropped during the resize");
 			exit(4);
 		}
 		input_conto(canale, NULL, NULL, &dopo, NULL, NULL);
-		dilo("RIDIMENSIONATO a %ldx%ld esito=%d ricambi_puntatore %u → %u (delta %d)", a1, a2,
+		dilo("RESIZED to %ldx%ld esito=%d ricambi_puntatore %u → %u (delta %d)", a1, a2,
 		     (int) esito, prima, dopo, (int) dopo - (int) prima);
 		return;
 	}
-	dilo("comando ignoto: «%s»", riga);
+	dilo("unknown command: «%s»", riga);
 }
 
 int main(int argc, char **argv)
@@ -327,60 +330,59 @@ int main(int argc, char **argv)
 		if (!strcmp(argv[i], "--tela") && i + 1 < argc)
 			sscanf(argv[++i], "%ux%u", &tela_l, &tela_a);
 
-	/* --- 1. la sessione del PRODOTTO, ConnectToEIS compreso ---------------- */
+	/* --- 1. the PRODUCT session, ConnectToEIS included -------------------- */
 	sessione = mutter_apri(&sbaglio);
 	if (!sessione)
 	{
 		dilo("ERRORE: mutter_apri: %s", sbaglio->message);
 		return 2;
 	}
-	dilo("sessione aperta: nodo %u, descrittore EIS %d", mutter_nodo(sessione),
+	dilo("session open: node %u, EIS descriptor %d", mutter_nodo(sessione),
 	     mutter_eis_fd(sessione));
 
-	/* --- 2. la CATTURA DEL PRODOTTO: e' lei l'imputato --------------------- */
+	/* --- 2. the PRODUCT CAPTURE: it is the defendant ----------------------- */
 	cat = cattura_avvia(mutter_nodo(sessione), tela_l, tela_a, 60, CATTURA_STRADA_MEMORIA,
 	                    CATTURA_COLORE_BGRX, NULL, NULL, NULL, &sbaglio);
 	if (!cat)
 	{
-		dilo("ERRORE: cattura_avvia: %s", sbaglio ? sbaglio->message : "senza motivo dichiarato");
+		dilo("ERRORE: cattura_avvia: %s", sbaglio ? sbaglio->message : "no reason declared");
 		return 2;
 	}
 	{
-		/* ⛔ Si aspetta che il flusso sia ATTIVO prima di andare avanti: prima
-		 *    di quel momento non c'e' nessun viewport, quindi nessun
-		 *    dispositivo assoluto, e un risveglio non avrebbe niente da
-		 *    ricambiare. */
+		/* ⛔ We wait for the stream to be ACTIVE before going on: before that
+		 *    moment there is no viewport, hence no absolute device, and a
+		 *    wake-up would have nothing to replace. */
 		gint64 scadenza = g_get_monotonic_time() + 20 * G_USEC_PER_SEC;
 
 		while (g_get_monotonic_time() < scadenza && !cattura_attiva(cat))
 			g_usleep(50 * 1000);
 		if (!cattura_attiva(cat))
 		{
-			dilo("ERRORE: il flusso non e' attivo dopo 20 s (%s)",
-			     cattura_guasto(cat) ?: "senza spiegazione");
+			dilo("ERRORE: the stream is not active after 20 s (%s)",
+			     cattura_guasto(cat) ?: "no explanation");
 			return 2;
 		}
 	}
-	dilo("cattura attiva a %ux%u sul nodo %u", tela_l, tela_a, mutter_nodo(sessione));
+	dilo("capture active at %ux%u on node %u", tela_l, tela_a, mutter_nodo(sessione));
 
 	if (mutter_monitor_cerca(sessione))
 		dilo("MONITOR %s («%s»)", mutter_monitor_nostro(sessione),
 		     mutter_monitor_prodotto(sessione));
 	else
-		dilo("⚠ il nostro monitor non si sa per nome: NON dico quale sia");
+		dilo("⚠ our monitor is not known by name: I do NOT say which one it is");
 
-	/* --- 3. il canale di input -------------------------------------------- */
+	/* --- 3. the input channel -------------------------------------------- */
 	canale = input_apri(sessione, tela_l, tela_a, &errore);
 	if (!canale)
 	{
-		dilo("ERRORE: input_apri: %s", errore ?: "senza motivo dichiarato");
+		dilo("ERRORE: input_apri: %s", errore ?: "no reason declared");
 		return 3;
 	}
 
 	/*
-	 * ⛔ SI ASPETTA CHE IL DISPOSITIVO SIA PRONTO, e si dice quando lo e'.
-	 *    Iniettare prima di «PRONTO» vorrebbe dire misurare un silenzio che non
-	 *    e' un difetto (`04-b24-iniezione.c`, stessa trappola).
+	 * ⛔ WE WAIT FOR THE DEVICE TO BE READY, and say when it is.  Injecting
+	 *    before "PRONTO" would mean measuring a silence that is not a defect
+	 *    (`04-b24-iniezione.c`, same trap).
 	 */
 	{
 		gint64 scadenza = g_get_monotonic_time() + 20 * G_USEC_PER_SEC;
@@ -390,7 +392,7 @@ int main(int argc, char **argv)
 		{
 			if (!gira_una_volta())
 			{
-				dilo("ERRORE: il canale di input e' caduto");
+				dilo("ERRORE: the input channel dropped");
 				return 3;
 			}
 			input_conto(canale, NULL, NULL, NULL, NULL, &pronto);
@@ -399,7 +401,7 @@ int main(int argc, char **argv)
 		}
 		if (!pronto)
 		{
-			dilo("ERRORE: nessun dispositivo ASSOLUTO con una regione dopo 20 s");
+			dilo("ERRORE: no ABSOLUTE device with a region after 20 s");
 			stampa_stato("mai-pronto");
 			return 3;
 		}
@@ -407,7 +409,7 @@ int main(int argc, char **argv)
 	stampa_stato("all-avvio");
 	dilo("PRONTO");
 
-	/* --- 4. i comandi ------------------------------------------------------ */
+	/* --- 4. the commands ---------------------------------------------------- */
 	sonda.fd = STDIN_FILENO;
 	sonda.events = POLLIN;
 	for (;;)
@@ -417,18 +419,18 @@ int main(int argc, char **argv)
 			break;
 		if (!gira_una_volta())
 		{
-			dilo("ERRORE: il compositore ha chiuso il canale di input");
+			dilo("ERRORE: the compositor closed the input channel");
 			return 4;
 		}
 		if (sonda.revents & POLLIN)
 		{
 			if (!fgets(riga, sizeof riga, stdin))
 			{
-				/* ⛔ Lo stdin chiuso NON e' «fine»: e' chi guida che se n'e'
-				 *    andato, e il conto di quel che e' premuto resta pieno.
-				 *    Si dice, e si esce con un codice diverso. */
+				/* ⛔ A closed stdin is NOT "fine": it is the driver that went
+				 *    away, and the count of what is pressed stays full.  It is
+				 *    said, and we exit with a different code. */
 				stampa_stato("stdin-chiuso");
-				dilo("⛔ stdin chiuso senza «fine»: esco SENZA rilasciare");
+				dilo("⛔ stdin closed without «fine»: I exit WITHOUT releasing");
 				return 5;
 			}
 			comando(riga);

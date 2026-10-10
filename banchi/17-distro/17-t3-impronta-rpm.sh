@@ -1,22 +1,22 @@
 #!/bin/bash
 #
-# 17-t3-impronta-rpm.sh — fase 17, T3, linea C: l'impronta di una macchina della
-# famiglia .rpm (Fedora, Alma, Tumbleweed, Leap), per confrontare prima
-# dell'installazione e dopo la disinstallazione (R5, R6, R33).
+# 17-t3-impronta-rpm.sh — phase 17, T3, line C: the fingerprint of a machine of the
+# .rpm family (Fedora, Alma, Tumbleweed, Leap), to compare before
+# installation and after uninstallation (R5, R6, R33).
 #
-#   (DENTRO la VM, da root)   bash 17-t3-impronta-rpm.sh > impronta.txt
+#   (INSIDE the VM, as root)   bash 17-t3-impronta-rpm.sh > impronta.txt
 #
-# Lo stesso formato di `17-t3-impronta.sh` (linea Arch), una riga per fatto:
-#   F <percorso> <modo> <utente> <gruppo> <sha256|dimensione>   file
-#   L <percorso> -> <destinazione>                              collegamenti
-#   D <percorso> <modo> <utente> <gruppo>                       cartelle
-#   G <gruppo>:<gid>:<membri>      U <utente>:<uid>:<shell>
-#   S <unita'> <stato>             P <pacchetto> <versione> <user|dependency|…>
-#   Z <percorso> <contesto SELinux>   solo per i nostri percorsi
-#   W <firewalld: servizi e porte della zona predefinita, permanenti>
-#   H <percorso>                   sotto /home (solo i nomi)
-# Fuori: i database dei gestori di pacchetti (li dice gia' P) e le cartelle
-# che cambiano da sole.
+# The same format as `17-t3-impronta.sh` (Arch line), one line per fact:
+#   F <path> <mode> <user> <group> <sha256|size>                files
+#   L <path> -> <target>                                        links
+#   D <path> <mode> <user> <group>                              folders
+#   G <group>:<gid>:<members>      U <user>:<uid>:<shell>
+#   S <unit> <state>               P <package> <version> <user|dependency|…>
+#   Z <path> <SELinux context>     only for our paths
+#   W <firewalld: services and ports of the default zone, permanent>
+#   H <path>                       under /home (names only)
+# Left out: the package managers' databases (already covered by P) and the folders
+# that change by themselves.
 set -u
 export LC_ALL=C
 {

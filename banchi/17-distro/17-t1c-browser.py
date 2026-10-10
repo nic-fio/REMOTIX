@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-17-t1c-browser — fase 17, tappa T1c: un browser VERO entra in REMOTIX dentro
-una VM di distribuzione e deve VEDERE il desktop.
+17-t1c-browser — phase 17, step T1c: a REAL browser enters REMOTIX inside
+a distribution VM and must SEE the desktop.
 
-    (sul server, come nicfio, dentro un labwc senza schermo)
+    (on the server, as nicfio, inside a headless labwc)
     python3 17-t1c-browser.py --porta 7511 --utente prova --parola prova2026 \\
         --evidenze /media/REMOTIX/vm17/t1c/esiti/debian13-gnome [--browser chrome]
 
-⭐ Non e' la suite (fasi/15): la suite vuole una SCATOLA (podman exec, registro
-   del server, inquilini c15*).  Qui la macchina e' una VM di `17-vm.sh`, e
-   l'utente di prova lo crea chi installa a mano.  ⇒ Si riusano SOLO le guide e
-   la Prova di `12-client-veri.py` (importate, non copiate): apri → entra →
-   primo_fotogramma, col giudice dei pixel (una tela nera o di un colore solo
-   e' ROSSO, non verde: «un contatore non e' guardare»).
+⭐ This is not the suite (fasi/15): the suite wants a BOX (podman exec, server
+   log, c15* tenants).  Here the machine is a VM from `17-vm.sh`, and the
+   test user is created by whoever installs by hand.  ⇒ ONLY the drivers and
+   the Prova of `12-client-veri.py` are reused (imported, not copied): open → enter →
+   primo_fotogramma, with the pixel judge (a black or single-colour canvas
+   is RED, not green: "a counter is not looking").
 
-⚠ Il certificato si accetta come lo accetta l'utente (pannello «Procedi»,
-  `GuidaCdp.vai`), niente `--ignore-certificate-errors`.
-⚠ La finestra e' Full HD (1920x1080): nella VM non c'e' la scheda, si codifica
-  in software, e la specifica di questa tappa e' «risoluzione bassa».
+⚠ The certificate is accepted the way the user accepts it («Procedi» panel,
+  `GuidaCdp.vai`), no `--ignore-certificate-errors`.
+⚠ The window is Full HD (1920x1080): there is no GPU in the VM, encoding is
+  in software, and the spec of this step is "low resolution".
 
-Uscita: una riga `T1C {json}` e codice 0 PASS · 1 FAIL · 3 BLOCKED.
+Output: one line `T1C {json}` and exit code 0 PASS · 1 FAIL · 3 BLOCKED.
 """
 import argparse
 import base64
@@ -40,22 +40,22 @@ def carica(nome, file):
 
 def main():
     a = argparse.ArgumentParser(description=__doc__.split("\n")[1])
-    a.add_argument("--porta", type=int, required=True, help="la porta inoltrata sul server")
+    a.add_argument("--porta", type=int, required=True, help="the port forwarded on the server")
     a.add_argument("--host", default="localhost")
     a.add_argument("--utente", default="prova")
     a.add_argument("--parola", default=os.environ.get("REMOTIX_PAROLA", ""))
     a.add_argument("--browser", choices=("chrome", "firefox"), default="chrome")
     a.add_argument("--banchi", default=os.environ.get(
         "REMOTIX_BANCHI", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")),
-        help="la cartella che contiene 12-client-veri.py")
+        help="the folder that contains 12-client-veri.py")
     a.add_argument("--evidenze", default="")
     a.add_argument("--tetto-s", type=int, default=90,
-                   help="tetto per l'ammissione e per il primo fotogramma NON degenere")
+                   help="cap for admission and for the first NON-degenerate frame")
     a.add_argument("--finestra", default="1920x1080")
     a.add_argument("--porte-base", type=int, default=3170)
     o = a.parse_args()
     if not o.parola:
-        a.error("serve --parola (o REMOTIX_PAROLA)")
+        a.error("--parola is required (or REMOTIX_PAROLA)")
 
     VERI = carica("veri", os.path.join(o.banchi, "12-client-veri.py"))
     VERI.FINESTRA[:] = [int(x) for x in o.finestra.split("x")]
@@ -72,26 +72,26 @@ def main():
         try:
             g = VERI.accendi_guida(o.browser, o)
         except Exception as e:                   # noqa: BLE001
-            riga["ragione"] = "il browser non si e' acceso: %s" % str(e)[:300]
+            riga["ragione"] = "the browser did not start: %s" % str(e)[:300]
             raise StopIteration
         riga["palco"] = g.palco()
         pr = VERI.Prova(g, o, o.url, o.parola)
         ok, m = pr.apri()
         riga["apri"] = m
         if not ok:
-            riga["ragione"] = "la pagina non si apre: " + m
+            riga["ragione"] = "the page does not open: " + m
             raise StopIteration
         e, m, s = pr.entra(o.parola)
         riga["entra"] = m
         if e != VERI.VERDE:
             esito, codice = "FAIL", 1
-            riga["ragione"] = "non entra: " + m
+            riga["ragione"] = "does not get in: " + m
             riga["registro_pagina"] = ((s or {}).get("registro") or "")[-1500:]
             raise StopIteration
         e, m, s = pr.primo_fotogramma()
         riga["prima_immagine"] = m
         riga["tela"] = (s or {}).get("tela")
-        # ⭐ la fotografia della tela a piena risoluzione, per l'occhio di chi legge
+        # ⭐ the photo of the canvas at full resolution, for the reader's eye
         try:
             r = g.js("const t=document.getElementById('schermo'); if(!t) return null;"
                      "const b=t.getBoundingClientRect();"
@@ -106,18 +106,18 @@ def main():
                     fh.write(base64.b64decode(f["data"]))
                 riga["foto"] = p
         except Exception as ex:                  # noqa: BLE001
-            riga["foto"] = "non presa: %s" % str(ex)[:200]
+            riga["foto"] = "not taken: %s" % str(ex)[:200]
         if e == VERI.VERDE:
             esito, codice = "PASS", 0
-            riga["ragione"] = "desktop visto: " + m
+            riga["ragione"] = "desktop seen: " + m
         else:
             esito, codice = ("FAIL", 1) if e == VERI.ROSSO else ("BLOCKED", 3)
-            riga["ragione"] = "entra, ma il desktop non si vede: " + m
+            riga["ragione"] = "gets in, but the desktop is not visible: " + m
             riga["registro_pagina"] = ((s or {}).get("registro") or "")[-1500:]
     except StopIteration:
         pass
     except Exception as ex:                      # noqa: BLE001
-        riga["ragione"] = "il banco e' caduto: %r" % ex
+        riga["ragione"] = "the bench crashed: %r" % ex
     finally:
         if g is not None:
             try:

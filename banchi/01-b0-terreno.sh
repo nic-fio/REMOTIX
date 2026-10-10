@@ -1,79 +1,79 @@
 #!/bin/bash
 #
-# 01-b0-terreno.sh — ⛔ IL SERVER E' QUELLO CHE CREDO?  Gira SUL SERVER.
+# 01-b0-terreno.sh — ⛔ IS THE SERVER THE ONE I BELIEVE?  Runs ON THE SERVER.
 #
-#   bash 01-b0-terreno.sh innesto     prima di un banco contro :7447
-#   bash 01-b0-terreno.sh prodotto    prima di un banco contro :7448
+#   bash 01-b0-terreno.sh innesto     before a bench against :7447
+#   bash 01-b0-terreno.sh prodotto    before a bench against :7448
 #
-# Esce 0 se il terreno regge, 1 se no, 2 se non ha potuto guardare.
-# ⛔ E «non ho potuto guardare» NON e' «va bene»: sono tre esiti, non due.
-#
-# ---------------------------------------------------------------------------
-# ⛔ PERCHE' ESISTE — due volte in una giornata, l'11 agosto 2026
-#
-# `B0.1` dice che lo stato iniziale si **dichiara e si verifica**.  Questo file
-# nasce perche' due volte, nello stesso giorno, un banco e' stato **verde su un
-# terreno che non era quello che credevamo** — e in tutt'e due i casi il banco
-# non aveva nessun motivo di accorgersene.
-#
-#   `[M]` **R12-A.45** · `01-b2-ngtcp2-wt-innesta.py --togli` rimette com'erano
-#         i file **tracciati** di `examples/`, e fra quelli c'e'
-#         `http3_server_proto_codec.cc`, dove vive l'innesto **RCP di B3**.
-#         ⇒ Togliere l'innesto B2 porta via anche B3, in silenzio.  Il server
-#         ha girato per un'ora **senza RCP**, rimandando indietro i byte del
-#         client, e ⛔ **la certificazione di B2 e' passata lo stesso**: la sua
-#         sonda legge i parametri QUIC e di RCP non sa niente.
-#         ⭐ L'ho preso PER CASO, provando un'altra cosa.
-#
-#   `[M]` **R12-A.44** · l'utente `prova`, su cui poggiano quattro banchi, non
-#         lo creava nessuno script: era stato fatto a mano.
-#
-# ⭐ La forma e' una sola, e ha un nome nel progetto: **il file c'e'** contro
-#    **il file e' quello che ho appena costruito** — gia' pagata su B11 il 10
-#    agosto, e su B6 col binario compilato col `CONGEDO` tolto (R12-A.6).
+# Exits 0 if the terrain holds, 1 if not, 2 if it could not look.
+# ⛔ And "I could not look" is NOT "all good": there are three outcomes, not two.
 #
 # ---------------------------------------------------------------------------
-# ⚠ CHE COSA QUESTO CONTROLLO **NON** DIMOSTRA, detto prima
+# ⛔ WHY IT EXISTS — twice in one day, on 11 Aug 2026
 #
-# Che il server sia CORRETTO.  Dimostra che e' **quello dichiarato**: i pezzi
-# che devono esserci ci sono, il binario e' piu' nuovo dei sorgenti da cui
-# dice di venire, e nessun guasto di certificazione e' rimasto addosso.
-# ⛔ Un server puo' passare tutto questo ed essere pieno di difetti: e' quel
-#    che i banchi cercano.  Qui si controlla soltanto che cerchino nel posto
-#    giusto.
+# `B0.1` says the initial state is **declared and verified**.  This file
+# was born because twice, on the same day, a bench was **green on a
+# terrain that was not the one we believed** — and in both cases the bench
+# had no reason whatsoever to notice.
+#
+#   `[M]` **R12-A.45** · `01-b2-ngtcp2-wt-innesta.py --togli` puts back as they were
+#         the **tracked** files of `examples/`, and among them there is
+#         `http3_server_proto_codec.cc`, where the **RCP graft of B3** lives.
+#         ⇒ Removing the B2 graft takes B3 away too, silently.  The server
+#         ran for an hour **without RCP**, sending back the client's bytes,
+#         and ⛔ **the certification of B2 passed all the same**: its
+#         probe reads the QUIC parameters and knows nothing of RCP.
+#         ⭐ I caught it BY CHANCE, while testing something else.
+#
+#   `[M]` **R12-A.44** · the user `prova`, on which four benches rest, was not
+#         created by any script: it had been made by hand.
+#
+# ⭐ The form is a single one, and it has a name in the project: **the file is there** versus
+#    **the file is the one I just built** — already paid for on B11 on 10
+#    Aug, and on B6 with the binary compiled with the `CONGEDO` removed (R12-A.6).
 #
 # ---------------------------------------------------------------------------
-# ⛔⭐ E QUESTO FILE HA AVUTO ADDOSSO PROPRIO IL DIFETTO CHE ESISTE PER
-#     IMPEDIRE — difetto **D5**, 12 agosto 2026.
+# ⚠ WHAT THIS CHECK DOES **NOT** PROVE, said first
 #
-# La riga 235 cercava il binario del prodotto in `remotix/build/remotix`, che
-# **non e' mai esistito**: `src/Makefile` dichiara `NOME := remotix` e lo
-# costruisce accanto ai sorgenti, e `src/costruisci.sh` fa `make -C "$QUI"`
-# dopo aver cancellato `"$QUI/remotix"`.  ⇒ Il `[ -f ... ]` cadeva **sempre**
-# nel ramo «non lo giudico», e quel controllo era un **IGNOTO fisso**: non
-# controllava niente, e nessuno lo leggeva piu'.
+# That the server is CORRECT.  It proves that it is **the one declared**: the pieces
+# that must be there are there, the binary is newer than the sources it
+# says it comes from, and no certification fault has been left on it.
+# ⛔ A server can pass all of this and be full of defects: that is what
+#    the benches look for.  Here we only check that they look in the right
+#    place.
 #
-# ⛔ E' la forma **E8** — «vuoto» e «proibito» hanno lo stesso aspetto —
-#    applicata allo strumento che dovrebbe impedirla agli altri.  Il percorso
-#    non e' stato indovinato una seconda volta: e' letto in `src/Makefile` e
-#    in `src/costruisci.sh`, ed e' lo stesso che dichiara gia'
+# ---------------------------------------------------------------------------
+# ⛔⭐ AND THIS FILE CARRIED EXACTLY THE DEFECT IT EXISTS TO
+#     PREVENT — defect **D5**, 12 Aug 2026.
+#
+# Line 235 looked for the product binary in `remotix/build/remotix`, which
+# **never existed**: `src/Makefile` declares `NOME := remotix` and
+# builds it next to the sources, and `src/costruisci.sh` does `make -C "$QUI"`
+# after deleting `"$QUI/remotix"`.  ⇒ The `[ -f ... ]` **always** fell
+# into the "I do not judge it" branch, and that check was a **fixed UNKNOWN**: it did not
+# check anything, and nobody read it any more.
+#
+# ⛔ It is form **E8** — "empty" and "forbidden" look the same —
+#    applied to the tool that should prevent it for the others.  The path
+#    was not guessed a second time: it is read in `src/Makefile` and
+#    in `src/costruisci.sh`, and it is the same one already declared by
 #    `01-b0-bersaglio.sh` (`B_ESE="$B0_DENTRO/remotix/remotix"`).
 #
-# ⭐ Da cui le quattro cose che questo giro ha cambiato, e ognuna risponde a
-#    «quale ingresso lo farebbe diventare ROSSO?»:
+# ⭐ Hence the four things this round changed, and each answers
+#    "which input would turn it RED?":
 #
-#   1. il percorso vero, `$SORG/remotix`             ⇒ rosso se il binario e'
-#                                                       piu' vecchio di un .c
-#   2. il binario che MANCA e' un **guaio**, non un ignoto — il ramo che lo
-#      scusava e' sparito, e giudica `piu_nuovo()` come sull'innesto
-#   3. si confronta con **tutti** i sorgenti compilati, non col solo `rcp.c`:
-#      con `rcp.c` da solo un `main.c` piu' nuovo del binario restava VERDE
-#   4. ⚠ **il posto e' uno solo per albero, ma gli alberi NON sono uno**:
-#      `[M]` 12 agosto 2026, cinque `remotix` eseguibili sotto `/media/REMOTIX/src`
-#      (il prodotto di casa, `01-p5-copia-7522`, `01-b12-copie/p1-remotix`,
-#      `01-b12-copie/p5-remotix`, `coder-r12/src`).  ⇒ l'albero si **dichiara**
-#      con `SORG=`, e se dentro l'albero i binari fossero due il controllo lo
-#      **dice** invece di sceglierne uno.
+#   1. the real path, `$SORG/remotix`                ⇒ red if the binary is
+#                                                       older than a .c
+#   2. the binary that is MISSING is a **trouble**, not an unknown — the branch that
+#      excused it is gone, and `piu_nuovo()` judges as on the graft
+#   3. the comparison is with **all** the compiled sources, not with `rcp.c` alone:
+#      with `rcp.c` alone a `main.c` newer than the binary stayed GREEN
+#   4. ⚠ **the place is a single one per tree, but the trees are NOT one**:
+#      `[M]` 12 Aug 2026, five executable `remotix` under `/media/REMOTIX/src`
+#      (the home product, `01-p5-copia-7522`, `01-b12-copie/p1-remotix`,
+#      `01-b12-copie/p5-remotix`, `coder-r12/src`).  ⇒ the tree is **declared**
+#      with `SORG=`, and if inside the tree there were two binaries the check
+#      **says so** instead of picking one.
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
@@ -84,17 +84,17 @@ DENTRO=/srv/src
 ESEMPI=$FUORI/b2/ngtcp2/examples
 BINARIO_INNESTO=$FUORI/b2/ngtcp2/build/examples/bsslserver
 
-# ⛔ L'albero del prodotto si DICHIARA, come in `01-p1-prodotto.sh` (SORG):
-#    il binario sta sempre accanto ai suoi sorgenti, ma di alberi ce n'e' piu'
-#    d'uno su questa macchina e il bersaglio «prodotto» e' quello di casa,
-#    cioe' il server della 7448.  Chi vuole giudicarne un altro lo nomina.
+# ⛔ The product tree is DECLARED, as in `01-p1-prodotto.sh` (SORG):
+#    the binary always sits next to its sources, but there is more than one tree
+#    on this machine and the «prodotto» target is the home one,
+#    that is the 7448 server.  Whoever wants to judge another names it.
 SORG=${SORG:-$FUORI/remotix}
 BINARIO_PRODOTTO=$SORG/remotix
 
 BERSAGLIO=${1:-}
 case "$BERSAGLIO" in
 innesto|prodotto) ;;
-*) echo "uso: $0 {innesto|prodotto}" >&2; exit 2 ;;
+*) echo "usage: $0 {innesto|prodotto}" >&2; exit 2 ;;
 esac
 
 VERDE=$'\033[1;32m'; ROSSO=$'\033[1;31m'; GIALLO=$'\033[1;33m'
@@ -108,19 +108,19 @@ GUAI=0
 IGNOTI=0
 GUARDATI=0
 
-# ⛔ conta() distingue TRE esiti: il file non c'e' · c'e' e il conto e' N ·
-#    non ho potuto leggerlo.  Stampa il numero, oppure «?».
+# ⛔ conta() distinguishes THREE outcomes: the file is not there · it is there and the count is N ·
+#    I could not read it.  It prints the number, or "?".
 #
-# ⛔⭐ E LA PRIMA STESURA SBAGLIAVA PROPRIO QUI, nella stessa forma curata
-#     stamattina su S1b (rilievo A31): `grep -c` esce **1** quando non trova
-#     niente — che non e' un errore, e' la risposta «zero» — e il mio
-#     `|| printf '?'` ci appiccicava un `?` DOPO lo zero gia' stampato.
-#     Usciva la stringa «0\n?», e ogni controllo «non deve esserci»
-#     dichiarava tracce di guasto su un file pulito: cinque falsi rossi in un
-#     colpo, dentro il file che esiste per impedire i falsi rossi.
-#     ⭐ Lo stato d'uscita di `grep` va letto: 0 = trovato · 1 = non trovato ·
-#        ≥2 = non ho potuto leggere.  Sono tre, e solo il terzo e' «?».
-conta() # $1 = file, $2 = ago
+# ⛔⭐ AND THE FIRST DRAFT WAS WRONG RIGHT HERE, in the same form cured
+#     this morning on S1b (finding A31): `grep -c` exits **1** when it finds
+#     nothing — which is not an error, it is the answer "zero" — and my
+#     `|| printf '?'` stuck a `?` AFTER the zero already printed.
+#     Out came the string "0\n?", and every "must not be there" check
+#     declared fault traces on a clean file: five false reds in one
+#     go, inside the file that exists to prevent false reds.
+#     ⭐ The exit status of `grep` must be read: 0 = found · 1 = not found ·
+#        ≥2 = I could not read.  They are three, and only the third is "?".
+conta() # $1 = file, $2 = needle
 {
 	local n s
 	if [ ! -f "$1" ]; then printf '?\n'; return; fi
@@ -129,154 +129,154 @@ conta() # $1 = file, $2 = ago
 	if [ "$s" -ge 2 ] || [ -z "$n" ]; then printf '?\n'; else printf '%s\n' "$n"; fi
 }
 
-# almeno() # $1 = descrizione, $2 = file, $3 = ago, $4 = minimo
+# almeno() # $1 = description, $2 = file, $3 = needle, $4 = minimum
 almeno()
 {
 	local n
 	GUARDATI=$((GUARDATI + 1))
 	n=$(conta "$2" "$3")
 	if [ "$n" = "?" ]; then
-		dub "⛔ $1: non ho potuto leggere «$(basename "$2")»"
-		dub "   ⚠ e «non ho potuto guardare» non e' «va bene»"
+		dub "⛔ $1: I could not read «$(basename "$2")»"
+		dub "   ⚠ and «I could not look» is not «all good»"
 		IGNOTI=$((IGNOTI + 1))
 		return
 	fi
 	if [ "$n" -ge "$4" ]; then
-		ok "$1: $n occorrenze (attese ≥ $4)"
+		ok "$1: $n occurrences (expected ≥ $4)"
 	else
-		ko "⛔ $1: $n occorrenze, ne servono almeno $4"
+		ko "⛔ $1: $n occurrences, at least $4 are needed"
 		GUAI=$((GUAI + 1))
 	fi
 }
 
-# nessuno() — un ago che NON deve esserci (i guasti di certificazione)
+# nessuno() — a needle that must NOT be there (the certification faults)
 nessuno()
 {
 	local n
 	GUARDATI=$((GUARDATI + 1))
 	n=$(conta "$2" "$3")
 	if [ "$n" = "?" ]; then
-		dub "⛔ $1: non ho potuto leggere «$(basename "$2")»"
+		dub "⛔ $1: I could not read «$(basename "$2")»"
 		IGNOTI=$((IGNOTI + 1))
 		return
 	fi
 	if [ "$n" -eq 0 ]; then
-		ok "$1: nessuna traccia"
+		ok "$1: no trace"
 	else
-		ko "⛔ $1: $n tracce RIMASTE ADDOSSO al codice"
-		ko "   Un guasto dimenticato avvelena ogni misura successiva, e"
-		ko "   nessuno sapra' che c'era."
+		ko "⛔ $1: $n traces LEFT ON the code"
+		ko "   A forgotten fault poisons every later measurement, and"
+		ko "   nobody will know it was there."
 		GUAI=$((GUAI + 1))
 	fi
 }
 
-# ⛔ IL BINARIO E' PIU' NUOVO DEI SORGENTI?  E' l'altra meta' di «il file c'e'»:
-#    un sorgente curato e un binario vecchio sono la trappola di R12-A.6, dove
-#    il sorgente era sano e il binario bugiardo.
-piu_nuovo() # $1 = binario, $2.. = sorgenti
+# ⛔ IS THE BINARY NEWER THAN THE SOURCES?  It is the other half of "the file is there":
+#    a cured source and an old binary are the trap of R12-A.6, where
+#    the source was healthy and the binary a liar.
+piu_nuovo() # $1 = binary, $2.. = sources
 {
 	local bin=$1; shift
 	local vecchi=0 f
 	GUARDATI=$((GUARDATI + 1))
 	if [ ! -f "$bin" ]; then
-		ko "⛔ il binario non c'e': $bin"
+		ko "⛔ the binary is not there: $bin"
 		GUAI=$((GUAI + 1))
 		return
 	fi
 	for f in "$@"; do
 		[ -f "$f" ] || continue
 		if [ "$f" -nt "$bin" ]; then
-			ko "⛔ «$(basename "$f")» e' PIU' NUOVO del binario:"
-			ko "   il server in esecuzione non contiene quel sorgente"
+			ko "⛔ «$(basename "$f")» is NEWER than the binary:"
+			ko "   the running server does not contain that source"
 			vecchi=$((vecchi + 1))
 		fi
 	done
 	if [ "$vecchi" -eq 0 ]; then
-		ok "il binario e' piu' nuovo di tutti i sorgenti che dichiara"
+		ok "the binary is newer than all the sources it declares"
 	else
 		GUAI=$((GUAI + 1))
 	fi
 }
 
-# ⛔ IL POSTO E' UNO SOLO?  E' l'altra meta' della cura di D5: sapere DOVE sta
-#    il binario non basta se il binario puo' stare in due posti.
+# ⛔ IS THE PLACE A SINGLE ONE?  It is the other half of the cure of D5: knowing WHERE
+#    the binary is is not enough if the binary can be in two places.
 #
-#    Dentro UN albero il posto e' uno per costruzione — `src/Makefile` mette
-#    `$(NOME)` accanto ai sorgenti e `costruisci.sh` cancella quello vecchio
-#    prima — ⛔ ma un `build/remotix` lasciato li' da una costruzione fuori
-#    albero, o una copia dimenticata, rimetterebbe in piedi esattamente la
-#    domanda che D5 ha pagato: *quale dei due sta girando?*
-#    ⭐ Qui non si sceglie: si contano e si dicono.  L'ESISTENZA la giudica
-#       `piu_nuovo()`; questo controlla soltanto che non ce ne sia PIU' D'UNO.
-posto_unico() # $1 = albero, $2 = il binario che sto per giudicare
+#    Inside ONE tree the place is one by construction — `src/Makefile` puts
+#    `$(NOME)` next to the sources and `costruisci.sh` deletes the old one
+#    first — ⛔ but a `build/remotix` left there by an out-of-tree build,
+#    or a forgotten copy, would raise again exactly the
+#    question D5 paid for: *which of the two is running?*
+#    ⭐ Here we do not choose: we count them and say so.  EXISTENCE is judged by
+#       `piu_nuovo()`; this only checks that there is not MORE THAN ONE.
+posto_unico() # $1 = tree, $2 = the binary I am about to judge
 {
 	local albero=$1 atteso=$2 trovati s n
 	GUARDATI=$((GUARDATI + 1))
 	if [ ! -d "$albero" ]; then
-		dub "⛔ l'albero del prodotto non c'e': $albero"
-		dub "   ⚠ e «non ho potuto guardare» non e' «va bene»"
+		dub "⛔ the product tree is not there: $albero"
+		dub "   ⚠ and «I could not look» is not «all good»"
 		IGNOTI=$((IGNOTI + 1))
 		return
 	fi
-	# ⚠ Niente `2>/dev/null`: se `find` non ha potuto guardare lo dice, e un
-	#   «non ho potuto» non deve avere la faccia di un «ce n'e' uno solo».
+	# ⚠ No `2>/dev/null`: if `find` could not look it says so, and an
+	#   "I could not" must not have the face of a "there is only one".
 	trovati=$(find "$albero" -maxdepth 2 -type f -name remotix -perm -u+x)
 	s=$?
 	if [ "$s" -ne 0 ]; then
-		dub "⛔ non ho potuto elencare i binari sotto «$albero» (find: $s)"
+		dub "⛔ I could not list the binaries under «$albero» (find: $s)"
 		IGNOTI=$((IGNOTI + 1))
 		return
 	fi
 	if [ -z "$trovati" ]; then n=0; else n=$(printf '%s\n' "$trovati" | wc -l); fi
 	if [ "$n" -le 1 ]; then
-		ok "un solo posto dove puo' stare il binario: $atteso"
-		[ "$n" -eq 0 ] && inf "(oggi non c'e' nessun binario: lo giudica il controllo qui sotto)"
+		ok "a single place where the binary can be: $atteso"
+		[ "$n" -eq 0 ] && inf "(today there is no binary: the check below judges it)"
 	else
-		ko "⛔ $n binari «remotix» dentro lo stesso albero:"
+		ko "⛔ $n «remotix» binaries inside the same tree:"
 		printf '        %s\n' $trovati
-		ko "   ⇒ non so quale sta girando, e sceglierne uno sarebbe D5 daccapo."
-		ko "   Si butta quello di troppo, o si dichiara l'albero con SORG=."
+		ko "   ⇒ I do not know which one is running, and picking one would be D5 all over again."
+		ko "   Throw away the extra one, or declare the tree with SORG=."
 		GUAI=$((GUAI + 1))
 	fi
 }
 
 # ===========================================================================
-# ⛔⭐ I GUASTI DI B12 SI CERCANO DOVE B12 LI METTE — lacuna L2, 12 agosto 2026.
+# ⛔⭐ THE B12 FAULTS ARE LOOKED FOR WHERE B12 PUTS THEM — gap L2, 12 Aug 2026.
 #
-# ⛔ QUEL CHE C'ERA PRIMA, E PERCHE' ERA PEGGIO DI NIENTE.
+# ⛔ WHAT WAS THERE BEFORE, AND WHY IT WAS WORSE THAN NOTHING.
 #
-# Questo file aveva quattro righe scritte a mano:
+# This file had four lines written by hand:
 #
 #     nessuno "guasti di B12 nel codec"        examples/http3_server_proto_codec.cc
 #     nessuno "guasti di B12 in rcp.c"         examples/rcp.c
 #     nessuno "guasti di B12 in server.cc"     examples/server.cc
-#     nessuno "guasti di B12 in remotix/rcp.c" remotix/rcp.c        ← ⛔ QUESTA
+#     nessuno "guasti di B12 in remotix/rcp.c" remotix/rcp.c        ← ⛔ THIS ONE
 #
-# L'ultima **non poteva diventare rossa in nessun caso**: `01-b12-guasti.py`
-# non innesta in `remotix/rcp.c` e non ci ha mai innestato — per progetto
-# dichiarato, perche' *«non si guasta mai un originale»* (la sua §«LA CARTELLA
-# DELLE COPIE»).  ⇒ Un controllo verde per costruzione, che GUARDATI contava
-# come uno dei controlli fatti.  ⛔ E' peggio di un controllo assente: chi
-# legge «nessuna traccia» crede che qualcuno abbia guardato.
+# The last one **could not turn red in any case**: `01-b12-guasti.py`
+# does not graft into `remotix/rcp.c` and never has — by declared
+# design, because *"an original is never broken"* (its §"LA CARTELLA
+# DELLE COPIE").  ⇒ A check green by construction, which GUARDATI counted
+# as one of the checks done.  ⛔ It is worse than an absent check: whoever
+# reads "no trace" believes someone looked.
 #
-# ⚠ E le prime tre erano vere ma **parziali**: dei quindici guasti del catalogo
-#   ne coprivano cinque.  I posti che nessuno guardava — `[M]` 12 agosto 2026,
-#   letti dal catalogo, non dedotti — erano `01-b12-copie/p1-remotix/pagina.c`,
+# ⚠ And the first three were true but **partial**: of the fifteen faults of the catalogue
+#   they covered five.  The places nobody looked at — `[M]` 12 Aug 2026,
+#   read from the catalogue, not deduced — were `01-b12-copie/p1-remotix/pagina.c`,
 #   `01-b12-copie/p5-remotix/pagina.c`, `sera-b10-remotix/autenticazione.c`,
-#   le tre copie di banchi in `01-b12-copie/` e `01-p5-copia-7522/pagina.html`.
+#   the three copies of benches in `01-b12-copie/` and `01-p5-copia-7522/pagina.html`.
 #
-# ⭐ LA CURA: l'elenco non si ricopia, SI CHIEDE AL CATALOGO.  Un guasto nuovo
-#    con un bersaglio nuovo entra qui dentro da solo; una riga ricopiata a mano
-#    invecchia in silenzio, ed e' la forma esatta di R12-A.45 — il file che uno
-#    script rimetteva com'era e che nessun altro guardava.
+# ⭐ THE CURE: the list is not copied, IT IS ASKED OF THE CATALOGUE.  A new fault
+#    with a new target comes in here by itself; a line copied by hand
+#    ages silently, and it is the exact form of R12-A.45 — the file that a
+#    script put back as it was and that nobody else looked at.
 #
-# ⚠ E la marca si legge di la' anche lei (`MARCA`): cercare una stringa
-#   ricopiata qui vorrebbe dire che il giorno in cui B12 la cambia questo
-#   controllo non trova piu' niente **e diventa verde**.
+# ⚠ And the mark is read from there too (`MARCA`): searching for a string
+#   copied here would mean that the day B12 changes it this
+#   check no longer finds anything **and turns green**.
 # ===========================================================================
 CATALOGO=$QUI/01-b12-guasti.py
 
-# Ritorna: prima riga = la MARCA · righe dopo = «SIGLE<TAB>percorso».
+# Returns: first line = the MARCA · following lines = «CODES<TAB>path».
 posti_dei_guasti()
 {
 	python3 - "$CATALOGO" <<'PY'
@@ -291,11 +291,11 @@ print(m.MARCA)
 ordine, di_chi = [], {}
 for sigla in sorted(m.GUASTI):
     g = m.GUASTI[sigla]
-    # ⛔ `copia-di-file` (oggi: B13) SOVRASCRIVE un file intero — un certificato
-    #    PEM — e non ci lascia dentro nessuna stringa da cercare.  Li' il
-    #    residuo lo giudica l'impronta che `--togli` rimette, non questo
-    #    setaccio: cercarci la marca sarebbe un controllo verde per
-    #    costruzione, cioe' il difetto che questa cura toglie.
+    # ⛔ `copia-di-file` (today: B13) OVERWRITES a whole file — a PEM
+    #    certificate — and leaves no string inside it to look for.  There
+    #    the residue is judged by the fingerprint that `--togli` puts back, not by this
+    #    sieve: looking for the mark there would be a check green by
+    #    construction, that is the defect this cure removes.
     if g["costa"] == "copia-di-file":
         continue
     d = os.path.realpath(m.risolvi(g["dove"]))
@@ -315,46 +315,46 @@ guasti_rimasti_addosso()
 
 	righe=$(posti_dei_guasti)
 	s=$?
-	# ⛔ Niente `2>/dev/null` qui sopra: se il catalogo non si carica, l'errore
-	#    di Python si vede, e questo controllo si dichiara IGNOTO invece di
-	#    setacciare zero file e chiamarlo «nessuna traccia».
+	# ⛔ No `2>/dev/null` above: if the catalogue does not load, the Python
+	#    error is seen, and this check declares itself UNKNOWN instead of
+	#    sieving zero files and calling it "no trace".
 	if [ "$s" -ne 0 ] || [ -z "$righe" ]; then
 		GUARDATI=$((GUARDATI + 1))
-		dub "⛔ non ho potuto chiedere a 01-b12-guasti.py dove innesta (uscita $s)"
-		dub "   ⚠ e zero file setacciati non e' «nessun guasto rimasto addosso»"
+		dub "⛔ I could not ask 01-b12-guasti.py where it grafts (exit $s)"
+		dub "   ⚠ and zero files sieved is not «no fault left on»"
 		IGNOTI=$((IGNOTI + 1))
 		return
 	fi
 	marca=$(printf '%s\n' "$righe" | head -1)
 
-	# ⭐ IL CONTROLLO POSITIVO, SULLO STESSO STRUMENTO (`LEZIONI.md` §1.9
-	#    regola 2).  `conta()` sa trovare la marca in un file che ce l'ha di
-	#    sicuro?  Se non la trova, ogni «nessuna traccia» qui sotto vale zero —
-	#    ed e' la stessa mattina in cui una ricerca non trovava nemmeno le 133
-	#    applicazioni di sistema.
+	# ⭐ THE POSITIVE CONTROL, ON THE SAME TOOL (`LEZIONI.md` §1.9
+	#    rule 2).  Can `conta()` find the mark in a file that certainly
+	#    has it?  If it does not find it, every "no trace" below is worth zero —
+	#    and it is the same morning in which a search did not even find the 133
+	#    system applications.
 	GUARDATI=$((GUARDATI + 1))
 	local finto
-	finto=$(mktemp) || { dub "⛔ nessun file temporaneo: setaccio non certificato"; IGNOTI=$((IGNOTI + 1)); return; }
+	finto=$(mktemp) || { dub "⛔ no temporary file: sieve not certified"; IGNOTI=$((IGNOTI + 1)); return; }
 	printf 'una riga qualunque\n/* %s prova */\n' "$marca" >"$finto"
 	n=$(conta "$finto" "$marca")
 	rm -f "$finto"
 	if [ "$n" = "?" ] || [ "$n" -lt 1 ]; then
-		dub "⛔ il setaccio NON trova la marca «$marca» in un file che ce l'ha:"
-		dub "   ogni «nessuna traccia» qui sotto sarebbe un verde vuoto."
+		dub "⛔ the sieve does NOT find the mark «$marca» in a file that has it:"
+		dub "   every «no trace» below would be an empty green."
 		IGNOTI=$((IGNOTI + 1))
 		return
 	fi
-	ok "il setaccio sa trovare «$marca» dove c'e' (controllo positivo)"
+	ok "the sieve can find «$marca» where it is (positive control)"
 
 	while IFS=$'\t' read -r sigle percorso; do
 		[ -n "${percorso:-}" ] || continue
 		posti=$((posti + 1))
 		if [ ! -e "$percorso" ]; then
-			# ⛔ ASSENTE NON E' IGNOTO, E QUI LA DIFFERENZA E' DIMOSTRABILE.
-			#    I bersagli di B12 sono COPIE che `prepara_copia()` rifa' da
-			#    zero a ogni giro: finche' la copia non esiste, non puo'
-			#    portare addosso niente.  ⇒ non e' «non ho potuto guardare»,
-			#    e non deve costare un IGNOTO che fermerebbe ogni giro.
+			# ⛔ ABSENT IS NOT UNKNOWN, AND HERE THE DIFFERENCE CAN BE PROVED.
+			#    The targets of B12 are COPIES that `prepara_copia()` redoes from
+			#    scratch at every round: as long as the copy does not exist, it cannot
+			#    carry anything on it.  ⇒ it is not "I could not look",
+			#    and it must not cost an UNKNOWN that would stop every round.
 			assenti=$((assenti + 1))
 			continue
 		fi
@@ -362,187 +362,187 @@ guasti_rimasti_addosso()
 		guardati=$((guardati + 1))
 		n=$(conta "$percorso" "$marca")
 		if [ "$n" = "?" ]; then
-			dub "⛔ non ho potuto leggere «$percorso» (guasti $sigle)"
-			dub "   ⚠ e «non ho potuto guardare» non e' «va bene»"
+			dub "⛔ I could not read «$percorso» (faults $sigle)"
+			dub "   ⚠ and «I could not look» is not «all good»"
 			IGNOTI=$((IGNOTI + 1))
 			continue
 		fi
 		if [ "$n" -ne 0 ]; then
-			ko "⛔ $n tracce di guasto RIMASTE ADDOSSO a «$percorso»"
-			ko "   e' il bersaglio di: $sigle"
-			ko "   Un guasto dimenticato avvelena ogni misura successiva, e"
-			ko "   nessuno sapra' che c'era.  Si toglie con:"
+			ko "⛔ $n fault traces LEFT ON «$percorso»"
+			ko "   it is the target of: $sigle"
+			ko "   A forgotten fault poisons every later measurement, and"
+			ko "   nobody will know it was there.  It is removed with:"
 			ko "     python3 $CATALOGO --togli ${sigle%%,*}"
 			GUAI=$((GUAI + 1))
 			sporchi=$((sporchi + 1))
 		fi
 	done <<< "$(printf '%s\n' "$righe" | tail -n +2)"
 
-	# ⛔ IL DENOMINATORE (`LEZIONI.md` §1.9 regola 4): «nessuna traccia» non e'
-	#    un dato finche' non dice DENTRO QUANTI FILE.
+	# ⛔ THE DENOMINATOR (`LEZIONI.md` §1.9 rule 4): "no trace" is not
+	#    a datum until it says INSIDE HOW MANY FILES.
 	if [ "$sporchi" -eq 0 ] && [ "$guardati" -gt 0 ]; then
-		ok "nessun guasto di B12 rimasto addosso: $guardati file setacciati su"
-		ok "   $posti bersagli dichiarati dal catalogo ($assenti non esistono oggi)"
+		ok "no B12 fault left on: $guardati files sieved out of"
+		ok "   $posti targets declared by the catalogue ($assenti do not exist today)"
 	elif [ "$guardati" -eq 0 ]; then
-		dub "⛔ nessuno dei $posti bersagli del catalogo esiste su questa macchina:"
-		dub "   questo controllo non ha guardato niente, e non e' un verde"
+		dub "⛔ none of the $posti targets of the catalogue exists on this machine:"
+		dub "   this check looked at nothing, and it is not a green"
 		IGNOTI=$((IGNOTI + 1))
 	fi
-	inf "i bersagli assenti sono copie che 01-b12-guasti.py rifa' a ogni giro:"
-	inf "  una copia che non c'e' non puo' portarsi addosso un guasto"
+	inf "the absent targets are copies that 01-b12-guasti.py redoes at every round:"
+	inf "  a copy that is not there cannot carry a fault on it"
 }
 
-printf '\n%s== ⛔ Il terreno: il server «%s» e'"'"' quello che credo?%s\n' \
+printf '\n%s== ⛔ The terrain: is the server «%s» the one I believe?%s\n' \
 	"$NETTO" "$BERSAGLIO" "$GRIGIO"
 
 if [ "$BERSAGLIO" = innesto ]; then
-	# ── I due innesti, e vivono TUTT'E DUE in server.cc ──────────────────
-	# ⚠ E' il punto in cui si sono pestati i piedi: `--togli` dell'uno
-	#   rimette com'era un file che l'altro aveva scritto.
-	almeno "innesto RCP (B3) nel codec"    "$ESEMPI/http3_server_proto_codec.cc" "rcp_"        20
-	almeno "innesto WebTransport (B2) nel codec" "$ESEMPI/http3_server_proto_codec.cc" "REMOTIX B2" 5
-	almeno "il ban lato ospite (B3) in server.cc" "$ESEMPI/server.cc"            "REMOTIX B3"  5
-	almeno "i parametri di trasporto (B2) in server.cc" "$ESEMPI/server.cc"      "REMOTIX B2"  1
+	# ── The two grafts, and BOTH of them live in server.cc ───────────────
+	# ⚠ It is the point where they stepped on each other's toes: the `--togli` of one
+	#   puts back as it was a file the other had written.
+	almeno "RCP graft (B3) in the codec"    "$ESEMPI/http3_server_proto_codec.cc" "rcp_"        20
+	almeno "WebTransport graft (B2) in the codec" "$ESEMPI/http3_server_proto_codec.cc" "REMOTIX B2" 5
+	almeno "the host-side ban (B3) in server.cc" "$ESEMPI/server.cc"            "REMOTIX B3"  5
+	almeno "the transport parameters (B2) in server.cc" "$ESEMPI/server.cc"      "REMOTIX B2"  1
 
-	# ── I tre file che B3 copia dentro examples/ ─────────────────────────
+	# ── The three files B3 copies into examples/ ─────────────────────────
 	for f in rcp.c rcp.h autenticazione.c; do
 		GUARDATI=$((GUARDATI + 1))
 		if [ -f "$ESEMPI/$f" ]; then
-			ok "examples/$f c'e'"
+			ok "examples/$f is there"
 		else
-			ko "⛔ examples/$f MANCA: l'innesto RCP non e' completo"
+			ko "⛔ examples/$f is MISSING: the RCP graft is not complete"
 			GUAI=$((GUAI + 1))
 		fi
 	done
 
-	# ── ⭐ E la copia dev'essere IL SORGENTE, non una copia stantia ──────
+	# ── ⭐ And the copy must be THE SOURCE, not a stale copy ─────────────
 	GUARDATI=$((GUARDATI + 1))
 	if [ -f "$ESEMPI/rcp.c" ] && [ -f "$FUORI/rcp/rcp.c" ]; then
 		A=$(md5sum "$ESEMPI/rcp.c" | cut -d' ' -f1)
 		B=$(md5sum "$FUORI/rcp/rcp.c" | cut -d' ' -f1)
 		if [ "$A" = "$B" ]; then
-			ok "examples/rcp.c e' identico a rcp/rcp.c ($A)"
+			ok "examples/rcp.c is identical to rcp/rcp.c ($A)"
 		else
-			ko "⛔ examples/rcp.c NON e' rcp/rcp.c:"
-			ko "   compilato: $A"
-			ko "   sorgente : $B"
-			ko "   ⇒ il server misura una versione che nessuno sta leggendo"
+			ko "⛔ examples/rcp.c is NOT rcp/rcp.c:"
+			ko "   compiled: $A"
+			ko "   source  : $B"
+			ko "   ⇒ the server measures a version nobody is reading"
 			GUAI=$((GUAI + 1))
 		fi
 	else
-		dub "⛔ non ho potuto confrontare rcp.c: uno dei due non c'e'"
+		dub "⛔ I could not compare rcp.c: one of the two is not there"
 		IGNOTI=$((IGNOTI + 1))
 	fi
 
-	# ⚠ I guasti di **B12** non stanno piu' qui: li setaccia
-	#   `guasti_rimasti_addosso()`, in fondo a questo file, chiedendo al
-	#   catalogo dove vanno davvero — e i suoi bersagli non sono tre, sono
-	#   nove (lacuna L2, 12 agosto 2026).  Quelli di **B11** restano scritti a
-	#   mano perche' li innesta un altro programma,
-	#   `01-b11-guasto-innesta.py`, che di catalogo non ne ha uno.
-	nessuno "guasti di B11 nel codec"  "$ESEMPI/http3_server_proto_codec.cc" "REMOTIX B11 GUASTO"
-	nessuno "guasti di B11 in rcp.c"   "$ESEMPI/rcp.c"                       "REMOTIX B11 GUASTO"
-	# ⛔ ⭐ E IL TERZO FILE DI B11, che fino al 12 agosto 2026 non guardava
-	#    nessuno: `01-b11-guasto-innesta.py` scrive in TRE file — `rcp.c`,
-	#    `http3_server_proto_codec.cc` e `http3_server_proto_codec.h` (il
-	#    membro `bool b11_fatto_{false}; // ⚠ REMOTIX B11 GUASTO`).  Un
-	#    `--togli` che lasciasse indietro l'intestazione era invisibile a
-	#    questo strumento: la stessa forma di R12-A.45, che e' il motivo per
-	#    cui questo file esiste.
-	nessuno "guasti di B11 nell'intestazione del codec" \
+	# ⚠ The **B12** faults are no longer here: they are sieved by
+	#   `guasti_rimasti_addosso()`, at the bottom of this file, asking the
+	#   catalogue where they really go — and its targets are not three, they are
+	#   nine (gap L2, 12 Aug 2026).  Those of **B11** stay written by
+	#   hand because another program grafts them,
+	#   `01-b11-guasto-innesta.py`, which has no catalogue.
+	nessuno "B11 faults in the codec"  "$ESEMPI/http3_server_proto_codec.cc" "REMOTIX B11 GUASTO"
+	nessuno "B11 faults in rcp.c"      "$ESEMPI/rcp.c"                       "REMOTIX B11 GUASTO"
+	# ⛔ ⭐ AND THE THIRD FILE OF B11, which until 12 Aug 2026 nobody
+	#    looked at: `01-b11-guasto-innesta.py` writes into THREE files — `rcp.c`,
+	#    `http3_server_proto_codec.cc` and `http3_server_proto_codec.h` (the
+	#    member `bool b11_fatto_{false}; // ⚠ REMOTIX B11 GUASTO`).  A
+	#    `--togli` that left the header behind was invisible to
+	#    this tool: the same form as R12-A.45, which is the reason
+	#    this file exists.
+	nessuno "B11 faults in the codec header" \
 		"$ESEMPI/http3_server_proto_codec.h" "REMOTIX B11 GUASTO"
 
-	# ⛔ Le INTESTAZIONI stanno fra i sorgenti che il binario dichiara: senza,
-	#    un `touch examples/rcp.h` — o l'intestazione del codec riscritta da
-	#    `--togli` — lasciava questo controllo VERDE su un binario stantio.
-	#    E' lo stesso difetto di D5 sull'altro bersaglio, dove si confrontava
-	#    il solo `rcp.c`.
+	# ⛔ The HEADERS are among the sources the binary declares: without them,
+	#    a `touch examples/rcp.h` — or the codec header rewritten by
+	#    `--togli` — left this check GREEN on a stale binary.
+	#    It is the same defect as D5 on the other target, where only
+	#    `rcp.c` was compared.
 	piu_nuovo "$BINARIO_INNESTO" \
 		"$ESEMPI/http3_server_proto_codec.cc" "$ESEMPI/http3_server_proto_codec.h" \
 		"$ESEMPI/server.cc" \
 		"$ESEMPI/rcp.c" "$ESEMPI/rcp.h" "$ESEMPI/autenticazione.c"
 else
-	# ── Il prodotto ─────────────────────────────────────────────────────
-	# ⛔ `src/rcp.c` e `banchi/rcp/rcp.c` DEVONO restare identici byte per
-	#    byte: e' l'invariante su cui poggia il fatto che i due server
-	#    parlino lo stesso protocollo.
+	# ── The product ─────────────────────────────────────────────────────
+	# ⛔ `src/rcp.c` and `banchi/rcp/rcp.c` MUST stay identical byte for
+	#    byte: it is the invariant on which the fact rests that the two servers
+	#    speak the same protocol.
 	GUARDATI=$((GUARDATI + 1))
 	if [ -f "$FUORI/remotix/rcp.c" ] && [ -f "$FUORI/rcp/rcp.c" ]; then
 		A=$(md5sum "$FUORI/remotix/rcp.c" | cut -d' ' -f1)
 		B=$(md5sum "$FUORI/rcp/rcp.c" | cut -d' ' -f1)
 		if [ "$A" = "$B" ]; then
-			ok "remotix/rcp.c e' identico a rcp/rcp.c ($A)"
+			ok "remotix/rcp.c is identical to rcp/rcp.c ($A)"
 		else
-			ko "⛔ i due rcp.c NON sono piu' identici — l'invariante e' rotta"
-			ko "   prodotto: $A"
-			ko "   banchi  : $B"
+			ko "⛔ the two rcp.c are NO longer identical — the invariant is broken"
+			ko "   product: $A"
+			ko "   benches: $B"
 			GUAI=$((GUAI + 1))
 		fi
 	else
-		dub "⛔ non ho potuto confrontare i due rcp.c"
+		dub "⛔ I could not compare the two rcp.c"
 		IGNOTI=$((IGNOTI + 1))
 	fi
-	# ⛔ QUI C'ERA `nessuno "guasti di B12 in remotix/rcp.c"`, E NON POTEVA
-	#    DIVENTARE ROSSA: `01-b12-guasti.py` non innesta negli originali, per
-	#    progetto dichiarato.  La ragione per esteso sta accanto a
-	#    `guasti_rimasti_addosso()`, che adesso setaccia i bersagli VERI — e li
-	#    setaccia su tutt'e due i bersagli di questo script, perche' un guasto
-	#    dimenticato avvelena le misure di chiunque, non solo quelle
-	#    dell'innesto.
+	# ⛔ HERE THERE WAS `nessuno "guasti di B12 in remotix/rcp.c"`, AND IT COULD NOT
+	#    TURN RED: `01-b12-guasti.py` does not graft into the originals, by
+	#    declared design.  The reason at length is next to
+	#    `guasti_rimasti_addosso()`, which now sieves the REAL targets — and
+	#    sieves them on both targets of this script, because a forgotten
+	#    fault poisons anyone's measurements, not only those
+	#    of the graft.
 
-	# ── ⛔ IL BINARIO DEL PRODOTTO — la cura di D5 ───────────────────────
-	inf "albero del prodotto: $SORG   (si cambia con SORG=<percorso>)"
+	# ── ⛔ THE PRODUCT BINARY — the cure of D5 ───────────────────────────
+	inf "product tree: $SORG   (changed with SORG=<path>)"
 	posto_unico "$SORG" "$BINARIO_PRODOTTO"
 
-	# ⛔ TUTTI i sorgenti che entrano nel binario, non il solo `rcp.c`:
-	#    `src/Makefile` ne compila DIECI, e con il solo `rcp.c` un `main.c`
-	#    piu' nuovo del binario lasciava il controllo VERDE.  Le
-	#    intestazioni ci stanno perche' il Makefile le dichiara come
-	#    prerequisiti degli oggetti.
+	# ⛔ ALL the sources that go into the binary, not `rcp.c` alone:
+	#    `src/Makefile` compiles TEN of them, and with `rcp.c` alone a `main.c`
+	#    newer than the binary left the check GREEN.  The
+	#    headers are in because the Makefile declares them as
+	#    prerequisites of the objects.
 	#
-	# ⚠ `pagina.html` e `remotix.pam` NON ci stanno, e la ragione va detta:
-	#    il server li legge all'AVVIO (`pagina_apri()`), non li compila
-	#    dentro.  Uno di loro piu' nuovo del binario non e' un binario
-	#    stantio, e metterlo qui sarebbe un rosso puntato sull'imputato
-	#    sbagliato.
+	# ⚠ `pagina.html` and `remotix.pam` are NOT in, and the reason must be said:
+	#    the server reads them at STARTUP (`pagina_apri()`), it does not compile them
+	#    in.  One of them newer than the binary is not a stale
+	#    binary, and putting it here would be a red pointed at the wrong
+	#    suspect.
 	#
-	# ⛔ E il binario che MANCA e' un GUAIO, non un ignoto — e' il ramo che
-	#    D5 usava per non guardare niente.  `piu_nuovo()` lo sa dire da se',
-	#    ed e' quel che gia' fa sul bersaglio «innesto».
+	# ⛔ And the binary that is MISSING is a TROUBLE, not an unknown — it is the branch that
+	#    D5 used to look at nothing.  `piu_nuovo()` can say so by itself,
+	#    and it is what it already does on the «innesto» target.
 	piu_nuovo "$BINARIO_PRODOTTO" \
 		"$SORG"/*.c "$SORG"/*.h "$SORG/Makefile"
 fi
 
-# ── ⛔ I GUASTI DI B12, CERCATI DOVE B12 LI METTE (lacuna L2) ───────────────
-#    Fuori dall'if apposta: il bersaglio dice quale SERVER si sta per usare,
-#    non quali file possono essere sporchi.
+# ── ⛔ THE B12 FAULTS, LOOKED FOR WHERE B12 PUTS THEM (gap L2) ──────────────
+#    Outside the if on purpose: the target says which SERVER is about to be used,
+#    not which files can be dirty.
 guasti_rimasti_addosso
 
 # ---------------------------------------------------------------------------
-# ⛔ IL DENOMINATORE — `LEZIONI.md` §1.9 regola 6.  «Tutti quelli provati sono
-#    andati bene» e' vero anche quando i provati sono zero.
-printf '\n    == quel che questo controllo ha davvero guardato\n'
-inf "controlli fatti:      $GUARDATI"
-printf '    %s%3d%s  ⛔ guai\n' "$ROSSO" "$GUAI" "$GRIGIO"
-printf '    %s%3d%s  ⚠ IGNOTI (non ho potuto guardare)\n' "$GIALLO" "$IGNOTI" "$GRIGIO"
+# ⛔ THE DENOMINATOR — `LEZIONI.md` §1.9 rule 6.  "All those tested
+#    went well" is true even when those tested are zero.
+printf '\n    == what this check really looked at\n'
+inf "checks done:          $GUARDATI"
+printf '    %s%3d%s  ⛔ troubles\n' "$ROSSO" "$GUAI" "$GRIGIO"
+printf '    %s%3d%s  ⚠ UNKNOWN (I could not look)\n' "$GIALLO" "$IGNOTI" "$GRIGIO"
 
 if [ "$GUARDATI" -eq 0 ]; then
-	ko "⛔ ZERO controlli: questo giro non dice niente, e «terreno buono»"
-	ko "   sarebbe una bugia"
+	ko "⛔ ZERO checks: this round says nothing, and «good terrain»"
+	ko "   would be a lie"
 	exit 2
 fi
 if [ "$GUAI" -gt 0 ]; then
-	printf '\n    %s⛔ IL TERRENO NON REGGE: non lanciare banchi su questo server.%s\n' \
+	printf '\n    %s⛔ THE TERRAIN DOES NOT HOLD: do not launch benches on this server.%s\n' \
 		"$ROSSO" "$GRIGIO"
-	ko "Quel che ne uscirebbe non parlerebbe del prodotto."
+	ko "What would come out of it would not speak about the product."
 	exit 1
 fi
 if [ "$IGNOTI" -gt 0 ]; then
-	printf '\n    %s⚠ il terreno regge SU QUEL CHE HO POTUTO GUARDARE%s\n' \
+	printf '\n    %s⚠ the terrain holds ON WHAT I COULD LOOK AT%s\n' \
 		"$GIALLO" "$GRIGIO"
-	inf "$IGNOTI controlli non si sono potuti fare: non sono un verde"
+	inf "$IGNOTI checks could not be done: they are not a green"
 	exit 1
 fi
-printf '\n    %s⭐ il terreno regge: %d controlli su %d%s\n' \
+printf '\n    %s⭐ the terrain holds: %d checks of %d%s\n' \
 	"$VERDE" "$GUARDATI" "$GUARDATI" "$GRIGIO"
 exit 0

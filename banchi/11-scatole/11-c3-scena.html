@@ -2,61 +2,61 @@
 <meta charset="utf-8">
 <title>REMOTIX — C3</title>
 <!--
-  ⭐⭐ LA SCENA DICHIARATA E IN MOVIMENTO che C3 mette sullo schermo.
+  ⭐⭐ THE DECLARED, MOVING SCENE that C3 puts on the screen.
 
-  ⛔ «Dichiarata» vuol dire: **e' questo file a decidere che cosa si muove e di
-     quanto**, non la semantica di un generatore di qualcun altro.  E' la stessa
-     regola che C5 si e' data per l'onda sonora (`11-c5…`, §«DA DOVE VIENE IL
-     SUONO»): `[M]` una sonda che faceva l'onda con `ffmpeg -f lavfi -i sine=…`
-     misuro' *«il percorso attenua di 21 dB»*, ⛔ e attenuava il GENERATORE.
-     ⇒ Una grandezza che dipende da un programma altrui e' una soglia che si
-       sposta senza dirlo.
-
-  ---------------------------------------------------------------------------
-  CHE COSA SI MUOVE, e perche' due cose e non una
-  ---------------------------------------------------------------------------
-
-  1. ⭐ **IL FONDO CAMBIA COLORE** fra `#0000FF` (blu) e `#FFFF00` (giallo) ogni
-     3 fotogrammi d'animazione.  ⛔ I due colori sono agli antipodi su tutti e
-     tre i canali: dopo una codifica H.264 in 4:2:0 — che sottocampia il croma —
-     restano distinguibili con una tolleranza larga.  ⚠ E servono anche a C3 per
-     rispondere alla domanda *«la scena che ho dichiarato e' davvero quella sullo
-     schermo?»*: se nessuno dei due colori copre una fetta larga, C3 dice «non ho
-     potuto guardare» invece di giudicare una scena che non e' la sua.
-
-  2. ⭐⭐ **UNA BANDA SCORRE**, e ⛔ questa e' la parte che conta di piu'.
-     Il fondo cambia ogni 3 fotogrammi: fra la cadenza dell'animazione e quella
-     della cattura, due fotogrammi consecutivi potrebbero cascare sullo stesso
-     colore — ⇒ e allora sembrerebbero identici **senza che niente sia rotto**,
-     cioe' un rosso falso.  La banda invece si sposta a **ogni** fotogramma:
-     ⭐ con lei, due fotogrammi consecutivi devono differire SEMPRE.
-     ⚠ La banda e' larga il 20 % dello schermo e avanza del **3 %** a fotogramma
-       ⇒ cambia ~6 % dei pixel, cioe' sei volte la soglia che C3 usa per dire
-       «questi due fotogrammi sono diversi» (1 %).  Il margine e' dichiarato
-       apposta: una scena che passa la soglia per un pelo non prova niente.
-
-  ⛔⛔ E IL «3 %» NON E' UN NUMERO QUALUNQUE — e' scelto per NON essere periodico.
-     Se la banda avanzasse del 4 %, tornerebbe al punto di partenza ogni 25
-     fotogrammi d'animazione: ⇒ due fotogrammi CATTURATI a 25 (o 50, o 75)
-     fotogrammi di distanza sarebbero **identici a scena sanissima**, e C3
-     direbbe «immagine congelata» su un prodotto che funziona.  ⚠ Con 25
-     fotogrammi d'animazione fra una cattura e l'altra il ritmo sarebbe
-     60/25 = 2,4 al secondo — sotto il pavimento che C3 pretende (4,0/s), ma
-     a **un solo passo** da li'.
-     ⭐ Con il 3 % il periodo diventa 100 fotogrammi d'animazione, cioe' un
-       ritmo di 0,6 al secondo: ⇒ il caso e' lontano quattro volte dal
-       pavimento invece che vicino, e chi domani abbassasse `--ritmo-minimo`
-       avrebbe molto piu' margine prima di aprire quella porta.
+  ⛔ «Declared» means: **it is this file that decides what moves and by
+     how much**, not the semantics of someone else's generator.  It is the same
+     rule C5 gave itself for the sound wave (`11-c5…`, §«WHERE THE
+     SOUND COMES FROM»): `[M]` a probe that made the wave with `ffmpeg -f lavfi -i sine=…`
+     measured *«the path attenuates by 21 dB»*, ⛔ and it was the GENERATOR attenuating.
+     ⇒ A quantity that depends on someone else's program is a threshold that moves
+       without saying so.
 
   ---------------------------------------------------------------------------
-  ⛔ E le tre regole della pagina, come per `11-c2-finestra.html`:
-     · nessuna risorsa esterna: la scatola non ha rete verso fuori, e una pagina
-       che aspetta qualcosa che non arriva darebbe un rosso che non e' del
-       prodotto;
-     · niente scritte che si muovono da sole (l'ora, un contatore di secondi):
-       il movimento dev'essere QUELLO DICHIARATO e nessun altro;
-     · `requestAnimationFrame` e non un `setInterval`: si disegna quando il
-       compositore e' pronto a ricevere, che e' l'unica cadenza che ha senso qui.
+  WHAT MOVES, and why two things and not one
+  ---------------------------------------------------------------------------
+
+  1. ⭐ **THE BACKGROUND CHANGES COLOUR** between `#0000FF` (blue) and `#FFFF00` (yellow) every
+     3 animation frames.  ⛔ The two colours are at opposite ends on all
+     three channels: after an H.264 encoding in 4:2:0 — which subsamples the chroma —
+     they stay distinguishable with a wide tolerance.  ⚠ And they also serve C3 to
+     answer the question *«is the scene I declared really the one on the
+     screen?»*: if neither of the two colours covers a wide slice, C3 says «I could not
+     look» instead of judging a scene that is not its own.
+
+  2. ⭐⭐ **A BAND SCROLLS**, and ⛔ this is the part that matters most.
+     The background changes every 3 frames: between the cadence of the animation and that
+     of the capture, two consecutive frames could land on the same
+     colour — ⇒ and then they would look identical **without anything being broken**,
+     i.e. a false red.  The band instead moves at **every** frame:
+     ⭐ with it, two consecutive frames must ALWAYS differ.
+     ⚠ The band is 20 % of the screen wide and advances by **3 %** per frame
+       ⇒ it changes ~6 % of the pixels, i.e. six times the threshold C3 uses to say
+       «these two frames are different» (1 %).  The margin is declared
+       on purpose: a scene that passes the threshold by a hair proves nothing.
+
+  ⛔⛔ AND THE «3 %» IS NOT JUST ANY NUMBER — it is chosen so as NOT to be periodic.
+     If the band advanced by 4 %, it would return to its starting point every 25
+     animation frames: ⇒ two frames CAPTURED 25 (or 50, or 75)
+     frames apart would be **identical on a perfectly healthy scene**, and C3
+     would say «frozen image» on a product that works.  ⚠ With 25
+     animation frames between one capture and the next the rate would be
+     60/25 = 2.4 per second — below the floor C3 demands (4.0/s), but
+     **a single step** away from it.
+     ⭐ With 3 % the period becomes 100 animation frames, i.e. a
+       rate of 0.6 per second: ⇒ the case is four times away from the
+       floor instead of close to it, and whoever lowered `--ritmo-minimo` tomorrow
+       would have much more margin before opening that door.
+
+  ---------------------------------------------------------------------------
+  ⛔ And the three rules of the page, as for `11-c2-finestra.html`:
+     · no external resource: the box has no network to the outside, and a page
+       waiting for something that never arrives would give a red that is not the
+       product's;
+     · no text that moves by itself (the time, a seconds counter):
+       the movement must be THE DECLARED ONE and no other;
+     · `requestAnimationFrame` and not a `setInterval`: we draw when the
+       compositor is ready to receive, which is the only cadence that makes sense here.
 -->
 <style>
   html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; }
@@ -70,19 +70,19 @@
 <div id="banda"></div>
 <div id="targa">REMOTIX C3</div>
 <script>
-  // ⭐ I due colori sono DICHIARATI qui e ripetuti nel banco: se qualcuno ne
-  //    cambia uno qui e non la', C3 dira' «la scena che ho dichiarato non e'
-  //    sullo schermo» ⇒ ⛔ «non ho potuto guardare», non un rosso al prodotto.
+  // ⭐ The two colours are DECLARED here and repeated in the bench: if someone
+  //    changes one here and not there, C3 will say «the scene I declared is not
+  //    on the screen» ⇒ ⛔ «I could not look», not a red for the product.
   var COLORI = ['#0000FF', '#FFFF00'];
   var n = 0, x = 0;
   var banda = document.getElementById('banda');
   function giro() {
-    // il fondo cambia ogni 3 fotogrammi
+    // the background changes every 3 frames
     if (n % 3 === 0) document.body.style.background = COLORI[(n / 3 | 0) % 2];
-    // la banda avanza del 3 % a OGNI fotogramma, e rientra dall'altro lato.
-    // ⛔ 3 e non 4: vedi il riquadro in testa — con 4 la scena sarebbe periodica
-    //    ogni 25 fotogrammi, e a un ritmo di 2,4/s C3 vedrebbe due fotogrammi
-    //    identici su una scena sanissima.
+    // the band advances by 3 % at EVERY frame, and re-enters from the other side.
+    // ⛔ 3 and not 4: see the box at the top — with 4 the scene would be periodic
+    //    every 25 frames, and at a rate of 2.4/s C3 would see two identical
+    //    frames on a perfectly healthy scene.
     x = (x + 3) % 100;
     banda.style.left = x + '%';
     n++;

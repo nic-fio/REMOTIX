@@ -1,32 +1,32 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-n027 — LE PROVE NEGATIVE (fasi/15 §«Prove negative», adattate)
+15-n027 — THE NEGATIVE TESTS (fasi/15 §«Negative tests», adapted)
 
     python3 15-n027-negative.py --scatola lxqt --browser firefox --porte-base 4930 [--guasto]
 
-N-1  utente inesistente ............ sta in 15-f027 (sul server G8: conta come errore)
-N-2  parola sbagliata .............. e' F-027 (15-f027)
-N-3  sessione gia' chiusa con «Esci» ⇒ il nuovo accesso fa nascere una sessione
-     NUOVA e PULITA.  Server normale (85xx).  L'inquilino entra, apre una scena
-     di colore noto (GIALLO), esce col gesto «Esci» del suo desktop (lo stesso di
-     C20/C24: il metodo D-Bus che il menu raggiunge).  Atteso: il prodotto dice
-     la sessione finita, la pagina torna al modulo, i programmi della sessione
-     non ci sono piu'; rientrando, il server fa NASCERE una sessione («LA FACCIO
-     NASCERE») e la tela — desktop vero, non degenere — NON mostra il giallo.
-N-4  rete non disponibile.  Sul server G8 (porta 862x): la pagina e' caricata,
-     poi il server si SPEGNE, e l'utente preme «Collegati».  Atteso: entro 40 s
-     la pagina dice che non si collega (esito «male», una frase), niente
-     «Ammesso», non resta appesa.  E la pagina ricaricata a server spento: che
-     cosa dice il browser (si registra; la pagina del prodotto non c'e').  Alla
-     fine il server G8 si riaccende.
-N-5  stesso utente gia' attivo da un altro dispositivo ... e' F-025 (15-f025).
+N-1  nonexistent user .............. lives in 15-f027 (on the G8 server: it counts as an error)
+N-2  wrong password ................ is F-027 (15-f027)
+N-3  session already closed with «Exit» ⇒ the new login makes a NEW and CLEAN
+     session be born.  Normal server (85xx).  The tenant logs in, opens a scene
+     of known colour (YELLOW), exits with their desktop's «Exit» gesture (the same as
+     C20/C24: the D-Bus method the menu reaches).  Expected: the product says
+     the session ended, the page goes back to the form, the session's programs
+     are no longer there; coming back in, the server MAKES a session BE BORN («I AM
+     MAKING IT BE BORN») and the canvas — real desktop, not degenerate — does NOT show the yellow.
+N-4  network not available.  On the G8 server (port 862x): the page is loaded,
+     then the server is TURNED OFF, and the user presses «Connect».  Expected: within 40 s
+     the page says it cannot connect (outcome «male», a sentence), no
+     «Admitted», it does not stay hung.  And the page reloaded with the server off: what
+     the browser says (it is recorded; the product's page is not there).  At the
+     end the G8 server is started again.
+N-5  same user already active from another device ... is F-025 (15-f025).
 
-GUASTI:
-  N-3  al posto di «Esci», uno STACCO (la pagina va su about:blank: il filo
-       cade, la sessione resta) e si rientra ⇒ la scena gialla c'e' ancora e
-       nessuna sessione nasce ⇒ il giudice deve dire rosso.
-  N-4  il server NON si spegne ⇒ «Ammesso» ⇒ il giudice deve dire rosso.
+FAULTS:
+  N-3  instead of «Exit», a DETACH (the page goes to about:blank: the wire
+       drops, the session stays) and we come back in ⇒ the yellow scene is still there and
+       no session is born ⇒ the judge must say red.
+  N-4  the server is NOT turned off ⇒ «Admitted» ⇒ the judge must say red.
 """
 import os
 import sys
@@ -41,44 +41,44 @@ PER_BROWSER = False
 SERVER = "15-g8-server.sh"
 GIALLO = (220, 200, 30)
 COLORI = {"giallo": GIALLO}
-NASCITA = "LA FACCIO NASCERE"
+NASCITA = "I AM MAKING IT BE BORN"
 FINITA = [p for p, _d in S.C20V.C20.RIGHE_FINITA]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  I GIUDICI — puri
+#  THE JUDGES — pure
 # ═══════════════════════════════════════════════════════════════════════════
 def giudica_rientro(finita, pagina_modulo, processi_dopo, righe_rientro, entrato, fr):
-    """N-3: (esito, ragione)."""
+    """N-3: (outcome, reason)."""
     if not finita:
-        return S.BLOCKED, "il prodotto non ha dichiarato la sessione finita: «Esci» non guardabile"
+        return S.BLOCKED, "the product did not declare the session ended: «Exit» not observable"
     if not entrato:
-        return S.FAIL, "dopo «Esci» non si rientra"
+        return S.FAIL, "after «Exit» you do not get back in"
     if fr is None:
-        return S.BLOCKED, "rientrato, ma la tela non si fotografa"
+        return S.BLOCKED, "back in, but the canvas cannot be photographed"
     guai = []
     if not any(NASCITA in r for r in righe_rientro):
-        guai.append("al rientro il server NON fa nascere una sessione")
+        guai.append("at the re-entry the server does NOT make a session be born")
     if fr.get("giallo", 0) > 0.01:
-        guai.append("la scena della sessione chiusa c'e' ancora (giallo %.1f%%)" % (100 * fr["giallo"]))
+        guai.append("the closed session's scene is still there (yellow %.1f%%)" % (100 * fr["giallo"]))
     if processi_dopo:
-        guai.append("dopo «Esci» restano %d processi della scena" % processi_dopo)
+        guai.append("after «Exit» %d processes of the scene remain" % processi_dopo)
     if guai:
         return S.FAIL, "; ".join(guai)
-    return S.PASS, ("finita, modulo %s, nessun programma rimasto, al rientro sessione NATA e tela "
-                    "pulita (giallo %.2f%%)" % ("visibile" if pagina_modulo else "dopo ricarica",
+    return S.PASS, ("ended, form %s, no program left, at the re-entry session BORN and canvas "
+                    "clean (yellow %.2f%%)" % ("visible" if pagina_modulo else "after reload",
                                                 100 * fr.get("giallo", 0)))
 
 
 def giudica_senza_rete(ammesso, stato, attesa_s):
-    """N-4: (esito, ragione)."""
+    """N-4: (outcome, reason)."""
     esito = (stato or {}).get("esito") or ""
     if ammesso is True:
-        return S.FAIL, "server spento e la pagina dice «%s»" % esito
+        return S.FAIL, "server off and the page says «%s»" % esito
     if (stato or {}).get("esito_classe") == "male" and esito.strip():
-        return S.PASS, "in %.0f s la pagina dice «%s»" % (attesa_s, esito[:120])
-    return S.FAIL, ("server spento: dopo %.0f s la pagina resta appesa senza dire niente di chiaro "
-                    "(esito «%s»)" % (attesa_s, esito[:120]))
+        return S.PASS, "in %.0f s the page says «%s»" % (attesa_s, esito[:120])
+    return S.FAIL, ("server off: after %.0f s the page stays hung without saying anything clear "
+                    "(outcome «%s»)" % (attesa_s, esito[:120]))
 
 
 def certifica():
@@ -88,26 +88,26 @@ def certifica():
         nonlocal ok
         ok &= bool(vero)
         print("%s %s" % ("⭐" if vero else "⛔", cosa))
-    nata = ["[c] ⭐ nessuna sessione grafica per «c»: LA FACCIO NASCERE io"]
-    prova("rientro pulito ⇒ PASS", giudica_rientro(True, True, 0, nata, True, {"giallo": 0.0})[0] == S.PASS)
-    prova("scena ancora li' ⇒ FAIL", giudica_rientro(True, True, 0, nata, True, {"giallo": 0.8})[0] == S.FAIL)
-    prova("nessuna nascita ⇒ FAIL", giudica_rientro(True, True, 0, [], True, {"giallo": 0.0})[0] == S.FAIL)
-    prova("programmi rimasti ⇒ FAIL", giudica_rientro(True, True, 2, nata, True, {"giallo": 0.0})[0] == S.FAIL)
-    prova("non finita ⇒ BLOCKED", giudica_rientro(False, True, 0, nata, True, {"giallo": 0.0})[0] == S.BLOCKED)
-    prova("senza rete, frase ⇒ PASS", giudica_senza_rete(
-        False, {"esito_classe": "male", "esito": "il server non risponde"}, 5)[0] == S.PASS)
-    prova("senza rete, ammesso ⇒ FAIL", giudica_senza_rete(True, {"esito": "Ammesso"}, 5)[0] == S.FAIL)
-    prova("senza rete, appesa ⇒ FAIL", giudica_senza_rete(
-        None, {"esito_classe": "", "esito": "Collego…"}, 40)[0] == S.FAIL)
+    nata = ["[c] ⭐ no graphical session for «c»: I AM MAKING IT BE BORN (canvas 1x1)"]
+    prova("clean re-entry ⇒ PASS", giudica_rientro(True, True, 0, nata, True, {"giallo": 0.0})[0] == S.PASS)
+    prova("scene still there ⇒ FAIL", giudica_rientro(True, True, 0, nata, True, {"giallo": 0.8})[0] == S.FAIL)
+    prova("no birth ⇒ FAIL", giudica_rientro(True, True, 0, [], True, {"giallo": 0.0})[0] == S.FAIL)
+    prova("programs left ⇒ FAIL", giudica_rientro(True, True, 2, nata, True, {"giallo": 0.0})[0] == S.FAIL)
+    prova("not ended ⇒ BLOCKED", giudica_rientro(False, True, 0, nata, True, {"giallo": 0.0})[0] == S.BLOCKED)
+    prova("without network, sentence ⇒ PASS", giudica_senza_rete(
+        False, {"esito_classe": "male", "esito": "the server does not answer"}, 5)[0] == S.PASS)
+    prova("without network, admitted ⇒ FAIL", giudica_senza_rete(True, {"esito": "Admitted"}, 5)[0] == S.FAIL)
+    prova("without network, hung ⇒ FAIL", giudica_senza_rete(
+        None, {"esito_classe": "", "esito": "Connecting…"}, 40)[0] == S.FAIL)
     return 0 if ok else 1
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA PROVA
+#  THE TEST
 # ═══════════════════════════════════════════════════════════════════════════
 def processi_scena(sc, chi):
-    # ⚠ solo l'APPLICAZIONE della sessione: il servitore della scena l'ha
-    #   lanciato il banco fuori dalla sessione (runuser), e «Esci» non lo vede
+    # ⚠ only the session's APPLICATION: the scene's server was
+    #   launched by the bench outside the session (runuser), and «Exit» does not see it
     c, t = G.dentro(sc, "pgrep -u %s -x firefox-esr 2>/dev/null | wc -l; true" % chi, 30)
     try:
         return int(t.split()[-1])
@@ -119,16 +119,16 @@ def scena_gialla(o, s):
     S.C21.sveglia(s.g, s.geometria())
     ok, t = G.accendi_scena(s.sc, s.chi, o.porte_base + G.SPOSTA_SCENA, GIALLO)
     if not ok:
-        return None, "la scena gialla non si accende: %s" % " | ".join(t.splitlines()[-5:])[-300:]
+        return None, "the yellow scene does not start: %s" % " | ".join(t.splitlines()[-5:])[-300:]
     fr, dove, perche = G.aspetta_colore(s, "scena-gialla", COLORI, "giallo", 0.5, 40)
     if not fr or fr["giallo"] < 0.5:
-        return None, "la scena gialla non copre la tela: %s %s" % (G.fr_testo(fr), perche)
+        return None, "the yellow scene does not cover the canvas: %s %s" % (G.fr_testo(fr), perche)
     return fr, dove
 
 
 def rientra_e_guarda(s, segno, pausa=8):
-    """Rientra (dal modulo se c'e', se no ricaricando) e fotografa dopo `pausa` s.
-    Torna (entrato, frazioni, righe del server dal segno, foto)."""
+    """Comes back in (from the form if it is there, otherwise by reloading) and photographs after `pausa` s.
+    Returns (got in, fractions, server lines from the mark, photo)."""
     p = G.leggi_pagina(s.g)
     if p.get("modulo"):
         e, m, st = s.pr.entra(s.parola)
@@ -151,14 +151,14 @@ def n3(o, E):
     with S.Sessione(o, "027", E) as s:
         ok, m = s.entra()
         if not ok:
-            raise S.Bloccata("l'inquilino non entra: " + m)
+            raise S.Bloccata("the tenant does not get in: " + m)
         fr, dove = scena_gialla(o, s)
         if fr is None:
             raise S.Bloccata(dove)
         ev = [dove]
         desk, gesto = s.sc.gesto_esci()
         if not gesto:
-            raise S.Bloccata("non so come si dice «Esci» in questa scatola")
+            raise S.Bloccata("I do not know how to say «Exit» in this box")
         segno = s.segno_registro()
         c, t = s.come_utente(gesto)
         forma, _r = S.C20V.aspetta_riga(s.sc, segno, s.chi, FINITA, 60)
@@ -182,23 +182,23 @@ def n3(o, E):
         ev.append(dove2 if entrato else "")
         e, r = giudica_rientro(bool(forma), modulo, proc, righe, entrato, fr2)
         ev.append(s.salva_testo("n3-server.txt", s.registro_da(segno)))
-        E.metti("N-3", e, r, atteso="«Esci» (%s) ⇒ sessione finita, modulo, nessun programma; al "
-                "rientro una sessione NUOVA e pulita" % desk,
-                osservato="%s · il prodotto: «%s» · la pagina dopo «Esci»: «%s»" % (
+        E.metti("N-3", e, r, atteso="«Exit» (%s) ⇒ session ended, form, no program; at the "
+                "re-entry a NEW and clean session" % desk,
+                osservato="%s · the product: «%s» · the page after «Exit»: «%s»" % (
                     r, forma, (pag.get("esito") or "")[:80]), evidenze=[x for x in ev if x])
 
         if o.guasto:
             fr, dove = scena_gialla(o, s)
             if fr is None:
-                E.guasto("N-3", None, "la scena gialla non si riaccende: " + dove)
+                E.guasto("N-3", None, "the yellow scene does not start again: " + dove)
                 return
-            s.g.vai("about:blank")                     # ⛔ il guasto: stacco, non «Esci»
+            s.g.vai("about:blank")                     # ⛔ the fault: detach, not «Exit»
             time.sleep(4)
             segno3 = s.segno_registro()
             entrato, fr3, righe, _d = rientra_e_guarda(s, segno3)
             eg, rg = giudica_rientro(True, True, 0, righe, entrato, fr3)
             E.guasto("N-3", eg == S.FAIL if eg != S.BLOCKED else None,
-                     "stacco al posto di «Esci» ⇒ il giudice dice %s: %s" % (eg, rg))
+                     "detach instead of «Exit» ⇒ the judge says %s: %s" % (eg, rg))
 
 
 def n4(o, E):
@@ -206,7 +206,7 @@ def n4(o, E):
     if not srv.acceso():
         ok, t = srv.accendi()
         if not ok:
-            E.metti("N-4", S.BLOCKED, "il server G8 non si accende: " + t)
+            E.metti("N-4", S.BLOCKED, "the G8 server does not start: " + t)
             return
     o4 = G.o_per(o, 1)
     o4.porta = srv.porta
@@ -216,7 +216,7 @@ def n4(o, E):
         with S.Sessione(o4, "027", E) as s:
             ok, m = s.pr.apri()
             if not ok:
-                E.metti("N-4", S.BLOCKED, "la pagina del server G8 non si apre: " + m)
+                E.metti("N-4", S.BLOCKED, "the G8 server's page does not open: " + m)
                 return
             spento, t = srv.spegni()
             time.sleep(1)
@@ -229,23 +229,23 @@ def n4(o, E):
                                      or ricaricata.get("non_aperta") or "").split())[:160]
             ev = [s.salva_testo("n4-pagina.txt", [str(st.get("registro") or "")[-3000:],
                                                   "---", str(ricaricata)])]
-            E.metti("N-4", e, r, atteso="server spento ⇒ entro 40 s una frase chiara, niente "
-                    "«Ammesso», la pagina non resta appesa",
-                    osservato="%s · ricaricata a server spento il browser dice: «%s» (%s)" % (
+            E.metti("N-4", e, r, atteso="server off ⇒ within 40 s a clear sentence, no "
+                    "«Admitted», the page does not stay hung",
+                    osservato="%s · reloaded with the server off the browser says: «%s» (%s)" % (
                         r, browser_dice, t.splitlines()[-1] if t else "?"), evidenze=ev)
             ok, t = srv.accendi()
             if o.guasto:
                 if not ok:
-                    E.guasto("N-4", None, "il server G8 non si riaccende: " + t)
+                    E.guasto("N-4", None, "the G8 server does not start again: " + t)
                 else:
                     t0 = time.time()
                     amm, st = G.tenta(s, s.chi, s.parola, 40)
                     eg, rg = giudica_senza_rete(amm, st, time.time() - t0)
                     E.guasto("N-4", eg == S.FAIL if amm is not None else None,
-                             "server acceso al posto di spento ⇒ il giudice dice %s: %s" % (eg, rg))
+                             "server on instead of off ⇒ the judge says %s: %s" % (eg, rg))
     finally:
         if not srv.acceso():
-            print("   server G8 riacceso: %s" % (srv.accendi(),), flush=True)
+            print("   G8 server restarted: %s" % (srv.accendi(),), flush=True)
 
 
 def corpo(o, E):

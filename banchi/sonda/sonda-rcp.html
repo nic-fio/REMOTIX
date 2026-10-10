@@ -1,9 +1,9 @@
 <!doctype html>
-<!-- sonda-rcp.html — NON e' prodotto: e' il banco che guida un browser vero
-     contro il server di src/.  La LOGICA e' estratta da src/pagina.html senza
-     riscriverla: se le due divergessero, questa prova misurerebbe un'altra
-     pagina.  Le sole differenze sono l'avvio automatico e il POST dell'esito. -->
-<html lang="it"><head><meta charset="utf-8"><title>sonda RCP</title></head>
+<!-- sonda-rcp.html — it is NOT product: it is the bench that drives a real browser
+     against the server of src/.  The LOGIC is extracted from src/pagina.html without
+     rewriting it: if the two diverged, this test would measure another
+     page.  The only differences are the automatic start and the POST of the outcome. -->
+<html lang="it"><head><meta charset="utf-8"><title>RCP probe</title></head>
 <body>
 <div id="avviso" hidden></div>
 <form id="modulo"><input id="utente"><input id="parola" type="password"></form>
@@ -11,42 +11,42 @@
 <script>
 "use strict";
 
-/* ⛔ L'impronta che il SERVER ha scritto qui dentro mentre serviva la pagina. */
+/* ⛔ The fingerprint the SERVER wrote in here while serving the page. */
 const Q = new URLSearchParams(location.search);
 const BASE = Q.get("base");
 const IMPRONTA_SERVITA = Q.get("impronta") || "";
 
 /* -------------------------------------------------------------------------
- * ⛔⭐ LE CREDENZIALI ARRIVANO DAL FRAMMENTO, NON DALLA QUERY — rilievo
- *     R12-A.34, 11 agosto 2026, e l'ha trovato B13.
+ * ⛔⭐ THE CREDENTIALS COME FROM THE FRAGMENT, NOT FROM THE QUERY — survey
+ *     R12-A.34, 11 Aug 2026, and B13 found it.
  *
- * Questa pagina riceveva `?utente=prova&parola=parola-di-prova`.  ⛔ La query
- * fa parte della RIGA DI RICHIESTA HTTP, e ogni server la registra per
- * mestiere: `sonda/racc.log` conteneva la parola d'ordine **in chiaro**, ed e'
- * la riga su cui B13.2 e' rosso — *«la parola d'ordine compare in 1 registri
- * su 1288»*.
+ * This page received `?utente=prova&parola=parola-di-prova`.  ⛔ The query
+ * is part of the HTTP REQUEST LINE, and every server logs it as a matter of
+ * course: `sonda/racc.log` held the password **in clear**, and it is
+ * the line on which B13.2 is red — *"the password appears in 1 logs
+ * out of 1288"*.
  *
- * ⚠ E poco piu' sotto questa stessa pagina stampava *«CREDENZIALI mandate (la
- *   parola non compare in nessun registro)»*: una frase che si smentiva da
- *   sola nel file accanto.
+ * ⚠ And a little further down this same page printed *"CREDENZIALI sent (the
+ *   password appears in no log)"*: a sentence that was contradicted by
+ *   the file next to it.
  *
- * ⭐ Il frammento — quel che sta dopo `#` — **non viene mandato al server**:
- *    non entra nella riga di richiesta, quindi non entra in nessun registro
- *    HTTP, ne' nostro ne' di un proxy in mezzo.
+ * ⭐ The fragment — what comes after `#` — **is not sent to the server**:
+ *    it does not enter the request line, so it enters no HTTP log,
+ *    neither ours nor that of a proxy in between.
  *
- * ⛔ E CHE COSA QUESTA CURA **NON** CHIUDE, detto qui e non altrove: il
- *    frammento resta nella CRONOLOGIA e nella sessione salvata del browser.
- *    `[M]` 11 agosto 2026: la parola stava anche in
- *    `sonda/prof-<etichetta>/sessionstore-backups/recovery.jsonlz4` — ⚠ e il
- *    nome della cartella e' scritto per esteso apposta: la forma con
- *    l'asterisco porta dentro la coppia di caratteri che CHIUDE un commento in
- *    JavaScript, e alla prima stesura ha spezzato in due questo blocco.  Il
- *    controllo di sintassi l'ha preso subito; a occhio non si vedeva.  Il
- *    profilo lo si
- *    butta a fine giro (`lancia.sh`), e finche' e' un banco con una parola di
- *    prova va bene cosi'; ⛔ **una pagina di prodotto non deve prendere la
- *    parola d'ordine da nessun pezzo dell'indirizzo**, e questa riga esiste
- *    per non far dimenticare la differenza.
+ * ⛔ AND WHAT THIS CURE DOES **NOT** CLOSE, said here and not elsewhere: the
+ *    fragment stays in the HISTORY and in the browser's saved session.
+ *    `[M]` 11 Aug 2026: the password was also in
+ *    `sonda/prof-<etichetta>/sessionstore-backups/recovery.jsonlz4` — ⚠ and the
+ *    folder name is written out in full on purpose: the form with
+ *    the asterisk carries the pair of characters that CLOSES a comment in
+ *    JavaScript, and in the first draft it split this block in two.  The
+ *    syntax check caught it at once; by eye it could not be seen.  The
+ *    profile is
+ *    thrown away at the end of the round (`lancia.sh`), and as long as it is a
+ *    bench with a test password that is fine; ⛔ **a product page must not take
+ *    the password from any piece of the address**, and this line exists
+ *    so that the difference is not forgotten.
  * ------------------------------------------------------------------------- */
 const F = new URLSearchParams((location.hash || "").replace(/^#/, ""));
 const credenziale = (nome) => F.get(nome) || Q.get(nome) || "";
@@ -59,34 +59,34 @@ function esito(t, bene) { const e = $("esito"); e.textContent = t; e.className =
 
 if (AVVISO.trim()) { $("avviso").hidden = false; }
 
-/* ── I byte di RCP (RCP.md §6.0 e §6.1) ────────────────────────────────────
-   ⛔ Ordine dei byte: rete (big-endian).  Nessun campo allineato, nessun
-      riempimento: «un byte in piu' che fa tornare i conti in una struttura C e'
-      la forma esatta del difetto corretto in §6.2».                          */
+/* ── The bytes of RCP (RCP.md §6.0 and §6.1) ───────────────────────────────
+   ⛔ Byte order: network (big-endian).  No aligned field, no padding:
+      "one extra byte that makes the sums add up in a C struct is the
+      exact form of the defect corrected in §6.2".                            */
 
 const TIPO = {
   CIAO: 0x0001, ECCOMI: 0x0002, CREDENZIALI: 0x0003, AMMESSO: 0x0004,
   RESPINTO: 0x0005, ATTACCA: 0x0006, SESSIONE: 0x0007, CONGEDO: 0x000C,
 };
 
-/* I motivi di §8.2, in parole.  ⛔ `RCP.md` §8.2 e `SPECIFICHE.md`: all'utente
-   si dice PERCHE', con una frase e non con un numero. */
+/* The reasons of §8.2, in words.  ⛔ `RCP.md` §8.2 and `SPECIFICHE.md`: the user
+   is told WHY, with a sentence and not with a number. */
 const MOTIVO = {
-  0x01: "la sessione e' stata chiusa dall'utente",
-  0x02: "silenzio troppo lungo: la sessione e' scaduta",
-  0x03: "la sessione e' stata abbandonata",
-  0x04: "ha prevalso la sessione locale su quella macchina",
-  0x05: "quell'utente e' gia' collegato localmente",
-  0x06: "il server e' pieno",
-  0x07: "utente o parola d'ordine non corretti",
-  0x08: "i tentativi da questo indirizzo sono esauriti: riprova fra dodici ore, o sblocca l'indirizzo dal server",
-  0x09: "il server e questa pagina non hanno niente in comune da parlare",
-  0x0A: "versione del protocollo incompatibile",
-  0x0B: "errore di protocollo",
-  0x0C: "il server si sta spegnendo",
-  0x0D: "tempo scaduto durante la stretta di mano",
-  0x0E: "quella sessione non si puo' servire",
-  0x0F: "quell'utente e' gia' collegato da un altro dispositivo",
+  0x01: "the session was closed by the user",
+  0x02: "silence too long: the session expired",
+  0x03: "the session was abandoned",
+  0x04: "the local session on that machine took precedence",
+  0x05: "that user is already signed in locally",
+  0x06: "the server is full",
+  0x07: "incorrect username or password",
+  0x08: "the attempts from this address are used up: try again in twelve hours, or unblock the address from the server",
+  0x09: "the server and this page have nothing in common to speak",
+  0x0A: "incompatible protocol version",
+  0x0B: "protocol error",
+  0x0C: "the server is shutting down",
+  0x0D: "timed out during the handshake",
+  0x0E: "that session cannot be served",
+  0x0F: "that user is already connected from another device",
 };
 
 class Scrittore {
@@ -94,12 +94,12 @@ class Scrittore {
   u8(v)  { this.b.push(v & 0xff); return this; }
   u16(v) { this.b.push((v >> 8) & 0xff, v & 0xff); return this; }
   u32(v) { this.b.push((v >>> 24) & 0xff, (v >>> 16) & 0xff, (v >>> 8) & 0xff, v & 0xff); return this; }
-  /* stringa = u16 lunghezza + i byte UTF-8, SENZA terminatore (§6.0) */
+  /* string = u16 length + the UTF-8 bytes, WITHOUT terminator (§6.0) */
   str(t)  { const d = new TextEncoder().encode(t); this.u16(d.length); for (const x of d) this.b.push(x); return this; }
   byte()  { return new Uint8Array(this.b); }
 }
 
-/* L'inquadratura di §6.1: u16 tipo, u32 lunghezza, corpo. */
+/* The framing of §6.1: u16 type, u32 length, body. */
 function inquadra(tipo, corpo) {
   const m = new Uint8Array(6 + corpo.length);
   const v = new DataView(m.buffer);
@@ -118,8 +118,8 @@ class Lettore {
   resta() { return this.v.byteLength - this.o; }
 }
 
-/* Il lettore del canale di controllo: accumula e restituisce un messaggio alla
-   volta.  ⛔ La lunghezza si controlla PRIMA di allocare (§6.1). */
+/* The control channel reader: it accumulates and returns one message at a
+   time.  ⛔ The length is checked BEFORE allocating (§6.1). */
 class Canale {
   constructor(stream) {
     this.lettore = stream.readable.getReader();
@@ -132,7 +132,7 @@ class Canale {
       if (this.buf.length >= 6) {
         const v = new DataView(this.buf.buffer, this.buf.byteOffset, this.buf.byteLength);
         const tipo = v.getUint16(0), lung = v.getUint32(2);
-        if (lung > 1024 * 1024) throw new Error("messaggio oltre 1 MiB: il server viola §6.1");
+        if (lung > 1024 * 1024) throw new Error("message over 1 MiB: the server violates §6.1");
         if (this.buf.length >= 6 + lung) {
           const corpo = this.buf.slice(6, 6 + lung);
           this.buf = this.buf.slice(6 + lung);
@@ -155,22 +155,22 @@ function base64ABytes(b64) {
   return d;
 }
 
-/* ⛔⭐ LA DISPOSIZIONE DI TASTIERA, E PERCHE' NON E' `navigator.language`.
+/* ⛔⭐ THE KEYBOARD LAYOUT, AND WHY IT IS NOT `navigator.language`.
  *
- *    `[M]` 10 agosto 2026, primo giro con Firefox vero: questa riga diceva
- *    `navigator.language.slice(0,2)`, e su un browser in inglese mandava `en`.
- *    ⛔ `en` NON E' un nome di disposizione XKB — quella si chiama `us` — e
- *    `RCP.md` §4.5 impone al server di congedare con `SESSIONE_NON_SERVIBILE`
- *    una disposizione ben formata che il sistema non conosce.  Il server ha
- *    fatto esattamente quel che deve; era la PAGINA a chiedere una tastiera che
- *    non esiste, e ogni utente con un browser in inglese avrebbe visto «quella
- *    sessione non si puo' servire» senza che niente nominasse la tastiera.
+ *    `[M]` 10 Aug 2026, first round with real Firefox: this line said
+ *    `navigator.language.slice(0,2)`, and on a browser in English it sent `en`.
+ *    ⛔ `en` IS NOT an XKB layout name — that one is called `us` — and
+ *    `RCP.md` §4.5 requires the server to dismiss with `SESSIONE_NON_SERVIBILE`
+ *    a well-formed layout the system does not know.  The server did
+ *    exactly what it must; it was the PAGE asking for a keyboard that
+ *    does not exist, and every user with a browser in English would have seen
+ *    "that session cannot be served" with nothing naming the keyboard.
  *
- * ⚠ E resta una `[?]` dichiarata: una pagina NON PUO' sapere la disposizione
- *   FISICA della tastiera di chi la guarda — la lingua dell'interfaccia e' un
- *   indizio, non un dato.  Questa tabella e' un ripiego onesto; la cura vera e'
- *   lasciar scegliere all'utente, e `SPECIFICHE.md` §7.3 e' il posto dove
- *   quella decisione andra' presa. */
+ * ⚠ And a declared `[?]` remains: a page CANNOT know the PHYSICAL layout
+ *   of the keyboard of whoever looks at it — the interface language is a
+ *   hint, not a fact.  This table is an honest fallback; the real cure is
+ *   to let the user choose, and `SPECIFICHE.md` §7.3 is the place where
+ *   that decision will be taken. */
 function disposizione() {
   const l = (navigator.language || "it-IT").toLowerCase();
   const lingua = l.slice(0, 2);
@@ -179,9 +179,9 @@ function disposizione() {
     const per_regione = {gb: "gb", au: "us", ca: "us", nz: "us", ie: "ie", in: "us", za: "us"};
     return per_regione[regione] || "us";
   }
-  /* Le lingue in cui il nome XKB coincide con il codice ISO.  ⛔ Fuori da qui
-     si ripiega su `us` invece di indovinare: una disposizione sbagliata non da'
-     un errore, fa uscire le lettere sbagliate. */
+  /* The languages in which the XKB name matches the ISO code.  ⛔ Outside these
+     it falls back to `us` instead of guessing: a wrong layout does not give
+     an error, it makes the wrong letters come out. */
   const note = ["it", "de", "fr", "es", "pt", "nl", "se", "no", "dk", "fi",
                 "pl", "cz", "sk", "hu", "ro", "ru", "ua", "gr", "tr", "il",
                 "jp", "kr", "br", "ch", "be", "at", "si", "hr", "rs", "bg"];
@@ -197,38 +197,38 @@ function disposizione() {
   return "us";
 }
 
-/* ⛔ L'impronta si RITIRA prima di ogni tentativo (§4.1-bis). Se il ritiro
-   fallisce si usa quella servita con la pagina, e LO SI DICE: un ripiego
-   silenzioso produce due comportamenti sotto la stessa etichetta. */
+/* ⛔ The fingerprint is FETCHED AGAIN before every attempt (§4.1-bis). If the
+   fetch fails the one served with the page is used, and IT IS SAID: a silent
+   fallback produces two behaviours under the same label. */
 async function impronta() {
   try {
     const r = await fetch(BASE + "/impronta", { cache: "no-store" });
-    if (!r.ok) throw new Error("stato " + r.status);
+    if (!r.ok) throw new Error("status " + r.status);
     const j = await r.json();
     if (j.impronta && j.impronta !== IMPRONTA_SERVITA) {
-      nota("impronta: il certificato e' stato ruotato da quando questa pagina e' stata servita — si usa quella nuova");
+      nota("fingerprint: the certificate has been rotated since this page was served — using the new one");
     }
     return j.impronta || IMPRONTA_SERVITA;
   } catch (e) {
-    nota("impronta: /impronta non risponde (" + e.message + "): si usa quella servita con la pagina");
+    nota("fingerprint: /impronta does not answer (" + e.message + "): using the one served with the page");
     return IMPRONTA_SERVITA;
   }
 }
 
 async function collega(utente, parola) {
   if (!("WebTransport" in window)) {
-    esito("Questo browser non ha WebTransport: serve Chrome/Edge, Firefox o Safari 26+.", false);
+    esito("This browser has no WebTransport: you need Chrome/Edge, Firefox or Safari 26+.", false);
     return;
   }
 
   const b64 = await impronta();
   const url = BASE + "/rcp/1";
-  nota("apro " + url);
+  nota("opening " + url);
 
-  /* ⛔ `allowPooling: false` e l'impronta: `RCP.md` §4.1-bis.  Con
-     `serverCertificateHashes` il browser NON guarda l'eccezione — guarda
-     l'impronta — ed e' l'unico meccanismo che i browser espongono per un
-     server senza dominio. */
+  /* ⛔ `allowPooling: false` and the fingerprint: `RCP.md` §4.1-bis.  With
+     `serverCertificateHashes` the browser does NOT look at the exception — it
+     looks at the fingerprint — and it is the only mechanism browsers expose for
+     a server without a domain. */
   const wt = new WebTransport(url, {
     allowPooling: false,
     serverCertificateHashes: [{ algorithm: "sha-256", value: base64ABytes(b64) }],
@@ -237,15 +237,15 @@ async function collega(utente, parola) {
   wt.closed.then((info) => {
     const c = info && info.closeCode;
     if (c && MOTIVO[c]) esito(MOTIVO[c], false);
-    nota("sessione chiusa dal server: codice " + (c === undefined ? "?" : c));
-  }).catch((e) => nota("sessione chiusa con errore: " + e));
+    nota("session closed by the server: code " + (c === undefined ? "?" : c));
+  }).catch((e) => nota("session closed with error: " + e));
 
   await wt.ready;
-  nota("sessione WebTransport aperta");
+  nota("WebTransport session open");
 
-  /* ⛔ §4.2: il client apre il PRIMO stream bidirezionale della sessione.
-     Quello e' il canale di controllo, e il suo chiudersi E' la fine della
-     sessione. */
+  /* ⛔ §4.2: the client opens the FIRST bidirectional stream of the session.
+     That is the control channel, and its closing IS the end of the
+     session. */
   const canale = new Canale(await wt.createBidirectionalStream());
 
   /* ── CIAO (§4.3) ────────────────────────────────────────────────────── */
@@ -260,46 +260,46 @@ async function collega(utente, parola) {
     ["client.nome", "remotix-pagina 0.1.0"],
   ];
   const s = new Scrittore();
-  s.u16(1);              /* la versione maggiore che questa pagina sa parlare */
+  s.u16(1);              /* the major version this page can speak */
   s.u16(cap.length);
   for (const [n, v] of cap) s.str(n).str(v);
   await canale.manda(TIPO.CIAO, s.byte());
-  nota("CIAO mandato (" + cap.length + " capacita')");
+  nota("CIAO sent (" + cap.length + " capabilities)");
 
   let m = await canale.ricevi();
-  if (!m) { esito("Il server ha chiuso il canale senza rispondere.", false); return; }
-  if (m.tipo === TIPO.CONGEDO) { const l = new Lettore(m.corpo); esito(MOTIVO[l.u8()] || "congedato", false); return; }
-  if (m.tipo !== TIPO.ECCOMI) { esito("Il server ha risposto 0x" + m.tipo.toString(16) + " invece di ECCOMI.", false); return; }
+  if (!m) { esito("The server closed the channel without answering.", false); return; }
+  if (m.tipo === TIPO.CONGEDO) { const l = new Lettore(m.corpo); esito(MOTIVO[l.u8()] || "dismissed", false); return; }
+  if (m.tipo !== TIPO.ECCOMI) { esito("The server answered 0x" + m.tipo.toString(16) + " instead of ECCOMI.", false); return; }
   {
     const l = new Lettore(m.corpo);
     const ver = l.u16(), quante = l.u16();
     const scelte = [];
     for (let i = 0; i < quante; i++) scelte.push(l.str() + "=" + l.str());
-    nota("ECCOMI: versione " + ver + " — " + scelte.join(" · "));
+    nota("ECCOMI: version " + ver + " — " + scelte.join(" · "));
   }
 
   /* ── CREDENZIALI (§4.4) ─────────────────────────────────────────────── */
   await canale.manda(TIPO.CREDENZIALI, new Scrittore().str(utente).str(parola).byte());
-  nota("CREDENZIALI mandate — ⛔ e la parola non compare in nessun\n  registro HTTP perche' arriva dal FRAMMENTO, che il browser non\n  manda al server (R12-A.34).  \u26a0 Resta nella cronologia del\n  browser: il profilo di questo giro si butta a fine giro");
+  nota("CREDENZIALI sent — ⛔ and the password appears in no\n  HTTP log because it comes from the FRAGMENT, which the browser does not\n  send to the server (R12-A.34).  \u26a0 It stays in the browser's\n  history: this round's profile is thrown away at the end of the round");
 
   m = await canale.ricevi();
-  if (!m) { esito("Il server ha chiuso il canale senza rispondere alle credenziali.", false); return; }
+  if (!m) { esito("The server closed the channel without answering the credentials.", false); return; }
   if (m.tipo === TIPO.RESPINTO) {
     const l = new Lettore(m.corpo);
     const mot = l.u8();
-    esito(MOTIVO[mot] || ("respinto, motivo 0x" + mot.toString(16)), false);
-    /* ⛔ §4.4: «il client NON DEVE riprovare sulla stessa connessione: per un
-       secondo tentativo se ne apre una nuova».  E l'unica cosa che gli resta
-       da dire e' CONGEDO — che §8.1 gli IMPONE quando e' lui a chiudere; qui
-       chiude il server, quindi si tace. */
+    esito(MOTIVO[mot] || ("refused, reason 0x" + mot.toString(16)), false);
+    /* ⛔ §4.4: "the client MUST NOT retry on the same connection: for a
+       second attempt a new one is opened".  And the only thing left for it
+       to say is CONGEDO — which §8.1 REQUIRES of it when it is the one closing;
+       here the server closes, so it keeps quiet. */
     return;
   }
-  if (m.tipo === TIPO.CONGEDO) { const l = new Lettore(m.corpo); esito(MOTIVO[l.u8()] || "congedato", false); return; }
-  if (m.tipo !== TIPO.AMMESSO) { esito("Il server ha risposto 0x" + m.tipo.toString(16) + " invece di AMMESSO.", false); return; }
+  if (m.tipo === TIPO.CONGEDO) { const l = new Lettore(m.corpo); esito(MOTIVO[l.u8()] || "dismissed", false); return; }
+  if (m.tipo !== TIPO.AMMESSO) { esito("The server answered 0x" + m.tipo.toString(16) + " instead of AMMESSO.", false); return; }
   nota("AMMESSO");
 
   /* ── ATTACCA (§4.5) ─────────────────────────────────────────────────── */
-  /* ⛔ I limiti sono normativi: fra 320×240 e 7680×4320, ed entrambe PARI. */
+  /* ⛔ The limits are normative: between 320×240 and 7680×4320, and both EVEN. */
   const pari = (n, min, max) => Math.max(min, Math.min(max, n - (n % 2)));
   const tela_l = pari(1920, 320, 7680), tela_a = pari(1080, 240, 4320);
   const vista_l = Math.max(1, Math.round(innerWidth * devicePixelRatio));
@@ -307,17 +307,17 @@ async function collega(utente, parola) {
   const disp = disposizione();
   await canale.manda(TIPO.ATTACCA,
     new Scrittore().u32(tela_l).u32(tela_a).u32(vista_l).u32(vista_a).str(disp).byte());
-  nota("ATTACCA: tela " + tela_l + "×" + tela_a + ", vista " + vista_l + "×" + vista_a + ", disposizione «" + disp + "»");
+  nota("ATTACCA: canvas " + tela_l + "×" + tela_a + ", view " + vista_l + "×" + vista_a + ", layout «" + disp + "»");
 
   m = await canale.ricevi();
-  if (!m) { esito("Il server ha chiuso il canale senza rispondere ad ATTACCA.", false); return; }
-  if (m.tipo === TIPO.CONGEDO) { const l = new Lettore(m.corpo); esito(MOTIVO[l.u8()] || "congedato", false); return; }
-  if (m.tipo !== TIPO.SESSIONE) { esito("Il server ha risposto 0x" + m.tipo.toString(16) + " invece di SESSIONE.", false); return; }
+  if (!m) { esito("The server closed the channel without answering ATTACCA.", false); return; }
+  if (m.tipo === TIPO.CONGEDO) { const l = new Lettore(m.corpo); esito(MOTIVO[l.u8()] || "dismissed", false); return; }
+  if (m.tipo !== TIPO.SESSIONE) { esito("The server answered 0x" + m.tipo.toString(16) + " instead of SESSIONE.", false); return; }
   {
     const l = new Lettore(m.corpo);
     const stato = l.u8(), tl = l.u32(), ta = l.u32(), desktop = l.str();
-    esito("Ammesso, sessione " + (stato === 1 ? "nuova" : "ripresa") +
-          ", tela " + tl + "×" + ta + ", desktop " + desktop, true);
+    esito("Admitted, " + (stato === 1 ? "new" : "resumed") +
+          " session, canvas " + tl + "×" + ta + ", desktop " + desktop, true);
   }
 }
 
@@ -326,7 +326,7 @@ async function spedisci(esito, dettaglio) {
     await fetch("/esito", {method: "POST", headers: {"Content-Type": "application/json"},
       body: JSON.stringify({esito: esito, motore: navigator.userAgent,
                             dettaglio: dettaglio, righe: righe})});
-  } catch (e) { /* non c'e' altra strada per dirlo */ }
+  } catch (e) { /* there is no other way to say it */ }
 }
 
 (async () => {
@@ -335,7 +335,7 @@ async function spedisci(esito, dettaglio) {
   try {
     await collega(credenziale("utente"), credenziale("parola"));
     const t = $("esito").textContent;
-    await spedisci(/^Ammesso/.test(t) ? "AMMESSO" : "RIFIUTATO", t);
+    await spedisci(/^Admitted/.test(t) ? "AMMESSO" : "RIFIUTATO", t);
   } catch (e) {
     await spedisci("ERRORE", String(e && e.message ? e.message : e));
   }

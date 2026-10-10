@@ -1,42 +1,41 @@
 /*
- * 04-b31-tela.c — IL BANCO DELLA TELA CHE CAMBIA, `RCP.md` §7.1 e §6.2.
+ * 04-b31-tela.c — THE BENCH OF THE CHANGING CANVAS, `RCP.md` §7.1 and §6.2.
  *
- *   04-b31-tela            gira tutti i casi
- *   04-b31-tela <n>        gira solo il caso n
- *
- * ---------------------------------------------------------------------------
- * ⛔ PERCHE' ESISTE, E PERCHE' NON E' UN BANCO DI RETE
- *
- * `CODER.md` §3.6: *«quando la catena e' gia' ristretta, non fare un altro giro
- * di banco: scrivi il programma minimo che chiama la sola funzione sospetta su
- * un ingresso noto.  Costa meno e chiude prima.»*
- *
- * La catena nuova del 15 agosto 2026 — `ADATTA_TELA` → `figli_ritela()` →
- * `cattura_ridimensiona()` → il fotogramma che torna — attraversa **due
- * processi, un compositore e una scheda video**.  ⛔ Provarla tutta vuole la
- * macchina di prova con la sessione grafica viva; ⭐ ma la META' che decide —
- * la macchina a stati di `rcp.c` — non ha bisogno di niente di tutto questo:
- * riceve byte, restituisce byte, e chiede a chi la ospita di fare.
- *
- * ⇒ Qui `rcp.c` e' montato NUDO, con ganci di prova al posto del palco.  Il
- *   «palco» e' una variabile di questo file: si puo' far rispondere in ritardo,
- *   concedere una misura diversa da quella chiesta, o non rispondere affatto.
- *
- * ⛔ E QUEL CHE QUESTO BANCO NON PROVA, dichiarato invece che scoperto:
- *   · **non prova che il compositore ridimensioni**: quello e' `[M]` di
- *     `banchi/04-in8-misura.c` (Mutter 41,6 ms, labwc 5,1 ms);
- *   · **non prova che i pixel siano giusti**: qui non c'e' un pixel;
- *   · **non prova la pagina**: `src/pagina.html` ha i suoi contatori (§6.2), e
- *     quelli si guardano dal browser.
- *   ⇒ Prova la sola cosa che sta in mezzo, ed e' quella che nessun banco
- *     guardava: **che a ogni `ADATTA_TELA` risponda esattamente un `TELA`, e che
- *     la tela in vigore non prenda mai un valore che nessuno ha concesso.**
+ *   04-b31-tela            runs all the cases
+ *   04-b31-tela <n>        runs only case n
  *
  * ---------------------------------------------------------------------------
- * ⛔ L'ATTESO SI DICHIARA PRIMA (regola B0.4 di `LEZIONI.md`): ogni caso qui
- *    sotto porta la sua riga «atteso», e il banco confronta con quella.  Un
- *    banco che stampa quel che e' successo e lo chiama risultato non misura
- *    niente.
+ * ⛔ WHY IT EXISTS, AND WHY IT IS NOT A NETWORK BENCH
+ *
+ * `CODER.md` §3.6: *«when the chain is already narrowed down, do not run another
+ * round of benches: write the minimal program that calls only the suspect
+ * function on a known input.  It costs less and closes sooner.»*
+ *
+ * The new chain of 15 Aug 2026 — `ADATTA_TELA` → `figli_ritela()` →
+ * `cattura_ridimensiona()` → the frame that comes back — crosses **two
+ * processes, a compositor and a graphics card**.  ⛔ Testing all of it needs the
+ * test machine with the graphical session alive; ⭐ but the HALF that decides —
+ * the state machine of `rcp.c` — needs none of this: it receives bytes, returns
+ * bytes, and asks whoever hosts it to act.
+ *
+ * ⇒ Here `rcp.c` is mounted BARE, with test hooks in place of the stage.  The
+ *   «stage» is a variable of this file: it can be made to answer late, grant a
+ *   size different from the one asked, or not answer at all.
+ *
+ * ⛔ AND WHAT THIS BENCH DOES NOT TEST, declared instead of discovered:
+ *   · **it does not test that the compositor resizes**: that is `[M]` of
+ *     `banchi/04-in8-misura.c` (Mutter 41.6 ms, labwc 5.1 ms);
+ *   · **it does not test that the pixels are right**: there is not a pixel here;
+ *   · **it does not test the page**: `src/pagina.html` has its own counters
+ *     (§6.2), and those are watched from the browser.
+ *   ⇒ It tests the one thing that sits in between, and it is the one no bench
+ *     was watching: **that every `ADATTA_TELA` gets exactly one `TELA` back, and
+ *     that the canvas in force never takes a value nobody granted.**
+ *
+ * ---------------------------------------------------------------------------
+ * ⛔ THE EXPECTATION IS DECLARED FIRST (rule B0.4 of `LEZIONI.md`): every case
+ *    below carries its «expected» line, and the bench compares against it.  A
+ *    bench that prints what happened and calls it a result measures nothing.
  */
 #include "../src/rcp.h"
 
@@ -46,7 +45,7 @@
 #include <string.h>
 
 /* ------------------------------------------------------------------ *
- *  Il filo, in byte — §6.0/§6.1: rete (big-endian), niente riempimento
+ *  The wire, in bytes — §6.0/§6.1: network order (big-endian), no padding
  * ------------------------------------------------------------------ */
 
 static uint8_t fuori[4096];
@@ -71,7 +70,7 @@ static void mettestr(uint8_t **p, const char *s)
 	*p += n;
 }
 
-/* Un messaggio del CLIENT: intestazione (u16 tipo, u32 lunghezza) + corpo. */
+/* A CLIENT message: header (u16 type, u32 length) + body. */
 static size_t incornicia(uint8_t *buf, uint16_t tipo, const uint8_t *corpo,
                          size_t len)
 {
@@ -83,50 +82,50 @@ static size_t incornicia(uint8_t *buf, uint16_t tipo, const uint8_t *corpo,
 }
 
 /* ------------------------------------------------------------------ *
- *  Il palco finto — e i suoi tre modi di comportarsi
+ *  The fake stage — and its three ways of behaving
  * ------------------------------------------------------------------ */
 
 static struct {
-	/* che cosa gli e' stato chiesto */
+	/* what it has been asked */
 	uint32_t chiesta_l, chiesta_a;
 	int quante_richieste;
-	/* come risponde */
-	bool accetta;        /* il gancio `ritela` restituisce true?            */
-	bool concede_altro;  /* concede una misura DIVERSA da quella chiesta    */
+	/* how it answers */
+	bool accetta;        /* does the `ritela` hook return true?             */
+	bool concede_altro;  /* grants a size DIFFERENT from the one asked      */
 	uint32_t altro_l, altro_a;
-	/* che misura ha adesso, per il gancio `tela_del_palco` */
+	/* what size it has now, for the `tela_del_palco` hook */
 	bool misura_nota;
 	uint32_t misura_l, misura_a;
 } palco;
 
-/* ⛔⛔⭐ LA RICHIESTA DELLA NASCITA — 16 agosto 2026, e ha tenuto questo banco
- *      ROSSO PER UN GIORNO INTERO senza che nessuno se ne accorgesse.
+/* ⛔⛔⭐ THE BIRTH REQUEST — 16 Aug 2026, and it kept this bench
+ *      RED FOR A WHOLE DAY without anybody noticing.
  *
- *      Il 15 agosto la cura della coda dei tempi di accesso (commit `477d708`)
- *      ha fatto una cosa in piu' e dichiarata: la sessione, appena si attacca,
- *      **dice al palco a che misura deve nascere** invece di lasciarlo nascere
- *      a una misura sua e poi cambiargliela.  Il registro lo scrive a ogni
- *      accesso: *«§4.5: dico al palco che la tela di questa sessione e' NxM —
- *      cosi' nasce gia' cosi' invece di nascere a una misura sua e doverla
- *      cambiare (e il cambio e' una gara)»*.
+ *      On 15 August the cure for the tail of the access times (commit `477d708`)
+ *      did one extra, declared thing: the session, as soon as it attaches,
+ *      **tells the stage at what size it must be born** instead of letting it be
+ *      born at a size of its own and then changing it.  The log writes it at
+ *      every access: *«§4.5: I tell the stage that the canvas of this session is
+ *      NxM — so it is born that way instead of being born at a size of its own
+ *      and having to change it (and the change is a race)»*.
  *
- *      ⇒ Da allora `apri_sessione()` lascia dietro di se' **una** richiesta al
- *      palco, e sette casi su diciotto contavano ancora da zero.  ⛔ Tutti e
- *      sette con lo STESSO scarto — una richiesta — e quattro di essi
- *      mostravano anche «TELA usciti 0» che non era un secondo difetto: sono
- *      scritti `bene = …; if (bene) { … }`, e caduta la prima condizione la
- *      seconda meta' non veniva mai eseguita.  Un difetto solo, sette facce.
+ *      ⇒ Since then `apri_sessione()` leaves **one** request to the stage behind
+ *      it, and seven cases out of eighteen were still counting from zero.  ⛔ All
+ *      seven with the SAME gap — one request — and four of them also showed
+ *      «TELA sent 0», which was not a second defect: they are written
+ *      `bene = …; if (bene) { … }`, and once the first condition failed the
+ *      second half was never executed.  One defect only, seven faces.
  *
- * ⭐ E LA CURA NON E' SOMMARE UNO.  Se questo banco si limitasse ad aspettarsi
- *    un numero piu' grande, diventerebbe **cieco proprio sulla cosa che l'ha
- *    reso rosso**: il giorno in cui la richiesta della nascita sparisse — cioe'
- *    tornassero i diciassette secondi di coda — i conti tornerebbero lo stesso.
- *    ⇒ Si fanno DUE cose:
+ * ⭐ AND THE CURE IS NOT ADDING ONE.  If this bench merely expected a bigger
+ *    number, it would become **blind precisely to the thing that turned it
+ *    red**: the day the birth request disappeared — that is, the seventeen
+ *    seconds of tail came back — the counts would add up all the same.
+ *    ⇒ TWO things are done:
  *
- *      1. i casi contano **da dopo la nascita**, con `dopo_la_nascita()`, che
- *         dice a chi legge che la nascita esiste ed e' un'altra cosa;
- *      2. ⭐ il **caso 19** prova la nascita per conto suo: se sparisce, e' LUI
- *         a diventare rosso, e con un messaggio che nomina il difetto. */
+ *      1. the cases count **from after the birth**, with `dopo_la_nascita()`,
+ *         which tells the reader that the birth exists and is another matter;
+ *      2. ⭐ **case 19** tests the birth on its own: if it disappears, it is IT
+ *         that turns red, and with a message that names the defect. */
 static int nascita_richieste;
 
 static int dopo_la_nascita(void)
@@ -134,7 +133,7 @@ static int dopo_la_nascita(void)
 	return palco.quante_richieste - nascita_richieste;
 }
 
-static void raccogli(void); /* legge quel che il server ha spedito, e svuota */
+static void raccogli(void); /* reads what the server has sent, and empties it */
 
 static bool g_ritela(void *ctx, uint32_t l, uint32_t a)
 {
@@ -155,12 +154,12 @@ static bool g_tela_del_palco(void *ctx, uint32_t *l, uint32_t *a)
 	return true;
 }
 
-/* ⭐⭐ IL PALCO RISPONDE — ed e' la strada che la prima stesura NON aveva: li' il
- *     padre indovinava dai fotogrammi «se ne arriva uno di misura diversa allora
- *     il palco ha obbedito», e con due richieste incatenate indovinava male.
+/* ⭐⭐ THE STAGE ANSWERS — and it is the road the first draft did NOT have: there
+ *     the parent guessed from the frames «if one of a different size arrives then
+ *     the stage has obeyed», and with two chained requests it guessed wrong.
  *
- * `voluta_*` = a quale richiesta risponde.  ⛔ E' quel che rende il
- * riconoscimento un FATTO invece di una deduzione. */
+ * `voluta_*` = which request it answers.  ⛔ It is what makes the recognition
+ * a FACT instead of a deduction. */
 static void palco_risponde(rcp_sessione *s, uint32_t voluta_l, uint32_t voluta_a,
                            uint64_t ora)
 {
@@ -176,13 +175,13 @@ static void palco_risponde(rcp_sessione *s, uint32_t voluta_l, uint32_t voluta_a
 	raccogli();
 }
 
-/* Il palco risponde all'ULTIMA richiesta che ha ricevuto. */
+/* The stage answers the LAST request it received. */
 static void palco_consegna(rcp_sessione *s, uint64_t ora)
 {
 	palco_risponde(s, palco.chiesta_l, palco.chiesta_a, ora);
 }
 
-/* ⛔ «Non ce l'ho fatta»: `0x0`, che NON e' una misura. */
+/* ⛔ «I didn't make it»: `0x0`, which is NOT a size. */
 static void palco_rinuncia(rcp_sessione *s, uint64_t ora)
 {
 	rcp_tela_dal_palco(s, palco.chiesta_l, palco.chiesta_a, 0, 0, ora);
@@ -190,7 +189,7 @@ static void palco_rinuncia(rcp_sessione *s, uint64_t ora)
 }
 
 /* ------------------------------------------------------------------ *
- *  I ganci
+ *  The hooks
  * ------------------------------------------------------------------ */
 
 static bool chiuso;
@@ -224,7 +223,7 @@ static bool g_verifica(void *ctx, const char *utente, const char *parola)
 }
 
 /* ------------------------------------------------------------------ *
- *  La lettura di quel che il server ha spedito
+ *  Reading what the server has sent
  * ------------------------------------------------------------------ */
 
 #define T_SESSIONE 0x0007u
@@ -243,9 +242,9 @@ static int quanti_tela;
 static struct tela_vista ultima_tela;
 static uint32_t sessione_l, sessione_a;
 
-/* Legge tutti i messaggi accumulati e conta i `TELA`.  ⛔ Si SVUOTA: il conto
- * che interessa e' «quanti ne sono usciti da quando ho guardato l'ultima
- * volta», non il totale. */
+/* Reads all the accumulated messages and counts the `TELA`s.  ⛔ It EMPTIES: the
+ * count that matters is «how many have gone out since I last looked», not the
+ * total. */
 static void raccogli(void)
 {
 	size_t i = 0;
@@ -279,14 +278,14 @@ static void raccogli(void)
 }
 
 /* ------------------------------------------------------------------ *
- *  La stretta di mano, fino a `SESSIONE`
+ *  The handshake, up to `SESSIONE`
  * ------------------------------------------------------------------ */
 
 static uint64_t orologio;
 
-/* ⛔ Da dove arriva la prossima sessione: serve al caso 18, che ne vuole DUE —
- *    e il posto di §8.2 e' per UTENTE, non per indirizzo, quindi due
- *    provenienze diverse dello stesso utente si contendono lo stesso posto. */
+/* ⛔ Where the next session comes from: case 18 needs it, as it wants TWO —
+ *    and the slot of §8.2 is per USER, not per address, so two different
+ *    origins of the same user compete for the same slot. */
 static const char *prossima_provenienza = "10.0.0.9:5000";
 
 static rcp_sessione *apri_sessione(uint32_t tela_l, uint32_t tela_a,
@@ -315,16 +314,16 @@ static rcp_sessione *apri_sessione(uint32_t tela_l, uint32_t tela_a,
 	if (!s)
 		return NULL;
 
-	/* CIAO: versione + capacita' (§4.3).
-	 * ⛔ `audio.codec=pcm` NON e' decorazione: §4.3 lo pretende, e senza il
-	 *    server congeda con `NIENTE_IN_COMUNE` — cosa che questo banco ha
-	 *    scoperto al primo giro, con tutti i casi rossi e zero `SESSIONE`.
-	 *    E' `CODER.md` §3.3: il banco si certifica PRIMA di puntarlo
-	 *    sull'incognita, o un rosso non distingue «non funziona l'incognita» da
-	 *    «non funzionava il banco». */
+	/* CIAO: version + capabilities (§4.3).
+	 * ⛔ `audio.codec=pcm` is NOT decoration: §4.3 demands it, and without it the
+	 *    server says farewell with `NIENTE_IN_COMUNE` — something this bench
+	 *    discovered on its first run, with all cases red and zero `SESSIONE`.
+	 *    It is `CODER.md` §3.3: the bench is certified BEFORE pointing it at the
+	 *    unknown, or a red does not tell «the unknown does not work» from
+	 *    «the bench did not work». */
 	p = corpo;
-	mette16(&p, 1);                      /* versione */
-	mette16(&p, max_misura ? 4 : 3);     /* quante capacita' */
+	mette16(&p, 1);                      /* version */
+	mette16(&p, max_misura ? 4 : 3);     /* how many capabilities */
 	mettestr(&p, "video.codec");
 	mettestr(&p, "hevc");
 	mettestr(&p, "video.profondita");
@@ -344,8 +343,8 @@ static rcp_sessione *apri_sessione(uint32_t tela_l, uint32_t tela_a,
 	mettestr(&p, "prova2026");
 	n = incornicia(busta, T_CREDENZIALI, corpo, (size_t)(p - corpo));
 	rcp_ricevi(s, busta, n, orologio);
-	/* ⛔ §4.4-bis: il secondo fisso.  Si fa scorrere il tempo, che e' quel che
-	 *    farebbe il ciclo `poll` del server. */
+	/* ⛔ §4.4-bis: the fixed second.  Time is made to flow, which is what the
+	 *    server's `poll` loop would do. */
 	orologio += 1500;
 	rcp_tempo(s, orologio);
 
@@ -353,15 +352,15 @@ static rcp_sessione *apri_sessione(uint32_t tela_l, uint32_t tela_a,
 	p = corpo;
 	mette32(&p, tela_l);
 	mette32(&p, tela_a);
-	mette32(&p, tela_l); /* vista: qui non conta */
+	mette32(&p, tela_l); /* view: it does not matter here */
 	mette32(&p, tela_a);
 	mettestr(&p, "it");
 	n = incornicia(busta, T_ATTACCA, corpo, (size_t)(p - corpo));
 	rcp_ricevi(s, busta, n, orologio);
 	raccogli();
-	/* ⛔ Qui la sessione ha gia' detto al palco a che misura nascere (§4.5): si
-	 *    segna quel che l'attacco ha lasciato, cosi' i casi possono contare da
-	 *    dopo.  ⚠ La ragione lunga sta su `nascita_richieste`. */
+	/* ⛔ Here the session has already told the stage at what size to be born
+	 *    (§4.5): what the attach left behind is noted, so the cases can count
+	 *    from after it.  ⚠ The long reason is at `nascita_richieste`. */
 	nascita_richieste = palco.quante_richieste;
 	return s;
 }
@@ -379,7 +378,7 @@ static void manda_adatta(rcp_sessione *s, uint32_t l, uint32_t a)
 }
 
 /* ------------------------------------------------------------------ *
- *  I casi
+ *  The cases
  * ------------------------------------------------------------------ */
 
 static int falliti, passati;
@@ -392,7 +391,7 @@ static void esito(const char *caso, bool bene, const char *atteso,
 		printf("  \033[1;32mOK\033[0m  %-34s %s\n", caso, visto);
 	} else {
 		falliti++;
-		printf("  \033[1;31mNO\033[0m  %-34s\n        atteso: %s\n        visto:  %s\n",
+		printf("  \033[1;31mNO\033[0m  %-34s\n        expected: %s\n        seen:     %s\n",
 		       caso, atteso, visto);
 	}
 }
@@ -401,8 +400,8 @@ static char detto[256];
 static const char *dillo(void)
 {
 	snprintf(detto, sizeof detto,
-	         "TELA usciti %d (esito %u motivo %u -> %ux%u), richieste al palco "
-	         "%d (di cui %d alla nascita, §4.5), tela in vigore %ux%u",
+	         "TELA sent %d (outcome %u reason %u -> %ux%u), requests to the stage "
+	         "%d (of which %d at birth, §4.5), canvas in force %ux%u",
 	         quanti_tela, ultima_tela.esito, ultima_tela.motivo, ultima_tela.l,
 	         ultima_tela.a, palco.quante_richieste, nascita_richieste,
 	         ultima_tela.l, ultima_tela.a);
@@ -417,7 +416,7 @@ static void azzera_palco(void)
 	quanti_tela = 0;
 }
 
-/* 1 — la strada buona: si chiede, il palco consegna, esce UN `TELA`. */
+/* 1 — the good road: it is asked, the stage delivers, ONE `TELA` goes out. */
 static void caso1(void)
 {
 	rcp_sessione *s;
@@ -428,7 +427,7 @@ static void caso1(void)
 	azzera_palco();
 	s = apri_sessione(1920, 1080, NULL, true);
 	manda_adatta(s, 1600, 900);
-	/* ⛔ ATTESO: nessun `TELA` ancora — la risposta e' il fotogramma. */
+	/* ⛔ EXPECTED: no `TELA` yet — the answer is the frame. */
 	bene = quanti_tela == 0 && dopo_la_nascita() == 1
 	    && palco.chiesta_l == 1600 && palco.chiesta_a == 900;
 	if (bene) {
@@ -438,13 +437,13 @@ static void caso1(void)
 		    && ultima_tela.l == 1600 && ultima_tela.a == 900 && l == 1600
 		    && a == 900 && !chiuso;
 	}
-	esito("1 la strada buona", bene,
-	      "nessun TELA prima del fotogramma, poi UNO solo con 1600x900",
+	esito("1 the good road", bene,
+	      "no TELA before the frame, then only ONE with 1600x900",
 	      dillo());
 	rcp_libera(s);
 }
 
-/* 2 — la misura che c'e' gia': si risponde SUBITO e non si tocca il palco. */
+/* 2 — the size that is already there: answer AT ONCE and do not touch the stage. */
 static void caso2(void)
 {
 	rcp_sessione *s;
@@ -457,14 +456,14 @@ static void caso2(void)
 	bene = quanti_tela == 1 && ultima_tela.esito == 1 && ultima_tela.motivo == 0
 	    && ultima_tela.l == 1920 && ultima_tela.a == 1080
 	    && dopo_la_nascita() == 0 && !chiuso;
-	esito("2 la misura che c'e' gia'", bene,
-	      "UN TELA(ADATTATA 1920x1080) subito, ZERO richieste al palco",
+	esito("2 the size already there", bene,
+	      "ONE TELA(ADATTATA 1920x1080) at once, ZERO requests to the stage",
 	      dillo());
 	rcp_libera(s);
 }
 
-/* 3 — due `ADATTA_TELA` di fila: DUE `TELA`, o il conto del client non torna
- *     piu' a zero e la pagina trattiene fotogrammi per sempre (§6.2). */
+/* 3 — two `ADATTA_TELA` in a row: TWO `TELA`s, or the client's count never gets
+ *     back to zero and the page holds back frames forever (§6.2). */
 static void caso3(void)
 {
 	rcp_sessione *s;
@@ -478,8 +477,8 @@ static void caso3(void)
 	primi = quanti_tela;
 	manda_adatta(s, 1280, 720);
 	secondi = quanti_tela;
-	/* ⛔ ATTESO: la seconda richiesta fa uscire il `TELA` che risponde alla
-	 *    PRIMA (NON_ORA), e poi il fotogramma fa uscire quello della seconda. */
+	/* ⛔ EXPECTED: the second request sends out the `TELA` that answers the
+	 *    FIRST (NON_ORA), and then the frame sends out the one of the second. */
 	bene = primi == 0 && secondi == 1 && ultima_tela.esito == 2
 	    && ultima_tela.motivo == 3;
 	if (bene) {
@@ -487,14 +486,14 @@ static void caso3(void)
 		bene = quanti_tela == 1 && ultima_tela.esito == 1
 		    && ultima_tela.l == 1280 && ultima_tela.a == 720 && !chiuso;
 	}
-	esito("3 due ADATTA_TELA di fila", bene,
-	      "due TELA in tutto: NON_ORA alla prima, ADATTATA 1280x720 alla seconda",
+	esito("3 two ADATTA_TELA in a row", bene,
+	      "two TELA in all: NON_ORA to the first, ADATTATA 1280x720 to the second",
 	      dillo());
 	rcp_libera(s);
 }
 
-/* 4 — il palco non consegna: dopo il fondo si risponde `NON_ORA` (§7.1: «un
- *     silenzio lascia il client ad aspettare per sempre»). */
+/* 4 — the stage does not deliver: after the deadline the answer is `NON_ORA`
+ *     (§7.1: «a silence leaves the client waiting forever»). */
 static void caso4(void)
 {
 	rcp_sessione *s;
@@ -505,7 +504,7 @@ static void caso4(void)
 	azzera_palco();
 	s = apri_sessione(1920, 1080, NULL, true);
 	manda_adatta(s, 1600, 900);
-	/* un giro di orologio PRIMA del fondo: non deve uscire niente */
+	/* one clock tick BEFORE the deadline: nothing must go out */
 	orologio += RCP_TELA_ATTESA_MS - 1;
 	rcp_tempo(s, orologio);
 	raccogli();
@@ -518,20 +517,20 @@ static void caso4(void)
 		bene = quanti_tela == 1 && ultima_tela.esito == 2
 		    && ultima_tela.motivo == 3 && l == 1920 && a == 1080 && !chiuso;
 	}
-	esito("4 il palco non consegna", bene,
-	      "niente prima del fondo, poi UN TELA(RIFIUTATA, NON_ORA), tela 1920x1080",
+	esito("4 the stage does not deliver", bene,
+	      "nothing before the deadline, then ONE TELA(RIFIUTATA, NON_ORA), canvas 1920x1080",
 	      dillo());
 	rcp_libera(s);
 }
 
-/* 5 — la misura SOPRA IL MASSIMO: dal 1 ottobre 2026 (`RCP.md` §4.5, tela al
- *     massimo 4096x2304, decisione dell'utente) NON si rifiuta: si RIDUCE al
- *     massimo — il lato che sfora al massimo, l'altro com'e' — e si gira al
- *     palco come una misura qualunque, con la riga «RIPIEGO DICHIARATO» nel
- *     registro.  ⛔ E la sessione resta viva, come prima: 100000x100000 era il
- *     numero «capace di uccidere il compositore», e qui diventa 4096x2304
- *     PRIMA di arrivare al palco.  (Fino al 30 set era `TELA(RIFIUTATA,
- *     MISURA_FUORI_LIMITI)`; il rifiuto resta SOTTO il minimo: caso 17.) */
+/* 5 — the size ABOVE THE MAXIMUM: since 1 Oct 2026 (`RCP.md` §4.5, canvas at
+ *     most 4096x2304, user decision) it is NOT refused: it is REDUCED to the
+ *     maximum — the side that overflows to the maximum, the other as it is — and
+ *     passed to the stage like any size, with the «DECLARED FALLBACK» line in
+ *     the log.  ⛔ And the session stays alive, as before: 100000x100000 was the
+ *     number «capable of killing the compositor», and here it becomes 4096x2304
+ *     BEFORE reaching the stage.  (Until 30 Sep it was `TELA(RIFIUTATA,
+ *     MISURA_FUORI_LIMITI)`; the refusal stays BELOW the minimum: case 17.) */
 static void caso5(void)
 {
 	rcp_sessione *s;
@@ -544,15 +543,15 @@ static void caso5(void)
 	bene = quanti_tela == 0 && dopo_la_nascita() == 1
 	    && palco.chiesta_l == RCP_TELA_L_MASSIMA
 	    && palco.chiesta_a == RCP_TELA_A_MASSIMA && !chiuso;
-	esito("5 misura sopra il massimo: ridotta", bene,
-	      "nessun TELA subito, UNA richiesta al palco a 4096x2304 (il massimo di "
-	      "§4.5), sessione VIVA",
+	esito("5 size above the maximum: reduced", bene,
+	      "no TELA at once, ONE request to the stage at 4096x2304 (the maximum of "
+	      "§4.5), session ALIVE",
 	      dillo());
 	rcp_libera(s);
 }
 
-/* 6 — la misura dispari si tronca in giu' e SI DICE (§5.0-sexies: «un pixel
- *     detto vale piu' di un pixel nascosto in una scala»). */
+/* 6 — the odd size is truncated down and IT IS SAID (§5.0-sexies: «a pixel
+ *     stated is worth more than a pixel hidden in a scale»). */
 static void caso6(void)
 {
 	rcp_sessione *s;
@@ -569,14 +568,14 @@ static void caso6(void)
 		bene = quanti_tela == 1 && ultima_tela.l == 2132
 		    && ultima_tela.a == 1200;
 	}
-	esito("6 la misura dispari, troncata", bene,
-	      "al palco 2132x1200 (troncata al pari), e il TELA porta quella",
+	esito("6 the odd size, truncated", bene,
+	      "to the stage 2132x1200 (truncated to even), and the TELA carries that",
 	      dillo());
 	rcp_libera(s);
 }
 
-/* 7 — §4.5: il palco concede una misura DIVERSA da quella chiesta.  Il `TELA`
- *     deve portare quella VERA, non quella chiesta. */
+/* 7 — §4.5: the stage grants a size DIFFERENT from the one asked.  The `TELA`
+ *     must carry the REAL one, not the one asked. */
 static void caso7(void)
 {
 	rcp_sessione *s;
@@ -594,14 +593,14 @@ static void caso7(void)
 	rcp_tela_in_vigore(s, &l, &a);
 	bene = quanti_tela == 1 && ultima_tela.esito == 1 && ultima_tela.l == 1366
 	    && ultima_tela.a == 768 && l == 1366 && a == 768 && !chiuso;
-	esito("7 il palco concede altro (§4.5)", bene,
-	      "UN TELA(ADATTATA 1366x768), e la tela in vigore e' quella VERA",
+	esito("7 the stage grants other (§4.5)", bene,
+	      "ONE TELA(ADATTATA 1366x768), and the canvas in force is the REAL one",
 	      dillo());
 	rcp_libera(s);
 }
 
-/* 8 — ⭐ IL RI-ATTACCO: il palco ha gia' 1912x1044, la pagina chiede 1920x1080.
- *     `SESSIONE` deve concedere quella del PALCO, o non arriva un pixel. */
+/* 8 — ⭐ THE RE-ATTACH: the stage already has 1912x1044, the page asks 1920x1080.
+ *     `SESSIONE` must grant the STAGE's, or not a pixel arrives. */
 static void caso8(void)
 {
 	rcp_sessione *s;
@@ -614,24 +613,24 @@ static void caso8(void)
 	palco.misura_a = 1044;
 	s = apri_sessione(1920, 1080, NULL, true);
 	bene = sessione_l == 1912 && sessione_a == 1044 && !chiuso;
-	snprintf(detto, sizeof detto, "SESSIONE concede %ux%u", sessione_l,
+	snprintf(detto, sizeof detto, "SESSIONE grants %ux%u", sessione_l,
 	         sessione_a);
-	esito("8 il ri-attacco", bene,
-	      "SESSIONE concede 1912x1044 (quella del palco, §4.5), non 1920x1080",
+	esito("8 the re-attach", bene,
+	      "SESSIONE grants 1912x1044 (the stage's, §4.5), not 1920x1080",
 	      detto);
 	rcp_libera(s);
 }
 
-/* 9 — ⭐⭐ IL PALCO FA DI TESTA SUA — e qui la prima stesura sbagliava di
- *      GRAVITA': adottava la misura del palco e mandava un `TELA` che nessuno
- *      aveva chiesto.  ⛔ §6.2 dice che il client trattiene una misura mai
- *      annunciata **solo finche' ha una `ADATTA_TELA` senza risposta**: senza,
- *      e' `ERRORE_PROTOCOLLO` — e il fotogramma, che viaggia su uno stream suo,
- *      arriva prima del `TELA` la meta' delle volte.  ⇒ Il server avrebbe fatto
- *      chiudere una sessione in cui nessuno aveva sbagliato.
+/* 9 — ⭐⭐ THE STAGE GOES ITS OWN WAY — and here the first draft got the
+ *      SEVERITY wrong: it adopted the stage's size and sent a `TELA` nobody had
+ *      asked for.  ⛔ §6.2 says the client holds back a never-announced size
+ *      **only while it has an unanswered `ADATTA_TELA`**: without one, it is
+ *      `ERRORE_PROTOCOLLO` — and the frame, which travels on a stream of its
+ *      own, arrives before the `TELA` half of the time.  ⇒ The server would have
+ *      made a session close in which nobody had made a mistake.
  *
- *      ⇒ ATTESO ADESSO: **nessun `TELA`, mai**, e il palco RICHIAMATO alla tela
- *      in vigore con un'attesa che cresce. */
+ *      ⇒ EXPECTED NOW: **no `TELA`, ever**, and the stage CALLED BACK to the
+ *      canvas in force with a growing wait. */
 static void caso9(void)
 {
 	rcp_sessione *s;
@@ -642,14 +641,14 @@ static void caso9(void)
 	rcp_azzera_registro_sessioni();
 	azzera_palco();
 	s = apri_sessione(1920, 1080, NULL, true);
-	/* il palco dice di essere a 1280x720 senza che nessuno abbia chiesto */
+	/* the stage says it is at 1280x720 without anybody having asked */
 	rcp_tela_dal_palco(s, 0, 0, 1280, 720, orologio);
 	raccogli();
 	primi = dopo_la_nascita();
 	bene = quanti_tela == 0 && primi == 1 && palco.chiesta_l == 1920
 	    && palco.chiesta_a == 1080;
 	if (bene) {
-		/* insiste: e il richiamo si ripete, ma non a ogni messaggio */
+		/* it insists: and the call-back repeats, but not at every message */
 		rcp_tela_dal_palco(s, 0, 0, 1280, 720, orologio);
 		raccogli();
 		bene = quanti_tela == 0 && dopo_la_nascita() == 1;
@@ -662,15 +661,15 @@ static void caso9(void)
 		bene = quanti_tela == 0 && dopo_la_nascita() == 2 && l == 1920
 		    && a == 1080 && !chiuso;
 	}
-	esito("9 il palco fa di testa sua", bene,
-	      "ZERO TELA (uno non richiesto farebbe chiudere il client), il palco "
-	      "richiamato a 1920x1080 con l'attesa che cresce",
+	esito("9 the stage goes its own way", bene,
+	      "ZERO TELA (an unrequested one would make the client close), the stage "
+	      "called back to 1920x1080 with the growing wait",
 	      dillo());
 	rcp_libera(s);
 }
 
-/* 10 — il tetto del decodificatore del client (§4.5): `ADATTA_TELA` oltre
- *      `video.misura_massima` si RIDUCE in proporzione, come in `ATTACCA`. */
+/* 10 — the client's decoder ceiling (§4.5): `ADATTA_TELA` beyond
+ *      `video.misura_massima` is REDUCED in proportion, as in `ATTACCA`. */
 static void caso10(void)
 {
 	rcp_sessione *s;
@@ -679,13 +678,13 @@ static void caso10(void)
 
 	rcp_azzera_registro_sessioni();
 	azzera_palco();
-	/* ⚠ Il tetto e' 2560x1440 e non 1920x1080 apposta: con quest'ultimo la
-	 *   riduzione darebbe **esattamente la tela in vigore**, e il caso finirebbe
-	 *   nel ramo «la misura che c'e' gia'» — che e' giusto, ma non prova la
-	 *   riduzione.  (La prima stesura di questo caso ci era cascata: l'atteso
-	 *   era sbagliato, non il codice.) */
+	/* ⚠ The ceiling is 2560x1440 and not 1920x1080 on purpose: with the latter
+	 *   the reduction would give **exactly the canvas in force**, and the case
+	 *   would end up in the «the size that is already there» branch — which is
+	 *   right, but does not test the reduction.  (The first draft of this case
+	 *   fell for it: the expectation was wrong, not the code.) */
 	s = apri_sessione(1920, 1080, "2560x1440", true);
-	/* il client hi-dpi chiede la misura della sua finestra in pixel FISICI */
+	/* the hi-dpi client asks for the size of its window in PHYSICAL pixels */
 	manda_adatta(s, 3840, 2160);
 	bene = dopo_la_nascita() == 1 && palco.chiesta_l == 2560
 	    && palco.chiesta_a == 1440;
@@ -695,14 +694,14 @@ static void caso10(void)
 		bene = quanti_tela == 1 && ultima_tela.esito == 1 && l == 2560
 		    && a == 1440 && !chiuso;
 	}
-	esito("10 oltre il tetto del client", bene,
-	      "ridotta a 2560x1440 (proporzioni tenute) e concessa, MAI 3840x2160",
+	esito("10 beyond the client's ceiling", bene,
+	      "reduced to 2560x1440 (proportions kept) and granted, NEVER 3840x2160",
 	      dillo());
 	rcp_libera(s);
 }
 
-/* 11 — nessun gancio (l'ospite non ha un palco): `COMPOSITORE_INCAPACE`, che e'
- *      la risposta vera e non chiude la sessione (§7.1). */
+/* 11 — no hook (the host has no stage): `COMPOSITORE_INCAPACE`, which is the
+ *      true answer and does not close the session (§7.1). */
 static void caso11(void)
 {
 	rcp_sessione *s;
@@ -714,12 +713,12 @@ static void caso11(void)
 	manda_adatta(s, 1600, 900);
 	bene = quanti_tela == 1 && ultima_tela.esito == 2 && ultima_tela.motivo == 1
 	    && ultima_tela.l == 1920 && ultima_tela.a == 1080 && !chiuso;
-	esito("11 ospite senza palco", bene,
-	      "UN TELA(RIFIUTATA, COMPOSITORE_INCAPACE), sessione viva", dillo());
+	esito("11 host without a stage", bene,
+	      "ONE TELA(RIFIUTATA, COMPOSITORE_INCAPACE), session alive", dillo());
 	rcp_libera(s);
 }
 
-/* 12 — la richiesta che non parte: `NON_ORA` subito, e non si resta appesi. */
+/* 12 — the request that does not leave: `NON_ORA` at once, and nothing hangs. */
 static void caso12(void)
 {
 	rcp_sessione *s;
@@ -732,15 +731,15 @@ static void caso12(void)
 	manda_adatta(s, 1600, 900);
 	bene = quanti_tela == 1 && ultima_tela.esito == 2 && ultima_tela.motivo == 3
 	    && ultima_tela.l == 1920 && ultima_tela.a == 1080 && !chiuso;
-	esito("12 la richiesta non parte", bene,
-	      "UN TELA(RIFIUTATA, NON_ORA) subito", dillo());
+	esito("12 the request does not leave", bene,
+	      "ONE TELA(RIFIUTATA, NON_ORA) at once", dillo());
 	rcp_libera(s);
 }
 
-/* 13 — ⛔ IL FOTOGRAMMA VECCHIO che arriva mentre una richiesta e' in volo: il
- *      palco sta ancora consegnando la misura di prima.  NON deve chiudere la
- *      richiesta, o il client riceverebbe `TELA(ADATTATA, la misura vecchia)`
- *      come risposta a una richiesta che stava per riuscire. */
+/* 13 — ⛔ THE OLD FRAME that arrives while a request is in flight: the
+ *      stage is still delivering the previous size.  It must NOT close the
+ *      request, or the client would receive `TELA(ADATTATA, the old size)`
+ *      as the answer to a request that was about to succeed. */
 static void caso13(void)
 {
 	rcp_sessione *s;
@@ -751,7 +750,7 @@ static void caso13(void)
 	azzera_palco();
 	s = apri_sessione(1920, 1080, NULL, true);
 	manda_adatta(s, 1600, 900);
-	/* il palco dice ancora la misura di prima: sta rinegoziando */
+	/* the stage still states the previous size: it is renegotiating */
 	rcp_tela_dal_palco(s, 0, 0, 1920, 1080, orologio);
 	raccogli();
 	bene = quanti_tela == 0;
@@ -761,17 +760,17 @@ static void caso13(void)
 		bene = quanti_tela == 1 && ultima_tela.l == 1600
 		    && ultima_tela.a == 900 && l == 1600 && a == 900;
 	}
-	esito("13 il fotogramma vecchio in volo", bene,
-	      "la misura VECCHIA non chiude la richiesta; poi TELA(1600x900)",
+	esito("13 the old frame in flight", bene,
+	      "the OLD size does not close the request; then TELA(1600x900)",
 	      dillo());
 	rcp_libera(s);
 }
 
-/* 14 — ⭐⭐ DUE RICHIESTE INCATENATE, e la risposta della PRIMA che arriva dopo:
- *      e' il gesto di chi trascina il bordo della finestra.  ⛔ La prima stesura
- *      prendeva il fotogramma della prima richiesta per la risposta della
- *      seconda — e il desktop si assestava sulla misura sbagliata **con i conti
- *      dei messaggi in ordine**, cioe' senza che niente lo dicesse. */
+/* 14 — ⭐⭐ TWO CHAINED REQUESTS, and the answer to the FIRST arriving later:
+ *      it is the gesture of someone dragging the edge of the window.  ⛔ The first
+ *      draft took the frame of the first request for the answer to the
+ *      second — and the desktop settled on the wrong size **with the message
+ *      counts in order**, that is without anything saying so. */
 static void caso14(void)
 {
 	rcp_sessione *s;
@@ -781,32 +780,32 @@ static void caso14(void)
 	rcp_azzera_registro_sessioni();
 	azzera_palco();
 	s = apri_sessione(1920, 1080, NULL, true);
-	manda_adatta(s, 1600, 900);      /* prima */
-	manda_adatta(s, 1280, 720);      /* seconda: NON_ORA alla prima */
+	manda_adatta(s, 1600, 900);      /* first */
+	manda_adatta(s, 1280, 720);      /* second: NON_ORA to the first */
 	bene = quanti_tela == 1 && ultima_tela.esito == 2 && ultima_tela.motivo == 3;
 	if (bene) {
-		/* ⛔ arriva la risposta della PRIMA richiesta, in ritardo */
+		/* ⛔ the answer to the FIRST request arrives, late */
 		palco_risponde(s, 1600, 900, orologio);
 		rcp_tela_in_vigore(s, &l, &a);
 		bene = quanti_tela == 0 && l == 1920 && a == 1080;
 	}
 	if (bene) {
-		/* e poi quella della seconda, che e' la sola che conta */
+		/* and then the one to the second, which is the only one that counts */
 		palco_risponde(s, 1280, 720, orologio);
 		rcp_tela_in_vigore(s, &l, &a);
 		bene = quanti_tela == 1 && ultima_tela.esito == 1
 		    && ultima_tela.l == 1280 && ultima_tela.a == 720 && l == 1280
 		    && a == 720 && !chiuso;
 	}
-	esito("14 due richieste incatenate", bene,
-	      "la risposta della PRIMA non chiude la SECONDA: la tela finisce a "
-	      "1280x720, quella che l'utente ha chiesto per ultima",
+	esito("14 two chained requests", bene,
+	      "the answer to the FIRST does not close the SECOND: the canvas ends at "
+	      "1280x720, the one the user asked for last",
 	      dillo());
 	rcp_libera(s);
 }
 
-/* 15 — ⭐ il palco dice «non ce l'ho fatta»: `NON_ORA` SUBITO, senza aspettare i
- *      tre secondi del fondo per una notizia che c'e' gia'. */
+/* 15 — ⭐ the stage says «I didn't make it»: `NON_ORA` AT ONCE, without waiting
+ *      the three seconds of the deadline for news that is already there. */
 static void caso15(void)
 {
 	rcp_sessione *s;
@@ -823,14 +822,14 @@ static void caso15(void)
 		    && ultima_tela.motivo == 3 && ultima_tela.l == 1920
 		    && ultima_tela.a == 1080 && !chiuso;
 	}
-	esito("15 il palco rinuncia", bene,
-	      "UN TELA(RIFIUTATA, NON_ORA) subito, non dopo il fondo", dillo());
+	esito("15 the stage gives up", bene,
+	      "ONE TELA(RIFIUTATA, NON_ORA) at once, not after the deadline", dillo());
 	rcp_libera(s);
 }
 
-/* 16 — ⭐ il palco risponde «quella misura ce l'ho gia'»: si chiude la richiesta
- *      con `TELA(ADATTATA)` senza aspettare un fotogramma che non arrivera',
- *      perche' i fotogrammi di quella misura chi guarda li ha gia' davanti. */
+/* 16 — ⭐ the stage answers «I already have that size»: the request is closed
+ *      with `TELA(ADATTATA)` without waiting for a frame that will not come,
+ *      because whoever is watching already has the frames of that size in front of them. */
 static void caso16(void)
 {
 	rcp_sessione *s;
@@ -840,12 +839,12 @@ static void caso16(void)
 	azzera_palco();
 	s = apri_sessione(1920, 1080, NULL, true);
 	manda_adatta(s, 1600, 900);
-	/* il palco cambia davvero */
+	/* the stage really changes */
 	palco_consegna(s, orologio);
 	bene = quanti_tela == 1 && ultima_tela.l == 1600;
 	if (bene) {
-		/* adesso il client richiede una misura che il palco HA GIA': il figlio
-		 * risponde subito, senza nessun fotogramma nuovo */
+		/* now the client asks again for a size the stage ALREADY HAS: the child
+		 * answers at once, without any new frame */
 		manda_adatta(s, 1280, 720);
 		bene = quanti_tela == 0;
 	}
@@ -855,15 +854,15 @@ static void caso16(void)
 		bene = quanti_tela == 1 && ultima_tela.esito == 1
 		    && ultima_tela.l == 1280 && ultima_tela.a == 720 && !chiuso;
 	}
-	esito("16 il palco ce l'aveva gia'", bene,
-	      "TELA(ADATTATA 1280x720) alla risposta del palco, senza fondo",
+	esito("16 the stage already had it", bene,
+	      "TELA(ADATTATA 1280x720) at the stage's answer, without deadline",
 	      dillo());
 	rcp_libera(s);
 }
 
-/* 17 — ⛔ i limiti di §4.5 PER LATO: 1600x230 e' fuori (l'altezza), e va
- *      rifiutata — o al ri-attacco `ATTACCA` rifiuterebbe una tela che questo
- *      stesso server aveva concesso. */
+/* 17 — ⛔ the limits of §4.5 PER SIDE: 1600x230 is out (the height), and must be
+ *      refused — or at the re-attach `ATTACCA` would refuse a canvas that this
+ *      same server had granted. */
 static void caso17(void)
 {
 	rcp_sessione *s;
@@ -876,30 +875,30 @@ static void caso17(void)
 	bene = quanti_tela == 1 && ultima_tela.esito == 2 && ultima_tela.motivo == 2
 	    && ultima_tela.l == 1920 && ultima_tela.a == 1080
 	    && dopo_la_nascita() == 0 && !chiuso;
-	esito("17 sotto il minimo di §4.5", bene,
-	      "UN TELA(RIFIUTATA, MISURA_FUORI_LIMITI): 230 < 240", dillo());
+	esito("17 below the minimum of §4.5", bene,
+	      "ONE TELA(RIFIUTATA, MISURA_FUORI_LIMITI): 230 < 240", dillo());
 	rcp_libera(s);
 }
 
-/* 18 — ⛔⛔ IL PING-PONG FRA DUE SESSIONI DELLO STESSO UTENTE, e non e' un caso
- *      di scuola: e' il difetto che l'utente ha visto la mattina del 15 agosto
- *      2026, e me l'ha detto cosi' — «su Android il mouse non prende piu' i
- *      click».
+/* 18 — ⛔⛔ THE PING-PONG BETWEEN TWO SESSIONS OF THE SAME USER, and it is not a
+ *      textbook case: it is the defect the user saw on the morning of 15 Aug
+ *      2026, and told me like this — «on Android the mouse no longer takes the
+ *      clicks».
  *
- *      `[M]` dal registro della sua sessione vera:
- *        05:10  il portatile attacca, tela 2544x926
- *        05:12  tace trenta secondi ⇒ STACCATO per silenzio, lascia il posto —
- *               ⛔ ma la sessione resta VIVA, col canale video acceso
- *        05:14  il telefono attacca, tela 2560x926
- *        05:14  **diciassette richieste al secondo**, per sempre: il portatile
- *               richiede 2544, il telefono 2560, il portatile 2544 …
- *      ⇒ ogni giro riavvia il flusso, Mutter ricrea i dispositivi di `libei`
- *        (`[M]` 640 ricambi) e la regione dell'input non e' mai d'accordo con la
- *        tela ⇒ **i clic finiscono altrove**.
+ *      `[M]` from the log of his real session:
+ *        05:10  the laptop attaches, canvas 2544x926
+ *        05:12  silent for thirty seconds ⇒ DETACHED for silence, leaves the slot —
+ *               ⛔ but the session stays ALIVE, with the video channel on
+ *        05:14  the phone attaches, canvas 2560x926
+ *        05:14  **seventeen requests per second**, forever: the laptop
+ *               asks 2544, the phone 2560, the laptop 2544 …
+ *      ⇒ every round restarts the stream, Mutter recreates the `libei` devices
+ *        (`[M]` 640 replacements) and the input region never agrees with the
+ *        canvas ⇒ **the clicks land elsewhere**.
  *
- *      ⇒ ATTESO: chi NON ha il posto non chiede niente al palco, e a un suo
- *      `ADATTA_TELA` si risponde `NON_ORA` (I2: il palco lo comanda chi e'
- *      attaccato). */
+ *      ⇒ EXPECTED: whoever does NOT have the slot asks nothing of the stage, and
+ *      an `ADATTA_TELA` of theirs is answered with `NON_ORA` (I2: the stage is
+ *      commanded by whoever is attached). */
 static void caso18(void)
 {
 	rcp_sessione *uno, *due;
@@ -909,21 +908,21 @@ static void caso18(void)
 	rcp_azzera_registro_sessioni();
 	azzera_palco();
 
-	/* Il portatile: attacca e si prende la tela. */
+	/* The laptop: attaches and takes the canvas. */
 	prossima_provenienza = "10.0.0.9:5000";
 	uno = apri_sessione(1920, 1080, NULL, true);
 	manda_adatta(uno, 1600, 900);
 	palco_consegna(uno, orologio);
 
-	/* Tace trenta secondi: §5.3 gli toglie il posto, la sessione resta viva. */
+	/* Silent for thirty seconds: §5.3 takes its slot away, the session stays alive. */
 	orologio += 31000;
 	rcp_tempo(uno, orologio);
 	raccogli();
 	bene = strcmp(rcp_stato_nome(uno), "staccata-per-silenzio") == 0;
 
-	/* Il telefono attacca e PRENDE il posto, con una finestra di un'altra
-	 * misura.  ⚠ `apri_sessione` azzera l'orologio: si rimette dov'era, o il
-	 * silenzio del portatile scatterebbe di nuovo. */
+	/* The phone attaches and TAKES the slot, with a window of another
+	 * size.  ⚠ `apri_sessione` resets the clock: it is put back where it was, or
+	 * the laptop's silence would trigger again. */
 	if (bene) {
 		uint64_t quando = orologio;
 		prossima_provenienza = "10.0.0.24:34583";
@@ -933,27 +932,27 @@ static void caso18(void)
 		palco_consegna(due, orologio);
 		richieste_prima = palco.quante_richieste;
 
-		/* Il palco adesso e' a 1280x720, e i suoi fotogrammi arrivano anche al
-		 * PORTATILE, che ha ancora 1600x900 come tela in vigore. */
+		/* The stage is now at 1280x720, and its frames also reach the
+		 * LAPTOP, which still has 1600x900 as the canvas in force. */
 		rcp_tela_dal_palco(uno, 0, 0, 1280, 720, orologio);
 		rcp_tela_dal_palco(uno, 0, 0, 1280, 720, orologio);
 		raccogli();
 		bene = palco.quante_richieste == richieste_prima && quanti_tela == 0;
 
-		/* ⭐ E se il portatile torna a parlare, non gli si risponde «non ora»:
-		 *    lo si CONGEDA con §8.2 `0x0F` — «hai gia' una sessione attiva
-		 *    altrove», e questa volta e' vero.  ⚠ Lo fa `torna_a_parlare()` in
-		 *    cima a `rcp_ricevi()`, prima che il messaggio arrivi da nessuna
-		 *    parte: e' per questo che in `T_ADATTA_TELA` una guardia sul posto
-		 *    sarebbe codice morto.  ⛔ Quel che conta e' che il palco non venga
-		 *    toccato. */
+		/* ⭐ And if the laptop speaks again, it is not answered «not now»:
+		 *    it is given FAREWELL with §8.2 `0x0F` — «you already have an active
+		 *    session elsewhere», and this time it is true.  ⚠ `torna_a_parlare()`
+		 *    does it at the top of `rcp_ricevi()`, before the message gets
+		 *    anywhere: that is why a guard on the slot in `T_ADATTA_TELA` would
+		 *    be dead code.  ⛔ What matters is that the stage is not
+		 *    touched. */
 		if (bene) {
 			chiuso = false;
 			manda_adatta(uno, 1024, 768);
 			bene = palco.quante_richieste == richieste_prima && chiuso
 			    && motivo_chiusura == 0x0F;
 		}
-		/* ⭐ E il telefono, che il posto ce l'ha, comanda eccome. */
+		/* ⭐ And the phone, which does have the slot, commands all right. */
 		if (bene) {
 			chiuso = false;
 			manda_adatta(due, 1152, 648);
@@ -962,29 +961,29 @@ static void caso18(void)
 		}
 		rcp_libera(due);
 	}
-	esito("18 due sessioni, un palco solo", bene,
-	      "chi non ha il posto NON comanda (zero richieste al palco, e se torna "
-	      "a parlare e' 0x0F); chi ce l'ha si'",
+	esito("18 two sessions, one stage only", bene,
+	      "whoever lacks the slot does NOT command (zero requests to the stage, and "
+	      "if it speaks again it is 0x0F); whoever has it does",
 	      dillo());
 	rcp_libera(uno);
 	prossima_provenienza = "10.0.0.9:5000";
 }
 
-/* 19 — ⭐⭐ LA TELA SI DICHIARA ALLA NASCITA, e questo caso esiste perche' senza
- *      di lui il banco sarebbe CIECO proprio dove e' stato rosso un giorno.
+/* 19 — ⭐⭐ THE CANVAS IS DECLARED AT BIRTH, and this case exists because without
+ *      it the bench would be BLIND precisely where it was red for a day.
  *
- *      `477d708`, 15 agosto 2026: la sessione che si attacca dice subito al
- *      palco a che misura nascere, invece di lasciarlo nascere a una misura sua
- *      e cambiargliela dopo.  ⭐ E' la cura che ha tolto **diciassette secondi**
- *      di coda ai tempi di accesso — «il cambio e' una gara», e la gara si
- *      perdeva contro una scena ferma.
+ *      `477d708`, 15 Aug 2026: the session that attaches tells the stage at
+ *      once at what size to be born, instead of letting it be born at a size of
+ *      its own and changing it afterwards.  ⭐ It is the cure that removed
+ *      **seventeen seconds** of tail from the access times — «the change is a
+ *      race», and the race was lost against a still scene.
  *
- * ⛔ Gli altri casi adesso contano con `dopo_la_nascita()`, cioe' SCAVALCANO
- *    questa richiesta.  ⇒ Se sparisse, loro resterebbero tutti verdi e la coda
- *    tornerebbe in silenzio.  Questo caso e' l'unico che se ne accorgerebbe.
+ * ⛔ The other cases now count with `dopo_la_nascita()`, that is they SKIP
+ *    this request.  ⇒ If it disappeared, they would all stay green and the tail
+ *    would come back silently.  This case is the only one that would notice.
  *
- *    ATTESO: l'attacco lascia **una** richiesta al palco, ed e' alla misura che
- *    il client ha chiesto in `ATTACCA` — non a una di riserva, non a zero. */
+ *    EXPECTED: the attach leaves **one** request to the stage, and it is at the
+ *    size the client asked in `ATTACCA` — not a fallback one, not zero. */
 static void caso19(void)
 {
 	rcp_sessione *s;
@@ -995,9 +994,9 @@ static void caso19(void)
 	s = apri_sessione(1600, 900, NULL, true);
 	bene = nascita_richieste == 1 && palco.chiesta_l == 1600
 	    && palco.chiesta_a == 900 && quanti_tela == 0 && !chiuso;
-	esito("19 la tela si dichiara alla nascita", bene,
-	      "UNA richiesta al palco gia' con l'ATTACCA, a 1600x900 (§4.5: nasce "
-	      "gia' cosi' invece di doverla cambiare — sono i 17 s di coda)",
+	esito("19 the canvas is declared at birth", bene,
+	      "ONE request to the stage already with ATTACCA, at 1600x900 (§4.5: it is "
+	      "born that way instead of having to change it — those are the 17 s of tail)",
 	      dillo());
 	rcp_libera(s);
 }
@@ -1012,12 +1011,12 @@ int main(int argc, char **argv)
 	const int quanti = (int)(sizeof casi / sizeof casi[0]);
 
 	parlantina = getenv("PARLANTINA") != NULL;
-	printf("\n== 04-b31: la tela che cambia (RCP.md §7.1, §6.2) ==\n\n");
+	printf("\n== 04-b31: the changing canvas (RCP.md §7.1, §6.2) ==\n\n");
 	for (int i = 0; i < quanti; i++) {
 		if (solo && solo != i + 1)
 			continue;
 		casi[i]();
 	}
-	printf("\n  passati %d, falliti %d\n\n", passati, falliti);
+	printf("\n  passed %d, failed %d\n\n", passati, falliti);
 	return falliti ? 1 : 0;
 }

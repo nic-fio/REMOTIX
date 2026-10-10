@@ -1,31 +1,31 @@
 #!/bin/bash
 # ===========================================================================
-# 15-g7-server.sh — il SECONDO server del prodotto, dentro una scatola, per le
-#                   prove del gruppo G7 (la rete che cade e gli orologi)
+# 15-g7-server.sh — the SECOND product server, inside a box, for the
+#                   tests of group G7 (the network dropping and the clocks)
 #
-#   bash 15-g7-server.sh accendi <desktop> [opzioni del server...]
+#   bash 15-g7-server.sh accendi <desktop> [server options...]
 #   bash 15-g7-server.sh spegni  <desktop>
 #   bash 15-g7-server.sh stato   <desktop>
 #   bash 15-g7-server.sh registro <desktop> [da_riga]
 #
-#   (dal tablet: bash 15-g7-server.sh --remoto accendi gnome ...)
+#   (from the tablet: bash 15-g7-server.sh --remoto accendi gnome ...)
 #
-# ⭐ PERCHE' UN SERVER SUO: le prove di G7 fanno cadere la linea (nftables sulla
-#    porta) e accorciano gli orologi di §5.3 (`--inattivita-s`, `--abbandono-s`).
-#    Sui server 8511-8514 non si puo': li usano tutti.  ⇒ Stesso binario
-#    (/opt/remotix/remotix), stessa pagina, unita' systemd SEPARATA
-#    (`rete15-g7`), porta, ban-file, socket di comando, rilievo, registro e
-#    certificati SUOI in /var/lib/rete15-g7/.
+# ⭐ WHY A SERVER OF ITS OWN: the G7 tests drop the line (nftables on the
+#    port) and shorten the clocks of §5.3 (`--inattivita-s`, `--abbandono-s`).
+#    On the 8511-8514 servers this cannot be done: everybody uses them.  ⇒ Same binary
+#    (/opt/remotix/remotix), same page, SEPARATE systemd unit
+#    (`rete15-g7`), and ITS OWN port, ban-file, command socket, survey, log and
+#    certificates in /var/lib/rete15-g7/.
 #
 #      gnome 8611 · kde 8612 · xfce 8613 · lxqt 8614
 #
-# ⛔ I certificati si COPIANO da /var/lib/rete11/certificati, non si
-#    condividono: il prodotto rigenera il certificato di sessione quando si
-#    avvicina la scadenza, e due server che scrivono nella stessa cartella
-#    potrebbero cambiarlo sotto i piedi l'uno dell'altro.
-# ⛔ Il modello e' `11-accendi.sh server` (le stesse opzioni), piu' le opzioni
-#    passate qui dopo il desktop (gli orologi accorciati).
-# ⛔ Si esegue SUL SERVER come nicfio (sudo con la parola) — o con --remoto.
+# ⛔ The certificates are COPIED from /var/lib/rete11/certificati, not
+#    shared: the product regenerates the session certificate when the
+#    expiry approaches, and two servers writing in the same folder
+#    could change it under each other's feet.
+# ⛔ The model is `11-accendi.sh server` (the same options), plus the options
+#    passed here after the desktop (the shortened clocks).
+# ⛔ It runs ON THE SERVER as nicfio (sudo with the password) — or with --remoto.
 # ===========================================================================
 set -uo pipefail
 if [ "${1:-}" = "--remoto" ]; then
@@ -44,7 +44,7 @@ gnome) PORTA=8611 ;;
 kde) PORTA=8612 ;;
 xfce) PORTA=8613 ;;
 lxqt) PORTA=8614 ;;
-*) echo "uso: $0 accendi|spegni|stato|registro gnome|kde|xfce|lxqt [opzioni]"; exit 2 ;;
+*) echo "usage: $0 accendi|spegni|stato|registro gnome|kde|xfce|lxqt [options]"; exit 2 ;;
 esac
 NOME="rete11-$DESKTOP"
 UNITA=rete15-g7
@@ -57,15 +57,15 @@ dentro() {
 
 case "$AZIONE" in
 accendi)
-	# ⛔ Solo la NOSTRA unita': rete11-server non si tocca.
+	# ⛔ Only OUR unit: rete11-server is not touched.
 	dentro "
 		systemctl stop $UNITA 2>/dev/null
 		systemctl reset-failed $UNITA 2>/dev/null
 		mkdir -p $DIR/rilievo
 		[ -d $DIR/certificati ] || cp -a /var/lib/rete11/certificati $DIR/certificati
-		# ⛔ Il registro NON si cancella: si mette da parte (D-011, 25 set 2026 —
-		#    il riavvio fra le fasi di 15-f022 buttava via proprio le righe che
-		#    spiegavano il BLOCKED).  Se ne tengono gli ultimi 30.
+		# ⛔ The log is NOT deleted: it is set aside (D-011, 25 Sep 2026 —
+		#    the restart between the phases of 15-f022 threw away exactly the lines that
+		#    explained the BLOCKED).  The last 30 are kept.
 		[ -s $REG ] && mv $REG $DIR/registro-\$(date +%Y%m%d-%H%M%S)-\$\$.log
 		ls -1t $DIR/registro-*.log 2>/dev/null | tail -n +31 | xargs -r rm -f
 		rm -f $DIR/ban $DIR/comando.sock
@@ -80,25 +80,25 @@ accendi)
 			--rilievo $DIR/rilievo --parlantina $*
 	" >/dev/null 2>&1
 	for _ in $(seq 1 40); do
-		if dentro "grep -q 'pronto: https' $REG" 2>/dev/null; then
-			echo "⭐ $UNITA ascolta sulla $PORTA in $NOME ($*)"
-			dentro "grep -a '§5.3, i tre orologi' $REG | tail -1" 2>/dev/null | sed 's/^/   /' | cut -c1-220
+		if dentro "grep -q 'ready: https' $REG" 2>/dev/null; then
+			echo "⭐ $UNITA listens on $PORTA in $NOME ($*)"
+			dentro "grep -a '§5.3, the three clocks' $REG | tail -1" 2>/dev/null | sed 's/^/   /' | cut -c1-220
 			exit 0
 		fi
 		sleep 0.5
 	done
-	echo "⛔ $UNITA non ha detto di essere pronto in 20 s"
+	echo "⛔ $UNITA did not say it was ready in 20 s"
 	dentro "tail -8 $REG" 2>/dev/null | sed 's/^/   /'
 	exit 1
 	;;
 spegni)
-	# ⚠ `systemctl stop` puo' restare appeso (11-accendi.sh, riga ~450): si
-	#   da' un tetto e poi si uccide l'unita' intera.
+	# ⚠ `systemctl stop` can stay hung (11-accendi.sh, line ~450): it is
+	#   given a cap and then the whole unit is killed.
 	dentro "timeout 20 systemctl stop $UNITA 2>/dev/null || systemctl kill -s KILL $UNITA 2>/dev/null; systemctl reset-failed $UNITA 2>/dev/null; true"
 	if dentro "systemctl is-active -q $UNITA" 2>/dev/null; then
-		echo "⛔ $UNITA ancora attiva"; exit 1
+		echo "⛔ $UNITA still active"; exit 1
 	fi
-	echo "⭐ $UNITA spenta in $NOME"
+	echo "⭐ $UNITA stopped in $NOME"
 	;;
 stato)
 	dentro "systemctl is-active $UNITA; systemctl show -p MainPID --value $UNITA"
@@ -108,5 +108,5 @@ registro)
 	dentro "tail -n +$((DA + 1)) $REG"
 	;;
 *)
-	echo "uso: $0 accendi|spegni|stato|registro <desktop> [opzioni]"; exit 2 ;;
+	echo "usage: $0 accendi|spegni|stato|registro <desktop> [options]"; exit 2 ;;
 esac

@@ -1,52 +1,52 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
-<title>B11 — le violazioni verso la pagina</title>
+<title>B11 — the violations towards the page</title>
 <style>
   body { font: 14px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 60rem; }
   pre  { background: #f4f4f4; padding: .6rem; overflow-x: auto; }
   .si  { color: #0a0; font-weight: bold; }
   .no  { color: #c00; font-weight: bold; }
 </style>
-<h1>B11 — le prove di violazione verso la <em>pagina</em></h1>
-<p>Un server <strong>guasto di proposito</strong> manda alla pagina cose
-sbagliate — e qualcuna giusta, per vedere che la pagina <em>non</em> reagisca.
-Quel che si misura non è il server: è se <strong>la pagina applica
-§3</strong> — o se la ingoia in silenzio.</p>
-<!-- ⛔ Il conto lo scrive il programma, non chi ha scritto la frase.  Questa
-     riga diceva «dodici» mentre i casi erano tredici, ed è il rilievo R1.29 di
-     `RCP.md` §0-bis fatto in casa: quel numero è l'unica prova di completezza
-     che il documento porta, e chi lo verificava contando ne trovava di più. -->
-<p id="quadro">in attesa…</p>
-<pre id="uscita">in attesa…</pre>
+<h1>B11 — the violation tests towards the <em>page</em></h1>
+<p>A server <strong>faulty on purpose</strong> sends the page wrong
+things — and a few right ones, to see that the page does <em>not</em> react.
+What is measured is not the server: it is whether <strong>the page applies
+§3</strong> — or swallows it silently.</p>
+<!-- ⛔ The count is written by the program, not by whoever wrote the sentence.  This
+     line said "twelve" while the cases were thirteen, and it is finding R1.29 of
+     `RCP.md` §0-bis done at home: that number is the only proof of completeness
+     the document carries, and whoever checked it by counting found more. -->
+<p id="quadro">waiting…</p>
+<pre id="uscita">waiting…</pre>
 
 <script>
 // ===========================================================================
-// ⛔ PERCHE' QUESTA PAGINA ESISTE — rilievo R4.1
+// ⛔ WHY THIS PAGE EXISTS — finding R4.1
 //
-// La prima stesura del banco della fase 1 aveva **dodici violazioni verso il
-// server e nessuna verso il client**.  Ma `RCP.md` §3 e' scritta su
-// «un'implementazione RCP», e §9 ha un DEVE esplicito del CLIENT.
+// The first draft of the phase 1 bench had **twelve violations towards the
+// server and none towards the client**.  But `RCP.md` §3 is written about
+// "an RCP implementation", and §9 has an explicit MUST of the CLIENT.
 //
-// ⭐ In un progetto che ha perso `mstsc` e che scrive `RCP.md` proprio per non
-//    fidarsi di due programmi della stessa mano, **un client mai messo alla
-//    prova e' il buco al posto dell'arbitro**.
+// ⭐ In a project that lost `mstsc` and that writes `RCP.md` precisely so as not
+//    to trust two programs from the same hand, **a client never put to the
+//    test is the hole in place of the referee**.
 //
 // ---------------------------------------------------------------------------
-// ⛔ E LE TRE PROPRIETA' NEGATIVE, CHE SONO LE PIU' DIFFICILI
+// ⛔ AND THE THREE NEGATIVE PROPERTIES, WHICH ARE THE HARDEST
 //
-// Tre righe della tabella di B11 dicono che la pagina **NON deve** fare
-// qualcosa, e una proprieta' negativa non si misura guardando la pagina:
+// Three lines of the B11 table say that the page **must NOT** do
+// something, and a negative property is not measured by looking at the page:
 //
-//   dopo `RESPINTO` non si riprova   → lo vede IL SERVER, che registra i byte
-//                                       arrivati dopo la fine (§4.4)
-//   `desktop` non cambia niente      → si gira DUE volte, con `gnome` e con
-//                                       `kde`, e si confrontano i byte usciti
-//   nessun battito applicativo       → si tace per otto secondi e si guarda se
-//                                       la pagina parla da sola (§2.2)
+//   after `RESPINTO` no retry         → THE SERVER sees it, recording the bytes
+//                                       arrived after the end (§4.4)
+//   `desktop` changes nothing         → it is run TWICE, with `gnome` and with
+//                                       `kde`, and the bytes sent out are compared
+//   no application heartbeat          → we stay silent for eight seconds and look whether
+//                                       the page speaks on its own (§2.2)
 //
-// ⚠ Le prime due hanno bisogno di un secondo testimone, e la terza di
-//   aspettare davvero.  Un banco che le desse per buone «perche' nel codice
-//   non c'e' un setInterval» proverebbe il codice di oggi, non il protocollo.
+// ⚠ The first two need a second witness, and the third needs to
+//   really wait.  A bench that took them as good "because in the code
+//   there is no setInterval" would prove today's code, not the protocol.
 // ===========================================================================
 
 const P = new URLSearchParams(location.search);
@@ -55,13 +55,13 @@ const IMPRONTA   = P.get("impronta") || "";
 const UTENTE     = P.get("utente") || "prova";
 const PAROLA     = P.get("parola") || "parola-di-prova";
 
-// ⛔ La versione che questa pagina sa parlare, e sta scritta UNA volta sola.
-//    §2.2: «e le due DEVONO coincidere» — quella del percorso `/rcp/<n>` e
-//    quella del `CIAO`.  ⚠ Erano due numeri che non si guardavano: la
-//    costante qui sotto e la stringa che l'operatore digita nella query, e un
-//    `CIAO(1)` su `/rcp/2` — la combinazione che §2.2 dichiara illegale —
-//    partiva senza una riga di registro (rilievo R6.19).  Il confronto sta
-//    all'avvio, in `parti()`.
+// ⛔ The version this page can speak, and it is written ONCE only.
+//    §2.2: "and the two MUST match" — that of the path `/rcp/<n>` and
+//    that of the `CIAO`.  ⚠ They were two numbers that did not look at each other: the
+//    constant below and the string the operator types in the query, and a
+//    `CIAO(1)` on `/rcp/2` — the combination §2.2 declares illegal —
+//    left without a log line (finding R6.19).  The comparison is
+//    at startup, in `parti()`.
 const VERSIONE = 1;
 
 const T = { CIAO: 0x0001, ECCOMI: 0x0002, CREDENZIALI: 0x0003, AMMESSO: 0x0004,
@@ -69,93 +69,93 @@ const T = { CIAO: 0x0001, ECCOMI: 0x0002, CREDENZIALI: 0x0003, AMMESSO: 0x0004,
             CONGEDO: 0x000C };
 const NOME_T = Object.fromEntries(Object.entries(T).map(([k, v]) => [v, k]));
 
-// ⛔ §8.2 PER INTERO — quindici motivi, e la pagina li sa nominare tutti.
-//    ⚠ Questa tabella partiva da `0x07`: mancavano sette motivi su quindici,
-//      fra cui lo `0x01` che la pagina spedisce lei stessa — e il proprio
-//      registro diceva «motivo 1 = ?», cioe' non sapeva il nome del motivo
-//      che mandava (rilievo R6.9).
+// ⛔ §8.2 IN FULL — fifteen reasons, and the page can name them all.
+//    ⚠ This table started from `0x07`: seven reasons out of fifteen were missing,
+//      among them the `0x01` the page sends itself — and its own
+//      log said "reason 1 = ?", that is it did not know the name of the reason
+//      it was sending (finding R6.9).
 //
-// ⛔ E la seconda colonna e' §8.2 alla lettera: «ogni motivo DEVE essere
-//    mostrabile all'utente in una frase comprensibile — `BUDGET_PIENO` non e'
-//    "errore 6" — e **la frase la costruisce il client, dal codice**».  Il
-//    campo `dettaglio` invece NON si mostra all'utente: e' per il registro.
+// ⛔ And the second column is §8.2 to the letter: "every reason MUST be
+//    showable to the user in an understandable sentence — `BUDGET_PIENO` is not
+//    "error 6" — and **the sentence is built by the client, from the code**".  The
+//    `dettaglio` field instead is NOT shown to the user: it is for the log.
 const MOTIVO = new Map([
-  [0x01, ["CHIUSO_DALL_UTENTE",       "il client e' stato chiuso"]],
-  [0x02, ["INATTIVITA",               "nessun input per trenta minuti"]],
-  [0x03, ["SESSIONE_ABBANDONATA",     "la sessione e' rimasta sei ore senza nessuno attaccato"]],
-  [0x04, ["SESSIONE_LOCALE_PREVALSA", "qualcuno si e' seduto davanti alla macchina"]],
-  [0x05, ["GIA_ATTIVA_LOCALE",        "sulla macchina c'e' gia' una sessione grafica locale"]],
-  [0x06, ["BUDGET_PIENO",             "questa macchina non ha piu' capacita' di codifica"]],
-  [0x07, ["CREDENZIALI_ERRATE",       "utente o parola d'ordine sbagliati"]],
-  [0x08, ["TROPPI_TENTATIVI",         "troppi tentativi: si riprova fra qualche minuto"]],
-  [0x09, ["NIENTE_IN_COMUNE",         "il server non parla nessuno dei formati di questo client"]],
-  [0x0A, ["VERSIONE_INCOMPATIBILE",   "il server parla una versione del protocollo che questo client non conosce"]],
-  [0x0B, ["ERRORE_PROTOCOLLO",        "il server ha mandato qualcosa che il protocollo non ammette"]],
-  [0x0C, ["SERVER_IN_CHIUSURA",       "il server si sta spegnendo"]],
-  [0x0D, ["TEMPO_SCADUTO",            "il tempo di attesa e' scaduto"]],
-  [0x0E, ["SESSIONE_NON_SERVIBILE",   "la sessione grafica non si e' potuta avviare"]],
-  [0x0F, ["GIA_ATTIVA_REMOTA",        "c'e' gia' un altro client attaccato a questa sessione"]],
+  [0x01, ["CHIUSO_DALL_UTENTE",       "the client was closed"]],
+  [0x02, ["INATTIVITA",               "no input for thirty minutes"]],
+  [0x03, ["SESSIONE_ABBANDONATA",     "the session stayed six hours with nobody attached"]],
+  [0x04, ["SESSIONE_LOCALE_PREVALSA", "someone sat down in front of the machine"]],
+  [0x05, ["GIA_ATTIVA_LOCALE",        "there is already a local graphical session on the machine"]],
+  [0x06, ["BUDGET_PIENO",             "this machine has no encoding capacity left"]],
+  [0x07, ["CREDENZIALI_ERRATE",       "wrong user or password"]],
+  [0x08, ["TROPPI_TENTATIVI",         "too many attempts: try again in a few minutes"]],
+  [0x09, ["NIENTE_IN_COMUNE",         "the server speaks none of the formats of this client"]],
+  [0x0A, ["VERSIONE_INCOMPATIBILE",   "the server speaks a protocol version this client does not know"]],
+  [0x0B, ["ERRORE_PROTOCOLLO",        "the server sent something the protocol does not allow"]],
+  [0x0C, ["SERVER_IN_CHIUSURA",       "the server is shutting down"]],
+  [0x0D, ["TEMPO_SCADUTO",            "the waiting time has expired"]],
+  [0x0E, ["SESSIONE_NON_SERVIBILE",   "the graphical session could not be started"]],
+  [0x0F, ["GIA_ATTIVA_REMOTA",        "another client is already attached to this session"]],
 ]);
 const nome_motivo  = (m) => (MOTIVO.get(m) || ["?"])[0];
 const frase_motivo = (m) => MOTIVO.has(m) ? MOTIVO.get(m)[1]
-  : `motivo ${m} (0x${m.toString(16)}), che §8.2 non definisce`;
+  : `reason ${m} (0x${m.toString(16)}), which §8.2 does not define`;
 
 const ERRORE_PROTOCOLLO = 0x0B, VERSIONE_INCOMPATIBILE = 0x0A,
       NIENTE_IN_COMUNE = 0x09, TEMPO_SCADUTO = 0x0D;
 
-// ⛔ I nomi di capacita' che RCP/1 dichiara DEL CLIENT (§4.3).  Se uno di
-//    questi arriva in `ECCOMI`, e' il lato sbagliato: il nome e' conosciuto,
-//    quindi l'eccezione dei nomi sconosciuti non lo copre.
+// ⛔ The capability names RCP/1 declares as the CLIENT's (§4.3).  If one of
+//    these arrives in `ECCOMI`, it is the wrong side: the name is known,
+//    so the exception for unknown names does not cover it.
 const SOLO_DEL_CLIENT = new Set(["video.livello", "video.misura_massima",
                                  "input.tocco", "client.nome"]);
-// ⛔ I nomi che RCP/1 definisce e che questa pagina conosce (§4.3).  ⚠ Era un
-//    oggetto letterale interrogato con `n in { … }`, e l'operatore `in` risale
-//    `Object.prototype`: la capacita' `__proto__` — nove byte di `a-z` e `_`,
-//    cioe' un nome PERFETTAMENTE LEGALE per §4.3 — risultava conosciuta, la
-//    riga di registro obbligatoria non veniva scritta, e `cap["__proto__"]=…`
-//    non memorizzava niente.  Un `Set` non ha catena, e `cap` e' una `Map`
-//    (rilievo R6.10).
+// ⛔ The names RCP/1 defines and this page knows (§4.3).  ⚠ It was an
+//    object literal queried with `n in { … }`, and the `in` operator climbs
+//    `Object.prototype`: the capability `__proto__` — nine bytes of `a-z` and `_`,
+//    that is a PERFECTLY LEGAL name for §4.3 — came out as known, the
+//    mandatory log line was not written, and `cap["__proto__"]=…`
+//    stored nothing.  A `Set` has no chain, and `cap` is a `Map`
+//    (finding R6.10).
 const NOMI_NOTI = new Set(["video.codec", "video.profondita", "audio.codec",
                            "appunti.testo", "banco.marca"]);
 
-// ⭐ Le capacita' di QUESTA pagina, scritte una volta sola: le legge il `CIAO`
-//    che si spedisce e le rilegge il controllo di §4.3 sull'`ECCOMI` che
-//    torna.  Due copie che non si guardano sono la forma esatta del rilievo
-//    R6.19, e §4.3 impone `pcm` e `8` a ENTRAMBI i lati.
+// ⭐ The capabilities of THIS page, written once only: the `CIAO`
+//    being sent reads them and the §4.3 check on the `ECCOMI` coming
+//    back rereads them.  Two copies that do not look at each other are the exact form of finding
+//    R6.19, and §4.3 imposes `pcm` and `8` on BOTH sides.
 const NOSTRE = new Map([["video.codec", "hevc,av1"],
                         ["video.profondita", "8,10"],
                         ["audio.codec", "opus,pcm"],
                         ["client.nome", "pagina-b11 0.1.0"]]);
 
-// ⛔ §6.1: «un ricevente che legge una lunghezza incoerente con quel che il
-//    tipo prevede DEVE chiudere con ERRORE_PROTOCOLLO».  §4.4 da' ad
-//    `AMMESSO` un corpo VUOTO e a `RESPINTO` un solo `u8`.
-//    ⚠ Nessun corpo veniva misurato: un `AMMESSO` con 1024 byte dentro
-//      passava, e un `RESPINTO` con il corpo vuoto dava `m.corpo[0] ===
-//      undefined` — cioe' un esito che il banco non sapeva leggere invece di
-//      un `ERRORE_PROTOCOLLO` (rilievo R6.7).
+// ⛔ §6.1: "a receiver that reads a length inconsistent with what the
+//    type foresees MUST close with ERRORE_PROTOCOLLO".  §4.4 gives
+//    `AMMESSO` an EMPTY body and `RESPINTO` a single `u8`.
+//    ⚠ No body was measured: an `AMMESSO` with 1024 bytes inside
+//      passed, and a `RESPINTO` with an empty body gave `m.corpo[0] ===
+//      undefined` — that is an outcome the bench could not read instead of
+//      an `ERRORE_PROTOCOLLO` (finding R6.7).
 const CORPO_ESATTO = new Map([[T.AMMESSO, 0], [T.RESPINTO, 1]]);
 
-// ⛔ Il tetto di attesa di una risposta del server, ed e' NOSTRO: va detto,
-//    perche' RCP non ne da' nessuno al server.  §4.6 fissa TRE tetti e sono
-//    tutti sul CLIENT — «`CIAO` ricevuto», «`CREDENZIALI` ricevute»,
-//    «`ATTACCA` ricevuto»; al server §4.5 impone soltanto di non rispondere
-//    «mai con un silenzio».
+// ⛔ The cap on waiting for an answer from the server, and it is OURS: it must be said,
+//    because RCP gives none to the server.  §4.6 sets THREE caps and they are
+//    all on the CLIENT — "`CIAO` received", "`CREDENZIALI` received",
+//    "`ATTACCA` received"; on the server §4.5 only imposes not to answer
+//    "ever with a silence".
 //
-// ⚠ Il valore era 12 s, e alla scadenza la pagina accusava il server di una
-//   violazione che non esiste: l'avvio di un compositore su una macchina
-//   carica supera i dodici secondi senza che nessuno abbia sbagliato — §8.2
-//   ha un motivo apposta, `SESSIONE_NON_SERVIBILE` = «un compositore che non
-//   parte» — e un PAM su LDAP con il secondo fisso di §4.4-bis pure
-//   (rilievo R6.4).
+// ⚠ The value was 12 s, and at expiry the page accused the server of a
+//   violation that does not exist: starting a compositor on a loaded
+//   machine exceeds twelve seconds without anyone having erred — §8.2
+//   has a reason for it, `SESSIONE_NON_SERVIBILE` = "a compositor that does not
+//   start" — and so does a PAM on LDAP with the fixed second of §4.4-bis
+//   (finding R6.4).
 //
-// ⭐ L'unico orologio che RCP mette su questa attesa e' quello del TRASPORTO:
-//    `max_idle_timeout` = 30 s (§2.2), «scaduto, il client e' staccato».  Il
-//    tetto sta appena sopra, cosi' a parlare per primo e' il trasporto — e la
-//    pagina non pronuncia un verdetto che non ha osservato.
+// ⭐ The only clock RCP puts on this wait is the TRANSPORT's:
+//    `max_idle_timeout` = 30 s (§2.2), "expired, the client is detached".  The
+//    cap is just above it, so the transport is the first to speak — and the
+//    page does not pronounce a verdict it has not observed.
 const TETTO_RISPOSTA = 32000;
 
-// ── i byte ─────────────────────────────────────────────────────────────────
+// ── the bytes ──────────────────────────────────────────────────────────────
 function str(t) {
   const b = new TextEncoder().encode(t);
   const o = new Uint8Array(2 + b.length);
@@ -180,12 +180,12 @@ function inquadra(tipo, corpo) {
 function u16(n) { const a = new Uint8Array(2); new DataView(a.buffer).setUint16(0, n); return a; }
 function u32(n) { const a = new Uint8Array(4); new DataView(a.buffer).setUint32(0, n); return a; }
 
-// ⛔ Il decodificatore e' `fatal`, e non e' un dettaglio: senza
-//    `{ fatal: true }` `TextDecoder` NON solleva davanti a UTF-8 illegale —
-//    sostituisce e restituisce `U+FFFD`.  §6.0 dice «⛔ UTF-8 non valido e'
-//    `ERRORE_PROTOCOLLO`» e §3 «NON DEVE indovinare»: due byte illegali che
-//    diventano due caratteri legali sono indovinare **e** tacere, e nessuno
-//    dei due lati puo' piu' sapere che cosa era stato spedito (rilievo R6.6).
+// ⛔ The decoder is `fatal`, and it is not a detail: without
+//    `{ fatal: true }` `TextDecoder` does NOT raise on illegal UTF-8 —
+//    it replaces and returns `U+FFFD`.  §6.0 says "⛔ invalid UTF-8 is
+//    `ERRORE_PROTOCOLLO`" and §3 "MUST NOT guess": two illegal bytes that
+//    become two legal characters are guessing **and** keeping quiet, and neither
+//    side can know any more what had been sent (finding R6.6).
 const DECODIFICA = new TextDecoder("utf-8", { fatal: true });
 
 class Lettore {
@@ -201,25 +201,25 @@ class Lettore {
     try { s = DECODIFICA.decode(grezzo); }
     catch (e) {
       throw new Violazione(ERRORE_PROTOCOLLO,
-        `stringa di ${n} byte che non e' UTF-8 valido, allo scostamento ${this.i} del corpo (§6.0)`);
+        `string of ${n} bytes that is not valid UTF-8, at offset ${this.i} of the body (§6.0)`);
     }
     this.i += n;
     return s;
   }
-  // ⛔ §6.1: «`lunghezza` DEVE essere il numero esatto dei byte del corpo».
-  //    Chi legge un corpo deve poter dire se ne e' avanzato: senza, un
-  //    `ECCOMI` con `quante = 0` e cinquecento byte di coda passa (R6.7).
+  // ⛔ §6.1: "`lunghezza` MUST be the exact number of bytes of the body".
+  //    Whoever reads a body must be able to say whether some is left over: without it, an
+  //    `ECCOMI` with `quante = 0` and five hundred bytes of tail passes (R6.7).
   avanzati() { return this.b.length - this.i; }
 }
 
-// ⛔ La violazione, dal lato della pagina.  Chiuderla e' §3.1 alla lettera, e
-//    il punto 3 e' quello che un'implementazione lascia indietro restando
-//    conforme alla lettera di una versione vecchia del testo.
+// ⛔ The violation, on the page's side.  Closing it is §3.1 to the letter, and
+//    point 3 is the one an implementation leaves behind while staying
+//    conformant to the letter of an old version of the text.
 class Violazione extends Error {
   constructor(motivo, dettaglio) { super(dettaglio); this.motivo = motivo; }
 }
 
-// ── il client RCP, lato pagina ─────────────────────────────────────────────
+// ── the RCP client, page side ──────────────────────────────────────────────
 class Rcp {
   constructor(wt, registro) {
     this.wt = wt;
@@ -227,27 +227,27 @@ class Rcp {
     this.arrivati = new Uint8Array(0);
     this.coda = [];
     this.attesa = null;
-    this.fine = false;             // FIN sul canale di controllo (§4.2)
-    // ⛔ E «rotto» NON e' «finito», anche se tutt'e due fermano la sessione.
-    //    §4.2 dice «⛔ in byte: **un FIN** su quello stream»: il FIN e' un
-    //    fatto preciso, non «la lettura e' finita in qualunque modo».  ⚠ Il
-    //    ramo d'errore poneva la STESSA `fine = true` e non scriveva niente:
-    //    un `RESET_STREAM` sul canale di controllo produceva `muta` e un
-    //    registro vuoto, cioe' il caso `fin-sul-controllo` restava verde
-    //    senza distinguere il fatto che dichiara di misurare — la forma
-    //    d'errore E8 di `REVIEWER.md` §2 (rilievo R6.12).
+    this.fine = false;             // FIN on the control channel (§4.2)
+    // ⛔ And "broken" is NOT "finished", even if both stop the session.
+    //    §4.2 says "⛔ in bytes: **a FIN** on that stream": the FIN is a
+    //    precise fact, not "reading ended in whatever way".  ⚠ The
+    //    error branch set the SAME `fine = true` and wrote nothing:
+    //    a `RESET_STREAM` on the control channel produced `muta` and an
+    //    empty log, that is the `fin-sul-controllo` case stayed green
+    //    without telling apart the fact it declares to measure — error form
+    //    E8 of `REVIEWER.md` §2 (finding R6.12).
     this.rotto = false;
-    // ⛔ §3.1 punto 3: il motivo viaggia ANCHE nel codice d'errore applicativo
-    //    con cui si chiude la sessione WebTransport.  ⭐ E non e' ridondanza:
-    //    il 10 agosto 2026 questo banco ha misurato un caso in cui e' l'UNICA
-    //    strada per cui il motivo arriva — il `RESPINTO` era stato spedito, e
-    //    il browser l'ha buttato insieme alla sessione che si chiudeva nello
-    //    stesso volo.  «Se il congedo non arriva, il motivo viaggia comunque»
-    //    e' scritto in §3.1, ed e' vero alla lettera.
+    // ⛔ §3.1 point 3: the reason travels ALSO in the application error code
+    //    with which the WebTransport session is closed.  ⭐ And it is not redundancy:
+    //    on 10 Aug 2026 this bench measured a case in which it is the ONLY
+    //    road by which the reason arrives — the `RESPINTO` had been sent, and
+    //    the browser threw it away together with the session closing in the
+    //    same flight.  "If the farewell does not arrive, the reason travels anyway"
+    //    is written in §3.1, and it is true to the letter.
     this.codice_chiusura = null;
     wt.closed.then((i) => { this.codice_chiusura = i && i.closeCode; })
              .catch(() => {});
-    this.usciti = [];              // ⭐ i byte che QUESTA pagina ha spedito
+    this.usciti = [];              // ⭐ the bytes THIS page has sent
     this.congedato = false;
   }
 
@@ -256,21 +256,21 @@ class Rcp {
     this.w = s.writable.getWriter();
     this.r = s.readable.getReader();
     this._leggi();
-    // ⛔ §2.5: «il server NON DEVE aprire stream bidirezionali».  Chi ne
-    //    riceve uno chiude con ERRORE_PROTOCOLLO — e la pagina se ne accorge
-    //    solo se STA A GUARDARE questo flusso.
+    // ⛔ §2.5: "the server MUST NOT open bidirectional streams".  Whoever
+    //    receives one closes with ERRORE_PROTOCOLLO — and the page notices
+    //    only if it IS WATCHING this flow.
     this._sorveglia();
-    // ⛔ E QUESTA E' L'ALTRA META' DI §2.5, che mancava.
+    // ⛔ AND THIS IS THE OTHER HALF OF §2.5, which was missing.
     //
-    //    Dei cinque canali di §2.5 la pagina ne sorvegliava UNO.  Quattro
-    //    vivono su stream unidirezionali e uno sui datagram, e su quei flussi
-    //    non c'era nessun lettore: un server che avesse aperto uno stream
-    //    unidirezionale con dentro `0x04` (audio, che §2.5 da' ai soli
-    //    datagram) o `0x01` (input, che §2.5 da' al CLIENT) non avrebbe
-    //    trovato nessuno ad accorgersene — lo stream restava li', il caso
-    //    arrivava in fondo e dichiarava `prosegue`.  ⚠ E il commento qui
-    //    sopra lo dice da sempre: «la pagina se ne accorge solo se STA A
-    //    GUARDARE questo flusso» (rilievo R6.3).
+    //    Of the five channels of §2.5 the page watched ONE.  Four
+    //    live on unidirectional streams and one on datagrams, and on those flows
+    //    there was no reader: a server that had opened a unidirectional
+    //    stream with `0x04` inside (audio, which §2.5 gives to datagrams
+    //    only) or `0x01` (input, which §2.5 gives to the CLIENT) would have
+    //    found nobody to notice — the stream stayed there, the case
+    //    reached the end and declared `prosegue`.  ⚠ And the comment just
+    //    above has always said it: "the page notices only if it IS
+    //    WATCHING this flow" (finding R6.3).
     this._sorveglia_uni();
     this._sorveglia_datagram();
   }
@@ -281,15 +281,15 @@ class Rcp {
       while (true) {
         const { value, done } = await rr.read();
         if (done) return;
-        // ⚠ Senza `await`: uno stream che si apre e non scrive niente non deve
-        //   accecare la sorveglianza su quelli che vengono dopo.
+        // ⚠ Without `await`: a stream that opens and writes nothing must not
+        //   blind the watch on those that come after.
         this._giudica_uni(value).catch(() => {});
       }
-    } catch (e) { /* la sessione e' finita: non e' un fatto di questo controllo */ }
+    } catch (e) { /* the session is over: not a fact of this check */ }
   }
 
-  // ⛔ §2.5: «si leggono i PRIMI DUE BYTE dello stream, che sono in ogni caso
-  //    un campo `tipo`.  Il byte alto dice il canale».
+  // ⛔ §2.5: "the FIRST TWO BYTES of the stream are read, which are in any case
+  //    a `tipo` field.  The high byte says the channel".
   async _giudica_uni(s) {
     let alto = null;
     try {
@@ -298,60 +298,60 @@ class Rcp {
       if (value && value.length >= 1) alto = value[0];
       r.cancel().catch(() => {});
     } catch (e) {
-      this.reg("⚠ stream unidirezionale dal server, illeggibile: " + e.message);
+      this.reg("⚠ unidirectional stream from the server, unreadable: " + e.message);
       return;
     }
     if (alto === null) {
-      // ⛔ E ogni tolleranza si scrive (§3, ultima riga): uno stream aperto e
-      //    chiuso senza un byte non e' giudicabile, e va detto invece che
-      //    ignorato.
-      this.reg("⚠ stream unidirezionale dal server senza nemmeno un byte: " +
-               "§2.5 vuole un `tipo`, e qui non c'e' niente da leggere");
+      // ⛔ And every tolerance is written (§3, last line): a stream opened and
+      //    closed without a byte cannot be judged, and it must be said instead of
+      //    ignored.
+      this.reg("⚠ unidirectional stream from the server without even one byte: " +
+               "§2.5 wants a `tipo`, and here there is nothing to read");
       return;
     }
-    const NOMI = { 0x00: "controllo", 0x01: "input", 0x02: "appunti",
+    const NOMI = { 0x00: "control", 0x01: "input", 0x02: "clipboard",
                    0x03: "video", 0x04: "audio" };
     const perche = {
-      // ⛔ «`0x00` controllo — su uno stream unidirezionale e' ERRORE_PROTOCOLLO:
-      //    il controllo vive solo sullo stream 0»
-      0x00: "il canale di controllo vive SOLO sullo stream 0 (§2.5)",
-      // ⛔ «un canale usato nel verso sbagliato — un `0x01` che arriva dal
-      //    server … lo e' a sua volta»
-      0x01: "il canale di input e' del CLIENT: verso sbagliato (§2.5)",
-      // ⛔ «`0x04` audio — solo su datagram.  Su uno stream e' ERRORE_PROTOCOLLO»
-      0x04: "l'audio viaggia SOLO su datagram (§2.5, §6.3)",
+      // ⛔ "`0x00` control — on a unidirectional stream it is ERRORE_PROTOCOLLO:
+      //    control lives only on stream 0"
+      0x00: "the control channel lives ONLY on stream 0 (§2.5)",
+      // ⛔ "a channel used in the wrong direction — a `0x01` arriving from the
+      //    server … is one in turn"
+      0x01: "the input channel is the CLIENT's: wrong direction (§2.5)",
+      // ⛔ "`0x04` audio — only on datagrams.  On a stream it is ERRORE_PROTOCOLLO"
+      0x04: "audio travels ONLY on datagrams (§2.5, §6.3)",
     };
     if (perche[alto] !== undefined) {
-      this.reg(`⛔ stream unidirezionale dal server con byte alto 0x` +
+      this.reg(`⛔ unidirectional stream from the server with high byte 0x` +
                `${alto.toString(16).padStart(2, "0")} (${NOMI[alto]}): ${perche[alto]}`);
       this.coda.push({ guasto: new Violazione(ERRORE_PROTOCOLLO,
-        `stream unidirezionale con canale ${NOMI[alto]}: ${perche[alto]}`) });
+        `unidirectional stream with channel ${NOMI[alto]}: ${perche[alto]}`) });
       this._sveglia();
       return;
     }
     if (alto === 0x02 || alto === 0x03) {
-      // ⚠ Verso giusto e canale legale, ma il CONTENUTO e' di una fase che
-      //   non e' questa: gli appunti sono §7.4 e i fotogrammi §6.2.  Qui si
-      //   registra e non si giudica — e' un punto aperto, non una tolleranza
-      //   silenziosa (§3, ultima riga).
-      this.reg(`⚠ stream unidirezionale dal server, canale ${NOMI[alto]} ` +
-               `(0x0${alto}): verso legale per §2.5, ma il suo contenuto ` +
-               `appartiene a una fase successiva — si registra e non si giudica`);
+      // ⚠ Right direction and legal channel, but the CONTENT belongs to a phase that
+      //   is not this one: the clipboard is §7.4 and the frames §6.2.  Here it is
+      //   recorded and not judged — it is an open point, not a silent
+      //   tolerance (§3, last line).
+      this.reg(`⚠ unidirectional stream from the server, channel ${NOMI[alto]} ` +
+               `(0x0${alto}): legal direction for §2.5, but its content ` +
+               `belongs to a later phase — recorded and not judged`);
       return;
     }
-    // ⛔ «Un byte alto diverso da questi cinque e' ERRORE_PROTOCOLLO».
-    this.reg(`⛔ stream unidirezionale con byte alto 0x` +
-             `${alto.toString(16).padStart(2, "0")}: non e' nessuno dei cinque canali di §2.5`);
+    // ⛔ "A high byte other than these five is ERRORE_PROTOCOLLO".
+    this.reg(`⛔ unidirectional stream with high byte 0x` +
+             `${alto.toString(16).padStart(2, "0")}: it is none of the five channels of §2.5`);
     this.coda.push({ guasto: new Violazione(ERRORE_PROTOCOLLO,
-      `byte alto 0x${alto.toString(16).padStart(2, "0")} sconosciuto: §2.5 ne definisce cinque`) });
+      `unknown high byte 0x${alto.toString(16).padStart(2, "0")}: §2.5 defines five`) });
     this._sveglia();
   }
 
-  // ⛔ §6.3 ed eccezione 2 di §3: un datagram corrotto o troppo corto si
-  //    SCARTA invece di chiudere — «scartandolo **nel registro**».  Una
-  //    tolleranza silenziosa e' indistinguibile da un difetto.
-  // ⚠ In fase 1 non ne deve arrivare nessuno: l'audio e' di una fase
-  //   successiva.  Questa sorveglianza serve a poterlo DIRE.
+  // ⛔ §6.3 and exception 2 of §3: a corrupt or too short datagram is
+  //    DISCARDED instead of closing — "discarding it **in the log**".  A
+  //    silent tolerance is indistinguishable from a defect.
+  // ⚠ In phase 1 none must arrive: audio belongs to a later
+  //   phase.  This watch serves to be able to SAY so.
   async _sorveglia_datagram() {
     try {
       const r = this.wt.datagrams.readable.getReader();
@@ -360,16 +360,16 @@ class Rcp {
         if (done) return;
         const tipo = value.length >= 2 ? (value[0] << 8) | value[1] : -1;
         if (value.length < 12 || tipo !== 0x0401) {
-          this.reg(`⚠ datagram scartato: ${value.length} byte, tipo 0x` +
-                   `${tipo < 0 ? "??" : tipo.toString(16)} — §6.3 lo scarta ` +
-                   `invece di chiudere (eccezione 2 di §3), E LO SCRIVE`);
+          this.reg(`⚠ datagram discarded: ${value.length} bytes, type 0x` +
+                   `${tipo < 0 ? "??" : tipo.toString(16)} — §6.3 discards it ` +
+                   `instead of closing (exception 2 of §3), AND WRITES IT DOWN`);
         } else {
-          this.reg(`⚠ datagram audio (0x0401) di ${value.length} byte in fase 1: ` +
-                   `il canale e' legale per §2.5, il suo contenuto e' di una ` +
-                   `fase successiva — si registra e non si giudica`);
+          this.reg(`⚠ audio datagram (0x0401) of ${value.length} bytes in phase 1: ` +
+                   `the channel is legal for §2.5, its content belongs to a ` +
+                   `later phase — recorded and not judged`);
         }
       }
-    } catch (e) { /* la sessione e' finita */ }
+    } catch (e) { /* the session is over */ }
   }
 
   async _sorveglia() {
@@ -379,12 +379,12 @@ class Rcp {
         const { value, done } = await rr.read();
         if (done) return;
         this.bidi_dal_server = true;
-        this.reg("⛔ il server ha aperto uno stream BIDIREZIONALE (§2.5)");
+        this.reg("⛔ the server opened a BIDIRECTIONAL stream (§2.5)");
         this.coda.push({ guasto: new Violazione(ERRORE_PROTOCOLLO,
-          "stream bidirezionale aperto dal server (§2.5)") });
+          "bidirectional stream opened by the server (§2.5)") });
         this._sveglia();
       }
-    } catch (e) { /* la sessione e' finita: non e' un fatto di questo controllo */ }
+    } catch (e) { /* the session is over: not a fact of this check */ }
   }
 
   async _leggi() {
@@ -392,9 +392,9 @@ class Rcp {
       while (true) {
         const { value, done } = await this.r.read();
         if (done) {
-          // ⛔ §4.2: un FIN sul canale di controllo E' la fine della sessione.
+          // ⛔ §4.2: a FIN on the control channel IS the end of the session.
           this.fine = true;
-          this.reg("il canale di controllo si e' chiuso (FIN)");
+          this.reg("the control channel closed (FIN)");
           this._sveglia();
           return;
         }
@@ -404,16 +404,16 @@ class Rcp {
         this._sfoglia();
       }
     } catch (e) {
-      // ⛔ E QUI NON C'E' NESSUN FIN.  Questo ramo scatta su un
-      //    `RESET_STREAM`, su uno `STOP_SENDING` o sulla caduta della
-      //    sessione: fatti diversi da quello di §4.2, e la pagina non li deve
-      //    confondere ne' tacere (§3, ultima riga).
-      // ⚠ Se a chiudere siamo stati noi, il rifiuto della lettura e' atteso e
-      //   non e' un fatto del server: non si registra e non si accusa
-      //   nessuno.
+      // ⛔ AND HERE THERE IS NO FIN.  This branch fires on a
+      //    `RESET_STREAM`, on a `STOP_SENDING` or on the fall of the
+      //    session: facts different from that of §4.2, and the page must neither
+      //    confuse them nor keep quiet about them (§3, last line).
+      // ⚠ If we were the ones closing, the rejection of the read is expected and
+      //   not a fact of the server: it is not recorded and nobody is
+      //   accused.
       if (!this.fine && !this.congedato && !this.chiudendo) {
         this.rotto = true;
-        this.reg("⛔ il canale di controllo si e' ROTTO — non e' il FIN di §4.2: " +
+        this.reg("⛔ the control channel BROKE — it is not the FIN of §4.2: " +
                  e.name + ": " + e.message);
       }
       this.fine = true;
@@ -425,11 +425,11 @@ class Rcp {
     while (this.arrivati.length >= 6) {
       const v = new DataView(this.arrivati.buffer, this.arrivati.byteOffset);
       const tipo = v.getUint16(0), lung = v.getUint32(2);
-      // ⛔ §6.1: il tetto e' 1 MiB, e vale anche per chi riceve.  Una pagina
-      //    che si fidasse della lunghezza dichiarata la userebbe per allocare.
+      // ⛔ §6.1: the cap is 1 MiB, and it holds for the receiver too.  A page
+      //    that trusted the declared length would use it to allocate.
       if (lung > 1024 * 1024) {
         this.coda.push({ guasto: new Violazione(ERRORE_PROTOCOLLO,
-          `messaggio da ${lung} byte: oltre il tetto di 1 MiB (§6.1)`) });
+          `message of ${lung} bytes: beyond the 1 MiB cap (§6.1)`) });
         this._sveglia();
         return;
       }
@@ -443,9 +443,9 @@ class Rcp {
 
   _sveglia() { if (this.attesa) { const a = this.attesa; this.attesa = null; a(); } }
 
-  // ⚠ `attesa_ms` e' «quanto si sta ad ascoltare», e NON e' un tetto imposto
-  //   al server: chi lo usa come tetto lo dichiara, e la dichiarazione sta in
-  //   `attendi()` accanto a `TETTO_RISPOSTA` (rilievo R6.4).
+  // ⚠ `attesa_ms` is "how long we stay listening", and it is NOT a cap imposed
+  //   on the server: whoever uses it as a cap declares it, and the declaration is in
+  //   `attendi()` next to `TETTO_RISPOSTA` (finding R6.4).
   async prossimo(attesa_ms = TETTO_RISPOSTA) {
     while (this.coda.length === 0 && !this.fine) {
       let scaduto = false;
@@ -462,116 +462,116 @@ class Rcp {
   }
 
   async manda(tipo, corpo, oscura) {
-    // ⛔ §4.2: dopo la fine della sessione non si spedisce piu' niente.  E dopo
-    //    `RESPINTO` non si riprova sulla stessa connessione (§4.4).  Le due
-    //    regole si applicano QUI, in un punto solo: sparse fra i chiamanti,
-    //    una delle due si dimentica.
+    // ⛔ §4.2: after the end of the session nothing more is sent.  And after
+    //    `RESPINTO` there is no retry on the same connection (§4.4).  The two
+    //    rules are applied HERE, in a single point: scattered among the callers,
+    //    one of the two gets forgotten.
     if (this.fine || this.congedato) {
-      this.reg("⛔ non si spedisce: la sessione e' finita (§4.2)");
+      this.reg("⛔ not sending: the session is over (§4.2)");
       return false;
     }
-    // ⛔ §4.4, il riquadro del 10 agosto 2026: «dopo `RESPINTO` al client resta
-    //    UNA COSA SOLA che puo' dire: `CONGEDO`. … Qualunque **altro**
-    //    messaggio, **e in particolare** un secondo `CREDENZIALI`, e' la
-    //    violazione che §4.4 vieta».
+    // ⛔ §4.4, the box of 10 Aug 2026: "after `RESPINTO` the client has
+    //    ONE THING ONLY it can say: `CONGEDO`. … Any **other**
+    //    message, **and in particular** a second `CREDENZIALI`, is the
+    //    violation §4.4 forbids".
     //
-    // ⚠ La guardia era scritta come un elenco di uno — bloccava il solo
-    //   `CREDENZIALI` — mentre «in particolare» dice che `CREDENZIALI` e' UN
-    //   caso, non IL caso: un `ATTACCA` o un `VISTA` spediti dopo `RESPINTO`
-    //   passavano, e il registro del server li avrebbe contati come byte dopo
-    //   la fine (rilievo R6.17).
+    // ⚠ The guard was written as a list of one — it blocked only
+    //   `CREDENZIALI` — while "in particular" says `CREDENZIALI` is ONE
+    //   case, not THE case: an `ATTACCA` or a `VISTA` sent after `RESPINTO`
+    //   passed, and the server log would have counted them as bytes after
+    //   the end (finding R6.17).
     //
-    // ⭐ E il `CONGEDO` resta permesso, che e' il punto: un client che si
-    //    zittisse del tutto perderebbe il punto 2 di §3.1 proprio nel caso in
-    //    cui il server ha appena sbagliato — ed e' il caso
-    //    `respinto-poi-congedo`.
+    // ⭐ And `CONGEDO` stays allowed, which is the point: a client that went
+    //    completely silent would lose point 2 of §3.1 precisely in the case in
+    //    which the server has just erred — and it is the
+    //    `respinto-poi-congedo` case.
     if (this.respinto && tipo !== T.CONGEDO) {
-      this.reg(`⛔ dopo RESPINTO si puo' mandare solo CONGEDO: ` +
-               `${NOME_T[tipo] || tipo} non parte (§4.4)`);
+      this.reg(`⛔ after RESPINTO only CONGEDO may be sent: ` +
+               `${NOME_T[tipo] || tipo} does not leave (§4.4)`);
       return false;
     }
     const b = inquadra(tipo, corpo);
-    // ⛔ §4.4: la parola d'ordine «non deve comparire in nessun registro a
-    //    nessun livello — nemmeno in `traccia`».  ⚠ E `usciti` E' un registro:
-    //    finisce sullo schermo, dentro `dettaglio`, e da li' in
-    //    `b2-esiti.jsonl` e sul terminale di chi lancia il banco.  Con
-    //    `?parola=segreta` in quel file compariva `…0773656772657461…`
-    //    (rilievo R6.2).
+    // ⛔ §4.4: the password "must not appear in any log at any
+    //    level — not even in `traccia`".  ⚠ And `usciti` IS a log:
+    //    it ends up on screen, inside `dettaglio`, and from there in
+    //    `b2-esiti.jsonl` and on the terminal of whoever launches the bench.  With
+    //    `?parola=segreta` that file showed `…0773656772657461…`
+    //    (finding R6.2).
     //
-    // ⭐ La cura e' quella di §11.1, scritta **per intero** per questo identico
-    //    problema: si tiene la LUNGHEZZA VERA, si sostituiscono i SOLI byte
-    //    segreti con altrettanti byte di riempimento `0x2A` — non zeri, che
-    //    sono un valore che i campi possono avere davvero — e si dichiara
-    //    l'intervallo oscurato.  Cosi' il confronto
-    //    `desktop-non-cambia-niente` continua a confrontare byte per byte, e
-    //    la parola non c'e'.
+    // ⭐ The cure is that of §11.1, written **in full** for this identical
+    //    problem: the TRUE LENGTH is kept, ONLY the secret bytes are replaced
+    //    with as many filler bytes `0x2A` — not zeros, which
+    //    are a value the fields can really have — and the
+    //    masked range is declared.  This way the `desktop-non-cambia-niente`
+    //    comparison keeps comparing byte by byte, and
+    //    the password is not there.
     const q = Array.from(b).map((x) => x.toString(16).padStart(2, "0"));
     if (oscura) {
       for (let i = oscura.inizio; i < oscura.inizio + oscura.quanti; i++) q[i] = "2a";
-      this.reg(`⭐ ${oscura.quanti} byte oscurati in ${NOME_T[tipo]} allo ` +
-               `scostamento ${oscura.inizio}: la lunghezza e' quella vera, i ` +
-               `byte segreti no (§4.4, §11.1)`);
+      this.reg(`⭐ ${oscura.quanti} bytes masked in ${NOME_T[tipo]} at ` +
+               `offset ${oscura.inizio}: the length is the true one, the ` +
+               `secret bytes are not (§4.4, §11.1)`);
     }
     this.usciti.push(q.join(""));
     await this.w.write(b);
     return true;
   }
 
-  /* ⛔ §3.1, nell'ordine, e sono TRE punti — il terzo e' quello che salva le
-   *    diagnosi: se il congedo non arriva, il motivo viaggia dentro la
-   *    chiusura della sessione. */
+  /* ⛔ §3.1, in order, and there are THREE points — the third is the one that saves the
+   *    diagnoses: if the farewell does not arrive, the reason travels inside the
+   *    closing of the session. */
   async chiudi(motivo, dettaglio) {
-    // ⚠ Da qui in poi il canale di lettura puo' cadere perche' lo stiamo
-    //   chiudendo NOI: non e' il canale che si rompe, e non si accusa nessuno.
+    // ⚠ From here on the reading channel may fall because WE are
+    //   closing it: it is not the channel breaking, and nobody is accused.
     this.chiudendo = true;
-    // ⛔ E IL MOTIVO 0 NON ESISTE.  §3.1, ultima riga: «⚠ il codice **0**
-    //    significa "chiusura senza motivo" e **NON DEVE** essere usato: ogni
-    //    chiusura ha un motivo di §8.2».  ⚠ La pagina lo spediva — dieci
-    //    righe dopo aver dichiarato quello stesso byte una violazione del
-    //    server — perche' il silenzio del server produceva `Violazione(0)`:
-    //    era indulgente con se' stessa nel punto esatto in cui era severa con
-    //    l'altro, cioe' `REVIEWER.md` §5 (rilievo R6.1).  Qui non passa.
+    // ⛔ AND REASON 0 DOES NOT EXIST.  §3.1, last line: "⚠ code **0**
+    //    means "closing without a reason" and **MUST NOT** be used: every
+    //    closing has a reason from §8.2".  ⚠ The page sent it — ten
+    //    lines after declaring that same byte a violation of the
+    //    server — because the server's silence produced `Violazione(0)`:
+    //    it was lenient with itself at the exact point where it was severe with
+    //    the other, that is `REVIEWER.md` §5 (finding R6.1).  Here it does not pass.
     if (!MOTIVO.has(motivo)) {
-      this.reg(`⛔ motivo di congedo 0x${motivo.toString(16)} fuori da §8.2: ` +
-               `si chiude con ERRORE_PROTOCOLLO, e questa riga e' un difetto ` +
-               `di questa pagina, non del server`);
+      this.reg(`⛔ farewell reason 0x${motivo.toString(16)} outside §8.2: ` +
+               `closing with ERRORE_PROTOCOLLO, and this line is a defect ` +
+               `of this page, not of the server`);
       motivo = ERRORE_PROTOCOLLO;
     }
-    this.reg(`chiusura: motivo ${motivo.toString(16)} = ${nome_motivo(motivo)} — ${dettaglio}`);
-    // ⛔ §8.2: «ogni motivo DEVE essere mostrabile all'utente in una frase
-    //    comprensibile … e la frase la costruisce il client, dal codice».  Il
-    //    `dettaglio` qui sopra e' l'altra cosa: sta nel registro, e all'utente
-    //    non si mostra.
-    this.reg(`  e all'utente si direbbe: «${frase_motivo(motivo)}»`);
+    this.reg(`closing: reason ${motivo.toString(16)} = ${nome_motivo(motivo)} — ${dettaglio}`);
+    // ⛔ §8.2: "every reason MUST be showable to the user in an
+    //    understandable sentence … and the sentence is built by the client, from the code".  The
+    //    `dettaglio` above is the other thing: it stays in the log, and is not
+    //    shown to the user.
+    this.reg(`  and the user would be told: «${frase_motivo(motivo)}»`);
     if (!this.fine) {
       try {
         if (await this.manda(T.CONGEDO, unisci([new Uint8Array([motivo]), str(dettaglio)])))
           await this._svuota();
-      } catch (e) { this.reg("il CONGEDO non e' partito: " + e.message); }
+      } catch (e) { this.reg("the CONGEDO did not leave: " + e.message); }
     }
     this.congedato = true;
     try { this.wt.close({ closeCode: motivo, reason: dettaglio.slice(0, 100) }); }
-    catch (e) { this.reg("la chiusura della sessione non e' riuscita: " + e.message); }
+    catch (e) { this.reg("closing the session did not succeed: " + e.message); }
   }
 
-  /* ⛔ E I DUE PASSI DI §3.1 SONO IN ORDINE, non nello stesso volo.
+  /* ⛔ AND THE TWO STEPS OF §3.1 ARE IN ORDER, not in the same flight.
    *
-   *    §3.1 e' un elenco **numerato e ordinato**: «2. DEVE mandare `CONGEDO`
-   *    … 3. DEVE chiudere la sessione WebTransport», e §8.1 dice «**prima**
-   *    di chiudere».  ⚠ `await w.write(b)` si risolve quando il pezzo e'
-   *    ACCODATO allo stream, non quando e' sul filo: la riga dopo abbatteva
-   *    la sessione — e con essa lo stream e i byte non ancora spediti
-   *    (rilievo R6.11).
+   *    §3.1 is a **numbered and ordered** list: "2. MUST send `CONGEDO`
+   *    … 3. MUST close the WebTransport session", and §8.1 says "**before**
+   *    closing".  ⚠ `await w.write(b)` resolves when the chunk is
+   *    QUEUED on the stream, not when it is on the wire: the next line tore
+   *    down the session — and with it the stream and the bytes not yet sent
+   *    (finding R6.11).
    *
-   * ⭐ Che la corsa esista non e' un'ipotesi, sta scritta in questo file: il
-   *    10 agosto 2026 un `RESPINTO` «spedito» e' stato «buttato insieme alla
-   *    sessione che si chiudeva nello stesso volo».  La pagina aveva
-   *    riconosciuto la corsa nel server e l'aveva lasciata in se' stessa.
+   * ⭐ That the race exists is not a hypothesis, it is written in this file: on
+   *    10 Aug 2026 a "sent" `RESPINTO` was "thrown away together with the
+   *    session closing in the same flight".  The page had
+   *    recognised the race in the server and left it in itself.
    *
-   * ⚠ E l'attesa e' col tetto, perche' se il server e' gia' andato via
-   *   `close()` non si risolve mai — e allora si DICE che non e' dimostrato
-   *   che il congedo sia partito, invece di darlo per buono.  §3.1 punto 3 e'
-   *   la seconda strada, e resta.
+   * ⚠ And the wait has a cap, because if the server has already gone
+   *   `close()` never resolves — and then it is SAID that it is not proved
+   *   that the farewell left, instead of taking it for granted.  §3.1 point 3 is
+   *   the second road, and it stays.
    */
   async _svuota() {
     let partito = false;
@@ -580,56 +580,56 @@ class Rcp {
         this.w.close().then(() => { partito = true; }).catch(() => {}),
         new Promise((r) => setTimeout(r, 1500)),
       ]);
-    } catch (e) { /* lo stream era gia' rotto: lo dice la riga qui sotto */ }
-    if (partito) this.reg("⭐ il CONGEDO e' sul filo: lo stream di controllo si e' chiuso");
-    else this.reg("⚠ non e' dimostrato che il CONGEDO sia partito: lo stream " +
-                  "non si e' chiuso entro 1,5 s — resta la seconda strada di §3.1 punto 3");
+    } catch (e) { /* the stream was already broken: the line below says so */ }
+    if (partito) this.reg("⭐ the CONGEDO is on the wire: the control stream has closed");
+    else this.reg("⚠ it is not proved that the CONGEDO left: the stream " +
+                  "did not close within 1.5 s — the second road of §3.1 point 3 remains");
   }
 
-  /* ⛔ Quando a congedarsi e' il SERVER, la sessione e' finita e la pagina non
-   *    ha piu' niente da dire.
+  /* ⛔ When the one saying farewell is the SERVER, the session is over and the page
+   *    has nothing more to say.
    *
-   * ⚠ Prima non chiamava nessuno: `congedato` restava falso, `fine` pure — il
-   *   `CONGEDO` del server non porta un FIN — e in fondo al caso la pagina
-   *   rispondeva `CONGEDO(0x01 CHIUSO_DALL_UTENTE)`, cioe' spediva **dopo la
-   *   fine** (§4.2) e con un motivo **che non aveva osservato**: nessun utente
-   *   aveva chiuso niente (rilievo R6.18).
+   * ⚠ Before, nobody called it: `congedato` stayed false, `fine` too — the
+   *   server's `CONGEDO` carries no FIN — and at the end of the case the page
+   *   answered `CONGEDO(0x01 CHIUSO_DALL_UTENTE)`, that is it sent **after the
+   *   end** (§4.2) and with a reason **it had not observed**: no user
+   *   had closed anything (finding R6.18).
    *
-   * ⭐ Il codice della chiusura e' quello RICEVUTO, e va detto: non e' un
-   *    verdetto della pagina, e' l'eco del motivo del server.
+   * ⭐ The closing code is the one RECEIVED, and it must be said: it is not a
+   *    verdict of the page, it is the echo of the server's reason.
    */
   chiudi_perche_congedato(motivo) {
     this.congedato = true;
-    this.reg(`la sessione e' finita: il server si e' congedato con ` +
-             `${nome_motivo(motivo)}.  ⛔ Da qui la pagina non spedisce piu' ` +
-             `niente (§4.2), e chiude la sessione con il motivo RICEVUTO — ` +
-             `non con uno suo`);
-    try { this.wt.close({ closeCode: motivo, reason: "congedo del server" }); }
-    catch (e) { this.reg("la chiusura della sessione non e' riuscita: " + e.message); }
+    this.reg(`the session is over: the server said farewell with ` +
+             `${nome_motivo(motivo)}.  ⛔ From here the page sends nothing ` +
+             `more (§4.2), and closes the session with the RECEIVED reason — ` +
+             `not with one of its own`);
+    try { this.wt.close({ closeCode: motivo, reason: "farewell from the server" }); }
+    catch (e) { this.reg("closing the session did not succeed: " + e.message); }
   }
 }
 
-// ── la stretta di mano, con il rigore di §3 ────────────────────────────────
+// ── the handshake, with the rigour of §3 ───────────────────────────────────
 function corpo_ciao(guasto) {
   const voci = [...NOSTRE, ["banco.guasto", guasto]];
   return unisci([u16(VERSIONE), u16(voci.length),
                  ...voci.flatMap(([n, v]) => [str(n), str(v)])]);
 }
 
-/* ⛔ `CONGEDO` e `RESPINTO` possono arrivare in QUALUNQUE momento, e si leggono
- *    allo stesso modo ovunque arrivino: qui, una volta sola.
+/* ⛔ `CONGEDO` and `RESPINTO` can arrive at ANY moment, and they are read
+ *    the same way wherever they arrive: here, once only.
  *
- * ⚠ Il controllo dopo `SESSIONE` non li leggeva affatto — un `CONGEDO(0x00)`
- *   finiva in «messaggio non richiesto dopo SESSIONE», cioe' il caso
- *   `congedo-motivo-zero` passava **per un motivo diverso da quello che
- *   dichiara di misurare**.
+ * ⚠ The check after `SESSIONE` did not read them at all — a `CONGEDO(0x00)`
+ *   ended up in "unrequested message after SESSIONE", that is the
+ *   `congedo-motivo-zero` case passed **for a reason different from the one it
+ *   declares to measure**.
  */
 function interpreta(rcp, m) {
-  // ⛔ §6.1: la lunghezza del corpo si misura contro quel che il tipo prevede.
+  // ⛔ §6.1: the length of the body is measured against what the type foresees.
   const esatto = CORPO_ESATTO.get(m.tipo);
   if (esatto !== undefined && m.corpo.length !== esatto) {
     throw new Violazione(ERRORE_PROTOCOLLO,
-      `${NOME_T[m.tipo]} con un corpo di ${m.corpo.length} byte invece di ` +
+      `${NOME_T[m.tipo]} with a body of ${m.corpo.length} bytes instead of ` +
       `${esatto} (§4.4, §6.1)`);
   }
   if (m.tipo === T.CONGEDO) {
@@ -638,27 +638,27 @@ function interpreta(rcp, m) {
     const det = l.str();
     if (l.corto) {
       throw new Violazione(ERRORE_PROTOCOLLO,
-        `CONGEDO troncato: ${m.corpo.length} byte, e §8 ne vuole un u8 piu' una stringa`);
+        `truncated CONGEDO: ${m.corpo.length} bytes, and §8 wants a u8 plus a string`);
     }
     if (l.avanzati() !== 0) {
       throw new Violazione(ERRORE_PROTOCOLLO,
-        `CONGEDO con ${l.avanzati()} byte di troppo su ${m.corpo.length} (§6.1)`);
+        `CONGEDO with ${l.avanzati()} bytes too many out of ${m.corpo.length} (§6.1)`);
     }
-    // ⛔ §3.1: il codice 0 «non deve essere usato», e chi lo riceve non lo
-    //    ingoia.
+    // ⛔ §3.1: code 0 "must not be used", and whoever receives it does not
+    //    swallow it.
     if (mot === 0) {
       throw new Violazione(ERRORE_PROTOCOLLO,
-        "CONGEDO con motivo 0x00, che §3.1 vieta");
+        "CONGEDO with reason 0x00, which §3.1 forbids");
     }
-    // ⛔ §3: «un campo fuori intervallo» impone la chiusura, e §8.2 obbliga il
-    //    client a costruire una FRASE dal codice.  ⚠ Un motivo che §8.2 non
-    //    definisce veniva accettato come congedo legittimo — `0x99` diventava
-    //    `congedato-dal-server:0x99` — e per quel codice non esiste nessuna
-    //    frase da mostrare: un motivo inventato non e' un motivo
-    //    (rilievo R6.9).
+    // ⛔ §3: "a field out of range" imposes closing, and §8.2 obliges the
+    //    client to build a SENTENCE from the code.  ⚠ A reason §8.2 does not
+    //    define was accepted as a legitimate farewell — `0x99` became
+    //    `congedato-dal-server:0x99` — and for that code there is no
+    //    sentence to show: an invented reason is not a reason
+    //    (finding R6.9).
     if (!MOTIVO.has(mot)) {
       throw new Violazione(ERRORE_PROTOCOLLO,
-        `CONGEDO con motivo 0x${mot.toString(16).padStart(2, "0")}, che §8.2 non definisce`);
+        `CONGEDO with reason 0x${mot.toString(16).padStart(2, "0")}, which §8.2 does not define`);
     }
     const e = new Error(`CONGEDO ${mot.toString(16)} = ${nome_motivo(mot)} «${det}»`);
     e.congedo = mot;
@@ -666,7 +666,7 @@ function interpreta(rcp, m) {
   }
   if (m.tipo === T.RESPINTO) {
     rcp.respinto = true;
-    const e = new Error(`RESPINTO motivo ${m.corpo[0]} = ${nome_motivo(m.corpo[0])}`);
+    const e = new Error(`RESPINTO reason ${m.corpo[0]} = ${nome_motivo(m.corpo[0])}`);
     e.respinto = m.corpo[0];
     throw e;
   }
@@ -675,48 +675,48 @@ function interpreta(rcp, m) {
 async function attendi(rcp, quale) {
   const m = await rcp.prossimo(TETTO_RISPOSTA);
   if (m === null) {
-    // ⛔ §4.2: se il canale di controllo si e' chiuso, la sessione E' finita.
-    //    Non e' un silenzio del server ed e' un fatto diverso: da qui non si
-    //    spedisce piu' niente, nemmeno un CONGEDO.
+    // ⛔ §4.2: if the control channel has closed, the session IS over.
+    //    It is not a silence of the server and it is a different fact: from here
+    //    nothing more is sent, not even a CONGEDO.
     if (rcp.fine) {
       const e = new Error(rcp.rotto
-        ? `il canale di controllo si e' rotto prima di ${quale}`
-        : `FIN sul canale di controllo prima di ${quale} (§4.2)`);
+        ? `the control channel broke before ${quale}`
+        : `FIN on the control channel before ${quale} (§4.2)`);
       e.finita = true;
       throw e;
     }
-    // ⛔ Prima di dire «silenzio» si guarda la TERZA strada di §3.1.
+    // ⛔ Before saying "silence" the THIRD road of §3.1 is looked at.
     await new Promise((r) => setTimeout(r, 600));
     if (rcp.codice_chiusura !== null && rcp.codice_chiusura !== undefined &&
         rcp.codice_chiusura !== 0) {
       const c = rcp.codice_chiusura;
-      rcp.reg(`⚠ nessun CONGEDO sul controllo, ma la sessione si e' chiusa con ` +
-              `il codice ${c.toString(16)} = ${nome_motivo(c)} (§3.1 punto 3)`);
+      rcp.reg(`⚠ no CONGEDO on the control channel, but the session closed with ` +
+              `code ${c.toString(16)} = ${nome_motivo(c)} (§3.1 point 3)`);
       if (!MOTIVO.has(c)) {
-        rcp.reg(`⛔ e quel codice §8.2 non lo definisce: la sessione si e' ` +
-                `chiusa con un motivo che non esiste`);
+        rcp.reg(`⛔ and §8.2 does not define that code: the session ` +
+                `closed with a reason that does not exist`);
       }
-      const e = new Error(`chiusura della sessione, codice ${c.toString(16)}`);
+      const e = new Error(`closing of the session, code ${c.toString(16)}`);
       e.congedo = c;
       throw e;
     }
-    // ⛔ E QUI LA PAGINA NON ACCUSA IL SERVER.  Il tetto e' suo — RCP non ne
-    //    da' nessuno al server (§4.6 li da' tutti al client) — quindi quel che
-    //    scade e' un'attesa del banco, non un DEVE del server.  Si chiude
-    //    perche' un client non puo' aspettare per sempre, col motivo di §8.2
-    //    che dice quel che e' successo, e si scrive di chi era il tetto.
-    rcp.reg(`⚠ ${quale} non e' arrivato entro ${TETTO_RISPOSTA / 1000} s.  ` +
-            `⛔ Il tetto e' del BANCO, non di RCP: §4.6 fissa tre tetti e sono ` +
-            `tutti sul client, e al server nessuna riga impone un tempo di ` +
-            `risposta.  Questa non e' una violazione del server`);
+    // ⛔ AND HERE THE PAGE DOES NOT ACCUSE THE SERVER.  The cap is its own — RCP gives
+    //    none to the server (§4.6 gives them all to the client) — so what
+    //    expires is a wait of the bench, not a MUST of the server.  It closes
+    //    because a client cannot wait forever, with the §8.2 reason
+    //    that says what happened, and it writes whose cap it was.
+    rcp.reg(`⚠ ${quale} did not arrive within ${TETTO_RISPOSTA / 1000} s.  ` +
+            `⛔ The cap is the BENCH's, not RCP's: §4.6 sets three caps and they are ` +
+            `all on the client, and no line imposes a response time on the ` +
+            `server.  This is not a violation of the server`);
     throw new Violazione(TEMPO_SCADUTO,
-      `niente invece di ${quale} entro ${TETTO_RISPOSTA / 1000} s: tetto del banco, non di §4.6`);
+      `nothing instead of ${quale} within ${TETTO_RISPOSTA / 1000} s: the bench's cap, not §4.6's`);
   }
   interpreta(rcp, m);
   if (NOME_T[m.tipo] !== quale) {
-    // ⛔ Un tipo sconosciuto sul canale di controllo non si ignora (§3).
+    // ⛔ An unknown type on the control channel is not ignored (§3).
     throw new Violazione(ERRORE_PROTOCOLLO,
-      `tipo ${m.tipo.toString(16)} invece di ${quale}`);
+      `type ${m.tipo.toString(16)} instead of ${quale}`);
   }
   return m.corpo;
 }
@@ -724,110 +724,110 @@ async function attendi(rcp, quale) {
 function leggi_eccomi(corpo, reg) {
   const l = new Lettore(corpo);
   const versione = l.u16();
-  // ⛔ §9: «il client DEVE verificare che la versione di ECCOMI sia una che sa
-  //    parlare, e congedare con VERSIONE_INCOMPATIBILE se non lo e' — un
-  //    server che risponde con una versione piu' alta di quella chiesta sta
-  //    sbagliando, e accettarla in silenzio e' l'indulgenza che §3 vieta».
+  // ⛔ §9: "the client MUST check that the version of ECCOMI is one it can
+  //    speak, and dismiss with VERSIONE_INCOMPATIBILE if it is not — a
+  //    server that answers with a version higher than the one asked is
+  //    wrong, and accepting it silently is the leniency §3 forbids".
   if (versione !== VERSIONE) {
     throw new Violazione(VERSIONE_INCOMPATIBILE,
-      `ECCOMI dichiara la versione ${versione}, il CIAO chiedeva ${VERSIONE}`);
+      `ECCOMI declares version ${versione}, the CIAO asked for ${VERSIONE}`);
   }
   const quante = l.u16();
-  // ⛔ Una `Map`, non un oggetto: `cap["__proto__"] = "abc"` non memorizza
-  //    niente — un no-op silenzioso — e `__proto__` e' un nome di capacita'
-  //    perfettamente legale per §4.3 (rilievo R6.10).
+  // ⛔ A `Map`, not an object: `cap["__proto__"] = "abc"` stores
+  //    nothing — a silent no-op — and `__proto__` is a perfectly legal
+  //    capability name for §4.3 (finding R6.10).
   const cap = new Map();
   for (let i = 0; i < quante; i++) {
     const n = l.str(), v = l.str();
     if (l.corto) {
       throw new Violazione(ERRORE_PROTOCOLLO,
-        `ECCOMI troncato alla capacita' ${i + 1} di ${quante}: ${corpo.length} byte ricevuti`);
+        `ECCOMI truncated at capability ${i + 1} of ${quante}: ${corpo.length} bytes received`);
     }
-    // ⛔ §4.3: «un **nome** e' fatto di `a-z`, `0-9`, `.` e `_`, da 1 a 64
-    //    byte».  ⚠ Senza questo controllo `VIDEO.CODEC=hevc` veniva solo
-    //    registrato come «nome sconosciuto», cioe' trattato con l'eccezione
-    //    che §4.3 dice di non estendergli (rilievo R6.8).
+    // ⛔ §4.3: "a **name** is made of `a-z`, `0-9`, `.` and `_`, from 1 to 64
+    //    bytes".  ⚠ Without this check `VIDEO.CODEC=hevc` was only
+    //    recorded as "unknown name", that is treated with the exception
+    //    §4.3 says not to extend to it (finding R6.8).
     if (!/^[a-z0-9._]{1,64}$/.test(n)) {
       throw new Violazione(ERRORE_PROTOCOLLO,
-        `nome di capacita' «${n}»: §4.3 vuole da 1 a 64 byte fra a-z, 0-9, «.» e «_»`);
+        `capability name «${n}»: §4.3 wants 1 to 64 bytes among a-z, 0-9, «.» and «_»`);
     }
-    // ⛔ §4.3: «un **valore** e' testo UTF-8 stampabile, al massimo 256 byte»,
-    //    e «⛔ un valore **vuoto** e' ERRORE_PROTOCOLLO: chi non ha niente da
-    //    dire non manda la capacita'».
+    // ⛔ §4.3: "a **value** is printable UTF-8 text, at most 256 bytes",
+    //    and "⛔ an **empty** value is ERRORE_PROTOCOLLO: whoever has nothing to
+    //    say does not send the capability".
     const byte_v = new TextEncoder().encode(v).length;
     if (byte_v === 0) {
       throw new Violazione(ERRORE_PROTOCOLLO,
-        `la capacita' «${n}» ha valore vuoto, che §4.3 vieta`);
+        `the capability «${n}» has an empty value, which §4.3 forbids`);
     }
     if (byte_v > 256) {
       throw new Violazione(ERRORE_PROTOCOLLO,
-        `il valore di «${n}» e' di ${byte_v} byte: §4.3 ne ammette al massimo 256`);
+        `the value of «${n}» is ${byte_v} bytes: §4.3 allows at most 256`);
     }
     if ([...v].some((c) => c.codePointAt(0) < 0x20 || c.codePointAt(0) === 0x7F)) {
       throw new Violazione(ERRORE_PROTOCOLLO,
-        `il valore di «${n}» non e' testo stampabile (§4.3)`);
+        `the value of «${n}» is not printable text (§4.3)`);
     }
-    // ⛔ §4.3: «un nome ripetuto due volte e' ERRORE_PROTOCOLLO.  "Vince
-    //    l'ultimo" e "vince il primo" sono due implementazioni diverse dello
-    //    stesso documento, che e' precisamente cio' che questo documento
-    //    esiste per impedire».  ⚠ La riga `cap[n] = v` aveva implementato
-    //    «vince l'ultimo», cioe' UNA delle due letture che §4.3 vieta
-    //    entrambe (rilievo R6.5).
+    // ⛔ §4.3: "a name repeated twice is ERRORE_PROTOCOLLO.  "The last one
+    //    wins" and "the first one wins" are two different implementations of the
+    //    same document, which is precisely what this document
+    //    exists to prevent".  ⚠ The line `cap[n] = v` had implemented
+    //    "the last one wins", that is ONE of the two readings §4.3 forbids
+    //    both of (finding R6.5).
     if (cap.has(n)) {
       throw new Violazione(ERRORE_PROTOCOLLO,
-        `la capacita' «${n}» arriva due volte in ECCOMI, che §4.3 vieta`);
+        `the capability «${n}» arrives twice in ECCOMI, which §4.3 forbids`);
     }
     if (SOLO_DEL_CLIENT.has(n)) {
       throw new Violazione(ERRORE_PROTOCOLLO,
-        `«${n}» arriva dal server: §4.3 la dichiara del client, e il nome e' conosciuto`);
+        `«${n}» arrives from the server: §4.3 declares it the client's, and the name is known`);
     }
     if (!NOMI_NOTI.has(n)) {
-      // ⭐ Eccezione 1 di §3: un nome sconosciuto si ignora — E SI SCRIVE.
-      reg(`⭐ capacita' sconosciuta ignorata: ${n}=${v} (§3, eccezione 1)`);
+      // ⭐ Exception 1 of §3: an unknown name is ignored — AND WRITTEN DOWN.
+      reg(`⭐ unknown capability ignored: ${n}=${v} (§3, exception 1)`);
     }
     cap.set(n, v);
   }
-  // ⛔ §6.1: «`lunghezza` DEVE essere il numero esatto dei byte del corpo».
-  //    ⚠ Con `quante = 0` e cinquecento byte di coda il ciclo non girava,
-  //      `l.corto` restava falso e nessuno confrontava quel che aveva letto
-  //      con quel che era arrivato (rilievo R6.7).
+  // ⛔ §6.1: "`lunghezza` MUST be the exact number of bytes of the body".
+  //    ⚠ With `quante = 0` and five hundred bytes of tail the loop did not run,
+  //      `l.corto` stayed false and nobody compared what had been read
+  //      with what had arrived (finding R6.7).
   if (l.avanzati() !== 0) {
     throw new Violazione(ERRORE_PROTOCOLLO,
-      `ECCOMI con ${l.avanzati()} byte di troppo su ${corpo.length}: ` +
-      `${quante} capacita' dichiarate, lette tutte (§6.1)`);
+      `ECCOMI with ${l.avanzati()} bytes too many out of ${corpo.length}: ` +
+      `${quante} capabilities declared, all read (§6.1)`);
   }
-  // ⛔ E QUI SI NEGOZIA, che e' l'altra meta' di §4.3 e viveva solo nella
-  //    tabella dei motivi.  ⚠ Il motivo `0x09 NIENTE_IN_COMUNE` era scritto
-  //    fra i motivi e non lo sollevava NESSUNA riga del file: era un motivo
-  //    che questa pagina non poteva emettere (rilievo R6.8).
+  // ⛔ AND HERE THE NEGOTIATION HAPPENS, which is the other half of §4.3 and lived only in the
+  //    table of reasons.  ⚠ Reason `0x09 NIENTE_IN_COMUNE` was written
+  //    among the reasons and NO line of the file raised it: it was a reason
+  //    this page could not emit (finding R6.8).
   for (const [nome, nostro] of NOSTRE) {
-    if (!NOMI_NOTI.has(nome)) continue;      // `client.nome` non si negozia
+    if (!NOMI_NOTI.has(nome)) continue;      // `client.nome` is not negotiated
     const suo = cap.get(nome);
     if (suo === undefined) {
-      // ⚠ §4.3: «chi non dichiara `pcm` o `8` … si congeda con
-      //   NIENTE_IN_COMUNE, non con ERRORE_PROTOCOLLO: non ha sbagliato a
-      //   scrivere, non ha di che parlare».
+      // ⚠ §4.3: "whoever does not declare `pcm` or `8` … is dismissed with
+      //   NIENTE_IN_COMUNE, not with ERRORE_PROTOCOLLO: it did not write wrongly,
+      //   it has nothing to talk about".
       throw new Violazione(NIENTE_IN_COMUNE,
-        `il server non dichiara «${nome}», che §4.3 impone a entrambi`);
+        `the server does not declare «${nome}», which §4.3 imposes on both`);
     }
-    // ⛔ «Una voce sconosciuta DENTRO un elenco si scarta»: un `hevc,vp9` si
-    //    legge come `hevc`.  ⚠ «Ma se dopo lo scarto l'elenco resta vuoto, si
-    //    congeda con NIENTE_IN_COMUNE».
+    // ⛔ "An unknown entry INSIDE a list is discarded": a `hevc,vp9` is
+    //    read as `hevc`.  ⚠ "But if after the discard the list is empty, the
+    //    farewell is NIENTE_IN_COMUNE".
     const miei = nostro.split(",");
     const comuni = suo.split(",").filter((x) => miei.includes(x));
     if (comuni.length === 0) {
       throw new Violazione(NIENTE_IN_COMUNE,
-        `«${nome}»: il server offre ${suo}, questa pagina ${nostro}, e dopo lo scarto non resta niente`);
+        `«${nome}»: the server offers ${suo}, this page ${nostro}, and after the discard nothing is left`);
     }
-    reg(`⭐ §4.3 ${nome}: il server offre ${suo}, in comune ${comuni.join(",")}`);
+    reg(`⭐ §4.3 ${nome}: the server offers ${suo}, in common ${comuni.join(",")}`);
   }
-  // ⚠ §4.3: «`pcm` DEVE essere dichiarato da entrambi: e' la base sempre
-  //   disponibile … allo stesso modo `8` DEVE comparire in
-  //   `video.profondita` di entrambi».
+  // ⚠ §4.3: "`pcm` MUST be declared by both: it is the base always
+  //   available … in the same way `8` MUST appear in
+  //   `video.profondita` of both".
   for (const [nome, voce] of [["audio.codec", "pcm"], ["video.profondita", "8"]]) {
     if (!cap.get(nome).split(",").includes(voce)) {
       throw new Violazione(NIENTE_IN_COMUNE,
-        `il server non dichiara «${voce}» in «${nome}», che §4.3 impone a entrambi`);
+        `the server does not declare «${voce}» in «${nome}», which §4.3 imposes on both`);
     }
   }
   return { versione, cap };
@@ -838,112 +838,112 @@ function leggi_sessione(corpo, reg) {
   const stato = l.u8(), lar = l.u32(), alt = l.u32(), desktop = l.str();
   if (l.corto) {
     throw new Violazione(ERRORE_PROTOCOLLO,
-      `SESSIONE troncato: ${corpo.length} byte, e §4.5 ne vuole un u8, due u32 e una stringa`);
+      `truncated SESSIONE: ${corpo.length} bytes, and §4.5 wants a u8, two u32 and a string`);
   }
   if (l.avanzati() !== 0) {
     throw new Violazione(ERRORE_PROTOCOLLO,
-      `SESSIONE con ${l.avanzati()} byte di troppo su ${corpo.length} (§6.1)`);
+      `SESSIONE with ${l.avanzati()} bytes too many out of ${corpo.length} (§6.1)`);
   }
-  // ⛔ §4.5: «`u8 stato   1 = NUOVA, 2 = RIPRESA`», e §3 chiude su «un campo
-  //    fuori intervallo».  ⚠ Lo `stato` veniva letto e non piu' guardato: un
-  //    terzo stato inesistente entrava senza che nessuno lo nominasse, ed e'
-  //    la coppia esatta del caso `sessione-tela-dispari` che invece la pagina
-  //    rifiuta — due campi dello stesso messaggio, due rigori diversi
-  //    (rilievo R6.16).
+  // ⛔ §4.5: "`u8 stato   1 = NUOVA, 2 = RIPRESA`", and §3 closes on "a field
+  //    out of range".  ⚠ The `stato` was read and never looked at again: a
+  //    nonexistent third state came in without anyone naming it, and it is
+  //    the exact twin of the `sessione-tela-dispari` case which the page instead
+  //    refuses — two fields of the same message, two different rigours
+  //    (finding R6.16).
   if (stato !== 1 && stato !== 2) {
     throw new Violazione(ERRORE_PROTOCOLLO,
-      `SESSIONE con stato ${stato}: §4.5 ne definisce due, 1 = NUOVA e 2 = RIPRESA`);
+      `SESSIONE with state ${stato}: §4.5 defines two, 1 = NUOVA and 2 = RIPRESA`);
   }
-  reg(`SESSIONE stato ${stato} = ${stato === 1 ? "NUOVA" : "RIPRESA"}`);
-  // ⛔ §4.5: i limiti e la parita' sono normativi, e valgono sulla tela
-  //    CONCESSA.  Una pagina che si adattasse invece di rifiutare
-  //    riscalerebbe da una misura che il codificatore ha gia' arrotondato.
+  reg(`SESSIONE state ${stato} = ${stato === 1 ? "NUOVA" : "RIPRESA"}`);
+  // ⛔ §4.5: the limits and the parity are normative, and hold on the GRANTED
+  //    canvas.  A page that adapted instead of refusing
+  //    would rescale from a size the encoder has already rounded.
   if (lar < 320 || lar > 7680 || alt < 240 || alt > 4320 || lar % 2 || alt % 2) {
     throw new Violazione(ERRORE_PROTOCOLLO,
-      `tela concessa ${lar}x${alt}: fuori dai limiti o dispari (§4.5)`);
+      `granted canvas ${lar}x${alt}: out of limits or odd (§4.5)`);
   }
   return { stato, lar, alt, desktop };
 }
 
 // ===========================================================================
-// I CASI.  ⛔ Ognuno dichiara la sua ATTESA prima di misurare, e ⛔ chi non e'
-// una violazione del server lo dichiara con `conforme: true`.
+// THE CASES.  ⛔ Each declares its EXPECTATION before measuring, and ⛔ whoever is not
+// a violation of the server declares it with `conforme: true`.
 //
-// ⚠ Il titolo diceva «I DODICI CASI» e le voci erano tredici; e il testo che
-//   l'utente legge diceva «dodici cose sbagliate» mentre quattro di quelle
-//   tredici sono casi in cui il server e' CONFORME e si misura che la pagina
-//   non reagisca.  ⛔ Non e' pedanteria — e' il rilievo R1.29 di `RCP.md`
-//   §0-bis: «quella casella e' l'unica prova che il documento porta di essere
-//   completo, e chi la verificava contando ne trovava di piu'» (R6.20).
-//   Adesso il conto lo fa `CASI.length`, e nessuno lo puo' piu' scrivere a
-//   mano sbagliato.
+// ⚠ The title said "THE TWELVE CASES" and the entries were thirteen; and the text
+//   the user reads said "twelve wrong things" while four of those
+//   thirteen are cases in which the server is CONFORMANT and we measure that the page
+//   does not react.  ⛔ It is not pedantry — it is finding R1.29 of `RCP.md`
+//   §0-bis: "that box is the only proof the document carries of being
+//   complete, and whoever checked it by counting found more" (R6.20).
+//   Now the count is done by `CASI.length`, and nobody can write it by
+//   hand wrong any more.
 //
-// ⚠ Il conto e' ripetuto anche in `01-b11-lancia.sh` e in
-//   `01-b11-guasto-innesta.py`, che questa pagina non tocca: li' dice ancora
-//   «dodici».
+// ⚠ The count is repeated also in `01-b11-lancia.sh` and in
+//   `01-b11-guasto-innesta.py`, which this page does not touch: there it still says
+//   "twelve".
 // ===========================================================================
 const CASI = [
   { nome: "eccomi-versione-2", atteso: "congedo:0x0a",
-    che: "⛔ ECCOMI(versione=2) a un CIAO(versione=1): §9 lo impone al CLIENT con un DEVE, e accettarla in silenzio e' l'indulgenza che §3 vieta" },
+    che: "⛔ ECCOMI(versione=2) to a CIAO(versione=1): §9 imposes it on the CLIENT with a MUST, and accepting it silently is the leniency §3 forbids" },
   { nome: "capacita-sconosciuta", atteso: "prosegue+registra", conforme: true,
-    che: "⭐ una capacita' SCONOSCIUTA in ECCOMI: si ignora e si prosegue (eccezione 1 di §3), e si scrive nel registro" },
+    che: "⭐ an UNKNOWN capability in ECCOMI: it is ignored and we go on (exception 1 of §3), and it is written in the log" },
   { nome: "misura-massima-in-eccomi", atteso: "congedo:0x0b",
-    che: "`video.misura_massima` in ECCOMI: lato sbagliato, e il nome e' conosciuto" },
+    che: "`video.misura_massima` in ECCOMI: wrong side, and the name is known" },
   { nome: "tipo-sconosciuto", atteso: "congedo:0x0b",
-    che: "un tipo che non esiste sul canale di controllo" },
+    che: "a type that does not exist on the control channel" },
   { nome: "congedo-motivo-zero", atteso: "congedo:0x0b",
-    che: "un CONGEDO con motivo 0x00: §3.1 vieta il codice zero" },
+    che: "a CONGEDO with reason 0x00: §3.1 forbids code zero" },
   { nome: "sessione-tela-dispari", atteso: "congedo:0x0b",
-    che: "un SESSIONE con la tela dispari: la pagina RIFIUTA invece di adattarsi" },
+    che: "a SESSIONE with an odd canvas: the page REFUSES instead of adapting" },
   { nome: "bidi-dal-server", atteso: "congedo:0x0b",
-    che: "uno stream bidirezionale aperto dal SERVER (§2.5)" },
+    che: "a bidirectional stream opened by the SERVER (§2.5)" },
   { nome: "fin-sul-controllo", atteso: "muta",
-    che: "⛔ un FIN sul canale di controllo: la sessione E' finita, e la pagina non spedisce piu' su nessun canale (§4.2)" },
+    che: "⛔ a FIN on the control channel: the session IS over, and the page sends nothing more on any channel (§4.2)" },
   { nome: "respinto-poi-congedo", atteso: "congedo:0x0b", parola: "sbagliata",
-    che: "RESPINTO seguito da CONGEDO: il secondo e' una violazione (§4.4)" },
+    che: "RESPINTO followed by CONGEDO: the second is a violation (§4.4)" },
   { nome: "respinto-non-riprovare", atteso: "muta", parola: "sbagliata",
-    // ⛔ E QUESTA RIGA E' MEZZO VERDETTO, e va detto sulla riga stessa.
-    //    Quel che la pagina puo' osservare e' di non aver CHIESTO di
-    //    spedire; che sul filo non sia passato niente lo vede solo il
-    //    registro del server (§8.1: «si verifica dal lato che lo riceve, mai
-    //    dal registro di chi lo manda»).  ⚠ Prima l'`ok` era calcolato dal
-    //    solo stato interno della pagina, che dichiarava verde una proprieta'
-    //    che dichiara di non poter osservare — la forma E7 di `REVIEWER.md`
-    //    §2 (rilievo R6.13).
-    testimone: "il registro del SERVER (01-b11-lancia.sh §5): §8.1 vuole il lato che RICEVE",
-    che: "⛔ dopo RESPINTO la pagina NON deve riprovare sulla stessa connessione (§4.4) — lo verifica il registro del SERVER" },
+    // ⛔ AND THIS LINE IS HALF A VERDICT, and it must be said on the line itself.
+    //    What the page can observe is that it did not ASK to
+    //    send; that nothing passed on the wire is seen only by the
+    //    server log (§8.1: "it is verified on the side that receives it, never
+    //    from the log of whoever sends it").  ⚠ Before, the `ok` was computed from the
+    //    page's internal state alone, which declared green a property
+    //    it declares it cannot observe — form E7 of `REVIEWER.md`
+    //    §2 (finding R6.13).
+    testimone: "the SERVER log (01-b11-lancia.sh §5): §8.1 wants the side that RECEIVES",
+    che: "⛔ after RESPINTO the page must NOT retry on the same connection (§4.4) — the SERVER log verifies it" },
   { nome: "sessione-desktop-kde", atteso: "prosegue", conforme: true,
-    che: "un SESSIONE con desktop=kde mentre il ferro non e' KDE: la pagina NON cambia comportamento (§4.5)" },
+    che: "a SESSIONE with desktop=kde while the hardware is not KDE: the page does NOT change behaviour (§4.5)" },
   { nome: "sessione-desktop-gnome", atteso: "prosegue", conforme: true,
-    che: "⭐ lo stesso caso con desktop=gnome: i byte usciti dalla pagina DEVONO essere identici a quelli del caso precedente" },
+    che: "⭐ the same case with desktop=gnome: the bytes sent by the page MUST be identical to those of the previous case" },
   { nome: "silenzio", atteso: "prosegue", conforme: true,
-    che: "⛔ §2.2 vieta un battito applicativo: si tace otto secondi, e la pagina non deve ne' mandarne uno ne' aspettarne uno" },
+    che: "⛔ §2.2 forbids an application heartbeat: we stay silent eight seconds, and the page must neither send one nor wait for one" },
 ];
 
-// ⛔ Quando la sessione non si apre, a sbagliare NON e' la pagina.  Le cause
-//    hanno tutte lo stesso aspetto e vanno elencate, come fa `01-b2-sonda.html`
-//    davanti allo stesso guasto (rilievo R6.14).
+// ⛔ When the session does not open, the one in error is NOT the page.  The causes
+//    all look the same and must be listed, as `01-b2-sonda.html` does
+//    in front of the same fault (finding R6.14).
 class GuastoAmbiente extends Error {}
 const CAUSE_DI_UNA_SESSIONE_CHE_NON_SI_APRE = [
-  "1. UDP filtrato (il TCP risponde lo stesso, e la pagina si carica)",
-  "2. l'impronta non e' quella del certificato servito, o manca (§4.1-bis: la",
-  "   misura S1 dice che l'eccezione dell'utente NON copre WebTransport ne' su",
-  "   Chrome ne' su Firefox)",
-  "3. il certificato della sessione supera i 14 giorni (§4.1-bis)",
-  "4. il server non c'e', o non e' quello che si crede",
+  "1. UDP filtered (TCP answers all the same, and the page loads)",
+  "2. the fingerprint is not that of the certificate served, or is missing (§4.1-bis: the",
+  "   S1 measurement says the user's exception does NOT cover WebTransport on either",
+  "   Chrome or Firefox)",
+  "3. the session certificate exceeds 14 days (§4.1-bis)",
+  "4. the server is not there, or is not the one believed",
 ];
 
 async function gira(caso, reg, opzioni) {
-  // ⛔ L'APERTURA STA IN UN TRY SUO, e non e' una finezza di stile.
+  // ⛔ THE OPENING IS IN A TRY OF ITS OWN, and it is not a nicety of style.
   //
-  //    Se la sessione non si apre, la pagina non ha violato niente: non ha
-  //    nemmeno parlato.  ⚠ Prima ogni caso finiva in `errore:…`, `guasti`
-  //    valeva 15 e il campo che il banco legge era `esito: "NON-CONFORME"` —
-  //    ⛔ una riga IDENTICA a quella di una pagina che ha davvero violato §3
-  //    tredici volte.  `01-b2-sonda.html`, davanti allo stesso ingresso,
-  //    scrive `NON-APERTA` ed elenca le cause: qui la distinzione era stata
-  //    persa (rilievo R6.14, `LEZIONI.md` §1.9 — «una misura che puo' dire
-  //    "zero" deve poter dire anche "sono fallito"»).
+  //    If the session does not open, the page has violated nothing: it has
+  //    not even spoken.  ⚠ Before, every case ended in `errore:…`, `guasti`
+  //    was 15 and the field the bench reads was `esito: "NON-CONFORME"` —
+  //    ⛔ a line IDENTICAL to that of a page that really violated §3
+  //    thirteen times.  `01-b2-sonda.html`, in front of the same input,
+  //    writes `NON-APERTA` and lists the causes: here the distinction had been
+  //    lost (finding R6.14, `LEZIONI.md` §1.9 — "a measurement that can say
+  //    "zero" must also be able to say "I failed"").
   let wt;
   try {
     wt = new WebTransport(URL_SERVER, opzioni);
@@ -959,9 +959,9 @@ async function gira(caso, reg, opzioni) {
     const ec = await attendi(rcp, "ECCOMI");
     leggi_eccomi(ec, reg);
 
-    // ⛔ L'intervallo dei byte segreti si calcola qui, dove si sa dove sono:
-    //    6 byte d'inquadratura, la stringa `utente`, i 2 byte di lunghezza
-    //    della `parola`, e poi la parola.  §4.4 e §11.1.
+    // ⛔ The range of the secret bytes is computed here, where it is known where they are:
+    //    6 framing bytes, the `utente` string, the 2 length bytes
+    //    of the `parola`, and then the password.  §4.4 and §11.1.
     const bu = str(UTENTE), bp = str(caso.parola || PAROLA);
     await rcp.manda(T.CREDENZIALI, unisci([bu, bp]),
                     { inizio: 6 + bu.length + 2, quanti: bp.length - 2 });
@@ -970,23 +970,23 @@ async function gira(caso, reg, opzioni) {
     await rcp.manda(T.ATTACCA, unisci([u32(1920), u32(1080), u32(1920), u32(1080), str("it")]));
     const se = await attendi(rcp, "SESSIONE");
     const s = leggi_sessione(se, reg);
-    reg(`SESSIONE: tela ${s.lar}x${s.alt}, desktop=${s.desktop}`);
+    reg(`SESSIONE: canvas ${s.lar}x${s.alt}, desktop=${s.desktop}`);
 
-    // ⛔ Dopo SESSIONE si TACE, e si guarda.  §2.2 vieta un battito
-    //    applicativo: se la pagina ne mandasse uno, comparirebbe in `usciti`.
+    // ⛔ After SESSIONE we KEEP SILENT, and watch.  §2.2 forbids an application
+    //    heartbeat: if the page sent one, it would appear in `usciti`.
     const quanto = caso.nome === "silenzio" ? 8000 : 2500;
     const m = await rcp.prossimo(quanto);
     if (m !== null) {
-      // ⛔ E un CONGEDO si legge come un CONGEDO anche qui: e' l'ultima parola
-      //    del server, non «un messaggio non richiesto».  ⚠ Senza questa
-      //    riga il caso `congedo-motivo-zero` passava per il motivo sbagliato.
+      // ⛔ And a CONGEDO is read as a CONGEDO here too: it is the last word
+      //    of the server, not "an unrequested message".  ⚠ Without this
+      //    line the `congedo-motivo-zero` case passed for the wrong reason.
       interpreta(rcp, m);
       throw new Violazione(ERRORE_PROTOCOLLO,
-        `messaggio non richiesto dopo SESSIONE: tipo ${m.tipo.toString(16)}`);
+        `unrequested message after SESSIONE: type ${m.tipo.toString(16)}`);
     }
-    // ⛔ «Muta» e «rotta» sono due fatti diversi (§4.2): il FIN e' un fatto
-    //    preciso, la caduta dello stream un altro, e il caso `fin-sul-controllo`
-    //    esiste per distinguerli.
+    // ⛔ "Mute" and "broken" are two different facts (§4.2): the FIN is a
+    //    precise fact, the fall of the stream another, and the `fin-sul-controllo` case
+    //    exists to tell them apart.
     if (rcp.rotto) fatto = "canale-rotto";
     else if (rcp.fine) fatto = "muta";
   } catch (e) {
@@ -994,25 +994,25 @@ async function gira(caso, reg, opzioni) {
       await rcp.chiudi(e.motivo, e.message);
       fatto = "congedo:0x" + e.motivo.toString(16).padStart(2, "0");
     } else if (e.congedo !== undefined) {
-      reg("il server si e' congedato: " + e.message);
-      reg(`⭐ e la frase per l'utente la costruisce il client (§8.2): ` +
+      reg("the server said farewell: " + e.message);
+      reg(`⭐ and the sentence for the user is built by the client (§8.2): ` +
           `«${frase_motivo(e.congedo)}»`);
-      // ⛔ Da qui la sessione e' finita: la pagina non risponde al congedo del
-      //    server con un congedo suo (rilievo R6.18).
+      // ⛔ From here the session is over: the page does not answer the server's
+      //    farewell with one of its own (finding R6.18).
       rcp.chiudi_perche_congedato(e.congedo);
       fatto = "congedato-dal-server:0x" + e.congedo.toString(16).padStart(2, "0");
     } else if (e.finita) {
-      reg("la sessione e' finita prima della risposta attesa: " + e.message);
+      reg("the session ended before the expected answer: " + e.message);
       fatto = rcp.rotto ? "canale-rotto" : "muta";
     } else if (e.respinto !== undefined) {
       reg("RESPINTO: " + e.message);
-      // ⛔ §4.4: dopo RESPINTO non si riprova.  Si aspetta comunque, perche' un
-      //    CONGEDO che arrivasse DOPO sarebbe una violazione da rilevare.
+      // ⛔ §4.4: after RESPINTO there is no retry.  We wait anyway, because a
+      //    CONGEDO arriving AFTER would be a violation to detect.
       try {
         const m = await rcp.prossimo(4000);
         if (m !== null) {
           const v = new Violazione(ERRORE_PROTOCOLLO,
-            `dopo RESPINTO e' arrivato un altro messaggio (tipo ${m.tipo.toString(16)}): §4.4`);
+            `after RESPINTO another message arrived (type ${m.tipo.toString(16)}): §4.4`);
           await rcp.chiudi(v.motivo, v.message);
           fatto = "congedo:0x0b";
         } else {
@@ -1030,46 +1030,46 @@ async function gira(caso, reg, opzioni) {
     }
   }
   const usciti = rcp.usciti.join(" ");
-  // ⛔⭐ E LA PAGINA SI CONGEDA ANCHE QUANDO NON E' SUCCESSO NIENTE.
+  // ⛔⭐ AND THE PAGE SAYS FAREWELL EVEN WHEN NOTHING HAPPENED.
   //
-  //    §8.1: «chi chiude DEVE mandare `CONGEDO` con un motivo **prima** di
-  //    chiudere la connessione», e §3.1 vieta il codice 0.  Vale anche per la
-  //    chiusura volontaria: `CHIUSO_DALL_UTENTE` (0x01).
+  //    §8.1: "whoever closes MUST send `CONGEDO` with a reason **before**
+  //    closing the connection", and §3.1 forbids code 0.  It holds for the
+  //    voluntary closing too: `CHIUSO_DALL_UTENTE` (0x01).
   //
-  // ⚠ Senza, il server non sa che la sessione e' finita: lo scopre dal
-  //   trasporto, quando il browser si degna di chiudere gli stream.  ⛔ Il 10
-  //   agosto 2026 con **Chrome** quel momento non arrivava in tempo, e i casi
-  //   in fila ricevevano `GIA_ATTIVA_REMOTA` — il posto (§8.2 motivo 0x0F)
-  //   restava a una sessione che non esisteva piu'.  Con Firefox no, ed e' la
-  //   differenza fra i due motori che ha reso visibile la regola mancante.
+  // ⚠ Without it, the server does not know the session is over: it finds out from the
+  //   transport, when the browser deigns to close the streams.  ⛔ On 10
+  //   Aug 2026 with **Chrome** that moment did not arrive in time, and the cases
+  //   in a row received `GIA_ATTIVA_REMOTA` — the slot (§8.2 reason 0x0F)
+  //   stayed with a session that no longer existed.  With Firefox not, and it is the
+  //   difference between the two engines that made the missing rule visible.
   //
-  // ⭐ Non e' una cura per Chrome: e' §8.1 applicata. La pagina non se ne era
-  //    accorta perche' nessuno gliel'aveva chiesto — e questo banco esiste
-  //    proprio per chiederglielo.
+  // ⭐ It is not a cure for Chrome: it is §8.1 applied. The page had not
+  //    noticed because nobody had asked it — and this bench exists
+  //    precisely to ask it.
   //
-  // ⛔ MA SOLO SE LA SESSIONE E' ANCORA VIVA.  Se il server si e' gia'
-  //    congedato — o ha mandato il FIN di §4.2 — rispondergli e' spedire dopo
-  //    la fine, e il motivo `CHIUSO_DALL_UTENTE` sarebbe per giunta falso:
-  //    nessun utente ha chiuso niente (rilievo R6.18).  `chiudi()` fa i tre
-  //    punti di §3.1 nell'ordine, e aspetta che il CONGEDO sia partito prima
-  //    di abbattere la sessione (R6.11).
+  // ⛔ BUT ONLY IF THE SESSION IS STILL ALIVE.  If the server has already
+  //    said farewell — or sent the FIN of §4.2 — answering it is sending after
+  //    the end, and the reason `CHIUSO_DALL_UTENTE` would on top of that be false:
+  //    no user closed anything (finding R6.18).  `chiudi()` does the three
+  //    points of §3.1 in order, and waits for the CONGEDO to have left before
+  //    tearing down the session (R6.11).
   //
-  // ⚠ E `0x01` resta il motivo, dichiarando quel che vale: §8.2 non ha un
-  //   codice per «il banco ha finito il caso», e chi guida questo client e'
-  //   il banco.  E' il piu' vicino dei quindici, non una misura.
+  // ⚠ And `0x01` stays the reason, declaring what it is worth: §8.2 has no
+  //   code for "the bench finished the case", and whoever drives this client is
+  //   the bench.  It is the closest of the fifteen, not a measurement.
   if (!rcp.congedato && !rcp.fine) {
-    try { await rcp.chiudi(0x01, "fine del caso: chiude il banco, che di questo client e' l'utente"); }
-    catch (e) { reg("⚠ il congedo di fine caso non e' partito: " + e.message); }
+    try { await rcp.chiudi(0x01, "end of the case: the bench closes, being this client's user"); }
+    catch (e) { reg("⚠ the end-of-case farewell did not leave: " + e.message); }
   } else {
-    try { wt.close({ closeCode: 0x01, reason: "fine del caso" }); } catch (e) {}
+    try { wt.close({ closeCode: 0x01, reason: "end of the case" }); } catch (e) {}
   }
-  // ⛔ E SI ASPETTA CHE LA SESSIONE SIA DAVVERO CHIUSA prima del caso dopo.
+  // ⛔ AND WE WAIT FOR THE SESSION TO BE REALLY CLOSED before the next case.
   //
-  //    `close()` ritorna subito; il server se ne accorge un giro di rete piu'
-  //    tardi, e fino a quel momento **il posto e' ancora occupato** (§8.2
-  //    motivo 0x0F).  ⚠ Il 10 agosto 2026 i casi in fila si rubavano il posto
-  //    l'uno con l'altro: `posto NEGATO` sette volte su nove, e la pagina
-  //    accusata di un difetto che era del banco.
+  //    `close()` returns at once; the server notices one network round trip
+  //    later, and until that moment **the slot is still occupied** (§8.2
+  //    reason 0x0F).  ⚠ On 10 Aug 2026 the cases in a row stole the slot
+  //    from each other: `posto NEGATO` seven times out of nine, and the page
+  //    accused of a defect that was the bench's.
   await Promise.race([wt.closed.catch(() => {}),
                       new Promise((r) => setTimeout(r, 2000))]);
   return { fatto, usciti };
@@ -1080,20 +1080,20 @@ const out = document.getElementById("uscita");
 const righe = [];
 const scrivi = (t) => { righe.push(t); out.textContent = righe.join("\n"); };
 
-/* ⛔ L'esito si spedisce, E SI GUARDA SE E' ARRIVATO.
+/* ⛔ The outcome is sent, AND WE LOOK WHETHER IT ARRIVED.
  *
- *    `LEZIONI.md` §1.9, quarta regola, citata da `01-b2-raccogli.py`: «la
- *    richiesta E' il denominatore dell'esito».  ⚠ Questa chiamata non aveva
- *    ne' `try` ne' controllo dello stato:
- *      · col raccoglitore fermo, `fetch` veniva rifiutata, la promessa moriva
- *        come *unhandled rejection*, lo schermo mostrava il verdetto completo
- *        e il file non aveva niente — indistinguibile, per
- *        `01-b11-lancia.sh`, da «la pagina si e' piantata a metà»;
- *      · con un 404 o un 500 `fetch` NON rifiuta, e la pagina considerava
- *        consegnato un esito che nessuno aveva scritto (rilievo R6.15).
+ *    `LEZIONI.md` §1.9, fourth rule, quoted by `01-b2-raccogli.py`: "the
+ *    request IS the denominator of the outcome".  ⚠ This call had
+ *    neither `try` nor a status check:
+ *      · with the collector stopped, `fetch` was rejected, the promise died
+ *        as an *unhandled rejection*, the screen showed the complete verdict
+ *        and the file had nothing — indistinguishable, for
+ *        `01-b11-lancia.sh`, from "the page got stuck halfway";
+ *      · with a 404 or a 500 `fetch` does NOT reject, and the page considered
+ *        delivered an outcome nobody had written (finding R6.15).
  *
- * ⭐ E se non e' arrivato **si dice sullo schermo**, come fa la sonda di B2:
- *    «se il raccoglitore non c'e', il banco NON deve fingere».
+ * ⭐ And if it did not arrive **it is said on screen**, as the B2 probe does:
+ *    "if the collector is not there, the bench must NOT pretend".
  */
 async function consegna(dati) {
   try {
@@ -1103,88 +1103,88 @@ async function consegna(dati) {
       body: JSON.stringify(dati),
     });
     if (!r.ok) {
-      scrivi(`⛔ l'esito NON e' stato registrato: il raccoglitore ha risposto ` +
-             `${r.status}.  Quel che si vede qui sopra non e' in b2-esiti.jsonl`);
+      scrivi(`⛔ the outcome was NOT recorded: the collector answered ` +
+             `${r.status}.  What is seen above is not in b2-esiti.jsonl`);
       return false;
     }
     return true;
   } catch (e) {
-    scrivi(`⛔ l'esito NON e' stato registrato (raccoglitore assente?): ${e}.  ` +
-           `Quel che si vede qui sopra non e' in b2-esiti.jsonl`);
+    scrivi(`⛔ the outcome was NOT recorded (collector absent?): ${e}.  ` +
+           `What is seen above is not in b2-esiti.jsonl`);
     return false;
   }
 }
 
 (async () => {
-  // ⛔ Il quadro lo conta il programma (R6.20).
+  // ⛔ The summary is counted by the program (R6.20).
   const sbagliate = CASI.filter((c) => !c.conforme).length;
   document.getElementById("quadro").textContent =
-    `${CASI.length} casi in tutto: ${sbagliate} in cui il server sbaglia — e la pagina ` +
-    `deve accorgersene — e ${CASI.length - sbagliate} in cui il server è conforme, ` +
-    `dove si misura che la pagina non reagisca. Più le due proprietà negative.`;
+    `${CASI.length} cases in all: ${sbagliate} in which the server errs — and the page ` +
+    `must notice — and ${CASI.length - sbagliate} in which the server is conformant, ` +
+    `where we measure that the page does not react. Plus the two negative properties.`;
 
   if (!("WebTransport" in window)) {
-    scrivi("⛔ questo motore non ha WebTransport: non c'e' niente da misurare");
+    scrivi("⛔ this engine has no WebTransport: there is nothing to measure");
     await consegna({ banco: "B11", esito: "SENZA-WEBTRANSPORT",
                      motore: navigator.userAgent, dettaglio: righe.join("\n") });
     return;
   }
 
-  scrivi(`motore: ${navigator.userAgent}`);
+  scrivi(`engine: ${navigator.userAgent}`);
   scrivi(`server: ${URL_SERVER}`);
 
-  // ⛔ §2.2: «e le due DEVONO coincidere» — la versione del PERCORSO e quella
-  //    del `CIAO`.  «Un `CIAO(versione=2)` su `/rcp/1` e' VERSIONE_INCOMPATIBILE,
-  //    non una negoziazione da risolvere», e il rovescio vale identico: questa
-  //    pagina parla RCP/1 e non ha niente da dire su `/rcp/2`.
-  // ⚠ E' il caso che B5 ha gia' trovato dal lato del server; dal lato del
-  //   client non lo guardava nessuno (rilievo R6.19).
+  // ⛔ §2.2: "and the two MUST match" — the version of the PATH and that
+  //    of the `CIAO`.  "A `CIAO(versione=2)` on `/rcp/1` is VERSIONE_INCOMPATIBILE,
+  //    not a negotiation to resolve", and the reverse holds identically: this
+  //    page speaks RCP/1 and has nothing to say on `/rcp/2`.
+  // ⚠ It is the case B5 already found on the server side; on the
+  //   client side nobody looked at it (finding R6.19).
   let percorso = null;
   try { percorso = new URL(URL_SERVER, location.href).pathname.match(/^\/rcp\/(\d+)$/); }
   catch (e) { percorso = null; }
   if (!percorso) {
-    scrivi(`⛔ «${URL_SERVER}» non ha la forma «https://host:porta/rcp/<versione>» (§2.2): ` +
-           `non si apre niente`);
+    scrivi(`⛔ «${URL_SERVER}» does not have the form «https://host:port/rcp/<version>» (§2.2): ` +
+           `nothing is opened`);
     await consegna({ banco: "B11", esito: "URL-NON-VALIDO",
                      motore: navigator.userAgent, dettaglio: righe.join("\n") });
     return;
   }
   if (Number(percorso[1]) !== VERSIONE) {
-    scrivi(`⛔ il percorso dice RCP/${percorso[1]} e questa pagina parla RCP/${VERSIONE}: ` +
-           `§2.2 vuole che le due coincidano, e un CIAO(${VERSIONE}) su ` +
-           `/rcp/${percorso[1]} e' la combinazione che dichiara illegale — ` +
-           `non una negoziazione da risolvere.  Non si spedisce niente`);
+    scrivi(`⛔ the path says RCP/${percorso[1]} and this page speaks RCP/${VERSIONE}: ` +
+           `§2.2 wants the two to match, and a CIAO(${VERSIONE}) on ` +
+           `/rcp/${percorso[1]} is the combination it declares illegal — ` +
+           `not a negotiation to resolve.  Nothing is sent`);
     await consegna({ banco: "B11", esito: "VERSIONE-NON-COINCIDE",
                      motore: navigator.userAgent, dettaglio: righe.join("\n") });
     return;
   }
-  scrivi(`versione: RCP/${VERSIONE} nel percorso e nel CIAO, e §2.2 vuole che coincidano`);
+  scrivi(`version: RCP/${VERSIONE} in the path and in the CIAO, and §2.2 wants them to match`);
 
-  // ⛔ L'impronta si valida PRIMA, e fuori dai tredici casi: `atob()` di una
-  //    stringa che non e' base64 solleva, e prima sollevava dentro `gira()`
-  //    tredici volte, una per caso, sotto l'etichetta «NON-CONFORME»
-  //    (rilievo R6.14).
+  // ⛔ The fingerprint is validated FIRST, and outside the thirteen cases: `atob()` of a
+  //    string that is not base64 raises, and before it raised inside `gira()`
+  //    thirteen times, once per case, under the label "NON-CONFORME"
+  //    (finding R6.14).
   let opzioni = { allowPooling: false };
   if (IMPRONTA) {
     try {
       opzioni = { allowPooling: false, serverCertificateHashes: [{
         algorithm: "sha-256",
         value: Uint8Array.from(atob(IMPRONTA), (c) => c.charCodeAt(0)) }] };
-      scrivi(`impronta: pubblicata (${IMPRONTA.slice(0, 12)}…), allowPooling: false (§4.1-bis)`);
+      scrivi(`fingerprint: published (${IMPRONTA.slice(0, 12)}…), allowPooling: false (§4.1-bis)`);
     } catch (e) {
-      scrivi("⛔ l'impronta non e' base64 valido: " + e);
+      scrivi("⛔ the fingerprint is not valid base64: " + e);
       await consegna({ banco: "B11", esito: "IMPRONTA-NON-VALIDA",
                        motore: navigator.userAgent, dettaglio: righe.join("\n") });
       return;
     }
   } else {
-    // ⚠ §4.1-bis e la misura S1: l'eccezione dell'utente NON copre
-    //   WebTransport ne' su Chrome ne' su Firefox.  Senza impronta la sessione
-    //   non si aprira', e si dice PRIMA invece di dedurlo da tredici
-    //   fallimenti uguali.
-    scrivi("⚠ NESSUNA impronta: §4.1-bis e la misura S1 dicono che l'eccezione " +
-           "dell'utente non copre WebTransport — su Chrome e Firefox la sessione " +
-           "non si aprira', e l'esito sara' NON-APERTA, non NON-CONFORME");
+    // ⚠ §4.1-bis and the S1 measurement: the user's exception does NOT cover
+    //   WebTransport on either Chrome or Firefox.  Without a fingerprint the session
+    //   will not open, and it is said FIRST instead of deducing it from thirteen
+    //   identical failures.
+    scrivi("⚠ NO fingerprint: §4.1-bis and the S1 measurement say the user's exception " +
+           "does not cover WebTransport — on Chrome and Firefox the session " +
+           "will not open, and the outcome will be NON-APERTA, not NON-CONFORME");
   }
   scrivi("");
 
@@ -1196,9 +1196,9 @@ async function consegna(dati) {
       r = await gira(caso, (t) => reg.push("      " + t), opzioni);
     } catch (e) {
       if (e instanceof GuastoAmbiente) {
-        // ⛔ Qui non ha sbagliato la pagina: non e' arrivata a parlare.
+        // ⛔ Here the page did not err: it did not get as far as speaking.
         r = { fatto: "non-aperta", usciti: "", aperta: false };
-        reg.push("      ⛔ la sessione non si e' aperta: " + e.message);
+        reg.push("      ⛔ the session did not open: " + e.message);
         for (const c of CAUSE_DI_UNA_SESSIONE_CHE_NON_SI_APRE) reg.push("      " + c);
       } else {
         r = { fatto: "errore:" + e.name + ":" + e.message, usciti: "" };
@@ -1206,72 +1206,72 @@ async function consegna(dati) {
     }
     const ok = r.fatto === caso.atteso ||
                (caso.atteso === "prosegue+registra" && r.fatto === "prosegue" &&
-                reg.some((x) => x.includes("capacita' sconosciuta ignorata")));
+                reg.some((x) => x.includes("unknown capability ignored")));
     esiti.push({ ...caso, fatto: r.fatto, usciti: r.usciti, ok,
                  aperta: r.aperta !== false, registro: reg });
-    scrivi(`${ok ? "OK " : "NO "} ${caso.nome.padEnd(26)} ${r.fatto}   (atteso ${caso.atteso})`);
-    // ⛔ E un OK che vale mezzo verdetto lo dichiara sulla riga stessa (R6.13).
+    scrivi(`${ok ? "OK " : "NO "} ${caso.nome.padEnd(26)} ${r.fatto}   (expected ${caso.atteso})`);
+    // ⛔ And an OK worth half a verdict declares it on the line itself (R6.13).
     if (caso.testimone) {
-      scrivi(`      ⚠ questo e' MEZZO verdetto: la pagina puo' dire solo di non ` +
-             `aver CHIESTO di spedire.  L'altra meta' la da' ${caso.testimone}`);
+      scrivi(`      ⚠ this is HALF a verdict: the page can only say it did not ` +
+             `ASK to send.  The other half is given by ${caso.testimone}`);
     }
     for (const x of reg) scrivi(x);
   }
 
-  // ⛔ IL CONFRONTO CHE MISURA UNA PROPRIETA' NEGATIVA: `desktop` non deve
-  //    cambiare NIENTE, e «niente» si dimostra solo mettendo in colonna i byte
-  //    usciti nei due giri.
+  // ⛔ THE COMPARISON THAT MEASURES A NEGATIVE PROPERTY: `desktop` must not
+  //    change ANYTHING, and "nothing" is proved only by putting in a column the bytes
+  //    sent out in the two rounds.
   const kde = esiti.find((e) => e.nome === "sessione-desktop-kde");
   const gnome = esiti.find((e) => e.nome === "sessione-desktop-gnome");
-  // ⛔ Si confronta da DOPO il `CIAO`, e non e' un dettaglio: il `CIAO` porta
-  //    `banco.guasto`, che nei due giri vale due stringhe di lunghezza
-  //    diversa — quindi i due `CIAO` sono per forza diversi, e un confronto
-  //    che li includesse direbbe «DIVERSI» sempre, anche su una pagina
-  //    perfetta.  ⚠ E' un difetto di banco visto al primo giro del 10 agosto
-  //    2026: il denominatore comprendeva il byte che il banco stesso aveva
-  //    cambiato.
+  // ⛔ The comparison starts AFTER the `CIAO`, and it is not a detail: the `CIAO` carries
+  //    `banco.guasto`, which in the two rounds is two strings of different
+  //    length — so the two `CIAO` are necessarily different, and a comparison
+  //    that included them would always say "DIFFERENT", even on a
+  //    perfect page.  ⚠ It is a bench defect seen at the first round of 10 Aug
+  //    2026: the denominator included the byte the bench itself had
+  //    changed.
   const dopoCiao = (e) => e.usciti.split(" ").slice(1).join(" ");
   const uguali = kde && gnome && dopoCiao(kde) === dopoCiao(gnome) &&
                  dopoCiao(kde) !== "";
   scrivi("");
-  scrivi(`${uguali ? "OK " : "NO "} desktop-non-cambia-niente   i byte usciti nei due giri sono ${uguali ? "IDENTICI" : "DIVERSI"}`);
+  scrivi(`${uguali ? "OK " : "NO "} desktop-non-cambia-niente   the bytes sent in the two rounds are ${uguali ? "IDENTICAL" : "DIFFERENT"}`);
   if (!uguali && kde && gnome) {
     scrivi("      kde  : " + kde.usciti);
     scrivi("      gnome: " + gnome.usciti);
   }
 
-  // ⛔ E il battito: dopo SESSIONE la pagina deve aver mandato ZERO byte.
+  // ⛔ And the heartbeat: after SESSIONE the page must have sent ZERO bytes.
   const sil = esiti.find((e) => e.nome === "silenzio");
   const battiti = sil ? sil.usciti.trim().split(/\s+/).length : -1;
-  const senza_battito = battiti === 3;   // CIAO, CREDENZIALI, ATTACCA e basta
-  scrivi(`${senza_battito ? "OK " : "NO "} nessun-battito-applicativo  messaggi usciti in tutto: ${battiti} (attesi 3: CIAO, CREDENZIALI, ATTACCA)`);
+  const senza_battito = battiti === 3;   // CIAO, CREDENZIALI, ATTACCA and that is all
+  scrivi(`${senza_battito ? "OK " : "NO "} nessun-battito-applicativo  messages sent in all: ${battiti} (expected 3: CIAO, CREDENZIALI, ATTACCA)`);
 
-  // ⛔⚠ E QUI SI DICE DA CHE LATO SONO MISURATE LE DUE RIGHE QUI SOPRA.
+  // ⛔⚠ AND HERE WE SAY FROM WHICH SIDE THE TWO LINES ABOVE ARE MEASURED.
   //
-  //    `usciti` e' alimentato SOLO da `manda()`, ed e' scritto **prima** di
-  //    `await this.w.write(b)`: e' il registro di quel che la pagina HA
-  //    DECISO di spedire — il lato che INVIA, cioe' la forma d'errore **E7**
-  //    di `REVIEWER.md` §2, e §8.1 dice «mai dal registro di chi lo manda».
-  //    Un battito scritto direttamente su `this.w`, o su uno stream
-  //    unidirezionale, non comparirebbe qui e queste due righe resterebbero
-  //    verdi.  ⚠ Il conto `battiti === 3` prova il codice di oggi, non §2.2
-  //    (rilievo R6.13).
-  scrivi("      ⚠ le due righe qui sopra guardano `usciti`, cioe' il lato che SPEDISCE (E7):");
-  scrivi("        provano che la pagina non ha CHIESTO di spedire altro.  Che sul filo non");
-  scrivi("        sia passato niente lo vede il registro del SERVER — 01-b11-lancia.sh §5.");
+  //    `usciti` is fed ONLY by `manda()`, and it is written **before**
+  //    `await this.w.write(b)`: it is the log of what the page HAS
+  //    DECIDED to send — the SENDING side, that is error form **E7**
+  //    of `REVIEWER.md` §2, and §8.1 says "never from the log of whoever sends it".
+  //    A heartbeat written directly on `this.w`, or on a unidirectional
+  //    stream, would not appear here and these two lines would stay
+  //    green.  ⚠ The count `battiti === 3` proves today's code, not §2.2
+  //    (finding R6.13).
+  scrivi("      ⚠ the two lines above look at `usciti`, that is the SENDING side (E7):");
+  scrivi("        they prove the page did not ASK to send anything else.  That nothing");
+  scrivi("        passed on the wire is seen by the SERVER log — 01-b11-lancia.sh §5.");
 
-  // ⛔ E un caso che non si e' aperto non e' un caso che ha detto no: si conta
-  //    a parte, e cambia il NOME dell'esito (rilievo R6.14).
+  // ⛔ And a case that did not open is not a case that said no: it is counted
+  //    apart, and it changes the NAME of the outcome (finding R6.14).
   const non_aperti = esiti.filter((e) => !e.aperta).length;
   const guasti = esiti.filter((e) => !e.ok).length + (uguali ? 0 : 1) + (senza_battito ? 0 : 1);
   scrivi("");
   if (non_aperti) {
-    scrivi(`⛔ ${non_aperti} casi su ${esiti.length} non hanno nemmeno APERTO la sessione: ` +
-           `quei casi non hanno un denominatore, e questa non e' una misura della pagina`);
+    scrivi(`⛔ ${non_aperti} cases out of ${esiti.length} did not even OPEN the session: ` +
+           `those cases have no denominator, and this is not a measurement of the page`);
   }
   scrivi(guasti === 0
-    ? `⭐ B11: ${esiti.length} casi su ${esiti.length}, piu' le due proprieta' negative`
-    : `⛔ B11: ${guasti} punti non passano`);
+    ? `⭐ B11: ${esiti.length} cases of ${esiti.length}, plus the two negative properties`
+    : `⛔ B11: ${guasti} points do not pass`);
 
   const esito = non_aperti === esiti.length ? "NON-APERTA"
               : non_aperti > 0 ? "NON-APERTA-PARZIALE"

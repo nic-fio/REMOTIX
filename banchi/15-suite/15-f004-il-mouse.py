@@ -1,36 +1,36 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-f004 — F-004 IL MOUSE: movimento, clic sinistro, clic destro, doppio clic,
-          trascinamento, selezione
+15-f004 — F-004 THE MOUSE: movement, left click, right click, double click,
+          drag, selection
 
     python3 15-f004-il-mouse.py --scatola kde --browser chrome [--guasto]
 
-Nella sessione dell'inquilino gira la scena nota di `15-g2-scena.py`
-(firefox-esr --kiosk).  Ogni gesto e' fatto con EVENTI VERI del browser
-(Marionette / CDP) sulla tela di REMOTIX, e si giudica dall'EFFETTO
-nell'applicazione remota — lo stato che la pagina remota scrive nel suo
-quaderno, e per il menu contestuale la FOTOGRAFIA:
+In the tenant's session runs the known scene of `15-g2-scena.py`
+(firefox-esr --kiosk).  Every gesture is made with REAL browser EVENTS
+(Marionette / CDP) on the REMOTIX canvas, and it is judged from the EFFECT
+in the remote application — the state that the remote page writes in its
+notebook, and for the context menu the PHOTO:
 
-  movimento     il puntatore va in tre punti del blocco BLU: la pagina remota
-                dice dove l'ha visto (frazione del blocco), entro 5 %
-  clic sinistro un clic sul bottone VERDE: il suo contatore +1, pulsante 0
-  clic destro   un clic destro sullo sfondo: il menu MAGENTA compare NELLA
-                FOTO con l'angolo dove si e' premuto (entro 2 % del desktop)
-  doppio clic   su «gamma»: il testo selezionato e' «gamma»
-  trascinamento il box GIALLO preso e portato a destra di 15 % della pagina:
-                si sposta di quanto (entro 10 %), in verticale no
-  selezione     premuto all'inizio di «beta», trascinato alla fine di «delta»:
-                il testo selezionato e' «beta gamma delta»
+  movimento     the pointer goes to three points of the BLUE block: the remote page
+                says where it saw it (fraction of the block), within 5 %
+  clic sinistro a click on the GREEN button: its counter +1, button 0
+  clic destro   a right click on the background: the MAGENTA menu appears IN THE
+                PHOTO with its corner where it was pressed (within 2 % of the desktop)
+  doppio clic   on «gamma»: the selected text is «gamma»
+  trascinamento the YELLOW box grabbed and carried right by 15 % of the page:
+                it moves by that much (within 10 %), not vertically
+  selezione     pressed at the start of «beta», dragged to the end of «delta»:
+                the selected text is «beta gamma delta»
 
-GUASTO (--guasto, stessa sessione): ogni gesto A VUOTO, con lo stesso giudice:
-  movimento ⇒ il puntatore va sullo SFONDO (fuori dal bersaglio) · clic
-  sinistro ⇒ clic fuori dal bottone · destro ⇒ pulsante non premuto · doppio
-  clic ⇒ una pressione sola · trascinamento e selezione ⇒ pulsante non
-  premuto.  Il guasto e' VISTO se OGNI gesto da' rosso.
+FAULT (--guasto, same session): every gesture IN THE VOID, with the same judge:
+  movement ⇒ the pointer goes onto the BACKGROUND (off the target) · left
+  click ⇒ click outside the button · right ⇒ button not pressed · double
+  click ⇒ a single press · drag and selection ⇒ button not
+  pressed.  The fault is SEEN if EVERY gesture gives red.
 
-Un gesto rosso nella passata sana si RIFA' una volta prima di dirlo FAIL
-(il server e' condiviso da dieci agenti).
+A red gesture in the healthy pass is REDONE once before calling it FAIL
+(the server is shared by ten agents).
 """
 import os
 import sys
@@ -46,61 +46,61 @@ GESTI = ("movimento", "clic-sinistro", "clic-destro", "doppio-clic", "trasciname
          "selezione")
 PUNTI_PAD = ((0.25, 0.3), (0.7, 0.6), (0.5, 0.8))
 TOLL_PAD = 0.05
-SPINTA = 0.15            # del largo della pagina
+SPINTA = 0.15            # of the page width
 PASSI = 15
 ATTESA_S = 5.0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  I GIUDICI — funzioni pure: (esito, frase)
+#  THE JUDGES — pure functions: (outcome, sentence)
 # ═══════════════════════════════════════════════════════════════════════════
 def giudica_movimento(st, atteso):
     p = (st or {}).get("pad")
     if not p:
-        return S.FAIL, "la pagina remota non ha visto il puntatore sul blocco BLU"
+        return S.FAIL, "the remote page did not see the pointer on the BLUE block"
     d = max(abs(p[0] - atteso[0]), abs(p[1] - atteso[1]))
     if d <= TOLL_PAD:
-        return S.PASS, "visto a (%.2f,%.2f), atteso (%.2f,%.2f)" % (p[0], p[1], atteso[0],
+        return S.PASS, "seen at (%.2f,%.2f), expected (%.2f,%.2f)" % (p[0], p[1], atteso[0],
                                                                     atteso[1])
-    return S.FAIL, "visto a (%.2f,%.2f) invece di (%.2f,%.2f)" % (p[0], p[1], atteso[0],
+    return S.FAIL, "seen at (%.2f,%.2f) instead of (%.2f,%.2f)" % (p[0], p[1], atteso[0],
                                                                   atteso[1])
 
 
 def giudica_clic(st):
     st = st or {}
     if st.get("clic") == 1 and st.get("clicbtn") == 0:
-        return S.PASS, "il bottone ha contato 1 clic col pulsante 0"
-    return S.FAIL, "il bottone ha contato %s clic (pulsante %s; clic fuori %s; giu %s)" % (
+        return S.PASS, "the button counted 1 click with button 0"
+    return S.FAIL, "the button counted %s clicks (button %s; clicks outside %s; down %s)" % (
         st.get("clic"), st.get("clicbtn"), st.get("fuori"), st.get("giu"))
 
 
 def giudica_menu(blocco, punto, tl):
-    """`blocco` = riquadro magenta nel desktop (X0,Y0,X1,Y1) o None;
-    `punto` = dove si e' premuto (desktop)."""
+    """`blocco` = magenta box in the desktop (X0,Y0,X1,Y1) or None;
+    `punto` = where it was pressed (desktop)."""
     if not blocco:
-        return S.FAIL, "nessun menu MAGENTA nella foto"
+        return S.FAIL, "no MAGENTA menu in the photo"
     d = max(abs(blocco[0] - punto[0]), abs(blocco[1] - punto[1]))
     if d <= 0.02 * tl:
-        return S.PASS, "menu nella foto con l'angolo a %.0f px dal punto premuto" % d
-    return S.FAIL, "menu nella foto ma a %.0f px dal punto premuto (%s vs %s)" % (
+        return S.PASS, "menu in the photo with its corner %.0f px from the pressed point" % d
+    return S.FAIL, "menu in the photo but %.0f px from the pressed point (%s vs %s)" % (
         d, [round(v) for v in blocco[:2]], [round(v) for v in punto])
 
 
 def giudica_selezione(st, atteso):
     sel = ((st or {}).get("sel") or "").strip()
     if sel == atteso:
-        return S.PASS, "selezionato %r" % sel
-    return S.FAIL, "selezionato %r invece di %r" % (sel, atteso)
+        return S.PASS, "selected %r" % sel
+    return S.FAIL, "selected %r instead of %r" % (sel, atteso)
 
 
 def giudica_box(st, attesa_dx, alto):
     st = st or {}
     b = st.get("box") or [0, 0]
     if not st.get("boxn"):
-        return S.FAIL, "il box non e' stato preso (nessun rilascio) · spostato %s" % (b,)
+        return S.FAIL, "the box was not grabbed (no release) · moved %s" % (b,)
     if abs(b[0] - attesa_dx) <= 0.1 * attesa_dx and abs(b[1]) <= 0.05 * alto:
-        return S.PASS, "il box si e' spostato di %.0f px (atteso %.0f)" % (b[0], attesa_dx)
-    return S.FAIL, "il box si e' spostato di %s px, atteso (%.0f, 0)" % (b, attesa_dx)
+        return S.PASS, "the box moved by %.0f px (expected %.0f)" % (b[0], attesa_dx)
+    return S.FAIL, "the box moved by %s px, expected (%.0f, 0)" % (b, attesa_dx)
 
 
 def esito_col_guasto(esiti):
@@ -116,65 +116,65 @@ def certifica():
         print("   %s %s" % ("⭐ ok " if vero else "⛔ NO ", cosa))
         if not vero:
             guai.append(cosa)
-    prova("movimento giusto ⇒ PASS", giudica_movimento({"pad": [0.26, 0.31]}, (0.25, 0.3))[0]
+    prova("right movement ⇒ PASS", giudica_movimento({"pad": [0.26, 0.31]}, (0.25, 0.3))[0]
           == S.PASS)
-    prova("movimento altrove ⇒ FAIL", giudica_movimento({"pad": [0.7, 0.6]}, (0.25, 0.3))[0]
+    prova("movement elsewhere ⇒ FAIL", giudica_movimento({"pad": [0.7, 0.6]}, (0.25, 0.3))[0]
           == S.FAIL)
-    prova("nessun movimento ⇒ FAIL", giudica_movimento({"pad": None}, (0.25, 0.3))[0] == S.FAIL)
-    prova("clic ⇒ PASS", giudica_clic({"clic": 1, "clicbtn": 0})[0] == S.PASS)
-    prova("clic fuori ⇒ FAIL", giudica_clic({"clic": 0, "fuori": 1})[0] == S.FAIL)
-    prova("menu al punto ⇒ PASS", giudica_menu((100, 100, 500, 400), (102, 98), 3840)[0]
+    prova("no movement ⇒ FAIL", giudica_movimento({"pad": None}, (0.25, 0.3))[0] == S.FAIL)
+    prova("click ⇒ PASS", giudica_clic({"clic": 1, "clicbtn": 0})[0] == S.PASS)
+    prova("click outside ⇒ FAIL", giudica_clic({"clic": 0, "fuori": 1})[0] == S.FAIL)
+    prova("menu at the point ⇒ PASS", giudica_menu((100, 100, 500, 400), (102, 98), 3840)[0]
           == S.PASS)
-    prova("menu lontano ⇒ FAIL", giudica_menu((900, 100, 1200, 400), (102, 98), 3840)[0]
+    prova("menu far away ⇒ FAIL", giudica_menu((900, 100, 1200, 400), (102, 98), 3840)[0]
           == S.FAIL)
-    prova("niente menu ⇒ FAIL", giudica_menu(None, (1, 1), 3840)[0] == S.FAIL)
-    prova("selezione giusta ⇒ PASS", giudica_selezione({"sel": "gamma "}, "gamma")[0] == S.PASS)
-    prova("selezione vuota ⇒ FAIL", giudica_selezione({"sel": ""}, "gamma")[0] == S.FAIL)
-    prova("box spostato ⇒ PASS", giudica_box({"box": [570, 2], "boxn": 1}, 576, 2160)[0]
+    prova("no menu ⇒ FAIL", giudica_menu(None, (1, 1), 3840)[0] == S.FAIL)
+    prova("right selection ⇒ PASS", giudica_selezione({"sel": "gamma "}, "gamma")[0] == S.PASS)
+    prova("empty selection ⇒ FAIL", giudica_selezione({"sel": ""}, "gamma")[0] == S.FAIL)
+    prova("box moved ⇒ PASS", giudica_box({"box": [570, 2], "boxn": 1}, 576, 2160)[0]
           == S.PASS)
-    prova("box fermo ⇒ FAIL", giudica_box({"box": [0, 0], "boxn": 0}, 576, 2160)[0] == S.FAIL)
-    prova("guasto: tutti rossi ⇒ visto", esito_col_guasto([S.FAIL] * 6) is True)
-    prova("guasto: uno verde ⇒ non visto", esito_col_guasto([S.FAIL, S.PASS]) is False)
-    prova("guasto: un bloccato ⇒ None", esito_col_guasto([S.FAIL, S.BLOCKED]) is None)
-    # il riquadro di colore e la retta
+    prova("box still ⇒ FAIL", giudica_box({"box": [0, 0], "boxn": 0}, 576, 2160)[0] == S.FAIL)
+    prova("fault: all red ⇒ seen", esito_col_guasto([S.FAIL] * 6) is True)
+    prova("fault: one green ⇒ not seen", esito_col_guasto([S.FAIL, S.PASS]) is False)
+    prova("fault: one blocked ⇒ None", esito_col_guasto([S.FAIL, S.BLOCKED]) is None)
+    # the colour box and the straight line
     try:
         from PIL import Image, ImageDraw
         im = Image.new("RGB", (800, 450), (32, 32, 32))
         d = ImageDraw.Draw(im)
         d.rectangle([24, 18, 239, 89], fill=G2.BLU)
         t = G2.trova_colore(im, G2.BLU, passo=2)
-        prova("trova il blocco blu (%s)" % t, t and abs(t["x0"] - 24) <= 2
+        prova("finds the blue block (%s)" % t, t and abs(t["x0"] - 24) <= 2
               and abs(t["x1"] - 240) <= 2 and t["pieno"] > 0.9)
     except ImportError:
-        prova("PIL c'e'", False)
+        prova("PIL is there", False)
     a = G2.adatta([(0, 10), (100, 210), (50, 110)])
-    prova("la retta per tre punti (%s)" % (a,), a and abs(a[0] - 2) < 1e-6 and abs(a[1] - 10) < 1e-6)
-    print("⛔ CERTIFICAZIONE FALLITA" if guai else "⭐ CERTIFICATO")
+    prova("the line through three points (%s)" % (a,), a and abs(a[0] - 2) < 1e-6 and abs(a[1] - 10) < 1e-6)
+    print("⛔ CERTIFICATION FAILED" if guai else "⭐ CERTIFIED")
     return 1 if guai else 0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  I GESTI
+#  THE GESTURES
 # ═══════════════════════════════════════════════════════════════════════════
 def nel_rett(r, fx, fy):
     return r[0] + fx * (r[2] - r[0]), r[1] + fy * (r[3] - r[1])
 
 
 def fa_gesto(nome, s, sc, mp, guasto, ev):
-    """Fa il gesto `nome` (sano o a vuoto) e lo giudica.  Torna (esito, frase)."""
+    """Makes the gesture `nome` (healthy or in the void) and judges it.  Returns (outcome, sentence)."""
     g = s.g
     R = sc.rett
     if sc.comanda("reset") is None:
-        return S.BLOCKED, "la scena non ha risposto al reset"
+        return S.BLOCKED, "the scene did not answer the reset"
     R = sc.rett or R
     W, H = R["W"], R["H"]
-    sfondo = (W * 0.80, H * 0.72)          # vuoto: sotto il campo b, fuori da tutto
+    sfondo = (W * 0.80, H * 0.72)          # empty: under field b, outside everything
     if nome == "movimento":
         esiti = []
         for fx, fy in PUNTI_PAD:
             x, y = nel_rett(R["pad"], fx, fy)
             if guasto:
-                x, y = W * 0.33, H * 0.12   # fra il pad e il bottone: fuori dal bersaglio
+                x, y = W * 0.33, H * 0.12   # between the pad and the button: off the target
             mouse_muovi(g, mp, x, y)
             st = sc.aspetta(lambda q, a=(fx, fy): giudica_movimento(q, a)[0] == S.PASS,
                             ATTESA_S)
@@ -183,7 +183,7 @@ def fa_gesto(nome, s, sc, mp, guasto, ev):
                 break
         brutti = [e for e in esiti if e[0] != S.PASS]
         return (brutti[0] if brutti else
-                (S.PASS, "tre punti: " + " · ".join(e[1] for e in esiti)))
+                (S.PASS, "three points: " + " · ".join(e[1] for e in esiti)))
     if nome == "clic-sinistro":
         x, y = centro_r(R["bot"])
         if guasto:
@@ -202,7 +202,7 @@ def fa_gesto(nome, s, sc, mp, guasto, ev):
         time.sleep(0.8)
         im, dove = G2.foto_pil(s, "destro-%s" % ("guasto" if guasto else "sano"))
         if im is None:
-            return S.BLOCKED, "la foto del menu non si fa: %s" % dove
+            return S.BLOCKED, "the photo of the menu cannot be taken: %s" % dove
         ev.append(dove)
         pw, ph = im.size
         t = G2.trova_colore(im, G2.MAGENTA)
@@ -270,15 +270,15 @@ def trascina(g, mp, da, a, premi):
 
 
 def gesto_protetto(nome, s, sc, mp, guasto, ev):
-    """Il gesto; un guasto DEL BANCO (il protocollo del browser che cade, la
-    scena che non risponde sotto carico) diventa BLOCKED di quel gesto, e si
-    riprova una volta prima di dirlo."""
+    """The gesture; a BENCH fault (the browser protocol falling over, the
+    scene not answering under load) becomes BLOCKED for that gesture, and it is
+    retried once before saying so."""
     ultimo = None
     for _tentativo in range(2):
         try:
             e, m = fa_gesto(nome, s, sc, mp, guasto, ev)
         except Exception as x:                   # noqa: BLE001
-            e, m = S.BLOCKED, "il banco e' caduto nel gesto: %s" % str(x)[:160]
+            e, m = S.BLOCKED, "the bench fell over in the gesture: %s" % str(x)[:160]
         if e != S.BLOCKED:
             return e, m
         ultimo = (e, m)
@@ -288,19 +288,19 @@ def gesto_protetto(nome, s, sc, mp, guasto, ev):
 
 # ═══════════════════════════════════════════════════════════════════════════
 def passata(s, sc, mp, guasto):
-    """Tutti i gesti; torna [(gesto, esito, frase)]."""
+    """All the gestures; returns [(gesture, outcome, sentence)]."""
     righe = []
     for nome in GESTI:
         ev = []
         e, m = gesto_protetto(nome, s, sc, mp, guasto, ev)
         if e == S.FAIL and not guasto:
-            print("   ⚠ %s rosso (%s): lo rifaccio per confermarlo" % (nome, m), flush=True)
+            print("   ⚠ %s red (%s): redoing it to confirm" % (nome, m), flush=True)
             e2, m2 = gesto_protetto(nome, s, sc, mp, guasto, ev)
             if e2 == S.PASS:
-                m = "⚠ ROSSO al primo tentativo (%s), verde al secondo: %s" % (m, m2)
+                m = "⚠ RED at the first attempt (%s), green at the second: %s" % (m, m2)
                 e = S.PASS
             else:
-                m = "rosso due volte: %s · %s" % (m, m2)
+                m = "red twice: %s · %s" % (m, m2)
                 e = e2
         print("   %s %-14s %s" % ({S.PASS: "⭐", S.FAIL: "⛔", S.BLOCKED: "⚠"}[e], nome, m),
               flush=True)
@@ -313,8 +313,8 @@ def corpo(o, E):
     with S.Sessione(o, "004", E) as s:
         sc, mp, geo, dove = G2.prepara(s, porta_scena)
         ev0 = [dove] if dove else []
-        atteso = ("movimento sul blocco BLU dove punta, clic sul VERDE contato, menu MAGENTA "
-                  "dove si preme il destro, doppio clic ⇒ «gamma», box spostato, trascinato "
+        atteso = ("movement on the BLUE block where it points, click on the GREEN counted, MAGENTA menu "
+                  "where the right one is pressed, double click ⇒ «gamma», box moved, dragged "
                   "⇒ «beta gamma delta»")
         righe = passata(s, sc, mp, False)
         _p, fin = G2.foto(s, "fine-sana")
@@ -322,15 +322,15 @@ def corpo(o, E):
         oss = " · ".join("%s: %s %s" % (n, e, m) for n, e, m, _ in righe)
         es = [r[1] for r in righe]
         if S.FAIL in es:
-            E.metti("F-004", S.FAIL, "gesti rossi: " + ", ".join(
+            E.metti("F-004", S.FAIL, "red gestures: " + ", ".join(
                 n for n, e, _m, _ in righe if e == S.FAIL), atteso=atteso, osservato=oss,
                 evidenze=ev + [s.salva_console()])
         elif S.BLOCKED in es:
-            E.metti("F-004", S.BLOCKED, "gesti non guardati: " + ", ".join(
+            E.metti("F-004", S.BLOCKED, "gestures not looked at: " + ", ".join(
                 "%s (%s)" % (n, m) for n, e, m, _ in righe if e == S.BLOCKED),
                 atteso=atteso, osservato=oss, evidenze=ev)
         else:
-            E.metti("F-004", S.PASS, "sei gesti su sei: l'effetto c'e' nell'applicazione",
+            E.metti("F-004", S.PASS, "six gestures out of six: the effect is there in the application",
                     atteso=atteso, osservato=oss, evidenze=ev)
         if o.guasto:
             righe = passata(s, sc, mp, True)
@@ -338,11 +338,11 @@ def corpo(o, E):
             visto = esito_col_guasto(es)
             oss = " · ".join("%s: %s %s" % (n, e, m) for n, e, m, _ in righe)
             E.guasto("F-004", visto,
-                     {True: "ogni gesto a vuoto ha dato rosso",
-                      False: "gesti a vuoto VERDI lo stesso: " + ", ".join(
+                     {True: "every gesture in the void gave red",
+                      False: "gestures in the void GREEN anyway: " + ", ".join(
                           n for n, e, _m, _ in righe if e == S.PASS),
-                      None: "un gesto a vuoto non si e' potuto guardare"}[visto],
-                     atteso="ogni gesto a vuoto ⇒ rosso", osservato=oss,
+                      None: "a gesture in the void could not be looked at"}[visto],
+                     atteso="every gesture in the void ⇒ red", osservato=oss,
                      evidenze=[x for r in righe for x in r[3]])
 
 

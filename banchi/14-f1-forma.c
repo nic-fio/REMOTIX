@@ -1,38 +1,38 @@
 /*
- * 14-f1-forma.c — ⭐ IL TEMA CODIFICATO E IL DIZIONARIO, senza desktop.
+ * 14-f1-forma.c — ⭐ THE ENCODED THEME AND THE DICTIONARY, without a desktop.
  *
  *   bash banchi/14-f1-forma.sh
  *
- * Fase 14, forma del puntatore, passi 1 e 2 (`src/forma.h`).  Compila gli
- * STESSI sorgenti del prodotto (`forma.c`, `cursore.c`, `registro.c`) e li
- * guida da fuori.  ⚠ Gira dove c'e' Adwaita (il portatile, le quattro scatole):
- * misura il modulo, NON che KWin mandi davvero il colore nel metadato — quello
- * e' la misura sulla scatola.
+ * Phase 14, pointer shape, steps 1 and 2 (`src/forma.h`).  It compiles the
+ * SAME sources as the product (`forma.c`, `cursore.c`, `registro.c`) and
+ * drives them from outside.  ⚠ It runs where Adwaita is (the laptop, the four
+ * boxes): it measures the module, NOT that KWin really sends the colour in the
+ * metadata — that is the measurement on the box.
  *
- * ⛔ I VALORI ATTESI DEL TEMA REALE NON LI CALCOLA QUESTO FILE: li legge lo
- *    `.sh` con un parser Python suo e li passa in argomento.  Un parser che
- *    controlla se stesso direbbe sempre di si'.
+ * ⛔ THE EXPECTED VALUES OF THE REAL THEME ARE NOT COMPUTED BY THIS FILE: the
+ *    `.sh` reads them with its own Python parser and passes them as arguments.
+ *    A parser that checks itself would always say yes.
  *
- *   argomenti: <cartella di lavoro> <cartella dei temi> <l> <a> <x> <y>
- *              <cartella dei temi GUASTA: indice corrotto> <cartella VUOTA>
- *              <cartella MISTA: Adwaita + un breeze_cursors finto con `size_hor`>
+ *   arguments: <working folder> <themes folder> <w> <h> <x> <y>
+ *              <FAULTY themes folder: corrupted index> <EMPTY folder>
+ *              <MIXED folder: Adwaita + a fake breeze_cursors with `size_hor`>
  *
- * Le prove, ognuna con il suo verdetto (VERDE/ROSSO), ed e' ROSSO l'uscita:
- *   T1  il tema scritto: FORMA_QUANTE file, ciascuno Xcursor 1x1 opaco, riletto dal
- *       disco e decodificato da `forma_da_pixel` nel suo indice;
- *   T2  i FORMA_QUANTE colori: distinti, lontani dal nero e dal bianco, e su tutti i
- *       16 777 216 colori opachi il dizionario ne riconosce ESATTAMENTE tanti;
- *   T3  il tema reale: «ew-resize» e «sb_h_double_arrow» con la misura e il
- *       punto attivo che dice il parser Python;
- *   T3b il giro dei temi: con un `breeze_cursors` che HA `size_hor` (Adwaita
- *       no), «size_hor» deve venire dall'alias di ADWAITA (`ew-resize`) —
- *       `[M]` 24 set 2026 sulla scatola KDE arrivava invece quella di Breeze;
- *   T4  la cucitura in `cursore.c`: un metadato 1x1 del colore di «ew-resize»
- *       (e uno 32x32 dello stesso colore, «scalato») ⇒ consegna l'immagine
- *       VERA; una bitmap vera (non uniforme) passa com'e' — il caso di GNOME;
- *   G1  guasto: `index.theme` corrotto ⇒ `forma_immagine` FALSE, e la
- *       cucitura NON consegna il pixel colorato;
- *   G2  guasto: cartella dei temi vuota ⇒ FALSE.
+ * The tests, each with its verdict (VERDE/ROSSO), and a ROSSO sets the exit:
+ *   T1  the written theme: FORMA_QUANTE files, each a 1x1 opaque Xcursor, read back
+ *       from disk and decoded by `forma_da_pixel` into its index;
+ *   T2  the FORMA_QUANTE colours: distinct, far from black and white, and over all
+ *       16 777 216 opaque colours the dictionary recognises EXACTLY that many;
+ *   T3  the real theme: "ew-resize" and "sb_h_double_arrow" with the size and
+ *       hotspot the Python parser reports;
+ *   T3b the theme walk: with a `breeze_cursors` that HAS `size_hor` (Adwaita
+ *       does not), "size_hor" must come from the ADWAITA alias (`ew-resize`) —
+ *       `[M]` 24 Sep 2026 on the KDE box Breeze's one arrived instead;
+ *   T4  the seam in `cursore.c`: a 1x1 metadata of the colour of "ew-resize"
+ *       (and a 32x32 one of the same colour, "scaled") ⇒ delivers the REAL
+ *       image; a real (non-uniform) bitmap passes as it is — the GNOME case;
+ *   G1  fault: corrupted `index.theme` ⇒ `forma_immagine` FALSE, and the
+ *       seam does NOT deliver the coloured pixel;
+ *   G2  fault: empty themes folder ⇒ FALSE.
  */
 #include "cursore.h"
 #include "forma.h"
@@ -62,7 +62,7 @@ static int indice_di(const char *nome)
 	return -1;
 }
 
-/* --- quel che la cucitura consegna -------------------------------------- */
+/* --- what the seam delivers --------------------------------------------- */
 static int consegnate;
 static CursoreForma ultima;
 static uint8_t ultima_img[CURSORE_MAX_LATO * CURSORE_MAX_LATO * 4];
@@ -77,7 +77,7 @@ static int ricevi(void *chi, const CursoreForma *f)
 	return 0;
 }
 
-/* Un metadato PipeWire con una bitmap l x a tutta di un colore (BGRA). */
+/* A PipeWire metadata with a w x h bitmap all of one colour (BGRA). */
 static size_t metadato(uint8_t *buf, uint32_t l, uint32_t a, const uint8_t *pixel_bgra,
                        const uint8_t *immagine)
 {
@@ -106,7 +106,7 @@ static void colore_di(int i, uint8_t bgra[4], const char *cartella_tema)
 
 	memset(bgra, 0, 4);
 	if (g_file_get_contents(p, &d, &n, NULL) && n == 68)
-		memcpy(bgra, d + 64, 4); /* l'unico pixel, ARGB little-endian = B G R A */
+		memcpy(bgra, d + 64, 4); /* the only pixel, ARGB little-endian = B G R A */
 }
 
 int main(int argc, char **argv)
@@ -117,7 +117,7 @@ int main(int argc, char **argv)
 	                   64 * 64 * 4];
 
 	if (argc != 10) {
-		fprintf(stderr, "uso: %s lavoro temi l a x y temi-guasti temi-vuoti temi-misti\n",
+		fprintf(stderr, "usage: %s work themes w h x y faulty-themes empty-themes mixed-themes\n",
 		        argv[0]);
 		return 2;
 	}
@@ -143,14 +143,14 @@ int main(int argc, char **argv)
 			if (forma_da_pixel(p[0], p[1], p[2], p[3]) == i)
 				giusti++;
 			else
-				printf("    ⛔ «%s»: pixel %02x%02x%02x%02x decodificato %d\n", forma_nome(i),
+				printf("    ⛔ «%s»: pixel %02x%02x%02x%02x decoded %d\n", forma_nome(i),
 				       p[3], p[2], p[1], p[0], forma_da_pixel(p[0], p[1], p[2], p[3]));
 		}
 		{
 			char riga[128];
 
-			snprintf(riga, sizeof riga, "tema scritto (%s), %d file su %d riletti e decodificati",
-			         scritto ? "si'" : "NO", giusti, FORMA_QUANTE);
+			snprintf(riga, sizeof riga, "theme written (%s), %d files of %d read back and decoded",
+			         scritto ? "yes" : "NO", giusti, FORMA_QUANTE);
 			verdetto("T1", scritto && giusti == FORMA_QUANTE, riga);
 		}
 	}
@@ -171,7 +171,7 @@ int main(int argc, char **argv)
 			for (int k = 0; k < i; k++)
 				if (visti[k] == visti[i])
 					distinti = 0;
-			/* la distanza (Chebyshev) dal nero e dal bianco */
+			/* the (Chebyshev) distance from black and from white */
 			dn = MAX(MAX(p[0], p[1]), p[2]);
 			db = MAX(MAX(255 - p[0], 255 - p[1]), 255 - p[2]);
 			lontano = MIN(lontano, MIN(dn, db));
@@ -181,7 +181,7 @@ int main(int argc, char **argv)
 		for (uint32_t c = 0; c < 0x1000000u; c++)
 			if (forma_da_pixel(c & 0xFF, (c >> 8) & 0xFF, c >> 16, 0xFF) >= 0)
 				riconosciuti++;
-		for (int a = 0; a < 255; a++) /* ⛔ e con alfa non piena, NESSUNO */
+		for (int a = 0; a < 255; a++) /* ⛔ and with non-full alpha, NONE */
 			if (forma_da_pixel(visti[0] & 0xFF, (visti[0] >> 8) & 0xFF, visti[0] >> 16,
 			                   (uint8_t) a) >= 0)
 				riconosciuti += 1000;
@@ -189,9 +189,9 @@ int main(int argc, char **argv)
 			char riga[160];
 
 			snprintf(riga, sizeof riga,
-			         "colori distinti %s, distanza minima da nero/bianco 0x%02x, riconosciuti "
-			         "%ld su 16M opachi (attesi %d)",
-			         distinti ? "si'" : "NO", lontano, riconosciuti, FORMA_QUANTE);
+			         "distinct colours %s, minimum distance from black/white 0x%02x, recognised "
+			         "%ld of 16M opaque (expected %d)",
+			         distinti ? "yes" : "NO", lontano, riconosciuti, FORMA_QUANTE);
 			verdetto("T2", distinti && !vicino && riconosciuti == FORMA_QUANTE, riga);
 		}
 	}
@@ -215,9 +215,9 @@ int main(int argc, char **argv)
 				opachi += f.immagine[p * 4 + 3] == 0xFF;
 			}
 			snprintf(riga, sizeof riga,
-			         "«%s» dal tema reale: %s, %ux%u punto %d,%d (attesi %dx%d, %d,%d), "
-			         "%d pixel trasparenti e %d opachi",
-			         nomi[k], ok ? "caricata" : "NON caricata", f.larghezza, f.altezza,
+			         "«%s» from the real theme: %s, %ux%u hotspot %d,%d (expected %dx%d, %d,%d), "
+			         "%d transparent pixels and %d opaque",
+			         nomi[k], ok ? "loaded" : "NOT loaded", f.larghezza, f.altezza,
 			         f.attivo_x, f.attivo_y, attesa_l, attesa_a, attesa_x, attesa_y,
 			         trasparenti, opachi);
 			verdetto("T3", ok && f.larghezza == attesa_l && f.altezza == attesa_a &&
@@ -239,8 +239,8 @@ int main(int argc, char **argv)
 		     forma_immagine(indice_di("ew-resize"), &ew) && sh.larghezza == ew.larghezza &&
 		     sh.altezza == ew.altezza &&
 		     memcmp(sh.immagine, ew.immagine, (size_t) ew.larghezza * ew.altezza * 4) == 0;
-		verdetto("T3b", ok, "«size_hor» con un breeze_cursors che ce l'ha ⇒ l'alias di "
-		                    "Adwaita (ew-resize), non il disegno dell'altro tema");
+		verdetto("T3b", ok, "«size_hor» with a breeze_cursors that has it ⇒ the Adwaita "
+		                    "alias (ew-resize), not the other theme's drawing");
 	}
 	forma_prova_cartella_temi(temi);
 
@@ -255,7 +255,7 @@ int main(int argc, char **argv)
 		int r, esito;
 		char riga[200];
 
-		cursore_mai_nascondere(c, "banco 14-f1: come su KDE");
+		cursore_mai_nascondere(c, "bench 14-f1: as on KDE");
 		memset(&vera, 0, sizeof vera);
 		forma_immagine(ew, &vera);
 
@@ -265,42 +265,42 @@ int main(int argc, char **argv)
 		esito = r == 1 && consegnate == 1 && ultima.larghezza == vera.larghezza &&
 		        ultima.altezza == vera.altezza && ultima.attivo_x == vera.attivo_x &&
 		        memcmp(ultima_img, vera.immagine, (size_t) vera.larghezza * vera.altezza * 4) == 0;
-		snprintf(riga, sizeof riga, "1x1 del colore di «ew-resize» ⇒ consegnata %ux%u punto %d,%d",
+		snprintf(riga, sizeof riga, "1x1 of the colour of «ew-resize» ⇒ delivered %ux%u hotspot %d,%d",
 		         ultima.larghezza, ultima.altezza, ultima.attivo_x, ultima.attivo_y);
 		verdetto("T4", esito, riga);
 
-		/* lo stesso colore al buffer dopo: INVARIATO, niente di nuovo */
+		/* the same colour in the next buffer: UNCHANGED, nothing new */
 		r = cursore_metadato(c, buf, n);
-		verdetto("T4", r == 0 && consegnate == 1, "stesso colore al buffer dopo ⇒ nessun invio");
+		verdetto("T4", r == 0 && consegnate == 1, "same colour in the next buffer ⇒ nothing sent");
 
-		/* «scalato»: 32x32 dello stesso colore ⇒ la stessa forma, nessun invio */
+		/* "scaled": 32x32 of the same colour ⇒ the same shape, nothing sent */
 		n = metadato(buf, 32, 32, p, NULL);
 		r = cursore_metadato(c, buf, n);
-		verdetto("T4", r == 0 && consegnate == 1, "32x32 uniforme dello stesso colore ⇒ invariato");
+		verdetto("T4", r == 0 && consegnate == 1, "uniform 32x32 of the same colour ⇒ unchanged");
 
-		/* un'altra forma codificata: la I del testo */
+		/* another encoded shape: the text I-beam */
 		colore_di(tx, p, tema);
 		n = metadato(buf, 1, 1, p, NULL);
 		r = cursore_metadato(c, buf, n);
-		snprintf(riga, sizeof riga, "1x1 del colore di «text» ⇒ consegnata %ux%u punto %d,%d",
+		snprintf(riga, sizeof riga, "1x1 of the colour of «text» ⇒ delivered %ux%u hotspot %d,%d",
 		         ultima.larghezza, ultima.altezza, ultima.attivo_x, ultima.attivo_y);
 		verdetto("T4", r == 1 && consegnate == 2 && ultima.larghezza > 1, riga);
 
-		/* GNOME: una bitmap vera passa com'e' (sono i pixel di Adwaita stessi) */
+		/* GNOME: a real bitmap passes as it is (they are Adwaita's own pixels) */
 		n = metadato(buf, vera.larghezza, vera.altezza, NULL, vera.immagine);
 		r = cursore_metadato(c, buf, n);
 		verdetto("T4", r == 1 && consegnate == 3 &&
 		                   memcmp(ultima_img, vera.immagine,
 		                          (size_t) vera.larghezza * vera.altezza * 4) == 0,
-		         "bitmap vera (il caso di GNOME) ⇒ consegnata com'e', il dizionario non scatta");
+		         "real bitmap (the GNOME case) ⇒ delivered as it is, the dictionary does not trigger");
 		cursore_chiudi(c);
 	}
 
-	/* --- G1 e G2 -------------------------------------------------------- */
+	/* --- G1 and G2 ------------------------------------------------------ */
 	{
 		const char *cartelle[] = { guasti, vuota };
 		const char *nomi[] = { "G1", "G2" };
-		const char *cosa[] = { "index.theme corrotto", "temi assenti" };
+		const char *cosa[] = { "corrupted index.theme", "themes absent" };
 
 		for (int k = 0; k < 2; k++) {
 			CursoreForma f;
@@ -318,18 +318,18 @@ int main(int argc, char **argv)
 			}
 			consegnate = 0;
 			c = cursore_apri(ricevi, NULL);
-			cursore_mai_nascondere(c, "banco 14-f1: guasto");
+			cursore_mai_nascondere(c, "bench 14-f1: fault");
 			colore_di(indice_di("ew-resize"), p, tema);
 			r = cursore_metadato(c, buf, metadato(buf, 1, 1, p, NULL));
 			snprintf(riga, sizeof riga,
-			         "guasto «%s»: forme caricate %d (attese 0), consegnate dalla cucitura %d "
-			         "(attese 0: il client tiene la sua freccia)",
+			         "fault «%s»: shapes loaded %d (expected 0), delivered by the seam %d "
+			         "(expected 0: the client keeps its arrow)",
 			         cosa[k], caricate, consegnate);
 			verdetto(nomi[k], caricate == 0 && consegnate == 0 && r == 0, riga);
 			cursore_chiudi(c);
 		}
 	}
 
-	printf("%s — %d rossi\n", rossi ? "⛔ ROSSO" : "⭐ VERDE", rossi);
+	printf("%s — %d red\n", rossi ? "⛔ ROSSO" : "⭐ VERDE", rossi);
 	return rossi ? 1 : 0;
 }

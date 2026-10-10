@@ -1,61 +1,61 @@
 #!/usr/bin/env python3
-"""04-b28-gesti.py — ⭐ IL BANCO DEL MODO A TOCCO (anello A8 della fase 4).
+"""04-b28-gesti.py — ⭐ THE BENCH FOR TOUCH MODE (link A8 of phase 4).
 
-    python3 banchi/04-b28-gesti.py --certifica     ⭐ senza browser: il giudice
-                                                      sa vedere il difetto?
+    python3 banchi/04-b28-gesti.py --certifica     ⭐ without a browser: can the
+                                                      judge see the defect?
     python3 banchi/04-b28-gesti.py --gira --porta 7671 --diagnosi 7672
     python3 banchi/04-b28-gesti.py --verdetto banchi/04-b28-registro.jsonl
 
 ===========================================================================
-⛔ CHE COSA MISURA, E DA CHE PARTE STA
+⛔ WHAT IT MEASURES, AND WHICH SIDE IT STANDS ON
 
-Due domande DISTINTE, e si giudicano separatamente:
+Two DISTINCT questions, and they are judged separately:
 
-  ⒜ **i sette gesti** (`SPECIFICHE.md` §7.2): una sequenza di eventi `Touch`
-     sintetica per ciascuno ⇒ il messaggio di `RCP.md` §7.3 atteso;
-  ⒝ **il passaggio automatico** (`DECISIONI.md` §5-bis.0-bis): si dichiara il
-     contesto e si verifica **quale disposizione e' IN VIGORE** — leggendo
-     `body[data-disposizione]`, che e' il prodotto a scrivere, e provando che
-     l'altra meta' e' davvero SPENTA.  ⛔ Non «esiste una funzione che la
-     cambia»: una funzione che non cambia niente esiste benissimo.
+  ⒜ **the seven gestures** (`SPECIFICHE.md` §7.2): a synthetic sequence of
+     `Touch` events for each one ⇒ the expected message of `RCP.md` §7.3;
+  ⒝ **the automatic switch** (`DECISIONI.md` §5-bis.0-bis): the context is
+     declared and it is checked **which layout is IN FORCE** — by reading
+     `body[data-disposizione]`, which the product writes, and by proving that
+     the other half is really OFF.  ⛔ Not «there is a function that changes
+     it»: a function that changes nothing can exist just fine.
 
-⛔ I byte si decodificano con un lettore scritto QUI, dalla tabella di
-   `RCP.md` §7.3, senza guardare il JavaScript della pagina.  Se un giorno i
-   due non andranno d'accordo, **quel disaccordo e' il regalo**.
-
-===========================================================================
-⛔⛔ IL BANCO SI CERTIFICA SULLE CONFUSIONI, NON SUI GESTI PULITI
-
-E' la riga piu' importante di questo file.  Un banco che provi i sette gesti
-puliti dice **verde** su un riconoscitore che sbaglia tutti i casi di confine:
-i gesti puliti sono facili, e nessun difetto vero vive li'.
-
-  G1..G7   i sette gesti puliti      — servono da controllo POSITIVO
-  C1..C8   ⭐ le CONFUSIONI          — e' qui che si decide il verdetto
-  D1..D4   il passaggio automatico
-  S1       ⭐ la CUCITURA fra le due ancore, che alla fase 3 non guardava
-           nessun banco (`fasi/rapporti/F5-desktop-vero.md`)
-
-⛔ E `--certifica` inietta CINQUE guasti, uno per famiglia di confusione, e
-   pretende **verde → rosso → verde** su ciascuno.  Un giudice che non sa dire
-   rosso non sa dire verde (`CODER.md` §3.3, §3.10, §4.6).
+⛔ The bytes are decoded with a reader written HERE, from the table of
+   `RCP.md` §7.3, without looking at the page's JavaScript.  If one day the
+   two disagree, **that disagreement is the gift**.
 
 ===========================================================================
-⚠ LA SCENA, DICHIARATA — e il palco si verifica dall'altro capo
+⛔⛔ THE BENCH IS CERTIFIED ON THE CONFUSIONS, NOT ON THE CLEAN GESTURES
 
-Il browser si apre sul desktop VERO dell'utente: e' quel che il mandato
-chiede, e ⛔ **non si sposta su uno schermo finto per far tornare i conti**.
-Quel che la scena era davvero lo scrive il raccoglitore in ogni riga di
-`04-b28-esiti.jsonl` — `XDG_SESSION_TYPE`, lo `userAgent`, e la disposizione
-che il PRODOTTO ha scritto nel documento.
+This is the most important line in this file.  A bench that tests the seven
+clean gestures says **green** on a recogniser that gets every edge case wrong:
+the clean gestures are easy, and no real defect lives there.
 
-⛔ E il tocco lo dichiara il banco, non l'ambiente: `Emulation.setTouchEmulation
-   Enabled` accende i punti di contatto, e ⚠ **quel che se ne ricava e'
-   l'emulazione, non un dito** (`LEZIONI.md` §1.11).  ⇒ Da qui NON esce nessun
-   numero su come si comporta una mano vera: escono i confini del
-   RICONOSCITORE, che sono deterministici e si misurano bene anche cosi'.
-   ⭐ Il giudizio sui gesti resta di Nic, con un dito, e sta scritto nel
-   rapporto.
+  G1..G7   the seven clean gestures  — they serve as POSITIVE control
+  C1..C8   ⭐ the CONFUSIONS         — this is where the verdict is decided
+  D1..D4   the automatic switch
+  S1       ⭐ the SEAM between the two anchors, which in phase 3 no bench
+           looked at (`fasi/rapporti/F5-desktop-vero.md`)
+
+⛔ And `--certifica` injects FIVE faults, one per family of confusion, and
+   demands **green → red → green** on each.  A judge that cannot say red
+   cannot say green (`CODER.md` §3.3, §3.10, §4.6).
+
+===========================================================================
+⚠ THE SCENE, DECLARED — and the stage is verified from the other end
+
+The browser opens on the user's REAL desktop: that is what the mandate
+asks, and ⛔ **it is not moved to a fake screen to make the numbers add up**.
+What the scene really was is written by the collector in every line of
+`04-b28-esiti.jsonl` — `XDG_SESSION_TYPE`, the `userAgent`, and the layout
+that the PRODUCT wrote into the document.
+
+⛔ And touch is declared by the bench, not by the environment: `Emulation.setTouchEmulation
+   Enabled` turns on the contact points, and ⚠ **what comes out of it is
+   the emulation, not a finger** (`LEZIONI.md` §1.11).  ⇒ NO number comes out
+   of here on how a real hand behaves: what comes out are the boundaries of the
+   RECOGNISER, which are deterministic and measure well even this way.
+   ⭐ The judgement on the gestures stays with Nic, with a finger, and it is
+   written in the report.
 """
 
 import argparse
@@ -72,7 +72,7 @@ import time
 QUI = os.path.dirname(os.path.abspath(__file__))
 RADICE = os.path.dirname(QUI)
 
-# `RCP.md` §7.3 — i tipi del canale di input e i codici di evdev.
+# `RCP.md` §7.3 — the types of the input channel and the evdev codes.
 PUNTATORE, PULSANTE, ROTELLA = 0x0101, 0x0102, 0x0103
 SINISTRO, DESTRO, CENTRALE = 0x110, 0x111, 0x112
 NOMI = {PUNTATORE: "PUNTATORE", PULSANTE: "PULSANTE", ROTELLA: "ROTELLA"}
@@ -86,65 +86,65 @@ class Violazione(Exception):
 
 
 # ---------------------------------------------------------------------------
-# IL LETTORE DEI BYTE — scritto dalla tabella di `RCP.md` §7.3.
+# THE BYTE READER — written from the table of `RCP.md` §7.3.
 #
-# ⛔ Inquadratura di §6.1: u16 tipo, u32 lunghezza, corpo.  Corpo di §7.3:
-#    u32 id (crescente, mai 0) + u64 istante (microsecondi) + i campi del tipo.
+# ⛔ Framing of §6.1: u16 type, u32 length, body.  Body of §7.3:
+#    u32 id (increasing, never 0) + u64 instant (microseconds) + the type's fields.
 # ---------------------------------------------------------------------------
 def decodifica(byte):
     fuori, o = [], 0
     while o < len(byte):
         if len(byte) - o < 6:
-            raise Violazione("inquadratura tronca: restano %d byte" % (len(byte) - o))
+            raise Violazione("truncated framing: %d bytes left" % (len(byte) - o))
         tipo, lung = struct.unpack_from(">HI", byte, o)
         o += 6
         if len(byte) - o < lung:
-            raise Violazione("corpo troncato: dichiarati %d, ce ne sono %d"
+            raise Violazione("truncated body: %d declared, %d present"
                              % (lung, len(byte) - o))
         corpo = byte[o:o + lung]
         o += lung
         if tipo >> 8 != 0x01:
-            raise Violazione("tipo 0x%04X: non e' del canale di input (§2.5)" % tipo)
+            raise Violazione("type 0x%04X: not on the input channel (§2.5)" % tipo)
         if lung < 12:
-            raise Violazione("corpo di %d byte: id e istante non ci stanno" % lung)
+            raise Violazione("body of %d bytes: id and instant do not fit" % lung)
         mid, istante = struct.unpack_from(">IQ", corpo, 0)
         if mid == 0:
-            raise Violazione("id 0: §7.3 lo riserva a «nessun input»")
+            raise Violazione("id 0: §7.3 reserves it for «no input»")
         m = {"tipo": tipo, "nome": NOMI.get(tipo, "?"), "id": mid, "istante": istante}
         if tipo == PUNTATORE:
             if lung != 20:
-                raise Violazione("PUNTATORE di %d byte, ne vuole 20" % lung)
+                raise Violazione("PUNTATORE of %d bytes, it wants 20" % lung)
             m["x"], m["y"] = struct.unpack_from(">II", corpo, 12)
         elif tipo == PULSANTE:
             if lung != 15:
-                raise Violazione("PULSANTE di %d byte, ne vuole 15" % lung)
+                raise Violazione("PULSANTE of %d bytes, it wants 15" % lung)
             m["codice"], m["premuto"] = struct.unpack_from(">HB", corpo, 12)
         elif tipo == ROTELLA:
             if lung != 20:
-                raise Violazione("ROTELLA di %d byte, ne vuole 20" % lung)
+                raise Violazione("ROTELLA of %d bytes, it wants 20" % lung)
             m["asse_x"], m["asse_y"] = struct.unpack_from(">ii", corpo, 12)
         else:
-            raise Violazione("tipo 0x%04X sconosciuto sul canale di input" % tipo)
+            raise Violazione("unknown type 0x%04X on the input channel" % tipo)
         fuori.append(m)
     return fuori
 
 
 # ---------------------------------------------------------------------------
-# IL GIUDICE.  Ogni caso e' una funzione che riceve i messaggi della sua fase e
-# torna (verde: bool, perche': str).
+# THE JUDGE.  Each case is a function that receives the messages of its phase and
+# returns (green: bool, why: str).
 #
-# ⛔ Le attese si scrivono come PROPRIETA', non come stringhe da confrontare:
-#    «nessun PULSANTE» e' una proprieta' che sopravvive a un id diverso o a un
-#    PUNTATORE in piu'; «questi byte esatti» sarebbe verde solo sul giro che
-#    l'ha prodotta (`LEZIONI.md` §2.3 — il banco della rotella di v1, rosso col
-#    codice corretto, per una stringa cercata male).
+# ⛔ Expectations are written as PROPERTIES, not as strings to compare:
+#    «no PULSANTE» is a property that survives a different id or one extra
+#    PUNTATORE; «these exact bytes» would be green only on the run that
+#    produced them (`LEZIONI.md` §2.3 — v1's wheel bench, red with the
+#    correct code, because of a badly searched string).
 # ---------------------------------------------------------------------------
 def _pul(ms):
     return [m for m in ms if m["tipo"] == PULSANTE]
 
 
 def _clic(ms, codice):
-    """La coppia premuto/rilasciato di un pulsante, contata come CLIC."""
+    """The pressed/released pair of a button, counted as a CLICK."""
     p, n = None, 0
     for m in _pul(ms):
         if m["codice"] != codice:
@@ -166,33 +166,33 @@ def _rot(ms):
 
 
 def _solo(ms, codice):
-    """Un clic solo, di quel pulsante, e nient'altro sul filo."""
+    """A single click, of that button, and nothing else on the wire."""
     if _rot(ms):
-        return False, "c'e' una ROTELLA: non era un tap"
+        return False, "there is a ROTELLA: it was not a tap"
     if _clic(ms, codice) != 1:
-        return False, ("clic %s attesi 1, contati %d (pulsanti: %s)"
+        return False, ("%s clicks expected 1, counted %d (buttons: %s)"
                        % (NOMI_BTN.get(codice, codice), _clic(ms, codice),
                           [(NOMI_BTN.get(m["codice"], m["codice"]), m["premuto"])
                            for m in _pul(ms)]))
     altri = [m for m in _pul(ms) if m["codice"] != codice]
     if altri:
-        return False, ("sul filo ci sono anche altri pulsanti: %s"
+        return False, ("there are other buttons on the wire too: %s"
                        % [(NOMI_BTN.get(m["codice"], m["codice"]), m["premuto"])
                           for m in altri])
-    return True, "un clic %s e basta" % NOMI_BTN.get(codice, codice)
+    return True, "one %s click and nothing else" % NOMI_BTN.get(codice, codice)
 
 
 def c_G1(ms):
-    """1 dito trascina = muove il puntatore, e NON preme niente."""
+    """1 finger drags = moves the pointer, and presses NOTHING."""
     if _pul(ms):
-        return False, "un trascinamento ha prodotto un pulsante"
+        return False, "a drag produced a button"
     p = _punt(ms)
     if len(p) < 3:
-        return False, "solo %d PUNTATORE per un trascinamento di 200 px" % len(p)
+        return False, "only %d PUNTATORE for a 200 px drag" % len(p)
     if p[-1]["x"] <= p[0]["x"]:
-        return False, ("il dito e' andato a destra e il puntatore no: da %d a %d"
+        return False, ("the finger went right and the pointer did not: from %d to %d"
                        % (p[0]["x"], p[-1]["x"]))
-    return True, "%d PUNTATORE, da x=%d a x=%d, nessun pulsante" % (
+    return True, "%d PUNTATORE, from x=%d to x=%d, no button" % (
         len(p), p[0]["x"], p[-1]["x"])
 
 
@@ -205,46 +205,46 @@ def c_G3(ms):
 
 
 def c_G4(ms):
-    """2 dita trascina = rotella.  ⛔ Il SEGNO e la grana da 60 (§7.3)."""
+    """2 fingers drag = wheel.  ⛔ The SIGN and the grain of 60 (§7.3)."""
     if _pul(ms):
-        return False, "uno scorrimento a due dita ha prodotto un pulsante"
+        return False, "a two-finger scroll produced a button"
     r = _rot(ms)
     if not r:
-        return False, "nessuna ROTELLA"
+        return False, "no ROTELLA"
     for m in r:
         if m["asse_y"] % 60 or m["asse_x"] % 60:
-            return False, ("ROTELLA non multipla di 60 (§7.3, il mezzo scatto): "
+            return False, ("ROTELLA not a multiple of 60 (§7.3, the half notch): "
                            "%d, %d" % (m["asse_x"], m["asse_y"]))
     tot = sum(m["asse_y"] for m in r)
     if tot <= 0:
-        return False, ("le dita sono scese e l'asse verticale non e' positivo "
-                       "(%d): `RCP.md` §7.3 vuole +120 per la rotella IN SU, e "
-                       "due dita che scendono spingono il foglio in giu'" % tot)
-    return True, "%d ROTELLA, somma verticale +%d, tutte multiple di 60" % (len(r), tot)
+        return False, ("the fingers went down and the vertical axis is not positive "
+                       "(%d): `RCP.md` §7.3 wants +120 for the wheel UP, and "
+                       "two fingers going down push the sheet down" % tot)
+    return True, "%d ROTELLA, vertical sum +%d, all multiples of 60" % (len(r), tot)
 
 
 def c_G5(ms):
-    """⭐ TAP-E-MEZZO: tap, poi premi e trascina.  Sul filo:
-       clic · premuto · PUNTATORE che si muovono · rilasciato.
-       ⛔ E i PUNTATORE devono stare FRA premuto e rilasciato, o non e' un
-          trascinamento: e' un doppio clic."""
+    """⭐ TAP-AND-A-HALF: tap, then press and drag.  On the wire:
+       click · pressed · moving PUNTATORE · released.
+       ⛔ And the PUNTATORE must sit BETWEEN pressed and released, or it is not
+          a drag: it is a double click."""
     p = _pul(ms)
     sin = [m for m in p if m["codice"] == SINISTRO]
     if len(sin) != 4:
-        return False, "attesi 4 eventi del sinistro (giu,su,giu,su), contati %d" % len(sin)
+        return False, "expected 4 left-button events (down,up,down,up), counted %d" % len(sin)
     if [m["premuto"] for m in sin] != [1, 0, 1, 0]:
-        return False, "l'ordine non e' giu,su,giu,su: %s" % [m["premuto"] for m in sin]
-    # I PUNTATORE fra il TERZO e il QUARTO evento: e' li' che vive il trascinamento.
+        return False, "the order is not down,up,down,up: %s" % [m["premuto"] for m in sin]
+    # The PUNTATORE between the THIRD and the FOURTH event: that is where the drag lives.
     i3 = ms.index(sin[2])
     i4 = ms.index(sin[3])
     dentro = [m for m in ms[i3 + 1:i4] if m["tipo"] == PUNTATORE]
     if len(dentro) < 2:
-        return False, ("solo %d PUNTATORE fra il premuto e il rilasciato: il "
-                       "tasto e' rimasto giu' senza trascinare niente" % len(dentro))
+        return False, ("only %d PUNTATORE between pressed and released: the "
+                       "button stayed down without dragging anything" % len(dentro))
     if dentro[-1]["y"] == dentro[0]["y"] and dentro[-1]["x"] == dentro[0]["x"]:
-        return False, "il puntatore non si e' mosso mentre il tasto era giu'"
-    return True, ("clic, poi premuto + %d PUNTATORE + rilasciato — "
-                  "il trascinamento c'e'" % len(dentro))
+        return False, "the pointer did not move while the button was down"
+    return True, ("click, then pressed + %d PUNTATORE + released — "
+                  "the drag is there" % len(dentro))
 
 
 def c_G6(ms):
@@ -252,129 +252,129 @@ def c_G6(ms):
 
 
 def c_G7(ms, zoom=None):
-    """Pizzico = ingrandisce la VISTA del client.  ⛔ ZERO byte sul filo."""
+    """Pinch = zooms the client's VIEW.  ⛔ ZERO bytes on the wire."""
     if ms:
-        return False, ("il pizzico ha spedito %d messaggi: §7.2 dice che "
-                       "ingrandisce la VISTA, non l'applicazione" % len(ms))
+        return False, ("the pinch sent %d messages: §7.2 says it "
+                       "zooms the VIEW, not the application" % len(ms))
     if zoom is None:
-        return True, "nessun messaggio sul filo (zoom non letto)"
+        return True, "no message on the wire (zoom not read)"
     if zoom <= 1.05:
-        return False, "nessun messaggio sul filo, ma la vista non si e' ingrandita (zoom %.2f)" % zoom
-    return True, "zero byte sul filo, e la vista e' a %.2fx" % zoom
+        return False, "no message on the wire, but the view did not zoom in (zoom %.2f)" % zoom
+    return True, "zero bytes on the wire, and the view is at %.2fx" % zoom
 
 
-# ── ⭐ LE CONFUSIONI ────────────────────────────────────────────────────────
+# ── ⭐ THE CONFUSIONS ───────────────────────────────────────────────────────
 def c_C1(ms):
-    """Il tap che dura un po' troppo (400 ms, fermo) ⇒ NON e' un clic.
-       Soglia dichiarata: `T_TAP` = 180 ms."""
+    """The tap that lasts a bit too long (400 ms, still) ⇒ NOT a click.
+       Declared threshold: `T_TAP` = 180 ms."""
     if _pul(ms):
-        return False, ("un contatto di 400 ms fermo ha prodotto un clic: la "
-                       "soglia dei 180 ms non e' guardata")
-    return True, "400 ms fermi, nessun clic (T_TAP = 180 ms)"
+        return False, ("a still 400 ms contact produced a click: the "
+                       "180 ms threshold is not checked")
+    return True, "400 ms still, no click (T_TAP = 180 ms)"
 
 
 def c_C2(ms):
-    """Il tap che scivola (120 ms ma 30 px) ⇒ NON e' un clic, e' un movimento.
-       Soglia dichiarata: `D_TAP` = 9 px CSS."""
+    """The tap that slides (120 ms but 30 px) ⇒ NOT a click, it is a movement.
+       Declared threshold: `D_TAP` = 9 CSS px."""
     if _pul(ms):
-        return False, "un contatto scivolato di 30 px ha prodotto un clic (D_TAP = 9 px)"
+        return False, "a contact that slid 30 px produced a click (D_TAP = 9 px)"
     if not _punt(ms):
-        return False, "scivolato di 30 px e il puntatore non si e' mosso affatto"
-    return True, "30 px di scivolata: %d PUNTATORE, nessun clic" % len(_punt(ms))
+        return False, "slid 30 px and the pointer did not move at all"
+    return True, "30 px of sliding: %d PUNTATORE, no click" % len(_punt(ms))
 
 
 def c_C3(ms):
-    """⭐⭐ LE DUE DITA CHE SI APPOGGIANO A 30 ms DI DISTANZA.
-       E' il caso che il mandato nomina.  Un riconoscitore che conta le dita
-       all'inizio del gesto qui vede UN dito e manda un clic SINISTRO."""
+    """⭐⭐ THE TWO FINGERS THAT LAND 30 ms APART.
+       It is the case the mandate names.  A recogniser that counts the fingers
+       at the start of the gesture sees ONE finger here and sends a LEFT click."""
     if _clic(ms, SINISTRO):
-        return False, ("clic SINISTRO: le due dita erano scollate di 30 ms e il "
-                       "conteggio non ha guardato il massimo di dita contemporanee")
+        return False, ("LEFT click: the two fingers were 30 ms apart and the "
+                       "count did not look at the maximum of simultaneous fingers")
     return _solo(ms, DESTRO)
 
 
 def c_C4(ms):
-    """⛔ IL DIFETTO DICHIARATO, e il banco lo pretende cosi' com'e'.
+    """⛔ THE DECLARED DEFECT, and the bench demands it exactly as it is.
 
-    Due dita che NON si sovrappongono mai (A 0→100 ms, B 130→230 ms, a 60 px
-    l'una dall'altra) escono come DUE CLIC SINISTRI, non come un clic destro.
-    ⛔ Non e' un difetto da correggere qui: la stessa sequenza e' anche «clicco
-    qui, poi clicco subito li'», e l'unica cura sarebbe ritardare OGNI clic
-    sinistro di 300 ms — il prezzo che `CODER.md` §1-bis vieta.
-    ⇒ Il banco fissa il comportamento DICHIARATO: il giorno in cui cambiasse,
-      questa riga diventa rossa e il rapporto si rilegge."""
+    Two fingers that NEVER overlap (A 0→100 ms, B 130→230 ms, 60 px
+    apart) come out as TWO LEFT CLICKS, not as one right click.
+    ⛔ It is not a defect to fix here: the same sequence is also «I click
+    here, then I click right there», and the only cure would be to delay EVERY
+    left click by 300 ms — the price that `CODER.md` §1-bis forbids.
+    ⇒ The bench pins the DECLARED behaviour: the day it changes,
+      this line turns red and the report is reread."""
     if _clic(ms, DESTRO):
-        return False, ("e' uscito un clic destro da due contatti che non si "
-                       "sovrappongono: il comportamento e' cambiato rispetto a "
-                       "quel che il rapporto A8 dichiara — si rilegge il rapporto")
+        return False, ("a right click came out of two contacts that do not "
+                       "overlap: the behaviour has changed from "
+                       "what the A8 report declares — reread the report")
     n = _clic(ms, SINISTRO)
     if n != 2:
-        return False, "attesi 2 clic sinistri (il difetto dichiarato), contati %d" % n
-    return True, ("2 clic sinistri: e' il difetto DICHIARATO — sotto la "
-                  "sovrapposizione di un campione un clic destro esce come "
-                  "doppio clic sinistro")
+        return False, "expected 2 left clicks (the declared defect), counted %d" % n
+    return True, ("2 left clicks: it is the DECLARED defect — below an "
+                  "overlap of one sample a right click comes out as a "
+                  "double left click")
 
 
 def c_C5a(ms):
-    """⭐ Doppio tap fermo, stesso punto ⇒ DOPPIO CLIC (4 eventi, 0 PUNTATORE)."""
+    """⭐ Still double tap, same spot ⇒ DOUBLE CLICK (4 events, 0 PUNTATORE)."""
     sin = [m for m in _pul(ms) if m["codice"] == SINISTRO]
     if [m["premuto"] for m in sin] != [1, 0, 1, 0]:
-        return False, "non sono quattro eventi giu,su,giu,su: %s" % [
+        return False, "they are not four events down,up,down,up: %s" % [
             (NOMI_BTN.get(m["codice"], m["codice"]), m["premuto"]) for m in _pul(ms)]
     if _punt(ms):
-        return False, ("ci sono %d PUNTATORE dentro un doppio clic fermo: il "
-                       "desktop remoto lo leggerebbe come un trascinamento"
+        return False, ("there are %d PUNTATORE inside a still double click: the "
+                       "remote desktop would read it as a drag"
                        % len(_punt(ms)))
-    return True, "quattro eventi del sinistro, zero PUNTATORE — e' un doppio clic"
+    return True, "four left-button events, zero PUNTATORE — it is a double click"
 
 
 def c_C5b(ms):
-    """⭐ E la STESSA apertura che poi trascina ⇒ TRASCINAMENTO.  Sono lo stesso
-       gesto fino al secondo contatto: e' la refutazione, ed e' provata qui."""
+    """⭐ And the SAME opening that then drags ⇒ DRAG.  They are the same
+       gesture up to the second contact: it is the refutation, and it is tested here."""
     return c_G5(ms)
 
 
 def c_C6(ms):
-    """Il trascinamento a due dita che comincia FERMO (350 ms di attesa).
-       ⛔ Un riconoscitore che decidesse «tap» al superamento di T_TAP e
-          chiudesse li' non manderebbe nessuna rotella."""
+    """The two-finger drag that starts STILL (350 ms of waiting).
+       ⛔ A recogniser that decided «tap» when T_TAP is exceeded and
+          stopped there would send no wheel."""
     if _pul(ms):
-        return False, "350 ms fermi e poi scorrimento: e' uscito un pulsante"
+        return False, "350 ms still and then scrolling: a button came out"
     if not _rot(ms):
-        return False, "350 ms fermi e poi scorrimento: nessuna ROTELLA"
-    return True, "%d ROTELLA dopo 350 ms di dita ferme, nessun clic" % len(_rot(ms))
+        return False, "350 ms still and then scrolling: no ROTELLA"
+    return True, "%d ROTELLA after 350 ms of still fingers, no click" % len(_rot(ms))
 
 
 def c_C7a(ms, zoom=None):
-    """⭐ ROTELLA CONTRO PIZZICO — le dita si ALLONTANANO: solo zoom."""
+    """⭐ WHEEL VERSUS PINCH — the fingers move APART: zoom only."""
     if _rot(ms):
-        return False, ("due dita che si allontanano hanno prodotto %d ROTELLA: "
-                       "pizzico e rotella si confondono" % len(_rot(ms)))
+        return False, ("two fingers moving apart produced %d ROTELLA: "
+                       "pinch and wheel are confused" % len(_rot(ms)))
     if zoom is not None and zoom <= 1.05:
-        return False, "nessuna rotella, ma nemmeno lo zoom e' cambiato (%.2f)" % zoom
-    return True, "zero ROTELLA, zoom %s" % ("%.2f" % zoom if zoom else "non letto")
+        return False, "no wheel, but the zoom did not change either (%.2f)" % zoom
+    return True, "zero ROTELLA, zoom %s" % ("%.2f" % zoom if zoom else "not read")
 
 
 def c_C7b(ms, zoom=None):
-    """⭐ E le dita PARALLELE: solo rotella, e la vista NON si ingrandisce."""
+    """⭐ And the PARALLEL fingers: wheel only, and the view does NOT zoom in."""
     if not _rot(ms):
-        return False, "due dita parallele e nessuna ROTELLA"
+        return False, "two parallel fingers and no ROTELLA"
     if zoom is not None and zoom > 1.05:
-        return False, ("due dita parallele hanno ingrandito la vista a %.2fx: "
-                       "e' stato letto come un pizzico" % zoom)
-    return True, "%d ROTELLA, vista ferma a %s" % (
+        return False, ("two parallel fingers zoomed the view to %.2fx: "
+                       "it was read as a pinch" % zoom)
+    return True, "%d ROTELLA, view still at %s" % (
         len(_rot(ms)), "%.2f" % zoom if zoom else "?")
 
 
 def c_C8(ms):
-    """Il residuo: due dita scorrono, una si stacca, l'altra si muove ancora.
-       ⛔ Il puntatore NON deve saltare — e' il difetto che si vede di piu',
-          perche' finendo di scorrere un dito si stacca sempre un attimo prima."""
+    """The leftover: two fingers scroll, one lifts, the other still moves.
+       ⛔ The pointer must NOT jump — it is the most visible defect,
+          because at the end of a scroll one finger always lifts a moment earlier."""
     if _punt(ms):
-        return False, ("il dito rimasto dopo uno scorrimento ha mosso il "
-                       "puntatore (%d PUNTATORE): a fine scorrimento il "
-                       "puntatore salta" % len(_punt(ms)))
-    return True, "il dito residuo non ha mosso il puntatore"
+        return False, ("the finger left after a scroll moved the "
+                       "pointer (%d PUNTATORE): at the end of the scroll the "
+                       "pointer jumps" % len(_punt(ms)))
+    return True, "the leftover finger did not move the pointer"
 
 
 CASI = {
@@ -397,7 +397,7 @@ CASI = {
     "C8-il-dito-residuo": c_C8,
 }
 
-# Quali casi vogliono anche lo zoom letto dalla pagina.
+# Which cases also want the zoom read from the page.
 VOGLIONO_ZOOM = {"G7-pizzico", "C7a-pizzico-non-rotella", "C7b-rotella-non-pizzico"}
 
 
@@ -418,13 +418,13 @@ def giudica(righe):
         dati = per_fase.get(nome)
         if dati is None:
             esiti.append({"caso": nome, "verde": False,
-                          "perche": "⛔ la fase non e' stata registrata affatto"})
+                          "perche": "⛔ the phase was not recorded at all"})
             continue
         try:
             ms = decodifica(dati)
         except Violazione as e:
             esiti.append({"caso": nome, "verde": False,
-                          "perche": "⛔ violazione di RCP.md §7.3: %s" % e})
+                          "perche": "⛔ violation of RCP.md §7.3: %s" % e})
             continue
         if nome in VOGLIONO_ZOOM:
             verde, perche = fn(ms, zoom.get(nome))
@@ -432,12 +432,12 @@ def giudica(righe):
             verde, perche = fn(ms)
         esiti.append({"caso": nome, "verde": bool(verde), "perche": perche,
                       "messaggi": len(ms)})
-    # ⛔ L'id cresce su TUTTO il canale, non per tipo (§7.3): si controlla una
-    #    volta sola, su tutti i messaggi di tutte le fasi, in ordine di arrivo.
-    # ⚠ Solo le fasi dei gesti: dopo la misura del passaggio la pagina viene
-    #   RICARICATA, e su una pagina nuova il contatore riparte da 1 — che e'
-    #   giusto, ed e' una sessione diversa.  Contarli insieme misurerebbe il
-    #   banco, non il prodotto.
+    # ⛔ The id grows over the WHOLE channel, not per type (§7.3): it is checked
+    #    once, over all the messages of all the phases, in order of arrival.
+    # ⚠ Only the gesture phases: after the switch measurement the page is
+    #   RELOADED, and on a new page the counter restarts from 1 — which is
+    #   correct, and it is a different session.  Counting them together would
+    #   measure the bench, not the product.
     tutti = []
     for r in righe:
         if "hex" in r and r.get("fase") in CASI:
@@ -448,18 +448,18 @@ def giudica(righe):
     ids = [m["id"] for m in tutti]
     cresce = all(b > a for a, b in zip(ids, ids[1:]))
     esiti.append({"caso": "R1-identificatore-crescente", "verde": bool(ids) and cresce,
-                  "perche": ("%d messaggi, id da %d a %d, crescente su tutto il canale"
+                  "perche": ("%d messages, id from %d to %d, increasing over the whole channel"
                              % (len(ids), ids[0], ids[-1])) if ids and cresce
-                            else "gli identificatori non crescono su tutto il canale: %s"
+                            else "the identifiers do not increase over the whole channel: %s"
                                  % ids[:20]})
     return esiti
 
 
 # ---------------------------------------------------------------------------
-# ⭐ LA CERTIFICAZIONE — verde → rosso → verde, su CINQUE guasti, uno per
-#    famiglia di confusione.  ⛔ `CODER.md` §3.3: il banco si certifica prima
-#    della misura, o un rosso e' ambiguo fra «non funziona» e «non funzionava
-#    il banco».
+# ⭐ THE CERTIFICATION — green → red → green, on FIVE faults, one per
+#    family of confusion.  ⛔ `CODER.md` §3.3: the bench is certified before
+#    the measurement, or a red is ambiguous between «it does not work» and «the
+#    bench was not working».
 # ---------------------------------------------------------------------------
 def _b(tipo, mid, ist, resto):
     corpo = struct.pack(">IQ", mid, ist) + resto
@@ -500,7 +500,7 @@ class Penna:
 
 
 def registrazione(guasto=None):
-    """Una registrazione SANA, con un guasto opzionale iniettato."""
+    """A HEALTHY recording, with an optional injected fault."""
     p = Penna()
 
     def clic(fase, cod):
@@ -584,29 +584,29 @@ def registrazione(guasto=None):
 
 GUASTI = [
     ("tap-lungo-clicca", "C1-tap-troppo-lungo",
-     "un contatto di 400 ms fermo che manda un clic (la soglia T_TAP non guardata)"),
+     "a still 400 ms contact that sends a click (the T_TAP threshold not checked)"),
     ("trenta-ms-diventa-doppio-sinistro", "C3-due-dita-a-30ms",
-     "due dita a 30 ms che escono come due clic sinistri invece di un destro"),
+     "two fingers 30 ms apart that come out as two left clicks instead of one right"),
     ("rotella-al-contrario", "G4-due-dita-trascina",
-     "il segno della rotella invertito (`RCP.md` §7.3, forma E11)"),
+     "the wheel sign inverted (`RCP.md` §7.3, form E11)"),
     ("tap-e-mezzo-non-trascina", "G5-tap-e-mezzo",
-     "il tap-e-mezzo che preme e rilascia senza trascinare — cioe' un doppio clic"),
+     "the tap-and-a-half that presses and releases without dragging — that is, a double click"),
     ("pizzico-manda-rotella", "G7-pizzico",
-     "il pizzico che spedisce una rotella invece di ingrandire la vista"),
+     "the pinch that sends a wheel instead of zooming the view"),
 ]
 
 
 def certifica():
-    print("⭐ CERTIFICAZIONE DEL GIUDICE — verde → rosso → verde, su cinque")
-    print("   guasti, uno per famiglia di confusione.\n")
+    print("⭐ CERTIFICATION OF THE JUDGE — green → red → green, on five")
+    print("   faults, one per family of confusion.\n")
     sano = giudica(registrazione())
     rossi = [e for e in sano if not e["verde"]]
     if rossi:
-        print("⛔ la registrazione SANA non e' verde: il giudice e' rotto.")
+        print("⛔ the HEALTHY recording is not green: the judge is broken.")
         for e in rossi:
             print("     %-40s %s" % (e["caso"], e["perche"]))
         return 1
-    print("  ✅ registrazione SANA: %d casi, tutti verdi" % len(sano))
+    print("  ✅ HEALTHY recording: %d cases, all green" % len(sano))
 
     ok = True
     for guasto, caso, testo in GUASTI:
@@ -614,30 +614,30 @@ def certifica():
         mio = [e for e in esiti if e["caso"] == caso][0]
         altri = [e["caso"] for e in esiti if not e["verde"] and e["caso"] != caso]
         if mio["verde"]:
-            print("  ⛔ guasto «%s»: il giudice NON lo vede." % guasto)
+            print("  ⛔ fault «%s»: the judge does NOT see it." % guasto)
             print("       %s" % testo)
             ok = False
         elif altri:
-            print("  ⚠ guasto «%s»: visto, ma ha tinto di rosso anche %s"
+            print("  ⚠ fault «%s»: seen, but it also turned %s red"
                   % (guasto, altri))
-            print("       (un giudice che sanguina non sa dire DOVE sta il difetto)")
+            print("       (a judge that bleeds cannot say WHERE the defect is)")
             ok = False
         else:
-            print("  ✅ %-36s rosso solo su %s" % (guasto, caso))
+            print("  ✅ %-36s red only on %s" % (guasto, caso))
             print("       ↳ %s" % testo)
 
     risanato = giudica(registrazione())
     if [e for e in risanato if not e["verde"]]:
-        print("⛔ la registrazione RISANATA non torna verde.")
+        print("⛔ the HEALED recording does not turn green again.")
         return 1
-    print("  ✅ registrazione RISANATA: torna verde")
-    print("\n%s" % ("⭐ il giudice e' certificato." if ok
-                    else "⛔ il giudice NON e' certificato: non si misura niente."))
+    print("  ✅ HEALED recording: green again")
+    print("\n%s" % ("⭐ the judge is certified." if ok
+                    else "⛔ the judge is NOT certified: nothing is measured."))
     return 0 if ok else 1
 
 
 # ---------------------------------------------------------------------------
-# IL SERVITORE E LA CUCITURA — la stessa forma di `04-b27-classico.py`.
+# THE SERVER AND THE SEAM — the same shape as `04-b27-classico.py`.
 # ---------------------------------------------------------------------------
 class Raccolta:
     def __init__(self):
@@ -680,7 +680,7 @@ def servitore(porta, raccolta, pagina_html):
             if p == "/":
                 self._corpo("text/html; charset=utf-8", pagina_html)
             else:
-                self._corpo("text/plain", b"non c'e'", 404)
+                self._corpo("text/plain", b"not here", 404)
 
         def do_POST(self):
             n = int(self.headers.get("Content-Length") or 0)
@@ -692,11 +692,11 @@ def servitore(porta, raccolta, pagina_html):
                 raccolta.marca(dati.decode("utf-8", "replace"))
             self._corpo("text/plain", b"ok")
 
-    # ⛔ `allow_reuse_address` va messo sulla CLASSE: `TCPServer.__init__` lega
-    #    la porta subito, e `server_bind()` legge l'attributo PRIMA che si possa
-    #    scriverlo sull'istanza.  ⚠ Scritto dopo, non ha nessun effetto — e il
-    #    sintomo e' «Address already in use» al giro dopo, con la porta che
-    #    `ss` dichiara libera perche' e' solo in TIME_WAIT.
+    # ⛔ `allow_reuse_address` must be set on the CLASS: `TCPServer.__init__` binds
+    #    the port at once, and `server_bind()` reads the attribute BEFORE it can be
+    #    written on the instance.  ⚠ Written afterwards, it has no effect — and the
+    #    symptom is «Address already in use» on the next run, with the port that
+    #    `ss` declares free because it is only in TIME_WAIT.
     class _Servitore(socketserver.ThreadingTCPServer):
         allow_reuse_address = True
         daemon_threads = True
@@ -707,16 +707,16 @@ def servitore(porta, raccolta, pagina_html):
 
 
 # ---------------------------------------------------------------------------
-# ⛔⭐ LA GUIDA AL BROWSER, CON IL RIAGGANCIO.
+# ⛔⭐ THE BROWSER DRIVER, WITH RECONNECTION.
 #
-# `[M]` 14 agosto 2026, Chrome 151.0.7922.137: `Input.dispatchTouchEvent`
-# **non torna** in alcune condizioni (dopo un evento di mouse, e dopo un
-# identificatore di contatto riciclato).  ⇒ Il primo giro di questo banco moriva
-# a meta' e buttava via sedici misure buone per un difetto della guida.
+# `[M]` 14 Aug 2026, Chrome 151.0.7922.137: `Input.dispatchTouchEvent`
+# **does not return** under some conditions (after a mouse event, and after a
+# recycled contact identifier).  ⇒ The first run of this bench died
+# halfway and threw away sixteen good measurements for a defect of the driver.
 #
-# ⛔ E non si finge che non sia successo: ogni riaggancio finisce in `guasti`,
-#    che va nel registro degli esiti — cosi' un rosso si puo' attribuire allo
-#    strumento invece che al prodotto (`CODER.md` §3.10, §3.11).
+# ⛔ And we do not pretend it did not happen: every reconnection ends up in `guasti`,
+#    which goes into the outcomes log — so a red can be attributed to the
+#    tool instead of to the product (`CODER.md` §3.10, §3.11).
 # ---------------------------------------------------------------------------
 class Guida:
     def __init__(self, modulo, url, timeout=20):
@@ -756,11 +756,11 @@ def _cdp():
     return m
 
 
-# ⛔ La cucitura che l'ancora `F4-TOCCO` chiede, messa dal banco.  E' la stessa
-#    di `04-b27-classico.py`: il coordinatore la scrivera' in `collega()` sullo
-#    stream unidirezionale di §2.5, qui spedisce a questo processo.
-#    ⚠ E' l'unica differenza fra banco e prodotto, ed e' dichiarata: il
-#      TRASPORTO non e' misurato qui.
+# ⛔ The seam that the `F4-TOCCO` anchor asks for, put in by the bench.  It is the same
+#    as in `04-b27-classico.py`: the coordinator will write it in `collega()` on the
+#    unidirectional stream of §2.5, here it sends to this process.
+#    ⚠ It is the only difference between bench and product, and it is declared: the
+#      TRANSPORT is not measured here.
 PROLOGO = r"""
 (function () {
   var n = 0, coda = Promise.resolve();
@@ -782,21 +782,21 @@ PROLOGO = r"""
     return coda;
   };
   window.__b28.attendi = function () { return coda.then(function () { return true; }); };
-  /* ⛔⭐ LA SPIA — `CODER.md` §3.7: «non si deduce il mittente: lo si chiede».
-     Registra che cosa il BROWSER ha davvero consegnato alla pagina, cosi' un
-     rosso del passaggio automatico si puo' attribuire — al prodotto, o al banco
-     che non ha consegnato l'evento che credeva di aver mandato.
-     ⚠ Sono osservazioni del banco su Chrome: nessun verdetto si costruisce su
-       questi campi, servono a dire DOVE guardare. */
+  /* ⛔⭐ THE SPY — `CODER.md` §3.7: «the sender is not deduced: it is asked».
+     It records what the BROWSER really delivered to the page, so a
+     red of the automatic switch can be attributed — to the product, or to the bench
+     that did not deliver the event it believed it had sent.
+     ⚠ These are the bench's observations on Chrome: no verdict is built on
+       these fields, they serve to say WHERE to look. */
 })()
 """
 
-# ⛔⭐ LA SPIA DELLA SCHEDA DEL PASSAGGIO — `CODER.md` §3.7: «non si deduce il
-#     mittente: lo si chiede al nucleo».  Registra che cosa il BROWSER ha
-#     davvero consegnato alla pagina, cosi' un rosso del passaggio si puo'
-#     attribuire: al prodotto, o al banco che non ha consegnato l'evento.
-# ⚠ E' PASSIVA: un ascoltatore non passivo su `touchstart` blocca
-#   `Input.dispatchTouchEvent` — misurato il 14 agosto 2026.
+# ⛔⭐ THE SPY OF THE SWITCH TAB — `CODER.md` §3.7: «the sender is not
+#     deduced: it is asked of the core».  It records what the BROWSER
+#     really delivered to the page, so a red of the switch can be
+#     attributed: to the product, or to the bench that did not deliver the event.
+# ⚠ It is PASSIVE: a non-passive listener on `touchstart` blocks
+#   `Input.dispatchTouchEvent` — measured on 14 Aug 2026.
 SPIA = r"""
 (function () {
   window.__spia = [];
@@ -810,8 +810,8 @@ SPIA = r"""
 })()
 """
 
-# ⛔ La scena della pagina: si accende la tela e le si da' una cornice NOTA, o
-#    non si saprebbe dove toccare.  ⚠ E' quel che `04-b27` fa per il classico.
+# ⛔ The page's scene: the canvas is switched on and given a KNOWN frame, or
+#    we would not know where to touch.  ⚠ It is what `04-b27` does for the classic one.
 SCENA = r"""
 (function () {
   document.body.dataset.schermo = "acceso";
@@ -819,7 +819,7 @@ SCENA = r"""
   t.width = %d; t.height = %d;
   t.style.width = "960px"; t.style.height = "540px";
   const s = window.REMOTIX && window.REMOTIX.tocco;
-  if (!s) return JSON.stringify({errore: "⛔ REMOTIX.tocco non esiste"});
+  if (!s) return JSON.stringify({errore: "⛔ REMOTIX.tocco does not exist"});
   const r = t.getBoundingClientRect();
   return JSON.stringify({ disposizione: document.body.dataset.disposizione,
                           perche: s.perche(), contesto: s.contesto(),
@@ -838,7 +838,7 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
         html = html.replace(chiave, valore)
     raccolta = Raccolta()
     s = servitore(porta, raccolta, html)
-    print("  servitore su http://127.0.0.1:%d — pagina del PRODOTTO, %d byte"
+    print("  server on http://127.0.0.1:%d — the PRODUCT's page, %d bytes"
           % (porta, len(html)))
 
     b = cdp.pagina(diagnosi, attesa)
@@ -846,23 +846,23 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
     c.chiama("Page.enable")
     c.chiama("Runtime.enable")
     c.chiama("Page.addScriptToEvaluateOnNewDocument", source=PROLOGO)
-    # ⛔ Il tocco si DICHIARA: senza, un Chrome da scrivania non consegna
-    #    nessun evento `Touch` e il banco misurerebbe il proprio silenzio.
+    # ⛔ Touch is DECLARED: without it, a desktop Chrome delivers no
+    #    `Touch` event and the bench would measure its own silence.
     c.chiama("Emulation.setTouchEmulationEnabled", enabled=True, maxTouchPoints=5)
-    # ⛔⭐ LA FINESTRA DEVE ESSERE DAVANTI E ATTIVA, E NON E' UN VEZZO.
-    #  `[M]` 14 agosto 2026: `Input.dispatchTouchEvent` **non torna** in modo
-    #  intermittente, in fasi diverse a ogni giro.  Il banco gira sul desktop
-    #  VERO dell'utente (e' quel che il mandato chiede): quando la finestra
-    #  finisce dietro un'altra, il renderer smette di produrre quadri — e' lo
-    #  stesso fatto che `STUDI.md` §web §6.2 misura su Xvfb, «senza schermo non c'e'
-    #  scanout» — e l'assenso all'evento di input non arriva mai.
-    #  ⇒ Si dichiara alla pagina che il fuoco ce l'ha, e si porta la finestra
-    #    davanti.  ⚠ E' una dichiarazione sulla SCENA, non una cura del
-    #    prodotto: il palco si dichiara, non si sposta.
+    # ⛔⭐ THE WINDOW MUST BE IN FRONT AND ACTIVE, AND IT IS NOT A WHIM.
+    #  `[M]` 14 Aug 2026: `Input.dispatchTouchEvent` **does not return**
+    #  intermittently, in different phases on every run.  The bench runs on the
+    #  user's REAL desktop (that is what the mandate asks): when the window
+    #  ends up behind another one, the renderer stops producing frames — it is the
+    #  same fact that `STUDI.md` §web §6.2 measures on Xvfb, «without a screen there is no
+    #  scanout» — and the acknowledgement of the input event never arrives.
+    #  ⇒ The page is told that it has the focus, and the window is brought
+    #    to the front.  ⚠ It is a declaration about the SCENE, not a cure of the
+    #    product: the stage is declared, not moved.
     try:
         c.chiama("Emulation.setFocusEmulationEnabled", enabled=True)
     except Exception:                          # noqa: BLE001
-        print("  ⚠ questo Chrome non ha `setFocusEmulationEnabled`")
+        print("  ⚠ this Chrome does not have `setFocusEmulationEnabled`")
     try:
         c.chiama("Page.bringToFront")
     except Exception:                          # noqa: BLE001
@@ -882,7 +882,7 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
     }
     acceso = c.valuta(SCENA % TELA)
     if not acceso:
-        print("  ⛔ la pagina non ha risposto alla scena")
+        print("  ⛔ the page did not answer the scene")
         s.shutdown()
         return 3, scena, []
     pag = json.loads(acceso)
@@ -893,33 +893,33 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
         s.shutdown()
         return 3, scena, []
     if pag.get("disposizione") != "tocco":
-        print("  ⛔ la disposizione in vigore e' «%s», non «tocco»: il banco "
-              "misurerebbe l'altra meta' della pagina" % pag.get("disposizione"))
+        print("  ⛔ the layout in force is «%s», not «tocco»: the bench "
+              "would measure the other half of the page" % pag.get("disposizione"))
         s.shutdown()
         return 3, scena, []
 
     cx, cy, cw, ch = pag["cornice"]
-    ox, oy = cx + cw / 2, cy + ch / 2      # il centro della tela, in px CSS
+    ox, oy = cx + cw / 2, cy + ch / 2      # the centre of the canvas, in CSS px
 
-    # ── LA MANO SINTETICA ──────────────────────────────────────────────────
-    # ⛔ CDP vuole i punti ATTIVI a ogni evento: al `touchEnd` si mandano quelli
-    #    che RESTANO, e il rilasciato si omette.  Sbagliarlo vuol dire misurare
-    #    una mano che nessuno ha mai fatto.
+    # ── THE SYNTHETIC HAND ─────────────────────────────────────────────────
+    # ⛔ CDP wants the ACTIVE points at every event: at `touchEnd` the ones
+    #    that REMAIN are sent, and the released one is omitted.  Getting it wrong
+    #    means measuring a hand that nobody ever made.
     #
-    # ⛔⭐ E OGNI CONTATTO NUOVO PRENDE UN IDENTIFICATORE NUOVO — `[M]` 14 agosto
-    #     2026, e la riga e' nata da un BLOCCO del banco, non da un ragionamento.
+    # ⛔⭐ AND EVERY NEW CONTACT TAKES A NEW IDENTIFIER — `[M]` 14 Aug
+    #     2026, and the line was born from a HANG of the bench, not from reasoning.
     #
-    #  Riusando l'identificatore `1` per il secondo contatto del tap-e-mezzo,
-    #  `Input.dispatchTouchEvent` **non tornava piu'**: la chiamata CDP scadeva
-    #  al primo `touchMove` dopo il riappoggio, in modo riproducibile (caso C5b,
-    #  due giri su due).  ⛔ E' un difetto dello STRUMENTO, non del prodotto.
+    #  Reusing identifier `1` for the second contact of the tap-and-a-half,
+    #  `Input.dispatchTouchEvent` **no longer returned**: the CDP call timed out
+    #  at the first `touchMove` after the finger landed again, reproducibly (case C5b,
+    #  two runs out of two).  ⛔ It is a defect of the TOOL, not of the product.
     #
-    # ⭐ E l'identificatore nuovo e' anche piu' fedele al vero: un pannello
-    #    tattile assegna un `tracking id` NUOVO a ogni contatto nuovo, e non
-    #    ricicla quello appena rilasciato.  ⇒ Il banco ora prova il tap-e-mezzo
-    #    con due identificatori DIVERSI, che e' quel che succede con un dito
-    #    vero — e prova per forza che il riconoscitore lo aggancia sullo SPAZIO
-    #    (40 px) e sul TEMPO (300 ms), mai sull'identita' del contatto.
+    # ⭐ And the new identifier is also truer to reality: a touch
+    #    panel assigns a NEW `tracking id` to every new contact, and does not
+    #    recycle the one just released.  ⇒ The bench now tests the tap-and-a-half
+    #    with two DIFFERENT identifiers, which is what happens with a real
+    #    finger — and it necessarily proves that the recogniser links it on SPACE
+    #    (40 px) and TIME (300 ms), never on the identity of the contact.
     attivi = {}
     posti = {}
     prossimo = [100]
@@ -954,8 +954,8 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
         c.valuta("window.__b28.attendi()")
 
     def zoom_azzera():
-        # ⚠ Non e' un interruttore del prodotto: e' un PIZZICO al contrario,
-        #   fatto con le stesse dita sintetiche, per riportare la vista a 1x.
+        # ⚠ It is not a product switch: it is a reversed PINCH,
+        #   made with the same synthetic fingers, to bring the view back to 1x.
         giu(80, -150, 0)
         giu(81, 150, 0)
         for k in range(1, 7):
@@ -970,22 +970,22 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
         raccolta.zoom(nome, z if isinstance(z, (int, float)) else 0)
 
     def riposa():
-        # ⛔ Oltre `T_SEQUENZA` (300 ms), o il gesto dopo si aggancerebbe come
-        #    tap-e-mezzo a quello prima: e' proprio la trappola che il banco
-        #    deve evitare di infilarsi da solo.
+        # ⛔ Beyond `T_SEQUENZA` (300 ms), or the next gesture would link as a
+        #    tap-and-a-half to the previous one: it is exactly the trap the bench
+        #    must avoid walking into by itself.
         dorme(450)
 
     # ══════════════════════════════════════════════════════════════════════
-    # LE SCENE, UNA FUNZIONE PER GESTO.
+    # THE SCENES, ONE FUNCTION PER GESTURE.
     #
-    # ⛔ E OGNI SCENA E' PROTETTA: un guasto dello STRUMENTO (la chiamata CDP
-    #    che non torna) non deve buttare via le altre sedici misure, e ⛔ non
-    #    deve nemmeno passare per un esito.  ⇒ Si riaggancia, si annulla il
-    #    tocco in corso, la fase resta SENZA byte — e il giudice la dichiara
-    #    rossa con «la fase non e' stata registrata affatto», che e' la verita'.
-    #    ⚠ `CODER.md` §3.10: «una lettura negata non e' una lettura che dice
-    #      zero».  I guasti finiscono in `04-b28-esiti.jsonl` sotto `guasti`,
-    #      cosi' un rosso si puo' attribuire al banco invece che al prodotto.
+    # ⛔ AND EVERY SCENE IS PROTECTED: a fault of the TOOL (the CDP call
+    #    that does not return) must not throw away the other sixteen measurements, and ⛔ it
+    #    must not pass for an outcome either.  ⇒ We reconnect, cancel the
+    #    touch in progress, the phase stays WITHOUT bytes — and the judge declares it
+    #    red with «the phase was not recorded at all», which is the truth.
+    #    ⚠ `CODER.md` §3.10: «a denied reading is not a reading that says
+    #      zero».  The faults end up in `04-b28-esiti.jsonl` under `guasti`,
+    #      so a red can be attributed to the bench instead of to the product.
     # ══════════════════════════════════════════════════════════════════════
 
     def f_G1():
@@ -1017,15 +1017,15 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
         su(2)
 
     def f_G4():
-        # Le dita SCENDONO ⇒ `RCP.md` §7.3 vuole l'asse verticale POSITIVO.
+        # The fingers go DOWN ⇒ `RCP.md` §7.3 wants the vertical axis POSITIVE.
         _due_dita_scendono()
 
     def f_G5():
         giu(1, 0, 0)
         dorme(80)
         su(1)
-        dorme(90)            # dentro i 300 ms di T_SEQUENZA
-        giu(1, 3, 3)         # e dentro i 40 px di D_STESSO_DITO
+        dorme(90)            # within the 300 ms of T_SEQUENZA
+        giu(1, 3, 3)         # and within the 40 px of D_STESSO_DITO
         dorme(30)
         for k in range(1, 9):
             muovi([(1, 3, 3 + 20 * k)])
@@ -1033,21 +1033,21 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
         su(1)
 
     def f_G6():
-        # ⛔⭐ QUI SI TIENE PREMUTO 20 ms E NON 80, E IL MOTIVO E' MISURATO.
+        # ⛔⭐ HERE IT IS HELD DOWN 20 ms AND NOT 80, AND THE REASON IS MEASURED.
         #
-        # `[M]` 14 agosto 2026: con 80 ms di attesa il tap a tre dita usciva
-        # **senza clic centrale**, e il riconoscitore era corretto.  Sonda
-        # diretta: `durata_max` = **147 ms** su una soglia di 180 — cioe' la
-        # MANO SINTETICA da sola costa ~120 ms, perche' tre dita giu' e tre su
-        # sono SEI andate-e-ritorni CDP a ~20 ms l'uno.
+        # `[M]` 14 Aug 2026: with 80 ms of waiting the three-finger tap came out
+        # **without a middle click**, and the recogniser was correct.  Direct
+        # probe: `durata_max` = **147 ms** against a threshold of 180 — that is, the
+        # SYNTHETIC HAND alone costs ~120 ms, because three fingers down and three up
+        # are SIX CDP round trips at ~20 ms each.
         #
-        # ⇒ Il banco stava misurando la latenza del proprio strumento, non il
-        #   gesto (`LEZIONI.md` §1.11).  Si toglie l'attesa, e il tempo che
-        #   resta e' quello vero dei sei viaggi.
-        # ⭐ E resta una domanda per Nic, che nessun banco chiude: **180 ms per
-        #    contatto bastano a un tap a tre dita fatto con una mano vera?**
-        #    Tre dita non si staccano insieme, e questo e' proprio il caso in
-        #    cui la soglia si giudica usandola.
+        # ⇒ The bench was measuring the latency of its own tool, not the
+        #   gesture (`LEZIONI.md` §1.11).  The wait is removed, and the time that
+        #   remains is the real one of the six trips.
+        # ⭐ And a question remains for Nic, which no bench closes: **are 180 ms per
+        #    contact enough for a three-finger tap made with a real hand?**
+        #    Three fingers do not lift together, and this is exactly the case in
+        #    which the threshold is judged by using it.
         giu(1, -40, 0)
         giu(2, 0, 0)
         giu(3, 40, 0)
@@ -1072,13 +1072,13 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
         zoom_azzera()
 
     def f_C1():
-        # Il tap che dura un po' troppo: 400 ms, e FERMO.  T_TAP = 180 ms.
+        # The tap that lasts a bit too long: 400 ms, and STILL.  T_TAP = 180 ms.
         giu(1, 0, 0)
         dorme(400)
         su(1)
 
     def f_C2():
-        # Il tap che scivola: 120 ms, ma 30 px.  D_TAP = 9 px CSS.
+        # The tap that slides: 120 ms, but 30 px.  D_TAP = 9 CSS px.
         giu(1, 0, 0)
         for k in range(1, 4):
             muovi([(1, 10 * k, 0)])
@@ -1086,8 +1086,8 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
         su(1)
 
     def f_C3():
-        # ⭐ Le due dita che si appoggiano a 30 ms di distanza — MA si
-        #    sovrappongono: e' la soglia dichiarata.
+        # ⭐ The two fingers that land 30 ms apart — BUT they
+        #    overlap: it is the declared threshold.
         giu(1, -30, 0)
         dorme(30)
         giu(2, 30, 0)
@@ -1097,7 +1097,7 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
         su(2)
 
     def f_C4():
-        # ⛔ E le due dita che NON si sovrappongono MAI: il difetto dichiarato.
+        # ⛔ And the two fingers that NEVER overlap: the declared defect.
         giu(1, -30, 0)
         dorme(90)
         su(1)
@@ -1107,7 +1107,7 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
         su(2)
 
     def f_C5a():
-        # Doppio tap fermo, stesso punto ⇒ DOPPIO CLIC.
+        # Still double tap, same spot ⇒ DOUBLE CLICK.
         giu(1, 0, 0)
         dorme(70)
         su(1)
@@ -1117,7 +1117,7 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
         su(1)
 
     def f_C5b():
-        # ⭐ La STESSA apertura, e poi trascina ⇒ TRASCINAMENTO.
+        # ⭐ The SAME opening, and then it drags ⇒ DRAG.
         giu(1, 0, 0)
         dorme(70)
         su(1)
@@ -1130,7 +1130,7 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
         su(1)
 
     def f_C6():
-        # Il trascinamento a due dita che comincia FERMO.
+        # The two-finger drag that starts STILL.
         giu(1, -30, -100)
         giu(2, 30, -100)
         dorme(350)
@@ -1151,7 +1151,7 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
         leggi_zoom("C7b-rotella-non-pizzico")
 
     def f_C8():
-        # Il dito residuo: due scorrono, una si stacca, l'altra continua.
+        # The leftover finger: two scroll, one lifts, the other carries on.
         giu(1, -30, -100)
         giu(2, 30, -100)
         for k in range(1, 5):
@@ -1183,24 +1183,24 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
         ("C8-il-dito-residuo", f_C8),
     ]
     assert sorted(n for n, _ in SCENE) == sorted(CASI), \
-        "le scene e i casi del giudice non combaciano"
+        "the scenes and the judge's cases do not match"
 
     verdetti = {}
     guasti_di_fase = []
     for nome, fn in SCENE:
-        # ⛔ UN TENTATIVO SOLO, e il secondo NON si fa.  Riprovando, i byte del
-        #    tentativo mezzo riuscito restano nella fase e si sommano a quelli
-        #    del secondo: il giudice leggeva «tre eventi del sinistro su
-        #    quattro» su un gesto che il prodotto aveva fatto due volte bene.
-        #    ⇒ Un guasto dello strumento si DICHIARA, non si nasconde con una
-        #      ripetizione (`CODER.md` §3.10: «una lettura negata non e' una
-        #      lettura che dice zero»).
+        # ⛔ ONE ATTEMPT ONLY, and the second is NOT made.  On a retry, the bytes of the
+        #    half-successful attempt stay in the phase and add up to those
+        #    of the second: the judge read «three left-button events out of
+        #    four» on a gesture the product had done right twice.
+        #    ⇒ A fault of the tool is DECLARED, not hidden with a
+        #      repetition (`CODER.md` §3.10: «a denied reading is not a
+        #      reading that says zero»).
         for tentativo in (1,):
             try:
                 fase(nome)
-                fn()                # ⛔ Il verdetto che la PAGINA ha dato al gesto, coi suoi numeri:
-                #    quando un caso e' rosso, dice quale condizione ha ceduto —
-                #    durata, sbavatura o decisione — invece di lasciarlo dedurre.
+                fn()                # ⛔ The verdict the PAGE gave to the gesture, with its numbers:
+                #    when a case is red, it says which condition gave way —
+                #    duration, smear or decision — instead of leaving it to be deduced.
                 try:
                     verdetti[nome] = json.loads(c.valuta(
                         "JSON.stringify(window.REMOTIX.tocco.stato().ultimo_gesto)")
@@ -1209,10 +1209,10 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
                     pass
                 break
             except (TimeoutError, OSError, RuntimeError) as e:
-                print("  ⚠ GUASTO DELLO STRUMENTO nella fase %s (%s)"
+                print("  ⚠ TOOL FAULT in phase %s (%s)"
                       % (nome, type(e).__name__))
                 guasti_di_fase.append(nome)
-                c.riaggancia("fase %s: %s" % (nome, type(e).__name__))
+                c.riaggancia("phase %s: %s" % (nome, type(e).__name__))
                 attivi.clear()
                 posti.clear()
                 try:
@@ -1228,13 +1228,13 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
     c.valuta("window.__b28.attendi()")
     time.sleep(0.5)
 
-    # ── ⒝ IL PASSAGGIO AUTOMATICO, e S1 la cucitura ───────────────────────
+    # ── ⒝ THE AUTOMATIC SWITCH, and S1 the seam ─────────────────────────────
     passaggio = misura_passaggio(c, cdp, porta, ox, oy, diagnosi)
     scena["passaggio"] = passaggio
     scena["verdetti_della_pagina"] = verdetti
     scena["guasti_dello_strumento"] = list(c.guasti)
     if c.guasti:
-        print("  ⚠ %d guasti dello strumento, riagganciati: %s"
+        print("  ⚠ %d tool faults, reconnected: %s"
               % (len(c.guasti), c.guasti))
 
     with raccolta.blocco:
@@ -1247,36 +1247,36 @@ def gira(porta, diagnosi, esiti_f, registro_f, attesa=30):
 
     esiti = giudica(righe)
     esiti += passaggio["esiti"]
-    # ⛔ Le fasi in cui lo STRUMENTO si e' guastato non si contano fra i rossi
-    #    del prodotto — e non si contano nemmeno fra i verdi.  Restano NON
-    #    MISURATE, con un segno tutto loro, e il banco esce con un codice
-    #    diverso: «da rifare», non «il prodotto e' rotto».
+    # ⛔ The phases in which the TOOL failed are not counted among the product's
+    #    reds — and they are not counted among the greens either.  They stay NOT
+    #    MEASURED, with a mark all their own, and the bench exits with a different
+    #    code: «to be redone», not «the product is broken».
     for e in esiti:
         if e["caso"] in guasti_di_fase:
             e["strumento"] = True
     return 0, scena, esiti
 
 
-# ⛔ Il passaggio si misura su QUALE DISPOSIZIONE E' IN VIGORE, letta dal
-#    documento — non «esiste una funzione che la cambia».
+# ⛔ The switch is measured on WHICH LAYOUT IS IN FORCE, read from the
+#    document — not «there is a function that changes it».
 def misura_passaggio(c_vecchia, cdp, porta, ox, oy, diagnosi):
-    """⛔⭐ IL PASSAGGIO SI MISURA IN UNA SCHEDA NUOVA, E NON E' UNA COMODITA'.
+    """⛔⭐ THE SWITCH IS MEASURED IN A NEW TAB, AND IT IS NOT A CONVENIENCE.
 
-    `[M]` 14 agosto 2026, Chrome 151.0.7922.137.  Misurando il passaggio nella
-    **stessa** scheda dei gesti — cioe' dopo una seconda `Page.navigate` e dopo
-    un evento di mouse — ⛔ `Input.dispatchTouchEvent` **non consegna piu'
-    niente alla pagina**: la spia del prologo non registra ne' un `touchstart`
-    ne' un `pointerdown` di tipo `touch`, e la chiamata CDP torna senza errore.
-    ⇒ Il banco leggeva «dopo un DITO: classico» e accusava il PRODOTTO.
+    `[M]` 14 Aug 2026, Chrome 151.0.7922.137.  Measuring the switch in the
+    **same** tab as the gestures — that is, after a second `Page.navigate` and after
+    a mouse event — ⛔ `Input.dispatchTouchEvent` **no longer delivers
+    anything to the page**: the prologue's spy records neither a `touchstart`
+    nor a `pointerdown` of type `touch`, and the CDP call returns without error.
+    ⇒ The bench read «after a FINGER: classico» and blamed the PRODUCT.
 
-    ⭐ In una scheda appena aperta la stessa sequenza funziona, e il passaggio
-       si misura per intero: avvio → **tocco**, mouse → **classico**, dito →
-       **tocco**.  ⚠ `CODER.md` §3.11: il sospetto va prima sulla misura.
+    ⭐ In a freshly opened tab the same sequence works, and the switch
+       is measured in full: start → **tocco**, mouse → **classico**, finger →
+       **tocco**.  ⚠ `CODER.md` §3.11: suspicion goes first to the measurement.
     """
     import urllib.request
     esiti, note = [], {}
 
-    # Una scheda nuova, sua, chiusa alla fine.
+    # A new tab, its own, closed at the end.
     with urllib.request.urlopen(urllib.request.Request(
             "http://127.0.0.1:%d/json/new?about:blank" % diagnosi,
             method="PUT"), timeout=10) as r:
@@ -1287,21 +1287,21 @@ def misura_passaggio(c_vecchia, cdp, porta, ox, oy, diagnosi):
     c.chiama("Page.addScriptToEvaluateOnNewDocument", source=SPIA)
     c.chiama("Emulation.setTouchEmulationEnabled", enabled=True, maxTouchPoints=5)
 
-    # ⛔⭐ UN DIFETTO DELLO STRUMENTO, MISURATO E AGGIRATO — `[M]` 14 agosto 2026,
-    #     Chrome 151.0.7922.137 su CHUWI.
+    # ⛔⭐ A DEFECT OF THE TOOL, MEASURED AND WORKED AROUND — `[M]` 14 Aug 2026,
+    #     Chrome 151.0.7922.137 on CHUWI.
     #
-    # Dopo un `Input.dispatchMouseEvent`, il successivo `Input.dispatchTouchEvent`
-    # **non torna mai**: la chiamata CDP scade in attesa di una risposta che non
-    # arriva.  ⇒ Il primo giro di questo banco leggeva «dopo un TOCCO: classico»
-    # e accusava il PRODOTTO di non tornare al tocco.
+    # After an `Input.dispatchMouseEvent`, the following `Input.dispatchTouchEvent`
+    # **never returns**: the CDP call times out waiting for an answer that never
+    # arrives.  ⇒ The first run of this bench read «after a TOUCH: classico»
+    # and blamed the PRODUCT for not going back to touch.
     #
-    # ⚠ `CODER.md` §3.11 — «quando codice letto e misura si contraddicono, il
-    #   sospetto va PRIMA sulla misura».  Qui il codice diceva che il passaggio
-    #   c'era e la misura diceva di no: aveva ragione il codice.
+    # ⚠ `CODER.md` §3.11 — «when code read and measurement contradict each other, the
+    #   suspicion goes FIRST to the measurement».  Here the code said the switch
+    #   was there and the measurement said no: the code was right.
     #
-    # ⭐ La cura: si riaccende l'emulazione del tocco dopo ogni evento di mouse.
-    #    Misurato: avvio «tocco» → dito «tocco» → mouse «classico» → dito
-    #    «tocco».  ⛔ E si dichiara qui invece di nasconderla in una riga.
+    # ⭐ The cure: touch emulation is switched on again after every mouse event.
+    #    Measured: start «tocco» → finger «tocco» → mouse «classico» → finger
+    #    «tocco».  ⛔ And it is declared here instead of hidden in a line.
     def mouse():
         c.chiama("Input.dispatchMouseEvent", type="mousePressed", x=ox, y=oy,
                  button="left", clickCount=1, buttons=1)
@@ -1310,19 +1310,19 @@ def misura_passaggio(c_vecchia, cdp, porta, ox, oy, diagnosi):
         time.sleep(0.3)
         c.chiama("Emulation.setTouchEmulationEnabled", enabled=True, maxTouchPoints=5)
 
-    # ⚠ Identificatore NUOVO a ogni contatto, come nella mano sintetica: un id
-    #   riciclato blocca `Input.dispatchTouchEvent` (misurato, vedi sopra).
+    # ⚠ A NEW identifier at every contact, as in the synthetic hand: a recycled
+    #   id blocks `Input.dispatchTouchEvent` (measured, see above).
     dito_id = [200]
 
     def dito(pt=None):
         dito_id[0] += 1
-        # ⛔ L'emulazione del tocco si RIACCENDE prima di ogni contatto — `[M]`
-        #    14 agosto 2026, e la spia della pagina e' quella che l'ha detto:
-        #    dopo la seconda navigazione e dopo un evento di mouse i
-        #    `touchStart` NON arrivavano piu' alla pagina (nessun `touchstart`
-        #    e nessun `pointerdown` di tipo touch nella spia), e il banco
-        #    accusava il PRODOTTO di non tornare al tocco.  ⚠ `CODER.md` §3.7:
-        #    non si deduce il mittente, lo si chiede.
+        # ⛔ Touch emulation is switched ON AGAIN before every contact — `[M]`
+        #    14 Aug 2026, and the page's spy is the one that said so:
+        #    after the second navigation and after a mouse event the
+        #    `touchStart` events NO LONGER reached the page (no `touchstart`
+        #    and no `pointerdown` of type touch in the spy), and the bench
+        #    blamed the PRODUCT for not going back to touch.  ⚠ `CODER.md` §3.7:
+        #    the sender is not deduced, it is asked.
         c.chiama("Emulation.setTouchEmulationEnabled", enabled=True,
                  maxTouchPoints=5)
         c.chiama("Input.dispatchTouchEvent", type="touchStart",
@@ -1341,17 +1341,17 @@ def misura_passaggio(c_vecchia, cdp, porta, ox, oy, diagnosi):
     def spediti():
         return c.valuta("window.__b28.spediti") or 0
 
-    # ── D1 · la disposizione forzata e' davvero in vigore, e il tocco parla ─
-    #    ⚠ Si legge sulla scheda dei GESTI, non su quella nuova.
+    # ── D1 · the forced layout is really in force, and touch speaks ────────
+    #    ⚠ It is read on the GESTURES tab, not on the new one.
     d = c_vecchia.valuta("document.body.dataset.disposizione")
     esiti.append({"caso": "D1-disposizione-in-vigore", "verde": d == "tocco",
-                  "perche": "`body[data-disposizione]` = «%s» (il PRODOTTO l'ha "
-                            "scritto, non il banco)" % d})
+                  "perche": "`body[data-disposizione]` = «%s» (the PRODUCT "
+                            "wrote it, not the bench)" % d})
 
-    # ── D2 · ⭐ IL PASSAGGIO VERO, su eventi VERI ──────────────────────────
-    # Si toglie la forzatura ricaricando senza `?disposizione`, poi si usa il
-    # mouse (⇒ classico) e poi il dito (⇒ tocco).  ⛔ Non si emula nessun
-    # hardware: si mandano eventi che il browser consegna come qualunque altro.
+    # ── D2 · ⭐ THE REAL SWITCH, on REAL events ──────────────────────────
+    # The forcing is removed by reloading without `?disposizione`, then the
+    # mouse is used (⇒ classico) and then the finger (⇒ tocco).  ⛔ No hardware
+    # is emulated: events are sent that the browser delivers like any other.
     c.chiama("Page.navigate", url="http://127.0.0.1:%d/" % porta)
     time.sleep(2.0)
     c.valuta(SCENA % TELA)
@@ -1371,22 +1371,22 @@ def misura_passaggio(c_vecchia, cdp, porta, ox, oy, diagnosi):
     note["spia"] = json.loads(c.valuta("JSON.stringify(window.__spia)") or "[]")
     verde = (d_dito0 == "tocco" and d_mouse == "classico" and d_dito == "tocco")
     esiti.append({"caso": "D2-passaggio-automatico", "verde": verde,
-                  "perche": ("all'avvio «%s»; dopo un DITO «%s»; dopo un CLIC di "
-                             "mouse «%s»; dopo un altro DITO «%s»"
+                  "perche": ("at start «%s»; after a FINGER «%s»; after a mouse "
+                             "CLICK «%s»; after another FINGER «%s»"
                              % (d0, d_dito0, d_mouse, d_dito))
                             + ("" if verde else
-                               "  ⛔ atteso tocco → classico → tocco; la spia dice: %s"
+                               "  ⛔ expected tocco → classico → tocco; the spy says: %s"
                                % note["spia"][-8:])})
 
-    # ── D3 · ⭐ «in vigore» vuol dire che l'ALTRA E' SPENTA ────────────────
-    # In classico, un tocco completo NON deve produrre nessun messaggio del
-    # tocco: i gestori sono staccati davvero, non solo dichiarati staccati.
+    # ── D3 · ⭐ «in force» means the OTHER ONE IS OFF ────────────────
+    # In classic, a complete touch must NOT produce any touch
+    # message: the handlers are really detached, not just declared detached.
     mouse()
     if disposizione() != "classico":
         esiti.append({"caso": "D3-l-altra-e-spenta", "verde": False,
-                      "perche": "non si e' riusciti a rientrare nel classico"})
+                      "perche": "could not get back into classic"})
     else:
-        # ⛔ Prima: in CLASSICO il tocco dev'essere spento e il classico acceso.
+        # ⛔ Before: in CLASSIC the touch one must be off and the classic one on.
         t_prima = json.loads(c.valuta("JSON.stringify(window.REMOTIX.tocco.stato())"))
         cl_prima = json.loads(c.valuta(
             "JSON.stringify(window.REMOTIX.input_classico.stato())"))
@@ -1405,32 +1405,32 @@ def misura_passaggio(c_vecchia, cdp, porta, ox, oy, diagnosi):
         nuovi = json.loads(c.valuta(
             "JSON.stringify(window.REMOTIX.tocco.spediti.slice(%d))" % prima) or "[]")
         d_fin = disposizione()
-        # ⛔⭐ «IN VIGORE» VUOL DIRE CHE L'ALTRA E' SPENTA, e si prova su tre
-        #    fatti osservabili, non su una variabile che dice cosi':
+        # ⛔⭐ «IN FORCE» MEANS THE OTHER ONE IS OFF, and it is proven on three
+        #    observable facts, not on a variable that says so:
         #
-        #   1. prima del gesto, in CLASSICO: il tocco e' spento e il classico
-        #      acceso — le due meta' non sono mai accese insieme;
-        #   2. dopo il gesto, in TOCCO: il classico e' spento;
-        #   3. ⛔ e il trascinamento cominciato NELL'ALTRA disposizione non
-        #      produce **nessun clic fantasma**: puo' muovere il puntatore (il
-        #      contatto e' quello che fa passare al tocco, ed e' giusto che il
-        #      gesto non vada perso), ma un PULSANTE li' dentro vorrebbe dire
-        #      che un mezzo gesto e' stato preso per un gesto intero.
+        #   1. before the gesture, in CLASSIC: touch is off and classic
+        #      on — the two halves are never on together;
+        #   2. after the gesture, in TOUCH: classic is off;
+        #   3. ⛔ and the drag started IN THE OTHER layout produces
+        #      **no ghost click**: it may move the pointer (the
+        #      contact is what switches to touch, and it is right that the
+        #      gesture is not lost), but a PULSANTE in there would mean
+        #      that half a gesture was taken for a whole gesture.
         clic = [m for m in nuovi if m.get("nome") == "PULSANTE"]
         verde = (t_prima.get("in_vigore") is False
                  and cl_prima.get("in_vigore") is True
                  and d_fin == "tocco" and not cl.get("in_vigore")
                  and not clic)
         esiti.append({"caso": "D3-l-altra-e-spenta", "verde": verde,
-                      "perche": ("in classico: tocco in vigore %s, classico in "
-                                 "vigore %s; dopo il gesto: disposizione «%s», "
-                                 "classico in vigore %s; il gesto ha prodotto %d "
-                                 "messaggi, di cui %d PULSANTE (clic fantasma)"
+                      "perche": ("in classic: touch in force %s, classic in "
+                                 "force %s; after the gesture: layout «%s», "
+                                 "classic in force %s; the gesture produced %d "
+                                 "messages, of which %d PULSANTE (ghost click)"
                                  % (t_prima.get("in_vigore"),
                                     cl_prima.get("in_vigore"), d_fin,
                                     cl.get("in_vigore"), dopo - prima, len(clic)))})
 
-    # ── S1 · ⭐ LA CUCITURA fra le due ancore ──────────────────────────────
+    # ── S1 · ⭐ THE SEAM between the two anchors ────────────────────────────
     c.chiama("Input.dispatchTouchEvent", type="touchStart",
              touchPoints=[{"x": ox, "y": oy, "id": 5}])
     for k in range(1, 6):
@@ -1450,44 +1450,44 @@ def misura_passaggio(c_vecchia, cdp, porta, ox, oy, diagnosi):
         }
         return null;
       })()""")
-    # ⛔ DUE COSE DISTINTE, e confonderle nasconderebbe la piu' importante:
-    #   S1a  l'utente VEDE un puntatore mentre trascina        (invariante I8)
-    #   S1b  e lo vede senza RIPIEGO, cioe' la cucitura regge  (la lezione F5)
+    # ⛔ TWO DISTINCT THINGS, and confusing them would hide the more important one:
+    #   S1a  the user SEES a pointer while dragging            (invariant I8)
+    #   S1b  and sees it without FALLBACK, i.e. the seam holds  (the F5 lesson)
     esiti.append({"caso": "S1a-il-puntatore-si-vede", "verde": bool(visibile),
-                  "perche": "in disposizione a tocco il puntatore visibile e' «%s»"
+                  "perche": "in touch layout the visible pointer is «%s»"
                             % visibile})
     esiti.append({"caso": "S1b-cucitura-senza-ripiego",
                   "verde": bool(st.get("puntatore_cucito"))
                            and not st.get("puntatore_cucitura_rotta"),
-                  "perche": ("`REMOTIX_PUNTATORE` c'e': %s; cucitura rotta: %s"
+                  "perche": ("`REMOTIX_PUNTATORE` is there: %s; seam broken: %s"
                              % (st.get("puntatore_cucito"),
                                 st.get("puntatore_cucitura_rotta")))
                             + ("" if not st.get("puntatore_cucitura_rotta") else
-                               "  ⛔ `muovi()` non accende `cl_noto`: in tocco il "
-                               "puntatore condiviso resta invisibile — cura di UNA "
-                               "riga nell'ancora F4-INPUT-CLASSICO (anello A7)")})
+                               "  ⛔ `muovi()` does not turn on `cl_noto`: in touch the "
+                               "shared pointer stays invisible — a cure of ONE "
+                               "line in the F4-INPUT-CLASSICO anchor (link A7)")})
     esiti.append({"caso": "S2-cucitura-classico",
                   "verde": bool(st.get("classico_cucito")),
-                  "perche": "`REMOTIX_CLASSICO` (ancora F4-INPUT-CLASSICO, anello A7): %s"
+                  "perche": "`REMOTIX_CLASSICO` (F4-INPUT-CLASSICO anchor, link A7): %s"
                             % st.get("classico_cucito")})
 
-    # ── D4 · il contesto NON e' il sistema operativo ───────────────────────
+    # ── D4 · the context is NOT the operating system ──────────────────────
     with open(os.path.join(RADICE, "src", "pagina.html"), encoding="utf-8") as f:
         testo = f.read()
     a = testo.split("ANCORA F4-TOCCO — INIZIO")[-1].split("ANCORA F4-TOCCO — FINE")[0]
-    # ⛔ I commenti si tolgono PRIMA di cercare, e non e' una finezza: il primo
-    #    giro di questo controllo era rosso su una riga di commento che diceva
-    #    «qui non compare `navigator.userAgent`».  Un controllo che legge le
-    #    proprie spiegazioni misura la prosa, non il codice.
+    # ⛔ Comments are removed BEFORE searching, and it is not a nicety: the first
+    #    run of this check was red on a comment line that said
+    #    «`navigator.userAgent` does not appear here».  A check that reads its
+    #    own explanations measures the prose, not the code.
     import re as _re
     codice = _re.sub(r"/\*.*?\*/", "", a, flags=_re.S)
     codice = _re.sub(r"^\s*//.*$", "", codice, flags=_re.M)
     colpevoli = [s for s in ("userAgent", "navigator.platform", "userAgentData")
                  if s in codice]
     esiti.append({"caso": "D4-il-contesto-non-e-il-sistema", "verde": not colpevoli,
-                  "perche": ("nell'ancora F4-TOCCO non compare niente che venga dal "
-                             "sistema operativo" if not colpevoli
-                             else "⛔ compaiono: %s" % colpevoli)})
+                  "perche": ("in the F4-TOCCO anchor nothing appears that comes from the "
+                             "operating system" if not colpevoli
+                             else "⛔ they appear: %s" % colpevoli)})
 
     try:
         urllib.request.urlopen(
@@ -1508,11 +1508,11 @@ def stampa(esiti):
     for e in esiti:
         segno = "⚠ " if e.get("strumento") else ("✅" if e["verde"] else "⛔")
         print("  %s %-38s %s" % (segno, e["caso"], e["perche"]))
-    print("\n  %d verdi su %d misurati" % (verdi, len(misurati)))
+    print("\n  %d green out of %d measured" % (verdi, len(misurati)))
     if guasti:
-        print("  ⚠ %d NON MISURATI per un guasto dello strumento: %s"
+        print("  ⚠ %d NOT MEASURED because of a tool fault: %s"
               % (len(guasti), [e["caso"] for e in guasti]))
-        print("    (⛔ non sono verdi e non sono rossi: si rifa' il giro)")
+        print("    (⛔ they are neither green nor red: the run is redone)")
     if rossi:
         return 1
     return 2 if guasti else 0

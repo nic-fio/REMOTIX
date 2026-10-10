@@ -1,106 +1,106 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-07-b65 — QUANDO IL TUBO E' STRETTO, CHI PAGA: L'AUDIO O IL VIDEO?
+07-b65 — WHEN THE PIPE IS NARROW, WHO PAYS: THE AUDIO OR THE VIDEO?
 
-⛔ Da dove nasce.  `[M]` di A1, da una sessione vera: **2 200 datagram scartati
-   dal server**, la pagina ha perso **684 blocchi = 13,7 s di audio (9,43 %)**,
-   e in una finestra di 25 s il **47 %**.  ⛔⛔ Nella STESSA sessione gli stream
-   del video non hanno perso niente: 5 334 consegnati, 5 334 dipinti.
-   ⇒ La sproporzione non e' la rete: e' **come trattiamo i datagram rispetto
-   agli stream** dentro il nostro trasporto.
+⛔ Where it comes from.  `[M]` by A1, from a real session: **2 200 datagrams discarded
+   by the server**, the page lost **684 blocks = 13.7 s of audio (9.43 %)**,
+   and in a 25 s window **47 %**.  ⛔⛔ In the SAME session the video
+   streams lost nothing: 5 334 delivered, 5 334 painted.
+   ⇒ The disproportion is not the network: it is **how we treat datagrams compared
+   with streams** inside our transport.
 
-⭐⭐ E LA PRIMA COSA CHE QUESTO BANCO HA DOVUTO IMPARARE E' CHE IL DIFETTO NON
-    SI RIPRODUCE SU UN TUBO LARGO.  `[M]` 21 agosto 2026, loopback, video vero
-    (1 279 fotogrammi 1920x1080 in 40 s) e audio PCM a 1,56 Mbit/s:
-    **8 006 spediti, 0 buttati, 0 rifiutati, 0 rimandati**.  ⇒ Su un tubo senza
-    fondo il pacer non chiude mai e nessuno cede.  Il difetto vive **solo dove
-    la banda non basta**, ed e' li' che bisogna andare a costruirlo.
+⭐⭐ AND THE FIRST THING THIS BENCH HAD TO LEARN IS THAT THE DEFECT DOES NOT
+    REPRODUCE ON A WIDE PIPE.  `[M]` 21 August 2026, loopback, real video
+    (1 279 frames 1920x1080 in 40 s) and PCM audio at 1.56 Mbit/s:
+    **8 006 sent, 0 thrown away, 0 refused, 0 postponed**.  ⇒ On a bottomless
+    pipe the pacer never closes and nobody gives way.  The defect lives **only where
+    bandwidth is not enough**, and that is where one has to go and build it.
 
-⛔ LE QUATTRO PORTE DA CUI UN DATAGRAM PUO' NON USCIRE, in ordine, e ognuna ha
-   un contatore suo (`src/webtransport.c`):
+⛔ THE FOUR DOORS THROUGH WHICH A DATAGRAM MAY FAIL TO GO OUT, in order, and each has
+   its own counter (`src/webtransport.c`):
 
-   | # | dove | contatore | chi decide |
+   | # | where | counter | who decides |
    |---|---|---|---|
-   | 1 | `dgram_accoda`, coda piena (8 posti) | `audio_buttati` | **noi**: il piu' vecchio esce per far posto al nuovo |
-   | 2 | `dgram_scrivi_uno`, `dgram_rimando_ts == ts` | — | **noi**: un solo tentativo per passata |
-   | 3 | `writev_datagram` torna 0 | `audio_rimandati` | **il pacer / la finestra di ngtcp2** |
-   | 4 | 4096 rimandi di fila | `audio_rifiutati` | **noi**, per non tenerlo in eterno |
+   | 1 | `dgram_accoda`, queue full (8 slots) | `audio_buttati` | **us**: the oldest leaves to make room for the new one |
+   | 2 | `dgram_scrivi_uno`, `dgram_rimando_ts == ts` | — | **us**: one single attempt per pass |
+   | 3 | `writev_datagram` returns 0 | `audio_rimandati` | **the pacer / ngtcp2's window** |
+   | 4 | 4096 postponements in a row | `audio_rifiutati` | **us**, so as not to keep it forever |
 
-⛔⛔ E L'ASIMMETRIA STA NELLA FORMA, non in una politica scritta da nessuna
-    parte: il video viaggia su **stream** — se non passa adesso, ngtcp2 lo
-    tiene, lo divide e lo ritrasmette, quindi puo' solo arrivare **tardi**;
-    l'audio viaggia su **datagram**, che §6.3 vieta di ritrasmettere e che
-    hanno una coda di otto posti che si sovrascrive.  ⇒ Ogni scarsita' di
-    occasioni di trasmissione la paga **per intero l'audio**, e nessuno l'ha
-    mai deciso: e' quel che succede se non si decide.
+⛔⛔ AND THE ASYMMETRY LIES IN THE FORM, not in a policy written
+    anywhere: video travels on **streams** — if it does not get through now, ngtcp2
+    keeps it, splits it and retransmits it, so it can only arrive **late**;
+    audio travels on **datagrams**, which §6.3 forbids retransmitting and which
+    have an eight-slot queue that overwrites itself.  ⇒ Every scarcity of
+    transmission opportunities is paid **entirely by the audio**, and nobody ever
+    decided it: it is what happens when nothing is decided.
 
-⭐ Questo banco costruisce la scarsita' con `tc netem rate` (piu' un ritardo,
-   o la finestra di congestione non ha modo di contare) e misura, a ogni
-   gradino: quanto audio parte, quanto se ne butta e **per quale delle quattro
-   porte**, quanti fotogrammi arrivano lo stesso, e come SUONA quel che resta.
+⭐ This bench builds the scarcity with `tc netem rate` (plus a delay,
+   or the congestion window has no way to count) and measures, at each
+   step: how much audio leaves, how much is thrown away and **through which of the four
+   doors**, how many frames arrive all the same, and how what remains SOUNDS.
 
-⛔ LA RETE SI TOCCA CON LA STESSA DISCIPLINA DI `07-b64-rete.py`:
-   solo `lo`, solo la porta 7801, `enp7s0` (ssh e 7730 dell'utente) mai; e un
-   guardiano staccato rimette la disciplina anche se questo copione muore.
+⛔ THE NETWORK IS TOUCHED WITH THE SAME DISCIPLINE AS `07-b64-rete.py`:
+   only `lo`, only port 7801, `enp7s0` (ssh and the user's 7730) never; and a
+   detached guardian puts the qdisc back even if this script dies.
 
-⛔⛔⛔ CHE COSA HA TROVATO — 21 agosto 2026, sera, e la causa NON e' quella che
-      il mandato sospettava.  La scena e' sempre la stessa: sessione di
-      `provar7` sulla 7801, tono 440 Hz nel sink, `04-b30-scena` sul monitor
-      catturato, cliente di prova dentro il contenitore, `netem` su `lo`
-      ristretto alla sola porta 7801.  Trenta secondi per gradino.
+⛔⛔⛔ WHAT IT FOUND — 21 August 2026, evening, and the cause is NOT the one
+      the mandate suspected.  The scene is always the same: session of
+      `provar7` on 7801, 440 Hz tone in the sink, `04-b30-scena` on the captured
+      monitor, test client inside the container, `netem` on `lo`
+      restricted to port 7801 only.  Thirty seconds per step.
 
-  1 · IL TUBO LARGO NON PERDE NIENTE.  Senza limite e a 15 Mbit/s:
-      **8 006 / 6 002 blocchi spediti, 0 buttati, 0 rifiutati**, purezza 1,000.
-      ⇒ Il difetto non esiste finche' la banda avanza.
+  1 · THE WIDE PIPE LOSES NOTHING.  Without a limit and at 15 Mbit/s:
+      **8 006 / 6 002 blocks sent, 0 thrown away, 0 refused**, purity 1.000.
+      ⇒ The defect does not exist as long as there is bandwidth to spare.
 
-  2 · ⛔ A 3 Mbit/s CON IL DESKTOP CHE SI MUOVE l'audio e' distrutto:
-      **397 blocchi spediti su ~6 000, 6 061 rifiutati** (PCM), purezza 0,18.
+  2 · ⛔ AT 3 Mbit/s WITH THE DESKTOP MOVING the audio is destroyed:
+      **397 blocks sent out of ~6 000, 6 061 refused** (PCM), purity 0.18.
 
-  3 · ⭐⭐ MA A 3 Mbit/s CON IL DESKTOP FERMO l'audio e' PERFETTO:
-      **6 009 spediti, 3 rifiutati, 0 buttati**, resa 0,9995, purezza **1,000**,
-      e sul filo passano 1,82 Mbit/s su 3 disponibili.
-      ⇒ **Non e' la banda: e' il video.**  Stessa banda, stesso audio, due
-        esiti opposti — e a cambiare c'e' una cosa sola.
+  3 · ⭐⭐ BUT AT 3 Mbit/s WITH THE DESKTOP STILL the audio is PERFECT:
+      **6 009 sent, 3 refused, 0 thrown away**, yield 0.9995, purity **1.000**,
+      and 1.82 Mbit/s out of 3 available pass on the wire.
+      ⇒ **It is not the bandwidth: it is the video.**  Same bandwidth, same audio, two
+        opposite outcomes — and only one thing changes.
 
-  4 · ⭐⭐ E NON E' NEMMENO QUANTO COSTA L'AUDIO.  Stesso gradino, stesso
-      desktop che si muove, ma **Opus** al posto del PCM — cioe' **1/32** della
-      banda (48 kbit/s contro 1,56 Mbit/s): **624 blocchi su 1 500, 896
-      rifiutati, il 58 % perso lo stesso**.  ⇒ Ridurre quel che l'audio chiede
-      non lo salva: il posto non c'e' comunque.
+  4 · ⭐⭐ AND IT IS NOT EVEN WHAT THE AUDIO COSTS.  Same step, same
+      moving desktop, but **Opus** instead of PCM — that is **1/32** of the
+      bandwidth (48 kbit/s against 1.56 Mbit/s): **624 blocks out of 1 500, 896
+      refused, 58 % lost all the same**.  ⇒ Reducing what the audio asks for
+      does not save it: the room is not there anyway.
 
-  5 · ⛔⛔⛔ LA CAUSA, ED E' UNA SPIRALE CHE IL CODICE AVEVA GIA' NOMINATO.
-      In tutti i giri stretti il video consegna **solo fotogrammi CHIAVE**
-      (144/144, 148/148, 107/107, 138/138, 149/149) contro 2 chiavi su 1 019 a
-      15 Mbit.  Il registro conta **806 richieste di chiave (§5.2)** e **173
-      righe «la CHIAVE N tiene ancora ~60 000 byte in coda e §5.2 vieta di
-      abbandonarla: si ASPETTA»**.
-        · una chiave da 60 KB su un tubo da 3 Mbit occupa la finestra per
+  5 · ⛔⛔⛔ THE CAUSE, AND IT IS A SPIRAL THE CODE HAD ALREADY NAMED.
+      In all the narrow runs the video delivers **only KEY frames**
+      (144/144, 148/148, 107/107, 138/138, 149/149) against 2 keys out of 1 019 at
+      15 Mbit.  The log counts **806 keyframe requests (§5.2)** and **173
+      lines «KEYFRAME N still holds ~60 000 bytes in the queue and §5.2 forbids
+      abandoning it: we WAIT»**.
+        · a 60 KB keyframe on a 3 Mbit pipe occupies the window for
           **160 ms**;
-        · `WT_CHIAVE_RICHIESTA_MS` ne concede una **ogni 150 ms**;
-        · in quei 160 ms nascono 32 blocchi PCM (8 di Opus) e ognuno trova
+        · `WT_CHIAVE_RICHIESTA_MS` grants one **every 150 ms**;
+        · in those 160 ms 32 PCM blocks are born (8 for Opus) and each finds
           `cwnd_left = 0`.
-      ⇒ Non e' una politica che fa cedere l'audio al video: e' che il video,
-        quando la banda manca, **chiede di piu'** (§5.2), e il datagram — che
-        non si spezza, non si ritrasmette e non puo' aspettare — e' l'unico che
-        puo' pagare.  ⚠ Il commento di `webtransport.c` alla riga ~728 la
-        chiamava «la spirale di §5.2» come ipotesi: qui e' misurata.
+      ⇒ It is not a policy that makes the audio give way to the video: it is that the video,
+        when bandwidth is short, **asks for more** (§5.2), and the datagram — which
+        does not split, is not retransmitted and cannot wait — is the only one that
+        can pay.  ⚠ The comment in `webtransport.c` at line ~728 called it
+        «the spiral of §5.2» as a hypothesis: here it is measured.
 
-  6 · ⛔ E QUATTRO VARIANTI DEL TRASPORTO NON CAMBIANO NIENTE, provate una per
-      una sul solo albero di costruzione, allo stesso gradino (blocchi
-      spediti): **base 397 · senza il ritorno anticipato per passata 278 ·
-      senza `PADDING` 406 · senza `MORE` (pacchetto suo) 514 · con la RISERVA
-      (il video cede la passata quando ci sono datagram in coda) 371**.
-      ⇒ ⭐ Il perche' e' la parte che vale: **la finestra non e' contesa, e'
-        gia' piena** di byte di video in volo.  Rinunciare a scrivere altro
-        video non libera quel che e' gia' partito e non e' ancora stato
-        riscontrato.  Nessuna furbizia nell'ordine di scrittura puo' fabbricare
-        posto che non c'e'.
+  6 · ⛔ AND FOUR VARIANTS OF THE TRANSPORT CHANGE NOTHING, tried one by
+      one on the build tree only, at the same step (blocks
+      sent): **base 397 · without the early return per pass 278 ·
+      without `PADDING` 406 · without `MORE` (its own packet) 514 · with the RESERVE
+      (the video yields the pass when there are datagrams in the queue) 371**.
+      ⇒ ⭐ The why is the part that counts: **the window is not contended, it is
+        already full** of video bytes in flight.  Giving up writing more
+        video does not free what has already left and has not yet been
+        acknowledged.  No cleverness in the write order can manufacture
+        room that is not there.
 
-Uso (dal portatile):
-    python3 banchi/07-b65-datagram.py sonda            # i gradini, uno per uno
-    python3 banchi/07-b65-datagram.py sonda --scena no # ⭐ il controllo del punto 3
-    python3 banchi/07-b65-datagram.py rimetti          # ⛔ e si verifica
+Usage (from the laptop):
+    python3 banchi/07-b65-datagram.py sonda            # the steps, one by one
+    python3 banchi/07-b65-datagram.py sonda --scena no # ⭐ the control of point 3
+    python3 banchi/07-b65-datagram.py rimetti          # ⛔ and it is checked
 """
 import argparse, json, os, re, subprocess, sys, time
 
@@ -118,25 +118,25 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 FUORI = os.environ.get("FUORI", "/tmp/claude-1000/-home-nicfio-Documenti-REMOTIX/"
                                 "84687524-93d6-4003-8cd1-1ed07aa63454/scratchpad/r7")
 
-VIETATA = "enp7s0"   # ci passano l'ssh e la 7730 dell'utente
+VIETATA = "enp7s0"   # ssh and the user's 7730 go through it
 DEV = "lo"
 
-# ⭐ I gradini.  La scena costa `[M]` 1,56 Mbit/s di audio PCM + ~0,5 di video:
-#    il primo gradino sta sopra la somma, l'ultimo molto sotto.  ⛔ E c'e'
-#    sempre un ritardo: senza RTT la finestra di congestione non ha modo di
-#    riempirsi, e il pacer non si accorge di niente.
+# ⭐ The steps.  The scene costs `[M]` 1.56 Mbit/s of PCM audio + ~0.5 of video:
+#    the first step sits above the sum, the last one well below.  ⛔ And there is
+#    always a delay: without RTT the congestion window has no way to
+#    fill up, and the pacer notices nothing.
 GRADINI = [
-    ("g0-largo",   [],                                    "nessun limite: il denominatore"),
-    ("g1-15mbit",  ["delay", "15ms", "rate", "15mbit"],   "banda tripla del bisogno: non deve cedere nessuno"),
-    ("g2-3mbit",   ["delay", "15ms", "rate", "3mbit"],    "poco sopra la somma (2,1): il primo gradino stretto"),
-    ("g3-2mbit",   ["delay", "15ms", "rate", "2mbit"],    "sotto la somma: qualcuno DEVE cedere, e si guarda chi"),
-    ("g4-1mbit",   ["delay", "15ms", "rate", "1mbit"],    "meta della somma"),
-    ("g5-500kbit", ["delay", "15ms", "rate", "500kbit"],  "un terzo del solo audio: il caso disperato"),
+    ("g0-largo",   [],                                    "no limit: the denominator"),
+    ("g1-15mbit",  ["delay", "15ms", "rate", "15mbit"],   "three times the needed bandwidth: nobody must give way"),
+    ("g2-3mbit",   ["delay", "15ms", "rate", "3mbit"],    "just above the sum (2.1): the first narrow step"),
+    ("g3-2mbit",   ["delay", "15ms", "rate", "2mbit"],    "below the sum: someone MUST give way, and we watch who"),
+    ("g4-1mbit",   ["delay", "15ms", "rate", "1mbit"],    "half the sum"),
+    ("g5-500kbit", ["delay", "15ms", "rate", "500kbit"],  "a third of the audio alone: the desperate case"),
 ]
 
 
 def rem(comando, tetto=300):
-    """⛔ Niente redirezione ATTORNO a ssh: la richiesta di sudo va sullo stderr."""
+    """⛔ No redirection AROUND ssh: the sudo prompt goes to stderr."""
     p = subprocess.run(["ssh", "-o", "BatchMode=yes", MACCHINA, comando],
                        capture_output=True, timeout=tetto)
     return (p.returncode, p.stdout.decode("utf-8", "replace"),
@@ -152,26 +152,26 @@ def qdisc():
 
 
 
-# ── ⛔ IL GUARDIANO SI ARMA E SI DISARMA PER PID, NON PER MOTIVO ───────────
+# ── ⛔ THE GUARDIAN IS ARMED AND DISARMED BY PID, NOT BY PATTERN ─────────
 GUARDIANO = LAV + "/.guardiano.pid"
 
 
 def guardiano_arma(secondi):
-    """Nasce con `setsid`: e' capo del suo gruppo, e il gruppo si uccide intero."""
+    """Born with `setsid`: it leads its own group, and the group is killed whole."""
     guardiano_disarma()
-    # ⛔ Il `&` e l'`echo $!` devono girare DENTRO la shell di root, o il
-    #    redirect verso `$LAV` (che e' di root) fallisce e il pid non si scrive:
-    #    `[M]` il primo giro stampava «pid ?», cioe' un guardiano che non si
-    #    sarebbe potuto disarmare per pid — la cura senza la sua meta'.
+    # ⛔ The `&` and the `echo $!` must run INSIDE root's shell, or the
+    #    redirect to `$LAV` (which belongs to root) fails and the pid is not written:
+    #    `[M]` the first run printed «pid ?», that is a guardian that could not
+    #    have been disarmed by pid — the cure without its other half.
     root('bash -c "setsid sh -c \'sleep %d; /usr/sbin/tc qdisc del dev %s root\' '
          '>/dev/null 2>&1 & echo \\$! > %s"' % (secondi, DEV, GUARDIANO))
     rc, out, _ = root("cat %s 2>/dev/null" % GUARDIANO)
-    print("   OK  guardiano armato per %d s (pid %s): la rete torna com'era "
-          "ANCHE se muoio" % (secondi, out.strip() or "?"))
+    print("   OK  guardian armed for %d s (pid %s): the network goes back as it was "
+          "EVEN if I die" % (secondi, out.strip() or "?"))
 
 
 def guardiano_disarma():
-    """⛔ Si uccide il GRUPPO, cosi' `sh` non arriva mai alla riga del `tc`."""
+    """⛔ The GROUP is killed, so `sh` never reaches the `tc` line."""
     rc, out, _ = root("cat %s 2>/dev/null || true" % GUARDIANO)
     p = out.strip()
     if p.isdigit():
@@ -185,7 +185,7 @@ def rimetti(dillo=True):
     q = qdisc()
     ok = "netem" not in q and "tbf" not in q
     if dillo:
-        print("   %s «%s» adesso e': %s" % ("OK " if ok else "NO ", DEV, q or "(nessuna)"))
+        print("   %s «%s» is now: %s" % ("OK " if ok else "NO ", DEV, q or "(none)"))
         print("   --  %s (ssh + 7730): %s"
               % (VIETATA, root("/usr/sbin/tc qdisc show dev %s" % VIETATA)[1].split("\n")[0]))
     return ok
@@ -194,7 +194,7 @@ def rimetti(dillo=True):
 def stringi(regole):
     if not regole:
         root("/usr/sbin/tc qdisc del dev %s root 2>/dev/null; true" % DEV)
-        return True, "(nessun limite)"
+        return True, "(no limit)"
     passi = [
         "/usr/sbin/tc qdisc del dev %s root 2>/dev/null; true" % DEV,
         "/usr/sbin/tc qdisc add dev %s root handle 1: prio bands 4" % DEV,
@@ -209,18 +209,18 @@ def stringi(regole):
         rc, _, err = root(c)
         if rc != 0 and "del dev" not in c:
             rimetti()
-            return False, "⛔ tc ha rifiutato: %s" % err[:200]
+            return False, "⛔ tc refused: %s" % err[:200]
     return True, qdisc()
 
 
-# ── ⛔ PRIMA DI TUTTO SI APRE UNA SESSIONE, o non c e niente da suonare ────
+# ── ⛔ FIRST OF ALL A SESSION IS OPENED, or there is nothing to play into ───
 #
-# `[M]` 21 agosto 2026, e il banco si e' fermato da solo dicendolo: il sink
-# «remotix» lo crea il FIGLIO, e il figlio nasce quando un cliente entra.  Su un
-# server appena riacceso il sink non esiste, `pw-play --target remotix` non si
-# lega a niente e il tono tace.  ⇒ Si apre una sessione corta apposta: il palco
-# e il sink le sopravvivono (invariante I4), e da li' in poi c e' dove suonare.
-# ⚠ Serve anche alla SCENA, che vuole il nome del monitor dal registro.
+# `[M]` 21 August 2026, and the bench stopped by itself saying so: the «remotix»
+# sink is created by the CHILD, and the child is born when a client comes in.  On a
+# freshly restarted server the sink does not exist, `pw-play --target remotix` binds
+# to nothing and the tone is silent.  ⇒ A short session is opened on purpose: the stage
+# and the sink outlive it (invariant I4), and from then on there is somewhere to play.
+# ⚠ It also serves the SCENE, which wants the monitor name from the log.
 def innesca_sessione(secondi=8):
     dentro = ("python3 -u %s/banchi/01-b3-cliente.py --indirizzo %s --porta %d "
               "--utente %s --parola-file %s/parola --audio-codec pcm "
@@ -231,11 +231,11 @@ def innesca_sessione(secondi=8):
     return "SESSIONE" in (out + err)
 
 
-# ── il tono, che deve suonare per TUTTO il giro ────────────────────────────
+# ── the tone, which must play for the WHOLE run ───────────────────────────
 def tono_fabbrica(hz=440, secondi=70, ampiezza=0.5):
-    """⛔ Il tono si fabbrica QUI se manca, e l'ampiezza e' NOTA: l'RMS atteso
-       e' un conto (A/sqrt2), non una stima.  ⚠ E il file dev'essere leggibile
-       dall'utente della sessione, che non e' root."""
+    """⛔ The tone is built HERE if missing, and the amplitude is KNOWN: the expected RMS
+       is a calculation (A/sqrt2), not an estimate.  ⚠ And the file must be readable
+       by the session's user, who is not root."""
     f = "%s/tono-%d.wav" % (LAV, hz)
     rc, out, _ = root("test -s %s && stat -c %%s %s || echo 0" % (f, f))
     if out.strip().isdigit() and int(out.strip()) > 48000 * secondi * 2:
@@ -281,7 +281,7 @@ def tono_spegni():
          % (UID_B, UID_B))
 
 
-# ── la scena che fa lavorare il codificatore ───────────────────────────────
+# ── the scene that makes the encoder work ─────────────────────────────────
 def scena_accendi():
     rc, out, _ = root("grep -ao 'monitor «[^»]*»' %s/registro.log | tail -1" % LAV)
     m = re.findall("monitor «([^»]*)»", out)
@@ -303,17 +303,17 @@ def scena_spegni():
     root("pkill -u %d -f 04-b30-scena; true" % UID_B)
 
 
-# ── ⭐ I BYTE VERI SUL FILO, che sono l altra meta della domanda ───────────
+# ── ⭐ THE REAL BYTES ON THE WIRE, which are the other half of the question ──
 #
-# ⛔ Il carico utile di un blocco PCM e' 972 byte, ma il pacchetto che lo porta
-#    puo' essere molto piu' grosso: `dgram_scrivi_uno` chiede
-#    `NGTCP2_WRITE_DATAGRAM_FLAG_PADDING`, e il padding riempie il pacchetto
-#    fino alla misura piena.  ⇒ Se il datagram NON riesce a dividere il
-#    pacchetto col video, ogni blocco d audio costa 1452 byte invece di 972:
-#    il 49 % di banda in piu' di quel che il suono contiene.
+# ⛔ The payload of a PCM block is 972 bytes, but the packet that carries it
+#    can be much bigger: `dgram_scrivi_uno` asks for
+#    `NGTCP2_WRITE_DATAGRAM_FLAG_PADDING`, and the padding fills the packet
+#    up to full size.  ⇒ If the datagram does NOT manage to share the
+#    packet with the video, every audio block costs 1452 bytes instead of 972:
+#    49 % more bandwidth than what the sound contains.
 #
-# ⚠ Non si deduce: si contano i byte che escono, e il contatore ce l ha gia'
-#   il qdisc `netem` che questo banco installa.
+# ⚠ It is not deduced: the outgoing bytes are counted, and the counter is already
+#   kept by the `netem` qdisc this bench installs.
 def byte_sul_filo():
     rc, out, _ = root("/usr/sbin/tc -s qdisc show dev %s" % DEV)
     import re as _re
@@ -324,11 +324,11 @@ def byte_sul_filo():
     return (int(m.group(1)), int(m.group(2))) if m else None
 
 
-# ── un giro: il cliente dentro il contenitore, audio + video ───────────────
+# ── one run: the client inside the container, audio + video ────────────────
 def giro(nome, codec, secondi):
     root("rm -f %s/%s.jsonl %s/%s.265; true" % (LAV, nome, LAV, nome))
-    # ⛔ Si prende il numero di righe del registro PRIMA, cosi' il «conto
-    #    finale» che si legge dopo e' di QUESTA sessione e non di quella prima.
+    # ⛔ The number of log lines is taken BEFORE, so that the «final
+    #    count» read afterwards belongs to THIS session and not to the one before.
     rc, out, _ = root("wc -l < %s/registro.log" % LAV)
     try:
         riga0 = int(out.strip())
@@ -338,11 +338,11 @@ def giro(nome, codec, secondi):
               "--utente %s --parola-file %s/parola --audio-codec %s "
               "--audio-scrivi %s/%s.jsonl --adatta 1920x1080 "
               "--video-scrivi %s/%s.265 --resta %d"
-              # ⛔ `opus` DA SOLO NON BASTA, e il server ha ragione a
-              #   rifiutarlo: RCP §4.3 fa del PCM la base obbligatoria ai due
-              #   capi, e un CIAO che dichiara solo Opus prende
-              #   CONGEDO(NIENTE_IN_COMUNE 0x09).  Il banco lo aveva preso per
-              #   un guasto per due giri.
+              # ⛔ `opus` ALONE IS NOT ENOUGH, and the server is right to
+              #   refuse it: RCP §4.3 makes PCM the mandatory base at both
+              #   ends, and a CIAO that declares only Opus gets
+              #   CONGEDO(NIENTE_IN_COMUNE 0x09).  The bench had taken it for
+              #   a fault for two runs.
               % (DENTRO_ALB, IND, PORTA, UTENTE, DENTRO_LAV,
                  "opus,pcm" if codec == "opus" else codec,
                  DENTRO_LAV, nome, DENTRO_LAV, nome, secondi))
@@ -353,14 +353,14 @@ def giro(nome, codec, secondi):
     testo = out + err
     r = {"cliente": {}}
     for x in testo.splitlines():
-        if "[audio] ricevuti" in x:
+        if "[audio] received" in x:
             r["cliente"]["audio"] = x.strip()
-        if "[audio] scartati" in x:
+        if "[audio] discarded" in x:
             r["cliente"]["scartati"] = x.strip()
         if "[vid]" in x:
             r["cliente"]["video"] = x.strip()
-    # ⛔ Il conto del SERVER, e solo le righe nate in questo giro.
-    rc, out, _ = root("tail -n +%d %s/registro.log | grep -aE 'conto finale|cwnd_left' "
+    # ⛔ The SERVER's count, and only the lines born in this run.
+    rc, out, _ = root("tail -n +%d %s/registro.log | grep -aE 'final count|cwnd_left' "
                       "| tail -4" % (riga0 + 1, LAV))
     r["server"] = [x.strip() for x in out.splitlines()]
     if prima_filo and dopo_filo:
@@ -373,23 +373,23 @@ def giro(nome, codec, secondi):
 
 
 def giudica(nome, codec):
-    """⛔ Con Opus non si ascolta: il giudice non lo decodifica, e dirlo e'
-       meglio che far finta (`CODER.md` §3.10)."""
+    """⛔ With Opus we do not listen: the judge does not decode it, and saying so is
+       better than pretending (`CODER.md` §3.10)."""
     j = os.path.join(FUORI, nome + ".jsonl")
     subprocess.run("ssh -o BatchMode=yes %s \"printf '%%s\\n' '%s' | sudo -S -p '' "
                    "cat %s/%s.jsonl\" > %s" % (MACCHINA, PAROLA_SUDO, LAV, nome, j),
                    shell=True)
     if codec != "pcm":
-        return {"esito": "NON GIUDICATO — Opus: il giudice non lo decodifica, "
-                         "qui si conta il trasporto"}
+        return {"esito": "NON GIUDICATO — Opus: the judge does not decode it, "
+                         "here the transport is counted"}
     if not os.path.exists(j) or os.path.getsize(j) == 0:
-        return {"esito": "NIENTE DA GIUDICARE — nessun blocco"}
+        return {"esito": "NIENTE DA GIUDICARE — no blocks"}
     p = subprocess.run(["python3", os.path.join(QUI, "07-b64-orecchio.py"), j,
                         "--hz", "440"], capture_output=True)
     try:
         d = json.loads(p.stdout.decode())["nostro"]
     except Exception as e:
-        return {"esito": "il giudice non ha risposto: %s" % e}
+        return {"esito": "the judge did not answer: %s" % e}
     return {"blocchi": d["blocchi"], "resa_campioni": d.get("resa_campioni"),
             "scoppiettii_al_s": d["scoppiettii"]["al_secondo"], "tono": d["tono"]}
 
@@ -401,34 +401,34 @@ def principale():
     p.add_argument("--codec", default="pcm", choices=["pcm", "opus"])
     p.add_argument("--solo", default="")
     p.add_argument("--scena", default="si", choices=["si", "no"],
-                   help="il desktop che si muove (e quindi il video che pesa)")
+                   help="the moving desktop (and so the video that weighs)")
     a = p.parse_args()
     os.makedirs(FUORI, exist_ok=True)
 
     if a.passo in ("rimetti", "stato"):
         return 0 if rimetti() else 2
 
-    print("== 07-b65 · chi paga quando il tubo e' stretto — porta %d, dev «%s»"
+    print("== 07-b65 · who pays when the pipe is narrow — port %d, dev «%s»"
           % (PORTA, DEV))
-    print("   ⛔ «%s» (ssh + 7730 dell utente) NON si tocca" % VIETATA)
-    print("   --  «%s» prima: %s" % (DEV, qdisc() or "(nessuna)"))
+    print("   ⛔ «%s» (ssh + the user's 7730) is NOT touched" % VIETATA)
+    print("   --  «%s» before: %s" % (DEV, qdisc() or "(none)"))
     totale = (a.secondi + 150) * len(GRADINI) + 300
     guardiano_arma(totale)
-    print("   OK  guardiano armato per %d s" % totale)
+    print("   OK  guardian armed for %d s" % totale)
 
     esiti = []
     try:
-        print("   --  apro una sessione corta per far nascere il palco e il sink")
+        print("   --  opening a short session to bring the stage and the sink to life")
         if not innesca_sessione():
-            print("   NO  la sessione non si apre: non misuro"); return 2
+            print("   NO  the session does not open: I do not measure"); return 2
         if not tono_accendi():
-            print("   NO  il tono non suona: non misuro"); return 2
+            print("   NO  the tone does not play: I do not measure"); return 2
         usc = scena_accendi() if a.scena == "si" else None
-        # ⭐ `--scena no` e' il CONTROLLO che separa i due imputati: con il
-        #    desktop fermo il video chiede pochissimo, e se in quella
-        #    condizione l audio passa, allora non e' «l audio cede sempre» —
-        #    e' «il video si mangia la finestra».
-        print("   %s scena sul monitor %s" % ("OK " if usc else "-- ", usc))
+        # ⭐ `--scena no` is the CONTROL that separates the two suspects: with the
+        #    desktop still the video asks for very little, and if in that
+        #    condition the audio gets through, then it is not «the audio always gives way» —
+        #    it is «the video eats the window».
+        print("   %s scene on monitor %s" % ("OK " if usc else "-- ", usc))
         for nome, regole, atteso in GRADINI:
             if a.solo and a.solo not in nome:
                 continue
@@ -438,10 +438,10 @@ def principale():
                 print("   ", q); break
             print("    tc: %s" % " ".join(q.split("\n")[:2])[:150])
             leg = legami()
-            print("    M3: legami in ingresso al sink = %s" % leg)
+            print("    M3: incoming links to the sink = %s" % leg)
             if leg <= 0:
-                print("   NO  il tono tace: NON giudico questo gradino")
-                esiti.append({"gradino": nome, "esito": "il tono taceva"})
+                print("   NO  the tone is silent: I do NOT judge this step")
+                esiti.append({"gradino": nome, "esito": "the tone was silent"})
                 continue
             r = giro(nome, a.codec, a.secondi)
             for k in ("audio", "scartati", "video"):
@@ -452,14 +452,14 @@ def principale():
             for x in r["server"]:
                 print("    SERVER %s" % x[:190])
             g = giudica(nome, a.codec)
-            print("    orecchio: %s" % json.dumps(g, ensure_ascii=False))
+            print("    ear: %s" % json.dumps(g, ensure_ascii=False))
             esiti.append({"gradino": nome, "regole": regole, "atteso": atteso,
                           "cliente": r["cliente"], "server": r["server"],
                           "orecchio": g})
     finally:
         scena_spegni()
         tono_spegni()
-        print("\n== ⛔ LA RETE SI RIMETTE COM'ERA")
+        print("\n== ⛔ THE NETWORK IS PUT BACK AS IT WAS")
         rimetti()
     json.dump(esiti, open(os.path.join(FUORI, "b65-esiti.json"), "w"),
               ensure_ascii=False, indent=1)

@@ -1,97 +1,102 @@
 #!/bin/bash
 #
-# 06-b33-risveglio.sh — ⛔⛔ LA SECONDA PORTA DEL CLIC CHE MUORE, §7.1.
+# 06-b33-risveglio.sh — ⛔⛔ THE SECOND DOOR OF THE DYING CLICK, §7.1.
 #
-#   ⚠ GIRA SUL SERVER (192.168.0.2), come utente `nicfio`, NON da root e NON
-#     dentro il contenitore.
+#   ⚠ RUNS ON THE SERVER (192.168.0.2), as user `nicfio`, NOT as root and NOT
+#     inside the container.
 #
 #   bash 06-b33-risveglio.sh <file-parola-sudo> tutto
-#   bash 06-b33-risveglio.sh <file-parola-sudo> strumento  ⭐ il controllo ZERO
-#   bash 06-b33-risveglio.sh <file-parola-sudo> libero     3 risvegli, mano alzata
-#   bash 06-b33-risveglio.sh <file-parola-sudo> tenuto     ⛔ LA SCENA CATTIVA
-#   bash 06-b33-risveglio.sh <file-parola-sudo> confronto  la porta GIA' NOTA
-#   bash 06-b33-risveglio.sh <file-parola-sudo> guarigione ⭐ la cura «C»
-#   bash 06-b33-risveglio.sh <file-parola-sudo> applicazione ⭐ un GTK vero
+#   bash 06-b33-risveglio.sh <file-parola-sudo> strumento  ⭐ the ZERO check
+#   bash 06-b33-risveglio.sh <file-parola-sudo> libero     3 wake-ups, hand raised
+#   bash 06-b33-risveglio.sh <file-parola-sudo> tenuto     ⛔ THE BAD SCENE
+#   bash 06-b33-risveglio.sh <file-parola-sudo> confronto  the ALREADY KNOWN door
+#   bash 06-b33-risveglio.sh <file-parola-sudo> guarigione ⭐ cure "C"
+#   bash 06-b33-risveglio.sh <file-parola-sudo> applicazione ⭐ a real GTK app
 #
-#   ⛔ E il suo controllo positivo e' `06-b33-risveglio-certifica.sh`, che
-#      innesta tre guasti e pretende che cambino ESATTAMENTE i casi dichiarati.
-#
-# ===========================================================================
-# ⛔ L'ATTESO, DICHIARATO PRIMA — `CODER.md` §3.3
-# ===========================================================================
-#
-# La tesi di §7.1 che questo banco parte per SMENTIRE:
-#
-#   *«ogni `cattura_risveglia()` (400 ms, scena ferma, chiave dovuta) ricrea i
-#     dispositivi di `libei`: 3 risvegli, 3 ricambi, con zero `ADATTA_TELA`»*
-#
-# S0 · strumento   il testimone vede `BTN_LEFT` giu' E su, senza nessun
-#                  ricambio in mezzo.  ⛔ Se non li vede, tutto il resto e' IL
-#                  BANCO e non il prodotto
-# S1 · libero      3 `risveglia`, **niente premuto** ⇒ `ricambi_puntatore`
-#                  atteso **+3** (uno per risveglio) e **zero** chiamate a
-#                  `cattura_ridimensiona()`.  ⚠ Se il delta fosse 0, §7.1 e'
-#                  FALSA e va corretta — ed e' l'esito che questo banco deve
-#                  poter dichiarare
-# S2 · tenuto      `BTN_LEFT` giu' → **un solo** `risveglia` → si rilascia.
-#                  atteso col mondo di oggi: ⛔ il rilascio **NON arriva** al
-#                  testimone, e il clic FRESCO successivo **non arriva
-#                  nemmeno lui** (il posto conta il pulsante ancora giu',
-#                  `meta-seat-impl.c:899-908`).  ⭐ E il TASTO invece arriva:
-#                  la tastiera non e' un dispositivo di viewport
-# S3 · confronto   la stessa scena con `ridimensiona` al posto di `risveglia`:
-#                  e' la porta gia' misurata da §4.6.  ⛔ Serve a distinguere
-#                  «il risveglio ricambia» da «ricambia tutto sempre»: senza
-#                  questo confronto il numero di S2 non significa niente
-# S4 · guarigione  si rompe apposta e si stacca il SOLO cliente EIS ⇒ i clic
-#                  devono tornare, con lo STESSO `gnome-shell` (verificato per
-#                  pid: se il pid cambia il verde direbbe solo «ho riavviato»)
-# S5 · applicazione ⭐ un `gnome-terminal` VERO deve continuare a ricevere gli
-#                  Invio DOPO la guarigione.  ⛔ Serve perche' il riattacco fa
-#                  passare la capacita' del posto da 3 a 0 e ritorno: un cliente
-#                  Wayland che non si riaggancia va SORDO — e uno c'era, ed era
-#                  il nostro testimone (curato il 21 ago)
-#
-# ⛔⛔ E DAL 21 AGOSTO GLI ATTESI DI S2/S3 SONO CAMBIATI, perche' il mondo e'
-#      cambiato: con le cure «A» e «C» dentro, T3 e T4 sono VERDI.  Col difetto
-#      vivo tornano `DIFETTO_VIVO`, ed e' quel che `06-b33-risveglio-certifica.sh`
-#      pretende togliendo le cure una per volta.
+#   ⛔ And its positive control is `06-b33-risveglio-certifica.sh`, which
+#      injects three faults and demands that EXACTLY the declared cases change.
 #
 # ===========================================================================
-# ⛔⛔ IL LIMITE, IN TESTA PERCHE' NESSUNO CI CADA IN VERDE
+# ⛔ THE EXPECTATION, DECLARED BEFOREHAND — `CODER.md` §3.3
 # ===========================================================================
 #
-# **Qui non c'e' il server**: non c'e' QUIC, non c'e' `rcp.c`, non c'e' la
-# pagina.  C'e' `06-b33-risveglio`, che collega `src/cattura.c` e `src/input.c`
-# e li chiama da riga di comando (`CODER.md` §3.6).
+# The thesis of §7.1 that this bench sets out to REFUTE:
 #
-#   ⇒ ⛔ Questo banco NON PUO' DIRE se il PRODOTTO cade in questa scena: dice
-#     che **la funzione che il prodotto chiama** ci cade.  Il passo dal secondo
-#     al primo lo fa `figlio.c:6365`, che chiama `cattura_risveglia()` quando la
-#     presa e' ZERO e una chiave e' dovuta — cioe' **su un desktop fermo**, che
-#     e' esattamente la scena qui sotto.  ⚠ Ma il giro col server vero e' un
-#     altro banco, e finche' non c'e' la marca resta `[M] sul modulo`.
+#   *"every `cattura_risveglia()` (400 ms, still scene, key owed) recreates the
+#     `libei` devices: 3 wake-ups, 3 replacements, with zero `ADATTA_TELA`"*
 #
-#   ⇒ E NON DICE NIENTE sul browser: nessun quadro, nessun `requestAnimationFrame`.
+# S0 · strumento   the witness sees `BTN_LEFT` down AND up, with no
+#                  replacement in between.  ⛔ If it does not see them, all the
+#                  rest is THE BENCH and not the product
+# S1 · libero      3 `risveglia`, **nothing pressed** ⇒ `ricambi_puntatore`
+#                  expected **+3** (one per wake-up) and **zero** calls to
+#                  `cattura_ridimensiona()`.  ⚠ If the delta were 0, §7.1 is
+#                  FALSE and must be corrected — and that is the outcome this
+#                  bench must be able to declare
+# S2 · tenuto      `BTN_LEFT` down → **a single** `risveglia` → release.
+#                  expected with today's world: ⛔ the release does **NOT reach**
+#                  the witness, and the next FRESH click **does not reach it
+#                  either** (the seat counts the button as still down,
+#                  `meta-seat-impl.c:899-908`).  ⭐ The KEY, instead, arrives:
+#                  the keyboard is not a viewport device
+# S3 · confronto   the same scene with `ridimensiona` in place of `risveglia`:
+#                  it is the door already measured by §4.6.  ⛔ It serves to
+#                  tell "the wake-up replaces" from "everything always
+#                  replaces": without this comparison the number of S2 means
+#                  nothing
+# S4 · guarigione  break it on purpose and detach ONLY the EIS client ⇒ clicks
+#                  must come back, with the SAME `gnome-shell` (checked by
+#                  pid: if the pid changes the green would only say "I
+#                  restarted")
+# S5 · applicazione ⭐ a REAL `gnome-terminal` must keep receiving Enters
+#                  AFTER the healing.  ⛔ It is needed because the reattach
+#                  takes the seat capability from 3 to 0 and back: a Wayland
+#                  client that does not re-hook goes DEAF — and there was one,
+#                  and it was our witness (cured on 21 Aug)
 #
-# ⚠ Ogni misura di tempo porta accanto il CARICO: dieci agenti sulla stessa
-#   macchina, e un numero preso sotto carico e non dichiarato tale e' un numero
-#   falso.
+# ⛔⛔ AND SINCE 21 AUGUST THE EXPECTATIONS OF S2/S3 HAVE CHANGED, because the
+#      world has changed: with cures "A" and "C" in, T3 and T4 are GREEN.  With
+#      the defect alive they go back to `DIFETTO_VIVO`, and that is what
+#      `06-b33-risveglio-certifica.sh` demands by removing the cures one at a
+#      time.
+#
+# ===========================================================================
+# ⛔⛔ THE LIMIT, AT THE TOP SO THAT NOBODY FALLS INTO IT IN GREEN
+# ===========================================================================
+#
+# **The server is not here**: there is no QUIC, no `rcp.c`, no page.  There
+# is `06-b33-risveglio`, which links `src/cattura.c` and `src/input.c` and
+# calls them from the command line (`CODER.md` §3.6).
+#
+#   ⇒ ⛔ This bench CANNOT SAY whether the PRODUCT falls in this scene: it says
+#     that **the function the product calls** falls in it.  The step from the
+#     second to the first is made by `figlio.c:6365`, which calls
+#     `cattura_risveglia()` when the capture is ZERO and a key is owed — that
+#     is, **on a still desktop**, which is exactly the scene below.  ⚠ But the
+#     round with the real server is another bench, and until it exists the mark
+#     stays `[M] on the module`.
+#
+#   ⇒ And it SAYS NOTHING about the browser: no frame, no `requestAnimationFrame`.
+#
+# ⚠ Every time measurement carries the LOAD next to it: ten agents on the same
+#   machine, and a number taken under load and not declared as such is a false
+#   number.
 set -uo pipefail
 
 QUI=$(cd -- "$(dirname -- "$0")" && pwd)
-PAROLA_SUDO=${1:?serve il file 0600 con la parola di sudo}
+PAROLA_SUDO=${1:?needs the 0600 file with the sudo password}
 COSA=${2:-tutto}
 
 SRC=${SRC:-/media/REMOTIX/src/06-i-src}
 LAV=${LAV:-/media/REMOTIX/tmp/06-i}
 T=$SRC/banchi/06-b33-terreno.sh
 G=$SRC/banchi/06-b33-risveglio-giudice.py
-# ⛔ Il file degli esiti si puo' DIRIGERE, e non e' una comodita': il giudice lo
-#    apre in **append** e nessuno lo tronca.  ⇒ Chi confronta due giri — cioe'
-#    `06-b33-risveglio-certifica.sh` — deve poter dare a ciascun giro un file
-#    suo, o rischia di leggere la riga di IERI credendola di adesso.
-#    *Rilievo R3 della revisione avversariale, 22 agosto 2026.*
+# ⛔ The results file can be REDIRECTED, and it is not a convenience: the judge
+#    opens it in **append** and nobody truncates it.  ⇒ Whoever compares two
+#    rounds — that is, `06-b33-risveglio-certifica.sh` — must be able to give
+#    each round a file of its own, or risks reading YESTERDAY's line believing
+#    it is from now.
+#    *Finding R3 of the adversarial review, 22 August 2026.*
 ESITI=${ESITI:-$LAV/06-b33-risveglio-esiti.jsonl}
 TELA=${TELA:-1264x800}
 TELA2=${TELA2:-1000x640}
@@ -104,16 +109,17 @@ inf() { printf '    --  %s\n' "$*"; }
 log() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 ESITO=0
 
-[ -r "$PAROLA_SUDO" ] || { printf '⛔ %s non si legge\n' "$PAROLA_SUDO"; exit 2; }
+[ -r "$PAROLA_SUDO" ] || { printf '⛔ %s cannot be read\n' "$PAROLA_SUDO"; exit 2; }
 sudo_mio() { printf '%s\n' "$(cat "$PAROLA_SUDO")" | sudo -S -p 'Password: ' "$@"; }
 terreno()  { sudo_mio bash "$T" "$@"; }
 di()       { terreno iniettore-di "$@" >/dev/null; }
 carico()   { terreno carico | sed 's/^/        /'; }
 
-# ⛔ La scena si rimonta da capo a OGNI giro, e il motivo e' misurato: una volta
-#    che il posto ha un pulsante bloccato giu', l'unica cosa che lo sblocca e'
-#    la caduta del canale EIS (`meta-eis-client.c:1075`, `drop_device`).  ⇒ Un
-#    secondo giro dentro lo stesso iniettore misurerebbe il DANNO DEL PRIMO.
+# ⛔ The scene is rebuilt from scratch at EVERY round, and the reason is
+#    measured: once the seat has a button stuck down, the only thing that
+#    unsticks it is the drop of the EIS channel (`meta-eis-client.c:1075`,
+#    `drop_device`).  ⇒ A second round inside the same injector would measure
+#    the DAMAGE OF THE FIRST.
 rimonta() {
 	terreno iniettore-spegni  > /dev/null 2>&1
 	terreno testimone-via     > /dev/null 2>&1
@@ -121,31 +127,31 @@ rimonta() {
 	sleep 2
 	terreno sessione > /dev/null 2>&1
 	terreno iniettore-accendi "$TELA" || return 3
-	# ⛔ Il testimone si apre DOPO l'iniettore: e' l'iniettore che monta il
-	#    monitor virtuale, e il testimone lo sceglie PER MISURA.  Aprirlo prima
-	#    vorrebbe dire cercare uno schermo che non esiste ancora.
-	terreno testimone "$TELA" || { ko "⛔ IL BANCO: il testimone non si apre"; return 3; }
-	# ⛔⛔ IL RISCALDAMENTO, e non e' prudenza: e' un difetto del banco misurato
-	#     il 21 agosto 2026 e che mi ha dato un rosso falso al primo giro.
+	# ⛔ The witness is opened AFTER the injector: it is the injector that
+	#    mounts the virtual monitor, and the witness picks it BY SIZE.  Opening
+	#    it first would mean looking for a screen that does not exist yet.
+	terreno testimone "$TELA" || { ko "⛔ THE BENCH: the witness does not open"; return 3; }
+	# ⛔⛔ THE WARM-UP, and it is not caution: it is a bench defect measured on
+	#     21 August 2026 that gave me a false red on the first round.
 	#
-	#     `[M]` Il PRIMISSIMO `punta` su una finestra appena aperta produce il
-	#     `wl_pointer.enter`, e il clic mandato 0,4 s dopo **non arriva** —
-	#     mentre lo stesso identico clic, ripetuto a mano un minuto dopo, arriva.
-	#     ⇒ Non e' il difetto di §7.1: e' la finestra che si sta ancora
-	#     insediando, e un banco che partisse subito accuserebbe il prodotto di
-	#     una cosa che non ha fatto (`CODER.md` §3.10).
+	#     `[M]` The VERY FIRST `punta` on a freshly opened window produces the
+	#     `wl_pointer.enter`, and the click sent 0.4 s later **does not
+	#     arrive** — while the very same click, repeated by hand a minute
+	#     later, arrives.  ⇒ It is not the defect of §7.1: it is the window
+	#     still settling in, and a bench that started right away would accuse
+	#     the product of something it did not do (`CODER.md` §3.10).
 	#
-	# ⇒ Si scalda PRIMA di `segna`, cosi' le righe dell'insediamento restano
-	#   **fuori** dalla finestra di misura invece di doverle scartare dopo.
+	# ⇒ It warms up BEFORE `segna`, so the settling-in lines stay **outside**
+	#   the measurement window instead of having to be discarded afterwards.
 	di "punta $((TL / 2)) $((TA / 2))"; sleep 1.5
 	di "punta $((TL / 3)) $((TA / 3))"; sleep 1.0
 	return 0
 }
 
-# quante righe ha visto il testimone finora — e' il `--da` del giudice
+# how many lines the witness has seen so far — it is the judge's `--da`
 segna() { terreno righe | awk '{print $2}'; }
 
-giudica() { # $1 etichetta · $2 scena(modo) · $3 da · $4 descrizione
+giudica() { # $1 label · $2 scene(mode) · $3 from · $4 description
 	sudo_mio python3 "$G" --visto "$LAV/visto.jsonl" \
 		--iniettore "$LAV/06-b33-risveglio.log" --da "$3" \
 		--modo "$2" --etichetta "$1" --tela "$TELA" --esiti "$ESITI" \
@@ -155,7 +161,7 @@ giudica() { # $1 etichetta · $2 scena(modo) · $3 da · $4 descrizione
 
 case "$COSA" in
 strumento)
-	log "S0 · IL CONTROLLO ZERO — lo strumento sa vedere un clic?"
+	log "S0 · THE ZERO CHECK — can the instrument see a click?"
 	carico
 	rimonta || exit 3
 	DA=$(segna)
@@ -164,12 +170,12 @@ strumento)
 	di "pulsante 272 0";                sleep 0.6
 	di "stato";                         sleep 0.3
 	giudica s0-strumento strumento "$DA" \
-		"clic senza nessun ricambio, testimone aperto prima"
+		"click with no replacement at all, witness opened first"
 	carico
 	exit $ESITO ;;
 
 libero)
-	log "S1 · TRE RISVEGLI A MANO ALZATA — §7.1 dice 3 ricambi, e zero ADATTA_TELA"
+	log "S1 · THREE WAKE-UPS WITH HAND RAISED — §7.1 says 3 replacements, and zero ADATTA_TELA"
 	carico
 	rimonta || exit 3
 	DA=$(segna)
@@ -179,12 +185,12 @@ libero)
 	di "risveglia"; sleep 1.2
 	di "stato";     sleep 0.3
 	giudica s1-libero libero "$DA" \
-		"tre cattura_risveglia() su scena ferma, niente premuto"
+		"three cattura_risveglia() on a still scene, nothing pressed"
 	carico
 	exit $ESITO ;;
 
 tenuto)
-	log "S2 · ⛔ IL PULSANTE TENUTO GIU' MENTRE LA CATTURA SI RISVEGLIA"
+	log "S2 · ⛔ THE BUTTON HELD DOWN WHILE THE CAPTURE WAKES UP"
 	carico
 	rimonta || exit 3
 	DA=$(segna)
@@ -192,31 +198,32 @@ tenuto)
 	di "pulsante 272 1";                 sleep 0.6
 	di "posizione 29 1";                 sleep 0.6
 	di "stato";                          sleep 0.3
-	# ⛔ UN SOLO risveglio: due renderebbero impossibile dire quale ha fatto il
-	#    danno, e il danno e' irreversibile — non si somma, si consuma.
+	# ⛔ A SINGLE wake-up: two would make it impossible to say which one did
+	#    the damage, and the damage is irreversible — it does not add up, it
+	#    is used up.
 	di "risveglia";                      sleep 1.5
 	di "stato";                          sleep 0.3
 	di "pulsante 272 0";                 sleep 0.8
 	di "posizione 29 0";                 sleep 0.8
-	# ⭐ E ADESSO UN CLIC FRESCO: e' la misura che conta davvero — «il desktop
-	#    prende ancora i clic?» — e nel banco di ieri non c'era.
+	# ⭐ AND NOW A FRESH CLICK: it is the measurement that really counts — "does
+	#    the desktop still take clicks?" — and yesterday's bench did not have it.
 	di "punta $((TL * 3 / 4)) $((TA * 3 / 4))"; sleep 0.4
 	di "pulsante 272 1";                 sleep 0.4
 	di "pulsante 272 0";                 sleep 0.6
-	# ⚠ E un tasto, come controllo INTERNO alla scena: la tastiera non e' un
-	#   dispositivo di viewport e non ricambia, quindi DEVE arrivare.  Se non
-	#   arrivasse, la causa sarebbe un'altra e il rosso accuserebbe la cosa
-	#   sbagliata.
+	# ⚠ And a key, as a check INSIDE the scene: the keyboard is not a viewport
+	#   device and does not get replaced, so it MUST arrive.  If it did not,
+	#   the cause would be something else and the red would accuse the wrong
+	#   thing.
 	di "posizione 28 1";                 sleep 0.3
 	di "posizione 28 0";                 sleep 0.6
 	di "stato";                          sleep 0.3
 	giudica s2-tenuto tenuto "$DA" \
-		"BTN_LEFT e Ctrl tenuti giu' durante UN cattura_risveglia(), scena ferma"
+		"BTN_LEFT and Ctrl held down during ONE cattura_risveglia(), still scene"
 	carico
 	exit $ESITO ;;
 
 confronto)
-	log "S3 · LA PORTA GIA' NOTA — la stessa scena con un RIDIMENSIONAMENTO"
+	log "S3 · THE ALREADY KNOWN DOOR — the same scene with a RESIZE"
 	carico
 	rimonta || exit 3
 	DA=$(segna)
@@ -236,33 +243,35 @@ confronto)
 	di "posizione 28 0";                 sleep 0.6
 	di "stato";                          sleep 0.3
 	giudica s3-confronto tenuto "$DA" \
-		"BTN_LEFT e Ctrl tenuti giu' durante un cattura_ridimensiona() (§4.6)"
+		"BTN_LEFT and Ctrl held down during a cattura_ridimensiona() (§4.6)"
 	carico
 	exit $ESITO ;;
 
 guarigione)
-	# ⭐⭐ SI GUARISCE SENZA RIACCENDERE LA SESSIONE? — la prova della cura «E».
+	# ⭐⭐ CAN IT BE HEALED WITHOUT RESTARTING THE SESSION? — the test of cure "E".
 	#
-	# §4.6 dice *«si guarisce solo riaccendendo il server»*.  ⛔ Ma «il server»
-	# e' molto piu' di quel che serve: `[R]` l'unico posto in cui Mutter
-	# rilascia quel che era premuto e' `drop_device()`, chiamata da
-	# `meta_eis_client_disconnect()` (`meta-eis-client.c:1075`) — cioe' dalla
-	# **caduta del canale EIS**, che non ha niente a che vedere col processo.
+	# §4.6 says *"it heals only by restarting the server"*.  ⛔ But "the server"
+	# is much more than what is needed: `[R]` the only place where Mutter
+	# releases what was pressed is `drop_device()`, called by
+	# `meta_eis_client_disconnect()` (`meta-eis-client.c:1075`) — that is, by
+	# the **drop of the EIS channel**, which has nothing to do with the process.
 	#
-	# ⇒ Qui si rompe il desktop e poi si stacca **soltanto il cliente EIS**,
-	#   lasciando in piedi gnome-shell, il monitor e la sessione dell'utente.
-	#   Se il clic torna, la cura di recupero esiste e costa un riattacco.
+	# ⇒ Here the desktop is broken and then **only the EIS client** is
+	#   detached, leaving gnome-shell, the monitor and the user's session
+	#   standing.  If the click comes back, the recovery cure exists and costs
+	#   a reattach.
 	#
-	# ⛔⛔ E IL LIMITE VA DETTO: qui il cliente si spegne INTERO, quindi cade
-	#      anche la sessione `RemoteDesktop` e il flusso PipeWire.  ⇒ Questa
-	#      misura prova che **un cliente EIS nuovo guarisce il posto**; NON
-	#      prova ancora che basti riaprire il **solo** `ConnectToEIS` tenendo su
-	#      il palco.  Quella e' `[R]` (`meta-remote-desktop-session.c:1943-1969`:
-	#      `session->eis` si riusa e ogni chiamata aggiunge un cliente) e per
-	#      renderla `[M]` serve una riga in `mutter.c` che chiuda il descrittore
-	#      messo da parte e richiami `ConnectToEIS` — ⚠ senza chiudere quello,
-	#      il socket resta aperto e Mutter **non vede nessun distacco**.
-	log "S4 · ⭐ SI GUARISCE SENZA TOCCARE LA SESSIONE?"
+	# ⛔⛔ AND THE LIMIT MUST BE SAID: here the client shuts down ENTIRELY, so
+	#      the `RemoteDesktop` session and the PipeWire stream drop too.  ⇒ This
+	#      measurement proves that **a new EIS client heals the seat**; it does
+	#      NOT yet prove that reopening **only** `ConnectToEIS` while keeping
+	#      the stage up is enough.  That is `[R]`
+	#      (`meta-remote-desktop-session.c:1943-1969`: `session->eis` is reused
+	#      and every call adds a client) and to make it `[M]` a line is needed
+	#      in `mutter.c` that closes the descriptor set aside and calls
+	#      `ConnectToEIS` again — ⚠ without closing that one, the socket stays
+	#      open and Mutter **sees no detach at all**.
+	log "S4 · ⭐ CAN IT BE HEALED WITHOUT TOUCHING THE SESSION?"
 	carico
 	rimonta || exit 3
 	DA=$(segna)
@@ -277,51 +286,50 @@ guarigione)
 	di "pulsante 272 0";                 sleep 0.8
 	di "posizione 28 1";                 sleep 0.3
 	di "posizione 28 0";                 sleep 0.6
-	giudica s4-rotto tenuto "$DA" "il danno, rifatto apposta per poi guarirlo"
+	giudica s4-rotto tenuto "$DA" "the damage, redone on purpose to then heal it"
 
-	log "E adesso stacco SOLO il cliente EIS — gnome-shell NON si tocca"
+	log "And now I detach ONLY the EIS client — gnome-shell is NOT touched"
 	PRIMA_SHELL=$(sudo_mio pgrep -u 1006 -x gnome-shell | head -1)
 	terreno iniettore-spegni > /dev/null
 	sleep 2
-	terreno iniettore-accendi "$TELA" > /dev/null || { ko "⛔ non si riaccende"; exit 3; }
-	terreno testimone "$TELA" > /dev/null || { ko "⛔ IL BANCO: testimone"; exit 3; }
+	terreno iniettore-accendi "$TELA" > /dev/null || { ko "⛔ it does not come back on"; exit 3; }
+	terreno testimone "$TELA" > /dev/null || { ko "⛔ THE BENCH: witness"; exit 3; }
 	di "punta $((TL / 2)) $((TA / 2))"; sleep 1.5
 	di "punta $((TL / 3)) $((TA / 3))"; sleep 1.0
 	DOPO_SHELL=$(sudo_mio pgrep -u 1006 -x gnome-shell | head -1)
-	# ⛔ E si CONTROLLA che la sessione sia la stessa: se gnome-shell fosse
-	#    ripartito, il conto del posto (`MetaSeatImpl`) sarebbe nuovo di zecca e
-	#    il verde direbbe soltanto «ho riavviato tutto».
+	# ⛔ And it is CHECKED that the session is the same: if gnome-shell had
+	#    restarted, the seat's count (`MetaSeatImpl`) would be brand new and
+	#    the green would only say "I restarted everything".
 	if [ -n "$PRIMA_SHELL" ] && [ "$PRIMA_SHELL" = "$DOPO_SHELL" ]; then
-		ok "gnome-shell e' lo STESSO processo ($PRIMA_SHELL): il posto non e' nuovo"
+		ok "gnome-shell is the SAME process ($PRIMA_SHELL): the seat is not new"
 	else
-		ko "⛔ gnome-shell e' cambiato ($PRIMA_SHELL → $DOPO_SHELL): il verde che segue non vale"
+		ko "⛔ gnome-shell has changed ($PRIMA_SHELL → $DOPO_SHELL): the green that follows does not count"
 	fi
 	DA=$(segna)
 	di "pulsante 272 1"; sleep 0.4
 	di "pulsante 272 0"; sleep 0.8
 	giudica s4-guarito strumento "$DA" \
-		"lo stesso desktop, dopo il riattacco del solo cliente EIS"
+		"the same desktop, after reattaching only the EIS client"
 	carico
 	exit $ESITO ;;
 
 applicazione)
-	# ⛔⛔ IL PREZZO VERO DELLA CURA «C», SU UN'APPLICAZIONE VERA — 21 ago 2026.
+	# ⛔⛔ THE REAL PRICE OF CURE "C", ON A REAL APPLICATION — 21 Aug 2026.
 	#
-	# La guarigione fa cadere il canale EIS, e su una sessione senza monitor i
-	# nostri dispositivi virtuali sono gli UNICI del posto: `[M]` la capacita'
-	# del `wl_seat` passa **3 → 1 → 0 → 1 → 3**.  ⇒ **Ogni cliente Wayland deve
-	# mollare `wl_pointer`/`wl_keyboard` e riagganciarli.**
+	# The healing drops the EIS channel, and on a session without monitors
+	# our virtual devices are the ONLY ones on the seat: `[M]` the capability
+	# of the `wl_seat` goes **3 → 1 → 0 → 1 → 3**.  ⇒ **Every Wayland client
+	# must let go of `wl_pointer`/`wl_keyboard` and re-hook them.**
 	#
-	# ⛔ Il testimone NON lo faceva, ed e' rimasto muto per sempre (curato oggi,
-	#    vedi il riquadro in `06-b33-testimone.c`).  ⚠ Un cliente scritto male
-	#    va sordo dopo una guarigione, e questo banco lo deve dire prima che lo
-	#    scopra l'utente.
+	# ⛔ The witness did NOT do it, and stayed mute forever (cured today, see
+	#    the box in `06-b33-testimone.c`).  ⚠ A badly written client goes deaf
+	#    after a healing, and this bench must say so before the user finds out.
 	#
-	# ⇒ Qui l'applicazione e' un `gnome-terminal` VERO, con dentro una shell che
-	#   nessuno riavviera': se dopo la guarigione riceve gli Invio, un cliente
-	#   GTK regge il cambio di capacita'.  ⭐ E' un `[M]` su un toolkit che non
-	#   abbiamo scritto noi, che e' il tipo di prova che vale di piu'.
-	log "S5 · ⭐ UN'APPLICAZIONE VERA sopravvive alla guarigione?"
+	# ⇒ Here the application is a REAL `gnome-terminal`, with a shell inside
+	#   that nobody will restart: if after the healing it receives the Enters,
+	#   a GTK client withstands the capability change.  ⭐ It is an `[M]` on a
+	#   toolkit we did not write, which is the kind of test worth the most.
+	log "S5 · ⭐ DOES A REAL APPLICATION survive the healing?"
 	carico
 	terreno iniettore-spegni  > /dev/null 2>&1
 	terreno testimone-via     > /dev/null 2>&1
@@ -329,53 +337,54 @@ applicazione)
 	sleep 2
 	terreno sessione > /dev/null 2>&1
 	terreno iniettore-accendi "$TELA" || exit 3
-	# ⛔ E il terminale si apre DOPO l'iniettore, come il testimone: e' lui che
-	#    monta il monitor.  ⚠ E NON insieme al testimone: la finestra a schermo
-	#    intero prende il fuoco e il terminale non riceverebbe un tasto.
-	terreno terminale || { ko "⛔ IL BANCO: il terminale non si apre"; exit 3; }
+	# ⛔ And the terminal is opened AFTER the injector, like the witness: it is
+	#    the injector that mounts the monitor.  ⚠ And NOT together with the
+	#    witness: the full-screen window takes the focus and the terminal would
+	#    not receive a key.
+	terreno terminale || { ko "⛔ THE BENCH: the terminal does not open"; exit 3; }
 	di "punta $((TL / 2)) $((TA / 2))"; sleep 1.5
 	PRIMA=$(terreno invii | awk '{print $2}')
-	inf "Invio ricevuti PRIMA: $PRIMA"
-	# ⛔ Un Invio PRIMA della guarigione: se non arriva nemmeno questo, la scena
-	#    non regge e il rosso di dopo accuserebbe la cosa sbagliata.
+	inf "Enters received BEFORE: $PRIMA"
+	# ⛔ One Enter BEFORE the healing: if not even this one arrives, the scene
+	#    does not hold and the red afterwards would accuse the wrong thing.
 	di "posizione 28 1"; sleep 0.3
 	di "posizione 28 0"; sleep 0.8
 	MEZZO=$(terreno invii | awk '{print $2}')
 	if [ "$((MEZZO - PRIMA))" -ge 1 ]; then
-		ok "il terminale riceve gli Invio PRIMA della guarigione ($((MEZZO - PRIMA)))"
+		ok "the terminal receives the Enters BEFORE the healing ($((MEZZO - PRIMA)))"
 	else
-		ko "⛔ IL BANCO: il terminale non riceve niente nemmeno prima, la scena non regge"
+		ko "⛔ THE BENCH: the terminal receives nothing even before, the scene does not hold"
 		exit 3
 	fi
-	# la scena cattiva: pulsante giu' + risveglio ⇒ la cura «C» deve scattare
+	# the bad scene: button down + wake-up ⇒ cure "C" must kick in
 	di "pulsante 272 1"; sleep 0.6
 	di "risveglia";      sleep 2.0
 	di "pulsante 272 0"; sleep 0.8
 	di "stato";          sleep 0.3
-	# ⛔ `iniettore-registro`, NON `iniettore-dice`: la riga della guarigione la
-	#    scrive `registro_dice()` dell'area «input», e `iniettore-dice` filtra
-	#    solo le righe `B33R:` dell'iniettore.  ⚠ Cercarla li' dava un rosso
-	#    falso mentre la cura era scattata davvero — difetto del banco, 21 ago.
-	# ⛔ E la forma LUNGA, non la parola sola: «GUARIGIONE» da sola comparirebbe
-	#    anche in un commento o in una riga futura di un altro modulo.  ⚠ E' la
-	#    stessa disciplina del rilievo sul `%s`: si cerca la forma completa.
-	if terreno iniettore-registro 400 | grep -q 'GUARIGIONE (n\.'; then
-		ok "⭐ la cura «C» e' scattata (la riga GUARIGIONE c'e')"
+	# ⛔ `iniettore-registro`, NOT `iniettore-dice`: the healing line is written
+	#    by `registro_dice()` of the "input" area, and `iniettore-dice` filters
+	#    only the injector's `B33R:` lines.  ⚠ Looking for it there gave a false
+	#    red while the cure had really kicked in — bench defect, 21 Aug.
+	# ⛔ And the LONG form, not the bare word: "HEALING" alone would also show
+	#    up in a comment or in a future line of another module.  ⚠ It is the
+	#    same discipline as the finding on `%s`: the complete form is searched.
+	if terreno iniettore-registro 400 | grep -q 'HEALING (n\.'; then
+		ok "⭐ cure \"C\" kicked in (the HEALING line is there)"
 	else
-		ko "⛔ la cura «C» NON e' scattata: quel che segue non misura la guarigione"
+		ko "⛔ cure \"C\" did NOT kick in: what follows does not measure the healing"
 	fi
 	di "posizione 28 1"; sleep 0.3
 	di "posizione 28 0"; sleep 0.8
 	di "posizione 28 1"; sleep 0.3
 	di "posizione 28 0"; sleep 1.0
 	DOPO=$(terreno invii | awk '{print $2}')
-	inf "Invio ricevuti DOPO la guarigione: $DOPO (erano $MEZZO)"
+	inf "Enters received AFTER the healing: $DOPO (they were $MEZZO)"
 	if [ "$((DOPO - MEZZO))" -ge 2 ]; then
-		ok "⭐ l'applicazione VERA ha ricevuto $((DOPO - MEZZO)) Invio DOPO la guarigione"
+		ok "⭐ the REAL application received $((DOPO - MEZZO)) Enters AFTER the healing"
 	else
-		ko "⛔ ne ha ricevuti $((DOPO - MEZZO)) invece di 2: un cliente GTK NON regge il"
-		ko "   cambio di capacita' del posto ⇒ il prezzo della cura «C» e' molto piu'"
-		ko "   alto di quel che si e' dichiarato, e va riportato al coordinatore"
+		ko "⛔ it received $((DOPO - MEZZO)) instead of 2: a GTK client does NOT withstand the"
+		ko "   seat capability change ⇒ the price of cure \"C\" is much higher"
+		ko "   than what was declared, and must be reported to the coordinator"
 	fi
 	terreno terminale-via > /dev/null 2>&1
 	carico
@@ -388,20 +397,21 @@ spegni)
 	exit 0 ;;
 
 tutto)
-	# ⛔⛔ GLI ESITI DEI SOTTO-GIRI SI SOMMANO, e non e' pignoleria: `06-b33-lancia.sh`
-	#      aveva qui un `exit 0` e usciva verde con tutti i casi rossi (rilievo
-	#      della revisione avversariale, 21 agosto 2026).  Non si ripaga.
+	# ⛔⛔ THE OUTCOMES OF THE SUB-ROUNDS ADD UP, and it is not pedantry:
+	#      `06-b33-lancia.sh` had an `exit 0` here and came out green with all
+	#      cases red (finding of the adversarial review, 21 August 2026).  It
+	#      is not paid twice.
 	for g in strumento libero tenuto confronto guarigione; do
 		bash "$0" "$PAROLA_SUDO" "$g" || ESITO=1
 	done
 	bash "$0" "$PAROLA_SUDO" spegni > /dev/null
 	if [ "$ESITO" -eq 0 ]; then
-		ok "⭐ tutte le scene hanno dato quel che l'atteso dichiarava"
+		ok "⭐ all scenes gave what the expectation declared"
 	else
-		ko "⛔ almeno una scena non e' verde: guarda i sotto-giri qui sopra"
+		ko "⛔ at least one scene is not green: look at the sub-rounds above"
 	fi
 	exit $ESITO ;;
 
 *)
-	echo "⛔ non so fare «$COSA»"; exit 2 ;;
+	echo "⛔ I do not know how to do \"$COSA\""; exit 2 ;;
 esac

@@ -1,48 +1,48 @@
 #!/bin/bash
 # ===========================================================================
-# 11-passo0.sh — ⛔⛔ IL PASSO 0 DELLA FASE 11
+# 11-passo0.sh — ⛔⛔ STEP 0 OF PHASE 11
 #
-#   «Dentro un contenitore, il pezzo di sistema che tiene il conto di chi e'
-#    collegato si comporta come sulla macchina vera?»
+#   «Inside a container, does the piece of the system that keeps track of who is
+#    logged in behave as on the real machine?»
 #
-#   Si esegue DENTRO la scatola, da amministratore:
+#   It runs INSIDE the box, as administrator:
 #       podman exec -it rete11-gnome bash /passo0/11-passo0.sh
 # ===========================================================================
 #
-# ⛔ PERCHE' ESISTE, e perche' viene PRIMA di qualunque scatola definitiva
+# ⛔ WHY IT EXISTS, and why it comes BEFORE any final box
 #
-# Il prodotto si appoggia parecchio a `systemd`/`logind`: il linger, la
-# sessione d'utente, il guardiano che chiude le sessioni morte.  Se qui dentro
-# quel pezzo si comporta diversamente, ⛔ **l'intero strato dei contenitori
-# diventa un simulacro** — cioe' la peggiore forma di sicurezza, quella falsa.
+# The product leans heavily on `systemd`/`logind`: linger, the
+# user session, the watchdog that closes dead sessions.  If in here
+# that piece behaves differently, ⛔ **the whole container layer
+# becomes a sham** — that is the worst form of safety, the false one.
 #
-# ⇒ Su questo convergono TUTT'E DUE i revisori esterni del 25 agosto 2026, ed e'
-#   il rilievo piu' grave dei due giri.  `fasi/11-la-rete-di-sicurezza.md` §3.5.
-#
-# ---------------------------------------------------------------------------
-# ⚠⚠ QUEL CHE QUESTO BANCO **NON** E', e va letto prima dei suoi esiti
-#
-# ⛔ **Non prova il prodotto.**  Prova l'AMBIENTE.  Il prodotto non e' ancora
-#    in questa scatola, e non serve che ci sia: la domanda del passo 0 e' se la
-#    scatola sappia ospitare le condizioni in cui il prodotto vive.
-#
-# ⛔ E in particolare, il punto 7 accende il compositore con `--virtual-monitor`,
-#    ⚠ che e' **il contrario** di come lo accende il prodotto (`sessione.c:735`,
-#    dove quella riga e' stata TOLTA il 14 agosto 2026 con una misura sotto).
-#    ⇒ Qui serve a chiedere *«un compositore Wayland riesce a vivere in questa
-#      scatola e a servire un cliente?»*.  ⛔ **Non** a chiedere *«la sessione di
-#      REMOTIX nasce col monitor?»*, che e' la domanda del collaudo A e vuole il
-#      prodotto dentro.  Confondere le due sarebbe rispondere a quella comoda.
+# ⇒ BOTH external reviewers of 25 August 2026 converge on this, and it is
+#   the most serious finding of the two rounds.  `fasi/11-la-rete-di-sicurezza.md` §3.5.
 #
 # ---------------------------------------------------------------------------
-# GLI ESITI — la regola di §4.5 del documento di fase
+# ⚠⚠ WHAT THIS BENCH IS **NOT**, and it must be read before its outcomes
 #
-#   0  ⭐ ho guardato, e la scatola regge
-#   1  ho guardato, e la scatola NON regge          ⇒ il disegno va cambiato
-#   3  ⛔ NON HO POTUTO GUARDARE — e non e' un rosso
+# ⛔ **It does not test the product.**  It tests the ENVIRONMENT.  The product is not yet
+#    in this box, and it does not need to be: the question of step 0 is whether the
+#    box can host the conditions in which the product lives.
 #
-# ⛔ «Non ho potuto guardare» e «e' rotto» non hanno la stessa faccia, e non
-#    devono averla: `LEZIONI.md` §1.9, e la regola «None non e' zero».
+# ⛔ And in particular, point 7 starts the compositor with `--virtual-monitor`,
+#    ⚠ which is **the opposite** of how the product starts it (`sessione.c:735`,
+#    where that line was REMOVED on 14 August 2026 with a measurement behind it).
+#    ⇒ Here it serves to ask *«can a Wayland compositor live in this
+#      box and serve a client?»*.  ⛔ **Not** to ask *«is the REMOTIX
+#      session born with the monitor?»*, which is the question of acceptance test A and needs the
+#      product inside.  Confusing the two would mean answering the convenient one.
+#
+# ---------------------------------------------------------------------------
+# THE OUTCOMES — the rule of §4.5 of the phase document
+#
+#   0  ⭐ I looked, and the box holds
+#   1  I looked, and the box does NOT hold          ⇒ the design must change
+#   3  ⛔ I COULD NOT LOOK — and it is not a red
+#
+# ⛔ «I could not look» and «it is broken» do not have the same face, and they
+#    must not have it: `LEZIONI.md` §1.9, and the rule «None is not zero».
 # ===========================================================================
 set -uo pipefail
 
@@ -59,188 +59,188 @@ nota() { printf '       %s\n' "$*"; }
 come_lui() { runuser -u "$UTENTE" -- "$@"; }
 
 # ---------------------------------------------------------------------------
-# ⭐⭐ L'ADATTATORE — la risposta a «come si resta ciechi al desktop»
+# ⭐⭐ THE ADAPTER — the answer to «how do we stay blind to the desktop»
 #
-# Questo banco non sa che desktop ha davanti, e non deve saperlo.  Ogni scatola
-# porta allo STESSO percorso un file che dice come si avvia il suo compositore.
-# ⇒ La lista delle prove resta UNA; il «come» sta sotto (`fasi/11…` §3.7).
+# This bench does not know which desktop it has in front of it, and must not know.  Every box
+# carries at the SAME path a file that says how its compositor is started.
+# ⇒ The list of tests stays ONE; the «how» lives below (`fasi/11…` §3.7).
 # ---------------------------------------------------------------------------
 ADATTATORE=/usr/local/lib/rete11/adattatore.sh
 if [ -r "$ADATTATORE" ]; then
 	. "$ADATTATORE"
 	DESK=$(adattatore_nome)
 else
-	DESK="(nessun adattatore: $ADATTATORE non c'e')"
+	DESK="(no adapter: $ADATTATORE is not there)"
 fi
 
-printf '\033[1m PASSO 0 — la scatola regge il sistema?\033[0m\n'
+printf '\033[1m STEP 0 — does the box hold the system?\033[0m\n'
 printf ' desktop: %s\n' "$DESK"
-printf ' scatola: %s · nucleo: %s · %s\n' \
-       "$(. /etc/os-release 2>/dev/null; echo "${PRETTY_NAME:-ignota}")" \
+printf ' box: %s · kernel: %s · %s\n' \
+       "$(. /etc/os-release 2>/dev/null; echo "${PRETTY_NAME:-unknown}")" \
        "$(uname -r)" "$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 
 # ---------------------------------------------------------------------------
-blu "0. Il primo processo e' «systemd»?  (se no, il resto non ha senso)"
+blu "0. Is the first process «systemd»?  (if not, the rest makes no sense)"
 # ---------------------------------------------------------------------------
 PRIMO=$(ps -p 1 -o comm= 2>/dev/null || echo '')
 if [ "$PRIMO" = "systemd" ]; then
-	si "il processo 1 e' systemd"
+	si "process 1 is systemd"
 else
-	no "il processo 1 e' «$PRIMO»: questa scatola non puo' rispondere alla domanda"
-	nota "⇒ mi fermo: senza systemd i punti 1-6 non sono nemmeno ponibili"
+	no "process 1 is «$PRIMO»: this box cannot answer the question"
+	nota "⇒ I stop: without systemd points 1-6 cannot even be asked"
 	exit 1
 fi
 
-# ⛔ `is-system-running` ESCE 1 quando lo stato e' «degraded», e con `pipefail`
-#    l'`if` lo leggeva come «non lo so».  ⇒ Si cattura il TESTO e si giudica
-#    quello: lo stato d'uscita qui non e' il giudizio, e' un dettaglio.
-#    `[M]` 25 agosto 2026, difetto di questo banco al primo giro.
+# ⛔ `is-system-running` EXITS 1 when the state is «degraded», and with `pipefail`
+#    the `if` read it as «I do not know».  ⇒ We capture the TEXT and judge
+#    that: the exit status here is not the judgement, it is a detail.
+#    `[M]` 25 August 2026, defect of this bench on its first run.
 STATO_SIS=$(systemctl is-system-running 2>&1 | head -1)
 case "$STATO_SIS" in
   running)
-	si "il sistema e' partito (running)" ;;
+	si "the system has started (running)" ;;
   degraded)
-	si "il sistema e' partito, con unita' fallite (degraded)"
-	nota "⚠ le unita' fallite, che vanno guardate una per una:"
+	si "the system has started, with failed units (degraded)"
+	nota "⚠ the failed units, which must be looked at one by one:"
 	systemctl --failed --no-legend --plain 2>/dev/null | head -8 | sed 's/^/       ⚠ /' ;;
   starting)
-	boh "il sistema sta ancora partendo: troppo presto per giudicare" ;;
+	boh "the system is still starting: too early to judge" ;;
   *)
-	boh "stato non leggibile: $STATO_SIS" ;;
+	boh "state not readable: $STATO_SIS" ;;
 esac
 
 # ---------------------------------------------------------------------------
-blu "1. La sessione d'utente ESISTE, ed e' di un tipo che il prodotto riconosce?"
+blu "1. Does the user session EXIST, and is it of a type the product recognises?"
 # ---------------------------------------------------------------------------
 if ! command -v loginctl >/dev/null 2>&1; then
-	boh "«loginctl» non c'e' nella scatola: non posso guardare"
+	boh "«loginctl» is not in the box: I cannot look"
 elif ! systemctl is-active systemd-logind >/dev/null 2>&1; then
-	no "systemd-logind NON e' attivo: $(systemctl is-active systemd-logind 2>&1)"
-	nota "⇒ e' proprio il pezzo su cui il prodotto si appoggia"
+	no "systemd-logind is NOT active: $(systemctl is-active systemd-logind 2>&1)"
+	nota "⇒ it is precisely the piece the product leans on"
 	systemctl status systemd-logind --no-pager -l 2>&1 | tail -6 | sed 's/^/       /'
 else
-	si "systemd-logind e' attivo"
-	# ⛔⛔ E QUI SI PREPARA PRIMA DI GUARDARE, perche' e' quel che fa il PRODOTTO.
-	#     Al primo giro questo punto giudicava mentre il gestore d'utente era
-	#     ancora «activating», e dava un rosso che diceva «la scatola non regge»
-	#     quando la verita' era «non avevo ancora chiesto niente».
-	#     ⇒ `[M]` 25 agosto 2026, secondo difetto di questo banco.
-	#     ⚠ Preparare non e' barare: il prodotto accende il linger e avvia il
-	#       gestore d'utente da se'.  Barare sarebbe **saltare** la verifica.
+	si "systemd-logind is active"
+	# ⛔⛔ AND HERE WE PREPARE BEFORE LOOKING, because it is what the PRODUCT does.
+	#     On the first run this point judged while the user manager was
+	#     still «activating», and gave a red that said «the box does not hold»
+	#     when the truth was «I had not asked anything yet».
+	#     ⇒ `[M]` 25 August 2026, second defect of this bench.
+	#     ⚠ Preparing is not cheating: the product turns on linger and starts the
+	#       user manager by itself.  Cheating would be **skipping** the check.
 	loginctl enable-linger "$UTENTE" 2>/dev/null
 	systemctl start "user@${UID_UTENTE}.service" 2>/dev/null
 	for _ in $(seq 1 30); do
 		loginctl show-user "$UTENTE" >/dev/null 2>&1 && break
 		sleep 0.5
 	done
-	# ⛔ Non basta che il servizio giri: deve saper APRIRE una sessione.
-	#    Si prova ad aprirne una vera con un login non interattivo.
+	# ⛔ It is not enough that the service runs: it must be able to OPEN a session.
+	#    We try to open a real one with a non-interactive login.
 	if come_lui true 2>/dev/null; then
 		SES=$(loginctl list-sessions --no-legend 2>/dev/null | wc -l)
-		nota "sessioni aperte adesso: $SES"
+		nota "sessions open now: $SES"
 		if loginctl show-user "$UTENTE" >/dev/null 2>&1; then
-			si "logind conosce l'utente «$UTENTE»"
+			si "logind knows the user «$UTENTE»"
 			loginctl show-user "$UTENTE" -p State -p Linger -p RuntimePath 2>/dev/null \
 				| sed 's/^/       /'
 		else
-			no "logind NON conosce l'utente «$UTENTE»: $(loginctl show-user "$UTENTE" 2>&1 | head -1)"
-			nota "⛔ e' questo il punto in cui la scatola smette di rappresentare il prodotto"
+			no "logind does NOT know the user «$UTENTE»: $(loginctl show-user "$UTENTE" 2>&1 | head -1)"
+			nota "⛔ this is the point where the box stops representing the product"
 		fi
 	else
-		boh "non riesco nemmeno a eseguire un comando come «$UTENTE»"
+		boh "I cannot even run a command as «$UTENTE»"
 	fi
 fi
 
 # ---------------------------------------------------------------------------
-blu "2. Il LINGER: i servizi dell'utente vivono senza che nessuno abbia fatto login?"
+blu "2. LINGER: do the user's services live without anyone having logged in?"
 # ---------------------------------------------------------------------------
 if loginctl enable-linger "$UTENTE" 2>/dev/null; then
 	if [ "$(loginctl show-user "$UTENTE" -p Linger --value 2>/dev/null)" = "yes" ]; then
-		si "il linger si accende e resta acceso"
+		si "linger turns on and stays on"
 	else
-		no "il comando passa ma il linger NON risulta acceso"
+		no "the command passes but linger does NOT show as on"
 	fi
 else
-	no "non si riesce ad accendere il linger: $(loginctl enable-linger "$UTENTE" 2>&1 | head -1)"
-	nota "⛔ senza linger la sessione grafica non sopravvive al distacco del client"
+	no "linger cannot be turned on: $(loginctl enable-linger "$UTENTE" 2>&1 | head -1)"
+	nota "⛔ without linger the graphical session does not survive the client detaching"
 fi
 
 if systemctl is-active "user@${UID_UTENTE}.service" >/dev/null 2>&1; then
-	si "il gestore d'utente («user@${UID_UTENTE}») e' vivo senza nessun login interattivo"
+	si "the user manager («user@${UID_UTENTE}») is alive without any interactive login"
 else
 	STATO=$(systemctl is-active "user@${UID_UTENTE}.service" 2>&1)
 	if systemctl start "user@${UID_UTENTE}.service" 2>/dev/null; then
-		si "il gestore d'utente si avvia a richiesta (era «$STATO»)"
+		si "the user manager starts on request (it was «$STATO»)"
 	else
-		no "il gestore d'utente non parte: era «$STATO»"
+		no "the user manager does not start: it was «$STATO»"
 		systemctl status "user@${UID_UTENTE}.service" --no-pager -l 2>&1 | tail -6 | sed 's/^/       /'
 	fi
 fi
 
 # ---------------------------------------------------------------------------
-blu "3. Dentro la sessione d'utente si riesce a far partire un servizio?"
+blu "3. Can a service be started inside the user session?"
 # ---------------------------------------------------------------------------
-# ⚠ Il prodotto parte cosi': un'unita' d'utente, non un processo staccato.
-#   Qui si prova il MECCANISMO con un'unita' finta, perche' il prodotto in
-#   questa scatola non c'e' ancora.
+# ⚠ The product starts like this: a user unit, not a detached process.
+#   Here we test the MECHANISM with a fake unit, because the product is not
+#   in this box yet.
 if come_lui env XDG_RUNTIME_DIR="/run/user/$UID_UTENTE" \
         systemd-run --user --quiet --unit=passo0-prova \
         --property=Type=oneshot /bin/true 2>/dev/null; then
-	si "un'unita' d'utente si avvia da dentro la sessione"
+	si "a user unit starts from inside the session"
 	come_lui env XDG_RUNTIME_DIR="/run/user/$UID_UTENTE" \
 	        systemctl --user reset-failed passo0-prova 2>/dev/null || true
 else
-	no "non si riesce ad avviare un'unita' d'utente"
-	nota "⛔ e' il modo in cui il prodotto avvia la sessione grafica"
+	no "a user unit cannot be started"
+	nota "⛔ it is the way the product starts the graphical session"
 	come_lui env XDG_RUNTIME_DIR="/run/user/$UID_UTENTE" \
 	        systemd-run --user --unit=passo0-prova --property=Type=oneshot /bin/true 2>&1 \
 	        | tail -4 | sed 's/^/       /'
 fi
 
 # ---------------------------------------------------------------------------
-blu "4. Quando la sessione finisce, i processi MUOIONO davvero?"
+blu "4. When the session ends, do the processes really DIE?"
 # ---------------------------------------------------------------------------
-# ⛔ La forma del guasto che si teme: un contenitore in cui i processi restano
-#    vivi dopo la chiusura ⇒ la prova C7 («non resta niente») sarebbe verde qui
-#    e rossa sulla macchina vera, o viceversa.
+# ⛔ The shape of the feared fault: a container in which processes stay
+#    alive after closing ⇒ test C7 («nothing remains») would be green here
+#    and red on the real machine, or vice versa.
 if come_lui env XDG_RUNTIME_DIR="/run/user/$UID_UTENTE" \
         systemd-run --user --quiet --unit=passo0-dorme sleep 300 2>/dev/null; then
 	sleep 1
 	PID=$(pgrep -u "$UTENTE" -f 'slee[p] 300' | head -1)
 	if [ -n "$PID" ]; then
-		nota "il figlio finto e' vivo (pid $PID); ora si chiude la sessione dell'utente"
+		nota "the fake child is alive (pid $PID); now the user's session is closed"
 		loginctl terminate-user "$UTENTE" 2>/dev/null || \
 			come_lui env XDG_RUNTIME_DIR="/run/user/$UID_UTENTE" \
 			        systemctl --user stop passo0-dorme 2>/dev/null
 		sleep 2
 		if pgrep -u "$UTENTE" -f 'slee[p] 300' >/dev/null 2>&1; then
-			no "il figlio e' SOPRAVVISSUTO alla chiusura della sessione"
-			nota "⛔ qui la scatola si comporta diversamente dalla macchina vera"
+			no "the child SURVIVED the closing of the session"
+			nota "⛔ here the box behaves differently from the real machine"
 		else
-			si "il figlio e' morto con la sessione, e non e' restato niente"
+			si "the child died with the session, and nothing remained"
 		fi
 	else
-		boh "non ho visto nascere il figlio finto: non posso giudicare"
+		boh "I did not see the fake child being born: I cannot judge"
 	fi
 else
-	boh "non sono riuscito ad avviare il figlio finto: non posso giudicare"
+	boh "I could not start the fake child: I cannot judge"
 fi
 
 # ---------------------------------------------------------------------------
-# ⛔⛔ E ADESSO SI RIMETTE IN PIEDI QUEL CHE IL PUNTO 4 HA APPENA BUTTATO GIU'.
+# ⛔⛔ AND NOW WE PUT BACK UP WHAT POINT 4 HAS JUST KNOCKED DOWN.
 #
-# `[M]` 25 agosto 2026, primo giro vero di questo banco — ⭐ e il difetto era
-# del BANCO, non della scatola.  Il punto 4 chiude la sessione dell'utente per
-# vedere se i figli muoiono; ⛔ chiudendola porta via anche `/run/user/4011`,
-# e i punti 5, 6 e 7 — che vengono dopo — trovavano il campo sgombro e davano
-# **TRE ROSSI FALSI**.
+# `[M]` 25 August 2026, first real run of this bench — ⭐ and the defect was
+# the BENCH's, not the box's.  Point 4 closes the user's session to
+# see whether the children die; ⛔ closing it also takes away `/run/user/4011`,
+# and points 5, 6 and 7 — which come after — found the field cleared and gave
+# **THREE FALSE REDS**.
 #
-# ⚠ E' la forma di §1.29 girata al contrario: non «silenzio invece di rosso»,
-#   ma **rosso invece di niente** — e costa uguale, perche' una rete che da'
-#   rossi a vuoto viene spenta da chi lavora (`fasi/11…` §4.3).
+# ⚠ It is the shape of §1.29 turned around: not «silence instead of red»,
+#   but **red instead of nothing** — and it costs the same, because a net that gives
+#   reds for nothing gets switched off by whoever works (`fasi/11…` §4.3).
 #
-# ⇒ Chi prova la chiusura ha il dovere di RIAPRIRE, e di verificare che la
-#   riapertura sia riuscita prima di lasciar giudicare gli altri.
+# ⇒ Whoever tests the closing has the duty to REOPEN, and to check that the
+#   reopening succeeded before letting the others judge.
 # ---------------------------------------------------------------------------
 loginctl enable-linger "$UTENTE" 2>/dev/null
 systemctl start "user@${UID_UTENTE}.service" 2>/dev/null
@@ -250,70 +250,70 @@ for _ in $(seq 1 30); do
 	sleep 0.5
 done
 if [ "$RIPRESO" = 1 ]; then
-	nota "⭐ sessione rimessa in piedi dopo la prova della chiusura"
+	nota "⭐ session put back up after the closing test"
 else
-	boh "⛔ NON sono riuscito a rimettere in piedi la sessione dopo il punto 4"
-	nota "⚠ i punti 5, 6 e 7 qui sotto girerebbero sul campo sgombro: NON li giudico"
-	printf '\n  \033[1;33mmi fermo qui\033[0m — meglio «non lo so» che tre rossi falsi.\n'
+	boh "⛔ I could NOT put the session back up after point 4"
+	nota "⚠ points 5, 6 and 7 below would run on a cleared field: I do NOT judge them"
+	printf '\n  \033[1;33mI stop here\033[0m — better «I do not know» than three false reds.\n'
 	exit 3
 fi
 
 # ---------------------------------------------------------------------------
-blu "5. La cartella privata dell'utente c'e', e' SUA, ed e' scrivibile?"
+blu "5. Is the user's private directory there, is it THEIRS, and is it writable?"
 # ---------------------------------------------------------------------------
 RTD="/run/user/$UID_UTENTE"
 if [ -d "$RTD" ]; then
 	PROP=$(stat -c '%U %a' "$RTD" 2>/dev/null)
 	if come_lui test -w "$RTD"; then
-		si "$RTD esiste, e' scrivibile dall'utente ($PROP)"
+		si "$RTD exists, it is writable by the user ($PROP)"
 	else
-		no "$RTD esiste ma l'utente NON ci puo' scrivere ($PROP)"
+		no "$RTD exists but the user can NOT write to it ($PROP)"
 	fi
-	# ⛔ E non dev'essere la stessa di un'altra scatola: si guarda che sia un
-	#    montaggio DI QUESTO contenitore, non un pezzo dell'ospite passato dentro.
-	# ⚠ `findmnt` qui dentro torna vuoto (il montaggio lo ha fatto logind dopo
-	#   l'avvio del contenitore, e la tabella che vede non lo elenca): si chiede
-	#   il TIPO al kernel, che risponde sempre.  `[M]` 25 agosto 2026.
+	# ⛔ And it must not be the same as another box's: we check that it is a
+	#    mount OF THIS container, not a piece of the host passed inside.
+	# ⚠ `findmnt` in here returns empty (logind made the mount after
+	#   the container started, and the table it sees does not list it): we ask
+	#   the kernel for the TYPE, which always answers.  `[M]` 25 August 2026.
 	TIPO_RTD=$(stat -fc %T "$RTD" 2>/dev/null)
 	if [ "$TIPO_RTD" = tmpfs ]; then
-		si "ed e' una cartella di questa scatola (tmpfs), non un pezzo dell'ospite"
+		si "and it is a directory of this box (tmpfs), not a piece of the host"
 	else
-		no "NON e' una tmpfs di questa scatola, e' «$TIPO_RTD»"
-		nota "⛔ due scatole che condividessero questa cartella si pesterebbero i piedi"
+		no "it is NOT a tmpfs of this box, it is «$TIPO_RTD»"
+		nota "⛔ two boxes sharing this directory would step on each other's toes"
 	fi
 else
-	no "$RTD non esiste: senza, nessun socket di sessione nasce"
+	no "$RTD does not exist: without it, no session socket is born"
 fi
 
 # ---------------------------------------------------------------------------
-blu "6. Il canale di messaggi della sessione c'e', e il desktop lo vede?"
+blu "6. Is the session message bus there, and does the desktop see it?"
 # ---------------------------------------------------------------------------
 if [ -S "$RTD/bus" ]; then
-	si "il canale della sessione c'e' ($RTD/bus)"
+	si "the session bus is there ($RTD/bus)"
 	if come_lui env XDG_RUNTIME_DIR="$RTD" \
 	        DBUS_SESSION_BUS_ADDRESS="unix:path=$RTD/bus" \
 	        busctl --user list --no-legend >/dev/null 2>&1; then
-		si "e ci si riesce a parlare"
+		si "and it can be talked to"
 	else
-		no "c'e' il socket ma non risponde"
+		no "the socket is there but does not answer"
 	fi
 else
-	no "il canale della sessione NON c'e' ($RTD/bus)"
-	nota "⛔ senza, gnome-session non parte e il prodotto non ha con chi parlare"
+	no "the session bus is NOT there ($RTD/bus)"
+	nota "⛔ without it, gnome-session does not start and the product has nobody to talk to"
 fi
 
 # ---------------------------------------------------------------------------
-blu "7. Un compositore Wayland vive qui dentro, e serve un cliente?"
+blu "7. Does a Wayland compositor live in here, and serve a client?"
 # ---------------------------------------------------------------------------
-# ⚠⚠ Vedi il riquadro in testa: qui si usa `--virtual-monitor`, che il prodotto
-#    NON usa.  La domanda e' sull'AMBIENTE, non sul prodotto.
+# ⚠⚠ See the box at the top: here `--virtual-monitor` is used, which the product
+#    does NOT use.  The question is about the ENVIRONMENT, not the product.
 if ! command -v adattatore_avvia >/dev/null 2>&1 && ! type adattatore_avvia >/dev/null 2>&1; then
-	boh "non c'e' l'adattatore di questa scatola: non so come si avvia il compositore"
+	boh "this box has no adapter: I do not know how the compositor is started"
 else
 	rm -f /tmp/passo0-shell.log
 	SHELLPID=$(adattatore_avvia "$RTD" /tmp/passo0-shell.log)
-	# Si aspetta il socket, non un tempo fisso: un'attesa a orologio e' una
-	# scadenza che scatta quando capita (`LEZIONI.md`, la regola del battito).
+	# We wait for the socket, not a fixed time: a clock-based wait is a
+	# deadline that fires whenever it happens to (`LEZIONI.md`, the heartbeat rule).
 	SOCK=''
 	for _ in $(seq 1 40); do
 		SOCK=$(come_lui sh -c "ls $RTD/wayland-* 2>/dev/null | grep -v lock | head -1" 2>/dev/null)
@@ -321,39 +321,39 @@ else
 		sleep 0.5
 	done
 	if [ -z "$SOCK" ]; then
-		no "il compositore non ha aperto nessun socket in 20 s"
+		no "the compositor opened no socket in 20 s"
 		tail -12 /tmp/passo0-shell.log 2>/dev/null | sed 's/^/       /'
 	else
-		si "il compositore e' vivo e ha aperto $(basename "$SOCK")"
+		si "the compositor is alive and has opened $(basename "$SOCK")"
 		DISP=$(basename "$SOCK")
-		# ⭐ IL METRO DEL GUASTO DEL 25 AGOSTO: quante uscite ANNUNCIA.
+		# ⭐ THE YARDSTICK OF THE 25 AUGUST FAULT: how many outputs it ANNOUNCES.
 		if command -v wayland-info >/dev/null 2>&1; then
 			USCITE=$(come_lui env XDG_RUNTIME_DIR="$RTD" WAYLAND_DISPLAY="$DISP" \
 			        wayland-info 2>/dev/null | grep -c 'interface:.*wl_output' || echo 0)
 			if [ "${USCITE:-0}" -gt 0 ]; then
-				si "e ANNUNCIA $USCITE uscita/e — un cliente puo' aprire una finestra"
+				si "and it ANNOUNCES $USCITE output(s) — a client can open a window"
 			else
-				no "⛔ ANNUNCIA ZERO uscite: e' la forma del guasto del 25 agosto"
-				nota "⚠ qui pero' il monitor gliel'ho chiesto io: se e' zero, e' della scatola"
+				no "⛔ it ANNOUNCES ZERO outputs: it is the shape of the 25 August fault"
+				nota "⚠ here though I asked for the monitor myself: if it is zero, it is the box's"
 			fi
 		else
-			boh "«wayland-info» non c'e': non posso contare le uscite"
+			boh "«wayland-info» is not there: I cannot count the outputs"
 		fi
-		# Un cliente vero che disegna.
+		# A real client that draws.
 		if command -v weston-simple-shm >/dev/null 2>&1; then
 			come_lui env XDG_RUNTIME_DIR="$RTD" WAYLAND_DISPLAY="$DISP" \
 			        weston-simple-shm >/tmp/passo0-cliente.log 2>&1 &
 			CLPID=$!
 			sleep 3
 			if kill -0 "$CLPID" 2>/dev/null; then
-				si "un cliente Wayland vero si e' attaccato e sta disegnando"
+				si "a real Wayland client has attached and is drawing"
 				kill "$CLPID" 2>/dev/null
 			else
-				no "il cliente Wayland e' morto subito"
+				no "the Wayland client died immediately"
 				tail -6 /tmp/passo0-cliente.log 2>/dev/null | sed 's/^/       /'
 			fi
 		else
-			boh "non ho un cliente Wayland minimo nella scatola"
+			boh "I have no minimal Wayland client in the box"
 		fi
 	fi
 	kill "$SHELLPID" 2>/dev/null
@@ -361,44 +361,44 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-blu "8. La scheda grafica e il codificatore in hardware si raggiungono?"
+blu "8. Can the graphics card and the hardware encoder be reached?"
 # ---------------------------------------------------------------------------
 if [ ! -e /dev/dri/renderD128 ]; then
-	no "/dev/dri/renderD128 non e' nella scatola: la scheda non e' entrata"
+	no "/dev/dri/renderD128 is not in the box: the card did not get in"
 else
-	si "/dev/dri/renderD128 c'e'"
+	si "/dev/dri/renderD128 is there"
 	if come_lui test -r /dev/dri/renderD128 && come_lui test -w /dev/dri/renderD128; then
-		si "e l'utente ci puo' leggere e scrivere"
+		si "and the user can read and write it"
 	else
-		no "c'e' ma l'utente NON ci puo' scrivere ($(stat -c '%U:%G %a' /dev/dri/renderD128))"
-		nota "⛔ e' il gruppo «render»: senza, si codifica in software e i numeri cambiano"
+		no "it is there but the user can NOT write to it ($(stat -c '%U:%G %a' /dev/dri/renderD128))"
+		nota "⛔ it is the «render» group: without it, encoding happens in software and the numbers change"
 	fi
 	if command -v vainfo >/dev/null 2>&1; then
 		VA=$(come_lui env LIBVA_DRIVER_NAME=iHD vainfo --display drm --device /dev/dri/renderD128 2>&1)
 		if echo "$VA" | grep -q 'VAProfileH264'; then
-			si "il codificatore in hardware risponde ($(echo "$VA" | grep -m1 'Driver version' | sed 's/^ *//'))"
-			nota "profili di codifica H.264 trovati: $(echo "$VA" | grep -c 'VAProfileH264.*Enc')"
+			si "the hardware encoder answers ($(echo "$VA" | grep -m1 'Driver version' | sed 's/^ *//'))"
+			nota "H.264 encoding profiles found: $(echo "$VA" | grep -c 'VAProfileH264.*Enc')"
 		else
-			no "il codificatore in hardware non risponde"
+			no "the hardware encoder does not answer"
 			echo "$VA" | tail -6 | sed 's/^/       /'
 		fi
 	else
-		boh "«vainfo» non c'e' nella scatola"
+		boh "«vainfo» is not in the box"
 	fi
 fi
 
 # ---------------------------------------------------------------------------
-printf '\n\033[1m=========================  IL VERDETTO  =========================\033[0m\n'
-printf '  regge: %d   non regge: %d   non ho potuto guardare: %d\n' "$VERDE" "$ROSSO" "$NONSO"
+printf '\n\033[1m=========================  THE VERDICT  =========================\033[0m\n'
+printf '  holds: %d   does not hold: %d   could not look: %d\n' "$VERDE" "$ROSSO" "$NONSO"
 if [ "$ROSSO" -gt 0 ]; then
-	printf '  \033[1;31m⛔ LA SCATOLA NON REGGE\033[0m — le prove che dipendono da quel che\n'
-	printf '     non regge restano sulla macchina vera, e si scrive quali.\n'
+	printf '  \033[1;31m⛔ THE BOX DOES NOT HOLD\033[0m — the tests that depend on what\n'
+	printf '     does not hold stay on the real machine, and we write down which.\n'
 	exit 1
 elif [ "$NONSO" -gt 0 ]; then
-	printf '  \033[1;33m⚠ NON GIUDICO\033[0m — %d cose non le ho potute guardare.\n' "$NONSO"
-	printf '     %s\n' "⛔ E questo NON e un verde: e un esito suo (§4.5)."
+	printf '  \033[1;33m⚠ I DO NOT JUDGE\033[0m — %d things I could not look at.\n' "$NONSO"
+	printf '     %s\n' "⛔ And this is NOT a green: it is an outcome of its own (§4.5)."
 	exit 3
 else
-	printf '  \033[1;32m⭐ LA SCATOLA REGGE\033[0m su tutti i punti che il prodotto usa.\n'
+	printf '  \033[1;32m⭐ THE BOX HOLDS\033[0m on all the points the product uses.\n'
 	exit 0
 fi

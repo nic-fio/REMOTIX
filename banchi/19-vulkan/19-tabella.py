@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""19-tabella.py — la tabella VA-API / Vulkan dagli esiti di 19-confronto.sh (dal 18-tabella.py).
+"""19-tabella.py — the VA-API / Vulkan table from the outcomes of 19-confronto.sh (from 18-tabella.py).
 
-Per ogni prova mette in colonna i due motori (vaapi = il prodotto, vulkan = il modulo nuovo): ffprobe (profilo, livello,
-misura, colore) IDENTICO o no, i fotogrammi decodificati, PSNR, SSIM, i byte
-del flusso e della chiave, i tempi mediani per fotogramma.  ⛔ Il verdetto
-«peggio» si scrive coi numeri: PSNR piu' basso di 0,5 dB, o byte oltre il 10 %
-in piu', o codifica oltre il 20 % piu' lenta.
+For each test it puts the two engines side by side (vaapi = the product, vulkan = the new module): ffprobe (profile, level,
+size, colour) IDENTICAL or not, the decoded frames, PSNR, SSIM, the bytes
+of the stream and of the key frame, the median times per frame.  ⛔ The verdict
+"worse" is written with numbers: PSNR lower by 0.5 dB, or bytes more than 10 %
+higher, or encoding more than 20 % slower.
 """
 import csv, io, json, os, statistics, sys
 
@@ -38,7 +38,7 @@ for e in esiti:
     per_prova.setdefault(e["prova"], {})[e["versione"]] = e
 
 def num(x):
-    """il PSNR e' «y:.. u:.. v:.. average:..»: si giudica la media, si stampa tutto"""
+    """the PSNR is "y:.. u:.. v:.. average:..": the average is judged, everything is printed"""
     try:
         if "average:" in str(x):
             x = str(x).split("average:")[1]
@@ -46,14 +46,14 @@ def num(x):
     except Exception:
         return None
 
-print(f"{'prova':38} {'ver':7} {'cod':4} {'dec':>4} {'psnr':>6} {'ssim':>6} {'byte':>9} {'chiave':>8} {'delta':>7} {'cod µs':>7} {'prep µs':>7}  ffprobe · psnr y/u/v")
+print(f"{'test':38} {'ver':7} {'code':4} {'dec':>4} {'psnr':>6} {'ssim':>6} {'bytes':>9} {'key':>8} {'delta':>7} {'enc µs':>7} {'prep µs':>7}  ffprobe · psnr y/u/v")
 peggio = []
 for prova, v in per_prova.items():
     for versione in ("vaapi", "vulkan", "scheda"):
         e = v.get(versione)
         if not e:
             if versione != "scheda":
-                print(f"{prova:38} {versione:7} MANCA")
+                print(f"{prova:38} {versione:7} MISSING")
             continue
         t = tempi(prova, versione) or {}
         print(f"{prova:38} {versione:7} {e['codice']:<4} {e['decodificati']:>4} {str(num(e['psnr']) or '')[:6]:>6} {str(e['ssim'])[:6]:>6} "
@@ -62,9 +62,9 @@ for prova, v in per_prova.items():
     if a and b:
         note = []
         if a["ffprobe"] != b["ffprobe"]:
-            note.append(f"ffprobe DIVERSO: «{a['ffprobe']}» → «{b['ffprobe']}»")
+            note.append(f"ffprobe DIFFERENT: «{a['ffprobe']}» → «{b['ffprobe']}»")
         if a["decodificati"] != b["decodificati"]:
-            note.append(f"decodificati {a['decodificati']} → {b['decodificati']}")
+            note.append(f"decoded {a['decodificati']} → {b['decodificati']}")
         pa, pb = num(a["psnr"]), num(b["psnr"])
         if pa and pb and pb < pa - 0.5:
             note.append(f"PSNR {pa:.2f} → {pb:.2f} dB")
@@ -72,19 +72,19 @@ for prova, v in per_prova.items():
             note.append(f"byte +{(b['byte_flusso']/a['byte_flusso']-1)*100:.0f} %")
         ta, tb = tempi(prova, "vaapi"), tempi(prova, "vulkan")
         if ta and tb and tb["cod"] > ta["cod"] * 1.20:
-            note.append(f"codifica {ta['cod']:.0f} → {tb['cod']:.0f} µs")
+            note.append(f"encoding {ta['cod']:.0f} → {tb['cod']:.0f} µs")
         if b["codice"] != 0 or int(b.get("errori_decodifica", 0)) > 0:
-            note.append(f"VULKAN ha codice {b['codice']} e {b.get('errori_decodifica')} errori di decodifica")
+            note.append(f"VULKAN has code {b['codice']} and {b.get('errori_decodifica')} decoding errors")
         if note:
             peggio.append(f"{prova}: " + " · ".join(note))
-    # ⭐ il prodotto INTEGRATO (motore «scheda», dall'innesto): contro VA-API, stessa regola
+    # ⭐ the INTEGRATED product (engine "scheda", since the graft): against VA-API, same rule
     a, s_ = v.get("vaapi"), v.get("scheda")
     if a and s_:
         note = []
         if a["ffprobe"] != s_["ffprobe"]:
-            note.append(f"ffprobe DIVERSO: «{a['ffprobe']}» → «{s_['ffprobe']}»")
+            note.append(f"ffprobe DIFFERENT: «{a['ffprobe']}» → «{s_['ffprobe']}»")
         if a["decodificati"] != s_["decodificati"]:
-            note.append(f"decodificati {a['decodificati']} → {s_['decodificati']}")
+            note.append(f"decoded {a['decodificati']} → {s_['decodificati']}")
         pa, ps = num(a["psnr"]), num(s_["psnr"])
         if pa and ps and ps < pa - 0.5:
             note.append(f"PSNR {pa:.2f} → {ps:.2f} dB")
@@ -92,15 +92,15 @@ for prova, v in per_prova.items():
             note.append(f"byte +{(s_['byte_flusso']/a['byte_flusso']-1)*100:.0f} %")
         ta, ts = tempi(prova, "vaapi"), tempi(prova, "scheda")
         if ta and ts and ts["cod"] > ta["cod"] * 1.20:
-            note.append(f"codifica {ta['cod']:.0f} → {ts['cod']:.0f} µs")
+            note.append(f"encoding {ta['cod']:.0f} → {ts['cod']:.0f} µs")
         if s_["codice"] != 0 or int(s_.get("errori_decodifica", 0)) > 0:
-            note.append(f"il PRODOTTO INTEGRATO ha codice {s_['codice']} e {s_.get('errori_decodifica')} errori di decodifica")
+            note.append(f"the INTEGRATED PRODUCT has code {s_['codice']} and {s_.get('errori_decodifica')} decoding errors")
         if note:
-            peggio.append(f"{prova} [prodotto integrato «scheda»]: " + " · ".join(note))
+            peggio.append(f"{prova} [integrated product «scheda»]: " + " · ".join(note))
 print()
 if peggio:
-    print("⛔ DOVE VULKAN NON E' UGUALE O E' PEGGIO DI VA-API:")
+    print("⛔ WHERE VULKAN IS NOT EQUAL TO OR IS WORSE THAN VA-API:")
     for r in peggio:
         print("   " + r)
 else:
-    print("⭐ nessuna prova in cui Vulkan sia peggio di VA-API (ffprobe, decodifica, PSNR, byte, tempi)")
+    print("⭐ no test in which Vulkan is worse than VA-API (ffprobe, decoding, PSNR, bytes, times)")

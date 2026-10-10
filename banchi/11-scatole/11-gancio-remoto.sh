@@ -1,51 +1,51 @@
 #!/bin/bash
 # ===========================================================================
-# 11-gancio-remoto.sh — ⭐ IL PEZZO CHE GIRA **SULLA MACCHINA DI PROVA**
+# 11-gancio-remoto.sh — ⭐ THE PIECE THAT RUNS **ON THE TEST MACHINE**
 # ===========================================================================
 #
 #   bash 11-gancio-remoto.sh <file-esito> gira --famiglia rete …
 #
-# ⛔ Non lo lancia una persona: lo lancia `11-gancio.sh remoto` dal portatile,
-#    dentro un'unita' `systemd-run`, perche' la famiglia veloce costa `[M]` 173 s
-#    e un comando lungo in ssh diretto non si porta a casa.
+# ⛔ A person does not launch it: `11-gancio.sh remoto` launches it from the laptop,
+#    inside a `systemd-run` unit, because the fast family costs `[M]` 173 s
+#    and a long command over direct ssh does not make it home.
 #
 # ---------------------------------------------------------------------------
-# ⛔⛔ ESISTE PER UNA RAGIONE SOLA, e va detta: **un'unita' transitoria che
-#     RIESCE sparisce.**
+# ⛔⛔ IT EXISTS FOR ONE REASON ONLY, and it must be said: **a transient unit that
+#     SUCCEEDS disappears.**
 #
-# `systemd-run --unit=X …`: quando il comando esce **0**, systemd raccoglie
-# l'unita' e `systemctl is-active X` risponde `inactive`.  ⇒ ⛔ Da fuori
-# «sparita perche' e' andata bene» e **«non e' mai partita»** hanno esattamente
-# lo stesso aspetto — e `systemctl show -p ExecMainStatus` risponde **vuoto** in
-# tutt'e due i casi.
-# ⇒ ⚠ Chi ha lanciato leggerebbe un silenzio e dovrebbe indovinare.  E' la
-#   forma d'errore di `LEZIONI.md` §1.46: un giro che non ha girato e che
-#   somiglia a uno riuscito.
+# `systemd-run --unit=X …`: when the command exits **0**, systemd collects
+# the unit and `systemctl is-active X` answers `inactive`.  ⇒ ⛔ From outside
+# «gone because it went well» and **«never started»** look exactly
+# the same — and `systemctl show -p ExecMainStatus` answers **empty** in
+# both cases.
+# ⇒ ⚠ Whoever launched it would read a silence and would have to guess.  It is the
+#   error shape of `LEZIONI.md` §1.46: a run that did not run and that
+#   looks like a successful one.
 #
-# ⭐ Quindi l'esito non si deduce da systemd: **si scrive in un file**, e chi ha
-#   lanciato lo legge.  Il file e' anche il segnale di «ho finito»: finche' non
-#   c'e', il giro sta ancora girando.
+# ⭐ So the outcome is not deduced from systemd: **it is written to a file**, and whoever
+#   launched it reads it.  The file is also the «I am done» signal: as long as it is not
+#   there, the run is still running.
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
 QUI=$(cd "$(dirname "$0")" && pwd)
 
 if [ $# -lt 1 ]; then
-	printf 'uso: bash %s <file-esito> gira --famiglia <nome> …\n' "$0" >&2
+	printf 'usage: bash %s <file-esito> gira --famiglia <nome> …\n' "$0" >&2
 	exit 2
 fi
 
 ESITO_FILE=$1
 shift
 
-# ⛔ Si cancella QUI, non solo da chi lancia: un file d'esito vecchio letto come
-#    se fosse di questo giro e' un giro che riferisce l'esito di un altro.
+# ⛔ It is deleted HERE, not only by whoever launches: an old outcome file read as
+#    if it belonged to this run is a run reporting the outcome of another.
 rm -f "$ESITO_FILE"
 
 bash "$QUI/11-gancio.sh" "$@"
 E=$?
 
-# ⚠ E si scrive **dopo**, mai prima: il file che compare vuol dire «finito».
+# ⚠ And it is written **after**, never before: the file appearing means «finished».
 printf '%s\n' "$E" > "$ESITO_FILE"
 chmod 644 "$ESITO_FILE" 2>/dev/null
 

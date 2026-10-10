@@ -1,11 +1,11 @@
 #!/bin/bash
-# 15-una.sh — fa girare UNA prova della suite coi browser veri, SUL SERVER.
+# 15-una.sh — runs ONE test of the suite with the real browsers, ON THE SERVER.
 #
-#   (sul server, come nicfio)  bash 15-una.sh 15-f001-accesso-e-prima-immagine.py --scatola gnome --browser firefox --guasto
-#   (dal tablet)               bash banchi/15-suite/15-una.sh --remoto 15-f001-… --scatola gnome …
+#   (on the server, as nicfio)  bash 15-una.sh 15-f001-accesso-e-prima-immagine.py --scatola gnome --browser firefox --guasto
+#   (from the tablet)           bash banchi/15-suite/15-una.sh --remoto 15-f001-… --scatola gnome …
 #
-# L'ambiente e' quello di 11-gancio.sh GIRA_C21: il labwc senza schermo di nicfio
-# a 3840x2160 su wayland-0, finestre vere.
+# The environment is that of 11-gancio.sh GIRA_C21: nicfio's headless labwc
+# at 3840x2160 on wayland-0, real windows.
 QUI=$(cd "$(dirname "$0")" && pwd)
 if [ "${1:-}" = "--remoto" ]; then
 	shift

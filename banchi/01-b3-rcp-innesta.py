@@ -1,61 +1,61 @@
 #!/usr/bin/env python3
-"""01-b3-rcp-innesta.py — innesta RCP sopra lo strato WebTransport di B2.
+"""01-b3-rcp-innesta.py — grafts RCP on top of the WebTransport layer of B2.
 
-    python3 01-b3-rcp-innesta.py            innesta
-    python3 01-b3-rcp-innesta.py --togli    rimette l'esempio com'era
-
----------------------------------------------------------------------------
-⛔ PERCHE' E' UN SECONDO INNESTO E NON UNA CRESCITA DEL PRIMO
-
-`01-b2-ngtcp2-wt-innesta.py` misura una cosa sola: **quanto collante costa
-WebTransport su ngtcp2+nghttp3**, ed e' il numero su cui `DECISIONI.md` §6.4 ha
-scelto la libreria.  Farlo crescere con RCP dentro renderebbe quel numero
-incomprensibile fra sei mesi: due misure diverse sotto la stessa etichetta,
-cioe' la forma **E2**.
-
-⭐ Qui il collante e' quasi zero apposta: **RCP vive in `banchi/rcp/`, in C, e
-   non sa che sotto c'e' QUIC**.  Quel che questo innesto aggiunge all'esempio
-   sono solo i fili — e il fatto che siano pochi e' la prova che il modulo si
-   potra' portare nel server vero senza riscriverlo.
+    python3 01-b3-rcp-innesta.py            grafts
+    python3 01-b3-rcp-innesta.py --togli    puts the example back as it was
 
 ---------------------------------------------------------------------------
-⛔ IL RITARDO FISSO E IL TEMPO CHE PASSA
+⛔ WHY IT IS A SECOND GRAFT AND NOT A GROWTH OF THE FIRST
 
-`RCP.md` §4.4-bis impone un secondo prima di rispondere a `CREDENZIALI`,
-**anche quando la risposta e' AMMESSO**.  Un secondo in cui il server non ha
-niente da spedire: se nessun timer scatta, la risposta non parte mai.
+`01-b2-ngtcp2-wt-innesta.py` measures one thing only: **how much glue
+WebTransport costs on ngtcp2+nghttp3**, and it is the number on which `DECISIONI.md` §6.4
+chose the library.  Growing it with RCP inside would make that number
+incomprehensible six months from now: two different measurements under the same label,
+that is form **E2**.
 
-⚠ Per questo l'ospite accende il **keep-alive di QUIC a 100 ms**: cosi' il
-  percorso di scrittura viene percorso comunque, e `rcp_tempo()` ha modo di
-  far scadere ritardi e tetti.  E' un filo dell'ospite, non una regola del
-  protocollo — per questo sta qui e non in `rcp.c`.
-
-⛔ E si accende in `rcp_avvia`, cioe' **quando la sessione RCP nasce**, non al
-   primo byte che arriva.  `[M]` 10 agosto 2026, B6: armato solo dentro
-   `rcp_passa`, il tetto del `CIAO` (§4.6 riga 1) non scadeva mai — nello
-   stato «attesa-ciao» di byte non ne e' ancora arrivato nessuno, quindi
-   nessuno armava niente, quindi `rcp_tempo()` non lo chiamava piu' nessuno.
+⭐ Here the glue is almost zero on purpose: **RCP lives in `banchi/rcp/`, in C, and
+   does not know there is QUIC underneath**.  What this graft adds to the example
+   is only the wires — and the fact that they are few is the proof that the module
+   can be carried into the real server without rewriting it.
 
 ---------------------------------------------------------------------------
-⛔⭐ E DALL'11 AGOSTO 2026 INNESTA ANCHE IL BAN LATO OSPITE — `RCP.md` §4.4-bis
+⛔ THE FIXED DELAY AND THE TIME THAT PASSES
 
-`rcp.c` sa contare i fallimenti, bannare, salvare su file, dire se un indirizzo
-e' bannato e togliere un ban.  ⛔ Ma non apre socket, non legge la riga di
-comando e non serve nessuna pagina: **le tre cose che §4.4-bis chiede al padrone
-di casa non esistevano**, e senza di esse la regola dell'utente era scritta a
-meta'.  Adesso stanno in `server.cc`, in `CORPO_OSPITE`:
+`RCP.md` §4.4-bis imposes one second before answering `CREDENZIALI`,
+**even when the answer is AMMESSO**.  A second in which the server has
+nothing to send: if no timer fires, the answer never leaves.
 
-    --ban-file=<PATH>        i ban si rileggono all'avvio, e ⛔ «zero ban» e
-                             «non ho potuto leggere il file» si stampano
-                             DIVERSI — sul secondo il server non parte
-    la pagina in TCP         stessa porta dell'UDP (SPECIFICHE.md §4): a chi e'
-                             bannato si serve LO STESSO, con «tentativi
-                             esauriti» e le ore che mancano
-    --comando-socket=<PATH>  «SBLOCCA <indirizzo>» su un socket Unix 0600 —
-                             l'altra via d'uscita oltre alle dodici ore
+⚠ That is why the host turns on the **QUIC keep-alive at 100 ms**: so the
+  write path is walked anyway, and `rcp_tempo()` gets the chance to
+  make delays and caps expire.  It is a wire of the host, not a rule of the
+  protocol — that is why it is here and not in `rcp.c`.
 
-⚠ Chi accende questo server **senza** quelle due opzioni non perde il ban: perde
-  la persistenza e il comando.  Il server lo dice all'avvio, in due righe.
+⛔ And it is turned on in `rcp_avvia`, that is **when the RCP session is born**, not at the
+   first byte that arrives.  `[M]` 10 Aug 2026, B6: armed only inside
+   `rcp_passa`, the cap of the `CIAO` (§4.6 line 1) never expired — in the
+   «attesa-ciao» state no byte has arrived yet, so
+   nobody armed anything, so nobody called `rcp_tempo()` any more.
+
+---------------------------------------------------------------------------
+⛔⭐ AND SINCE 11 AUG 2026 IT ALSO GRAFTS THE HOST-SIDE BAN — `RCP.md` §4.4-bis
+
+`rcp.c` can count failures, ban, save to file, say whether an address
+is banned and remove a ban.  ⛔ But it opens no socket, does not read the command
+line and serves no page: **the three things §4.4-bis asks of the
+host did not exist**, and without them the user's rule was half
+written.  Now they are in `server.cc`, in `CORPO_OSPITE`:
+
+    --ban-file=<PATH>        the bans are reread at startup, and ⛔ "zero bans" and
+                             "I could not read the file" are printed
+                             DIFFERENTLY — on the second the server does not start
+    the page over TCP        same port as the UDP (SPECIFICHE.md §4): whoever is
+                             banned is served ALL THE SAME, with "attempts
+                             exhausted" and the hours that are left
+    --comando-socket=<PATH>  "SBLOCCA <address>" on a 0600 Unix socket —
+                             the other way out besides the twelve hours
+
+⚠ Whoever turns on this server **without** those two options does not lose the ban: they lose
+  persistence and the command.  The server says so at startup, in two lines.
 """
 import os
 import shutil
@@ -71,14 +71,14 @@ MARCA_B11 = "REMOTIX B11 GUASTO"
 
 FILE_NOSTRI = ["rcp.c", "rcp.h", "autenticazione.c"]
 
-# I file dell'esempio che questo innesto tocca: servono a `--togli` per
-# VERIFICARE di aver tolto, invece di restituire 0 comunque.
+# The files of the example this graft touches: `--togli` needs them to
+# VERIFY it has removed, instead of returning 0 anyway.
 #
-# ⛔ `server.cc` e' entrato l'11 agosto 2026 col ban lato ospite: le tre cose
-#    che §4.4-bis chiede al PADRONE DI CASA — caricare i ban all'avvio, servire
-#    la pagina a chi e' bannato, togliere un ban su comando — vivono nel `main`
-#    e nel ciclo degli eventi, non nel codec.  ⚠ Chi lo dimentica qui lascia
-#    `--togli` a dichiarare «nessuna traccia» su un file che ne ha cento.
+# ⛔ `server.cc` came in on 11 Aug 2026 with the host-side ban: the three things
+#    §4.4-bis asks of the HOST — loading the bans at startup, serving
+#    the page to whoever is banned, removing a ban on command — live in `main`
+#    and in the event loop, not in the codec.  ⚠ Whoever forgets it here leaves
+#    `--togli` declaring "no trace" on a file that has a hundred.
 FILE_TOCCATI = [
     "http3_server_proto_codec.cc",
     "http3_server_proto_codec.h",
@@ -87,40 +87,40 @@ FILE_TOCCATI = [
 ]
 
 INNESTI = [
-    # ── 0. ⛔ L'intestazione di RCP, IN CIMA ─────────────────────────────────
-    #    Il primo giro del 10 agosto la metteva insieme al corpo dei ganci, che
-    #    sta a meta' file: `rcp_tempo` veniva usata alla riga 120 e dichiarata
-    #    alla 1100.  Un'intestazione si mette dove si mettono le intestazioni.
+    # ── 0. ⛔ The RCP header, AT THE TOP ─────────────────────────────────────
+    #    The first round of 10 Aug put it together with the body of the hooks, which
+    #    sits halfway down the file: `rcp_tempo` was used at line 120 and declared
+    #    at 1100.  A header goes where headers go.
     (
         "http3_server_proto_codec.cc",
         '#include "http3_server_proto_codec.h"\n',
         '#include "http3_server_proto_codec.h"\n'
         "\n"
-        "// ⭐ REMOTIX B3 — il protocollo sta in C, e vive in banchi/rcp/.\n"
+        "// ⭐ REMOTIX B3 — the protocol is in C, and lives in banchi/rcp/.\n"
         'extern "C" {\n'
         '#include "rcp.h"\n'
         "bool rcp_autentica(const char *utente, const char *parola);\n"
         "}\n",
-        "l'intestazione di RCP",
+        "the RCP header",
     ),
-    # ── 1. I file nostri nella compilazione ─────────────────────────────────
+    # ── 1. Our files in the build ───────────────────────────────────────────
     (
         "CMakeLists.txt",
         "  set(bsslserver_SOURCES\n",
         "  set(bsslserver_SOURCES\n"
-        "    # ⭐ REMOTIX B3 — RCP e PAM.  Sono NOSTRI e stanno in C: l'esempio\n"
-        "    #    li ospita, non li possiede.\n"
+        "    # ⭐ REMOTIX B3 — RCP and PAM.  They are OURS and are in C: the example\n"
+        "    #    hosts them, it does not own them.\n"
         "    rcp.c\n"
         "    autenticazione.c\n",
-        "i file di RCP nella compilazione",
+        "the RCP files in the build",
     ),
     (
         "CMakeLists.txt",
         "  target_link_libraries(bsslserver ${bssl_LIBS})\n",
         "  target_link_libraries(bsslserver ${bssl_LIBS} pam)\n",
-        "PAM fra le librerie",
+        "PAM among the libraries",
     ),
-    # ── 2. Lo stato di RCP nel codec ────────────────────────────────────────
+    # ── 2. The RCP state in the codec ───────────────────────────────────────
     (
         "http3_server_proto_codec.h",
         "  std::deque<WtUscita> wt_uscita_;\n"
@@ -128,31 +128,31 @@ INNESTI = [
         "  std::deque<WtUscita> wt_uscita_;\n"
         "  int64_t wt_sessione_{-1};\n"
         "\n"
-        "  // ═══ ⭐ REMOTIX B3 — RCP sopra WebTransport ═══════════════════════\n"
-        "  // ⛔ Il canale di controllo e' il PRIMO stream bidirezionale che il\n"
-        "  //    client apre dentro la sessione (RCP.md §4.2), e il suo\n"
-        "  //    chiudersi E' la fine della sessione.\n"
+        "  // ═══ ⭐ REMOTIX B3 — RCP on top of WebTransport ═══════════════════\n"
+        "  // ⛔ The control channel is the FIRST bidirectional stream the\n"
+        "  //    client opens inside the session (RCP.md §4.2), and its\n"
+        "  //    closing IS the end of the session.\n"
         "  struct rcp_sessione *rcp_{nullptr};\n"
         "  int64_t rcp_stream_{-1};\n"
         "  void rcp_avvia(int64_t stream_id);\n"
         "  void rcp_passa(int64_t stream_id, std::span<const uint8_t> dati);\n"
         "\n"
-        "  // ⛔ RCP.md §2.5 — gli stream unidirezionali aperti dal CLIENT.  Il\n"
-        "  //    canale si legge dai primi due byte, e tre dei cinque valori\n"
-        "  //    sono violazioni: 0x00 (il controllo vive solo sullo stream 0),\n"
-        "  //    0x03 (il video va dal server al client), 0x04 (l'audio vive\n"
-        "  //    solo sui datagram).\n"
+        "  // ⛔ RCP.md §2.5 — the unidirectional streams opened by the CLIENT.  The\n"
+        "  //    channel is read from the first two bytes, and three of the five values\n"
+        "  //    are violations: 0x00 (control lives only on stream 0),\n"
+        "  //    0x03 (video goes from server to client), 0x04 (audio lives\n"
+        "  //    only on datagrams).\n"
         "  std::unordered_map<int64_t, bool> wt_uni_;\n"
         "\n"
-        "  // ⛔ REMOTIX B11 — la chiusura della sessione ASPETTA che la coda\n"
-        "  //    d'uscita si sia svuotata: vedi `wt_chiudi_sessione`.\n"
+        "  // ⛔ REMOTIX B11 — the closing of the session WAITS for the output\n"
+        "  //    queue to have emptied: see `wt_chiudi_sessione`.\n"
         "  int wt_chiusura_{-1};\n"
         "  int wt_chiusura_attesa_{0};\n"
         "  WtEsito wt_smista_uni(int64_t stream_id, std::span<const uint8_t> data,\n"
         "                        std::vector<uint8_t> &riunito);\n",
-        "lo stato di RCP",
+        "the RCP state",
     ),
-    # ── 3. Il FIN nella coda d'uscita ───────────────────────────────────────
+    # ── 3. The FIN in the output queue ──────────────────────────────────────
     (
         "http3_server_proto_codec.h",
         "  struct WtUscita {\n"
@@ -164,13 +164,13 @@ INNESTI = [
         "    int64_t stream_id;\n"
         "    std::vector<uint8_t> dati;\n"
         "    size_t off;\n"
-        "    // ⭐ REMOTIX B3 — la capsula che chiude la sessione va spedita con\n"
-        "    //    il FIN: senza, il client resta ad aspettare altri byte.\n"
+        "    // ⭐ REMOTIX B3 — the capsule that closes the session must be sent with\n"
+        "    //    the FIN: without it, the client keeps waiting for more bytes.\n"
         "    bool fin;\n"
         "  };\n",
-        "il FIN nella coda d'uscita",
+        "the FIN in the output queue",
     ),
-    # ── 4. Lo smistamento: il primo stream WT e' il canale di controllo ─────
+    # ── 4. The dispatch: the first WT stream is the control channel ─────────
     (
         "http3_server_proto_codec.cc",
         "    if (!data.empty()) {\n"
@@ -179,14 +179,14 @@ INNESTI = [
         "      ngtcp2_conn_extend_max_offset(conn_, data.size());\n"
         "    }\n",
         "    if (!data.empty()) {\n"
-        "      // ⭐ REMOTIX B3 — sul canale di controllo i byte vanno a RCP.\n"
+        "      // ⭐ REMOTIX B3 — on the control channel the bytes go to RCP.\n"
         "      //\n"
-        "      // ⚠ Sugli altri stream resta l'eco di B2, che serviva al banco\n"
-        "      //   del trasporto — ma con QUESTO innesto sopra, un secondo\n"
-        "      //   stream bidirezionale del client e' una violazione di §2.5\n"
-        "      //   che congeda (vedi piu' sotto).  L'eco vale quindi solo per i\n"
-        "      //   byte gia' in volo mentre la sessione sta cadendo: ⛔ il banco\n"
-        "      //   del trasporto di B2 si misura SENZA B3 innestato.\n"
+        "      // ⚠ On the other streams the B2 echo remains, which served the\n"
+        "      //   transport bench — but with THIS graft on top, a second\n"
+        "      //   bidirectional stream from the client is a violation of §2.5\n"
+        "      //   that dismisses (see further down).  So the echo only applies to the\n"
+        "      //   bytes already in flight while the session is falling: ⛔ the B2\n"
+        "      //   transport bench is measured WITHOUT B3 grafted.\n"
         "      if (stream_id == rcp_stream_) {\n"
         "        rcp_passa(stream_id, data);\n"
         "      } else {\n"
@@ -195,7 +195,7 @@ INNESTI = [
         "      ngtcp2_conn_extend_max_stream_offset(conn_, stream_id, data.size());\n"
         "      ngtcp2_conn_extend_max_offset(conn_, data.size());\n"
         "    }\n",
-        "i byte del controllo verso RCP",
+        "the control bytes towards RCP",
     ),
     (
         "http3_server_proto_codec.cc",
@@ -203,82 +203,85 @@ INNESTI = [
         "    wt_incerti_.erase(stream_id);\n",
         "    wt_streams_[stream_id] = static_cast<int64_t>(sessione);\n"
         "    wt_incerti_.erase(stream_id);\n"
-        "    // ⭐ REMOTIX B3 — RCP.md §4.2: il PRIMO stream bidirezionale che il\n"
-        "    //    client apre nella sessione e' il canale di controllo.\n"
+        "    // ⭐ REMOTIX B3 — RCP.md §4.2: the FIRST bidirectional stream the\n"
+        "    //    client opens in the session is the control channel.\n"
         "    //\n"
-        "    // ⚠ E «il primo» QUI e' il primo RICONOSCIUTO, non il primo\n"
-        "    //   APERTO: i due stream viaggiano in pacchetti diversi, e fra\n"
-        "    //   stream diversi la rete non promette nessun ordine.  Il numero\n"
-        "    //   dello stream invece l'ordine ce l'ha dentro — QUIC li numera\n"
-        "    //   in ordine di apertura — ed e' quello che si guarda per dire\n"
-        "    //   quale dei due era il primo (vedi il ramo qui sotto).\n"
+        "    // ⚠ And \"the first\" HERE is the first RECOGNISED, not the first\n"
+        "    //   OPENED: the two streams travel in different packets, and between\n"
+        "    //   different streams the network promises no order.  The stream\n"
+        "    //   number instead carries the order inside it — QUIC numbers them\n"
+        "    //   in order of opening — and it is what is looked at to say\n"
+        "    //   which of the two was the first (see the branch below).\n"
         "    if (rcp_stream_ == -1) {\n"
         "      rcp_avvia(stream_id);\n"
         "    } else {\n"
-        "      // ⛔ REMOTIX B5 — RCP.md §2.5: «il client NON DEVE aprire stream\n"
-        "      //    bidirezionali oltre lo 0».  Il canale di controllo e' UNO\n"
-        "      //    SOLO per tutta la sessione, e un secondo bidirezionale non\n"
-        "      //    e' un canale nuovo: e' una violazione.\n"
+        "      // ⛔ REMOTIX B5 — RCP.md §2.5: \"the client MUST NOT open\n"
+        "      //    bidirectional streams beyond 0\".  The control channel is ONE\n"
+        "      //    ONLY for the whole session, and a second bidirectional one is not\n"
+        "      //    a new channel: it is a violation.\n"
         "      //\n"
-        "      // ⚠ Senza questa riga il secondo stream finiva nell'ECO di B2 e\n"
-        "      //   i byte tornavano indietro: il client avrebbe visto un server\n"
-        "      //   che gli risponde, e la violazione sarebbe passata per una\n"
-        "      //   funzione.\n"
+        "      // ⚠ Without this line the second stream ended up in the B2 ECHO and\n"
+        "      //   the bytes came back: the client would have seen a server\n"
+        "      //   answering it, and the violation would have passed for a\n"
+        "      //   feature.\n"
         "      //\n"
-        "      // ⛔ E LA DIAGNOSI NON DEVE INCOLPARE L'ORDINE D'ARRIVO.  Se\n"
-        "      //    questo stream ha un numero PIU' BASSO di quello eletto, il\n"
-        "      //    primo aperto era lui, e a scambiarli e' stata la rete: gli\n"
-        "      //    stream bidirezionali restano due — e due e' la violazione,\n"
-        "      //    comunque siano arrivati — ma «un secondo stream» detto del\n"
-        "      //    numero piu' basso manda a cercare il difetto nel client,\n"
-        "      //    che li' non ha sbagliato niente.\n"
+        "      // ⛔ AND THE DIAGNOSIS MUST NOT BLAME THE ORDER OF ARRIVAL.  If\n"
+        "      //    this stream has a LOWER number than the elected one, the\n"
+        "      //    first opened was this one, and the network swapped them: the\n"
+        "      //    bidirectional streams are still two — and two is the violation,\n"
+        "      //    however they arrived — but \"a second stream\" said of the\n"
+        "      //    lower number sends people looking for the defect in the client,\n"
+        "      //    which got nothing wrong there.\n"
         "      if (stream_id < rcp_stream_) {\n"
         "        std::println(stderr,\n"
-        "                     \"REMOTIX B5: ⛔ due stream bidirezionali dal \"\n"
-        "                     \"client dentro la sessione: {} e {} — e il PRIMO \"\n"
-        "                     \"APERTO era il {}, arrivato per secondo: il \"\n"
-        "                     \"canale di controllo e' stato eletto per ordine \"\n"
-        "                     \"d'arrivo, non per numero\",\n"
+        "                     \"REMOTIX B5: ⛔ two bidirectional streams from the \"\n"
+        "                     \"client inside the session: {} and {} — and the FIRST \"\n"
+        "                     \"OPENED was {}, which arrived second: the \"\n"
+        "                     \"control channel was elected by order of \"\n"
+        "                     \"arrival, not by number\",\n"
         "                     rcp_stream_, stream_id, stream_id);\n"
         "      } else {\n"
         "        std::println(stderr,\n"
-        "                     \"REMOTIX B5: ⛔ due stream bidirezionali dal \"\n"
-        "                     \"client dentro la sessione: il controllo e' il \"\n"
-        "                     \"{}, e il {} e' di troppo\",\n"
+        "                     \"REMOTIX B5: ⛔ two bidirectional streams from the \"\n"
+        "                     \"client inside the session: control is \"\n"
+        "                     \"{}, and {} is one too many\",\n"
         "                     rcp_stream_, stream_id);\n"
         "      }\n"
         "      rcp_violazione(rcp_,\n"
-        "                     \"due stream bidirezionali dal client dentro la \"\n"
-        "                     \"sessione (§2.5)\");\n"
+        "                     \"two bidirectional streams from the client inside the \"\n"
+        "                     \"session (§2.5)\");\n"
         "    }\n",
-        "il primo stream e' il controllo",
+        "the first stream is the control",
     ),
-    # ── 4-quater. ⛔ GLI STREAM UNIDIREZIONALI DEL CLIENT — §2.5 ─────────────
-    #    B2 mandava a nghttp3 tutto quel che non era un bidirezionale del
-    #    client, e nghttp3 di uno stream di tipo 0x54 non sa che farsene: lo
-    #    scarta in silenzio.  ⛔ Il risultato era che un client poteva mandare
-    #    il canale di controllo, il video o l'audio su uno stream
-    #    unidirezionale e **non succedeva niente** — cioe' esattamente
-    #    l'indulgenza che §3 vieta, in un punto dove nessun banco guardava.
+    # ── 4-quater. ⛔ THE CLIENT'S UNIDIRECTIONAL STREAMS — §2.5 ──────────────
+    #    B2 sent to nghttp3 everything that was not a bidirectional stream of the
+    #    client, and nghttp3 has no use for a stream of type 0x54: it
+    #    discards it silently.  ⛔ The result was that a client could send
+    #    the control channel, the video or the audio on a unidirectional
+    #    stream and **nothing happened** — that is, exactly
+    #    the leniency §3 forbids, at a point where no bench was looking.
     (
         "http3_server_proto_codec.cc",
-        "  // Solo gli stream bidirezionali aperti dal client: la CONNECT estesa e gli\n"
-        "  // stream WebTransport arrivano tutti di li'.\n"
+        # ⚠ The two comment lines of this foothold are text left by B2
+        #   (`01-b2-ngtcp2-wt-innesta.py`), not by ngtcp2: they stay exactly as
+        #   B2 writes them, here and in the copy below.
+        "  // Only the bidirectional streams opened by the client: the extended CONNECT and the\n"
+        "  // WebTransport streams all arrive from there.\n"
         "  if ((stream_id & 0x03) != 0x00) {\n"
         "    return WtEsito::HTTP3;\n"
         "  }\n",
-        "  // ⛔ REMOTIX B5 — gli unidirezionali APERTI DAL CLIENT (§2.5) passano\n"
-        "  //    di qui prima di tutto: fra loro c'e' il canale di controllo di\n"
-        "  //    HTTP/3 e i due di QPACK, che sono di nghttp3 e non nostri.\n"
+        "  // ⛔ REMOTIX B5 — the unidirectional streams OPENED BY THE CLIENT (§2.5) pass\n"
+        "  //    through here before anything else: among them are the HTTP/3 control\n"
+        "  //    channel and the two QPACK ones, which belong to nghttp3, not to us.\n"
         "  if ((stream_id & 0x03) == 0x02) {\n"
         "    return wt_smista_uni(stream_id, data, riunito);\n"
         "  }\n"
-        "  // Solo gli stream bidirezionali aperti dal client: la CONNECT estesa e gli\n"
-        "  // stream WebTransport arrivano tutti di li'.\n"
+        "  // Only the bidirectional streams opened by the client: the extended CONNECT and the\n"
+        "  // WebTransport streams all arrive from there.\n"
         "  if ((stream_id & 0x03) != 0x00) {\n"
         "    return WtEsito::HTTP3;\n"
         "  }\n",
-        "gli unidirezionali del client",
+        "the client's unidirectional streams",
     ),
     (
         "http3_server_proto_codec.cc",
@@ -290,62 +293,64 @@ INNESTI = [
         "        wt_accoda(stream_id, resto);\n"
         "      }\n"
         "    }\n",
-        "i primi byte del controllo",
+        "the first bytes of the control",
     ),
-    # ── 4-bis. ⛔ IL TEMPO CHE SCORRE ────────────────────────────────────────
-    #    Senza questa chiamata `rcp_tempo()` non lo invoca nessuno, e il
-    #    ritardo fisso di §4.4-bis non scade MAI: la stretta di mano si ferma
-    #    dopo ECCOMI e il cliente va in timeout.  ⚠ Visto al primo giro del
-    #    10 agosto 2026 — il modulo era giusto, il filo mancava.
+    # ── 4-bis. ⛔ THE TIME THAT FLOWS ────────────────────────────────────────
+    #    Without this call nobody invokes `rcp_tempo()`, and the
+    #    fixed delay of §4.4-bis NEVER expires: the handshake stops
+    #    after ECCOMI and the client times out.  ⚠ Seen at the first round of
+    #    10 Aug 2026 — the module was right, the wire was missing.
     (
         "http3_server_proto_codec.cc",
-        # ⚠ L'appiglio non e' piu' il testo nudo di ngtcp2: e' quel che ci ha
-        #   lasciato B2, che fra la dichiarazione di `vec` e il ciclo azzera
-        #   `wt_coda_bloccata_`.  ⛔ Un appiglio condiviso fra due innesti va
-        #   riletto ogni volta che il primo dei due cambia, o il secondo conta
-        #   zero e si ferma dando la colpa a ngtcp2.
+        # ⚠ The foothold is no longer ngtcp2's bare text: it is what B2
+        #   left us, which between the declaration of `vec` and the loop resets
+        #   `wt_coda_bloccata_`.  ⛔ A foothold shared between two grafts must be
+        #   reread every time the first of the two changes, or the second counts
+        #   zero and stops blaming ngtcp2.
+        # ⚠ And the B2 comment inside it stays exactly as B2 writes it, here and
+        #   in the copy below.
         "  std::array<nghttp3_vec, 16> vec;\n"
         "\n"
-        "  // ⭐ REMOTIX B2 — una passata di scrittura comincia qui, e la coda\n"
-        "  //    nostra riparte SBLOCCATA: `wt_coda_bloccata_` vale per una\n"
-        "  //    passata sola.  ⚠ Sta fuori dal ciclo apposta — azzerarlo\n"
-        "  //    dentro rimetterebbe in gioco lo stesso elemento a ogni giro,\n"
-        "  //    che e' precisamente il ciclo che non avanza.\n"
+        "  // ⭐ REMOTIX B2 — a write pass starts here, and our queue\n"
+        "  //    restarts UNBLOCKED: `wt_coda_bloccata_` holds for one\n"
+        "  //    pass only.  ⚠ It is outside the loop on purpose — resetting it\n"
+        "  //    inside would put the same element back in play at every round,\n"
+        "  //    which is precisely the loop that does not advance.\n"
         "  wt_coda_bloccata_ = false;\n"
         "\n"
         "  for (;;) {\n",
         "  std::array<nghttp3_vec, 16> vec;\n"
         "\n"
-        "  // ⭐ REMOTIX B2 — una passata di scrittura comincia qui, e la coda\n"
-        "  //    nostra riparte SBLOCCATA: `wt_coda_bloccata_` vale per una\n"
-        "  //    passata sola.  ⚠ Sta fuori dal ciclo apposta — azzerarlo\n"
-        "  //    dentro rimetterebbe in gioco lo stesso elemento a ogni giro,\n"
-        "  //    che e' precisamente il ciclo che non avanza.\n"
+        "  // ⭐ REMOTIX B2 — a write pass starts here, and our queue\n"
+        "  //    restarts UNBLOCKED: `wt_coda_bloccata_` holds for one\n"
+        "  //    pass only.  ⚠ It is outside the loop on purpose — resetting it\n"
+        "  //    inside would put the same element back in play at every round,\n"
+        "  //    which is precisely the loop that does not advance.\n"
         "  wt_coda_bloccata_ = false;\n"
         "\n"
-        "  // ⭐ REMOTIX B3 — il tempo di RCP scorre di qui: e' l'unico punto\n"
-        "  //    percorso comunque, anche quando non c'e' niente da spedire.\n"
+        "  // ⭐ REMOTIX B3 — RCP's time flows from here: it is the only point\n"
+        "  //    walked anyway, even when there is nothing to send.\n"
         "  if (rcp_) {\n"
         "    rcp_tempo(rcp_, ngtcp2_conn_get_timestamp(conn_) / NGTCP2_MILLISECONDS);\n"
         "  }\n"
-        "  // ⛔ REMOTIX B11 — la capsula di chiusura parte SOLO quando la coda\n"
-        "  //    d'uscita e' vuota: il `CONGEDO` deve essere gia' partito, o il\n"
-        "  //    browser lo butta insieme alla sessione.\n"
+        "  // ⛔ REMOTIX B11 — the closing capsule leaves ONLY when the output\n"
+        "  //    queue is empty: the `CONGEDO` must already have left, or the\n"
+        "  //    browser throws it away together with the session.\n"
         "  if (wt_chiusura_ >= 0) {\n"
-        "    // ⚠ Non basta che la coda sia vuota UNA VOLTA: «consegnato a\n"
-        "    //   ngtcp2» non e' «uscito sul filo».  Si aspettano cinque passate\n"
-        "    //   di scrittura, che col keep-alive a 100 ms sono mezzo secondo —\n"
-        "    //   niente, per un banco, e toglie di mezzo la corsa fra il\n"
-        "    //   CONGEDO e la capsula che chiude la sessione.\n"
+        "    // ⚠ It is not enough that the queue is empty ONCE: \"handed to\n"
+        "    //   ngtcp2\" is not \"out on the wire\".  We wait five write\n"
+        "    //   passes, which with the keep-alive at 100 ms are half a second —\n"
+        "    //   nothing, for a bench, and it removes the race between the\n"
+        "    //   CONGEDO and the capsule that closes the session.\n"
         "    //\n"
-        "    // ⛔ E CHE LE CINQUE PASSATE AVVENGANO lo garantisce il keep-alive\n"
-        "    //    che `wt_chiudi_sessione` arma nello stesso istante in cui\n"
-        "    //    scrive `wt_chiusura_`: senza, su una violazione trovata al\n"
-        "    //    primo messaggio il client tace, nessuno percorre piu' questo\n"
-        "    //    punto e il contatore si ferma a uno o due per sempre.  ⚠ E'\n"
-        "    //    il difetto misurato da B5 il 10 agosto 2026 — 22 su 36 —, e\n"
-        "    //    il registro del server lo diceva per intero: il `congedo`\n"
-        "    //    c'era, la «chiusa la sessione WebTransport» no.\n"
+        "    // ⛔ AND THAT THE FIVE PASSES HAPPEN is guaranteed by the keep-alive\n"
+        "    //    that `wt_chiudi_sessione` arms at the same instant in which it\n"
+        "    //    writes `wt_chiusura_`: without it, on a violation found at the\n"
+        "    //    first message the client goes quiet, nobody walks this\n"
+        "    //    point any more and the counter stops at one or two forever.  ⚠ It is\n"
+        "    //    the defect measured by B5 on 10 Aug 2026 — 22 of 36 —, and\n"
+        "    //    the server log said it in full: the `congedo`\n"
+        "    //    was there, the \"closed the WebTransport session\" was not.\n"
         "    wt_chiusura_attesa_ = wt_uscita_.empty() ? wt_chiusura_attesa_ + 1 : 0;\n"
         "    if (wt_chiusura_attesa_ >= 5) {\n"
         "      auto m = static_cast<uint8_t>(wt_chiusura_);\n"
@@ -354,33 +359,33 @@ INNESTI = [
         "    }\n"
         "  }\n"
         "\n  for (;;) {\n",
-        "il tempo che scorre",
+        "the time that flows",
     ),
-    # ── 4-ter. ⛔ IL POSTO SI LIBERA ─────────────────────────────────────────
-    #    `rcp_libera()` libera il posto nel registro delle sessioni (§8.2
-    #    motivo 0x0F).  Senza questa chiamata il posto resta occupato per
-    #    sempre, e ⛔ **la stretta di mano funziona UNA volta e mai piu'**:
-    #    dalla seconda connessione in poi il server risponde
-    #    GIA_ATTIVA_REMOTA a chiunque, compreso chi e' solo.
+    # ── 4-ter. ⛔ THE SLOT IS FREED ──────────────────────────────────────────
+    #    `rcp_libera()` frees the slot in the session register (§8.2
+    #    reason 0x0F).  Without this call the slot stays occupied
+    #    forever, and ⛔ **the handshake works ONCE and never again**:
+    #    from the second connection on the server answers
+    #    GIA_ATTIVA_REMOTA to anyone, including whoever is alone.
     #
-    # ⭐ Trovato da B3 al primo giro, 10 agosto 2026 — ed e' esattamente il
-    #    difetto che B3 esiste per trovare: `LEZIONI.md` §2.1 dice che in v1
-    #    un certificato condiviso uccideva il server ALLA SECONDA connessione,
-    #    e che una prova a collegamento singolo **resta verde per sempre**.
-    #    Questa qui e' la stessa forma, in un altro punto.
+    # ⭐ Found by B3 at the first round, 10 Aug 2026 — and it is exactly the
+    #    defect B3 exists to find: `LEZIONI.md` §2.1 says that in v1
+    #    a shared certificate killed the server AT THE SECOND connection,
+    #    and that a single-connection test **stays green forever**.
+    #    This one is the same form, at another point.
     (
         "http3_server_proto_codec.cc",
         "ProtoCodec::~ProtoCodec() {\n",
         "ProtoCodec::~ProtoCodec() {\n"
-        "  // ⭐ REMOTIX B3 — il posto nel registro delle sessioni si libera QUI.\n"
+        "  // ⭐ REMOTIX B3 — the slot in the session register is freed HERE.\n"
         "  if (rcp_) {\n"
         "    rcp_libera(rcp_);\n"
         "    rcp_ = nullptr;\n"
         "  }\n",
-        "il posto che si libera",
+        "the slot that is freed",
     ),
-    # ── 4-quinquies. ⛔⭐ IL POSTO SI LIBERA QUANDO FINISCE LA SESSIONE,
-    #                     NON QUANDO MUORE LA CONNESSIONE — trovato da B11
+    # ── 4-quinquies. ⛔⭐ THE SLOT IS FREED WHEN THE SESSION ENDS,
+    #                     NOT WHEN THE CONNECTION DIES — found by B11
     (
         "http3_server_proto_codec.cc",
         "ProtoCodec::on_stream_close(int64_t stream_id,\n"
@@ -390,38 +395,38 @@ INNESTI = [
         "ProtoCodec::on_stream_close(int64_t stream_id,\n"
         "                            std::optional<uint64_t> rx_app_error_code,\n"
         "                            std::optional<uint64_t> tx_app_error_code) {\n"
-        "  // ⛔⭐ REMOTIX B3 — RCP.md §4.2: il canale di controllo si chiude, e\n"
-        "  //    **il suo chiudersi E\' la fine della sessione**.  Il posto nel\n"
-        "  //    registro (§8.2 motivo 0x0F) va liberato QUI — e anche quando a\n"
-        "  //    chiudersi e\' lo stream della CONNECT estesa, che porta la\n"
-        "  //    sessione WebTransport.\n"
+        "  // ⛔⭐ REMOTIX B3 — RCP.md §4.2: the control channel closes, and\n"
+        "  //    **its closing IS the end of the session**.  The slot in the\n"
+        "  //    register (§8.2 reason 0x0F) must be freed HERE — and also when\n"
+        "  //    what closes is the stream of the extended CONNECT, which carries the\n"
+        "  //    WebTransport session.\n"
         "  //\n"
-        "  // ⚠ Prima il posto si liberava solo in `~ProtoCodec`, che e\' il\n"
-        "  //   distruttore della CONNESSIONE.  Con `aioquic` i due istanti\n"
-        "  //   coincidono — il cliente di prova chiude tutto — e B3 e\' rimasto\n"
-        "  //   verde per cinque giri.  ⛔ Un BROWSER no: chiude la sessione e\n"
-        "  //   **tiene viva la connessione**, e da quel momento il posto resta\n"
-        "  //   occupato da una sessione che non esiste piu\'.\n"
+        "  // ⚠ Before, the slot was freed only in `~ProtoCodec`, which is the\n"
+        "  //   destructor of the CONNECTION.  With `aioquic` the two instants\n"
+        "  //   coincide — the test client closes everything — and B3 stayed\n"
+        "  //   green for five rounds.  ⛔ A BROWSER does not: it closes the session and\n"
+        "  //   **keeps the connection alive**, and from that moment the slot stays\n"
+        "  //   occupied by a session that no longer exists.\n"
         "  //\n"
-        "  // ⭐ Trovato da B11 il 10 agosto 2026: con Chrome, SETTE `posto\n"
-        "  //    NEGATO` su nove tentativi, e la pagina non vedeva altro che\n"
-        "  //    silenzio.  E\' la stessa forma del difetto che B3 aveva trovato\n"
-        "  //    il giorno prima — il posto che non si libera — in un altro\n"
-        "  //    punto, e ⛔ **una prova con un solo tipo di client non poteva\n"
-        "  //    vederla**: il difetto vive nella differenza fra i due.\n"
+        "  // ⭐ Found by B11 on 10 Aug 2026: with Chrome, SEVEN `posto\n"
+        "  //    NEGATO` out of nine attempts, and the page saw nothing but\n"
+        "  //    silence.  It is the same form as the defect B3 had found\n"
+        "  //    the day before — the slot that is not freed — at another\n"
+        "  //    point, and ⛔ **a test with a single kind of client could not\n"
+        "  //    see it**: the defect lives in the difference between the two.\n"
         "  if (rcp_ && (stream_id == rcp_stream_ || stream_id == wt_sessione_)) {\n"
         "    std::println(stderr,\n"
-        "                 \"REMOTIX B3: chiuso lo stream {}: la sessione e\' finita, \"\n"
-        "                 \"il posto si libera\",\n"
+        "                 \"REMOTIX B3: closed stream {}: the session is over, \"\n"
+        "                 \"the slot is freed\",\n"
         "                 stream_id);\n"
         "    rcp_libera(rcp_);\n"
         "    rcp_ = nullptr;\n"
         "    rcp_stream_ = -1;\n"
         "  }\n"
         "  if (!httpconn_) {\n    return {};\n  }\n",
-        "il posto che si libera con la sessione",
+        "the slot that is freed with the session",
     ),
-    # ── 5. wt_accoda con il FIN ─────────────────────────────────────────────
+    # ── 5. wt_accoda with the FIN ───────────────────────────────────────────
     (
         "http3_server_proto_codec.cc",
         "  wt_uscita_.push_back(\n"
@@ -429,7 +434,7 @@ INNESTI = [
         "  wt_uscita_.push_back(\n"
         "    WtUscita{stream_id, std::vector<uint8_t>{dati.begin(), dati.end()}, 0,\n"
         "             false});\n",
-        "wt_accoda con il FIN",
+        "wt_accoda with the FIN",
     ),
     (
         "http3_server_proto_codec.cc",
@@ -441,125 +446,125 @@ INNESTI = [
         "      wt_mio = true;\n"
         "      // ⭐ REMOTIX B3\n"
         "      fin = u.fin ? 1 : 0;\n",
-        "il FIN in scrittura",
+        "the FIN when writing",
     ),
-    # ── 6. ⛔⭐ IL POSTO SI LIBERA ANCHE QUANDO A CHIUDERE E' IL SERVER ───────
-    #    `RCP.md` §4.2: il canale di controllo che si chiude E' la fine della
-    #    sessione.  Il verso in cui lo si chiude non cambia la regola — ma il
-    #    codice conosceva un verso solo, perche' l'altro non l'aveva mai
-    #    percorso nessuno.
+    # ── 6. ⛔⭐ THE SLOT IS FREED ALSO WHEN IT IS THE SERVER THAT CLOSES ──────
+    #    `RCP.md` §4.2: the control channel that closes IS the end of the
+    #    session.  The direction in which it is closed does not change the rule — but the
+    #    code knew only one direction, because nobody had ever walked
+    #    the other.
     #
-    # ⭐ Trovato da B11 il 10 agosto 2026, e SOLO su Chrome: dopo il caso in
-    #    cui il server chiude il canale con un FIN, i tre casi successivi
-    #    ricevevano `GIA_ATTIVA_REMOTA`.  Su Firefox il trasporto chiudeva lo
-    #    stream in tempo e `on_stream_close` liberava il posto lo stesso: il
-    #    difetto viveva nella DIFFERENZA fra i due motori.
+    # ⭐ Found by B11 on 10 Aug 2026, and ONLY on Chrome: after the case in
+    #    which the server closes the channel with a FIN, the next three cases
+    #    received `GIA_ATTIVA_REMOTA`.  On Firefox the transport closed the
+    #    stream in time and `on_stream_close` freed the slot anyway: the
+    #    defect lived in the DIFFERENCE between the two engines.
     #
-    # ⚠ E la pagina non poteva rimediare: §4.2 le vieta di spedire dopo la
-    #   fine del canale, quindi il `CONGEDO` che libera il posto — la cura del
-    #   terzo difetto di B11 — li' e' proprio quel che non deve mandare.
+    # ⚠ And the page could not make up for it: §4.2 forbids it to send after the
+    #   end of the channel, so the `CONGEDO` that frees the slot — the cure of the
+    #   third defect of B11 — there is precisely what it must not send.
     (
         "http3_server_proto_codec.cc",
         "        if (u.off >= u.dati.size()) {\n"
         "          wt_uscita_.pop_front();\n"
         "        }\n",
         "        if (u.off >= u.dati.size()) {\n"
-        "          // ⛔⭐ REMOTIX B3 — RCP.md §4.2: il canale di controllo che si\n"
-        "          //    chiude e' la fine della sessione, ANCHE dal lato nostro.\n"
-        "          //    Il posto (§8.2 motivo 0x0F) va lasciato QUI, perche' da\n"
-        "          //    adesso in poi non arrivera' piu' un byte che lo liberi.\n"
+        "          // ⛔⭐ REMOTIX B3 — RCP.md §4.2: the control channel that\n"
+        "          //    closes is the end of the session, ALSO from our side.\n"
+        "          //    The slot (§8.2 reason 0x0F) must be released HERE, because from\n"
+        "          //    now on no byte will arrive any more to free it.\n"
         "          //\n"
-        "          // ⛔ E VALE ANCHE PER LO STREAM DELLA SESSIONE.  Con la sola\n"
-        "          //    condizione su `rcp_stream_` questa riga era raggiungibile\n"
-        "          //    SOLTANTO col server guasto di B11 innestato: e' l'unico\n"
-        "          //    che mette un FIN sul canale di controllo.  Sul server\n"
-        "          //    vero il nostro FIN va sullo stream della CONNECT — che\n"
-        "          //    PORTA la sessione — e i due casi sono la stessa coppia\n"
-        "          //    che `on_stream_close` guarda gia' venti righe piu' su.\n"
+        "          // ⛔ AND IT ALSO APPLIES TO THE SESSION STREAM.  With only the\n"
+        "          //    condition on `rcp_stream_` this line was reachable\n"
+        "          //    ONLY with the faulty B11 server grafted: it is the only one\n"
+        "          //    that puts a FIN on the control channel.  On the real\n"
+        "          //    server our FIN goes on the stream of the CONNECT — which\n"
+        "          //    CARRIES the session — and the two cases are the same pair\n"
+        "          //    that `on_stream_close` already looks at twenty lines above.\n"
         "          //\n"
-        "          // ⚠ `congeda()` lascia il posto per conto suo su ogni congedo\n"
-        "          //   (`banchi/rcp/rcp.c`), quindi qui di solito non resta\n"
-        "          //   niente da fare: questa e' la rete per le chiusure che un\n"
-        "          //   congedo non ce l'hanno, ed e' idempotente.\n"
+        "          // ⚠ `congeda()` releases the slot on its own at every farewell\n"
+        "          //   (`banchi/rcp/rcp.c`), so here there is usually nothing\n"
+        "          //   left to do: this is the net for the closings that have no\n"
+        "          //   farewell, and it is idempotent.\n"
         "          if (u.fin && rcp_ &&\n"
         "              (u.stream_id == rcp_stream_ || u.stream_id == wt_sessione_)) {\n"
         "            rcp_canale_chiuso(rcp_);\n"
         "          }\n"
         "          wt_uscita_.pop_front();\n"
         "        }\n",
-        "il posto che si libera quando chiude il server",
+        "the slot that is freed when the server closes",
     ),
-    # ── 7. ⛔⭐ LA SECONDA STRADA DI §3.1, CHE FINO A OGGI NESSUNO GUARDAVA ──
-    #    §3.1 punto 3: il motivo del congedo viaggia **anche** nel codice di
-    #    chiusura.  B2 adesso legge la capsula che lo porta; qui si dice che
-    #    cosa significa — ed e' l'unico posto che lo sa, perche' «era gia'
-    #    finita» e' uno stato di RCP, non del trasporto.
+    # ── 7. ⛔⭐ THE SECOND ROAD OF §3.1, WHICH UNTIL TODAY NOBODY LOOKED AT ──
+    #    §3.1 point 3: the reason of the farewell travels **also** in the closing
+    #    code.  B2 now reads the capsule that carries it; here we say what
+    #    it means — and it is the only place that knows, because "it was already
+    #    over" is an RCP state, not a transport one.
     #
-    # ⭐ Senza questa riga, di Firefox si sarebbe detto «non si congeda»:
-    #    azzera lo stream di controllo e butta il `CONGEDO` gia' in coda — il
-    #    secondo difetto trovato da B11 — e il motivo gli arriva **solo** di
-    #    qui.  ⚠ Due motori, due strade, e una regola sola rispettata da
-    #    tutt'e due: e' la ragione per cui §3.1 punto 3 non e' ridondanza.
+    # ⭐ Without this line, Firefox would have been said "not to say farewell":
+    #    it resets the control stream and throws away the `CONGEDO` already queued — the
+    #    second defect found by B11 — and the reason reaches it **only** from
+    #    here.  ⚠ Two engines, two roads, and one single rule respected by
+    #    both: it is the reason §3.1 point 3 is not redundancy.
     (
         "http3_server_proto_codec.cc",
         "void ProtoCodec::wt_chiusa_dal_client(uint32_t codice) { (void)codice; }\n",
         "void ProtoCodec::wt_chiusa_dal_client(uint32_t codice) {\n"
-        "  // ⛔⭐ REMOTIX B3 — E PRIMA DI TUTTO SI GUARDA SE QUEL CODICE ESISTE.\n"
+        "  // ⛔⭐ REMOTIX B3 — AND FIRST OF ALL WE LOOK AT WHETHER THAT CODE EXISTS.\n"
         "  //\n"
-        "  //    RCP.md §3.1: il codice **0** significa «chiusura senza motivo»\n"
-        "  //    e NON DEVE essere usato — ogni chiusura ha un motivo di §8.2.\n"
-        "  //    E §3 — la regola di rigore — chiede di scrivere NEL REGISTRO\n"
-        "  //    che cosa non si e' capito, non di supplire in silenzio.\n"
+        "  //    RCP.md §3.1: code **0** means \"closing without a reason\"\n"
+        "  //    and MUST NOT be used — every closing has a reason from §8.2.\n"
+        "  //    And §3 — the rule of rigour — asks to write IN THE LOG\n"
+        "  //    what was not understood, not to make up for it silently.\n"
         "  //\n"
-        "  // ⚠ Prima il codice arrivava troncato a 8 bit: una pagina che\n"
-        "  //   chiudesse con `0x0100` faceva scrivere a RCP «motivo 0x00» —\n"
-        "  //   cioe' il solo valore che §3.1 vieta — e i due registri della\n"
-        "  //   STESSA chiusura si contraddicevano a due righe di distanza.\n"
-        "  //   ⛔ E `close()` senza codice, che vale 0, era indistinguibile da\n"
-        "  //     una chiusura regolare.\n"
+        "  // ⚠ Before, the code arrived truncated to 8 bits: a page that\n"
+        "  //   closed with `0x0100` made RCP write \"reason 0x00\" —\n"
+        "  //   that is the only value §3.1 forbids — and the two logs of the\n"
+        "  //   SAME closing contradicted each other two lines apart.\n"
+        "  //   ⛔ And `close()` without a code, which is 0, was indistinguishable from\n"
+        "  //     a regular closing.\n"
         "  bool motivo_valido = codice >= uint32_t{RCP_CHIUSO_DALL_UTENTE} &&\n"
         "                       codice <= uint32_t{RCP_GIA_ATTIVA_REMOTA};\n"
         "  if (!motivo_valido) {\n"
         "    std::println(stderr,\n"
-        "                 \"REMOTIX B3: ⛔ VIOLAZIONE §3.1 — la pagina ha chiuso \"\n"
-        "                 \"la sessione col codice {:#x}, che non e' un motivo di \"\n"
-        "                 \"§8.2 (0 = «senza motivo», ed e' vietato).  A verbale \"\n"
-        "                 \"va ERRORE_PROTOCOLLO, e questa riga dice il codice \"\n"
-        "                 \"vero: la sessione e' gia' chiusa dal client, quindi \"\n"
-        "                 \"non c'e' piu' niente da congedare\",\n"
+        "                 \"REMOTIX B3: ⛔ VIOLATION §3.1 — the page closed \"\n"
+        "                 \"the session with code {:#x}, which is not a reason of \"\n"
+        "                 \"§8.2 (0 = «no reason», and it is forbidden).  On record \"\n"
+        "                 \"goes ERRORE_PROTOCOLLO, and this line says the real \"\n"
+        "                 \"code: the session is already closed by the client, so \"\n"
+        "                 \"there is nothing left to dismiss\",\n"
         "                 codice);\n"
         "  }\n"
         "  auto motivo = static_cast<uint8_t>(\n"
         "    motivo_valido ? codice : uint32_t{RCP_ERRORE_PROTOCOLLO});\n"
-        "  // ⭐ REMOTIX B3 — RCP.md §3.1 punto 3: il motivo nel codice di\n"
-        "  //    chiusura e' la seconda strada, e vale quando la prima e' chiusa.\n"
+        "  // ⭐ REMOTIX B3 — RCP.md §3.1 point 3: the reason in the closing\n"
+        "  //    code is the second road, and applies when the first is closed.\n"
         "  if (rcp_ && rcp_e_finita(rcp_)) {\n"
         "    std::println(stderr,\n"
-        "                 \"REMOTIX B3: ⭐ CONGEDO di commiato per la seconda \"\n"
-        "                 \"strada di §3.1 (il codice di chiusura): motivo {:#04x} \"\n"
-        "                 \"— i byte sul canale non erano piu' spedibili\",\n"
+        "                 \"REMOTIX B3: ⭐ parting CONGEDO by the second \"\n"
+        "                 \"road of §3.1 (the closing code): reason {:#04x} \"\n"
+        "                 \"— the bytes on the channel could no longer be sent\",\n"
         "                 motivo);\n"
         "  }\n"
-        "  // ⛔ E il POSTO si lascia adesso: §4.2, la sessione e' finita perche'\n"
-        "  //    lo dice il client.  Aspettare lo smontaggio del trasporto vuol\n"
-        "  //    dire tenerlo occupato addosso a chi si ricollega subito.\n"
+        "  // ⛔ And the SLOT is released now: §4.2, the session is over because\n"
+        "  //    the client says so.  Waiting for the transport to be torn down means\n"
+        "  //    keeping it occupied against whoever reconnects right away.\n"
         "  if (rcp_) {\n"
         "    rcp_chiusa_dal_client(rcp_, motivo);\n"
         "  }\n"
         "}\n",
-        "il commiato che viaggia nel codice di chiusura",
+        "the parting that travels in the closing code",
     ),
-    # ── 8. ⛔⭐ IL FIN DEL CLIENT SUL CANALE DI CONTROLLO — §4.2, l'altra
-    #          direzione, che non aveva percorso nessuno.
+    # ── 8. ⛔⭐ THE CLIENT'S FIN ON THE CONTROL CHANNEL — §4.2, the other
+    #          direction, which nobody had walked.
     #
-    #    §4.2: «un FIN su quello stream, **da una qualunque delle due parti**,
-    #    chiude la sessione.  Chi lo riceve **DEVE** considerarla finita».  Il
-    #    verso server→client era curato (B11, il posto che si libera); questo e'
-    #    il verso client→server, ed e' la **stessa forma** del difetto: la
-    #    pagina chiude la parte scrivente del canale — `writable.close()` — e
-    #    tiene viva la sessione e la connessione.  ⛔ Il posto restava occupato
-    #    finche' non moriva la connessione, e una connessione un browser la
-    #    tiene viva.
+    #    §4.2: "a FIN on that stream, **from either of the two sides**,
+    #    closes the session.  Whoever receives it **MUST** consider it over".  The
+    #    server→client direction was cured (B11, the slot that is freed); this is
+    #    the client→server direction, and it is the **same form** of the defect: the
+    #    page closes the writing side of the channel — `writable.close()` — and
+    #    keeps the session and the connection alive.  ⛔ The slot stayed occupied
+    #    until the connection died, and a browser keeps a connection
+    #    alive.
     (
         "http3_server_proto_codec.cc",
         "void ProtoCodec::wt_fin_dal_client(int64_t stream_id) { (void)stream_id; }\n",
@@ -567,28 +572,28 @@ INNESTI = [
         "  if (!rcp_ || stream_id != rcp_stream_) {\n"
         "    return;\n"
         "  }\n"
-        "  // ⚠ La riga la scriviamo QUI e non in rcp.c, perche' `rcp.c` non sa\n"
-        "  //   da che parte sia arrivato il FIN: il suo registro dice «dal lato\n"
-        "  //   del server», che qui sarebbe falso.  Il fatto e' lo stesso —\n"
-        "  //   §4.2, la sessione e' finita — e l'effetto pure: si lascia il\n"
-        "  //   posto e si resta a guardare se il client spedisce ancora, che e'\n"
-        "  //   il DEVE che solo da qui si osserva.\n"
+        "  // ⚠ We write the line HERE and not in rcp.c, because `rcp.c` does not know\n"
+        "  //   which side the FIN came from: its log says \"from the\n"
+        "  //   server side\", which here would be false.  The fact is the same —\n"
+        "  //   §4.2, the session is over — and so is the effect: the slot is\n"
+        "  //   released and we stay watching whether the client still sends, which is\n"
+        "  //   the MUST that can only be observed from here.\n"
         "  std::println(stderr,\n"
-        "               \"REMOTIX B3: ⛔ FIN del CLIENT sul canale di controllo \"\n"
-        "               \"(stream {}): §4.2, la sessione e' finita\",\n"
+        "               \"REMOTIX B3: ⛔ FIN from the CLIENT on the control channel \"\n"
+        "               \"(stream {}): §4.2, the session is over\",\n"
         "               stream_id);\n"
         "  rcp_canale_chiuso(rcp_);\n"
         "}\n",
-        "il FIN del client sul canale di controllo",
+        "the client's FIN on the control channel",
     ),
 ]
 
 
 CORPO = r'''namespace {
-// ⭐ REMOTIX B3 — i quattro ganci di `rcp_ganci`, che sono l'unica cosa che
-//    RCP sa del mondo di sotto.  Passano da qui e nient'altro: se un giorno
-//    il modulo andra' in un server vero, questi quattro si riscrivono e il
-//    protocollo no.
+// ⭐ REMOTIX B3 — the four hooks of `rcp_ganci`, which are the only thing
+//    RCP knows about the world below.  They pass through here and nothing else: if one day
+//    the module goes into a real server, these four are rewritten and the
+//    protocol is not.
 void rcp_gancio_manda(void *ctx, const uint8_t *dati, size_t len);
 void rcp_gancio_chiudi(void *ctx, uint8_t motivo);
 void rcp_gancio_registra(void *ctx, const char *riga);
@@ -605,7 +610,7 @@ void ProtoCodec::rcp_avvia(int64_t stream_id) {
   auto g = ganci;
   g.ctx = this;
 
-  // La provenienza serve al contatore per indirizzo di §4.4-bis e al registro.
+  // The origin is needed by the per-address counter of §4.4-bis and by the log.
   std::array<char, 64> da{};
   auto path = ngtcp2_conn_get_path(conn_);
   if (path && path->remote.addr) {
@@ -616,47 +621,47 @@ void ProtoCodec::rcp_avvia(int64_t stream_id) {
   rcp_ = rcp_apri(&g, da.data(),
                   ngtcp2_conn_get_timestamp(conn_) / NGTCP2_MILLISECONDS);
 
-  // ══ ⛔⭐ E QUI SI ARMA L'OROLOGIO DEL PRIMO TETTO — §4.6 riga 1 ═══════════
+  // ══ ⛔⭐ AND HERE THE CLOCK OF THE FIRST CAP IS ARMED — §4.6 line 1 ═══════
   //
-  //    `[M]` 10 agosto 2026, banco B6: `ciao-tetto` dava «non e' successo
-  //    niente per 20 s».  Gli altri due tetti scattavano — 60 s e 10 s, con
-  //    `TEMPO_SCADUTO` — e il primo no: un client che apre il canale di
-  //    controllo e poi tace restava appeso per sempre.
+  //    `[M]` 10 Aug 2026, bench B6: `ciao-tetto` gave "nothing
+  //    happened for 20 s".  The other two caps fired — 60 s and 10 s, with
+  //    `TEMPO_SCADUTO` — and the first did not: a client that opens the control
+  //    channel and then goes quiet stayed hung forever.
   //
-  // ⛔ E il difetto non era in `rcp.c`: il tetto del `CIAO` ce l'ha, in
-  //    `rcp_tempo()`, accanto agli altri due.  Era che `rcp_tempo()` non lo
-  //    chiamava PIU' NESSUNO.  Scorre dal percorso di scrittura, e il
-  //    percorso di scrittura in silenzio lo fa passare solo il keep-alive:
-  //    che veniva armato soltanto dentro `rcp_passa`, cioe' **solo quando
-  //    arrivano dei byte**.  Nello stato `attesa-ciao` di byte non ne e'
-  //    arrivato ancora nessuno — l'apertura del canale porta l'intestazione
-  //    dello stream WebTransport e basta, e con `resto` vuoto `rcp_passa`
-  //    non viene invocata affatto — quindi non lo armava nessuno.
+  // ⛔ And the defect was not in `rcp.c`: it has the cap of the `CIAO`, in
+  //    `rcp_tempo()`, next to the other two.  It was that NOBODY called
+  //    `rcp_tempo()` ANY MORE.  It flows from the write path, and the
+  //    write path in silence is only made to pass by the keep-alive:
+  //    which was armed only inside `rcp_passa`, that is **only when
+  //    bytes arrive**.  In the `attesa-ciao` state no byte has
+  //    arrived yet — opening the channel carries the header of
+  //    the WebTransport stream and nothing else, and with an empty `resto` `rcp_passa`
+  //    is not invoked at all — so nobody armed it.
   //
-  // ⚠ E' la STESSA FORMA del difetto curato poche ore prima in
-  //   `wt_chiudi_sessione`: il segnale che fa scorrere il tempo era armato in
-  //   un punto che quel caso non attraversa.  ⛔ Chi mette un tetto deve
-  //   accendere anche cio' che lo fara' scadere, e nell'istante in cui il
-  //   tetto comincia — non alla prima occasione utile che capita dopo.
+  // ⚠ It is the SAME FORM as the defect cured a few hours earlier in
+  //   `wt_chiudi_sessione`: the signal that makes time flow was armed at
+  //   a point that case does not cross.  ⛔ Whoever sets a cap must
+  //   also turn on what will make it expire, and at the instant the
+  //   cap begins — not at the first useful occasion that comes along afterwards.
   //
-  // ⭐ L'istante e' QUESTO: `rcp_apri` mette lo stato a `attesa-ciao` e
-  //    `s->da_quando` a adesso.  Il cronometro del server e l'orologio che lo
-  //    fa girare partono cosi' dalla stessa riga.
+  // ⭐ The instant is THIS one: `rcp_apri` sets the state to `attesa-ciao` and
+  //    `s->da_quando` to now.  The server's stopwatch and the clock that makes
+  //    it run thus start from the same line.
   //
-  // ⚠ NON si spegne qui, e nemmeno all'arrivo del `CIAO`: gli altri due
-  //   tetti della stretta di mano vogliono lo stesso battito, e `rcp_passa`
-  //   lo rimette a ogni messaggio — 100 ms per tutta la stretta, 5 s una
-  //   volta `attiva`, che e' l'unico punto in cui si allarga.  Spegnerlo
-  //   prima sarebbe rifare il difetto appena curato, un tetto piu' in la'.
+  // ⚠ It is NOT turned off here, nor at the arrival of the `CIAO`: the other two
+  //   caps of the handshake want the same beat, and `rcp_passa`
+  //   resets it at every message — 100 ms for the whole handshake, 5 s once
+  //   `attiva`, which is the only point where it widens.  Turning it off
+  //   earlier would redo the defect just cured, one cap further on.
   //
-  // ⚠ E resta un filo dell'OSPITE, come gli altri: e' il keep-alive del
-  //   TRASPORTO, non un battito applicativo (§2.2 lo vieta, e questo non lo
-  //   e'), e un server vero armera' un proprio timer senza mettere niente sul
-  //   filo.
+  // ⚠ And it stays a wire of the HOST, like the others: it is the keep-alive of the
+  //   TRANSPORT, not an application heartbeat (§2.2 forbids that, and this is not
+  //   one), and a real server will arm its own timer without putting anything on
+  //   the wire.
   if (rcp_) {
     ngtcp2_conn_set_keep_alive_timeout(conn_, 100 * NGTCP2_MILLISECONDS);
   }
-  std::println(stderr, "REMOTIX B3: canale di controllo = stream {}", stream_id);
+  std::println(stderr, "REMOTIX B3: control channel = stream {}", stream_id);
 }
 
 void ProtoCodec::rcp_passa(int64_t stream_id, std::span<const uint8_t> dati) {
@@ -667,49 +672,49 @@ void ProtoCodec::rcp_passa(int64_t stream_id, std::span<const uint8_t> dati) {
   if (!rcp_ricevi(rcp_, dati.data(), dati.size(), ora)) {
     return;
   }
-  // ⛔ Il ritardo fisso di §4.4-bis dura un secondo, e in quel secondo il
-  //    server non ha niente da spedire: senza un timer la risposta non
-  //    partirebbe mai.  Il keep-alive di QUIC fa passare il percorso di
-  //    scrittura ogni 100 ms — e' un filo dell'ospite, non una regola del
-  //    protocollo, e per questo sta qui e non in rcp.c.
-  // ⛔ Due stati vogliono un battito, e per due ragioni diverse:
+  // ⛔ The fixed delay of §4.4-bis lasts one second, and in that second the
+  //    server has nothing to send: without a timer the answer would never
+  //    leave.  The QUIC keep-alive makes the write path pass
+  //    every 100 ms — it is a wire of the host, not a rule of the
+  //    protocol, and that is why it is here and not in rcp.c.
+  // ⛔ Two states want a beat, and for two different reasons:
   //
-  //   attesa-verdetto  il ritardo fisso di §4.4-bis dura un secondo, e in
-  //                    quel secondo non c'e' niente da spedire;
-  //   attiva           l'OROLOGIO DEL SILENZIO di §5.3 va valutato mentre il
-  //                    client tace — e mentre tace il percorso di scrittura
-  //                    non lo percorre nessuno.
+  //   attesa-verdetto  the fixed delay of §4.4-bis lasts one second, and in
+  //                    that second there is nothing to send;
+  //   attiva           the SILENCE CLOCK of §5.3 must be evaluated while the
+  //                    client is quiet — and while it is quiet nobody walks the
+  //                    write path.
   //
-  // ⛔ E IL PRIMO ARMO NON STA QUI: sta in `rcp_avvia`, dove la sessione RCP
-  //    nasce.  Qui si arriva solo quando dei byte sono arrivati, e nello stato
-  //    `attesa-ciao` non ne e' arrivato ancora nessuno: armarlo soltanto di
-  //    qui lasciava il tetto del `CIAO` senza nessuno che lo facesse scadere
-  //    (`[M]` 10 agosto 2026, B6).  Queste righe non ACCENDONO il battito:
-  //    lo REGOLANO mano a mano che lo stato cambia.
+  // ⛔ AND THE FIRST ARMING IS NOT HERE: it is in `rcp_avvia`, where the RCP session
+  //    is born.  We get here only when some bytes have arrived, and in the
+  //    `attesa-ciao` state none has arrived yet: arming it only from
+  //    here left the cap of the `CIAO` with nobody to make it expire
+  //    (`[M]` 10 Aug 2026, B6).  These lines do not TURN ON the beat:
+  //    they ADJUST it as the state changes.
   //
-  // ⚠ E' un battito del TRASPORTO (il keep-alive di QUIC), non un battito
-  //   applicativo: §2.2 vieta il secondo, e questo non lo e'.  ⛔ Resta pero'
-  //   un filo dell'OSPITE: un server vero armera' un proprio timer e non
-  //   mettera' niente sul filo.  Sta scritto perche' non venga ereditato per
-  //   distrazione.
+  // ⚠ It is a TRANSPORT beat (the QUIC keep-alive), not an application
+  //   heartbeat: §2.2 forbids the second, and this is not one.  ⛔ It does remain
+  //   a wire of the HOST, though: a real server will arm its own timer and will not
+  //   put anything on the wire.  It is written down so that it is not inherited by
+  //   distraction.
   auto stato = std::string_view{rcp_stato_nome(rcp_)};
   if (stato == "attesa-verdetto") {
     ngtcp2_conn_set_keep_alive_timeout(conn_, 100 * NGTCP2_MILLISECONDS);
   } else if (stato == "attiva") {
     ngtcp2_conn_set_keep_alive_timeout(conn_, 5 * NGTCP2_SECONDS);
   } else {
-    // ⚠ Gli stati di mezzo della stretta di mano — `attesa-attacca` e simili:
-    //   il battito resta fitto perche' la stretta non e' ancora finita.
+    // ⚠ The middle states of the handshake — `attesa-attacca` and the like:
+    //   the beat stays dense because the handshake is not over yet.
     //
-    // ⛔ E QUI C'ERA SCRITTO «anche dopo la fine il percorso di scrittura deve
-    //    continuare a passare: la capsula che chiude la sessione parte di
-    //    li'».  ⚠ Era FALSO, ed e' costato i quattordici casi di B5 del 10
-    //    agosto 2026: dopo la fine questa riga NON si raggiunge, perche'
-    //    venti righe piu' su `rcp_ricevi` restituisce false — «la sessione e'
-    //    finita» — e si esce.  Il battito che fa maturare l'attesa della
-    //    capsula lo arma `wt_chiudi_sessione`, che e' l'unico punto
-    //    attraversato da TUTTE le strade della chiusura, comprese le due che
-    //    da qui non passano affatto.
+    // ⛔ AND HERE IT USED TO SAY "even after the end the write path must
+    //    keep passing: the capsule that closes the session leaves from
+    //    there".  ⚠ It was FALSE, and it cost the fourteen cases of B5 of 10
+    //    Aug 2026: after the end this line is NOT reached, because
+    //    twenty lines above `rcp_ricevi` returns false — "the session is
+    //    over" — and we exit.  The beat that makes the wait for the
+    //    capsule mature is armed by `wt_chiudi_sessione`, which is the only point
+    //    crossed by ALL the roads of the closing, including the two that
+    //    do not pass through here at all.
     ngtcp2_conn_set_keep_alive_timeout(conn_, 100 * NGTCP2_MILLISECONDS);
   }
 }
@@ -732,29 +737,29 @@ void rcp_gancio_registra(void *ctx, const char *riga) {
 
 bool rcp_gancio_verifica(void *ctx, const char *utente, const char *parola) {
   (void)ctx;
-  // ⚠ PAM blocca.  In un banco va bene e si dichiara; in un server vero la
-  //   verifica andra' su un filo a parte, o la stretta di mano di un utente
-  //   ferma quella di tutti gli altri.
+  // ⚠ PAM blocks.  In a bench that is fine and it is declared; in a real server the
+  //   verification will go on a separate thread, or one user's handshake
+  //   stops everyone else's.
   return rcp_autentica(utente, parola);
 }
 } // namespace
 
-// ⛔ REMOTIX B5 — RCP.md §2.5: gli stream unidirezionali aperti dal CLIENT.
+// ⛔ REMOTIX B5 — RCP.md §2.5: the unidirectional streams opened by the CLIENT.
 //
-// ⭐ Come si riconosce il canale: «si leggono i primi due byte dello stream,
-//    che sono in ogni caso un campo `tipo`».  Il byte alto dice il canale, e
-//    di cinque valori leciti **tre sono violazioni quando arrivano di qui**:
+// ⭐ How the channel is recognised: "the first two bytes of the stream are read,
+//    which are in any case a `tipo` field".  The high byte says the channel, and
+//    of five legitimate values **three are violations when they arrive from here**:
 //
-//    0x00  controllo  ⛔ «il controllo vive solo sullo stream 0»
-//    0x01  input      ✓  legale: e' l'unico unidirezionale che il client apre
-//    0x02  appunti    ✓  legale, uno per trasferimento
-//    0x03  video      ⛔ verso sbagliato: il video va dal server al client
-//    0x04  audio      ⛔ «solo su datagram.  Su uno stream e' ERRORE_PROTOCOLLO»
+//    0x00  control    ⛔ "control lives only on stream 0"
+//    0x01  input      ✓  legal: it is the only unidirectional stream the client opens
+//    0x02  clipboard  ✓  legal, one per transfer
+//    0x03  video      ⛔ wrong direction: video goes from server to client
+//    0x04  audio      ⛔ "only on datagrams.  On a stream it is ERRORE_PROTOCOLLO"
 //
-// ⚠ E prima ancora bisogna sapere se lo stream e' NOSTRO: fra gli
-//   unidirezionali del client ci sono il canale di controllo di HTTP/3 e i due
-//   di QPACK, che sono di nghttp3.  Uno stream WebTransport si riconosce dal
-//   suo tipo, 0x54 — che come 0x41 non sta in un byte: sul filo sono 0x40 0x54.
+// ⚠ And even before that we must know whether the stream is OURS: among the
+//   client's unidirectional streams there are the HTTP/3 control channel and the two
+//   QPACK ones, which belong to nghttp3.  A WebTransport stream is recognised by its
+//   type, 0x54 — which like 0x41 does not fit in one byte: on the wire they are 0x40 0x54.
 ProtoCodec::WtEsito ProtoCodec::wt_smista_uni(int64_t stream_id,
                                               std::span<const uint8_t> data,
                                               std::vector<uint8_t> &riunito) {
@@ -762,29 +767,29 @@ ProtoCodec::WtEsito ProtoCodec::wt_smista_uni(int64_t stream_id,
     return WtEsito::HTTP3;
   }
   if (auto giudizio = wt_uni_.find(stream_id); giudizio != wt_uni_.end()) {
-    // Gia' giudicato — ⚠ ma i due giudizi NON sono la stessa cosa, e il
-    // commento di prima ne diceva uno solo («la sessione e' gia' caduta»), che
-    // per i due canali leciti e' falso:
+    // Already judged — ⚠ but the two judgements are NOT the same thing, and the
+    // previous comment named only one of them ("the session has already fallen"), which
+    // for the two legitimate channels is false:
     //
-    //   true   violazione: la sessione e' gia' caduta, e non c'e' piu' niente
-    //          da servire;
-    //   false  canale LECITO di §2.5 — `0x01` input, `0x02` appunti — che
-    //          questa fase non serve ancora: l'input arriva alla fase 4, gli
-    //          appunti alla 7.
+    //   true   violation: the session has already fallen, and there is nothing left
+    //          to serve;
+    //   false  LEGITIMATE channel of §2.5 — `0x01` input, `0x02` clipboard — that
+    //          this phase does not serve yet: input arrives with phase 4, the
+    //          clipboard with phase 7.
     //
-    // ⛔ Prima `wt_uni_` veniva scritto a `true` per tutt'e cinque i valori di
-    //    `canale`, quindi anche per i due leciti: un client conforme apriva il
-    //    canale di input, si sentiva rispondere «lecito» — e da quel momento
-    //    OGNI suo byte finiva qui dentro, scartato per sempre e senza una riga
-    //    di registro, sotto un commento che affermava una caduta che non c'era.
+    // ⛔ Before, `wt_uni_` was written to `true` for all five values of
+    //    `canale`, so also for the two legitimate ones: a conforming client opened the
+    //    input channel, was told "legitimate" — and from that moment
+    //    EVERY byte of it ended up in here, discarded forever and without a line
+    //    of log, under a comment that asserted a fall that was not there.
     //
-    // ⚠ La tolleranza si dichiara UNA VOLTA, quando lo stream viene
-    //   riconosciuto (RCP.md §3, ultima riga: «ogni tolleranza va scritta nel
-    //   registro»), non a ogni pacchetto: una riga per pacchetto renderebbe il
-    //   registro illeggibile, e il registro e' il testimone di B11.
+    // ⚠ The leniency is declared ONCE, when the stream is
+    //   recognised (RCP.md §3, last line: "every leniency must be written in the
+    //   log"), not at every packet: one line per packet would make the
+    //   log unreadable, and the log is B11's witness.
     //
-    // In tutt'e due i casi i byte si contano nel credito: non contarli
-    // lascerebbe il client senza credito su una connessione viva (§2.3).
+    // In both cases the bytes are counted in the credit: not counting them
+    // would leave the client without credit on a live connection (§2.3).
     if (!data.empty()) {
       ngtcp2_conn_extend_max_stream_offset(conn_, stream_id, data.size());
       ngtcp2_conn_extend_max_offset(conn_, data.size());
@@ -798,7 +803,7 @@ ProtoCodec::WtEsito ProtoCodec::wt_smista_uni(int64_t stream_id,
     return WtEsito::ATTENDI;
   }
   if (!(pref[0] == 0x40 && pref[1] == 0x54)) {
-    // Non e' WebTransport: e' di nghttp3, e i byte vanno consegnati interi.
+    // It is not WebTransport: it belongs to nghttp3, and the bytes must be delivered whole.
     riunito = pref;
     wt_incerti_.erase(stream_id);
     wt_nonwt_[stream_id] = true;
@@ -807,7 +812,7 @@ ProtoCodec::WtEsito ProtoCodec::wt_smista_uni(int64_t stream_id,
   uint64_t sessione = 0;
   auto n = wt_leggi_varint(&sessione, pref.data() + 2, pref.size() - 2);
   if (n == 0 || pref.size() < 2 + n + 2) {
-    return WtEsito::ATTENDI; // il campo `tipo` non e' ancora tutto arrivato
+    return WtEsito::ATTENDI; // the `tipo` field has not all arrived yet
   }
   auto consumati = pref.size();
   uint16_t tipo = static_cast<uint16_t>(pref[2 + n] << 8 | pref[2 + n + 1]);
@@ -819,46 +824,46 @@ ProtoCodec::WtEsito ProtoCodec::wt_smista_uni(int64_t stream_id,
   const char *guasto = nullptr;
   switch (canale) {
   case 0x00:
-    guasto = "il canale di CONTROLLO su uno stream unidirezionale: "
-             "il controllo vive solo sullo stream 0 (§2.5)";
+    guasto = "the CONTROL channel on a unidirectional stream: "
+             "control lives only on stream 0 (§2.5)";
     break;
   case 0x03:
-    guasto = "il canale VIDEO dal client: e' del server, verso sbagliato (§2.5)";
+    guasto = "the VIDEO channel from the client: it belongs to the server, wrong direction (§2.5)";
     break;
   case 0x04:
-    guasto = "il canale AUDIO su uno stream: l'audio vive solo sui datagram "
+    guasto = "the AUDIO channel on a stream: audio lives only on datagrams "
              "(§2.5, §6.3)";
     break;
   case 0x01:
   case 0x02:
     break;
   default:
-    guasto = "byte alto del tipo sconosciuto su uno stream unidirezionale (§2.5)";
+    guasto = "unknown high byte of the type on a unidirectional stream (§2.5)";
     break;
   }
-  // ⛔ E il giudizio si registra DOPO averlo emesso, non prima: `true` vuol
-  //    dire «violazione, la sessione e' caduta», e scriverlo per tutti i
-  //    canali era quel che faceva sparire i byte dei due leciti.
+  // ⛔ And the judgement is recorded AFTER it has been issued, not before: `true` means
+  //    "violation, the session has fallen", and writing it for all the
+  //    channels was what made the bytes of the two legitimate ones vanish.
   wt_uni_[stream_id] = guasto != nullptr;
   std::println(stderr,
-               "REMOTIX B5: stream unidirezionale {} del client, sessione {}, "
-               "tipo {:#06x}, canale {:#04x} — {}",
+               "REMOTIX B5: unidirectional stream {} from the client, session {}, "
+               "type {:#06x}, channel {:#04x} — {}",
                stream_id, sessione, tipo, canale,
                guasto ? "VIOLAZIONE"
-                      : "lecito (§2.5).  ⚠ Ma questa fase non lo serve: i byte "
-                        "si contano nel credito e si scartano, e questa riga "
-                        "e' la tolleranza dichiarata (§3)");
+                      : "legitimate (§2.5).  ⚠ But this phase does not serve it: the bytes "
+                        "are counted in the credit and discarded, and this line "
+                        "is the declared leniency (§3)");
   if (guasto) {
     if (rcp_) {
       rcp_violazione(rcp_, guasto);
     } else {
-      // ⚠ Nessun canale di controllo ancora aperto: il `CONGEDO` non ha una
-      //   strada, e resta il punto 3 di §3.1 — il motivo dentro la chiusura
-      //   della sessione.  ⭐ E' il secondo condizionale di §3.1 all'opera:
-      //   pretendere tutt'e tre i punti sempre darebbe rosso sul codice
-      //   giusto (rilievo R3.3).
-      std::println(stderr, "REMOTIX B5: ⚠ nessun canale di controllo: il motivo "
-                           "viaggia solo nella chiusura della sessione");
+      // ⚠ No control channel opened yet: the `CONGEDO` has no
+      //   road, and what remains is point 3 of §3.1 — the reason inside the closing
+      //   of the session.  ⭐ It is the second conditional of §3.1 at work:
+      //   demanding all three points always would give red on the right
+      //   code (finding R3.3).
+      std::println(stderr, "REMOTIX B5: ⚠ no control channel: the reason "
+                           "travels only in the closing of the session");
       wt_chiudi_sessione(0x0B);
     }
   }
@@ -873,124 +878,124 @@ void ProtoCodec::wt_manda_controllo(const uint8_t *dati, size_t len) {
 }
 
 void ProtoCodec::wt_chiudi_sessione(uint8_t motivo) {
-  // ⛔ RCP.md §3.1 punto 3: si chiude la SESSIONE WebTransport con il codice
-  //    d'errore applicativo pari al codice del motivo — non la connessione
-  //    QUIC, che puo' reggere altro.
+  // ⛔ RCP.md §3.1 point 3: the WebTransport SESSION is closed with the
+  //    application error code equal to the code of the reason — not the QUIC
+  //    connection, which can carry other things.
   //
-  // In byte e' la capsula CLOSE_WEBTRANSPORT_SESSION (tipo 0x2843) sullo
-  // stream della CONNECT estesa, seguita dal FIN.
+  // In bytes it is the CLOSE_WEBTRANSPORT_SESSION capsule (type 0x2843) on the
+  // stream of the extended CONNECT, followed by the FIN.
   if (wt_sessione_ == -1) {
     return;
   }
-  // ⛔⭐ E LA CAPSULA SI RIMANDA, invece di accodarla adesso — trovato da B11
-  //    il 10 agosto 2026, con browser veri.
+  // ⛔⭐ AND THE CAPSULE IS POSTPONED, instead of queuing it now — found by B11
+  //    on 10 Aug 2026, with real browsers.
   //
-  //    `respingi()` manda `RESPINTO` sul canale di controllo e chiude la
-  //    sessione **nella riga dopo**.  I due finivano nella stessa passata di
-  //    scrittura, cioe' spesso nello stesso volo di pacchetti — e il browser
-  //    processa la capsula `CLOSE_WEBTRANSPORT_SESSION` **prima** dei byte
-  //    dello stream, che a quel punto butta.  ⛔ La pagina non ha mai visto
-  //    `RESPINTO`: ha visto **silenzio**.
+  //    `respingi()` sends `RESPINTO` on the control channel and closes the
+  //    session **on the next line**.  The two ended up in the same write
+  //    pass, that is often in the same flight of packets — and the browser
+  //    processes the `CLOSE_WEBTRANSPORT_SESSION` capsule **before** the bytes
+  //    of the stream, which at that point it throws away.  ⛔ The page never saw
+  //    `RESPINTO`: it saw **silence**.
   //
-  // ⚠ E il punto 3 di §3.1 ha fatto il suo mestiere — il motivo e' arrivato
-  //   comunque, dentro il codice di chiusura — ma il punto 2 era perduto, e
-  //   §3.1 li vuole tutt'e due quando il canale e' utilizzabile.
+  // ⚠ And point 3 of §3.1 did its job — the reason arrived
+  //   anyway, inside the closing code — but point 2 was lost, and
+  //   §3.1 wants both when the channel is usable.
   //
-  // ⛔ E ACCODARE LA CAPSULA DIETRO AL `CONGEDO`, NELLA STESSA CODA, NON E'
-  //    LA CURA: E' ESATTAMENTE IL CODICE CHE B11 HA TROVATO ROTTO.  La coda
-  //    e' ordinata e serve un elemento per passata, quindi l'ordine sul filo
-  //    ci sarebbe — ⚠ ma l'ordine sul filo non e' quel che manca.  I due
-  //    finiscono comunque nello stesso volo, il browser processa la capsula
-  //    prima di consegnare i byte dello stream alla pagina, e la pagina non
-  //    vede il `CONGEDO`.  Quel che serve e' TEMPO fra i due, ed e' quel che
-  //    l'attesa compra.
+  // ⛔ AND QUEUING THE CAPSULE BEHIND THE `CONGEDO`, IN THE SAME QUEUE, IS NOT
+  //    THE CURE: IT IS EXACTLY THE CODE B11 FOUND BROKEN.  The queue
+  //    is ordered and serves one element per pass, so the order on the wire
+  //    would be there — ⚠ but the order on the wire is not what is missing.  The two
+  //    still end up in the same flight, the browser processes the capsule
+  //    before delivering the bytes of the stream to the page, and the page does not
+  //    see the `CONGEDO`.  What is needed is TIME between the two, and that is what
+  //    the wait buys.
   //
-  // ⭐ Qui si segna soltanto l'intenzione: la capsula la accoda il ciclo di
-  //    scrittura quando la coda e' vuota, cioe' quando i byte del `CONGEDO`
-  //    sono gia' stati consegnati a ngtcp2.
+  // ⭐ Here only the intention is marked: the write loop queues the capsule
+  //    when the queue is empty, that is when the bytes of the `CONGEDO`
+  //    have already been handed to ngtcp2.
   wt_chiusura_ = motivo;
-  // ⛔ E l'attesa riparte da ZERO: le cinque passate si contano da QUESTA
-  //    chiusura.  Senza, una seconda chiusura sulla stessa connessione
-  //    troverebbe il contatore gia' oltre il cinque e manderebbe la capsula
-  //    nella stessa passata del suo `CONGEDO` — cioe' il difetto che l'attesa
-  //    esiste per togliere, ricomparso al secondo giro.
+  // ⛔ And the wait restarts from ZERO: the five passes are counted from THIS
+  //    closing.  Without it, a second closing on the same connection
+  //    would find the counter already beyond five and would send the capsule
+  //    in the same pass as its `CONGEDO` — that is the defect the wait
+  //    exists to remove, reappearing at the second round.
   wt_chiusura_attesa_ = 0;
-  // ══ ⛔⭐ REMOTIX B5 — E QUI SI ARMA L'OROLOGIO CHE FA MATURARE L'ATTESA ══
+  // ══ ⛔⭐ REMOTIX B5 — AND HERE THE CLOCK THAT MAKES THE WAIT MATURE IS ARMED ══
   //
-  //    `[M]` 10 agosto 2026: «§3.1 punto 3 — motivo nella chiusura WT» dava
-  //    22 su 36, e i quattordici mancanti erano TUTTI violazioni trovate al
-  //    primo messaggio.  Nel registro del server, per `versione-2`, c'era
-  //    `congedo motivo=0x0a` e NON c'era «chiusa la sessione WebTransport»:
-  //    la capsula non e' mai partita.
+  //    `[M]` 10 Aug 2026: "§3.1 point 3 — reason in the WT closing" gave
+  //    22 of 36, and the fourteen missing were ALL violations found at the
+  //    first message.  In the server log, for `versione-2`, there was
+  //    `congedo motivo=0x0a` and there was NOT "closed the WebTransport session":
+  //    the capsule never left.
   //
-  // ⛔ E il difetto non era l'attesa: erano le passate, che non arrivavano.
-  //    Il keep-alive lo armava soltanto `rcp_passa`, e solo DOPO
-  //    `rcp_ricevi` — che su una violazione restituisce false, perche' la
-  //    sessione e' finita.  Su una violazione al PRIMO messaggio quel punto
-  //    non veniva mai raggiunto nemmeno una volta: il client non spediva
-  //    piu' niente, il percorso di scrittura non veniva piu' percorso, e
-  //    `wt_chiusura_attesa_` restava fermo a uno o due per sempre.  ⚠ E le
-  //    altre due strade della chiusura — `wt_smista` per il secondo stream
-  //    bidirezionale, `wt_smista_uni` quando un canale di controllo non c'e'
-  //    ancora — da `rcp_passa` non passano affatto.
+  // ⛔ And the defect was not the wait: it was the passes, which did not come.
+  //    The keep-alive was armed only by `rcp_passa`, and only AFTER
+  //    `rcp_ricevi` — which on a violation returns false, because the
+  //    session is over.  On a violation at the FIRST message that point
+  //    was never reached even once: the client did not send
+  //    anything more, the write path was no longer walked, and
+  //    `wt_chiusura_attesa_` stayed stuck at one or two forever.  ⚠ And the
+  //    other two roads of the closing — `wt_smista` for the second bidirectional
+  //    stream, `wt_smista_uni` when there is no control channel
+  //    yet — do not pass through `rcp_passa` at all.
   //
-  // ⭐ Per questo l'orologio si arma QUI, dove l'intenzione viene segnata:
-  //    e' l'unico punto che tutte le strade attraversano, e ⛔ chi rimanda un
-  //    lavoro deve accendere anche cio' che lo fara' maturare — un lavoro
-  //    rimandato a una condizione che nessuno fa piu' avvenire non e'
-  //    rimandato, e' perduto, e nel registro somiglia a un lavoro non
-  //    chiesto.
+  // ⭐ That is why the clock is armed HERE, where the intention is marked:
+  //    it is the only point all the roads cross, and ⛔ whoever postpones a
+  //    job must also turn on what will make it mature — a job
+  //    postponed to a condition that nobody makes happen any more is not
+  //    postponed, it is lost, and in the log it looks like a job never
+  //    asked for.
   //
-  // ⚠ L'ordine fra il `CONGEDO` e la capsula NON cambia: restano le cinque
-  //   passate a coda vuota, che a 100 ms sono mezzo secondo.  Qui non si
-  //   accorcia e non si toglie niente — si fa solo esistere il tempo che
-  //   l'attesa gia' pretendeva.
+  // ⚠ The order between the `CONGEDO` and the capsule does NOT change: the five
+  //   passes with an empty queue remain, which at 100 ms are half a second.  Here nothing is
+  //   shortened and nothing is removed — we only make exist the time that
+  //   the wait already demanded.
   //
-  // ⚠ E resta un filo dell'OSPITE, come gli altri tre: un server vero armera'
-  //   un proprio timer e non mettera' niente sul filo (§2.2).
+  // ⚠ And it stays a wire of the HOST, like the other three: a real server will arm
+  //   its own timer and will not put anything on the wire (§2.2).
   ngtcp2_conn_set_keep_alive_timeout(conn_, 100 * NGTCP2_MILLISECONDS);
   std::println(stderr,
-               "REMOTIX B3: chiusura della sessione RIMANDATA, codice {:#04x} "
-               "(in coda: {}; keep-alive a 100 ms perche' le cinque passate "
-               "maturino)",
+               "REMOTIX B3: closing of the session POSTPONED, code {:#04x} "
+               "(queued: {}; keep-alive at 100 ms so that the five passes "
+               "mature)",
                motivo, wt_uscita_.size());
 }
 
 void ProtoCodec::wt_chiudi_adesso(uint8_t motivo) {
-  // ⛔⭐ LA CAPSULA VA DENTRO UN FRAME `DATA`, E FINO AL 10 AGOSTO USCIVA NUDA.
+  // ⛔⭐ THE CAPSULE GOES INSIDE A `DATA` FRAME, AND UNTIL 10 AUG IT WENT OUT BARE.
   //
-  //    Il corpo di una CONNECT estesa e' un flusso di capsule (RFC 9297), ma
-  //    in HTTP/3 il corpo di un messaggio viaggia dentro frame `DATA`: la
-  //    capsula NON sta nuda sullo stream.  ⭐ E che il client le incapsuli lo
-  //    dimostra il nostro stesso lato di LETTURA: `wt_capsula` la chiama
-  //    `http_recv_data`, che nghttp3 invoca soltanto sul carico utile di un
-  //    `DATA`.  Se le capsule non ci fossero dentro, quella funzione non
-  //    sarebbe mai stata chiamata — e su Firefox e' stata chiamata `[M]`.
+  //    The body of an extended CONNECT is a stream of capsules (RFC 9297), but
+  //    in HTTP/3 the body of a message travels inside `DATA` frames: the
+  //    capsule does NOT sit bare on the stream.  ⭐ And that the client wraps them
+  //    is proven by our own READ side: `wt_capsula` is called by
+  //    `http_recv_data`, which nghttp3 invokes only on the payload of a
+  //    `DATA`.  If the capsules were not inside, that function would
+  //    never have been called — and on Firefox it was called `[M]`.
   //
-  // ⛔ Le due direzioni non potevano essere tutt'e due giuste, e la sbagliata
-  //    era questa.  Scritti nudi, i sette byte `68 43 04 00 00 00 mm` il
-  //    browser li legge col proprio strato HTTP/3: `0x68` ha i due bit alti a
-  //    `01`, quindi e' un intero variabile di due byte, e il tipo di frame
-  //    diventa `0x2843` — che **non e' un tipo di frame HTTP/3 noto**, e RFC
-  //    9114 §9 impone di IGNORARLO.  La pagina non vedeva nessuna capsula:
-  //    vedeva solo il FIN che arriva subito dietro, e un FIN sullo stream
-  //    della CONNECT senza `CLOSE_WEBTRANSPORT_SESSION` chiude la sessione con
-  //    codice **0**.
+  // ⛔ The two directions could not both be right, and the wrong one
+  //    was this.  Written bare, the seven bytes `68 43 04 00 00 00 mm` are read by the
+  //    browser with its own HTTP/3 layer: `0x68` has the two high bits at
+  //    `01`, so it is a two-byte variable-length integer, and the frame type
+  //    becomes `0x2843` — which **is not a known HTTP/3 frame type**, and RFC
+  //    9114 §9 requires IGNORING it.  The page saw no capsule:
+  //    it saw only the FIN that arrives right behind, and a FIN on the stream
+  //    of the CONNECT without `CLOSE_WEBTRANSPORT_SESSION` closes the session with
+  //    code **0**.
   //
-  // ⚠ Cioe' e' il `congedo:0x00` che B11 ha visto e che era stato attribuito a
-  //   una corsa fra eventi: questa strada lo produce **in ogni giro**, non uno
-  //   su cinque.  ⭐ La misura che distingue le due spiegazioni e' scritta nel
-  //   rapporto: far chiudere il server con `0x0b` senza nessun `RESPINTO` in
-  //   coda, e leggere `wt.closed` dalla pagina.
+  // ⚠ That is, it is the `congedo:0x00` that B11 saw and that had been attributed to
+  //   a race between events: this road produces it **at every round**, not one
+  //   in five.  ⭐ The measurement that tells the two explanations apart is written in the
+  //   report: make the server close with `0x0b` with no `RESPINTO` in the
+  //   queue, and read `wt.closed` from the page.
   std::array<uint8_t, 64> b{};
   size_t n = 0;
-  // la busta: un frame DATA di HTTP/3, tipo 0x00, lungo quanto la capsula
+  // the envelope: an HTTP/3 DATA frame, type 0x00, as long as the capsule
   b[n++] = 0x00; // DATA
-  b[n++] = 7;    // 2 byte di tipo + 1 di lunghezza + 4 di codice
-  // la capsula CLOSE_WEBTRANSPORT_SESSION
-  b[n++] = 0x68; // 0x2843 in intero variabile, primo byte
+  b[n++] = 7;    // 2 bytes of type + 1 of length + 4 of code
+  // the CLOSE_WEBTRANSPORT_SESSION capsule
+  b[n++] = 0x68; // 0x2843 as a variable-length integer, first byte
   b[n++] = 0x43;
-  b[n++] = 4;    // lunghezza della capsula: solo il codice
+  b[n++] = 4;    // length of the capsule: only the code
   b[n++] = 0;
   b[n++] = 0;
   b[n++] = 0;
@@ -998,47 +1003,48 @@ void ProtoCodec::wt_chiudi_adesso(uint8_t motivo) {
   wt_uscita_.push_back(WtUscita{
     wt_sessione_, std::vector<uint8_t>{b.data(), b.data() + n}, 0, true});
   std::println(stderr,
-               "REMOTIX B3: chiusa la sessione WebTransport, codice {:#04x} "
-               "({} byte: 2 di frame DATA + 7 di capsula)",
+               "REMOTIX B3: closed the WebTransport session, code {:#04x} "
+               "({} bytes: 2 of DATA frame + 7 of capsule)",
                motivo, n);
 }
 
 '''
 
 # ===========================================================================
-# ⛔⭐ IL BAN LATO OSPITE — le tre cose che §4.4-bis chiede al PADRONE DI CASA
+# ⛔⭐ THE HOST-SIDE BAN — the three things §4.4-bis asks of the HOST
 # ===========================================================================
 #
-# `rcp.c` sa contare i fallimenti, bannare, salvare su file, rispondere «e'
-# bannato?» e togliere un ban.  ⛔ Ma non apre socket, non legge la riga di
-# comando e non serve nessuna pagina: le tre cose che seguono **non esistevano**
-# fino all'11 agosto 2026, e senza di esse la regola dell'utente era scritta a
-# meta'.
+# `rcp.c` can count failures, ban, save to file, answer "is it
+# banned?" and remove a ban.  ⛔ But it opens no socket, does not read the command
+# line and serves no page: the three things that follow **did not exist**
+# until 11 Aug 2026, and without them the user's rule was half
+# written.
 #
-#   1. i ban si RILEGGONO all'avvio          §4.4-bis, «il ban sopravvive al
-#                                            riavvio del server» — invariante I7
-#   2. la PAGINA si serve lo stesso a chi     §4.4-bis, «viene visualizzata una
-#      e' bannato, e dice quante ore mancano  pagina di login rifiutato»
-#   3. il COMANDO DI SBLOCCO                  §4.4-bis, «si esce in due modi»
+#   1. the bans are REREAD at startup         §4.4-bis, "the ban survives the
+#                                            restart of the server" — invariant I7
+#   2. the PAGE is served all the same to     §4.4-bis, "a page of refused
+#      whoever is banned, and says how many   login is displayed"
+#      hours are left
+#   3. the UNBLOCK COMMAND                    §4.4-bis, "there are two ways out"
 #
 CORPO_OSPITE = r'''// ═══════════════════════════════════════════════════════════
-// ⛔⭐ REMOTIX B3 — IL BAN LATO OSPITE (RCP.md §4.4-bis, DECISIONI.md §1.9)
+// ⛔⭐ REMOTIX B3 — THE HOST-SIDE BAN (RCP.md §4.4-bis, DECISIONI.md §1.9)
 //
-// ⛔ PERCHE' STA QUI E NON IN `rcp.c`.  Quel file «conosce RCP.md e nient'altro:
-//    non sa che sotto c'e' QUIC, non apre socket e non guarda l'orologio».  Le
-//    tre cose di sotto sono tutte e tre socket, riga di comando e orologio —
-//    cioe' tutte e tre del padrone di casa.  ⭐ `rcp.c` espone `rcp_ban_carica`,
-//    `rcp_bannato` e `rcp_sblocca` e non sa **chi** le chiama: e' la stessa
-//    linea che permettera' di portare il protocollo nel server vero senza
-//    riscriverlo.
+// ⛔ WHY IT IS HERE AND NOT IN `rcp.c`.  That file "knows RCP.md and nothing else:
+//    it does not know there is QUIC underneath, opens no socket and does not look at the clock".  The
+//    three things below are all three socket, command line and clock —
+//    that is, all three belong to the host.  ⭐ `rcp.c` exposes `rcp_ban_carica`,
+//    `rcp_bannato` and `rcp_sblocca` and does not know **who** calls them: it is the same
+//    line that will allow carrying the protocol into the real server without
+//    rewriting it.
 //
-// ⛔ E L'OROLOGIO DEV'ESSERE LO STESSO.  `rcp_apri`/`rcp_ricevi` ricevono
-//    `ngtcp2_conn_get_timestamp(conn_) / NGTCP2_MILLISECONDS`, e ngtcp2 quel
-//    valore lo prende da `util::timestamp()`.  Qui non c'e' nessuna
-//    connessione, quindi si chiama `util::timestamp()` direttamente: ⚠ un
-//    secondo orologio con un'altra origine renderebbe le scadenze del ban
-//    numeri senza senso — «restano 4 miliardi di ore» — e nessuno lo vedrebbe
-//    finche' qualcuno non viene bannato davvero.
+// ⛔ AND THE CLOCK MUST BE THE SAME.  `rcp_apri`/`rcp_ricevi` receive
+//    `ngtcp2_conn_get_timestamp(conn_) / NGTCP2_MILLISECONDS`, and ngtcp2 takes that
+//    value from `util::timestamp()`.  Here there is no
+//    connection, so `util::timestamp()` is called directly: ⚠ a
+//    second clock with another origin would make the ban expiries
+//    meaningless numbers — "4 billion hours left" — and nobody would see it
+//    until someone really got banned.
 // ═══════════════════════════════════════════════════════════════════════════
 #include <sys/un.h>
 #include <cerrno>
@@ -1049,10 +1055,10 @@ extern "C" {
 
 namespace {
 
-// L'orologio monotono in millisecondi: LO STESSO che vede la sessione.
+// The monotonic clock in milliseconds: THE SAME one the session sees.
 uint64_t remotix_ora_ms() { return util::timestamp() / NGTCP2_MILLISECONDS; }
 
-// Le due strade del padrone di casa, dalla riga di comando.
+// The two roads of the host, from the command line.
 const char *remotix_ban_file = nullptr;
 const char *remotix_comando_socket = nullptr;
 
@@ -1061,20 +1067,20 @@ ev_io remotix_comando_ev;
 bool remotix_pagina_accesa = false;
 bool remotix_comando_acceso = false;
 
-// ⛔ 200 ms, e il prezzo si dichiara invece di nasconderlo.  Qui la pagina e il
-//    comando si servono DENTRO il ciclo degli eventi di QUIC, con una lettura e
-//    una scrittura bloccanti a tempo: un client TCP che apre e tace ferma il
-//    server per due decimi di secondo.  ⚠ E' accettabile in un banco e va
-//    scritto qui: un server vero mettera' un `ev_io` per ogni connessione
-//    accettata, o un filo a parte.  ⭐ Il motivo per cui NON lo si fa oggi e'
-//    che `rcp.c` tiene la tabella dei ban in memoria statica senza nessun
-//    lucchetto: un filo a parte sarebbe una corsa fra due scrittori, cioe' un
-//    difetto vero comprato per evitare un ritardo finto.
+// ⛔ 200 ms, and the price is declared instead of hidden.  Here the page and the
+//    command are served INSIDE the QUIC event loop, with a blocking read and
+//    write with a timeout: a TCP client that opens and goes quiet stops the
+//    server for two tenths of a second.  ⚠ It is acceptable in a bench and must be
+//    written here: a real server will put an `ev_io` for every accepted
+//    connection, or a separate thread.  ⭐ The reason it is NOT done today is
+//    that `rcp.c` keeps the ban table in static memory without any
+//    lock: a separate thread would be a race between two writers, that is a
+//    real defect bought to avoid a fake delay.
 const timeval REMOTIX_TETTO{0, 200000};
 
-// ── Quel che si legge e si scrive, con un tetto e senza mai bloccare per
-//    sempre.  Restituiscono false su qualunque guasto: chi chiama chiude e va
-//    avanti — una connessione TCP persa non deve portarsi via il server.
+// ── What is read and written, with a cap and without ever blocking
+//    forever.  They return false on any fault: the caller closes and goes
+//    on — a lost TCP connection must not carry off the server.
 bool remotix_scrivi_tutto(int fd, std::string_view dati) {
   while (!dati.empty()) {
     auto n = send(fd, dati.data(), dati.size(), MSG_NOSIGNAL);
@@ -1086,54 +1092,54 @@ bool remotix_scrivi_tutto(int fd, std::string_view dati) {
   return true;
 }
 
-// ═══ 1. LA PAGINA ═══════════════════════════════════════════════════════════
+// ═══ 1. THE PAGE ════════════════════════════════════════════════════════════
 //
-// ⛔ §4.4-bis, e la ragione e' dell'utente: «la pagina si serve lo stesso, e
-//    mostra il rifiuto — *tentativi esauriti*.  Non un errore di rete, non un
-//    silenzio: chi e' stato bannato per errore e' quasi sempre il proprietario,
-//    e deve poter capire che cosa gli e' successo invece di trovarsi davanti un
-//    server che sembra morto per mezza giornata».
+// ⛔ §4.4-bis, and the reason is the user's: "the page is served all the same, and
+//    shows the refusal — *attempts exhausted*.  Not a network error, not a
+//    silence: whoever was banned by mistake is almost always the owner,
+//    and must be able to understand what happened to them instead of facing a
+//    server that seems dead for half a day".
 //
-// ⛔ E LO STATO E' 200, ANCHE PER CHI E' BANNATO — scelta, non distrazione.
-//    §4.4-bis dice «la pagina si serve lo stesso» e non dice con quale stato
-//    HTTP.  Con un 403 il documento sarebbe comunque servito, ⚠ ma un proxy,
-//    un'estensione o il browser stesso possono sostituire il corpo di una
-//    risposta d'errore con una propria schermata — e allora la frase che
-//    l'utente DEVE leggere sparisce, che e' esattamente il caso che questa
-//    regola esiste per impedire.  ⭐ Il rifiuto e' dell'ACCESSO, non della
-//    pagina: la pagina ha fatto il suo mestiere.
+// ⛔ AND THE STATUS IS 200, EVEN FOR WHOEVER IS BANNED — a choice, not a distraction.
+//    §4.4-bis says "the page is served all the same" and does not say with which HTTP
+//    status.  With a 403 the document would be served anyway, ⚠ but a proxy,
+//    an extension or the browser itself can replace the body of an
+//    error response with a screen of its own — and then the sentence the
+//    user MUST read disappears, which is exactly the case this
+//    rule exists to prevent.  ⭐ The refusal is of the ACCESS, not of the
+//    page: the page did its job.
 std::string remotix_pagina_html(bool bannato, const std::string &chiave,
                                 uint64_t restano_ms) {
   if (!bannato) {
     return std::format(
-      "<!doctype html>\n<html lang=\"it\">\n<head><meta charset=\"utf-8\">\n"
-      "<title>REMOTIX — accesso</title></head>\n"
+      "<!doctype html>\n<html lang=\"en\">\n<head><meta charset=\"utf-8\">\n"
+      "<title>REMOTIX — access</title></head>\n"
       "<body data-bannato=\"no\" data-restano-ms=\"0\">\n"
-      "<h1 id=\"esito\">accesso</h1>\n"
-      "<p id=\"quanto\">Questo indirizzo ({}) puo' provare a entrare.</p>\n"
-      "<p>⚠ Pagina minima del banco: la pagina vera di RCP arriva con la fase "
-      "successiva.  Qui c'e' la sola cosa che §4.4-bis pretende dal padrone di "
-      "casa — dire se l'indirizzo e' fuori, e per quanto.</p>\n"
+      "<h1 id=\"esito\">access</h1>\n"
+      "<p id=\"quanto\">This address ({}) may try to log in.</p>\n"
+      "<p>⚠ Minimal bench page: the real RCP page arrives with the next "
+      "phase.  Here there is the only thing §4.4-bis demands of the "
+      "host — saying whether the address is out, and for how long.</p>\n"
       "</body>\n</html>\n",
       chiave);
   }
-  // ⚠ I minuti si arrotondano PER ECCESSO: dire «restano 0 ore» a chi ha
-  //   ancora 59 minuti da aspettare e' peggio che non dire niente.
+  // ⚠ The minutes are rounded UP: saying "0 hours left" to whoever still
+  //   has 59 minutes to wait is worse than saying nothing.
   auto minuti = (restano_ms + 59999) / 60000;
   auto ore = minuti / 60;
   auto resto = minuti % 60;
   return std::format(
-    "<!doctype html>\n<html lang=\"it\">\n<head><meta charset=\"utf-8\">\n"
-    "<title>REMOTIX — tentativi esauriti</title></head>\n"
+    "<!doctype html>\n<html lang=\"en\">\n<head><meta charset=\"utf-8\">\n"
+    "<title>REMOTIX — attempts exhausted</title></head>\n"
     "<body data-bannato=\"si\" data-restano-ms=\"{}\">\n"
-    "<h1 id=\"esito\">tentativi esauriti</h1>\n"
-    "<p id=\"quanto\">Da questo indirizzo ({}) sono arrivati tre tentativi di "
-    "accesso falliti, e per questo resta fuori.  Mancano ancora "
-    "<b id=\"ore\">{}</b> ore e <b id=\"minuti\">{}</b> minuti.</p>\n"
-    "<p id=\"uscite\">Si rientra in due modi: aspettando la scadenza, oppure "
-    "col comando di sblocco sulla macchina che serve — che chiede l'accesso a "
-    "quella macchina, ed e' la via di chi si e' bannato dal proprio "
-    "telefono.</p>\n"
+    "<h1 id=\"esito\">attempts exhausted</h1>\n"
+    "<p id=\"quanto\">Three failed login attempts arrived from this address "
+    "({}), and for this reason it stays out.  There are still "
+    "<b id=\"ore\">{}</b> hours and <b id=\"minuti\">{}</b> minutes left.</p>\n"
+    "<p id=\"uscite\">There are two ways back in: waiting for the expiry, or "
+    "with the unblock command on the serving machine — which requires access to "
+    "that machine, and is the way out for whoever banned themselves from their own "
+    "phone.</p>\n"
     "</body>\n</html>\n",
     restano_ms, chiave, ore, resto);
 }
@@ -1142,21 +1148,21 @@ void remotix_pagina_servi(int fd, const sockaddr *sa, socklen_t salen) {
   setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &REMOTIX_TETTO, sizeof REMOTIX_TETTO);
   setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &REMOTIX_TETTO, sizeof REMOTIX_TETTO);
 
-  // ⛔ La richiesta si LEGGE anche se non ci serve, e non e' cortesia: chiudere
-  //    un socket con byte non letti nel buffer manda un RST, e il RST fa
-  //    buttare al client la risposta che gli abbiamo appena scritto.  Chi e'
-  //    bannato vedrebbe «connessione azzerata» — cioe' l'errore di rete che
-  //    §4.4-bis vieta — e il server nel registro direbbe di aver risposto.
+  // ⛔ The request is READ even if we do not need it, and it is not courtesy: closing
+  //    a socket with unread bytes in the buffer sends an RST, and the RST makes
+  //    the client throw away the response we have just written to it.  Whoever is
+  //    banned would see "connection reset" — that is the network error that
+  //    §4.4-bis forbids — and the server would say in the log that it answered.
   std::array<char, 4096> richiesta;
   auto letti = recv(fd, richiesta.data(), richiesta.size(), 0);
 
-  // ⛔ E L'INDIRIZZO SI CHIEDE AL NUCLEO, NELLA STESSA FORMA DELLA SESSIONE.
-  //    `util::straddr()` scrive `[127.0.0.1]:55680` — con le quadre anche per
-  //    IPv4 — e quella e' la chiave che `rcp.c` conta e che finisce nel file
-  //    dei ban.  ⚠ Costruirla qui in un altro modo (`inet_ntop` nudo) darebbe
-  //    `127.0.0.1`, che NON e' `[127.0.0.1]`: la pagina direbbe «puoi entrare»
-  //    a un indirizzo bannato, e il registro del server direbbe il contrario.
-  //    `[M]` la forma con le quadre e' letta nel registro, non dedotta.
+  // ⛔ AND THE ADDRESS IS ASKED OF THE KERNEL, IN THE SAME FORM AS THE SESSION.
+  //    `util::straddr()` writes `[127.0.0.1]:55680` — with brackets even for
+  //    IPv4 — and that is the key `rcp.c` counts and that ends up in the ban
+  //    file.  ⚠ Building it here in another way (bare `inet_ntop`) would give
+  //    `127.0.0.1`, which is NOT `[127.0.0.1]`: the page would say "you may log in"
+  //    to a banned address, and the server log would say the opposite.
+  //    `[M]` the form with brackets is read in the log, not deduced.
   auto provenienza = util::straddr(sa, salen);
   std::array<char, 64> chiave{};
   rcp_chiave_indirizzo(provenienza.c_str(), chiave.data(), chiave.size());
@@ -1173,13 +1179,13 @@ void remotix_pagina_servi(int fd, const sockaddr *sa, socklen_t salen) {
                            corpo.size());
   auto scritta = remotix_scrivi_tutto(fd, testa) && remotix_scrivi_tutto(fd, corpo);
   std::println(stderr,
-               "REMOTIX B3: pagina TCP a {} (chiave {}) — {} · richiesta {} "
-               "byte · risposta {} byte {}",
+               "REMOTIX B3: TCP page at {} (key {}) — {} · request {} "
+               "bytes · response {} bytes {}",
                provenienza, chiave.data(),
-               fuori ? std::format("BANNATO, restano {} ms", restano)
-                     : std::string{"non bannato"},
+               fuori ? std::format("BANNED, {} ms left", restano)
+                     : std::string{"not banned"},
                letti, corpo.size(),
-               scritta ? "spedita" : "⛔ NON spedita per intero");
+               scritta ? "sent" : "⛔ NOT sent in full");
 }
 
 void remotix_pagina_cb(struct ev_loop *loop, ev_io *w, int revents) {
@@ -1195,55 +1201,55 @@ void remotix_pagina_cb(struct ev_loop *loop, ev_io *w, int revents) {
   close(fd);
 }
 
-// ═══ 2. IL COMANDO DI SBLOCCO ═══════════════════════════════════════════════
+// ═══ 2. THE UNBLOCK COMMAND ═════════════════════════════════════════════════
 //
-// ⛔ PERCHE' UN SOCKET DI CONTROLLO, E NON LE ALTRE DUE FORME.  §4.4-bis chiede
-//    «un comando di sblocco sul server», «la via d'uscita di chi si banna dal
-//    proprio telefono», che «chiede l'unica chiave che quel caso ammette —
-//    l'accesso alla macchina», e che **scriva nel registro ogni sblocco**
-//    distinguendo un ban tolto da un ban mai scattato.  Tre forme erano
-//    possibili e due non reggono:
+// ⛔ WHY A CONTROL SOCKET, AND NOT THE OTHER TWO FORMS.  §4.4-bis asks for
+//    "an unblock command on the server", "the way out for whoever bans themselves from
+//    their own phone", which "asks for the only key that case admits —
+//    access to the machine", and which **writes every unblock in the log**
+//    distinguishing a removed ban from a ban that never fired.  Three forms were
+//    possible and two do not hold:
 //
-//    ⛔ un SECONDO PROCESSO con un'opzione (`bsslserver --sblocca X`) —
-//       **non funziona**, e il modo in cui non funziona e' silenzioso: il ban
-//       vive nella memoria del processo che serve, e un secondo processo puo'
-//       solo riscrivere il file.  Il server continuerebbe a rispondere
-//       `TROPPI_TENTATIVI` fino al riavvio, e ⛔ il primo `salva_ban()` — cioe'
-//       il primo ban di chiunque altro — riscriverebbe il file rimettendoci
-//       dentro il ban appena tolto.  Chi ha dato il comando lo ha visto uscire
-//       con zero;
-//    ⛔ un SEGNALE — non porta un indirizzo.  `SIGUSR1` potrebbe togliere
-//       *tutti* i ban, che e' un comando diverso da quello chiesto, e
-//       soprattutto **non ha una risposta**: §4.4-bis vuole che «non era
-//       bannato» e «l'ho tolto» si distinguano, e un segnale consegnato dice
-//       solo che e' stato consegnato;
-//    ⭐ un SOCKET DI CONTROLLO — porta l'indirizzo, agisce sul processo VIVO
-//       (memoria e file nella stessa riga, per mano di `rcp_sblocca()`), e
-//       **risponde**, quindi le due risposte esistono davvero.  La chiave che
-//       chiede e' un file con permessi `0600` nel filesystem della macchina,
-//       cioe' esattamente «l'accesso alla macchina» — e non aggiunge nessuna
-//       superficie raggiungibile dalla rete: un socket di dominio Unix non ha
-//       un indirizzo IP.
+//    ⛔ a SECOND PROCESS with an option (`bsslserver --sblocca X`) —
+//       **does not work**, and the way it does not work is silent: the ban
+//       lives in the memory of the serving process, and a second process can
+//       only rewrite the file.  The server would keep answering
+//       `TROPPI_TENTATIVI` until the restart, and ⛔ the first `salva_ban()` — that is
+//       the first ban of anyone else — would rewrite the file putting
+//       back into it the ban just removed.  Whoever gave the command saw it exit
+//       with zero;
+//    ⛔ a SIGNAL — does not carry an address.  `SIGUSR1` could remove
+//       *all* the bans, which is a different command from the one asked, and
+//       above all **has no answer**: §4.4-bis wants "it was not
+//       banned" and "I removed it" to be told apart, and a delivered signal only says
+//       that it was delivered;
+//    ⭐ a CONTROL SOCKET — carries the address, acts on the LIVE process
+//       (memory and file on the same line, by the hand of `rcp_sblocca()`), and
+//       **answers**, so the two answers really exist.  The key it
+//       asks for is a file with `0600` permissions in the machine's filesystem,
+//       that is exactly "access to the machine" — and it adds no
+//       surface reachable from the network: a Unix domain socket has no
+//       IP address.
 //
-// Il protocollo e' una riga, e si legge senza strumenti:
+// The protocol is one line, and can be read without tools:
 //
-//     SBLOCCA <indirizzo>   →   TOLTO <chiave>      il ban c'era e non c'e' piu'
-//                           →   NON-BANNATO <chiave>  non c'era niente da togliere
-//     PING                  →   PONG                 «il comando esiste?», e non
-//                                                    tocca niente
+//     SBLOCCA <address>     →   TOLTO <key>         the ban was there and is no longer
+//                           →   NON-BANNATO <key>   there was nothing to remove
+//     PING                  →   PONG                "does the command exist?", and it
+//                                                    touches nothing
 //
-// ⭐ `PING` non e' un ornamento: e' il denominatore di B0.3.  Un banco che
-//    chiama lo sblocco fra un banco e l'altro deve poter dire «il comando c'era
-//    e ha risposto», o «il ban non e' scattato» e «lo sblocco non e' mai
-//    arrivato a nessuno» hanno lo stesso aspetto.
+// ⭐ `PING` is not an ornament: it is the denominator of B0.3.  A bench that
+//    calls the unblock between one bench and the next must be able to say "the command was there
+//    and answered", or "the ban did not fire" and "the unblock never
+//    reached anyone" look the same.
 void remotix_comando_servi(int fd) {
   setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &REMOTIX_TETTO, sizeof REMOTIX_TETTO);
   setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &REMOTIX_TETTO, sizeof REMOTIX_TETTO);
   std::array<char, 256> buf{};
   auto letti = recv(fd, buf.data(), buf.size() - 1, 0);
   if (letti <= 0) {
-    std::println(stderr, "REMOTIX B3: ⚠ comando vuoto sul socket di controllo "
-                         "(letti {} byte): non ho tolto niente",
+    std::println(stderr, "REMOTIX B3: ⚠ empty command on the control socket "
+                         "({} bytes read): I removed nothing",
                  letti);
     remotix_scrivi_tutto(fd, "NON-CAPITO riga vuota\n");
     return;
@@ -1253,39 +1259,39 @@ void remotix_comando_servi(int fd) {
     riga.pop_back();
   }
   if (riga == "PING") {
-    std::println(stderr, "REMOTIX B3: comando PING — il socket di sblocco e' "
-                         "vivo, e non ho toccato nessun ban");
+    std::println(stderr, "REMOTIX B3: PING command — the unblock socket is "
+                         "alive, and I touched no ban");
     remotix_scrivi_tutto(fd, "PONG\n");
     return;
   }
   constexpr std::string_view verbo = "SBLOCCA ";
   if (!riga.starts_with(verbo)) {
-    std::println(stderr, "REMOTIX B3: ⚠ comando sconosciuto «{}»: non ho tolto "
-                         "niente (le forme sono «SBLOCCA <indirizzo>» e «PING»)",
+    std::println(stderr, "REMOTIX B3: ⚠ unknown command «{}»: I removed "
+                         "nothing (the forms are «SBLOCCA <address>» and «PING»)",
                  riga);
     remotix_scrivi_tutto(fd, std::format("NON-CAPITO {}\n", riga));
     return;
   }
   auto chiesto = riga.substr(verbo.size());
-  // ⛔ La chiave la costruisce `rcp.c`, non questo file: chi comanda digita
-  //    `192.168.0.2`, e nel file dei ban c'e' scritto `[192.168.0.2]`.
+  // ⛔ The key is built by `rcp.c`, not by this file: whoever commands types
+  //    `192.168.0.2`, and in the ban file it says `[192.168.0.2]`.
   std::array<char, 64> chiave{};
   rcp_chiave_indirizzo(chiesto.c_str(), chiave.data(), chiave.size());
   auto era = rcp_sblocca(chiave.data(), remotix_ora_ms());
-  // ⛔ «Ogni sblocco si scrive nel registro, o un ban tolto e un ban mai
-  //    scattato hanno lo stesso aspetto» (§4.4-bis).  Le due righe sono
-  //    diverse, e lo e' anche la risposta a chi comanda.
+  // ⛔ "Every unblock is written in the log, or a removed ban and a ban that never
+  //    fired look the same" (§4.4-bis).  The two lines are
+  //    different, and so is the answer to whoever commands.
   if (era) {
     std::println(stderr,
-                 "REMOTIX B3: ⛔ SBLOCCATO su comando l'indirizzo {} (chiesto "
-                 "«{}»): il ban c'era ed e' stato tolto, e il file dei ban e' "
-                 "stato riscritto (§4.4-bis)",
+                 "REMOTIX B3: ⛔ UNBLOCKED on command the address {} (asked "
+                 "«{}»): the ban was there and has been removed, and the ban file has "
+                 "been rewritten (§4.4-bis)",
                  chiave.data(), chiesto);
   } else {
     std::println(stderr,
-                 "REMOTIX B3: sblocco chiesto per {} (chiesto «{}»): NON era "
-                 "bannato, non ho tolto niente (§4.4-bis) — ⚠ e il conto dei "
-                 "tentativi di quell'indirizzo riparte comunque da zero",
+                 "REMOTIX B3: unblock asked for {} (asked «{}»): it was NOT "
+                 "banned, I removed nothing (§4.4-bis) — ⚠ and the count of "
+                 "attempts of that address restarts from zero anyway",
                  chiave.data(), chiesto);
   }
   remotix_scrivi_tutto(fd, std::format("{} {}\n", era ? "TOLTO" : "NON-BANNATO",
@@ -1303,34 +1309,34 @@ void remotix_comando_cb(struct ev_loop *loop, ev_io *w, int revents) {
   close(fd);
 }
 
-// ═══ 3. L'AVVIO ═════════════════════════════════════════════════════════════
+// ═══ 3. THE STARTUP ═════════════════════════════════════════════════════════
 //
-// ⛔ «ZERO BAN» E «NON HO POTUTO LEGGERE IL FILE» SONO DUE FATTI DIVERSI, e
-//    questa e' la funzione in cui il difetto di `LEZIONI.md` §1.9 sarebbe piu'
-//    caro di tutti: un errore letto come uno zero e' **la protezione spenta con
-//    l'aria di non avere niente da proteggere**, cioe' l'invariante I7 persa in
-//    silenzio.  Qui i fatti stampati sono TRE, e si distinguono guardando il
-//    file prima di aprirlo:
+// ⛔ "ZERO BANS" AND "I COULD NOT READ THE FILE" ARE TWO DIFFERENT FACTS, and
+//    this is the function in which the defect of `LEZIONI.md` §1.9 would be the
+//    most costly of all: an error read as a zero is **the protection turned off with
+//    the air of having nothing to protect**, that is invariant I7 lost
+//    silently.  Here the printed facts are THREE, and they are told apart by looking at the
+//    file before opening it:
 //
-//      il file non c'e' ancora        nessun ban, e non e' un errore
-//      il file c'e' e dice zero       nessun ban, e l'ho letto
-//      il file c'e' e non si legge    ⛔ NON parto
+//      the file is not there yet      no ban, and it is not an error
+//      the file is there and says zero no ban, and I read it
+//      the file is there and cannot be read ⛔ I do NOT start
 //
-// ⛔ E sul terzo il server ESCE, che e' la sola scelta difendibile: servire con
-//    la protezione spenta somiglia in tutto a servirla accesa, e chi ha
-//    riavviato per un altro motivo non saprebbe di averla persa.  ⚠ Sugli altri
-//    due guasti — la porta della pagina, il socket del comando — il server va
-//    avanti: senza pagina e senza comando la protezione **c'e' ancora**, e
-//    spegnere il server QUIC su cui poggiano cinque altri banchi metterebbe il
-//    rosso sull'imputato sbagliato.  In tutti i casi la riga si stampa.
+// ⛔ And on the third the server EXITS, which is the only defensible choice: serving with
+//    the protection off looks in every way like serving with it on, and whoever
+//    restarted for another reason would not know they had lost it.  ⚠ On the other
+//    two faults — the page port, the command socket — the server goes
+//    on: without page and without command the protection **is still there**, and
+//    turning off the QUIC server on which five other benches rest would put the
+//    red on the wrong suspect.  In all cases the line is printed.
 bool remotix_ospite_avvia(const char *addr, const char *port) {
   auto ora = remotix_ora_ms();
 
   if (remotix_ban_file == nullptr) {
     std::println(stderr,
-                 "REMOTIX B3: ⛔ nessun --ban-file: il ban di §4.4-bis vive SOLO "
-                 "IN MEMORIA, e il primo riavvio lo porta via (invariante I7). "
-                 "Il conto dei tentativi funziona lo stesso, la persistenza no.");
+                 "REMOTIX B3: ⛔ no --ban-file: the ban of §4.4-bis lives ONLY "
+                 "IN MEMORY, and the first restart takes it away (invariant I7). "
+                 "The attempt count works all the same, persistence does not.");
   } else {
     struct stat st;
     auto c_era = stat(remotix_ban_file, &st) == 0;
@@ -1338,33 +1344,33 @@ bool remotix_ospite_avvia(const char *addr, const char *port) {
     auto quanti = rcp_ban_carica(remotix_ban_file, ora);
     if (quanti < 0) {
       std::println(stderr,
-                   "REMOTIX B3: ⛔ NON HO POTUTO LEGGERE il file dei ban «{}»: "
-                   "{}.  Non e' «zero ban»: e' «non ho potuto guardare», e "
-                   "servire cosi' spegnerebbe la protezione di §4.4-bis "
-                   "facendola sembrare accesa.  Non parto.",
+                   "REMOTIX B3: ⛔ COULD NOT READ the ban file «{}»: "
+                   "{}.  It is not «zero bans»: it is «I could not look», and "
+                   "serving like this would turn off the protection of §4.4-bis "
+                   "while making it look on.  Not starting.",
                    remotix_ban_file, strerror(errno));
       return false;
     }
     if (!c_era) {
       std::println(stderr,
-                   "REMOTIX B3: ban caricati: 0 — il file «{}» non esiste "
-                   "ancora, quindi nessun indirizzo e' fuori.  ⚠ Non e' un "
-                   "errore: lo scrivera' il primo ban.",
+                   "REMOTIX B3: bans loaded: 0 — the file «{}» does not exist "
+                   "yet, so no address is out.  ⚠ It is not an "
+                   "error: the first ban will write it.",
                    remotix_ban_file);
     } else {
       std::println(stderr,
-                   "REMOTIX B3: ban caricati: {} — dal file «{}», letto per "
-                   "intero.  {}",
+                   "REMOTIX B3: bans loaded: {} — from the file «{}», read "
+                   "in full.  {}",
                    quanti, remotix_ban_file,
                    quanti == 0
-                     ? "⚠ zero indirizzi fuori, e questo e' un fatto misurato: "
-                       "il file c'era e l'ho letto"
-                     : "Questi indirizzi restano fuori finche' non scadono o "
-                       "finche' non li toglie il comando di sblocco (§4.4-bis).");
+                     ? "⚠ zero addresses out, and this is a measured fact: "
+                       "the file was there and I read it"
+                     : "These addresses stay out until they expire or "
+                       "until the unblock command removes them (§4.4-bis).");
     }
   }
 
-  // ── la porta TCP della pagina, lo STESSO NUMERO dell'UDP (SPECIFICHE.md §4)
+  // ── the TCP port of the page, the SAME NUMBER as the UDP one (SPECIFICHE.md §4)
   addrinfo suggerimenti{};
   suggerimenti.ai_flags = AI_PASSIVE;
   suggerimenti.ai_family = AF_UNSPEC;
@@ -1372,9 +1378,9 @@ bool remotix_ospite_avvia(const char *addr, const char *port) {
   addrinfo *elenco = nullptr;
   if (auto rv = getaddrinfo(addr, port, &suggerimenti, &elenco); rv != 0) {
     std::println(stderr,
-                 "REMOTIX B3: ⛔ la pagina TCP non parte: getaddrinfo({}, {}) "
-                 "dice «{}».  Chi viene bannato non leggera' nessuna frase "
-                 "(§4.4-bis), e il server QUIC va avanti lo stesso.",
+                 "REMOTIX B3: ⛔ the TCP page does not start: getaddrinfo({}, {}) "
+                 "says «{}».  Whoever gets banned will read no sentence "
+                 "(§4.4-bis), and the QUIC server goes on all the same.",
                  addr, port, gai_strerror(rv));
   } else {
     auto fd = -1;
@@ -1394,41 +1400,41 @@ bool remotix_ospite_avvia(const char *addr, const char *port) {
     freeaddrinfo(elenco);
     if (fd == -1) {
       std::println(stderr,
-                   "REMOTIX B3: ⛔ la pagina TCP non parte: nessun indirizzo di "
-                   "{}:{} si e' lasciato legare ({}).  Chi viene bannato non "
-                   "leggera' nessuna frase (§4.4-bis), e il server QUIC va "
-                   "avanti lo stesso.",
+                   "REMOTIX B3: ⛔ the TCP page does not start: no address of "
+                   "{}:{} let itself be bound ({}).  Whoever gets banned will "
+                   "read no sentence (§4.4-bis), and the QUIC server goes "
+                   "on all the same.",
                    addr, port, strerror(errno));
     } else {
       ev_io_init(&remotix_pagina_ev, remotix_pagina_cb, fd, EV_READ);
       ev_io_start(EV_DEFAULT, &remotix_pagina_ev);
       remotix_pagina_accesa = true;
       std::println(stderr,
-                   "REMOTIX B3: la pagina e' servita in TCP su {}:{} — ⛔ e a un "
-                   "indirizzo bannato si serve LO STESSO, con «tentativi "
-                   "esauriti» e le ore che mancano (§4.4-bis)",
+                   "REMOTIX B3: the page is served over TCP on {}:{} — ⛔ and a "
+                   "banned address is served ALL THE SAME, with «attempts "
+                   "exhausted» and the hours that are left (§4.4-bis)",
                    addr, port);
     }
   }
 
-  // ── il socket del comando di sblocco
+  // ── the socket of the unblock command
   if (remotix_comando_socket == nullptr) {
     std::println(stderr,
-                 "REMOTIX B3: ⛔ nessun --comando-socket: il ban si toglie SOLO "
-                 "col passare delle 12 ore.  §4.4-bis ne vuole due, di strade, "
-                 "e questa meta' non c'e'.");
+                 "REMOTIX B3: ⛔ no --comando-socket: the ban is removed ONLY "
+                 "by the passing of the 12 hours.  §4.4-bis wants two roads, "
+                 "and this half is not there.");
   } else {
-    // ⚠ Si toglie il file vecchio: un socket lasciato li' da un'esecuzione
-    //   precedente fa fallire `bind` con EADDRINUSE, e il sintomo — «il comando
-    //   non risponde» — somiglia in tutto a un server morto.
+    // ⚠ The old file is removed: a socket left there by a previous
+    //   run makes `bind` fail with EADDRINUSE, and the symptom — "the command
+    //   does not answer" — looks in every way like a dead server.
     unlink(remotix_comando_socket);
     sockaddr_un dove{};
     dove.sun_family = AF_UNIX;
     if (strlen(remotix_comando_socket) >= sizeof dove.sun_path) {
       std::println(stderr,
-                   "REMOTIX B3: ⛔ il percorso del socket di comando e' troppo "
-                   "lungo ({} byte, il massimo e' {}): il comando di sblocco "
-                   "non ci sara'",
+                   "REMOTIX B3: ⛔ the path of the command socket is too "
+                   "long ({} bytes, the maximum is {}): the unblock command "
+                   "will not be there",
                    strlen(remotix_comando_socket), sizeof dove.sun_path - 1);
     } else {
       strcpy(dove.sun_path, remotix_comando_socket);
@@ -1437,46 +1443,46 @@ bool remotix_ospite_avvia(const char *addr, const char *port) {
           bind(fd, reinterpret_cast<sockaddr *>(&dove), sizeof dove) != 0 ||
           listen(fd, 4) != 0) {
         std::println(stderr,
-                     "REMOTIX B3: ⛔ il socket del comando di sblocco non parte "
-                     "su «{}»: {}.  Il ban si potra' togliere solo aspettando "
-                     "12 ore (§4.4-bis).",
+                     "REMOTIX B3: ⛔ the socket of the unblock command does not start "
+                     "on «{}»: {}.  The ban can be removed only by waiting "
+                     "12 hours (§4.4-bis).",
                      remotix_comando_socket, strerror(errno));
         if (fd != -1) {
           close(fd);
         }
       } else {
-        // ⛔ 0600, e la ragione e' la regola: la chiave che questo comando
-        //    chiede e' «l'accesso alla macchina».  Un socket leggibile da
-        //    chiunque la renderebbe «l'accesso a un utente qualunque della
-        //    macchina», che e' una chiave diversa e piu' facile.
+        // ⛔ 0600, and the reason is the rule: the key this command
+        //    asks for is "access to the machine".  A socket readable by
+        //    anyone would make it "access to any user of the
+        //    machine", which is a different and easier key.
         if (chmod(remotix_comando_socket, 0600) != 0) {
           std::println(stderr,
-                       "REMOTIX B3: ⚠ non ho potuto mettere 0600 su «{}»: {} — "
-                       "il comando di sblocco c'e', ma la chiave che chiede e' "
-                       "piu' larga di quel che §4.4-bis suppone",
+                       "REMOTIX B3: ⚠ I could not set 0600 on «{}»: {} — "
+                       "the unblock command is there, but the key it asks for is "
+                       "wider than what §4.4-bis assumes",
                        remotix_comando_socket, strerror(errno));
         }
         ev_io_init(&remotix_comando_ev, remotix_comando_cb, fd, EV_READ);
         ev_io_start(EV_DEFAULT, &remotix_comando_ev);
         remotix_comando_acceso = true;
         std::println(stderr,
-                     "REMOTIX B3: il comando di sblocco ascolta su «{}» (0600) "
-                     "— «SBLOCCA <indirizzo>» oppure «PING»",
+                     "REMOTIX B3: the unblock command listens on «{}» (0600) "
+                     "— «SBLOCCA <address>» or «PING»",
                      remotix_comando_socket);
       }
     }
   }
 
-  // ⛔ E IL RIASSUNTO SI STAMPA IN UNA RIGA SOLA, con i tre fatti dentro: e' la
-  //    riga che un banco legge per sapere DA CHE STATO parte (B0.1), e senza la
-  //    quale «il ban non e' scattato» e «il ban non era nemmeno acceso» hanno
-  //    lo stesso aspetto.
+  // ⛔ AND THE SUMMARY IS PRINTED ON ONE SINGLE LINE, with the three facts inside: it is the
+  //    line a bench reads to know FROM WHICH STATE it starts (B0.1), and without
+  //    which "the ban did not fire" and "the ban was not even on" look
+  //    the same.
   std::println(stderr,
-               "REMOTIX B3: ban lato ospite — persistenza {} · pagina TCP {} · "
-               "comando di sblocco {}",
-               remotix_ban_file ? remotix_ban_file : "SPENTA",
-               remotix_pagina_accesa ? "accesa" : "SPENTA",
-               remotix_comando_acceso ? remotix_comando_socket : "SPENTO");
+               "REMOTIX B3: host-side ban — persistence {} · TCP page {} · "
+               "unblock command {}",
+               remotix_ban_file ? remotix_ban_file : "OFF",
+               remotix_pagina_accesa ? "on" : "OFF",
+               remotix_comando_acceso ? remotix_comando_socket : "OFF");
   return true;
 }
 
@@ -1484,35 +1490,35 @@ bool remotix_ospite_avvia(const char *addr, const char *port) {
 
 '''
 
-# ⛔ Gli innesti in `server.cc`, e sono quattro punti perche' quattro sono i
-#    posti in cui un `main` scritto da altri si lascia allargare: la tabella
-#    delle opzioni lunghe, lo `switch` che le legge, l'aiuto, e la riga fra
-#    «il server e' pronto» e «gira».
+# ⛔ The grafts in `server.cc`, and they are four points because four are the
+#    places in which a `main` written by others lets itself be widened: the table
+#    of long options, the `switch` that reads them, the help, and the line between
+#    "the server is ready" and "it runs".
 INNESTI_OSPITE = [
-    # ── il corpo, subito prima di `main` ────────────────────────────────────
+    # ── the body, right before `main` ───────────────────────────────────────
     (
         "server.cc",
         "int main(int argc, char **argv) {\n",
-        None,  # ⚠ riempito in `main()` con CORPO_OSPITE + l'appiglio
-        "il ban lato ospite (il corpo)",
+        None,  # ⚠ filled in `main()` with CORPO_OSPITE + the foothold
+        "the host-side ban (the body)",
     ),
-    # ── le due opzioni lunghe ───────────────────────────────────────────────
-    #    ⚠ I numeri 100 e 101 stanno lontani dai 37 dell'esempio apposta: il
-    #      giorno in cui ngtcp2 aggiungera' la sua opzione numero 38, due casi
-    #      con lo stesso numero sarebbero un'opzione che ne esegue un'altra —
-    #      e il compilatore direbbe soltanto «duplicate case value», se va bene.
+    # ── the two long options ────────────────────────────────────────────────
+    #    ⚠ The numbers 100 and 101 are far from the example's 37 on purpose: the
+    #      day ngtcp2 adds its option number 38, two cases
+    #      with the same number would be an option that runs another one —
+    #      and the compiler would only say "duplicate case value", if all goes well.
     (
         "server.cc",
         '      {"gso-burst", required_argument, &flag, 37},\n',
         '      {"gso-burst", required_argument, &flag, 37},\n'
-        "      // ⭐ REMOTIX B3 — RCP.md §4.4-bis, le due strade del padrone di\n"
-        "      //    casa: dove stanno i ban fra un riavvio e l'altro, e da dove\n"
-        "      //    si comanda di toglierne uno.\n"
+        "      // ⭐ REMOTIX B3 — RCP.md §4.4-bis, the two roads of the\n"
+        "      //    host: where the bans are kept between one restart and the next, and from where\n"
+        "      //    removing one is commanded.\n"
         '      {"ban-file", required_argument, &flag, 100},\n'
         '      {"comando-socket", required_argument, &flag, 101},\n',
-        "le due opzioni del ban",
+        "the two ban options",
     ),
-    # ── i due casi che le leggono ───────────────────────────────────────────
+    # ── the two cases that read them ────────────────────────────────────────
     (
         "server.cc",
         "      case 36:\n"
@@ -1531,42 +1537,42 @@ INNESTI_OSPITE = [
         "        // --show-stat\n"
         "        config.show_stat = true;\n"
         "        break;\n",
-        "i due casi del ban",
+        "the two ban cases",
     ),
-    # ── l'aiuto ────────────────────────────────────────────────────────────
+    # ── the help ───────────────────────────────────────────────────────────
     (
         "server.cc",
         "  -h, --help  Display this help and exit.\n",
         "  --ban-file=<PATH>\n"
-        "              REMOTIX B3 (RCP.md 4.4-bis): dove si tengono i ban fra\n"
-        "              un riavvio e l'altro.  Senza, il ban vive solo in\n"
-        "              memoria.  Se il file c'e' e non si legge, il server NON\n"
-        "              parte: «zero ban» e «non ho potuto guardare» sono due\n"
-        "              fatti diversi.\n"
+        "              REMOTIX B3 (RCP.md 4.4-bis): where the bans are kept between\n"
+        "              one restart and the next.  Without it, the ban lives only in\n"
+        "              memory.  If the file exists and cannot be read, the server does NOT\n"
+        "              start: «zero bans» and «I could not look» are two\n"
+        "              different facts.\n"
         "  --comando-socket=<PATH>\n"
-        "              REMOTIX B3 (RCP.md 4.4-bis): il socket di dominio Unix\n"
-        "              (0600) da cui si comanda «SBLOCCA <indirizzo>».  E'\n"
-        "              l'altra via d'uscita oltre alle dodici ore.\n"
+        "              REMOTIX B3 (RCP.md 4.4-bis): the Unix domain socket\n"
+        "              (0600) from which «SBLOCCA <address>» is commanded.  It is\n"
+        "              the other way out besides the twelve hours.\n"
         "  -h, --help  Display this help and exit.\n",
-        "l'aiuto delle due opzioni",
+        "the help of the two options",
     ),
-    # ── e la chiamata, fra «il server e' pronto» e «gira» ───────────────────
-    #    ⛔ DOPO `s.init`: prima, un fallimento del server lascerebbe aperti la
-    #       porta della pagina e il socket del comando di un server che non c'e'.
-    #    ⛔ E PRIMA di `ev_run`: i due `ev_io` vanno messi nel ciclo mentre il
-    #       ciclo non gira ancora.
+    # ── and the call, between "the server is ready" and "it runs" ───────────
+    #    ⛔ AFTER `s.init`: before, a failure of the server would leave open the
+    #       page port and the command socket of a server that is not there.
+    #    ⛔ And BEFORE `ev_run`: the two `ev_io` must be put in the loop while the
+    #       loop is not running yet.
     (
         "server.cc",
         "  ev_run(EV_DEFAULT, 0);\n",
-        "  // ⭐ REMOTIX B3 — RCP.md §4.4-bis: i ban dal disco, la pagina in TCP\n"
-        "  //    e il comando di sblocco.  Tutte e tre cose del PADRONE DI CASA:\n"
-        "  //    `rcp.c` non apre socket e non legge la riga di comando.\n"
+        "  // ⭐ REMOTIX B3 — RCP.md §4.4-bis: the bans from disk, the page over TCP\n"
+        "  //    and the unblock command.  All three things of the HOST:\n"
+        "  //    `rcp.c` opens no socket and does not read the command line.\n"
         "  if (!remotix_ospite_avvia(addr, port)) {\n"
         "    exit(EXIT_FAILURE);\n"
         "  }\n"
         "\n"
         "  ev_run(EV_DEFAULT, 0);\n",
-        "la chiamata all'avvio",
+        "the call at startup",
     ),
 ]
 
@@ -1577,18 +1583,18 @@ def leggi(percorso):
 
 
 def righe_di_commento(righe):
-    """⛔ UNA REGOLA SOLA PER I COMMENTI, E LA STESSA NEI TRE INNESTI.
+    """⛔ ONE SINGLE RULE FOR COMMENTS, AND THE SAME IN THE THREE GRAFTS.
 
-    Qui la regola era «comincia per //, /* oppure *», e classificava come
-    COMMENTO due righe di C++ vero che stanno nel corpo innestato da B2:
+    Here the rule was "starts with //, /* or *", and it classified as
+    COMMENT two lines of real C++ that are in the body grafted by B2:
 
         *v = src[0] & 0x3f;
         *v = (*v << 8) | src[i];
 
-    ⚠ Sono dereferenziazioni.  ⛔ Il numero «di codice» stampato di qui era
-      quindi strettamente minore di quello che B2 stampa sulle stesse righe, e
-      i due si presentavano con la stessa etichetta.  L'asterisco vale come
-      commento solo quando continua o chiude un blocco `/* … */`.
+    ⚠ They are dereferences.  ⛔ The "code" number printed from here was
+      therefore strictly lower than the one B2 prints on the same lines, and
+      the two presented themselves with the same label.  The asterisk counts as a
+      comment only when it continues or closes a `/* … */` block.
     """
     return sum(1 for r in righe
                if r.strip().startswith(("//", "/*", "* ", "*/"))
@@ -1596,28 +1602,28 @@ def righe_di_commento(righe):
 
 
 def togli():
-    # ⛔ E SI DICE LA VERITA' SU CHE COSA SI PORTA VIA.
+    # ⛔ AND THE TRUTH IS TOLD ABOUT WHAT IS TAKEN AWAY.
     #
-    #    Qui c'era scritto «(resta l'innesto di B2)», ed era vero soltanto per
-    #    `CMakeLists.txt`.  Nei due file che contano — `http3_server_proto_codec`
-    #    `.cc` e `.h` — i due innesti sono INTRECCIATI, e togliendo solo il
-    #    proprio restava un albero che ⛔ **non compila**: il `.cc` continuava a
-    #    chiamare `rcp_apri`, `examples/rcp.h` era stato cancellato e il
-    #    CMakeLists era tornato senza `rcp.c` — con `exit 0` stampato dallo
-    #    script che quello stato l'aveva appena prodotto.
+    #    Here it used to say "(the B2 graft remains)", and it was true only for
+    #    `CMakeLists.txt`.  In the two files that matter — `http3_server_proto_codec`
+    #    `.cc` and `.h` — the two grafts are INTERWOVEN, and removing only
+    #    one's own left a tree that ⛔ **does not compile**: the `.cc` kept
+    #    calling `rcp_apri`, `examples/rcp.h` had been deleted and the
+    #    CMakeLists was back without `rcp.c` — with `exit 0` printed by the
+    #    script that had just produced that state.
     #
-    # ⭐ Quindi si rimette TUTTO l'esempio, e lo si dice: si riapplicano in
-    #    ordine, prima B2 e poi questo.  Un `--togli` che lascia meno di quel
-    #    che il nome promette e' meglio di uno che lascia macerie e tace.
-    print("== Si rimette l'esempio com'era")
-    print("   ⛔ sparisce ANCHE l'innesto di B2 (e i guasti di B11, se ci sono):")
-    print("      i due vivono negli stessi due file, e un albero con mezzo")
-    print("      innesto NON COMPILA.  Si riapplicano in ordine —")
-    print("      01-b2-ngtcp2-wt-innesta.py, poi questo.")
+    # ⭐ So the WHOLE example is put back, and we say so: they are reapplied in
+    #    order, first B2 and then this one.  A `--togli` that leaves less than what
+    #    the name promises is better than one that leaves rubble and keeps quiet.
+    print("== Putting the example back as it was")
+    print("   ⛔ the B2 graft goes away TOO (and the B11 faults, if any):")
+    print("      the two live in the same two files, and a tree with half a")
+    print("      graft DOES NOT COMPILE.  They are reapplied in order —")
+    print("      01-b2-ngtcp2-wt-innesta.py, then this one.")
     r = subprocess.run(["git", "-C", ALBERO, "checkout", "--", "examples"])
     if r.returncode != 0:
-        print(f"   ⛔ git checkout e' fallito (uscita {r.returncode}):"
-              " non si e' tolto niente.")
+        print(f"   ⛔ git checkout failed (exit {r.returncode}):"
+              " nothing was removed.")
         return r.returncode
     for f in FILE_NOSTRI:
         try:
@@ -1625,25 +1631,25 @@ def togli():
         except FileNotFoundError:
             pass
 
-    # ⛔ E SI VERIFICA DI AVER TOLTO — qui prima si restituiva `0` SEMPRE,
-    #    qualunque cosa fosse successa.  `LEZIONI.md` §1.9, quarta regola: una
-    #    misura che puo' dire «zero» deve poter dire «sono fallita».
+    # ⛔ AND IT IS VERIFIED THAT IT HAS REMOVED — here before `0` was returned ALWAYS,
+    #    whatever had happened.  `LEZIONI.md` §1.9, fourth rule: a
+    #    measurement that can say "zero" must be able to say "I failed".
     guai = 0
     for percorso in FILE_TOCCATI:
         testo = leggi(os.path.join(ESEMPI, percorso))
         for marca in (MARCA, MARCA_B2, MARCA_B11):
             n = testo.count(marca)
             if n:
-                print(f"   NO  restano {n} righe con «{marca}» in {percorso}")
+                print(f"   NO  {n} lines with «{marca}» remain in {percorso}")
                 guai += n
     for f in FILE_NOSTRI:
         if os.path.exists(os.path.join(ESEMPI, f)):
-            print(f"   NO  examples/{f} e' ancora li'")
+            print(f"   NO  examples/{f} is still there")
             guai += 1
     if guai:
-        print("   ⛔ l'esempio NON e' com'era.")
+        print("   ⛔ the example is NOT as it was.")
         return 3
-    print("   OK  nessuna traccia di B2, B3 o B11, e i file nostri sono via")
+    print("   OK  no trace of B2, B3 or B11, and our files are gone")
     return 0
 
 
@@ -1651,37 +1657,37 @@ def main():
     if "--togli" in sys.argv:
         return togli()
 
-    print("== L'innesto di RCP nell'esempio di ngtcp2")
+    print("== The RCP graft in the ngtcp2 example")
     testo_cc = leggi(os.path.join(ESEMPI, "http3_server_proto_codec.cc"))
     if MARCA in testo_cc:
-        print("   ⚠ l'innesto c'e' gia': non si tocca niente.")
+        print("   ⚠ the graft is already there: nothing is touched.")
         return 0
 
-    # ⛔ E PRIMA DI TUTTO SI CHIEDE SE B2 C'E'.
+    # ⛔ AND FIRST OF ALL WE ASK WHETHER B2 IS THERE.
     #
-    #    Sei dei nostri appigli vengono da testo che ha introdotto B2: senza
-    #    quell'innesto contano tutti zero, e la diagnosi che ne usciva era
-    #    «gli appigli non sono UNO» — cioe' mandava a rileggere gli innesti
-    #    mentre il difetto era che mancava il denominatore.  ⚠ E' la forma E6,
-    #    il mittente dedotto invece che chiesto (`CODER.md` §3.7).
+    #    Six of our footholds come from text that B2 introduced: without
+    #    that graft they all count zero, and the diagnosis that came out was
+    #    "the footholds are not ONE" — that is, it sent people to reread the grafts
+    #    while the defect was that the denominator was missing.  ⚠ It is form E6,
+    #    the sender deduced instead of asked (`CODER.md` §3.7).
     if MARCA_B2 not in testo_cc:
-        print(f"   ⛔ manca l'innesto di B2: «{MARCA_B2}» non compare in")
+        print(f"   ⛔ the B2 graft is missing: «{MARCA_B2}» does not appear in")
         print("      http3_server_proto_codec.cc.")
-        print("      Questo innesto ci poggia sopra: si applica prima")
-        print("      01-b2-ngtcp2-wt-innesta.py, poi di nuovo questo comando.")
+        print("      This graft rests on it: apply first")
+        print("      01-b2-ngtcp2-wt-innesta.py, then this command again.")
         return 2
 
     lista = list(INNESTI) + [
         ("http3_server_proto_codec.cc",
          "std::expected<void, Error> ProtoCodec::wt_apri_sessione(Stream *stream) {\n",
-         None, "il corpo dei ganci"),
+         None, "the body of the hooks"),
     ] + list(INNESTI_OSPITE)
     testi, guasti = {}, 0
     for percorso, appiglio, sostituto, nome in lista:
         if sostituto is None:
-            # ⚠ Due corpi, e ciascuno ha il suo file: quello dei ganci va nel
-            #   codec, quello del ban lato ospite va nel `main`.  Prima qui
-            #   c'era un `CORPO` solo e la scelta non esisteva.
+            # ⚠ Two bodies, and each has its own file: the hooks one goes into the
+            #   codec, the host-side ban one goes into `main`.  Before, here
+            #   there was a single `CORPO` and the choice did not exist.
             corpo = CORPO_OSPITE if percorso == "server.cc" else CORPO
             sostituto = corpo + appiglio
         if percorso not in testi:
@@ -1689,77 +1695,77 @@ def main():
                 testi[percorso] = f.read()
         n = testi[percorso].count(appiglio)
         stato = "OK " if n == 1 else "NO "
-        print(f"   {stato} {nome:34s} appiglio trovato {n} volta/e  [{percorso}]")
+        print(f"   {stato} {nome:34s} foothold found {n} time(s)  [{percorso}]")
         if n != 1:
             guasti += 1
             continue
         testi[percorso] = testi[percorso].replace(appiglio, sostituto, 1)
 
-    # le due dichiarazioni pubbliche dei ganci, nella classe
+    # the two public declarations of the hooks, in the class
     a = ("  void wt_accoda(int64_t stream_id, std::span<const uint8_t> dati);\n")
     if testi["http3_server_proto_codec.h"].count(a) == 1:
         testi["http3_server_proto_codec.h"] = testi["http3_server_proto_codec.h"].replace(
             a, a + "\n"
                    " public:\n"
-                   "  // ⭐ REMOTIX B3 — pubblici perche' li chiamano i ganci, che\n"
-                   "  //    stanno in uno spazio anonimo fuori dalla classe: e' il\n"
-                   "  //    prezzo di tenere `rcp.c` in C, e si paga in due righe.\n"
+                   "  // ⭐ REMOTIX B3 — public because the hooks call them, which\n"
+                   "  //    sit in an anonymous namespace outside the class: it is the\n"
+                   "  //    price of keeping `rcp.c` in C, and it is paid in two lines.\n"
                    "  void wt_manda_controllo(const uint8_t *dati, size_t len);\n"
                    "  void wt_chiudi_adesso(uint8_t motivo);\n"
                    "  void wt_chiudi_sessione(uint8_t motivo);\n"
                    "\n"
                    " private:\n", 1)
-        print("   OK  i due ganci pubblici              appiglio trovato 1 volta/e")
+        print("   OK  the two public hooks               foothold found 1 time(s)")
     else:
-        print("   NO  i due ganci pubblici              appiglio NON unico")
+        print("   NO  the two public hooks               foothold NOT unique")
         guasti += 1
 
     if guasti:
-        print(f"\n   ⛔ {guasti} appigli non sono UNO: non si scrive niente,")
-        print("      e nessun file e' stato copiato.")
+        print(f"\n   ⛔ {guasti} footholds are not ONE: nothing is written,")
+        print("      and no file has been copied.")
         return 2
 
-    # ⛔ E I FILE NOSTRI SI COPIANO SOLO ADESSO.
+    # ⛔ AND OUR FILES ARE COPIED ONLY NOW.
     #
-    #    Prima venivano copiati in cima, PRIMA di guardare gli appigli: l'uscita
-    #    con 2 stampava «non si scrive niente» su un albero in cui `rcp.c`,
-    #    `rcp.h` e `autenticazione.c` erano gia' stati scritti — cioe' l'esito
-    #    d'errore lasciava l'albero in uno stato che l'esito d'errore negava
+    #    Before, they were copied at the top, BEFORE looking at the footholds: the exit
+    #    with 2 printed "nothing is written" on a tree in which `rcp.c`,
+    #    `rcp.h` and `autenticazione.c` had already been written — that is, the error
+    #    outcome left the tree in a state the error outcome denied
     #    (`LEZIONI.md` §1.9).
     #
-    # ⛔ I nostri file si COPIANO, non si linkano: l'albero di ngtcp2 e' di
-    #    qualcun altro, e un collegamento simbolico che punta fuori si rompe
-    #    in silenzio il giorno in cui qualcuno lo riclona.
+    # ⛔ Our files are COPIED, not linked: the ngtcp2 tree belongs to
+    #    someone else, and a symbolic link pointing outside breaks
+    #    silently the day someone reclones it.
     for f in FILE_NOSTRI:
         shutil.copyfile(os.path.join(SORGENTI, f), os.path.join(ESEMPI, f))
-    print(f"\n   OK  {len(FILE_NOSTRI)} file nostri copiati in examples/")
+    print(f"\n   OK  {len(FILE_NOSTRI)} of our files copied into examples/")
 
     for percorso, testo in testi.items():
         with open(os.path.join(ESEMPI, percorso), "w", encoding="utf-8") as f:
             f.write(testo)
-    print(f"   OK  {len(lista) + 1} innesti, in {len(testi)} file")
+    print(f"   OK  {len(lista) + 1} grafts, in {len(testi)} files")
 
-    print("\n== Quante righe sono cambiate — e sono DUE numeri diversi")
+    print("\n== How many lines changed — and they are TWO different numbers")
     d = subprocess.run(["git", "-C", ALBERO, "diff", "-U0", "--",
                         "examples"], capture_output=True, text=True).stdout.splitlines()
     agg = [r[1:] for r in d if r.startswith("+") and not r.startswith("+++")]
     vuote = sum(1 for r in agg if not r.strip())
     cod = len(agg) - vuote - righe_di_commento(agg)
-    print(f"   dentro l'esempio (B2 + i fili di B3): {len(agg)} righe, {cod} di codice")
+    print(f"   inside the example (B2 + the wires of B3): {len(agg)} lines, {cod} of code")
     for f in FILE_NOSTRI:
         righe = leggi(os.path.join(SORGENTI, f)).splitlines()
         vuote = sum(1 for r in righe if not r.strip())
         cod = len(righe) - vuote - righe_di_commento(righe)
-        # ⚠ E il nome del posto e' quello VERO: qui si stampava
-        #   `banchi/rcp/<file>` mentre si leggeva `/srv/src/rcp/<file>` — il
-        #   conto era giusto e il posto no, che e' il modo piu' comodo di
-        #   guardare il file sbagliato per mezz'ora.
-        print(f"   {SORGENTI}/{f:<20s} {len(righe):>4} righe, {cod:>4} di codice")
-    print("\n   ⭐ Il secondo gruppo e' il PROTOCOLLO, e non dipende da ngtcp2:")
-    print("      e' quel che si porta via se un giorno la libreria cambia.")
-    print("\n   ⚠ E la regola per dire che cos'e' un commento e' UNA SOLA, la")
-    print("     stessa dei tre innesti: fino al 10 agosto erano tre diverse, e")
-    print("     questa contava come commento le dereferenziazioni `*v = …`.")
+        # ⚠ And the name of the place is the REAL one: here it used to print
+        #   `banchi/rcp/<file>` while reading `/srv/src/rcp/<file>` — the
+        #   count was right and the place was not, which is the most convenient way of
+        #   looking at the wrong file for half an hour.
+        print(f"   {SORGENTI}/{f:<20s} {len(righe):>4} lines, {cod:>4} of code")
+    print("\n   ⭐ The second group is the PROTOCOL, and it does not depend on ngtcp2:")
+    print("      it is what is carried away if one day the library changes.")
+    print("\n   ⚠ And the rule for saying what a comment is is ONE SINGLE one, the")
+    print("     same as the three grafts: until 10 Aug there were three different ones, and")
+    print("     this one counted the dereferences `*v = …` as comments.")
     return 0
 
 

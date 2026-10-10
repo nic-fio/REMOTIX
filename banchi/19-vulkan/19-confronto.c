@@ -1,27 +1,27 @@
 /*
- * 19-confronto.c — la STESSA sequenza di desktop (il generatore del banco 18)
- * codificata da DUE motori sulla STESSA scheda:
+ * 19-confronto.c — the SAME desktop sequence (the generator of bench 18)
+ * encoded by TWO engines on the SAME card:
  *
- *   --motore vaapi    il codificatore del PRODOTTO (`src/codificatore.c` +
- *                     `src/vadiretta.c`) con la strada VA-API chiesta per nome
- *                     (`h264_vaapi`), strada della memoria o della scheda;
- *   --motore vulkan   il modulo nuovo `src/vulkanvideo.c`, da solo: dalla
- *                     memoria (`vulkanvideo_codifica_memoria`) o dal DMA-BUF
- *                     (`vulkanvideo_codifica_dmabuf`, copia zero via GBM);
- *   --motore scheda   ⭐ il PRODOTTO INTEGRATO (dall'innesto, 1 ott 2026):
- *                     `h264_scheda`/`hevc_scheda`, la strada scelta per
- *                     capacita' — sulla Radeon e' Vulkan dentro codificatore.c,
- *                     con tutte le cure a valle dei byte (tetto, cornice,
- *                     forma).  Il JSON dice quale strada e' uscita.
+ *   --motore vaapi    the PRODUCT's encoder (`src/codificatore.c` +
+ *                     `src/vadiretta.c`) with the VA-API path requested by name
+ *                     (`h264_vaapi`), memory path or card path;
+ *   --motore vulkan   the new module `src/vulkanvideo.c`, on its own: from
+ *                     memory (`vulkanvideo_codifica_memoria`) or from DMA-BUF
+ *                     (`vulkanvideo_codifica_dmabuf`, zero copy via GBM);
+ *   --motore scheda   ⭐ the INTEGRATED PRODUCT (since the graft, 1 Oct 2026):
+ *                     `h264_scheda`/`hevc_scheda`, the path chosen by
+ *                     capability — on the Radeon it is Vulkan inside codificatore.c,
+ *                     with all the cures downstream of the bytes (cap, frame,
+ *                     shape).  The JSON says which path came out.
  *
- * Il guscio e' quello di `banchi/18-scheda/18-confronto.c`: desktop finto ma
- * realistico (testo, finestre, scorrimento, trascinamento, cursore), una riga
- * CSV per fotogramma, in fondo una riga JSON con la confessione.  In piu':
- *   --qualita-a N:QP   il cambio di qualita' A CALDO al fotogramma N
- *   --capacita NODO    la scoperta delle capacita' Vulkan del nodo, in JSON
+ * The shell is that of `banchi/18-scheda/18-confronto.c`: fake but
+ * realistic desktop (text, windows, scrolling, dragging, cursor), one CSV
+ * line per frame, at the end one JSON line with the confession.  In addition:
+ *   --qualita-a N:QP   the HOT quality change at frame N
+ *   --capacita NODO    the discovery of the node's Vulkan capabilities, in JSON
  *
- * Il giudizio e' in `19-confronto.sh` (ffmpeg come strumento di misura, ffprobe,
- * PSNR/SSIM) e in `19-decodifica-chrome.sh` (Chrome vero, WebCodecs).
+ * The judgement is in `19-confronto.sh` (ffmpeg as measuring tool, ffprobe,
+ * PSNR/SSIM) and in `19-decodifica-chrome.sh` (real Chrome, WebCodecs).
  */
 #include "../../src/codificatore.h"
 #include "../../src/vulkanvideo.h"
@@ -37,7 +37,7 @@
 #include <gbm.h>
 #include <vulkan/vulkan.h>
 
-/* ─── un generatore deterministico: xorshift32 ──────────────────────────── */
+/* ─── a deterministic generator: xorshift32 ──────────────────────────────── */
 static uint32_t seme = 0x9E3779B9u;
 static uint32_t caso(void)
 {
@@ -47,8 +47,8 @@ static uint32_t caso(void)
 	return seme;
 }
 
-/* Un glifo 5x7 «stabile»: dipende solo da (riga, colonna) del testo, cosi' il
- * testo non cambia da un fotogramma all'altro se non scorre. */
+/* A "stable" 5x7 glyph: it depends only on (row, column) of the text, so the
+ * text does not change from one frame to the next unless it scrolls. */
 static uint32_t glifo(uint32_t riga, uint32_t colonna)
 {
 	uint32_t h = riga * 2654435761u ^ colonna * 40503u ^ 0xA5A5A5A5u;
@@ -80,8 +80,8 @@ static void rettangolo(Tela *t, int x0, int y0, int l, int a, uint8_t b, uint8_t
 	}
 }
 
-/* Righe di testo: glifi 5x7 in celle da (scala·6)x(scala·10), dal pixel
- * `scorrimento` in giu' (per far scorrere il terminale). */
+/* Lines of text: 5x7 glyphs in cells of (scale·6)x(scale·10), from pixel
+ * `scorrimento` downwards (to make the terminal scroll). */
 static void testo(Tela *t, int x0, int y0, int l, int a, int scala, uint32_t prima_riga,
                   int scorrimento, uint8_t b, uint8_t g, uint8_t r)
 {
@@ -99,7 +99,7 @@ static void testo(Tela *t, int x0, int y0, int l, int a, int scala, uint32_t pri
 		for (int c = 0; c < colonne; c++) {
 			uint32_t gl = glifo(prima_riga + (uint32_t) riga_testo, (uint32_t) c);
 			if ((gl & 7) == 0)
-				continue; /* uno spazio ogni otto */
+				continue; /* one space every eight */
 			for (int dx = 0; dx < 5 * scala; dx++) {
 				int bitx = dx / scala;
 				if (!((gl >> (dentro_y * 5 + bitx + 3)) & 1u))
@@ -119,9 +119,9 @@ static void finestra(Tela *t, int x, int y, int l, int a, int scala, uint32_t id
                      int scorrimento, bool scura)
 {
 	int barra = 28 * scala;
-	rettangolo(t, x - 1, y - 1, l + 2, a + 2, 60, 60, 60);           /* bordo */
-	rettangolo(t, x, y, l, barra, 0x3a, 0x4a, 0x5e);                 /* barra del titolo */
-	rettangolo(t, x + 10 * scala, y + 8 * scala, 12 * scala, 12 * scala, 0x38, 0x38, 0xe0); /* bottone */
+	rettangolo(t, x - 1, y - 1, l + 2, a + 2, 60, 60, 60);           /* border */
+	rettangolo(t, x, y, l, barra, 0x3a, 0x4a, 0x5e);                 /* title bar */
+	rettangolo(t, x + 10 * scala, y + 8 * scala, 12 * scala, 12 * scala, 0x38, 0x38, 0xe0); /* button */
 	rettangolo(t, x + 26 * scala, y + 8 * scala, 12 * scala, 12 * scala, 0x38, 0xc0, 0xe0);
 	testo(t, x + 50 * scala, y + 8 * scala, l / 2, 14 * scala, scala, id * 1000u, 0, 240, 240, 240);
 	if (scura) {
@@ -138,7 +138,7 @@ static void finestra(Tela *t, int x, int y, int l, int a, int scala, uint32_t id
 static void disegna(Tela *t, uint32_t n)
 {
 	int scala = (t->l >= 3000) ? 2 : 1;
-	/* sfondo: gradiente diagonale con una banda «wallpaper» */
+	/* background: diagonal gradient with a "wallpaper" band */
 	for (uint32_t y = 0; y < t->a; y++) {
 		uint8_t *riga = t->pixel + (size_t) y * t->passo;
 		for (uint32_t x = 0; x < t->l; x++) {
@@ -149,17 +149,17 @@ static void disegna(Tela *t, uint32_t n)
 			riga[x * 4 + 3] = 0;
 		}
 	}
-	/* la barra in basso (pannello) con «icone» */
+	/* the bottom bar (panel) with "icons" */
 	rettangolo(t, 0, (int) t->a - 40 * scala, (int) t->l, 40 * scala, 0x28, 0x28, 0x28);
 	for (int i = 0; i < 12; i++)
 		rettangolo(t, 12 * scala + i * 48 * scala, (int) t->a - 34 * scala, 28 * scala, 28 * scala,
 		           (uint8_t) (80 + i * 13), (uint8_t) (120 + i * 9), (uint8_t) (200 - i * 11));
 	int L = (int) t->l, A = (int) t->a;
-	/* finestra 1: un editor chiaro, fermo */
+	/* window 1: a light editor, still */
 	finestra(t, L / 20, A / 12, L * 9 / 20, A * 6 / 10, scala, 1, 0, false);
-	/* finestra 2: un terminale scuro che SCORRE di 3 px per fotogramma */
+	/* window 2: a dark terminal that SCROLLS by 3 px per frame */
 	finestra(t, L * 11 / 20, A / 8, L * 8 / 20, A * 5 / 10, scala, 2, (int) n * 3 * scala, true);
-	/* finestra 3: piccola, TRASCINATA fra i fotogrammi 30 e 90 */
+	/* window 3: small, DRAGGED between frames 30 and 90 */
 	int dx = 0, dy = 0;
 	if (n >= 30 && n < 90) {
 		dx = (int) (n - 30) * (L / 240);
@@ -169,7 +169,7 @@ static void disegna(Tela *t, uint32_t n)
 		dy = 60 * (A / 480);
 	}
 	finestra(t, L / 8 + dx, A * 6 / 10 + dy, L * 3 / 10, A * 3 / 10, scala, 3, 0, false);
-	/* il cursore: una freccetta che gira */
+	/* the cursor: a little arrow going round */
 	double ang = n * 0.11;
 	int cx = L / 2 + (int) (L / 3 * __builtin_cos(ang));
 	int cy = A / 2 + (int) (A / 3 * __builtin_sin(ang * 1.3));
@@ -180,7 +180,7 @@ static void disegna(Tela *t, uint32_t n)
 	(void) caso;
 }
 
-/* ─── il DMA-BUF con GBM, per la strada della scheda ────────────────────── */
+/* ─── the DMA-BUF with GBM, for the card path ───────────────────────────── */
 typedef struct {
 	struct gbm_bo *bo;
 	int fd;
@@ -188,19 +188,19 @@ typedef struct {
 	uint64_t modificatore;
 } Buffer;
 
-/* ⭐ 5 ott 2026, NVIDIA: il suo GBM rifiuta LINEARE + RENDERING. */
+/* ⭐ 5 Oct 2026, NVIDIA: its GBM refuses LINEAR + RENDERING. */
 static struct gbm_bo *bo_come_il_prodotto(struct gbm_device *g, uint32_t l, uint32_t a, uint64_t *mod)
 {
 	struct gbm_bo *bo = gbm_bo_create(g, l, a, GBM_FORMAT_XRGB8888, GBM_BO_USE_LINEAR | GBM_BO_USE_RENDERING);
 	*mod = DRM_FORMAT_MOD_LINEAR;
 	if (!bo) {
-		/* ⚠ Il banco scrive i pixel col processore (`gbm_bo_map`), e la NVIDIA non
-		 *    mappa le sue lastre a blocchi: qui si ripiega sul LINEARE senza
-		 *    RENDERING, che Vulkan importa uguale.  La lastra a blocchi del
-		 *    prodotto la prova la suite (il compositore ci disegna davvero). */
+		/* ⚠ The bench writes the pixels with the CPU (`gbm_bo_map`), and NVIDIA does not
+		 *    map its tiled slabs: here we fall back to LINEAR without
+		 *    RENDERING, which Vulkan imports just the same.  The product's tiled slab
+		 *    is tested by the suite (the compositor really draws into it). */
 		bo = gbm_bo_create(g, l, a, GBM_FORMAT_XRGB8888, GBM_BO_USE_LINEAR);
 		if (bo)
-			fprintf(stderr, "⚠ LINEARE+RENDERING rifiutato: lastra LINEARE senza RENDERING\n");
+			fprintf(stderr, "⚠ LINEAR+RENDERING refused: LINEAR slab without RENDERING\n");
 	}
 	return bo;
 }
@@ -212,12 +212,12 @@ static const char *nome_codec_arg(CodecVideo c)
 	return c == CODIFICATORE_H264 ? "h264" : "hevc";
 }
 
-/* La stringa che il browser passa a `VideoDecoder.configure()`, letta dai byte
- * del flusso Vulkan con il LETTORE del prodotto: si apre un codificatore del
- * prodotto?  No — si rilegge l'SPS con lo stesso modulo che lo fa nel prodotto
- * non e' esposto; qui basta il profilo/livello letti con ffprobe nel .sh, e la
- * stringa si compone dal livello che il modulo DICHIARA (il banco Chrome la
- * verifica: se Chrome la rifiuta e' un rosso vero). */
+/* The string the browser passes to `VideoDecoder.configure()`, read from the bytes
+ * of the Vulkan stream with the product's READER: is a product encoder
+ * opened?  No — re-reading the SPS with the same module that does it in the product
+ * is not exposed; here the profile/level read with ffprobe in the .sh is enough, and the
+ * string is composed from the level the module DECLARES (the Chrome bench
+ * verifies it: if Chrome refuses it, it is a real red). */
 static void stringa_codec(CodecVideo codec, int profondita, int livello_idc, char *fuori, size_t n)
 {
 	if (codec == CODIFICATORE_H264)
@@ -267,9 +267,9 @@ int main(int argc, char **argv)
 	int profondita = 8;
 	int chiave_a = -1, ridimensiona_a = -1, qualita_a = -1, qualita_qp = 0;
 	uint32_t ridim_l = 0, ridim_a = 0;
-	/* ⭐ --ciclo K:LxA,LxA,... — ogni K fotogrammi la misura successiva della
-	 *    lista (in giro): il cambio di tela ripetuto, come F-018 lo fa nel
-	 *    prodotto, ma senza browser (la caccia al GPU hang del 1 ott 2026) */
+	/* ⭐ --ciclo K:LxA,LxA,... — every K frames the next size in the
+	 *    list (round robin): the repeated canvas change, as F-018 does it in the
+	 *    product, but without a browser (the hunt for the GPU hang of 1 Oct 2026) */
 	uint32_t ciclo_ogni = 0, ciclo_n = 0, ciclo_l[16], ciclo_a[16], ciclo_i = 0;
 
 	for (int i = 1; i < argc; i++) {
@@ -300,10 +300,10 @@ int main(int argc, char **argv)
 		else if (!strcmp(k, "--qualita-a")) { sscanf(v, "%d:%d", &qualita_a, &qualita_qp); i++; }
 		else if (!strcmp(k, "--tetto")) { tetto = (uint32_t) atoi(v); i++; }
 		else if (!strcmp(k, "--sorgente-out")) { sorgente_out = v; i++; }
-		else { fprintf(stderr, "argomento ignoto: %s\n", k); return 2; }
+		else { fprintf(stderr, "unknown argument: %s\n", k); return 2; }
 	}
 	if (!uscita || !l || !a) {
-		fprintf(stderr, "uso: 19-confronto --motore vulkan|vaapi|scheda --codec h264|hevc --misura LxA --uscita F [...]\n"
+		fprintf(stderr, "usage: 19-confronto --motore vulkan|vaapi|scheda --codec h264|hevc --misura LxA --uscita F [...]\n"
 		                "     19-confronto --capacita /dev/dri/renderDNNN\n");
 		return 2;
 	}
@@ -311,7 +311,7 @@ int main(int argc, char **argv)
 	bool vulkan = strcmp(motore, "vulkan") == 0;
 	char errore[512] = { 0 };
 
-	/* ── il motore: il PRODOTTO (codificatore.c + vadiretta) o il modulo Vulkan ── */
+	/* ── the engine: the PRODUCT (codificatore.c + vadiretta) or the Vulkan module ── */
 	Codificatore *cod = NULL;
 	VulkanVideoDispositivo *vd = NULL;
 	VulkanVideo *vv = NULL;
@@ -326,21 +326,21 @@ int main(int argc, char **argv)
 			.chiavi_ogni = 0,
 		};
 		if (tetto) {
-			/* gli stessi tre numeri di `codificatore_tetto_banda()`: filo 80 %,
-			 * punto 75 % del filo, serbatoio 40 ms */
+			/* the same three numbers as `codificatore_tetto_banda()`: wire 80 %,
+			 * target 75 % of the wire, reservoir 40 ms */
 			r.banda_filo = (int64_t) tetto * 1000000 * 80 / 100;
 			r.banda_punto = r.banda_filo * 75 / 100;
 			r.serbatoio_bit = (int) (r.banda_filo * 40 / 1000);
 		}
 		vd = vulkanvideo_apri_dispositivo(nodo, errore, sizeof errore);
 		if (!vd) {
-			fprintf(stderr, "⛔ il dispositivo Vulkan non si e' aperto: %s\n", errore);
+			fprintf(stderr, "⛔ the Vulkan device did not open: %s\n", errore);
 			printf("{\"esito\":\"non aperto\",\"errore\":\"%s\"}\n", errore);
 			return 1;
 		}
 		vv = vulkanvideo_apri(vd, &r, errore, sizeof errore);
 		if (!vv) {
-			fprintf(stderr, "⛔ il codificatore Vulkan non si e' aperto: %s\n", errore);
+			fprintf(stderr, "⛔ the Vulkan encoder did not open: %s\n", errore);
 			printf("{\"esito\":\"non aperto\",\"errore\":\"%s\"}\n", errore);
 			return 1;
 		}
@@ -365,12 +365,12 @@ int main(int argc, char **argv)
 		};
 		cod = codificatore_nuovo(&r, errore, sizeof errore);
 		if (!cod) {
-			fprintf(stderr, "⛔ il codificatore non si e' aperto: %s\n", errore);
+			fprintf(stderr, "⛔ the encoder did not open: %s\n", errore);
 			printf("{\"esito\":\"non aperto\",\"errore\":\"%s\"}\n", errore);
 			return 1;
 		}
 		if (scheda && !codificatore_in_hardware(cod)) {
-			fprintf(stderr, "⛔ strada della scheda chiesta, ma il codificatore e' in software\n");
+			fprintf(stderr, "⛔ card path requested, but the encoder is in software\n");
 			return 1;
 		}
 	}
@@ -378,7 +378,7 @@ int main(int argc, char **argv)
 	FILE *fu = fopen(uscita, "wb");
 	FILE *fs = sorgente_out ? fopen(sorgente_out, "wb") : NULL;
 	if (!fu || (sorgente_out && !fs)) {
-		fprintf(stderr, "⛔ non apro i file d'uscita\n");
+		fprintf(stderr, "⛔ cannot open the output files\n");
 		return 1;
 	}
 
@@ -392,7 +392,7 @@ int main(int argc, char **argv)
 		drm_fd = open(nodo, O_RDWR | O_CLOEXEC);
 		gbm = drm_fd >= 0 ? gbm_create_device(drm_fd) : NULL;
 		if (!gbm) {
-			fprintf(stderr, "⛔ GBM non si apre su %s\n", nodo);
+			fprintf(stderr, "⛔ GBM does not open on %s\n", nodo);
 			return 1;
 		}
 	}
@@ -409,11 +409,11 @@ int main(int argc, char **argv)
 			ridimensiona_a = (int) i;
 			ridim_l = ciclo_l[ciclo_i];
 			ridim_a = ciclo_a[ciclo_i];
-			fprintf(stderr, "⭐ ciclo: fotogramma %u, tela %ux%u\n", i, ridim_l, ridim_a);
+			fprintf(stderr, "⭐ cycle: frame %u, canvas %ux%u\n", i, ridim_l, ridim_a);
 		}
 		if (ridimensiona_a >= 0 && (int) i == ridimensiona_a && getenv("ORDINE_PRODOTTO")) {
-			/* ⭐ l'ordine del PRODOTTO: la cattura (`wlroots.c`) butta le sue
-			 *    lastre GBM e fa le nuove PRIMA che il codificatore si riapra */
+			/* ⭐ the PRODUCT's order: the capture (`wlroots.c`) throws away its
+			 *    GBM slabs and makes the new ones BEFORE the encoder reopens */
 			for (int b = 0; b < BUFFER_QUANTI; b++)
 				if (buffer[b].bo) {
 					close(buffer[b].fd);
@@ -453,12 +453,12 @@ int main(int argc, char **argv)
 		if (qualita_a >= 0 && (int) i == qualita_a) {
 			if (vulkan) {
 				if (!vulkanvideo_qualita(vv, qualita_qp, errore, sizeof errore)) {
-					fprintf(stderr, "⛔ qualita': %s\n", errore);
+					fprintf(stderr, "⛔ quality: %s\n", errore);
 					return 1;
 				}
-				prossima_chiave = true; /* come fa `cambia_qualita()` nel prodotto */
+				prossima_chiave = true; /* as `cambia_qualita()` does in the product */
 			} else {
-				fprintf(stderr, "⚠ --qualita-a vale solo per il motore vulkan (nel prodotto scatta dal tetto dei 16 MiB)\n");
+				fprintf(stderr, "⚠ --qualita-a applies only to the vulkan engine (in the product it is triggered by the 16 MiB cap)\n");
 			}
 		}
 		if (chiave_a >= 0 && (int) i == chiave_a) {
@@ -530,7 +530,7 @@ int main(int argc, char **argv)
 				fg.us_codifica = tempi.us_codifica;
 				prossima_chiave = false;
 			} else {
-				fprintf(stderr, "⛔ fotogramma %u: %s\n", i, errore);
+				fprintf(stderr, "⛔ frame %u: %s\n", i, errore);
 			}
 		} else if (scheda) {
 			ok = codificatore_comprimi_scheda(cod, &s, &fg);

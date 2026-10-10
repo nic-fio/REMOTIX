@@ -1,33 +1,33 @@
 #!/bin/bash
 #
-# 17-t1c-installa.sh — fase 17, tappa T1c: REMOTIX installato A MANO in una VM
-# di `17-vm.sh`, famiglia per famiglia, e acceso come servizio sulla 7447.
+# 17-t1c-installa.sh — phase 17, step T1c: REMOTIX installed BY HAND in a VM
+# from `17-vm.sh`, family by family, and started as a service on 7447.
 #
-#   (sul server, come nicfio)
-#   bash 17-t1c-installa.sh <macchina> <bersaglio> [prodotto|diag]
-#     <macchina>   debian13-gnome, ubuntu2604-gnome, fedora44-gnome, arch-kde, …
-#     <bersaglio>  la cartella del binario in $T1C/bin/ (debian13, ubuntu2604,
+#   (on the server, as nicfio)
+#   bash 17-t1c-installa.sh <machine> <target> [prodotto|diag]
+#     <machine>    debian13-gnome, ubuntu2604-gnome, fedora44-gnome, arch-kde, …
+#     <target>     the binary's folder in $T1C/bin/ (debian13, ubuntu2604,
 #                  fedora44, arch, tumbleweed, leap16, alma10)
-#     diag         il binario di DIAGNOSI in $T1C/diag/<bersaglio>: lo stesso
-#                  sorgente con -DCOPIA_ZERO=0 (vedi sotto).  ⛔ NON e' il prodotto.
+#     diag         the DIAGNOSTIC binary in $T1C/diag/<target>: the same
+#                  source with -DCOPIA_ZERO=0 (see below).  ⛔ It is NOT the product.
 #
-# ⭐ Non e' l'installatore (T4-T5): e' la LISTA dei passi a mano che il prodotto
-#    portato vuole, scritta in un posto solo, e che la T3 trasforma nelle
-#    dipendenze dei pacchetti.  Ogni `case` qui sotto e' una riga di §13.2.
-# ⛔ NON si usa `src/provisiona.sh`: e' un allestitore DA BANCO (§4.4) e, fuori
-#    da Debian, rompe in silenzio — installa sempre `remotix.pam` (Debian,
-#    `@include`) in /etc/pam.d, e la sua verifica guarda solo che ci sia
-#    «pam_systemd», quindi dice «⭐ la macchina e' nello stato che il prodotto
-#    si aspetta» su Fedora e Arch dove nessuno entrerebbe.  `[M]` 29 set.
+# ⭐ This is not the installer (T4-T5): it is the LIST of manual steps that the
+#    ported product wants, written in one place only, and which T3 turns into
+#    the package dependencies.  Every `case` below is a line of §13.2.
+# ⛔ `src/provisiona.sh` is NOT used: it is a BENCH provisioner (§4.4) and, outside
+#    Debian, breaks silently — it always installs `remotix.pam` (Debian,
+#    `@include`) in /etc/pam.d, and its check only looks for
+#    "pam_systemd", so it says "⭐ the machine is in the state the product
+#    expects" on Fedora and Arch where nobody would get in.  `[M]` 29 Sep.
 #
-# ⚠ Il binario di diagnosi: nelle VM la scheda e' `virtio_gpu` senza 3D e
-#   Mutter/KWin rendono in software.  Il prodotto chiede per primo la strada
-#   della SCHEDA (DMA-BUF con modificatore obbligatorio, `cattura.c:1487`), il
-#   compositore non ha modificatori da offrire, la negoziazione PipeWire muore
-#   con «no more input formats» e il ripiego sulla MEMORIA scatta solo DOPO un
-#   fotogramma (`figlio.c:5362`) — che non arriva mai.  `[M]` 29 set, uguale
-#   su Debian 13 (GNOME 48), Ubuntu 26.04 (GNOME 50) e Arch (KDE).  Col
-#   binario di diagnosi (memoria da subito) il resto della catena si prova.
+# ⚠ The diagnostic binary: in the VMs the GPU is `virtio_gpu` without 3D and
+#   Mutter/KWin render in software.  The product first asks for the GPU
+#   path (DMA-BUF with mandatory modifier, `cattura.c:1487`), the
+#   compositor has no modifiers to offer, the PipeWire negotiation dies
+#   with "no more input formats" and the fallback to MEMORY kicks in only AFTER a
+#   frame (`figlio.c:5362`) — which never arrives.  `[M]` 29 Sep, the same
+#   on Debian 13 (GNOME 48), Ubuntu 26.04 (GNOME 50) and Arch (KDE).  With the
+#   diagnostic binary (memory from the start) the rest of the chain can be tested.
 set -euo pipefail
 m=${1:?macchina}; b=${2:?bersaglio}; q=${3:-prodotto}
 R=/media/REMOTIX/vm17
@@ -37,32 +37,32 @@ PAROLA=${REMOTIX_PAROLA_PROVA:-prova2026}
 
 case $m in
 debian13-*) n=1;; ubuntu2604-*) n=2;; fedora44-*) n=3;; arch-*) n=4;;
-tumbleweed-*) n=5;; leap16-*) n=6;; alma10-*) n=7;; *) echo "macchina sconosciuta: $m"; exit 2;;
+tumbleweed-*) n=5;; leap16-*) n=6;; alma10-*) n=7;; *) echo "unknown machine: $m"; exit 2;;
 esac
 case ${m#*-} in gnome) k=1;; kde) k=2;; xfce) k=3;; lxqt) k=4;; esac
 PORTA_SSH=$((2300 + 10 * n + k))
 O="-i $R/ssh/id_ed25519 -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR"
 if [ "$q" = diag ]; then BIN=$T1C/diag/$b/remotix; else BIN=$T1C/bin/$b/remotix; fi
 
-echo "==> $m: copio binario ($q), pagina e file di sistema"
+echo "==> $m: copying binary ($q), page and system files"
 $VM 'mkdir -p /tmp/t1c'
 # shellcheck disable=SC2086
 scp -q $O -P "$PORTA_SSH" "$BIN" "$T1C/pagina.html" "$T1C"/remotix.pam* \
 	"$T1C/remotix-niente-spegnimento.rules" "$T1C/remotix-tasti.conf" nicfio@localhost:/tmp/t1c/
 
-# ── 1. le dipendenze di esecuzione, famiglia per famiglia ─────────────────────
-echo "==> $m: dipendenze di esecuzione"
+# ── 1. the runtime dependencies, family by family ────────────────────────────
+echo "==> $m: runtime dependencies"
 case $m in
 debian13-*)
-	: ;;   # il gruppo del desktop porta gia' libavcodec61 (con libx264), pipewire, libei
+	: ;;   # the desktop group already brings libavcodec61 (with libx264), pipewire, libei
 ubuntu2604-*)
-	# ubuntu-desktop non porta libavcodec; e il GNOME «vanilla» (sessione `gnome`,
-	# che REMOTIX avvia) sta nel pacchetto gnome-session (§4.6, D8)
+	# ubuntu-desktop does not bring libavcodec; and "vanilla" GNOME (session `gnome`,
+	# which REMOTIX starts) is in the gnome-session package (§4.6, D8)
 	$VM 'sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q libavcodec62 libswscale9 libavutil60' ;;
 fedora44-*)
-	: ;;   # il gruppo Workstation porta gia' libavcodec-free (SENZA libx264/libx265)
+	: ;;   # the Workstation group already brings libavcodec-free (WITHOUT libx264/libx265)
 alma10-*)
-	# ffmpeg-free sta in EPEL 10 (con CRB), non in AppStream
+	# ffmpeg-free is in EPEL 10 (with CRB), not in AppStream
 	$VM 'sudo dnf -y -q install epel-release && sudo dnf config-manager --set-enabled crb && sudo dnf -y -q install libavcodec-free libavutil-free libswscale-free' ;;
 arch-*)
 	: ;;
@@ -71,7 +71,7 @@ tumbleweed-*)
 leap16-*)
 	$VM 'sudo zypper -n install libavcodec61 libavutil59 libswscale8 libpipewire-0_3-0 libva2 libei1' ;;
 esac
-# firewalld: ACCESO dopo il gruppo del desktop su Fedora/Alma (zona public, porta chiusa)
+# firewalld: ON after the desktop group on Fedora/Alma (public zone, port closed)
 $VM 'if systemctl is-active -q firewalld; then sudo firewall-cmd -q --permanent --add-port=7447/tcp --add-port=7447/udp && sudo firewall-cmd -q --reload; fi'
 case $m in
 *-xfce|*-lxqt)
@@ -79,16 +79,16 @@ case $m in
 	debian13-*|ubuntu2604-*) $VM 'sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q labwc' ;;
 	fedora44-*) $VM 'sudo dnf -y -q install labwc' ;;
 	arch-*) $VM 'sudo pacman -S --noconfirm --needed labwc' ;;
-	# ⚠ xfce4-session 4.20 e' X11: sotto labwc vuole Xwayland, e il pattern xfce
-	#   di Leap 16 non lo porta (`[M]` 29 set: «Cannot find Xwayland binary»)
+	# ⚠ xfce4-session 4.20 is X11: under labwc it wants Xwayland, and the xfce pattern
+	#   of Leap 16 does not bring it (`[M]` 29 Sep: "Cannot find Xwayland binary")
 	tumbleweed-*|leap16-*) $VM 'sudo zypper -n install labwc xwayland' ;;
 	esac ;;
 esac
 MANCANO=$($VM "ldd /tmp/t1c/remotix | grep 'not found' || true")
-if [ -n "$MANCANO" ]; then echo "⛔ librerie mancanti:"; echo "$MANCANO"; exit 1; fi
+if [ -n "$MANCANO" ]; then echo "⛔ missing libraries:"; echo "$MANCANO"; exit 1; fi
 
-# ── 2. il prodotto, il file PAM della famiglia, gli utenti negati ─────────────
-echo "==> $m: prodotto e PAM"
+# ── 2. the product, the family's PAM file, the denied users ─────────────────
+echo "==> $m: product and PAM"
 case $m in
 debian13-*|ubuntu2604-*) PAM=remotix.pam;        DOVE=/etc/pam.d/remotix ;;
 fedora44-*|alma10-*)     PAM=remotix.pam.fedora; DOVE=/etc/pam.d/remotix ;;
@@ -102,7 +102,7 @@ sudo install -D -m 644 /tmp/t1c/$PAM $DOVE
 [ -f /etc/remotix/utenti-negati ] || { sudo install -D -m 644 /dev/null /etc/remotix/utenti-negati; echo root | sudo tee /etc/remotix/utenti-negati >/dev/null; }
 command -v restorecon >/dev/null && sudo restorecon -R /opt/remotix /etc/remotix $DOVE || true"
 
-# ── 3. polkit, logind, sleep: le tre cinture di provisiona.sh §3 ─────────────
+# ── 3. polkit, logind, sleep: the three belts of provisiona.sh §3 ────────────
 echo "==> $m: polkit, logind, sleep"
 $VM 'sudo install -D -m 644 /tmp/t1c/remotix-niente-spegnimento.rules /etc/polkit-1/rules.d/50-remotix-niente-spegnimento.rules
 sudo install -D -m 644 /tmp/t1c/remotix-tasti.conf /etc/systemd/logind.conf.d/remotix-tasti.conf
@@ -111,8 +111,8 @@ printf "[Sleep]\nAllowSuspend=no\nAllowHibernation=no\nAllowSuspendThenHibernate
 sudo systemctl restart polkit 2>/dev/null || true
 sudo systemctl reload systemd-logind 2>/dev/null || true'
 
-# ── 4. l'utente di prova, nei gruppi LETTI DAI NODI della scheda ─────────────
-echo "==> $m: utente di prova"
+# ── 4. the test user, in the groups READ BY THE GPU NODES ────────────────────
+echo "==> $m: test user"
 $VM "id -u prova >/dev/null 2>&1 || sudo useradd -m -s /bin/bash prova
 echo 'prova:$PAROLA' | sudo chpasswd
 G=\$(for x in /dev/dri/card* /dev/dri/renderD*; do [ -e \$x ] && getent group \$(stat -c %g \$x) | cut -d: -f1; done | sort -u | paste -sd,)
@@ -120,12 +120,12 @@ G=\$(for x in /dev/dri/card* /dev/dri/renderD*; do [ -e \$x ] && getent group \$
 sudo loginctl enable-linger prova
 id prova"
 
-# ── 5. il servizio: unita' transitoria di sistema, come src/riavvia-7900.sh ──
-echo "==> $m: REMOTIX come servizio sulla 7447"
+# ── 5. the service: transient system unit, like src/riavvia-7900.sh ─────────
+echo "==> $m: REMOTIX as a service on 7447"
 $VM 'sudo mkdir -p /var/lib/remotix
 sudo systemd-run --unit=remotix-t1c --collect --working-directory=/opt/remotix \
   --property=KillMode=mixed --property=LimitRTPRIO=20 --property=LimitNICE=-11 \
   /opt/remotix/remotix --indirizzo 0.0.0.0 --nome localhost --porta 7447 \
   --certificati /var/lib/remotix/certificati --pagina /opt/remotix/pagina.html \
   --ban-file /var/lib/remotix/ban >/dev/null
-sleep 2; systemctl is-active remotix-t1c; sudo journalctl -u remotix-t1c -o cat --no-pager | grep -E "pronto:|PAM" | tail -2'
+sleep 2; systemctl is-active remotix-t1c; sudo journalctl -u remotix-t1c -o cat --no-pager | grep -E "ready:|PAM" | tail -2'

@@ -1,20 +1,20 @@
 # ===========================================================================
-# 11-scatole/Contenitore.xrdp — LE SCATOLE CON xrdp, per il confronto
+# 11-scatole/Contenitore.xrdp — THE BOXES WITH xrdp, for the comparison
 # ===========================================================================
 #
-# ⭐ fasi/20-le-prestazioni.md §7 (9 ott 2026): la STESSA scatola delle misure di
-#    REMOTIX (`rete11/<desktop>:p0`, dalla sua ricetta) con in piu' xrdp, cosi'
-#    l'unica differenza fra le due salite e' il sistema che porta il desktop.
-#    Decisione dell'utente del 9 ott: i 4 desktop, Intel e Radeon, come REMOTIX.
+# ⭐ fasi/20-le-prestazioni.md §7 (9 Oct 2026): the SAME box as REMOTIX's
+#    measurements (`rete11/<desktop>:p0`, from its recipe) plus xrdp, so that
+#    the only difference between the two climbs is the system that carries the desktop.
+#    User's decision of 9 Oct: the 4 desktops, Intel and Radeon, as for REMOTIX.
 #
-#    bash 11-accendi.sh costruisci <desktop>         (prima, se manca)
-#    bash 11-accendi.sh costruisci <desktop>-xrdp    ⇒ questa ricetta, DESKTOP=<desktop>
+#    bash 11-accendi.sh costruisci <desktop>         (first, if missing)
+#    bash 11-accendi.sh costruisci <desktop>-xrdp    ⇒ this recipe, DESKTOP=<desktop>
 #    bash 11-accendi.sh accendi    <desktop>-xrdp
 #
-# ⛔ xrdp come lo installa Debian 13, e la configurazione di Debian COM'E' (§7.5):
-#    niente ritocchi a `xrdp.ini`, o il confronto non vale.
-# ⚠ xrdp non conosce Wayland: qui ogni desktop gira su X11.  E' la sola differenza
-#   di ambiente, ed e' quella di xrdp, non una scelta nostra.
+# ⛔ xrdp as Debian 13 installs it, and Debian's configuration AS IT IS (§7.5):
+#    no tweaks to `xrdp.ini`, or the comparison is not valid.
+# ⚠ xrdp does not know Wayland: here every desktop runs on X11.  It is the only
+#   environment difference, and it is xrdp's, not a choice of ours.
 # ---------------------------------------------------------------------------
 ARG DESKTOP
 FROM localhost/rete11/${DESKTOP}:p0
@@ -23,32 +23,32 @@ ARG DESKTOP
 ENV DEBIAN_FRONTEND=noninteractive
 
 # ---------------------------------------------------------------------------
-# 1. xrdp, la cattura per Xorg e l'audio della sessione (§7.5, versioni di trixie).
+# 1. xrdp, the capture for Xorg and the session audio (§7.5, trixie versions).
 # ---------------------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
         xrdp xorgxrdp pipewire-module-xrdp dbus-x11 x11-xserver-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # ---------------------------------------------------------------------------
-# 2. ⚠ IL DESKTOP SU X11 — le scatole delle misure girano su Wayland e non hanno
-#    i pezzi X11.  Per ciascuno, quel che Debian 13 installa per la sua sessione
-#    «su Xorg», e niente di piu':
-#      gnome  `gnome-session-xsession` (la sessione «GNOME on Xorg»; Mutter 48 fa
-#             ancora X11)
-#      kde    `kwin-x11` (in Plasma 6.3 KWin per X11 e' un pacchetto a parte;
-#             `startplasma-x11` c'e' gia')
-#      xfce   `xfwm4` e `xfce4-settings` (la scatola usa labwc e non ha il
-#             gestore delle finestre di X11)
-#      lxqt   `openbox` (il gestore delle finestre di serie di LXQt su X11)
-#    ⛔ Sono quel che serve al desktop per essere se stesso su X11, non un aiuto
-#       a xrdp.  Il comando della sessione va in `~/.xsession` (§3).
+# 2. ⚠ THE DESKTOP ON X11 — the measurement boxes run on Wayland and do not have
+#    the X11 pieces.  For each, what Debian 13 installs for its
+#    «on Xorg» session, and nothing more:
+#      gnome  `gnome-session-xsession` (the «GNOME on Xorg» session; Mutter 48 still
+#             does X11)
+#      kde    `kwin-x11` (in Plasma 6.3 KWin for X11 is a separate package;
+#             `startplasma-x11` is already there)
+#      xfce   `xfwm4` and `xfce4-settings` (the box uses labwc and does not have the
+#             X11 window manager)
+#      lxqt   `openbox` (LXQt's default window manager on X11)
+#    ⛔ They are what the desktop needs to be itself on X11, not a help
+#       to xrdp.  The session command goes in `~/.xsession` (§3).
 # ---------------------------------------------------------------------------
 RUN case "$DESKTOP" in \
       gnome) P="gnome-session-xsession"; S="env XDG_SESSION_TYPE=x11 gnome-session" ;; \
       kde)   P="kwin-x11";                S="startplasma-x11" ;; \
       xfce)  P="xfwm4 xfce4-settings";    S="startxfce4" ;; \
       lxqt)  P="openbox";                 S="startlxqt" ;; \
-      *) echo "desktop sconosciuto: $DESKTOP"; exit 1 ;; \
+      *) echo "unknown desktop: $DESKTOP"; exit 1 ;; \
     esac \
     && apt-get update && apt-get install -y --no-install-recommends $P \
     && rm -rf /var/lib/apt/lists/* \
@@ -58,13 +58,13 @@ RUN case "$DESKTOP" in \
          install -m 755 -o "$u" -g "$u" /etc/skel/.xsession "/home/$u/.xsession"; done
 
 # ---------------------------------------------------------------------------
-# 3. La sessione: `startwm.sh` di Debian lancia `~/.xsession` se c'e' (la prima
-#    delle tre eccezioni di §7.5).  Lo scheletro serve agli inquilini nuovi
-#    (`c16NNNuN`), la copia a mano a quelli gia' fatti.
+# 3. The session: Debian's `startwm.sh` launches `~/.xsession` if it is there (the first
+#    of the three exceptions of §7.5).  The skeleton serves new tenants
+#    (`c16NNNuN`), the manual copy those already made.
 #
-# 4. xrdp NON parte da solo: `rete11-server` e xrdp non stanno accesi insieme.
-#    Lo accende `16-salita.py --sistema xrdp` (o la mano: `systemctl start xrdp`).
-#    ⚠ La porta 3389 e' quella dell'ospite (`--network=host`).
+# 4. xrdp does NOT start by itself: `rete11-server` and xrdp are not on together.
+#    `16-salita.py --sistema xrdp` starts it (or by hand: `systemctl start xrdp`).
+#    ⚠ Port 3389 is the host's (`--network=host`).
 # ---------------------------------------------------------------------------
 RUN systemctl disable xrdp.service xrdp-sesman.service 2>/dev/null || true
 

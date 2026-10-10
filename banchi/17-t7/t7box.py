@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-# T7 fase 17 — il lato DENTRO la scatola (root, podman exec).
-#   t7box.py foto UTENTE   → JSON: i processi dell'utente e il capo del palco
-# Il capo del palco si riconosce come lo riconosce il prodotto (src/ritrovo.h):
-# pid = sid, dentro la scope di una sessione logind «remotix», padre fuori da
-# quella scope.  Qui lo si guarda da fuori, per confrontarlo col registro.
+# T7 phase 17 — the side INSIDE the box (root, podman exec).
+#   t7box.py foto USER     → JSON: the user's processes and the head of the stage
+# The head of the stage is recognised as the product recognises it (src/ritrovo.h):
+# pid = sid, inside the scope of a "remotix" logind session, parent outside
+# that scope.  Here it is looked at from outside, to compare it with the log.
 import json
 import os
 import pwd

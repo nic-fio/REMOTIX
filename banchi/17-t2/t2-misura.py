@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-# T2 fase 17 — che cosa uccide i desktop quando si ferma REMOTIX.  Gira SUL SERVER
-# come nicfio, nell'ambiente di 15-una.sh (browser veri nel labwc della suite).
-#   python3 t2-misura.py DESKTOP ESPERIMENTO [ESPERIMENTO...]
-#   ESPERIMENTO: ferma (systemctl stop rete11-server) · uccidi-padre (kill -KILL
-#   al MainPID) · uccidi-figlio (kill -TERM al solo figlio, padre vivo, browser chiuso)
+# T2 phase 17 — what kills the desktops when REMOTIX stops.  Runs ON THE SERVER
+# as nicfio, in the environment of 15-una.sh (real browsers in the suite's labwc).
+#   python3 t2-misura.py DESKTOP EXPERIMENT [EXPERIMENT...]
+#   EXPERIMENT: ferma (systemctl stop rete11-server) · uccidi-padre (kill -KILL
+#   to the MainPID) · uccidi-figlio (kill -TERM to the child only, parent alive, browser closed)
 import fcntl
 import os
 import subprocess
@@ -38,7 +38,7 @@ def tieni():
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
             break
         except OSError:
-            log("serratura presa da: %s — aspetto" % os.pread(fd, 200, 0).decode(errors="replace"))
+            log("lock held by: %s — waiting" % os.pread(fd, 200, 0).decode(errors="replace"))
             time.sleep(30)
     os.ftruncate(fd, 0)
     os.pwrite(fd, ("T2-misura-fase17 pid %d" % os.getpid()).encode(), 0)
@@ -69,14 +69,14 @@ def una(esp):
     rimetti = False
     with S.Sessione(o, "917", E) as s:
         u = s.chi
-        log("inquilino %s, entro col browser" % u)
+        log("tenant %s, entering with the browser" % u)
         ok, m = s.entra()
-        log("entra: %s %s" % (ok, m[:120]))
+        log("enter: %s %s" % (ok, m[:120]))
         if not ok:
-            return "entra fallito: " + m
+            return "enter failed: " + m
         time.sleep(10)
         s.foto("desktop-prima")
-        # i tre testimoni dell'ora
+        # the three time witnesses
         import base64
         s.sc.dentro("echo %s | base64 -d > /home/%s/t2-ora.sh; chown %s /home/%s/t2-ora.sh"
                     % (base64.b64encode(ORA.encode()).decode(), u, u, u), 30)
@@ -85,21 +85,21 @@ def una(esp):
         print(s.nella_sessione("systemd-run --user --scope --unit=t2-testimone-utente "
                                "sh $HOME/t2-ora.sh utente"))
         time.sleep(4)
-        # chi e' rimasto in init.scope (lanciato da podman exec) va nella scope della
-        # sessione: e' dove lo metterebbe il pannello di xfce/lxqt
+        # whoever stayed in init.scope (launched by podman exec) goes into the session's
+        # scope: it is where the xfce/lxqt panel would put it
         c, t = s.sc.dentro(
             "uid=$(id -u %(u)s); sc=$(loginctl show-session $(loginctl list-sessions --no-legend "
             "| awk -v uid=$uid '$2==uid && $6==\"user\"{print $1}' | head -1) -p Scope --value); "
             "cg=/sys/fs/cgroup/user.slice/user-$uid.slice/$sc; echo scope=$sc; "
             "for p in $(ps -u %(u)s -o pid=); do grep -qx 0::/init.scope /proc/$p/cgroup 2>/dev/null && "
-            "{ echo $p > $cg/cgroup.procs && echo spostato $p $(cat /proc/$p/comm); }; done" % {"u": u}, 30)
-        log("spostati in sessione: %s" % t.replace("\n", " · "))
+            "{ echo $p > $cg/cgroup.procs && echo moved $p $(cat /proc/$p/comm); }; done" % {"u": u}, 30)
+        log("moved into the session: %s" % t.replace("\n", " · "))
         time.sleep(3)
         s.foto("desktop-coi-testimoni")
         c, prima = s.sc.dentro("python3 /tmp/t2box.py foto %s" % u, 60)
         scrivi(ev, "prima.txt", prima)
         c, t = s.sc.dentro("tail -n1 /home/%s/ora-*.txt" % u, 20)
-        log("testimoni: %s" % t.replace("\n", " "))
+        log("witnesses: %s" % t.replace("\n", " "))
         c, t0 = s.sc.dentro("date +%s", 10)
         t0 = int(t0.strip()) - 2
         s.sc.dentro("rm -rf /tmp/t2run; mkdir -p /tmp/t2run; setsid python3 /tmp/t2box.py "
@@ -109,10 +109,10 @@ def una(esp):
             if "si" in t:
                 break
             time.sleep(0.5)
-        log("sorveglianza pronta")
+        log("watch ready")
         padre = s.sc.dentro("systemctl show -p MainPID --value rete11-server", 10)[1].strip()
         figlio = s.sc.dentro("ps -eo pid=,ppid=,user:32= | awk '$2==%s && $3==\"%s\"{print $1}' | head -1" % (padre, u), 10)[1].strip()
-        log("padre %s figlio %s" % (padre, figlio))
+        log("parent %s child %s" % (padre, figlio))
         if esp == "uccidi-figlio":
             s.spegni_browser()
             time.sleep(4)
@@ -125,28 +125,28 @@ def una(esp):
             rimetti = True
         elif esp == "uccidi-figlio":
             c, t = s.sc.dentro("kill -TERM %s; date +%%H:%%M:%%S.%%N" % figlio, 30)
-        log("AZIONE %s alle %s → %s" % (esp, ta.strip(), t.strip().replace("\n", " ")))
+        log("ACTION %s at %s → %s" % (esp, ta.strip(), t.strip().replace("\n", " ")))
         scrivi(ev, "azione.txt", "%s\npadre %s figlio %s\ninizio %s\n%s\n" % (esp, padre, figlio, ta, t))
         time.sleep(38)
         c, dopo = s.sc.dentro("python3 /tmp/t2box.py foto %s" % u, 60)
         scrivi(ev, "dopo.txt", dopo)
-        # ⭐ IL RIATTACCO: il servizio si riaccende (come fa la scatola) e l'utente
-        #   rientra — si guarda se ritrova il SUO desktop o uno nuovo
+        # ⭐ THE REATTACH: the service is restarted (as the box does) and the user
+        #   comes back in — we look at whether they find THEIR desktop or a new one
         if rimetti:
             c, t = sudo("bash /media/REMOTIX/rete11/11-accendi.sh server %s" % D, 120)
-            log("servizio riacceso: rc %s" % c)
+            log("service restarted: rc %s" % c)
             rimetti = False
         s.spegni_browser()
         s.accendi_browser()
         ok, m = s.entra()
-        log("riattacco: %s %s" % (ok, m[:100]))
+        log("reattach: %s %s" % (ok, m[:100]))
         time.sleep(15)
         s.foto("desktop-dopo-il-riattacco")
         c, t = s.sc.dentro("python3 /tmp/t2box.py foto %s" % u, 60)
         scrivi(ev, "riattacco.txt", t)
         c, t = s.sc.dentro("for f in /home/%s/ora-*.txt; do echo \"== $f\"; tail -n3 $f; done" % u, 20)
         scrivi(ev, "ore-riattacco.txt", t)
-        log("ore al riattacco: %s" % t.replace("\n", " "))
+        log("times at reattach: %s" % t.replace("\n", " "))
         for _ in range(120):
             c, t = s.sc.dentro("pgrep -f 't2box.py sorveglia' >/dev/null || echo finita", 10)
             if "finita" in t:
@@ -163,14 +163,14 @@ def una(esp):
         scrivi(ev, "journal.txt", t)
         c, t = s.sc.dentro("for f in /home/%s/ora-*.txt; do echo \"== $f\"; tail -n3 $f; done" % u, 20)
         scrivi(ev, "ore.txt", t)
-        log("ultime ore: %s" % t.replace("\n", " "))
+        log("last times: %s" % t.replace("\n", " "))
         c, t = s.sc.dentro("tail -n 400 /var/lib/rete11/registro.log", 30)
         scrivi(ev, "registro-remotix.txt", t)
-    log("inquilino sgomberato")
+    log("tenant cleared")
     if rimetti:
         c, t = sudo("bash /media/REMOTIX/rete11/11-accendi.sh server %s" % D, 120)
-        log("servizio riacceso: rc %s %s" % (c, t.strip().splitlines()[-1:] if t.strip() else ""))
-    return "fatto"
+        log("service restarted: rc %s %s" % (c, t.strip().splitlines()[-1:] if t.strip() else ""))
+    return "done"
 
 
 if __name__ == "__main__":
@@ -182,9 +182,9 @@ if __name__ == "__main__":
         except Exception as x:                  # noqa: BLE001
             import traceback
             traceback.print_exc()
-            log("=== %s: CADUTO %r" % (e, x))
+            log("=== %s: CRASHED %r" % (e, x))
         c, t = sudo("podman exec %s systemctl is-active rete11-server" % BOX)
         if t.strip() != "active":
             c, t = sudo("bash /media/REMOTIX/rete11/11-accendi.sh server %s" % D, 120)
-            log("servizio riacceso dopo la caduta: rc %s" % c)
+            log("service restarted after the crash: rc %s" % c)
     os.close(fd)

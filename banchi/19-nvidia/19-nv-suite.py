@@ -1,28 +1,28 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-19-nv-suite — IL SOTTOINSIEME DELLA SUITE DELLA FASE 15 SULLA MACCHINA NVIDIA
+19-nv-suite — THE SUBSET OF THE PHASE 15 SUITE ON THE NVIDIA MACHINE
 
-    (da `19-nv-macchina.sh suite`, come l'utente del banco `rxbanco`)
+    (from `19-nv-macchina.sh suite`, as the bench user `rxbanco`)
     python3 19-nv-suite.py --registro R.jsonl --evidenze DIR --porta 7447 --modo finestra|headless
 
-Le prove sono quelle della suite, IDENTICHE (banchi/15-suite/15-f*.py, non copiate):
+The tests are the suite's, IDENTICAL (banchi/15-suite/15-f*.py, not copied):
     F-001 F-002 (15-f001) · F-003 (15-f003) · F-011 (15-f011) · F-013 (15-f013)
     F-016 (15-f016) · F-018 (15-f018)
-coi due browser (Firefox con Marionette, Chrome con CDP), sana + guasto, tetto 10 minuti
-ciascuna, come `15-giro.py`.  ⭐ L'unica differenza e' dove stanno le cose:
+with the two browsers (Firefox with Marionette, Chrome with CDP), healthy + fault, cap 10 minutes
+each, like `15-giro.py`.  ⭐ The only difference is where things are:
 
-  - NIENTE SCATOLA: sul server di casa il prodotto gira in `rete11-xfce` e la suite entra
-    con `sudo podman exec`; qui il prodotto e' INSTALLATO sulla macchina (col suo
-    installatore) e «dentro la scatola» vuol dire `sudo -n sh -c` sulla macchina stessa.
-    ⇒ si sostituisce `Scatola.dentro` (lo stesso innesto che `suite.py` fa gia' per
-    REMOTIX_SUL_SERVER), e il registro del server e' il file dove l'unita' scrive lo stderr;
-  - un desktop solo, XFCE (sotto labwc: lo accende il prodotto, sulla scheda);
-  - i browser nel labwc senza schermo DEI BROWSER (pixman, 3840x2160) come
-    `15-compositori.sh`; se quello non nasce, HEADLESS — e la riga lo porta scritto.
+  - NO BOX: on the home server the product runs in `rete11-xfce` and the suite enters
+    with `sudo podman exec`; here the product is INSTALLED on the machine (with its
+    installer) and "inside the box" means `sudo -n sh -c` on the machine itself.
+    ⇒ `Scatola.dentro` is replaced (the same graft that `suite.py` already does for
+    REMOTIX_SUL_SERVER), and the server log is the file where the unit writes stderr;
+  - one desktop only, XFCE (under labwc: the product starts it, on the card);
+  - the browsers in THE BROWSERS' headless labwc (pixman, 3840x2160) like
+    `15-compositori.sh`; if that one is not born, HEADLESS — and the line says so.
 
-Il registro ha le righe di `15-giro.py` (giro «19-nvidia»): `15-rapporto.py` ne fa il
-rapporto come per gli altri giri.  Uscita: 0 tutte PASS · 1 almeno un FAIL · 3 BLOCKED.
+The log has the lines of `15-giro.py` (run "19-nvidia"): `15-rapporto.py` makes the
+report as for the other runs.  Exit: 0 all PASS · 1 at least one FAIL · 3 BLOCKED.
 """
 import argparse
 import datetime
@@ -51,19 +51,19 @@ CHROME_OPZIONI = ("--ozone-platform=wayland --disable-backgrounding-occluded-win
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  DENTRO UNA PROVA (processo figlio): l'innesto, poi la prova vera
+#  INSIDE A TEST (child process): the graft, then the real test
 # ═══════════════════════════════════════════════════════════════════════════
 def interno(file, resto):
     sys.path.insert(0, SUITE)
     import suite as S                                              # noqa: E402
 
     def dentro(self, riga, secondi=90):
-        """(codice, uscita) di `riga` da root SULLA MACCHINA (la «scatola» e' lei)."""
+        """(code, output) of `riga` as root ON THE MACHINE (the "box" is the machine)."""
         try:
             r = subprocess.run(["sudo", "-n", "sh", "-c", riga], capture_output=True,
                                text=True, errors="replace", timeout=secondi)
         except subprocess.TimeoutExpired:
-            return None, "(nessuna risposta in %d s)" % secondi
+            return None, "(no answer within %d s)" % secondi
         return r.returncode, (r.stdout + r.stderr).strip()
 
     S.C20V.Scatola.dentro = dentro
@@ -73,7 +73,7 @@ def interno(file, resto):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  IL GIRO
+#  THE RUN
 # ═══════════════════════════════════════════════════════════════════════════
 def leggi(file):
     testo = open(file, encoding="utf-8").read()
@@ -136,17 +136,17 @@ def una(o, file, browser, base):
             finally:
                 cane.cancel()
             if scaduto:
-                fuori = "oltre i %d minuti: la prova e' stata fermata" % (TETTO_S // 60)
+                fuori = "over %d minutes: the test was stopped" % (TETTO_S // 60)
         except Exception as e:                                       # noqa: BLE001
-            fuori = "il banco non ha potuto lanciare la prova: %r" % e
+            fuori = "the bench could not launch the test: %r" % e
     durata = round(time.time() - t0)
     viste = {(r.get("funzione"), r.get("passata")) for r in righe}
     for f in funzioni:
         for ps in ("sana", "guasto"):
             if (f, ps) not in viste:
                 righe.append({"funzione": f, "passata": ps, "esito": "BLOCKED",
-                              "ragione": fuori or "la prova non ha dato un giudizio per %s "
-                              "(vedi uscita.log)" % f, "guasto_visto": None, "evidenze": []})
+                              "ragione": fuori or "the test gave no verdict for %s "
+                              "(see uscita.log)" % f, "guasto_visto": None, "evidenze": []})
     uscita = []
     for r in righe:
         f = r.get("funzione", "?")
@@ -186,21 +186,21 @@ def principale():
     a.add_argument("--evidenze", required=True)
     a.add_argument("--porta", type=int, default=7447)
     a.add_argument("--modo", choices=("finestra", "headless"), default="finestra")
-    a.add_argument("--prove", default="", help="solo queste (es. f001,f018)")
+    a.add_argument("--prove", default="", help="only these (e.g. f001,f018)")
     a.add_argument("--browser", default=",".join(BROWSER))
     a.add_argument("--desktop", default="xfce", choices=("gnome", "kde", "xfce", "lxqt"))
     o = a.parse_args()
     if "RXNV_REGISTRO" not in os.environ:
-        a.error("manca RXNV_REGISTRO (il file dove il server scrive)")
+        a.error("RXNV_REGISTRO is missing (the file the server writes to)")
     os.makedirs(o.evidenze, exist_ok=True)
     tutti = []
     globals()["DESKTOP"] = o.desktop
-    # le porte di debug del desktop come in 15-giro.py
+    # the desktop's debug ports as in 15-giro.py
     base = 3100 + 10 * ("gnome", "kde", "xfce", "lxqt").index(o.desktop)
-    print("⭐ 19-nv-suite · %s · %s · browser %s · porta %d" % (
+    print("⭐ 19-nv-suite · %s · %s · browser %s · port %d" % (
         o.desktop, o.modo, o.browser, o.porta), flush=True)
-    # ⭐ 6 ott 2026: con --prove si sceglie fra TUTTE le prove della fase 15 (es. f012 per il
-    #    suono senza video), non solo fra le sei del giro; «-f012-» non prende f012b
+    # ⭐ 6 Oct 2026: with --prove one chooses among ALL the phase 15 tests (e.g. f012 for
+    #    sound without video), not only among the six of the run; "-f012-" does not pick f012b
     scelte = PROVE
     if o.prove:
         voluti = ["-%s-" % x.strip() for x in o.prove.split(",") if x.strip()]
@@ -217,7 +217,7 @@ def principale():
     for r in tutti:
         conto[r["esito"]] = conto.get(r["esito"], 0) + 1
     riassunto = " ".join("%s=%d" % kv for kv in sorted(conto.items()))
-    print("FINE %s" % riassunto, flush=True)
+    print("END %s" % riassunto, flush=True)
     if conto.get("FAIL"):
         return 1
     return 3 if conto.get("BLOCKED") or not tutti else 0

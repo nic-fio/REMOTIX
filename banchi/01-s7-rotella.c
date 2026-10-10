@@ -1,49 +1,49 @@
 /*
- * 01-s7-rotella.c — l'INIETTORE della misura S7: da che parte gira la rotella.
+ * 01-s7-rotella.c — the INJECTOR of measurement S7: which way the wheel turns.
  *
- *   ./01-s7-rotella            apre la sessione, aspetta comandi su standard input
+ *   ./01-s7-rotella            opens the session, waits for commands on standard input
  *
- * Comandi (uno per riga, la risposta comincia sempre con «S7: »):
+ * Commands (one per line, the answer always starts with «S7: »):
  *
- *   centro            porta il puntatore al centro della regione
- *   scatto <dx> <dy>  ei_device_scroll_discrete(dx, dy)   ← LA misura
- *   liscio <dx> <dy>  ei_device_scroll_delta(dx, dy)      ← il confronto
- *   stato             ristampa regione, dispositivo, capacita'
- *   fine              esce
- *
- * ---------------------------------------------------------------------------
- * ⛔ PERCHE' `libei` E NON `NotifyPointerAxisDiscrete`
- *
- * Mutter espone anche i vecchi metodi `Notify*` su D-Bus, e da li' uno scatto
- * si manda in una riga di `gdbus`.  ⛔ Ma il prodotto inietta con **libei**
- * (`fondamenta/remotix-c/src/input.c`, `ei_device_scroll_discrete`), e il segno e'
- * proprio la cosa che le due strade potrebbero non condividere: misurare sulla
- * strada che il prodotto non usa sarebbe la forma **E10** — un numero preso su
- * un motore diverso da quello del prodotto.
+ *   centro            brings the pointer to the centre of the region
+ *   scatto <dx> <dy>  ei_device_scroll_discrete(dx, dy)   ← THE measurement
+ *   liscio <dx> <dy>  ei_device_scroll_delta(dx, dy)      ← the comparison
+ *   stato             reprints region, device, capabilities
+ *   fine              exits
  *
  * ---------------------------------------------------------------------------
- * ⛔ E QUEL CHE `libei` NON DICE, ED E' IL MOTIVO PER CUI S7 ESISTE
+ * ⛔ WHY `libei` AND NOT `NotifyPointerAxisDiscrete`
  *
- * `libei.h` 1.3.901, documentazione di `ei_device_scroll_discrete` letta il 10
- * agosto 2026, dichiara **la grandezza e non il verso**:
+ * Mutter also exposes the old `Notify*` methods on D-Bus, and from there a click
+ * is sent in one line of `gdbus`.  ⛔ But the product injects with **libei**
+ * (`fondamenta/remotix-c/src/input.c`, `ei_device_scroll_discrete`), and the sign
+ * is precisely the thing the two roads might not share: measuring on the road
+ * the product does not use would be form **E10** — a number taken on an engine
+ * different from the product's.
+ *
+ * ---------------------------------------------------------------------------
+ * ⛔ AND WHAT `libei` DOES NOT SAY, AND IT IS THE REASON S7 EXISTS
+ *
+ * `libei.h` 1.3.901, documentation of `ei_device_scroll_discrete` read on 10
+ * Aug 2026, declares **the magnitude and not the direction**:
  *
  *     «A discrete scroll event is based logical scroll units (equivalent to
  *      one mouse wheel click). The value for one scroll unit is 120 …
  *      @param y The y scroll distance in fractions or multiples of 120»
  *
- * Nessuna riga dice se `+120` sia «in su» o «in giu'».  ⭐ Non e' una
- * dimenticanza nostra: **la convenzione non sta nell'API**, sta nel
- * compositore — che e' esattamente il motivo per cui `RCP.md` §7.3 tiene la
- * riga a `[?]` e ordina di misurarla invece di deciderla.
+ * No line says whether `+120` is «up» or «down».  ⭐ It is not an oversight of
+ * ours: **the convention is not in the API**, it is in the compositor — which is
+ * exactly the reason `RCP.md` §7.3 keeps the line at `[?]` and orders measuring
+ * it instead of deciding it.
  *
  * ---------------------------------------------------------------------------
- * ⛔ IL PUNTATORE SI PORTA AL CENTRO PRIMA DI OGNI SCATTO, E NON E' CORTESIA
+ * ⛔ THE POINTER IS BROUGHT TO THE CENTRE BEFORE EVERY CLICK, AND IT IS NOT COURTESY
  *
- * Uno scatto va alla finestra sotto il puntatore.  Un puntatore emulato nasce
- * a `0,0`, e `0,0` su GNOME e' la barra in alto — cioe' la Shell, non la
- * pagina.  Senza questa mossa la misura avrebbe l'aspetto di «la pagina non si
- * muove», che e' anche l'aspetto di «il segno e' zero» e di «l'iniezione non
- * funziona»: tre cause, un solo silenzio (`LEZIONI.md` §1.9).
+ * A click goes to the window under the pointer.  An emulated pointer is born at
+ * `0,0`, and `0,0` on GNOME is the top bar — that is the Shell, not the page.
+ * Without this move the measurement would look like «the page does not move»,
+ * which is also the look of «the sign is zero» and of «the injection does not
+ * work»: three causes, one single silence (`LEZIONI.md` §1.9).
  * ---------------------------------------------------------------------------
  */
 #include <gio/gio.h>
@@ -75,22 +75,22 @@ static void dilo(const char *forma, ...)
 }
 
 /* ------------------------------------------------------------------------ *
- * Lo stato del programma: piccolo, e tutto qui dentro.
+ * The state of the program: small, and all in here.
  * ------------------------------------------------------------------------ */
 static struct ei *contesto;
-static struct ei_device *puntatore;     /* quello che ha lo scorrimento */
+static struct ei_device *puntatore;     /* the one that has scrolling */
 static bool puntatore_pronto;
 static uint32_t sequenza;
 static bool regione_nota;
 static double reg_x, reg_y, reg_l, reg_a;
-static bool assoluto;                   /* la regione c'e': si va al centro */
+static bool assoluto;                   /* the region is there: one goes to the centre */
 
 /*
- * ⛔ La connessione al bus e' NOSTRA, non quella condivisa di `g_bus_get_sync`.
- *    Sulla condivisa GIO tiene acceso «exit-on-close» e chiama `raise(SIGTERM)`
- *    per conto nostro quando il bus si chiude: e' il difetto del 4 agosto 2026
- *    citato in `fondamenta/remotix-c/src/sessione.h`, e qui produrrebbe un iniettore
- *    che muore da solo a meta' misura senza che niente lo dica.
+ * ⛔ The bus connection is OURS, not the shared one of `g_bus_get_sync`.
+ *    On the shared one GIO keeps «exit-on-close» on and calls `raise(SIGTERM)`
+ *    on our behalf when the bus closes: it is the defect of 4 Aug 2026
+ *    quoted in `fondamenta/remotix-c/src/sessione.h`, and here it would produce an
+ *    injector that dies by itself halfway through the measurement without anything saying so.
  */
 static GDBusConnection *apri_bus(GError **sbaglio)
 {
@@ -104,11 +104,11 @@ static GDBusConnection *apri_bus(GError **sbaglio)
 }
 
 /* ------------------------------------------------------------------------ *
- * La sessione RemoteDesktop di Mutter, e il descrittore EIS.
+ * Mutter's RemoteDesktop session, and the EIS descriptor.
  *
- * ⚠ L'ordine e' quello del riferimento e di `fondamenta/remotix-c/src/mutter.c`:
- *   CreateSession → ConnectToEIS → Start.  `ConnectToEIS` si chiede sulla
- *   sessione NON ancora avviata.
+ * ⚠ The order is that of the reference and of `fondamenta/remotix-c/src/mutter.c`:
+ *   CreateSession → ConnectToEIS → Start.  `ConnectToEIS` is asked on the
+ *   session NOT yet started.
  * ------------------------------------------------------------------------ */
 static int apri_eis(GDBusConnection *bus, GError **sbaglio)
 {
@@ -126,13 +126,13 @@ static int apri_eis(GDBusConnection *bus, GError **sbaglio)
 		                                NULL, sbaglio);
 		if (!r)
 		{
-			g_prefix_error(sbaglio, "Mutter non espone RemoteDesktop (c'e' una sessione "
-			                        "grafica?): ");
+			g_prefix_error(sbaglio, "Mutter does not expose RemoteDesktop (is there a graphical "
+			                        "session?): ");
 			return -1;
 		}
 		g_variant_get(r, "(o)", &sessione);
 	}
-	dilo("sessione RemoteDesktop: %s", sessione);
+	dilo("RemoteDesktop session: %s", sessione);
 
 	g_variant_builder_init(&vuote, G_VARIANT_TYPE("a{sv}"));
 	risposta = g_dbus_connection_call_with_unix_fd_list_sync(
@@ -140,7 +140,7 @@ static int apri_eis(GDBusConnection *bus, GError **sbaglio)
 	    G_VARIANT_TYPE("(h)"), G_DBUS_CALL_FLAGS_NONE, ATTESA_MS, NULL, &descrittori, NULL, sbaglio);
 	if (!risposta)
 	{
-		g_prefix_error(sbaglio, "ConnectToEIS rifiutata: ");
+		g_prefix_error(sbaglio, "ConnectToEIS refused: ");
 		return -1;
 	}
 	g_variant_get(risposta, "(h)", &indice);
@@ -154,20 +154,20 @@ static int apri_eis(GDBusConnection *bus, GError **sbaglio)
 		                                NULL, G_DBUS_CALL_FLAGS_NONE, ATTESA_MS, NULL, sbaglio);
 		if (!r)
 		{
-			g_prefix_error(sbaglio, "Start della sessione RemoteDesktop: ");
+			g_prefix_error(sbaglio, "Start of the RemoteDesktop session: ");
 			close(fd);
 			return -1;
 		}
 	}
-	dilo("canale EIS aperto (descrittore %d), sessione avviata", fd);
+	dilo("EIS channel open (descriptor %d), session started", fd);
 	return fd;
 }
 
 /* ------------------------------------------------------------------------ *
- * La regione: e' lo schermo su cui il puntatore si muove in assoluto.
+ * The region: it is the screen on which the pointer moves in absolute terms.
  *
- * ⛔ Si STAMPA sempre, anche quando non c'e'.  «Nessuna regione» e «regione
- *    0x0» hanno due cure diverse, e un iniettore muto le confonde.
+ * ⛔ It is always PRINTED, even when it is not there.  «No region» and «region
+ *    0x0» have two different cures, and a mute injector confuses them.
  * ------------------------------------------------------------------------ */
 static void leggi_regione(struct ei_device *dispositivo)
 {
@@ -178,14 +178,14 @@ static void leggi_regione(struct ei_device *dispositivo)
 
 		if (!regione)
 			break;
-		/* ⛔ I quattro getter tornano `uint32_t`, non `double`: passarli a un
-		 *    `%.0f` stampa spazzatura.  `[M]` 10 agosto 2026, e la spazzatura
-		 *    era «0,0 0x0» — cioe' aveva l'aspetto di una diagnosi vera («la
-		 *    regione e' degenere») mentre la regione era 1920x1080.  Un
-		 *    difetto di STAMPA che si legge come un difetto del compositore. */
-		dilo("regione %zu: %u,%u  %ux%u  (mapping-id «%s»)", i, ei_region_get_x(regione),
+		/* ⛔ The four getters return `uint32_t`, not `double`: passing them to a
+		 *    `%.0f` prints garbage.  `[M]` 10 Aug 2026, and the garbage
+		 *    was «0,0 0x0» — that is it looked like a real diagnosis («the
+		 *    region is degenerate») while the region was 1920x1080.  A
+		 *    PRINTING defect that reads as a defect of the compositor. */
+		dilo("region %zu: %u,%u  %ux%u  (mapping-id «%s»)", i, ei_region_get_x(regione),
 		     ei_region_get_y(regione), ei_region_get_width(regione), ei_region_get_height(regione),
-		     ei_region_get_mapping_id(regione) ?: "assente");
+		     ei_region_get_mapping_id(regione) ?: "absent");
 		if (!regione_nota && ei_region_get_width(regione) > 0 && ei_region_get_height(regione) > 0)
 		{
 			reg_x = ei_region_get_x(regione);
@@ -196,39 +196,39 @@ static void leggi_regione(struct ei_device *dispositivo)
 		}
 	}
 	if (!regione_nota)
-		dilo("NESSUNA regione: il puntatore si muovera' in RELATIVO, e la posizione "
-		     "finale non e' garantita");
+		dilo("NO region: the pointer will move in RELATIVE mode, and the final "
+		     "position is not guaranteed");
 }
 
 static void al_centro(void)
 {
 	if (!puntatore_pronto)
 	{
-		dilo("ERRORE: nessun dispositivo di puntamento pronto");
+		dilo("ERROR: no pointing device ready");
 		return;
 	}
 	if (regione_nota && assoluto)
 	{
 		ei_device_pointer_motion_absolute(puntatore, reg_x + reg_l / 2, reg_y + reg_a / 2);
 		ei_device_frame(puntatore, ei_now(contesto));
-		dilo("puntatore in %.0f,%.0f (assoluto)", reg_x + reg_l / 2, reg_y + reg_a / 2);
+		dilo("pointer at %.0f,%.0f (absolute)", reg_x + reg_l / 2, reg_y + reg_a / 2);
 	}
 	else
 	{
-		/* ⛔ Prima all'angolo, POI indietro di meta' schermo: il compositore
-		 *    ferma il puntatore al bordo, quindi la prima mossa da' una
-		 *    posizione NOTA anche senza sapere dov'era prima. */
+		/* ⛔ First to the corner, THEN back by half a screen: the compositor
+		 *    stops the pointer at the edge, so the first move gives a
+		 *    KNOWN position even without knowing where it was before. */
 		ei_device_pointer_motion(puntatore, 20000, 20000);
 		ei_device_frame(puntatore, ei_now(contesto));
 		ei_device_pointer_motion(puntatore, -960, -540);
 		ei_device_frame(puntatore, ei_now(contesto));
-		dilo("puntatore mosso in RELATIVO verso il centro (angolo, poi -960,-540)");
+		dilo("pointer moved in RELATIVE mode towards the centre (corner, then -960,-540)");
 	}
 }
 
 /* ------------------------------------------------------------------------ *
- * Gli eventi di libei.  Nomi e ordine sono quelli gia' provati in
- * `fondamenta/remotix-c/src/input.c`, che gira su questo stesso Mutter.
+ * The libei events.  Names and order are those already tested in
+ * `fondamenta/remotix-c/src/input.c`, which runs on this same Mutter.
  * ------------------------------------------------------------------------ */
 static void tratta_evento(struct ei_event *evento)
 {
@@ -238,38 +238,38 @@ static void tratta_evento(struct ei_event *evento)
 	switch (tipo)
 	{
 		case EI_EVENT_CONNECT:
-			dilo("connesso");
+			dilo("connected");
 			break;
 		case EI_EVENT_SEAT_ADDED:
 			ei_seat_bind_capabilities(ei_event_get_seat(evento), EI_DEVICE_CAP_POINTER,
 			                          EI_DEVICE_CAP_POINTER_ABSOLUTE, EI_DEVICE_CAP_BUTTON,
 			                          EI_DEVICE_CAP_SCROLL, NULL);
-			dilo("seggio «%s»: chieste le capacita' di puntamento e scorrimento",
+			dilo("seat «%s»: requested the pointing and scrolling capabilities",
 			     ei_seat_get_name(ei_event_get_seat(evento)) ?: "?");
 			break;
 		case EI_EVENT_DEVICE_ADDED:
-			dilo("dispositivo «%s»: puntatore=%d assoluto=%d scorrimento=%d bottoni=%d",
+			dilo("device «%s»: pointer=%d absolute=%d scroll=%d buttons=%d",
 			     ei_device_get_name(dispositivo) ?: "?",
 			     ei_device_has_capability(dispositivo, EI_DEVICE_CAP_POINTER),
 			     ei_device_has_capability(dispositivo, EI_DEVICE_CAP_POINTER_ABSOLUTE),
 			     ei_device_has_capability(dispositivo, EI_DEVICE_CAP_SCROLL),
 			     ei_device_has_capability(dispositivo, EI_DEVICE_CAP_BUTTON));
 			/*
-			 * ⛔ SI PRENDE QUELLO ASSOLUTO, E NON E' UNA PREFERENZA.
+			 * ⛔ THE ABSOLUTE ONE IS TAKEN, AND IT IS NOT A PREFERENCE.
 			 *
-			 * `[M]` 10 agosto 2026: Mutter offre DUE dispositivi, e sono
-			 * diversi dove conta.  «remotix-s7 virtual pointer» sa scorrere ma
-			 * si muove solo in RELATIVO e **non ha nessuna regione**; «remotix-s7
-			 * shared virtual absolute pointer» ha le regioni, cioe' e' l'unico
-			 * con cui si sa DOVE si sta mettendo il puntatore.
+			 * `[M]` 10 Aug 2026: Mutter offers TWO devices, and they are
+			 * different where it counts.  «remotix-s7 virtual pointer» can scroll but
+			 * moves only in RELATIVE mode and **has no region**; «remotix-s7
+			 * shared virtual absolute pointer» has the regions, that is it is the only
+			 * one with which one knows WHERE one is putting the pointer.
 			 *
-			 * Il primo giro di questo banco ha preso «il primo che sa
-			 * scorrere», cioe' il relativo, ha spinto il puntatore verso il
-			 * centro a occhio, e ha registrato **cinque volte niente**: gli
-			 * scatti partivano davvero (l'iniettore lo diceva) e non arrivavano
-			 * a nessuna finestra.  ⭐ «Non si e' mossa» e «non c'era niente
-			 * sotto il puntatore» hanno lo stesso aspetto, ed e' la ragione per
-			 * cui adesso il banco chiede anche a GNOME Shell dov'e' la finestra.
+			 * The first run of this bench took «the first one that can
+			 * scroll», that is the relative one, pushed the pointer towards the
+			 * centre by eye, and recorded **nothing five times**: the
+			 * clicks really left (the injector said so) and reached
+			 * no window.  ⭐ «It did not move» and «there was nothing
+			 * under the pointer» look the same, and it is the reason why
+			 * the bench now also asks GNOME Shell where the window is.
 			 */
 			if (!ei_device_has_capability(dispositivo, EI_DEVICE_CAP_SCROLL))
 				break;
@@ -278,7 +278,7 @@ static void tratta_evento(struct ei_event *evento)
 			{
 				if (puntatore)
 				{
-					dilo("scambio il dispositivo: quello di prima non aveva l'assoluto");
+					dilo("switching device: the previous one did not have absolute mode");
 					ei_device_unref(puntatore);
 					puntatore_pronto = false;
 				}
@@ -293,9 +293,9 @@ static void tratta_evento(struct ei_event *evento)
 			{
 				leggi_regione(dispositivo);
 				puntatore_pronto = true;
-				/* ⛔ Due parole diverse per due situazioni diverse: chi lancia
-				 *    il banco deve poter aspettare quella buona invece di
-				 *    partire con la prima che arriva. */
+				/* ⛔ Two different words for two different situations: whoever launches
+				 *    the bench must be able to wait for the good one instead of
+				 *    starting with the first that arrives. */
 				dilo(assoluto ? "PRONTO" : "PRONTO-RELATIVO");
 			}
 			break;
@@ -303,18 +303,18 @@ static void tratta_evento(struct ei_event *evento)
 			if (dispositivo == puntatore)
 			{
 				puntatore_pronto = false;
-				dilo("il dispositivo e' stato SOSPESO dal compositore");
+				dilo("the device was SUSPENDED by the compositor");
 			}
 			break;
 		case EI_EVENT_DEVICE_REMOVED:
 			if (dispositivo == puntatore)
 			{
 				puntatore_pronto = false;
-				dilo("il dispositivo e' stato TOLTO dal compositore");
+				dilo("the device was REMOVED by the compositor");
 			}
 			break;
 		case EI_EVENT_DISCONNECT:
-			dilo("DISCONNESSO dal compositore");
+			dilo("DISCONNECTED by the compositor");
 			exit(4);
 		default:
 			break;
@@ -353,7 +353,7 @@ static void comando(char *riga)
 	}
 	if (g_str_equal(riga, "stato"))
 	{
-		dilo("dispositivo pronto=%d  assoluto=%d  regione=%d (%.0f,%.0f %.0fx%.0f)",
+		dilo("device ready=%d  absolute=%d  region=%d (%.0f,%.0f %.0fx%.0f)",
 		     puntatore_pronto, assoluto, regione_nota, reg_x, reg_y, reg_l, reg_a);
 		return;
 	}
@@ -361,21 +361,21 @@ static void comando(char *riga)
 	{
 		if (!puntatore_pronto)
 		{
-			dilo("ERRORE: nessun dispositivo pronto, lo scatto NON e' stato mandato");
+			dilo("ERROR: no device ready, the click was NOT sent");
 			return;
 		}
 		ei_device_scroll_discrete(puntatore, dx, dy);
 		ei_device_frame(puntatore, ei_now(contesto));
-		dilo("SCATTO dx=%d dy=%d mandato", dx, dy);
+		dilo("CLICK dx=%d dy=%d sent", dx, dy);
 		return;
 	}
-	/* Il movimento a mano: serve al controllo positivo — se la pagina vede
-	 * muoversi il puntatore, la strada dall'iniettore alla pagina e' aperta. */
+	/* The movement by hand: it serves the positive control — if the page sees
+	 * the pointer move, the road from the injector to the page is open. */
 	if (sscanf(riga, "muovi %d %d", &dx, &dy) == 2)
 	{
 		if (!puntatore_pronto)
 		{
-			dilo("ERRORE: nessun dispositivo pronto");
+			dilo("ERROR: no device ready");
 			return;
 		}
 		if (regione_nota && assoluto)
@@ -383,34 +383,34 @@ static void comando(char *riga)
 		else
 			ei_device_pointer_motion(puntatore, dx, dy);
 		ei_device_frame(puntatore, ei_now(contesto));
-		dilo("MOSSO a %d,%d", dx, dy);
+		dilo("MOVED to %d,%d", dx, dy);
 		return;
 	}
 	if (sscanf(riga, "bottone %d %d", &dx, &dy) == 2)
 	{
 		if (!puntatore_pronto)
 		{
-			dilo("ERRORE: nessun dispositivo pronto");
+			dilo("ERROR: no device ready");
 			return;
 		}
 		ei_device_button_button(puntatore, (uint32_t) dx, dy != 0);
 		ei_device_frame(puntatore, ei_now(contesto));
-		dilo("BOTTONE %d %s", dx, dy ? "giu'" : "su'");
+		dilo("BUTTON %d %s", dx, dy ? "down" : "up");
 		return;
 	}
 	if (sscanf(riga, "liscio %d %d", &dx, &dy) == 2)
 	{
 		if (!puntatore_pronto)
 		{
-			dilo("ERRORE: nessun dispositivo pronto, il liscio NON e' stato mandato");
+			dilo("ERROR: no device ready, the smooth scroll was NOT sent");
 			return;
 		}
 		ei_device_scroll_delta(puntatore, dx, dy);
 		ei_device_frame(puntatore, ei_now(contesto));
-		dilo("LISCIO dx=%d dy=%d mandato", dx, dy);
+		dilo("SMOOTH dx=%d dy=%d sent", dx, dy);
 		return;
 	}
-	dilo("comando ignoto: «%s»", riga);
+	dilo("unknown command: «%s»", riga);
 }
 
 int main(void)
@@ -426,13 +426,13 @@ int main(void)
 	bus = apri_bus(&sbaglio);
 	if (!bus)
 	{
-		dilo("ERRORE: bus di sessione non raggiungibile: %s", sbaglio->message);
+		dilo("ERROR: session bus not reachable: %s", sbaglio->message);
 		return 2;
 	}
 	fd_eis = apri_eis(bus, &sbaglio);
 	if (fd_eis < 0)
 	{
-		dilo("ERRORE: %s", sbaglio->message);
+		dilo("ERROR: %s", sbaglio->message);
 		return 3;
 	}
 
@@ -440,7 +440,7 @@ int main(void)
 	ei_configure_name(contesto, "remotix-s7");
 	if (ei_setup_backend_fd(contesto, fd_eis) != 0)
 	{
-		dilo("ERRORE: libei non ha accettato il descrittore di ConnectToEIS");
+		dilo("ERROR: libei did not accept the ConnectToEIS descriptor");
 		return 3;
 	}
 
@@ -460,7 +460,7 @@ int main(void)
 		{
 			if (!fgets(riga, sizeof riga, stdin))
 			{
-				dilo("standard input chiuso: esco");
+				dilo("standard input closed: exiting");
 				break;
 			}
 			comando(riga);

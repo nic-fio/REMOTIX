@@ -1,50 +1,50 @@
 #!/usr/bin/env python3
-"""01-b4-lancia.py — B4: il validatore contro le registrazioni, RIGENERATE ADESSO.
+"""01-b4-lancia.py — B4: the validator against the recordings, REGENERATED NOW.
 
-    python3 01-b4-lancia.py [cartella]
+    python3 01-b4-lancia.py [folder]
 
-⛔ Confronta l'ATTESO con il MISURATO **il banco, non chi guarda** (regola
-   B0.4).  E l'atteso non e' «rosso»: e' **quale uscita**, **quale byte** e
-   **quale regola**.
-
----------------------------------------------------------------------------
-⛔ LE REGISTRAZIONI SI RIGENERANO, NON SI TROVANO
-
-*10 agosto 2026, rilievo R7.13.*  Questo programma leggeva `manifesto.json` e i
-`.rcpreg` da una cartella **senza mai rigenerarli**: non eseguiva
-`01-b4-registrazioni.py`, non ne confrontava l'impronta, non guardava le date.
-Certificava il validatore contro i file che trovava.
-
-⚠ Il difetto non era che fossero vecchi — oggi coincidono — e' che **niente lo
-  impediva**: si cambiava lo scostamento atteso di un caso e il banco stampava
-  «e' certificato», perche' leggeva il manifesto del giro precedente.  L'ATTESO
-  che `01-b4-registrazioni.py` chiama *«scritto qui e non nella testa di chi
-  guarda»* era scritto in un file che nessuno legava al programma che lo aveva
-  prodotto.
-
-⭐ Adesso il primo passo di questo banco e' **eseguire il programma che le
-   costruisce**, nella cartella che poi legge.
+⛔ It is **the bench, not whoever is watching**, that compares the EXPECTED with
+   the MEASURED (rule B0.4).  And the expected is not «red»: it is **which exit
+   code**, **which byte** and **which rule**.
 
 ---------------------------------------------------------------------------
-⭐ LE QUATTRO COSE CHE QUESTO BANCO ESISTE PER DISTINGUERE
+⛔ THE RECORDINGS ARE REGENERATED, NOT FOUND
 
-  1. un validatore che **boccia tutto** — lo prende la registrazione conforme,
-     che DEVE essere accettata;
-  2. un validatore che da' **rosso sul byte sbagliato** — lo prende il
-     confronto degli scostamenti, e in particolare la registrazione col
-     riempimento, dove un validatore che non conosce §6.0 legge di traverso il
-     messaggio successivo e accusa quello;
-  3. ⛔ un validatore che confonde **«il file e' rotto»** con **«il filo non e'
-     conforme»** — lo prendono le registrazioni ad uscita 2, che prima non
-     esistevano: l'esito che il validatore dichiara essere la ragione per cui
-     gli esiti non sono due **non era mai stato osservato** (R7.13);
-  4. ⛔ un validatore che dichiara conforme una registrazione in cui **non ha
-     giudicato niente** — lo prende quella ad uscita 3.
+*10 Aug 2026, finding R7.13.*  This program read `manifesto.json` and the
+`.rcpreg` files from a folder **without ever regenerating them**: it did not run
+`01-b4-registrazioni.py`, did not compare its fingerprint, did not look at the
+dates.  It certified the validator against whatever files it found.
 
-⛔ **E la copertura si stampa per esito, con il denominatore.**  «13 su 13» non
-   dice quali dei quattro esiti sono stati esercitati, e un esito senza
-   nemmeno una registrazione e' un ramo di codice che nessuno ha mai fatto
-   girare.
+⚠ The defect was not that they were old — today they match — it was that
+  **nothing prevented it**: one changed the expected offset of a case and the
+  bench printed «it is certified», because it read the manifest of the previous
+  run.  The EXPECTED that `01-b4-registrazioni.py` calls *«written here and not
+  in the head of whoever is watching»* was written in a file that nobody tied to
+  the program that had produced it.
+
+⭐ Now the first step of this bench is **running the program that builds
+   them**, in the folder it then reads.
+
+---------------------------------------------------------------------------
+⭐ THE FOUR THINGS THIS BENCH EXISTS TO TELL APART
+
+  1. a validator that **rejects everything** — caught by the compliant
+     recording, which MUST be accepted;
+  2. a validator that gives **red on the wrong byte** — caught by the
+     comparison of the offsets, and in particular by the recording with
+     padding, where a validator that does not know §6.0 misreads the next
+     message and accuses that one;
+  3. ⛔ a validator that confuses **«the file is broken»** with **«the wire is
+     not compliant»** — caught by the recordings with exit code 2, which did
+     not exist before: the outcome that the validator declares to be the reason
+     the outcomes are not two **had never been observed** (R7.13);
+  4. ⛔ a validator that declares compliant a recording in which **it judged
+     nothing** — caught by the one with exit code 3.
+
+⛔ **And the coverage is printed per outcome, with the denominator.**  «13 out
+   of 13» does not say which of the four outcomes were exercised, and an
+   outcome without even one recording is a code branch that nobody has ever
+   run.
 """
 import json
 import os
@@ -56,22 +56,22 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 VALIDATORE = os.path.join(QUI, "01-b4-validatore.py")
 COSTRUTTORE = os.path.join(QUI, "01-b4-registrazioni.py")
 
-ESITI = {0: "conforme", 1: "non-conforme", 2: "registrazione-rotta",
-         3: "niente-da-giudicare"}
+ESITI = {0: "compliant", 1: "non-compliant", 2: "broken-recording",
+         3: "nothing-to-judge"}
 
 
 def rigenera(dove):
-    """⛔ Il manifesto e i `.rcpreg` li produce ADESSO chi li sa produrre."""
-    print(f"== 1. le registrazioni si rigenerano in {dove}/\n")
+    """⛔ The manifest and the `.rcpreg` files are produced NOW by whoever knows how."""
+    print(f"== 1. the recordings are regenerated in {dove}/\n")
     p = subprocess.run([sys.executable, COSTRUTTORE, dove],
                        capture_output=True, text=True)
     for riga in (p.stdout + p.stderr).strip().splitlines():
         print(f"   | {riga}")
     print()
     if p.returncode != 0:
-        print(f"   ⛔ 01-b4-registrazioni.py e' uscito {p.returncode}: senza le")
-        print("      registrazioni non c'e' niente da certificare, e ⛔ NON si")
-        print("      ripiega su quelle che eventualmente stanno su disco")
+        print(f"   ⛔ 01-b4-registrazioni.py exited {p.returncode}: without the")
+        print("      recordings there is nothing to certify, and ⛔ we do NOT")
+        print("      fall back on whatever may be lying on disk")
         return False
     return True
 
@@ -84,14 +84,14 @@ def main():
         with open(os.path.join(dove, "manifesto.json")) as f:
             manifesto = json.load(f)
     except OSError as e:
-        # ⛔ E8 anche qui: «il manifesto non si legge» non e' «zero voci».
-        print(f"   ⛔ il manifesto non si legge: {e}")
+        # ⛔ E8 here too: «the manifest cannot be read» is not «zero entries».
+        print(f"   ⛔ the manifest cannot be read: {e}")
         return 2
 
-    print(f"== 2. il validatore del filo contro {len(manifesto)} registrazioni\n")
+    print(f"== 2. the wire validator against {len(manifesto)} recordings\n")
     buoni = 0
-    # ⛔ La copertura per esito, calcolata: quante ne PRETENDONO ciascuno, e
-    #    quante ne hanno davvero ottenuto quello giusto.
+    # ⛔ The coverage per outcome, computed: how many DEMAND each one, and
+    #    how many actually got the right one.
     copertura = {u: [0, 0] for u in ESITI}
     for voce in manifesto:
         percorso = os.path.join(dove, voce["file"])
@@ -106,24 +106,25 @@ def main():
 
         if uscita != atteso_uscita:
             ok = False
-            note.append(f"attesa uscita {atteso_uscita} "
-                        f"({ESITI[atteso_uscita]}), avuta {uscita} "
+            note.append(f"expected exit {atteso_uscita} "
+                        f"({ESITI[atteso_uscita]}), got {uscita} "
                         f"({ESITI.get(uscita, '?')})")
         elif atteso_uscita == 1:
-            # ⛔ Il byte e la regola si confrontano SOLO quando l'uscita e'
-            #    quella giusta.  Prima si cercava «byte N nel file» anche su
-            #    un'uscita 1 arrivata per tutt'altra ragione — per esempio un
-            #    `FileNotFoundError` — e il banco riportava «atteso il byte
-            #    508, accusato None», cioe' un rosso sul BYTE invece che sul
-            #    FILE, che e' proprio la distinzione per cui esiste (R7.5).
-            m = re.search(r"byte (\d+) nel file", testo)
+            # ⛔ The byte and the rule are compared ONLY when the exit code is
+            #    the right one.  Before, «byte N in the file» was searched even
+            #    on an exit 1 that came for an entirely different reason — for
+            #    example a `FileNotFoundError` — and the bench reported
+            #    «expected byte 508, accused None», that is a red on the BYTE
+            #    instead of on the FILE, which is exactly the distinction it
+            #    exists for (R7.5).
+            m = re.search(r"byte (\d+) in the file", testo)
             visto = int(m.group(1)) if m else None
             if visto != voce["byte"]:
                 ok = False
-                note.append(f"atteso il byte {voce['byte']}, accusato {visto}")
+                note.append(f"expected byte {voce['byte']}, accused {visto}")
             if voce["regola"] not in testo:
                 ok = False
-                note.append(f"attesa la regola {voce['regola']}")
+                note.append(f"expected rule {voce['regola']}")
 
         segno = "OK " if ok else "NO "
         print(f"   {segno} {voce['file']:<28s} {voce['che']}")
@@ -136,39 +137,39 @@ def main():
             buoni += 1
             copertura[atteso_uscita][0] += 1
 
-    print(f"\n== 3. Esito")
-    print(f"   {buoni} su {len(manifesto)}")
-    # ⛔ Il denominatore del verdetto: se le registrazioni fossero zero, «tutte
-    #    passano» sarebbe vero e vuoto (LEZIONI.md §1.9, punto 6).
+    print(f"\n== 3. Outcome")
+    print(f"   {buoni} out of {len(manifesto)}")
+    # ⛔ The denominator of the verdict: if the recordings were zero, «all
+    #    pass» would be true and empty (LEZIONI.md §1.9, point 6).
     if not manifesto:
-        print("   ⛔ nessuna registrazione: non c'e' niente da approvare")
+        print("   ⛔ no recordings: there is nothing to approve")
         return 2
 
-    # ⛔ E il denominatore PER ESITO: un esito senza nemmeno una registrazione
-    #    e' un ramo che nessuno ha mai fatto girare, e il validatore lo
-    #    dichiara come la ragione per cui gli esiti non sono due.
-    print("\n   la copertura dei quattro esiti del validatore:")
+    # ⛔ And the denominator PER OUTCOME: an outcome without even one recording
+    #    is a branch that nobody has ever run, and the validator declares it
+    #    as the reason the outcomes are not two.
+    print("\n   the coverage of the validator's four outcomes:")
     scoperti = 0
     for u in sorted(ESITI):
         buoni_u, tot_u = copertura[u]
         if tot_u == 0:
             scoperti += 1
-            print(f"     uscita {u} = {ESITI[u]:<20s} ⛔ NESSUNA registrazione "
-                  f"la esercita")
+            print(f"     exit {u} = {ESITI[u]:<20s} ⛔ NO recording "
+                  f"exercises it")
         else:
-            print(f"     uscita {u} = {ESITI[u]:<20s} {buoni_u} su {tot_u}")
+            print(f"     exit {u} = {ESITI[u]:<20s} {buoni_u} out of {tot_u}")
     if scoperti:
-        print(f"   ⛔ {scoperti} esiti su {len(ESITI)} senza controllo positivo:")
-        print("      su quei rami «non ho trovato niente» non vuol dire niente")
+        print(f"   ⛔ {scoperti} outcomes out of {len(ESITI)} without a positive control:")
+        print("      on those branches «I found nothing» means nothing")
         return 1
 
     if buoni == len(manifesto):
-        print(f"\n   ⭐ il validatore accusa ciascun guasto sul byte giusto,")
-        print(f"      accetta la conforme, e distingue i quattro esiti.")
-        print(f"      E' certificato — su {len(manifesto)} registrazioni "
-              f"rigenerate adesso.")
+        print(f"\n   ⭐ the validator accuses each fault on the right byte,")
+        print(f"      accepts the compliant one, and tells the four outcomes apart.")
+        print(f"      It is certified — on {len(manifesto)} recordings "
+              f"regenerated now.")
         return 0
-    print("   ⛔ il validatore NON e' certificato: vedi sopra")
+    print("   ⛔ the validator is NOT certified: see above")
     return 1
 
 

@@ -1,45 +1,45 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-f022 — I TRE OROLOGI DI §5.3: F-022 silenzio · F-023 inattivita' · F-024 abbandono
+15-f022 — THE THREE CLOCKS OF §5.3: F-022 silence · F-023 inactivity · F-024 abandonment
 
     python3 15-f022-orologi.py --scatola kde --browser chrome --guasto --porta 8612
 
-⛔ SERVER SUO (`15-g7-server.sh`, porte 8611-8614): gli orologi si accorciano
-   dalla riga di comando e il server si RIACCENDE fra una fase e l'altra — sulla
-   851x non si puo'.  Alla fine il server resta acceso coi PREDEFINITI.
+⛔ A SERVER OF ITS OWN (`15-g7-server.sh`, ports 8611-8614): the clocks are shortened
+   from the command line and the server is RESTARTED between one phase and the next — on the
+   851x it cannot be done.  At the end the server stays on with the DEFAULTS.
 
-I NOMI E I VALORI VERI (letti nel codice, non in SPECIFICHE):
-  · silenzio del client: 30 s FISSO (`rcp.c` `#define SILENZIO 30000`, non
-    configurabile) — ⚠ ma prima scatta la LINEA MORTA a 10 s senza un pacchetto
-    (`--linea-morta-silenzio-s`, predefinito 10, `webtransport.c`): e' lei che
-    stacca un client muto, e lascia il posto.  ⇒ l'atteso di F-022 e' «staccato
-    ENTRO 30 s», qualunque dei due lo faccia, e la riga lo dice;
-  · inattivita' dell'utente: `--inattivita-s` (predefinito 1800), in SECONDI;
-    si azzera su OGNI byte di RCP dal client (`rcp.c` ~7523), scatta con
-    `CONGEDO 0x02` e la riga «§5.3 — INATTIVITA'»; la sessione grafica RESTA;
-  · abbandono della sessione: `--abbandono-s` (predefinito 3600); si nutre dei
-    SOLI cinque gesti d'input (`main.c` `input_al_figlio` → `presenza_segna`),
-    scatta con la riga «§5.3 — ABBANDONO» e chiude la sessione grafica coi
-    suoi programmi (`figli_termina_sessione`).
+THE REAL NAMES AND VALUES (read in the code, not in SPECIFICHE):
+  · client silence: 30 s FIXED (`rcp.c` `#define SILENZIO 30000`, not
+    configurable) — ⚠ but first the DEAD LINE fires at 10 s without a packet
+    (`--linea-morta-silenzio-s`, default 10, `webtransport.c`): it is the one that
+    detaches a mute client, and frees the slot.  ⇒ the expectation of F-022 is «detached
+    WITHIN 30 s», whichever of the two does it, and the line says so;
+  · user inactivity: `--inattivita-s` (default 1800), in SECONDS;
+    it resets on EVERY RCP byte from the client (`rcp.c` ~7523), fires with
+    `CONGEDO 0x02` and the line «§5.3 — INACTIVITY»; the graphical session STAYS;
+  · session abandonment: `--abbandono-s` (default 3600); it feeds on the
+    ONLY five input gestures (`main.c` `input_al_figlio` → `presenza_segna`),
+    fires with the line «§5.3 — ABANDONMENT» and closes the graphical session with its
+    programs (`figli_termina_sessione`).
 
-F-022  (server predefinito) il browser si FERMA (SIGSTOP a tutto l'albero dei
-       processi: il client tace, come un portatile che si spegne) ⇒ atteso: entro
-       30 s il server lo stacca (riga `linea-morta`/`STACCATO`/`posto LASCIATO`),
-       la sessione resta (i programmi dell'inquilino vivi), e ripreso il browser
-       si rientra con utente e parola ritrovando gli stessi programmi.
-       GUASTO: il browser NON si ferma ⇒ nessuno stacco in 35 s ⇒ il giudice deve
-       dire «non staccato» (rosso).
-F-023  (server con `--inattivita-s 12 --abbandono-s 45`) un clic e poi niente ⇒
-       atteso: fra 12 e 12+15 s la riga INATTIVITA', la pagina lo DICE (frase
-       rossa, modulo in vista, niente ricollegamento da se'), i programmi restano,
-       e si rientra SOLO con utente e parola.
-F-024  (stessa sessione) nessun gesto da quel clic ⇒ atteso: entro 45+15 s la
-       riga ABBANDONO, e i processi della sessione dell'inquilino (la scena
-       compresa) SPARISCONO.
-       GUASTO F-023/F-024: gli orologi LUNGHI (i predefiniti) al posto di quelli
-       corti, stessa sequenza ⇒ nessuna INATTIVITA' in 12+15 s, nessun ABBANDONO
-       in 45+15 s, scena viva ⇒ i due giudici devono dire rosso.
+F-022  (default server) the browser STOPS (SIGSTOP to the whole tree of
+       processes: the client goes silent, like a laptop switching off) ⇒ expected: within
+       30 s the server detaches it (line `linea-morta`/`DETACHED`/`slot LEFT`),
+       the session stays (the tenant's programs alive), and with the browser resumed
+       you come back in with user and password finding the same programs.
+       FAULT: the browser does NOT stop ⇒ no detach in 35 s ⇒ the judge must
+       say «not detached» (red).
+F-023  (server with `--inattivita-s 12 --abbandono-s 45`) one click and then nothing ⇒
+       expected: between 12 and 12+15 s the INACTIVITY line, the page SAYS it (red
+       sentence, form in view, no reconnecting by itself), the programs stay,
+       and you come back in ONLY with user and password.
+F-024  (same session) no gesture since that click ⇒ expected: within 45+15 s the
+       ABANDONMENT line, and the processes of the tenant's session (the scene
+       included) DISAPPEAR.
+       FAULT F-023/F-024: the LONG clocks (the defaults) instead of the
+       short ones, same sequence ⇒ no INACTIVITY in 12+15 s, no ABANDONMENT
+       in 45+15 s, scene alive ⇒ the two judges must say red.
 """
 import importlib.util as _iu
 import os
@@ -61,31 +61,31 @@ FUNZIONI = ("F-022", "F-023", "F-024")
 SERVER = "15-g7-server.sh"
 SILENZIO_S = 30
 MARGINE_S = 15
-# ⚠ 25 e non 12: `[M]` 25 set 2026 (D-011) l'orologio d'inattivita' conta dall'ultimo
-#   byte del client, cioe' dall'ATTACCA, anche mentre la sessione NASCE; su XFCE
-#   in 4K la nascita supera i 12 s ⇒ CONGEDO 0x02 un secondo dopo il primo
-#   fotogramma.  Coi valori veri (1800 s) non morde; qui l'orologio va tenuto
-#   piu' lungo della nascita piu' lenta.
+# ⚠ 25 and not 12: `[M]` 25 Sep 2026 (D-011) the inactivity clock counts from the last
+#   byte of the client, that is from the ATTACCA, even while the session IS BEING BORN; on XFCE
+#   in 4K the birth exceeds 12 s ⇒ CONGEDO 0x02 one second after the first
+#   frame.  With the real values (1800 s) it does not bite; here the clock must be kept
+#   longer than the slowest birth.
 INATTIVITA_S = 25
 ABBANDONO_S = 60
-FORME_STACCO = ("linea-morta", "STACCATO per silenzio", "posto LASCIATO")
+FORME_STACCO = ("linea-morta", "DETACHED for silence", "slot LEFT")
 
 
 def certifica():
     ok = True
-    # il giudice dello stacco: una riga di un ALTRO inquilino non conta
-    righe = ["21:00 rcp [c15022u111] posto LASCIATO da c15022u111 via x (occupati 0)"]
+    # the detach judge: a line of ANOTHER tenant does not count
+    righe = ["21:00 rcp [c15022u111] slot LEFT by c15022u111 via x (taken now: 0)"]
     if giudica_stacco(righe, "c15022u222")[0]:
-        print("⛔ lo stacco di un altro inquilino conta come mio")
+        print("⛔ the detach of another tenant counts as mine")
         ok = False
     if not giudica_stacco(righe, "c15022u111")[0]:
-        print("⛔ lo stacco dell'inquilino non si vede")
+        print("⛔ the tenant's detach is not seen")
         ok = False
     for inatt, abb in ((12, 45), (1800, 3600)):
         if not (inatt + MARGINE_S < abb):
-            print("⛔ gli orologi si pestano: inattivita' %d, abbandono %d" % (inatt, abb))
+            print("⛔ the clocks tread on each other: inactivity %d, abandonment %d" % (inatt, abb))
             ok = False
-    print("%s giudici degli orologi" % ("⭐" if ok else "⛔"))
+    print("%s clock judges" % ("⭐" if ok else "⛔"))
     return 0 if ok else 1
 
 
@@ -102,9 +102,9 @@ def giudica_stacco(righe, chi):
 def accendi(o, *opz):
     ok, t = G7.server("accendi", o.scatola, *opz)
     if not ok:
-        raise S.Bloccata("il server nostro non si accende (%s): %s" % (" ".join(opz), t[-300:]))
+        raise S.Bloccata("our server does not start (%s): %s" % (" ".join(opz), t[-300:]))
     inatt, abb, riga = G7.orologi_in_vigore(o.scatola)
-    print("   server nostro: inattivita' %s s · abbandono %s s" % (inatt, abb), flush=True)
+    print("   our server: inactivity %s s · abandonment %s s" % (inatt, abb), flush=True)
     return inatt, abb
 
 
@@ -124,7 +124,7 @@ return { rect: r ? [r.left, r.top, r.width, r.height] : null,
 
 
 def _traccia(s):
-    """G7_TRACCIA=1: ogni chiamata al browser col suo orario (diagnosi D-011)."""
+    """G7_TRACCIA=1: every call to the browser with its time (diagnosis D-011)."""
     if os.environ.get("G7_TRACCIA") != "1" or getattr(s.g, "_tracciata", False):
         return
     s.g._tracciata = True
@@ -138,7 +138,7 @@ def _traccia(s):
                 esito = "ok"
                 return r
             except Exception as e:               # noqa: BLE001
-                esito = "ECCEZIONE %s" % str(e)[:80]
+                esito = "EXCEPTION %s" % str(e)[:80]
                 raise
             finally:
                 print("   ⏱ %s %s %.2f s %s · %s" % (time.strftime("%H:%M:%S"), _n,
@@ -149,15 +149,15 @@ def _traccia(s):
 def sessione_con_scena(s, reg=None, tetto_foto=None):
     segno = reg.righe() if reg else None
     _traccia(s)
-    # ⛔⭐ D-011, la causa (25 set 2026, misurata con G7_TRACCIA=1): su XFCE lo
-    #    sfondo e' NERO e in 4K il giudice dei pixel lo dice «degenere» ⇒
-    #    `Prova.primo_fotogramma()` fotografa per TUTTO il tetto (45 s) e solo
-    #    alla fine `desktop_scuro_ma_vivo` lo salva.  Con l'orologio
-    #    d'inattivita' accorciato a 25 s, durante quei 45 s senza un gesto il
-    #    server congeda (0x02, giusto), la pagina torna al modulo (tela 16x16,
-    #    display:none) e la foto successiva fallisce: il BLOCKED era del BANCO.
-    #    ⇒ Nelle fasi a orologi corti il primo fotogramma si guarda con un
-    #    tetto piu' corto dell'orologio (`tetto_foto`), e il clic arriva subito.
+    # ⛔⭐ D-011, the cause (25 Sep 2026, measured with G7_TRACCIA=1): on XFCE the
+    #    background is BLACK and in 4K the pixel judge calls it «degenerate» ⇒
+    #    `Prova.primo_fotogramma()` photographs for the WHOLE cap (45 s) and only
+    #    at the end `desktop_scuro_ma_vivo` saves it.  With the inactivity
+    #    clock shortened to 25 s, during those 45 s without a gesture the
+    #    server says farewell (0x02, rightly), the page goes back to the form (canvas 16x16,
+    #    display:none) and the next photo fails: the BLOCKED was the BENCH's.
+    #    ⇒ In the short-clock phases the first frame is looked at with a
+    #    cap shorter than the clock (`tetto_foto`), and the click arrives at once.
     vecchio = s.o.tetto_s
     if tetto_foto:
         s.o.tetto_s = min(vecchio, tetto_foto)
@@ -165,12 +165,12 @@ def sessione_con_scena(s, reg=None, tetto_foto=None):
         ok, m = F019.entra_con_orecchio(s)
     finally:
         s.o.tetto_s = vecchio
-    # ⚠ D-011, seconda lettura (25 set 2026): su XFCE la foto del primo
-    #   fotogramma a ~1 s dall'ingresso fallisce (Firefox: TakeScreenshot
-    #   «Failure»; Chrome: tela di area 0) — l'uscita di labwc nasce 1280x720 e
-    #   si ridimensiona DOPO la nascita.  Il CONGEDO 0x02 visto nella pagina era
-    #   una CONSEGUENZA (il banco, arreso, non toccava piu' niente per 25 s).
-    #   ⇒ Si riguarda la tela per 15 s prima di arrendersi.
+    # ⚠ D-011, second reading (25 Sep 2026): on XFCE the photo of the first
+    #   frame ~1 s after entering fails (Firefox: TakeScreenshot
+    #   «Failure»; Chrome: canvas of area 0) — labwc's output is born 1280x720 and
+    #   resizes AFTER the birth.  The CONGEDO 0x02 seen in the page was
+    #   a CONSEQUENCE (the bench, having given up, touched nothing more for 25 s).
+    #   ⇒ The canvas is looked at again for 15 s before giving up.
     riprove = 0
     if not ok:
         try:
@@ -178,21 +178,21 @@ def sessione_con_scena(s, reg=None, tetto_foto=None):
             g0.pop("registro", None)
         except Exception as e:                   # noqa: BLE001
             g0 = str(e)[:150]
-        print("   ⚠ primo fotogramma non guardabile, la pagina SUBITO: %s · %s"
+        print("   ⚠ first frame not observable, the page AT ONCE: %s · %s"
               % (g0, str(G7.pagina(s.g).get("esito"))[:100]), flush=True)
-    while not ok and "non li ho potuti guardare" in m and riprove < 5:
+    while not ok and "could not look at the" in m and riprove < 5:
         riprove += 1
         time.sleep(3)
         e, m2, st = s.pr.primo_fotogramma()
         e, m2 = S.C20V.desktop_scuro_ma_vivo(e, m2, st)
-        ok, m = (e == S.VERDE), "il primo fotogramma (riprova %d): %s" % (riprove, m2)
+        ok, m = (e == S.VERDE), "the first frame (retry %d): %s" % (riprove, m2)
     if not ok:
-        # ⛔ D-011 (25 set 2026): qui il giro diceva solo «la tela non ha area
-        #    visibile» e le prove del perche' sparivano col riavvio del server.
-        #    ⇒ Prima di arrendersi si fotografa lo STATO DELLA PAGINA (che cosa
-        #    dice, se e' ancora vestita da desktop, il suo registro) e le righe
-        #    del server per questo inquilino, e la frase della pagina entra nella
-        #    ragione del BLOCKED.
+        # ⛔ D-011 (25 Sep 2026): here the round said only «the canvas has no visible
+        #    area» and the evidence of why vanished with the server restart.
+        #    ⇒ Before giving up we photograph the STATE OF THE PAGE (what it
+        #    says, whether it is still dressed as a desktop, its log) and the lines
+        #    of the server for this tenant, and the page's sentence enters the
+        #    reason of the BLOCKED.
         time.sleep(1)
         pag = G7.pagina(s.g)
         try:
@@ -202,18 +202,18 @@ def sessione_con_scena(s, reg=None, tetto_foto=None):
         pag["geometria"] = geo
         s.salva_testo("pagina-ingresso-fallito.txt",
                       "\n".join("%s: %s" % kv for kv in pag.items()))
-        print("   ⚠ ingresso fallito, la pagina: %s" % geo, flush=True)
+        print("   ⚠ login failed, the page: %s" % geo, flush=True)
         if reg is not None and segno is not None:
             s.salva_testo("server-ingresso-fallito.txt", reg.da(segno, s.chi))
         s.salva_console()
-        raise S.Bloccata("non si entra: %s · la pagina: esito «%s», vestita=%s, modulo=%s"
+        raise S.Bloccata("you cannot get in: %s · the page: outcome «%s», dressed=%s, form=%s"
                          % (m, (pag.get("esito") or "")[:120], pag.get("vestita"),
                             pag.get("modulo_visibile")))
-    F019.clic_tela(s)                 # ⭐ il PRIMO gesto: parte l'orologio dell'abbandono
+    F019.clic_tela(s)                 # ⭐ the FIRST gesture: the abandonment clock starts
     t_gesto = time.time()
     pid, t = G7.lancia_scena(s)
     if not pid:
-        raise S.Bloccata("la scena non parte: " + t)
+        raise S.Bloccata("the scene does not start: " + t)
     vista, t = G7.aspetta_scena(s, S)
     if not vista:
         raise S.Bloccata(t)
@@ -233,53 +233,53 @@ def fase_silenzio(o, E, reg):
             vivi = G7.processi_inquilino(o.scatola, s.chi)
         finally:
             G7.riprendi_browser(s.g)
-        print("   F-022: fermati %d processi del browser · stacco: %s dopo %.0f s"
+        print("   F-022: %d browser processes stopped · detach: %s after %.0f s"
               % (len(fermati), forma, dopo), flush=True)
         time.sleep(2)
         ok_r, come, mr = F019.rientra(s, 40)
         ps1 = G7.processi_inquilino(o.scatola, s.chi)
         ev = [s.salva_testo("server-f022.txt", reg.da(segno, s.chi)), s.salva_console()]
-        atteso = ("browser fermo ⇒ staccato entro %d s (riga linea-morta/STACCATO/posto "
-                  "LASCIATO), sessione viva, si rientra coi programmi di prima" % SILENZIO_S)
-        oss = ("stacco: %s · programmi vivi durante: %s · rientro %s: %s (%s) · scena di prima "
-               "viva dopo: %s" % ((riga or "NESSUNO")[:180], pid in vivi, come,
-                                   "riuscito" if ok_r else "FALLITO", mr[:100], pid in ps1))
+        atteso = ("browser stopped ⇒ detached within %d s (line linea-morta/DETACHED/slot "
+                  "LEFT), session alive, you come back in with the previous programs" % SILENZIO_S)
+        oss = ("detach: %s · programs alive during: %s · re-entry %s: %s (%s) · previous scene "
+               "alive after: %s" % ((riga or "NONE")[:180], pid in vivi, come,
+                                   "succeeded" if ok_r else "FAILED", mr[:100], pid in ps1))
         if not fermati:
-            E.metti("F-022", S.BLOCKED, "non ho potuto fermare il browser (nessun pid)",
+            E.metti("F-022", S.BLOCKED, "I could not stop the browser (no pid)",
                     evidenze=ev)
         elif not forma:
-            E.metti("F-022", S.FAIL, "il client tace da %d s e il server NON lo stacca"
+            E.metti("F-022", S.FAIL, "the client has been silent for %d s and the server does NOT detach it"
                     % (SILENZIO_S + 5), atteso=atteso, osservato=oss, evidenze=ev)
         elif pid not in vivi or not ok_r or pid not in ps1:
-            E.metti("F-022", S.FAIL, "staccato, ma la sessione non si ritrova: " + oss,
+            E.metti("F-022", S.FAIL, "detached, but the session is not found again: " + oss,
                     atteso=atteso, osservato=oss, evidenze=ev)
         else:
-            E.metti("F-022", S.PASS, "staccato dopo %.0f s da «%s», sessione ritrovata"
+            E.metti("F-022", S.PASS, "detached after %.0f s by «%s», session found again"
                     % (dopo, forma), atteso=atteso, osservato=oss, evidenze=ev)
         if o.guasto:
-            # GUASTO: il browser NON si ferma — il giudice deve dire «non staccato»
+            # FAULT: the browser does NOT stop — the judge must say «not detached»
             segno2 = reg.righe()
             forma2, riga2, dopo2 = reg.aspetta(segno2, FORME_STACCO, s.chi,
                                                tetto=SILENZIO_S + 5, passo=2.0)
             E.guasto("F-022", forma2 is None,
-                     "browser vivo ⇒ il giudice %s" % ("non vede stacchi in %d s (rosso)"
+                     "browser alive ⇒ the judge %s" % ("sees no detach in %d s (red)"
                                                       % (SILENZIO_S + 5) if forma2 is None
-                                                      else "vede uno STACCO: " + riga2[:150]))
+                                                      else "sees a DETACH: " + riga2[:150]))
 
 
 def fase_orologi(o, E, reg, corti):
-    """corti=True: la passata sana (F-023, F-024); False: il GUASTO (orologi lunghi)."""
+    """corti=True: the healthy pass (F-023, F-024); False: the FAULT (long clocks)."""
     passata = "sana" if corti else "guasto"
     with S.Sessione(o, "022", E) as s:
         segno = reg.righe()
-        # il primo fotogramma si guarda per meno dell'orologio d'inattivita'
+        # the first frame is looked at for less than the inactivity clock
         pid, t_gesto = sessione_con_scena(s, reg, tetto_foto=max(8, INATTIVITA_S - 10))
         # — F-023 —
-        forma, riga, _d = reg.aspetta(segno, ["INATTIVITA'"], s.chi,
+        forma, riga, _d = reg.aspetta(segno, ["INACTIVITY"], s.chi,
                                       tetto=max(1, INATTIVITA_S + MARGINE_S - (time.time() - t_gesto)),
                                       passo=1.0)
         dopo = time.time() - t_gesto
-        # la pagina ha fino a 10 s per dirlo (il CONGEDO arriva, poi il modulo)
+        # the page has up to 10 s to say it (the CONGEDO arrives, then the form)
         pag = G7.pagina(s.g)
         for _ in range(10):
             if not forma or G7.la_pagina_lo_dice(pag):
@@ -290,52 +290,52 @@ def fase_orologi(o, E, reg, corti):
         detto = G7.la_pagina_lo_dice(pag)
         if not corti:
             E.guasto("F-023", forma is None,
-                     "orologio LUNGO ⇒ il giudice %s" % (
-                         "non vede INATTIVITA' in %d s (rosso)" % (INATTIVITA_S + MARGINE_S)
-                         if forma is None else "vede INATTIVITA': " + riga[:150]))
+                     "LONG clock ⇒ the judge %s" % (
+                         "sees no INACTIVITY in %d s (red)" % (INATTIVITA_S + MARGINE_S)
+                         if forma is None else "sees INACTIVITY: " + riga[:150]))
         else:
-            ok_r, come, mr = (False, "", "non tentato")
+            ok_r, come, mr = (False, "", "not attempted")
             if forma:
-                # si rientra SOLO con utente e parola: la pagina non deve essersi
-                # ricollegata da se'
+                # you come back in ONLY with user and password: the page must not have
+                # reconnected by itself
                 da_se = bool(pag.get("sessione")) and pag.get("vestita") == "acceso" \
                     and not pag.get("modulo_visibile")
                 ok_r, come, mr = F019.rientra(s, 40)
             ps1 = G7.processi_inquilino(o.scatola, s.chi)
             ev = [s.salva_testo("server-f023.txt", reg.da(segno, s.chi)),
                   s.salva_testo("pagina-f023.txt", "\n".join("%s: %s" % kv for kv in pag.items()))]
-            atteso = ("un clic, poi niente ⇒ fra %d e %d s CONGEDO 0x02 (riga INATTIVITA'), la "
-                      "pagina lo dice e torna al modulo, i programmi restano, si rientra con "
-                      "utente e parola" % (INATTIVITA_S, INATTIVITA_S + MARGINE_S))
-            oss = ("riga: %s · a %.0f s dal clic · pagina: esito «%s» modulo %s vestita %s · "
-                   "scena viva %s · rientro %s: %s · scena viva dopo %s"
-                   % ((riga or "NESSUNA")[:120], dopo, (pag.get("esito") or "")[:90],
+            atteso = ("one click, then nothing ⇒ between %d and %d s CONGEDO 0x02 (INACTIVITY line), the "
+                      "page says it and goes back to the form, the programs stay, you come back in with "
+                      "user and password" % (INATTIVITA_S, INATTIVITA_S + MARGINE_S))
+            oss = ("line: %s · %.0f s after the click · page: outcome «%s» form %s dressed %s · "
+                   "scene alive %s · re-entry %s: %s · scene alive after %s"
+                   % ((riga or "NONE")[:120], dopo, (pag.get("esito") or "")[:90],
                       pag.get("modulo_visibile"), pag.get("vestita"), pid in vivi, come,
-                      "riuscito" if ok_r else mr[:80], pid in ps1))
+                      "succeeded" if ok_r else mr[:80], pid in ps1))
             if not forma:
-                E.metti("F-023", S.FAIL, "nessuna INATTIVITA' entro %d s dall'ultimo gesto"
+                E.metti("F-023", S.FAIL, "no INACTIVITY within %d s of the last gesture"
                         % (INATTIVITA_S + MARGINE_S), atteso=atteso, osservato=oss, evidenze=ev)
             elif not detto:
-                E.metti("F-023", S.FAIL, "staccato per inattivita', ma la pagina non lo dice: "
+                E.metti("F-023", S.FAIL, "detached for inactivity, but the page does not say it: "
                         + oss, atteso=atteso, osservato=oss, evidenze=ev)
             elif pid not in vivi or not ok_r or pid not in ps1:
-                E.metti("F-023", S.FAIL, "dopo l'inattivita' la sessione non si ritrova: " + oss,
+                E.metti("F-023", S.FAIL, "after the inactivity the session is not found again: " + oss,
                         atteso=atteso, osservato=oss, evidenze=ev)
             elif da_se:
-                E.metti("F-023", S.FAIL, "la pagina si e' ricollegata da se' (non doveva)",
+                E.metti("F-023", S.FAIL, "the page reconnected by itself (it should not have)",
                         atteso=atteso, osservato=oss, evidenze=ev)
             else:
-                E.metti("F-023", S.PASS, "staccato a %.0f s, pagina al modulo con «%s», rientrato "
-                        "con la parola, scena ritrovata" % (dopo, (pag.get("esito") or "")[:60]),
+                E.metti("F-023", S.PASS, "detached at %.0f s, page at the form with «%s», back in "
+                        "with the password, scene found again" % (dopo, (pag.get("esito") or "")[:60]),
                         atteso=atteso, osservato=oss, evidenze=ev)
-        # — F-024 — nessun gesto dal clic: l'abbandono
+        # — F-024 — no gesture since the click: the abandonment
         resta = ABBANDONO_S + MARGINE_S - (time.time() - t_gesto)
-        forma4, riga4, _d = reg.aspetta(segno, ["ABBANDONO"], s.chi,
+        forma4, riga4, _d = reg.aspetta(segno, ["ABANDONMENT"], s.chi,
                                         tetto=max(1, resta), passo=2.0)
         dopo4 = time.time() - t_gesto
         time.sleep(4)
         ps4 = {}
-        for _ in range(8):                        # la chiusura non e' istantanea
+        for _ in range(8):                        # the closing is not instantaneous
             ps4 = G7.processi_inquilino(o.scatola, s.chi)
             if pid not in ps4 and not (forma4 and ps4):
                 break
@@ -343,37 +343,37 @@ def fase_orologi(o, E, reg, corti):
         if not corti:
             rosso = forma4 is None and pid in ps4
             E.guasto("F-024", rosso,
-                     "orologio LUNGO ⇒ il giudice %s" % (
-                         "non vede ABBANDONO in %d s e la scena e' viva (rosso)"
+                     "LONG clock ⇒ the judge %s" % (
+                         "sees no ABANDONMENT in %d s and the scene is alive (red)"
                          % (ABBANDONO_S + MARGINE_S) if rosso
-                         else "vede un ABBANDONO (%s) o la scena sparita (%s)"
+                         else "sees an ABANDONMENT (%s) or the scene gone (%s)"
                          % ((riga4 or "")[:100], pid not in ps4)))
             return
         ev = [s.salva_testo("server-f024.txt", reg.da(segno, s.chi)),
               s.salva_testo("processi-f024.txt", "\n".join("%d %s" % kv for kv in sorted(ps4.items())))]
-        atteso = ("nessun gesto dal clic ⇒ entro %d s riga ABBANDONO e la sessione si chiude "
-                  "coi suoi programmi (processi dell'inquilino spariti)" % (ABBANDONO_S + MARGINE_S))
-        oss = ("riga: %s · a %.0f s dal clic · scena viva %s · processi dell'inquilino rimasti "
-               "%d: %s" % ((riga4 or "NESSUNA")[:120], dopo4, pid in ps4, len(ps4),
+        atteso = ("no gesture since the click ⇒ within %d s ABANDONMENT line and the session closes "
+                  "with its programs (the tenant's processes gone)" % (ABBANDONO_S + MARGINE_S))
+        oss = ("line: %s · %.0f s after the click · scene alive %s · tenant's processes left "
+               "%d: %s" % ((riga4 or "NONE")[:120], dopo4, pid in ps4, len(ps4),
                            ", ".join(sorted(set(ps4.values())))[:200]))
         if not forma4:
-            E.metti("F-024", S.FAIL, "nessun ABBANDONO entro %d s dall'ultimo gesto"
+            E.metti("F-024", S.FAIL, "no ABANDONMENT within %d s of the last gesture"
                     % (ABBANDONO_S + MARGINE_S), atteso=atteso, osservato=oss, evidenze=ev)
         elif pid in ps4 or _residui(s):
-            oss += " · non esenti (regola di F-021): %s" % ", ".join(_residui(s) or [])[:200]
-            E.metti("F-024", S.FAIL, "ABBANDONO scritto, ma restano processi della sessione: "
+            oss += " · non-exempt (F-021's rule): %s" % ", ".join(_residui(s) or [])[:200]
+            E.metti("F-024", S.FAIL, "ABANDONMENT written, but processes of the session remain: "
                     + oss, atteso=atteso, osservato=oss, evidenze=ev)
         else:
-            E.metti("F-024", S.PASS, "abbandono a %.0f s dal clic, nessun processo dell'inquilino "
-                    "rimasto" % dopo4, atteso=atteso, osservato=oss, evidenze=ev)
+            E.metti("F-024", S.PASS, "abandonment at %.0f s after the click, no tenant process "
+                    "left" % dopo4, atteso=atteso, osservato=oss, evidenze=ev)
 
 
 def _residui(s):
-    """⭐ I processi dell'inquilino che NON devono restare, con la stessa regola
-    di F-021 (gruppo di controllo): il figlio `remotix` resta per disegno (il
-    rientro nasce in lui) e il gestore d'utente di systemd coi suoi servizi
-    (dbus, pipewire, wireplumber) vive quanto la sessione di logind del figlio.
-    `[M]` 25 set 2026, LXQt: restavano esattamente quelli ⇒ un FAIL del BANCO."""
+    """⭐ The tenant's processes that must NOT remain, with the same rule
+    as F-021 (control group): the `remotix` child stays by design (the
+    re-entry is born in it) and systemd's user manager with its services
+    (dbus, pipewire, wireplumber) lives as long as the child's logind session.
+    `[M]` 25 Sep 2026, LXQt: exactly those remained ⇒ a BENCH FAIL."""
     import importlib.util as _iu
     f = os.path.join(os.path.dirname(os.path.abspath(__file__)), "15-f021-esci.py")
     sp = _iu.spec_from_file_location("f021", f)
@@ -387,7 +387,7 @@ def corpo(o, E):
         o.porta = G7.PORTE_G7[o.scatola]
         o.url = "https://%s:%d/" % (o.host, o.porta)
     if o.porta != G7.PORTE_G7[o.scatola]:
-        raise S.Bloccata("la porta %d non e' quella del server nostro (%d)"
+        raise S.Bloccata("port %d is not our server's (%d)"
                          % (o.porta, G7.PORTE_G7[o.scatola]))
     prima_8511 = F019.sano_8511(o)
     reg = G7.Registro(o.scatola)
@@ -402,7 +402,7 @@ def corpo(o, E):
         accendi(o, "--inattivita-s", str(INATTIVITA_S), "--abbandono-s", str(ABBANDONO_S))
         fase_orologi(o, E, reg, corti=True)
         if o.guasto:
-            accendi(o)                                # i LUNGHI: i predefiniti
+            accendi(o)                                # the LONG ones: the defaults
             try:
                 fase_orologi(o, E, reg, corti=False)
             except S.Bloccata as b:
@@ -410,10 +410,10 @@ def corpo(o, E):
     finally:
         inatt, abb, _r = G7.orologi_in_vigore(o.scatola)
         if (inatt, abb) != (1800, 3600):
-            G7.server("accendi", o.scatola)           # si lascia coi predefiniti
+            G7.server("accendi", o.scatola)           # left with the defaults
         dopo_8511 = F019.sano_8511(o)
-        print("   server 851x prima «%s» dopo «%s»%s" % (
-            prima_8511, dopo_8511, "" if prima_8511 == dopo_8511 else "  ⛔ CAMBIATO"), flush=True)
+        print("   851x server before «%s» after «%s»%s" % (
+            prima_8511, dopo_8511, "" if prima_8511 == dopo_8511 else "  ⛔ CHANGED"), flush=True)
 
 
 if __name__ == "__main__":

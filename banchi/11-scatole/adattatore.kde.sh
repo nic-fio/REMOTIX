@@ -1,33 +1,33 @@
 # ===========================================================================
-# adattatore.kde.sh — ⭐ COME SI AVVIA E SI GUARDA **PLASMA**
+# adattatore.kde.sh — ⭐ HOW **PLASMA** IS STARTED AND WATCHED
 # ===========================================================================
 #
-# ⛔⛔ E QUESTA SCATOLA HA UNO SCOPO SOLO, oggi: dimostrare che la rete NON e'
-#     fatta su misura di GNOME.
+# ⛔⛔ AND THIS BOX HAS ONE PURPOSE ONLY, today: to show that the net is NOT
+#     tailored to GNOME.
 #
-# ⚠ Il prodotto **non sa ancora accendere KDE**: in `src/` c'e' soltanto il
-#   pezzo che parla con Mutter, e KDE e' la fase 12.  ⇒ Dentro questa scatola,
-#   oggi, girano soltanto le verifiche dell'AMBIENTE (il passo 0), non le
-#   maglie della rete che vogliono il prodotto.
+# ⚠ The product **cannot start KDE yet**: in `src/` there is only the
+#   piece that talks to Mutter, and KDE is phase 12.  ⇒ Inside this box,
+#   today, only the ENVIRONMENT checks run (step 0), not the
+#   meshes of the net that need the product.
 #
-# ⭐ E questo basta a rispondere alla domanda che conta: **il modo di provare
-#   regge anche su un compositore che non e' Mutter?**  Se la risposta e' no,
-#   e' molto meglio saperlo adesso che alla fase 12.
+# ⭐ And that is enough to answer the question that counts: **does the way of testing
+#   hold on a compositor that is not Mutter too?**  If the answer is no,
+#   it is much better to know it now than at phase 12.
 #
-# ⛔ Il confine e' lo stesso dell'altro adattatore: qui ci va **come si avvia e
-#    come si guarda**, MAI il comportamento del prodotto.
+# ⛔ The boundary is the same as the other adapter: what goes in here is **how it is started and
+#    how it is watched**, NEVER the product's behaviour.
 # ===========================================================================
 
 adattatore_nome() { printf 'KDE (KWin)'; }
 
 adattatore_pacchetto() { printf 'kwin-wayland'; }
 
-# ⚠ KWin senza monitor fisico si accende con `--virtual`, e la misura si da'
-#   sulla riga di avvio.  ⭐ E' una differenza VERA fra i due compositori — la
-#   stessa che `PIANO.md` fase 12 dichiara: KWin ≤ 6.7.4 prende la misura da
-#   qui e non la cambia piu'.
-#   ⇒ E' esattamente il genere di cosa che deve stare in un adattatore invece
-#     che in un `se il desktop e' KDE allora` dentro la lista delle prove.
+# ⚠ KWin without a physical monitor is started with `--virtual`, and the size is given
+#   on the command line.  ⭐ It is a REAL difference between the two compositors — the
+#   same one that `PIANO.md` phase 12 declares: KWin ≤ 6.7.4 takes the size from
+#   here and never changes it again.
+#   ⇒ It is exactly the kind of thing that must live in an adapter instead
+#     of in an `if the desktop is KDE then` inside the list of tests.
 adattatore_avvia() {
 	_rtd=$1; _log=$2
 	runuser -u provanic -- env \

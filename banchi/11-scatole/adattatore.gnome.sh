@@ -1,24 +1,24 @@
 # ===========================================================================
-# adattatore.gnome.sh — ⭐ COME SI AVVIA E SI GUARDA **QUESTO** DESKTOP
+# adattatore.gnome.sh — ⭐ HOW **THIS** DESKTOP IS STARTED AND WATCHED
 # ===========================================================================
 #
-# ⛔⛔ QUESTO FILE E' LA RISPOSTA ALLA DOMANDA PIU' DIFFICILE DELLA FASE:
-#     *«come si scrivono prove che valgano su quattro desktop diversi senza
-#       riscriverle quattro volte?»*  (`fasi/11…` §3.7, e la Q3 su cui i due
-#       revisori esterni hanno risposto la stessa cosa).
+# ⛔⛔ THIS FILE IS THE ANSWER TO THE HARDEST QUESTION OF THE PHASE:
+#     *«how do you write tests that hold on four different desktops without
+#       rewriting them four times?»*  (`fasi/11…` §3.7, and Q3, on which the two
+#       external reviewers answered the same thing).
 #
-# ⭐ La lista delle prove (C1…C14) e' UNA e non sa niente di nessun desktop.
-#    Ogni scatola porta un file come questo, allo STESSO percorso —
-#    `/usr/local/lib/rete11/adattatore.sh` — che risponde a poche domande:
+# ⭐ The list of tests (C1…C14) is ONE and knows nothing about any desktop.
+#    Every box carries a file like this one, at the SAME path —
+#    `/usr/local/lib/rete11/adattatore.sh` — that answers a few questions:
 #
-#       adattatore_nome            come si chiama questo desktop
-#       adattatore_pacchetto       da che pacchetto viene, per l'impronta
-#       adattatore_avvia RTD LOG   accendi il compositore, torna il suo pid
+#       adattatore_nome            what this desktop is called
+#       adattatore_pacchetto       which package it comes from, for the fingerprint
+#       adattatore_avvia RTD LOG   start the compositor, return its pid
 #
-# ⛔ IL CONFINE, e va difeso: qui dentro ci va **come si avvia e come si
-#    guarda**, MAI il comportamento del prodotto.  Il giorno in cui un
-#    adattatore contiene una regola di REMOTIX, non e' piu' un adattatore:
-#    e' un'eccezione per compositore travestita, e il prodotto non le ammette
+# ⛔ THE BOUNDARY, and it must be defended: what goes in here is **how it is started and how
+#    it is watched**, NEVER the product's behaviour.  The day an
+#    adapter contains a REMOTIX rule, it is no longer an adapter:
+#    it is a per-compositor exception in disguise, and the product does not allow them
 #    (`DECISIONI.md` §5.1-bis).
 # ===========================================================================
 
@@ -26,18 +26,18 @@ adattatore_nome() { printf 'GNOME (Mutter)'; }
 
 adattatore_pacchetto() { printf 'gnome-shell'; }
 
-# avvia il compositore in fondo, e stampa il suo pid.
-#   $1 = la cartella privata della sessione
-#   $2 = dove scrivere quel che dice
+# starts the compositor in the background, and prints its pid.
+#   $1 = the session's private directory
+#   $2 = where to write what it says
 #
-# ⚠⚠ `--virtual-monitor` c'e' APPOSTA, e NON e' come lo avvia il prodotto.
-#    Il prodotto lo ha tolto il 14 agosto 2026 con una misura sotto
-#    (`src/sessione.c:735`): la sessione nasce SENZA monitor propri, e l'unico
-#    monitor lo monta la nostra cattura.
-#    ⇒ Qui la domanda e' sull'AMBIENTE — *«un compositore Wayland riesce a
-#      vivere in questa scatola e a servire un cliente?»* — non sul prodotto.
-#      ⛔ Chiedere quella del prodotto senza il prodotto dentro vorrebbe dire
-#      rispondere a una domanda diversa da quella scritta.
+# ⚠⚠ `--virtual-monitor` is there ON PURPOSE, and it is NOT how the product starts it.
+#    The product removed it on 14 August 2026 with a measurement behind it
+#    (`src/sessione.c:735`): the session is born WITHOUT monitors of its own, and the only
+#    monitor is mounted by our capture.
+#    ⇒ Here the question is about the ENVIRONMENT — *«can a Wayland compositor
+#      live in this box and serve a client?»* — not about the product.
+#      ⛔ Asking the product's question without the product inside would mean
+#      answering a question different from the one written.
 adattatore_avvia() {
 	_rtd=$1; _log=$2
 	runuser -u provanic -- env \

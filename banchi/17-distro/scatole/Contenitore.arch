@@ -1,11 +1,11 @@
-# Contenitore.arch — fase 17: la scatola «cliente» di Arch col desktop DESKTOP (gnome, plasma, xfce4 +
-# xfce4-goodies, lxqt + breeze-icons: gli stessi di 17-vm.sh vesti, SENZA abilitare il gestore
-# d'accesso: la scatola parte in multi-user). Il resto come Contenitore.debian13.
+# Contenitore.arch — phase 17: the "customer" box of Arch with the desktop DESKTOP (gnome, plasma, xfce4 +
+# xfce4-goodies, lxqt + breeze-icons: the same as 17-vm.sh vesti, WITHOUT enabling the display
+# manager: the box boots into multi-user). The rest as in Contenitore.debian13.
 FROM docker.io/archlinux/archlinux:latest
 ARG DESKTOP
 ARG PORTA_SSH=8600
-RUN case "$DESKTOP" in gnome|kde|xfce|lxqt) ;; *) echo "DESKTOP=«$DESKTOP»: gnome|kde|xfce|lxqt" >&2; exit 2 ;; esac
-# l'immagine ufficiale toglie le pagine di manuale e simili (NoExtract): si lascia com'è
+RUN case "$DESKTOP" in gnome|kde|xfce|lxqt) ;; *) echo "DESKTOP=\"$DESKTOP\": gnome|kde|xfce|lxqt" >&2; exit 2 ;; esac
+# the official image strips man pages and the like (NoExtract): it is left as it is
 RUN pacman -Syu --noconfirm systemd dbus sudo procps-ng iproute2 ca-certificates curl openssh \
     && pacman -Scc --noconfirm
 RUN case "$DESKTOP" in gnome) P="gnome" ;; kde) P="plasma" ;; xfce) P="xfce4 xfce4-goodies" ;; lxqt) P="lxqt breeze-icons" ;; esac \

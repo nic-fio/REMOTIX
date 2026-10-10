@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-g3-comune — l'aiuto comune delle tre prove del gruppo G3 (F-005, F-006,
-F-008): le maglie C21, C22, C23 della fase 14 dentro la suite.
+15-g3-comune — the common helper of the three tests of group G3 (F-005, F-006,
+F-008): the meshes C21, C22, C23 of phase 14 inside the suite.
 
-⛔ Le maglie si IMPORTANO, non si copiano: le loro funzioni di osservazione e
-   di giudizio (`C21.osserva`, `C22.prova_browser`, `C22.scansiona`,
-   `C23.manda`, `C23.fotografa_e_leggi`, …) girano cosi' come sono.  Una sola
-   cosa va cambiata: `osserva` e `prova_browser` accendono DA SE' il browser
-   (`VERI.accendi_guida`) e lo chiudono alla fine; nella suite il browser e
-   l'inquilino li tiene `suite.Sessione`.  ⇒ `guida_prestata()` presta alla
-   maglia il browser della sessione, con un `chiudi()` che non chiude: la
-   sessione resta viva per la passata col guasto e per le osservazioni in piu'.
+⛔ The meshes are IMPORTED, not copied: their observation and
+   judgment functions (`C21.osserva`, `C22.prova_browser`, `C22.scansiona`,
+   `C23.manda`, `C23.fotografa_e_leggi`, …) run as they are.  Only one
+   thing must change: `osserva` and `prova_browser` start the browser BY THEMSELVES
+   (`VERI.accendi_guida`) and close it at the end; in the suite the browser and
+   the tenant are held by `suite.Sessione`.  ⇒ `guida_prestata()` lends the
+   mesh the session's browser, with a `chiudi()` that does not close: the
+   session stays alive for the fault pass and for the extra observations.
 """
 import contextlib
 import glob
@@ -25,9 +25,9 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 
 
 def _parola_sudo():
-    """La parola di sudo del server: da REMOTIX_PAROLA_SUDO, o dalla riga «pass:» di
-    ~/SERVER.ssh (lo stesso file di fondamenta/strumenti/sshpw.py). ⛔ Mai scritta
-    nei banchi: sono nel deposito."""
+    """The server's sudo password: from REMOTIX_PAROLA_SUDO, or from the «pass:» line of
+    ~/SERVER.ssh (the same file as fondamenta/strumenti/sshpw.py). ⛔ Never written
+    in the benches: they are in the repository."""
     p = os.environ.get("REMOTIX_PAROLA_SUDO")
     if p is None:
         try:
@@ -45,11 +45,11 @@ SCATOLE = os.path.join(S.BANCHI, "11-scatole")
 
 
 def pazienza_ssh(scatola_cls):
-    """⚠ `[M]` 24 set 2026, 10 agenti sul server: `Scatola.dentro` passa per un
-    ssh del server verso se' stesso, e sshd (MaxStartups 10:30:100) chiude a
-    caso le connessioni non ancora autenticate («Connection closed by … port
-    22»).  Il comando in quel caso NON e' partito (si chiude prima
-    dell'accesso) ⇒ si puo' ripetere.  Si riprova fino a 12 volte (circa due minuti)."""
+    """⚠ `[M]` 24 Sep 2026, 10 agents on the server: `Scatola.dentro` goes through an
+    ssh from the server to itself, and sshd (MaxStartups 10:30:100) randomly closes
+    the not yet authenticated connections («Connection closed by … port
+    22»).  The command in that case did NOT start (it closes before
+    the login) ⇒ it can be repeated.  It is retried up to 12 times (about two minutes)."""
     if getattr(scatola_cls, "_g3_pazienza", False):
         return
     originale = scatola_cls.dentro
@@ -78,8 +78,8 @@ def carica_maglia(nome, file):
 
 
 class Prestito:
-    """Il browser della sessione, prestato a una maglia: tutto passa, tranne
-    `chiudi()` (lo chiude la Sessione, all'uscita)."""
+    """The session's browser, lent to a mesh: everything goes through, except
+    `chiudi()` (the Sessione closes it, on exit)."""
 
     def __init__(self, g):
         self.__dict__["_g"] = g
@@ -93,9 +93,9 @@ class Prestito:
 
 @contextlib.contextmanager
 def guida_prestata(veri, g):
-    """Dentro il blocco `veri.accendi_guida(...)` torna il browser `g` della
-    sessione (in prestito).  ⚠ `veri` e' il modulo `12-client-veri` CHE LA
-    MAGLIA USA: ogni maglia caricata porta il suo."""
+    """Inside the block `veri.accendi_guida(...)` returns the session's browser `g`
+    (on loan).  ⚠ `veri` is the `12-client-veri` module THAT THE
+    MESH USES: every loaded mesh carries its own."""
     vecchia = veri.accendi_guida
     veri.accendi_guida = lambda nome, o: Prestito(g)
     try:
@@ -105,16 +105,16 @@ def guida_prestata(veri, g):
 
 
 def cura_della_cache(sc, chi):
-    """⭐ La `~/.cache` VERA all'inquilino — la cura di `src/provisiona.sh`, con
-    le righe di `11-c8….applica_la_cura` (che gira DENTRO la scatola: qui si
-    manda con `sc.dentro`), e la prova di scrittura di `sa_scrivere_nella_cache`.
+    """⭐ The REAL `~/.cache` for the tenant — the cure of `src/provisiona.sh`, with
+    the lines of `11-c8….applica_la_cura` (which runs INSIDE the box: here it is
+    sent with `sc.dentro`), and the write test of `sa_scrivere_nella_cache`.
 
-    `[M]` 24 set 2026, rete11-gnome: `/etc/skel/.cache -> /tmp` (la scelta
-    dell'utente, `DECISIONI.md` §4.6-undecies, riprodotta nella scatola) ⇒ il
-    primo inquilino che apre `firefox-esr` si prende `/tmp/mozilla` a modo 0700
-    e tutti gli altri vedono «Your Firefox profile cannot be loaded».  C21-C23
-    non la facevano: nella fase 14 giravano da sole.  Con dieci agenti sulla
-    stessa scatola la finestra di prova non nasce piu' ⇒ BLOCKED di banco."""
+    `[M]` 24 Sep 2026, rete11-gnome: `/etc/skel/.cache -> /tmp` (the user's
+    choice, `DECISIONI.md` §4.6-undecies, reproduced in the box) ⇒ the
+    first tenant that opens `firefox-esr` takes `/tmp/mozilla` with mode 0700
+    and all the others see «Your Firefox profile cannot be loaded».  C21-C23
+    did not do it: in phase 14 they ran alone.  With ten agents on the
+    same box the test window is no longer born ⇒ bench BLOCKED."""
     c = "/home/%s/.cache" % chi
     cod, t = sc.dentro(
         "[ -L %s ] && rm -f %s; mkdir -p %s; chown %s:%s %s; chmod 700 %s; "
@@ -125,9 +125,9 @@ def cura_della_cache(sc, chi):
 
 
 def prepara_o(o, s):
-    """I campi che le maglie leggono da `o` e che `suite.argomenti` non mette;
-    ⚠ la `~/.cache` vera all'inquilino la da' ora `suite.Sessione` (25 set):
-    `cura_della_cache` resta solo come diagnosi, non si chiama piu'."""
+    """The fields the meshes read from `o` and that `suite.argomenti` does not set;
+    ⚠ the real `~/.cache` for the tenant is now given by `suite.Sessione` (25 Sep):
+    `cura_della_cache` remains only as a diagnosis, it is no longer called."""
     o.parola = s.parola
     o.utente = s.chi
     o.salva = o.evidenze or ""
@@ -136,7 +136,7 @@ def prepara_o(o, s):
 
 
 def evidenze_nuove(o, prima):
-    """I file comparsi nelle evidenze dopo `prima` (un insieme di percorsi)."""
+    """The files that appeared in the evidence after `prima` (a set of paths)."""
     if not o.evidenze:
         return []
     return sorted(set(glob.glob(os.path.join(o.evidenze, "*"))) - set(prima))
@@ -150,20 +150,20 @@ DA_ESITO_GUASTO = {S.VERDE: True, S.ROSSO: False, S.CIECO: None}
 
 
 def argomenti_g3(a):
-    # ⚠ `[M]` 25 set: con Chrome una foto a scala 1 in 4K (+ la ricerca del
-    #   ciano) costa 10-20 s sotto carico: in 60 s due foto FERME di fila non
-    #   sempre ci stanno ⇒ BLOCKED «la finestra non si vede» con la finestra li'.
+    # ⚠ `[M]` 25 Sep: with Chrome a photo at scale 1 in 4K (+ the search for the
+    #   cyan) costs 10-20 s under load: in 60 s two STILL photos in a row do not
+    #   always fit ⇒ BLOCKED «the window is not seen» with the window there.
     a.add_argument("--attesa-finestra", type=int, default=150,
-                   help="quanto si aspetta che la finestra di prova compaia ferma")
+                   help="how long to wait for the test window to appear still")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  LA SCENA E' ANCORA VIVA?  (per non dare al prodotto la colpa del server)
+#  IS THE SCENE STILL ALIVE?  (so as not to blame the product for the server)
 # ─────────────────────────────────────────────────────────────────────────────
-# `[M]` 24 set 2026, sera: dieci agenti sul server, 31 GB, niente swap ⇒
-#   l'OOM-killer del server ha ucciso processi; nello stesso minuto sono
-#   sparite le finestre `firefox-esr` di due scene (F-006 e F-008, gnome).  Un
-#   caso rosso con la scena morta NON e' un rosso del prodotto: e' BLOCKED.
+# `[M]` 24 Sep 2026, evening: ten agents on the server, 31 GB, no swap ⇒
+#   the server's OOM-killer killed processes; in the same minute the
+#   `firefox-esr` windows of two scenes vanished (F-006 and F-008, gnome).  A
+#   red case with the scene dead is NOT a red of the product: it is BLOCKED.
 def scena_viva(sc, chi):
     c, t = sc.dentro("pgrep -u %s -f '[f]irefox-esr' >/dev/null && echo viva || echo morta"
                      % chi, 30)
@@ -171,8 +171,8 @@ def scena_viva(sc, chi):
 
 
 def uccisi_dal_server():
-    """Le righe «Killed process» del registro del kernel del server (dove gira
-    la prova): si confrontano prima e dopo.  [] se non si leggono."""
+    """The «Killed process» lines of the kernel log of the server (where the
+    test runs): they are compared before and after.  [] if they cannot be read."""
     import subprocess
     try:
         r = subprocess.run(["sudo", "-S", "-p", "", "dmesg"], input=_parola_sudo(),
@@ -188,18 +188,18 @@ def nuovi_uccisi(prima):
 
 
 def spiega_cieco(prima_oom):
-    """Una frase in piu' per un BLOCKED: l'OOM-killer ha lavorato nel frattempo?"""
+    """One more sentence for a BLOCKED: did the OOM-killer work in the meantime?"""
     n = nuovi_uccisi(prima_oom)
     if not n:
         return ""
-    return (" — ⚠ durante la prova l'OOM-killer del SERVER ha ucciso %d processi (%s)"
+    return (" — ⚠ during the test the SERVER's OOM-killer killed %d processes (%s)"
             % (len(n), "; ".join(x.split("Killed process")[-1].split(" total-vm")[0].strip()
                                  for x in n[-3:])))
 
 
 def traccia_la_ricerca(c21):
-    """Diagnosi: ogni esito di `trova_finestra` stampato (rettangolo del ciano e
-    bordo destro), per capire perche' due foto di fila non tornano ferme."""
+    """Diagnosis: every outcome of `trova_finestra` printed (cyan rectangle and
+    right edge), to understand why two photos in a row do not come back still."""
     if getattr(c21, "_g3_traccia", False):
         return
     orig = c21.trova_finestra
@@ -207,7 +207,7 @@ def traccia_la_ricerca(c21):
     def trova(*a, **k):
         t0 = time.time()
         f, perche = orig(*a, **k)
-        print("      [ricerca %.1fs] %s" % (time.time() - t0, ("ciano %s destro %s" % (
+        print("      [search %.1fs] %s" % (time.time() - t0, ("cyan %s right %s" % (
             f["ciano"], f["destro"])) if f else perche), flush=True)
         return f, perche
     c21.trova_finestra = trova

@@ -1,32 +1,32 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-f005 — F-005 FORMA DEL PUNTATORE (la maglia C21 dentro la suite)
+15-f005 — F-005 POINTER SHAPE (the C21 mesh inside the suite)
 
     python3 15-f005-forma-del-puntatore.py --scatola kde --browser chrome [--guasto]
     python3 15-f005-forma-del-puntatore.py --certifica
 
-atteso: nella sessione una finestra vera di `firefox-esr` (pagina nota a fondo
-        ciano, riquadro giallo di testo): il puntatore che il BROWSER indossa e'
-          · la FRECCIA al centro della finestra,
-          · la barra del TESTO sul riquadro giallo,
-          · la freccia ORIZZONTALE di ridimensionamento in un punto della
-            scansione del bordo destro (da -4 a +8 px),
-        ciascuna entro 300 ms dal movimento.
-giudizio: `C21.osserva` + `C21.giudica_browser` — IMPORTATI: l'immagine del
-        cursore (la regola `cursor` della tela) classificata dai suoi PIXEL.
+expected: in the session a real `firefox-esr` window (known page with a cyan
+        background, yellow text box): the pointer the BROWSER wears is
+          · the ARROW at the centre of the window,
+          · the TEXT bar on the yellow box,
+          · the HORIZONTAL resize arrow at one point of the
+            scan of the right edge (from -4 to +8 px),
+        each within 300 ms of the movement.
+judgment: `C21.osserva` + `C21.giudica_browser` — IMPORTED: the image of the
+        cursor (the canvas's `cursor` rule) classified by its PIXELS.
 
-GUASTO (quello di C21, `--forma-sbagliata`): la tabella delle attese spostata
-        di uno, sulle STESSE immagini ⇒ deve dare rosso.  Il rosso puo' venire
-        solo dalle classi, cioe' dai pixel dei cursori veri.
+FAULT (C21's, `--forma-sbagliata`): the table of expectations shifted
+        by one, on the SAME images ⇒ it must give red.  The red can come
+        only from the classes, that is from the pixels of the real cursors.
 
-OSSERVAZIONE PER L'UTENTE (non e' un giudizio): il «puntino di 1 px» sotto la
-        punta (il prezzo della forma su KDE e labwc, fasi/14 ~214).  Col
-        puntatore fermo al centro della finestra (tutto ciano) si guarda nella
-        FOTO della tela un intorno della punta: i pixel non ciano; poi il
-        puntatore si sposta di 120 px e si riguarda lo stesso posto (il puntino
-        se ne va?) e il posto nuovo (il puntino lo segue?).  Ingrandimenti x12
-        nelle evidenze.  Il campo `puntino` della riga SUITE lo racconta.
+OBSERVATION FOR THE USER (it is not a judgment): the «1 px dot» under the
+        tip (the price of the shape on KDE and labwc, fasi/14 ~214).  With the
+        pointer still at the centre of the window (all cyan) we look in the
+        PHOTO of the canvas at a neighbourhood of the tip: the non-cyan pixels; then the
+        pointer moves by 120 px and the same place is looked at again (does the dot
+        go away?) and the new place (does the dot follow it?).  x12 enlargements
+        in the evidence.  The `puntino` field of the SUITE line tells it.
 """
 import io
 import os
@@ -37,12 +37,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import suite as S                                                     # noqa: E402
 
 G3 = S._carica("g3", os.path.join(S.QUI, "15-g3-comune.py"))
-C21 = S.C21                     # la maglia, gia' caricata dalla suite: una sola in memoria
+C21 = S.C21                     # the mesh, already loaded by the suite: only one in memory
 FUNZIONI = ("F-005",)
-ATTESO = ("freccia al centro, barra del testo sul testo, freccia orizzontale sul bordo "
-          "destro (scansione -4..+8 px), ciascuna entro 300 ms dal movimento")
+ATTESO = ("arrow at the centre, text bar on the text, horizontal arrow on the right "
+          "edge (scan -4..+8 px), each within 300 ms of the movement")
 
-# il puntino: l'intorno della punta, in pixel della FOTO, e lo spostamento
+# the dot: the neighbourhood of the tip, in PHOTO pixels, and the move
 INTORNO = 10
 SPOSTA = 120
 
@@ -52,7 +52,7 @@ def certifica():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  il puntino di 1 px — un'osservazione, non un giudizio
+#  the 1 px dot — an observation, not a judgment
 # ─────────────────────────────────────────────────────────────────────────────
 def _al_pixel_foto(geo, pw, ph, X, Y):
     return ((geo["bx0"] + X * geo["sx"]) * pw / geo["bw"],
@@ -60,7 +60,7 @@ def _al_pixel_foto(geo, pw, ph, X, Y):
 
 
 def _non_ciano(im, cx, cy):
-    """[(dx, dy, rgb)] dei pixel NON ciano attorno a (cx, cy) nella foto."""
+    """[(dx, dy, rgb)] of the NON-cyan pixels around (cx, cy) in the photo."""
     fuori = []
     for dy in range(-INTORNO, INTORNO + 1):
         for dx in range(-INTORNO, INTORNO + 1):
@@ -88,7 +88,7 @@ def osserva_puntino(s, riga):
     try:
         mira = riga["finestra"]["mira_desktop"]["centro"]
     except (KeyError, TypeError):
-        return {"visto": None, "detto": "la finestra non e' stata trovata: non si guarda"}
+        return {"visto": None, "detto": "the window was not found: not looking"}
     geo = s.geometria()
     X, Y = mira
     out = {"evidenze": []}
@@ -107,7 +107,7 @@ def osserva_puntino(s, riga):
     a = foto_con_puntatore(X, Y, "fermo")
     b = foto_con_puntatore(X - SPOSTA, Y, "spostato")
     if a is None or b is None:
-        return {"visto": None, "detto": "la tela non si fotografa"}
+        return {"visto": None, "detto": "the canvas cannot be photographed"}
     pw, ph = a.size
     p1 = _al_pixel_foto(geo, pw, ph, X, Y)
     p2 = _al_pixel_foto(geo, pw, ph, X - SPOSTA, Y)
@@ -117,8 +117,8 @@ def osserva_puntino(s, riga):
         e = _ingrandisci(s, im, cx, cy, nome)
         if e:
             out["evidenze"].append(e)
-    # ⭐ e su TUTTA la finestra ciano: che cosa cambia fra le due foto (il
-    #   puntatore si e' spostato, nient'altro): dove sta, rispetto alla punta
+    # ⭐ and over the WHOLE cyan window: what changes between the two photos (the
+    #   pointer moved, nothing else): where it is, relative to the tip
     diff = []
     try:
         cx0, cy0, cx1, cy1 = riga["finestra"]["ciano_foto"]
@@ -140,17 +140,17 @@ def osserva_puntino(s, riga):
         "posto_lasciato": len(b_p1), "dopo_lo_spostamento": len(b_p2),
         "foto": [pw, ph], "punta_foto": [round(p1[0], 1), round(p1[1], 1)]})
     if segue:
-        out["detto"] = ("PUNTINO VISTO: %d px non ciano attorno alla punta (%s), e segue il "
-                        "puntatore spostato di %d px — da giudicare dall'utente"
+        out["detto"] = ("DOT SEEN: %d non-cyan px around the tip (%s), and it follows the "
+                        "pointer moved by %d px — for the user to judge"
                         % (len(a_p1), ", ".join("%+d,%+d rgb%s" % (dx, dy, p)
                                                 for dx, dy, p in a_p1[:4]), SPOSTA))
     elif not a_p1 and not b_p2:
-        out["detto"] = ("nessun puntino: attorno alla punta tutto ciano, fermo e spostato; "
-                        "fra le due foto cambiano %d px della finestra (%d vicino alle punte)"
+        out["detto"] = ("no dot: around the tip all cyan, still and moved; "
+                        "between the two photos %d px of the window change (%d near the tips)"
                         % (len(diff), out["differenze_vicino_alle_punte"]))
     else:
-        out["detto"] = ("incerto: %d px non ciano sotto la punta, %d nel posto lasciato, %d "
-                        "sotto la punta spostata" % (len(a_p1), len(b_p1), len(b_p2)))
+        out["detto"] = ("uncertain: %d non-cyan px under the tip, %d in the place left, %d "
+                        "under the moved tip" % (len(a_p1), len(b_p1), len(b_p2)))
     return out
 
 
@@ -168,17 +168,17 @@ def corpo(o, E):
                                              s.salva_console()]
         if oss is None:
             s.foto("quando-non-si-guarda")
-            raise S.Bloccata(riga.get("perche", "la maglia non ha osservato")
+            raise S.Bloccata(riga.get("perche", "the mesh did not observe")
                              + G3.spiega_cieco(oom0))
         r = C21.giudica_browser(dict(riga), oss, False)
         passi = "; ".join(m for _p, _e, m in r["sano"]["passi"])
 
-        # il puntino: dopo il giudizio, con lo stesso browser e la stessa finestra
+        # the dot: after the judgment, with the same browser and the same window
         try:
             pt = osserva_puntino(s, riga)
         except Exception as ex:                  # noqa: BLE001
-            pt = {"visto": None, "detto": "osservazione caduta: %r" % ex}
-        print("   PUNTINO: %s" % pt.get("detto"), flush=True)
+            pt = {"visto": None, "detto": "observation fell over: %r" % ex}
+        print("   DOT: %s" % pt.get("detto"), flush=True)
         E.metti("F-005", r["esito"], r["perche"], atteso=ATTESO, osservato=passi,
                 evidenze=[e for e in ev if e] + pt.pop("evidenze", []),
                 puntino=pt, finestra=riga.get("finestra"))
@@ -186,8 +186,8 @@ def corpo(o, E):
         if o.guasto:
             rg = C21.giudica_browser(dict(riga), oss, True)
             E.guasto("F-005", G3.DA_ESITO_GUASTO[rg["esito"]], rg["perche"],
-                     atteso="con la tabella delle attese spostata di uno, le stesse "
-                            "immagini danno rosso",
+                     atteso="with the table of expectations shifted by one, the same "
+                            "images give red",
                      osservato="; ".join(m for _p, _e, m in rg.get("guasto", {})
                                          .get("passi", [])))
 

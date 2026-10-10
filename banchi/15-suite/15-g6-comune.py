@@ -1,29 +1,29 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-g6-comune — GLI ATTREZZI DEL GRUPPO G6 «STACCO E RIATTACCO» (fase 15)
+15-g6-comune — THE TOOLS OF GROUP G6 «DETACH AND REATTACH» (phase 15)
 
-Usati da 15-f016, 15-f018, 15-f020.  Non e' una prova: e' la SCENA e i
-giudici puri che le tre prove condividono.
+Used by 15-f016, 15-f018, 15-f020.  It is not a test: it is the SCENE and the
+pure judges that the three tests share.
 
-⭐ LA SCENA, dentro la sessione dell'inquilino:
-   - un servitore minimo (python3, 127.0.0.1:<porta>, ⛔ la scatola e' in rete
-     host: la porta e' una delle NOSTRE, porte-base+5) che serve la pagina e
-     annota nel «quaderno» (~/g6.log) quel che la pagina gli manda;
-   - `firefox-esr` NORMALE (con i bordi, 800x440: il desktop la centra, e
-     centrata nel 4K sta anche dentro un desktop 2512x1296) che mostra la pagina:
-       · fondo CIANO (la finestra si trova nella foto),
-       · un campo di testo sempre a fuoco,
-       · la STRISCIA: 8 caselle, una per carattere scritto, di un colore per
-         lettera («a»…«f»); vuota = grigio.  ⇒ il testo scritto si LEGGE dalla
-         fotografia della tela;
-       · ogni 2 s manda al quaderno il suo stato: il GETTONE (nato al carico
-         della pagina: se la pagina rinasce, cambia), il valore del campo, la
-         misura dello SCHERMO visto da dentro (screen.width × height = l'uscita
-         del compositore) e la finestra.
-   ⇒ due campi e una foto: «il programma e' vivo» (PID uguale, battiti che
-     continuano col gettone di prima), «lo stato e' quello» (valore del campo),
-     «si vede» (finestra ciano + striscia letta nella foto).
+⭐ THE SCENE, inside the tenant's session:
+   - a minimal server (python3, 127.0.0.1:<port>, ⛔ the box is on the host
+     network: the port is one of OURS, porte-base+5) that serves the page and
+     writes down in the «notebook» (~/g6.log) what the page sends it;
+   - a NORMAL `firefox-esr` (with borders, 800x440: the desktop centres it, and
+     centred in the 4K it also fits inside a 2512x1296 desktop) that shows the page:
+       · CYAN background (the window is found in the photo),
+       · an always-focused text field,
+       · the STRIP: 8 cells, one per character written, of one colour per
+         letter («a»…«f»); empty = grey.  ⇒ the written text is READ from the
+         photo of the canvas;
+       · every 2 s it sends its state to the notebook: the TOKEN (born when the
+         page loaded: if the page is reborn, it changes), the field value, the
+         size of the SCREEN seen from inside (screen.width × height = the
+         compositor's output) and the window.
+   ⇒ two fields and a photo: «the program is alive» (same PID, beats that
+     continue with the previous token), «the state is that one» (field value),
+     «it is seen» (cyan window + strip read in the photo).
 """
 import base64
 import io
@@ -40,8 +40,8 @@ C23 = S._carica("c23", os.path.join(S.BANCHI, "11-scatole",
                                     "11-c23-maiusc-e-frecce-selezionano.py"))
 
 # ---------------------------------------------------------------------------
-# LA TAVOLOZZA DELLA STRISCIA — lontana dal ciano del fondo, dal grigio del
-# vuoto e fra loro (distanza minima > 2 × TOLLERANZA su almeno un canale).
+# THE STRIP'S PALETTE — far from the background's cyan, from the grey of the
+# empty cell and from each other (minimum distance > 2 × TOLLERANZA on at least one channel).
 # ---------------------------------------------------------------------------
 CIANO = (0, 255, 255)
 VUOTO = (128, 128, 128)
@@ -50,12 +50,12 @@ TAVOLOZZA = {"a": (255, 0, 0), "b": (0, 0, 255), "c": (0, 150, 0),
 ALFABETO = "abcdef"
 CASELLE = 8
 TOLLERANZA = 60
-# la striscia, in frazioni della VISTA della pagina (= il rettangolo ciano)
+# the strip, in fractions of the page's VIEW (= the cyan rectangle)
 STR_X0, STR_X1, STR_Y0, STR_Y1 = 0.04, 0.96, 0.45, 0.80
-# ⚠ `[M]` 25 set 2026, xfce (labwc): la finestra nasce CENTRATA nel 4K e al
-#   riattacco a 2560x1440 resta dov'era — una finestra alta 800 finiva sotto il
-#   bordo e la striscia non si leggeva piu'.  Centrata in 3840x2160, una
-#   finestra 800x440 sta anche dentro 2512x1296.
+# ⚠ `[M]` 25 Sep 2026, xfce (labwc): the window is born CENTRED in the 4K and at the
+#   reattach at 2560x1440 stays where it was — a window 800 tall ended up below the
+#   edge and the strip could no longer be read.  Centred in 3840x2160, a
+#   800x440 window also fits inside 2512x1296.
 FINESTRA_SCENA = (800, 440)
 
 PAGINA = """<!doctype html><meta charset=utf-8><title>REMOTIX G6</title>
@@ -98,20 +98,20 @@ def pagina():
 
 
 def porta_scena(o):
-    """⛔ La scatola e' in rete host: la porta del servitore e' una delle nostre."""
+    """⛔ The box is on the host network: the server's port is one of ours."""
     return o.porte_base + 5
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA SCENA NELLA SESSIONE
+#  THE SCENE IN THE SESSION
 # ═══════════════════════════════════════════════════════════════════════════
 def accendi_scena(s, finestra=FINESTRA_SCENA):
-    """Servitore + firefox-esr normale nella sessione di `s.chi`.  (ok, testo)."""
+    """Server + normal firefox-esr in the session of `s.chi`.  (ok, text)."""
     b = lambda x: base64.b64encode(x.encode()).decode()     # noqa: E731
     p = porta_scena(s.o)
     xul = S.C21.xulstore(*finestra)
     c, t = s.sc.dentro(
-        # (la ~/.cache VERA la da' ora `suite.Sessione`, 25 set 2026)
+        # (the REAL ~/.cache is now given by `suite.Sessione`, 25 Sep 2026)
         "set -e; h=/home/{c}; mkdir -p $h/{pr}; "
         "echo {srv} | base64 -d > $h/g6-servitore.py; echo {pag} | base64 -d > $h/g6.html; "
         "echo {pref} | base64 -d > $h/{pr}/user.js; echo {xul} | base64 -d > $h/{pr}/xulstore.json; "
@@ -121,14 +121,14 @@ def accendi_scena(s, finestra=FINESTRA_SCENA):
         "</dev/null >/dev/null 2>&1 & "
         "d=''; for i in $(seq 1 40); do d=$(ls /run/user/$u 2>/dev/null | "
         "grep -E '^wayland-[0-9]+$' | head -1); [ -n \"$d\" ] && break; sleep 0.5; done; "
-        "[ -n \"$d\" ] || {{ echo 'nessun socket wayland'; exit 2; }}; sleep 1; "
+        "[ -n \"$d\" ] || {{ echo 'no wayland socket'; exit 2; }}; sleep 1; "
         "setsid runuser -u {c} -- env XDG_RUNTIME_DIR=/run/user/$u WAYLAND_DISPLAY=$d "
         "DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$u/bus MOZ_ENABLE_WAYLAND=1 "
         "XDG_SESSION_TYPE=wayland HOME=$h firefox-esr --no-remote --new-instance "
         "--profile $h/{pr} http://127.0.0.1:{p}/ "
         "</dev/null >$h/.g6-firefox.log 2>&1 & "
         "for i in $(seq 1 200); do grep -q caricata $h/g6.log && {{ echo accesa; exit 0; }}; "
-        "sleep 0.5; done; echo 'la scena non ha detto «caricata»'; tail -n 5 $h/.g6-firefox.log; "
+        "sleep 0.5; done; echo 'the scene did not say «caricata»'; tail -n 5 $h/.g6-firefox.log; "
         "exit 1".format(c=s.chi, p=p, pr=PROFILO, srv=b(SERVITORE), pag=b(pagina()),
                         pref=b(PREFERENZE), xul=b(xul)), 150)
     return c == 0, t
@@ -139,7 +139,7 @@ def spegni_servitore(s):
 
 
 def quaderno(s):
-    """Le righe di stato della scena (dict), in ordine."""
+    """The scene's state lines (dict), in order."""
     _c, t = s.sc.dentro("cat /home/%s/g6.log 2>/dev/null" % s.chi, 30)
     fuori = []
     for r in t.splitlines():
@@ -151,8 +151,8 @@ def quaderno(s):
 
 
 def ultimo_stato(s, fresco_s=8.0):
-    """L'ultima riga del quaderno, ⛔ solo se FRESCA (la scena batte ogni 2 s):
-    una riga vecchia e' lo stato di un programma che forse non c'e' piu'."""
+    """The last line of the notebook, ⛔ only if FRESH (the scene beats every 2 s):
+    an old line is the state of a program that may no longer be there."""
     q = quaderno(s)
     if not q:
         return None
@@ -163,7 +163,7 @@ def ultimo_stato(s, fresco_s=8.0):
 
 
 def processi(s):
-    """{nome: [pid, ...]} dei programmi della sessione dell'inquilino che contano."""
+    """{name: [pid, ...]} of the programs of the tenant's session that matter."""
     _c, t = s.sc.dentro(
         "for n in firefox-esr gnome-shell kwin_wayland labwc plasmashell xfce4-panel "
         "lxqt-panel; do for p in $(pgrep -u %s -x $n 2>/dev/null); do echo \"$n $p\"; "
@@ -178,7 +178,7 @@ def processi(s):
 
 
 def pid_scena(pr):
-    """Il PID piu' basso di firefox-esr: il processo padre della scena."""
+    """The lowest PID of firefox-esr: the scene's parent process."""
     v = pr.get("firefox-esr") or []
     try:
         return min(int(x) for x in v)
@@ -187,14 +187,14 @@ def pid_scena(pr):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA FOTOGRAFIA: la finestra ciano e la striscia
+#  THE PHOTO: the cyan window and the strip
 # ═══════════════════════════════════════════════════════════════════════════
 def _vicino(p, c, toll=TOLLERANZA):
     return abs(p[0] - c[0]) <= toll and abs(p[1] - c[1]) <= toll and abs(p[2] - c[2]) <= toll
 
 
 def immagine(png, largo=960):
-    """PIL RGB ridotta a `largo` (vicino piu' vicino): i conti in puro python."""
+    """PIL RGB reduced to `largo` (nearest neighbour): the counts in pure python."""
     from PIL import Image
     im = Image.open(io.BytesIO(png)).convert("RGB")
     if im.size[0] > largo:
@@ -204,7 +204,7 @@ def immagine(png, largo=960):
 
 
 def trova_ciano(im):
-    """Il rettangolo ciano (la vista della scena): (x0,y0,x1,y1) o (None, motivo)."""
+    """The cyan rectangle (the scene's view): (x0,y0,x1,y1) or (None, reason)."""
     w, h = im.size
     px = list(im.getdata())
     col, rig = [0] * w, [0] * h
@@ -215,12 +215,12 @@ def trova_ciano(im):
                 col[x] += 1
                 rig[y] += 1
     if max(col) == 0:
-        return None, "nessun pixel ciano: la finestra della scena non si vede"
+        return None, "no cyan pixel: the scene's window is not seen"
     xs = [x for x, n in enumerate(col) if n >= 0.3 * max(col)]
     ys = [y for y, n in enumerate(rig) if n >= 0.3 * max(rig)]
     r = (min(xs), min(ys), max(xs), max(ys))
     if (r[2] - r[0]) < 0.05 * w or (r[3] - r[1]) < 0.05 * h:
-        return None, "il ciano c'e' ma e' piccolo (%s): non e' la finestra" % (r,)
+        return None, "the cyan is there but it is small (%s): it is not the window" % (r,)
     return r, ""
 
 
@@ -234,8 +234,8 @@ def nome_colore(p):
 
 
 def leggi_striscia(im, r):
-    """Il testo letto dalla striscia dentro il rettangolo ciano `r`.
-    Torna (testo, dettaglio): «_» = casella vuota, «!» = colore sconosciuto."""
+    """The text read from the strip inside the cyan rectangle `r`.
+    Returns (text, detail): «_» = empty cell, «!» = unknown colour."""
     x0, y0, x1, y1 = r
     W, H = x1 - x0 + 1, y1 - y0 + 1
     passo = (STR_X1 - STR_X0) / CASELLE
@@ -256,8 +256,8 @@ def leggi_striscia(im, r):
 
 
 def guarda_la_scena(s, nome):
-    """⭐ Fotografa la tela, trova la finestra, legge la striscia.
-    Torna dict {finestra, letto, crudo, foto, perche, png}."""
+    """⭐ Photographs the canvas, finds the window, reads the strip.
+    Returns dict {finestra, letto, crudo, foto, perche, png}."""
     png, dove = s.foto(nome)
     if not png:
         return {"finestra": None, "letto": None, "foto": "", "perche": dove, "png": None}
@@ -272,7 +272,7 @@ def guarda_la_scena(s, nome):
 
 
 def aspetta_testo(s, voluto, nome, tetto=12.0):
-    """Fotografa finche' la striscia dice `voluto` (o il tetto)."""
+    """Photographs until the strip says `voluto` (or the cap)."""
     fine = time.time() + tetto
     v = None
     fallite = 0
@@ -280,36 +280,36 @@ def aspetta_testo(s, voluto, nome, tetto=12.0):
         v = guarda_la_scena(s, nome)
         if v.get("png") is None:
             fallite += 1
-        # ⚠ `[M]` 25 set 2026, gnome+Chrome sotto carico: la fotografia CDP di una
-        #   sessione appena rinata va in «timed out» (60 s l'una) ⇒ dopo due
-        #   fallite di fila si smette: la prova resta sotto i 10 minuti
+        # ⚠ `[M]` 25 Sep 2026, gnome+Chrome under load: the CDP photo of a
+        #   just reborn session goes «timed out» (60 s each) ⇒ after two
+        #   failed in a row it stops: the test stays under 10 minutes
         if v.get("letto") == voluto or time.time() >= fine or fallite >= 2:
             return v
         time.sleep(1.0)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  L'INPUT VERO: il clic sulla finestra, i tasti
+#  THE REAL INPUT: the click on the window, the keys
 # ═══════════════════════════════════════════════════════════════════════════
 def sveglia(s):
-    """Un ESC vero (GNOME nasce nella panoramica: la scena starebbe in piccolo)."""
+    """A real ESC (GNOME is born in the overview: the scene would be small)."""
     try:
         geo = s.geometria()
         if geo:
             return S.C21.sveglia(s.g, geo)
     except Exception as e:                       # noqa: BLE001
         return "⚠ %s" % e
-    return "⚠ niente geometria"
+    return "⚠ no geometry"
 
 
 def clic_sulla_scena(s, v):
-    """Un clic VERO del browser sul ciano della scena (le da' il fuoco)."""
+    """A REAL browser click on the scene's cyan (gives it the focus)."""
     geo = s.geometria()
     if not geo or not v.get("finestra"):
-        return "⚠ niente geometria o finestra"
+        return "⚠ no geometry or window"
     pw, ph = v["misura"]
     x0, y0, x1, y1 = v["finestra"]
-    # un punto del ciano sotto la striscia
+    # a point of the cyan below the strip
     fx, fy = x0 + (x1 - x0) * 0.5, y0 + (y1 - y0) * 0.9
     X, Y = S.C21.dalla_foto_al_desktop(geo, pw, ph, fx, fy)
     vx, vy = S.C21.dal_desktop_al_vetro(geo, X, Y)
@@ -320,14 +320,14 @@ def clic_sulla_scena(s, v):
         pass
     s.g.clic(vx, vy)
     time.sleep(0.8)
-    return "clic in (%d,%d) del desktop" % (X, Y)
+    return "click at (%d,%d) of the desktop" % (X, Y)
 
 
 def scrivi_la_base(s, v, testo, prove=3):
-    """⭐ La PREPARAZIONE (non la funzione guardata): clic sulla scena, testo
-    scritto, letto in foto.  `[M]` 24 set 2026, KDE sotto carico 50: una volta
-    su una sono arrivate 2 lettere su 4 (il fuoco arriva tardi) ⇒ si pulisce
-    (Ctrl+A, Backspace) e si riscrive, fino a `prove` volte.  Torna (v, note)."""
+    """⭐ The PREPARATION (not the function looked at): click on the scene, text
+    written, read in the photo.  `[M]` 24 Sep 2026, KDE under load 50: once
+    in one 2 letters out of 4 arrived (the focus arrives late) ⇒ it is cleaned
+    (Ctrl+A, Backspace) and rewritten, up to `prove` times.  Returns (v, notes)."""
     note = []
     for k in range(prove):
         cl = clic_sulla_scena(s, v)
@@ -337,7 +337,7 @@ def scrivi_la_base(s, v, testo, prove=3):
         time.sleep(0.7)
         C23.manda(s.g, C23.scrivi(testo))
         v2 = aspetta_testo(s, testo, "scritto-prima", tetto=10)
-        note.append("prova %d: %s, letto «%s»" % (k + 1, cl, v2.get("letto")))
+        note.append("attempt %d: %s, read «%s»" % (k + 1, cl, v2.get("letto")))
         if v2.get("letto") == testo:
             return v2, note
         if v2.get("finestra"):
@@ -350,10 +350,10 @@ def scrivi(s, testo):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  IL BROWSER: chiuderlo, ucciderlo, riaprirlo a una misura
+#  THE BROWSER: closing it, killing it, reopening it at a size
 # ═══════════════════════════════════════════════════════════════════════════
 def albero(pid):
-    """Il PID e tutti i discendenti (da /proc)."""
+    """The PID and all its descendants (from /proc)."""
     figli = {}
     for d in os.listdir("/proc"):
         if not d.isdigit():
@@ -374,11 +374,11 @@ def albero(pid):
 
 
 def uccidi_browser(s):
-    """⛔ kill -9 del browser e di tutti i suoi processi: nessun congedo.
-    Torna quanti processi."""
+    """⛔ kill -9 of the browser and of all its processes: no farewell.
+    Returns how many processes."""
     g = s.g
     if hasattr(g, "uccidi"):
-        # ⭐ il telefono (fase 19 §5): Chrome fermato di colpo da adb (`am force-stop`)
+        # ⭐ the phone (phase 19 §5): Chrome stopped abruptly by adb (`am force-stop`)
         n = g.uccidi()
         s.g = None
         return n
@@ -395,7 +395,7 @@ def uccidi_browser(s):
         p.wait(10)
     except Exception:                            # noqa: BLE001
         pass
-    # il guscio della guida: niente congedo, solo i resti su disco
+    # the driver's shell: no farewell, only the leftovers on disk
     import shutil
     prof = getattr(g, "profilo", None)
     if prof:
@@ -405,14 +405,14 @@ def uccidi_browser(s):
 
 
 def accendi_a_misura(s, largo, alto):
-    """Riaccende il browser della sessione alla misura chiesta.  4K = massimizzata
-    (come `Sessione`); il resto: Chrome nasce con `--window-size`, Firefox con
-    `SetWindowRect`.  Torna la misura riletta."""
+    """Restarts the session's browser at the requested size.  4K = maximised
+    (like `Sessione`); the rest: Chrome is born with `--window-size`, Firefox with
+    `SetWindowRect`.  Returns the size read back."""
     o = s.o
     if o.browser == "telefono":
-        # ⭐ il telefono (fase 19 §5) non ha finestre da misurare: la misura nuova e'
-        #   il telefono GIRATO; il 4K di partenza e' il verso in cui l'ha lasciato l'utente
-        print("   telefono: %s" % S.telefono().orienta(
+        # ⭐ the phone (phase 19 §5) has no windows to size: the new size is
+        #   the phone TURNED; the starting 4K is the orientation the user left it in
+        print("   phone: %s" % S.telefono().orienta(
             "partenza" if (largo, alto) == (3840, 2160) else "altro"), flush=True)
         s.accendi_browser()
         try:
@@ -424,7 +424,7 @@ def accendi_a_misura(s, largo, alto):
     try:
         if o.browser == "chrome" and (largo, alto) != (3840, 2160):
             S.VERI.FINESTRA[:] = [largo, alto]
-            o.largo = 0                           # niente «massimizzata»
+            o.largo = 0                           # no «maximised»
         else:
             o.largo, o.alto = largo, alto
         s.accendi_browser()
@@ -438,8 +438,8 @@ def accendi_a_misura(s, largo, alto):
 
 
 def entra_con_riprova(s, tetto_s=45.0, primo_apri=True):
-    """Entra; se il posto e' ancora occupato (0x0F, il fantasma di §5.1) riprova
-    ogni 3 s fino al tetto.  Torna (ok, motivo, rifiuti, secondi)."""
+    """Logs in; if the slot is still taken (0x0F, the ghost of §5.1) it retries
+    every 3 s up to the cap.  Returns (ok, reason, refusals, seconds)."""
     t0 = time.time()
     rifiuti = []
     while True:
@@ -453,7 +453,7 @@ def entra_con_riprova(s, tetto_s=45.0, primo_apri=True):
 
 
 def osserva_tela(s):
-    """I campi della pagina: tela (buffer), vista, rettangolo, esito, scala."""
+    """The page's fields: canvas (buffer), view, rectangle, outcome, scale."""
     st = s.stato()
     geo = None
     try:
@@ -467,8 +467,8 @@ def osserva_tela(s):
 
 
 def aspetta_tela_ferma(s, tetto=25.0):
-    """Dopo il riattacco la tela puo' cambiare ancora (`ADATTA_TELA` → `TELA`):
-    si aspetta che il buffer resti uguale per 4 s."""
+    """After the reattach the canvas can still change (`ADATTA_TELA` → `TELA`):
+    we wait for the buffer to stay the same for 4 s."""
     fine = time.time() + tetto
     ult, da = None, time.time()
     ob = osserva_tela(s)
@@ -487,11 +487,11 @@ SECCHI = 50
 
 
 def bordi(im, r=None):
-    """La firma dei bordi della foto: colore medio delle 6 righe in alto e in
-    basso (tutte, e in SECCHI fette di larghezza), la frazione di NERO nella
-    fascia del 3 % a destra e in basso, e le fette COPERTE dalla finestra della
-    scena `r` (± 3 %): ⚠ `[M]` 25 set 2026, xfce: rimpicciolendo il desktop la
-    finestra resta dov'era e arriva al bordo — non e' il pannello che manca."""
+    """The signature of the photo's edges: mean colour of the 6 rows at the top and at the
+    bottom (all, and in SECCHI width slices), the fraction of BLACK in the
+    3 % band on the right and at the bottom, and the slices COVERED by the
+    scene's window `r` (± 3 %): ⚠ `[M]` 25 Sep 2026, xfce: shrinking the desktop the
+    window stays where it was and reaches the edge — it is not the panel missing."""
     w, h = im.size
     px = im.load()
 
@@ -519,8 +519,8 @@ def bordi(im, r=None):
                 t[0] += p[0]; t[1] += p[1]; t[2] += p[2]; n += 1        # noqa: E702
         return [round(v / max(1, n)) for v in t]
 
-    # la finestra (con cornice e barre: il 3 % di margine, e 12 % in alto per
-    # le barre del browser) non conta per la fascia nera
+    # the window (with frame and bars: the 3 % margin, and 12 % at the top for
+    # the browser's bars) does not count for the black band
     if r:
         fx0, fx1 = r[0] - 0.03 * w, r[2] + 0.03 * w
         fy0, fy1 = r[1] - 0.12 * h, r[3] + 0.03 * h

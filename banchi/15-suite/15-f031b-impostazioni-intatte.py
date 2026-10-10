@@ -1,59 +1,59 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-15-f031b — F-031B LE IMPOSTAZIONI DELL'UTENTE NON SI TOCCANO (D-015, D-017,
-           D-018), tranne blocco, riavvio, sospensione e stand-by
+15-f031b — F-031B THE USER'S SETTINGS ARE NOT TOUCHED (D-015, D-017,
+           D-018), except lock, restart, suspend and stand-by
 
     python3 15-f031b-impostazioni-intatte.py --scatola xfce [--guasto]
 
-⭐ LA REGOLA — decisione dell'utente del 25 set 2026, testuale: «Le
-   impostazioni dell'utente non si toccano TRANNE quelle che riguardano
-   blocco-schermo, riavvio sistema, sospensione e stand-by: queste sono
-   impostazioni pericolose per altri utenti presenti sulla macchina».
+⭐ THE RULE — the user's decision of 25 Sep 2026, verbatim: «The
+   user's settings are not touched EXCEPT those concerning
+   screen lock, system restart, suspend and stand-by: these are
+   settings dangerous for other users present on the machine».
 
-⭐ COME: un inquilino nuovo; PRIMA dell'accesso si leggono DAL DISCO, come
-   l'utente, i suoi file di impostazione — il dconf (con un profilo che ha
-   SOLO `user-db:user`, cioe' `~/.config/dconf/user`), i canali xfconf
+⭐ HOW: a new tenant; BEFORE the login their settings files are read FROM DISK, like
+   the user — the dconf (with a profile that has
+   ONLY `user-db:user`, that is `~/.config/dconf/user`), the xfconf channels
    (`~/.config/xfce4/xfconf/xfce-perchannel-xml/`), `~/.config/lxqt/*.conf`,
-   le voci `lxqt-*.desktop` di `~/.local/share/applications`, `~/.config/kxkbrc`
-   e `~/.cache/sessions` (dove il banco lascia una SENTINELLA: un file che
-   REMOTIX non deve portare via).  Poi si entra dal browser, si aspetta che la
-   sessione sia in piedi, si esce con «Esci» (il gesto di F-021), e si rilegge.
-   ⭐ E il GESTORE D'UTENTE (R1/R2, revisione della bonifica): col linger
-   acceso sopravvive alla sessione, e l'utente che entra al monitor ne
-   eredita l'ambiente e i drop-in.  Dopo «Esci» non deve restarci niente di
-   REMOTIX: nessuna variabile col nostro segno (`systemctl --user
-   show-environment`: `DCONF_PROFILE`, valori con «remotix»), nessun drop-in
-   col nostro nome (`$XDG_RUNTIME_DIR/systemd/user.control`,
-   `~/.config/systemd/user`), e `xfconf-query` sul bus vero dell'utente non
-   deve vedere le chiavi di sessione di XFCE (bloccate da noi).
+   the `lxqt-*.desktop` entries of `~/.local/share/applications`, `~/.config/kxkbrc`
+   and `~/.cache/sessions` (where the bench leaves a SENTINEL: a file that
+   REMOTIX must not take away).  Then we log in from the browser, wait for the
+   session to be up, exit with «Exit» (F-021's gesture), and read again.
+   ⭐ And the USER MANAGER (R1/R2, clean-up review): with linger
+   on it survives the session, and the user who logs in at the monitor
+   inherits its environment and drop-ins.  After «Exit» nothing of
+   REMOTIX must remain there: no variable with our mark (`systemctl --user
+   show-environment`: `DCONF_PROFILE`, values with «remotix»), no drop-in
+   with our name (`$XDG_RUNTIME_DIR/systemd/user.control`,
+   `~/.config/systemd/user`), and `xfconf-query` on the user's real bus must not
+   see XFCE's session keys (locked by us).
 
-⭐ IL GIUDIZIO, chiave per chiave, in tre classi:
-   · PERMESSE (`PERMESSE`) — blocco, riavvio, sospensione, stand-by: possono
-     cambiare, e si dice come;
-   · SORVEGLIATE (`SORVEGLIATE`) — tutto quel che REMOTIX ha mai scritto e
-     che NON e' di quelle quattro specie (l'inventario del codice, 25 set
-     2026: la disposizione, Ctrl+Alt+F*, «Esci…», «Cambia utente» (GNOME e dialogo di XFCE), la cintura
-     del logout di XFCE, la sessione salvata,
-     il pannello e le voci del menu di LXQt, kxkbrc): devono restare quelle
-     di PRIMA, o FAIL;
-   · ALTRE — il resto di quei file: le scrive anche il DESKTOP da se' al
-     primo accesso (xfce4-panel copia la sua configurazione, LXQt crea i suoi
-     file sparsi), e non sono distinguibili da qui.  ⚠ Si ELENCANO nelle
-     evidenze e nella riga, ma non decidono: e' il limite dichiarato di
-     questa prova.  Una chiave nuova che REMOTIX cominciasse a scrivere va
-     aggiunta a `SORVEGLIATE` (o a `PERMESSE`).
-   PASS = nessuna sorvegliata cambiata.  BLOCKED = non letto, o «Esci» non
-   ha chiuso la sessione.
+⭐ THE JUDGMENT, key by key, in three classes:
+   · ALLOWED (`PERMESSE`) — lock, restart, suspend, stand-by: they may
+     change, and how is said;
+   · WATCHED (`SORVEGLIATE`) — everything REMOTIX has ever written and
+     that is NOT of those four kinds (the inventory of the code, 25 Sep
+     2026: the layout, Ctrl+Alt+F*, «Log out…», «Switch user» (GNOME and XFCE's dialog), XFCE's logout
+     belt, the saved session,
+     LXQt's panel and menu entries, kxkbrc): they must stay the ones
+     from BEFORE, or FAIL;
+   · OTHERS — the rest of those files: the DESKTOP also writes them by itself at the
+     first login (xfce4-panel copies its configuration, LXQt creates its
+     scattered files), and they cannot be told apart from here.  ⚠ They are LISTED in the
+     evidence and in the line, but they do not decide: it is the declared limit of
+     this test.  A new key that REMOTIX started writing must be
+     added to `SORVEGLIATE` (or to `PERMESSE`).
+   PASS = no watched key changed.  BLOCKED = not read, or «Exit» did not
+   close the session.
 
-GUASTO (--guasto, dopo la passata sana, sessione chiusa): una SCRITTURA
-   PERSISTENTE simulata di una chiave sorvegliata — la sentinella di
-   `~/.cache/sessions` portata via (il vecchio `rm -rf`), e una chiave del
-   desktop: GNOME `always-show-log-out` nel dconf dell'utente, XFCE
-   `ShowSwitchUser` nel canale dell'utente, LXQt una voce `lxqt-leave.desktop`
-   nascosta nella cartella dell utente, KDE un gruppo in kxkbrc, e un drop-in
-   `zz-remotix-finto.conf` dimenticato nel gestore d utente ⇒ lo stesso
-   giudice deve dare rosso.
+FAULT (--guasto, after the healthy pass, session closed): a simulated PERSISTENT
+   WRITE of a watched key — the sentinel of
+   `~/.cache/sessions` taken away (the old `rm -rf`), and a key of the
+   desktop: GNOME `always-show-log-out` in the user's dconf, XFCE
+   `ShowSwitchUser` in the user's channel, LXQt a hidden `lxqt-leave.desktop`
+   entry in the user's folder, KDE a group in kxkbrc, and a drop-in
+   `zz-remotix-finto.conf` forgotten in the user manager ⇒ the same
+   judge must give red.
 """
 import base64
 import os
@@ -73,14 +73,14 @@ PER_BROWSER = False
 SENTINELLA = "xfce4-session-c15-sentinella:0"
 ATTESA_IN_PIEDI_S = 20.0
 
-# ── che cosa si legge ────────────────────────────────────────────────────────
+# ── what is read ─────────────────────────────────────────────────────────────
 DCONF = (
-    # sorvegliate
+    # watched
     ["org.gnome.mutter.wayland switch-to-session-%d" % i for i in range(1, 13)]
     + ["org.gnome.shell always-show-log-out", "org.gnome.desktop.lockdown disable-user-switching"]
     + ["org.gnome.desktop.input-sources %s" % k
        for k in ("sources", "current", "mru-sources", "xkb-options")]
-    # permesse
+    # allowed
     + ["org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type",
        "org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type",
        "org.gnome.desktop.session idle-delay", "org.gnome.desktop.screensaver lock-enabled"])
@@ -95,7 +95,7 @@ XFCONF_SESSIONE = ("/general/WaylandLogoutCommand", "/general/SessionName",
 VOCI_LXQT = ("lxqt-leave", "lxqt-lockscreen", "lxqt-suspend", "lxqt-hibernate",
              "lxqt-shutdown", "lxqt-reboot")
 
-# ── le classi ────────────────────────────────────────────────────────────────
+# ── the classes ──────────────────────────────────────────────────────────────
 PERMESSE = [re.compile(x) for x in (
     r"^dconf:org\.gnome\.settings-daemon\.plugins\.power sleep-inactive-(ac|battery)-type$",
     r"^dconf:org\.gnome\.desktop\.session idle-delay$",
@@ -103,23 +103,23 @@ PERMESSE = [re.compile(x) for x in (
     r"^xfconf:xfce4-power-manager:/xfce4-power-manager/"
     r"(dpms-enabled|inactivity-on-ac|inactivity-on-battery)$",
     r"^xfconf:xfce4-session:/general/LockCommand$",
-    # Sospendi, Iberna, Sonno ibrido nel dialogo di «Esci»: sospensione
+    # Suspend, Hibernate, Hybrid sleep in the «Exit» dialog: suspend
     r"^xfconf:xfce4-session:/shutdown/Show(Suspend|Hibernate|HybridSleep)$",
-    # i pulsanti d'azione del pannello: blocco, sospensione, riavvio, spegnimento
+    # the panel's action buttons: lock, suspend, restart, shut down
     r"^xfconf:xfce4-panel:/plugins/plugin-\d+/items$",
     r"^lxqt:lxqt-powermanagement\.conf:\[General\](enableIdlenessWatcher|runCheckLevel)$",
     r"^lxqt:lxqt\.conf:\[Screensaver\]lock_command_wayland$",
     r"^lxqt:session\.conf:\[General\]lock_command_wayland$",
 )]
 SORVEGLIATE = [re.compile(x) for x in (
-    r"^dconf:",                                      # quelle lette e non permesse
+    r"^dconf:",                                      # those read and not allowed
     r"^xfconf:xfce4-session:/general/(WaylandLogoutCommand|SessionName|SaveOnExit)$",
     r"^xfconf:xfce4-session:/shutdown/ShowSwitchUser$",
     r"^lxqt:panel\.conf:\[[^\]]*\]type$",
     r"^app:",
     r"^kxkbrc:",
     r"^cache:",
-    r"^gestore:",                                    # R1/R2: niente di nostro resta
+    r"^gestore:",                                    # R1/R2: nothing of ours remains
 )]
 
 
@@ -132,7 +132,7 @@ def classe(chiave):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA LETTURA: una riga di shell come l'utente, il resto qui
+#  THE READING: a shell line as the user, the rest here
 # ═══════════════════════════════════════════════════════════════════════════
 def riga_lettura(chi):
     casa = "/home/%s" % chi
@@ -148,10 +148,10 @@ def riga_lettura(chi):
         r.append("f=\"$HOME/.local/share/applications/%s.desktop\"; if [ -f \"$f\" ]; then "
                  "echo \"@@app %s $(base64 -w0 < \"$f\")\"; fi" % (v, v))
     r.append("ls -1 \"$HOME/.cache/sessions\" 2>/dev/null | sed 's/^/@@cache /'")
-    # ⭐ R1/R2 — il GESTORE D'UTENTE: le variabili col nostro segno, i drop-in
-    #   col nostro nome, e quel che xfconfd dice oggi delle chiavi di sessione
-    #   di XFCE, sul bus VERO dell'utente (quello che userebbe un accesso al
-    #   monitor)
+    # ⭐ R1/R2 — the USER MANAGER: the variables with our mark, the drop-ins
+    #   with our name, and what xfconfd says today about XFCE's session keys,
+    #   on the user's REAL bus (the one a login at the
+    #   monitor would use)
     r.append("u=$(id -u); if [ -S /run/user/$u/bus ]; then "
              "systemctl --user show-environment 2>/dev/null | while IFS= read -r l; do "
              "case \"$l\" in DCONF_PROFILE=*|*remotix*) echo \"@@env $l\";; esac; done; "
@@ -166,8 +166,8 @@ def riga_lettura(chi):
 
 
 def ini(testo):
-    """{"[gruppo]chiave": valore} da un file QSettings/KConfig (le chiavi di
-    primo livello vanno in [General], come le legge QSettings)."""
+    """{"[group]key": value} from a QSettings/KConfig file (the top-level
+    keys go into [General], as QSettings reads them)."""
     d, g = {}, "General"
     for riga in testo.splitlines():
         riga = riga.strip()
@@ -184,7 +184,7 @@ def ini(testo):
 
 
 def xfconf(testo):
-    """{"/percorso": valore} da un canale xfconf."""
+    """{"/path": value} from an xfconf channel."""
     d = {}
 
     def giu(el, base):
@@ -200,8 +200,8 @@ def xfconf(testo):
 
 
 def interpreta(uscita):
-    """{chiave: valore} da quel che ha stampato `riga_lettura`; None se la
-    lettura non e' arrivata in fondo."""
+    """{key: value} from what `riga_lettura` printed; None if the
+    reading did not get to the end."""
     if "@@fine" not in (uscita or ""):
         return None
     d = {}
@@ -252,12 +252,12 @@ def leggi(s):
 
 
 def giudica(prima, dopo):
-    """(esito, frase, dettaglio)."""
+    """(outcome, sentence, detail)."""
     if prima is None or dopo is None:
-        return S.BLOCKED, "le impostazioni dell'utente non si sono potute leggere (%s)" % (
+        return S.BLOCKED, "the user's settings could not be read (%s)" % (
             "prima" if prima is None else "dopo"), {}
     if not any(k.startswith("cache:" + SENTINELLA) for k in prima):
-        return S.BLOCKED, "la sentinella di ~/.cache/sessions non c'era prima", {}
+        return S.BLOCKED, "the sentinel of ~/.cache/sessions was not there before", {}
     per = {"permessa": [], "sorvegliata": [], "altra": []}
     for k in sorted(set(prima) | set(dopo)):
         a, b = prima.get(k, "(assente)"), dopo.get(k, "(assente)")
@@ -265,28 +265,28 @@ def giudica(prima, dopo):
             c = classe(k)
             m = re.match(r"^lxqt:panel\.conf:\[([^\]]*)\]type$", k)
             if c == "sorvegliata" and m and a == "(assente)" and b == m.group(1):
-                # ⚠ [M] 25 set 2026: lxqt-panel all'avvio RISCRIVE nel file
-                #   dell'utente tutta la configurazione che vede, coi tipi di
-                #   serie (il gruppo si chiama come il suo tipo): e' il
-                #   desktop, non noi.  Un tipo DIVERSO (mainmenu) resta rosso.
+                # ⚠ [M] 25 Sep 2026: lxqt-panel at startup REWRITES in the user's
+                #   file all the configuration it sees, with the standard
+                #   types (the group is named like its type): it is the
+                #   desktop, not us.  A DIFFERENT type (mainmenu) stays red.
                 c = "altra"
             per[c].append("%s: %s → %s" % (k, a[:80], b[:80]))
-    coda = " · permesse cambiate: %s · altre cambiate (del desktop o nostre, non decidono): %d" % (
-        "; ".join(per["permessa"]) or "nessuna", len(per["altra"]))
+    coda = " · allowed changed: %s · others changed (the desktop's or ours, they do not decide): %d" % (
+        "; ".join(per["permessa"]) or "none", len(per["altra"]))
     if per["sorvegliata"]:
-        return (S.FAIL, "⛔ IMPOSTAZIONI DELL'UTENTE TOCCATE: %s" % "; ".join(per["sorvegliata"])
+        return (S.FAIL, "⛔ USER'S SETTINGS TOUCHED: %s" % "; ".join(per["sorvegliata"])
                 + coda, per)
-    return S.PASS, "nessuna sorvegliata cambiata (%d lette)%s" % (
+    return S.PASS, "no watched key changed (%d read)%s" % (
         sum(1 for k in prima if classe(k) == "sorvegliata"), coda), per
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  IL GUASTO
+#  THE FAULT
 # ═══════════════════════════════════════════════════════════════════════════
 def riga_guasto(chi, desktop):
     casa = "/home/%s" % chi
     r = ["export HOME=%s" % casa,
-         # il vecchio `rm -rf ~/.cache/sessions`
+         # the old `rm -rf ~/.cache/sessions`
          "rm -f \"$HOME/.cache/sessions/%s\"" % SENTINELLA]
     if desktop == "gnome":
         r.append("p=$(mktemp); echo user-db:user > \"$p\"; "
@@ -306,7 +306,7 @@ def riga_guasto(chi, desktop):
     elif desktop == "kde":
         r.append("mkdir -p \"$HOME/.config\"; printf '\\n[Remotix15Guasto]\\nscritta=1\\n' >> "
                  "\"$HOME/.config/kxkbrc\"")
-    # R1/R2: un drop-in di REMOTIX dimenticato nel gestore d'utente
+    # R1/R2: a REMOTIX drop-in forgotten in the user manager
     r.append("d=\"$HOME/.config/systemd/user/xfconfd.service.d\"; mkdir -p \"$d\"; printf "
              "'[Service]\\n# 15-f031b guasto\\n' > \"$d/zz-remotix-finto.conf\"")
     r.append("echo scritto")
@@ -333,68 +333,68 @@ def certifica():
         "@@file .config/lxqt/panel.conf " + b("panels=panel1\n[fancymenu]\ntype=fancymenu\n"),
         "@@cache " + SENTINELLA, "@@fine"])
     p = interpreta(uscita)
-    prova("lettura", p and p.get("xfconf:xfce4-session:/general/LockCommand") == "/bin/false"
+    prova("reading", p and p.get("xfconf:xfce4-session:/general/LockCommand") == "/bin/false"
           and p.get("lxqt:panel.conf:[fancymenu]type") == "fancymenu"
           and p.get("lxqt:panel.conf:[General]panels") == "panel1"
           and ("cache:" + SENTINELLA) in p, repr(p))
-    prova("lettura monca ⇒ None", interpreta("@@dconf a b=c") is None)
-    prova("uguali ⇒ PASS", giudica(p, dict(p))[0] == S.PASS)
-    prova("idle-delay 0 (permessa) ⇒ PASS",
+    prova("truncated reading ⇒ None", interpreta("@@dconf a b=c") is None)
+    prova("equal ⇒ PASS", giudica(p, dict(p))[0] == S.PASS)
+    prova("idle-delay 0 (allowed) ⇒ PASS",
           giudica(p, dict(p, **{"dconf:org.gnome.desktop.session idle-delay": "uint32 0"}))[0]
           == S.PASS)
-    prova("LockCommand (permessa) ⇒ PASS",
+    prova("LockCommand (allowed) ⇒ PASS",
           giudica(p, dict(p, **{"xfconf:xfce4-session:/general/LockCommand": "/bin/true"}))[0]
           == S.PASS)
-    prova("ShowSuspend (permessa) ⇒ PASS",
+    prova("ShowSuspend (allowed) ⇒ PASS",
           giudica(p, dict(p, **{"xfconf:xfce4-session:/shutdown/ShowSuspend": "false"}))[0]
           == S.PASS)
-    prova("pulsanti del pannello (permessa) ⇒ PASS",
+    prova("panel buttons (allowed) ⇒ PASS",
           giudica(p, dict(p, **{"xfconf:xfce4-panel:/plugins/plugin-14/items": "-lock"}))[0]
           == S.PASS)
-    prova("always-show-log-out nell'utente ⇒ FAIL",
+    prova("always-show-log-out in the user ⇒ FAIL",
           giudica(p, dict(p, **{"dconf:org.gnome.shell always-show-log-out": "true"}))[0]
           == S.FAIL)
-    prova("ShowSwitchUser nell'utente ⇒ FAIL",
+    prova("ShowSwitchUser in the user ⇒ FAIL",
           giudica(p, dict(p, **{"xfconf:xfce4-session:/shutdown/ShowSwitchUser": "false"}))[0]
           == S.FAIL)
-    prova("WaylandLogoutCommand nell'utente ⇒ FAIL",
+    prova("WaylandLogoutCommand in the user ⇒ FAIL",
           giudica(p, dict(p, **{"xfconf:xfce4-session:/general/WaylandLogoutCommand":
                                 "/bin/true"}))[0] == S.FAIL)
-    prova("fancymenu→mainmenu nell'utente ⇒ FAIL",
+    prova("fancymenu→mainmenu in the user ⇒ FAIL",
           giudica(p, dict(p, **{"lxqt:panel.conf:[fancymenu]type": "mainmenu"}))[0] == S.FAIL)
-    prova("il pannello riscritto dal desktop coi tipi di serie ⇒ PASS",
+    prova("the panel rewritten by the desktop with the standard types ⇒ PASS",
           giudica(p, dict(p, **{"lxqt:panel.conf:[taskbar]type": "taskbar"}))[0] == S.PASS)
-    prova("fancymenu→mainmenu scritto da zero nell'utente ⇒ FAIL",
+    prova("fancymenu→mainmenu written from scratch in the user ⇒ FAIL",
           giudica({k: v for k, v in p.items() if "fancymenu" not in k},
                   dict(p, **{"lxqt:panel.conf:[fancymenu]type": "mainmenu"}))[0] == S.FAIL)
-    prova("voce Hidden nell'utente ⇒ FAIL",
+    prova("Hidden entry in the user ⇒ FAIL",
           giudica(p, dict(p, **{"app:lxqt-leave:Hidden": "true"}))[0] == S.FAIL)
-    prova("kxkbrc toccato ⇒ FAIL",
+    prova("kxkbrc touched ⇒ FAIL",
           giudica(p, dict(p, **{"kxkbrc:[Layout]LayoutList": "it"}))[0] == S.FAIL)
     senza = dict(p)
     senza.pop("cache:" + SENTINELLA)
-    prova("sentinella portata via ⇒ FAIL", giudica(p, senza)[0] == S.FAIL)
-    prova("un file del desktop in piu' (altra) ⇒ PASS",
+    prova("sentinel taken away ⇒ FAIL", giudica(p, senza)[0] == S.FAIL)
+    prova("one more desktop file (other) ⇒ PASS",
           giudica(p, dict(p, **{"lxqt:lxqt.conf:[General]__userfile__": "true"}))[0] == S.PASS)
     g = interpreta("@@env DCONF_PROFILE=/run/user/5/remotix/dconf/profilo\n"
                    "@@xfq /general/SessionName=REMOTIX\n"
                    "@@drop /run/user/5/systemd/user.control/xfconfd.service.d/"
                    "zz-remotix-sessione.conf\n@@fine")
-    prova("lettura del gestore", g == {
+    prova("reading the manager", g == {
         "gestore:env:DCONF_PROFILE": "/run/user/5/remotix/dconf/profilo",
         "gestore:xfconf:/general/SessionName": "REMOTIX",
         "gestore:dropin:/run/user/5/systemd/user.control/xfconfd.service.d/"
         "zz-remotix-sessione.conf": "c'e'"}, repr(g))
     for k, v in g.items():
-        prova("gestore: %s rimasto ⇒ FAIL" % k.split(":")[1],
+        prova("manager: %s left ⇒ FAIL" % k.split(":")[1],
               giudica(p, dict(p, **{k: v}))[0] == S.FAIL)
-    prova("non letto ⇒ BLOCKED", giudica(None, p)[0] == S.BLOCKED)
-    prova("riga di lettura: shell valida",
+    prova("not read ⇒ BLOCKED", giudica(None, p)[0] == S.BLOCKED)
+    prova("reading line: valid shell",
           os.system("sh -n -c %s" % S._q(riga_lettura("x"))) == 0)
     for d in S.DESKTOP:
-        prova("riga del guasto %s: shell valida" % d,
+        prova("fault line %s: valid shell" % d,
               os.system("sh -n -c %s" % S._q(riga_guasto("x", d))) == 0)
-    print("⛔ CERTIFICAZIONE FALLITA" if guai else "⭐ CERTIFICATO")
+    print("⛔ CERTIFICATION FAILED" if guai else "⭐ CERTIFIED")
     return 1 if guai else 0
 
 
@@ -403,22 +403,22 @@ def corpo(o, E):
     with S.Sessione(o, "031", E) as s:
         desktop, gesto = s.sc.gesto_esci()
         if not gesto:
-            raise S.Bloccata("non so come si dice «Esci» in %s" % s.sc.contenitore)
+            raise S.Bloccata("I do not know how to say «Exit» in %s" % s.sc.contenitore)
         c, t = s.come_utente("sh -c %s" % S._q(
-            "mkdir -p /home/%s/.cache/sessions && echo sentinella del banco 15-f031b > "
+            "mkdir -p /home/%s/.cache/sessions && echo bench sentinel 15-f031b > "
             "'/home/%s/.cache/sessions/%s'" % (s.chi, s.chi, SENTINELLA)), 30)
         prima, tp = leggi(s)
         ev = [x for x in (s.salva_testo("impostazioni-prima.txt", tp or ""),) if x]
-        print("   prima: %s chiavi" % (None if prima is None else len(prima)), flush=True)
+        print("   before: %s keys" % (None if prima is None else len(prima)), flush=True)
         ok, m = s.entra()
         if not ok:
             raise S.Bloccata(m)
-        time.sleep(ATTESA_IN_PIEDI_S)        # la sessione nasce, il pannello pure
+        time.sleep(ATTESA_IN_PIEDI_S)        # the session is born, the panel too
         d, ev2 = F21.esci_e_guarda(s, gesto, nome="esci")
         ev += [x for x in ev2 if x]
         if not d.get("finita"):
-            raise S.Bloccata("«Esci» (%s) non ha chiuso la sessione: il «dopo» non sarebbe "
-                             "il dopo" % gesto)
+            raise S.Bloccata("«Exit» (%s) did not close the session: the «after» would not be "
+                             "the after" % gesto)
         dopo, td = leggi(s)
         e, frase, per = giudica(prima, dopo)
         p = s.salva_testo("impostazioni-dopo.txt", td or "")
@@ -426,20 +426,20 @@ def corpo(o, E):
             "%s:\n  %s" % (k, "\n  ".join(v) or "-") for k, v in per.items()))
         ev += [x for x in (p, q) if x]
         E.metti("F-031B", e, frase,
-                atteso="dopo «Esci» le impostazioni dell'utente sono quelle di prima, "
-                       "salvo blocco, riavvio, sospensione e stand-by",
+                atteso="after «Exit» the user's settings are the ones from before, "
+                       "except lock, restart, suspend and stand-by",
                 osservato=frase, evidenze=ev)
         if not o.guasto:
             return
         _c, tg = s.come_utente("sh -c %s" % S._q(riga_guasto(s.chi, o.scatola)), 60)
         dopo_g, tdg = leggi(s)
         eg, fg, _per = giudica(prima, dopo_g)
-        print("   GUASTO (%s): %s" % ((tg or "").strip().replace("\n", " | ")[-120:], fg[:300]),
+        print("   FAULT (%s): %s" % ((tg or "").strip().replace("\n", " | ")[-120:], fg[:300]),
               flush=True)
         E.guasto("F-031B", None if eg == S.BLOCKED else eg == S.FAIL,
-                 "scrittura persistente simulata (sentinella via + una chiave di %s): %s"
+                 "simulated persistent write (sentinel gone + a key of %s): %s"
                  % (o.scatola, fg),
-                 atteso="rosso: una sorvegliata cambiata", osservato=fg,
+                 atteso="red: a watched key changed", osservato=fg,
                  evidenze=[x for x in (s.salva_testo("impostazioni-guasto.txt", tdg or ""),)
                            if x])
 

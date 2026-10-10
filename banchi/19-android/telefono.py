@@ -2,33 +2,33 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-telefono.py — LA GUIDA DEL TELEFONO VERO per la suite (fase 19 §5)
+telefono.py — THE REAL PHONE DRIVER for the suite (phase 19 §5)
 ===========================================================================
 
-`suite.py --browser telefono` la carica al posto di Firefox o di Chrome da
-tavolo.  Gira SUL SERVER, dentro le prove della suite, e parla con due porte
-che il portatile le porta col tunnel ssh (`19-android.py`):
+`suite.py --browser telefono` loads it in place of Firefox or desktop
+Chrome.  It runs ON THE SERVER, inside the suite's tests, and talks to two ports
+that the laptop carries to it through the ssh tunnel (`19-android.py`):
 
-  127.0.0.1:19333   il protocollo DevTools del Chrome del telefono
-                    (portatile: `adb forward tcp:9333 localabstract:chrome_devtools_remote`)
-  127.0.0.1:19334   lo SPORTELLO del portatile: le sole cose che vogliono adb
-                    (chiamata in corso?, Chrome davanti, tocco vero, rotazione,
-                    Chrome fermato di colpo, tastiera a schermo aperta?).  ⛔ La chiave del telefono resta sul
-                    portatile: di qua passano solo domande con nome.
+  127.0.0.1:19333   the DevTools protocol of the phone's Chrome
+                    (laptop: `adb forward tcp:9333 localabstract:chrome_devtools_remote`)
+  127.0.0.1:19334   the laptop's COUNTER: the only things that need adb
+                    (call in progress?, Chrome in front, real touch, rotation,
+                    Chrome stopped abruptly, on-screen keyboard open?).  ⛔ The phone's key stays on the
+                    laptop: only named questions pass through here.
 
-⛔ LE REGOLE DEL TELEFONO (DECISIONI §10.27, fasi/19 §5):
-  - solo Chrome, e solo verso le scatole del server: `vai()` rifiuta ogni
-    indirizzo che non sia https://192.168.0.2:8511-8514 o 8611-8614 (e 8599, il server inesistente del guasto di F-001);
-  - una scheda NOSTRA (nuova), mai quelle dell'utente: si apre con /json/new,
-    si chiude alla fine; il portatile la segna e la chiude anche se qui si cade;
-  - prima di ogni gesto il controllo della chiamata (lo fa lo sportello, una
-    riga `mCallState=[12]` per SIM): con una chiamata si ASPETTA, e se non
-    finisce la prova cade BLOCKED «chiamata in corso» — mai un gesto durante.
+⛔ THE PHONE'S RULES (DECISIONI §10.27, fasi/19 §5):
+  - only Chrome, and only towards the server's boxes: `vai()` refuses every
+    address that is not https://192.168.0.2:8511-8514 or 8611-8614 (and 8599, the nonexistent server of the F-001 fault);
+  - a tab of OUR OWN (new), never the user's: it is opened with /json/new,
+    closed at the end; the laptop records it and closes it even if things crash here;
+  - before every gesture the call check (the counter does it, one
+    `mCallState=[12]` line per SIM): with a call we WAIT, and if it does not
+    end the test falls BLOCKED "call in progress" — never a gesture during it.
 
-L'input delle prove comuni (clic, tasti, trascinamenti) passa dal protocollo
-DevTools come per Chrome da tavolo — mouse e tastiera, cioe' il caso DeX
-(`SPECIFICHE.md` §7.2: «su Android l'uso primario e' DeX»).  Il TOCCO VERO
-(`adb shell input`) lo usa la prova del tocco, `15-f031-tocco.py`.
+The input of the common tests (clicks, keys, drags) goes through the DevTools
+protocol as for desktop Chrome — mouse and keyboard, i.e. the DeX case
+(`SPECIFICHE.md` §7.2: "on Android the primary use is DeX").  The REAL TOUCH
+(`adb shell input`) is used by the touch test, `15-f031-tocco.py`.
 """
 import base64
 import json
@@ -41,13 +41,13 @@ import urllib.request
 PORTA_CDP = int(os.environ.get("REMOTIX_TELEFONO_CDP", "19333"))
 SPORTELLO = "http://127.0.0.1:%s" % os.environ.get("REMOTIX_TELEFONO_SPORTELLO", "19334")
 SERVER = os.environ.get("REMOTIX_TELEFONO_HOST", "192.168.0.2")
-# 8599: il «server inesistente» del guasto di F-001 (nessuno ascolta: la pagina non si apre)
+# 8599: the "nonexistent server" of the F-001 fault (nobody listens: the page does not open)
 PORTE_AMMESSE = set(range(8511, 8515)) | set(range(8611, 8615)) | {8599}
-# ⚠ solo per la prova a secco del banco (19-android.py a-secco): una pagina locale in http
+# ⚠ only for the bench's dry run (19-android.py a-secco): a local page over http
 A_SECCO = os.environ.get("REMOTIX_TELEFONO_A_SECCO") == "1"
 GUARDIA_OGNI_S = 5.0
 
-# Il quaderno dei tocchi VERI: dove e' caduto ogni dito, visto dalla pagina.
+# The notebook of REAL touches: where every finger landed, as seen by the page.
 QUADERNO_TOCCHI = r"""
 (function () {
   if (window.__T19) return;
@@ -65,11 +65,11 @@ QUADERNO_TOCCHI = r"""
 
 
 class ChiamataInCorso(RuntimeError):
-    """Il telefono e' in chiamata: nessun gesto."""
+    """The phone is in a call: no gesture."""
 
 
 def sportello(percorso, dati=None, tetto=1800):
-    """Una domanda allo sportello del portatile.  Torna il dizionario della risposta."""
+    """A question to the laptop's counter.  Returns the answer's dictionary."""
     corpo = json.dumps(dati or {}).encode()
     rq = urllib.request.Request(SPORTELLO + percorso, data=corpo, method="POST",
                                 headers={"Content-Type": "application/json"})
@@ -82,15 +82,15 @@ def sportello(percorso, dati=None, tetto=1800):
         except ValueError:
             d = {}
         if e.code == 409:
-            raise ChiamataInCorso(d.get("perche") or "chiamata in corso sul telefono")
-        raise RuntimeError("sportello %s: %s %s" % (percorso, e.code, d.get("perche", "")))
+            raise ChiamataInCorso(d.get("perche") or "call in progress on the phone")
+        raise RuntimeError("counter %s: %s %s" % (percorso, e.code, d.get("perche", "")))
     except urllib.error.URLError as e:
-        raise RuntimeError("lo sportello del portatile non risponde (%s): il tunnel ssh "
-                           "c'e'?  %s" % (SPORTELLO, e))
+        raise RuntimeError("the laptop's counter does not answer (%s): is the ssh tunnel "
+                           "there?  %s" % (SPORTELLO, e))
 
 
 def ammesso(url):
-    """⛔ Solo le scatole del server (e la pagina vuota)."""
+    """⛔ Only the server's boxes (and the blank page)."""
     if url in ("about:blank",):
         return True
     u = urllib.parse.urlsplit(url)
@@ -100,7 +100,7 @@ def ammesso(url):
 
 
 def orienta(verso):
-    """«altro» gira il telefono nell'altro verso; «partenza» lo rimette com'era."""
+    """\"altro\" turns the phone the other way; \"partenza\" puts it back as it was."""
     r = sportello("/ruota", {"verso": verso})
     return r.get("detto", str(r))
 
@@ -116,7 +116,7 @@ def _http(percorso, metodo="GET"):
 
 
 def _veri():
-    """`12-client-veri.py` come lo carica la suite (gia' caricato: non si ricarica)."""
+    """`12-client-veri.py` as the suite loads it (already loaded: not reloaded)."""
     import sys
     s = sys.modules.get("suite") or sys.modules.get("__main__")
     v = getattr(s, "VERI", None)
@@ -133,8 +133,8 @@ VERI = _veri()
 
 
 class GuidaTelefono(VERI.GuidaCdp):
-    """Chrome del telefono vero, in una scheda NOSTRA."""
-    tocco = False                 # l'input comune e' mouse+tastiera del protocollo (DeX)
+    """The real phone's Chrome, in a tab of OUR OWN."""
+    tocco = False                 # the common input is the protocol's mouse+keyboard (DeX)
     _n_chiusure = 0
 
     def __init__(self, o=None):
@@ -143,7 +143,7 @@ class GuidaTelefono(VERI.GuidaCdp):
         self._ultima_guardia = 0.0
         self.scala_foto = 1
         self._palco = None
-        sportello("/pronto")                      # chiamata? schermo? Chrome davanti
+        sportello("/pronto")                      # call? screen? Chrome in front
         self.scheda = self._nuova_scheda()
         sportello("/mia", {"id": self.scheda["id"]})
         self.aggancia()
@@ -152,7 +152,7 @@ class GuidaTelefono(VERI.GuidaCdp):
         except Exception:                         # noqa: BLE001
             self.scala_foto = 1
 
-    # -- la scheda -------------------------------------------------------------
+    # -- the tab ---------------------------------------------------------------
     def _nuova_scheda(self):
         try:
             t = _http("/json/new?about:blank", "PUT")
@@ -160,7 +160,7 @@ class GuidaTelefono(VERI.GuidaCdp):
                 return t
         except Exception:                         # noqa: BLE001
             pass
-        # ripiego: Target.createTarget dal bersaglio del browser
+        # fallback: Target.createTarget from the browser target
         v = _http("/json/version")
         b = VERI.Cdp(self._qui(v["webSocketDebuggerUrl"]))
         r = b.chiama("Target.createTarget", url="about:blank")
@@ -171,11 +171,11 @@ class GuidaTelefono(VERI.GuidaCdp):
         for t in _http("/json/list"):
             if t.get("id") == r.get("targetId"):
                 return t
-        raise RuntimeError("la scheda nuova non compare nell'elenco del telefono")
+        raise RuntimeError("the new tab does not appear in the phone's list")
 
     @staticmethod
     def _qui(ws):
-        """Il websocket passa dal tunnel: l'host e' sempre 127.0.0.1:PORTA_CDP."""
+        """The websocket goes through the tunnel: the host is always 127.0.0.1:PORTA_CDP."""
         u = urllib.parse.urlsplit(ws)
         return urllib.parse.urlunsplit(u._replace(netloc="127.0.0.1:%d" % PORTA_CDP))
 
@@ -204,28 +204,28 @@ class GuidaTelefono(VERI.GuidaCdp):
             try:
                 self._palco = sportello("/palco").get("palco")
             except Exception as e:                # noqa: BLE001
-                self._palco = "%s su Android (palco non letto: %s)" % (self.versione(), e)
+                self._palco = "%s on Android (stage not read: %s)" % (self.versione(), e)
         return self._palco
 
-    # -- la guardia della chiamata --------------------------------------------
+    # -- the call guard ------------------------------------------------------
     def guardia(self, subito=False):
-        """⚠ Gli eventi del PROTOCOLLO (clic, tasti) vanno al renderer di Chrome, non
-        al sistema: non possono rispondere a una chiamata ne' toccare altro.  Per
-        loro il controllo si rifa' ogni 5 s (una prova manda centinaia di tasti).
-        I gesti VERI (`adb shell input`) lo sportello li controlla ogni volta."""
+        """⚠ The PROTOCOL events (clicks, keys) go to Chrome's renderer, not
+        to the system: they cannot answer a call nor touch anything else.  For
+        them the check is redone every 5 s (a test sends hundreds of keys).
+        The REAL gestures (`adb shell input`) the counter checks every time."""
         if not subito and time.time() - self._ultima_guardia < GUARDIA_OGNI_S:
             return
         try:
-            sportello("/chiamata")                # aspetta lui; 409 ⇒ ChiamataInCorso
+            sportello("/chiamata")                # it waits; 409 ⇒ ChiamataInCorso
         except Exception:
-            self._ultima_guardia = 0.0            # il prossimo gesto ricontrolla
+            self._ultima_guardia = 0.0            # the next gesture checks again
             raise
         self._ultima_guardia = time.time()
 
-    # -- le azioni: prima la guardia ------------------------------------------
+    # -- the actions: guard first --------------------------------------------
     def vai(self, url):
         if not ammesso(url):
-            raise RuntimeError("⛔ il telefono va solo alle scatole del server, non a %s" % url)
+            raise RuntimeError("⛔ the phone goes only to the server's boxes, not to %s" % url)
         self.guardia(subito=True)
         return super().vai(url)
 
@@ -253,7 +253,7 @@ class GuidaTelefono(VERI.GuidaCdp):
         self.guardia()
         return super().tasto(t)
 
-    # -- chiudere, e uccidere --------------------------------------------------
+    # -- closing, and killing -------------------------------------------------
     def _chiudi_scheda(self):
         sid = self.scheda.get("id")
         try:
@@ -269,7 +269,7 @@ class GuidaTelefono(VERI.GuidaCdp):
             pass
 
     def chiudi(self):
-        # ⭐ l'evidenza: com'era la pagina del telefono un attimo prima di chiudere
+        # ⭐ the evidence: how the phone's page was a moment before closing
         cartella = getattr(self.o, "evidenze", "") if self.o else ""
         if cartella:
             GuidaTelefono._n_chiusure += 1
@@ -286,8 +286,8 @@ class GuidaTelefono(VERI.GuidaCdp):
         self._chiudi_scheda()
 
     def uccidi(self):
-        """⛔ Chrome fermato DI COLPO (`am force-stop`): nessun congedo, il filo tace.
-        E' il gesto di F-020 «browser chiuso di colpo».  Torna 1 (un processo)."""
+        """⛔ Chrome stopped ABRUPTLY (`am force-stop`): no farewell, the wire goes silent.
+        It is the gesture of F-020 "browser closed abruptly".  Returns 1 (one process)."""
         self.guardia(subito=True)
         sportello("/uccidi-chrome")
         try:
@@ -298,7 +298,7 @@ class GuidaTelefono(VERI.GuidaCdp):
         return 1
 
     # ═════════════════════════════════════════════════════════════════════════
-    #  IL TOCCO (per 15-f031-tocco.py): il modello a trackpad di SPECIFICHE §7.1
+    #  TOUCH (for 15-f031-tocco.py): the trackpad model of SPECIFICHE §7.1
     # ═════════════════════════════════════════════════════════════════════════
     def stato_tocco(self):
         return self.js("return (window.REMOTIX && REMOTIX.tocco) ? REMOTIX.tocco.stato() : null")
@@ -311,7 +311,7 @@ class GuidaTelefono(VERI.GuidaCdp):
         return (self.js("return (window.__T19 || []).slice(arguments[0])", da) or [])
 
     def puntatore_vetro(self, geo):
-        """Dove sta il puntatore DISEGNATO, in coordinate del vetro."""
+        """Where the DRAWN pointer is, in glass coordinates."""
         st = self.stato_tocco() or {}
         p = st.get("puntatore")
         if not p:
@@ -320,13 +320,13 @@ class GuidaTelefono(VERI.GuidaCdp):
                 geo["top"] + (geo["by0"] + p[1] * geo["sy"]) * geo["vy"])
 
     def schermo(self):
-        """(larghezza, altezza) dello schermo in pixel VERI, nel verso di adesso; dpr."""
+        """(width, height) of the screen in REAL pixels, in the current orientation; dpr."""
         r = self.js("return [screen.width, screen.height, devicePixelRatio,"
                     " innerWidth, innerHeight]")
         return r[0] * r[2], r[1] * r[2], r[2], r[3], r[4]
 
     def dito_cdp(self, punti, pausa_s=0.03, tieni_s=0.0):
-        """Un dito del protocollo: giu' sul primo punto, i movimenti, su."""
+        """A protocol finger: down on the first point, the moves, up."""
         self.guardia()
         c = self.cdp.chiama
         c("Input.dispatchTouchEvent", type="touchStart",
@@ -343,8 +343,8 @@ class GuidaTelefono(VERI.GuidaCdp):
         return geo["left"] + geo["width"] / 2.0, geo["top"] + geo["height"] / 2.0
 
     def porta_il_puntatore(self, geo, tx, ty, giri=6):
-        """Trascina un dito (protocollo) finche' il puntatore disegnato sta su (tx,ty)
-        del vetro.  Torna l'errore finale in px del vetro, o None se non si legge."""
+        """Drags a finger (protocol) until the drawn pointer is on (tx,ty)
+        of the glass.  Returns the final error in glass px, or None if unreadable."""
         err = None
         for _ in range(giri):
             p = self.puntatore_vetro(geo)
@@ -354,17 +354,17 @@ class GuidaTelefono(VERI.GuidaCdp):
             err = max(abs(dx), abs(dy))
             if err <= 1.0:
                 return err
-            # un passo che resti nella tela, e che sia SEMPRE un trascinamento
-            # (oltre la soglia del tap, 9 px CSS): se il passo e' corto, un giro largo
+            # a step that stays inside the canvas, and that is ALWAYS a drag
+            # (beyond the tap threshold, 9 CSS px): if the step is short, a wide loop
             lim = 0.35 * min(geo["width"], geo["height"])
             dx, dy = max(-lim, min(lim, dx)), max(-lim, min(lim, dy))
             cx, cy = self._centro_tela(geo)
             x0, y0 = cx - dx / 2.0, cy - dy / 2.0
-            # ⚠ la pagina CONSUMA il campione che supera la sbavatura (D_TAP, 9 px
-            #   CSS: `tocco_muovi`, «la sbavatura si consuma»): un primo passo
-            #   di 12 px in verticale che non muove niente, e da li' il movimento
-            #   intero.  Prima il passo consumato era un pezzo di dx: il puntatore
-            #   restava indietro di 9-18 px a ogni giro (2 ott 2026, S23+).
+            # ⚠ the page CONSUMES the sample that exceeds the slop (D_TAP, 9 CSS
+            #   px: `tocco_muovi`, "the slop is consumed"): a first step
+            #   of 12 px vertically that moves nothing, and from there the whole
+            #   movement.  Before, the consumed step was a piece of dx: the pointer
+            #   lagged 9-18 px behind at every loop (2 Oct 2026, S23+).
             sb = 12.0 if y0 + 12.0 + max(dy, 0) < geo["top"] + geo["height"] else -12.0
             punti = [(x0, y0), (x0, y0 + sb)]
             n = 10
@@ -376,9 +376,9 @@ class GuidaTelefono(VERI.GuidaCdp):
         return None if p is None else max(abs(tx - p[0]), abs(ty - p[1]))
 
     def tap_vero(self, geo):
-        """⭐ Un TOCCO VERO (`adb shell input tap`) dentro la tela.  Nel modello a
-        trackpad il tap clicca dove sta il puntatore, non dove cade il dito:
-        il dito va al centro della tela.  Torna il tocco come l'ha visto la pagina."""
+        """⭐ A REAL TAP (`adb shell input tap`) inside the canvas.  In the trackpad
+        model the tap clicks where the pointer is, not where the finger lands:
+        the finger goes to the centre of the canvas.  Returns the touch as the page saw it."""
         da = len(self.tocchi_visti())
         x, y = self.vetro_su_schermo(*self._centro_tela(geo))
         sportello("/tocca", {"x": round(x), "y": round(y)})
@@ -386,31 +386,31 @@ class GuidaTelefono(VERI.GuidaCdp):
         return (self.tocchi_visti(da) or [None])[0]
 
     def scorri_vero(self, geo, dx, dy, ms=600):
-        """⭐ Un dito VERO che scorre (`adb shell input swipe`) di (dx,dy) px del vetro,
-        partendo in modo che i due capi stiano nella tela."""
+        """⭐ A REAL finger that swipes (`adb shell input swipe`) by (dx,dy) glass px,
+        starting so that both ends stay inside the canvas."""
         da = len(self.tocchi_visti())
-        # ⚠ una passata corta, come la mano su un trackpad: uno scorrimento di
-        #   mezzo schermo in diagonale Chrome non lo passa alla pagina (2 ott
-        #   2026, S23+: 200x284 px CSS ⇒ nessun tocco visto).  Il resto lo fa
-        #   la passata dopo (15-f031 `DITI_VERI_MAX`).
+        # ⚠ a short stroke, like the hand on a trackpad: a half-screen diagonal
+        #   swipe Chrome does not pass to the page (2 Oct
+        #   2026, S23+: 200x284 CSS px ⇒ no touch seen).  The rest is done by
+        #   the next stroke (15-f031 `DITI_VERI_MAX`).
         lim = 0.3 * min(geo["width"], geo["height"])
         k = min(1.0, lim / max(abs(dx), abs(dy), 1e-9))
         dx, dy = dx * k, dy * k
-        # ⚠ la pagina consuma la sbavatura (D_TAP, 9 px CSS, e il campione che la
-        #   supera: `tocco_muovi`): il dito scorre ~10 px in piu', nella stessa
-        #   direzione, o le correzioni piccole non muoverebbero niente
+        # ⚠ the page consumes the slop (D_TAP, 9 CSS px, and the sample that
+        #   exceeds it: `tocco_muovi`): the finger swipes ~10 px more, in the same
+        #   direction, or small corrections would move nothing
         n = (dx * dx + dy * dy) ** 0.5
         if n > 0.5:
             dx, dy = dx * (n + 10.0) / n, dy * (n + 10.0) / n
         cx, cy = self._centro_tela(geo)
-        # il dito PARTE dal centro della tela (dove il tocco vero arriva sempre)
+        # the finger STARTS from the centre of the canvas (where the real touch always arrives)
         x0, y0 = self.vetro_su_schermo(cx, cy)
         x1, y1 = self.vetro_su_schermo(cx + dx, cy + dy)
         self.ultimo_dito = (round(x0), round(y0), round(x1), round(y1))
         sportello("/scorri", {"x1": round(x0), "y1": round(y0), "x2": round(x1),
                               "y2": round(y1), "ms": int(ms)})
-        # ⚠ adb via Wi-Fi: il dito puo' partire un po' dopo la risposta dello
-        #   sportello (2 ott 2026: a 0,5 s fisso il primo scorrimento «non c'era»)
+        # ⚠ adb over Wi-Fi: the finger may start a little after the counter's
+        #   answer (2 Oct 2026: with a fixed 0.5 s the first swipe "was not there")
         fine = time.time() + 3.0
         while True:
             t = self.tocchi_visti(da)
@@ -421,20 +421,20 @@ class GuidaTelefono(VERI.GuidaCdp):
         return (t or [None])[0]
 
     # ═════════════════════════════════════════════════════════════════════════
-    #  LA TASTIERA A SCHERMO (per 15-f031-tocco.py, «tastiera solo a richiesta»,
-    #  DECISIONI §10.28): lo stato lo dice ANDROID, non la pagina
+    #  THE ON-SCREEN KEYBOARD (for 15-f031-tocco.py, "keyboard only on request",
+    #  DECISIONI §10.28): the state is told by ANDROID, not the page
     # ═════════════════════════════════════════════════════════════════════════
     def tastiera_aperta(self):
-        """True/False dalla riga `mInputShown` di `dumpsys input_method` (lo
-        sportello); None se non si legge."""
+        """True/False from the `mInputShown` line of `dumpsys input_method` (the
+        counter); None if unreadable."""
         try:
             return sportello("/tastiera").get("aperta")
         except RuntimeError:
             return None
 
     def aspetta_tastiera(self, voluta, tetto_s=3.0):
-        """Aspetta che la tastiera sia `voluta` (l'animazione di Android dura qualche
-        decimo).  Torna l'ultimo stato letto (True/False/None)."""
+        """Waits for the keyboard to be `voluta` (Android's animation lasts a few
+        tenths).  Returns the last state read (True/False/None)."""
         fine = time.time() + tetto_s
         while True:
             a = self.tastiera_aperta()
@@ -443,16 +443,16 @@ class GuidaTelefono(VERI.GuidaCdp):
             time.sleep(0.3)
 
     def comando_tastiera(self):
-        """Il centro del comando ⌨ della pagina, in coordinate del vetro, o None
-        se la pagina non lo mostra."""
+        """The centre of the page's ⌨ control, in glass coordinates, or None
+        if the page does not show it."""
         return self.js("const b=document.getElementById('tastiera-comando');"
                        "if(!b||getComputedStyle(b).display==='none') return null;"
                        "const r=b.getBoundingClientRect();"
                        "return [r.left+r.width/2, r.top+r.height/2, r.width, r.height];")
 
     def tocco_vero_in(self, x, y):
-        """⭐ Un TOCCO VERO (`adb shell input tap`) in (x,y) del vetro.  Torna il
-        tocco come l'ha visto la pagina, o None."""
+        """⭐ A REAL TAP (`adb shell input tap`) at (x,y) of the glass.  Returns the
+        touch as the page saw it, or None."""
         self.guardia(subito=True)
         da = len(self.tocchi_visti())
         sx, sy = self.vetro_su_schermo(x, y)
@@ -461,9 +461,9 @@ class GuidaTelefono(VERI.GuidaCdp):
         return (self.tocchi_visti(da) or [None])[0]
 
     def scrivi_ime(self, parola):
-        """Una parola come la scrive una tastiera a schermo: composizione lettera per
-        lettera e poi il commit (protocollo DevTools, la strada del metodo
-        d'inserimento: eventi `input`, `keyCode` 229).  Va al campo a fuoco."""
+        """A word as an on-screen keyboard writes it: composition letter by
+        letter and then the commit (DevTools protocol, the input method
+        route: `input` events, `keyCode` 229).  It goes to the focused field."""
         self.guardia()
         c = self.cdp.chiama
         try:
@@ -471,22 +471,22 @@ class GuidaTelefono(VERI.GuidaCdp):
                 c("Input.imeSetComposition", text=parola[:i], selectionStart=i, selectionEnd=i)
                 time.sleep(0.08)
         except Exception:                         # noqa: BLE001
-            pass                                  # senza composizione: resta il commit
+            pass                                  # without composition: the commit remains
         c("Input.insertText", text=parola)
 
-    _scarto = None        # (ox, oy): schermo = scarto + vetro × dpr, dal primo tocco vero
+    _scarto = None        # (ox, oy): screen = offset + glass × dpr, from the first real touch
 
     def vetro_su_schermo(self, x, y):
         sw, sh, dpr, iw, ih = self.schermo()
         if self._scarto is None:
-            # prima stima: la pagina occupa il fondo dello schermo, larga quanto lui
-            # (sopra c'e' la barra di Chrome); il primo tocco vero la corregge
+            # first estimate: the page fills the bottom of the screen, as wide as it
+            # (above is Chrome's bar); the first real touch corrects it
             return (sw - iw * dpr) / 2.0 + x * dpr, (sh - ih * dpr) + y * dpr - 0.0
         return self._scarto[0] + x * dpr, self._scarto[1] + y * dpr
 
     def taratura(self, geo):
-        """Un dito vero che scorre poco (muove il puntatore e basta, non clicca):
-        dove l'ha visto la pagina dice lo scarto fra schermo e vetro."""
+        """A real finger that swipes a little (it only moves the pointer, no click):
+        where the page saw it tells the offset between screen and glass."""
         sw, sh, dpr, iw, ih = self.schermo()
         cx, cy = self._centro_tela(geo)
         x0, y0 = self.vetro_su_schermo(cx, cy)
@@ -502,7 +502,7 @@ class GuidaTelefono(VERI.GuidaCdp):
 
 
 def foto_png(g, nome, cartella):
-    """Una fotografia di TUTTA la pagina del telefono (evidenza), o None."""
+    """A photo of the WHOLE phone page (evidence), or None."""
     try:
         s = g.cdp.chiama("Page.captureScreenshot", format="png")
     except Exception:                             # noqa: BLE001

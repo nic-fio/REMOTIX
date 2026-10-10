@@ -1,20 +1,20 @@
 #!/bin/bash
 #
-# 17-t10-giro.sh — fase 17, T10: il giro di 17-t10.sh su più macchine, QUATTRO alla volta (§7.1).
+# 17-t10-giro.sh — phase 17, T10: the 17-t10.sh round on several machines, FOUR at a time (§7.1).
 #
-#   (sul server, come nicfio)   VERSIONE_N1=0.18.1-2 bash 17-t10-giro.sh <macchina>[:iso] …
-#     es. bash 17-t10-giro.sh debian13-gnome debian13-gnome:iso fedora44-kde arch-lxqt
-#     senza argomenti: tutta la matrice (26 «cliente» + 6 «iso»)
+#   (on the server, as nicfio)   VERSIONE_N1=0.18.1-2 bash 17-t10-giro.sh <macchina>[:iso] …
+#     e.g. bash 17-t10-giro.sh debian13-gnome debian13-gnome:iso fedora44-kde arch-lxqt
+#     without arguments: the whole matrix (26 «cliente» + 6 «iso»)
 #
-# Ogni macchina scrive in t10/esiti/<m>/ e una riga in t10/giro.log; qui in fondo il riepilogo.
-# I due rilasci: t10/run-N.run e run-N1.run (packaging/rilascio.sh), coi loro .sha256 (17-t10.sh).
-# ⚠ 10 ott 2026 (DECISIONI §10.36, fase 19): REMOTIX vuole una scheda che codifica; in VM il
-#   controllo preliminare la rifiuta (RX-GPU-*): il giro vero si fa in SCATOLA con la scheda del
-#   server (<macchina>:scatola), e le scatole per tutte le combinazioni sono da preparare.
+# Every machine writes into t10/esiti/<m>/ and one line into t10/giro.log; the summary at the bottom here.
+# The two releases: t10/run-N.run and run-N1.run (packaging/rilascio.sh), with their .sha256 (17-t10.sh).
+# ⚠ 10 Oct 2026 (DECISIONI §10.36, phase 19): REMOTIX wants a card that encodes; in a VM the
+#   preflight check refuses it (RX-GPU-*): the real round is done in a BOX with the server's card
+#   (<macchina>:scatola), and the boxes for all the combinations are still to be prepared.
 set -uo pipefail
 T10=${T10:-/media/REMOTIX/vm17/t10}
 P=${PARALLELE:-4}
-export VERSIONE_N1=${VERSIONE_N1:?la versione N+1, per esempio 0.18.1-2}
+export VERSIONE_N1=${VERSIONE_N1:?the N+1 version, for example 0.18.1-2}
 MATRICE="debian13-gnome debian13-kde debian13-xfce debian13-lxqt
 ubuntu2604-gnome ubuntu2604-kde ubuntu2604-xfce ubuntu2604-lxqt
 fedora44-gnome fedora44-kde fedora44-xfce fedora44-lxqt
@@ -26,11 +26,11 @@ debian13-gnome:iso ubuntu2604-gnome:iso fedora44-gnome:iso arch-kde:iso tumblewe
 [ $# -gt 0 ] && MATRICE="$*"
 mkdir -p "$T10/esiti"
 T0=$(date +%s)
-echo "== giro T10 $(date -u +%FT%TZ), $P alla volta: $(echo $MATRICE | wc -w) macchine" | tee -a "$T10/giro.log"
+echo "== T10 round $(date -u +%FT%TZ), $P at a time: $(echo $MATRICE | wc -w) machines" | tee -a "$T10/giro.log"
 # shellcheck disable=SC2086
 printf '%s\n' $MATRICE | xargs -P "$P" -I{} bash -c '
 	x={}; m=${x%%:*}; s=${x#*:}; [ "$s" = "$x" ] && s=cliente
 	nome=$m; [ "$s" = iso ] && nome=$m-iso; [ "$s" = scatola ] && nome=$m-scatola
 	bash '"$T10"'/17-t10.sh "$m" "$s" >'"$T10"'/esiti/"$nome".log 2>&1
 	tail -1 '"$T10"'/esiti/"$nome".log' 2>/dev/null
-echo "== fine in $(( ($(date +%s) - T0) / 60 )) min" | tee -a "$T10/giro.log"
+echo "== end in $(( ($(date +%s) - T0) / 60 )) min" | tee -a "$T10/giro.log"

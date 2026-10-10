@@ -2,203 +2,203 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-11-c5 — ⭐⭐ «IL SUONO C'E' E NON E' SILENZIO»
+11-c5 — ⭐⭐ «THE SOUND IS THERE AND IT IS NOT SILENCE»
 ===========================================================================
 
     python3 11-c5-il-suono-non-e-silenzio.py --porta 8512
     python3 11-c5-il-suono-non-e-silenzio.py --porta 8512 --senza-sorgente
     python3 11-c5-il-suono-non-e-silenzio.py --certifica
 
-E' la riga **C5** di `fasi/11-la-rete-di-sicurezza.md` §4.1:
+It is line **C5** of `fasi/11-la-rete-di-sicurezza.md` §4.1:
 
-    che cosa deve essere vero : il suono c'e' e non e' silenzio
-    da dove parte             : ⛔ una sessione NUOVA (un inquilino mai usato)
-    che cosa guarda           : ⭐ i BYTE che arrivano al cliente, e che non
-                                siano silenzio
-    come so che sa dare rosso : si toglie la sorgente ⇒ rosso
-
----------------------------------------------------------------------------
-⭐⭐ PERCHE' QUESTA MAGLIA VEDE QUALCOSA MENTRE LE ALTRE SONO CIECHE
----------------------------------------------------------------------------
-
-`fasi/11…` §6 e §7-bis.13: `[M]` **dieci sessioni GNOME nuove su dieci nascono
-senza monitor**, ⇒ C2, C3, C4, C6 e la meta' B di C8 **non hanno niente da
-guardare**, perche' guardano un pixel attraverso il prodotto.
-
-⭐ C5 giudica **byte**, non pixel — e i byte del suono non passano dal
-  compositore.  ⛔ **Ma non e' stato dato per scontato: e' stato misurato.**
-
-  `[M]` 26 agosto 2026, scatola `rete11-kde`, porta 8512, inquilino `c5u1`:
-  il registro del prodotto dice per quella stessa sessione
-
-      figlio [c5u1] ⛔ nessun monitor virtuale da catturare … monitor «»
-                    (0 prima, 0 dopo), 0x0
-
-  cioe' **la sessione era CIECA** — ⇒ e nello stesso identico giro il cliente
-  ha ricevuto **13 753 blocchi PCM, 13 202 880 byte, purezza 1,0000**.
-
-  ⭐ E c'e' un secondo fatto misurato che rende C5 **piu' rapida** di tutte le
-    altre: il sink «remotix» compare nel PipeWire dell'inquilino dopo **3
-    secondi**, mentre il palco grafico ne vuole ~13 quando ci riesce.
-
-  ⇒ **C5 e' oggi l'unica maglia che attraversa il prodotto da cima a fondo e
-    ha ancora qualcosa da giudicare.**
+    what must be true         : the sound is there and it is not silence
+    where it starts from      : ⛔ a NEW session (a tenant never used)
+    what it looks at          : ⭐ the BYTES that arrive at the client, and that they
+                                are not silence
+    how I know it can say red : the source is removed ⇒ red
 
 ---------------------------------------------------------------------------
-⛔⛔ CHE COS'E' «SILENZIO», CON UN NUMERO — e il numero e' TARATO
+⭐⭐ WHY THIS MESH SEES SOMETHING WHILE THE OTHERS ARE BLIND
 ---------------------------------------------------------------------------
 
-⛔ *«Sono arrivati dei byte»* **non e' una prova che ci sia del suono**: un
-   flusso di zeri e' byte che arrivano ed e' silenzio perfetto.  ⇒ Serve una
-   misura di **energia**, e una **soglia dichiarata**.
+`fasi/11…` §6 and §7-bis.13: `[M]` **ten new GNOME sessions out of ten are born
+without a monitor**, ⇒ C2, C3, C4, C6 and half B of C8 **have nothing to
+look at**, because they look at a pixel through the product.
 
-**Il metro**: si chiede al cliente il codec **PCM** (`--audio-codec pcm`, che
-§4.3 del protocollo impone come «base sempre disponibile»), ⇒ il carico del
-datagram e' **s16 little-endian, 48 000 Hz, 2 canali, 240 fotogrammi = 480
-campioni = 960 byte per blocco, 5 ms** (`src/audio.h`: `AUDIO_BLOCCO_PCM`,
-`AUDIO_FREQUENZA`, `AUDIO_CANALI`).  ⭐ Su quei campioni si calcola l'**RMS**,
-in unita' di fondo scala 32767.
+⭐ C5 judges **bytes**, not pixels — and the bytes of the sound do not go through the
+  compositor.  ⛔ **But it was not taken for granted: it was measured.**
 
-⚠ E si chiede PCM apposta: con Opus il carico e' compresso e per misurare
-  l'energia servirebbe un decodificatore dentro il banco.  ⛔ Un banco che si
-  porta dentro un decodificatore e' un banco che puo' sbagliare da solo.
+  `[M]` 26 August 2026, box `rete11-kde`, port 8512, tenant `c5u1`:
+  the product log says for that same session
 
-**I tre numeri del verdetto**, e ciascuno con la sua ragione:
+      figlio [c5u1] ⛔ no virtual monitor to capture … monitor «»
+                    (0 before, 0 after), 0x0
 
-    SOGLIA_RMS   = 328 su 32767  ⇒ 1,0 % del fondo scala, cioe' −40 dBFS
-    MIN_BLOCCHI  = 200           ⇒ 1 secondo di suono (5 ms a blocco)
-    MIN_FRAZIONE = 0,50          ⇒ meta' dei blocchi dev'essere sopra soglia
+  i.e. **the session was BLIND** — ⇒ and in the very same round the client
+  received **13 753 PCM blocks, 13 202 880 bytes, purity 1.0000**.
 
-⭐⭐ **LA TARATURA — `[M]` 26 agosto 2026, `rete11-kde`, porta 8512, SEI
-    sessioni vere.**  ⛔ La soglia non e' inventata: e' stata **cercata**
-    facendo girare la maglia vera su ampiezze diverse, finche' si e' visto dove
-    passa il confine.
+  ⭐ And there is a second measured fact that makes C5 **faster** than all the
+    others: the «remotix» sink appears in the tenant's PipeWire after **3
+    seconds**, while the graphical stage wants ~13 when it manages.
 
-  | la sorgente (onda a 440 Hz)  | RMS misurato | in dBFS | volte la soglia | verdetto |
+  ⇒ **C5 is today the only mesh that goes through the product from top to bottom and
+    still has something to judge.**
+
+---------------------------------------------------------------------------
+⛔⛔ WHAT «SILENCE» IS, WITH A NUMBER — and the number is CALIBRATED
+---------------------------------------------------------------------------
+
+⛔ *«Some bytes arrived»* **is not a proof that there is sound**: a
+   stream of zeros is bytes that arrive and it is perfect silence.  ⇒ A
+   measure of **energy** is needed, and a **declared threshold**.
+
+**The yardstick**: the client is asked for the **PCM** codec (`--audio-codec pcm`, which
+§4.3 of the protocol imposes as «base always available»), ⇒ the payload of the
+datagram is **s16 little-endian, 48 000 Hz, 2 channels, 240 frames = 480
+samples = 960 bytes per block, 5 ms** (`src/audio.h`: `AUDIO_BLOCCO_PCM`,
+`AUDIO_FREQUENZA`, `AUDIO_CANALI`).  ⭐ On those samples the **RMS** is computed,
+in units of full scale 32767.
+
+⚠ And PCM is asked for on purpose: with Opus the payload is compressed and to measure
+  the energy a decoder inside the bench would be needed.  ⛔ A bench that
+  carries a decoder inside it is a bench that can go wrong by itself.
+
+**The three numbers of the verdict**, each one with its own reason:
+
+    SOGLIA_RMS   = 328 of 32767  ⇒ 1.0 % of full scale, i.e. −40 dBFS
+    MIN_BLOCCHI  = 200           ⇒ 1 second of sound (5 ms per block)
+    MIN_FRAZIONE = 0.50          ⇒ half of the blocks must be above threshold
+
+⭐⭐ **THE CALIBRATION — `[M]` 26 August 2026, `rete11-kde`, port 8512, SIX
+    real sessions.**  ⛔ The threshold is not invented: it was **searched for**
+    by running the real mesh at different amplitudes, until it was seen where
+    the border lies.
+
+  | the source (440 Hz wave)     | RMS measured | in dBFS | times threshold | verdict  |
   |------------------------------|--------------|---------|-----------------|----------|
-  | ampiezza **1,0** (predefinita) | **23 169,3** |  −3,0  | **70,6 ×**  | ⭐ VERDE |
-  | ampiezza 0,5                 |   11 582,7   |  −9,0   | 35,3 ×      | VERDE |
-  | ampiezza **0,02**            |      463,1   | −37,0   | **1,41 ×**  | ⭐ VERDE — il punto vero piu' vicino da sopra |
-  | ampiezza **0,01**            |      231,2   | −43,0   | **0,71 ×**  | ⛔ ROSSO — il punto vero piu' vicino da sotto |
-  | ampiezza 0,001               |       22,6   | −63,2   | 0,07 ×      | ⛔ ROSSO |
-  | ⛔ **nessuna sorgente**       |      —       |   —     |      —      | ⛔ ROSSO: **zero blocchi**, non arriva NIENTE |
+  | amplitude **1.0** (default)  | **23 169.3** |  −3.0  | **70.6 ×**  | ⭐ GREEN |
+  | amplitude 0.5                |   11 582.7   |  −9.0   | 35.3 ×      | GREEN |
+  | amplitude **0.02**           |      463.1   | −37.0   | **1.41 ×**  | ⭐ GREEN — the nearest real point from above |
+  | amplitude **0.01**           |      231.2   | −43.0   | **0.71 ×**  | ⛔ RED — the nearest real point from below |
+  | amplitude 0.001              |       22.6   | −63.2   | 0.07 ×      | ⛔ RED |
+  | ⛔ **no source**              |      —       |   —     |      —      | ⛔ RED: **zero blocks**, NOTHING arrives |
 
-⭐ **Il confine e' stato ATTRAVERSATO in tutt'e due i versi su dati veri**, non
-  dedotto: fra 0,01 e 0,02 di ampiezza la maglia cambia verdetto, e la soglia
-  cade dove il documento dice che cade (ampiezza 0,0142 = 1,42 % del fondo
-  scala).  ⇒ Non e' una soglia che «non ha mai dato rosso in vita sua»
+⭐ **The border was CROSSED in both directions on real data**, not
+  deduced: between 0.01 and 0.02 of amplitude the mesh changes verdict, and the threshold
+  falls where the document says it falls (amplitude 0.0142 = 1.42 % of full
+  scale).  ⇒ It is not a threshold that «has never given red in its life»
   (`LEZIONI.md` §1.47).
 
-⚠ **E il percorso e' TRASPARENTE**, misurato e non supposto: RMS misurato /
-  RMS atteso = 23 169,3 / 23 170 = **1,0000**.  ⇒ Quel che `pw-play` mette nel
-  sink arriva al cliente **con lo stesso livello**, e il conto del prodotto lo
-  conferma dall'altro capo del filo (`PICCO 32767 su 32767`).
+⚠ **And the path is TRANSPARENT**, measured and not assumed: RMS measured /
+  RMS expected = 23 169.3 / 23 170 = **1.0000**.  ⇒ What `pw-play` puts in the
+  sink arrives at the client **at the same level**, and the product's count
+  confirms it from the other end of the wire (`PEAK 32767 of 32767`).
 
-⛔⛔ **E QUI IL BANCO HA GIA' MENTITO UNA VOLTA, prima di essere scritto.**
-  La sonda esplorativa faceva l'onda con `ffmpeg -f lavfi -i sine=…` e misurava
-  **RMS 2 047,5, PICCO 2 896** — cioe' *«il percorso attenua di 21 dB»*.  ⛔ Era
-  falso: attenuava **il generatore**, non il percorso.  ⇒ Una soglia tarata su
-  quel numero sarebbe stata **dieci volte troppo bassa**, e nessuno se ne
-  sarebbe accorto finche' non avesse smesso di dare rosso.
-  ⭐ **E' la ragione per cui l'onda la scrive questo file**: un'ampiezza che
-    dipende dalla semantica del generatore di qualcun altro e' una soglia che
-    si sposta senza dirlo.
+⛔⛔ **AND HERE THE BENCH HAS ALREADY LIED ONCE, before being written.**
+  The exploratory probe made the wave with `ffmpeg -f lavfi -i sine=…` and measured
+  **RMS 2 047.5, PEAK 2 896** — i.e. *«the path attenuates by 21 dB»*.  ⛔ It was
+  false: it was **the generator** attenuating, not the path.  ⇒ A threshold calibrated on
+  that number would have been **ten times too low**, and nobody would have
+  noticed until it stopped giving red.
+  ⭐ **It is the reason why this file writes the wave**: an amplitude that
+    depends on the semantics of someone else's generator is a threshold that
+    moves without saying so.
 
-⇒ ⭐ E per la stessa ragione la maglia **stampa sempre il margine**: il giorno
-  in cui quel percorso smettesse di essere trasparente, si vedrebbe **prima**
-  che diventi un rosso falso, invece che dopo.
+⇒ ⭐ And for the same reason the mesh **always prints the margin**: the day
+  that path stopped being transparent, it would be seen **before**
+  it becomes a false red, instead of after.
 
-⛔ E QUEL CHE LA SOGLIA **NON** E': non e' un giudizio su quanto sia forte il
-   suono dell'utente.  E' la riga che separa *«e' passato il tono che ho messo
-   io»* da *«arriva un flusso di quasi-zeri»*.  ⚠ La qualita' fine del suono
-   e' giudizio dell'utente (I8), e §6 la mette **fuori** dalla rete.
-
----------------------------------------------------------------------------
-⭐ DA DOVE VIENE IL SUONO — e non c'e' niente da aggiungere alla ricetta
----------------------------------------------------------------------------
-
-Il prodotto **si fa il suo sink da solo**: `src/suono.c` crea nel PipeWire
-dell'inquilino un `support.null-audio-sink` chiamato **`remotix`** e ne cattura
-il monitor.  ⇒ ⭐ Per fare del suono basta **suonare dentro quel sink**.
-
-`[M]` 26 agosto 2026, dentro `rete11-kde`, gia' presenti e verificati **prima**
-di scrivere questa maglia (E1: non si ispeziona la ricetta, si prova a fare la
-cosa):
-
-    /usr/bin/pw-play   pipewire-bin 1.4.2-1     ⭐ suona il tono
-    /usr/bin/pw-cli    pipewire-bin 1.4.2-1     ⭐ dice se il sink c'e'
-    /usr/sbin/runuser  util-linux               diventa l'inquilino
-
-⛔ **Non serve aggiungere niente alle quattro ricette**, e non e' un dettaglio:
-   una maglia che chiede un pacchetto nuovo obbliga a ricostruire le quattro
-   scatole, cioe' a rimettere in discussione C11 (l'allineamento).
-
-⚠ E l'onda **non** la fa `ffmpeg`, che pure c'e': la scrive questa maglia, in
-  Python, campione per campione.  ⭐ Cosi' **l'ampiezza e' un numero di questo
-  file** e non la semantica di un filtro altrui — che e' esattamente quel che
-  serve a una soglia tarata.
+⛔ AND WHAT THE THRESHOLD IS **NOT**: it is not a judgement on how loud the
+   user's sound is.  It is the line that separates *«the tone I put in
+   passed»* from *«a stream of near-zeros arrives»*.  ⚠ The fine quality of the sound
+   is the user's judgement (I8), and §6 puts it **outside** the net.
 
 ---------------------------------------------------------------------------
-⛔⛔ TRE ESITI DISTINTI, E NON DUE — §4.5, e il difetto di `LEZIONI.md` §1.49
+⭐ WHERE THE SOUND COMES FROM — and there is nothing to add to the recipe
 ---------------------------------------------------------------------------
 
-⭐ *«Non e' arrivato NIENTE»* e *«non sono riuscito ad aprire la sessione»*
-  hanno lo stesso sintomo — un file di blocchi vuoto — **e sono due cose
-  opposte**.  ⇒ La maglia le separa **prima** di guardare i blocchi:
+The product **makes its own sink by itself**: `src/suono.c` creates in the tenant's
+PipeWire a `support.null-audio-sink` called **`remotix`** and captures
+its monitor.  ⇒ ⭐ To make sound it is enough to **play inside that sink**.
 
-  · il cliente non e' stato AMMESSO           ⇒ **3**, non ho potuto guardare
-  · il PipeWire dell'inquilino non risponde   ⇒ **3**, il terreno non parla
-  · PipeWire risponde e il sink «remotix» NON c'e'
-                                              ⇒ ⛔ **1**, ROSSO: il prodotto
-                                                 non ha aperto la via del suono
-  · il sink c'e', la sorgente suona, e non arriva un blocco
-                                              ⇒ ⛔ **1**, ROSSO: il suono non c'e'
-  · arrivano blocchi ma l'energia e' sotto soglia
-                                              ⇒ ⛔ **1**, ROSSO: e' silenzio
-  · il codec negoziato non e' PCM             ⇒ **3**: non so misurare l'energia
+`[M]` 26 August 2026, inside `rete11-kde`, already present and verified **before**
+writing this mesh (E1: the recipe is not inspected, one tries to do the
+thing):
 
----------------------------------------------------------------------------
-⛔ IL GUASTO INNESTATO — `--senza-sorgente`, e va fatto girare
----------------------------------------------------------------------------
+    /usr/bin/pw-play   pipewire-bin 1.4.2-1     ⭐ plays the tone
+    /usr/bin/pw-cli    pipewire-bin 1.4.2-1     ⭐ says whether the sink is there
+    /usr/sbin/runuser  util-linux               becomes the tenant
 
-`--senza-sorgente` fa tutto **tranne** suonare il tono.  ⇒ La sessione consegna
-silenzio digitale, e la cura di `src/audio.c` (accesa dal 24 agosto 2026) **non
-spedisce i blocchi tutti a zero**: ⇒ al cliente non arriva niente.
+⛔ **Nothing needs to be added to the four recipes**, and it is not a detail:
+   a mesh that asks for a new package forces rebuilding the four
+   boxes, i.e. calling C11 (the alignment) into question again.
 
-⭐ Con il guasto innestato **l'esito si legge al contrario**: qui il verde e' un
-  rosso.  Se C5 dicesse verde senza sorgente, ⛔ non starebbe guardando il suono
-  — starebbe guardando qualcos'altro, e non ci si potrebbe fidare di lei.
-
-⚠ `[M]` E' stato fatto girare, non immaginato: i numeri stanno nel rapporto
-  della maglia (§7-bis del documento di fase).
+⚠ And the wave is **not** made by `ffmpeg`, which is there too: this mesh writes it, in
+  Python, sample by sample.  ⭐ So **the amplitude is a number of this
+  file** and not the semantics of someone else's filter — which is exactly what
+  a calibrated threshold needs.
 
 ---------------------------------------------------------------------------
-⛔ QUEL CHE C5 **NON** GUARDA — dichiarato, o qualcuno se ne fidera' troppo
+⛔⛔ THREE DISTINCT OUTCOMES, AND NOT TWO — §4.5, and the defect of `LEZIONI.md` §1.49
 ---------------------------------------------------------------------------
 
-  · ⛔ **non guarda un pixel.**  Una sessione cieca la fa passare VERDE, ed e'
-    giusto cosi': quella e' C1.  ⚠ ⇒ C5 verde **non vuol dire «la sessione
-    sta bene»**, vuol dire «la via del suono e' aperta».
-  · ⛔ **non giudica la qualita' del suono**: ne' fedelta', ne' distorsione, ne'
-    sincronia con il video (I8, giudizio dell'utente; §6 della fase).
-  · ⛔ **non giudica il ritardo** ne' il jitter: il cliente li sa contare, questa
-    maglia non li legge.
-  · ⛔ **non guarda Opus**, che e' il codec che il browser vero negozia: qui si
-    chiede PCM per poter misurare l'energia senza un decodificatore.
-    ⚠ ⇒ Un guasto che colpisse **solo** il ramo Opus, C5 non lo vedrebbe.
-  · ⛔ **non e' una prova di intermittenza**: apre **una** sessione, non dieci.
-    Se la nascita del sink diventasse saltuaria, ⇒ e' C1 che conta i giri.
-  · ⛔ **non prova che il suono sia quello GIUSTO**: prova che c'e' energia, non
-    che sia l'onda che abbiamo suonato noi.  ⚠ Un rumore qualunque passerebbe.
+⭐ *«NOTHING arrived»* and *«I could not open the session»*
+  have the same symptom — an empty blocks file — **and they are two
+  opposite things**.  ⇒ The mesh separates them **before** looking at the blocks:
+
+  · the client was not ADMITTED               ⇒ **3**, I could not look
+  · the tenant's PipeWire does not answer     ⇒ **3**, the terrain does not speak
+  · PipeWire answers and the «remotix» sink is NOT there
+                                              ⇒ ⛔ **1**, RED: the product
+                                                 did not open the sound path
+  · the sink is there, the source plays, and not one block arrives
+                                              ⇒ ⛔ **1**, RED: the sound is not there
+  · blocks arrive but the energy is below threshold
+                                              ⇒ ⛔ **1**, RED: it is silence
+  · the negotiated codec is not PCM           ⇒ **3**: I cannot measure the energy
 
 ---------------------------------------------------------------------------
-GLI ESITI (§4.5 del documento di fase)
+⛔ THE GRAFTED FAULT — `--senza-sorgente`, and it must be run
 ---------------------------------------------------------------------------
 
-  0  ⭐ ho guardato: il suono arriva e non e' silenzio
-  1  ⛔ ho guardato e NON regge ⇒ rosso
-  3  ⛔ non ho potuto guardare — ⛔ e NON e' un rosso
-  2  il terreno non regge, o l'uso e' sbagliato
+`--senza-sorgente` does everything **except** playing the tone.  ⇒ The session delivers
+digital silence, and the cure of `src/audio.c` (on since 24 August 2026) **does not
+send the all-zero blocks**: ⇒ nothing arrives at the client.
+
+⭐ With the grafted fault **the outcome is read backwards**: here green is a
+  red.  If C5 said green without a source, ⛔ it would not be looking at the sound
+  — it would be looking at something else, and it could not be trusted.
+
+⚠ `[M]` It was run, not imagined: the numbers are in the mesh's
+  report (§7-bis of the phase document).
+
+---------------------------------------------------------------------------
+⛔ WHAT C5 DOES **NOT** LOOK AT — declared, or someone will trust it too much
+---------------------------------------------------------------------------
+
+  · ⛔ **it does not look at a pixel.**  A blind session passes it GREEN, and that is
+    right: that is C1.  ⚠ ⇒ C5 green **does not mean «the session
+    is fine»**, it means «the sound path is open».
+  · ⛔ **it does not judge the quality of the sound**: neither fidelity, nor distortion, nor
+    synchronisation with the video (I8, the user's judgement; §6 of the phase).
+  · ⛔ **it does not judge the latency** nor the jitter: the client can count them, this
+    mesh does not read them.
+  · ⛔ **it does not look at Opus**, which is the codec the real browser negotiates: here
+    PCM is asked for to be able to measure the energy without a decoder.
+    ⚠ ⇒ A fault that hit **only** the Opus branch, C5 would not see.
+  · ⛔ **it is not an intermittency test**: it opens **one** session, not ten.
+    If the birth of the sink became sporadic, ⇒ it is C1 that counts the rounds.
+  · ⛔ **it does not prove that the sound is the RIGHT one**: it proves there is energy, not
+    that it is the wave we played.  ⚠ Any noise would pass.
+
+---------------------------------------------------------------------------
+THE OUTCOMES (§4.5 of the phase document)
+---------------------------------------------------------------------------
+
+  0  ⭐ I looked: the sound arrives and it is not silence
+  1  ⛔ I looked and it does NOT hold ⇒ red
+  3  ⛔ I could not look — ⛔ and it is NOT a red
+  2  the terrain does not hold, or the usage is wrong
 ===========================================================================
 """
 import argparse
@@ -213,32 +213,32 @@ import sys
 import time
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐ «IL CLIENTE E' STATO AMMESSO?» — ⛔ IL PREDICATO SI IMPORTA, NON SI
-#     RISCRIVE.  La casa e' `11-c1-nasce-e-si-vede.py`, e ce n'e' UNA (§1.47).
+# ⭐⭐ «WAS THE CLIENT ADMITTED?» — ⛔ THE PREDICATE IS IMPORTED, NOT
+#     REWRITTEN.  Its home is `11-c1-nasce-e-si-vede.py`, and there is ONE (§1.47).
 #
-# ⛔ Fino al 27 agosto 2026 qui c'era `"AMMESSO" in uscita`, ⭐ e non poteva
-#    dire di no: `[R]` `01-b3-cliente.py` stampa quella parola anche nei **due
-#    messaggi di rifiuto** — «CONGEDO invece di AMMESSO: motivo …» (:1315) e
-#    «atteso AMMESSO, arrivato …» (:1322) — e li stampa sullo **stdout**, che
-#    e' esattamente dove si guardava.  ⇒ Un predicato che non puo' fallire,
-#    `LEZIONI.md` §1.44: la maglia si credeva entrata **anche quando era stata
-#    respinta**, e poi giudicava il buio che ne seguiva come un difetto del
-#    prodotto.
-# ⚠ Era in CINQUE maglie con la stessa riga.  ⇒ Curarla cinque volte sarebbe
-#   stato creare cinque posti da cui divergere di nuovo (§1.47): sta in C1, e
-#   le altre quattro la importano da li'.
-# ⛔ E se non si riesce a importarla si esce **3** e lo si dice, ⇒ ⛔ non si
-#   ripiega in silenzio sul predicato povero — che e' il difetto stesso.
+# ⛔ Until 27 August 2026 there was `"AMMESSO" in uscita` here, ⭐ and it could not
+#    say no: `[R]` `01-b3-cliente.py` prints that word also in the **two
+#    refusal messages** — «CONGEDO instead of AMMESSO: reason …» (:1315) and
+#    «expected AMMESSO, arrived …» (:1322) — and prints them on **stdout**, which
+#    is exactly where it looked.  ⇒ A predicate that cannot fail,
+#    `LEZIONI.md` §1.44: the mesh believed it had got in **even when it had been
+#    turned away**, and then judged the darkness that followed as a defect of the
+#    product.
+# ⚠ It was in FIVE meshes with the same line.  ⇒ Curing it five times would have
+#   been creating five places to diverge from again (§1.47): it lives in C1, and
+#   the other four import it from there.
+# ⛔ And if it cannot be imported we exit **3** and say so, ⇒ ⛔ we do not
+#   silently fall back on the poor predicate — which is the defect itself.
 # ═══════════════════════════════════════════════════════════════════════════
 _QUI_C1 = os.path.dirname(os.path.abspath(__file__))
 _C1 = None
 
 
 def _carica_c1():
-    """⛔ E' un CARICATORE, non un giudice: trova il file, non decide niente.
+    """⛔ It is a LOADER, not a judge: it finds the file, it decides nothing.
 
-    ⚠ Si cerca accanto a me (dentro la scatola tutto sta in `/opt/remotix`) e
-      un piano piu' su, come fanno C2, C3 e C6 coi loro giudici importati.
+    ⚠ It is looked for next to me (inside the box everything is in `/opt/remotix`) and
+      one level up, as C2, C3 and C6 do with their imported judges.
     """
     for p in (os.path.join(_QUI_C1, "11-c1-nasce-e-si-vede.py"),
               os.path.join(os.path.dirname(_QUI_C1), "11-scatole",
@@ -251,14 +251,14 @@ def _carica_c1():
             spec.loader.exec_module(m)
         except Exception:
             return None
-        # ⛔ Si VERIFICA che ci sia quel che serve, invece di fidarsi del nome
-        #    del file (`CODER.md` §3.9).
+        # ⛔ We VERIFY that what is needed is there, instead of trusting the name
+        #    of the file (`CODER.md` §3.9).
         if not callable(getattr(m, "e_stato_ammesso", None)):
             return None
         if not callable(getattr(m, "certifica_ammissione", None)):
             return None
-        # ⭐ E da C1 viene anche la garanzia dei gruppi della scheda: stessa
-        #    ragione, stesso posto solo (§1.47).
+        # ⭐ And from C1 also comes the guarantee of the card's groups: same
+        #    reason, same single place (§1.47).
         for mestiere in ("garantisci_i_gruppi", "verdetto_gruppi",
                          "certifica_gruppi"):
             if not callable(getattr(m, mestiere, None)):
@@ -272,142 +272,142 @@ def casa_dell_ammissione():
     if _C1 is None:
         _C1 = _carica_c1()
     if _C1 is None:
-        print("⛔ non trovo `11-c1-nasce-e-si-vede.py` accanto a me, e da li'")
-        print("   viene il predicato «il cliente e' stato AMMESSO?» — che sta")
-        print("   in un posto solo apposta (§1.47).")
-        print("⇒ non ho potuto guardare — ⛔ e NON e' un rosso (§4.5).")
+        print("⛔ I cannot find `11-c1-nasce-e-si-vede.py` next to me, and from there")
+        print("   comes the predicate «was the client ADMITTED?» — which lives")
+        print("   in one place only on purpose (§1.47).")
+        print("⇒ I could not look — ⛔ and it is NOT a red (§4.5).")
         sys.exit(3)
     return _C1
 
 
 def e_stato_ammesso(coda):
-    """⭐ `True` ammesso · `False` **RESPINTO** · `None` non ha detto niente.
+    """⭐ `True` admitted · `False` **TURNED AWAY** · `None` said nothing.
 
-    ⛔ `False` non e' un rosso del prodotto: un cliente respinto e' un cliente
-       respinto, e chi chiama esce **3**.
+    ⛔ `False` is not a product red: a client turned away is a client
+       turned away, and the caller exits **3**.
     """
     return casa_dell_ammissione().e_stato_ammesso(coda)
 
 
 def garantisci_i_gruppi(chi, prefisso="   "):
-    """⭐⭐ I GRUPPI DELLA SCHEDA — ⛔ e anche questo sta in un posto solo (C1).
+    """⭐⭐ THE CARD'S GROUPS — ⛔ and this too lives in one place only (C1).
 
-    Torna `(esito, perche)`: `0` = l'inquilino vede e si puo' misurare,
-    `3` = ⛔ NON si misura.
+    Returns `(esito, perche)`: `0` = the tenant sees and it can be measured,
+    `3` = ⛔ it is NOT measured.
 
-    ⛔ Fino al 27 agosto 2026 questa maglia creava l'inquilino con
-       `usermod -aG video,render` **e non rileggeva**: due nomi inchiodati (che
-       sono di UNA distribuzione) e nessuna verifica.  ⭐ `[M]` senza i gruppi
-       dei nodi `/dev/dri` la sessione nasce CIECA — 0 su 4, mai in 90 s, zero
-       fotogrammi — e questa maglia avrebbe misurato il buio chiamandolo
-       difetto del prodotto (`fasi/10-…` §7.4).
-    ⭐ Il lavoro lo fa `attrezzi-gruppi-scheda.sh`, che legge i gid dai NODI e
-       rilegge confrontando i numeri.  ⛔ Non se ne fa una copia qui (§1.47).
+    ⛔ Until 27 August 2026 this mesh created the tenant with
+       `usermod -aG video,render` **and did not read back**: two nailed-down names (which
+       belong to ONE distribution) and no verification.  ⭐ `[M]` without the groups
+       of the `/dev/dri` nodes the session is born BLIND — 0 of 4, never in 90 s, zero
+       frames — and this mesh would have measured the darkness calling it
+       a product defect (`fasi/10-…` §7.4).
+    ⭐ The work is done by `attrezzi-gruppi-scheda.sh`, which reads the gids from the NODES and
+       reads back comparing the numbers.  ⛔ No copy of it is made here (§1.47).
     """
     return casa_dell_ammissione().garantisci_i_gruppi(chi, prefisso)
 
 # ---------------------------------------------------------------------------
-# ⛔ IL METRO, DICHIARATO QUI E STAMPATO A OGNI GIRO.  Un verdetto senza il suo
-#    metro e' un'opinione (§4.2 della fase).
+# ⛔ THE YARDSTICK, DECLARED HERE AND PRINTED AT EVERY ROUND.  A verdict without its
+#    yardstick is an opinion (§4.2 of the phase).
 # ---------------------------------------------------------------------------
 FONDO_SCALA = 32767.0
 
-# 1,0 % del fondo scala = −40 dBFS.  ⭐ TARATA su sei sessioni vere (la tabella
-# in testa): il tono predefinito ci sta **70,6 volte sopra**, e il confine e'
-# stato attraversato in tutt'e due i versi fra ampiezza 0,01 (rosso) e 0,02
-# (verde).  ⛔ Non e' un numero che non ha mai dato rosso in vita sua.
+# 1.0 % of full scale = −40 dBFS.  ⭐ CALIBRATED on six real sessions (the table
+# at the top): the default tone sits **70.6 times above** it, and the border was
+# crossed in both directions between amplitude 0.01 (red) and 0.02
+# (green).  ⛔ It is not a number that has never given red in its life.
 SOGLIA_RMS = 328.0
 
-# 200 blocchi da 5 ms = 1 secondo di suono.  ⛔ Un blocco solo non e' un flusso:
-# potrebbe essere uno schiocco in mezzo al nulla.
+# 200 blocks of 5 ms = 1 second of sound.  ⛔ A single block is not a stream:
+# it could be a click in the middle of nothing.
 MIN_BLOCCHI = 200
 
-# ⛔ Meta' dei blocchi dev'essere sopra soglia.  Senza questo, un tono forte per
-#    un decimo del tempo e zeri per il resto avrebbe l'RMS globale a posto.
+# ⛔ Half of the blocks must be above threshold.  Without this, a loud tone for
+#    a tenth of the time and zeros for the rest would have the global RMS in order.
 #
-# ⚠⚠ E VA DETTO CHE OGGI QUESTO CRITERIO E' QUASI CIECO SUL PERCORSO VERO, come
-#    C5 dice le altre cose che non guarda: `src/audio.c` (`audio_taci_silenzio`,
-#    accesa in modo predefinito) **non spedisce i blocchi muti**, quindi i buchi
-#    non arrivano al cliente e non entrano nel denominatore.  ⇒ Sui dati veri
-#    `frazione` e' ~1,0 **per costruzione**, e perche' `A TRATTI` scatti
-#    servirebbe un flusso quasi-silenzioso ma non esattamente nullo — che il
-#    criterio `SILENZIO` prende prima.
-#    ⇒ Non e' un rosso falso e non e' un verde falso: e' un criterio
-#      certificato su casi sintetici che il prodotto struttura per non produrre
-#      mai.  ⭐ Resta a difendere il giorno in cui quella cura si spegnesse (un
-#      server acceso con `--niente-audio-silenzio`), e resta a difendere la
-#      TESTA dell'onda — i secondi fra l'ammissione e la comparsa del sink, che
-#      nessun margine copre (vedi `--resta` piu' sotto).
+# ⚠⚠ AND IT MUST BE SAID THAT TODAY THIS CRITERION IS ALMOST BLIND ON THE REAL PATH, as
+#    C5 says the other things it does not look at: `src/audio.c` (`audio_taci_silenzio`,
+#    on by default) **does not send the mute blocks**, so the holes
+#    do not reach the client and do not enter the denominator.  ⇒ On real data
+#    `frazione` is ~1.0 **by construction**, and for `A TRATTI` to fire
+#    a near-silent but not exactly null stream would be needed — which the
+#    `SILENZIO` criterion catches first.
+#    ⇒ It is neither a false red nor a false green: it is a criterion
+#      certified on synthetic cases that the product structures itself never to
+#      produce.  ⭐ It stays to defend the day that cure were switched off (a
+#      server started with `--niente-audio-silenzio`), and it stays to defend the
+#      HEAD of the wave — the seconds between the admission and the appearance of the sink, which
+#      no margin covers (see `--resta` further below).
 MIN_FRAZIONE = 0.50
 
-# Il formato del carico PCM — `src/audio.h`.
+# The format of the PCM payload — `src/audio.h`.
 PCM_CODEC = 2
 PCM_FREQUENZA = 48000
 PCM_CANALI = 2
 PCM_FOTOGRAMMI = 240          # 5 ms
 PCM_BYTE_BLOCCO = PCM_FOTOGRAMMI * PCM_CANALI * 2   # = 960
 
-# Il sink che il prodotto si crea da solo — `src/suono.c`, `NOME_SINK`.
+# The sink the product creates by itself — `src/suono.c`, `NOME_SINK`.
 NOME_SINK = "remotix"
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ⭐⭐ IL TETTO DELLA NASCITA — ed e' una MISURA, non un numero tondo (§1.45).
+# ⭐⭐ THE BIRTH CEILING — and it is a MEASUREMENT, not a round number (§1.45).
 #
-# ⛔ Il sink «remotix» non puo' comparire prima che la SESSIONE sia nata: se ne
-#    occupa `src/suono.c` dentro la sessione.  ⇒ Il tetto di C5 e' il tetto
-#    della nascita, ed e' lo stesso numero di C1 (`TETTO_NASCITA` la').
+# ⛔ The «remotix» sink cannot appear before the SESSION is born: it is taken care
+#    of by `src/suono.c` inside the session.  ⇒ C5's ceiling is the ceiling
+#    of the birth, and it is the same number as C1 (`TETTO_NASCITA` there).
 #
-# `[M]` 27 agosto 2026, scatola GNOME **curata**, tre sessioni nuove: il
-# `formato negoziato` — l'istante in cui il monitor nasce — arriva in
+# `[M]` 27 August 2026, **cured** GNOME box, three new sessions: the
+# `negotiated format` — the instant the monitor is born — arrives in
 #
-#     1,105 s        0,998 s        0,957 s        ⇒ massimo **1,105 s**
+#     1.105 s        0.998 s        0.957 s        ⇒ maximum **1.105 s**
 #
-# e il sink si vede in `[M]` **3 s** (misura del 26 ago, scatole sane).
+# and the sink is seen in `[M]` **3 s** (measurement of 26 Aug, healthy boxes).
 #
-# ⛔⛔ E QUESTA RIGA HA GIA' PORTATO UN NUMERO SBAGLIATO, PER MEZZA GIORNATA:
-#     **152 s**, tarati su un ritardo di ~97 s che **non era del prodotto**.
-#     `[M]` Era un guasto della SCATOLA: il §6 della ricetta spostava il gruppo
-#     `polkitd` da 991 a 1991 per dare 991 a `render`, e `groupmod -g` non si
-#     porta dietro i file ⇒ `polkitd` non leggeva piu'
-#     `/etc/polkit-1/rules.d`, moriva, e `gnome-shell` incassava quattro
-#     scadenze da 25 s.  ⇒ ⚠ Un tetto di 152 s su un fenomeno di 1,1 s e'
-#     **cento volte** il fenomeno: ⛔ un tetto cosi' non protegge, **nasconde**
-#     — scaduto non ha piu' niente da dire, e nel frattempo ha pagato
-#     centocinquanta secondi per ogni giro che va storto.
-#   ⭐ La lezione, e vale piu' del numero: **prima di tarare un tetto su una
-#     misura, si guarda se quella misura e' del prodotto o del banco.**
+# ⛔⛔ AND THIS LINE HAS ALREADY CARRIED A WRONG NUMBER, FOR HALF A DAY:
+#     **152 s**, calibrated on a delay of ~97 s that **was not the product's**.
+#     `[M]` It was a fault of the BOX: §6 of the recipe moved the
+#     `polkitd` group from 991 to 1991 to give 991 to `render`, and `groupmod -g` does not
+#     carry the files along ⇒ `polkitd` could no longer read
+#     `/etc/polkit-1/rules.d`, died, and `gnome-shell` took four
+#     25 s timeouts.  ⇒ ⚠ A ceiling of 152 s on a phenomenon of 1.1 s is
+#     **a hundred times** the phenomenon: ⛔ a ceiling like that does not protect, it **hides**
+#     — once expired it has nothing more to say, and in the meantime it has paid
+#     a hundred and fifty seconds for every round that goes wrong.
+#   ⭐ The lesson, and it is worth more than the number: **before calibrating a ceiling on a
+#     measurement, look whether that measurement is the product's or the bench's.**
 #
-# ⭐ IL MARGINE, E DA DOVE VIENE — e non e' il margine della dispersione di
-#   oggi (0,957-1,105 s, il 15 %), che sarebbe un margine misurato su una
-#   macchina sola e a riposo:
+# ⭐ THE MARGIN, AND WHERE IT COMES FROM — and it is not the margin of today's
+#   spread (0.957-1.105 s, 15 %), which would be a margin measured on a
+#   single machine at rest:
 #
-#     · il fenomeno sano, oggi                      `[M]`  1,105 s
-#     · il sink, sulle scatole sane                 `[M]`  3 s
-#     · ⚠ la nascita piu' lenta MAI misurata in
-#       questo progetto (26 ago, scatola carica)    `[M]` ~13 s
-#     · il margine dichiarato su QUELLA             **× 2**
+#     · the healthy phenomenon, today               `[M]`  1.105 s
+#     · the sink, on the healthy boxes              `[M]`  3 s
+#     · ⚠ the slowest birth EVER measured in
+#       this project (26 Aug, loaded box)           `[M]` ~13 s
+#     · the margin declared on THAT one             **× 2**
 #                                                   ⇒ **26 s**
 #
-#   ⇒ 26 s sono **8,7 volte** il sink misurato e **due volte** il peggiore mai
-#     visto.  ⚠ Il margine sta sul peggiore apposta: la scatola puo' essere
-#     carica, e la macchina vera ha una **Intel UHD 730 integrata**.
+#   ⇒ 26 s are **8.7 times** the measured sink and **twice** the worst ever
+#     seen.  ⚠ The margin sits on the worst on purpose: the box can be
+#     loaded, and the real machine has an **integrated Intel UHD 730**.
 TETTO_NASCITA = 26.0
 
-# ⭐ E la FINESTRA DI MISURA vera e propria, cioe' quanto suono si vuole avere
-#   in mano dopo che il sink si e' visto.  ⚠ 25 s = ~5 000 blocchi da 5 ms:
-#   e' la popolazione su cui e' tarata la soglia (`[M]` ~4 878 blocchi sulle
-#   scatole sane) e **25 volte** `MIN_BLOCCHI`.
+# ⭐ And the actual MEASURING WINDOW, i.e. how much sound one wants to have
+#   in hand after the sink has been seen.  ⚠ 25 s = ~5 000 blocks of 5 ms:
+#   it is the population the threshold is calibrated on (`[M]` ~4 878 blocks on the
+#   healthy boxes) and **25 times** `MIN_BLOCCHI`.
 FINESTRA_MISURA = 25.0
 
 
 # ---------------------------------------------------------------------------
-# ⭐⭐ IL GIUDICE — e vive da solo, senza rete, senza scatola, senza sessione.
+# ⭐⭐ THE JUDGE — and it lives on its own, without network, without box, without session.
 #
-# ⛔ E' la parte che `--certifica` mette alla prova.  Prende una lista di
-#    blocchi `(codec, carico)` e torna un verdetto:
-#      True  = c'e' suono e non e' silenzio
-#      False = ⛔ rosso
-#      None  = ⛔ non lo so — e ⛔ `None` NON e' zero (§4.5)
+# ⛔ It is the part `--certifica` puts to the test.  It takes a list of
+#    blocks `(codec, carico)` and returns a verdict:
+#      True  = there is sound and it is not silence
+#      False = ⛔ red
+#      None  = ⛔ I do not know — and ⛔ `None` is NOT zero (§4.5)
 # ---------------------------------------------------------------------------
 def giudica(blocchi, soglia=SOGLIA_RMS, min_blocchi=MIN_BLOCCHI,
             min_frazione=MIN_FRAZIONE):
@@ -416,35 +416,35 @@ def giudica(blocchi, soglia=SOGLIA_RMS, min_blocchi=MIN_BLOCCHI,
          "motivo": None}
 
     if blocchi is None:
-        m["motivo"] = "non sono riuscito a leggere i blocchi"
+        m["motivo"] = "I could not read the blocks"
         return None, m
 
     m["blocchi"] = len(blocchi)
     m["byte"] = sum(len(c) for _, c in blocchi)
 
-    # ⛔ PRIMA di ogni altra cosa: «non e' arrivato niente» e' un ROSSO, non un
-    #    «non lo so».  Chi arriva qui ha gia' avuto la sessione e il sink: se
-    #    con la sorgente accesa non arriva un blocco, il suono NON C'E'.
+    # ⛔ BEFORE anything else: «nothing arrived» is a RED, not an
+    #    «I do not know».  Whoever gets here has already had the session and the sink: if
+    #    with the source on not one block arrives, the sound is NOT THERE.
     if not blocchi:
-        m["motivo"] = "NIENTE: non e' arrivato un solo blocco d'audio"
+        m["motivo"] = "NIENTE: not a single audio block arrived"
         return False, m
 
     codec = set(c for c, _ in blocchi)
     if len(codec) != 1:
         m["codec"] = sorted(codec)
-        m["motivo"] = ("il codec CAMBIA a meta' sessione (%s): non so su che "
-                       "formato misurare l'energia" % sorted(codec))
+        m["motivo"] = ("the codec CHANGES in mid-session (%s): I do not know on which "
+                       "format to measure the energy" % sorted(codec))
         return None, m
     m["codec"] = codec.pop()
     if m["codec"] != PCM_CODEC:
-        m["motivo"] = ("il codec negoziato e' %d, non PCM (%d): l'energia si "
-                       "misurerebbe solo decodificando, e questo banco non "
-                       "decodifica" % (m["codec"], PCM_CODEC))
+        m["motivo"] = ("the negotiated codec is %d, not PCM (%d): the energy would "
+                       "be measured only by decoding, and this bench does not "
+                       "decode" % (m["codec"], PCM_CODEC))
         return None, m
 
-    # ⛔ Un carico di lunghezza dispari non e' s16: non si tira a indovinare.
+    # ⛔ A payload of odd length is not s16: no guessing.
     if any(len(c) % 2 for _, c in blocchi):
-        m["motivo"] = "almeno un carico ha lunghezza DISPARI: non e' s16"
+        m["motivo"] = "at least one payload has ODD length: it is not s16"
         return None, m
 
     somma = 0
@@ -469,7 +469,7 @@ def giudica(blocchi, soglia=SOGLIA_RMS, min_blocchi=MIN_BLOCCHI,
             sopra += 1
 
     if campioni == 0:
-        m["motivo"] = "sono arrivati %d blocchi e ZERO campioni" % len(blocchi)
+        m["motivo"] = "%d blocks arrived and ZERO samples" % len(blocchi)
         return None, m
 
     m["campioni"] = campioni
@@ -478,45 +478,45 @@ def giudica(blocchi, soglia=SOGLIA_RMS, min_blocchi=MIN_BLOCCHI,
     m["sopra"] = sopra
     m["frazione"] = sopra / float(len(blocchi))
 
-    # ⚠ L'ordine dei tre controlli e' quello del rapporto che si vuole leggere:
-    #   prima «quanto», poi «quanto forte», poi «per quanto tempo».
+    # ⚠ The order of the three checks is that of the report one wants to read:
+    #   first «how much», then «how loud», then «for how long».
     if len(blocchi) < min_blocchi:
-        m["motivo"] = ("POCHI: %d blocchi su %d attesi al minimo (%d ms di "
-                       "suono): non e' un flusso"
+        m["motivo"] = ("POCHI: %d blocks of %d expected at minimum (%d ms of "
+                       "sound): it is not a stream"
                        % (len(blocchi), min_blocchi, len(blocchi) * 5))
         return False, m
     if m["rms"] < soglia:
-        m["motivo"] = ("SILENZIO: RMS %.1f sotto la soglia %.0f (%.4f %% del "
-                       "fondo scala): arrivano byte, ma non sono suono"
+        m["motivo"] = ("SILENZIO: RMS %.1f below the threshold %.0f (%.4f %% of "
+                       "full scale): bytes arrive, but they are not sound"
                        % (m["rms"], soglia, 100 * m["rms"] / FONDO_SCALA))
         return False, m
     if m["frazione"] < min_frazione:
-        m["motivo"] = ("A TRATTI: solo %d blocchi su %d (%.0f %%) sono sopra "
-                       "soglia: il suono c'e' a sprazzi"
+        m["motivo"] = ("A TRATTI: only %d blocks out of %d (%.0f %%) are above "
+                       "threshold: the sound comes in bursts"
                        % (sopra, len(blocchi), 100 * m["frazione"]))
         return False, m
 
-    m["motivo"] = ("RMS %.1f = %.2f volte la soglia" % (m["rms"], m["rms"] / soglia))
+    m["motivo"] = ("RMS %.1f = %.2f times the threshold" % (m["rms"], m["rms"] / soglia))
     return True, m
 
 
 def guasto_visto(verdetto, m):
-    """⛔⛔ §1.52 — «il guasto e' stato visto» NON e' «il verdetto e' rosso».
+    """⛔⛔ §1.52 — «the fault was seen» is NOT «the verdict is red».
 
-    ⚠ C5 su GNOME e' rossa per conto suo (`[M]` 41 blocchi invece di ~4 878,
-      motivo `POCHI`).  ⇒ Un predicato che guardasse solo il colore direbbe
-      «visto» anche se l'iniezione non avesse morso niente, e la
-      certificazione della rete poggerebbe su un difetto del prodotto.
-    ⭐ Si pretendono DUE cose: il rosso **e** la differenza misurabile — senza
-      sorgente devono arrivare **ZERO** blocchi, non «pochi».
-    ⛔ `None` non e' zero: se non si e' potuto giudicare, non si e' visto
-       niente (§4.5).
+    ⚠ C5 on GNOME is red on its own (`[M]` 41 blocks instead of ~4 878,
+      reason `POCHI`).  ⇒ A predicate that looked only at the colour would say
+      «seen» even if the injection had bitten nothing, and the
+      net's certification would rest on a defect of the product.
+    ⭐ TWO things are demanded: the red **and** the measurable difference — without
+      source **ZERO** blocks must arrive, not «few».
+    ⛔ `None` is not zero: if it could not be judged, nothing was
+       seen (§4.5).
     """
     return verdetto is False and m.get("blocchi") == 0
 
 
 def in_db(v):
-    """dBFS, e ⛔ `None` per «non lo so»: uno zero qui sarebbe una bugia."""
+    """dBFS, and ⛔ `None` for «I do not know»: a zero here would be a lie."""
     if v is None or v <= 0:
         return None
     return 20.0 * math.log10(v / FONDO_SCALA)
@@ -524,10 +524,10 @@ def in_db(v):
 
 def riga_misure(m):
     def q(x, f="%.1f"):
-        return "non lo so" if x is None else (f % x)
+        return "unknown" if x is None else (f % x)
     db = in_db(m["rms"])
-    return ("blocchi %s · byte %d · codec %s · RMS %s (%s %% f.s., %s dBFS) · "
-            "PICCO %s · sopra soglia %s/%s (%s %%)"
+    return ("blocks %s · bytes %d · codec %s · RMS %s (%s %% f.s., %s dBFS) · "
+            "PEAK %s · above threshold %s/%s (%s %%)"
             % (q(m["blocchi"], "%d"), m["byte"], m["codec"],
                q(m["rms"]),
                "?" if m["rms"] is None else "%.4f" % (100 * m["rms"] / FONDO_SCALA),
@@ -537,23 +537,23 @@ def riga_misure(m):
 
 
 # ---------------------------------------------------------------------------
-# L'onda di prova — scritta qui, campione per campione.
+# The test wave — written here, sample by sample.
 # ---------------------------------------------------------------------------
 def scrivi_onda(percorso, secondi, ampiezza, hertz=440.0):
-    """Un WAV s16le 48 kHz stereo con un'onda sinusoidale.
+    """A WAV s16le 48 kHz stereo with a sine wave.
 
-    ⚠ Si scrive a mano invece di chiamare `ffmpeg` per una ragione sola, e non
-      e' l'eleganza: ⭐ **l'ampiezza dev'essere un numero di questo file**.  Una
-      soglia tarata su un'ampiezza che dipende dalla semantica del filtro di
-      qualcun altro e' una soglia che si sposta senza che nessuno lo sappia.
+    ⚠ It is written by hand instead of calling `ffmpeg` for one reason only, and it is not
+      elegance: ⭐ **the amplitude must be a number of this file**.  A
+      threshold calibrated on an amplitude that depends on the semantics of
+      someone else's filter is a threshold that moves without anyone knowing.
     """
     picco = int(ampiezza * 32767)
     passo = 2.0 * math.pi * hertz / PCM_FREQUENZA
-    # ⭐ Si costruisce UN SECONDO e lo si ripete, e non e' solo per fare presto:
-    #   a 440 Hz un secondo contiene 440 cicli INTERI, ⇒ la giuntura e' esatta e
-    #   non produce lo scatto che un taglio a meta' onda lascerebbe.
-    #   ⚠ Con un `--hertz` non intero la giuntura non e' piu' esatta: e' un
-    #     difetto sonoro dichiarato, e non tocca la misura d'energia.
+    # ⭐ ONE SECOND is built and repeated, and it is not only to be quick:
+    #   at 440 Hz a second contains 440 WHOLE cycles, ⇒ the joint is exact and
+    #   does not produce the click a cut in mid-wave would leave.
+    #   ⚠ With a non-integer `--hertz` the joint is no longer exact: it is a
+    #     declared sound defect, and it does not touch the energy measurement.
     uno = []
     for i in range(PCM_FREQUENZA):
         v = int(round(picco * math.sin(passo * i)))
@@ -576,8 +576,8 @@ def scrivi_onda(percorso, secondi, ampiezza, hertz=440.0):
 
 
 def leggi_blocchi(percorso):
-    """⛔ Torna `None` se il file non si e' fatto leggere, `[]` se e' vuoto.
-       Sono due cose diverse e non devono avere la stessa faccia."""
+    """⛔ Returns `None` if the file could not be read, `[]` if it is empty.
+       They are two different things and must not have the same face."""
     if not os.path.exists(percorso):
         return None
     fuori = []
@@ -595,8 +595,8 @@ def leggi_blocchi(percorso):
 
 
 # ---------------------------------------------------------------------------
-# ⛔ NIENTE `sh -c` ANNIDATI — `LEZIONI.md` §1.46.  Ogni comando e' un array, e
-#    i programmi si chiamano per percorso.
+# ⛔ NO NESTED `sh -c` — `LEZIONI.md` §1.46.  Every command is an array, and
+#    programs are called by path.
 # ---------------------------------------------------------------------------
 def esegui(comando, tetto=30):
     try:
@@ -606,16 +606,16 @@ def esegui(comando, tetto=30):
 
 
 def come(chi, uid, resto, tetto=30):
-    """Esegue `resto` **come l'inquilino**, col suo `XDG_RUNTIME_DIR`."""
+    """Runs `resto` **as the tenant**, with its `XDG_RUNTIME_DIR`."""
     return esegui(["runuser", "-u", chi, "--", "env",
                    "XDG_RUNTIME_DIR=/run/user/%d" % uid] + resto, tetto=tetto)
 
 
 def sink_c_e(chi, uid):
-    """Torna True / False / ⛔ None se PipeWire non ha risposto affatto.
+    """Returns True / False / ⛔ None if PipeWire did not answer at all.
 
-    ⭐ E i tre valori sono tre esiti diversi piu' avanti: «non risponde» e' il
-      terreno (3), «risponde e il sink non c'e'» e' un rosso del prodotto (1).
+    ⭐ And the three values are three different outcomes further on: «does not answer» is the
+      terrain (3), «answers and the sink is not there» is a product red (1).
     """
     p = come(chi, uid, ["pw-cli", "ls", "Node"], tetto=20)
     if p is None or p.returncode != 0 or not p.stdout.strip():
@@ -630,23 +630,23 @@ def sink_c_e(chi, uid):
             nome = r.split("=", 1)[1].strip().strip('"')
         elif r.startswith("media.class"):
             classe = r.split("=", 1)[1].strip().strip('"')
-        # ⛔ Non basta che il nome compaia: ci sono DUE nodi «remotix» — il sink
-        #    e il flusso che lo cattura.  ⭐ Quello che serve e' il SINK.
+        # ⛔ It is not enough that the name appears: there are TWO «remotix» nodes — the sink
+        #    and the stream that captures it.  ⭐ The one needed is the SINK.
         if nome == NOME_SINK and classe == "Audio/Sink":
             return True
     return False
 
 
 def sgombra(chi, attesa=45.0):
-    """⭐ Sempre e solo il PROPRIO inquilino, per nome: mai un modello globale.
-       (fase 10 §7.3: un `pkill -f` globale ha rischiato di uccidere il lavoro
-       di un'altra prova che stava misurando.)
+    """⭐ Always and only one's OWN tenant, by name: never a global pattern.
+       (phase 10 §7.3: a global `pkill -f` risked killing the work
+       of another test that was measuring.)
 
-    ⛔⛔ E SI ASPETTA L'EVENTO, NON L'OROLOGIO.  `loginctl terminate-user` e
-        `pkill` tornano SUBITO: chi ripartisse dopo mezzo secondo ricreerebbe
-        l'inquilino mentre il precedente sta ancora morendo.  ⚠ E' esattamente
-        il difetto che ha fatto dire a C1 «non lo so» cinque volte su dieci
-        (`fasi/11…` §7-bis.13).  ⇒ Torna True se il campo e' libero DAVVERO.
+    ⛔⛔ AND WE WAIT FOR THE EVENT, NOT FOR THE CLOCK.  `loginctl terminate-user` and
+        `pkill` return AT ONCE: whoever restarted after half a second would recreate
+        the tenant while the previous one is still dying.  ⚠ It is exactly
+        the defect that made C1 say «I do not know» five times out of ten
+        (`fasi/11…` §7-bis.13).  ⇒ Returns True if the field is REALLY free.
     """
     esegui(["loginctl", "terminate-user", chi], tetto=20)
     time.sleep(1.0)
@@ -664,16 +664,16 @@ def sgombra(chi, attesa=45.0):
 
 # ---------------------------------------------------------------------------
 def certifica():
-    """⛔ Il guasto innestato in laboratorio: si dimostra che il giudice sa dire
-       VERDE, sa dire ROSSO, e sa dire «non lo so».
+    """⛔ The grafted fault in the laboratory: it proves that the judge can say
+       GREEN, can say RED, and can say «I do not know».
 
-    ⚠ E si dichiara che cosa copre e che cosa no.
-      COPRE: la misura dell'energia e i tre criteri — che un flusso di zeri sia
-      rosso, che pochi blocchi siano rossi, che il suono a sprazzi sia rosso,
-      che un tono a META' del livello vero resti VERDE, e che quel che non e'
-      PCM torni «non lo so» invece che zero.
-      ⛔ NON COPRE: che la sessione nasca, che il sink si apra, che `pw-play`
-      suoni.  ⇒ Quello lo copre il giro vero, e il suo guasto innestato e'
+    ⚠ And it declares what it covers and what it does not.
+      COVERS: the measurement of the energy and the three criteria — that a stream of zeros is
+      red, that few blocks are red, that sound in bursts is red,
+      that a tone at HALF the real level stays GREEN, and that what is not
+      PCM returns «I do not know» instead of zero.
+      ⛔ DOES NOT COVER: that the session is born, that the sink opens, that `pw-play`
+      plays.  ⇒ That is covered by the real round, and its grafted fault is
       `--senza-sorgente`.
     """
     def onda(ampiezza, quanti, hertz=440.0):
@@ -692,71 +692,71 @@ def certifica():
     def zeri(quanti):
         return [(PCM_CODEC, b"\x00" * PCM_BYTE_BLOCCO) for _ in range(quanti)]
 
-    # ⭐ Le ampiezze NON sono inventate: sono le stesse che hanno girato su
-    #   sessioni vere (la tabella della taratura, in testa).  ⇒ La
-    #   certificazione e il giro vero parlano dello stesso metro.
+    # ⭐ The amplitudes are NOT invented: they are the same that ran on
+    #   real sessions (the calibration table, at the top).  ⇒ The
+    #   certification and the real round speak of the same yardstick.
     VERO = 1.0
 
     casi = [
-        # (nome, blocchi, atteso, pezzo del motivo atteso)
-        ("il tono predefinito (ampiezza 1,0)", onda(VERO, 1000), True, "RMS"),
-        # ⛔⛔ Il caso che tiene ONESTA la soglia — l'equivalente dei «colori
-        #    spostati» di C1 (§4.1): il punto vero piu' vicino da SOPRA deve
-        #    restare verde, o la soglia e' troppo stretta e fra due settimane
-        #    la rete si butta.  `[M]` a 0,02 il filo ha dato RMS 463,1.
-        ("⭐ ampiezza 0,02 — il punto vero piu' vicino da SOPRA: DEVE restare VERDE",
+        # (name, blocks, expected, piece of the expected reason)
+        ("the default tone (amplitude 1.0)", onda(VERO, 1000), True, "RMS"),
+        # ⛔⛔ The case that keeps the threshold HONEST — the equivalent of C1's «shifted
+        #    colours» (§4.1): the nearest real point from ABOVE must
+        #    stay green, or the threshold is too tight and in two weeks
+        #    the net gets thrown away.  `[M]` at 0.02 the wire gave RMS 463.1.
+        ("⭐ amplitude 0.02 — the nearest real point from ABOVE: MUST stay GREEN",
          onda(0.02, 1000), True, "RMS"),
-        # ⛔ E il punto vero piu' vicino da SOTTO: `[M]` a 0,01 il filo ha dato
-        #    RMS 231,2, e la maglia vera ha detto ROSSO.  ⇒ Il confine e'
-        #    attraversato in tutt'e due i versi.
-        ("⛔ ampiezza 0,01 — il punto vero piu' vicino da SOTTO",
+        # ⛔ And the nearest real point from BELOW: `[M]` at 0.01 the wire gave
+        #    RMS 231.2, and the real mesh said RED.  ⇒ The border is
+        #    crossed in both directions.
+        ("⛔ amplitude 0.01 — the nearest real point from BELOW",
          onda(0.01, 1000), False, "SILENZIO"),
-        ("⛔ non e' arrivato NIENTE", [], False, "NIENTE"),
-        # ⭐⭐ IL CASO CHE GIUSTIFICA TUTTA LA MISURA D'ENERGIA: byte che
-        #    arrivano, e sono silenzio.  Un giudice che contasse i byte
-        #    direbbe verde qui.
-        ("⛔ 4 000 blocchi di ZERI — byte che arrivano ed e' silenzio",
+        ("⛔ NOTHING arrived", [], False, "NIENTE"),
+        # ⭐⭐ THE CASE THAT JUSTIFIES THE WHOLE ENERGY MEASUREMENT: bytes that
+        #    arrive, and they are silence.  A judge that counted the bytes
+        #    would say green here.
+        ("⛔ 4 000 blocks of ZEROS — bytes that arrive and it is silence",
          zeri(4000), False, "SILENZIO"),
-        ("⛔ quasi-silenzio (ampiezza 0,001)", onda(0.001, 1000), False, "SILENZIO"),
-        ("⛔ solo 50 blocchi di tono pieno", onda(VERO, 50), False, "POCHI"),
-        # ⛔ RMS globale a posto (il tono e' forte), ma il suono c'e' per un
-        #    quarto del tempo: senza il terzo criterio questo passerebbe.
-        ("⛔ tono per un quarto del tempo, zeri per il resto",
+        ("⛔ near-silence (amplitude 0.001)", onda(0.001, 1000), False, "SILENZIO"),
+        ("⛔ only 50 blocks of full tone", onda(VERO, 50), False, "POCHI"),
+        # ⛔ Global RMS in order (the tone is loud), but the sound is there for a
+        #    quarter of the time: without the third criterion this would pass.
+        ("⛔ tone for a quarter of the time, zeros for the rest",
          onda(VERO, 1000) + zeri(3000), False, "A TRATTI"),
-        ("codec Opus ⇒ non lo so", [(1, b"\x00" * 100)] * 400, None, "non PCM"),
-        ("codec che CAMBIA ⇒ non lo so",
-         onda(VERO, 200) + [(1, b"\x00" * 100)] * 200, None, "CAMBIA"),
-        ("carico di lunghezza dispari ⇒ non lo so",
-         [(PCM_CODEC, b"\x00" * 961)] * 400, None, "DISPARI"),
-        ("il file dei blocchi non si e' letto ⇒ non lo so", None, None, "non sono riuscito"),
+        ("Opus codec ⇒ I do not know", [(1, b"\x00" * 100)] * 400, None, "not PCM"),
+        ("codec that CHANGES ⇒ I do not know",
+         onda(VERO, 200) + [(1, b"\x00" * 100)] * 200, None, "CHANGES"),
+        ("payload of odd length ⇒ I do not know",
+         [(PCM_CODEC, b"\x00" * 961)] * 400, None, "ODD"),
+        ("the blocks file could not be read ⇒ I do not know", None, None, "I could not"),
     ]
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ⭐⭐ LA SECONDA META' — «il guasto e' stato visto?» (§1.52).
+    # ⭐⭐ THE SECOND HALF — «was the fault seen?» (§1.52).
     #
-    # ⛔ Non c'era prima del 27 ago 2026, ed e' il caso che avrebbe preso il
-    #    difetto: le DUE popolazioni misurate su GNOME — 41 blocchi col giro
-    #    normale, 0 col guasto innestato — sono tutt'e due ROSSE, ⇒ un
-    #    predicato che guarda il colore le confonde.
-    # ⚠ 41 e' misurato: `[M]` §7-bis.18, scatola GNOME, contro ~4 878 altrove.
+    # ⛔ It was not there before 27 Aug 2026, and it is the case that would have caught the
+    #    defect: the TWO populations measured on GNOME — 41 blocks with the
+    #    normal round, 0 with the grafted fault — are both RED, ⇒ a
+    #    predicate that looks at the colour confuses them.
+    # ⚠ 41 is measured: `[M]` §7-bis.18, GNOME box, against ~4 878 elsewhere.
     # ═══════════════════════════════════════════════════════════════════════
     casi_guasto = [
-        ("⭐ senza sorgente: ZERO blocchi ⇒ il guasto E' STATO VISTO", [], True),
+        ("⭐ without source: ZERO blocks ⇒ the fault WAS SEEN", [], True),
 
-        ("⛔⛔ i 41 blocchi FORTI di GNOME: rossi per POCHI ⇒ ⛔ NON «visto»",
+        ("⛔⛔ GNOME's 41 LOUD blocks: red for POCHI ⇒ ⛔ NOT «seen»",
          onda(VERO, 41), False),
 
-        ("⛔ 4 000 blocchi di zeri: rossi per SILENZIO ⇒ ⛔ NON «visto»",
+        ("⛔ 4 000 blocks of zeros: red for SILENZIO ⇒ ⛔ NOT «seen»",
          zeri(4000), False),
 
-        ("⛔ il giro sano e' verde ⇒ ⛔ NON «visto»", onda(VERO, 1000), False),
+        ("⛔ the healthy round is green ⇒ ⛔ NOT «seen»", onda(VERO, 1000), False),
 
-        ("⛔ «non lo so» non e' «visto» (§4.5)", None, False),
+        ("⛔ «I do not know» is not «seen» (§4.5)", None, False),
     ]
 
-    print("== certificazione del giudice di C5 ==")
-    print("   il metro: soglia RMS %.0f su %.0f (%.1f %% f.s., %.0f dBFS) · "
-          "almeno %d blocchi · almeno il %.0f %% sopra soglia"
+    print("== certification of C5's judge ==")
+    print("   the yardstick: RMS threshold %.0f of %.0f (%.1f %% f.s., %.0f dBFS) · "
+          "at least %d blocks · at least %.0f %% above threshold"
           % (SOGLIA_RMS, FONDO_SCALA, 100 * SOGLIA_RMS / FONDO_SCALA,
              in_db(SOGLIA_RMS), MIN_BLOCCHI, 100 * MIN_FRAZIONE))
     print()
@@ -764,35 +764,35 @@ def certifica():
     for nome, blocchi, atteso, pezzo in casi:
         v, m = giudica(blocchi)
         bene = (v is atteso) and (pezzo in (m["motivo"] or ""))
-        print("  %s  %-52s  verdetto=%-5s (atteso %-5s)  %s"
+        print("  %s  %-52s  verdict=%-5s (expected %-5s)  %s"
               % ("OK " if bene else "NO ", nome, v, atteso,
                (m["motivo"] or "")[:72]))
         if not bene:
             guai += 1
     print()
-    print("  ⛔ e il guasto innestato si legge sulla DIFFERENZA, non sul colore:")
+    print("  ⛔ and the grafted fault is read on the DIFFERENCE, not on the colour:")
     for nome, blocchi, atteso in casi_guasto:
         v, m = giudica(blocchi)
         avuto = guasto_visto(v, m)
         bene = avuto is atteso
-        print("  %s  %-52s  visto=%-5s (atteso %-5s)  %s"
+        print("  %s  %-52s  seen=%-5s (expected %-5s)  %s"
               % ("OK " if bene else "NO ", nome, avuto, atteso,
                  (m["motivo"] or "")[:40]))
         if not bene:
             guai += 1
     # ═══════════════════════════════════════════════════════════════════════
-    # ⭐⭐ E IL TETTO SI CERTIFICA COME UNA SOGLIA — ⛔ o e' un numero che
-    #     nessuno ricontrolla piu' (`LEZIONI.md` §1.45).  ⚠ Non c'era prima del
-    #     27 ago 2026.
-    # ⚠ E il margine sta sul PEGGIORE mai misurato, non sulla dispersione di
-    #   oggi: tre misure su una macchina a riposo non dicono niente su una
-    #   scatola carica.  ⇒ Vedi `TETTO_NASCITA` in testa.
-    # ⛔ E c'e' una seconda pretesa, ed e' quella che C5 aveva sbagliato: il
-    #   cliente dev'essere ANCORA ATTACCATO quando il sink compare.
+    # ⭐⭐ AND THE CEILING IS CERTIFIED LIKE A THRESHOLD — ⛔ or it is a number that
+    #     nobody checks any more (`LEZIONI.md` §1.45).  ⚠ It was not there before
+    #     27 Aug 2026.
+    # ⚠ And the margin sits on the WORST ever measured, not on today's
+    #   spread: three measurements on a machine at rest say nothing about a
+    #   loaded box.  ⇒ See `TETTO_NASCITA` at the top.
+    # ⛔ And there is a second demand, and it is the one C5 had got wrong: the
+    #   client must STILL BE ATTACHED when the sink appears.
     # ═══════════════════════════════════════════════════════════════════════
-    MISURE_SANE = (1.105, 0.998, 0.957)   # `[M]` 27 ago 2026, scatola curata
-    SINK_MISURATO = 3.0                   # `[M]` 26 ago 2026, scatole sane
-    PEGGIORE_MAI_VISTA = 13.0             # `[M]` 26 ago 2026, scatola carica
+    MISURE_SANE = (1.105, 0.998, 0.957)   # `[M]` 27 Aug 2026, cured box
+    SINK_MISURATO = 3.0                   # `[M]` 26 Aug 2026, healthy boxes
+    PEGGIORE_MAI_VISTA = 13.0             # `[M]` 26 Aug 2026, loaded box
     MARGINE = 2.0
     serve = PEGGIORE_MAI_VISTA * MARGINE
     tetto_ok = TETTO_NASCITA >= serve
@@ -800,49 +800,49 @@ def certifica():
     if not tetto_ok or not resta_ok:
         guai += 1
     print()
-    print("  %s  il tetto copre la nascita piu' lenta MAI misurata: "
+    print("  %s  the ceiling covers the slowest birth EVER measured: "
           "%.0f s × %.0f = %.0f s ⇒ TETTO_NASCITA %.0f s"
           % ("OK " if tetto_ok else "NO ", PEGGIORE_MAI_VISTA, MARGINE,
              serve, TETTO_NASCITA))
-    print("      ⇒ e sono %.1f volte il sink misurato (%.0f s) e %.0f volte il "
-          "fenomeno sano di oggi (%.3f s)"
+    print("      ⇒ and that is %.1f times the measured sink (%.0f s) and %.0f times "
+          "today's healthy phenomenon (%.3f s)"
           % (TETTO_NASCITA / SINK_MISURATO, SINK_MISURATO,
              TETTO_NASCITA / max(MISURE_SANE), max(MISURE_SANE)))
-    print("  %s  il cliente resta attaccato %.0f s = tetto %.0f + finestra di "
-          "misura %.0f ⇒ e' ancora li' quando il sink compare"
+    print("  %s  the client stays attached %.0f s = ceiling %.0f + measuring "
+          "window %.0f ⇒ it is still there when the sink appears"
           % ("OK " if resta_ok else "NO ", TETTO_NASCITA + FINESTRA_MISURA,
              TETTO_NASCITA, FINESTRA_MISURA))
 
-    # ⭐⭐ I CASI DELL'AMMISSIONE — ⛔ quelli che oggi non c'erano.
-    #    Il predicato vive in C1 e lo si certifica con i casi di C1: ⛔ una
-    #    copia dei casi qui sarebbe un secondo posto da cui divergere (§1.47).
+    # ⭐⭐ THE ADMISSION CASES — ⛔ the ones that were not there before today.
+    #    The predicate lives in C1 and is certified with C1's cases: ⛔ a
+    #    copy of the cases here would be a second place to diverge from (§1.47).
     print()
     guai_amm, quanti_amm = casa_dell_ammissione().certifica_ammissione("C5")
     guai += guai_amm
 
-    # ⭐⭐ E I CASI DEI GRUPPI DELLA SCHEDA — ⛔ l'altro caso che non c'era:
-    #    un inquilino senza i gruppi dei nodi ⇒ «non ho potuto guardare», ⛔
-    #    mai rosso.  Vivono in C1 col passo che certificano.
+    # ⭐⭐ AND THE CARD GROUPS CASES — ⛔ the other case that was missing:
+    #    a tenant without the groups of the nodes ⇒ «I could not look», ⛔
+    #    never red.  They live in C1 with the step they certify.
     print()
     guai_gr, quanti_gr = casa_dell_ammissione().certifica_gruppi("C5")
     guai += guai_gr
 
-    # ⚠ `+ 2` e non `+ 1`: le prove stampate qui sopra sono DUE (il tetto e
-    #   il tempo d'attacco).  ⛔ Il conto diceva 1 dal giorno in cui la
-    #   seconda e' nata, ⇒ la maglia dichiarava un caso in meno di quelli
-    #   che faceva davvero — un conto che non torna e' un conto che non si
-    #   puo' citare.
+    # ⚠ `+ 2` and not `+ 1`: the checks printed above are TWO (the ceiling and
+    #   the attach time).  ⛔ The count said 1 from the day the
+    #   second was born, ⇒ the mesh declared one case fewer than those
+    #   it really did — a count that does not add up is a count that cannot
+    #   be quoted.
     quanti = len(casi) + len(casi_guasto) + quanti_amm + quanti_gr + 2
     print()
     if guai:
-        print("⛔ il giudice NON e' affidabile: %d casi su %d sbagliati"
+        print("⛔ the judge is NOT reliable: %d cases out of %d wrong"
               % (guai, quanti))
         return 1
-    print("⭐ %d casi su %d: il giudice sa dire VERDE, sa dire ROSSO e sa dire "
-          "«non lo so»" % (quanti, quanti))
-    print("⛔ e sa distinguere «l'iniezione ha morso» da «ero gia' rossa» (§1.52)")
-    print("⚠ e questa certificazione copre la MISURA, non la sessione: quella "
-          "la copre il giro vero con `--senza-sorgente`")
+    print("⭐ %d cases out of %d: the judge can say GREEN, can say RED and can say "
+          "«I do not know»" % (quanti, quanti))
+    print("⛔ and it can distinguish «the injection bit» from «I was already red» (§1.52)")
+    print("⚠ and this certification covers the MEASUREMENT, not the session: that "
+          "is covered by the real round with `--senza-sorgente`")
     return 0
 
 
@@ -850,77 +850,77 @@ def certifica():
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--utente", default="c5u1",
-                   help="⛔ un inquilino NUOVO: si cancella e si ricrea a ogni "
-                        "giro. «Da zero» comprende «da zero rispetto a me "
-                        "stesso di ieri» (LEZIONI.md, la cura di C1)")
+                   help="⛔ a NEW tenant: it is deleted and recreated at every "
+                        "round. «From zero» includes «from zero with respect to myself "
+                        "of yesterday» (LEZIONI.md, C1's cure)")
     p.add_argument("--parola", default="provanic2026")
     p.add_argument("--porta", type=int, default=8512)
     p.add_argument("--indirizzo", default="127.0.0.1")
     p.add_argument("--cliente", default="/opt/remotix/01-b3-cliente.py")
     p.add_argument("--registro", default="/var/lib/rete11/registro.log")
     p.add_argument("--resta", type=float, default=TETTO_NASCITA + FINESTRA_MISURA,
-                   help="quanto il cliente resta attaccato a raccogliere suono. "
+                   help="how long the client stays attached collecting sound. "
                         "⭐ = TETTO_NASCITA (26 s) + FINESTRA_MISURA (25 s) = "
-                        "51 s: il sink non puo' comparire prima che la sessione "
-                        "nasca, e il cliente deve essere ANCORA ATTACCATO "
-                        "quando compare — `[M]` e' la ragione dei 41 blocchi "
-                        "invece di ~4 878, il cliente se n'era gia' andato")
+                        "51 s: the sink cannot appear before the session "
+                        "is born, and the client must STILL BE ATTACHED "
+                        "when it appears — `[M]` it is the reason for the 41 blocks "
+                        "instead of ~4 878, the client had already gone away")
     p.add_argument("--ampiezza", type=float, default=1.0,
-                   help="ampiezza dell'onda, 0..1 di fondo scala. ⭐ Serve alla "
-                        "TARATURA: e' con questa che si sono misurate le due "
-                        "popolazioni scritte in testa")
+                   help="amplitude of the wave, 0..1 of full scale. ⭐ It serves the "
+                        "CALIBRATION: it is with this that the two "
+                        "populations written at the top were measured")
     p.add_argument("--hertz", type=float, default=440.0)
     p.add_argument("--senza-sorgente", action="store_true",
-                   help="⛔ IL GUASTO INNESTATO: non si suona niente. L'esito si "
-                        "legge AL CONTRARIO — qui il verde e' un rosso")
+                   help="⛔ THE GRAFTED FAULT: nothing is played. The outcome is "
+                        "read BACKWARDS — here green is a red")
     p.add_argument("--attesa-ammesso", type=float, default=45.0,
-                   help="quanto si aspetta che il cliente dica AMMESSO. "
-                        "Scaduto: «non ho potuto guardare», MAI verde. "
-                        "⚠ Resta 45 s apposta: l'AMMISSIONE e' la stretta di "
-                        "mano RCP e viene PRIMA della sessione — il ritardo "
-                        "del palco (26 s) lo copre `--attesa-sink`, non "
-                        "questo. ⛔ Confonderli vorrebbe dire aspettare il "
-                        "palco nella finestra sbagliata")
+                   help="how long to wait for the client to say AMMESSO. "
+                        "Expired: «I could not look», NEVER green. "
+                        "⚠ It stays 45 s on purpose: the ADMISSION is the RCP "
+                        "handshake and comes BEFORE the session — the delay "
+                        "of the stage (26 s) is covered by `--attesa-sink`, not "
+                        "this. ⛔ Confusing them would mean waiting for the "
+                        "stage in the wrong window")
     p.add_argument("--attesa-sink", type=float, default=TETTO_NASCITA,
-                   help="quanto si aspetta che compaia il sink «remotix». "
-                        "⭐ = TETTO_NASCITA: `[M]` il sink si vede in 3 s e la "
-                        "sessione nasce in 1,105 s sulla scatola curata; 26 s "
-                        "sono la nascita piu' lenta mai misurata (13 s) × 2 — "
-                        "vedi TETTO_NASCITA in testa")
+                   help="how long to wait for the «remotix» sink to appear. "
+                        "⭐ = TETTO_NASCITA: `[M]` the sink is seen in 3 s and the "
+                        "session is born in 1.105 s on the cured box; 26 s "
+                        "are the slowest birth ever measured (13 s) × 2 — "
+                        "see TETTO_NASCITA at the top")
     p.add_argument("--certifica", action="store_true")
     a = p.parse_args()
 
     if a.certifica:
         return certifica()
 
-    # ═══ IL TERRENO — e ogni pezzo che manca e' un «non lo so», mai un verde ══
+    # ═══ THE TERRAIN — and every missing piece is an «I do not know», never a green ══
     if os.geteuid() != 0:
-        print("⛔ va eseguito da amministratore dentro la scatola (crea un utente)")
+        print("⛔ it must be run as administrator inside the box (it creates a user)")
         return 2
     if not os.path.exists(a.cliente):
-        print("⛔ non trovo il cliente di prova: %s" % a.cliente)
-        print("   ⇒ non ho potuto guardare")
+        print("⛔ I cannot find the test client: %s" % a.cliente)
+        print("   ⇒ I could not look")
         return 3
     for arnese in ("/usr/bin/pw-play", "/usr/bin/pw-cli"):
         if not os.path.exists(arnese):
-            print("⛔ manca %s (pacchetto `pipewire-bin`): senza, non so ne' "
-                  "fare suono ne' vedere il sink" % arnese)
-            print("   ⇒ non ho potuto guardare")
+            print("⛔ %s is missing (package `pipewire-bin`): without it, I can neither "
+                  "make sound nor see the sink" % arnese)
+            print("   ⇒ I could not look")
             return 3
 
-    print("== C5 — il suono c'e' e non e' silenzio ==")
-    print("   inquilino NUOVO «%s» · porta %d · resto attaccato %.0f s"
+    print("== C5 — the sound is there and it is not silence ==")
+    print("   NEW tenant «%s» · port %d · I stay attached %.0f s"
           % (a.utente, a.porta, a.resta))
-    print("   il metro: soglia RMS %.0f su %.0f (%.1f %% f.s., %.0f dBFS) · "
-          "almeno %d blocchi · almeno il %.0f %% sopra soglia"
+    print("   the yardstick: RMS threshold %.0f of %.0f (%.1f %% f.s., %.0f dBFS) · "
+          "at least %d blocks · at least %.0f %% above threshold"
           % (SOGLIA_RMS, FONDO_SCALA, 100 * SOGLIA_RMS / FONDO_SCALA,
              in_db(SOGLIA_RMS), MIN_BLOCCHI, 100 * MIN_FRAZIONE))
     if a.senza_sorgente:
-        print("   ⛔⛔ GUASTO INNESTATO: la sorgente NON si accende. "
-              "L'esito si legge al contrario.")
+        print("   ⛔⛔ GRAFTED FAULT: the source is NOT switched on. "
+              "The outcome is read backwards.")
     else:
-        print("   la sorgente: onda a %.0f Hz, ampiezza %.4f, suonata dentro il "
-              "sink «%s» del prodotto" % (a.hertz, a.ampiezza, NOME_SINK))
+        print("   the source: wave at %.0f Hz, amplitude %.4f, played inside the "
+              "product's «%s» sink" % (a.hertz, a.ampiezza, NOME_SINK))
     print()
 
     chi = a.utente
@@ -931,77 +931,77 @@ def main():
     esito = 3
 
     try:
-        # ═══ L'INQUILINO — si CANCELLA prima di crearlo ═══════════════════
-        # ⛔ «Da zero» comprende «da zero rispetto a me stesso di ieri»: un
-        #    `id -u X || useradd X` renderebbe l'inquilino nuovo solo la PRIMA
-        #    volta che questo banco gira in vita sua.
+        # ═══ THE TENANT — it is DELETED before creating it ═════════════════
+        # ⛔ «From zero» includes «from zero with respect to myself of yesterday»: an
+        #    `id -u X || useradd X` would make the tenant new only the FIRST
+        #    time this bench runs in its life.
         if not sgombra(chi):
-            print("  ⚠ «%s» del giro precedente non se n'e' andato: il campo "
-                  "non e' libero, e lo dico invece di far finta di niente" % chi)
+            print("  ⚠ «%s» of the previous round did not go away: the field "
+                  "is not free, and I say so instead of pretending nothing happened" % chi)
         esegui(["/bin/sh", "-c",
                 "userdel -r %s 2>/dev/null; rm -rf /home/%s" % (chi, chi)],
                tetto=60)
-        # ⛔ I gruppi della scheda non stanno piu' qui dentro: `usermod -aG
-        #    video,render` inchiodava due nomi e non rileggeva.  Li da'
-        #    l'attrezzo, qui sotto, che li LEGGE dai nodi e poi VERIFICA.
+        # ⛔ The card's groups are no longer in here: `usermod -aG
+        #    video,render` nailed down two names and did not read back.  They are given by
+        #    the tool, below, which READS them from the nodes and then VERIFIES.
         f = esegui(["/bin/sh", "-c",
                     "useradd -m -s /bin/bash %s "
                     "&& printf '%s:%s\n' | chpasswd" % (chi, chi, a.parola)],
                    tetto=60)
         if f is None or f.returncode != 0:
-            print("⛔ non sono riuscito a creare l'inquilino «%s»: %s"
-                  % (chi, (f.stderr.strip()[:120] if f else "il comando non e' partito")))
-            print("   ⇒ non ho potuto guardare")
+            print("⛔ I could not create the tenant «%s»: %s"
+                  % (chi, (f.stderr.strip()[:120] if f else "the command did not start")))
+            print("   ⇒ I could not look")
             return 3
-        # ⛔⛔ E SENZA I GRUPPI DELLA SCHEDA NON SI MISURA: `[M]` la sessione
-        #     nasce cieca (0 su 4), e C5 misurerebbe il suono di un desktop
-        #     che non esiste.  ⇒ 3, ⛔ mai rosso (§1.51).
+        # ⛔⛔ AND WITHOUT THE CARD'S GROUPS WE DO NOT MEASURE: `[M]` the session
+        #     is born blind (0 of 4), and C5 would measure the sound of a desktop
+        #     that does not exist.  ⇒ 3, ⛔ never red (§1.51).
         e_gr, perche_gr = garantisci_i_gruppi(chi, prefisso="  ")
         if e_gr != 0:
-            # ⭐ Si propaga l'esito dell'attrezzo, non un 3 inchiodato: «non ho
-            #   potuto guardare» (3) e «uso sbagliato» (2) hanno nomi diversi.
+            # ⭐ The tool's outcome is propagated, not a nailed-down 3: «I could not
+            #   look» (3) and «wrong usage» (2) have different names.
             print("  %s" % perche_gr)
-            print("  ⇒ non misuro — ⛔ e NON e' un rosso (§4.5): esito %d"
+            print("  ⇒ I do not measure — ⛔ and it is NOT a red (§4.5): outcome %d"
                   % e_gr)
             return e_gr
-        # ⛔ `esegui` torna `None` a scadenza: senza questa guardia era un
-        #    `AttributeError` ⇒ traccia ⇒ Python esce **1** ⇒ il gancio legge
-        #    ROSSO, e sarebbe un guasto del BANCO che accusa il prodotto
-        #    (`LEZIONI.md` §1.51).  ⚠ Probabilita' bassa, forma sbagliata.
+        # ⛔ `esegui` returns `None` on expiry: without this guard it was an
+        #    `AttributeError` ⇒ traceback ⇒ Python exits **1** ⇒ the hook reads
+        #    RED, and it would be a fault of the BENCH accusing the product
+        #    (`LEZIONI.md` §1.51).  ⚠ Low probability, wrong shape.
         letto = esegui(["id", "-u", chi])
         if letto is None or letto.returncode != 0 or not letto.stdout.strip():
-            print("⛔ ho creato «%s» ma non riesco a leggerne l'uid: e' il "
-                  "BANCO che non risponde, non il prodotto" % chi)
-            print("   ⇒ non ho potuto guardare")
+            print("⛔ I created «%s» but I cannot read its uid: it is the "
+                  "BENCH that does not answer, not the product" % chi)
+            print("   ⇒ I could not look")
             return 3
         uid = int(letto.stdout.strip())
-        print("  inquilino «%s» creato, uid %d" % (chi, uid))
+        print("  tenant «%s» created, uid %d" % (chi, uid))
 
-        # ═══ L'ONDA — e si riscrive a ogni giro ═══════════════════════════
+        # ═══ THE WAVE — and it is rewritten at every round ═════════════════
         for vecchio in (blocchi_file, cliente_log, onda_file):
             try:
                 os.unlink(vecchio)
             except OSError:
                 pass
         if not a.senza_sorgente:
-            # ⚠ Piu' lunga di quel che serve, e il margine e' dichiarato: il
-            #   tono parte quando il sink si vede e deve arrivare oltre la fine
-            #   del cliente.  ⛔ Se finisse prima, la coda del giro sarebbe
-            #   silenzio e la frazione crollerebbe — un rosso del BANCO, non del
-            #   prodotto (`LEZIONI.md` §1.45).
-            # ⚠ E questo margine protegge la CODA, non la TESTA: fra
-            #   l'ammissione e la comparsa del sink ci sono secondi di silenzio
-            #   dentro la finestra del cliente (fino a ~3 s, e piu' se la scatola e' carica), e nessun
-            #   margine li copre.  ⇒ Oggi non mordono perche' `src/audio.c` non
-            #   spedisce i blocchi muti — vedi `MIN_FRAZIONE` in testa.  ⛔ E'
-            #   una dipendenza fra questa maglia e un'opzione del prodotto, ed
-            #   e' scritta qui invece di essere scoperta il giorno del rosso.
+            # ⚠ Longer than needed, and the margin is declared: the
+            #   tone starts when the sink is seen and must last beyond the end
+            #   of the client.  ⛔ If it ended earlier, the tail of the round would be
+            #   silence and the fraction would collapse — a red of the BENCH, not of the
+            #   product (`LEZIONI.md` §1.45).
+            # ⚠ And this margin protects the TAIL, not the HEAD: between
+            #   the admission and the appearance of the sink there are seconds of silence
+            #   inside the client's window (up to ~3 s, and more if the box is loaded), and no
+            #   margin covers them.  ⇒ Today they do not bite because `src/audio.c` does not
+            #   send the mute blocks — see `MIN_FRAZIONE` at the top.  ⛔ It is
+            #   a dependency between this mesh and an option of the product, and
+            #   it is written here instead of being discovered on the day of the red.
             durata = a.resta + 15.0
             picco = scrivi_onda(onda_file, durata, a.ampiezza, a.hertz)
-            print("  onda scritta: %.0f s a %.0f Hz, picco alla sorgente %d su "
+            print("  wave written: %.0f s at %.0f Hz, peak at the source %d of "
                   "32767 (%s)" % (durata, a.hertz, picco, onda_file))
 
-        # ═══ IL CLIENTE — si chiede PCM, o non si puo' misurare l'energia ══
+        # ═══ THE CLIENT — PCM is asked for, or the energy cannot be measured ══
         with open(cliente_log, "w") as reg:
             cli = subprocess.Popen(
                 ["python3", "-u", a.cliente,
@@ -1012,17 +1012,17 @@ def main():
                  "--resta", str(a.resta)],
                 stdout=reg, stderr=subprocess.STDOUT)
 
-        # ⛔ Si aspetta l'EVENTO «AMMESSO», non l'orologio.
-        # ⛔⛔ E si aspetta la RIGA, non la parola: `"AMMESSO" in …` sarebbe
-        #     vero anche sui due messaggi di RIFIUTO ⇒ questo ciclo sarebbe
-        #     uscito **subito e contento** proprio quando il server aveva
-        #     respinto il cliente (§1.44).  Vedi `e_stato_ammesso()` in testa.
-        # ⭐ Il ciclo esce solo su `True`.  ⚠ `False` NON e' una condizione
-        #   d'uscita: nei primi decimi di secondo il cliente ha gia' stampato
-        #   «→ CIAO» e non e' ancora stato ammesso — sarebbe un'uscita
-        #   anticipata su una sessione che sta ancora nascendo.  ⇒ Chi esce
-        #   presto sul rifiuto e' il cliente stesso, che muore (`sys.exit(2)`),
-        #   e lo prende il `cli.poll()` qui sotto.
+        # ⛔ We wait for the «AMMESSO» EVENT, not for the clock.
+        # ⛔⛔ And we wait for the LINE, not the word: `"AMMESSO" in …` would be
+        #     true also on the two REFUSAL messages ⇒ this loop would have
+        #     exited **at once and happy** precisely when the server had
+        #     turned the client away (§1.44).  See `e_stato_ammesso()` at the top.
+        # ⭐ The loop exits only on `True`.  ⚠ `False` is NOT an exit
+        #   condition: in the first tenths of a second the client has already printed
+        #   «→ CIAO» and has not been admitted yet — it would be an early
+        #   exit on a session that is still being born.  ⇒ Whoever exits
+        #   early on the refusal is the client itself, which dies (`sys.exit(2)`),
+        #   and the `cli.poll()` below catches it.
         ammesso = None
         scadenza = time.time() + a.attesa_ammesso
         while time.time() < scadenza:
@@ -1037,8 +1037,8 @@ def main():
                 break
             time.sleep(0.5)
         if ammesso is not True:
-            # ⛔ «Non ammesso» da solo e' un silenzio: si porta il MOTIVO
-            #    accanto al sintomo (la cura di C1).
+            # ⛔ «Not admitted» on its own is a silence: the REASON is carried
+            #    next to the symptom (C1's cure).
             motivo = "?"
             try:
                 with open(cliente_log, "r", errors="replace") as h:
@@ -1049,33 +1049,33 @@ def main():
                             break
             except OSError:
                 pass
-            # ⭐ E i due «no» si dicono per nome: «respinto» e «muto» non sono
-            #   la stessa cosa, e mescolarli e' meta' del difetto di §1.44.
-            print("  ⛔ %s in %.0f s — perche': %s"
-                  % ("il cliente e' stato RESPINTO dal server"
+            # ⭐ And the two «no»s are said by name: «turned away» and «silent» are not
+            #   the same thing, and mixing them is half the defect of §1.44.
+            print("  ⛔ %s in %.0f s — why: %s"
+                  % ("the client was TURNED AWAY by the server"
                      if ammesso is False
-                     else "il cliente non ha detto NIENTE",
+                     else "the client said NOTHING",
                      a.attesa_ammesso, motivo))
-            print("\n  ⚠ NON GIUDICO: non ho aperto la sessione, quindi non ho "
-                  "modo di dire se il suono ci sarebbe stato.")
-            print("     ⛔ E questo NON e' un rosso: e' l'esito 3 (§4.5).")
+            print("\n  ⚠ NOT JUDGING: I did not open the session, so I have no "
+                  "way of saying whether the sound would have been there.")
+            print("     ⛔ And this is NOT a red: it is outcome 3 (§4.5).")
             return 3
-        print("  il cliente e' stato AMMESSO")
+        print("  the client was ADMITTED")
 
-        # ═══ IL SINK — e i tre casi sono tre esiti diversi ════════════════
+        # ═══ THE SINK — and the three cases are three different outcomes ═══
         #
-        # ⛔⛔ E SI RICORDA SE PIPEWIRE HA RISPOSTO ALMENO UNA VOLTA, non solo
-        #     l'ULTIMA risposta.  ⚠ Fino al 27 ago 2026 `visto` veniva
-        #     sovrascritto a ogni giro, e `sink_c_e` torna `None` quando
-        #     PipeWire non risponde — cosa che nei primi secondi succede per
-        #     forza, perche' `/run/user/<uid>` non c'e' ancora.  ⇒ L'esito era
-        #     deciso dall'ultimo colpo:
-        #       · risponde «niente sink» per tutta l'attesa e all'ultimo tace
-        #         ⇒ **3** invece di **1** (un rosso del prodotto perso);
-        #       · e' morto per tutta l'attesa e risponde all'ultimo
-        #         ⇒ **1** invece di **3** (un rosso INVENTATO sul prodotto).
-        #     ⛔ Sono i due esiti che questa maglia dichiara di tenere separati
-        #     apposta (vedi in testa).
+        # ⛔⛔ AND WE REMEMBER WHETHER PIPEWIRE ANSWERED AT LEAST ONCE, not only
+        #     the LAST answer.  ⚠ Until 27 Aug 2026 `visto` was
+        #     overwritten at every round, and `sink_c_e` returns `None` when
+        #     PipeWire does not answer — which in the first seconds necessarily
+        #     happens, because `/run/user/<uid>` is not there yet.  ⇒ The outcome was
+        #     decided by the last shot:
+        #       · it answers «no sink» for the whole wait and at the last is silent
+        #         ⇒ **3** instead of **1** (a product red lost);
+        #       · it is dead for the whole wait and answers at the last
+        #         ⇒ **1** instead of **3** (a red INVENTED on the product).
+        #     ⛔ They are the two outcomes this mesh declares it keeps separate
+        #     on purpose (see the top).
         visto = None
         ha_risposto = False
         t0 = time.time()
@@ -1088,122 +1088,122 @@ def main():
                 break
             time.sleep(1.0)
         if not ha_risposto:
-            print("  ⛔ il PipeWire di «%s» non ha risposto NEMMENO UNA VOLTA "
+            print("  ⛔ the PipeWire of «%s» did not answer EVEN ONCE "
                   "in %.0f s" % (chi, a.attesa_sink))
-            print("\n  ⚠ NON GIUDICO: e' il terreno che non parla, non il "
-                  "prodotto.  ⛔ E non e' un rosso (§4.5).")
+            print("\n  ⚠ NOT JUDGING: it is the terrain that does not speak, not the "
+                  "product.  ⛔ And it is not a red (§4.5).")
             return 3
         if not visto:
-            print("  ⛔ PipeWire ha risposto (almeno una volta), e il sink «%s» "
-                  "NON c'e' dopo %.0f s" % (NOME_SINK, a.attesa_sink))
-            print("\n  ⛔⛔ ROSSO — il prodotto non ha aperto la via del suono.")
-            print("     ⇒ `src/suono.c` crea un `support.null-audio-sink` "
-                  "chiamato «%s»: non c'e'." % NOME_SINK)
+            print("  ⛔ PipeWire answered (at least once), and the «%s» sink "
+                  "is NOT there after %.0f s" % (NOME_SINK, a.attesa_sink))
+            print("\n  ⛔⛔ RED — the product did not open the sound path.")
+            print("     ⇒ `src/suono.c` creates a `support.null-audio-sink` "
+                  "called «%s»: it is not there." % NOME_SINK)
             return 1
-        print("  ⭐ il sink «%s» c'e' dopo %.0f s" % (NOME_SINK, time.time() - t0))
+        print("  ⭐ the «%s» sink is there after %.0f s" % (NOME_SINK, time.time() - t0))
 
-        # ═══ LA SORGENTE ══════════════════════════════════════════════════
+        # ═══ THE SOURCE ═══════════════════════════════════════════════════
         if a.senza_sorgente:
-            print("  ⛔ GUASTO INNESTATO: non suono niente")
+            print("  ⛔ GRAFTED FAULT: I play nothing")
         else:
             tono = subprocess.Popen(
                 ["runuser", "-u", chi, "--", "env",
                  "XDG_RUNTIME_DIR=/run/user/%d" % uid,
                  "pw-play", "--target=%s" % NOME_SINK, onda_file],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            print("  la sorgente suona (pw-play su «%s»)" % NOME_SINK)
+            print("  the source plays (pw-play on «%s»)" % NOME_SINK)
 
-        # ⛔ Il tetto governa l'ATTESA DEL CLIENTE, non il lavoro: se il cliente
-        #    ha gia' scritto i suoi blocchi, si giudicano lo stesso — si giudica
-        #    il RISULTATO, non il codice d'uscita (`LEZIONI.md` §1.50).
+        # ⛔ The ceiling governs the WAIT FOR THE CLIENT, not the work: if the client
+        #    has already written its blocks, they are judged anyway — the
+        #    RESULT is judged, not the exit code (`LEZIONI.md` §1.50).
         try:
             cli.wait(timeout=a.resta * 3 + 60)
         except subprocess.TimeoutExpired:
-            print("  ⚠ il cliente non e' uscito da solo: lo chiudo e guardo "
-                  "quel che ha scritto")
+            print("  ⚠ the client did not exit by itself: I close it and look at "
+                  "what it wrote")
             cli.kill()
             cli.wait(timeout=30)
 
-        # ═══ IL GIUDIZIO ══════════════════════════════════════════════════
+        # ═══ THE JUDGEMENT ════════════════════════════════════════════════
         blocchi = leggi_blocchi(blocchi_file)
         verdetto, m = giudica(blocchi)
         print()
         print("  %s" % riga_misure(m))
-        # ⭐ Il secondo testimone: quel che il PRODOTTO dice di aver spedito.
-        #   ⚠ Si STAMPA e non si giudica — e' un confronto per chi diagnostica,
-        #     non un criterio.
+        # ⭐ The second witness: what the PRODUCT says it sent.
+        #   ⚠ It is PRINTED and not judged — it is a comparison for whoever diagnoses,
+        #     not a criterion.
         for riga in coda_registro(a.registro, chi):
-            print("  [registro] %s" % riga)
+            print("  [log] %s" % riga)
         print("  ⇒ %s" % (m["motivo"] or "—"))
 
-        # ═══ E il margine, che si stampa SEMPRE ═══════════════════════════
+        # ═══ And the margin, which is ALWAYS printed ══════════════════════
         if m["rms"]:
-            print("  margine sulla soglia: %.2f volte (%.1f dB) — ⚠ e si stampa "
-                  "sempre: e' il numero che avvisa PRIMA che la soglia diventi "
-                  "un rosso falso" % (m["rms"] / SOGLIA_RMS,
-                                      in_db(m["rms"]) - in_db(SOGLIA_RMS)))
+            print("  margin on the threshold: %.2f times (%.1f dB) — ⚠ and it is always "
+                  "printed: it is the number that warns BEFORE the threshold becomes "
+                  "a false red" % (m["rms"] / SOGLIA_RMS,
+                                   in_db(m["rms"]) - in_db(SOGLIA_RMS)))
 
         print()
-        # ═══ E col guasto innestato l'esito si legge AL CONTRARIO ═════════
+        # ═══ And with the grafted fault the outcome is read BACKWARDS ══════
         if a.senza_sorgente:
             # ═══════════════════════════════════════════════════════════════
-            # ⛔⛔ E NON BASTA IL COLORE DEL VERDETTO — `LEZIONI.md` §1.52.
+            # ⛔⛔ AND THE COLOUR OF THE VERDICT IS NOT ENOUGH — `LEZIONI.md` §1.52.
             #
-            # ⚠ Fino al 27 ago 2026 l'unico predicato qui era `verdetto is
-            #   False`.  ⛔ Ma C5 su GNOME e' rossa **per conto suo**: `[M]`
-            #   §7-bis.18, arrivano **41 blocchi** invece di ~4 878 ⇒ motivo
-            #   `POCHI`.  E senza sorgente ne arrivano **0** ⇒ motivo `NIENTE`.
-            #   ⇒ Tutt'e due `False`, ⇒ si usciva **0**, ⇒ il gancio scriveva
-            #   `ha_visto_il_guasto: true` **senza aver mai confrontato 41 con
-            #   0**.  ⛔ La certificazione della rete poggiava su un difetto
-            #   del prodotto, che e' §1.52 parola per parola.
+            # ⚠ Until 27 Aug 2026 the only predicate here was `verdetto is
+            #   False`.  ⛔ But C5 on GNOME is red **on its own**: `[M]`
+            #   §7-bis.18, **41 blocks** arrive instead of ~4 878 ⇒ reason
+            #   `POCHI`.  And without source **0** arrive ⇒ reason `NIENTE`.
+            #   ⇒ Both `False`, ⇒ it exited **0**, ⇒ the hook wrote
+            #   `ha_visto_il_guasto: true` **without ever having compared 41 with
+            #   0**.  ⛔ The net's certification rested on a defect
+            #   of the product, which is §1.52 word for word.
             #
-            # ⭐ La cura e' la stessa che C9 ha gia': si pretendono DUE cose —
-            #   il verdetto rosso **e** una differenza misurabile.  Qui la
-            #   differenza e' il conto dei blocchi: senza sorgente ne devono
-            #   arrivare **ZERO**.  ⛔ E non e' una pretesa gratuita: la cura
-            #   del silenzio di `src/audio.c` (`audio_taci_silenzio`, accesa in
-            #   modo predefinito) NON spedisce i blocchi muti — quindi «nessuna
-            #   sorgente» vuol dire davvero «nessun blocco».
+            # ⭐ The cure is the same C9 already has: TWO things are demanded —
+            #   the red verdict **and** a measurable difference.  Here the
+            #   difference is the count of blocks: without source **ZERO** must
+            #   arrive.  ⛔ And it is not a gratuitous demand: the silence cure
+            #   of `src/audio.c` (`audio_taci_silenzio`, on by
+            #   default) does NOT send the mute blocks — so «no
+            #   source» really means «no block».
             # ═══════════════════════════════════════════════════════════════
             quanti = m["blocchi"]
             if guasto_visto(verdetto, m):
-                print("⭐ IL GUASTO INNESTATO E' STATO VISTO: senza sorgente non "
-                      "arriva un solo blocco (%s)" % (m["motivo"] or "")[:60])
-                print("   ⇒ questa maglia SA dare rosso sui dati veri, ⭐ e il "
-                      "rosso viene DAL GUASTO: 0 blocchi, non «pochi».")
+                print("⭐ THE GRAFTED FAULT WAS SEEN: without source not a single "
+                      "block arrives (%s)" % (m["motivo"] or "")[:60])
+                print("   ⇒ this mesh CAN say red on real data, ⭐ and the "
+                      "red comes FROM THE FAULT: 0 blocks, not «few».")
                 return 0
             if verdetto is False:
-                print("⛔⛔ ROSSO, ma NON per colpa del guasto: senza sorgente "
-                      "sono arrivati lo stesso %s blocchi." % quanti)
+                print("⛔⛔ RED, but NOT because of the fault: without source "
+                      "%s blocks arrived anyway." % quanti)
                 print("    ⇒ %s" % (m["motivo"] or ""))
-                print("    ⛔ C5 era GIA' rossa per conto suo, e l'iniezione non")
-                print("      ha tolto niente: dire «il guasto e' stato visto»")
-                print("      certificherebbe la rete su un difetto del PRODOTTO")
+                print("    ⛔ C5 was ALREADY red on its own, and the injection did not")
+                print("      remove anything: saying «the fault was seen»")
+                print("      would certify the net on a defect of the PRODUCT")
                 print("      (`LEZIONI.md` §1.52).")
                 return 1
             if verdetto is None:
-                print("⛔ non ho potuto giudicare: non posso dire se il guasto "
-                      "si sarebbe visto")
+                print("⛔ I could not judge: I cannot say whether the fault "
+                      "would have been seen")
                 return 3
-            print("⛔⛔ IL GUASTO INNESTATO NON E' STATO VISTO: senza sorgente "
-                  "C5 dice comunque VERDE.")
-            print("    ⇒ o il suono arriva da un'altra parte, o questa maglia "
-                  "non guarda nel posto giusto — e in tutt'e due i casi non ci "
-                  "si puo' fidare di lei.")
+            print("⛔⛔ THE GRAFTED FAULT WAS NOT SEEN: without source "
+                  "C5 says GREEN anyway.")
+            print("    ⇒ either the sound arrives from somewhere else, or this mesh "
+                  "does not look in the right place — and in both cases it cannot "
+                  "be trusted.")
             return 1
 
         if verdetto is None:
-            print("  ⚠ NON GIUDICO — %s" % (m["motivo"] or ""))
-            print("     ⛔ E questo non e' un verde: e' un esito suo (§4.5).")
+            print("  ⚠ NOT JUDGING — %s" % (m["motivo"] or ""))
+            print("     ⛔ And this is not a green: it is an outcome of its own (§4.5).")
             return 3
         if verdetto is False:
-            print("  ⛔⛔ ROSSO — il suono non c'e', o e' silenzio.")
+            print("  ⛔⛔ RED — the sound is not there, or it is silence.")
             print("     %s" % (m["motivo"] or ""))
             return 1
-        print("  ⭐ VERDE — il suono arriva al cliente e NON e' silenzio.")
-        print("     ⚠ E C5 verde non vuol dire «la sessione sta bene»: C5 non "
-              "guarda un pixel (vedi in testa).")
+        print("  ⭐ GREEN — the sound arrives at the client and it is NOT silence.")
+        print("     ⚠ And C5 green does not mean «the session is fine»: C5 does not "
+              "look at a pixel (see the top).")
         return 0
 
     finally:
@@ -1213,26 +1213,26 @@ def main():
 
 
 def coda_registro(percorso, chi):
-    """Le righe del PRODOTTO su questo inquilino — ⭐ un secondo testimone.
+    """The PRODUCT's lines about this tenant — ⭐ a second witness.
 
-    ⛔ Si STAMPANO e non si giudicano: sono il conto di chi spedisce, e C5
-       giudica quel che ARRIVA.  ⚠ Averli tutti e due accanto e' quel che fa
-       capire, il giorno del rosso, da che parte del filo sta il guasto.
+    ⛔ They are PRINTED and not judged: they are the count of whoever sends, and C5
+       judges what ARRIVES.  ⚠ Having both side by side is what makes one
+       understand, on the day of the red, on which side of the wire the fault lies.
     """
     fuori = []
     try:
         with open(percorso, "r", errors="replace") as f:
             testo = f.read()
     except OSError:
-        return ["⚠ il registro del server non si e' fatto leggere: %s" % percorso]
+        return ["⚠ the server log could not be read: %s" % percorso]
     for riga in testo.splitlines():
         if "[%s]" % chi not in riga:
             continue
-        if "PICCO" in riga or "cura del silenzio" in riga or "conto finale" in riga:
+        if "PEAK" in riga or "silence cure" in riga or "final count" in riga:
             fuori.append(riga.strip()[:200])
     if not fuori:
-        return ["⚠ il registro del server non dice niente di «%s»: ⛔ non e' "
-                "uno zero, e' un silenzio" % chi]
+        return ["⚠ the server log says nothing about «%s»: ⛔ it is not "
+                "a zero, it is a silence" % chi]
     return fuori[-3:]
 
 

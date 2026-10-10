@@ -1,24 +1,24 @@
 #!/bin/bash
 #
-# 17-t3-impronta-arch.sh — fase 17, T3: l'impronta di una macchina, per confrontare
-# prima dell'installazione e dopo la disinstallazione (R5, R6, R33).
+# 17-t3-impronta-arch.sh — phase 17, T3: the fingerprint of a machine, to compare
+# before installation and after uninstallation (R5, R6, R33).
 #
-#   (DENTRO la VM, da root)   bash 17-t3-impronta-arch.sh > impronta.txt
+#   (INSIDE the VM, as root)   bash 17-t3-impronta-arch.sh > impronta.txt
 #
-# Una riga per fatto, ordinata, confrontabile con `diff`:
-#   F <percorso> <modo> <utente> <gruppo> <sha256|dimensione>   file di /etc, /usr, /var/lib, /opt
-#   L <percorso> -> <destinazione>                              collegamenti
-#   D <percorso> <modo> <utente> <gruppo>                       cartelle
-#   G <gruppo>:<gid>:<membri>                                   /etc/group
-#   U <utente>:<uid>:<shell>                                    /etc/passwd
-#   S <unita'> <stato>                                          unita' di sistema
-#   P <pacchetto> <versione> <esplicito|dipendenza>             pacchetti
-#   H <percorso>                                                sotto /home (solo i nomi)
+# One line per fact, sorted, comparable with `diff`:
+#   F <path> <mode> <user> <group> <sha256|size>                files of /etc, /usr, /var/lib, /opt
+#   L <path> -> <target>                                        links
+#   D <path> <mode> <user> <group>                              folders
+#   G <group>:<gid>:<members>                                   /etc/group
+#   U <user>:<uid>:<shell>                                      /etc/passwd
+#   S <unit> <state>                                            system units
+#   P <package> <version> <esplicito|dipendenza>                packages
+#   H <path>                                                    under /home (names only)
 #
-# ⚠ /etc e le cartelle di configurazione di systemd, polkit, PAM col contenuto
-#   (sha256); il resto di /usr con la sola dimensione: e' la differenza di file,
-#   non di byte, che conta per R6.  Fuori: le cartelle che cambiano da sole
-#   (cache di pacman, journal, i database di pacman li dice gia' P).
+# ⚠ /etc and the configuration folders of systemd, polkit, PAM with content
+#   (sha256); the rest of /usr with size only: it is the difference in files,
+#   not bytes, that matters for R6.  Left out: folders that change by themselves
+#   (pacman cache, journal; the pacman databases are already covered by P).
 set -u
 export LC_ALL=C
 {

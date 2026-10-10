@@ -2,73 +2,73 @@
 <meta charset="utf-8">
 <title>REMOTIX — C20</title>
 <!--
-  ⭐⭐ LA SCENA DICHIARATA DI C20: **si muove, e la sua luce NON cambia.**
+  ⭐⭐ C20'S DECLARED SCENE: **it moves, and its light does NOT change.**
 
-  ⛔⛔ PERCHE' NE SERVE UNA NUOVA, e non bastava quella di C3 — 23 set 2026.
+  ⛔⛔ WHY A NEW ONE IS NEEDED, and C3's was not enough — 23 Sep 2026.
 
-  C20 chiede: *«dopo «Esci» e un nuovo accesso, lo schermo non lampeggia»*, e
-  lo giudica sulla LUMINANZA MEDIA dei fotogrammi: a schermo sano e' una sola,
-  col fantasma alterna fra valori lontani.  ⇒ La scena di C3 non puo' servire:
-  lei cambia il fondo fra blu e giallo APPOSTA, cioe' lampeggia — ⛔ e' il
-  GUASTO INNESTATO di C20, non il suo giro sano.
+  C20 asks: *«after «Log out» and a new login, the screen does not flicker»*, and
+  judges it on the MEAN LUMINANCE of the frames: on a healthy screen it is one only,
+  with the ghost it alternates between distant values.  ⇒ C3's scene cannot serve:
+  it changes the background between blue and yellow ON PURPOSE, that is it flickers — ⛔ it is
+  C20's INJECTED FAULT, not its healthy run.
 
-  ⚠ E il desktop fermo non puo' servire nemmeno lui.  `[M]` 23 settembre 2026,
-  secondo accesso, stessa maglia, stesso binario:
+  ⚠ And the still desktop cannot serve either.  `[M]` 23 September 2026,
+  second login, same mesh, same binary:
 
-    | scatola | compositore | fotogrammi consegnati |
+    | box | compositor | frames delivered |
     |---|---|---|
-    | **kde**  | KWin   | **1 800 in 45 s** — consegna anche a desktop fermo |
-    | **xfce** | labwc  | ⛔ **7 in 60 s** — wlroots consegna solo sul DANNO  |
+    | **kde**  | KWin   | **1 800 in 45 s** — delivers even with a still desktop |
+    | **xfce** | labwc  | ⛔ **7 in 60 s** — wlroots delivers only on DAMAGE  |
 
-  ⇒ Su xfce (e su lxqt, che usa lo stesso labwc) un desktop fermo non da'
-    abbastanza fotogrammi per avere una coda da guardare: la maglia usciva
-    **3 per sempre**, ⛔ che e' il cugino del rosso perpetuo (§1.49).
+  ⇒ On xfce (and on lxqt, which uses the same labwc) a still desktop does not give
+    enough frames to have a tail to look at: the mesh exited
+    **3 for ever**, ⛔ which is the cousin of the perpetual red (§1.49).
 
-  ⭐⭐ LA CURA E' LA STESSA DI C3: **la scena la mette la maglia, e la
-      dichiara** — ma qui deve muoversi SENZA cambiare la luce.
-
-  ---------------------------------------------------------------------------
-  CHE COSA SI MUOVE, e perche' la luce resta ferma
-  ---------------------------------------------------------------------------
-
-  Una **banda scura scorre** su un fondo chiaro, e avanza del 3 % dello schermo
-  a ogni fotogramma d'animazione.  ⇒ Ogni fotogramma e' diverso dal precedente
-  (c'e' danno, quindi il compositore consegna), ⭐ ma l'istogramma dei pixel
-  non cambia mai: la stessa quantita' di scuro e la stessa quantita' di chiaro,
-  solo spostate.  ⇒ **La luminanza media e' una costante.**
-
-  ⛔⛔ E LE BANDE SONO DUE, e questa e' la parte che si sbaglia.
-     Con UNA banda sola, quando arriva al bordo esce dallo schermo: a `left:
-     90%` se ne vede solo la meta', ⇒ il fondo chiaro guadagna il 10 % dello
-     schermo e ⛔ **la luminanza media sale** — un salto periodico su una scena
-     sanissima, cioe' un rosso falso a ogni giro della banda.
-     ⭐ La seconda banda sta sempre 100 punti percentuali piu' a sinistra:
-     quel che esce da destra rientra da sinistra nello stesso istante, e la
-     quantita' di scuro in vista e' **esattamente il 20 %** sempre.
-
-  ⚠ Il 3 % e' lo stesso passo di `11-c3-scena.html`, e per la stessa ragione
-    scritta li': con il 4 % la scena tornerebbe al punto di partenza ogni 25
-    fotogrammi d'animazione, e due fotogrammi catturati a quella distanza
-    sarebbero identici a scena sanissima.
+  ⭐⭐ THE CURE IS THE SAME AS C3'S: **the mesh puts the scene there, and
+      declares it** — but here it must move WITHOUT changing the light.
 
   ---------------------------------------------------------------------------
-  ⛔ E le tre regole della pagina, come per `11-c2-finestra.html` e
+  WHAT MOVES, and why the light stays still
+  ---------------------------------------------------------------------------
+
+  A **dark band slides** over a light background, and advances by 3 % of the screen
+  at every animation frame.  ⇒ Every frame is different from the previous one
+  (there is damage, so the compositor delivers), ⭐ but the pixel histogram
+  never changes: the same amount of dark and the same amount of light,
+  only moved.  ⇒ **The mean luminance is a constant.**
+
+  ⛔⛔ AND THE BANDS ARE TWO, and this is the part that goes wrong.
+     With ONE band only, when it reaches the edge it leaves the screen: at `left:
+     90%` only half of it is visible, ⇒ the light background gains 10 % of the
+     screen and ⛔ **the mean luminance rises** — a periodic jump on a perfectly
+     healthy scene, that is a false red at every turn of the band.
+     ⭐ The second band always stays 100 percentage points further left:
+     what leaves on the right comes back in on the left at the same instant, and the
+     amount of dark in view is **exactly 20 %** always.
+
+  ⚠ The 3 % is the same step as `11-c3-scena.html`, and for the same reason
+    written there: with 4 % the scene would come back to the starting point every 25
+    animation frames, and two frames captured at that distance
+    would be identical on a perfectly healthy scene.
+
+  ---------------------------------------------------------------------------
+  ⛔ And the three rules of the page, as for `11-c2-finestra.html` and
      `11-c3-scena.html`:
-     · nessuna risorsa esterna: la scatola non ha rete verso fuori;
-     · niente scritte che si muovono da sole (l'ora, un contatore): il
-       movimento dev'essere QUELLO DICHIARATO e nessun altro;
-     · `requestAnimationFrame` e non un `setInterval`: si disegna quando il
-       compositore e' pronto a ricevere.
+     · no external resource: the box has no network to the outside;
+     · no text that moves by itself (the time, a counter): the
+       movement must be THE DECLARED ONE and no other;
+     · `requestAnimationFrame` and not a `setInterval`: we draw when the
+       compositor is ready to receive.
 
-  ⭐ LA LUCE CHE QUESTA PAGINA PRODUCE, dichiarata: fondo `#C0C0C0` (luminanza
-     BT.601 ≈ 192) per l'80 % dello schermo, bande `#101010` (≈ 16) per il
-     20 % ⇒ media attesa ≈ **157**.  `[M]` 23 set 2026, kde, secondo accesso:
-     **156**, e ⭐ **un solo valore distinto su 2 166 fotogrammi** — cioe' la
-     scena fa quel che dichiara.  ⚠ Il banco non pretende quel numero —
-     pannelli e bordi del desktop ne mangiano un po' — ⛔ ma pretende che lo
-     schermo **non sia nero**: se la mediana resta sotto 40, la scena non e'
-     arrivata e la maglia dice «non ho potuto guardare» invece di regalare un
-     verde a uno schermo spento.
+  ⭐ THE LIGHT THIS PAGE PRODUCES, declared: background `#C0C0C0` (BT.601
+     luminance ≈ 192) for 80 % of the screen, bands `#101010` (≈ 16) for
+     20 % ⇒ expected mean ≈ **157**.  `[M]` 23 Sep 2026, kde, second login:
+     **156**, and ⭐ **a single distinct value over 2 166 frames** — that is the
+     scene does what it declares.  ⚠ The bench does not demand that number —
+     the desktop's panels and borders eat a bit of it — ⛔ but it demands that the
+     screen **is not black**: if the median stays below 40, the scene did not
+     arrive and the mesh says «I could not look» instead of giving away a
+     green to a screen that is off.
 -->
 <style>
   html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; }
@@ -82,9 +82,9 @@
 <div class="banda" id="b"></div>
 <div id="targa">REMOTIX C20</div>
 <script>
-  // ⛔ DUE bande, e la seconda insegue la prima a 100 punti di distanza: quel
-  //    che esce da destra rientra da sinistra nello stesso istante.  ⇒ In vista
-  //    c'e' SEMPRE il 20 % di scuro, e la luminanza media non si muove.
+  // ⛔ TWO bands, and the second chases the first at 100 points distance: what
+  //    leaves on the right comes back in on the left at the same instant.  ⇒ In view
+  //    there is ALWAYS 20 % of dark, and the mean luminance does not move.
   var a = document.getElementById('a');
   var b = document.getElementById('b');
   var x = 0;

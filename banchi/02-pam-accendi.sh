@@ -1,43 +1,43 @@
 #!/bin/bash
 #
-# 02-pam-accendi.sh — ⛔ GIRA DENTRO IL CONTENITORE.  Accende IL BERSAGLIO DI
-# QUESTO BANCO: una copia del prodotto sulla porta 7531, con ban, socket,
-# certificati, registro e file del pid tutti suoi.
+# 02-pam-accendi.sh — ⛔ IT RUNS INSIDE THE CONTAINER.  It switches on THIS BENCH'S
+# TARGET: a copy of the product on port 7531, with ban, socket,
+# certificates, log and pid file all of its own.
 #
-#   bash /srv/src/02-pam-accendi.sh copia     rifa' la copia e la ricostruisce
+#   bash /srv/src/02-pam-accendi.sh copia     remakes the copy and rebuilds it
 #   bash /srv/src/02-pam-accendi.sh accendi
 #   bash /srv/src/02-pam-accendi.sh spegni
-#   bash /srv/src/02-pam-accendi.sh registro  stampa il registro del bersaglio
+#   bash /srv/src/02-pam-accendi.sh registro  prints the target's log
 #
 # ---------------------------------------------------------------------------
-# ⛔ PERCHE' UN BERSAGLIO MIO E NON QUELLO DI CASA
+# ⛔ WHY A TARGET OF MY OWN AND NOT THE HOUSE ONE
 #
-# Su NIC-OS, il 12 agosto 2026, girano gia': la **7448** (il prodotto di casa),
-# la **7501** e la **7522** (i bersagli di P5, di un altro giro).  ⛔ Sono
-# accesi apposta e non si toccano.  ⚠ E la regola «un banco in parallelo ha
-# porta, ban-file e socket PROPRI» non e' zelo: il conto dei tentativi di
-# §4.4-bis e' **per indirizzo**, e tutti i banchi di questa macchina partono
-# dallo stesso indirizzo — chi si divide un ban-file con un altro giro mette
-# fuori per dodici ore anche lui.
+# On NIC-OS, on 12 Aug 2026, already running are: **7448** (the house product),
+# **7501** and **7522** (the targets of P5, from another round).  ⛔ They are
+# on on purpose and are not touched.  ⚠ And the rule «a parallel bench has
+# its OWN port, ban file and socket» is not zeal: the attempt count of
+# §4.4-bis is **per address**, and all the benches of this machine start
+# from the same address — whoever shares a ban file with another round locks
+# that one out for twelve hours too.
 #
-# ⭐ Il perimetro sta in UNA variabile (`PREFISSO`), come in `01-p5-accendi.sh`:
-#    cosi' non se ne puo' dimenticare un pezzo.  E' la cura nata il 12 agosto
-#    2026 quando ban, socket, registro, certificato e **file del pid** erano
-#    scritti in chiaro, e un secondo bersaglio avrebbe cancellato quelli del
-#    primo — compreso il `.pid`, cioe' `spegni` avrebbe ammazzato il processo
-#    sbagliato.
+# ⭐ The perimeter sits in ONE variable (`PREFISSO`), as in `01-p5-accendi.sh`:
+#    so no piece of it can be forgotten.  It is the cure born on 12 Aug
+#    2026 when ban, socket, log, certificate and **pid file** were
+#    written out literally, and a second target would have deleted those of the
+#    first — including the `.pid`, that is `spegni` would have killed the wrong
+#    process.
 #
 # ---------------------------------------------------------------------------
-# ⛔ IL GUASTO SI INNESTA NELLA COPIA, MAI NEL PRODOTTO DI CASA
+# ⛔ THE FAULT IS INJECTED INTO THE COPY, NEVER INTO THE HOUSE PRODUCT
 #
-# La certificazione di questo banco vuole il giro `sano -> guasto -> risanato`,
-# e il guasto e' **la cura tolta**: il gancio asincrono non collegato, cioe'
-# esattamente lo stato del server prima del 12 agosto 2026.  ⛔ Innestarlo nel
-# prodotto di `/srv/src/remotix` lo metterebbe sotto i piedi di chiunque altro
-# lo stia usando.
+# The certification of this bench wants the round `sano -> guasto -> risanato`,
+# and the fault is **the cure removed**: the asynchronous hook not connected, that is
+# exactly the state of the server before 12 Aug 2026.  ⛔ Injecting it into the
+# product of `/srv/src/remotix` would put it under the feet of anyone else
+# who is using it.
 #
-# ⛔ B0.7: MARCATORI, NON `sleep`.  «Il processo e' vivo» e «la porta risponde»
-#    sono due fatti diversi, e alla misura serve il secondo.
+# ⛔ B0.7: MARKERS, NOT `sleep`.  «The process is alive» and «the port answers»
+#    are two different facts, and the measurement needs the second.
 set -uo pipefail
 
 SORG=${SORG:-/srv/src/02-pam-src}
@@ -60,51 +60,51 @@ case "${1:-accendi}" in
 spegni)
 	if [ -f "$PIDF" ]; then
 		pid=$(cat "$PIDF")
-		# ⛔ Per PID e solo il proprio: `pkill -f remotix` porterebbe via la
-		#    7448, la 7501 e la 7522, che sono di altri.
+		# ⛔ By PID and only its own: `pkill -f remotix` would take away
+		#    7448, 7501 and 7522, which belong to others.
 		kill "$pid" 2>/dev/null
 		g=0
 		while [ -d "/proc/$pid" ] && [ "$g" -lt 20 ]; do sleep 0.5; g=$((g+1)); done
-		[ -d "/proc/$pid" ] && printf 'NO  il pid %s non e\x27 morto\n' "$pid" \
-		                    || printf 'OK  spento (pid %s)\n' "$pid"
+		[ -d "/proc/$pid" ] && printf 'NO  pid %s did not die\n' "$pid" \
+		                    || printf 'OK  switched off (pid %s)\n' "$pid"
 		rm -f "$PIDF"
 	else
-		printf -- '--  nessun %s: non c\x27era niente di mio acceso\n' "$PIDF"
+		printf -- '--  no %s: nothing of mine was on\n' "$PIDF"
 	fi
 	rm -f "$SOCK"
 	exit 0 ;;
 registro)
-	[ -f "$LOG" ] || { echo "NO  ⛔ $LOG non c'e'"; exit 2; }
+	[ -f "$LOG" ] || { echo "NO  ⛔ $LOG is not there"; exit 2; }
 	cat "$LOG"
 	exit 0 ;;
 ammazza-aiutante)
-	# ⛔⭐ STA IN UN FILE, E NON DENTRO TRE LIVELLI DI VIRGOLETTE — 12 agosto
-	#     2026, e la lezione era gia' scritta in `01-p5-accendi.sh`: «un file
-	#     non ha livelli di virgolette».  ⚠ Scritto dentro `ssh → enter.sh →
-	#     bash -c`, questo pezzo e' morto su un `$(...)`  — e il guaio non e'
-	#     stato l'errore: e' stato che il caso «l'aiutante e' morto» e' girato
-	#     lo stesso, su un aiutante VIVO, e ha dato un rosso a un server sano.
+	# ⛔⭐ IT SITS IN A FILE, AND NOT INSIDE THREE LEVELS OF QUOTES — 12 Aug
+	#     2026, and the lesson was already written in `01-p5-accendi.sh`: «a file
+	#     has no levels of quotes».  ⚠ Written inside `ssh → enter.sh →
+	#     bash -c`, this piece died on a `$(...)`  — and the trouble was not
+	#     the error: it was that the case «the helper is dead» ran
+	#     anyway, on a LIVE helper, and gave a red to a healthy server.
 	#
-	# ⛔ E il pid si legge dal registro DI QUESTO bersaglio: un `pgrep` su
-	#    «remotix» troverebbe anche la 7448, la 7501 e la 7522, che sono di
-	#    altri.  ⚠ «l'ho ammazzato» e «ne ho ammazzato uno» sono due fatti
-	#    diversi.
-	[ -f "$LOG" ] || { echo "NO  ⛔ $LOG non c'e': non ho ammazzato niente"; exit 2; }
-	p=$(sed -n 's/.*aiutante di PAM acceso: pid \([0-9]*\).*/\1/p' "$LOG" | tail -1)
+	# ⛔ And the pid is read from the log OF THIS target: a `pgrep` on
+	#    «remotix» would also find 7448, 7501 and 7522, which belong to
+	#    others.  ⚠ «I killed it» and «I killed one» are two different
+	#    facts.
+	[ -f "$LOG" ] || { echo "NO  ⛔ $LOG is not there: I killed nothing"; exit 2; }
+	p=$(sed -n 's/.*PAM helper started: pid \([0-9]*\).*/\1/p' "$LOG" | tail -1)
 	if [ -z "$p" ]; then
-		echo "NO  ⛔ nessun pid dell'aiutante nel registro: non e' «e' morto»,"
-		echo "    e' «non e' mai nato», e sono due cose diverse."
+		echo "NO  ⛔ no helper pid in the log: it is not «it died»,"
+		echo "    it is «it was never born», and they are two different things."
 		exit 2
 	fi
-	# ⛔⭐ «VIVO» E «ZOMBIE» NON SONO LA STESSA COSA, E IN /proc SI ASSOMIGLIANO
-	#     — 12 agosto 2026, e questo controllo ha gia' dato un NO sbagliato.
+	# ⛔⭐ «ALIVE» AND «ZOMBIE» ARE NOT THE SAME THING, AND IN /proc THEY LOOK ALIKE
+	#     — 12 Aug 2026, and this check has already given a wrong NO.
 	#
-	# `[ -d /proc/$p ]` risponde «si'» anche a un processo gia' morto che il
-	# padre non ha ancora raccolto.  ⛔ Il banco ha detto «l'aiutante e' ancora
-	# vivo dopo SIGKILL» mentre era morto da un secondo, e la diagnosi puntava
-	# sul prodotto.  ⭐ Lo stato vero sta nel terzo campo di /proc/<pid>/stat:
-	# `Z` e' uno zombie, cioe' morto.
-	vivo() # $1 = pid.  0 = vivo davvero, 1 = morto (assente o zombie)
+	# `[ -d /proc/$p ]` answers «yes» also for a process already dead that its
+	# parent has not reaped yet.  ⛔ The bench said «the helper is still
+	# alive after SIGKILL» while it had been dead for a second, and the diagnosis pointed
+	# at the product.  ⭐ The real state is in the third field of /proc/<pid>/stat:
+	# `Z` is a zombie, that is dead.
+	vivo() # $1 = pid.  0 = really alive, 1 = dead (absent or zombie)
 	{
 		[ -r "/proc/$1/stat" ] || return 1
 		s=$(awk '{print $3}' "/proc/$1/stat" 2>/dev/null)
@@ -112,125 +112,125 @@ ammazza-aiutante)
 		return 0
 	}
 	if ! vivo "$p"; then
-		echo "NO  ⛔ il pid $p non e' vivo GIA' ADESSO: il caso che segue"
-		echo "    misurerebbe una scena che non ho preparato io."
+		echo "NO  ⛔ pid $p is not alive ALREADY NOW: the case that follows"
+		echo "    would measure a scene I did not prepare."
 		exit 2
 	fi
 	kill -9 "$p"
 	sleep 1
 	if vivo "$p"; then
-		echo "NO  ⛔ il pid $p e' ancora VIVO dopo SIGKILL (stato $(awk '{print $3}' "/proc/$p/stat"))"
+		echo "NO  ⛔ pid $p is still ALIVE after SIGKILL (state $(awk '{print $3}' "/proc/$p/stat"))"
 		exit 3
 	fi
-	echo "OK  aiutante $p ammazzato con SIGKILL: non ha potuto scrivere niente,"
-	echo "    e nessun gestore ha potuto rispondere al posto suo"
+	echo "OK  helper $p killed with SIGKILL: it could not write anything,"
+	echo "    and no handler could answer in its place"
 	exit 0 ;;
 copia)
-	[ -d "$SORG" ] || { echo "NO  ⛔ $SORG non c'e'"; exit 2; }
-	# ⛔ La copia si rifa' da zero: una copia vecchia risponde «esisto» come
-	#    una di adesso (LEZIONI.md §1.9 punto 8).
+	[ -d "$SORG" ] || { echo "NO  ⛔ $SORG is not there"; exit 2; }
+	# ⛔ The copy is remade from scratch: an old copy answers «I exist» just like
+	#    a current one (LEZIONI.md §1.9 point 8).
 	rm -rf "$D"
 	mkdir -p "$(dirname "$D")"
 	cp -a "$SORG" "$D"
 	rm -f "$D"/*.o "$D/remotix"
-	printf -- '--  copia: %s → %s\n' "$SORG" "$D"
+	printf -- '--  copy: %s → %s\n' "$SORG" "$D"
 	GEMELLO="$GEMELLO" bash "$D/costruisci.sh" || exit 3
 	exit 0 ;;
 guasto)
-	# ⛔⭐ IL GUASTO E' LA CURA TOLTA, E NON UN DIFETTO INVENTATO — 12 agosto
-	#     2026.  E' la forma migliore che un guasto da innesto possa avere: lo
-	#     stato del server PRIMA di §1.10, cioe' un difetto che e' davvero
-	#     esistito e che e' davvero stato misurato (`[M]` B8, 11 agosto:
-	#     1,0-2,2 s per tentativo).
+	# ⛔⭐ THE FAULT IS THE CURE REMOVED, AND NOT AN INVENTED DEFECT — 12 Aug
+	#     2026.  It is the best form an injected fault can have: the
+	#     state of the server BEFORE §1.10, that is a defect that really
+	#     existed and that was really measured (`[M]` B8, 11 Aug:
+	#     1.0-2.2 s per attempt).
 	#
-	# ⛔ Che cosa dimostra: che `02-pam-fermo.py` **sa vedere** il blocco.  Un
-	#    banco che restasse verde con questo guasto dentro non proverebbe che
-	#    la cura funziona — proverebbe che il righello e' cieco, e ogni verde
-	#    successivo sarebbe la peggiore delle prove (`CODER.md` §4.6).
+	# ⛔ What it proves: that `02-pam-fermo.py` **can see** the blocking.  A
+	#    bench that stayed green with this fault inside would not prove that
+	#    the cure works — it would prove that the ruler is blind, and every later
+	#    green would be the worst of proofs (`CODER.md` §4.6).
 	#
-	# ⚠ Si innesta nella COPIA (`$D`), mai nel prodotto di `/srv/src/remotix`,
-	#   che e' di chiunque altro lo stia usando.
-	[ -f "$D/webtransport.c" ] || { echo "NO  ⛔ $D/webtransport.c non c'e'"; exit 2; }
+	# ⚠ It is injected into the COPY (`$D`), never into the product of `/srv/src/remotix`,
+	#   which belongs to anyone else who is using it.
+	[ -f "$D/webtransport.c" ] || { echo "NO  ⛔ $D/webtransport.c is not there"; exit 2; }
 	python3 - "$D/webtransport.c" <<'FINE'
 import sys
 p = sys.argv[1]
 t = open(p).read()
 appiglio = "\tif (w->aiuto)\n\t\tg.chiedi_verifica = gancio_chiedi;\n"
 if t.count(appiglio) != 1:
-    print("NO  \u26d4 l'appiglio non e' unico (%d volte): non innesto niente"
+    print("NO  ⛔ the anchor is not unique (%d times): I inject nothing"
           % t.count(appiglio))
     sys.exit(2)
-guasto = ("\t/* REMOTIX 02-PAM GUASTO \u2014 il gancio asincrono NON collegato,\n"
-          "\t * cioe' il server com'era prima di DECISIONI.md \u00a71.10.  rcp.c\n"
-          "\t * ripieghera' sulla verifica SINCRONA e il filo si fermera'.\n"
-          "\t * Se 02-pam-fermo.py resta verde con questo dentro, e' cieco. */\n")
+guasto = ("\t/* REMOTIX 02-PAM GUASTO — the asynchronous hook NOT connected,\n"
+          "\t * that is the server as it was before DECISIONI.md §1.10.  rcp.c\n"
+          "\t * will fall back on the SYNCHRONOUS check and the wire will stall.\n"
+          "\t * If 02-pam-fermo.py stays green with this inside, it is blind. */\n")
 open(p, "w").write(t.replace(appiglio, guasto, 1))
-print("OK  guasto innestato: il gancio asincrono non e' piu' collegato")
+print("OK  fault injected: the asynchronous hook is no longer connected")
 FINE
 	[ $? -eq 0 ] || exit 3
 	GEMELLO="$GEMELLO" bash "$D/costruisci.sh" >/dev/null 2>&1 \
-		|| { echo "NO  ⛔ la ricostruzione col guasto e' fallita"; exit 3; }
-	# ⛔ E si CONTROLLA che il guasto sia nel binario, non solo nel sorgente:
-	#    «l'ho scritto» e «e' dentro quel che gira» sono due fatti diversi, ed
-	#    e' il difetto con cui B11 ha acceso il server sano credendolo guasto.
+		|| { echo "NO  ⛔ the rebuild with the fault failed"; exit 3; }
+	# ⛔ And it is CHECKED that the fault is in the binary, not only in the source:
+	#    «I wrote it» and «it is inside what runs» are two different facts, and
+	#    it is the defect with which B11 switched on the healthy server believing it faulty.
 	if grep -a -F -q "REMOTIX 02-PAM GUASTO" "$D/webtransport.c" \
 	   && ! grep -a -F -q "g.chiedi_verifica = gancio_chiedi" "$D/webtransport.c"; then
-		echo "OK  ⛔ ricostruito CON il guasto: $(sha256sum "$D/remotix" | cut -c1-16)…"
+		echo "OK  ⛔ rebuilt WITH the fault: $(sha256sum "$D/remotix" | cut -c1-16)…"
 	else
-		echo "NO  ⛔ il guasto non e' dove doveva essere"
+		echo "NO  ⛔ the fault is not where it should be"
 		exit 3
 	fi
 	exit 0 ;;
 accendi) TIENI_BAN=0 ;;
 riaccendi)
-	# ⛔⭐ E QUESTO PASSO ESISTE PER UN ROSSO CHE IL BANCO SI ERA DATO DA SE'
-	#     — 12 agosto 2026, e il primo imputato era il banco (`REVIEWER.md` §1).
+	# ⛔⭐ AND THIS STEP EXISTS BECAUSE OF A RED THE BENCH HAD GIVEN ITSELF
+	#     — 12 Aug 2026, and the first suspect was the bench (`REVIEWER.md` §1).
 	#
-	# `accendi` cancella il file dei ban, ed e' giusto: un giro deve partire da
-	# uno stato NOTO, e un ban ereditato dal giro prima farebbe misurare
-	# `TROPPI_TENTATIVI` dove si voleva misurare PAM.  ⛔ Ma il caso
-	# «il ban sopravvive al riavvio» (invariante **I7**) si prova SPEGNENDO E
-	# RIACCENDENDO, e con quel `rm` diceva sempre di no — **rosso pieno su un
-	# prodotto che il ban lo conserva**.
+	# `accendi` deletes the ban file, and rightly so: a round must start from
+	# a KNOWN state, and a ban inherited from the previous round would make it measure
+	# `TROPPI_TENTATIVI` where PAM was meant to be measured.  ⛔ But the case
+	# «the ban survives the restart» (invariant **I7**) is proved by SWITCHING OFF AND
+	# ON AGAIN, and with that `rm` it always said no — **full red on a
+	# product that does keep the ban**.
 	#
-	# ⚠ E' la forma di `LEZIONI.md` §1.9: il banco misurava la propria gamba e
-	#   la diagnosi puntava sul server.  ⭐ Adesso i due passi sono due, e il
-	#   nome dice quale stato si sta chiedendo.
+	# ⚠ It is the form of `LEZIONI.md` §1.9: the bench was measuring its own leg and
+	#   the diagnosis pointed at the server.  ⭐ Now the two steps are two, and the
+	#   name says which state is being asked for.
 	TIENI_BAN=1 ;;
-*) echo "uso: $0 [copia|guasto|accendi|riaccendi|spegni|registro|ammazza-aiutante]"; exit 2 ;;
+*) echo "usage: $0 [copia|guasto|accendi|riaccendi|spegni|registro|ammazza-aiutante]"; exit 2 ;;
 esac
 
-command -v ss >/dev/null || { echo "NO  ⛔ «ss» non c'e': non ho guardato la porta, e non la chiamo libera"; exit 2; }
+command -v ss >/dev/null || { echo "NO  ⛔ «ss» is not there: I did not look at the port, and I do not call it free"; exit 2; }
 n=$(ss -tuln 2>/dev/null | grep -c ":$PORTA\b")
 if [ "$n" -ne 0 ]; then
-	echo "NO  ⛔ la porta $PORTA e' gia' occupata ($n righe): non e' mia, non la tocco"
+	echo "NO  ⛔ port $PORTA is already taken ($n lines): it is not mine, I do not touch it"
 	ss -tuln | grep ":$PORTA\b"
 	exit 2
 fi
-echo "OK  porta $PORTA libera (ss ha guardato e ha stampato $n righe su di lei)"
+echo "OK  port $PORTA free (ss looked and printed $n lines about it)"
 
-[ -x "$D/remotix" ] || { echo "NO  ⛔ $D/remotix non c'e' o non e' eseguibile — manca il passo «copia»"; exit 2; }
-[ -f "$D/pagina.html" ] || { echo "NO  ⛔ $D/pagina.html non c'e': il server non servirebbe niente"; exit 2; }
-echo "--  binario  : $(sha256sum "$D/remotix" | cut -c1-16)…  $(stat -c '%y' "$D/remotix")"
+[ -x "$D/remotix" ] || { echo "NO  ⛔ $D/remotix is not there or not executable — the «copia» step is missing"; exit 2; }
+[ -f "$D/pagina.html" ] || { echo "NO  ⛔ $D/pagina.html is not there: the server would serve nothing"; exit 2; }
+echo "--  binary   : $(sha256sum "$D/remotix" | cut -c1-16)…  $(stat -c '%y' "$D/remotix")"
 
-# ⛔ E PRIMA DI CANCELLARE QUALCOSA, SI GUARDA SE E' DI QUALCUN ALTRO CHE VIVE.
+# ⛔ AND BEFORE DELETING ANYTHING, IT CHECKS WHETHER IT BELONGS TO SOMEONE ELSE ALIVE.
 if [ -f "$PIDF" ] && [ -d "/proc/$(cat "$PIDF" 2>/dev/null)" ]; then
-	echo "NO  ⛔ «$PIDF» dice pid $(cat "$PIDF"), ed e' VIVO: un altro bersaglio"
-	echo "    con questo stesso prefisso («$PREFISSO») e' gia' acceso."
+	echo "NO  ⛔ «$PIDF» says pid $(cat "$PIDF"), and it is ALIVE: another target"
+	echo "    with this same prefix («$PREFISSO») is already on."
 	exit 2
 fi
 if [ "${TIENI_BAN:-0}" = 1 ]; then
 	rm -f "$LOG" "$PIDF" "$SOCK"
-	echo "--  ⚠ il file dei ban NON si cancella: e' il passo «riaccendi», e"
-	echo "    quel file E' la cosa da provare (I7, §4.4-bis)"
-	[ -f "$BAN" ] && echo "--  ban prima del riavvio: $(wc -l < "$BAN") righe in $BAN" \
-	              || echo "--  ⛔ $BAN NON C'E': non e' «zero ban», e' «non c'era niente da conservare»"
+	echo "--  ⚠ the ban file is NOT deleted: it is the «riaccendi» step, and"
+	echo "    that file IS the thing to prove (I7, §4.4-bis)"
+	[ -f "$BAN" ] && echo "--  bans before the restart: $(wc -l < "$BAN") lines in $BAN" \
+	              || echo "--  ⛔ $BAN IS NOT THERE: it is not «zero bans», it is «there was nothing to keep»"
 else
 	rm -f "$LOG" "$PIDF" "$SOCK" "$BAN" "$BAN.nuovo"
 fi
 mkdir -p "$CERT"
-# ⭐ Si accende DA DENTRO la sua cartella: il prodotto cerca `pagina.html`
-#    accanto a se'.
+# ⭐ It is started FROM INSIDE its folder: the product looks for `pagina.html`
+#    next to itself.
 cd "$D" || exit 3
 nohup ./remotix --indirizzo 0.0.0.0 --nome "$IND" --porta "$PORTA" \
       --certificati "$CERT" \
@@ -246,25 +246,25 @@ while [ "$g" -lt 60 ]; do
 	sleep 0.5; g=$((g+1))
 done
 if [ ! -d "/proc/$pid" ]; then
-	echo "NO  ⛔ il server e' morto subito.  Il registro dice:"
+	echo "NO  ⛔ the server died at once.  The log says:"
 	sed 's/^/        /' "$LOG"
 	exit 3
 fi
 righe=$(ss -tuln 2>/dev/null | grep -c ":$PORTA\b")
 if [ "$righe" -lt 2 ]; then
-	echo "NO  ⛔ il processo $pid e' vivo ma su :$PORTA ci sono $righe ascoltatori."
-	echo "    §2.4 ne vuole DUE — UDP per RCP, TCP per la pagina."
+	echo "NO  ⛔ process $pid is alive but on :$PORTA there are $righe listeners."
+	echo "    §2.4 wants TWO — UDP for RCP, TCP for the page."
 	sed 's/^/        /' "$LOG"
 	exit 3
 fi
-# ⛔ E il servizio PAM si guarda nel REGISTRO del server, non a memoria: senza
-#    /etc/pam.d/remotix ogni parola giusta viene rifiutata, e questo banco
-#    misurerebbe una scena in cui NESSUNO entra — cioe' un numero verde perche'
-#    non c'era niente da bloccare.
-if grep -q "NON C'E'" "$LOG"; then
-	echo "NO  ⛔ il server dice che /etc/pam.d/remotix non c'e': ogni parola"
-	echo "    giusta verrebbe rifiutata, e la scena di questo banco non esiste."
+# ⛔ And the PAM service is checked in the server's LOG, not from memory: without
+#    /etc/pam.d/remotix every right password is refused, and this bench
+#    would measure a scene in which NOBODY gets in — that is a green number because
+#    there was nothing to block.
+if grep -q "DOES NOT EXIST" "$LOG"; then
+	echo "NO  ⛔ the server says /etc/pam.d/remotix is not there: every right"
+	echo "    password would be refused, and this bench's scene does not exist."
 	exit 3
 fi
-echo "OK  acceso, pid $pid, $righe ascoltatori su :$PORTA dopo $((g/2)) s d'attesa"
-echo "--  registro: $LOG · ban: $BAN · socket: $SOCK"
+echo "OK  on, pid $pid, $righe listeners on :$PORTA after $((g/2)) s of waiting"
+echo "--  log: $LOG · ban: $BAN · socket: $SOCK"

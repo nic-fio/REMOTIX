@@ -1,30 +1,30 @@
 #!/usr/bin/env python3
-"""01-s7-raccogli.py — serve la pagina di S7 e ne REGISTRA quel che vede.
+"""01-s7-raccogli.py — serves the S7 page and RECORDS what it sees.
 
-    python3 -u 01-s7-raccogli.py [porta]        predefinita: 8877
-
----------------------------------------------------------------------------
-PERCHE' ESISTE, VISTO CHE B2 NE HA GIA' UNO
-
-Lo stesso mestiere di `01-b2-raccogli.py` — B0.4: *l'atteso lo confronta il
-banco, non chi legge* — ma su un altro registro e un'altra porta.  ⛔ Non si
-riusa quello di B2 apposta: `b2-esiti.jsonl` e' gia' condiviso fra B2 e B11, e
-il rilievo R8.10 racconta per esteso che cosa costa un registro condiviso —
-«l'ultima riga» smette di voler dire «la riga di questa prova».  S7 ha il suo
-file, e nessun altro banco ci scrive.
-
-⛔ E QUI IL REGISTRO E' L'UNICO OCCHIO CHE ABBIAMO.  La sessione GNOME di
-   questa misura non ha uno schermo: nessuno puo' *guardare* da che parte va
-   la pagina.  Quel che la pagina non spedisce non e' successo per nessuno.
+    python3 -u 01-s7-raccogli.py [port]        default: 8877
 
 ---------------------------------------------------------------------------
-⛔ IL DENOMINATORE, e in questo banco morde piu' che altrove
+WHY IT EXISTS, GIVEN THAT B2 ALREADY HAS ONE
 
-Ogni richiesta si scrive su standard error (`LEZIONI.md` §1.9, quarta regola).
-«Nessun esito» ha due cause opposte — il browser non ha aperto la pagina,
-oppure l'ha aperta e lo scatto non e' arrivato — e senza il registro delle
-richieste hanno lo stesso aspetto.  E' la stessa riga che il 10 agosto 2026
-diceva `pass` in `01-b2-raccogli.py` e ha reso indistinguibili due difetti.
+The same job as `01-b2-raccogli.py` — B0.4: *the expected is compared by the
+bench, not by whoever reads* — but on another log and another port.  ⛔ B2's one
+is not reused on purpose: `b2-esiti.jsonl` is already shared between B2 and B11,
+and finding R8.10 tells in full what a shared log costs — «the last line» stops
+meaning «the line of this test».  S7 has its own file, and no other bench writes
+in it.
+
+⛔ AND HERE THE LOG IS THE ONLY EYE WE HAVE.  The GNOME session of this
+   measurement has no screen: nobody can *look* at which way the page goes.
+   What the page does not send did not happen for anybody.
+
+---------------------------------------------------------------------------
+⛔ THE DENOMINATOR, and in this bench it bites more than elsewhere
+
+Every request is written on standard error (`LEZIONI.md` §1.9, fourth rule).
+«No outcome» has two opposite causes — the browser did not open the page, or it
+opened it and the click did not arrive — and without the log of the requests
+they look the same.  It is the same line that on 10 Aug 2026 said `pass` in
+`01-b2-raccogli.py` and made two defects indistinguishable.
 """
 import json
 import sys
@@ -60,12 +60,12 @@ class Raccoglitore(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def log_message(self, formato, *a):
-        sys.stderr.write("richiesta: " + (formato % a) + "\n")
+        sys.stderr.write("request: " + (formato % a) + "\n")
         sys.stderr.flush()
 
 
 if __name__ == "__main__":
     porta = int(sys.argv[1]) if len(sys.argv) > 1 else 8877
-    print(f"== S7: pagina su http://127.0.0.1:{porta}/01-s7-pagina.html")
-    print(f"   il registro si accumula in {REGISTRO}", flush=True)
+    print(f"== S7: page on http://127.0.0.1:{porta}/01-s7-pagina.html")
+    print(f"   the log accumulates in {REGISTRO}", flush=True)
     ThreadingHTTPServer(("127.0.0.1", porta), Raccoglitore).serve_forever()

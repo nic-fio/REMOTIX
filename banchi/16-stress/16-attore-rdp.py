@@ -1,49 +1,49 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-16-attore-rdp — UN UTENTE SIMULATO DAVANTI A xrdp (fasi/20-le-prestazioni.md §7)
+16-attore-rdp — A SIMULATED USER IN FRONT OF xrdp (fasi/20-le-prestazioni.md §7)
 
     python3 16-attore-rdp.py --scatola gnome|kde|xfce|lxqt --utente N --display :2NN \\
         --dir DIR --seme S [--largo 3840 --alto 2160] [--video FILE]
     python3 16-attore-rdp.py --controllo --scatola xfce --display :200 --dir DIRLIV ...
     python3 16-attore-rdp.py --certifica
 
-E' il gemello di 16-attore.py per il confronto con xrdp: STESSO ritmo (Ritmo, stessi semi),
-STESSI quattro lavori (16-lavori.py), STESSO schema di stato.jsonl / nascita.json /
-eventi.jsonl, cosi' 16-classifica.py --sistema xrdp li legge.  Cambia il cliente:
+It is the twin of 16-attore.py for the comparison with xrdp: SAME rhythm (Ritmo, same seeds),
+SAME four jobs (16-lavori.py), SAME schema of stato.jsonl / nascita.json /
+eventi.jsonl, so that 16-classifica.py --sistema xrdp reads them.  The client changes:
 
-  scatola   rete11-<desktop>-xrdp (Contenitore.xrdp): xrdp di Debian 13 com'e', il
-            desktop su X11
-  cliente   xfreerdp3 /gfx a tutto schermo nell'Xvfb di questo utente
-            (16-compositori-rdp.sh), /sound:sys:fake: l'audio viaggia e non si suona
-  mani      XTEST sull'Xvfb (python-xlib): l'input passa DAL CANALE RDP, come quello
-            di una persona davanti a FreeRDP
-  foto      l'Xvfb intero (get_image), 1:1 col desktop remoto
-  dipinti   XDamage sulla finestra di FreeRDP: l'ora di ogni disegno, raggruppati in
-            «raffiche» separate da piu' di 5 ms.  ⭐ E' la misura dal lato di chi guarda.
-            ⚠ Due condizioni misurate il 9 ott: `damage_query_version()` prima di
-            tutto (senza, ZERO eventi e nessun errore), e il danno sulla finestra di
-            FreeRDP, non sulla radice.
+  box       rete11-<desktop>-xrdp (Contenitore.xrdp): Debian 13's xrdp as it is, the
+            desktop on X11
+  client    xfreerdp3 /gfx full screen in this user's Xvfb
+            (16-compositori-rdp.sh), /sound:sys:fake: the audio travels and is not played
+  hands     XTEST on the Xvfb (python-xlib): the input goes THROUGH THE RDP CHANNEL, like that
+            of a person in front of FreeRDP
+  photo     the whole Xvfb (get_image), 1:1 with the remote desktop
+  paints    XDamage on the FreeRDP window: the time of every draw, grouped in
+            «bursts» separated by more than 5 ms.  ⭐ It is the measure from the viewer's side.
+            ⚠ Two conditions measured on 9 Oct: `damage_query_version()` before
+            everything (without it, ZERO events and no error), and the damage on the
+            FreeRDP window, not on the root.
 
-stato.jsonl, ogni 5 s: conti {"dipinti": raffiche CUMULATIVE}, dipinti_s, input [{ok,
-latenza_ms, azione}], blocco_max_ms (impulso → primo disegno dopo, o il fermo del video),
-ritardi_ms (gli stessi, uno per impulso chiuso nell'intervallo), ritardi_eco_ms (solo i
-tasti battuti dove l'eco e' immediata), lavoro, caduta (xfreerdp uscito o la finestra
-sparita), errori, eventi.  ⛔ NON ci sono consegnati, salt, buchi, audio: xrdp non manda i
-fotogrammi che non puo' (FreeRDP li riscontra), e non ha contatori nella pagina (§7.3).
+stato.jsonl, every 5 s: conti {"dipinti": CUMULATIVE bursts}, dipinti_s, input [{ok,
+latenza_ms, azione}], blocco_max_ms (impulse → first draw after it, or the still of the video),
+ritardi_ms (the same, one per impulse closed in the interval), ritardi_eco_ms (only the
+keys typed where the echo is immediate), lavoro, caduta (xfreerdp exited or the window
+gone), errori, eventi.  ⛔ There are NO consegnati, salt, buchi, audio: xrdp does not send the
+frames it cannot (FreeRDP acknowledges them), and has no counters in the page (§7.3).
 
-nascita.json: accesso_ms = l'avvio di xfreerdp (utente e parola sulla riga: niente
-schermata d'accesso); primo_fotogramma_ms = il primo istante in cui la sessione X
-dell'inquilino esiste E la foto non e' degenere (almeno 40 colori distinti, la regola di
-`desktop_scuro_ma_vivo`); degenere se a 15 s dall'accesso ancora no (§9).
+nascita.json: accesso_ms = the start of xfreerdp (user and password on the line: no
+login screen); primo_fotogramma_ms = the first instant at which the tenant's X session
+exists AND the photo is not degenerate (at least 40 distinct colours, the rule of
+`desktop_scuro_ma_vivo`); degenerate if at 15 s from access still not (§9).
 
---controllo: il controllo corto ridotto di §7.3 — una sessione in piu' (utente 99,
-profilo C), che entra, apre il terminale, batte due comandi e li trova nella storia di
-bash, ed esce.  Scrive DIR/controllo-corto.json nello schema di 16-controllo-corto.py
-(esiti RDP-accesso, RDP-schermo, RDP-tastiera; nascita).
+--controllo: the reduced short check of §7.3 — one more session (user 99,
+profile C), which enters, opens the terminal, types two commands and finds them in the bash
+history, and leaves.  Writes DIR/controllo-corto.json in the schema of 16-controllo-corto.py
+(outcomes RDP-accesso, RDP-schermo, RDP-tastiera; nascita).
 
-Codice d'uscita come 16-attore.py: 0 fermato dopo aver lavorato · 1 accesso o avvio non
-riusciti · 2 errore del banco.
+Exit code as 16-attore.py: 0 stopped after having worked · 1 access or start
+failed · 2 bench error.
 """
 import argparse
 import importlib.util as _iu
@@ -77,13 +77,13 @@ Ritmo, Fine = A16.Ritmo, A16.Fine
 attese_impulsi, pausa_piu_lunga = A16.attese_impulsi, A16.pausa_piu_lunga
 esito_nascita, lavora_dopo_nascita = A16.esito_nascita, A16.lavora_dopo_nascita
 TETTO_DEGENERE_S = A16.TETTO_DEGENERE_S
-RAFFICA_S = 0.005             # due disegni a meno di 5 ms sono lo stesso fotogramma (§7.3)
-COLORI_VIVO = 40              # la regola di desktop_scuro_ma_vivo (12-c20-veri.py)
+RAFFICA_S = 0.005             # two draws less than 5 ms apart are the same frame (§7.3)
+COLORI_VIVO = 40              # the rule of desktop_scuro_ma_vivo (12-c20-veri.py)
 
 
 def _preferenze_firefox():
-    """Le preferenze del Firefox interno: le stesse di 11-c21 (PREFERENZE), lette dal
-    file e non importate (quel modulo si tira dietro le guide dei browser)."""
+    """The preferences of the inner Firefox: the same as 11-c21 (PREFERENZE), read from the
+    file and not imported (that module drags in the browser guides)."""
     try:
         s = open(os.path.join(BANCHI, "11-scatole", "11-c21-sul-bordo-la-forma-cambia.py"),
                  encoding="utf-8").read()
@@ -113,11 +113,11 @@ def _q(s):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LE FUNZIONI PURE (certificate)
+#  THE PURE FUNCTIONS (certified)
 # ═══════════════════════════════════════════════════════════════════════════
 class Raffiche:
-    """⭐ I disegni XDamage ⇒ «raffiche» (un fotogramma di FreeRDP arriva come piu'
-    rettangoli): un disegno a piu' di RAFFICA_S dal precedente apre una raffica nuova."""
+    """⭐ The XDamage draws ⇒ «bursts» (a FreeRDP frame arrives as several
+    rectangles): a draw more than RAFFICA_S after the previous one opens a new burst."""
 
     def __init__(self, soglia=RAFFICA_S):
         self.soglia, self.ultimo, self.n, self.t = soglia, None, 0, []
@@ -134,7 +134,7 @@ class Raffiche:
 
 
 def colori_distinti(im, fattore=8):
-    """Quanti colori distinti nella foto ridotta di `fattore` (None se illeggibile)."""
+    """How many distinct colours in the photo reduced by `fattore` (None if unreadable)."""
     w, h = im.size
     p = im.resize((max(1, w // fattore), max(1, h // fattore)))
     c = p.getcolors(maxcolors=1 << 20)
@@ -142,7 +142,7 @@ def colori_distinti(im, fattore=8):
 
 
 def tasto_x(c):
-    """Il nome del keysym di un carattere battuto (per XK.string_to_keysym)."""
+    """The keysym name of a typed character (for XK.string_to_keysym)."""
     return NOMI_TASTI.get(c, c)
 
 
@@ -160,7 +160,7 @@ NOMI_TASTI = {" ": "space", "-": "minus", "~": "asciitilde", "/": "slash", "|": 
 
 
 def caduta_da_registro(testo):
-    """Il registro di xfreerdp dice che la connessione e' caduta?  (frase o None)"""
+    """Does the xfreerdp log say the connection dropped?  (phrase or None)"""
     for rx in (r"ERRCONNECT_\w+", r"ERRINFO_\w+", r"connection (?:lost|closed|failure)",
                r"Network disconnect", r"freerdp_check_fds\(\) failed"):
         m = re.search(rx, testo or "", re.I)
@@ -177,70 +177,70 @@ def certifica():
         if not vero:
             guai.append(cosa)
 
-    print("── le raffiche")
+    print("── the bursts")
     r = Raffiche()
     for t in (1.000, 1.001, 1.004, 1.040, 1.041, 1.080):
         r.disegno(t)
-    prova("6 disegni in 3 gruppi ⇒ 3 raffiche", r.n == 3 and r.t == [1.000, 1.040, 1.080], str(r.t))
+    prova("6 draws in 3 groups ⇒ 3 bursts", r.n == 3 and r.t == [1.000, 1.040, 1.080], str(r.t))
     r = Raffiche()
     for k in range(300):
         r.disegno(10 + k / 30.0)
-    prova("un video a 30 al secondo ⇒ 30 raffiche al secondo", r.n == 300)
-    # ⛔ GUASTO: una soglia di 50 ms (troppo larga) fonde i fotogrammi del video
+    prova("a video at 30 per second ⇒ 30 bursts per second", r.n == 300)
+    # ⛔ FAULT: a 50 ms threshold (too wide) merges the video frames
     r = Raffiche(soglia=0.05)
     for k in range(300):
         r.disegno(10 + k / 30.0)
-    prova("GUASTO visto: soglia di 50 ms ⇒ il video a 30/s diventa UNA raffica", r.n == 1, str(r.n))
+    prova("FAULT seen: 50 ms threshold ⇒ the 30/s video becomes ONE burst", r.n == 1, str(r.n))
     at, ap = attese_impulsi([10.0, 12.0], [10.03, 12.4], 13.0)
-    prova("impulso → primo disegno dopo: 30 e 400 ms", [round(x, 3) for x in at] == [0.03, 0.4]
+    prova("impulse → first draw after: 30 and 400 ms", [round(x, 3) for x in at] == [0.03, 0.4]
           and not ap, str(at))
 
-    print("── i tasti")
-    prova("spazio, trattino, tilde, barra, asterisco", [tasto_x(c) for c in " -~/*"] ==
+    print("── the keys")
+    prova("space, hyphen, tilde, slash, asterisk", [tasto_x(c) for c in " -~/*"] ==
           ["space", "minus", "asciitilde", "slash", "asterisk"])
-    prova("lettere e cifre restano se stesse", tasto_x("a") == "a" and tasto_x("7") == "7")
-    prova("Invio, PagGiu', PagSu' coi nomi di X", tasto_x("Enter") == "Return"
+    prova("letters and digits stay themselves", tasto_x("a") == "a" and tasto_x("7") == "7")
+    prova("Enter, PageDown, PageUp with the X names", tasto_x("Enter") == "Return"
           and tasto_x("PageDown") == "Next" and tasto_x("PageUp") == "Prior")
-    # ⛔ GUASTO: ogni carattere dei comandi dei lavori ha un nome conosciuto
+    # ⛔ FAULT: every character of the jobs' commands has a known name
     from Xlib import XK
     tutti = set("".join(c for c, _p in L.COMANDI_C) + " #k0123456789" + "".join(L.PAROLE_NOTA)
                 + "/home/c16001u1/prova16/nuove")
     ignoti = sorted(c for c in tutti if XK.string_to_keysym(tasto_x(c)) == 0)
-    prova("ogni carattere dei comandi C ha un keysym", not ignoti, str(ignoti))
-    prova("GUASTO visto: un nome sbagliato ⇒ keysym 0", XK.string_to_keysym("trattino") == 0)
+    prova("every character of the C commands has a keysym", not ignoti, str(ignoti))
+    prova("FAULT seen: a wrong name ⇒ keysym 0", XK.string_to_keysym("trattino") == 0)
 
-    print("── la foto")
+    print("── the photo")
     try:
         from PIL import Image, ImageDraw
         nero = Image.new("RGB", (800, 600), (0, 0, 0))
-        prova("tutto nero ⇒ 1 colore (degenere)", colori_distinti(nero) == 1)
+        prova("all black ⇒ 1 colour (degenerate)", colori_distinti(nero) == 1)
         viva = nero.copy()
         dr = ImageDraw.Draw(viva)
         for i in range(60):
             dr.rectangle([i * 13, 0, i * 13 + 12, 20], fill=(i * 4, 255 - i * 4, (i * 37) % 255))
-        prova("un pannello di 60 colori ⇒ vivo", (colori_distinti(viva) or 0) >= COLORI_VIVO,
+        prova("a panel of 60 colours ⇒ alive", (colori_distinti(viva) or 0) >= COLORI_VIVO,
               str(colori_distinti(viva)))
     except ImportError:
-        prova("PIL c'e'", False)
+        prova("PIL is there", False)
 
-    print("── la caduta dal registro di FreeRDP")
-    prova("ERRCONNECT_CONNECT_TRANSPORT_FAILED vista",
+    print("── the drop from the FreeRDP log")
+    prova("ERRCONNECT_CONNECT_TRANSPORT_FAILED seen",
           caduta_da_registro("[ERROR] ... ERRCONNECT_CONNECT_TRANSPORT_FAILED [0x0002000D]")
           == "ERRCONNECT_CONNECT_TRANSPORT_FAILED")
-    prova("un registro pulito ⇒ nessuna caduta",
+    prova("a clean log ⇒ no drop",
           caduta_da_registro("[WARN][com.freerdp.core.license] - license binary blob") is None)
-    print("── l'inquilino e le porte")
-    prova("inquilino come 16-attore (c16001u1, il controllo c16099u99)",
+    print("── the tenant and the ports")
+    prova("tenant as in 16-attore (c16001u1, the check c16099u99)",
           L.inquilino_di(1) == "c16001u1" and L.inquilino_di(99) == "c16099u99")
-    print("⛔ CERTIFICAZIONE FALLITA (%d)" % len(guai) if guai else "⭐ CERTIFICATO")
+    print("⛔ CERTIFICATION FAILED (%d)" % len(guai) if guai else "⭐ CERTIFIED")
     return 1 if guai else 0
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA SCATOLA E LA SESSIONE X DELL'INQUILINO
+#  THE BOX AND THE TENANT'S X SESSION
 # ═══════════════════════════════════════════════════════════════════════════
 class Scatola:
-    """Comandi da root nella scatola, LOCALI (sudo podman exec), come suite.py sul server."""
+    """Root commands in the box, LOCAL (sudo podman exec), like suite.py on the server."""
 
     def __init__(self, desktop):
         self.nome = desktop
@@ -252,7 +252,7 @@ class Scatola:
                                 "sh", "-c", riga], input=_parola_sudo(), capture_output=True,
                                text=True, errors="replace", timeout=secondi)
         except subprocess.TimeoutExpired:
-            return None, "(nessuna risposta in %d s)" % secondi
+            return None, "(no answer in %d s)" % secondi
         return r.returncode, (r.stdout + r.stderr).strip()
 
     def crea(self, chi, parola):
@@ -272,9 +272,9 @@ AMBIENTE_X = (r"(DISPLAY|XAUTHORITY|DBUS_SESSION_BUS_ADDRESS|XDG_[A-Z_]+|LANG|LC
 
 
 class SessioneX:
-    """`nella_sessione` di suite.Sessione, per una sessione X portata da xrdp: l'ambiente
-    (DISPLAY dell'Xorg dell'inquilino, XAUTHORITY, il bus) si legge da un processo
-    della sessione (/proc/<pid>/environ), senza MOZ_ENABLE_WAYLAND."""
+    """`nella_sessione` of suite.Sessione, for an X session carried by xrdp: the environment
+    (DISPLAY of the tenant's Xorg, XAUTHORITY, the bus) is read from a process
+    of the session (/proc/<pid>/environ), without MOZ_ENABLE_WAYLAND."""
 
     def __init__(self, sc, chi):
         self.sc, self.chi = sc, chi
@@ -282,12 +282,12 @@ class SessioneX:
     def _amb(self):
         return ("u=$(id -u %(c)s) || exit 2; p=''; for q in $(pgrep -u $u); do "
                 "tr '\\0' '\\n' < /proc/$q/environ 2>/dev/null | grep -q '^DISPLAY=' && p=$q; done; "
-                "[ -n \"$p\" ] || { echo 'nessuna sessione X'; exit 2; }; "
+                "[ -n \"$p\" ] || { echo 'no X session'; exit 2; }; "
                 "amb=$(tr '\\0' '\\n' < /proc/$p/environ | grep -E '^%(r)s=' | tr '\\n' ' '); "
                 % {"c": self.chi, "r": AMBIENTE_X})
 
     def pronta(self):
-        """La sessione X dell'inquilino c'e' (un suo processo ha DISPLAY)?"""
+        """Is the tenant's X session there (does one of its processes have DISPLAY)?"""
         c, t = self.sc.dentro(self._amb() + "echo \"$amb\" | grep -o 'DISPLAY=[^ ]*'", 30)
         return c == 0, (t or "").strip()
 
@@ -295,7 +295,7 @@ class SessioneX:
         corpo = ("runuser -u %(c)s -- env -i $amb HOME=/home/%(c)s USER=%(c)s LOGNAME=%(c)s "
                  "SHELL=/bin/bash sh -c %(q)s" % {"c": self.chi, "q": _q(comando)})
         if fondo:
-            corpo = "setsid %s < /dev/null > /home/%s/.c16-%s.log 2>&1 & echo lanciato" % (
+            corpo = "setsid %s < /dev/null > /home/%s/.c16-%s.log 2>&1 & echo launched" % (
                 corpo, self.chi, re.sub(r"\W", "", comando.split()[0])[:20])
         return self.sc.dentro(self._amb() + corpo, secondi)
 
@@ -304,7 +304,7 @@ class SessioneX:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LA SONDA XDamage (un filo suo, una connessione sua)
+#  THE XDamage PROBE (a thread of its own, a connection of its own)
 # ═══════════════════════════════════════════════════════════════════════════
 class Sonda(threading.Thread):
     def __init__(self, nome_display, finestra):
@@ -312,7 +312,7 @@ class Sonda(threading.Thread):
         from Xlib import display
         from Xlib.ext import damage
         self.d = display.Display(nome_display)
-        self.d.damage_query_version()                      # ⛔ senza, ZERO eventi
+        self.d.damage_query_version()                      # ⛔ without it, ZERO events
         w = self.d.create_resource_object("window", finestra)
         self.dmg = w.damage_create(damage.DamageReportNonEmpty)
         self.d.flush()
@@ -334,7 +334,7 @@ class Sonda(threading.Thread):
                     t = time.time()
                     with self.serratura:
                         self.r.disegno(t)
-                    # NonEmpty: si svuota il danno, cosi' il prossimo disegno avvisa di nuovo
+                    # NonEmpty: the damage is emptied, so the next draw notifies again
                     self.d.damage_subtract(self.dmg, 0, 0)
                     self.d.flush()
         except Exception as e:                               # noqa: BLE001
@@ -349,7 +349,7 @@ class Sonda(threading.Thread):
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  LE MANI — XTEST sull'Xvfb (l'input passa dal canale RDP)
+#  THE HANDS — XTEST on the Xvfb (the input goes through the RDP channel)
 # ═══════════════════════════════════════════════════════════════════════════
 class Mani:
     def __init__(self, att):
@@ -366,7 +366,7 @@ class Mani:
             ks = ord(nome)
         kc = self.d.keysym_to_keycode(ks) if ks else 0
         if not kc:
-            raise RuntimeError("nessun tasto per %r" % nome)
+            raise RuntimeError("no key for %r" % nome)
         maiusc = self.d.keycode_to_keysym(kc, 0) != ks
         return kc, maiusc
 
@@ -416,7 +416,7 @@ class Mani:
         return t
 
     def rotella(self, X, Y, tacche, atteso=False):
-        """`tacche` > 0 in giu' (bottone 5), < 0 in su' (bottone 4)."""
+        """`tacche` > 0 down (button 5), < 0 up (button 4)."""
         self.muovi(X, Y)
         b = 5 if tacche > 0 else 4
         t = None
@@ -462,9 +462,9 @@ class Mani:
         return t
 
     def batti(self, testo, atteso=True, eco=False):
-        """Ogni carattere un tasto vero, col ritmo della persona; ogni ~1,5 s il cuore
-        (la riga di stato e i segnali).  `eco`: il carattere compare subito ⇒ il suo
-        impulso conta anche fra i ritardi «a eco»."""
+        """Every character a real key, with the person's rhythm; every ~1.5 s the heart
+        (the state row and the signals).  `eco`: the character appears at once ⇒ its
+        impulse also counts among the «echo» delays."""
         R = self.a.ritmo
         dur = 0.0
         sh = self._kc("Shift")[0]
@@ -490,7 +490,7 @@ class Mani:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-#  L'ATTORE
+#  THE ACTOR
 # ═══════════════════════════════════════════════════════════════════════════
 class Attore:
     def __init__(self, o):
@@ -500,10 +500,10 @@ class Attore:
         self.browser = "freerdp"
         self.chi = L.inquilino_di(self.n)
         if o.controllo:
-            # ⛔ [M] 9 ott, prova a 2K: con lo STESSO nome a ogni livello xrdp-sesman ritrovava
-            #   la sessione del livello prima (ancora in chiusura) e ci si riattaccava ⇒
-            #   ERRINFO_LOGOFF_BY_USER dopo 1,5 s.  Un nome per livello, sempre «…u99»
-            #   (16-classifica riconosce il controllo dalla coda del nome).
+            # ⛔ [M] 9 Oct, test at 2K: with the SAME name at every level xrdp-sesman found again
+            #   the session of the previous level (still closing) and reattached to it ⇒
+            #   ERRINFO_LOGOFF_BY_USER after 1.5 s.  One name per level, always «…u99»
+            #   (16-classifica recognises the check from the tail of the name).
             k = int(re.sub(r"\D", "", str(o.livello)) or 0)
             self.chi = "c16%03du99" % (900 + k % 100)
         self.parola = "c16-" + secrets.token_hex(8)
@@ -528,10 +528,10 @@ class Attore:
         self.verifiche, self.ver_finestra = {"ok": 0, "ko": 0}, []
         self.prec = None
         self.foto_size = None
-        self.x = None                          # connessione X per le foto
+        self.x = None                          # X connection for the photos
         self.creato = False
 
-    # -- le righe -------------------------------------------------------------
+    # -- the rows --------------------------------------------------------------
     def _testa(self, evento):
         return {"t": round(time.time(), 3), "utente": self.n, "profilo": self.profilo,
                 "browser": self.browser, "versione": self.versione, "inquilino": self.chi,
@@ -562,17 +562,17 @@ class Attore:
              "latenza_ms": None if lat_ms is None else round(lat_ms), "det": det}
         self.ver_finestra.append(v)
         if not ok:
-            print("   [%02d %s] ⚠ input NON verificato: %s" % (self.n, self.profilo, v), flush=True)
+            print("   [%02d %s] ⚠ input NOT verified: %s" % (self.n, self.profilo, v), flush=True)
 
     def impulso(self, t, eco=False):
         self.impulsi.append(t)
         if eco:
             self.impulsi_eco.append(t)
 
-    # -- il cuore -------------------------------------------------------------
+    # -- the heart -------------------------------------------------------------
     def cuore(self):
         if self.fermati:
-            raise Fine("segnale")
+            raise Fine("signal")
         if self.voglio_foto:
             self.voglio_foto = False
             self.scatta()
@@ -606,13 +606,13 @@ class Attore:
         n, dt_lista = self.sonda.leggi()
         errori = list(self.errori_finestra)
         if self.sonda.errore:
-            errori.append("la sonda XDamage e' ferma: %s" % self.sonda.errore)
+            errori.append("the XDamage probe has stopped: %s" % self.sonda.errore)
         caduta = False
         if self.entrato and not self.rdp_vivo():
             caduta = True
-            errori.append("xfreerdp e' uscito (codice %s): %s" % (
+            errori.append("xfreerdp exited (code %s): %s" % (
                 self.rdp.returncode if self.rdp else None,
-                caduta_da_registro(self.registro_rdp()) or "nessuna riga d'errore"))
+                caduta_da_registro(self.registro_rdp()) or "no error line"))
         blocco, lavoro, ritardi, eco = None, False, [], []
         if self.profilo == "D":
             if self.video_in_corso():
@@ -654,7 +654,7 @@ class Attore:
         v = getattr(self.lavoro, "ultimo_video", None) or {}
         return self.entrato and v.get("stato") == 1
 
-    # -- le foto --------------------------------------------------------------
+    # -- the photos ------------------------------------------------------------
     def foto_pil(self):
         from PIL import Image
         from Xlib import X, display
@@ -674,14 +674,14 @@ class Attore:
         t = time.time()
         im = self.foto_pil()
         if im is None:
-            self.evento("foto", ok=False, perche="l'Xvfb non si fotografa")
+            self.evento("foto", ok=False, perche="the Xvfb cannot be photographed")
             return
         f = os.path.join(self.cartella, "foto-%d.png" % int(t * 1000))
         im.save(f)
         self.evento("foto", ok=True, file=f, ms=round((time.time() - t) * 1000))
 
     def foto_al_desktop(self, r):
-        """⭐ La foto e' l'Xvfb, e FreeRDP e' a tutto schermo: 1:1 col desktop remoto."""
+        """⭐ The photo is the Xvfb, and FreeRDP is full screen: 1:1 with the remote desktop."""
         if not r:
             return None
         tl, ta = self.desktop
@@ -690,7 +690,7 @@ class Attore:
     def preferenze_interne(self):
         return _preferenze_firefox()
 
-    # -- il cliente -----------------------------------------------------------
+    # -- the client ------------------------------------------------------------
     def cerca_finestra(self):
         from Xlib import display
         if self.x is None:
@@ -730,29 +730,29 @@ class Attore:
         t0 = time.time()
         self.accendi_rdp()
         n["accesso_ms"] = round(t0 * 1000)
-        # la finestra di FreeRDP, poi la sonda
+        # the FreeRDP window, then the probe
         while time.time() < t0 + o.tetto_s and self.finestra is None:
             if not self.rdp_vivo():
                 c = caduta_da_registro(self.registro_rdp())
                 n.update(esito="rifiuto" if c and "AUTH" in c.upper() else "nessun_fotogramma",
-                         motivo="xfreerdp e' uscito prima della finestra: %s" % c)
+                         motivo="xfreerdp exited before the window: %s" % c)
                 return n
             self.finestra = self.cerca_finestra()
             if self.fermati:
-                raise Fine("segnale")
+                raise Fine("signal")
             time.sleep(0.1)
         if self.finestra is None:
-            n.update(esito="nessun_fotogramma", motivo="nessuna finestra di FreeRDP in %d s" % o.tetto_s)
+            n.update(esito="nessun_fotogramma", motivo="no FreeRDP window in %d s" % o.tetto_s)
             return n
         self.sonda = Sonda(o.display, self.finestra)
         self.sonda.start()
-        # il desktop vivo: la sessione X dell'inquilino c'e', e la foto non e' degenere
+        # the live desktop: the tenant's X session is there, and the photo is not degenerate
         primo, sessione, colori, ultimo_ctl = None, False, None, 0.0
         while time.time() < t0 + o.tetto_s:
             if self.fermati:
-                raise Fine("segnale")
+                raise Fine("signal")
             if not self.rdp_vivo():
-                n.update(esito="nessun_fotogramma", motivo="xfreerdp e' uscito durante l'accesso: %s"
+                n.update(esito="nessun_fotogramma", motivo="xfreerdp exited during access: %s"
                          % caduta_da_registro(self.registro_rdp()))
                 return n
             if not sessione and time.time() - ultimo_ctl > 1.0:
@@ -771,21 +771,21 @@ class Attore:
         n["prima_raffica_ms"] = round(self.sonda.leggi()[1][0] * 1000) if self.sonda.leggi()[1] else None
         if not primo:
             if sessione:
-                # la sessione c'e' ma il desktop resta degenere: si lavora lo stesso
+                # the session is there but the desktop stays degenerate: work goes on anyway
                 n["primo_fotogramma_ms"] = n["prima_raffica_ms"]
                 n["nascita_ms"] = (n["prima_raffica_ms"] - n["accesso_ms"]) if n["prima_raffica_ms"] else None
-                n.update(esito="degenere", motivo="desktop degenere (%s colori) a %d s" % (colori, o.tetto_s))
+                n.update(esito="degenere", motivo="degenerate desktop (%s colours) at %d s" % (colori, o.tetto_s))
             else:
-                n.update(esito="nessun_fotogramma", motivo="nessuna sessione X in %d s" % o.tetto_s)
+                n.update(esito="nessun_fotogramma", motivo="no X session in %d s" % o.tetto_s)
             return n
         verde = primo - t0 <= TETTO_DEGENERE_S
         n["esito"], nota = esito_nascita(verde, not verde)
         if not verde:
             n["esito"] = "degenere"
-            n["motivo"] = "il desktop e' vivo solo a %.1f s dall'accesso (tetto %d s)" % (
+            n["motivo"] = "the desktop is alive only at %.1f s from access (cap %d s)" % (
                 primo - t0, TETTO_DEGENERE_S)
         else:
-            n["motivo"] = "sessione X e %s colori distinti a %.1f s" % (colori, primo - t0)
+            n["motivo"] = "X session and %s distinct colours at %.1f s" % (colori, primo - t0)
         if nota:
             n["nota"] = nota
         return n
@@ -794,19 +794,19 @@ class Attore:
         self.sc.sgombera(self.chi)
         c, t = self.sc.crea(self.chi, self.parola)
         if c != 0:
-            raise RuntimeError("non ho potuto creare l'inquilino %s: %s" % (self.chi, (t or "")[-200:]))
+            raise RuntimeError("I could not create the tenant %s: %s" % (self.chi, (t or "")[-200:]))
         self.creato = True
         self.sc.dentro("h=/home/%s; [ -L $h/.cache ] && rm -f $h/.cache; "
                        "install -d -o %s -g %s -m 700 $h/.cache" % (self.chi, self.chi, self.chi), 30)
-        # ⭐ ~/.xsession arriva dallo scheletro (Contenitore.xrdp): si GUARDA che ci sia
+        # ⭐ ~/.xsession comes from the skeleton (Contenitore.xrdp): we LOOK that it is there
         c, t = self.sc.dentro("cat /home/%s/.xsession" % self.chi, 30)
         if c != 0 or "exec " not in (t or ""):
-            self.evento("errore", testo="~/.xsession dell'inquilino manca: la sessione non sarebbe "
-                                        "il desktop (%s)" % (t or "")[:120])
-            raise RuntimeError("~/.xsession assente nell'inquilino %s" % self.chi)
+            self.evento("errore", testo="the tenant's ~/.xsession is missing: the session would not be "
+                                        "the desktop (%s)" % (t or "")[:120])
+            raise RuntimeError("~/.xsession absent in the tenant %s" % self.chi)
         self.evento("xsession", testo=(t or "").strip().splitlines()[-1][:120])
 
-    # -- tutto ------------------------------------------------------------------
+    # -- everything -------------------------------------------------------------
     def corri(self):
         o = self.o
         self.versione = (subprocess.run(["xfreerdp3", "/version"], capture_output=True, text=True)
@@ -828,19 +828,19 @@ class Attore:
                 self.salva_diagnosi()
                 if o.controllo:
                     return codice
-                self.aspetta_la_fine("accesso non riuscito")
+                self.aspetta_la_fine("access failed")
                 return codice
             self.entrato = True
             self.mani = Mani(self)
-            # il fuoco della tastiera sulla finestra di FreeRDP (nell'Xvfb non c'e' un
-            # gestore di finestre), poi un clic su un punto vuoto del desktop
+            # the keyboard focus on the FreeRDP window (in the Xvfb there is no
+            # window manager), then a click on an empty spot of the desktop
             try:
                 from Xlib import X
                 self.mani.d.create_resource_object("window", self.finestra).set_input_focus(
                     X.RevertToParent, X.CurrentTime)
                 self.mani.d.sync()
             except Exception as e:                   # noqa: BLE001
-                self.evento("errore", testo="fuoco sulla finestra di FreeRDP: %r" % e)
+                self.evento("errore", testo="focus on the FreeRDP window: %r" % e)
             self.dorme(1.0)
             self.mani.clic(self.desktop[0] * 0.55, self.desktop[1] * 0.55)
             self.dorme(1.0)
@@ -856,7 +856,7 @@ class Attore:
                 if o.controllo:
                     self.esiti_controllo = {"applicazione": False}
                     return codice
-                self.aspetta_la_fine("l'applicazione non parte")
+                self.aspetta_la_fine("the application does not start")
                 return codice
             if o.controllo:
                 ok = self.lavoro.comando("uname -a")
@@ -887,8 +887,8 @@ class Attore:
         return codice
 
     def salva_diagnosi(self):
-        """Una nascita fallita: ~/.xsession-errors e il registro di Xorg dell'inquilino
-        nella cartella, PRIMA che lo sgombero li cancelli."""
+        """A failed birth: ~/.xsession-errors and the tenant's Xorg log
+        in the folder, BEFORE the clean-up deletes them."""
         c, t = self.sc.dentro("for f in /home/%s/.xsession-errors /home/%s/.xorgxrdp.*.log; do "
                               "echo \"== $f\"; tail -n 60 \"$f\" 2>/dev/null; done" % (self.chi, self.chi), 60)
         with open(os.path.join(self.cartella, "diagnosi-sessione.txt"), "w") as f:
@@ -921,7 +921,7 @@ class Attore:
                 try:
                     self.sc.sgombera(self.chi)
                 except Exception as e:               # noqa: BLE001
-                    print("   ⚠ uscita: %s" % e, flush=True)
+                    print("   ⚠ exit: %s" % e, flush=True)
             _c, t = self.sc.dentro("id %s >/dev/null 2>&1 && echo RESTA || echo via" % self.chi, 30)
             self.evento("fine", sgomberato=(t or "").strip().endswith("via"), azioni=self.azioni,
                         verifiche=self.verifiche)
@@ -930,7 +930,7 @@ class Attore:
 
 
 def controllo(o, att):
-    """Il controllo corto ridotto (§7.3): entra, schermo, tastiera ⇒ controllo-corto.json."""
+    """The reduced short check (§7.3): enters, screen, keyboard ⇒ controllo-corto.json."""
     t = time.time()
     codice = att.corri()
     try:
@@ -953,11 +953,11 @@ def controllo(o, att):
            "esito": "FAIL" if "FAIL" in esiti.values() else ("PASS" if all(
                v == "PASS" for v in esiti.values()) else "BLOCKED"),
            "durata_s": round(time.time() - t, 1),
-           "nota": "controllo corto RIDOTTO (fasi/20 §7.3): accesso, schermo, tastiera — le funzioni "
-                   "F-0xx della pagina di REMOTIX non esistono in xrdp"}
+           "nota": "REDUCED short check (fasi/20 §7.3): access, screen, keyboard — the REMOTIX page's "
+                   "F-0xx functions do not exist in xrdp"}
     with open(os.path.join(o.dir, "controllo-corto.json"), "w") as f:
         json.dump(out, f, ensure_ascii=False, indent=1)
-    print("controllo corto xrdp: %s %s" % (out["esito"], esiti), flush=True)
+    print("xrdp short check: %s %s" % (out["esito"], esiti), flush=True)
     return 0 if out["esito"] == "PASS" else 1
 
 
@@ -965,17 +965,17 @@ def argomenti():
     a = argparse.ArgumentParser(description=__doc__,
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     a.add_argument("--certifica", action="store_true")
-    a.add_argument("--controllo", action="store_true", help="il controllo corto ridotto (utente 99)")
+    a.add_argument("--controllo", action="store_true", help="the reduced short check (user 99)")
     a.add_argument("--scatola", choices=DESKTOP)
     a.add_argument("--utente", type=int)
-    a.add_argument("--display", help="l'Xvfb di questo utente (:2NN)")
+    a.add_argument("--display", help="this user's Xvfb (:2NN)")
     a.add_argument("--dir")
     a.add_argument("--seme", default="0")
     a.add_argument("--largo", type=int, default=3840)
     a.add_argument("--alto", type=int, default=2160)
     a.add_argument("--video", default="")
     a.add_argument("--tetto-s", type=int, default=60)
-    # accettati e ignorati: la salita li passa uguali a tutti e due gli attori
+    # accepted and ignored: the climb passes them equally to both actors
     a.add_argument("--porte-base", type=int, default=0)
     a.add_argument("--livello", default="")
     a.add_argument("--browser", default="")
@@ -987,7 +987,7 @@ def argomenti():
         o.seme = o.seme if o.seme != "0" else "controllo"
     for k in ("scatola", "utente", "display", "dir"):
         if getattr(o, k) in (None, ""):
-            a.error("serve --%s" % k)
+            a.error("--%s is needed" % k)
     return o
 
 
@@ -996,7 +996,7 @@ def main():
     if o.certifica:
         return certifica()
     try:
-        open("/proc/self/oom_score_adj", "w").write("800")      # §7.7: i clienti muoiono prima
+        open("/proc/self/oom_score_adj", "w").write("800")      # §7.7: the clients die first
     except OSError:
         pass
     os.environ.pop("WAYLAND_DISPLAY", None)
@@ -1010,7 +1010,7 @@ def main():
     signal.signal(signal.SIGTERM, _fine)
     signal.signal(signal.SIGINT, _fine)
     signal.signal(signal.SIGUSR1, _foto)
-    print("⭐ attore xrdp %02d · %s · profilo %s · %s · %s" % (
+    print("⭐ xrdp actor %02d · %s · profile %s · %s · %s" % (
         o.utente, o.scatola, att.profilo, o.display, att.chi), flush=True)
     if o.controllo:
         return controllo(o, att)

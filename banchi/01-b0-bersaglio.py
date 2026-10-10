@@ -1,221 +1,221 @@
 #!/usr/bin/env python3
-"""01-b0-bersaglio.py — ⛔ IL REGISTRO DI OGNI GIRO, E LA RIGA CHE DICE CONTRO
-CHE COSA HA MISURATO.
+"""01-b0-bersaglio.py — ⛔ THE LOG OF EVERY RUN, AND THE LINE THAT SAYS WHAT
+IT MEASURED AGAINST.
 
-Il gemello in Python di `01-b0-bersaglio.sh`: quello sceglie e accende il
-bersaglio, questo lo **scrive**.  Lo includono B5, B6, B7 e B8.
-
-===========================================================================
-⛔ PERCHE' ESISTE, E NON E' UN COMODO
-
-*«Un registro che non dice contro quale server ha misurato mette in fila numeri
-di due cose diverse»* — ed e' la forma d'errore che questo progetto paga piu'
-spesso, perche' non ha nessun sintomo: i numeri sono tutti buoni, uno per uno.
-
-⛔ E il caso concreto e' gia' sul disco.  `banchi/prodotto/b8-campioni.jsonl` e
-   `b8-fatti.jsonl` sono i campioni del secondo fisso presi contro il
-   **prodotto** la notte del 10 agosto 2026; `b8-fatti.jsonl` in
-   `/media/REMOTIX/src/` sono quelli presi contro l'**innesto**.  Hanno lo
-   stesso nome, la stessa forma, gli stessi campi — e nessuna riga, in nessuno
-   dei due, dice quale server ha risposto.  Chi li mettesse insieme per avere
-   «piu' campioni» calcolerebbe la mediana di due popolazioni diverse credendo
-   di ridurre il rumore.
-
-⭐ Da qui le tre cose che questo file impone, e che nessun banco puo' scordarsi:
-
-  1. **ogni** riga porta `bersaglio`, `porta` e `giro`;
-  2. la prima riga di ogni giro e' un record `giro` che porta anche
-     l'**impronta vista** — cioe' quel che il registro del server dice di
-     essere, non quel che il banco ha dichiarato (`LEZIONI.md` §1.9,
-     corollario 5);
-  3. si scrive e si **sincronizza** riga per riga: un file scritto e chiuso e'
-     un fatto, una riga in un buffer e' una speranza sul momento in cui
-     qualcuno la vedra' (§1.9, settima veste — e quella veste ha gia' accusato
-     il codice giusto in questa fase).
+The Python twin of `01-b0-bersaglio.sh`: that one chooses and turns on the
+target, this one **writes** it.  B5, B6, B7 and B8 include it.
 
 ===========================================================================
-⛔ E IL BERSAGLIO NON E' UN'ETICHETTA: E' UN INSIEME DI FATTI
+⛔ WHY IT EXISTS, AND IT IS NOT A CONVENIENCE
 
-`PROFILO` tiene le differenze **note** fra i due server, misurate leggendo il
-codice l'11 agosto 2026.  Un banco le legge di qui invece di scoprirle da capo,
-e soprattutto invece di **non** scoprirle e dare rosso.
+*"A log that does not say which server it measured against lines up numbers
+of two different things"* — and it is the form of error this project pays for
+most often, because it has no symptom: the numbers are all good, one by one.
+
+⛔ And the concrete case is already on disk.  `banchi/prodotto/b8-campioni.jsonl` and
+   `b8-fatti.jsonl` are the samples of the second fixed taken against the
+   **product** on the night of 10 Aug 2026; `b8-fatti.jsonl` in
+   `/media/REMOTIX/src/` are those taken against the **graft**.  They have the
+   same name, the same shape, the same fields — and no line, in either
+   of the two, says which server answered.  Whoever put them together to have
+   "more samples" would compute the median of two different populations believing
+   they were reducing the noise.
+
+⭐ Hence the three things this file imposes, and that no bench can forget:
+
+  1. **every** line carries `bersaglio`, `porta` and `giro`;
+  2. the first line of every round is a `giro` record that also carries
+     the **fingerprint seen** — that is, what the server's log says it
+     is, not what the bench declared (`LEZIONI.md` §1.9,
+     corollary 5);
+  3. it is written and **synced** line by line: a file written and closed is
+     a fact, a line in a buffer is a hope about the moment in which
+     someone will see it (§1.9, seventh guise — and that guise has already accused
+     the right code in this phase).
+
+===========================================================================
+⛔ AND THE TARGET IS NOT A LABEL: IT IS A SET OF FACTS
+
+`PROFILO` holds the **known** differences between the two servers, measured by reading
+the code on 11 Aug 2026.  A bench reads them from here instead of discovering them anew,
+and above all instead of **not** discovering them and giving red.
 """
 import json
 import os
 import time
 
 # ===========================================================================
-# ⛔ LE DIFFERENZE NOTE, SCRITTE PRIMA DI MISURARE.
+# ⛔ THE KNOWN DIFFERENCES, WRITTEN BEFORE MEASURING.
 #
-# Ogni riga ha accanto il file e la ragione: chi la trovasse falsa deve poter
-# risalire in un minuto a dove l'abbiamo letta.
+# Every line has the file and the reason next to it: whoever found it false must be
+# able to trace back in a minute to where we read it.
 # ===========================================================================
 PROFILO = {
     "innesto": {
         "porta": 7447,
-        "eseguibile": "bsslserver (esempio di ngtcp2 + i due innesti)",
-        # ⛔ B7: `RCP_SERVER_IN_CHIUSURA` (0x0C) non e' producibile.
-        #    `01-b3-rcp-innesta.py` non ha nessun percorso di spegnimento —
-        #    grep: zero occorrenze — quindi i motivi provocabili sono SETTE.
+        "eseguibile": "bsslserver (ngtcp2 example + the two grafts)",
+        # ⛔ B7: `RCP_SERVER_IN_CHIUSURA` (0x0C) cannot be produced.
+        #    `01-b3-rcp-innesta.py` has no shutdown path —
+        #    grep: zero occurrences — so the reasons that can be provoked are SEVEN.
         "spegnimento": False,
         "motivi_provocabili": 7,
-        # Dove puo' vivere un percorso di spegnimento su questo bersaglio.
+        # Where a shutdown path can live on this target.
         "sorgenti_spegnimento": ("rcp/rcp.c", "01-b3-rcp-innesta.py"),
-        # ⭐ Il tetto d'inattivita' del trasporto si sceglie (`--timeout=Ns`).
+        # ⭐ The transport idle cap can be chosen (`--timeout=Ns`).
         "idle_scelta": True,
         "idle_lungo": 120000,
         "idle_corto": 15000,
-        # Le righe d'avvio sul ban, per B8.
-        "r_ban_caricati": "ban caricati:",
-        "r_ban_illeggibile": "NON HO POTUTO LEGGERE il file dei ban",
-        "r_pagina": "pagina TCP a",
-        # Se il file dei ban c'e' e non si legge, questo server parte lo stesso
-        # e lo scrive.
+        # The startup lines about the ban, for B8.
+        "r_ban_caricati": "bans loaded:",
+        "r_ban_illeggibile": "COULD NOT READ the ban file",
+        "r_pagina": "TCP page at",
+        # If the ban file exists and cannot be read, this server starts all the same
+        # and writes so.
         "ban_illeggibile_parte": True,
-        # L'impronta di ogni riga del suo registro.
+        # The fingerprint of every line of its log.
         "impronta": r"REMOTIX B[35]:",
         "controllo": "REMOTIX B3",
-        # ⛔⭐ L'ECO DI B2, e questa riga esiste per una trappola gia' pagata
-        #     DUE volte.  Il server minimo di B2 **rimanda indietro** i byte
-        #     ricevuti sugli stream che il client apre — e' il «byte che torna»
-        #     del gruppo 2 di `FASI.md` §01-filo-nudo.  Uno strumento che aspetta
-        #     quell'eco resta appeso contro il prodotto, che l'eco non ce l'ha,
-        #     e il rosso che ne esce il 10 agosto 2026 e' stato diagnosticato
-        #     per ore come «difetto del certificato».
+        # ⛔⭐ THE B2 ECHO, and this line exists because of a trap already paid for
+        #     TWICE.  The minimal server of B2 **sends back** the bytes
+        #     received on the streams the client opens — it is the "byte that comes back"
+        #     of group 2 of `FASI.md` §01-filo-nudo.  A tool that waits for
+        #     that echo stays hung against the product, which has no echo,
+        #     and the red that came out of it on 10 Aug 2026 was diagnosed
+        #     for hours as a "certificate defect".
         "eco": True,
-        # ⛔⭐ IL TETTO DI §7.17 — sessione WebTransport aperta e canale di
-        #     controllo mai aperto, 5 s — QUESTO SERVER NON CE L'HA.
+        # ⛔⭐ THE CAP OF §7.17 — WebTransport session open and control
+        #     channel never opened, 5 s — THIS SERVER DOES NOT HAVE IT.
         #
-        # `[M]` 11 agosto 2026, misurato da B6 in un giro di certificazione:
-        # `ciao-senza-controllo` resta appeso **20 s senza che succeda niente**.
-        # ⭐ E il banco aveva ragione: la cura di §7.17 e' `WT_TETTO_CANALE_NS`
-        # in `src/webtransport.c`, cioe' nel PRODOTTO.  L'innesto e' l'esempio
-        # di ngtcp2 con gli innesti sopra, e uno strato WebTransport suo non ce
-        # l'ha — quel tetto non ha un posto dove vivere.
-        # ⚠ E' la stessa forma di `spegnimento`: una proprieta' che esiste su un
-        #   bersaglio solo, dichiarata invece che scoperta a ogni giro.
-        # ⛔ Senza questa riga B6 non si puo' CERTIFICARE: il giro sano esce 1,
-        #   e un banco che non parte dal verde non dimostra niente col guasto.
+        # `[M]` 11 Aug 2026, measured by B6 in a certification round:
+        # `ciao-senza-controllo` stays hung **20 s without anything happening**.
+        # ⭐ And the bench was right: the cure of §7.17 is `WT_TETTO_CANALE_NS`
+        # in `src/webtransport.c`, that is in the PRODUCT.  The graft is the ngtcp2
+        # example with the grafts on top, and it has no WebTransport layer of its
+        # own — that cap has no place to live.
+        # ⚠ It is the same shape as `spegnimento`: a property that exists on one
+        #   target only, declared instead of discovered at every round.
+        # ⛔ Without this line B6 cannot be CERTIFIED: the healthy round exits 1,
+        #   and a bench that does not start from green proves nothing with the fault.
         "tetto_canale": False,
     },
     "prodotto": {
         "porta": 7448,
         "eseguibile": "remotix (src/)",
-        # ⭐ `src/main.c` congeda tutte le sessioni con `SERVER_IN_CHIUSURA`
-        #    prima di uscire, e aspetta fino a due secondi che i byte escano:
-        #    il motivo 0x0C E' provocabile, e i provocabili diventano OTTO.
+        # ⭐ `src/main.c` dismisses all sessions with `SERVER_IN_CHIUSURA`
+        #    before exiting, and waits up to two seconds for the bytes to leave:
+        #    reason 0x0C CAN be provoked, and the provocable ones become EIGHT.
         "spegnimento": True,
         "motivi_provocabili": 8,
-        # ⛔ E NON si cerca in `rcp.c`: `rcp.c` e' identico nei due server e non
-        #    sa che esista un processo.  Il percorso vive in `main.c`,
-        #    `trasporto.c` (`trasporto_congeda_tutte`) e `webtransport.c`
-        #    (`wt_congeda`).  Un denominatore si legge dove la cosa succede.
+        # ⛔ And we do NOT search in `rcp.c`: `rcp.c` is identical in the two servers and does not
+        #    know a process exists.  The path lives in `main.c`,
+        #    `trasporto.c` (`trasporto_congeda_tutte`) and `webtransport.c`
+        #    (`wt_congeda`).  A denominator is read where the thing happens.
         "sorgenti_spegnimento": ("remotix/rcp.c", "remotix/main.c",
                                  "remotix/trasporto.c", "remotix/webtransport.c"),
-        # ⛔ `#define IDLE_MS 30000` in `src/trasporto.c`, e nessuna opzione lo
-        #    tocca (nessun `getenv` in tutto `src/`).
+        # ⛔ `#define IDLE_MS 30000` in `src/trasporto.c`, and no option
+        #    touches it (no `getenv` in all of `src/`).
         "idle_scelta": False,
         "idle_lungo": 30000,
         "idle_corto": 30000,
-        "r_ban_caricati": "indirizzi caricati",
-        "r_ban_illeggibile": "c'e' e NON si e' potuto leggere",
-        "r_pagina": "ascolto TCP su",
-        # ⛔⭐ E QUI I DUE SERVER FANNO L'OPPOSTO: il prodotto RIFIUTA di
-        #     partire (`src/main.c`), perche' «non e' "zero ban", e' la
-        #     protezione di §4.4-bis spenta».
+        "r_ban_caricati": "addresses loaded",
+        "r_ban_illeggibile": "exists and could NOT be read",
+        "r_pagina": "listening over TCP on",
+        # ⛔⭐ AND HERE THE TWO SERVERS DO THE OPPOSITE: the product REFUSES to
+        #     start (`src/main.c`), because "it is not "zero bans", it is the
+        #     protection of §4.4-bis turned off".
         "ban_illeggibile_parte": False,
         "impronta": r"^\d\d:\d\d:\d\d\.\d\d\d (avvio|quic|wt|rcp|pagina|cert) ",
-        "controllo": "REMOTIX — fase 1, il filo nudo",
-        # ⛔ NESSUNA ECO.  `src/webtransport.c`, `scarta_stream_di_troppo()`:
-        #    «i byte di uno stream di troppo si buttano, e NON si rimandano
-        #    indietro».  ⚠ Nessuno dei quattro banchi deve **aspettare** byte di
-        #    ritorno su uno stream che ha aperto lui: chi lo facesse resterebbe
-        #    appeso, e la diagnosi finirebbe su qualunque cosa tranne che su
-        #    questa riga.  B5 la incontra e la tollera gia' (scarta l'eco senza
-        #    aspettarla): qui si dichiara, perche' un'assenza tollerata e
-        #    un'assenza mai avvenuta non devono avere lo stesso aspetto.
+        "controllo": "REMOTIX — phase 1, the bare wire",
+        # ⛔ NO ECHO.  `src/webtransport.c`, `scarta_stream_di_troppo()`:
+        #    "the bytes of a stream too many are thrown away, and NOT sent
+        #    back".  ⚠ None of the four benches must **wait** for bytes
+        #    coming back on a stream it opened itself: whoever did would stay
+        #    hung, and the diagnosis would land on anything except on
+        #    this line.  B5 meets it and already tolerates it (it discards the echo without
+        #    waiting for it): here it is declared, because a tolerated absence and
+        #    an absence that never happened must not look the same.
         "eco": False,
-        # ⭐ `WT_TETTO_CANALE_NS` in `src/webtransport.c`, armato
-        #    all'apertura della sessione (`cb_end_headers`) e fatto
-        #    valere in `wt_batti`.  `DECISIONI.md` §7.17.
+        # ⭐ `WT_TETTO_CANALE_NS` in `src/webtransport.c`, armed
+        #    at the opening of the session (`cb_end_headers`) and
+        #    enforced in `wt_batti`.  `DECISIONI.md` §7.17.
         "tetto_canale": True,
     },
 }
 
 
-# ⛔ E il verdetto sull'eco non e' una nota: e' un numero che il banco confronta.
+# ⛔ And the verdict on the echo is not a note: it is a number the bench compares.
 def eco_attesa(bersaglio):
-    """Quanti stream devono riportare byte dal server.  0 sul prodotto."""
+    """How many streams must bring bytes back from the server.  0 on the product."""
     return profilo(bersaglio)["eco"]
 
 
 def profilo(nome):
-    """⛔ Un bersaglio sconosciuto non ripiega su «innesto»: si ferma.
+    """⛔ An unknown target does not fall back on «innesto»: it stops.
 
-    ⚠ `controllo` sta nella grammatica (`--bersaglio {innesto,prodotto,
-      controllo}`, la stessa della sonda del trasporto) e **non** in questa
-      tabella: per B5, B6, B7 e B8 il server guasto di proposito verso il filo
-      non esiste ancora.  ⛔ Farlo cadere su «innesto» darebbe un VERDE del caso
-      sano al posto di un controllo che deve diventare rosso, che e' peggio di
-      un controllo assente.
+    ⚠ `controllo` is in the grammar (`--bersaglio {innesto,prodotto,
+      controllo}`, the same as the transport probe) and **not** in this
+      table: for B5, B6, B7 and B8 the server faulty on purpose towards the wire
+      does not exist yet.  ⛔ Letting it fall onto «innesto» would give a GREEN of the
+      healthy case in place of a check that must turn red, which is worse than
+      an absent check.
     """
     if nome == "controllo":
         raise SystemExit(
-            "⛔ bersaglio «controllo»: la grammatica lo prevede, questi quattro "
-            "banchi non ce l'hanno ancora.  Sarebbe il server GUASTO DI "
-            "PROPOSITO, quello contro cui il banco deve diventare rosso "
-            "(LEZIONI.md §1.2); oggi esiste solo verso la pagina "
-            "(01-b11-guasto-innesta.py), non verso il filo.")
+            "⛔ target «controllo»: the grammar provides for it, these four "
+            "benches do not have it yet.  It would be the server FAULTY ON "
+            "PURPOSE, the one against which the bench must turn red "
+            "(LEZIONI.md §1.2); today it exists only towards the page "
+            "(01-b11-guasto-innesta.py), not towards the wire.")
     if nome not in PROFILO:
         raise SystemExit(
-            f"⛔ bersaglio «{nome}» sconosciuto: i valori sono "
-            f"{', '.join(PROFILO)} e «controllo».  Non ripiego su nessuno — "
-            f"misurerei un server dichiarandone un altro.")
+            f"⛔ unknown target «{nome}»: the values are "
+            f"{', '.join(PROFILO)} and «controllo».  Not falling back on any — "
+            f"I would measure one server while declaring another.")
     return PROFILO[nome]
 
 
 def aggiungi_argomenti(p):
-    """⛔ Gli stessi quattro argomenti in tutt'e quattro i banchi, e in un posto
-    solo — cosi' il giorno in cui se ne aggiunge uno si aggiunge una volta.
+    """⛔ The same four arguments in all four benches, and in one place
+    only — so the day one is added it is added once.
 
-    ⛔ `--bersaglio` e' **obbligatorio e senza predefinito**, ed e' la stessa
-       forma con cui la sonda del trasporto sceglie il proprio: due convenzioni
-       diverse per la stessa cosa sono il difetto delle cuciture.  ⚠ Un
-       predefinito qui vorrebbe dire che un giro puo' misurare il server
-       sbagliato per distrazione, e il registro lo scriverebbe come se fosse
-       quello giusto.
+    ⛔ `--bersaglio` is **mandatory and without default**, and it is the same
+       shape with which the transport probe chooses its own: two different
+       conventions for the same thing are the defect of the seams.  ⚠ A
+       default here would mean that a round can measure the wrong server
+       by distraction, and the log would write it as if it were
+       the right one.
     """
     p.add_argument("--bersaglio", required=True,
                    choices=("innesto", "prodotto", "controllo"),
-                   help="⛔ obbligatorio: contro quale server si misura")
+                   help="⛔ mandatory: which server is measured against")
     p.add_argument("--uscita", default="",
-                   help="il registro dei fatti di questo giro (.jsonl)")
+                   help="the log of the facts of this round (.jsonl)")
     p.add_argument("--giro", default="",
-                   help="l'identificatore del giro, uguale per tutte le righe")
+                   help="the identifier of the round, the same for all lines")
     p.add_argument("--md5", default="",
-                   help="l'impronta md5 del BINARIO misurato, per il registro")
+                   help="the md5 fingerprint of the measured BINARY, for the log")
     return p
 
 
 def sorgenti_spegnimento(bersaglio, dentro="/srv/src"):
-    """⛔ Dove si cerca un percorso di spegnimento, per il denominatore di B7.
+    """⛔ Where a shutdown path is searched for, for the denominator of B7.
 
-    ⛔⭐ E NON E' `rcp.c`, che e' identico byte per byte nei due server e non sa
-        che esista un processo: cercarlo li' direbbe «zero» su tutt'e due i
-        bersagli, ed e' un denominatore letto dove la cosa NON succede
-        (`LEZIONI.md` §1.9, corollario 5).  Sul prodotto il percorso vive in
-        `main.c`, `trasporto.c` e `webtransport.c`.
+    ⛔⭐ AND IT IS NOT `rcp.c`, which is identical byte for byte in the two servers and does not know
+        a process exists: searching there would say "zero" on both
+        targets, and it is a denominator read where the thing does NOT happen
+        (`LEZIONI.md` §1.9, corollary 5).  On the product the path lives in
+        `main.c`, `trasporto.c` and `webtransport.c`.
     """
     return [f"{dentro}/{p}" for p in profilo(bersaglio)["sorgenti_spegnimento"]]
 
 
 class Registro:
-    """Una riga per fatto, con dentro il bersaglio, e sincronizzata subito.
+    """One line per fact, with the target inside, and synced at once.
 
-    ⚠ `percorso` vuoto NON e' un errore silenzioso: il banco continua a
-      misurare e a stampare, ma `dichiarato_senza_registro` diventa vero e chi
-      legge il verdetto lo vede.  ⛔ Un registro assente e un registro vuoto non
-      devono avere lo stesso aspetto.
+    ⚠ An empty `percorso` is NOT a silent error: the bench goes on
+      measuring and printing, but `dichiarato_senza_registro` becomes true and whoever
+      reads the verdict sees it.  ⛔ An absent log and an empty log must not
+      look the same.
     """
 
     def __init__(self, percorso, bersaglio, porta, giro=None, md5=None):
@@ -223,21 +223,21 @@ class Registro:
         self.bersaglio = bersaglio
         self.porta = porta
         self.giro = giro or time.strftime("%Y%m%d-%H%M%S")
-        # ⛔ L'impronta md5 del BINARIO misurato, non del sorgente: e' l'unico
-        #    modo di sapere, sei ore dopo, se due giri hanno misurato lo stesso
-        #    programma.  ⚠ `[M]` 11 agosto 2026: il binario del prodotto era
-        #    piu' vecchio dei sorgenti di un'ora, e il registro dell'ultima
-        #    accensione portava una formulazione di due generazioni prima.
+        # ⛔ The md5 fingerprint of the measured BINARY, not of the source: it is the only
+        #    way of knowing, six hours later, whether two rounds measured the same
+        #    program.  ⚠ `[M]` 11 Aug 2026: the product binary was
+        #    an hour older than the sources, and the log of the last
+        #    start carried a wording from two generations before.
         self.md5 = md5 or "ignota"
         self.scritte = 0
         self.guasto = None
         self.profilo = profilo(bersaglio)
 
     def apri_giro(self, banco, scena, impronta_vista=None, extra=None):
-        """⛔ La prima riga di ogni giro, e porta l'impronta VISTA.
+        """⛔ The first line of every round, and it carries the fingerprint SEEN.
 
-        `impronta_vista` e' quel che il registro del SERVER dice di essere; se
-        e' `None` vuol dire «non l'ho guardata», che non e' «combacia».
+        `impronta_vista` is what the SERVER's log says it is; if
+        it is `None` it means "I did not look at it", which is not "it matches".
         """
         rec = {"tipo": "giro", "banco": banco, "scena": scena,
                "impronta_dichiarata": self.bersaglio,
@@ -250,14 +250,14 @@ class Registro:
         return self.scrivi(rec)
 
     def scrivi(self, rec):
-        """⛔ Il bersaglio, la porta e il giro entrano in OGNI riga, e li mette
-        questa funzione: un campo che quattro banchi devono ricordarsi di
-        aggiungere e' un campo che prima o poi manca in uno dei quattro."""
+        """⛔ The target, the port and the round go into EVERY line, and this
+        function puts them there: a field that four benches must remember to
+        add is a field that sooner or later is missing in one of the four."""
         fuori = {"giro": self.giro, "bersaglio": self.bersaglio,
                  "porta": self.porta, "md5": self.md5, "quando": time.time()}
         fuori.update(rec)
         if not self.percorso:
-            self.guasto = "nessun --uscita: questo giro non lascia registro"
+            self.guasto = "no --uscita: this round leaves no log"
             return False
         try:
             with open(self.percorso, "a") as f:
@@ -265,21 +265,21 @@ class Registro:
                 f.flush()
                 os.fsync(f.fileno())
         except OSError as e:
-            # ⛔ E non si tace: un registro che non si scrive e uno che non si
-            #    e' chiesto sono due fatti diversi, e il secondo e' colpa di chi
-            #    lancia mentre il primo e' un disco.
-            self.guasto = f"il registro «{self.percorso}» non si scrive: {e}"
+            # ⛔ And it is not kept quiet: a log that cannot be written and one that was not
+            #    asked for are two different facts, and the second is the fault of whoever
+            #    launches while the first is a disk.
+            self.guasto = f"the log «{self.percorso}» cannot be written: {e}"
             return False
         self.scritte += 1
         return True
 
     def riassunto(self):
-        """La riga che ogni banco stampa in fondo: quante ne ha scritte e dove.
+        """The line every bench prints at the end: how many it wrote and where.
 
-        ⛔ Con il denominatore: «ho scritto il registro» senza un numero e'
-           vero anche quando le righe sono zero (`LEZIONI.md` §1.9, regola 6 —
-           anche un verdetto ha un denominatore)."""
+        ⛔ With the denominator: "I wrote the log" without a number is
+           true even when the lines are zero (`LEZIONI.md` §1.9, rule 6 —
+           a verdict too has a denominator)."""
         if self.guasto:
-            return f"⛔ REGISTRO: {self.guasto}  ({self.scritte} righe scritte)"
-        return (f"registro del giro «{self.giro}» contro «{self.bersaglio}»: "
-                f"{self.scritte} righe in {self.percorso}")
+            return f"⛔ LOG: {self.guasto}  ({self.scritte} lines written)"
+        return (f"log of round «{self.giro}» against «{self.bersaglio}»: "
+                f"{self.scritte} lines in {self.percorso}")

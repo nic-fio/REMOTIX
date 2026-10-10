@@ -1,17 +1,17 @@
 #!/bin/bash
-# 19-decodifica-chrome.sh — Chrome headless (sul server, come utente normale)
-# decodifica con WebCodecs ogni flusso della matrice, VA-API e Vulkan, e i due
-# esiti si mettono in colonna: stessi fotogrammi decodificati, stesse impronte.
+# 19-decodifica-chrome.sh — headless Chrome (on the server, as a normal user)
+# decodes with WebCodecs every stream of the matrix, VA-API and Vulkan, and the two
+# outcomes are put side by side: same decoded frames, same fingerprints.
 #
-#   bash 19-decodifica-chrome.sh /media/REMOTIX/src/f19-vulkan/tmp/confronto [flag di Chrome…]
+#   bash 19-decodifica-chrome.sh /media/REMOTIX/src/f19-vulkan/tmp/confronto [Chrome flags…]
 #
-# ⚠ La pagina scrive l'esito con `console.log`, e lo si legge dal registro di
-#   Chrome (`--enable-logging=stderr`): `--dump-dom` col tempo virtuale non
-#   aspetta ne' il fetch del file ne' il decodificatore.  Chrome resta aperto
-#   finche' non lo chiude `timeout`.
-# ⚠ HEVC in Chrome esiste SOLO in hardware: senza la GPU `isConfigSupported`
-#   dice no per tutt'e due le versioni, e un «0 = 0» non e' un PASS — la
-#   tabella lo scrive come NON PROVATO.
+# ⚠ The page writes the outcome with `console.log`, and it is read from Chrome's
+#   log (`--enable-logging=stderr`): `--dump-dom` with virtual time does not
+#   wait for either the file fetch or the decoder.  Chrome stays open
+#   until `timeout` closes it.
+# ⚠ HEVC in Chrome exists ONLY in hardware: without the GPU `isConfigSupported`
+#   says no for both versions, and a "0 = 0" is not a PASS — the
+#   table writes it as NON PROVATO.
 set -u
 CARTELLA=${1:?cartella con i flussi *.bin e esiti.jsonl}; shift
 PAGINA=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../18-scheda/18-decodifica-chrome.html
@@ -38,7 +38,7 @@ while read -r prova versione codec; do
 		| grep -o 'ESITO {[^"]*"[^}]*}' | head -1)
 	echo "$prova $versione $codec ${riga#ESITO }"
 done < "$PROFILO/lista" | tee "$CARTELLA/chrome.txt"
-# VA-API contro Vulkan: stessi decodificati?  (le impronte DIVERSE qui sono attese: due codificatori diversi)
+# VA-API against Vulkan: same decoded?  (DIFFERENT fingerprints are expected here: two different encoders)
 python3 - "$CARTELLA/chrome.txt" <<'EOF'
 import json, sys
 per = {}
@@ -50,13 +50,13 @@ rossi = 0; passati = 0; non_provati = 0
 for prova, v in sorted(per.items()):
     a, b = v.get("vaapi"), v.get("vulkan")
     if not a or not b:
-        print(f"FAIL {prova}: manca una versione"); rossi += 1; continue
+        print(f"FAIL {prova}: one version is missing"); rossi += 1; continue
     if not a.get("supportato") and not b.get("supportato"):
-        print(f"NON PROVATO {prova}: Chrome non decodifica {b.get('codec')} qui (serve la GPU)"); non_provati += 1; continue
+        print(f"NON PROVATO {prova}: Chrome does not decode {b.get('codec')} here (the GPU is needed)"); non_provati += 1; continue
     uguali = a["decodificati"] > 0 and a["decodificati"] == b["decodificati"] and not b["errori"] and b.get("supportato")
-    print(f"{'PASS' if uguali else 'FAIL'} {prova}: vaapi {a['decodificati']}/{a['chunk']} vulkan {b['decodificati']}/{b['chunk']} · misura {b.get('misura')} · errori {b['errori']} · impronte {'uguali' if a['impronte']==b['impronte'] else 'DIVERSE'}")
+    print(f"{'PASS' if uguali else 'FAIL'} {prova}: vaapi {a['decodificati']}/{a['chunk']} vulkan {b['decodificati']}/{b['chunk']} · size {b.get('misura')} · errors {b['errori']} · fingerprints {'equal' if a['impronte']==b['impronte'] else 'DIFFERENT'}")
     rossi += 0 if uguali else 1
     passati += 1 if uguali else 0
-print(f"{passati} PASS · {rossi} FAIL · {non_provati} non provati")
+print(f"{passati} PASS · {rossi} FAIL · {non_provati} not tested")
 sys.exit(1 if rossi else 0)
 EOF

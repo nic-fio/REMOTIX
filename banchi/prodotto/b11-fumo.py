@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Prova di fumo dei guasti di B11: si guarda che il server MENTA davvero.
+"""Smoke test of the B11 faults: it checks that the server really LIES.
 
-⛔ Non prova la pagina — prova il BANCO.  Se il server guasto non mentisse, i
-   dodici casi di B11 fallirebbero tutti per la ragione sbagliata, e il rosso
-   finirebbe sulla pagina invece che sull'innesto.
+⛔ It does not test the page — it tests the BENCH.  If the faulty server did not
+   lie, the twelve cases of B11 would all fail for the wrong reason, and the red
+   would land on the page instead of on the graft.
 """
 import asyncio, importlib.util, os, struct, sys
 QUI = "/srv/src"

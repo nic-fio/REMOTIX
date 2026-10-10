@@ -2,88 +2,88 @@
 # -*- coding: utf-8 -*-
 """
 ===========================================================================
-11-c11 — ⭐⭐ «LE SCATOLE SONO ALLINEATE» — la maglia che guarda LA RETE
+11-c11 — ⭐⭐ «THE BOXES ARE ALIGNED» — the mesh that looks at THE NET
 ===========================================================================
 
     python3 11-c11-allineamento.py
     python3 11-c11-allineamento.py --certifica
 
-⛔ Questa maglia **non prova il prodotto**: prova che i confronti fra desktop
-   valgano qualcosa.  ⭐ Ed e' il guasto che l'utente ha nominato per PRIMO,
-   con parole sue:
+⛔ This mesh **does not test the product**: it tests that the comparisons between desktops
+   are worth something.  ⭐ And it is the fault the user named FIRST,
+   in his own words:
 
-       *«affinche' i numeri siano coerenti e' necessario tenere allineati i
-         container.  Se sul container gnome abbiamo remotix v1 e sul container
-         kde remotix v1.2 andiamo a sbattere.»*
+       *«for the numbers to be consistent the containers must be kept
+         aligned.  If on the gnome container we have remotix v1 and on the
+         kde container remotix v1.2 we crash.»*
 
-   ⇒ `fasi/11…` D5, e la maglia C11 di §4.2.
-
----------------------------------------------------------------------------
-⛔⛔ E SI GUARDA QUEL CHE C'E' DENTRO, NON QUEL CHE C'E' SCRITTO NELLA RICETTA
----------------------------------------------------------------------------
-
-La prima idea era confrontare le **ricette**.  ⛔ Non regge: le ricette sono
-diverse **apposta** (ogni scatola ha il suo desktop), e un confronto che deve
-prima «togliere le parti diverse» diventa un confronto su cui si discute.
-
-⭐ Quel che conta davvero non e' che le ricette si somiglino: e' che le
-  **scatole accese** siano d'accordo su tutto quel che NON e' il desktop.
-  ⇒ Si chiede a ciascuna che versione ha di ogni pezzo dichiarato, e si guarda
-    se rispondono la stessa cosa.  «Scritto non e' in vigore» (E1) applicato
-    all'ambiente: ⛔ una ricetta ricostruita ieri e una di un mese fa possono
-    avere lo stesso testo e pacchetti diversi.
+   ⇒ `fasi/11…` D5, and mesh C11 of §4.2.
 
 ---------------------------------------------------------------------------
-⭐ CHE COSA DEV'ESSERE UGUALE, e perche' ciascuno
+⛔⛔ AND WE LOOK AT WHAT IS INSIDE, NOT AT WHAT IS WRITTEN IN THE RECIPE
 ---------------------------------------------------------------------------
 
-  la base            `debian:13` ⇒ una distribuzione diversa fa numeri diversi
-  mesa / libva       ⛔ il CODIFICATORE.  Due mesa diversi e i millisecondi
-                     non si confrontano piu'
-  pipewire           il percorso della cattura
-  ffmpeg / libav*    quel che decodifica quando si giudica un'immagine
-  firefox-esr        ⛔ il bersaglio di C8: due Firefox diversi, due difetti
-                     diversi
-  libc / libssl      il fondo di tutto
-  ⭐ IL PRODOTTO      md5 del binario: ⛔ **e' la ragione per cui esiste questa
-                     maglia**.  Un binario diverso per scatola e ogni confronto
-                     fra desktop e' aria fritta
+The first idea was to compare the **recipes**.  ⛔ It does not hold: the recipes are
+different **on purpose** (every box has its own desktop), and a comparison that must
+first «remove the different parts» becomes a comparison people argue about.
 
-⛔ E QUEL CHE **NON** DEV'ESSERE UGUALE, dichiarato: il **desktop**.  Ogni
-   scatola ha il suo, ed e' il punto.  ⇒ Il pacchetto del desktop lo dice
-   l'ADATTATORE, e questa maglia lo stampa senza confrontarlo.
+⭐ What really counts is not that the recipes resemble each other: it is that the
+  **running boxes** agree on everything that is NOT the desktop.
+  ⇒ Each is asked which version it has of every declared piece, and we look
+    whether they answer the same thing.  «Written is not in force» (E1) applied
+    to the environment: ⛔ a recipe rebuilt yesterday and one from a month ago can
+    have the same text and different packages.
 
 ---------------------------------------------------------------------------
-GLI ESITI (§4.5 del documento di fase)
+⭐ WHAT MUST BE THE SAME, and why each one
 ---------------------------------------------------------------------------
 
-  0  ⭐ le scatole accese sono allineate
-  1  ⛔ almeno un pezzo ha versioni diverse fra le scatole ⇒ rosso
-  3  ⛔ non ho potuto guardare (podman non c'e', nessuna scatola accesa,
-     una scatola non risponde) — ⛔ e NON e' un rosso
-  2  il terreno non regge, o l'uso e' sbagliato
+  the base           `debian:13` ⇒ a different distribution makes different numbers
+  mesa / libva       ⛔ the ENCODER.  Two different mesas and the milliseconds
+                     can no longer be compared
+  pipewire           the capture path
+  ffmpeg / libav*    what decodes when an image is judged
+  firefox-esr        ⛔ C8's target: two different Firefoxes, two different
+                     defects
+  libc / libssl      the bottom of everything
+  ⭐ THE PRODUCT      md5 of the binary: ⛔ **it is the reason this
+                     mesh exists**.  A different binary per box and every comparison
+                     between desktops is hot air
+
+⛔ AND WHAT MUST **NOT** BE THE SAME, declared: the **desktop**.  Every
+   box has its own, and that is the point.  ⇒ The desktop package is told by
+   the ADAPTER, and this mesh prints it without comparing it.
+
+---------------------------------------------------------------------------
+THE OUTCOMES (§4.5 of the phase document)
+---------------------------------------------------------------------------
+
+  0  ⭐ the running boxes are aligned
+  1  ⛔ at least one piece has different versions across the boxes ⇒ red
+  3  ⛔ I could not look (podman is not there, no box running,
+     a box does not answer) — ⛔ and it is NOT a red
+  2  the terrain does not hold, or the usage is wrong
 ===========================================================================
 """
 import argparse
 import subprocess
 import sys
 
-# ⛔ L'elenco e' DICHIARATO qui e stampato in ogni esito: «allineate» e' un
-#    verdetto, e un verdetto senza il suo metro e' un'opinione.
+# ⛔ The list is DECLARED here and printed in every outcome: «aligned» is a
+#    verdict, and a verdict without its yardstick is an opinion.
 DEVE_COMBACIARE = [
     ("la base", "base"),
     ("mesa-va-drivers", "pacchetto"),
     ("va-driver-all", "pacchetto"),
     ("libva2", "pacchetto"),
-    # ⚠ I nomi portano il `t64` e NON e' un dettaglio: in Debian 13 i pacchetti
-    #   toccati dalla transizione del tempo a 64 bit si chiamano cosi'.  ⛔ La
-    #   prima stesura chiedeva `libssl3` e `libpipewire-0.3-0`, che NON esistono
-    #   ⇒ rispondeva «?» per tutti, e ⛔ «?» uguale per tutti PASSA il confronto.
-    #   Cioe' tre voci su tredici non stavano guardando niente.
+    # ⚠ The names carry the `t64` and it is NOT a detail: in Debian 13 the packages
+    #   touched by the 64-bit time transition are called like that.  ⛔ The
+    #   first draft asked for `libssl3` and `libpipewire-0.3-0`, which do NOT exist
+    #   ⇒ it answered «?» for all, and ⛔ «?» equal for all PASSES the comparison.
+    #   That is, three entries out of thirteen were looking at nothing.
     ("libpipewire-0.3-0t64", "pacchetto"),
-    # ⭐ Aggiunta il 26 ago 2026 con C5: `pw-play`/`pw-cli` stanno in
-    #   `pipewire-bin`, ed e' da li' che C5 tira fuori il suono.  ⛔ Senza questa
-    #   voce due scatole potevano avere strumenti audio diversi e C11 taceva.
+    # ⭐ Added on 26 Aug 2026 with C5: `pw-play`/`pw-cli` live in
+    #   `pipewire-bin`, and that is where C5 gets the sound from.  ⛔ Without this
+    #   entry two boxes could have different audio tools and C11 stayed silent.
     ("pipewire-bin", "pacchetto"),
     ("libavcodec61", "pacchetto"),
     ("ffmpeg", "pacchetto"),
@@ -92,18 +92,18 @@ DEVE_COMBACIARE = [
     ("libssl3t64", "pacchetto"),
     ("libei1", "pacchetto"),
     ("libpci3", "pacchetto"),
-    # ⭐ Aggiunte il 21 set 2026 (fase 13): gli ARBITRI degli appunti di C17 —
-    #   `wl-clipboard` dove il compositore ha `data-control`, GTK4 (per
-    #   `appunti-gtk.py`) dove non ce l'ha.  Fino a ieri stavano solo in gnome
-    #   e kde, e ⛔ C11 non lo vedeva: non erano in questa lista.
-    # ⚠ LA SCELTA, scritta: dentro la lista, e non «basta metterli in tutte e
-    #   quattro le ricette».  Una ricetta non e' la scatola (E1): due scatole
-    #   ricostruite in giorni diversi possono avere l'arbitro in versioni
-    #   diverse, e allora il verde di C17 su una e il rosso sull'altra non
-    #   direbbero piu' «e' il desktop».  ⛔ Il PREZZO, dichiarato: finche'
-    #   `rete11-xfce` e `rete11-lxqt` non si ricostruiscono dalla ricetta
-    #   nuova, qui rispondono «(non c e)» e C11 da' ROSSO — ed e' un rosso
-    #   vero: quelle due scatole non sono allineate alle altre.
+    # ⭐ Added on 21 Sep 2026 (phase 13): C17's clipboard ARBITERS —
+    #   `wl-clipboard` where the compositor has `data-control`, GTK4 (for
+    #   `appunti-gtk.py`) where it does not.  Until yesterday they were only in gnome
+    #   and kde, and ⛔ C11 did not see it: they were not in this list.
+    # ⚠ THE CHOICE, written: inside the list, and not «it is enough to put them in all
+    #   four recipes».  A recipe is not the box (E1): two boxes
+    #   rebuilt on different days can have the arbiter in different
+    #   versions, and then C17's green on one and red on the other would no
+    #   longer say «it is the desktop».  ⛔ The PRICE, declared: until
+    #   `rete11-xfce` and `rete11-lxqt` are rebuilt from the new
+    #   recipe, here they answer «(not there)» and C11 gives RED — and it is a real
+    #   red: those two boxes are not aligned with the others.
     ("wl-clipboard", "pacchetto"),
     ("python3-gi", "pacchetto"),
     ("gir1.2-gtk-4.0", "pacchetto"),
@@ -114,8 +114,8 @@ DESKTOP = ("gnome", "kde", "xfce", "lxqt")
 
 
 def dentro(scatola, comando):
-    """⛔ Niente `sh -c` annidati: `LEZIONI.md` §1.46 — un comando che perde le
-       virgolette non esegue niente e restituisce 0."""
+    """⛔ No nested `sh -c`: `LEZIONI.md` §1.46 — a command that loses its
+       quotes runs nothing and returns 0."""
     p = subprocess.run(["podman", "exec", scatola, "/bin/sh", "-c", comando],
                        capture_output=True, text=True, timeout=90)
     if p.returncode != 0:
@@ -124,7 +124,7 @@ def dentro(scatola, comando):
 
 
 def raccogli(scatola):
-    """Torna il dizionario di quella scatola, o ⛔ `None` se non risponde."""
+    """Returns the dictionary of that box, or ⛔ `None` if it does not answer."""
     vivo = subprocess.run(["podman", "inspect", "-f", "{{.State.Running}}", scatola],
                           capture_output=True, text=True)
     if vivo.returncode != 0 or vivo.stdout.strip() != "true":
@@ -135,12 +135,12 @@ def raccogli(scatola):
         if che != "pacchetto":
             continue
         d[nome] = dentro(scatola, "dpkg-query -W -f='${Version}' %s 2>/dev/null "
-                                  "|| echo '(non c e)'" % nome)
+                                  "|| echo '(not there)'" % nome)
     d["il prodotto (md5)"] = dentro(
         scatola, "md5sum /opt/remotix/remotix 2>/dev/null | cut -c1-12 "
-                 "|| echo '(non ancora dentro)'")
-    # ⚠ Il desktop si STAMPA e non si confronta: e' l unica cosa che DEVE
-    #   essere diversa.  E lo dice l adattatore, non questo file.
+                 "|| echo '(not inside yet)'")
+    # ⚠ The desktop is PRINTED and not compared: it is the only thing that MUST
+    #   be different.  And the adapter says it, not this file.
     pacco = dentro(scatola, ". /usr/local/lib/rete11/adattatore.sh 2>/dev/null "
                             "&& adattatore_pacchetto")
     d["_desktop"] = "%s %s" % (pacco or "?", dentro(
@@ -150,11 +150,11 @@ def raccogli(scatola):
 
 
 def giudica(tavola):
-    """Dato {scatola: {voce: valore}}, dice quali voci NON combaciano.
+    """Given {box: {entry: value}}, says which entries do NOT match.
 
-    ⛔ Torna `None` se non c'e' abbastanza per giudicare: **una scatola sola
-       non e' un allineamento**, e dirlo verde sarebbe la bugia piu' comoda di
-       tutta questa maglia.
+    ⛔ Returns `None` if there is not enough to judge: **a single box
+       is not an alignment**, and calling it green would be the most convenient lie of
+       this whole mesh.
     """
     presenti = {n: d for n, d in tavola.items() if d}
     if len(presenti) < 2:
@@ -165,57 +165,57 @@ def giudica(tavola):
         for scatola, d in presenti.items():
             v = d.get(nome)
             valori.setdefault(v, []).append(scatola)
-        # ⚠ Una voce che NESSUNO ha (per esempio il prodotto non ancora messo
-        #   dentro) e' uguale per tutti: non e' un disallineamento.
+        # ⚠ An entry that NOBODY has (for example the product not yet put
+        #   inside) is the same for all: it is not a misalignment.
         if len(valori) > 1:
             guai.append((nome, valori))
     return guai
 
 
 def certifica():
-    """⛔ Si dimostra che il giudice SA dare rosso — e che sa dire «non lo so»."""
+    """⛔ We prove that the judge CAN give red — and that it can say «I do not know»."""
     casi = [
-        ("due scatole d'accordo su tutto",
+        ("two boxes agreeing on everything",
          {"a": {n: "1" for n, _ in DEVE_COMBACIARE},
           "b": {n: "1" for n, _ in DEVE_COMBACIARE}}, 0),
-        ("⭐ il PRODOTTO diverso — il guasto che l'utente ha nominato per primo",
+        ("⭐ the PRODUCT different — the fault the user named first",
          {"a": dict({n: "1" for n, _ in DEVE_COMBACIARE},
                     **{"il prodotto (md5)": "aaaa"}),
           "b": dict({n: "1" for n, _ in DEVE_COMBACIARE},
                     **{"il prodotto (md5)": "bbbb"})}, 1),
-        ("mesa diverso: i millisecondi non si confrontano piu'",
+        ("mesa different: the milliseconds can no longer be compared",
          {"a": dict({n: "1" for n, _ in DEVE_COMBACIARE},
                     **{"mesa-va-drivers": "25.0.7"}),
           "b": dict({n: "1" for n, _ in DEVE_COMBACIARE},
                     **{"mesa-va-drivers": "25.1.0"})}, 1),
-        ("⛔ una scatola sola NON e' un allineamento",
+        ("⛔ a single box is NOT an alignment",
          {"a": {n: "1" for n, _ in DEVE_COMBACIARE}, "b": None}, None),
-        ("⛔ nessuna scatola accesa",
+        ("⛔ no box running",
          {"a": None, "b": None}, None),
-        ("una voce che manca a TUTTI non e' un disallineamento",
+        ("an entry missing from ALL is not a misalignment",
          {"a": dict({n: "1" for n, _ in DEVE_COMBACIARE},
-                    **{"il prodotto (md5)": "(non ancora dentro)"}),
+                    **{"il prodotto (md5)": "(not inside yet)"}),
           "b": dict({n: "1" for n, _ in DEVE_COMBACIARE},
-                    **{"il prodotto (md5)": "(non ancora dentro)"})}, 0),
+                    **{"il prodotto (md5)": "(not inside yet)"})}, 0),
     ]
-    print("== certificazione del giudice di C11 ==")
+    print("== certification of the C11 judge ==")
     guai = 0
     for nome, tavola, atteso in casi:
         r = giudica(tavola)
         ottenuto = None if r is None else len(r)
         ok = ottenuto == atteso
-        print("  %s  %-58s  disallineamenti=%s (atteso %s)"
+        print("  %s  %-58s  misalignments=%s (expected %s)"
               % ("OK " if ok else "NO ", nome,
-                 "non lo so" if ottenuto is None else ottenuto,
-                 "non lo so" if atteso is None else atteso))
+                 "I do not know" if ottenuto is None else ottenuto,
+                 "I do not know" if atteso is None else atteso))
         if not ok:
             guai += 1
     print()
     if guai:
-        print("⛔ il giudice NON e' affidabile: %d casi sbagliati" % guai)
+        print("⛔ the judge is NOT reliable: %d wrong cases" % guai)
         return 1
-    print("⭐ il giudice vede il disallineamento, e ⛔ non chiama «allineate» due")
-    print("   scatole di cui una non c'e'")
+    print("⭐ the judge sees the misalignment, and ⛔ does not call «aligned» two")
+    print("   boxes of which one is not there")
     return 0
 
 
@@ -229,52 +229,52 @@ def main():
     if a.certifica:
         sys.exit(certifica())
 
-    # ⚠ `command` e' un builtin della shell, non un programma: cercarlo con
-    #   `subprocess` da' `FileNotFoundError`.  Si chiede a podman se c e'.
+    # ⚠ `command` is a shell builtin, not a program: looking for it with
+    #   `subprocess` gives `FileNotFoundError`.  We ask podman whether it is there.
     try:
         subprocess.run(["podman", "--version"], capture_output=True, timeout=30)
-    # ⛔ `subprocess.TimeoutExpired` NON discende da `OSError`: senza
-    #    nominarla, un comando che si pianta fa una traccia ⇒ Python esce **1**
-    #    ⇒ il gancio legge ROSSO su un guasto del BANCO (`LEZIONI.md` §1.51, e
-    #    la cura che C10 ha gia' in `radice_del_deposito()`).
-    # ⚠ E questa maglia sta nella famiglia `rete`, cioe' scatta a OGNI
-    #   cambiamento, e fa ~76 `podman exec` su quattro scatole: e' proprio
-    #   quella dove un comando lento e' piu' probabile.
+    # ⛔ `subprocess.TimeoutExpired` does NOT descend from `OSError`: without
+    #    naming it, a command that hangs produces a traceback ⇒ Python exits **1**
+    #    ⇒ the hook reads RED on a fault of the BENCH (`LEZIONI.md` §1.51, and
+    #    the cure C10 already has in `radice_del_deposito()`).
+    # ⚠ And this mesh is in the `rete` family, that is it fires at EVERY
+    #   change, and it does ~76 `podman exec` on four boxes: it is precisely
+    #   the one where a slow command is most likely.
     except (OSError, subprocess.SubprocessError):
-        print("⛔ podman non c'e' o non risponde: ⇒ non ho potuto guardare")
+        print("⛔ podman is not there or does not answer: ⇒ I could not look")
         sys.exit(3)
 
     nomi = [a.prefisso + d for d in a.desktop.split(",") if d]
     tavola = {n: raccogli(n) for n in nomi}
 
-    print("== C11 — le scatole sono allineate? ==")
-    print("   ⛔ si guarda quel che c'e' DENTRO le scatole accese, non quel che")
-    print("      c'e' scritto nelle ricette\n")
+    print("== C11 — are the boxes aligned? ==")
+    print("   ⛔ we look at what is INSIDE the running boxes, not at what")
+    print("      is written in the recipes\n")
     accese = [n for n, d in tavola.items() if d]
     for n in nomi:
         d = tavola[n]
         print("   %-14s %s" % (n, ("desktop: %s" % d["_desktop"]) if d
-                               else "⛔ spenta o non risponde"))
+                               else "⛔ off or not answering"))
     print()
 
-    # ⛔⛔ E PRIMA DI GIUDICARE: una voce a cui NESSUNA scatola sa rispondere
-    #    e' uguale per tutti, quindi **passa** — e non ha guardato niente.
-    #    `[M]` 26 agosto 2026: tre voci su tredici erano cosi (nomi sbagliati),
-    #    e il verde su di loro non valeva niente.  ⇒ Si dichiara.
+    # ⛔⛔ AND BEFORE JUDGING: an entry NO box can answer
+    #    is the same for all, so it **passes** — and it has looked at nothing.
+    #    `[M]` 26 August 2026: three entries out of thirteen were like that (wrong names),
+    #    and the green on them was worth nothing.  ⇒ It is declared.
     mute = [nome for nome, _ in DEVE_COMBACIARE
             if all((tavola[n] or {}).get(nome) in (None, "", "?")
                    for n in nomi if tavola[n])]
     r = giudica(tavola)
     if r is None:
-        print("⛔ scatole accese: %d — ⭐ e UNA SOLA non e' un allineamento."
+        print("⛔ boxes running: %d — ⭐ and ONE ONLY is not an alignment."
               % len(accese))
-        print("   ⇒ non ho potuto guardare")
+        print("   ⇒ I could not look")
         sys.exit(3)
 
-    # ⭐ La tabella si stampa SEMPRE, verde o rosso: e' quel che va confrontato
-    #   fra le quattro scatole, e chi legge deve poterla vedere.
+    # ⭐ The table is ALWAYS printed, green or red: it is what must be compared
+    #   across the four boxes, and whoever reads must be able to see it.
     largh = max(len(n) for n, _ in DEVE_COMBACIARE)
-    print("   %-*s  %s" % (largh, "voce", "  ".join("%-16s" % n for n in accese)))
+    print("   %-*s  %s" % (largh, "entry", "  ".join("%-16s" % n for n in accese)))
     for nome, _che in DEVE_COMBACIARE:
         valori = [tavola[n].get(nome) or "?" for n in accese]
         segno = "  " if len(set(valori)) == 1 else "⛔"
@@ -282,26 +282,26 @@ def main():
                                 "  ".join("%-16s" % v[:16] for v in valori)))
     print()
     if mute:
-        print("⚠ ⛔ %d voci a cui NESSUNA scatola sa rispondere — e una voce muta"
+        print("⚠ ⛔ %d entries NO box can answer — and a silent entry"
               % len(mute))
-        print("   PASSA il confronto senza aver guardato niente:")
+        print("   PASSES the comparison without having looked at anything:")
         for nome in mute:
             print("     · %s" % nome)
-        print("   ⇒ vanno corrette, o questa maglia si racconta storie.\n")
+        print("   ⇒ they must be fixed, or this mesh tells itself stories.\n")
     if r:
-        print("⛔⛔ ROSSO — %d voci NON combaciano fra le scatole:" % len(r))
+        print("⛔⛔ RED — %d entries do NOT match across the boxes:" % len(r))
         for nome, valori in r:
             print("   · %s" % nome)
             for v, chi in valori.items():
                 print("       %-16s  %s" % (v, ", ".join(chi)))
         print()
-        print("   ⇒ finche' e' cosi', ⛔ **i confronti fra desktop non valgono**:")
-        print("     un numero peggiore direbbe «e' il desktop» quando invece e'")
-        print("     un'altra versione di qualcos'altro (D5).")
+        print("   ⇒ as long as it is like this, ⛔ **the comparisons between desktops are not valid**:")
+        print("     a worse number would say «it is the desktop» when instead it is")
+        print("     another version of something else (D5).")
         return 1
-    print("⭐ le %d scatole accese sono allineate su tutte le %d voci dichiarate"
+    print("⭐ the %d running boxes are aligned on all the %d declared entries"
           % (len(accese), len(DEVE_COMBACIARE)))
-    print("⚠ e il DESKTOP e' diverso in ognuna, come dev'essere: e' il punto.")
+    print("⚠ and the DESKTOP is different in each, as it must be: that is the point.")
     return 0
 
 

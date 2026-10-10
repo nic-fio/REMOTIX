@@ -1,148 +1,148 @@
 /*
- * 02-cattura-fotogramma — UN fotogramma preso dalla sessione GNOME, consegnato
- * in memoria con il tipo di buffer DICHIARATO.  Banco della sotto-fase F2.2.
+ * 02-cattura-fotogramma — ONE frame taken from the GNOME session, delivered
+ * in memory with the buffer type DECLARED.  Bench of sub-phase F2.2.
  *
- * ⛔ PERCHE' ESISTE, VISTO CHE `misura-cattura` C'E' GIA'
+ * ⛔ WHY IT EXISTS, GIVEN THAT `misura-cattura` IS ALREADY THERE
  *
- * Lo strumento della fase 0 (`fondamenta/banchi/banco-compositori/misura-cattura.c`) e'
- * certificato, riproduce i 36 ± 2 fotogrammi di Mutter, e resta il controllo
- * positivo storico di tutto il progetto.  ⛔ Ma non guarda **mai** dentro il
- * buffer: conta i fotogrammi, legge il tipo di dato, il danno, la fence e gli
- * intervalli — e i pixel non li tocca.  Riga per riga: `su_processo` prende
- * `datas[0]`, ne legge `type`, `fd`, `chunk->stride`, e rimette il buffer in
- * coda con `pw_stream_queue_buffer`.  Nessuna lettura di `piano->data`.
+ * The phase 0 tool (`fondamenta/banchi/banco-compositori/misura-cattura.c`) is
+ * certified, reproduces Mutter's 36 ± 2 frames, and stays the historical positive
+ * control of the whole project.  ⛔ But it **never** looks inside the
+ * buffer: it counts the frames, reads the data type, the damage, the fence and the
+ * intervals — and it does not touch the pixels.  Line by line: `su_processo` takes
+ * `datas[0]`, reads its `type`, `fd`, `chunk->stride`, and puts the buffer back in
+ * the queue with `pw_stream_queue_buffer`.  No read of `piano->data`.
  *
- * ⇒ **Un fotogramma completamente NERO passerebbe la fase 0 con il massimo dei
- *   voti**: 36 al secondo, danno parziale, quattro buffer riciclati, zero salti
- *   di sequenza.  Tutto verde, e sullo schermo il nulla.
+ * ⇒ **A completely BLACK frame would pass phase 0 with full
+ *   marks**: 36 per second, partial damage, four recycled buffers, zero sequence
+ *   skips.  All green, and on the screen nothing.
  *
- * ⛔ E il nero non e' un caso di scuola: `STUDI.md` §gnome §3.1 dice che in headless
- *   `needs_outputs=false`, quindi **senza `--virtual-monitor` la sessione parte
- *   viva, completa e nera**, ed e' la prova guasta M9 del piano di misure di
- *   `STUDI.md` §gnome §13.  Il piano della fase 2 (`PIANO.md`) lo scrive a lettere
- *   intere: *«una sessione nera e perfettamente viva e' la cosa che si scambia
- *   per un difetto di cattura, e si cerca per mezza giornata dalla parte
- *   sbagliata»*.  Il fotogramma NERO E VALIDO e' il guasto peggiore di questa
- *   sotto-fase, e serve uno strumento che sappia vederlo.
+ * ⛔ And black is not a textbook case: `STUDI.md` §gnome §3.1 says that in headless mode
+ *   `needs_outputs=false`, so **without `--virtual-monitor` the session starts
+ *   alive, complete and black**, and it is the broken test M9 of the measurement plan of
+ *   `STUDI.md` §gnome §13.  The phase 2 plan (`PIANO.md`) writes it in
+ *   full: *«a black and perfectly alive session is the thing that gets mistaken
+ *   for a capture defect, and you search for half a day on the wrong
+ *   side»*.  The BLACK AND VALID frame is the worst fault of this
+ *   sub-phase, and a tool that can see it is needed.
  *
- * Questo programma fa quindi la cosa che l'altro non fa, e **solo quella**:
- * prende un fotogramma, lo scrive su disco byte per byte, e accanto ci mette un
- * manifesto con tutto quel che serve per giudicarlo senza doverlo dedurre.  Chi
- * giudica e' un altro programma (`02-cattura-giudica.py`), e la separazione e'
- * voluta: e' l'unico modo di innestare un guasto nei PIXEL — un fotogramma nero
- * al posto di quello vero — senza toccare ne' il produttore ne' il giudice.
+ * This program therefore does the thing the other does not, and **only that**:
+ * it takes a frame, writes it to disk byte by byte, and next to it puts a
+ * manifest with everything needed to judge it without having to deduce it.  Whoever
+ * judges is another program (`02-cattura-giudica.py`), and the separation is
+ * intended: it is the only way of injecting a fault into the PIXELS — a black frame
+ * instead of the real one — without touching either the producer or the judge.
  *
  * ---------------------------------------------------------------------------
- * ⛔ QUEL CHE QUESTO PROGRAMMA **NON** DIMOSTRA — scritto qui perche' e' la
- *    forma d'errore E1 di `REVIEWER.md` §2, e questo e' esattamente il punto in
- *    cui e' gia' stata pagata due volte (`LEZIONI.md` §1.11):
+ * ⛔ WHAT THIS PROGRAM DOES **NOT** PROVE — written here because it is
+ *    error form E1 of `REVIEWER.md` §2, and this is exactly the point where
+ *    it has already been paid for twice (`LEZIONI.md` §1.11):
  *
- *   | Quel che si legge nel manifesto | Quel che NON prova                    |
+ *   | What is read in the manifest    | What it does NOT prove                |
  *   |---------------------------------|---------------------------------------|
- *   | `tipo = MemFd`                  | ⛔ **niente sul compositore**: dipende |
- *   |                                 | da quel che il CLIENTE ha chiesto.     |
- *   |                                 | Qui il cliente chiede la memoria       |
- *   |                                 | apposta — servono i pixel leggibili —  |
- *   |                                 | quindi MemFd e' la RISPOSTA A UNA      |
- *   |                                 | NOSTRA DOMANDA, non una scoperta       |
- *   | `tipo = DMA-BUF`                | non prova che Mutter renda in GPU:     |
- *   |                                 | un render node aperto e' necessario,   |
- *   |                                 | non sufficiente (KWin lo apre anche    |
- *   |                                 | quando poi rende in QPainter)          |
+ *   | `tipo = MemFd`                  | ⛔ **nothing about the compositor**: it|
+ *   |                                 | depends on what the CLIENT asked for.  |
+ *   |                                 | Here the client asks for memory        |
+ *   |                                 | on purpose — readable pixels are       |
+ *   |                                 | needed — so MemFd is the ANSWER TO A   |
+ *   |                                 | QUESTION OF OURS, not a discovery      |
+ *   | `tipo = DMA-BUF`                | does not prove Mutter renders on GPU:  |
+ *   |                                 | an open render node is necessary,      |
+ *   |                                 | not sufficient (KWin opens one even    |
+ *   |                                 | when it then renders in QPainter)      |
  *
- *   Per questo il manifesto porta TRE campi separati e non uno: `chiesto`,
- *   `dichiarato_dal_produttore` e `chi_lo_dice`.  ⭐ Il tipo di buffer **si
- *   chiede e si dichiara**, non si deduce — ed e' il mandato di F2.2.
- *
- * ---------------------------------------------------------------------------
- * ⛔ ZERO, FALLITO E GUASTO SONO TRE COSE DIVERSE (`REVIEWER.md` §1 punto 4)
- *
- *   uscita 0  un fotogramma c'e' ed e' stato scritto
- *   uscita 3  ⭐ ZERO fotogrammi, ma il flusso E' STATO attivo per tutta la
- *             misura: e' uno zero **legittimo** — un desktop fermo non consegna
- *             niente (`LEZIONI.md` §4 trappola 8), ed e' un risultato, non un
- *             guasto.  Nessun `.raw` viene scritto, e il manifesto lo dice
- *   uscita 2  GUASTO: il flusso non e' mai diventato attivo, oppure e' caduto a
- *             misura in corso, oppure si e' chiesta una strada e ne e' arrivata
- *             un'altra.  Non c'e' nessun numero da leggere
- *   uscita 1  l'ambiente: il monitor virtuale non si monta, PipeWire non
- *             risponde, il file non si scrive
- *
- * Le tre guardie di uscita 2 sono le stesse che la fase 0 ha dovuto aggiungere
- * a `misura-cattura` DOPO averlo creduto (voci 1 e 8 di «Che cosa NON ha
- * funzionato» in `FASI.md` §00-ambiente): qui nascono insieme al programma.
+ *   That is why the manifest carries THREE separate fields and not one: `chiesto`,
+ *   `dichiarato_dal_produttore` and `chi_lo_dice`.  ⭐ The buffer type **is
+ *   asked for and declared**, not deduced — and it is the mandate of F2.2.
  *
  * ---------------------------------------------------------------------------
- * ⛔ L'ORDINE: PRIMA IL MONITOR, POI LA SCENA — e lo dice il programma, non chi
- *    lo lancia.
+ * ⛔ ZERO, FAILED AND FAULT ARE THREE DIFFERENT THINGS (`REVIEWER.md` §1 point 4)
  *
- * `banco.sh` della fase 0 accende la scena 2,5 secondi DOPO il misuratore, con
- * la ragione scritta accanto: *«senza uno schermo non c'e' dove aprirsi»*.  Qui
- * l'attesa a tempo non basta, perche' questo programma deve poi sapere QUALI
- * fotogrammi sono arrivati prima della scena e quali dopo.  Quindi il programma
- * scrive un file (`--pronto`) nell'istante in cui il flusso diventa attivo, e
- * chi lo lancia accende la scena solo allora.  ⭐ Non e' un'attesa: e' un evento
- * (`LEZIONI.md` §4 trappola 9 — «non si aspetta un silenzio, si aspetta un
- * evento»).
+ *   exit 0  a frame is there and it was written
+ *   exit 3  ⭐ ZERO frames, but the stream WAS active for the whole
+ *           measurement: it is a **legitimate** zero — a still desktop delivers
+ *           nothing (`LEZIONI.md` §4 trap 8), and it is a result, not a
+ *           fault.  No `.raw` is written, and the manifest says so
+ *   exit 2  FAULT: the stream never became active, or it dropped
+ *           during the measurement, or one road was asked for and another
+ *           arrived.  There is no number to read
+ *   exit 1  the environment: the virtual monitor does not mount, PipeWire does not
+ *           answer, the file cannot be written
  *
- * ⚠ E la stessa forma morde la fase 2 da un'altra parte, gia' misurata: in una
- *   sessione GNOME senza dispositivi di input, un client aperto PRIMA che il
- *   puntatore virtuale di `libei` esista non riceve nulla (`PIANO.md`, riquadro
- *   «Una domanda che la fase 1 ha trovato e che morde QUI», `[M]` 10 agosto).
- *   Qui non si crea nessun dispositivo — non e' l'area di F2.2 — ma l'ordine e'
- *   lo stesso, e chi montera' l'input dovra' infilarlo fra il `--pronto` e la
- *   scena.
+ * The three exit-2 guards are the same that phase 0 had to add
+ * to `misura-cattura` AFTER having believed it (items 1 and 8 of «What did NOT
+ * work» in `FASI.md` §00-ambiente): here they are born together with the program.
  *
  * ---------------------------------------------------------------------------
- * ⛔ DUE FOTOGRAMMI, NON UNO, E LA RAGIONE E' `CODER.md` §3.5 (forma E9)
+ * ⛔ THE ORDER: FIRST THE MONITOR, THEN THE SCENE — and the program says it, not whoever
+ *    launches it.
  *
- * *Un campione preso all'avvio non dice niente del regime.*  Per un'immagine
- * ferma la regola non sparisce: cambia forma.
+ * Phase 0's `banco.sh` switches the scene on 2.5 seconds AFTER the meter, with
+ * the reason written next to it: *«without a screen there is nowhere to open»*.  Here
+ * a timed wait is not enough, because this program must then know WHICH
+ * frames arrived before the scene and which after.  So the program
+ * writes a file (`--pronto`) at the instant the stream becomes active, and
+ * whoever launches it switches the scene on only then.  ⭐ It is not a wait: it is an event
+ * (`LEZIONI.md` §4 trap 9 — «you do not wait for a silence, you wait for an
+ * event»).
  *
- *   `primo`   il primo fotogramma dopo che il flusso e' diventato attivo, prima
- *             che la scena esista.  E' il **ridisegno completo**: su di esso il
- *             danno e' `pieno`, ed e' il fotogramma che l'utente vedrebbe
- *             collegandosi a un desktop appena montato
- *   `regime`  un fotogramma preso dopo `--dopo-scena` secondi di scena viva,
- *             saltandone `--scarta`.  Su Mutter a regime il danno e'
- *             **parziale** nel 98 % dei casi (`FASI.md` §00-ambiente: pieno 15,
- *             parziale 929)
- *
- * ⭐ E il confronto fra i due risponde a una domanda che i documenti oggi si
- *    contraddicono su:
- *
- *   - `fondamenta/remotix-c/src/cattura.h` dice: *«in zero-copy Mutter ricicla i propri
- *     buffer e vi ridipinge dentro SOLO la parte cambiata; fuori da quelle
- *     regioni ci sono i pixel del fotogramma che aveva usato quel buffer
- *     prima»*;
- *   - `STUDI.md` §gnome §8.1, che ha riletto il codice di Mutter, dice il contrario:
- *     *«⛔ falso: blit dell'intero framebuffer, stack di clip svuotato
- *     deliberatamente»*.
- *
- *   Uno dei due e' vecchio.  Un fotogramma `regime` con danno **parziale** che
- *   contiene comunque la scena INTERA decide la questione, e la decide con una
- *   misura invece che con una rilettura.  ⚠ E la decisione conta: se avesse
- *   ragione `cattura.h`, la fase 2 consegnerebbe mezzo desktop e meta' schermata
- *   vecchia, senza un errore da nessuna parte.
+ * ⚠ And the same form bites phase 2 from another side, already measured: in a
+ *   GNOME session without input devices, a client opened BEFORE the
+ *   `libei` virtual pointer exists receives nothing (`PIANO.md`, box
+ *   «A question phase 1 found and that bites HERE», `[M]` 10 Aug).
+ *   Here no device is created — it is not F2.2's area — but the order is
+ *   the same, and whoever mounts input will have to slip it between `--pronto` and the
+ *   scene.
  *
  * ---------------------------------------------------------------------------
- * ⚠ QUESTO PROGRAMMA NON MISURA IL RITMO, E NON DEVE.
+ * ⛔ TWO FRAMES, NOT ONE, AND THE REASON IS `CODER.md` §3.5 (form E9)
  *
- * Copia due fotogrammi da 8 MB dentro la richiamata `process`, che gira sul
- * thread di tempo reale di PipeWire.  `misura-cattura` scrive, giustamente, che
- * chi rallenta quel ciclo falsa la propria misura — quindi qui i fotogrammi al
- * secondo **non si stampano affatto**: il ritmo e' della fase 0 (36 ± 2) e della
- * fase 3.  Un numero di ritmo che uscisse da qui sarebbe un numero giusto per
- * una domanda che nessuno ha fatto, ed e' la voce 8 di `FASI.md` §00-ambiente.
+ * *A sample taken at start-up says nothing about the steady state.*  For a still
+ * image the rule does not disappear: it changes form.
+ *
+ *   `primo`   the first frame after the stream became active, before
+ *             the scene exists.  It is the **full redraw**: on it the
+ *             damage is `pieno`, and it is the frame the user would see
+ *             connecting to a just-mounted desktop
+ *   `regime`  a frame taken after `--dopo-scena` seconds of live scene,
+ *             skipping `--scarta`.  On Mutter in steady state the damage is
+ *             **partial** in 98 % of cases (`FASI.md` §00-ambiente: full 15,
+ *             partial 929)
+ *
+ * ⭐ And the comparison between the two answers a question the documents today
+ *    contradict each other on:
+ *
+ *   - `fondamenta/remotix-c/src/cattura.h` says: *«in zero-copy Mutter recycles its own
+ *     buffers and repaints in them ONLY the part that changed; outside those
+ *     regions are the pixels of the frame that had used that buffer
+ *     before»*;
+ *   - `STUDI.md` §gnome §8.1, which reread Mutter's code, says the opposite:
+ *     *«⛔ false: blit of the whole framebuffer, clip stack emptied
+ *     deliberately»*.
+ *
+ *   One of the two is old.  A `regime` frame with **partial** damage that
+ *   nevertheless contains the WHOLE scene settles the matter, and settles it with a
+ *   measurement instead of a rereading.  ⚠ And the decision matters: if
+ *   `cattura.h` were right, phase 2 would deliver half a desktop and half an old
+ *   screen, without an error anywhere.
  *
  * ---------------------------------------------------------------------------
- * uso:
+ * ⚠ THIS PROGRAM DOES NOT MEASURE RATE, AND MUST NOT.
+ *
+ * It copies two 8 MB frames inside the `process` callback, which runs on
+ * PipeWire's real-time thread.  `misura-cattura` writes, rightly, that
+ * whoever slows that loop skews its own measurement — so here frames per
+ * second **are not printed at all**: rate belongs to phase 0 (36 ± 2) and
+ * phase 3.  A rate number that came out of here would be a right number for
+ * a question nobody asked, and it is item 8 of `FASI.md` §00-ambiente.
+ *
+ * ---------------------------------------------------------------------------
+ * usage:
  *   02-cattura-fotogramma --uscita PREFISSO --pronto FILE
  *        [--larghezza W] [--altezza H] [--fps N] [--bgra] [--dmabuf]
  *        [--dopo-scena S] [--scarta N] [--durata S] [--etichetta T]
  *        [--nodo N]
  *
- * Scrive: PREFISSO-primo.raw, PREFISSO-regime.raw, PREFISSO.json
+ * Writes: PREFISSO-primo.raw, PREFISSO-regime.raw, PREFISSO.json
  */
 
 #include <gio/gio.h>
@@ -164,13 +164,13 @@
 #define TIPI_MAX 8
 
 /* ------------------------------------------------------------------ *
- *  Il fotogramma trattenuto
+ *  The held frame
  * ------------------------------------------------------------------ */
 
 typedef struct
 {
 	gboolean preso;
-	uint8_t *pixel;      /* copia nostra: il buffer di PipeWire torna subito */
+	uint8_t *pixel;      /* our copy: PipeWire's buffer goes back at once  */
 	size_t byte;
 	uint32_t stride;
 	uint32_t offset;
@@ -180,7 +180,7 @@ typedef struct
 	int64_t pts;
 	gboolean seq_noto;
 	const char *danno;   /* "pieno" | "parziale" | "assente"                */
-	guint64 indice;      /* quale fotogramma era, contato dal primo arrivato */
+	guint64 indice;      /* which frame it was, counted from the first arrived */
 	gint64 quando;
 } Fermo;
 
@@ -209,12 +209,12 @@ typedef struct
 	uint32_t tipi_visti[TIPI_MAX];
 	guint quanti_tipi;
 
-	/* ⛔ La scena si dichiara viva con una variabile che scrive CHI LANCIA,
-	 *    non con un orologio: il programma deve sapere quali fotogrammi sono
-	 *    arrivati prima e quali dopo, e un'attesa a tempo non lo distingue. */
+	/* ⛔ The scene is declared alive with a variable written by WHOEVER LAUNCHES,
+	 *    not with a clock: the program must know which frames
+	 *    arrived before and which after, and a timed wait does not tell them apart. */
 	volatile gboolean scena_viva;
-	gint64 t_scena;      /* quando la scena e' stata dichiarata viva        */
-	gint64 t_regime;     /* da quando si puo' prendere il fotogramma di regime */
+	gint64 t_scena;      /* when the scene was declared alive               */
+	gint64 t_regime;     /* from when the steady-state frame may be taken   */
 	guint64 salta_ancora;
 
 	Fermo primo;
@@ -224,7 +224,7 @@ typedef struct
 } Presa;
 
 /* ------------------------------------------------------------------ *
- *  Il danno — copiato dalla fase 0 perche' la domanda e' la stessa
+ *  The damage — copied from phase 0 because the question is the same
  * ------------------------------------------------------------------ */
 
 static const char *guarda_danno(Presa *p, struct pw_buffer *pacco)
@@ -264,13 +264,13 @@ static const char *guarda_danno(Presa *p, struct pw_buffer *pacco)
 }
 
 /*
- * ⛔ SI COPIA, NON SI TIENE IL PUNTATORE.
+ * ⛔ IT IS COPIED, THE POINTER IS NOT KEPT.
  *
- * `cattura.h` di v1 lo scrive in testa: *«i pixel vivono solo per la durata
- * della chiamata: chi li vuole se li copia»*.  Un puntatore trattenuto verrebbe
- * riscritto dal produttore al giro dopo, e il fotogramma scritto su disco
- * sarebbe un fotogramma diverso da quello di cui il manifesto racconta il danno
- * e la sequenza: due misure sotto la stessa etichetta, che e' la forma E2.
+ * v1's `cattura.h` writes it at the top: *«the pixels live only for the duration
+ * of the call: whoever wants them copies them»*.  A kept pointer would be
+ * rewritten by the producer at the next round, and the frame written to disk
+ * would be a frame different from the one whose damage and sequence the manifest tells
+ * about: two measurements under the same label, which is form E2.
  */
 static void trattieni(Fermo *f, struct spa_data *piano, struct spa_meta_header *intestazione,
                       const char *danno, guint64 indice, gint64 adesso)
@@ -318,7 +318,7 @@ static void su_stato(void *dati, enum pw_stream_state vecchio, enum pw_stream_st
 	if (nuovo == PW_STREAM_STATE_STREAMING && p->t_inizio == 0)
 	{
 		p->t_inizio = g_get_monotonic_time();
-		fprintf(stderr, "  flusso attivo\n");
+		fprintf(stderr, "  stream active\n");
 	}
 	pw_thread_loop_signal(p->ciclo, false);
 }
@@ -342,17 +342,17 @@ static void su_parametri(void *dati, uint32_t id, const struct spa_pod *param)
 		return;
 
 	p->formato_noto = TRUE;
-	fprintf(stderr, "  formato negoziato: %ux%u %s, modificatore 0x%" PRIx64 "\n",
+	fprintf(stderr, "  negotiated format: %ux%u %s, modifier 0x%" PRIx64 "\n",
 	        p->formato.size.width, p->formato.size.height,
 	        p->formato.format == SPA_VIDEO_FORMAT_BGRx ? "BGRx"
 	        : p->formato.format == SPA_VIDEO_FORMAT_BGRA ? "BGRA"
-	                                                     : "ALTRO",
+	                                                     : "OTHER",
 	        (uint64_t) p->formato.modifier);
 
-	/* Il tipo dei dati si concorda QUI, non nel formato: chi tace lascia il
-	 * predefinito.  `LEZIONI.md` §4 trappola 4 — il tipo di buffer si chiede in
-	 * DUE posti, e dichiararne uno solo fa riuscire la negoziazione con dentro
-	 * il contrario di quel che si voleva. */
+	/* The data type is agreed HERE, not in the format: whoever stays silent leaves the
+	 * default.  `LEZIONI.md` §4 trap 4 — the buffer type is asked for in
+	 * TWO places, and declaring only one makes the negotiation succeed with inside
+	 * the opposite of what was wanted. */
 	if (p->vuole_dmabuf)
 		tipi |= (1 << SPA_DATA_DmaBuf);
 
@@ -393,8 +393,8 @@ static void su_processo(void *dati)
 	piano = &pacco->buffer->datas[0];
 	p->arrivati++;
 
-	/* Quanti buffer distinti ricicla il produttore: Mutter ne usa quattro, e
-	 * saperlo serve a leggere il resto (R29). */
+	/* How many distinct buffers the producer recycles: Mutter uses four, and
+	 * knowing it serves to read the rest (R29). */
 	noto = FALSE;
 	for (i = 0; i < p->quanti_fd; i++)
 		if (p->fd_visti[i] == (piano->fd >= 0 ? (int) piano->fd : -1))
@@ -402,11 +402,11 @@ static void su_processo(void *dati)
 	if (!noto && p->quanti_fd < FD_MAX)
 		p->fd_visti[p->quanti_fd++] = piano->fd >= 0 ? (int) piano->fd : -1;
 
-	/* ⛔ I TIPI SI COLLEZIONANO TUTTI, non si tiene solo l'ultimo.
-	 *    `misura-cattura` stampa `m->tipo_dati` dell'ULTIMO fotogramma: se il
-	 *    produttore cambiasse strada a meta' misura, la riga direbbe una strada
-	 *    sola per due popolazioni diverse.  Non e' mai stato visto succedere,
-	 *    ma «non e' mai stato visto» non e' «non puo'», e costa otto interi. */
+	/* ⛔ THE TYPES ARE ALL COLLECTED, not only the last one kept.
+	 *    `misura-cattura` prints `m->tipo_dati` of the LAST frame: if the
+	 *    producer changed road midway through the measurement, the line would say one road
+	 *    only for two different populations.  It has never been seen happening,
+	 *    but «it has never been seen» is not «it cannot», and it costs eight integers. */
 	noto = FALSE;
 	for (i = 0; i < p->quanti_tipi; i++)
 		if (p->tipi_visti[i] == piano->type)
@@ -422,8 +422,8 @@ static void su_processo(void *dati)
 	if (!p->scena_viva)
 	{
 		p->prima_della_scena++;
-		/* Il PRIMO in assoluto: il ridisegno completo, e il fotogramma che
-		 * vedrebbe chi si collega a un desktop appena montato. */
+		/* The VERY FIRST: the full redraw, and the frame that
+		 * whoever connects to a just-mounted desktop would see. */
 		if (!p->primo.preso)
 			trattieni(&p->primo, piano, intestazione, danno, p->arrivati, adesso);
 	}
@@ -437,10 +437,10 @@ static void su_processo(void *dati)
 			if (p->salta_ancora > 0)
 				p->salta_ancora--;
 			else
-				/* Si riscrive a ogni giro: il fotogramma di regime che
-				 * interessa e' l'ULTIMO della finestra, non il primo — cosi'
-				 * il danno che porta e' quello del regime e non quello del
-				 * primo ridisegno dopo l'accensione della scena. */
+				/* It is rewritten at every round: the steady-state frame of
+				 * interest is the LAST of the window, not the first — so
+				 * the damage it carries is the steady-state one and not that of the
+				 * first redraw after switching the scene on. */
 				trattieni(&p->regime, piano, intestazione, danno, p->arrivati, adesso);
 		}
 	}
@@ -456,7 +456,7 @@ static const struct pw_stream_events eventi = {
 };
 
 /* ------------------------------------------------------------------ *
- *  La proposta di formato — identica a quella della fase 0
+ *  The format proposal — identical to that of phase 0
  * ------------------------------------------------------------------ */
 
 static const struct spa_pod *formato_memoria(struct spa_pod_builder *c, uint32_t w, uint32_t h,
@@ -504,7 +504,7 @@ static const struct spa_pod *formato_dmabuf(struct spa_pod_builder *c, uint32_t 
 }
 
 /* ------------------------------------------------------------------ *
- *  Il monitor virtuale di Mutter — la sequenza che non ammette permute
+ *  Mutter's virtual monitor — the sequence that admits no permutations
  * ------------------------------------------------------------------ */
 
 #define NOME_REMOTE "org.gnome.Mutter.RemoteDesktop"
@@ -538,9 +538,9 @@ static gboolean sveglia(gpointer d)
 	return G_SOURCE_CONTINUE;
 }
 
-/* Non si usa mai g_bus_get_sync sul bus di sessione: GIO vi tiene acceso
- * `exit-on-close` e ci ammazza al logout (`LEZIONI.md` §5, «il bus di
- * sessione»). */
+/* g_bus_get_sync is never used on the session bus: GIO keeps
+ * `exit-on-close` on there and kills us at logout (`LEZIONI.md` §5, «the session
+ * bus»). */
 static GDBusConnection *bus_di_sessione(GError **sbaglio)
 {
 	g_autofree char *indirizzo = g_dbus_address_get_for_bus_sync(G_BUS_TYPE_SESSION, NULL, sbaglio);
@@ -567,24 +567,24 @@ static GVariant *chiama(GDBusConnection *bus, const char *nome, const char *perc
 }
 
 /*
- * ⛔ L'ORDINE E' QUELLO DI `mutter.h`, e ogni permuta e' punita con un errore
- *    diverso che non dice «hai sbagliato l'ordine» (`LEZIONI.md` §4 trappola 1):
+ * ⛔ THE ORDER IS THAT OF `mutter.h`, and every permutation is punished with a
+ *    different error that does not say «you got the order wrong» (`LEZIONI.md` §4 trap 1):
  *
- *      1. RemoteDesktop.CreateSession      → si legge SessionId SENZA avviarla
- *      2. ScreenCast.CreateSession         dichiarando remote-desktop-session-id
- *      3. RemoteDesktop.Session.Start      ← ADESSO, non prima
- *      4. ScreenCast.Session.RecordVirtual → il flusso
- *      5. Stream.Start                     ← il FLUSSO, non la sessione
+ *      1. RemoteDesktop.CreateSession      → SessionId is read WITHOUT starting it
+ *      2. ScreenCast.CreateSession         declaring remote-desktop-session-id
+ *      3. RemoteDesktop.Session.Start      ← NOW, not before
+ *      4. ScreenCast.Session.RecordVirtual → the stream
+ *      5. Stream.Start                     ← the STREAM, not the session
  *
- * ⛔ E ci si iscrive a `PipeWireStreamAdded` PRIMA di `Stream.Start`: l'annuncio
- *    arriva DURANTE la chiamata, e chi si iscrive dopo aspetta per sempre
- *    qualcosa di gia' passato (trappola 2).
+ * ⛔ And one subscribes to `PipeWireStreamAdded` BEFORE `Stream.Start`: the announcement
+ *    arrives DURING the call, and whoever subscribes afterwards waits forever
+ *    for something already gone (trap 2).
  *
- * ⚠ E la sessione si chiude fermando il CONTROLLO, non la cattura: un
- *   `ScreenCast.Session.Stop` su una cattura associata risponde «Must be stopped
- *   from remote desktop session», e ogni monitor virtuale non smontato resta
- *   attaccato a Mutter.  Sul server ci sono altri due giri accesi: un monitor
- *   dimenticato da questo banco sarebbe un difetto che pagano gli altri.
+ * ⚠ And the session is closed by stopping the CONTROL, not the capture: a
+ *   `ScreenCast.Session.Stop` on an associated capture answers «Must be stopped
+ *   from remote desktop session», and every virtual monitor not dismounted stays
+ *   attached to Mutter.  On the server two other rounds are on: a monitor
+ *   forgotten by this bench would be a defect the others pay for.
  */
 static Palco *palco_monta(uint32_t larghezza, uint32_t altezza, GError **sbaglio)
 {
@@ -605,7 +605,7 @@ static Palco *palco_monta(uint32_t larghezza, uint32_t altezza, GError **sbaglio
 		                               "CreateSession", NULL, G_VARIANT_TYPE("(o)"), sbaglio);
 		if (!r)
 		{
-			g_prefix_error(sbaglio, "Mutter non espone RemoteDesktop (c'e' una sessione?): ");
+			g_prefix_error(sbaglio, "Mutter does not expose RemoteDesktop (is there a session?): ");
 			goto guasto;
 		}
 		g_variant_get(r, "(o)", &p->controllo);
@@ -686,10 +686,10 @@ static Palco *palco_monta(uint32_t larghezza, uint32_t altezza, GError **sbaglio
 
 	if (p->nodo == 0)
 	{
-		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_TIMED_OUT, "nessun nodo PipeWire annunciato");
+		g_set_error(sbaglio, G_IO_ERROR, G_IO_ERROR_TIMED_OUT, "no PipeWire node announced");
 		goto guasto;
 	}
-	fprintf(stderr, "  monitor virtuale %ux%u chiesto, nodo PipeWire %u\n", larghezza, altezza,
+	fprintf(stderr, "  virtual monitor %ux%u requested, PipeWire node %u\n", larghezza, altezza,
 	        p->nodo);
 	return p;
 
@@ -728,7 +728,7 @@ static void palco_smonta(Palco *p)
 }
 
 /* ------------------------------------------------------------------ *
- *  Il manifesto
+ *  The manifest
  * ------------------------------------------------------------------ */
 
 static const char *nome_tipo(uint32_t t)
@@ -737,52 +737,52 @@ static const char *nome_tipo(uint32_t t)
 	       : t == SPA_DATA_MemFd  ? "MemFd"
 	       : t == SPA_DATA_MemPtr ? "MemPtr"
 	       : t == SPA_DATA_MemId  ? "MemId"
-	                              : "SCONOSCIUTO";
+	                              : "UNKNOWN";
 }
 
 static const char *nome_colore(uint32_t c)
 {
 	return c == SPA_VIDEO_FORMAT_BGRx   ? "BGRx"
 	       : c == SPA_VIDEO_FORMAT_BGRA ? "BGRA"
-	                                    : "ALTRO";
+	                                    : "OTHER";
 }
 
 /*
  * ===========================================================================
- * ⛔ LE TRE COSE CHE F2.3 (LA CODIFICA) CHIEDE DICHIARATE, NON DEDOTTE
+ * ⛔ THE THREE THINGS F2.3 (ENCODING) ASKS TO BE DECLARED, NOT DEDUCED
  * ===========================================================================
  *
- * La profondita' di bit vera, il RANGE (limitato o pieno) e la MATRICE (601 o
- * 709).  ⛔ E la ragione della terza e' che *un confronto di pixel fatto con la
- * matrice sbagliata misura la matrice* — e F2.6 confrontera' i pixel.  Senza
- * queste tre dichiarazioni il rosso della fase 2 non avrebbe un imputato.
+ * The real bit depth, the RANGE (limited or full) and the MATRIX (601 or
+ * 709).  ⛔ And the reason for the third is that *a pixel comparison made with the
+ * wrong matrix measures the matrix* — and F2.6 will compare pixels.  Without
+ * these three declarations the red of phase 2 would have no defendant.
  *
- * ⭐ E NON SI DEDUCONO: SPA le porta.  `struct spa_video_info_raw` ha
- *    `color_range`, `color_matrix`, `transfer_function` e `color_primaries`,
- *    e `spa_format_video_raw_parse` le riempie.  Si CHIEDONO al produttore
- *    (`CODER.md` §3.7 — non si deduce il mittente, lo si chiede) e si scrive
- *    quel che risponde, **compreso «non lo dichiaro»**: un `UNKNOWN` e' una
- *    risposta, e va scritta come tale invece di essere riempita con quel che ci
- *    aspettiamo.  Il silenzio scambiato per un valore e' la forma E8.
+ * ⭐ AND THEY ARE NOT DEDUCED: SPA carries them.  `struct spa_video_info_raw` has
+ *    `color_range`, `color_matrix`, `transfer_function` and `color_primaries`,
+ *    and `spa_format_video_raw_parse` fills them.  They are ASKED of the producer
+ *    (`CODER.md` §3.7 — the sender is not deduced, it is asked) and what it
+ *    answers is written, **including «I do not declare it»**: an `UNKNOWN` is an
+ *    answer, and it must be written as such instead of being filled with what we
+ *    expect.  Silence mistaken for a value is form E8.
  *
- * ⛔ E LA PRIMA DELLE TRE HA GIA' UNA RISPOSTA CHE PESA SULL'INTERA FASE 2:
+ * ⛔ AND THE FIRST OF THE THREE ALREADY HAS AN ANSWER THAT WEIGHS ON THE WHOLE OF PHASE 2:
  *
- *    `STUDI.md` §gnome §8.3 `[R]`, letto riga per riga nel codice di Mutter 48.7:
- *    **«Solo BGRx e BGRA»**.  Sono formati a **8 bit per canale**.
+ *    `STUDI.md` §gnome §8.3 `[R]`, read line by line in the code of Mutter 48.7:
+ *    **«Only BGRx and BGRA»**.  They are formats at **8 bits per channel**.
  *
- *    ⇒ Da questa cattura NON possono uscire dieci bit veri.  Un HEVC Main10
- *      alimentato da qui porta 8 bit promossi a 10, e l'etichetta continua a
- *      dire Main10 mentre l'immagine viene bene lo stesso: e' il guasto che
- *      F2.3 chiama **F2.3-A**, e ⛔ **l'imputato e' qui, non nel codificatore**.
- *      Per questo il numero si misura gia' alla cattura.
+ *    ⇒ From this capture ten real bits CANNOT come out.  An HEVC Main10
+ *      fed from here carries 8 bits promoted to 10, and the label keeps
+ *      saying Main10 while the image comes out fine anyway: it is the fault
+ *      F2.3 calls **F2.3-A**, and ⛔ **the defendant is here, not in the encoder**.
+ *      That is why the number is measured already at capture.
  */
 static const char *nome_range(uint32_t r)
 {
 	switch (r)
 	{
-	case 1: return "PIENO (0-255)";
-	case 2: return "LIMITATO (16-235)";
-	default: return "NON DICHIARATO dal produttore";
+	case 1: return "FULL (0-255)";
+	case 2: return "LIMITED (16-235)";
+	default: return "NOT DECLARED by the producer";
 	}
 }
 
@@ -790,13 +790,13 @@ static const char *nome_matrice(uint32_t m)
 {
 	switch (m)
 	{
-	case 1: return "RGB (nessuna conversione: i pixel sono RGB)";
+	case 1: return "RGB (no conversion: the pixels are RGB)";
 	case 2: return "FCC";
 	case 3: return "BT.709";
 	case 4: return "BT.601";
 	case 5: return "SMPTE240M";
 	case 6: return "BT.2020";
-	default: return "NON DICHIARATA dal produttore";
+	default: return "NOT DECLARED by the producer";
 	}
 }
 
@@ -804,12 +804,12 @@ static const char *nome_trasferimento(uint32_t t)
 {
 	switch (t)
 	{
-	case 1: return "gamma 1.0 (lineare)";
+	case 1: return "gamma 1.0 (linear)";
 	case 4: return "gamma 2.2";
 	case 5: return "BT.709";
 	case 7: return "sRGB";
-	case 11: return "BT.2020 12 bit";
-	default: return "NON DICHIARATA dal produttore";
+	case 11: return "BT.2020 12 bits";
+	default: return "NOT DECLARED by the producer";
 	}
 }
 
@@ -820,14 +820,14 @@ static const char *nome_primari(uint32_t p)
 	case 1: return "BT.709";
 	case 4: return "SMPTE170M";
 	case 7: return "BT.2020";
-	default: return "NON DICHIARATI dal produttore";
+	default: return "NOT DECLARED by the producer";
 	}
 }
 
-/* I bit per canale si ricavano dal FORMATO, che e' un fatto del produttore, non
- * una nostra ipotesi.  ⛔ E se un giorno arrivasse un formato che non
- * conosciamo, si risponde 0 e lo si dichiara: un valore inventato qui
- * diventerebbe «10 bit veri» in una tabella di F2.3. */
+/* The bits per channel are derived from the FORMAT, which is a fact of the producer, not
+ * a hypothesis of ours.  ⛔ And if one day a format arrived that we do not
+ * know, 0 is answered and it is declared: a value invented here
+ * would become «10 real bits» in an F2.3 table. */
 static int bit_per_canale(uint32_t c)
 {
 	switch (c)
@@ -876,7 +876,7 @@ static void manifesto_fermo(GString *s, const char *chiave, const Fermo *f, cons
 }
 
 /* ------------------------------------------------------------------ *
- *  Il programma
+ *  The program
  * ------------------------------------------------------------------ */
 
 int main(int argc, char **argv)
@@ -884,10 +884,10 @@ int main(int argc, char **argv)
 	uint32_t larghezza = 1920, altezza = 1080, fps = 60, nodo = 0;
 	double dopo_scena = 3.0, durata = 12.0, attesa_scena = 25.0;
 	guint64 scarta = 10;
-	/* ⛔ Quanti fotogrammi si PRETENDONO dopo che la scena e' stata dichiarata
-	 *    viva.  Uno basta: la domanda e' «la scena dipinge sullo schermo che
-	 *    stiamo catturando, si' o no?».  Con `0` si dichiara di voler misurare
-	 *    lo zero legittimo (scena «fermo»). */
+	/* ⛔ How many frames are REQUIRED after the scene was declared
+	 *    alive.  One is enough: the question is «does the scene paint on the screen we
+	 *    are capturing, yes or no?».  With `0` one declares one wants to measure
+	 *    the legitimate zero («fermo» scene). */
 	guint64 minimo_dopo_scena = 1;
 	gboolean vuole_dmabuf = FALSE;
 	uint32_t colore = SPA_VIDEO_FORMAT_BGRx;
@@ -945,7 +945,7 @@ int main(int argc, char **argv)
 		else
 		{
 			fprintf(stderr,
-			        "uso: %s --uscita PREFISSO --pronto FILE --segnale-scena FILE\n"
+			        "usage: %s --uscita PREFISSO --pronto FILE --segnale-scena FILE\n"
 			        "        [--larghezza W] [--altezza H] [--fps N] [--bgra] [--dmabuf]\n"
 			        "        [--dopo-scena S] [--scarta N] [--durata S] [--attesa-scena S]\n"
 			        "        [--minimo-dopo-scena N] [--etichetta T] [--nodo N]\n",
@@ -955,11 +955,11 @@ int main(int argc, char **argv)
 	}
 	if (!uscita || !pronto || !segnale_scena)
 	{
-		fprintf(stderr, "⛔ servono --uscita, --pronto e --segnale-scena.\n"
-		                "   Il file --pronto dice a chi lancia che il monitor virtuale c'e' e\n"
-		                "   che la scena si puo' accendere; il file --segnale-scena e' la\n"
-		                "   risposta: «la scena e' accesa».  Senza questi due l'ordine fra\n"
-		                "   monitor e scena tornerebbe a essere un'attesa a tempo.\n");
+		fprintf(stderr, "⛔ --uscita, --pronto and --segnale-scena are needed.\n"
+		                "   The --pronto file tells whoever launches that the virtual monitor is there and\n"
+		                "   that the scene can be switched on; the --segnale-scena file is the\n"
+		                "   answer: «the scene is on».  Without these two the order between\n"
+		                "   monitor and scene would go back to being a timed wait.\n");
 		return 2;
 	}
 
@@ -973,15 +973,15 @@ int main(int argc, char **argv)
 
 	p.vuole_dmabuf = vuole_dmabuf;
 
-	fprintf(stderr, "== %s: chiesti %ux%u, %s, tetto %u fps, strada %s ==\n", etichetta, larghezza,
-	        altezza, nome_colore(colore), fps, vuole_dmabuf ? "DMA-BUF" : "memoria");
+	fprintf(stderr, "== %s: requested %ux%u, %s, ceiling %u fps, road %s ==\n", etichetta, larghezza,
+	        altezza, nome_colore(colore), fps, vuole_dmabuf ? "DMA-BUF" : "memory");
 
 	if (nodo == 0)
 	{
 		palco = palco_monta(larghezza, altezza, &sbaglio);
 		if (!palco)
 		{
-			fprintf(stderr, "⛔ monitor virtuale non montato: %s\n", sbaglio->message);
+			fprintf(stderr, "⛔ virtual monitor not mounted: %s\n", sbaglio->message);
 			return 1;
 		}
 		nodo = palco->nodo;
@@ -994,7 +994,7 @@ int main(int argc, char **argv)
 	if (pw_thread_loop_start(p.ciclo) < 0)
 	{
 		pw_thread_loop_unlock(p.ciclo);
-		fprintf(stderr, "⛔ thread PipeWire non avviato\n");
+		fprintf(stderr, "⛔ PipeWire thread not started\n");
 		palco_smonta(palco);
 		return 1;
 	}
@@ -1002,7 +1002,7 @@ int main(int argc, char **argv)
 	if (!p.nucleo)
 	{
 		pw_thread_loop_unlock(p.ciclo);
-		fprintf(stderr, "⛔ connessione a PipeWire fallita\n");
+		fprintf(stderr, "⛔ connection to PipeWire failed\n");
 		palco_smonta(palco);
 		return 1;
 	}
@@ -1021,7 +1021,7 @@ int main(int argc, char **argv)
 	                      parametri, n_parametri) < 0)
 	{
 		pw_thread_loop_unlock(p.ciclo);
-		fprintf(stderr, "⛔ aggancio al nodo %u fallito\n", nodo);
+		fprintf(stderr, "⛔ hooking onto node %u failed\n", nodo);
 		palco_smonta(palco);
 		return 1;
 	}
@@ -1033,53 +1033,53 @@ int main(int argc, char **argv)
 
 	if (p.stato == PW_STREAM_STATE_ERROR)
 	{
-		printf("GUASTO\t%s\tcattura rifiutata\n", etichetta);
-		fprintf(stderr, "⛔ FALLITO: cattura rifiutata: %s\n",
-		        p.guasto ? p.guasto : "senza spiegazione");
+		printf("GUASTO\t%s\tcapture refused\n", etichetta);
+		fprintf(stderr, "⛔ FAILED: capture refused: %s\n",
+		        p.guasto ? p.guasto : "without explanation");
 		palco_smonta(palco);
 		return 2;
 	}
 
-	/* ⛔ Il file «pronto» si scrive SOLO quando il flusso e' davvero attivo.
-	 *    Scriverlo prima significherebbe accendere la scena su un monitor che
-	 *    non esiste ancora, e la scena si aprirebbe su niente — che e' proprio
-	 *    l'ordine che `banco.sh` della fase 0 aveva dovuto imparare. */
+	/* ⛔ The «pronto» file is written ONLY when the stream is really active.
+	 *    Writing it before would mean switching the scene on on a monitor that
+	 *    does not exist yet, and the scene would open on nothing — which is precisely
+	 *    the order phase 0's `banco.sh` had had to learn. */
 	scadenza = g_get_monotonic_time() + (gint64) ATTESA_AVVIO_S * G_USEC_PER_SEC;
 	while (p.stato != PW_STREAM_STATE_STREAMING && g_get_monotonic_time() < scadenza)
 		g_usleep(20000);
 	if (p.stato != PW_STREAM_STATE_STREAMING)
 	{
-		printf("GUASTO\t%s\tflusso mai attivo\n", etichetta);
+		printf("GUASTO\t%s\tstream never active\n", etichetta);
 		fprintf(stderr,
-		        "⛔ FALLITO (non «zero»): il flusso non e' mai diventato attivo.\n"
-		        "   stato finale %d%s%s.  Non c'e' nessun fotogramma da giudicare qui:\n"
-		        "   la cattura non e' mai cominciata (LEZIONI.md §1.9).\n",
-		        (int) p.stato, p.guasto ? ", guasto: " : "", p.guasto ? p.guasto : "");
+		        "⛔ FAILED (not «zero»): the stream never became active.\n"
+		        "   final state %d%s%s.  There is no frame to judge here:\n"
+		        "   capture never started (LEZIONI.md §1.9).\n",
+		        (int) p.stato, p.guasto ? ", fault: " : "", p.guasto ? p.guasto : "");
 		palco_smonta(palco);
 		return 2;
 	}
 	if (!g_file_set_contents(pronto, "pronto\n", -1, &sbaglio))
 	{
-		fprintf(stderr, "⛔ non riesco a scrivere %s: %s\n", pronto, sbaglio->message);
+		fprintf(stderr, "⛔ I cannot write %s: %s\n", pronto, sbaglio->message);
 		palco_smonta(palco);
 		return 1;
 	}
-	fprintf(stderr, "  pronto: la scena si puo' accendere adesso\n");
+	fprintf(stderr, "  pronto: the scene can be switched on now\n");
 
-	/* Si aspetta che chi lancia dichiari la scena accesa.  ⛔ E se non arriva
-	 * mai non si misura lo stesso: si dichiara.  Una scena che non parte e un
-	 * compositore muto hanno lo stesso aspetto — voce 8 di
-	 * `FASI.md` §00-ambiente, e la terza faccia di uno stesso difetto. */
+	/* Wait for whoever launches to declare the scene on.  ⛔ And if it never arrives
+	 * nothing is measured anyway: it is declared.  A scene that does not start and a
+	 * silent compositor look the same — item 8 of
+	 * `FASI.md` §00-ambiente, and the third face of one same defect. */
 	scadenza = g_get_monotonic_time() + (gint64) (attesa_scena * G_USEC_PER_SEC);
 	while (!g_file_test(segnale_scena, G_FILE_TEST_EXISTS) && g_get_monotonic_time() < scadenza)
 		g_usleep(50000);
 	if (!g_file_test(segnale_scena, G_FILE_TEST_EXISTS))
 	{
-		printf("GUASTO\t%s\tla scena non e' mai stata dichiarata accesa\n", etichetta);
+		printf("GUASTO\t%s\tthe scene was never declared on\n", etichetta);
 		fprintf(stderr,
-		        "⛔ FALLITO: dopo %.1f s nessuno ha dichiarato la scena accesa (%s).\n"
-		        "   Un fotogramma preso adesso sarebbe il desktop vuoto sotto\n"
-		        "   l'etichetta della scena: due cose diverse sotto lo stesso nome.\n",
+		        "⛔ FAILED: after %.1f s nobody declared the scene on (%s).\n"
+		        "   A frame taken now would be the empty desktop under\n"
+		        "   the scene's label: two different things under the same name.\n",
 		        attesa_scena, segnale_scena);
 		palco_smonta(palco);
 		return 2;
@@ -1088,106 +1088,106 @@ int main(int argc, char **argv)
 	p.t_regime = p.t_scena + (gint64) (dopo_scena * G_USEC_PER_SEC);
 	p.salta_ancora = scarta;
 	p.scena_viva = TRUE;
-	fprintf(stderr, "  scena dichiarata accesa: il regime comincia fra %.1f s\n", dopo_scena);
+	fprintf(stderr, "  scene declared on: the steady state starts in %.1f s\n", dopo_scena);
 
 	fine = p.t_scena + (gint64) (durata * G_USEC_PER_SEC);
 	while (g_get_monotonic_time() < fine)
 		g_usleep(50000);
 
-	/* ⛔ «E' STATO attivo» non e' «lo e' ancora»: la morte a meta' misura. */
+	/* ⛔ «It WAS active» is not «it still is»: death midway through the measurement. */
 	if (p.stato != PW_STREAM_STATE_STREAMING)
 	{
-		printf("GUASTO\t%s\tflusso caduto durante la presa\n", etichetta);
+		printf("GUASTO\t%s\tstream dropped during the take\n", etichetta);
 		fprintf(stderr,
-		        "⛔ FALLITO (non «zero»): il flusso era attivo ed e' caduto.\n"
-		        "   stato finale %d%s%s.  Fotogrammi arrivati prima di cadere: %" PRIu64 ".\n",
-		        (int) p.stato, p.guasto ? ", guasto: " : "", p.guasto ? p.guasto : "", p.arrivati);
+		        "⛔ FAILED (not «zero»): the stream was active and dropped.\n"
+		        "   final state %d%s%s.  Frames arrived before dropping: %" PRIu64 ".\n",
+		        (int) p.stato, p.guasto ? ", fault: " : "", p.guasto ? p.guasto : "", p.arrivati);
 		palco_smonta(palco);
 		return 2;
 	}
 
-	/* ⛔ LA STRADA SI VERIFICA, NON SI DA' PER CHIESTA — `LEZIONI.md` §1.8. */
+	/* ⛔ THE ROAD IS CHECKED, IT IS NOT TAKEN AS ASKED FOR — `LEZIONI.md` §1.8. */
 	if (vuole_dmabuf && p.quanti_tipi > 0 && p.tipi_visti[0] != SPA_DATA_DmaBuf)
 	{
-		printf("GUASTO\t%s\tchiesto DMA-BUF, ottenuta memoria\n", etichetta);
+		printf("GUASTO\t%s\tDMA-BUF requested, memory obtained\n", etichetta);
 		fprintf(stderr,
-		        "⛔ FALLITO: si e' chiesto DMA-BUF e il produttore ha consegnato %s.\n"
-		        "   Non si ripiega in silenzio (LEZIONI.md §1.8, corollario).\n",
+		        "⛔ FAILED: DMA-BUF was requested and the producer delivered %s.\n"
+		        "   No silent fallback (LEZIONI.md §1.8, corollary).\n",
 		        nome_tipo(p.tipi_visti[0]));
 		palco_smonta(palco);
 		return 2;
 	}
 
 	/*
-	 * ⛔ SCENA VIVA E ZERO FOTOGRAMMI NON E' UNO ZERO: E' UN GUASTO.
+	 * ⛔ A LIVE SCENE AND ZERO FRAMES IS NOT A ZERO: IT IS A FAULT.
 	 *
-	 * Trovato il 12 agosto 2026, al PRIMO giro vero di questo banco, e trovato
-	 * perche' il banco e' uscito **VERDE** mentre il difetto era vivo — cioe' la
-	 * cosa peggiore che un banco possa fare (`REVIEWER.md` §1).
+	 * Found on 12 Aug 2026, at the FIRST real round of this bench, and found
+	 * because the bench came out **VERDE** while the defect was alive — that is the
+	 * worst thing a bench can do (`REVIEWER.md` §1).
 	 *
-	 * Che cosa era successo: la sessione GNOME aveva GIA' un monitor virtuale
-	 * (`Meta-0`), il nostro `RecordVirtual` ne aggiungeva un secondo (`Meta-1`),
-	 * e `mpv --fs` andava a schermo intero sul PRIMO — che non e' quello che
-	 * stavamo catturando.  La scena era viva, dipingeva a 60 fotogrammi al
-	 * secondo, `ps` diceva `Sl`, e la nostra cattura riceveva **zero**.
+	 * What had happened: the GNOME session ALREADY had a virtual monitor
+	 * (`Meta-0`), our `RecordVirtual` added a second one (`Meta-1`),
+	 * and `mpv --fs` went full screen on the FIRST — which is not the one we
+	 * were capturing.  The scene was alive, painting at 60 frames per
+	 * second, `ps` said `Sl`, and our capture received **zero**.
 	 *
-	 * ⇒ Con una scena DICHIARATA VIVA E IN MOVIMENTO, zero fotogrammi non e' il
-	 *   comportamento legittimo della trappola 8: e' la prova che stiamo
-	 *   guardando uno schermo diverso da quello su cui dipinge la scena.  E' il
-	 *   controllo di `LEZIONI.md` §1.1 — *«quanto disegna il client, contato
-	 *   accanto a quanto consegna la cattura: senza, un tetto della scena viene
-	 *   attribuito al compositore, e viceversa»*.
+	 * ⇒ With a scene DECLARED ALIVE AND MOVING, zero frames is not the
+	 *   legitimate behaviour of trap 8: it is the proof that we are
+	 *   looking at a screen different from the one the scene paints on.  It is the
+	 *   check of `LEZIONI.md` §1.1 — *«how much the client draws, counted
+	 *   next to how much capture delivers: without it, a ceiling of the scene gets
+	 *   attributed to the compositor, and vice versa»*.
 	 *
-	 * ⚠ Chi vuole misurare lo zero legittimo — il desktop fermo — passa
-	 *   `--minimo-dopo-scena 0` e lo dichiara.  Non lo si ottiene per caso.
+	 * ⚠ Whoever wants to measure the legitimate zero — the still desktop — passes
+	 *   `--minimo-dopo-scena 0` and declares it.  It is not obtained by chance.
 	 */
 	if (p.scena_viva && p.dopo_la_scena < minimo_dopo_scena)
 	{
-		printf("GUASTO\t%s\tscena viva e %" PRIu64 " fotogrammi dopo\n", etichetta,
+		printf("GUASTO\t%s\tlive scene and %" PRIu64 " frames after\n", etichetta,
 		       p.dopo_la_scena);
 		fprintf(stderr,
-		        "⛔ FALLITO (non «zero»): la scena era dichiarata viva e sono arrivati\n"
-		        "   %" PRIu64 " fotogrammi dopo di lei (minimo preteso %" PRIu64 ").\n"
-		        "   Prima della scena ne erano arrivati %" PRIu64 ": il flusso funziona.\n"
+		        "⛔ FAILED (not «zero»): the scene was declared alive and there arrived\n"
+		        "   %" PRIu64 " frames after it (minimum required %" PRIu64 ").\n"
+		        "   Before the scene %" PRIu64 " had arrived: the stream works.\n"
 		        "\n"
-		        "   ⇒ Non e' il desktop fermo. E' che la scena dipinge su uno SCHERMO\n"
-		        "     DIVERSO da quello che stiamo catturando: se la sessione ha gia'\n"
-		        "     un monitor, una finestra a schermo intero va su quello e non sul\n"
-		        "     monitor virtuale appena montato da noi.\n"
-		        "     Si dichiara lo schermo alla scena (mpv `--fs-screen-name`), e si\n"
-		        "     verifica che abbia obbedito (CODER.md §3.9).\n",
+		        "   ⇒ It is not the still desktop. It is that the scene paints on a\n"
+		        "     DIFFERENT SCREEN from the one we are capturing: if the session already has\n"
+		        "     a monitor, a full-screen window goes on that one and not on the\n"
+		        "     virtual monitor we have just mounted.\n"
+		        "     The screen is declared to the scene (mpv `--fs-screen-name`), and it is\n"
+		        "     checked that it obeyed (CODER.md §3.9).\n",
 		        p.dopo_la_scena, minimo_dopo_scena, p.prima_della_scena);
 		palco_smonta(palco);
 		return 2;
 	}
 
-	/* --- la scrittura -------------------------------------------------- */
+	/* --- the writing --------------------------------------------------- */
 	if (p.arrivati == 0)
 	{
-		/* ⭐ ZERO LEGITTIMO, e si distingue dal fallimento con l'uscita 3.
-		 *    Il flusso e' stato attivo per tutta la presa: se nessun fotogramma
-		 *    e' arrivato, il desktop non e' cambiato — che su Mutter e' il
-		 *    comportamento dichiarato, non un guasto (trappola 8). */
+		/* ⭐ LEGITIMATE ZERO, and it is told from failure with exit 3.
+		 *    The stream was active for the whole take: if no frame
+		 *    arrived, the desktop did not change — which on Mutter is the
+		 *    declared behaviour, not a fault (trap 8). */
 		esito = "ZERO FOTOGRAMMI";
 		codice = 3;
 	}
 	else if (vuole_dmabuf)
 	{
-		/* ⛔ CON IL DMA-BUF I PIXEL NON SI LEGGONO DA QUI, E LO SI DICE.
-		 *    Il descrittore vive sulla scheda: leggerlo vorrebbe dire
-		 *    importarlo, cioe' meta' del palco.  Questo giro serve a DICHIARARE
-		 *    il tipo di buffer, non a giudicare l'immagine, e un `.raw` scritto
-		 *    da qui sarebbe vuoto sotto l'etichetta di un fotogramma. */
+		/* ⛔ WITH DMA-BUF THE PIXELS ARE NOT READ FROM HERE, AND IT IS SAID.
+		 *    The descriptor lives on the card: reading it would mean
+		 *    importing it, that is half the stage.  This round serves to DECLARE
+		 *    the buffer type, not to judge the image, and a `.raw` written
+		 *    from here would be empty under the label of a frame. */
 		esito = "TIPO DICHIARATO, PIXEL NON LETTI (dmabuf)";
 		codice = 0;
 	}
 	else if (!p.regime.preso && !p.primo.preso)
 	{
-		printf("GUASTO\t%s\tfotogrammi arrivati ma nessuno copiabile\n", etichetta);
+		printf("GUASTO\t%s\tframes arrived but none copyable\n", etichetta);
 		fprintf(stderr,
-		        "⛔ FALLITO: sono arrivati %" PRIu64 " fotogrammi e nessuno aveva pixel\n"
-		        "   mappati (data nullo o chunk vuoto).  Non e' uno zero: e' un buffer\n"
-		        "   che non si e' potuto leggere.\n",
+		        "⛔ FAILED: %" PRIu64 " frames arrived and none had mapped\n"
+		        "   pixels (null data or empty chunk).  It is not a zero: it is a buffer\n"
+		        "   that could not be read.\n",
 		        p.arrivati);
 		palco_smonta(palco);
 		return 2;
@@ -1198,13 +1198,13 @@ int main(int argc, char **argv)
 		codice = 0;
 		if (p.primo.preso && !scrivi_raw(file_primo, &p.primo, &sbaglio))
 		{
-			fprintf(stderr, "⛔ non riesco a scrivere %s: %s\n", file_primo, sbaglio->message);
+			fprintf(stderr, "⛔ I cannot write %s: %s\n", file_primo, sbaglio->message);
 			palco_smonta(palco);
 			return 1;
 		}
 		if (p.regime.preso && !scrivi_raw(file_regime, &p.regime, &sbaglio))
 		{
-			fprintf(stderr, "⛔ non riesco a scrivere %s: %s\n", file_regime, sbaglio->message);
+			fprintf(stderr, "⛔ I cannot write %s: %s\n", file_regime, sbaglio->message);
 			palco_smonta(palco);
 			return 1;
 		}
@@ -1223,8 +1223,8 @@ int main(int argc, char **argv)
 	                       "  \"chiesto\": {\n"
 	                       "    \"larghezza\": %u, \"altezza\": %u, \"fps_massimi\": %u,\n"
 	                       "    \"colore\": \"%s\", \"strada\": \"%s\",\n"
-	                       "    \"cadenza\": \"0/1 con maxFramerate a %u — «mandami un fotogramma "
-	                       "quando cambia qualcosa»\"\n"
+	                       "    \"cadenza\": \"0/1 with maxFramerate at %u — «send me a frame "
+	                       "when something changes»\"\n"
 	                       "  },\n",
 	                       larghezza, altezza, fps, nome_colore(colore),
 	                       vuole_dmabuf ? "dmabuf" : "memoria", fps);
@@ -1234,36 +1234,36 @@ int main(int argc, char **argv)
 	                       "    \"larghezza\": %u, \"altezza\": %u,\n"
 	                       "    \"colore\": \"%s\",\n"
 	                       "    \"modificatore\": \"0x%" PRIx64 "\",\n"
-	                       "    \"chi_lo_dice\": \"PipeWire, SPA_PARAM_Format nella richiamata "
-	                       "param_changed — non e' l'etichetta che gli abbiamo dato noi\"\n"
+	                       "    \"chi_lo_dice\": \"PipeWire, SPA_PARAM_Format in the param_changed "
+	                       "callback — it is not the label we gave it\"\n"
 	                       "  },\n",
 	                       p.formato_noto ? "true" : "false", p.formato.size.width,
 	                       p.formato.size.height, nome_colore(p.formato.format),
 	                       (uint64_t) p.formato.modifier);
 
-	/* ⛔ LE TRE COSE CHE F2.3 CHIEDE DICHIARATE — chieste al produttore, non
-	 *    dedotte, e scritte com'egli risponde, «non lo dichiaro» compreso. */
+	/* ⛔ THE THREE THINGS F2.3 ASKS TO BE DECLARED — asked of the producer, not
+	 *    deduced, and written as it answers, «I do not declare it» included. */
 	g_string_append_printf(
 	    manifesto,
 	    "  \"consegna_a_F2_3\": {\n"
 	    "    \"bit_per_canale\": %d,\n"
-	    "    \"bit_per_canale_chi_lo_dice\": \"il FORMATO negoziato (%s). "
-	    "STUDI.md §gnome §8.3 [R]: Mutter consegna SOLO BGRx e BGRA, che sono 8 bit per "
-	    "canale — da questa cattura NON escono dieci bit veri\",\n"
-	    "    \"⛔ F2.3-A\": \"un HEVC Main10 alimentato da qui porta 8 bit promossi a "
-	    "10: l'etichetta dice Main10, l'immagine viene bene lo stesso, e l'imputato e' "
-	    "LA CATTURA, non il codificatore\",\n"
+	    "    \"bit_per_canale_chi_lo_dice\": \"the negotiated FORMAT (%s). "
+	    "STUDI.md §gnome §8.3 [R]: Mutter delivers ONLY BGRx and BGRA, which are 8 bits per "
+	    "channel — from this capture ten real bits do NOT come out\",\n"
+	    "    \"⛔ F2.3-A\": \"an HEVC Main10 fed from here carries 8 bits promoted to "
+	    "10: the label says Main10, the image comes out fine anyway, and the defendant is "
+	    "THE CAPTURE, not the encoder\",\n"
 	    "    \"range\": \"%s\",\n"
 	    "    \"matrice\": \"%s\",\n"
 	    "    \"trasferimento\": \"%s\",\n"
 	    "    \"primari\": \"%s\",\n"
 	    "    \"chi_lo_dice\": \"spa_video_info_raw.color_range / .color_matrix / "
-	    ".transfer_function / .color_primaries, riempiti da "
-	    "spa_format_video_raw_parse sul SPA_PARAM_Format del produttore\",\n"
-	    "    \"⚠ sulla matrice\": \"alla cattura i pixel sono RGB: nessuna matrice "
-	    "601/709 e' stata applicata da noi. La matrice la SCEGLIE F2.3 nel convertire "
-	    "in YCbCr, e F2.6 deve confrontare con la stessa — un confronto fatto con la "
-	    "matrice sbagliata misura la matrice\",\n"
+	    ".transfer_function / .color_primaries, filled by "
+	    "spa_format_video_raw_parse on the producer's SPA_PARAM_Format\",\n"
+	    "    \"⚠ sulla matrice\": \"at capture the pixels are RGB: no "
+	    "601/709 matrix was applied by us. The matrix is CHOSEN by F2.3 when converting "
+	    "to YCbCr, and F2.6 must compare with the same one — a comparison made with the "
+	    "wrong matrix measures the matrix\",\n"
 	    "    \"valori_grezzi\": {\"color_range\": %u, \"color_matrix\": %u, "
 	    "\"transfer_function\": %u, \"color_primaries\": %u}\n"
 	    "  },\n",
@@ -1279,8 +1279,8 @@ int main(int argc, char **argv)
 	g_string_append_printf(manifesto,
 	                       "],\n"
 	                       "    \"distinti_riciclati\": %u,\n"
-	                       "    \"chi_lo_dice\": \"PipeWire, spa_data.type del piano 0 di ogni "
-	                       "buffer — chiesto in due posti (formato e SPA_PARAM_Buffers)\"\n"
+	                       "    \"chi_lo_dice\": \"PipeWire, spa_data.type of plane 0 of every "
+	                       "buffer — asked for in two places (format and SPA_PARAM_Buffers)\"\n"
 	                       "  },\n",
 	                       p.quanti_fd);
 
@@ -1302,32 +1302,32 @@ int main(int argc, char **argv)
 	manifesto_fermo(manifesto, "regime", &p.regime, file_regime);
 
 	/*
-	 * ⛔ LE AVVERTENZE STANNO NEL MANIFESTO, NON IN UN DOCUMENTO.
+	 * ⛔ THE WARNINGS SIT IN THE MANIFEST, NOT IN A DOCUMENT.
 	 *
-	 * Invariante I7: la protezione di un difetto noto sta nel programma, non in
-	 * una riga che si puo' perdere.  Chi legge questo manifesto fra sei mesi non
-	 * avra' letto `REVIEWER.md` §2, e la deduzione «MemFd dunque software» e'
-	 * gia' costata due volte.
+	 * Invariant I7: the protection against a known defect lives in the program, not in
+	 * a line that can get lost.  Whoever reads this manifest six months from now will not
+	 * have read `REVIEWER.md` §2, and the deduction «MemFd therefore software» has
+	 * already cost twice.
 	 */
 	g_string_append(manifesto,
 	                "  \"avvertenze\": [\n"
-	                "    \"⛔ E1 — il tipo di buffer NON dice dove Mutter renda. Un MemFd qui e' "
-	                "la risposta a quel che ABBIAMO CHIESTO noi (servono i pixel leggibili), non "
-	                "una scoperta sul compositore. LEZIONI.md §1.11.\",\n"
-	                "    \"⛔ E1 — e nemmeno il contrario: un DMA-BUF non prova che si renda in "
-	                "GPU. Un render node aperto e' necessario, non sufficiente.\",\n"
-	                "    \"⚠ questo strumento NON misura il ritmo: copia due fotogrammi dentro la "
-	                "richiamata di tempo reale, e un numero di fotogrammi al secondo che uscisse "
-	                "da qui sarebbe falsato da noi. Il ritmo e' della fase 0 (36 ± 2) e della "
-	                "fase 3.\",\n"
-	                "    \"⚠ 'negoziato' e 'chiesto' sono due campi diversi apposta: la voce "
-	                "12-bis di FASI.md §00-ambiente e' un'etichetta che dichiarava una misura che "
-	                "il compositore non aveva mai onorato.\"\n"
+	                "    \"⛔ E1 — the buffer type does NOT say where Mutter renders. A MemFd here is "
+	                "the answer to what WE ASKED for (readable pixels are needed), not "
+	                "a discovery about the compositor. LEZIONI.md §1.11.\",\n"
+	                "    \"⛔ E1 — nor the opposite: a DMA-BUF does not prove rendering on the "
+	                "GPU. An open render node is necessary, not sufficient.\",\n"
+	                "    \"⚠ this tool does NOT measure rate: it copies two frames inside the "
+	                "real-time callback, and a frames-per-second number that came out "
+	                "of here would be skewed by us. Rate belongs to phase 0 (36 ± 2) and "
+	                "phase 3.\",\n"
+	                "    \"⚠ 'negoziato' and 'chiesto' are two different fields on purpose: item "
+	                "12-bis of FASI.md §00-ambiente is a label that declared a size that "
+	                "the compositor had never honoured.\"\n"
 	                "  ]\n}\n");
 
 	if (!g_file_set_contents(file_json, manifesto->str, -1, &sbaglio))
 	{
-		fprintf(stderr, "⛔ non riesco a scrivere %s: %s\n", file_json, sbaglio->message);
+		fprintf(stderr, "⛔ I cannot write %s: %s\n", file_json, sbaglio->message);
 		g_string_free(manifesto, TRUE);
 		palco_smonta(palco);
 		return 1;
@@ -1336,13 +1336,13 @@ int main(int argc, char **argv)
 
 	printf("PRESA\t%s\t%s\t%s\t%" PRIu64 "\t%" PRIu64 "\t%s\n", etichetta, esito, file_json,
 	       p.arrivati, p.dopo_la_scena,
-	       p.quanti_tipi > 0 ? nome_tipo(p.tipi_visti[0]) : "NESSUNO");
+	       p.quanti_tipi > 0 ? nome_tipo(p.tipi_visti[0]) : "NONE");
 	fprintf(stderr,
-	        "  esito: %s\n"
-	        "  arrivati %" PRIu64 " (prima della scena %" PRIu64 ", dopo %" PRIu64 ")\n"
-	        "  danno: pieno %" PRIu64 ", parziale %" PRIu64 ", assente %" PRIu64 "\n"
-	        "  buffer distinti riciclati: %u\n"
-	        "  manifesto: %s\n",
+	        "  outcome: %s\n"
+	        "  arrived %" PRIu64 " (before the scene %" PRIu64 ", after %" PRIu64 ")\n"
+	        "  damage: full %" PRIu64 ", partial %" PRIu64 ", absent %" PRIu64 "\n"
+	        "  distinct recycled buffers: %u\n"
+	        "  manifest: %s\n",
 	        esito, p.arrivati, p.prima_della_scena, p.dopo_la_scena, p.danno_pieno,
 	        p.danno_parziale, p.danno_assente, p.quanti_fd, file_json);
 
