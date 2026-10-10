@@ -1,93 +1,93 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-16-risorse — IL CAMPIONATORE DELLE RISORSE, SUL SERVER (fase 16, §7 e §10)
+16-risorse — THE RESOURCE SAMPLER, ON THE SERVER (phase 16, §7 and §10)
 
-    (sul server, da root)  python3 16-risorse.py --scatola kde --dir DIR [--intervallo 1]
+    (on the server, as root)  python3 16-risorse.py --scatola kde --dir DIR [--intervallo 1]
                                                 [--durata S] [--pss-ogni 5]
                                                 [--segni-browser remotix-ff-,remotix-cr-]
-    python3 16-risorse.py --certifica          (niente server: /proc e /sys FINTI)
+    python3 16-risorse.py --certifica          (no server: FAKE /proc and /sys)
 
-Scrive DIR/risorse.jsonl, UNA riga JSON al secondo, finche' non riceve SIGTERM
-(o SIGINT, o scade --durata).  La prima riga e' l'intestazione (`"tipo":
-"intestazione"`: macchina, schede, scatola); le altre sono campioni.
+Writes DIR/risorse.jsonl, ONE JSON row per second, until it receives SIGTERM
+(or SIGINT, or --durata expires).  The first row is the header (`"tipo":
+"intestazione"`: machine, cards, box); the others are samples.
 
-⛔ Deve girare da ROOT (sudo): `smaps_rollup` e `fdinfo` dei processi degli
-   inquilini e di root non si leggono da un altro utente.  Senza root il
-   campionatore NON finge: i recinti che non puo' leggere li segnala in `avvisi`.
+⛔ It must run as ROOT (sudo): `smaps_rollup` and `fdinfo` of the processes of the
+   tenants and of root cannot be read by another user.  Without root the
+   sampler does NOT pretend: the enclosures it cannot read are reported in `avvisi`.
 
-I TRE RECINTI (§7) — come si trovano, e perche' cosi'
+THE THREE ENCLOSURES (§7) — how they are found, and why this way
 ----------------------------------------------------------------------------
-`[M]` 25 set 2026, scatola kde con una sessione viva: i cgroup della scatola NON
-coincidono coi recinti.  Il padre `remotix` sta in
+`[M]` 25 Sep 2026, kde box with a live session: the box's cgroups do NOT
+coincide with the enclosures.  The parent `remotix` is in
   /machine.slice/libpod-<id>.scope/container/system.slice/rete11-server.service
-ma il FIGLIO per sessione (`remotix`, uid dell'inquilino) sta nella scope di
-logind dell'inquilino (`…/user.slice/user-4013.slice/session-c5.scope`), insieme
-alla sessione; e le applicazioni lanciate dai banchi con `podman exec … runuser`
-finiscono in `…/container/init.scope`.  ⇒ il recinto si decide PROCESSO PER
-PROCESSO, e il cgroup serve a dire «dentro la scatola» e a contare il totale:
+but the per-session CHILD (`remotix`, the tenant's uid) is in the tenant's
+logind scope (`…/user.slice/user-4013.slice/session-c5.scope`), together
+with the session; and the applications launched by the benches with `podman exec … runuser`
+end up in `…/container/init.scope`.  ⇒ the enclosure is decided PROCESS BY
+PROCESS, and the cgroup serves to say «inside the box» and to count the total:
 
-  remotix   dentro la scatola, e: nel cgroup `rete11-server.service`, OPPURE il
-            suo eseguibile si chiama `remotix` (i figli per sessione).
-            `per_inquilino` = i figli, per inquilino; `padre` = il resto.
-  sessioni  dentro la scatola, uid >= 1000 (e non 65534), e non `remotix`:
-            compositore, applicazioni, pipewire, dbus… — `per_inquilino` col
-            nome letto da /etc/passwd DELLA scatola.
-  browser   fuori dalla scatola: ogni processo la cui riga di comando porta un
-            SEGNO dei profili dei banchi (`remotix-ff-` Firefox/Marionette,
-            `remotix-cr-` Chrome/CDP: `12-client-veri.py` e `07-b46`) e TUTTI i
-            suoi discendenti (i processi di contenuto di Firefox non portano il
-            profilo nella riga di comando: li porta il padre).  ⭐ E' il modo
-            piu' affidabile senza toccare l'attore: il profilo e' fatto dal
-            banco, un Firefox dell'utente non lo ha.  (Se l'attore lanciasse
-            ogni browser con `systemd-run --user --scope --unit=r16-browser-NN`
-            il recinto sarebbe anche un cgroup: qui basta aggiungere il segno.)
-  ⭐ --sistema xrdp (fasi/20 §7.4): la scatola e' `rete11-<desktop>-xrdp`; il recinto
-            `remotix` e' xrdp (eseguibili xrdp, xrdp-sesman, xrdp-sesexec, xrdp-chansrv, o
-            le unita' xrdp.service / xrdp-sesman.service) — QUI si comprime RemoteFX;
-            `sessioni` comprende l'Xorg di ogni inquilino (xorgxrdp, la cattura);
-            `browser` sono gli xfreerdp3 (segno `remotix-rdp-`); `labwc_cliente` anche
-            gli Xvfb.  `remotix_pid` e' il demone xrdp (il padre delle connessioni).
-            ⛔ Le due divisioni non si confrontano recinto per recinto: il confronto si
-            fa sui TOTALI della scatola.
-  + a parte, e NON recinti: `altro_scatola` (i processi di root della scatola
-    che non sono remotix: systemd, journald, logind…) e `labwc_cliente` (i
-    compositori senza schermo dei browser, utente dei banchi, sull'ospite).
+  remotix   inside the box, and: in the cgroup `rete11-server.service`, OR its
+            executable is called `remotix` (the per-session children).
+            `per_inquilino` = the children, per tenant; `padre` = the rest.
+  sessioni  inside the box, uid >= 1000 (and not 65534), and not `remotix`:
+            compositor, applications, pipewire, dbus… — `per_inquilino` with the
+            name read from the BOX's /etc/passwd.
+  browser   outside the box: every process whose command line carries a
+            MARK of the benches' profiles (`remotix-ff-` Firefox/Marionette,
+            `remotix-cr-` Chrome/CDP: `12-client-veri.py` and `07-b46`) and ALL
+            its descendants (Firefox's content processes do not carry the
+            profile on the command line: their parent does).  ⭐ It is the most
+            reliable way without touching the actor: the profile is made by the
+            bench, a user's Firefox does not have it.  (If the actor launched
+            each browser with `systemd-run --user --scope --unit=r16-browser-NN`
+            the enclosure would also be a cgroup: here adding the mark is enough.)
+  ⭐ --sistema xrdp (fasi/20 §7.4): the box is `rete11-<desktop>-xrdp`; the enclosure
+            `remotix` is xrdp (executables xrdp, xrdp-sesman, xrdp-sesexec, xrdp-chansrv, or
+            the units xrdp.service / xrdp-sesman.service) — HERE RemoteFX is compressed;
+            `sessioni` includes each tenant's Xorg (xorgxrdp, the capture);
+            `browser` are the xfreerdp3 (mark `remotix-rdp-`); `labwc_cliente` also
+            the Xvfb.  `remotix_pid` is the xrdp daemon (the parent of the connections).
+            ⛔ The two divisions are not compared enclosure by enclosure: the comparison is
+            made on the box's TOTALS.
+  + apart, and NOT enclosures: `altro_scatola` (the box's root processes
+    that are not remotix: systemd, journald, logind…) and `labwc_cliente` (the
+    browsers' screenless compositors, benches' user, on the host).
 
-⚠ LA CPU DEI PROCESSI BREVI.  Un `ls` battuto nel terminale nasce e muore fra
-  due campioni: la lettura per processo non lo vede.  ⇒ `sessioni.cpu_core` e'
-  preso dal cgroup della scatola (esatto) MENO remotix e `altro_scatola`
-  (processi lunghi, esatti per processo); `sessioni.cpu_non_attribuita` e' la
-  parte che nessun inquilino vivo si porta (i processi morti in mezzo).  Il
-  browser non ha cgroup suo: i suoi processi sono lunghi, e la perdita e' detta.
+⚠ THE CPU OF SHORT PROCESSES.  An `ls` typed in the terminal is born and dies between
+  two samples: the per-process reading does not see it.  ⇒ `sessioni.cpu_core` is
+  taken from the box's cgroup (exact) MINUS remotix and `altro_scatola`
+  (long processes, exact per process); `sessioni.cpu_non_attribuita` is the
+  part that no live tenant carries (the processes that died in between).  The
+  browser has no cgroup of its own: its processes are long, and the loss is stated.
 
-LA SCHEDA GRAFICA — dal kernel, per processo (`/proc/<pid>/fdinfo`)
+THE GRAPHICS CARD — from the kernel, per process (`/proc/<pid>/fdinfo`)
 ----------------------------------------------------------------------------
-Chiavi GENERICHE dello standard DRM (Documentation/gpu/drm-usage-stats):
-  drm-engine-<motore>: <ns> ns        tempo occupato, cumulativo ⇒ Δns/Δt = uso
-  drm-engine-capacity-<motore>: <n>   motori di quella classe ⇒ si divide per n
-  drm-cycles-<m> / drm-total-cycles-<m>   (xe) ⇒ Δcicli/Δtotali
-  drm-total-/drm-resident-<regione>, drm-memory-<regione>: <n> [KiB|MiB]
-  drm-client-id, drm-pdev             un client aperto su piu' fd o ereditato
-                                      da un figlio si conta UNA volta
-Intel i915: render · copy · video (capacita' 2) · video-enhance, regioni
-system0/stolen-system0.  AMD amdgpu: gfx · compute · enc · dec (e dma/jpeg),
-regioni vram/gtt/cpu (o `drm-memory-vram` sui nuclei vecchi).  Le CATEGORIE
-(`disegno`, `video`, `video_enhance`, `copia`, `calcolo`) si decidono dal nome.
-⭐ `intel_gpu_top` NON serve: fdinfo da' gia' l'uso per motore e per processo, e
-  la frequenza, la strozzatura e la potenza vengono da sysfs (sotto).
-  ⚠ Quel che fdinfo non vede: il lavoro del nucleo senza client (scansione
-  dello schermo), e l'ultimo pezzo di un client chiuso fra due campioni.
-  La somma per scheda e' «somma dei client», non il contatore del hardware.
+GENERIC keys of the DRM standard (Documentation/gpu/drm-usage-stats):
+  drm-engine-<engine>: <ns> ns        busy time, cumulative ⇒ Δns/Δt = usage
+  drm-engine-capacity-<engine>: <n>   engines of that class ⇒ divide by n
+  drm-cycles-<m> / drm-total-cycles-<m>   (xe) ⇒ Δcycles/Δtotal
+  drm-total-/drm-resident-<region>, drm-memory-<region>: <n> [KiB|MiB]
+  drm-client-id, drm-pdev             a client open on several fds or inherited
+                                      by a child is counted ONCE
+Intel i915: render · copy · video (capacity 2) · video-enhance, regions
+system0/stolen-system0.  AMD amdgpu: gfx · compute · enc · dec (and dma/jpeg),
+regions vram/gtt/cpu (or `drm-memory-vram` on old kernels).  The CATEGORIES
+(`disegno`, `video`, `video_enhance`, `copia`, `calcolo`) are decided from the name.
+⭐ `intel_gpu_top` is NOT needed: fdinfo already gives the usage per engine and per process, and
+  the frequency, the throttling and the power come from sysfs (below).
+  ⚠ What fdinfo does not see: the kernel's work without a client (screen
+  scan-out), and the last piece of a client closed between two samples.
+  The sum per card is «sum of the clients», not the hardware counter.
 
-Per scheda (sysfs): i915 `gt_cur_freq_mhz`, `gt_act_freq_mhz`,
-`gt/gt0/throttle_reason_*` (strozzatura: le ragioni attive); amdgpu
-`gpu_busy_percent`, `mem_info_vram_used/total`, hwmon (temperature, sclk,
-potenza).  Temperatura della iGPU Intel: NON esiste un sensore suo ⇒ si registra
-il pacchetto della CPU (coretemp, stessa piastrina), dichiarato come tale.
-Potenza: RAPL `package` e `uncore` (= la iGPU) da powercap.
+Per card (sysfs): i915 `gt_cur_freq_mhz`, `gt_act_freq_mhz`,
+`gt/gt0/throttle_reason_*` (throttling: the active reasons); amdgpu
+`gpu_busy_percent`, `mem_info_vram_used/total`, hwmon (temperatures, sclk,
+power).  Temperature of the Intel iGPU: it has NO sensor of its own ⇒ the
+CPU package is recorded (coretemp, same die), declared as such.
+Power: RAPL `package` and `uncore` (= the iGPU) from powercap.
 
-LA RIGA (campione):
+THE ROW (sample):
   {"tipo":"campione","t":<epoch>,"ora":"…","dt_s":1.0,"scatola":"kde",
    "macchina":{"cpu_core","cpu_pct","carico":[1,5,15],"processi","thread",
                "mem_totale_mb","mem_disponibile_mb","mem_usata_mb"},
@@ -96,15 +96,15 @@ LA RIGA (campione):
               "sessioni":{…,"cpu_non_attribuita","per_inquilino":{nome:{…}}},
               "browser":{…,"per_browser":[{"pid","tipo","profilo",…}]},
               "altro_scatola":{…},"labwc_cliente":{…}},
-     dove {…} = {"cpu_core","processi","thread","rss_mb","pss_mb",
+     where {…} = {"cpu_core","processi","thread","rss_mb","pss_mb",
                  "gpu":{categoria:%},"gpu_mem_mb"}
    "gpu":{"<pdev>":{"scheda","driver","motori":{nome:%},"categorie":{…},
                     "freq_mhz","freq_att_mhz","temp_c","temp_fonte","potenza_w",
                     "strozzatura":[…],"occupata_pct","vram_usata_mb"}},
    "processi_gpu":[{"pid","comm","recinto","inquilino","pdev","motori":{…}}],
    "remotix_pid":n, "avvisi":[…], "misuratore":{"cpu_core","ms"}}
-  `pss_mb`: PSS da smaps_rollup, ogni processo riletto ogni --pss-ogni secondi
-  a rotazione (il costo si spalma), e subito alla prima vista.
+  `pss_mb`: PSS from smaps_rollup, each process re-read every --pss-ogni seconds
+  in rotation (the cost is spread out), and immediately at first sight.
 """
 import argparse
 import json
@@ -127,7 +127,7 @@ EXTRA = ("altro_scatola", "labwc_cliente")
 
 # ─────────────────────────────── fdinfo ────────────────────────────────────
 def unita(v):
-    """'123 KiB' → byte.  Senza unita' sono byte (lo standard)."""
+    """'123 KiB' → bytes.  Without a unit they are bytes (the standard)."""
     p = v.split()
     try:
         n = float(p[0])
@@ -138,9 +138,9 @@ def unita(v):
 
 
 def leggi_fdinfo(testo):
-    """Il blocco `drm-*` di un fdinfo, in un dizionario semplice:
+    """The `drm-*` block of an fdinfo, in a simple dictionary:
     {driver, pdev, client, motori{nome:ns}, capacita{nome:n}, cicli{nome:c},
-     cicli_tot{nome:c}, memoria{regione:byte}}   — None se non e' DRM."""
+     cicli_tot{nome:c}, memoria{regione:byte}}   — None if it is not DRM."""
     d = {"motori": {}, "capacita": {}, "cicli": {}, "cicli_tot": {}, "memoria": {},
          "driver": None, "pdev": None, "client": None}
     visto = False
@@ -177,8 +177,8 @@ def leggi_fdinfo(testo):
             except (ValueError, IndexError):
                 pass
         elif k.startswith("drm-resident-") or k.startswith("drm-memory-"):
-            # ⚠ `resident` e non `total`: `total` conta anche quel che e' solo
-            #   prenotato.  `drm-memory-*` e' la forma vecchia (amdgpu).
+            # ⚠ `resident` and not `total`: `total` also counts what is only
+            #   reserved.  `drm-memory-*` is the old form (amdgpu).
             reg = k.split("-", 2)[2]
             b = unita(v)
             if b is not None:
@@ -204,14 +204,14 @@ def categoria(motore):
 
 
 def uso_client(prima, ora, dt_ns):
-    """Uso % per motore di UN client fra due letture.  Normalizzato sulla
-    capacita' (i915 video: 2 motori ⇒ 100 % = tutti e due pieni)."""
+    """Usage % per engine of ONE client between two readings.  Normalised on the
+    capacity (i915 video: 2 engines ⇒ 100 % = both full)."""
     out = {}
     if prima is None or dt_ns <= 0:
         return out
     for m, ns in ora["motori"].items():
         p = prima["motori"].get(m)
-        if p is None or ns < p:            # contatore nuovo o azzerato: niente
+        if p is None or ns < p:            # new or reset counter: nothing
             continue
         cap = max(1, ora["capacita"].get(m, 1))
         out[m] = 100.0 * (ns - p) / dt_ns / cap
@@ -269,21 +269,21 @@ class Campionatore:
         self.cont = contenitore or (self.scopri_contenitore() if scopri else None)
         self.giro = 0
         self.t_prima = None
-        self.cpu_prima = {}            # (pid, avvio) → tick
+        self.cpu_prima = {}            # (pid, start) → ticks
         self.cpu_mac_prima = None
         self.cg_prima = None
-        self.pss = {}                  # (pid, avvio) → kB
-        self.info = {}                 # (pid, avvio) → {cg, cmd, exe, uid}
-        self.drm_fd = {}               # (pid, avvio) → [fd, …]
-        self.drm_eta = {}              # (pid, avvio) → giro dell'ultima scansione
-        self.drm_prima = {}            # chiave client → lettura
+        self.pss = {}                  # (pid, start) → kB
+        self.info = {}                 # (pid, start) → {cg, cmd, exe, uid}
+        self.drm_fd = {}               # (pid, start) → [fd, …]
+        self.drm_eta = {}              # (pid, start) → round of the last scan
+        self.drm_prima = {}            # client key → reading
         self.rapl_prima = {}
         self.passwd = {}
         self.passwd_giro = -99
         self.ncpu = os.cpu_count() or 1
         self.io_prima = None
 
-    # ── la scatola ──
+    # ── the box ──
     def scopri_contenitore(self):
         nome = "rete11-" + self.scatola
         try:
@@ -308,7 +308,7 @@ class Campionatore:
                     self.passwd[int(p[2])] = p[0]
         return self.passwd
 
-    # ── identita' di un processo (letta una volta, ricontrollata ogni 10 giri) ──
+    # ── identity of a process (read once, re-checked every 10 rounds) ──
     def identita(self, pid, chiave):
         i = self.info.get(chiave)
         if i and self.giro - i["giro"] < 10:
@@ -322,10 +322,10 @@ class Campionatore:
             except OSError:
                 exe = None
             i = {"cmd": cmd, "exe": exe}
-        # ⛔ L'uid VERO da `status`, non il padrone di /proc/<pid>: `[M]` 25 set,
-        #   il figlio di remotix e' non-«dumpable» e la sua cartella in /proc
-        #   risulta di ROOT — finiva nel padre invece che nell'inquilino.  E si
-        #   rilegge ogni 10 giri: il figlio nasce root e poi cede i privilegi.
+        # ⛔ The REAL uid from `status`, not the owner of /proc/<pid>: `[M]` 25 Sep,
+        #   remotix's child is non-«dumpable» and its folder in /proc
+        #   appears owned by ROOT — it ended up in the parent instead of the tenant.  And it is
+        #   re-read every 10 rounds: the child is born root and then drops its privileges.
         m = re.search(r"^Uid:\s+(\d+)", leggi("%s/%d/status" % (self.proc, pid)) or "", re.M)
         i["uid"] = int(m.group(1)) if m else i.get("uid", -1)
         i["cg"], i["giro"] = cg, self.giro
@@ -420,7 +420,7 @@ class Campionatore:
                 if m:
                     s["freq_att_mhz"] = float(m.group(1))
             out[pdev] = s
-        # la potenza RAPL (Intel): package e uncore (= la grafica integrata)
+        # the RAPL power (Intel): package and uncore (= the integrated graphics)
         for p in _glob(self.sys + "/class/powercap", "intel-rapl:"):
             nome = (leggi(p + "/name") or "").strip()
             e = leggi(p + "/energy_uj")
@@ -444,12 +444,12 @@ class Campionatore:
             if (leggi(h + "/name") or "").strip() == "coretemp":
                 v = leggi(h + "/temp1_input")
                 try:
-                    return round(int(v) / 1000, 1), "coretemp pacchetto CPU (la iGPU non ha sensore suo)"
+                    return round(int(v) / 1000, 1), "coretemp CPU package (the iGPU has no sensor of its own)"
                 except (TypeError, ValueError):
                     pass
         return None, None
 
-    # ── un campione ──
+    # ── one sample ──
     def campione(self):
         t0cpu = time.process_time()
         t0 = self.orologio()
@@ -457,12 +457,12 @@ class Campionatore:
         self.giro += 1
         avvisi = []
         if self.cont is None:
-            avvisi.append("⛔ scatola rete11-%s NON trovata (podman inspect): recinti remotix e "
-                          "sessioni non misurabili" % self.scatola)
+            avvisi.append("⛔ box rete11-%s NOT found (podman inspect): enclosures remotix and "
+                          "sessioni not measurable" % self.scatola)
         pref = self.cont["cgroup"] if self.cont else None
         nomi = self.nomi_scatola() if self.cont else {}
 
-        # 1. tutti i processi
+        # 1. all the processes
         procs = {}
         for n in os.listdir(self.proc):
             if not n.isdigit():
@@ -471,7 +471,7 @@ class Campionatore:
             s = stat_pid(self.proc, pid)
             if s:
                 procs[pid] = s
-        # 2. i browser: radici col segno e i loro discendenti
+        # 2. the browsers: roots with the mark and their descendants
         figli = {}
         for pid, s in procs.items():
             figli.setdefault(s["ppid"], []).append(pid)
@@ -505,7 +505,7 @@ class Campionatore:
                 radici_browser[pid] = "chrome" if "remotix-cr-" in i["cmd"] else (
                     "firefox" if "remotix-ff-" in i["cmd"] else (
                         "freerdp" if "remotix-rdp-" in i["cmd"] else "browser"))
-        # i discendenti (un livello alla volta: la radice vince sul figlio col segno)
+        # the descendants (one level at a time: the root wins over a child with the mark)
         radice_di = {}
         pila = [(r, r) for r in radici_browser
                 if procs[r]["ppid"] not in radici_browser and not _antenato_in(procs, r, radici_browser)]
@@ -523,7 +523,7 @@ class Campionatore:
                     and s["i"]["uid"] >= 1000:
                 rec[pid] = "labwc_cliente"
 
-        # 3. CPU, memoria, fd grafici per processo
+        # 3. CPU, memory, graphics fds per process
         tot = {k: _vuoto() for k in RECINTI + EXTRA}
         per_in = {"remotix": {}, "sessioni": {}}
         per_br = {}
@@ -572,7 +572,7 @@ class Campionatore:
             for k in [k for k in dct if k not in vivi]:
                 del dct[k]
 
-        # 4. la scheda grafica, per client (deduplicato) e per processo
+        # 4. the graphics card, per client (deduplicated) and per process
         dt_ns = dt * 1e9 if dt else 0
         visti = {}
         proc_gpu = {}
@@ -587,7 +587,7 @@ class Campionatore:
                     continue
                 k = (d["pdev"], d["client"]) if d["client"] else (pid, s["avvio"], fd)
                 if k in visti:
-                    continue                  # lo stesso client: una volta sola
+                    continue                  # the same client: once only
                 visti[k] = (pid, d)
         schede_gpu = {}
         nuovi_drm = {}
@@ -627,7 +627,7 @@ class Campionatore:
                     for _, v in sorted(proc_gpu.items())]
         self.drm_prima = nuovi_drm
 
-        # 5. macchina, scatola, schede
+        # 5. machine, box, cards
         st = (leggi(self.proc + "/stat") or "cpu 0 0 0 0").splitlines()[0].split()[1:]
         st = [int(x) for x in st[:8]]
         occ, tut = sum(st) - st[3] - st[4], sum(st)
@@ -657,7 +657,7 @@ class Campionatore:
             if dt and self.cg_prima and cg["usec"] is not None and self.cg_prima["usec"] is not None:
                 scat["cpu_core"] = round(max(0, cg["usec"] - self.cg_prima["usec"]) / 1e6 / dt, 3)
         self.cg_prima = cg
-        # la CPU esatta delle sessioni: il cgroup meno i processi lunghi degli altri
+        # the exact CPU of the sessions: the cgroup minus the others' long processes
         if scat and scat["cpu_core"] is not None:
             ses = scat["cpu_core"] - tot["remotix"]["cpu_core"] - tot["altro_scatola"]["cpu_core"]
             attr = tot["sessioni"]["cpu_core"]
@@ -676,12 +676,12 @@ class Campionatore:
             s["memoria_client_mb"] = {r: round(v, 1) for r, v in sch["memoria_mb"].items()}
             s["client"] = sch["client"]
 
-        # 6. i recinti vuoti si DICONO (un recinto vuoto non e' un recinto sano)
+        # 6. empty enclosures are STATED (an empty enclosure is not a healthy enclosure)
         for r in RECINTI:
             if tot[r]["processi"] == 0:
-                avvisi.append("⚠ recinto %s VUOTO: nessun processo trovato" % r)
+                avvisi.append("⚠ enclosure %s EMPTY: no process found" % r)
         if self.sistema != "xrdp" and self.cont and tot["remotix"]["processi"] and not padre["processi"]:
-            avvisi.append("⚠ remotix: nessun processo nel cgroup rete11-server.service (il padre?)")
+            avvisi.append("⚠ remotix: no process in the cgroup rete11-server.service (the parent?)")
         if self.sistema == "xrdp":
             pids_rx = sorted(p for p, r in rec.items() if r == "remotix" and procs[p]["comm"] == "xrdp"
                              and procs.get(procs[p]["ppid"], {}).get("comm") != "xrdp")
@@ -690,7 +690,7 @@ class Campionatore:
                              and "rete11-server.service" in procs[p]["i"]["cg"]
                              and rec.get(procs[p]["ppid"]) != "remotix")
         if any(v["pss_mancanti"] for v in tot.values()):
-            avvisi.append("⚠ PSS illeggibile per %d processi (non si e' root?)"
+            avvisi.append("⚠ PSS unreadable for %d processes (not root?)"
                           % sum(v["pss_mancanti"] for v in tot.values()))
 
         rec_out = {}
@@ -768,7 +768,7 @@ def _pulisci(v):
     return o
 
 
-# ─────────────────────────────── giro ──────────────────────────────────────
+# ─────────────────────────────── loop ──────────────────────────────────────
 def gira(o):
     os.makedirs(o.dir, exist_ok=True)
     c = Campionatore(o.scatola, segni_browser=o.segni_browser.split(","), pss_ogni=o.pss_ogni,
@@ -784,7 +784,7 @@ def gira(o):
     out.flush()
     fine = time.monotonic() + o.durata if o.durata else None
     prossimo = time.monotonic()
-    c.campione()                       # il primo serve solo da «prima»
+    c.campione()                       # the first one serves only as «before»
     while not fermo["si"]:
         prossimo += o.intervallo
         time.sleep(max(0.0, prossimo - time.monotonic()))
@@ -796,7 +796,7 @@ def gira(o):
         if fine and time.monotonic() >= fine:
             break
         if time.monotonic() - prossimo > 5 * o.intervallo:
-            prossimo = time.monotonic()     # siamo rimasti indietro: non si rincorre
+            prossimo = time.monotonic()     # we fell behind: no catching up
     out.close()
     return 0
 
@@ -833,8 +833,8 @@ drm-total-cycles-rcs:\t{t}
 
 
 class Finto:
-    """Un /proc e un /sys finti in una cartella: si scrivono i processi, si
-    fanno due campioni con un orologio finto, e si guarda il numero."""
+    """A fake /proc and /sys in a folder: the processes are written, two
+    samples are taken with a fake clock, and the number is checked."""
 
     def __init__(self):
         self.d = tempfile.mkdtemp(prefix="16-risorse-cert-")
@@ -880,8 +880,8 @@ class Finto:
             f.write("Rss: 9999 kB\nPss: %d kB\n" % pss)
         if exe and not os.path.lexists(p + "/exe"):
             os.symlink("/opt/remotix/" + exe, p + "/exe")
-        # ⚠ il padrone della cartella resta il NOSTRO (come un processo non
-        #   «dumpable», che in /proc risulta di root): l'uid si legge da status.
+        # ⚠ the folder's owner stays OURS (like a non-«dumpable» process,
+        #   which in /proc appears owned by root): the uid is read from status.
         for fd, txt in (fdinfo or {}).items():
             if not os.path.lexists(p + "/fd/" + fd):
                 os.symlink("/dev/dri/renderD128", p + "/fd/" + fd)
@@ -917,8 +917,8 @@ def certifica():
         c._ripristina = lambda: None
         return c
 
-    print("16-risorse --certifica  (/proc e /sys finti, orologio finto)")
-    # ── 1. i915: render 250 ms su 1 s ⇒ 25 %; video 1 s su due motori ⇒ 50 % ──
+    print("16-risorse --certifica  (fake /proc and /sys, fake clock)")
+    # ── 1. i915: render 250 ms over 1 s ⇒ 25 %; video 1 s on two engines ⇒ 50 % ──
     F = nuovo()
     F.stat_macchina(0, 0)
     F.processo(10, "remotix", 0, SRV, cmd="/opt/remotix/remotix --porta 8512", exe="remotix")
@@ -942,32 +942,32 @@ def certifica():
     r = c.campione()
     c._ripristina()
     rx, se, br = r["recinti"]["remotix"], r["recinti"]["sessioni"], r["recinti"]["browser"]
-    guarda("fdinfo i915, video su 2 motori", abs(rx["gpu"].get("video", -1) - 50.0) < 0.01,
-           "remotix video %s %% (atteso 50: 1 s occupato su 1 s, capacita' 2)" % rx["gpu"].get("video"))
-    guarda("fdinfo i915, disegno", abs(se["gpu"].get("disegno", -1) - 25.0) < 0.01,
-           "sessioni disegno %s %% (atteso 25)" % se["gpu"].get("disegno"))
-    guarda("memoria grafica per client", abs(rx["gpu_mem_mb"] - 2.0) < 0.01,
-           "remotix %s MB (atteso 2: 2048 KiB residenti)" % rx["gpu_mem_mb"])
-    guarda("i tre recinti", (rx["processi"], se["processi"], br["processi"]) == (2, 1, 2),
-           "remotix %d (padre + figlio) · sessioni %d · browser %d (il Firefox dell'utente "
-           "SENZA segno resta fuori)" % (rx["processi"], se["processi"], br["processi"]))
-    guarda("per inquilino", "uid4013" in rx["per_inquilino"] and "uid4013" in se["per_inquilino"],
-           "figlio di remotix e sessione attribuiti all'inquilino 4013")
-    guarda("CPU per processo", abs(rx["cpu_core"] - 150 / CLK) < 1e-3,
-           "remotix %.3f core (attesi %.3f: 150 tick in 1 s)" % (rx["cpu_core"], 150 / CLK))
-    guarda("CPU delle sessioni dal cgroup (processi brevi)",
+    guarda("fdinfo i915, video on 2 engines", abs(rx["gpu"].get("video", -1) - 50.0) < 0.01,
+           "remotix video %s %% (expected 50: 1 s busy over 1 s, capacity 2)" % rx["gpu"].get("video"))
+    guarda("fdinfo i915, drawing", abs(se["gpu"].get("disegno", -1) - 25.0) < 0.01,
+           "sessioni drawing %s %% (expected 25)" % se["gpu"].get("disegno"))
+    guarda("graphics memory per client", abs(rx["gpu_mem_mb"] - 2.0) < 0.01,
+           "remotix %s MB (expected 2: 2048 KiB resident)" % rx["gpu_mem_mb"])
+    guarda("the three enclosures", (rx["processi"], se["processi"], br["processi"]) == (2, 1, 2),
+           "remotix %d (parent + child) · sessioni %d · browser %d (the user's Firefox "
+           "WITHOUT a mark stays out)" % (rx["processi"], se["processi"], br["processi"]))
+    guarda("per tenant", "uid4013" in rx["per_inquilino"] and "uid4013" in se["per_inquilino"],
+           "remotix's child and session attributed to tenant 4013")
+    guarda("CPU per process", abs(rx["cpu_core"] - 150 / CLK) < 1e-3,
+           "remotix %.3f cores (expected %.3f: 150 ticks in 1 s)" % (rx["cpu_core"], 150 / CLK))
+    guarda("CPU of the sessions from the cgroup (short processes)",
            abs(se["cpu_core"] - (2.0 - 150 / CLK)) < 1e-3
            and abs(se["cpu_non_attribuita"] - (2.0 - 170 / CLK)) < 1e-3,
-           "sessioni %.3f core = scatola 2,000 − remotix; non attribuita %.3f (quel che il "
-           "cgroup ha visto e nessun processo vivo si porta: i processi brevi)"
+           "sessioni %.3f cores = box 2.000 − remotix; unattributed %.3f (what the "
+           "cgroup saw and no live process carries: the short processes)"
            % (se["cpu_core"], se["cpu_non_attribuita"]))
-    guarda("macchina", r["macchina"]["cpu_pct"] == 50.0, "cpu %s %% (atteso 50)" % r["macchina"]["cpu_pct"])
-    guarda("PSS", abs(se["pss_mb"] - 1.0) < 0.01, "sessioni %s MB (atteso 1)" % se["pss_mb"])
-    guarda("nessun avviso quando i recinti sono pieni", not r["avvisi"], str(r["avvisi"]))
-    guarda("il pid del padre remotix", r["remotix_pid"] == 10, "remotix_pid %s (atteso 10)" % r["remotix_pid"])
+    guarda("machine", r["macchina"]["cpu_pct"] == 50.0, "cpu %s %% (expected 50)" % r["macchina"]["cpu_pct"])
+    guarda("PSS", abs(se["pss_mb"] - 1.0) < 0.01, "sessioni %s MB (expected 1)" % se["pss_mb"])
+    guarda("no warning when the enclosures are full", not r["avvisi"], str(r["avvisi"]))
+    guarda("the pid of the remotix parent", r["remotix_pid"] == 10, "remotix_pid %s (expected 10)" % r["remotix_pid"])
     shutil.rmtree(F.d, ignore_errors=True)
 
-    # ── 2. GUASTO: lo stesso client su due fd e due processi ⇒ una volta sola ──
+    # ── 2. FAULT: the same client on two fds and two processes ⇒ once only ──
     F = nuovo()
     txt0 = FDI_I915.format(cid=9, mem=0, r=0, v=0)
     txt1 = FDI_I915.format(cid=9, mem=0, r=500_000_000, v=0)
@@ -983,14 +983,14 @@ def certifica():
     r = c.campione()
     c._ripristina()
     v = r["recinti"]["sessioni"]["gpu"].get("disegno")
-    guarda("client duplicato contato UNA volta", v is not None and abs(v - 50.0) < 0.01,
-           "disegno %s %% (atteso 50; contato tre volte darebbe 150)" % v)
-    guarda("browser Chrome riconosciuto dal profilo",
+    guarda("duplicated client counted ONCE", v is not None and abs(v - 50.0) < 0.01,
+           "drawing %s %% (expected 50; counted three times it would give 150)" % v)
+    guarda("Chrome browser recognised from the profile",
            r["recinti"]["browser"]["per_browser"][:1] and
            r["recinti"]["browser"]["per_browser"][0]["tipo"] == "chrome", "")
     shutil.rmtree(F.d, ignore_errors=True)
 
-    # ── 3. amdgpu e xe: nomi delle chiavi diversi, stesse categorie ──
+    # ── 3. amdgpu and xe: different key names, same categories ──
     F = nuovo()
     F.processo(10, "remotix", 0, SRV, exe="remotix",
                fdinfo={"7": FDI_AMD.format(cid=1, vram=4096, g=0, e=0),
@@ -1006,15 +1006,15 @@ def certifica():
     r = c.campione()
     c._ripristina()
     g = r["recinti"]["remotix"]["gpu"]
-    guarda("amdgpu gfx/enc + xe cicli",
+    guarda("amdgpu gfx/enc + xe cycles",
            abs(g.get("disegno", -1) - (25.0 + 30.0)) < 0.01 and abs(g.get("video", -1) - 50.0) < 0.01,
-           "disegno %s %% (attesi 25 gfx + 30 xe rcs) · video %s %% (atteso 50 enc)"
+           "drawing %s %% (expected 25 gfx + 30 xe rcs) · video %s %% (expected 50 enc)"
            % (g.get("disegno"), g.get("video")))
     guarda("VRAM amdgpu (drm-memory-vram)", abs(r["recinti"]["remotix"]["gpu_mem_mb"] - 4.0) < 0.01,
-           "%s MB (attesi 4)" % r["recinti"]["remotix"]["gpu_mem_mb"])
+           "%s MB (expected 4)" % r["recinti"]["remotix"]["gpu_mem_mb"])
     shutil.rmtree(F.d, ignore_errors=True)
 
-    # ── 4. GUASTO: un contatore che non avanza ⇒ 0 %, mai l'ultimo valore ──
+    # ── 4. FAULT: a counter that does not advance ⇒ 0 %, never the last value ──
     F = nuovo()
     t = FDI_I915.format(cid=3, mem=0, r=7_000_000_000, v=0)
     F.processo(10, "remotix", 0, SRV, exe="remotix", fdinfo={"7": t})
@@ -1025,11 +1025,11 @@ def certifica():
     F.t += 1.0
     r = c.campione()
     c._ripristina()
-    guarda("motore fermo ⇒ 0 %", r["recinti"]["remotix"]["gpu"].get("disegno") == 0.0,
-           "disegno %s %%" % r["recinti"]["remotix"]["gpu"].get("disegno"))
+    guarda("idle engine ⇒ 0 %", r["recinti"]["remotix"]["gpu"].get("disegno") == 0.0,
+           "drawing %s %%" % r["recinti"]["remotix"]["gpu"].get("disegno"))
     shutil.rmtree(F.d, ignore_errors=True)
 
-    # ── 5. GUASTO: il pid riusato (stesso numero, altro avvio) non da' salti ──
+    # ── 5. FAULT: a reused pid (same number, other start) gives no jumps ──
     F = nuovo()
     F.processo(10, "remotix", 0, SRV, exe="remotix", cpu=100000)
     F.processo(20, "kwin", 4013, SES)
@@ -1045,11 +1045,11 @@ def certifica():
         f.write(s)
     r = c.campione()
     c._ripristina()
-    guarda("pid riusato: niente CPU negativa o gigante", r["recinti"]["remotix"]["cpu_core"] == 0.0,
-           "remotix %s core (il processo nuovo parte da zero; confuso col vecchio darebbe 5)" % r["recinti"]["remotix"]["cpu_core"])
+    guarda("reused pid: no negative or giant CPU", r["recinti"]["remotix"]["cpu_core"] == 0.0,
+           "remotix %s cores (the new process starts from zero; mistaken for the old one it would give 5)" % r["recinti"]["remotix"]["cpu_core"])
     shutil.rmtree(F.d, ignore_errors=True)
 
-    # ── 6. GUASTO: i recinti vuoti si SEGNALANO ──
+    # ── 6. FAULT: empty enclosures are REPORTED ──
     F = nuovo()
     F.processo(20, "kwin", 4013, SES)
     c = campionatore(F)
@@ -1058,21 +1058,21 @@ def certifica():
     r = c.campione()
     c._ripristina()
     a = " | ".join(r["avvisi"])
-    guarda("recinto remotix vuoto segnalato", "recinto remotix VUOTO" in a, a)
-    guarda("recinto browser vuoto segnalato", "recinto browser VUOTO" in a, "")
-    guarda("recinto sessioni pieno NON segnalato", "sessioni VUOTO" not in a, "")
+    guarda("empty remotix enclosure reported", "enclosure remotix EMPTY" in a, a)
+    guarda("empty browser enclosure reported", "enclosure browser EMPTY" in a, "")
+    guarda("full sessioni enclosure NOT reported", "sessioni EMPTY" not in a, "")
     shutil.rmtree(F.d, ignore_errors=True)
 
-    # ── 7. GUASTO: la scatola che non c'e' ──
+    # ── 7. FAULT: the box that is not there ──
     c = Campionatore("nessuna", proc=F.proc if os.path.isdir(F.proc) else "/proc",
                      contenitore=None, scopri=False)
     r = c.campione()
-    guarda("scatola assente segnalata", any("NON trovata" in x for x in r["avvisi"]),
+    guarda("missing box reported", any("NOT found" in x for x in r["avvisi"]),
            r["avvisi"][0] if r["avvisi"] else "")
 
     n = len(esiti)
     ok = sum(esiti)
-    print("CERTIFICA %s — %d su %d" % ("PASS" if ok == n else "FAIL", ok, n))
+    print("CERTIFICATION %s — %d of %d" % ("PASS" if ok == n else "FAIL", ok, n))
     return 0 if ok == n else 1
 
 
@@ -1082,7 +1082,7 @@ def main():
     a.add_argument("--scatola", choices=("gnome", "kde", "xfce", "lxqt", "gnome-xrdp", "kde-xrdp",
                                          "xfce-xrdp", "lxqt-xrdp"))
     a.add_argument("--sistema", choices=("remotix", "xrdp"), default="remotix",
-                   help="xrdp: il recinto «remotix» e' xrdp (fasi/20 §7.4)")
+                   help="xrdp: the «remotix» enclosure is xrdp (fasi/20 §7.4)")
     a.add_argument("--dir")
     a.add_argument("--intervallo", type=float, default=1.0)
     a.add_argument("--durata", type=float, default=0)
@@ -1093,10 +1093,10 @@ def main():
     if o.certifica:
         return certifica()
     if not o.scatola or not o.dir:
-        a.error("servono --scatola e --dir (o --certifica)")
+        a.error("--scatola and --dir are needed (or --certifica)")
     if os.geteuid() != 0:
-        print("⚠ 16-risorse non gira da root: PSS e fdinfo degli altri utenti saranno "
-              "illeggibili (e lo dira' in `avvisi`)", file=sys.stderr)
+        print("⚠ 16-risorse is not running as root: PSS and fdinfo of the other users will be "
+              "unreadable (and it will say so in `avvisi`)", file=sys.stderr)
     return gira(o)
 
 

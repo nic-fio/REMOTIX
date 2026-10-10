@@ -1,15 +1,15 @@
 /*
- * 16-d023-cornice.c — la prova di D-023: il flusso dichiara la misura della TELA.
+ * 16-d023-cornice.c — the test of D-023: the stream declares the size of the CANVAS.
  *
- * `[M]` 27 set 2026, Radeon RX 6800 (radeonsi 25.0.7): `hevc_vaapi` a 2544x1344
- * dichiarava 2560x1344 — il multiplo di 64, senza finestra di conformita' — e
- * le sessioni con Chrome (HEVC, tele mai multiple di 64) restavano nere.
+ * `[M]` 27 Sep 2026, Radeon RX 6800 (radeonsi 25.0.7): `hevc_vaapi` at 2544x1344
+ * declared 2560x1344 — the multiple of 64, without a conformance window — and
+ * the sessions with Chrome (HEVC, canvases never multiples of 64) stayed black.
  *
- * Il programma e' un guscio attorno a `src/codificatore.c` e non contiene
- * logica di codifica: codifica N fotogrammi BGRx della misura chiesta, con due
- * chiavi (la cornice va scritta su OGNI SPS, non solo sul primo), e scrive il
- * flusso.  Il giudizio lo danno `ffprobe` (la misura dichiarata) e il PSNR
- * contro la sorgente (l'immagine dentro e' quella, 1:1): `16-d023-cornice.sh`.
+ * The program is a shell around `src/codificatore.c` and contains no
+ * encoding logic: it encodes N BGRx frames of the requested size, with two
+ * keyframes (the crop window must be written on EVERY SPS, not only on the first), and writes the
+ * stream.  The judgement is given by `ffprobe` (the declared size) and by the PSNR
+ * against the source (the image inside is that one, 1:1): `16-d023-cornice.sh`.
  *
  *   16-d023-cornice --codec hevc|h264 --misura LxA --nodo /dev/dri/renderD128 \
  *       --sorgente F.bgrx --uscita F [--fotogrammi N]
@@ -42,7 +42,7 @@ int main(int argc, char **argv)
 			n = (uint32_t) strtoul(v, NULL, 10);
 	}
 	if (!sorgente || !uscita || !l || !a) {
-		fprintf(stderr, "uso: 16-d023-cornice --codec hevc|h264 --misura LxA "
+		fprintf(stderr, "usage: 16-d023-cornice --codec hevc|h264 --misura LxA "
 		                "--sorgente F.bgrx --uscita F [--nodo N] [--fotogrammi N]\n");
 		return 2;
 	}
@@ -51,7 +51,7 @@ int main(int argc, char **argv)
 	uint8_t *pixel = malloc(byte);
 	FILE *f = fopen(sorgente, "rb");
 	if (!pixel || !f || fread(pixel, 1, byte, f) != byte) {
-		fprintf(stderr, "⛔ %s: non ci sono %zu byte di BGRx %ux%u\n", sorgente, byte, l, a);
+		fprintf(stderr, "⛔ %s: there are not %zu bytes of BGRx %ux%u\n", sorgente, byte, l, a);
 		return 2;
 	}
 	fclose(f);
@@ -72,7 +72,7 @@ int main(int argc, char **argv)
 	char errore[512] = { 0 };
 	Codificatore *cod = codificatore_nuovo(&r, errore, sizeof(errore));
 	if (!cod) {
-		fprintf(stderr, "⛔ il codificatore non si e' aperto: %s\n", errore);
+		fprintf(stderr, "⛔ the encoder did not open: %s\n", errore);
 		return 1;
 	}
 	FILE *u = fopen(uscita, "wb");
@@ -84,7 +84,7 @@ int main(int argc, char **argv)
 			codificatore_chiedi_chiave(cod);
 		CodificatoreFotogramma fg;
 		if (!codificatore_comprimi(cod, pixel, l * 4, &fg)) {
-			fprintf(stderr, "⛔ fotogramma %u non prodotto (vedi il registro)\n", k);
+			fprintf(stderr, "⛔ frame %u not produced (see the log)\n", k);
 			break;
 		}
 		fwrite(fg.dati, 1, fg.byte, u);
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
 		codificatore_rilascia(cod);
 	}
 	fclose(u);
-	printf("%s %ux%u: %u fotogrammi su %u, %u chiavi · %s\n",
+	printf("%s %ux%u: %u frames of %u, %u keyframes · %s\n",
 	       codec == CODIFICATORE_H264 ? "h264" : "hevc", l, a, spediti, n, chiavi,
 	       codificatore_nome(cod));
 	codificatore_libera(cod);

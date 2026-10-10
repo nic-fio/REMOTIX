@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-16-rapporto — IL RAPPORTO DELLA FASE 16, GENERATO DAL REGISTRO (mai scritto a mano)
+16-rapporto — THE PHASE 16 REPORT, GENERATED FROM THE REGISTER (never written by hand)
 
     python3 16-rapporto.py [--registro banchi/16-stress/registro.jsonl]
                            [--html banchi/16-stress/rapporto.html] [--testo]
-    python3 16-rapporto.py --certifica      (registro sintetico in una cartella sua)
+    python3 16-rapporto.py --certifica      (synthetic register in a folder of its own)
 
-Dal registro di `16-classifica.py` (§10: una riga per livello, una per sessione):
-- la MATRICE FINALE di §11, desktop × scheda: per ogni misura dello schermo
-  (4K → 3K → 2K → Full HD) l'ultimo livello GREEN, il primo livello in FAIL
-  (il punto di rottura) e il primo DEGRADED;
-- la CURVA di ogni campagna per gradino: una riga per livello (l'ULTIMA
-  registrazione di quel livello: il registro si aggiunge soltanto, e una
-  ripetizione di §14 prende il posto della prima — le ripetizioni si contano),
-  con le misure peggiori delle sessioni e le risorse; e un grafico delle
-  risorse per gradino (CPU della macchina, disegno e video della scheda,
-  memoria usata — tutte in %, un solo asse);
-- i COLLI DI BOTTIGLIA: al primo livello non GREEN di ogni campagna (o
-  all'ultimo, se e' tutta verde), la risorsa piu' carica e i recinti che la
-  consumano;
-- per ogni livello non GREEN: le ragioni delle sessioni e le evidenze.
+From the register of `16-classifica.py` (§10: one row per level, one per session):
+- the FINAL MATRIX of §11, desktop × card: for every screen size
+  (4K → 3K → 2K → Full HD) the last GREEN level, the first level in FAIL
+  (the breaking point) and the first DEGRADED;
+- the CURVE of every campaign per step: one row per level (the LAST
+  recording of that level: the register is only appended to, and a
+  repetition of §14 takes the place of the first — repetitions are counted),
+  with the worst measures of the sessions and the resources; and a chart of the
+  resources per step (machine CPU, drawing and video of the card,
+  memory used — all in %, a single axis);
+- the BOTTLENECKS: at the first non-GREEN level of every campaign (or
+  at the last, if it is all green), the most loaded resource and the enclosures that
+  consume it;
+- for every non-GREEN level: the reasons of the sessions and the evidence.
 """
 import argparse
 import html
@@ -34,9 +34,9 @@ QUI = os.path.dirname(os.path.abspath(__file__))
 DESKTOP = ("gnome", "kde", "xfce", "lxqt")
 MISURE = ("4K", "3K", "2K", "FHD")
 ORD = {"GREEN": 0, "DEGRADED": 1, "FAIL": 2}
-SERIE = (("cpu", "CPU della macchina"), ("disegno", "scheda: disegno"),
-         ("video", "scheda: video"), ("mem", "memoria usata"))
-BREVI = {"cpu": "CPU", "disegno": "disegno", "video": "video", "mem": "memoria"}
+SERIE = (("cpu", "machine CPU"), ("disegno", "card: drawing"),
+         ("video", "card: video"), ("mem", "memory used"))
+BREVI = {"cpu": "CPU", "disegno": "drawing", "video": "video", "mem": "memory"}
 
 
 def leggi(p):
@@ -75,8 +75,8 @@ def misura_di(m):
 
 
 def campagne(righe):
-    """{campagna: {"meta":…, "livelli": {n: riga di livello}, "sessioni": {n: [righe]},
-    "ripetizioni": {n: k}}} — l'ultima registrazione di ogni livello vince."""
+    """{campagna: {"meta":…, "livelli": {n: level row}, "sessioni": {n: [rows]},
+    "ripetizioni": {n: k}}} — the last recording of every level wins."""
     c = {}
     for r in righe:
         k = r.get("campagna") or "?"
@@ -124,8 +124,8 @@ def esiti_campagna(cc):
     verdi = [n for n in liv if cc["livelli"][n]["classe"] == "GREEN"]
     rotti = [n for n in liv if cc["livelli"][n]["classe"] == "FAIL"]
     degr = [n for n in liv if cc["livelli"][n]["classe"] == "DEGRADED"]
-    # ⭐ «regge» e' la regola di non-prosecuzione della salita (§6, §9): il livello piu' alto
-    #   prima del primo FAIL o DEGRADED SIGNIFICATIVO — un DEGRADED non significativo regge.
+    # ⭐ «regge» (holds) is the climb's stop rule (§6, §9): the highest level
+    #   before the first FAIL or SIGNIFICANT DEGRADED — a non-significant DEGRADED holds.
     regge = None
     for n in liv:
         r = cc["livelli"][n]
@@ -174,31 +174,31 @@ def collo(cc):
             "recinti": rec[:3], "strozzatura": stroz, "temp_max": temp or None}
 
 
-# ─────────────────────────────── testo ─────────────────────────────────────
+# ─────────────────────────────── text ──────────────────────────────────────
 def testo(righe):
     c = campagne(righe)
-    out = ["FASE 16 — %d campagne" % len(c)]
+    out = ["PHASE 16 — %d campaigns" % len(c)]
     for k, cc in sorted(c.items()):
         e = esiti_campagna(cc)
-        out.append("\n%s (%s · %s · %s) — regge %s · ultimo GREEN %s · rottura %s" % (
+        out.append("\n%s (%s · %s · %s) — holds %s · last GREEN %s · break %s" % (
             k, cc["meta"].get("desktop"), cc["meta"].get("scheda"), cc["meta"].get("misura"),
             e["regge"], e["ultimo_verde"], e["rottura"]))
         for n in sorted(cc["livelli"]):
             L = cc["livelli"][n]
             s = sommario(L)
-            out.append("  %3s utenti  %-8s %s  cpu %s%% disegno %s%% video %s%% mem %s%%%s" % (
+            out.append("  %3s users  %-8s %s  cpu %s%% drawing %s%% video %s%% mem %s%%%s" % (
                 n, L["classe"], "SIG" if L.get("significativo") and L["classe"] == "DEGRADED" else "   ",
                 s["cpu"], s["disegno"], s["video"], s["mem"],
-                "  (%d registrazioni)" % cc["ripetizioni"][n] if cc["ripetizioni"].get(n, 0) > 1 else ""))
+                "  (%d recordings)" % cc["ripetizioni"][n] if cc["ripetizioni"].get(n, 0) > 1 else ""))
         co = collo(cc)
         if co and co.get("risorsa"):
-            out.append("  collo a %s utenti: %s %.0f %% — %s" % (
+            out.append("  bottleneck at %s users: %s %.0f %% — %s" % (
                 co["livello"], co["risorsa"], co["valore"],
                 ", ".join("%s %s" % (a, b) for a, b, _ in co["recinti"])))
     return "\n".join(out)
 
 
-# ─────────────────────────────── pagina ────────────────────────────────────
+# ─────────────────────────────── page ──────────────────────────────────────
 CSS = """
 :root{--sfondo:#f7f7f5;--carta:#fff;--testo:#1d1d1b;--tenue:#6b6b66;--riga:#e3e2dd;
 --pass:#1f7a3a;--pass-f:#e3f3e7;--fail:#b3261e;--fail-f:#fbe4e2;--bloc:#8a5a00;--bloc-f:#fdf0d5;--vuoto:#f0efeb;
@@ -245,7 +245,7 @@ def grafico(cc):
     if not liv:
         return ""
     e = html.escape
-    L, A, sx, sy = 44, 30, 640, 220          # margini e area
+    L, A, sx, sy = 44, 30, 640, 220          # margins and area
     W, H = L + sx + 80, 14 + sy + A + 26
     xmax = max(liv)
     xmin = min(0, min(liv))
@@ -255,7 +255,7 @@ def grafico(cc):
 
     def Y(v):
         return 14 + sy - v / 100.0 * sy
-    s = ["<svg viewBox='0 0 %d %d' role='img' aria-label='risorse per gradino'>" % (W, H)]
+    s = ["<svg viewBox='0 0 %d %d' role='img' aria-label='resources per step'>" % (W, H)]
     for g in (0, 25, 50, 75, 100):
         s.append("<line x1='%d' x2='%d' y1='%.1f' y2='%.1f' stroke='var(--griglia)' stroke-width='1'/>"
                  % (L, L + sx, Y(g), Y(g)))
@@ -267,7 +267,7 @@ def grafico(cc):
                  % (X(n), 14 + sy + 16, n))
         s.append("<text x='%.1f' y='%d' font-size='11' text-anchor='middle' class='%s' "
                  "style='background:none' fill='currentColor'>%s</text>" % (X(n), 14 + sy + 32, c, SEGNO[c]))
-    s.append("<text x='%d' y='%d' font-size='11' text-anchor='end' fill='var(--tenue)'>utenti →</text>"
+    s.append("<text x='%d' y='%d' font-size='11' text-anchor='end' fill='var(--tenue)'>users →</text>"
              % (L + sx, 14 + sy + 46))
     etichette = []
     for i, (k, nome) in enumerate(SERIE):
@@ -280,10 +280,10 @@ def grafico(cc):
                  % (col, " ".join("%.1f,%.1f" % (X(n), Y(min(v, 100))) for n, v in pts)))
         for n, v in pts:
             s.append("<circle cx='%.1f' cy='%.1f' r='4' fill='%s' stroke='var(--carta)' stroke-width='2'>"
-                     "<title>%s utenti · %s: %.1f %%</title></circle>" % (X(n), Y(min(v, 100)), col, n, e(nome), v))
+                     "<title>%s users · %s: %.1f %%</title></circle>" % (X(n), Y(min(v, 100)), col, n, e(nome), v))
         n, v = pts[-1]
         etichette.append([Y(min(v, 100)) + 4, X(n) + 10, BREVI[k]])
-    # le etichette in fondo alle linee non si pestano: almeno 13 px fra l'una e l'altra
+    # the labels at the end of the lines do not overlap: at least 13 px between one and the next
     etichette.sort()
     for j in range(1, len(etichette)):
         etichette[j][0] = max(etichette[j][0], etichette[j - 1][0] + 13)
@@ -291,7 +291,7 @@ def grafico(cc):
         s.append("<text x='%.1f' y='%.1f' font-size='11' fill='var(--testo)'>%s</text>" % (x, y, e(t)))
     s.append("</svg>")
     leg = "".join("<span><i style='background:var(--s%d)'></i>%s</span>" % (i + 1, e(n)) for i, (_, n) in enumerate(SERIE))
-    return ("<div class='grafico'>%s<div class='legenda'>%s<span>sotto l'asse: la classe del livello "
+    return ("<div class='grafico'>%s<div class='legenda'>%s<span>below the axis: the class of the level "
             "(✓ GREEN · ▲ DEGRADED · ✕ FAIL)</span></div></div>" % ("".join(s), leg))
 
 
@@ -304,24 +304,24 @@ def pagina(righe):
     c = campagne(righe)
     impronte = sorted({(str(cc["meta"].get("commit")), str(cc["meta"].get("binario")),
                         str(cc["meta"].get("pagina"))) for cc in c.values()})
-    h = ["<!doctype html><html lang='it'><head><meta charset='utf-8'>",
+    h = ["<!doctype html><html lang='en'><head><meta charset='utf-8'>",
          "<meta name='viewport' content='width=device-width,initial-scale=1'>",
-         "<title>Stress e capacità</title><style>%s</style></head><body><main>" % CSS,
-         "<h1>Fase 16 — stress e capacità</h1>",
-         "<p class='tenue'>Generato dal registro. Misurato su: %s. Soglie di §9 (approvate il 25 set 2026). "
-         "⚠ I browser girano sullo stesso server: ogni numero è un limite <b>inferiore</b>.</p>"
-         % e("; ".join("commit %s · binario %s · pagina %s" % x for x in impronte) or "—")]
-    # ── ⭐ il RIEPILOGO (proposta dell'utente, 29 set): desktop in riga, misure in colonna, Intel
-    #    e Radeon affiancate; il numero GRANDE e' il severo (tutti GREEN), la tolleranza sotto ──
+         "<title>Stress and capacity</title><style>%s</style></head><body><main>" % CSS,
+         "<h1>Phase 16 — stress and capacity</h1>",
+         "<p class='tenue'>Generated from the register. Measured on: %s. Thresholds of §9 (approved on 25 Sep 2026). "
+         "⚠ The browsers run on the same server: every number is a <b>lower</b> bound.</p>"
+         % e("; ".join("commit %s · binary %s · page %s" % x for x in impronte) or "—")]
+    # ── ⭐ the SUMMARY (the user's proposal, 29 Sep): desktops in rows, sizes in columns, Intel
+    #    and Radeon side by side; the BIG number is the strict one (all GREEN), the tolerance below ──
     trova = {}
     for k, cc in c.items():
         m = cc["meta"]
         trova[(m.get("desktop"), colonna_scheda(m.get("scheda")), misura_di(m.get("misura")))] = (k, esiti_campagna(cc))
-    h.append("<h2>Riepilogo: quanti utenti insieme</h2><p class='tenue'>Il numero grande: utenti "
-             "insieme con <b>tutti</b> sotto i 50 ms e ogni altra misura GREEN (§9). Sotto, «regge»: "
-             "il livello in cui al massimo un utente su quattro è appena oltre (mai sopra 100 ms) e "
-             "nessuno fallisce. Livelli provati: 1, 4, 8, 12, 16, e la ricerca fra due gradini "
-             "solo dove la salita si è rotta.</p>")
+    h.append("<h2>Summary: how many users together</h2><p class='tenue'>The big number: users "
+             "together with <b>all</b> under 50 ms and every other measure GREEN (§9). Below, «holds»: "
+             "the level at which at most one user in four is just over (never above 100 ms) and "
+             "nobody fails. Levels tried: 1, 4, 8, 12, 16, and the search between two steps "
+             "only where the climb broke.</p>")
     h.append("<div class='scorre'><table class='riepilogo'><thead><tr><th></th>%s</tr><tr><th></th>%s</tr></thead><tbody>"
              % ("".join("<th class='m' colspan='2'>%s</th>" % {"FHD": "Full HD"}.get(m, m) for m in MISURE),
                 "".join("<th class='s'>Intel</th><th class='s'>Radeon</th>" for _ in MISURE)))
@@ -331,18 +331,18 @@ def pagina(righe):
             for sc in ("intel", "radeon"):
                 t = trova.get((d, sc, m))
                 if not t:
-                    h.append("<td class='no'><b>·</b><small>non misurato</small></td>")
+                    h.append("<td class='no'><b>·</b><small>not measured</small></td>")
                     continue
                 k, es = t
                 v, r = es["ultimo_verde"] or 0, es["regge"] or 0
                 h.append("<td style='--q:%.3f' title='%s'><a href='#%s' style='color:inherit;text-decoration:none'>"
-                         "<b>%d</b><small>regge %d</small></a></td>" % (min(v, 16) / 16.0, e(k), e(k), v, r))
+                         "<b>%d</b><small>holds %d</small></a></td>" % (min(v, 16) / 16.0, e(k), e(k), v, r))
         h.append("</tr>")
     h.append("</tbody></table></div>")
-    # ── la matrice §11 ──
+    # ── the §11 matrix ──
     schede = sorted({colonna_scheda(cc["meta"].get("scheda")) for cc in c.values()} | {"intel", "radeon"})
-    h.append("<h2>La matrice finale</h2><p class='tenue'>Per ogni misura dello schermo: l'ultimo livello "
-             "GREEN · il punto di rottura (primo FAIL). Ogni riga rimanda alla sua salita.</p>")
+    h.append("<h2>The final matrix</h2><p class='tenue'>For every screen size: the last level "
+             "in GREEN · the breaking point (first FAIL). Every row links to its climb.</p>")
     h.append("<div class='scorre'><table><thead><tr><th>desktop</th>%s</tr></thead><tbody>"
              % "".join("<th>%s</th>" % e({"intel": "Intel iGPU", "radeon": "Radeon RX 6800"}.get(s, s))
                        for s in schede))
@@ -357,44 +357,44 @@ def pagina(righe):
                 es = esiti_campagna(cc)
                 cl = "GREEN" if es["rottura"] is None and es["primo_degradato"] is None else (
                     "FAIL" if es["rottura"] is not None else "DEGRADED")
-                celle.append("<a href='#%s' class='bollo %s'>%s</a> regge <b>%s</b> · ultimo GREEN <b>%s</b> · rottura <b>%s</b>"
+                celle.append("<a href='#%s' class='bollo %s'>%s</a> holds <b>%s</b> · last GREEN <b>%s</b> · break <b>%s</b>"
                              % (e(k), cl, e(misura_di(cc["meta"].get("misura"))), fmt(es["regge"]),
                                 fmt(es["ultimo_verde"]), fmt(es["rottura"])))
             h.append("<td>%s</td>" % ("<br>".join(celle) if celle else "<span class='tenue'>·</span>"))
         h.append("</tr>")
     h.append("</tbody></table></div>")
-    # ── colli di bottiglia ──
-    h.append("<h2>I colli di bottiglia</h2><p class='tenue'>Al primo livello non GREEN di ogni campagna (o "
-             "all'ultimo, se è tutta verde): la risorsa più carica, e i recinti che la consumano. Una "
-             "risorsa alta da sola non è un FAIL: spiega il comportamento, non lo giudica.</p>")
+    # ── bottlenecks ──
+    h.append("<h2>The bottlenecks</h2><p class='tenue'>At the first non-GREEN level of every campaign (or "
+             "at the last, if it is all green): the most loaded resource, and the enclosures that consume it. A "
+             "high resource on its own is not a FAIL: it explains the behaviour, it does not judge it.</p>")
     for k, cc in sorted(c.items()):
         co = collo(cc)
         if not co or not co.get("risorsa"):
             continue
-        h.append("<div class='collo'><b>%s</b> a %s utenti %s — <b>%s %.0f %%</b>%s%s%s</div>" % (
+        h.append("<div class='collo'><b>%s</b> at %s users %s — <b>%s %.0f %%</b>%s%s%s</div>" % (
             e(k), co["livello"], bollo(co["classe"]), e(co["risorsa"]), co["valore"],
             (" · " + ", ".join("%s %s" % (e(a), e(b)) for a, b, _ in co["recinti"])) if co["recinti"] else "",
-            (" · strozzatura: " + e(", ".join(co["strozzatura"]))) if co["strozzatura"] else "",
+            (" · throttling: " + e(", ".join(co["strozzatura"]))) if co["strozzatura"] else "",
             (" · %.0f °C" % co["temp_max"]) if co["temp_max"] else ""))
-    # ── le curve ──
-    h.append("<h2>Le salite</h2>")
+    # ── the curves ──
+    h.append("<h2>The climbs</h2>")
     for k, cc in sorted(c.items()):
         m = cc["meta"]
-        h.append("<h3 id='%s'>%s</h3><p class='tenue'>%s · %s %s · %s · commit %s · nucleo %s</p>" % (
+        h.append("<h3 id='%s'>%s</h3><p class='tenue'>%s · %s %s · %s · commit %s · kernel %s</p>" % (
             e(k), e(k), e(str(m.get("desktop"))), e(str(m.get("scheda"))), e(str(m.get("driver") or "")),
             e(str(m.get("misura"))), e(str(m.get("commit"))), e(str(m.get("nucleo")))))
         h.append(grafico(cc))
-        h.append("<div class='scorre'><table><thead><tr><th>utenti</th><th>classe</th><th>sessioni</th>"
-                 "<th>ritardo p95</th><th>saltati</th><th>blocco</th><th>buchi/min</th><th>video</th>"
-                 "<th>audio</th><th>nascita</th><th>CPU</th><th>disegno</th><th>video (scheda)</th>"
-                 "<th>memoria</th></tr></thead><tbody>")
+        h.append("<div class='scorre'><table><thead><tr><th>users</th><th>class</th><th>sessions</th>"
+                 "<th>delay p95</th><th>skipped</th><th>freeze</th><th>gaps/min</th><th>video</th>"
+                 "<th>audio</th><th>birth</th><th>CPU</th><th>drawing</th><th>video (card)</th>"
+                 "<th>memory</th></tr></thead><tbody>")
         for n in sorted(cc["livelli"]):
             L, ss = cc["livelli"][n], cc["sessioni"].get(n, [])
             s = sommario(L)
             co = L.get("sessioni") or {}
             rip = cc["ripetizioni"].get(n, 1)
             h.append("<tr><th>%s%s</th><td>%s</td><td class='n'>%s/%s/%s</td>" % (
-                n, "<br><span class='tenue'>%d volte</span>" % rip if rip > 1 else "",
+                n, "<br><span class='tenue'>%d times</span>" % rip if rip > 1 else "",
                 bollo(L["classe"], L.get("significativo") and L["classe"] == "DEGRADED"),
                 co.get("GREEN", 0), co.get("DEGRADED", 0), co.get("FAIL", 0)))
             for voce, suf, verso in (("ritardo_p95_ms", " ms", "max"), ("saltati_pct", " %", "max"),
@@ -405,17 +405,17 @@ def pagina(righe):
             for kk in ("cpu", "disegno", "video", "mem"):
                 h.append("<td class='n'>%s</td>" % fmt(s[kk], " %"))
             h.append("</tr>")
-        h.append("</tbody></table></div><p class='tenue'>Le misure delle sessioni sono le PEGGIORI del "
-                 "livello; le risorse sono medie nella finestra di controllo (la memoria: il massimo).</p>")
+        h.append("</tbody></table></div><p class='tenue'>The session measures are the WORST of the "
+                 "level; the resources are averages in the check window (memory: the maximum).</p>")
         for n in sorted(cc["livelli"]):
             L = cc["livelli"][n]
             if L["classe"] == "GREEN":
                 continue
-            h.append("<details><summary>%s %s utenti — %s</summary><p>%s</p>" % (
+            h.append("<details><summary>%s %s users — %s</summary><p>%s</p>" % (
                 bollo(L["classe"], L.get("significativo")), n, e(k), e(L.get("ragione") or "")))
             for r in cc["sessioni"].get(n, []):
                 if r.get("classe") != "GREEN":
-                    h.append("<p>%s utente %s (%s, %s, %s): %s</p>" % (
+                    h.append("<p>%s user %s (%s, %s, %s): %s</p>" % (
                         bollo(r["classe"]), r.get("utente"), e(str(r.get("profilo"))), e(str(r.get("browser"))),
                         e(str(r.get("inquilino"))), e(r.get("ragione") or "")))
             for x in L.get("evidenze") or []:
@@ -425,10 +425,10 @@ def pagina(righe):
     return "".join(h)
 
 
-# ─────────────────────────────── certifica ─────────────────────────────────
+# ─────────────────────────────── certify ───────────────────────────────────
 def sintetico(p):
-    """Due campagne finte: kde Intel 4K che si rompe a 12, e kde Intel FHD tutta verde;
-    il livello 8 della prima ripetuto (§14)."""
+    """Two fake campaigns: kde Intel 4K that breaks at 12, and kde Intel FHD all green;
+    level 8 of the first one repeated (§14)."""
     with open(p, "w", encoding="utf-8") as f:
         def liv(camp, misura, n, classe, cpu, dis, vid, sig=False):
             f.write(json.dumps({"tipo": "livello", "campagna": camp, "livello": n, "desktop": "kde",
@@ -438,7 +438,7 @@ def sintetico(p):
                                 "sessioni": {"GREEN": n if classe == "GREEN" else n - 1,
                                              "DEGRADED": 1 if classe == "DEGRADED" else 0,
                                              "FAIL": 1 if classe == "FAIL" else 0},
-                                "ragione": "sintetico", "evidenze": ["/media/REMOTIX/misure/fase16/x"],
+                                "ragione": "synthetic", "evidenze": ["/media/REMOTIX/misure/fase16/x"],
                                 "risorse": {"cpu_macchina_pct": {"media": cpu}, "mem_usata_mb": {"max": 1000 * n},
                                             "mem_totale_mb": 32000,
                                             "recinti": {"remotix": {"cpu_core": {"media": 0.1 * n},
@@ -459,7 +459,7 @@ def sintetico(p):
                 f.write(json.dumps({"tipo": "sessione", "campagna": camp, "livello": n, "utente": u,
                                     "profilo": "ABCD"[(u - 1) % 4], "browser": "firefox" if u % 2 else "chrome",
                                     "inquilino": "c16u%02d" % u, "classe": cl,
-                                    "ragione": "sintetico: blocco 4 s" if cl == "FAIL" else "",
+                                    "ragione": "synthetic: freeze 4 s" if cl == "FAIL" else "",
                                     "misure": {"ritardo_p95_ms": 20 + 3 * n, "saltati_pct": 0.1 * n,
                                                "blocco_max_s": 4.0 if cl == "FAIL" else 0.3,
                                                "nascita_s": 1 + 0.2 * n,
@@ -468,7 +468,7 @@ def sintetico(p):
         liv("intel-4k-kde", "4K", 1, "GREEN", 8, 12, 5)
         liv("intel-4k-kde", "4K", 4, "GREEN", 25, 40, 18)
         liv("intel-4k-kde", "4K", 8, "DEGRADED", 45, 80, 35, True)
-        liv("intel-4k-kde", "4K", 8, "GREEN", 44, 78, 34)          # la ripetizione vince
+        liv("intel-4k-kde", "4K", 8, "GREEN", 44, 78, 34)          # the repetition wins
         liv("intel-4k-kde", "4K", 12, "FAIL", 70, 99, 52)
         liv("intel-4k-kde", "4K", 10, "GREEN", 55, 88, 44)
         liv("intel-4k-kde", "4K", 11, "FAIL", 62, 95, 48)
@@ -490,35 +490,35 @@ def certifica():
         righe = leggi(reg)
         c = campagne(righe)
         e = esiti_campagna(c["intel-4k-kde"])
-        guarda("la ricerca a meta': ultimo GREEN 10, rottura 11", e["ultimo_verde"] == 10 and e["rottura"] == 11,
+        guarda("the bisection: last GREEN 10, break 11", e["ultimo_verde"] == 10 and e["rottura"] == 11,
                str(e))
-        guarda("la ripetizione di §14 prende il posto della prima",
+        guarda("the repetition of §14 takes the place of the first",
                c["intel-4k-kde"]["livelli"][8]["classe"] == "GREEN" and c["intel-4k-kde"]["ripetizioni"][8] == 2)
         co = collo(c["intel-4k-kde"])
-        guarda("il collo: la scheda (disegno) al primo non GREEN, col recinto browser in testa",
-               co["livello"] == 11 and co["risorsa"] == "scheda: disegno" and co["recinti"][0][0] == "browser"
+        guarda("the bottleneck: the card (drawing) at the first non-GREEN, with the browser enclosure on top",
+               co["livello"] == 11 and co["risorsa"] == "card: drawing" and co["recinti"][0][0] == "browser"
                and co["strozzatura"] == ["pl1"], str(co))
         p = pagina(righe)
         pp = os.path.join(tmp, "rapporto.html")
         open(pp, "w").write(p)
-        guarda("la pagina: matrice, curva, colli, dettagli",
-               "La matrice finale" in p and "<svg" in p and "I colli di bottiglia" in p and "<details>" in p
-               and "ultimo GREEN <b>10</b> · rottura <b>11</b>" in p and "ultimo GREEN <b>16</b>" in p,
+        guarda("the page: matrix, curve, bottlenecks, details",
+               "The final matrix" in p and "<svg" in p and "The bottlenecks" in p and "<details>" in p
+               and "last GREEN <b>10</b> · break <b>11</b>" in p and "last GREEN <b>16</b>" in p,
                "%d byte" % len(p))
-        guarda("⛔ GUASTO: un registro vuoto non inventa caselle", "ultimo GREEN" not in pagina([]))
+        guarda("⛔ FAULT: an empty register does not invent cells", "last GREEN" not in pagina([]))
         print(testo(righe))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     n, ok = len(esiti), sum(esiti)
-    print("CERTIFICA %s — %d su %d" % ("PASS" if ok == n else "FAIL", ok, n))
+    print("CERTIFY %s — %d of %d" % ("PASS" if ok == n else "FAIL", ok, n))
     return 0 if ok == n else 1
 
 
 def scegli(righe, prefissi):
-    """⭐ Le campagne VALIDE (fasi/16 §11 e le anomalie): solo le etichette date (`intel-b`,
-    `amd-b`, `intel-c` …), e per ogni casella desktop × scheda × misura la campagna **piu'
-    recente** — una salita rifatta (attore curato, prodotto curato, ripresa dopo un blocco)
-    prende il posto di quella di prima.  Le scartate si elencano, non spariscono in silenzio."""
+    """⭐ The VALID campaigns (fasi/16 §11 and the anomalies): only the given labels (`intel-b`,
+    `amd-b`, `intel-c` …), and for every desktop × card × size cell the **most
+    recent** campaign — a redone climb (actor cured, product cured, resumed after a block)
+    takes the place of the earlier one.  The discarded ones are listed, they do not vanish silently."""
     if not prefissi:
         return righe, []
     tieni = [r for r in righe if any((r.get("campagna") or "").startswith(x + "-") for x in prefissi)]
@@ -544,10 +544,10 @@ def main():
     a.add_argument("--registro", default=os.path.join(QUI, "registro.jsonl"))
     a.add_argument("--html", default=os.path.join(QUI, "rapporto.html"))
     a.add_argument("--testo", action="store_true")
-    a.add_argument("--sintetico", help="scrive un registro sintetico di prova in questo percorso ed esce")
+    a.add_argument("--sintetico", help="writes a synthetic test register at this path and exits")
     a.add_argument("--certifica", action="store_true")
     a.add_argument("--campagne", nargs="*", default=[],
-                   help="solo queste etichette (es. intel-b amd-b intel-c); per casella vince la piu' recente")
+                   help="only these labels (e.g. intel-b amd-b intel-c); per cell the most recent wins")
     o = a.parse_args()
     if o.certifica:
         return certifica()
@@ -557,12 +557,12 @@ def main():
     righe = leggi(o.registro)
     righe, scartate = scegli(righe, o.campagne)
     if scartate:
-        print("⚠ sostituite da una salita piu' recente: %s" % ", ".join(scartate))
+        print("⚠ replaced by a more recent climb: %s" % ", ".join(scartate))
     with open(o.html, "w", encoding="utf-8") as f:
         f.write(pagina(righe))
     if o.testo:
         print(testo(righe))
-    print("→ %s (%d righe del registro)" % (o.html, len(righe)))
+    print("→ %s (%d register rows)" % (o.html, len(righe)))
     return 0
 
 

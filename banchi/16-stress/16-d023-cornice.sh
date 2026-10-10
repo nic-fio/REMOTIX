@@ -1,20 +1,20 @@
 #!/bin/bash
-# 16-d023-cornice.sh — la prova di D-023, dentro una scatola con la scheda da provare.
+# 16-d023-cornice.sh — the test of D-023, inside a box with the card to be tested.
 #
-#   (sulla macchina di prova, costruito prima con enter.sh — vedi fasi/16 §17)
+#   (on the test machine, built beforehand with enter.sh — see fasi/16 §17)
 #   sudo podman exec rete11-gnome bash /media/REMOTIX/src/controllo/banchi/16-stress/16-d023-cornice.sh \
-#        /percorso/16-d023-cornice [/dev/dri/renderD128]
+#        /path/16-d023-cornice [/dev/dri/renderD128]
 #
-# Per ogni codec e ogni misura (le tele VERE di Chrome nella fase 16, nessuna
-# multipla di 64): codifica 10 fotogrammi con due chiavi col codificatore del
-# PRODOTTO, poi
-#   1. `ffprobe` deve leggere nel flusso la misura della TELA (non il multiplo di 64);
-#   2. decodificato contro la sorgente, PSNR >= 40 dB: l'immagine dentro e' quella, 1:1
-#      (una scala o uno spostamento di una colonna la porterebbero sotto 25).
-# ⛔ Senza la cura, sulla Radeon: hevc 2544x1344 → il flusso dichiara 2560, e il
-#    prodotto non lo spedisce (0 fotogrammi) — PASS impossibile.
+# For every codec and every size (the REAL canvases of Chrome in phase 16, none
+# a multiple of 64): encodes 10 frames with two keyframes with the PRODUCT's
+# encoder, then
+#   1. `ffprobe` must read in the stream the size of the CANVAS (not the multiple of 64);
+#   2. decoded against the source, PSNR >= 40 dB: the image inside is that one, 1:1
+#      (a scaling or a shift by one column would bring it below 25).
+# ⛔ Without the cure, on the Radeon: hevc 2544x1344 → the stream declares 2560, and the
+#    product does not send it (0 frames) — PASS impossible.
 set -u
-PROVA=${1:?uso: 16-d023-cornice.sh /percorso/16-d023-cornice [nodo]}
+PROVA=${1:?usage: 16-d023-cornice.sh /path/16-d023-cornice [node]}
 NODO=${2:-/dev/dri/renderD128}
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
@@ -24,7 +24,7 @@ for codec in hevc h264; do
 		ffmpeg -v error -f lavfi -i "testsrc2=s=$m:r=30" -frames:v 1 -pix_fmt bgr0 -f rawvideo -y "$T/s.bgrx"
 		if ! "$PROVA" --codec $codec --misura $m --nodo "$NODO" --sorgente "$T/s.bgrx" \
 			--uscita "$T/f.$codec" >"$T/esito" 2>"$T/registro"; then
-			echo "FAIL $codec $m: il prodotto non ha spedito ($(grep -m1 '⛔' "$T/registro" | cut -c1-160))"
+			echo "FAIL $codec $m: the product did not send ($(grep -m1 '⛔' "$T/registro" | cut -c1-160))"
 			esito=1; continue
 		fi
 		letta=$(ffprobe -v error -show_entries stream=width,height -of csv=p=0:s=x "$T/f.$codec")
@@ -33,9 +33,9 @@ for codec in hevc h264; do
 			| grep -o 'average:[0-9.inf]*' | cut -d: -f2)
 		cornice=$(grep -c 'D-023' "$T/registro")
 		if [ "$letta" = "$m" ] && awk "BEGIN{exit !(\"$psnr\"==\"inf\" || $psnr+0 >= 40)}"; then
-			echo "PASS $codec $m: il flusso dichiara $letta · PSNR $psnr dB · righe D-023 $cornice · $(cat "$T/esito")"
+			echo "PASS $codec $m: the stream declares $letta · PSNR $psnr dB · D-023 lines $cornice · $(cat "$T/esito")"
 		else
-			echo "FAIL $codec $m: il flusso dichiara $letta · PSNR $psnr dB · righe D-023 $cornice"
+			echo "FAIL $codec $m: the stream declares $letta · PSNR $psnr dB · D-023 lines $cornice"
 			esito=1
 		fi
 	done

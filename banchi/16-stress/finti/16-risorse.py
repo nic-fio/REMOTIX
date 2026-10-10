@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""FINTO di 16-risorse.py: una riga al secondo in DIR/risorse.jsonl finche' SIGTERM."""
+"""FAKE of 16-risorse.py: one row per second in DIR/risorse.jsonl until SIGTERM."""
 import argparse, json, os, signal, time
 a = argparse.ArgumentParser(); a.add_argument("--scatola"); a.add_argument("--dir")
 o = a.parse_args()
