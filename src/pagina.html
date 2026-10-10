@@ -265,8 +265,17 @@
    * ⚠ `background: #000` is already on `#schermo` (line above) and is still
    *   needed, for the first instant before a frame arrives. */
   body[data-schermo="acceso"] #schermo { display: block; order: -1; flex: none;
-                                         margin: 0 auto; }
-  body[data-schermo="acceso"] main { background: #000; }
+                                         margin: auto; }
+  /* ⛔ AND THE BLACK FILLS THE WINDOW, ABOVE AND BELOW TOO — 10 Oct 2026, seen
+     on the phone: a canvas shorter than the window left the `<main>` as tall
+     as the canvas, and under it the body's WHITE (~92 px at factor 2.625).
+     ⇒ The column is at least as tall as the window and `margin: auto` centres
+     the canvas in it vertically as well: two bands, like the side ones.  ⚠
+     `svh` is the window with the browser's bars shown, that is the height
+     `misura_vista()` reads; the body's black covers the rest when they hide. */
+  body[data-schermo="acceso"] { background: #000; }
+  body[data-schermo="acceso"] main { background: #000;
+                                     min-height: 100vh; min-height: 100svh; }
 
   /* ⛔⛔⭐ AND THE LOGIN FORM DISAPPEARS — 16 Aug 2026, and the user found it
    *      with a screenshot, after reporting it three times:
@@ -2403,14 +2412,26 @@ function misura_vista() {
 const TELA_L_MINIMA = 320, TELA_L_MASSIMA = 4096;
 const TELA_A_MINIMA = 240, TELA_A_MASSIMA = 2304;
 const TELA_L_PASSO = 16, TELA_A_PASSO = 16;
+/* ⛔⭐ AND THE PAGE ASKS WITHIN ITS OWN `video.misura_massima` — 10 Oct 2026,
+ *     seen on the phone: 412x915 CSS at factor 2.625 asked for 1072x2304,
+ *     the decoder ceiling this page declares is 3840x2160, and the server
+ *     (`rcp.c`, B-1) reduced it KEEPING THE PROPORTIONS to 1004x2160 — a
+ *     canvas narrower than needed, plus ~92 px left over under the desktop.
+ * ⇒ The side that overflows the ceiling is brought to the ceiling and the
+ *   other stays (1072x2160), the same rule as `TELA_*_MASSIMA` above: the
+ *   server then has nothing to reduce.  ⚠ The leftover comes back as a band,
+ *   centred by the stylesheet.  `null` (MSE route, ceiling not measured):
+ *   nothing to respect, as in the `CIAO`. */
+let tela_tetto = null;
 function tela_da_chiedere() {
   const v = misura_vista();
   const p = (n, min, max, passo) => {
     n = Math.min(max, Math.max(min, Math.round(n)));
     return n - (n % passo);
   };
-  return [p(v[0], TELA_L_MINIMA, TELA_L_MASSIMA, TELA_L_PASSO),
-          p(v[1], TELA_A_MINIMA, TELA_A_MASSIMA, TELA_A_PASSO)];
+  const t = tela_tetto || [TELA_L_MASSIMA, TELA_A_MASSIMA];
+  return [p(v[0], TELA_L_MINIMA, Math.min(TELA_L_MASSIMA, t[0]), TELA_L_PASSO),
+          p(v[1], TELA_A_MINIMA, Math.min(TELA_A_MASSIMA, t[1]), TELA_A_PASSO)];
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -5768,6 +5789,7 @@ async function collega(utente, parola) {
    *   `[M]` on Firefox 140 ESR the three support APIs say yes to HEVC and the
    *   pixel does not arrive. */
   const sondaggio = await (SONDAGGIO || sonda_tutto());
+  tela_tetto = (sondaggio.misura && sondaggio.misura.massima) || null;
   const codec_buoni = PREFERENZA.filter((n) =>
     (sondaggio.codec[n][8] && sondaggio.codec[n][8].arriva) ||
     (sondaggio.codec[n][10] && sondaggio.codec[n][10].arriva));
@@ -11546,8 +11568,13 @@ function tocco_cucitura_verifica() {
      in the comment addressed to this one: it is a coupling, and a DECLARED
      coupling — it serves only to judge the seam, never to change its
      content. */
+  /* ⛔ The ARROW inside is measured, not the `<div>`: the stylesheet gives the
+     `<div>` width 0 on purpose (the tip sits at its corner), so measuring it
+     judged the seam broken EVERY time — and the fallback triangle was drawn
+     next to the real arrow (10 Oct 2026, seen on the phone: two pointers). */
   const e = document.getElementById("puntatore");
-  const visibile = !!e && e.getBoundingClientRect().width > 0
+  const f = e && e.firstElementChild;
+  const visibile = !!f && f.getBoundingClientRect().width > 0
                    && getComputedStyle(e).display !== "none";
   if (!visibile) {
     tocco_cucitura_rotta = true;
@@ -11559,7 +11586,15 @@ function tocco_cucitura_verifica() {
   return !tocco_cucitura_rotta;
 }
 
+/* ⛔ NO ARROW BEFORE THE FIRST DRAG — 10 Oct 2026, seen on the phone: the
+ *    arrow stood in the top-left corner of the login page, and after login
+ *    over the corner (or the middle) of the desktop.  That position had never
+ *    been SENT: the remote pointer was somewhere else, and a tap clicks where
+ *    the remote pointer is (§7.2), not where the arrow was.  ⇒ The arrow
+ *    appears with the first `PUNTATORE` the finger sends, and from then on
+ *    it tells the truth. */
 function tocco_puntatore_disegna() {
+  if (!tocco_puntatore_noto) return;
   const p = window.REMOTIX_PUNTATORE;
   if (p && typeof p.muovi === "function" && !tocco_cucitura_rotta) {
     if (tocco_ripiego_elemento) tocco_ripiego_elemento.style.display = "none";
@@ -11600,11 +11635,12 @@ function tocco_muovi_puntatore(dx_vetro, dy_vetro, ms) {
   tocco_spedisci(TIPO_INPUT.PUNTATORE, Math.floor(tocco_px), Math.floor(tocco_py), ms);
 }
 
+/* The starting point of the first drag.  ⚠ It does not make the pointer
+   "known": only `tocco_muovi_puntatore()` does, because only it sends. */
 function tocco_centra_puntatore() {
   if (tocco_puntatore_noto) return;
   const [tl, ta] = tocco_tela();
   tocco_px = Math.floor(tl / 2); tocco_py = Math.floor(ta / 2);
-  tocco_puntatore_noto = true;
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
