@@ -6707,5 +6707,9 @@ ma riprendere una sessione e non avere il resize al reattach non è accettabile�
 - ⇒ **The rule of §5.0-sexies now holds on KDE without exception**: the canvas takes the window's size at birth AND
   at reattach. Resizing during the session stays out (§5.1-bis).
 - 🔸 The way being tried (10 Oct): on reattach to a different size, create a new virtual output of the right size
-  and remove the old one, as when a monitor is swapped; the expected price is that KDE rearranges the windows. To
-  be confirmed on the hardware (branch `fix-kde-riattacco`).
+  and remove the old one, as when a monitor is swapped. To be confirmed on the hardware (branch
+  `fix-kde-riattacco`).
+- ⚠ Windows being rearranged is **not a KDE price**: every desktop moves and shrinks windows to fit a smaller screen
+  on reattach (user: *«accade la stessa cosa anche sugli altri DE»*). The only KDE detail (August note above: KWin
+  puts windows back where they were the last time it saw that size) is measured alongside GNOME, not treated as a
+  defect.
