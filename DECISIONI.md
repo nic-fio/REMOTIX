@@ -3271,1149 +3271,1149 @@ registro direbbe «verificato» avendo guardato la cosa sbagliata.
 
 ---
 
-### 4.8 ✅ ⛔ Niente sei ore: **sessanta minuti senza input e la sessione si chiude**
+### 4.8 ✅ ⛔ No six hours: **sixty minutes without input and the session closes**
 
-*Decisa dall'utente il **16 agosto 2026**, con queste parole: «niente timeout delle 6 ore: se dopo 60
+*Decided by the user on **16 Aug 2026**, with these words: «niente timeout delle 6 ore: se dopo 60
 minuti non c'è traccia di input la sessione viene killata».*
 
-`SPECIFICHE.md` §5.3 aveva scritto **6 ore senza alcun attacco**. ⇒ Cambiano **due cose**, e vanno
-lette separate:
+`SPECIFICHE.md` §5.3 had written **6 hours without any attach**. ⇒ **Two things** change, and they must be
+read separately:
 
-| | prima | adesso |
+| | before | now |
 |---|---|---|
-| il tetto | 6 ore | **60 minuti** |
-| ⛔ **il criterio** | «nessuno si è **attaccato**» | «nessuno ha **toccato niente**» |
+| the cap | 6 hours | **60 minutes** |
+| ⛔ **the criterion** | «nobody has **attached**» | «nobody has **touched anything**» |
 
-⭐ **Il secondo cambio è il più grosso**, e va detto: uno che si attacca e resta a guardare non
-rinnova più niente. Il tetto si nutre degli stessi gesti dell'orologio dei 30 minuti — i cinque
-input di §7.3 — e non del fatto che una connessione esista.
+⭐ **The second change is the bigger one**, and it must be said: someone who attaches and just watches no
+longer renews anything. The cap feeds on the same gestures as the 30-minute clock — the five
+inputs of §7.3 — and not on the fact that a connection exists.
 
-### ⭐ La decisione è venuta da un numero, e il numero è stato misurato apposta
+### ⭐ The decision came from a number, and the number was measured on purpose
 
-*L'utente aveva chiesto: «misura la memoria. Potrei anche decidere di diminuire drasticamente questo
+*The user had asked: «misura la memoria. Potrei anche decidere di diminuire drasticamente questo
 intervallo».*
 
-`[M]` 16 agosto 2026, sessione abbandonata, PSS (le librerie condivise contate una volta sola):
+`[M]` 16 Aug 2026, abandoned session, PSS (shared libraries counted only once):
 
 | | |
 |---|---|
-| la sessione intera di `prova` | **477 MB** su 31 851 totali ⇒ **1,5 %** |
-| di cui `gnome-shell` | 182 MB |
-| di cui **il nostro figlio** (palco, cattura, codificatore) | **116 MB** |
-| CPU | ~0,017 % di un nucleo |
-| ⭐ **crescita in 4 minuti** | **nessuna**: 477 · 476 · 476 · 477 · 477 · 477 · 477 · 477 · 477 MB |
+| the whole session of `prova` | **477 MB** out of 31 851 total ⇒ **1.5 %** |
+| of which `gnome-shell` | 182 MB |
+| of which **our child** (stage, capture, encoder) | **116 MB** |
+| CPU | ~0.017 % of one core |
+| ⭐ **growth in 4 minutes** | **none**: 477 · 476 · 476 · 477 · 477 · 477 · 477 · 477 · 477 MB |
 
-⇒ **Non è una perdita, è un costo fisso.** ⚠ E la scelta, con quel numero davanti, è dell'utente: si
-paga per un'ora invece che per sei.
+⇒ **It is not a leak, it is a fixed cost.** ⚠ And the choice, with that number in front of him, is the user's: one
+pays for one hour instead of six.
 
-### ⚠ E una complicazione è stata proposta e SCARTATA — dall'utente, con una misura di buon senso
+### ⚠ And a complication was proposed and DISCARDED — by the user, with a common-sense measure
 
-Avevo proposto di azzerare il tetto anche al **riaggancio**, temendo di uccidere una sessione mentre
-qualcuno la guardava. La risposta:
+I had proposed resetting the cap on **reattach** too, fearing to kill a session while
+someone was watching it. The answer:
 
 > *«la tua ipotesi comporta il fatto che l'utente in 10 minuti non fa nemmeno un clic col mouse,
 > alquanto improbabile»*
 
-⭐ **Ed è giusta**: perché il danno avvenisse, uno dovrebbe rientrare e poi non toccare **niente** per
-il resto dell'ora. ⇒ Si conta l'input e basta — la regola più semplice, e anche la più facile da
-spiegare a chi la subisce.
+⭐ **And it is right**: for the damage to happen, someone would have to come back and then touch **nothing** for
+the rest of the hour. ⇒ Input is counted and that is all — the simplest rule, and also the easiest to
+explain to whoever is subject to it.
 
-### Che cosa comporta, in codice
+### What it means, in code
 
-- il motivo `0x03 SESSIONE_ABBANDONATA` di `RCP.md` §8.2 **esiste da sempre e non l'aveva mai spedito
-  nessuno**: adesso è il suo. ⚠ Di solito non lo riceverà nessuno — se il tetto scade è perché non
-  c'era più nessuno — ma chi c'è legge una frase invece di guardare uno schermo fermo;
-- **configurabile** (`--abbandono-s`), `0` = spento, e il valore in vigore **si scrive nel registro
-  all'avvio** insieme agli altri due: un tetto da un'ora non lo verifica nessuno aspettando un'ora.
+- the reason `0x03 SESSIONE_ABBANDONATA` of `RCP.md` §8.2 **has always existed and nobody had ever
+  sent it**: now it is its own. ⚠ Usually nobody will receive it — if the cap expires it is because
+  nobody was there any more — but whoever is there reads a sentence instead of looking at a frozen screen;
+- **configurable** (`--abbandono-s`), `0` = off, and the value in force **is written in the log
+  at startup** together with the other two: nobody verifies a one-hour cap by waiting an hour.
 
 ---
 
-## 5. La geometria — la tela e la vista
+## 5. The geometry — the canvas and the view
 
-### 5.0 ✅ La tela nasce a ogni attacco, e sta ferma finché il client resta
+### 5.0 ✅ The canvas is born at every attach, and stays still as long as the client stays
 
-*8 agosto 2026, modello dettato dall'utente.*
+*8 Aug 2026, model dictated by the user.*
 
-| Momento | Chi decide la misura | Chi adatta |
+| Moment | Who decides the size | Who adapts |
 |---|---|---|
-| **attacco** | il client: la sessione legge la sua risoluzione e usa quella | nessuno — è 1:1 |
-| **durante la sessione** | nessuno: la tela non si muove | il **client** riscala l'immagine |
-| **riattacco** da un altro dispositivo | il nuovo client, con la sua risoluzione | nessuno — di nuovo 1:1 |
+| **attach** | the client: the session reads its resolution and uses that | nobody — it is 1:1 |
+| **during the session** | nobody: the canvas does not move | the **client** rescales the image |
+| **reattach** from another device | the new client, with its resolution | nobody — 1:1 again |
 
-Chiude la domanda che era aperta in §7.1: la tela **non** ha un valore predefinito né una
-preferenza dell'utente. La detta il client, a ogni attacco.
+It closes the question that was open in §7.1: the canvas has **no** default value nor a
+user preference. The client dictates it, at every attach.
 
-**La virtù del modello è il caso mobile**, e viene giusto da solo: il telefono si attacca e la
-tela nasce della forma del telefono — pixel veri, niente bande, niente scalatura. Nessuna
-delle alternative discusse (tela fissa generosa, tela con vista scorrevole) faceva altrettanto
-bene senza logica aggiuntiva.
+**The virtue of the model is the mobile case**, and it comes out right by itself: the phone attaches and the
+canvas is born in the phone's shape — real pixels, no bands, no scaling. None
+of the alternatives discussed (generous fixed canvas, canvas with a scrolling view) did as
+well without additional logic.
 
-**L'attacco funziona su tutti e quattro i desktop**, KDE compreso: la misura si scrive nella
-riga di avvio del compositore (`--virtual --width W --height H`) **prima** che la sessione
-parta, e la sessione parte al primo attacco.
+**Attach works on all four desktops**, KDE included: the size is written in the
+compositor's start line (`--virtual --width W --height H`) **before** the session
+starts, and the session starts at the first attach.
 
-### 5.0-bis 🔸 Il riattacco a misura diversa su KDE ≤ 6.7.4: degradazione dichiarata
+### 5.0-bis 🔸 Reattach at a different size on KDE ≤ 6.7.4: declared degradation
 
-> ⚠ *Il titolo diceva «KDE < 6.8», e §5.0-quater prometteva quella versione «a ottobre».*
-> ⛔ **Corretto il 14 agosto 2026**: `[R]` verificato su invent.kde.org, **`Plasma/6.8` non
-> esiste**, l'ultimo tag è **v6.7.4**, e i rami da `Plasma/6.3` a `Plasma/6.7` non hanno il
-> ridimensionamento a caldo — c'è **solo su `master`**, senza una data di rilascio. ⇒ Una
-> degradazione con una scadenza scritta invecchia peggio di una senza: qui la scadenza **non
-> c'è**, e va detto.
+> ⚠ *The title said «KDE < 6.8», and §5.0-quater promised that version «in October».*
+> ⛔ **Corrected on 14 Aug 2026**: `[R]` checked on invent.kde.org, **`Plasma/6.8` does not
+> exist**, the last tag is **v6.7.4**, and the branches from `Plasma/6.3` to `Plasma/6.7` do not have
+> hot resizing — it is **only on `master`**, without a release date. ⇒ A
+> degradation with a written expiry ages worse than one without: here the expiry **is not
+> there**, and it must be said.
 
-È l'unico punto in cui il modello non può essere servito. A sessione viva KWin 6.3.6 non
-cambia misura `[M]`, e riavviarlo significherebbe uccidere la sessione — cioè distruggere
-proprio il distacco che il modello offre.
+It is the only point where the model cannot be served. With the session alive KWin 6.3.6 does not
+change size `[M]`, and restarting it would mean killing the session — that is, destroying
+exactly the detach that the model offers.
 
-**Ripiego: si tiene la tela vecchia e riscala il client.** Non costa una riga in più, perché è
-lo stesso codice del punto «durante la sessione». Su Debian stabile, riattaccandosi da un
-dispositivo di forma diversa, si vede il desktop della forma precedente riscalato, finché la
-sessione non viene chiusa. Su GNOME, wlroots e KDE ≥ 6.8 si vede la forma nuova.
+**Fallback: the old canvas is kept and the client rescales.** It does not cost one more line, because it is
+the same code as the «during the session» point. On Debian stable, reattaching from a
+device of a different shape, one sees the desktop of the previous shape rescaled, until the
+session is closed. On GNOME, wlroots and KDE ≥ 6.8 one sees the new shape.
 
-Il ripiego **si dichiara nel registro** (`CODER.md` §4.2): un ripiego silenzioso produce due
-comportamenti sotto la stessa etichetta.
+The fallback **is declared in the log** (`CODER.md` §4.2): a silent fallback produces two
+behaviours under the same label.
 
-### 5.0-ter 🔸 `[?]` Ridurre anche la misura codificata quando la finestra è piccola
+### 5.0-ter 🔸 `[?]` Reduce the encoded size too when the window is small
 
-Se l'utente restringe molto la finestra, il server continua a codificare la tela intera e il
-client la rimpicciolisce: quei pixel si pagano in banda senza vederli. Si **potrebbe** far
-scendere anche la misura codificata sotto una certa soglia, con assestamento.
+If the user shrinks the window a lot, the server keeps encoding the whole canvas and the
+client shrinks it: those pixels are paid for in bandwidth without being seen. One **could** make
+the encoded size drop too below a certain threshold, with settling.
 
-⚠ **Non è nel modello, ed è volutamente fuori**: prima va misurato se il problema esiste
-davvero, e quanto pesa. Un'ottimizzazione decisa prima della misura è §7.2 di `LEZIONI.md` —
-ottimizzare nella direzione sbagliata.
+⚠ **It is not in the model, and it is left out on purpose**: first it must be measured whether the problem
+really exists, and how much it weighs. An optimisation decided before the measurement is §7.2 of `LEZIONI.md` —
+optimising in the wrong direction.
 
-### 5.0-quater 🔸 ⛔ ~~Con il browser, «la risoluzione del client» sono due misure diverse~~ → **la tela è la FINESTRA**
+### 5.0-quater 🔸 ⛔ ~~With the browser, «the client's resolution» is two different measures~~ → **the canvas is the WINDOW**
 
-> ## ⛔⛔ SUPERATA DA §5.0-sexies, e attuata il 15 agosto 2026
+> ## ⛔⛔ SUPERSEDED BY §5.0-sexies, and implemented on 15 Aug 2026
 >
-> *Questa voce sceglieva **lo schermo del dispositivo** come tela, e la finestra come vista. ⛔ È
-> stata rovesciata da §5.0-sexies — decisa dall'utente il 14 agosto — che prende **la finestra**:
-> tela e vista coincidono, la scala vale 1 e la conversione delle coordinate sparisce.*
+> *This item chose **the device's screen** as the canvas, and the window as the view. ⛔ It
+> was overturned by §5.0-sexies — decided by the user on 14 Aug — which takes **the window**:
+> canvas and view coincide, the scale is 1 and the coordinate conversion disappears.*
 >
-> ⚠ **E le due ragioni di questa voce non erano sbagliate: erano legate a un vincolo che non c'è
-> più.** La prima diceva che una finestra piccola darebbe *«un desktop piccolo per tutta la
-> sessione»* — vero **finché la tela non si poteva cambiare**. Da quando `figli_ritela()` →
-> `cattura_ridimensiona()` esiste (`[M]` 6 ms a caldo, 15 agosto), la tela si rifà **a ogni
-> attacco e a ogni riattacco**. ⛔ *Durante* la sessione no, e dal 17 agosto 2026 nemmeno dietro un
-> interruttore: §5.1-bis l'ha tolto. ⚠ Ma la voce resta curata lo stesso — «piccolo per sempre»
-> voleva dire *per tutta la sessione*, e una sessione si riattacca.
+> ⚠ **And the two reasons of this item were not wrong: they were tied to a constraint that no longer
+> exists.** The first said that a small window would give *«a small desktop for the whole
+> session»* — true **as long as the canvas could not be changed**. Since `figli_ritela()` →
+> `cattura_ridimensiona()` exists (`[M]` 6 ms hot, 15 Aug), the canvas is remade **at every
+> attach and at every reattach**. ⛔ *During* the session no, and since 17 Aug 2026 not even behind a
+> switch: §5.1-bis removed it. ⚠ But the item stays cured all the same — «small forever»
+> meant *for the whole session*, and a session can be reattached.
 >
-> ⭐ **E la `[?]` dello zoom di pagina, che questa voce lasciava aperta, si è chiusa da sé**: la
-> misura non si legge più dallo schermo — si legge dalla finestra, e il fattore di zoom ci è già
-> dentro. Un client con zoom ≠ 100 % non dichiara più una tela sbagliata: dichiara la sua.
+> ⭐ **And the `[?]` about page zoom, which this item left open, closed by itself**: the
+> size is no longer read from the screen — it is read from the window, and the zoom factor is already
+> inside it. A client with zoom ≠ 100 % no longer declares a wrong canvas: it declares its own.
 >
-> ⇒ Quel che resta valido qui sotto è la **distinzione fra tela e vista** e il perché sono due
-> grandezze diverse. Quel che cade è **quale delle due misure diventa la tela**.
+> ⇒ What remains valid below is the **distinction between canvas and view** and why they are two
+> different quantities. What falls is **which of the two measures becomes the canvas**.
 
 
-*9 agosto 2026, chiedendolo l'utente dopo il passaggio al client web: «resta da chiarire il
+*9 Aug 2026, at the user's request after the move to the web client: «resta da chiarire il
 comportamento della risoluzione avendo adesso come client un browser».*
 
-§5.0 dice *«la sessione legge la risoluzione del client e usa quella»*, e con un programma nostro a
-schermo intero non c'era altro da dire. ⛔ **Un browser è una finestra dentro uno schermo**, e le due
-misure differiscono — su un telefono di un fattore tre, per via dei pixel logici.
+§5.0 says *«the session reads the client's resolution and uses that»*, and with a program of ours in
+full screen there was nothing else to say. ⛔ **A browser is a window inside a screen**, and the two
+measures differ — on a phone by a factor of three, because of logical pixels.
 
 | | |
 |---|---|
-| **la tela** | 🔸 **lo schermo del dispositivo, in pixel fisici** |
-| **la vista** | la finestra, in pixel fisici |
+| **the canvas** | 🔸 **the device's screen, in physical pixels** |
+| **the view** | the window, in physical pixels |
 
-**Le due ragioni, e la seconda non l'aveva vista nessuno:**
+**The two reasons, and nobody had seen the second one:**
 
-1. la tela **è il desktop**: prendendola dalla finestra, un collegamento aperto per caso in una
-   finestrella darebbe un desktop piccolo **per tutta la sessione** — e §5.3 ha già dichiarato che
-   ingrandire non inventa dettaglio;
-2. ⭐ **la Keyboard Lock esiste solo a schermo intero** (`STUDI.md` §web §5). Cioè il modo in cui questo
-   prodotto si usa davvero *è* lo schermo intero, che è **esattamente la condizione in cui vista e
-   tela coincidono**. Il modello non ha un caso normale e un caso degradato: ha un caso normale che
-   coincide con quello ottimo.
+1. the canvas **is the desktop**: taking it from the window, a connection opened by chance in a
+   small window would give a small desktop **for the whole session** — and §5.3 has already declared that
+   enlarging does not invent detail;
+2. ⭐ **the Keyboard Lock exists only in full screen** (`STUDI.md` §web §5). That is, the way this
+   product is really used *is* full screen, which is **exactly the condition in which view and
+   canvas coincide**. The model does not have a normal case and a degraded case: it has a normal case that
+   coincides with the optimal one.
 
-⚠ **Non cambia nessuna decisione presa**: §5.0 resta (la tela la detta il client, all'attacco), §5.1
-resta (ridimensionare la finestra non tocca il desktop), §5.2 resta come corretta oggi (si codifica
-la tela, il client riscala). Cambia **che cosa il client legge** per rispondere.
+⚠ **No decision taken changes**: §5.0 stays (the client dictates the canvas, at attach), §5.1
+stays (resizing the window does not touch the desktop), §5.2 stays as corrected today (the
+canvas is encoded, the client rescales). What changes is **what the client reads** to answer.
 
-`[?]` **E tre cose da misurare prima di crederci**, tutte in `SPECIFICHE.md` §6.1-bis: che lo zoom
-della pagina non falsi il conto — ⛔ *l'utente che ha premuto `Ctrl +` prima di collegarsi
-dichiarerebbe una tela sbagliata, e resterebbe per tutta la sessione* — che cosa risponde DeX, e se
-l'arrotondamento dei browser possa produrre un numero dispari, che `RCP.md` §4.5 rifiuta.
+`[?]` **And three things to measure before believing it**, all in `SPECIFICHE.md` §6.1-bis: that the
+page zoom does not falsify the count — ⛔ *the user who pressed `Ctrl +` before connecting
+would declare a wrong canvas, and it would stay for the whole session* — what DeX answers, and whether
+browser rounding can produce an odd number, which `RCP.md` §4.5 rejects.
 
-> ### ⛔ La prima delle tre È MISURATA, e la risposta è la peggiore — `[M]` 10 agosto 2026
+> ### ⛔ The first of the three IS MEASURED, and the answer is the worst one — `[M]` 10 Aug 2026
 >
-> *Banco **S5**, `banchi/01-s5-tela.sh` + `01-s5-pagina.html`, registro `banchi/01-s5-esiti.jsonl`
-> (due giri identici, 23:13 e 23:14). Scena: schermo **Xvfb 1920×1080×24**, risoluzione letta **fuori
-> dal browser** con `xdpyinfo` = 1920×1080. Il dettaglio sta in `web/rapporti/S-esiti-sonda.md` §3.*
+> *Bench **S5**, `banchi/01-s5-tela.sh` + `01-s5-pagina.html`, log `banchi/01-s5-esiti.jsonl`
+> (two identical rounds, 23:13 and 23:14). Scene: **Xvfb 1920×1080×24** screen, resolution read **outside
+> the browser** with `xdpyinfo` = 1920×1080. The detail is in `web/rapporti/S-esiti-sonda.md` §3.*
 >
-> | Motore | zoom | `screen` | `devicePixelRatio` | **tela che il client dichiarerebbe** |
+> | Engine | zoom | `screen` | `devicePixelRatio` | **canvas the client would declare** |
 > |---|---|---|---|---|
 > | **Chrome 151.0.7922.108** | 100 % | 1920×1080 | 1 | 1920×1080 |
-> | | 150 % | **1920×1080** | 1,5 | ⛔ **2880×1620** |
+> | | 150 % | **1920×1080** | 1.5 | ⛔ **2880×1620** |
 > | **Firefox 140.13.0esr** | 100 % | 1920×1080 | 1 | 1920×1080 |
-> | | 150 % | **1280×720** | 1,5 | ✅ 1920×1080 |
+> | | 150 % | **1280×720** | 1.5 | ✅ 1920×1080 |
 >
-> ⛔ **Su Chrome `screen.width` NON cala con lo zoom di pagina**, mentre `devicePixelRatio` sale:
-> la formula di `SPECIFICHE.md` §6.1-bis dà `risoluzione × zoom`. Un utente su un portatile 1920×1080
-> con lo zoom al 150 % dichiarerebbe una tela **del 50 % più grande di quella che esiste** — ed è
-> **esattamente il difetto che questa decisione dice di esistere per evitare**.
+> ⛔ **On Chrome `screen.width` does NOT drop with page zoom**, while `devicePixelRatio` rises:
+> the formula of `SPECIFICHE.md` §6.1-bis gives `risoluzione × zoom`. A user on a 1920×1080 laptop
+> with zoom at 150 % would declare a canvas **50 % larger than the one that exists** — and it is
+> **exactly the defect this decision says it exists to avoid**.
 >
-> ⛔ **Quindi la ragione scritta accanto a questa decisione era `[?]` e adesso è FALSA su un motore
-> su due.** `FASI.md` §01-filo-nudo la giustificava così: *«`screen.width` cala di un terzo,
-> `devicePixelRatio` sale di un mezzo, **il prodotto resta**»*. Resta su Firefox. Su Chrome no.
-> È il caso di `LEZIONI.md` §2.3-quater preso in flagrante: *una decisione presa citando un
-> comportamento non misurato è presa a metà* — e stavolta il comportamento, misurato, va nell'altro
-> verso.
+> ⛔ **So the reason written next to this decision was `[?]` and now it is FALSE on one engine
+> out of two.** `FASI.md` §01-filo-nudo justified it like this: *«`screen.width` drops by a third,
+> `devicePixelRatio` rises by a half, **the product stays**»*. It stays on Firefox. On Chrome it does not.
+> It is the case of `LEZIONI.md` §2.3-quater caught red-handed: *a decision taken by citing an
+> unmeasured behaviour is taken by half* — and this time the behaviour, measured, goes the other
+> way.
 >
-> ⚠ **Che cosa NON cambia, e va detto per non far credere a un ripensamento**: la decisione resta 🔸
-> e resta *«la tela è lo schermo del dispositivo in pixel fisici»*. Quel che cade è **la formula con
-> cui il client lo legge**, non che cosa deve leggere. ⛔ E non si aggiusta con una riga: lo zoom di
-> pagina **non è leggibile da JavaScript in modo portabile**. La cura è di chi tiene `SPECIFICHE.md`
-> §6.1-bis, e finché non c'è, un client su Chrome con zoom ≠ 100 % **dichiara una tela sbagliata**.
+> ⚠ **What does NOT change, and it must be said so as not to suggest a rethink**: the decision stays 🔸
+> and stays *«the canvas is the device's screen in physical pixels»*. What falls is **the formula with
+> which the client reads it**, not what it must read. ⛔ And it is not fixed with one line: page
+> zoom **is not readable from JavaScript in a portable way**. The cure belongs to whoever keeps `SPECIFICHE.md`
+> §6.1-bis, and until it exists, a client on Chrome with zoom ≠ 100 % **declares a wrong canvas**.
 >
-> ⚠ **E metà di S5 non è misurata**: il **DeX** non c'era. *«Il Chrome del portatile lo fa»* non dice
-> niente del Chrome del telefono — forma **E10** — e la seconda delle tre `[?]` resta intera.
+> ⚠ **And half of S5 is not measured**: the **DeX** was not there. *«The laptop's Chrome does it»* says
+> nothing about the phone's Chrome — form **E10** — and the second of the three `[?]` stays whole.
 
-### 5.0-quinquies ✅ ⭐ ~~La tela resta **1920×1080**~~ → **accesa da §5.0-sexies il 14-15 agosto**
+### 5.0-quinquies ✅ ⭐ ~~The canvas stays **1920×1080**~~ → **switched on by §5.0-sexies on 14-15 Aug**
 
-> ⭐ **Questa voce si è chiusa da sé, come aveva previsto.** Diceva: *«resta aperta, e va nominata
-> alla fase in cui si accende, l'attuazione di `SPECIFICHE.md` §6.1»*. Quella fase è stata la **coda
-> della fase 4**: §5.0-sexies l'ha decisa il 14 agosto e il 15 la tela ha smesso di essere
-> 1920×1080 — prende la misura della finestra del client (`[M]` 1264×800 su una finestra 1265×800).
-> ⚠ Il ragionamento qui sotto **resta valido per il suo giorno**, e la sua ultima riga è quella che
-> ha aperto la porta.
+> ⭐ **This item closed by itself, as it had foreseen.** It said: *«it stays open, and must be named
+> at the phase in which it is switched on, the implementation of `SPECIFICHE.md` §6.1»*. That phase was the **tail
+> of phase 4**: §5.0-sexies decided it on 14 Aug and on the 15th the canvas stopped being
+> 1920×1080 — it takes the size of the client's window (`[M]` 1264×800 on a 1265×800 window).
+> ⚠ The reasoning below **stays valid for its day**, and its last line is the one that
+> opened the door.
 
-*13 agosto 2026, all'apertura della fase 3, **decisa dall'utente**. Era ereditata dalla scena di un
-banco e non era mai stata decisa da nessuno: `src/main.c` · `TELA_L` ha `TELA_L 1920` scritto a mano.*
+*13 Aug 2026, at the opening of phase 3, **decided by the user**. It was inherited from the scene of a
+bench and had never been decided by anyone: `src/main.c` · `TELA_L` has `TELA_L 1920` written by hand.*
 
-La domanda è stata posta con il suo prezzo misurato accanto: sullo schermo dell'utente la tela
-viene dipinta all'**86 %**, cioè **912 px di nero**. Le tre alternative messe davanti:
+The question was asked with its measured price beside it: on the user's screen the canvas
+is painted at **86 %**, that is **912 px of black**. The three alternatives put forward:
 
 | | |
 |---|---|
-| ⭐ **tenerla a 1920×1080** | **scelta** |
-| portarla a 2560×1440 (lo schermo dell'utente) | non scelta |
-| accendere subito `SPECIFICHE.md` §6.1 — *la tela nasce dallo schermo del client* | non scelta: oggi il prodotto non lo fa |
+| ⭐ **keep it at 1920×1080** | **chosen** |
+| bring it to 2560×1440 (the user's screen) | not chosen |
+| switch on `SPECIFICHE.md` §6.1 right away — *the canvas is born from the client's screen* | not chosen: today the product does not do it |
 
-⭐ **La ragione è di metodo, ed è la ragione per cui la decisione è stata presa il giorno stesso in
-cui la fase si apriva**: la fase 3 misura il **tempo**, non la geometria. Con la tela ferma, un
-ritardo che sfora i 50 ms accusa l'architettura; con la tela cambiata sotto, non si saprebbe se
-accusa l'architettura o il conto dei pixel.
+⭐ **The reason is one of method, and it is the reason why the decision was taken on the very day
+the phase opened**: phase 3 measures **time**, not geometry. With the canvas still, a
+delay that goes past 50 ms accuses the architecture; with the canvas changed underneath, one would not know whether
+it accuses the architecture or the pixel count.
 
-⛔ **E le bande nere non sono la risoluzione**, o la `[?]` verrà riaperta credendo di curarle:
-2545×927 di finestra fanno un rapporto **2,74** contro un 16:9 di **1,7778**. Quelle bande sono la
-**forma della finestra**, e sparirebbero solo a schermo pieno — cambiare la tela non le tocca.
+⛔ **And the black bands are not the resolution**, or the `[?]` will be reopened in the belief of curing them:
+2545×927 of window make a ratio of **2.74** against a 16:9 of **1.7778**. Those bands are the
+**shape of the window**, and would disappear only in full screen — changing the canvas does not touch them.
 
-⏳ **Resta aperta**, e va nominata alla fase in cui si accende, l'attuazione di `SPECIFICHE.md`
-§6.1: oggi è una specifica scritta e **non attuata** (§5.0-quater ne racconta il pezzo difficile).
+⏳ **It stays open**, and must be named at the phase in which it is switched on, the implementation of `SPECIFICHE.md`
+§6.1: today it is a written specification and **not implemented** (§5.0-quater tells its difficult part).
 
-### 5.0-sexies ✅ ⭐⭐ La tela del server prende la misura della tela del client — e la conversione delle coordinate **sparisce**
+### 5.0-sexies ✅ ⭐⭐ The server's canvas takes the size of the client's canvas — and the coordinate conversion **disappears**
 
-*14 agosto 2026, sera, **decisa dall'utente** dopo una giornata in cui il mouse sul DeX è rimasto
-inutilizzabile attraverso quattro cure. Sue parole: «abbiamo due tele: quella del server e quella
+*14 Aug 2026, evening, **decided by the user** after a day in which the mouse on the DeX stayed
+unusable through four cures. His words: «abbiamo due tele: quella del server e quella
 del client (la dimensione della finestra di rendering del browser). Bisogna solo convertire le
-coordinate» — e poi, chiedendo la verifica: «se questo è possibile, allora non servono più nemmeno
+coordinate» — and then, asking for the check: «se questo è possibile, allora non servono più nemmeno
 le conversioni».*
 
-⭐ **Non rovescia §5.0-quinquies: la accende.** Quella decisione teneva la tela a 1920×1080 per una
-ragione di **metodo** («la fase 3 misura il tempo, non la geometria») e lasciava scritto ⏳ *«resta
-aperta, e va nominata alla fase in cui si accende, l'attuazione di `SPECIFICHE.md` §6.1»*. È questa.
+⭐ **It does not overturn §5.0-quinquies: it switches it on.** That decision kept the canvas at 1920×1080 for a
+reason of **method** («phase 3 measures time, not geometry») and left written ⏳ *«it stays
+open, and must be named at the phase in which it is switched on, the implementation of `SPECIFICHE.md` §6.1»*. This is it.
 
 | | |
 |---|---|
-| **la tela del server** | si chiede della misura della **tela del client**, arrotondata in giù al **pari** |
-| **la tela del client** | si stringe alla misura **concessa** ⇒ le due coincidono |
-| **la conversione** | `x_desktop = x_tela`: **l'identità** |
-| **le bande nere** | non esistono più *dentro* l'immagine: quel che avanza (≤1 px per asse) è **sfondo della pagina fuori dalla tela**, e non viaggia sul filo |
+| **the server's canvas** | is asked for the size of the **client's canvas**, rounded down to **even** |
+| **the client's canvas** | shrinks to the **granted** size ⇒ the two coincide |
+| **the conversion** | `x_desktop = x_tela`: **the identity** |
+| **the black bands** | no longer exist *inside* the image: what is left over (≤1 px per axis) is **page background outside the canvas**, and does not travel on the wire |
 
-> ⚠ **E il monito di §5.0-quinquies non è stato ignorato**, è stato letto: *«le bande nere non sono
-> la risoluzione… sono la forma della finestra, e cambiare la tela non le tocca»*. ⭐ È vero per il
-> cambio che quella voce esaminava — da 1920×1080 a 2560×1440, **sempre 16:9**. Qui la tela prende
-> il **rapporto del client**, quindi il monito non si applica: le bande spariscono perché sparisce
-> la differenza di forma che le genera.
+> ⚠ **And the warning of §5.0-quinquies was not ignored**, it was read: *«the black bands are not
+> the resolution… they are the shape of the window, and changing the canvas does not touch them»*. ⭐ It is true for the
+> change that item examined — from 1920×1080 to 2560×1440, **still 16:9**. Here the canvas takes
+> the **client's ratio**, so the warning does not apply: the bands disappear because the
+> difference in shape that generates them disappears.
 
-#### Le misure che l'hanno resa possibile — quattro banchi in parallelo, 14 agosto 2026
+#### The measures that made it possible — four benches in parallel, 14 Aug 2026
 
-| | misura esatta | cambio a caldo |
+| | exact size | hot change |
 |---|---|---|
-| **Mutter** (GNOME) | `[M]` **30 richieste su 30**, da 1×1 a 7680×4320, scala **1,000000**, passo senza riempimento | `[M]` primo fotogramma nuovo a **41,6 ms**, nessun nero, sessione ed EIS intatti; **20 ridimensionamenti in 2 s, 20 esatti** |
-| **labwc** (XFCE, LXQt) | `[M]` esatta **anche a larghezza dispari**; `1×1`, `1919×1079`, `32768×1080` tutte al pixel | `[M]` **5,1 ms**, **0 fotogrammi persi su 25** |
-| **KWin** (KDE) | `[R]` nessuna validazione: né minimo, né massimo, né parità, né multipli | ⛔ solo su `master` — vedi §5.0-bis |
-| **il codificatore** | `[M]` il vincolo è **pari, e basta** — non multiplo di 8 né di 16 | — |
+| **Mutter** (GNOME) | `[M]` **30 requests out of 30**, from 1×1 to 7680×4320, scale **1.000000**, stride without padding | `[M]` first new frame at **41.6 ms**, no black, session and EIS intact; **20 resizes in 2 s, 20 exact** |
+| **labwc** (XFCE, LXQt) | `[M]` exact **even at odd width**; `1×1`, `1919×1079`, `32768×1080` all to the pixel | `[M]` **5.1 ms**, **0 frames lost out of 25** |
+| **KWin** (KDE) | `[R]` no validation: neither minimum, nor maximum, nor parity, nor multiples | ⛔ only on `master` — see §5.0-bis |
+| **the encoder** | `[M]` the constraint is **even, and that is all** — not a multiple of 8 nor of 16 | — |
 
-⛔ **Il vincolo del pari è NOSTRO, non dei compositori**: è il 4:2:0 (`src/codificatore.c` · `croma_flusso` e
-`:1512`). `[M]` In 4:4:4 passa anche il dispari. ⇒ Si tronca in **giù** (2133 → 2132) e **lo si
-dichiara** con `TELA(ADATTATA)`: un pixel detto vale più di un pixel nascosto in una scala.
+⛔ **The even constraint is OURS, not the compositors'**: it is 4:2:0 (`src/codificatore.c` · `croma_flusso` and
+`:1512`). `[M]` In 4:4:4 odd passes too. ⇒ It is truncated **down** (2133 → 2132) and **it is
+declared** with `TELA(ADATTATA)`: a pixel said is worth more than a pixel hidden in a scale.
 
-#### ⛔ Le tre guardie che dobbiamo scrivere noi — nessuno le fa a monte
+#### ⛔ The three guards we must write ourselves — nobody upstream does them
 
-Tutte e tre scoperte misurando, e tutte e tre della stessa famiglia: **il silenzio**.
+All three discovered by measuring, and all three of the same family: **silence**.
 
-1. **Il tetto della misura.** `[M]` Oltre **16384** per lato `gnome-shell` muore — e 16386 è
-   *dentro* il `MAX_SIZE` che Mutter **dichiara**, quindi il limite dichiarato mente. `[M]` Su
-   labwc `32768×32768` uccide il compositore **con zero righe di registro**. ⇒ Il tetto lo mette il
-   nostro codice, e un client non può sceglierlo senza limiti.
-2. ⛔⛔ **La scala di GNOME.** `[M]` Con `org.gnome.desktop.interface scaling-factor = 2` i pixel
-   restano quelli chiesti ma il monitor logico prende **scala 2,0**: il layout diventa
-   `roundf(2133/2) = 1067` e **1067×2 = 2134 ≠ 2133**. È lo spazio delle coordinate dell'**input**
-   ⇒ **il puntatore va altrove e nessuno lo dice.** Cura: leggere la scala e **fallire** se non è
-   `1,0`.
-3. **Chiesto contro concesso.** `[R]` `src/cattura.c` · `chiesta_larghezza`/`chiesta_altezza` non confronta mai la misura **chiesta** a
-   PipeWire con quella **negoziata**, e `codificatore_comprimi()` riceve i pixel e il passo ma
-   **non** larghezza e altezza, quindi non può fare da testimone. ⛔ Oggi è irraggiungibile perché
-   si chiede sempre 1920×1080: **è questa decisione a renderlo raggiungibile**, e va chiuso
-   insieme, non dopo.
+1. **The size cap.** `[M]` Beyond **16384** per side `gnome-shell` dies — and 16386 is
+   *inside* the `MAX_SIZE` that Mutter **declares**, so the declared limit lies. `[M]` On
+   labwc `32768×32768` kills the compositor **with zero log lines**. ⇒ The cap is set by
+   our code, and a client cannot choose it without limits.
+2. ⛔⛔ **GNOME's scale.** `[M]` With `org.gnome.desktop.interface scaling-factor = 2` the pixels
+   stay the ones asked for but the logical monitor takes **scale 2.0**: the layout becomes
+   `roundf(2133/2) = 1067` and **1067×2 = 2134 ≠ 2133**. It is the coordinate space of the **input**
+   ⇒ **the pointer goes elsewhere and nobody says so.** Cure: read the scale and **fail** if it is not
+   `1.0`.
+3. **Asked versus granted.** `[R]` `src/cattura.c` · `chiesta_larghezza`/`chiesta_altezza` never compares the size **asked** of
+   PipeWire with the **negotiated** one, and `codificatore_comprimi()` receives the pixels and the stride but
+   **not** width and height, so it cannot act as witness. ⛔ Today it is unreachable because
+   1920×1080 is always asked: **it is this decision that makes it reachable**, and it must be closed
+   together, not after.
 
-#### La regola di forma, rubata a neatvnc
+#### The shape rule, stolen from neatvnc
 
-⭐ `[M]` Chiedere a labwc la misura **che l'output ha già** risponde «riuscito» e **non manda
-nessun evento**; un serial vecchio risponde «annullato» e non fa niente. ⛔ `wayvnc` tratta
-*riuscito*, *fallito* e *annullato* nello stesso ramo — da non copiare. ⇒ **La verità la dice il
-fotogramma, non l'esito della richiesta.**
+⭐ `[M]` Asking labwc for the size **the output already has** answers «succeeded» and **sends
+no event**; an old serial answers «cancelled» and does nothing. ⛔ `wayvnc` treats
+*succeeded*, *failed* and *cancelled* in the same branch — not to be copied. ⇒ **The truth is told by the
+frame, not by the outcome of the request.**
 
-#### ⏳ ⭐ Per quando si affronterà il RI-ATTACCO: la soluzione è già misurata, e sta qui
+#### ⏳ ⭐ For when the RE-ATTACH is tackled: the solution is already measured, and it is here
 
-*Annotato su richiesta dell'utente, 14 agosto 2026: «il problema della dimensione della finestra
+*Noted at the user's request, 14 Aug 2026: «il problema della dimensione della finestra
 del browser si ripresenterà, ma la soluzione è già bella pronta».*
 
-⛔ **La domanda tornerà, ed è inevitabile**: §4.1 promette che **la sessione sopravvive al
-client**, e §5.0 che la tela **nasce a ogni attacco**. ⇒ Il giorno in cui l'utente si stacca dal
-DeX e si riattacca dal portatile, la finestra del browser ha **un'altra misura** — e la tela del
-server è quella di ieri. È esattamente il caso che oggi produrrebbe di nuovo bande, scala e
-conversione.
+⛔ **The question will come back, and it is inevitable**: §4.1 promises that **the session survives the
+client**, and §5.0 that the canvas **is born at every attach**. ⇒ The day the user detaches from the
+DeX and reattaches from the laptop, the browser window has **another size** — and the server's
+canvas is yesterday's. It is exactly the case that today would again produce bands, scale and
+conversion.
 
-⭐ **E la risposta non va cercata quel giorno: è stata misurata il 14 agosto 2026**, ed è il
-ridimensionamento **a caldo**, sulla sessione viva, senza rifarla:
+⭐ **And the answer must not be sought on that day: it was measured on 14 Aug 2026**, and it is
+**hot** resizing, on the live session, without remaking it:
 
-| | costo misurato | che cosa NON succede |
+| | measured cost | what does NOT happen |
 |---|---|---|
-| **Mutter** (GNOME) | `[M]` primo fotogramma nuovo a **41,6 ms** · **20 ridimensionamenti in 2 s, 20 esatti** | nessun fotogramma nero, **sessione ed EIS intatti**, nessuna riconnessione |
-| **labwc** (XFCE, LXQt) | `[M]` **5,1 ms** · **0 fotogrammi persi su 25** | nessun fotogramma nero; il fotogramma successivo è già alla misura nuova |
-| **KWin** (KDE ≤ 6.7.4) | ⛔ non esiste | ⇒ vale il ripiego dichiarato di §5.0-bis, e **solo lì** |
+| **Mutter** (GNOME) | `[M]` first new frame at **41.6 ms** · **20 resizes in 2 s, 20 exact** | no black frame, **session and EIS intact**, no reconnection |
+| **labwc** (XFCE, LXQt) | `[M]` **5.1 ms** · **0 frames lost out of 25** | no black frame; the next frame is already at the new size |
+| **KWin** (KDE ≤ 6.7.4) | ⛔ does not exist | ⇒ the declared fallback of §5.0-bis applies, and **only there** |
 
-⇒ ⭐ **Il ri-attacco a misura diversa non è un problema aperto: è un caso già coperto**, su tre
-desktop su quattro, a un costo che l'utente non percepisce. Chi affronterà quel tema non deve
-studiare niente di nuovo — deve **chiamare** `cattura_ridimensiona()` e rileggere questa tabella.
+⇒ ⭐ **Re-attach at a different size is not an open problem: it is a case already covered**, on three
+desktops out of four, at a cost the user does not perceive. Whoever tackles that topic does not have to
+study anything new — they must **call** `cattura_ridimensiona()` and reread this table.
 
-> ### ✅ ⭐⭐ SCRITTA E MISURATA — la notte del 15 agosto 2026
+> ### ✅ ⭐⭐ WRITTEN AND MEASURED — the night of 15 Aug 2026
 >
-> *Questa voce diceva «`cattura_ridimensiona()` alla data di questa voce **non esiste ancora**: è
-> l'unica riga di lavoro rimasta». Adesso esiste, e con lei la catena intera.*
+> *This item said «`cattura_ridimensiona()` at the date of this item **does not exist yet**: it is
+> the only line of work left». Now it exists, and with it the whole chain.*
 >
-> **La catena, per nome**, e ogni anello sta dove sta la cosa che sa:
+> **The chain, by name**, and every link sits where the thing that knows sits:
 >
-> | dove | che cosa |
+> | where | what |
 > |---|---|
-> | `src/pagina.html` | `chiedi_tela()` manda `ADATTA_TELA` con la misura della finestra, **all'attacco** |
-> | `src/rcp.c` `T_ADATTA_TELA` | applica §4.5 (limiti, parità, `video.misura_massima`) e gira la richiesta al palco. ⛔ **Non risponde subito**: segna una richiesta «in volo» |
-> | `src/webtransport.c` · `src/main.c` | portano la domanda oltre il confine di processo |
-> | `src/figlio.c` `figli_ritela()` | → `MSG_INPUT/RITELA` al figlio |
+> | `src/pagina.html` | `chiedi_tela()` sends `ADATTA_TELA` with the size of the window, **at attach** |
+> | `src/rcp.c` `T_ADATTA_TELA` | applies §4.5 (limits, parity, `video.misura_massima`) and passes the request to the stage. ⛔ **It does not answer right away**: it marks a request «in flight» |
+> | `src/webtransport.c` · `src/main.c` | carry the question across the process boundary |
+> | `src/figlio.c` `figli_ritela()` | → `MSG_INPUT/RITELA` to the child |
 > | `src/cattura.c` `cattura_ridimensiona()` | → `pw_stream_update_params()` |
-> | ⭐ e **la risposta torna indietro**: `MSG_TELA` → `rcp_tela_dal_palco()` → `TELA(ADATTATA)` |
+> | ⭐ and **the answer comes back**: `MSG_TELA` → `rcp_tela_dal_palco()` → `TELA(ADATTATA)` |
 >
-> ⛔ **La risposta torna, e non si indovina**: la prima stesura di stanotte faceva dedurre al padre
-> l'esito **dai fotogrammi** («se ne arriva uno di misura diversa, il palco ha obbedito»), e quattro
-> agenti mandati a refutarla hanno trovato tre casi in cui deduceva male — fra cui **due
-> `ADATTA_TELA` incatenate**, cioè un utente che trascina il bordo della finestra. ⇒ Il figlio adesso
-> risponde portando **due** misure: quella *chiesta* (per riconoscere a quale richiesta risponde) e
-> quella *avuta* (`0x0` = non ce l'ha fatta).
+> ⛔ **The answer comes back, and is not guessed**: tonight's first draft had the parent deduce
+> the outcome **from the frames** («if one of a different size arrives, the stage has obeyed»), and four
+> agents sent to refute it found three cases in which it deduced wrongly — among them **two
+> chained `ADATTA_TELA`**, that is a user dragging the edge of the window. ⇒ The child now
+> answers carrying **two** sizes: the *asked* one (to recognise which request it is answering) and
+> the *obtained* one (`0x0` = it did not manage).
 >
-> #### `[M]` Le misure della notte, sulla macchina di prova, utente `prova`, GNOME headless
+> #### `[M]` The night's measures, on the test machine, user `prova`, headless GNOME
 >
-> | | prima (14 ago) | adesso (15 ago) |
+> | | before (14 Aug) | now (15 Aug) |
 > |---|---|---|
-> | ⭐⭐ dal canale video al primo fotogramma | **4,4 s** (659 «attese a vuoto») | **311 ms** |
-> | la tela in vigore all'attacco | 1920×1080 fissa | **1264×800** = la finestra del browser |
-> | la scala di disegno del client | 0,658 (`imageRendering: auto`) | **1,000** (`pixelated`) |
-> | il ridimensionamento a caldo (1264×800 → 1000×640) | non esisteva | ⭐ **6 ms** dalla risposta del palco alla chiave spedita |
-> | fotogrammi scartati per misura · trattenuti · errori | — | **0 · 0 · 0** |
+> | ⭐⭐ from the video channel to the first frame | **4.4 s** (659 «empty waits») | **311 ms** |
+> | the canvas in force at attach | 1920×1080 fixed | **1264×800** = the browser window |
+> | the client's drawing scale | 0.658 (`imageRendering: auto`) | **1.000** (`pixelated`) |
+> | the hot resize (1264×800 → 1000×640) | did not exist | ⭐ **6 ms** from the stage's answer to the keyframe sent |
+> | frames discarded for size · held back · errors | — | **0 · 0 · 0** |
 >
-> ⭐ **E il desktop lo dice da sé**: GNOME *Impostazioni → Displays* dentro la sessione remota
-> riporta **«Resolution 1264 × 800 (3:2)»** e **«Scale 100%»**. Non è una nostra riga di registro:
-> è il compositore che dichiara la misura che gli abbiamo chiesto.
+> ⭐ **And the desktop says it by itself**: GNOME *Settings → Displays* inside the remote session
+> reports **«Resolution 1264 × 800 (3:2)»** and **«Scale 100%»**. It is not a log line of ours:
+> it is the compositor declaring the size we asked of it.
 >
-> #### Le tre guardie: dove sono finite
+> #### The three guards: where they ended up
 >
-> | guardia | stato |
+> | guard | state |
 > |---|---|
-> | 1 · il tetto della misura | ✅ `rcp_misura_ammessa()`, e ⛔ **corretta stanotte**: i limiti sono quelli di §4.5 **per lato** (320..7680 × 240..4320), non i 200..8192 della prima stesura — che `ATTACCA` avrebbe rifiutato al ri-attacco |
-> | 2 · la scala di GNOME | ✅ **chiusa stanotte** come §5.0-sexies chiedeva («leggere la scala e **fallire**»): `mutter_scala_nostra()` + il rifiuto in `prendi_il_palco()`. ⚠ Si guarda il **nostro** monitor, non il peggiore della macchina: un portatile con lo schermo interno a 2,0 non ha nessun difetto. `[M]` sulla macchina di prova la scala del nostro «Meta-0» è **1,000**, e la riga si scrive anche quando è buona |
-> | 3 · chiesto contro concesso | ✅ in `cattura.c` (`su_parametri`), e da stanotte anche **nel figlio**: i 28 byte di §6.2 portano la misura del FOTOGRAMMA, non quella che si era chiesta |
+> | 1 · the size cap | ✅ `rcp_misura_ammessa()`, and ⛔ **corrected tonight**: the limits are those of §4.5 **per side** (320..7680 × 240..4320), not the 200..8192 of the first draft — which `ATTACCA` would have rejected on re-attach |
+> | 2 · GNOME's scale | ✅ **closed tonight** as §5.0-sexies asked («read the scale and **fail**»): `mutter_scala_nostra()` + the refusal in `prendi_il_palco()`. ⚠ It looks at **our** monitor, not the worst one of the machine: a laptop with the internal screen at 2.0 has no defect. `[M]` on the test machine the scale of our «Meta-0» is **1.000**, and the line is written even when it is good |
+> | 3 · asked versus granted | ✅ in `cattura.c` (`su_parametri`), and since tonight also **in the child**: the 28 bytes of §6.2 carry the size of the FRAME, not the one that had been asked |
 >
-> #### I tempi, e il perché di ciascuno
+> #### The timings, and the why of each
 >
-> | | valore | perché |
+> | | value | why |
 > |---|---|---|
-> | `RCP_TELA_ATTESA_MS` | **3000 ms** | il fondo oltre cui si risponde `NON_ORA` comunque: §7.1 vuole un `TELA` per ogni `ADATTA_TELA`, e §6.2 fa **trattenere fotogrammi** al client finché aspetta |
-> | `RCP_TELA_RICHIAMO_MS` | 500 ms, che raddoppia fino a 8 s | ogni quanto si **richiede** al palco di tornare alla tela in vigore, quando ne ha una sua |
-> | ~~`TELA_FONDO_MS` (client)~~ ⛔ **USCITO il 17 agosto 2026** *(riallineato il 28)* | ~~250 ms~~ | chi trascina un bordo produce decine di `resize` al secondo — ⭐ ma il fondo è uscito **con la funzione che serviva** (`tela_forse_chiedi()`): `src/pagina.html` ne tiene la lapide, perché la cura andrebbe rimessa solo se qualcuno rimettesse l'inseguimento |
-> | `RISVEGLIO_MS` (figlio) | 400 ms | ogni quanto si riavvia il flusso quando **una chiave è dovuta e la scena è ferma** — è la cura dei 4,4 secondi |
+> | `RCP_TELA_ATTESA_MS` | **3000 ms** | the floor beyond which `NON_ORA` is answered anyway: §7.1 wants one `TELA` for every `ADATTA_TELA`, and §6.2 makes the client **hold back frames** while it waits |
+> | `RCP_TELA_RICHIAMO_MS` | 500 ms, doubling up to 8 s | how often the stage is **asked** to go back to the canvas in force, when it has one of its own |
+> | ~~`TELA_FONDO_MS` (client)~~ ⛔ **REMOVED on 17 Aug 2026** *(realigned on the 28th)* | ~~250 ms~~ | whoever drags an edge produces dozens of `resize` per second — ⭐ but the floor went out **with the function it served** (`tela_forse_chiedi()`): `src/pagina.html` keeps its tombstone, because the cure would have to be put back only if someone put back the chasing |
+> | `RISVEGLIO_MS` (child) | 400 ms | how often the stream is restarted when **a keyframe is due and the scene is still** — it is the cure for the 4.4 seconds |
 >
-> ⛔ **E una cosa che il server NON fa, per una riga che manca a `RCP.md`**: quando il palco cambia
-> misura **senza che nessuno gliel'abbia chiesto**, il server **non adotta** la misura nuova e non
-> manda nessun `TELA`. La prima stesura lo faceva — sembrava gentile — ed è fatale: §6.2 dice che il
-> client trattiene una misura mai annunciata **solo finché ha una `ADATTA_TELA` senza risposta**, e
-> senza quella è `ERRORE_PROTOCOLLO`. ⇒ Si **richiede al palco di tornare**, con un'attesa che
-> cresce, e nel frattempo la sessione mostra l'ultima immagine buona (I1: brutta e viva). ⏳ La riga
-> che manca è in `RCP.md` §7.1: *che cosa fa un server quando il palco cambia misura da sé*.
+> ⛔ **And one thing the server does NOT do, because of a line missing from `RCP.md`**: when the stage changes
+> size **without anyone having asked it to**, the server **does not adopt** the new size and sends
+> no `TELA`. The first draft did — it seemed kind — and it is fatal: §6.2 says that the
+> client holds back a never-announced size **only while it has an `ADATTA_TELA` without answer**, and
+> without that it is `ERRORE_PROTOCOLLO`. ⇒ The stage **is asked to go back**, with a wait that
+> grows, and meanwhile the session shows the last good image (I1: ugly and alive). ⏳ The missing
+> line is in `RCP.md` §7.1: *what a server does when the stage changes size by itself*.
 
-⚠ E le tre guardie qui sopra valgono **a maggior ragione** al ri-attacco: è il momento in cui la
-misura cambia davvero, cioè il momento in cui una divergenza silenziosa fra chiesto e concesso
-avrebbe le sue conseguenze.
+⚠ And the three guards above hold **all the more** on re-attach: it is the moment in which the
+size really changes, that is the moment in which a silent divergence between asked and granted
+would have its consequences.
 
-#### Su KDE non cambia niente: vale §5.0-bis
+#### On KDE nothing changes: §5.0-bis applies
 
-⚠ *E §5.0-bis va corretta in un punto*: diceva «KDE < 6.8». `[R]` Verificato il 14 agosto su
-invent.kde.org: **`Plasma/6.8` non esiste**, l'ultimo tag è **v6.7.4**, e il ridimensionamento a
-caldo è **solo su `master`**, senza una data. ⇒ Si legga «KDE ≤ 6.7.4, e la versione che lo porta
-non è ancora uscita».
+⚠ *And §5.0-bis must be corrected on one point*: it said «KDE < 6.8». `[R]` Checked on 14 Aug on
+invent.kde.org: **`Plasma/6.8` does not exist**, the last tag is **v6.7.4**, and hot
+resizing is **only on `master`**, without a date. ⇒ Read «KDE ≤ 6.7.4, and the version that brings it
+has not been released yet».
 
-### 5.0-septies 🔸 Al congedo il palco **NON** si rimette a una misura di riposo — *provvisoria, 22 agosto 2026*
+### 5.0-septies 🔸 At farewell the stage is **NOT** put back to a resting size — *provisional, 22 Aug 2026*
 
-*Portata all'utente come una delle due decisioni che aspettavano lui. ⛔ **E gliel'avevo posta con
-una premessa falsa**: «chi si collega eredita la finestra di chi c'era prima». Non c'è nessun «chi
-c'era prima» — il multi-tenant è la **fase 10** e non esiste, e la sessione grafica è **una per
-utente** (invariante **I2**, `sessione.c` · `sessione_assicura()`). ⭐ **L'ha rilevato l'utente**, e la voce sta qui
-anche per quello.*
+*Brought to the user as one of the two decisions waiting for him. ⛔ **And I had put it to him with
+a false premise**: «whoever connects inherits the window of whoever was there before». There is no «whoever
+was there before» — multi-tenant is **phase 10** and does not exist, and the graphical session is **one per
+user** (invariant **I2**, `sessione.c` · `sessione_assicura()`). ⭐ **The user spotted it**, and the item is here
+for that too.*
 
-**Che cosa sopravvive davvero**: non la sessione di un altro, ma **la misura del palco** lasciata
-dalla **connessione precedente dello stesso utente**. `RCP.md` §4.5 lo dichiara — *«la tela
-SOPRAVVIVE alla sessione»* — e `[M]` il 21 agosto sul prodotto vero tre attacchi di fila con
-`ATTACCA(1920×1080)` hanno ricevuto `SESSIONE` con **1920×1080**, **1264×800** e **1600×900**: ogni
-volta quel che il giro prima aveva lasciato.
+**What really survives**: not someone else's session, but **the stage size** left
+by **the previous connection of the same user**. `RCP.md` §4.5 declares it — *«the canvas
+SURVIVES the session»* — and `[M]` on 21 Aug on the real product three attaches in a row with
+`ATTACCA(1920×1080)` received `SESSIONE` with **1920×1080**, **1264×800** and **1600×900**: each
+time what the previous round had left.
 
-**La decisione, per ora**: si lascia com'è. Tre ragioni, e la terza è quella che conta:
+**The decision, for now**: it is left as it is. Three reasons, and the third is the one that counts:
 
-1. ⭐ **si corregge già da sola**: la misura di `ATTACCA` è una **preferenza**, ma subito dopo
-   `SESSIONE` il client manda `ADATTA_TELA` con la sua misura vera (§5.0-sexies, dal 15 agosto). ⇒
-   Resta solo un **istante** all'attacco in cui la tela in vigore è quella vecchia;
-2. ⛔ **un riposo al congedo è un secondo riordino delle finestre** fatto mentre l'utente non
-   guarda: il desktop rimescola le finestre a **ogni** cambio di misura del monitor, e quel
-   rimescolo il server non lo può disfare;
-3. ⛔⛔ **e non curerebbe il problema vero.** Il costo che l'utente vedrebbe è lo scenario
-   PC → telefono → PC: dal telefono il palco si rimpicciolisce, GNOME **schiaccia le finestre** per
-   farcele stare, e al ritorno il palco torna grande **ma le finestre restano schiacciate**. Una
-   misura di riposo non le rimette dov'erano — ne aggiunge una terza.
+1. ⭐ **it already corrects itself**: the size in `ATTACCA` is a **preference**, but right after
+   `SESSIONE` the client sends `ADATTA_TELA` with its true size (§5.0-sexies, since 15 Aug). ⇒
+   Only an **instant** remains at attach in which the canvas in force is the old one;
+2. ⛔ **a rest at farewell is a second reshuffle of the windows** done while the user is not
+   looking: the desktop reshuffles the windows at **every** change of the monitor size, and that
+   reshuffle the server cannot undo;
+3. ⛔⛔ **and it would not cure the real problem.** The cost the user would see is the scenario
+   PC → phone → PC: from the phone the stage shrinks, GNOME **squashes the windows** to
+   make them fit, and on return the stage goes back to large **but the windows stay squashed**. A
+   resting size does not put them back where they were — it adds a third one.
 
-⏳ **`[?]` E la strada che curerebbe davvero quello scenario è un'altra**, ed è di **fase 9**: non
-far cambiare misura al palco quando ci si attacca da uno schermo piccolo, e lasciar **riscalare** il
-client — che è precisamente quel che il prodotto già sa fare per la vista (§5.1). ⚠ Non si anticipa
-qui: ha bisogno del punto di lavoro fra qualità e banda, che è la fase 9.
+⏳ **`[?]` And the route that would really cure that scenario is another one**, and it belongs to **phase 9**: not
+making the stage change size when attaching from a small screen, and letting the
+client **rescale** — which is precisely what the product already knows how to do for the view (§5.1). ⚠ It is not anticipated
+here: it needs the working point between quality and bandwidth, which is phase 9.
 
-🔸 **Perché è provvisoria e non chiusa**: *«per il momento accetto il tuo suggerimento, ma poi ci
-penserò su»* — l'utente, 22 agosto 2026. ⇒ La voce **non** va marcata ✅ finché non ci ritorna, e
-chi la riapre trova qui la ragione per cui era stata lasciata così.
+🔸 **Why it is provisional and not closed**: *«per il momento accetto il tuo suggerimento, ma poi ci
+penserò su»* — the user, 22 Aug 2026. ⇒ The item must **not** be marked ✅ until he comes back to it, and
+whoever reopens it finds here the reason why it had been left like this.
 
-### 5.1 ✅ Se l'utente ridimensiona la finestra, l'immagine si riscala
+### 5.1 ✅ If the user resizes the window, the image is rescaled
 
-*8 agosto 2026. «Tagliamo la testa al toro. Anziché correre dietro ai compositor, una scelta
+*8 Aug 2026. «Tagliamo la testa al toro. Anziché correre dietro ai compositor, una scelta
 che vale per tutti».*
 
-**Ridimensionare la finestra del client non tocca mai il desktop.** Si adatta la vista; le
-finestre dell'utente non si muovono. Uguale su GNOME, KDE, XFCE e LXQt.
+**Resizing the client's window never touches the desktop.** The view adapts; the user's
+windows do not move. The same on GNOME, KDE, XFCE and LXQt.
 
-> ### ⚠ E DAL 15 AGOSTO 2026 QUESTA VOCE VALE **DURANTE** LA SESSIONE, NON ALL'ATTACCO
+> ### ⚠ AND SINCE 15 AUG 2026 THIS ITEM HOLDS **DURING** THE SESSION, NOT AT ATTACH
 >
-> §5.0-sexies ha deciso che **la tela del server prende la misura della tela del client**, e quella
-> misura la si chiede **all'attacco di ogni sessione**. ⇒ All'attacco il desktop *cambia* misura, ed
-> è voluto: è la decisione dell'utente del 14 agosto.
+> §5.0-sexies decided that **the server's canvas takes the size of the client's canvas**, and that
+> size is asked **at the attach of every session**. ⇒ At attach the desktop *changes* size, and it
+> is intended: it is the user's decision of 14 Aug.
 >
-> ⛔ **Ma le tre ragioni di questa voce non sono invecchiate**, e la terza meno che mai: su KWin
-> ridimensionare un output **ridispone le finestre dell'utente**. ⇒ Durante la sessione viva il
-> comportamento resta quello scritto qui — si riscala la vista, il desktop non si tocca.
+> ⛔ **But the three reasons of this item have not aged**, and the third least of all: on KWin
+> resizing an output **rearranges the user's windows**. ⇒ During the live session the
+> behaviour stays the one written here — the view is rescaled, the desktop is not touched.
 >
-> ### ⛔⛔ E DAL 17 AGOSTO 2026 NON C'È PIÙ NEMMENO L'INTERRUTTORE — vedi **§5.1-bis**
+> ### ⛔⛔ AND SINCE 17 AUG 2026 THERE IS NOT EVEN THE SWITCH ANY MORE — see **§5.1-bis**
 >
-> L'inseguimento della finestra stava dietro `?adatta=segui`, spento di suo (I6). **È uscito dal
-> prodotto**: *«non voglio mettere delle eccezioni nel progetto»*. ⇒ Questa voce torna a valere
-> come fu scritta l'8 agosto, **senza eccezioni**, e i valori di `?adatta=` restano due:
+> Chasing the window sat behind `?adatta=segui`, off by default (I6). **It went out of the
+> product**: *«non voglio mettere delle eccezioni nel progetto»*. ⇒ This item goes back to holding
+> as it was written on 8 Aug, **without exceptions**, and the values of `?adatta=` remain two:
 >
-> | `?adatta=` | che cosa fa |
+> | `?adatta=` | what it does |
 > |---|---|
-> | *assente* (predefinito) | chiede la tela **all'attacco e al riattacco**, e basta |
-> | `no` | ⛔ non la chiede mai: è la pagina di prima del 15 agosto, e serve al **confronto A/B** che il giudizio dell'utente richiede (`LEZIONI.md` §7.3) |
-> | ~~`segui`~~ | ⛔ **tolto il 17 agosto 2026**. Un indirizzo vecchio che lo porta vale il predefinito e non riaccende niente — sorvegliato da `banchi/06-b37-modi.py` |
+> | *absent* (default) | asks for the canvas **at attach and at reattach**, and that is all |
+> | `no` | ⛔ never asks for it: it is the page from before 15 Aug, and it serves the **A/B comparison** that the user's judgement requires (`LEZIONI.md` §7.3) |
+> | ~~`segui`~~ | ⛔ **removed on 17 Aug 2026**. An old address carrying it counts as the default and switches nothing back on — guarded by `banchi/06-b37-modi.py` |
 >
-> ⚠ Si legge da `?` **e** da `#`, come `video` e `disposizione`.
+> ⚠ It is read from `?` **and** from `#`, like `video` and `disposizione`.
 
-Le tre ragioni, e la terza è quella che ha deciso:
+The three reasons, and the third is the one that decided:
 
-1. su KDE 6.3.6 — cioè Debian Trixie — **non si può** ridimensionare: la misura sta nella riga
-   di comando di KWin (`--virtual --width W --height H`), il modo è `const`, e
-   `stream_virtual_output` risponde `Could not find output` per ogni misura `[M]` 8 ago;
-2. la correzione a monte esiste (`kwin!7932`, traguardo 6.8, ottobre) ma **Debian stabile non
-   aggiorna Plasma**: 6.3.6 per tutta Trixie (Forky, ancora testing, ha già 6.7.2 `[R]` 4 ott). Il ripiego non è un'impalcatura temporanea, è un
-   percorso di codice da mantenere per anni;
-3. ⛔ **e anche dove funziona, fa una cosa peggiore**: ridimensionare un output ridispone le
-   finestre dell'utente `[R]`. Su KWin la chiave del `PlacementTracker` contiene la geometria
-   dell'output, quindi tornando a una misura già vista le finestre vengono **teleportate**
-   indietro. La versione «giusta» scompiglia il lavoro; quella «rotta» lo lascia fermo.
+1. on KDE 6.3.6 — that is Debian Trixie — resizing **is not possible**: the size sits in KWin's
+   command line (`--virtual --width W --height H`), the mode is `const`, and
+   `stream_virtual_output` answers `Could not find output` for every size `[M]` 8 Aug;
+2. the upstream fix exists (`kwin!7932`, milestone 6.8, October) but **Debian stable does not
+   update Plasma**: 6.3.6 for all of Trixie (Forky, still testing, already has 6.7.2 `[R]` 4 Oct). The fallback is not temporary scaffolding, it is a
+   code path to maintain for years;
+3. ⛔ **and even where it works, it does something worse**: resizing an output rearranges the
+   user's windows `[R]`. On KWin the key of the `PlacementTracker` contains the geometry
+   of the output, so going back to a size already seen the windows are **teleported**
+   back. The «right» version messes up the work; the «broken» one leaves it still.
 
-**Conseguenze:** ⛔ *superate da §5.1-bis (17 ago 2026), e riconfermate dall'utente il 2 ottobre 2026 dopo
-la sua prova a mano: il ridimensionamento a caldo non resta nemmeno come funzione facoltativa; la
-misura nuova si prende solo ricollegandosi. Le tre righe sotto restano come cronaca.*
-- il ridimensionamento del compositore esce dal percorso critico e resta come funzione
-  facoltativa («adatta il desktop a questa finestra»), spenta dove il compositore non la sa
-  fare, **con la ragione dichiarata** (`CODER.md` §4.2);
-- quando si scriverà, si scriverà **nella forma della negoziazione PipeWire** — decisione già
-  presa in `STUDI.md` §kde §8.2 — perché è una strada sola per GNOME, wlroots e KDE 6.8, e su KDE si
-  accende da sé all'aggiornamento;
-- ⚠ e includerà la **guardia obbligatoria** `if (misura_attuale == misura_richiesta) return;`
-  (`STUDI.md` §kde §8.2-bis): senza, la rinegoziazione si morde la coda. Il difetto **non si vede su
-  Trixie** e compare il giorno dell'aggiornamento a 6.8, quando nessuno lo sta più cercando.
+**Consequences:** ⛔ *superseded by §5.1-bis (17 Aug 2026), and reconfirmed by the user on 2 Oct 2026 after
+his test by hand: hot resizing does not even stay as an optional function; the
+new size is taken only by reconnecting. The three lines below stay as a chronicle.*
+- compositor resizing leaves the critical path and stays as an optional
+  function («fit the desktop to this window»), off where the compositor cannot
+  do it, **with the reason declared** (`CODER.md` §4.2);
+- when it is written, it will be written **in the form of PipeWire negotiation** — decision already
+  taken in `STUDI.md` §kde §8.2 — because it is one single route for GNOME, wlroots and KDE 6.8, and on KDE it
+  switches itself on at the update;
+- ⚠ and it will include the **mandatory guard** `if (misura_attuale == misura_richiesta) return;`
+  (`STUDI.md` §kde §8.2-bis): without it, renegotiation chases its own tail. The defect **does not show on
+  Trixie** and appears on the day of the update to 6.8, when nobody is looking for it any more.
 
-### 5.1-bis ✅ ⛔⛔ Il ridimensionamento a caldo **esce dal prodotto** — 17 agosto 2026
+### 5.1-bis ✅ ⛔⛔ Hot resizing **goes out of the product** — 17 Aug 2026
 
 *«Ecco la mia decisione. Non voglio mettere delle eccezioni nel progetto. Il dynamic resolution
 esce dalle funzionalità di Remotix.»*
 
-**Quel che esce:** cambiare la misura della tela **mentre la sessione è viva**. L'interruttore
-`?adatta=segui`, il fondo `TELA_FONDO_MS`, `tela_forse_chiedi()` e il ramo del `resize` sono tolti
-da `src/pagina.html`.
+**What goes out:** changing the size of the canvas **while the session is alive**. The switch
+`?adatta=segui`, the floor `TELA_FONDO_MS`, `tela_forse_chiedi()` and the `resize` branch are removed
+from `src/pagina.html`.
 
-**Quel che resta, ed è la logica di prima:** ⭐ *la tela nasce con la dimensione della finestra del
-client, nel momento della nascita **o del riattacco** della sessione* — §5.0-sexies, intatta. Da lì
-in poi il desktop non si tocca più: il client riscala (§5.1, che torna a valere **senza eccezioni**,
-com'era scritta l'8 agosto).
+**What stays, and it is the logic from before:** ⭐ *the canvas is born with the size of the client's
+window, at the moment of the birth **or of the reattach** of the session* — §5.0-sexies, intact. From there
+on the desktop is no longer touched: the client rescales (§5.1, which goes back to holding **without exceptions**,
+as it was written on 8 Aug).
 
-#### Perché — e la ragione non è il codice, è il prodotto
+#### Why — and the reason is not the code, it is the product
 
-⛔ **L'eccezione era misurata, non temuta.** Su Mutter cambiare la tela a caldo costa `[M]` **6 ms**
-e funziona. Su KWin ≤ 6.7.4 — cioè **Debian Trixie, e fino a Forky** — `stream_virtual_output`
-risponde **`Could not find output` a ogni misura** (`[M]` 8 agosto 2026, cinque misure provate,
-`VirtualBackend` non ridefinisce `createVirtualOutput()`). ⇒ Tenerla avrebbe voluto dire **un
-prodotto che fa una cosa diversa a seconda di chi ci ospita**, con un ramo condizionato al
-compositore e un banco per ciascun ramo.
+⛔ **The exception was measured, not feared.** On Mutter changing the canvas hot costs `[M]` **6 ms**
+and works. On KWin ≤ 6.7.4 — that is **Debian Trixie, and up to Forky** — `stream_virtual_output`
+answers **`Could not find output` to every size** (`[M]` 8 Aug 2026, five sizes tried,
+`VirtualBackend` does not override `createVirtualOutput()`). ⇒ Keeping it would have meant **a
+product that does a different thing depending on who hosts it**, with a branch conditioned on the
+compositor and a bench for each branch.
 
-⚠ **E non basta aspettare che KDE si aggiorni.** `kwin!7932` «Resizable Virtual Monitors» è unita
-(29 luglio 2026, milestone 6.8, **14 ottobre 2026**) e nella nostra stessa forma — negoziazione
-PipeWire — ma:
+⚠ **And waiting for KDE to update is not enough.** `kwin!7932` «Resizable Virtual Monitors» is merged
+(29 Jul 2026, milestone 6.8, **14 Oct 2026**) and in our very same form — PipeWire
+negotiation — but:
 
-- `[R]` verificato il **17 agosto 2026** su invent.kde.org: l'ultimo tag è ancora **v6.7.4**,
-  `Plasma/6.8` non esiste;
-- Debian stabile non aggiorna Plasma ⇒ l'eccezione sarebbe rimasta **per anni**, non per due mesi;
-- ⛔ e **anche dove funziona fa un danno**: ridimensionare un output **ridispone le finestre
-  dell'utente** (la chiave del `PlacementTracker` contiene la geometria dell'output, quindi tornando
-  a una misura già vista le finestre vengono teleportate). La versione «giusta» scompiglia il
-  lavoro; quella «rotta» lo lascia fermo.
+- `[R]` checked on **17 Aug 2026** on invent.kde.org: the last tag is still **v6.7.4**,
+  `Plasma/6.8` does not exist;
+- Debian stable does not update Plasma ⇒ the exception would have stayed **for years**, not for two months;
+- ⛔ and **even where it works it does damage**: resizing an output **rearranges the user's
+  windows** (the key of the `PlacementTracker` contains the geometry of the output, so going back
+  to a size already seen the windows are teleported). The «right» version messes up the
+  work; the «broken» one leaves it still.
 
-✅ **Riconfermata il 4 ottobre 2026, guardando Forky** (Debian 14, Plasma 6.8 previsto): KWin
-ridimensionabile non riapre la voce. *«il dynamic resize non è una funzionalità così importante,
-le cose grosse adesso le abbiamo e funzionano bene, anche su Android»* (l'utente).
+✅ **Reconfirmed on 4 Oct 2026, looking at Forky** (Debian 14, Plasma 6.8 expected): a resizable KWin
+does not reopen the item. *«il dynamic resize non è una funzionalità così importante,
+le cose grosse adesso le abbiamo e funzionano bene, anche su Android»* (the user).
 
-#### ⚠ E la richiesta dell'utente che questa decisione ha superato
+#### ⚠ And the user's request that this decision superseded
 
-*17 agosto 2026, prima della decisione*: **«l'utente trascina i bordi e rilascia, e solo allora
-avviene il ridisegno»**. Era attuabile, e la nota tecnica resta perché il giorno in cui qualcuno la
-riproponesse la ritroverebbe uguale:
+*17 Aug 2026, before the decision*: **«l'utente trascina i bordi e rilascia, e solo allora
+avviene il ridisegno»**. It was feasible, and the technical note stays because the day someone
+proposed it again they would find it unchanged:
 
-> Il bordo della finestra **non è nel documento**: lo trascina il gestore delle finestre. Alla
-> pagina non arriva né `mousedown`, né `mouseup`, né `pointerup`, e un evento «il ridimensionamento
-> è finito» **non esiste in nessun motore**. ⇒ «Ha rilasciato» si può solo **dedurre** — «sono
-> passati N ms senza un altro `resize`» — ed era esattamente ciò che il fondo di 250 ms faceva.
+> The window edge **is not in the document**: the window manager drags it. The
+> page receives neither `mousedown`, nor `mouseup`, nor `pointerup`, and an event «the resize
+> is finished» **does not exist in any engine**. ⇒ «It has released» can only be **deduced** — «N ms
+> have passed without another `resize`» — and that was exactly what the 250 ms floor did.
 
-**Conseguenze:**
-- ⛔ **le bande nere restano possibili, e sono il comportamento dichiarato**: se dopo l'attacco la
-  finestra cambia forma (ridimensionata, o il tablet **ruotato**), le proporzioni non combaciano più
-  e il client riscala impaginando — `SPECIFICHE.md` §6.2, «si impagina, non si stira». Non è un
-  difetto da curare: è la scelta;
-- ⭐ **`ADATTA_TELA` resta nel protocollo** (`RCP.md` §7.1) e la catena server resta viva **per
-  intero** — la usa l'attacco, e la usa il **riattacco**, dove il palco esiste già con la misura di
-  un altro dispositivo. ⚠ Chi la togliesse credendola figlia dell'inseguimento romperebbe il
-  riattacco;
-- `banchi/06-b37-modi.py` cambia mestiere: da «i tre modi di `?adatta=`» a **guardia contro il
-  ritorno** — 0 richieste in tutti i modi, `?adatta=segui` compreso, che ora è solo un segnalibro
-  vecchio;
-- `banchi/06-b37-voce.py` V4 cambia domanda: da «la voce si spegne?» a «la funzione è davvero
-  uscita?». ⚠ V1–V3 restano: la voce spenta serve ancora, perché la tela si chiede a ogni riattacco
-  e la ripetizione su `NON_ORA` è viva;
-- ⛔ e **la fase 11 (KDE) non eredita più niente da decidere qui**: il ripiego dichiarato di §6.3 —
-  `COMPOSITORE_INCAPACE`, il client riscala — diventa il comportamento **normale** di tutti,
-  non il ramo povero di uno.
+**Consequences:**
+- ⛔ **black bands remain possible, and they are the declared behaviour**: if after attach the
+  window changes shape (resized, or the tablet **rotated**), the proportions no longer match
+  and the client rescales with letterboxing — `SPECIFICHE.md` §6.2, «letterbox, do not stretch». It is not a
+  defect to cure: it is the choice;
+- ⭐ **`ADATTA_TELA` stays in the protocol** (`RCP.md` §7.1) and the server chain stays alive **in
+  full** — attach uses it, and **reattach** uses it, where the stage already exists with the size of
+  another device. ⚠ Whoever removed it believing it a child of the chasing would break
+  reattach;
+- `banchi/06-b37-modi.py` changes job: from «the three modes of `?adatta=`» to **guard against the
+  return** — 0 requests in all modes, `?adatta=segui` included, which is now only an old
+  bookmark;
+- `banchi/06-b37-voce.py` V4 changes question: from «does the voice switch off?» to «has the function really
+  gone out?». ⚠ V1–V3 stay: the switched-off voice is still needed, because the canvas is asked at every reattach
+  and the repetition on `NON_ORA` is alive;
+- ⛔ and **phase 11 (KDE) no longer inherits anything to decide here**: the declared fallback of §6.3 —
+  `COMPOSITORE_INCAPACE`, the client rescales — becomes the **normal** behaviour of everyone,
+  not the poor branch of one.
 
-### 5.2 🔸 ⛔ ~~Il codificatore lavora alla misura della finestra~~ → **no: lavora alla misura della tela**
+### 5.2 🔸 ⛔ ~~The encoder works at the window's size~~ → **no: it works at the canvas's size**
 
-> ⛔ **Corretta il 9 agosto 2026, scrivendo `RCP.md` §6.2.** Questa voce diceva: *«Regalo che
-> arriva gratis da 5.1: finestra piccola ⇒ meno pixel da codificare ⇒ la stessa banda rende di
-> più»*. **Contraddiceva §5.0-ter**, che è a due voci di distanza e dice il contrario — *«il server
-> continua a codificare la tela intera e il client la rimpicciolisce»* — mettendo l'ottimizzazione
-> **volutamente fuori dal modello**, come `[?]` da misurare prima.
+> ⛔ **Corrected on 9 Aug 2026, while writing `RCP.md` §6.2.** This item said: *«A gift that
+> comes free from 5.1: small window ⇒ fewer pixels to encode ⇒ the same bandwidth yields
+> more»*. **It contradicted §5.0-ter**, which is two items away and says the opposite — *«the server
+> keeps encoding the whole canvas and the client shrinks it»* — putting the optimisation
+> **deliberately outside the model**, as a `[?]` to be measured first.
 >
-> **Vince §5.0-ter**, e non per anzianità: è quella che regge insieme al resto. `SPECIFICHE.md`
-> §6.1 dice che durante la sessione **è il client a riscalare**, e §6.3 dice che il ripiego su KDE
-> *«non costa una riga in più, perché è lo stesso codice del punto durante la sessione»* — cioè la
-> riscalatura nel client. Se il server codificasse alla misura della finestra, quel codice non
-> esisterebbe e il ripiego costerebbe eccome.
+> **§5.0-ter wins**, and not by seniority: it is the one that holds together with the rest. `SPECIFICHE.md`
+> §6.1 says that during the session **it is the client that rescales**, and §6.3 says that the fallback on KDE
+> *«does not cost one more line, because it is the same code as the during-the-session point»* — that is, the
+> rescaling in the client. If the server encoded at the window's size, that code would not
+> exist and the fallback would cost plenty.
 >
-> ⚠ **Il regalo non era gratis**: cambiare la misura codificata a ogni trascinamento del bordo
-> significa rinegoziare il codificatore — e con `DECISIONI.md` §5-bis.0 il bordo si trascina
-> **dieci volte al giorno**, perché su DeX la finestra è ridimensionabile. Era una `[?]` travestita
-> da conseguenza, cioè la forma d'errore **E5** di `REVIEWER.md`.
+> ⚠ **The gift was not free**: changing the encoded size at every drag of the border
+> means renegotiating the encoder — and with `DECISIONI.md` §5-bis.0 the border is dragged
+> **ten times a day**, because on DeX the window is resizable. It was a `[?]` disguised
+> as a consequence, that is error form **E5** of `REVIEWER.md`.
 
-**Quel che vale adesso**: il server codifica alla misura della **tela**, il client riscala. Il
-messaggio `VISTA` di RCP esiste lo stesso e serve a scegliere **quanti bit spendere**, non quanti
-pixel produrre; e l'intestazione del fotogramma porta la misura come campo, così che il giorno in
-cui §5.0-ter venisse chiusa **il protocollo non cambi** (`RCP.md` §6.2, §7.1).
+**What holds now**: the server encodes at the size of the **canvas**, the client rescales. RCP's
+`VISTA` message exists all the same and serves to choose **how many bits to spend**, not how many
+pixels to produce; and the frame header carries the size as a field, so that the day
+§5.0-ter were closed **the protocol does not change** (`RCP.md` §6.2, §7.1).
 
-### 5.3 🔸 Il prezzo di 5.1, dichiarato
+### 5.3 🔸 The price of 5.1, declared
 
-Tela 1080p vista da uno schermo 4K = desktop ingrandito, quindi morbido. Ingrandire non
-inventa dettaglio. La via d'uscita è la voce «adatta il desktop», ed è il motivo per cui la
-misura iniziale della tela conta — vedi la domanda aperta §7.1.
+A 1080p canvas viewed from a 4K screen = an enlarged desktop, hence soft. Enlarging does not
+invent detail. The way out is the «fit the desktop» item, and it is the reason why the
+initial size of the canvas matters — see the open question §7.1.
 
 ---
 
-### 5.4 ✅ ⭐⭐⭐ La tela visibile si dipinge con **`bitmaprenderer`**, non con la tela 2D — 17 agosto 2026
+### 5.4 ✅ ⭐⭐⭐ The visible canvas is painted with **`bitmaprenderer`**, not with the 2D canvas — 17 Aug 2026
 
-**Deciso sul giudizio dell'utente** — *«NIENTE ARTEFATTI!»* — dopo due giorni di caccia ai
-**blocchi rettangolari da 64×192** che vedeva nelle zone ferme.
+**Decided on the user's judgement** — *«NIENTE ARTEFATTI!»* — after two days of hunting the
+**64×192 rectangular blocks** he saw in the still areas.
 
-⛔ **La causa non era nostra, ed è fuori dalla portata di qualunque banco che rilegga i pixel**: la
-`<canvas>` **2D** riceve i pixel giusti e si rompe **andando allo schermo**. Le prove, una per
-imputato, stanno in [`fasi/06-la-tela-e-la-vista.md` §4.9](fasi/06-la-tela-e-la-vista.md) —
-cattura pulita, codificatore pulito (0 superblocchi rovinati su 600), `copyTo` pulito, `getImageData`
-**0 su 180 000** — ⛔ **e la stessa tela fotografata col cellulare che mostra i rettangoli**.
+⛔ **The cause was not ours, and it is out of reach of any bench that reads the pixels back**: the
+**2D** `<canvas>` receives the right pixels and breaks **on its way to the screen**. The proofs, one per
+suspect, are in [`fasi/06-la-tela-e-la-vista.md` §4.9](fasi/06-la-tela-e-la-vista.md) —
+clean capture, clean encoder (0 spoiled superblocks out of 600), clean `copyTo`, `getImageData`
+**0 out of 180 000** — ⛔ **and the same canvas photographed with the mobile phone showing the rectangles**.
 
-⇒ ⭐ **`getImageData` legge il magazzino, non lo schermo.** Un banco che rilegge la tela è verde
-**per costruzione**, e per due giorni ha detto che andava tutto bene.
+⇒ ⭐ **`getImageData` reads the backing store, not the screen.** A bench that reads the canvas back is green
+**by construction**, and for two days it said everything was fine.
 
-**La cura**: `createImageBitmap()` + `transferFromImageBitmap()` su un contesto **`bitmaprenderer`**,
-che il magazzino 2D non ce l'ha. ⚠ Non è un'ottimizzazione e non è un interruttore: è **la** strada
-di disegno del prodotto (`niente eccezioni`, §0).
+**The cure**: `createImageBitmap()` + `transferFromImageBitmap()` on a **`bitmaprenderer`** context,
+which does not have the 2D backing store. ⚠ It is not an optimisation and it is not a switch: it is **the** drawing
+route of the product (`niente eccezioni`, §0).
 
-**Che cosa cambia nel prodotto, e che cosa no:**
+**What changes in the product, and what does not:**
 
 | | |
 |---|---|
-| ⛔ **le due tele 2D spariscono** | oggi il fotogramma passa da `deposito_p.drawImage(f)` **e poi** da `pennello.drawImage(deposito)`: due copie e due magazzini |
-| ⭐ **il deposito non serve più** | `transferFromImageBitmap` **dimensiona la tela da sé**, e al ridimensionamento della finestra il contenuto **resta**: la ragione per cui il deposito esisteva (§5.1, il nero fino al fotogramma dopo) cade da sola |
-| ⭐ **il cursore non è toccato** | è un cursore **CSS**, non è dipinto sulla tela ⇒ la tela visibile non deve **comporre** niente |
-| ⚠ **il centraggio si fa col CSS** | quando la finestra è più larga dell'immagine. Le bande erano già **fuori** dal buffer (§5.0-sexies), quindi non si perde una misura |
-| ⚠ **e il costo va misurato** | `createImageBitmap` è **asincrona**: entra nel percorso del ritardo, che è il numero per cui esiste la fase 3. `[?]` finché non c'è la misura |
-| ⛔ **il ripiego si dichiara** | se `getContext("bitmaprenderer")` non c'è, si torna alla tela 2D **e lo si scrive nel registro** — `CODER.md` §4.2. Non è un'eccezione per compositore: è una capacità che manca |
+| ⛔ **the two 2D canvases disappear** | today the frame passes through `deposito_p.drawImage(f)` **and then** through `pennello.drawImage(deposito)`: two copies and two backing stores |
+| ⭐ **the store canvas is no longer needed** | `transferFromImageBitmap` **sizes the canvas by itself**, and when the window is resized the content **stays**: the reason the store canvas existed (§5.1, black until the next frame) falls by itself |
+| ⭐ **the cursor is not touched** | it is a **CSS** cursor, it is not painted on the canvas ⇒ the visible canvas does not have to **composite** anything |
+| ⚠ **centring is done with CSS** | when the window is wider than the image. The bands were already **outside** the buffer (§5.0-sexies), so no measure is lost |
+| ⚠ **and the cost must be measured** | `createImageBitmap` is **asynchronous**: it enters the delay path, which is the number phase 3 exists for. `[?]` until there is the measurement |
+| ⛔ **the fallback is declared** | if `getContext("bitmaprenderer")` is not there, it goes back to the 2D canvas **and writes it in the log** — `CODER.md` §4.2. It is not an exception per compositor: it is a missing capability |
 
 
 ---
 
-## 5-bis. L'input
+## 5-bis. The input
 
-### 5-bis.1 ✅ Il puntatore lo disegna il client, non il desktop
+### 5-bis.1 ✅ The pointer is drawn by the client, not by the desktop
 
-*8 agosto 2026, proposta dall'utente.*
+*8 Aug 2026, proposed by the user.*
 
-Il dito trascina un puntatore **disegnato dal client**; un tap fa il clic sinistro sulla
-posizione del puntatore, un tap a due dita il destro. Non è il «tocco diretto», dove il dito
-è il puntatore: è il trackpad, e si vede dove si sta per cliccare **prima** di cliccare.
+The finger drags a pointer **drawn by the client**; a tap makes the left click at the
+pointer's position, a two-finger tap the right one. It is not «direct touch», where the finger
+is the pointer: it is the trackpad, and you see where you are about to click **before** clicking.
 
-**Tre problemi diversi che questa scelta chiude insieme:**
+**Three different problems this choice closes together:**
 
-1. ⭐ **la latenza percepita.** Il puntatore si muove alla velocità del dito, non a quella
-   della rete. Su un collegamento mobile con 150 ms di ritardo è la differenza fra usabile e
-   frustrante — e pesa più dei fotogrammi al secondo, che è la grandezza che di solito si
-   guarda;
-2. **le scie e le posizioni vecchie** del puntatore, che nascono proprio dal fatto che il
-   puntatore viaggi *dentro il video* e arrivi in ritardo;
-3. **la precisione.** Un dito è largo ~10 mm, i bersagli di un desktop ne misurano ~4, e nel
-   tocco diretto il dito **copre il bersaglio** mentre lo si cerca. In più il passaggio del
-   puntatore — da cui dipendono suggerimenti e menu — esiste solo se un puntatore c'è davvero.
+1. ⭐ **perceived latency.** The pointer moves at the speed of the finger, not at that
+   of the network. On a mobile link with 150 ms of delay it is the difference between usable and
+   frustrating — and it weighs more than frames per second, which is the quantity people usually
+   look at;
+2. **the trails and the stale positions** of the pointer, which are born precisely from the
+   pointer travelling *inside the video* and arriving late;
+3. **precision.** A finger is ~10 mm wide, a desktop's targets measure ~4, and in
+   direct touch the finger **covers the target** while looking for it. Moreover the pointer's
+   hover — on which tooltips and menus depend — exists only if a pointer really is there.
 
-### 5-bis.2 🔸 Il cursore non deve MAI essere dentro l'immagine catturata — e va verificato
+### 5-bis.2 🔸 The cursor must NEVER be inside the captured image — and it must be verified
 
-Discende da 5-bis.1: se lo disegna il client e c'è anche in quel che arriva, se ne vedono
-**due**. v1 aveva incontrato il problema tre volte senza collegarle, e la cura è la sua:
-*«non nasconderlo: renderlo invisibile»* — un tema con un cursore 1×1 ad alfa zero.
+It follows from 5-bis.1: if the client draws it and it is also in what arrives, you see
+**two**. v1 had met the problem three times without connecting them, and the cure is its own:
+*«don't hide it: make it invisible»* — a theme with a 1×1 cursor at zero alpha.
 
-| Desktop | Il cursore è nella cattura? | Il canale della cura |
+| Desktop | Is the cursor in the capture? | The channel of the cure |
 |---|---|---|
-| GNOME / Mutter | **no**, lo esclude di suo (`inhibit_cursor_overlay`) | ⚠ e se servisse, **non** `XCURSOR_THEME`: Mutter non la legge, legge `org.gnome.desktop.interface cursor-theme` |
-| KDE / KWin `--virtual` | **sì** `[M]` — niente piano cursore ⇒ dipinto nel framebuffer | `XCURSOR_THEME` (+ `XCURSOR_SIZE`, che KWin pretende) |
-| wlroots — XFCE, LXQt | **sì, sempre** su headless; `overlay_cursor` non lo toglie, lo **forza software** | `XCURSOR_THEME`; su labwc `XCURSOR_SIZE` non è obbligatoria |
+| GNOME / Mutter | **no**, it excludes it on its own (`inhibit_cursor_overlay`) | ⚠ and if it were needed, **not** `XCURSOR_THEME`: Mutter does not read it, it reads `org.gnome.desktop.interface cursor-theme` |
+| KDE / KWin `--virtual` | **yes** `[M]` — no cursor plane ⇒ painted in the framebuffer | `XCURSOR_THEME` (+ `XCURSOR_SIZE`, which KWin demands) |
+| wlroots — XFCE, LXQt | **yes, always** on headless; `overlay_cursor` does not remove it, it **forces it to software** | `XCURSOR_THEME`; on labwc `XCURSOR_SIZE` is not mandatory |
 
-⛔ **La trappola, e va verificata invece che sperata**: su wlroots un tema che carica **zero**
-cursori fa ripiegare la libreria su un tema **incorporato e visibile** — cioè due puntatori,
-per un ripiego silenzioso (`REVIEWER.md` E2). Serve almeno un cursore valido, `index.theme`
-**senza `Inherits=`**, e i dieci nomi che labwc chiede. E l'esito si **controlla dopo l'avvio
-della sessione**: che il tema sia stato scritto non è che sia stato caricato.
+⛔ **The trap, and it must be verified instead of hoped for**: on wlroots a theme that loads **zero**
+cursors makes the library fall back on a **built-in, visible** theme — that is two pointers,
+through a silent fallback (`REVIEWER.md` E2). At least one valid cursor is needed, `index.theme`
+**without `Inherits=`**, and the ten names labwc asks for. And the outcome is **checked after the session
+has started**: that the theme was written is not that it was loaded.
 
-*Il posto dove metterlo c'è già: l'ambiente della sessione si compone da zero, una variabile
-per volta (`CODER.md` §4.5) — quindi la cura sta nel programma e non in un file, come vuole I7.*
+*The slot to put it in already exists: the session's environment is composed from scratch, one variable
+at a time (`CODER.md` §4.5) — so the cure lives in the program and not in a file, as I7 wants.*
 
-### 5-bis.0 ✅ Su Android l'uso primario è **Samsung DeX**, e il tocco è il ripiego
+### 5-bis.0 ✅ On Android the primary use is **Samsung DeX**, and touch is the fallback
 
-*9 agosto 2026. «DeX assolutamente. È l'uso primario che faccio quando uso android perché la
+*9 Aug 2026. «DeX assolutamente. È l'uso primario che faccio quando uso android perché la
 verità è che usare certi programmi con il touch anziché nel modo classico è un ripiego di
 emergenza, non la normalità.»*
 
-⛔ **Ribalta la priorità con cui era stato progettato l'input Android**, che era tutto attorno al
-telefono in mano — cioè al caso che l'utente quasi non usa.
+⛔ **It overturns the priority with which the Android input had been designed**, which was all around the
+phone in the hand — that is, around the case the user almost never uses.
 
-| | Prima | Adesso |
+| | Before | Now |
 |---|---|---|
-| mouse e tastiera fisici (5-bis.8) | un passeggero | **la strada principale** |
-| i sette gesti (5-bis.3) | il modello di input | **il ripiego d'emergenza** |
-| ridimensionare la finestra (§5.1) | un caso limite | **quel che si fa di continuo** |
+| physical mouse and keyboard (5-bis.8) | a passenger | **the main route** |
+| the seven gestures (5-bis.3) | the input model | **the emergency fallback** |
+| resizing the window (§5.1) | an edge case | **what is done all the time** |
 
-Con DeX il telefono pilota uno schermo esterno con mouse e tastiera veri: la tela nasce di forma
-**desktop** e non di forma telefono, e la finestra si trascina.
+With DeX the phone drives an external screen with a real mouse and keyboard: the canvas is born
+**desktop**-shaped and not phone-shaped, and the window gets dragged.
 
-⭐ **Tre decisioni ne escono rafforzate, non indebolite:**
+⭐ **Three decisions come out of it strengthened, not weakened:**
 
-1. **il puntatore disegnato dal client** (5-bis.1) era giusto col dito; con un mouse vero diventa
-   non negoziabile — un puntatore che insegue la mano mentre si lavora «nel modo classico» è la
-   differenza fra usarlo e chiuderlo;
-2. **il ridimensionamento che non tocca il compositore** (§5.1) passa da scelta prudente a scelta
-   obbligata: se trascinando il bordo dieci volte al giorno le finestre *dentro* la sessione si
-   rimescolassero, il prodotto sarebbe inservibile. Era stato deciso per il muro di KWin; si
-   scopre che era giusto anche per l'uso vero;
-3. **la regola sui modificatori di comando** (5-bis.6) era una precisazione; lavorando col
-   classico diventa **portante**, perché le scorciatoie sono metà del lavoro.
+1. **the pointer drawn by the client** (5-bis.1) was right with the finger; with a real mouse it becomes
+   non-negotiable — a pointer that chases the hand while working «the classic way» is the
+   difference between using it and closing it;
+2. **the resizing that does not touch the compositor** (§5.1) goes from a prudent choice to a forced
+   choice: if, dragging the border ten times a day, the windows *inside* the session got
+   reshuffled, the product would be unusable. It had been decided because of KWin's wall; it
+   turns out it was right for real use too;
+3. **the rule on command modifiers** (5-bis.6) was a clarification; working the
+   classic way it becomes **load-bearing**, because shortcuts are half of the work.
 
-⭐ **E una buona notizia sul costo**: se l'uso primario è DeX, il client Android somiglia molto più
-a quello Linux di quanto previsto — stesso modello di interazione, diverso solo nello stack di
-decodifica. Riduce il rischio segnalato in §0.3 spostando Android in fondo: il protocollo non è
-stato progettato per il client sbagliato, perché i due client si somigliano.
+⭐ **And good news on the cost**: if the primary use is DeX, the Android client resembles the Linux
+one much more than expected — same interaction model, different only in the decoding
+stack. It reduces the risk flagged in §0.3 by moving Android to the end: the protocol was not
+designed for the wrong client, because the two clients resemble each other.
 
-> ⭐ **Confermata e resa più forte dal 9 agosto 2026 (§1.6).** La decisione resta intera — l'uso
-> primario su Android è DeX, il tocco è il ripiego — e cambia solo che il programma è **il browser
-> su DeX** invece di un'applicazione nostra. ⚠ Da cui una domanda nuova che non c'era, e che va
-> alla sonda: **su DeX, in una finestra ridimensionabile, il browser dà `Pointer Lock` e le
-> scorciatoie?** Senza il primo si vedono due puntatori (5-bis.8), senza le seconde metà del lavoro
-> se ne va nel browser invece che nella sessione.
+> ⭐ **Confirmed and made stronger from 9 Aug 2026 (§1.6).** The decision stays whole — the primary
+> use on Android is DeX, touch is the fallback — and all that changes is that the program is **the browser
+> on DeX** instead of an application of ours. ⚠ From which a new question that was not there, and that goes
+> to the probe: **on DeX, in a resizable window, does the browser give `Pointer Lock` and the
+> shortcuts?** Without the first you see two pointers (5-bis.8), without the second half of the work
+> goes into the browser instead of into the session.
 
-### 5-bis.0-ter ✅ L'emulatore Android è banco di lavoro, non strumento di misura
+### 5-bis.0-ter ✅ The Android emulator is a workbench, not a measuring instrument
 
-*9 agosto 2026. «Per android forse dovremmo ricorrere a degli emulatori (che entrerebbero a far
+*9 Aug 2026. «Per android forse dovremmo ricorrere a degli emulatori (che entrerebbero a far
 parte dell'ambiente di sviluppo).»*
 
-Accettato: SDK, emulatore, `adb` e il collegamento al telefono entrano nell'ambiente, e si mettono
-già alla **fase 0** perché la sonda della fase 2 li richiede.
+Accepted: SDK, emulator, `adb` and the link to the phone enter the environment, and they are put
+already in **phase 0** because the probe of phase 2 requires them.
 
-⚠ **Corretto lo stesso giorno, dopo che l'utente ha chiesto di cercare meglio.** La prima
-stesura diceva che DeX «sull'emulatore non esiste»: **è falso**. Esiste il **Desktop AVD**
-(profilo «13.5" Freeform», da Android 11; la versione Android 13 aggiunge scorciatoie da tastiera
-e supporto mouse), e **Samsung stessa documenta l'emulatore per DeX** — *«If you don't have the
+⚠ **Corrected the same day, after the user asked to search better.** The first
+draft said that DeX «does not exist on the emulator»: **it is false**. There is the **Desktop AVD**
+(«13.5" Freeform» profile, from Android 11; the Android 13 version adds keyboard shortcuts
+and mouse support), and **Samsung itself documents the emulator for DeX** — *«If you don't have the
 DeX Station, you can test your app resize behavior in Android Studio using Android Virtual
-Device»*, a 160 dpi e 1080×1920. Il modello di interazione che ci interessa **è testabile lì**, ed
-è gran parte delle fasi A1 e A3. Samsung avverte però che l'emulatore **simula, non replica**.
+Device»*, at 160 dpi and 1080×1920. The interaction model we care about **is testable there**, and
+it is a large part of phases A1 and A3. Samsung warns, however, that the emulator **simulates, does not replicate**.
 
-⛔ **Il confine resta, ma è più stretto e più netto**: *sull'emulatore si sviluppa, non si misura.*
-**Nessun numero di questo progetto viene dichiarato su un emulatore.** Quel che non dà è la
-**decodifica in hardware** — il suo MediaCodec non è il silicio del telefono, e `[?]` non si è
-riusciti a stabilire che esponga un decodificatore HEVC hardware — più il ritardo vero, la
-batteria e la rete che cambia.
+⛔ **The border stays, but it is narrower and sharper**: *on the emulator you develop, you do not measure.*
+**No number of this project is declared on an emulator.** What it does not give is
+**hardware decoding** — its MediaCodec is not the phone's silicon, and `[?]` it was not
+possible to establish that it exposes a hardware HEVC decoder — plus the real delay, the
+battery and the changing network.
 
-⚠ È `REVIEWER.md` **E10**, *una prova verde sul client sbagliato*: un emulatore che dice «funziona»
-mentre il telefono no è un banco verde col difetto vivo — la forma che a v1 è costata di più, con
-una correzione scritta su un banco che non riproduceva il difetto e spedita all'utente, **che ha
-peggiorato le cose**.
+⚠ It is `REVIEWER.md` **E10**, *a green test on the wrong client*: an emulator that says «it works»
+while the phone does not is a green bench with the defect alive — the form that cost v1 the most, with
+a correction written on a bench that did not reproduce the defect and shipped to the user, **which made
+things worse**.
 
-**Il telefono vero è lo strumento di misura; l'emulatore è il banco di lavoro.**
+**The real phone is the measuring instrument; the emulator is the workbench.**
 
-> ⛔ **Decade quasi per intero il 9 agosto 2026, con §1.6**: non c'è più un'applicazione Android da
-> costruire, quindi non servono né SDK né APK né Desktop AVD — **il banco di lavoro è il browser
-> del portatile**, che è più comodo di qualunque emulatore.
+> ⛔ **Lapses almost entirely on 9 Aug 2026, with §1.6**: there is no longer an Android application to
+> build, so neither SDK nor APK nor Desktop AVD is needed — **the workbench is the laptop's
+> browser**, which is handier than any emulator.
 >
-> ⭐ **Ma la riga che conta sopravvive parola per parola, e vale ancora di più**:
-> *«nessun numero di questo progetto viene dichiarato su un emulatore»* diventa **«nessun numero si
-> dichiara su un browser che non sia quello del dispositivo vero»**. Un Chrome su portatile che
-> decodifica HEVC in hardware **non dice niente** del Chrome del telefono: è la stessa forma
-> d'errore **E10**, con un travestimento nuovo.
+> ⭐ **But the line that counts survives word for word, and is worth even more**:
+> *«no number of this project is declared on an emulator»* becomes **«no number is
+> declared on a browser that is not the one of the real device»**. A Chrome on a laptop that
+> decodes HEVC in hardware **says nothing** about the phone's Chrome: it is the same error
+> form **E10**, in a new disguise.
 
-### 5-bis.0-bis ✅ RDM è un riferimento da cui **ispirarsi**, non un prodotto da rifare
+### 5-bis.0-bis ✅ RDM is a reference to **draw inspiration** from, not a product to redo
 
-*9 agosto 2026. «Ora noi non dobbiamo rifare RDP e/o RDM, ma secondo me trarne ispirazione sì.»*
+*9 Aug 2026. «Ora noi non dobbiamo rifare RDP e/o RDM, ma secondo me trarne ispirazione sì.»*
 
-⚠ **In v1 RDM aveva un ruolo diverso**: era il **client da servire** — *«se non funziona qui, non
-funziona»* (`fondamenta/documenti/client-android.md` §1.2). In V2 il client lo scriviamo noi, quindi
-cambia mestiere: da **vincolo** a **riferimento**.
+⚠ **In v1 RDM had a different role**: it was the **client to serve** — *«if it doesn't work here, it doesn't
+work»* (`fondamenta/documenti/client-android.md` §1.2). In V2 we write the client ourselves, so
+it changes job: from **constraint** to **reference**.
 
-⛔ **E il confine è netto, perché RDM è proprietario** (Devolutions,
-`com.devolutions.remotedesktopmanager`): si studia **come si comporta e come si sente all'uso**,
-mai come è fatto dentro. La fonte migliore non è comunque il codice: è l'utente, che lo usa tutti
-i giorni.
+⛔ **And the border is sharp, because RDM is proprietary** (Devolutions,
+`com.devolutions.remotedesktopmanager`): what is studied is **how it behaves and how it feels in use**,
+never how it is made inside. The best source is not the code anyway: it is the user, who uses it every
+day.
 
-⭐ **Che cosa se ne prende, e viene da una frase sola**: *«funziona bene sia con interfaccia mobile
-sia in modalità desktop»*. Non è il video che si adatta — sono **due interfacce**, e
-l'applicazione sceglie da sé quale mostrare.
+⭐ **What is taken from it, and it comes from a single sentence**: *«funziona bene sia con interfaccia mobile
+sia in modalità desktop»*. It is not the video that adapts — they are **two interfaces**, and
+the application chooses by itself which one to show.
 
-🔸 Da cui, per il nostro client Android: **una sola applicazione, due interfacce**, e il passaggio
-è **automatico sul contesto** — schermo esterno e mouse collegati, oppure telefono in mano — non
-un'impostazione che l'utente deve andare a cercare. È la forma che le fasi **A3** (il modo
-classico) e **A4** (il tocco) hanno già preso.
+🔸 From which, for our Android client: **one single application, two interfaces**, and the switch
+is **automatic on the context** — external screen and mouse connected, or phone in the hand — not
+a setting the user has to go looking for. It is the shape that phases **A3** (the classic
+way) and **A4** (touch) have already taken.
 
-> ⭐ **Sopravvive intatta al 9 agosto 2026 (§1.6), e diventa più facile**: «una applicazione, due
-> interfacce» è **una pagina, due disposizioni**, e il passaggio automatico sul contesto è la cosa
-> che una pagina sa fare meglio di qualunque altra tecnologia — si guarda se c'è un puntatore fine
-> e quanto è grande la finestra, non «è Android o è Linux». ⚠ La sostanza però non cambia: **due
-> disposizioni vere, non una che si stira**, ed è la lezione che si prende da RDM.
+> ⭐ **Survives intact past 9 Aug 2026 (§1.6), and becomes easier**: «one application, two
+> interfaces» is **one page, two layouts**, and the automatic switch on the context is the thing
+> a page does better than any other technology — you look at whether there is a fine pointer
+> and how big the window is, not «is it Android or is it Linux». ⚠ The substance however does not change: **two
+> real layouts, not one that gets stretched**, and that is the lesson taken from RDM.
 
-**Che cosa invece NON se ne prende:**
+**What instead is NOT taken from it:**
 
-| | Perché |
+| | Why |
 |---|---|
-| l'essere un **gestore di connessioni** — RDP, VNC, ARD, SSH, FTP e una cinquantina d'altro | è un pregio per loro e un fuori scope per noi: REMOTIX è un prodotto solo, e `SPECIFICHE.md` §12 esclude la compatibilità con altri protocolli |
-| la sua **scelta di codec** (RemoteFX Progressive) | era ingegneria giusta *per RDP e per un telefono senza decodifica hardware*. Noi puntiamo su HEVC in hardware — ⚠ e se la sonda della fase 2 dicesse no, è **questa** la riga da rileggere |
+| being a **connection manager** — RDP, VNC, ARD, SSH, FTP and fifty-odd more | it is a merit for them and out of scope for us: REMOTIX is a single product, and `SPECIFICHE.md` §12 excludes compatibility with other protocols |
+| its **choice of codec** (RemoteFX Progressive) | it was the right engineering *for RDP and for a phone without hardware decoding*. We aim at HEVC in hardware — ⚠ and if the probe of phase 2 said no, **this** is the line to reread |
 
-### 5-bis.3 ✅ Il ventaglio dei gesti — **il ripiego, non la strada principale**
+### 5-bis.3 ✅ The fan of gestures — **the fallback, not the main route**
 
-*9 agosto 2026, confermati tutti e sette. ⚠ E ridimensionati lo stesso giorno da 5-bis.0: su
-Android l'uso primario è DeX, con mouse e tastiera veri. Questi gesti servono al telefono in
-mano, che è il ripiego d'emergenza — restano necessari, ma non sono la cosa da azzeccare per
-prima.*
+*9 Aug 2026, all seven confirmed. ⚠ And scaled down the same day by 5-bis.0: on
+Android the primary use is DeX, with a real mouse and keyboard. These gestures serve the phone in the
+hand, which is the emergency fallback — they remain necessary, but they are not the thing to get right
+first.*
 
-| Gesto | Effetto |
+| Gesture | Effect |
 |---|---|
-| 1 dito trascina | muove il puntatore |
-| 1 dito tap | clic sinistro |
-| 2 dita tap | clic destro |
-| 2 dita trascina | rotella / scorrimento |
-| tap-e-mezzo (tap, poi premi e trascina) | trascinamento e selezione |
-| 3 dita tap | clic centrale |
-| pizzico | ingrandisce la **vista** del client, non l'applicazione |
+| 1 finger drag | moves the pointer |
+| 1 finger tap | left click |
+| 2 finger tap | right click |
+| 2 finger drag | wheel / scrolling |
+| tap-and-a-half (tap, then press and drag) | dragging and selection |
+| 3 finger tap | middle click |
+| pinch | enlarges the client's **view**, not the application |
 
-⚠ Il *tap-e-mezzo* non è un lusso: senza, non si sposta una finestra e non si seleziona del
-testo. Tap e trascinamento a due dita non si confondono — un tap è breve e fermo.
+⚠ The *tap-and-a-half* is not a luxury: without it, you cannot move a window or select
+text. Tap and two-finger drag are not confused — a tap is short and still.
 
-> ⭐ **E con quale riserva sono stati confermati**, che vale più della tabella: *«tanto poi sono
+> ⭐ **And with what reserve they were confirmed**, which is worth more than the table: *«tanto poi sono
 > sicuro che su alcune specifiche ci torneremo quando avremo il sistema funzionante sotto
-> mano»*. È `LEZIONI.md` §7.3 applicata ai gesti, e sui gesti vale doppio — un gesto non si
-> giudica leggendolo, si giudica usandolo. Questa tabella è quindi un **punto di partenza
-> dichiarato**, non un impegno: chi la trova diversa fra sei mesi non ha trovato un difetto.
+> mano»*. It is `LEZIONI.md` §7.3 applied to gestures, and for gestures it counts double — a gesture is not
+> judged by reading it, it is judged by using it. This table is therefore a **declared starting
+> point**, not a commitment: whoever finds it different six months from now has not found a defect.
 
-### 5-bis.3-bis ✅ ⭐ La barra porta **un bottone solo**: `Ctrl+Alt+Canc`
+### 5-bis.3-bis ✅ ⭐ The bar carries **a single button**: `Ctrl+Alt+Canc`
 
-*14 agosto 2026, deciso dall'utente davanti alla misura della fase 4.*
+*14 Aug 2026, decided by the user in front of the phase 4 measurement.*
 
-⛔ **Il fatto che ha prodotto la domanda, ed è `[M]`** (`fasi/rapporti/F4-A9-scorciatoie.md`): sei
-combinazioni **non arriveranno mai** al desktop remoto — `Super`, `Super+D`, `Alt+Tab`, `Alt+F2`,
-`Alt+F4`, `Ctrl+Alt+Canc`. ⚠ E non è un limite del browser: **le prende il compositore del client**,
-e **nessuna API le riprenderà mai**. L'unico modo di darle è un bottone a schermo — che però toglie
-pixel all'immagine del desktop.
+⛔ **The fact that produced the question, and it is `[M]`** (`fasi/rapporti/F4-A9-scorciatoie.md`): six
+combinations **will never arrive** at the remote desktop — `Super`, `Super+D`, `Alt+Tab`, `Alt+F2`,
+`Alt+F4`, `Ctrl+Alt+Canc`. ⚠ And it is not a browser limit: **the client's compositor takes them**,
+and **no API will ever take them back**. The only way to provide them is an on-screen button — which however takes
+pixels away from the desktop's image.
 
-**Scelto: uno solo.** ⛔ E la ragione per cui è quello e non un altro è di natura diversa dal gusto:
-senza `Ctrl+Alt+Canc`, **in una sessione bloccata l'utente non entra più** — è l'unica delle sei che,
-mancando, lo lascia **fuori** invece che scomodo. `SPECIFICHE.md` §7.3-bis la chiama *«un requisito,
-non un ripiego di fortuna»*, e tre riferimenti maturi su tre lo fanno.
+**Chosen: just one.** ⛔ And the reason it is that one and not another is of a different nature from taste:
+without `Ctrl+Alt+Canc`, **in a locked session the user can no longer get in** — it is the only one of the six that,
+when missing, leaves him **outside** rather than inconvenienced. `SPECIFICHE.md` §7.3-bis calls it *«a requirement,
+not a makeshift fallback»*, and three mature references out of three do it.
 
-⚠ **Gli altri cinque restano scritti e spenti**, con la loro ragione accanto: la scelta è di gusto e
-si rivede **guardandola**, non leggendola (`LEZIONI.md` §7.3, la stessa riserva con cui l'utente ha
-confermato i sette gesti). ⛔ Accenderne uno costa **una riga**.
-⛔ **E spento vuol dire NON DISEGNATO**, non «disegnato e inerte»: un bottone che c'è e non fa niente
-è peggio di un bottone che non c'è. Le cinque combinazioni restano però **nella tavola delle
-dichiarate**, dove l'utente legge che quella battuta se la tiene il suo computer — ⭐ perché
-`SPECIFICHE.md` §7.3-bis vieta di **fingere** che siano arrivate, non di non offrirle.
+⚠ **The other five stay written and switched off**, with their reason beside them: the choice is one of taste and
+is revisited **by looking at it**, not by reading it (`LEZIONI.md` §7.3, the same reserve with which the user
+confirmed the seven gestures). ⛔ Switching one on costs **one line**.
+⛔ **And switched off means NOT DRAWN**, not «drawn and inert»: a button that is there and does nothing
+is worse than a button that is not there. The five combinations stay however **in the table of the
+declared ones**, where the user reads that his computer keeps that keystroke for itself — ⭐ because
+`SPECIFICHE.md` §7.3-bis forbids **pretending** they arrived, not not offering them.
 
 ---
 
-### 5-bis.4 🔸 Il canale del cursore, e il suo compromesso
+### 5-bis.4 🔸 The cursor channel, and its compromise
 
-Il client deve sapere **che forma** disegnare: barretta sul testo, doppia freccia sui bordi,
-mano sui collegamenti. Serve quindi un canale che porti **forma e punto attivo** quando
-cambiano.
+The client must know **what shape** to draw: the I-beam on text, the double arrow on borders,
+the hand on links. So a channel is needed that carries **shape and hotspot** when they
+change.
 
-Il compromesso, accettato: la **posizione** è immediata perché locale, la **forma** arriva con
-un giro di rete di ritardo. Muovendo in fretta sopra un bordo, la doppia freccia compare un
-attimo dopo. È il verso giusto del compromesso — il ritardo di una forma non lo nota nessuno,
-quello di una posizione lo notano tutti.
+The compromise, accepted: the **position** is immediate because local, the **shape** arrives with
+one network round of delay. Moving quickly over a border, the double arrow appears a
+moment later. It is the right side of the compromise — the delay of a shape nobody notices,
+that of a position everybody notices.
 
-### 5-bis.5 🔸 Che cosa porta il canale di input
+### 5-bis.5 🔸 What the input channel carries
 
 | | |
 |---|---|
-| puntatore **assoluto** | sì — ed è **l'unico** percorso del puntatore (vedi 5-bis.8) |
-| ~~puntatore relativo~~ | ⛔ **tolto il 9 agosto**: era motivato con *Pointer Capture*, e la motivazione era sbagliata. Vedi 5-bis.8 |
-| **scancode** | sì — tasti di controllo e tastiere fisiche |
-| **Unicode** | sì, e su Android è la **strada principale** (vedi §7.10-bis) |
-| **tocco multi-dito** | posto riservato, **non implementato** `[?]` |
-| **stilo** (pressione, inclinazione) | fuori, per ora |
+| **absolute** pointer | yes — and it is **the only** pointer path (see 5-bis.8) |
+| ~~relative pointer~~ | ⛔ **removed on 9 Aug**: it was justified by *Pointer Capture*, and the justification was wrong. See 5-bis.8 |
+| **scancode** | yes — control keys and physical keyboards |
+| **Unicode** | yes, and on Android it is the **main route** (see §7.10-bis) |
+| **multi-finger touch** | slot reserved, **not implemented** `[?]` |
+| **stylus** (pressure, tilt) | out, for now |
 
-Il tocco nativo non entra perché non risolve la precisione, le applicazioni desktop lo
-gestiscono male, e andrebbe verificato che l'EIS di Mutter e KWin espongano la capacità
-«touch» — `libei` la prevede, che i due la offrano è `[?]`. Il **posto riservato** costa niente
-adesso e fa risparmiare una riscrittura se un giorno servisse.
+Native touch does not get in because it does not solve precision, desktop applications
+handle it badly, and it would have to be verified that the EIS of Mutter and KWin expose the
+«touch» capability — `libei` provides for it, that the two offer it is `[?]`. The **reserved slot** costs nothing
+now and saves a rewrite if one day it were needed.
 
-### 5-bis.6 ✅ Le lettere viaggiano come lettere, i tasti che non sono lettere come posizioni
+### 5-bis.6 ✅ Letters travel as letters, the keys that are not letters as positions
 
-*8 agosto 2026.*
+*8 Aug 2026.*
 
-| Che cosa | Come viaggia |
+| What | How it travels |
 |---|---|
-| lettere, numeri, segni — tutto ciò che si stampa | **come lettere** (carattere) |
-| Invio, Tab, Esc, frecce, F1-F12, Ctrl, Alt, Maiusc, Super | **come posizioni** — non sono lettere, e stanno nello stesso posto su ogni tastiera |
+| letters, numbers, signs — everything that is printed | **as letters** (character) |
+| Enter, Tab, Esc, arrows, F1-F12, Ctrl, Alt, Shift, Super | **as positions** — they are not letters, and they sit in the same place on every keyboard |
 
-**Il problema che questa scelta scioglie**, ed è quello che l'utente ha isolato da sé: una
-tastiera fisica non manda lettere, manda **posizioni** — il tasto a destra della L dice «tasto
-39», ed è il desktop a decidere se significa «ò» (disposizione italiana) o «;» (americana). Se
-sul filo viaggiassero le posizioni, un client con tastiera americana attaccato a una sessione
-italiana produrrebbe **le lettere sbagliate**: è il difetto classico di ogni desktop remoto.
+**The problem this choice solves**, and it is the one the user isolated by himself: a
+physical keyboard does not send letters, it sends **positions** — the key to the right of L says «key
+39», and it is the desktop that decides whether it means «ò» (Italian layout) or «;» (American). If
+positions travelled on the wire, a client with an American keyboard attached to an Italian
+session would produce **the wrong letters**: it is the classic defect of every remote desktop.
 
-Facendo viaggiare le lettere, la disposizione del *client* la applica il sistema del client, e
-la nostra sessione non deve indovinare niente. Vale per **entrambi** i client, non solo per
-Android — dove però è obbligatorio comunque, perché una tastiera Android non ha posizioni:
-è un IME che produce testo.
+By making letters travel, the *client's* layout is applied by the client's system, and
+our session does not have to guess anything. It holds for **both** clients, not only for
+Android — where however it is mandatory anyway, because an Android keyboard has no positions:
+it is an IME that produces text.
 
-⛔ **La precisazione che manca alla riga di sopra, aggiunta il 9 agosto: `Ctrl+C` non è testo,
-è un comando.** Mandato come «lettera c», l'applicazione remota riceverebbe una c da scrivere
-invece di una copia da fare. Quindi la regola completa è:
+⛔ **The clarification missing from the line above, added on 9 Aug: `Ctrl+C` is not text,
+it is a command.** Sent as «letter c», the remote application would receive a c to write
+instead of a copy to make. So the complete rule is:
 
-> Una battuta viaggia **come lettera** quando sta scrivendo del testo. Quando è tenuto premuto
-> un modificatore **di comando** — Ctrl, Alt, Super — viaggia **come posizione**, perché in quel
-> momento non è una lettera. Maiusc e AltGr non contano: quelli servono a *fare* la lettera, e
-> restano dentro il percorso del testo.
+> A keystroke travels **as a letter** when it is writing text. When a **command** modifier
+> is held down — Ctrl, Alt, Super — it travels **as a position**, because at that
+> moment it is not a letter. Shift and AltGr do not count: those serve to *make* the letter, and
+> stay inside the text path.
 
-⭐ **E questo dà una seconda ragione a 5-bis.7**, che era stata decisa per un motivo diverso: le
-scorciatoie viaggiano come posizioni, e le posizioni combaciano solo se le due disposizioni
-sono la stessa. Su una tastiera tedesca la Z sta dove sulla nostra sta la Y — senza
-rinegoziare la disposizione all'attacco, `Ctrl+Z` finirebbe su un altro tasto.
+⭐ **And this gives a second reason to 5-bis.7**, which had been decided for a different motive: the
+shortcuts travel as positions, and positions match only if the two layouts
+are the same. On a German keyboard the Z is where on ours the Y is — without
+renegotiating the layout at attach, `Ctrl+Z` would end up on another key.
 
-⚠ **Resta la sola raggiungibilità.** Se nella disposizione della sessione un carattere non
-esiste su nessun tasto — un'emoji, un alfabeto diverso — non esce **niente**, e il server lo
-**dichiara nel registro**: mai una lettera diversa, mai un silenzio (`LEZIONI.md` §1.8).
+⚠ **Only reachability remains.** If in the session's layout a character does not
+exist on any key — an emoji, a different alphabet — **nothing** comes out, and the server
+**declares it in the log**: never a different letter, never a silence (`LEZIONI.md` §1.8).
 
-**In dote**: i modificatori non sono mai stati il problema e si emulano normalmente (per «A»:
-premi Maiusc, premi 30, rilascia 30, rilascia Maiusc); la ripetizione non è nostra (wlroots
-scarta i tasti ripetuti, a ripetere è l'applicazione); e la disposizione dichiarata dal client
-— la «questione n.7» di v1 — non serve più per *interpretare*, solo per *scegliere* (5-bis.7).
+**As a dowry**: modifiers were never the problem and are emulated normally (for «A»:
+press Shift, press 30, release 30, release Shift); repetition is not ours (wlroots
+discards repeated keys, it is the application that repeats); and the layout declared by the client
+— v1's «question no. 7» — is no longer needed to *interpret*, only to *choose* (5-bis.7).
 
-### 5-bis.6-bis ✅ ⭐ Gli accenti composti e le tastiere asiatiche restano **fuori, dichiarati**
+### 5-bis.6-bis ✅ ⭐ Composed accents and Asian keyboards stay **out, declared**
 
-*14 agosto 2026, deciso dall'utente davanti alla misura della fase 4
+*14 Aug 2026, decided by the user in front of the phase 4 measurement
 (`fasi/rapporti/F4-A7-pagina-classico.md`).*
 
-**Che cosa funziona già** `[M]`: la `à` italiana, perché sulla disposizione italiana **è un tasto
-suo** e passa dal percorso di `LETTERA` come tutte le altre.
+**What already works** `[M]`: the Italian `à`, because on the Italian layout **it is a key of
+its own** and goes through the `LETTERA` path like all the others.
 
-⛔ **Che cosa resta fuori**: i **tasti morti** (la `à` composta in due battute di una tastiera
-francese o «US international») e l'**IME** (cinese, giapponese, coreano). ⚠ E resta fuori
-**dichiarato**: la pagina lo scrive, e **non fa uscire una lettera diversa né tace** — che è la
-regola di `RCP.md` §7.3 applicata al lato del client.
+⛔ **What stays out**: **dead keys** (the `à` composed in two keystrokes of a
+French or «US international» keyboard) and the **IME** (Chinese, Japanese, Korean). ⚠ And it stays out
+**declared**: the page writes it, and **neither lets a different letter out nor stays silent** — which is the
+rule of `RCP.md` §7.3 applied to the client side.
 
-**Il prezzo che si è scelto di non pagare**, ed era previsto: per avere tasti morti e IME serve un
-**elemento modificabile col fuoco sopra la tela** — cioè `STUDI.md` §web §1.2 C — e quell'elemento si mette
-**fra il puntatore e l'immagine**: ⛔ il percorso con cui la pagina disegna oggi la freccia **andrebbe
-rifatto**. ⇒ Costo certo e visibile, contro un guadagno che per l'utente di oggi è **zero**.
+**The price it was chosen not to pay**, and it was foreseen: to have dead keys and IME you need an
+**editable element with focus over the canvas** — that is `STUDI.md` §web §1.2 C — and that element sits
+**between the pointer and the image**: ⛔ the path by which the page draws the arrow today **would have to be
+redone**. ⇒ A certain and visible cost, against a gain that for today's user is **zero**.
 
-⚠ **E si riapre da sé il giorno in cui servisse una tastiera straniera**: il lavoro è dichiarato, non
-perso. `LEZIONI.md` §2.4 — quel che cambia ciò che si vede sta dietro un interruttore finché
-qualcuno non l'ha guardato.
+⚠ **And it reopens by itself the day a foreign keyboard were needed**: the work is declared, not
+lost. `LEZIONI.md` §2.4 — whatever changes what is seen stays behind a switch until
+someone has looked at it.
 
 ---
 
-### 5-bis.7 ✅ La disposizione si rinegozia all'attacco e al riattacco, come la risoluzione
+### 5-bis.7 ✅ The layout is renegotiated at attach and at reattach, like the resolution
 
-*8 agosto 2026. «Per le tastiere vale il discorso delle risoluzioni: alla creazione della
+*8 Aug 2026. «Per le tastiere vale il discorso delle risoluzioni: alla creazione della
 sessione o re-attach viene rinegoziata anche la tastiera».*
 
-Stessa forma di §5.0 — il client dichiara, la sessione si adegua — ma **con due differenze che
-giocano a favore**:
+Same shape as §5.0 — the client declares, the session adapts — but **with two differences that
+play in our favour**:
 
-1. **non costa niente di visibile.** Cambiare la misura dello schermo rimescola le finestre
-   dell'utente e su KWin < 6.8 non si può proprio; cambiare la disposizione non sposta nulla,
-   non riavvia la cattura, non si vede;
-2. **e se fallisse, la degradazione è morbida.** Grazie a 5-bis.6 una disposizione vecchia non
-   produce mai caratteri sbagliati — al massimo rende irraggiungibili un paio di accenti. Una
-   misura vecchia, invece, la si vede per tutta la sessione.
+1. **it costs nothing visible.** Changing the screen size reshuffles the user's
+   windows and on KWin < 6.8 it cannot be done at all; changing the layout moves nothing,
+   does not restart the capture, is not seen;
+2. **and if it failed, the degradation is soft.** Thanks to 5-bis.6 a stale layout never
+   produces wrong characters — at most it makes a couple of accents unreachable. A
+   stale size, instead, is seen for the whole session.
 
-`[?]` **Da misurare, due cose, e nessuna è urgente:** se il cambio di disposizione a sessione
-viva riesca su tutti e quattro i desktop (la nascita è certa, il cambio a caldo no); e se
-convenga dare alla sessione **più disposizioni insieme** — il sistema ne accetta fino a quattro
-— per coprire il caso di chi passa da un telefono italiano a un portatile americano, che
-sospetto sia raro ma non l'ha misurato nessuno.
+`[?]` **To be measured, two things, and neither is urgent:** whether the layout change in a live
+session succeeds on all four desktops (birth is certain, the hot change is not); and whether
+it is worth giving the session **several layouts together** — the system accepts up to four
+— to cover the case of someone moving from an Italian phone to an American laptop, which I
+suspect is rare but nobody has measured it.
 
-> ### ⛔⛔ QUESTA DECISIONE NON È MAI STATA ATTUATA — `[M]` 16 agosto 2026, sottofase 6.2
+> ### ⛔⛔ THIS DECISION WAS NEVER IMPLEMENTED — `[M]` 16 Aug 2026, sub-phase 6.2
 >
-> *Misurato sul prodotto vivo, utente `provat6`, porta 7721, con un testimone dentro la sessione
-> grafica: la disposizione che il client dichiara in `ATTACCA` viene **convalidata**
-> (`rcp.c:2013-2027`), **scritta nel registro** (`rcp.c` · `tratta_attacca()`), **e lì finisce**. Non arriva mai
-> alla tastiera.*
+> *Measured on the live product, user `provat6`, port 7721, with a witness inside the graphical
+> session: the layout the client declares in `ATTACCA` is **validated**
+> (`rcp.c:2013-2027`), **written in the log** (`rcp.c` · `tratta_attacca()`), **and it ends there**. It never reaches
+> the keyboard.*
 >
-> | scena | atteso se la decisione fosse attuata | `[M]` misurato |
+> | scene | expected if the decision were implemented | `[M]` measured |
 > |---|---|---|
-> | sessione `it`, riattacco dichiarando **`us`** | `è` e `ò` irraggiungibili | **`aèò\@a`** — identico a `it` |
-> | sessione `it`, riattacco dichiarando **`de`** | `z` e `y` scambiate | **comportamento `it`** |
-> | la **sessione** passa `it`→`de` a palco vivo | keymap riletta, `azy\a` | ⭐ **`azy\a`** — questo pezzo funziona: `ricambi_tastiera` 0→1, impronta della keymap `8315b8d9`→`d1c54543`, «[German]» |
+> | session `it`, reattach declaring **`us`** | `è` and `ò` unreachable | **`aèò\@a`** — identical to `it` |
+> | session `it`, reattach declaring **`de`** | `z` and `y` swapped | **`it` behaviour** |
+> | the **session** goes `it`→`de` with the stage live | keymap reread, `azy\a` | ⭐ **`azy\a`** — this piece works: `ricambi_tastiera` 0→1, keymap fingerprint `8315b8d9`→`d1c54543`, «[German]» |
 >
-> ⇒ ⭐ **Quel che regge è la metà difficile**: quando la disposizione **della sessione** cambia,
-> Mutter distrugge e ricrea il dispositivo tastiera e `tastiera.c` rilegge la keymap nuova — le
-> lettere escono giuste. ⛔ **Quel che manca è la metà facile**: nessuno prende la disposizione
-> *del client* e la dà alla sessione. `input.c` · `leggi_regione()` passa `NULL` dove andrebbe la negoziata, e la
-> riga `RIPIEGO DICHIARATO` di `tastiera.c` · `tastiera_apri_da_keymap()` **non compare in nessun giro** — cioè chi cercasse
-> quella riga nel registro concluderebbe *«combaciano sempre»*, che è diverso da *«non ho
-> guardato»*.
+> ⇒ ⭐ **What holds is the hard half**: when the layout **of the session** changes,
+> Mutter destroys and recreates the keyboard device and `tastiera.c` rereads the new keymap — the
+> letters come out right. ⛔ **What is missing is the easy half**: nobody takes the layout
+> *of the client* and gives it to the session. `input.c` · `leggi_regione()` passes `NULL` where the negotiated one should go, and the
+> `RIPIEGO DICHIARATO` line of `tastiera.c` · `tastiera_apri_da_keymap()` **does not appear in any round** — that is, whoever looked for
+> that line in the log would conclude *«they always match»*, which is different from *«I did not
+> look»*.
 >
-> ### ✅ E il 16 agosto 2026 l'utente l'ha CONFERMATA, messo davanti alle tre strade
+> ### ✅ And on 16 Aug 2026 the user CONFIRMED it, put in front of the three routes
 >
-> *Gli sono state poste come la scena che vive — «ti colleghi da un PC con tastiera diversa da
-> quella della sessione: chi decide?» — con le tre risposte possibili: **comanda la sessione** (e
-> si corregge la promessa di `SPECIFICHE.md` §7.3), **comanda il client** (e il server la applica),
-> **sceglie l'utente** con una voce nella pagina. ⇒ Ha scelto la seconda: **comanda il client**.*
+> *They were put to him as the scene that is lived — «you connect from a PC with a keyboard different from
+> the session's: who decides?» — with the three possible answers: **the session rules** (and
+> the promise of `SPECIFICHE.md` §7.3 is corrected), **the client rules** (and the server applies it),
+> **the user chooses** with an item in the page. ⇒ He chose the second: **the client rules**.*
 >
-> ⇒ La decisione dell'8 agosto **resta in piedi e si attua adesso**, nella fase 6.
+> ⇒ The decision of 8 Aug **stays standing and is implemented now**, in phase 6.
 >
-> ⚠ **E il prezzo dichiarato prima della scelta, che resta un prezzo**: la pagina **non può sapere**
-> la disposizione fisica della tastiera di chi la guarda — la indovina dalla lingua dell'interfaccia
-> del browser (`src/pagina.html:2585-2624`, `[?]` dichiarata lì dallo stesso codice), e fuori dalle
-> lingue note **ripiega su `us`**. ⇒ Applicando quel nome alla sessione si cambia la tastiera vera su
-> un **indizio**. ⭐ Il danno resta morbido per §5-bis.6 — le lettere viaggiano come lettere, quindi
-> al massimo si spostano le **scorciatoie** e qualche accento — ⛔ ma la terza strada (l'utente
-> sceglie) resta la cura vera del difetto, e il codice della pagina la nomina già come tale.
+> ⚠ **And the price declared before the choice, which stays a price**: the page **cannot know**
+> the physical layout of the keyboard of whoever is looking at it — it guesses it from the browser's interface
+> language (`src/pagina.html:2585-2624`, `[?]` declared there by the code itself), and outside the
+> known languages **it falls back on `us`**. ⇒ Applying that name to the session changes the real keyboard on
+> a **clue**. ⭐ The damage stays soft by §5-bis.6 — letters travel as letters, so
+> at most the **shortcuts** and some accent move — ⛔ but the third route (the user
+> chooses) stays the real cure of the defect, and the page's code already names it as such.
 
-### 5-bis.8 🔸 Mouse e tastiera fisici collegati al telefono
+### 5-bis.8 🔸 Physical mouse and keyboard connected to the phone
 
-*Domanda posta dall'utente il 9 agosto. La risposta è che il disegno già scelto li assorbe
-entrambi, e in un caso lo semplifica.*
+*Question asked by the user on 9 Aug. The answer is that the design already chosen absorbs them
+both, and in one case simplifies it.*
 
-**Il mouse.** Android offre due modi: quello normale mostra **il cursore di sistema** e
-consegna posizioni — inservibile per noi, perché si vedrebbero **due puntatori**. Quello giusto
-è **Pointer Capture**: il client dichiara di gestirlo lui, il cursore di Android sparisce, e
-arrivano **spostamenti** più tasti e rotella.
+**The mouse.** Android offers two modes: the normal one shows **the system cursor** and
+delivers positions — useless for us, because you would see **two pointers**. The right one
+is **Pointer Capture**: the client declares it handles it itself, Android's cursor disappears, and
+**movements** arrive plus buttons and wheel.
 
-⭐ E lì si chiude da sé: **quegli spostamenti muovono lo stesso puntatore che muove il dito.**
-Una freccia sola, due modi di spingerla; si stacca il mouse e si continua col dito senza che
-cambi niente. È il dividendo di 5-bis.1 — avendo il puntatore in casa, non importa da dove
-arrivi la spinta.
+⭐ And there it closes by itself: **those movements move the same pointer the finger moves.**
+A single arrow, two ways of pushing it; you unplug the mouse and carry on with the finger without anything
+changing. It is the dividend of 5-bis.1 — having the pointer at home, it does not matter where
+the push comes from.
 
-⛔ **E da qui la correzione a 5-bis.5.** Avevo messo il «puntatore relativo» fra le cose che il
-protocollo deve portare, **motivandolo con Pointer Capture**: è sbagliato. Se il puntatore lo
-disegna il client, è il client a fare i conti, e sul filo continua a viaggiare solo la
-**posizione**. Un percorso in meno.
+⛔ **And from here the correction to 5-bis.5.** I had put the «relative pointer» among the things the
+protocol must carry, **justifying it with Pointer Capture**: it is wrong. If the pointer is
+drawn by the client, it is the client that does the arithmetic, and on the wire only the
+**position** keeps travelling. One path fewer.
 
-`[?]` Il relativo servirà semmai per un motivo diverso — le applicazioni remote che
-**catturano** il puntatore (un programma 3D, un gioco) — e quel caso lo segnala il **server**,
-non il client. Da riprendere se e quando si presenta.
+`[?]` Relative will be needed if anything for a different reason — remote applications that
+**capture** the pointer (a 3D program, a game) — and that case is signalled by the **server**,
+not the client. To be taken up again if and when it shows up.
 
-🔸 **L'accelerazione la applica il client**, non il server: si regola dove sta la mano ed è la
-stessa per qualunque sessione. Applicata da tutt'e due si sommerebbe, e il puntatore
-diventerebbe imprevedibile.
+🔸 **Acceleration is applied by the client**, not the server: it is adjusted where the hand is and it is the
+same for any session. Applied by both it would add up, and the pointer
+would become unpredictable.
 
-**La tastiera.** Android la gestisce e consegna comunque **il carattere**, applicando la
-disposizione impostata nelle sue preferenze: la regola di 5-bis.6 vale identica, e non importa
-che la tastiera sia disegnata o di plastica.
+**The keyboard.** Android handles it and delivers **the character** anyway, applying the
+layout set in its preferences: the rule of 5-bis.6 holds identically, and it does not matter
+whether the keyboard is drawn or made of plastic.
 
 ---
 
-## 5-ter. Gli appunti
+## 5-ter. The clipboard
 
-### 5-ter.1 ✅ Solo testo, nei due versi
+### 5-ter.1 ✅ Text only, in both directions
 
-*9 agosto 2026. «Per la clipboard ho idea precisa: solo testo». «Clipboard bi-direzionale. Dal
+*9 Aug 2026. «Per la clipboard ho idea precisa: solo testo». «Clipboard bi-direzionale. Dal
 server al client e viceversa».*
 
-**Solo testo**: niente immagini, niente file, niente formati ricchi.
+**Text only**: no images, no files, no rich formats.
 
-**Nei due versi**: si copia sul desktop remoto e si incolla sul dispositivo in mano, e
-viceversa. ⚠ Corregge `SPECIFICHE.md` riga 28, che diceva «clipboard testuale **server-client**»
-e si leggeva in un verso solo — mentre il verso client → server (copio un indirizzo sul
-telefono, lo incollo nel browser remoto) è quello che si usa di più dei due.
+**In both directions**: you copy on the remote desktop and paste on the device in your hand, and
+vice versa. ⚠ It corrects `SPECIFICHE.md` line 28, which said «**server-client** text clipboard»
+and read in one direction only — while the client → server direction (I copy an address on the
+phone, I paste it in the remote browser) is the more used of the two.
 
-**Perché è la scelta giusta e non una rinuncia**, scritto perché nessuno la riapra per
-distrazione: il testo copre il 95 % degli usi, costa una manciata di byte, e non ha
-negoziazione — una stringa è una stringa. Le immagini aprono invece una scatola intera:
-quali formati, chi converte, e soprattutto **chi paga la banda** quando si copia una schermata
-da 8 MB su un collegamento mobile che stiamo faticando a tenere a 480p (§3.1).
+**Why it is the right choice and not a renunciation**, written so that nobody reopens it out of
+distraction: text covers 95 % of uses, costs a handful of bytes, and has no
+negotiation — a string is a string. Images instead open a whole box:
+which formats, who converts, and above all **who pays the bandwidth** when you copy a screenshot
+of 8 MB over a mobile link we are struggling to keep at 480p (§3.1).
 
-### 5-ter.2 🔸 Il codice c'è già, e copre tre desktop su quattro con un file solo
+### 5-ter.2 🔸 The code is already there, and covers three desktops out of four with a single file
 
-Fra le cose che sopravvivono alla morte di RDP, gli appunti sono le più intatte: muore solo il
-canale RDP che li trasportava, non il modo di parlare col desktop.
+Among the things that survive the death of RDP, the clipboard is the most intact: only the
+RDP channel that carried it dies, not the way of talking to the desktop.
 
-| | Righe | Copre |
+| | Lines | Covers |
 |---|---|---|
-| `fondamenta/remotix-c/src/appunti_wlr.c` | 796 | **KDE, XFCE e LXQt insieme** — stesso protocollo (`zwlr_data_control_manager_v1`), e `STUDI.md` §xfce §8 lo dà per funzionante così com'è |
-| `fondamenta/remotix-c/src/appunti_mutter.c` | 450 | GNOME, che ha una via sua |
+| `fondamenta/remotix-c/src/appunti_wlr.c` | 796 | **KDE, XFCE and LXQt together** — same protocol (`zwlr_data_control_manager_v1`), and `STUDI.md` §xfce §8 gives it as working as it is |
+| `fondamenta/remotix-c/src/appunti_mutter.c` | 450 | GNOME, which has a way of its own |
 
-### 5-ter.3 🔸 Di chi sono gli appunti cambia per desktop, e una trappola è già disinnescata
+### 5-ter.3 🔸 Whom the clipboard belongs to changes per desktop, and one trap is already defused
 
-`LEZIONI.md` §3, domanda 14 — *«la clipboard di chi è?»*:
+`LEZIONI.md` §3, question 14 — *«whose clipboard is it?»*:
 
 | | |
 |---|---|
-| **GNOME** | ⚠ **anche qui del compositore** — vedi la correzione qui sotto: è `MetaSelection`; della sessione remota è solo **la porta** (`EnableClipboard` sull'oggetto RemoteDesktop) |
-| **KDE, wlroots** | del **compositore**: nessun permesso, e c'è anche se REMOTIX non c'è |
+| **GNOME** | ⚠ **here too the compositor's** — see the correction below: it is `MetaSelection`; only **the door** belongs to the remote session (`EnableClipboard` on the RemoteDesktop object) |
+| **KDE, wlroots** | the **compositor's**: no permission, and it is there even if REMOTIX is not |
 
-> ⛔ **Corretta il 9 agosto 2026**, leggendo `STUDI.md` §gnome §10, che lo aveva già scritto l'8 e che
-> nessuno aveva riportato qui. Diceva: *«della sessione remota: sta sull'oggetto RemoteDesktop, si
-> accende con `EnableClipboard`, e senza sessione non esiste»*. `[R]` Le prime due mezze frasi
-> descrivono la **porta**, non la proprietà; l'ultima è **falsa**: la sponda X11 di Mutter è
-> incondizionata nei due versi, senza un solo controllo sul fuoco.
+> ⛔ **Corrected on 9 Aug 2026**, reading `STUDI.md` §gnome §10, which had already written it on the 8th and which
+> nobody had carried over here. It said: *«the remote session's: it sits on the RemoteDesktop object, it is
+> switched on with `EnableClipboard`, and without a session it does not exist»*. `[R]` The first two half-sentences
+> describe the **door**, not the ownership; the last is **false**: Mutter's X11 bridge is
+> unconditional in both directions, without a single check on focus.
 >
-> ⭐ **E la conseguenza è un regalo per la fase 7**: `xclip` funziona su GNOME **senza** una nostra
-> sessione, quindi il banco degli appunti può usarlo come lato indipendente — invece di far
-> parlare fra loro due pezzi nostri, che è ciò che `PIANO.md` §0.4 chiama non confermare niente.
+> ⭐ **And the consequence is a gift for phase 7**: `xclip` works on GNOME **without** a session of
+> ours, so the clipboard bench can use it as an independent side — instead of making two pieces of ours
+> talk to each other, which is what `PIANO.md` §0.4 calls confirming nothing.
 >
-> ⚠ **Tre trappole di Mutter, tutte `[R]` in `STUDI.md` §gnome §10**, che chi scrive la fase 7 legge lì e
-> non qui: `DisableClipboard` è **a senso unico** (dopo, gli annunci non tornano più — non si
-> chiama mai); la firma di `mime-types` è **asimmetrica** fra ingresso e uscita, e chi legge col
-> tipo sbagliato ottiene `NULL` **senza errore**; e il gestore interno degli appunti tiene **un
-> solo tipo MIME**.
+> ⚠ **Three Mutter traps, all `[R]` in `STUDI.md` §gnome §10**, which whoever writes phase 7 reads there and
+> not here: `DisableClipboard` is **one-way** (afterwards, the announcements never come back — it is never
+> called); the signature of `mime-types` is **asymmetric** between input and output, and whoever reads with the
+> wrong type gets `NULL` **without an error**; and the internal clipboard manager keeps **a
+> single MIME type**.
 
-⚠ **La trappola di GNOME, e perché non ci tocca più**: *«gnome-shell azzera la clipboard a ogni
-blocco schermo: ci strappa la proprietà in silenzio»* (`STUDI.md` §gnome). Con §4.3 — il blocco è
-nostro e quello dei desktop resta spento — il caso non si presenta. **Ma torna il giorno in cui
-qualcuno rimettesse il blocco del desktop**, ed è un'altra ragione per cui quella decisione va
-riletta e non data per scontata.
+⚠ **The GNOME trap, and why it no longer touches us**: *«gnome-shell clears the clipboard at every
+screen lock: it snatches the ownership from us in silence»* (`STUDI.md` §gnome). With §4.3 — the lock is
+ours and the desktops' one stays off — the case does not arise. **But it comes back the day
+someone put the desktop's lock back**, and it is one more reason why that decision must be
+reread and not taken for granted.
 
-### 5-ter.4 ✅ «Testo formattato» è stato richiesto, e la decisione del 9 agosto REGGE
+### 5-ter.4 ✅ «Formatted text» was requested, and the decision of 9 Aug HOLDS
 
-*17 agosto 2026, all'apertura del lavoro sugli appunti.* La richiesta diceva *«la copia
-server↔client di **testo formattato**»*. ⛔ Contraddiceva §5-ter.1, che è **parola dell'utente del 9
-agosto**: *«solo testo»*, niente formati ricchi.
+*17 Aug 2026, at the opening of the clipboard work.* The request said *«la copia
+server↔client di **testo formattato**»*. ⛔ It contradicted §5-ter.1, which is **the user's word of 9
+Aug**: *«solo testo»*, no rich formats.
 
-**Chiesto prima di scrivere una riga, e l'utente ha scelto «solo testo semplice».** ⇒ §5-ter.1 non
-si tocca.
+**Asked before writing a line, and the user chose «solo testo semplice».** ⇒ §5-ter.1 is not
+touched.
 
-⚠ **E il costo dell'altra strada era protocollare, non di fatica**: `RCP.md` §7.4 ha costruito i tre
-messaggi **senza nessun campo che dichiari il tipo**, con la ragione scritta accanto — *«non esiste
-perché non c'è niente da scegliere»*. Per l'HTML servirebbe quel campo, e `RCP.md` §9 vieta di
-aggiungere campi a messaggi esistenti dentro una versione maggiore: **la finestra è chiusa dal 10
-agosto 2026**. ⇒ Sarebbe stato **RCP/2**, più quattro documenti da correggere.
+⚠ **And the cost of the other route was protocol-level, not effort**: `RCP.md` §7.4 built the three
+messages **without any field declaring the type**, with the reason written beside it — *«it does not exist
+because there is nothing to choose»*. HTML would need that field, and `RCP.md` §9 forbids
+adding fields to existing messages within a major version: **the window has been closed since 10
+Aug 2026**. ⇒ It would have been **RCP/2**, plus four documents to correct.
 
-⭐ E v1 l'HTML lo portava (`fondamenta/remotix-c/src/scambio.c:56`, il formato registrato «HTML Format»):
-non è una cosa impossibile, è una cosa **lasciata fuori di proposito**.
+⭐ And v1 did carry HTML (`fondamenta/remotix-c/src/scambio.c:56`, the registered format «HTML Format»):
+it is not an impossible thing, it is a thing **left out on purpose**.
 
-### 5-ter.5 🔸 La corsa fra `Ctrl+V` e l'annuncio: la richiesta ASPETTA, e i tasti non si ritardano
+### 5-ter.5 🔸 The race between `Ctrl+V` and the announcement: the request WAITS, and keys are not delayed
 
-*17 agosto 2026, scrivendo il canale.* `SPECIFICHE.md` §9 nomina la corsa e rifiuta la cura del
-riferimento con un numero: Xpra ritarda **ogni battuta di 100 ms**, e per noi *«sono due volte il
-tetto del ritardo»*.
+*17 Aug 2026, while writing the channel.* `SPECIFICHE.md` §9 names the race and rejects the reference's
+cure with a number: Xpra delays **every keystroke by 100 ms**, and for us *«that is twice the
+delay cap»*.
 
-**La corsa**: l'utente batte `Ctrl+V` nel browser; i tasti e l'annuncio degli appunti partono
-insieme su due canali diversi, e il desktop — ricevuto il `Ctrl+V` — chiede il testo **subito**.
-⛔ La prima incollata di ogni testo nuovo tornerebbe vuota, e la seconda funzionerebbe.
+**The race**: the user types `Ctrl+V` in the browser; the keys and the clipboard announcement leave
+together on two different channels, and the desktop — having received the `Ctrl+V` — asks for the text **immediately**.
+⛔ The first paste of every new text would come back empty, and the second would work.
 
-⭐ **La sostituzione**: la richiesta di incolla **si mette in coda** invece di tornare vuota, e la
-domanda al client parte quando l'annuncio arriva. Costa zero, e **non tocca un solo tasto**.
+⭐ **The replacement**: the paste request **is queued** instead of coming back empty, and the
+question to the client leaves when the announcement arrives. It costs zero, and **does not touch a single key**.
 
-⏳ Ragionata, **non misurata**: la scena che la prova è quella dell'utente.
+⏳ Reasoned, **not measured**: the scene that proves it is the user's.
 
-### 5-ter.6 🔸 Due fondi di tempo, e sono due perché i debiti sono due
+### 5-ter.6 🔸 Two timeouts, and they are two because the debts are two
 
-| dove | quanto | che debito paga |
+| where | how much | which debt it pays |
 |---|---|---|
-| ⛔ **nel figlio** | **4 s** | il debito verso **Mutter**: un `SelectionTransfer` senza risposta lascia appesa a tempo indeterminato l'applicazione che incolla, e l'utente vede **un desktop piantato** |
-| ⚠ **nel padre** | **8 s** | che il **canale** non resti bloccato: senza, un client che non risponde una volta manda in coda tutte le incollate successive |
+| ⛔ **in the child** | **4 s** | the debt towards **Mutter**: a `SelectionTransfer` without an answer leaves the pasting application hanging indefinitely, and the user sees **a frozen desktop** |
+| ⚠ **in the parent** | **8 s** | that the **channel** does not stay blocked: without it, a client that fails to answer once queues up all the following pastes |
 
-⭐ **E il fondo verso Mutter sta nel FIGLIO, non nel padre**: il padre può non avere nessun client
-(la sessione sopravvive al client — I4), il client può sparire, il padre stesso può morire. Il
-debito verso il compositore resta di chi ha la sessione.
+⭐ **And the timeout towards Mutter lives in the CHILD, not in the parent**: the parent may have no client
+(the session survives the client — I4), the client may disappear, the parent itself may die. The
+debt towards the compositor stays with whoever holds the session.
 
-⚠ I due numeri sono diversi **apposta**: coincidendo scadrebbero insieme, e un testo arrivato al
-millesimo giusto non troverebbe più nessuno da servire da nessuna delle due parti.
+⚠ The two numbers are different **on purpose**: if they coincided they would expire together, and a text arriving at
+the right millisecond would no longer find anyone to serve on either side.
 
-### 5-ter.7 🔸 Uno stream per MESSAGGIO, non per trasferimento — dove §2.5 ammetteva due letture
+### 5-ter.7 🔸 One stream per MESSAGE, not per transfer — where §2.5 allowed two readings
 
-`RCP.md` §2.5 dice *«uno stream **per trasferimento**»*. ⚠ Un trasferimento dalla parte del server è
-fatto di due messaggi lontani nel tempo: l'annuncio adesso, il testo **se e quando** qualcuno chiede.
+`RCP.md` §2.5 says *«one stream **per transfer**»*. ⚠ A transfer on the server side is made of two
+messages far apart in time: the announcement now, the text **if and when** someone asks.
 
-⇒ **Uno stream per messaggio**, perché si copia molto più spesso di quanto si incolli: tenere aperto
-uno stream fra i due vorrebbe dire tenerlo aperto **per sempre** nella maggioranza dei casi, e §2.5
-concede al server un numero finito di stream.
+⇒ **One stream per message**, because people copy much more often than they paste: keeping a stream open
+between the two would mean keeping it open **forever** in most cases, and §2.5 grants the server a finite
+number of streams.
 
-⭐ Si può fare perché a legare i messaggi di un trasferimento **non è lo stream**: è il campo
-`trasferimento` (rilievo R1.11). ⭐ E il cliente di prova, leggendo **solo `RCP.md`**, ha fatto la
-stessa scelta — la riga è ambigua, ma l'ambiguità non morde.
+⭐ It can be done because what ties the messages of a transfer together **is not the stream**: it is the
+`trasferimento` field (finding R1.11). ⭐ And the test client, reading **only `RCP.md`**, made the same
+choice — the line is ambiguous, but the ambiguity does not bite.
 
-### 5-ter.8 ✅ Come una sessione locale — e il prezzo che Firefox impone
+### 5-ter.8 ✅ Like a local session — and the price Firefox imposes
 
-*21 agosto 2026, dall'utente, dopo la cura dell'incolla col mouse:*
+*21 Aug 2026, from the user, after the cure for pasting with the mouse:*
 
 > *«Voglio che sia chiara una cosa: l'esperienza dell'utente con REMOTIX dev'essere quanto più
 > vicina possibile all'esperienza con una sessione grafica locale. Questo vale anche per la gestione
@@ -4421,353 +4421,347 @@ stessa scelta — la riga è ambigua, ma l'ambiguità non morde.
 > direttiva, quindi ctrl+v o usare il mouse per incollare i contenuti dev'essere assolutamente
 > allineata al comportamento reale.»*
 
-⛔ **È una direttiva, non una preferenza**, e vale oltre gli appunti: dove una cura richiede
-all'utente di imparare qualcosa, la cura è sbagliata.
+⛔ **It is a directive, not a preference**, and it holds beyond the clipboard: where a cure requires the
+user to learn something, the cure is wrong.
 
-⇒ Da lì discendono tre cose, tutte misurate e tutte in vigore:
+⇒ Three things follow from it, all measured and all in force:
 
-1. ⭐ **Incollare col mouse funziona**, cioè tasto destro dentro il desktop remoto e voce «Incolla»
-   del menu dell'applicazione remota. `[M]` `banchi/07-b56`, 3 incollate su 3 per motore.
-2. ⭐ **Collegarsi non cancella la clipboard del desktop.** `[M]` Prima la cancellava: `wl-paste`
-   diceva `TESTO-CHE-ERA-GIA-NEL-DESKTOP` prima e `«»` dopo.
-3. ⭐ **Non esiste nessun pulsante nostro**, nessun interruttore, niente da spiegare.
+1. ⭐ **Pasting with the mouse works**, that is right button inside the remote desktop and the «Incolla» item
+   of the remote application's menu. `[M]` `banchi/07-b56`, 3 pastes out of 3 per engine.
+2. ⭐ **Connecting does not clear the desktop's clipboard.** `[M]` Before, it cleared it: `wl-paste`
+   said `TESTO-CHE-ERA-GIA-NEL-DESKTOP` before and `«»` after.
+3. ⭐ **There is no button of ours**, no switch, nothing to explain.
 
-### 5-ter.9 🔸 E su Firefox l'incolla col mouse costa **un clic in più** — accettato
+### 5-ter.9 🔸 And on Firefox pasting with the mouse costs **one more click** — accepted
 
-*21 agosto 2026: «ok, va bene così».*
+*21 Aug 2026: «ok, va bene così».*
 
-⛔ Quando si incolla col menu del desktop remoto, sulla pagina non nasce nessun evento: quel menu è
-dipinto nel video e a incollare è un'applicazione dall'altra parte del filo. ⇒ L'unico modo che la
-pagina ha di sapere che cosa hai copiato è **leggere la clipboard in quell'istante**, e lì decide il
-browser:
+⛔ When you paste with the remote desktop's menu, no event is born on the page: that menu is painted in
+the video and the one pasting is an application at the other end of the wire. ⇒ The only way the page has
+of knowing what you copied is **reading the clipboard at that instant**, and there the browser decides:
 
 | | Chrome | Firefox |
 |---|---|---|
-| che cosa chiede | la concessione della clipboard **una volta sola**, come per il microfono | ⛔ il suo bottoncino **«Incolla», ogni volta** — `[M]` anche reincollando lo stesso testo |
+| what it asks | the clipboard permission **only once**, as for the microphone | ⛔ its little **«Incolla» button, every time** — `[M]` even when pasting the same text again |
 
-⚠ **Quel bottoncino è di Firefox, non nostro**, e dalla pagina non si può togliere: l'unica cosa che
-lo spegne è una preferenza di prova, che in un prodotto non entra.
+⚠ **That little button is Firefox's, not ours**, and it cannot be removed from the page: the only thing
+that turns it off is a testing preference, which does not go into a product.
 
-⇒ **Si accetta e si dichiara**, invece di rinunciare all'incolla col mouse su Firefox. ⏳ E resta
-aperta la sola strada che lo toglierebbe davvero — **un componente aggiuntivo per Firefox** — da
-decidere alla fase 13, quando si decide come REMOTIX si installa. ⚠ Non si fa prima: cambia *che
-cosa si installa*, e REMOTIX smetterebbe di essere «apri il browser e vai».
+⇒ **It is accepted and declared**, instead of giving up pasting with the mouse on Firefox. ⏳ And the only
+route that would really remove it stays open — **a Firefox add-on** — to be decided at phase 13, when it
+is decided how REMOTIX is installed. ⚠ It is not done earlier: it changes *what gets installed*, and
+REMOTIX would stop being «open the browser and go».
 
-⭐ **Il `Ctrl+V` non costa niente su nessun motore**, ed è la strada che la maggioranza userà.
-
----
+⭐ **`Ctrl+V` costs nothing on any engine**, and it is the route most people will use.
 
 ---
 
-## 5-quater. L'audio
+---
 
-*Aperto il 17 agosto 2026. ⛔ Fino a quel giorno **questo capitolo non esisteva**: le scelte
-dell'audio stavano sparse fra `SPECIFICHE.md` §10, `RCP.md` §5.3 e l'invariante I5 — cioè in tre
-posti e in nessuno. Il documento di fase lo aveva dichiarato all'apertura.*
+## 5-quater. Audio
 
-### 5-quater.1 🔸 Opus passa da `libavcodec`, non da `libopus`
+*Opened on 17 Aug 2026. ⛔ Until that day **this chapter did not exist**: the audio choices were scattered
+among `SPECIFICHE.md` §10, `RCP.md` §5.3 and invariant I5 — that is in three places and in none. The
+phase document had declared it at the opening.*
 
-`[M]` 17 agosto 2026: `libavcodec` 61.19.101 sulla macchina di prova **è già collegato a
-`libopus.so.0`** e dichiara l'encoder `libopus`. ⇒ Il `Makefile` **non cambia** e non si aggiunge
-un pacchetto a **due** ambienti di costruzione (il contenitore del portatile e il `devroot` del
-server), dove `opus.pc` non c'è.
+### 5-quater.1 🔸 Opus goes through `libavcodec`, not through `libopus`
 
-⚠ **Il prezzo, dichiarato**: un `AVPacket` per blocco, cioè 50 allocazioni al secondo. È meno del
-prezzo di una dipendenza da installare due volte e ricordare per sempre (`LEZIONI.md` §2.5-bis).
+`[M]` 17 Aug 2026: `libavcodec` 61.19.101 on the test machine **is already linked to `libopus.so.0`** and
+declares the `libopus` encoder. ⇒ The `Makefile` **does not change** and no package is added to **two**
+build environments (the laptop's container and the server's `devroot`), where `opus.pc` is not present.
 
-### 5-quater.2 🔸 Il bitrate di Opus: **96 kbit/s**
+⚠ **The price, declared**: one `AVPacket` per block, that is 50 allocations per second. It is less than
+the price of a dependency to install twice and remember forever (`LEZIONI.md` §2.5-bis).
 
-Derivato, non deciso dall'utente. È la banda a cui Opus è trasparente per la musica secondo la sua
-documentazione `[S]`; `[M]` un blocco da 20 ms misura **241-439 byte**, che sta nel datagram con
-margine largo. ⏳ **Da rivedere il giorno in cui qualcuno giudichi la qualità**, non prima.
+### 5-quater.2 🔸 Opus's bitrate: **96 kbit/s**
 
-### 5-quater.3 🔸 Il cuscino di riproduzione: **250 ms**, e non è un numero libero
+Derived, not decided by the user. It is the bandwidth at which Opus is transparent for music according to
+its documentation `[S]`; `[M]` a 20 ms block measures **241-439 bytes**, which fits in the datagram with a
+wide margin. ⏳ **To be reviewed on the day someone judges the quality**, not before.
 
-⛔ **Era 60 ms, ed era sbagliato**: scelto guardando il tetto del **video** (50 ms, `CODER.md`
-§1-bis) — cioè misurando l'audio col metro di un'altra cosa. Il riferimento
-(`gnome-remote-desktop`) ne tiene **300** (`STUDI.md` §gnome §11).
+### 5-quater.3 🔸 The playback cushion: **250 ms**, and it is not a free number
 
-**La ragione per cui 60 non regge**: il video si decodifica e si dipinge **sullo stesso thread**
-che programma l'audio. Quando quel lavoro supera il cuscino la riproduzione si è già svuotata, e
-**ogni riarmo è un buco**.
+⛔ **It was 60 ms, and it was wrong**: chosen looking at the cap of the **video** (50 ms, `CODER.md`
+§1-bis) — that is measuring the audio with the yardstick of something else. The reference
+(`gnome-remote-desktop`) keeps **300** (`STUDI.md` §gnome §11).
 
-⚠ **Il prezzo è dichiarato**: 250 ms fra quel che si vede e quel che si sente. ⛔ E se un giorno
-desse fastidio, **la cura non è stringerlo**: è togliere l'audio dal thread principale con un
-`AudioWorklet`. ⏳ L'utente ha detto *«risolto»*, non *«e il ritardo va bene»*: quel giudizio manca.
+**The reason why 60 does not hold**: the video is decoded and painted **on the same thread** that schedules
+the audio. When that work exceeds the cushion the playback has already emptied, and **every re-arm is a
+hole**.
 
-### 5-quater.4 ✅ ⭐⭐ Un blocco che non parte si RIMANDA, non si butta — e a decidere è la coda
+⚠ **The price is declared**: 250 ms between what you see and what you hear. ⛔ And if one day it were
+annoying, **the cure is not to tighten it**: it is to take the audio off the main thread with an
+`AudioWorklet`. ⏳ The user said *«risolto»*, not *«e il ritardo va bene»*: that judgement is missing.
 
-*17 agosto 2026, dopo che l'utente ha detto sette volte «fa schifo» su un banco verde.*
+### 5-quater.4 ✅ ⭐⭐ A block that does not leave is POSTPONED, not thrown away — and the queue decides
 
-`RCP.md` §6.3 dice *«nessuna ritrasmissione, nessun riordino»*, ⛔ **e non dice «si butta al primo
-rifiuto»**: quella era una lettura mia, e valeva il **50 %** dell'audio.
+*17 Aug 2026, after the user said «fa schifo» seven times on a green bench.*
+
+`RCP.md` §6.3 says *«no retransmission, no reordering»*, ⛔ **and it does not say «thrown away at the first
+refusal»**: that was a reading of mine, and it was worth **50 %** of the audio.
 
 | | |
 |---|---|
-| ⛔ **quel che NON si fa** | buttare un blocco perché il pacer ha detto «non adesso»: quel blocco parte qualche centinaio di microsecondi dopo, e buttarlo è **un buco garantito** |
-| ⭐ **quel che decide** | **la coda**: otto blocchi = 160 ms di Opus. Oltre quelli il più vecchio non serve più a nessuno, ed **è lì** che §6.3 morde |
-| ⭐ **e si spediscono più blocchi per pacchetto** | un pacchetto è **1452 byte**, un blocco di Opus **230**: ce ne stanno sei. ⛔ Spedirne uno per passata di scrittura, con ~25 passate al secondo contro 50 blocchi prodotti, perdeva **esattamente la metà** |
+| ⛔ **what is NOT done** | throwing away a block because the pacer said «not now»: that block leaves a few hundred microseconds later, and throwing it away is **a guaranteed hole** |
+| ⭐ **what decides** | **the queue**: eight blocks = 160 ms of Opus. Beyond those the oldest is no longer of use to anyone, and **that is where** §6.3 bites |
+| ⭐ **and several blocks are sent per packet** | a packet is **1452 bytes**, an Opus block **230**: six fit. ⛔ Sending one per write pass, with ~25 passes per second against 50 blocks produced, lost **exactly half** |
 
-⚠ **E la forma del numero era l'indizio**: *esattamente* la metà. Una perdita di rete non è mai
-esattamente la metà; un'aritmetica sì (`LEZIONI.md` §2.7).
+⚠ **And the shape of the number was the clue**: *exactly* half. A network loss is never exactly half; an
+arithmetic is (`LEZIONI.md` §2.7).
 
-### 5-quater.5 ✅ ⛔ La priorità di tempo reale si concede **dall'unità**, e il programma la VERIFICA
+### 5-quater.5 ✅ ⛔ Real-time priority is granted **by the unit**, and the program VERIFIES it
 
-**R26 di v1** (`~/Documenti/REMOTIX/REFERENCE.md`, `[M]` 5 agosto 2026): un processo con
-`RLIMIT_RTPRIO` a zero **non può chiedere `SCHED_FIFO`**. PipeWire ci prova, gli viene negato, e il
-suo anello dei dati raccoglie i campioni a priorità normale ⛔ **mentre nello stesso processo il
-codificatore video si prende un core**. Il sintomo non è un errore: è **audio che scoppietta quando
-il desktop lavora**, invisibile a ogni controllo sul filo.
+**v1's R26** (`~/Documenti/REMOTIX/REFERENCE.md`, `[M]` 5 Aug 2026): a process with `RLIMIT_RTPRIO` at
+zero **cannot ask for `SCHED_FIFO`**. PipeWire tries, is denied, and its data loop collects the samples at
+normal priority ⛔ **while in the same process the video encoder takes a core**. The symptom is not an
+error: it is **audio that crackles when the desktop works**, invisible to every check on the wire.
 
-⇒ `LimitRTPRIO=20` e `LimitNICE=-11` **nell'unità systemd**. ⭐ E poiché un rlimit il codice non se
-lo può dare, il figlio **lo legge e scrive una riga ⛔ se manca**: è l'invariante **I7** applicata
-dove la protezione *deve* stare in una configurazione — una riga persa si vede invece di tacere.
+⇒ `LimitRTPRIO=20` and `LimitNICE=-11` **in the systemd unit**. ⭐ And since the code cannot give itself an
+rlimit, the child **reads it and writes a line ⛔ if it is missing**: it is invariant **I7** applied where
+the protection *must* live in a configuration — a lost line shows instead of staying silent.
 
 ---
 
-## 6. Il codice che si eredita
+## 6. The inherited code
 
-### 6.1 ✅ Il patrimonio di v1 è qui, e versionato
+### 6.1 ✅ v1's heritage is here, and versioned
 
-*8 agosto 2026.* Portato dal server di sviluppo, dove viveva senza versionamento e senza una
-seconda copia. Verificato per impronta SHA-256, 103 file su 103.
+*8 Aug 2026.* Brought over from the development server, where it lived without versioning and without a
+second copy. Verified by SHA-256 fingerprint, 103 files out of 103.
 
 | | |
 |---|---|
-| `fondamenta/remotix-c/` | **17.481 righe di C**, 26 moduli |
-| `fondamenta/remotix-c/prove/` | **4.563 righe di banchi**, uno script per fase |
-| `fondamenta/banchi/` | **262 file** dell'indagine sulla fase 11, `misura-cattura.c` compreso |
-| `fondamenta/remotix-rust/` | 7.163 righe, ramo IronRDP chiuso il 3 agosto |
+| `fondamenta/remotix-c/` | **17,481 lines of C**, 26 modules |
+| `fondamenta/remotix-c/prove/` | **4,563 lines of benches**, one script per phase |
+| `fondamenta/banchi/` | **262 files** of the investigation on phase 11, `misura-cattura.c` included |
+| `fondamenta/remotix-rust/` | 7,163 lines, IronRDP branch closed on 3 Aug |
 | `fondamenta/documenti/` | PIANO, SPECIFICA, REFERENCE, protocollo-rdp, client-android, xrdp |
-| `fondamenta/calibrazione/` | le tre scene della taratura del 1 agosto |
+| `fondamenta/calibrazione/` | the three scenes of the calibration of 1 Aug |
 
-> ### ⛔⛔ E QUESTA TABELLA OMETTEVA LE DUE SOLE PARTI DI `fondamenta/` CHE SONO VIVE — *corretto il 16 agosto 2026*
+> ### ⛔⛔ AND THIS TABLE LEFT OUT THE ONLY TWO PARTS OF `fondamenta/` THAT ARE ALIVE — *corrected on 16 Aug 2026*
 >
-> *Trovato censendo `fondamenta/` file per file, su richiesta dell'utente. La tabella qui sopra ha **sei
-> righe** e le lascio com'erano — ⛔ ma `fondamenta/banco/` e `fondamenta/strumenti/` non ci sono, e sono
-> **l'attrezzatura corrente del progetto**. Chi leggeva questo paragrafo per sapere che cos'è `fondamenta/`
-> si portava a casa che era tutto archivio. Non lo è.*
+> *Found by surveying `fondamenta/` file by file, at the user's request. The table above has **six
+> rows** and I leave them as they were — ⛔ but `fondamenta/banco/` and `fondamenta/strumenti/` are not
+> there, and they are **the project's current equipment**. Whoever read this paragraph to know what
+> `fondamenta/` is took home that it was all archive. It is not.*
 >
-> ## La mappa vera: che cosa è **vivo**, che cosa è **archivio**, che cosa non serve a nessuno
+> ## The real map: what is **alive**, what is **archive**, what is of no use to anyone
 >
-> *`[M]` 16 agosto 2026, citazioni contate dai dieci documenti, da `src/`, da `banchi/` e da `web/`.*
+> *`[M]` 16 Aug 2026, citations counted from the ten documents, from `src/`, from `banchi/` and from `web/`.*
 >
-> | | file | MB | citazioni | |
+> | | files | MB | citations | |
 > |---|---|---|---|---|
-> | ⭐⭐ **`fondamenta/banco/`** | 13 | 0,2 | **enter.sh: 193** | **VIVO, e regge tutto**: `enter.sh` è il modo in cui si entra nella macchina di prova. Con `provision.sh`, `provision-server.sh`, `gpu-udev.sh` (applicato il 15 agosto, §4.6-ter), `server.sh`, `vm.sh` |
-> | ⭐⭐ **`fondamenta/strumenti/sshpw.py`** | 1 | 0,01 | **81** | **VIVO**: lo chiamano decine di banchi di V2 |
-> | ⭐ `fondamenta/remotix-c/` | 70 | 1,0 | 37 file su 70 | **archivio con valore**: è la miniera del riuso — `kwin.c` (822 righe) e `appunti_wlr.c` (796) sono nel piano delle fasi 11 e 12 |
-> | ⭐ `fondamenta/banchi/banco-compositori/` | 74 | 0,7 | 4 | **archivio con valore**: le misure di KWin, wlroots e Mutter, che le fasi 11 e 12 rifaranno |
-> | ⭐ `fondamenta/documenti/` | 6 | 0,5 | tutti e sei | **archivio con valore**: la storia del prezzo pagato (`LEZIONI.md` §0) |
-> | ⚠ `fondamenta/calibrazione/` | 10 | ⛔ **90,2** | la cartella 1 volta, i file **0** | le tre scene a tre risoluzioni — **il 96 % del peso del progetto**. Vedi il riquadro sotto |
-> | ⚠ `fondamenta/remotix-rust/` | 23 | 0,4 | **1**, ed è questa tabella | il ramo IronRDP, **chiuso il 3 agosto**. La lezione è scritta qui; il codice non la aggiunge |
-> | ⛔ `fondamenta/banchi/` *(resto)* | ~190 | 4,1 | 17 | 86 `.log`, 8 `.png`, 10 archivi `.tgz/.gz/.xz`, 2 `.so`, gli esiti di esecuzioni del 1-8 agosto |
-> | ⛔ ~~`fondamenta/tracce/`~~ | 8 | 0,4 | **0** | flussi `.h264` e log di provisioning **RDP** — e RDP è morto con §1.6. ✅ **Tolti il 16 agosto 2026** |
-> | ⛔ ~~`fondamenta/banco/*.prima*`, `*.rust`~~ | 4 | 0,05 | **0** | **copie a mano** di `enter.sh`, `provision.sh`, `provision-server.sh`, `vm.sh`, fatte prima di una modifica. ⚠ Una copia di riserva accanto all'originale è una trappola, non una rete: la rete è git. ✅ **Tolte il 16 agosto 2026** |
+> | ⭐⭐ **`fondamenta/banco/`** | 13 | 0.2 | **enter.sh: 193** | **ALIVE, and it holds everything up**: `enter.sh` is the way one enters the test machine. With `provision.sh`, `provision-server.sh`, `gpu-udev.sh` (applied on 15 Aug, §4.6-ter), `server.sh`, `vm.sh` |
+> | ⭐⭐ **`fondamenta/strumenti/sshpw.py`** | 1 | 0.01 | **81** | **ALIVE**: dozens of V2 benches call it |
+> | ⭐ `fondamenta/remotix-c/` | 70 | 1.0 | 37 files out of 70 | **archive with value**: it is the mine of reuse — `kwin.c` (822 lines) and `appunti_wlr.c` (796) are in the plan of phases 11 and 12 |
+> | ⭐ `fondamenta/banchi/banco-compositori/` | 74 | 0.7 | 4 | **archive with value**: the measurements of KWin, wlroots and Mutter, which phases 11 and 12 will redo |
+> | ⭐ `fondamenta/documenti/` | 6 | 0.5 | all six | **archive with value**: the history of the price paid (`LEZIONI.md` §0) |
+> | ⚠ `fondamenta/calibrazione/` | 10 | ⛔ **90.2** | the folder 1 time, the files **0** | the three scenes at three resolutions — **96 % of the project's weight**. See the box below |
+> | ⚠ `fondamenta/remotix-rust/` | 23 | 0.4 | **1**, and it is this table | the IronRDP branch, **closed on 3 Aug**. The lesson is written here; the code does not add to it |
+> | ⛔ `fondamenta/banchi/` *(rest)* | ~190 | 4.1 | 17 | 86 `.log`, 8 `.png`, 10 `.tgz/.gz/.xz` archives, 2 `.so`, the outcomes of runs of 1-8 Aug |
+> | ⛔ ~~`fondamenta/tracce/`~~ | 8 | 0.4 | **0** | `.h264` streams and **RDP** provisioning logs — and RDP died with §1.6. ✅ **Removed on 16 Aug 2026** |
+> | ⛔ ~~`fondamenta/banco/*.prima*`, `*.rust`~~ | 4 | 0.05 | **0** | **hand copies** of `enter.sh`, `provision.sh`, `provision-server.sh`, `vm.sh`, made before a change. ⚠ A backup copy next to the original is a trap, not a safety net: the safety net is git. ✅ **Removed on 16 Aug 2026** |
 >
-> ## ⛔⛔ E la cosa che cambia il ragionamento sui 90 MB: **toglierli non recupera niente**
+> ## ⛔⛔ And the thing that changes the reasoning about the 90 MB: **removing them recovers nothing**
 >
-> `[M]` il `.git` pesa **94,29 MiB** e i dieci `.mp4` ne sono **90,2** — cioè **il 96 %**. Sono dieci
-> file distinti, entrati una volta sola e mai più toccati.
+> `[M]` the `.git` weighs **94.29 MiB** and the ten `.mp4` are **90.2** of it — that is **96 %**. They are
+> ten distinct files, entered once and never touched again.
 >
-> ⛔ **Ma `git rm` non li toglie dalla storia**: resterebbero nel `.git` e il peso non cambierebbe di
-> un byte. L'unica strada che recupera davvero è **riscrivere la storia**, e costa un prezzo che
-> questo progetto non può pagare:
+> ⛔ **But `git rm` does not remove them from history**: they would stay in the `.git` and the weight would
+> not change by one byte. The only route that really recovers is **rewriting history**, and it costs a
+> price this project cannot pay:
 >
-> ⛔⛔ **quindici hash di commit sono citati nei documenti come ricette di recupero** — `0c85e5c`
-> per i 94 rapporti degli agenti, `47bd41c` per il diario potato del `README`, e altri tredici nei
-> verbali delle fasi. Una riscrittura li cambia **tutti**, e ogni ricetta punterebbe al nulla.
+> ⛔⛔ **fifteen commit hashes are cited in the documents as recovery recipes** — `0c85e5c` for the 94
+> agent reports, `47bd41c` for the pruned diary of the `README`, and thirteen more in the phase minutes. A
+> rewrite changes **all** of them, and every recipe would point to nothing.
 >
-> ⇒ ⭐ **E non serve pagarlo**: `[M]` il repository **non ha un remote**, vive solo su questo disco.
-> Novantaquattro megabyte fermi in una cartella non costano niente a nessuno.
+> ⇒ ⭐ **And there is no need to pay it**: `[M]` the repository **has no remote**, it lives only on this
+> disk. Ninety-four megabytes sitting in a folder cost nothing to anyone.
 >
-> ⇒ **Decisione: i `.mp4` restano.** ⚠ E si scrive qui perché nessuno riapra la questione contando
-> di nuovo i megabyte senza contare gli hash.
+> ⇒ **Decision: the `.mp4` stay.** ⚠ And it is written here so that nobody reopens the question by
+> counting the megabytes again without counting the hashes.
 >
-> ⭐ **Con un fatto che vale per la fase 9**: le scene **si rigenerano**, `fondamenta/banco/calibrazione.sh`
-> le produce con `ffmpeg` alle tre risoluzioni native. ⚠ **Ma non byte per byte**: un `ffmpeg`
-> diverso dà un file diverso, e il confronto con i numeri del 1 agosto si romperebbe. ⇒ Chi alla
-> fase 9 volesse confrontarsi con la taratura di v1 **usi questi file**, non quelli che si
-> rigenererebbe.
+> ⭐ **With a fact that matters for phase 9**: the scenes **can be regenerated**,
+> `fondamenta/banco/calibrazione.sh` produces them with `ffmpeg` at the three native resolutions. ⚠ **But
+> not byte for byte**: a different `ffmpeg` gives a different file, and the comparison with the numbers of
+> 1 Aug would break. ⇒ Whoever at phase 9 wanted to compare with v1's calibration **should use these
+> files**, not the ones they would regenerate.
 
-`LEZIONI.md` è stato promosso al livello di V2: è il fondamento di `CODER.md` e `REVIEWER.md`,
-che lo citano 29 volte su 20 sezioni.
+`LEZIONI.md` has been promoted to V2's level: it is the foundation of `CODER.md` and `REVIEWER.md`, which
+cite it 29 times across 20 sections.
 
-### 6.2 🔸 Circa il 79 % del C sopravvive alla morte di RDP
+### 6.2 🔸 About 79 % of the C survives the death of RDP
 
-Misurato contando le occorrenze di `freerdp|winpr|rdpContext|RDPGFX|rdpSettings` per file:
-7.442 righe **pulite** (`palco`, `cattura`, `kwin`, `mutter`, `appunti_wlr`, `superficie`,
-`sentinella`, `autenticazione`…), 4.570 con contaminazione superficiale, 1.781 media, e
-**3.688 che muoiono** (`server.c`, 134 occorrenze, e `rete.c` che va sostituito da QUIC).
+Measured by counting the occurrences of `freerdp|winpr|rdpContext|RDPGFX|rdpSettings` per file:
+7,442 **clean** lines (`palco`, `cattura`, `kwin`, `mutter`, `appunti_wlr`, `superficie`,
+`sentinella`, `autenticazione`…), 4,570 with superficial contamination, 1,781 medium, and
+**3,688 that die** (`server.c`, 134 occurrences, and `rete.c` which must be replaced by QUIC).
 
-⚠ È una misura di primo livello: contare gli `#include` dice chi *tocca* FreeRDP, non chi
-*dipende* da RDP. `scambio.c` e `codificatore.c` vanno letti prima di dare il 79 % per buono.
+⚠ It is a first-level measurement: counting the `#include` says who *touches* FreeRDP, not who
+*depends* on RDP. `scambio.c` and `codificatore.c` must be read before taking the 79 % as good.
 
-### 6.3 ✅ Il server si scrive in C
+### 6.3 ✅ The server is written in C
 
-*8 agosto 2026. «Confermo il C».*
+*8 Aug 2026. «Confermo il C».*
 
-⚠ **Non è un'eredità: è una decisione nuova che ripete la vecchia.** Il vincolo di v1
-(`fondamenta/documenti/SPECIFICA.md` §8-bis) aveva una ragione sola — *«gnome-remote-desktop smette di
-essere un riferimento da cui trarre ispirazione e diventa un riferimento da cui trarre
-codice»* — e **quella ragione è morta con RDP**: non c'è più niente da trapiantare, perché
-nessuno ha scritto RCP prima di noi. La questione è stata riaperta a occhi aperti e richiusa
-per un motivo diverso.
+⚠ **It is not an inheritance: it is a new decision that repeats the old one.** v1's constraint
+(`fondamenta/documenti/SPECIFICA.md` §8-bis) had a single reason — *«gnome-remote-desktop stops being a
+reference to draw inspiration from and becomes a reference to draw code from»* — and **that reason died
+with RDP**: there is nothing left to transplant, because nobody wrote RCP before us. The question was
+reopened with eyes open and closed again for a different reason.
 
-**Il motivo nuovo è il conto di §6.2**: circa 14.000 righe sopravvivono, con i loro banchi già
-tarati. Il pezzo QUIC ne vale forse 2.000. Riscrivere quattordicimila righe misurate per
-guadagnare l'ergonomia di duemila è uno scambio pessimo — ed è anche `LEZIONI.md` §10 in
-azione, perché fra le cose che si butterebbero ci sono **4.563 righe di banchi**, e questo
-progetto non è mai morto sul codice: è morto sulle misure.
+**The new reason is the count of §6.2**: about 14,000 lines survive, with their benches already
+calibrated. The QUIC piece is worth perhaps 2,000. Rewriting fourteen thousand measured lines to gain the
+ergonomics of two thousand is a terrible trade — and it is also `LEZIONI.md` §10 in action, because among
+the things that would be thrown away there are **4,563 lines of benches**, and this project never died on
+the code: it died on the measurements.
 
-**Che cosa questa decisione NON decide:** i client. Quello Android è Kotlin comunque, per via
-di MediaCodec. Quello Linux è aperto — se sarà in C potrà condividere `librcp` col server, che
-è un argomento a favore ma non una conclusione.
+**What this decision does NOT decide:** the clients. The Android one is Kotlin anyway, because of
+MediaCodec. The Linux one is open — if it is in C it can share `librcp` with the server, which is an
+argument in favour but not a conclusion.
 
-### 6.4 🔸 QUIC via `ngtcp2` + `nghttp3` — **chiusa il 10 agosto 2026, con un banco**
+### 6.4 🔸 QUIC via `ngtcp2` + `nghttp3` — **closed on 10 Aug 2026, with a bench**
 
-> ⭐ **La decisione, in tre righe.** Delle quattro candidate ne resta **una**: `ngtcp2`+`nghttp3`.
-> `lsquic` è uscita perché **pretende l'SNI** e il prodotto si usa per indirizzo; `libwtf` era
-> ultima in fila (seconda pila QUIC, licenza che si contraddice); e ⛔ **`quiche`, usata dal C, non
-> riesce a dichiarare WebTransport** — la misura è qui sotto. `ngtcp2` invece regge: **due browser
-> veri aprono la sessione**, e lo strato che manca costa **373 righe di codice** nostro
-> (`[M]` 10 agosto 2026, ore 16:30 — la scomposizione e la successione delle misure stanno nel
-> riquadro «Quante righe sono nostre, e a che ora» più sotto).
+> ⭐ **The decision, in three lines.** Of the four candidates **one** remains: `ngtcp2`+`nghttp3`.
+> `lsquic` left because it **demands SNI** and the product is used by address; `libwtf` was last in line
+> (second QUIC stack, a licence that contradicts itself); and ⛔ **`quiche`, used from C, cannot declare
+> WebTransport** — the measurement is below. `ngtcp2` on the other hand holds: **two real browsers open
+> the session**, and the missing layer costs **373 lines of code** of ours (`[M]` 10 Aug 2026, 16:30 —
+> the breakdown and the succession of measurements are in the box «How many lines are ours, and at what
+> time» further down).
 >
-> ⚠ **Il prezzo, dichiarato**: quelle righe includono la **riscrittura del frame SETTINGS che
-> nghttp3 sta scrivendo**, perché la sua API pubblica non permette di annunciare un'impostazione
-> arbitraria. È collante che dipende dalla forma dei byte di una libreria, non da una sua promessa:
-> ⛔ **va riprovato a ogni aggiornamento di nghttp3**, e il banco che lo riprova esiste.
+> ⚠ **The price, declared**: those lines include the **rewriting of the SETTINGS frame that nghttp3 is
+> writing**, because its public API does not allow announcing an arbitrary setting. It is glue that
+> depends on the shape of a library's bytes, not on a promise of it: ⛔ **it must be retested at every
+> nghttp3 update**, and the bench that retests it exists.
 >
-> 🔸 *Derivata, correggibile senza discussione: se un giorno `quiche` esporrà
-> `set_additional_settings` nell'FFI e Debian avrà `rustc` ≥ 1.88, la scelta si riapre — e i due
-> banchi per rifare il confronto sono scritti.*
+> 🔸 *Derived, correctable without discussion: if one day `quiche` exposes `set_additional_settings` in
+> the FFI and Debian has `rustc` ≥ 1.88, the choice reopens — and the two benches to redo the comparison
+> are written.*
 
-*Il testo qui sotto è la cronaca, e si legge in ordine: la decisione è nata come «`quiche`» su
-carta, ed è finita all'opposto con tre misure.*
+*The text below is the chronicle, and it is read in order: the decision was born as «`quiche`» on paper,
+and ended at the opposite with three measurements.*
 
-Era l'unico argomento serio a favore di Rust, e si risolve con una libreria invece che con un
-linguaggio: **`quiche`** di Cloudflare ha un'**API C**, licenza **BSD-2**, ed è in produzione
-da anni. Si prende il QUIC finito senza cucire ngtcp2 a mano e senza toccare la libertà di
-licenza (§7.6).
+It was the only serious argument in favour of Rust, and it is solved with a library instead of with a
+language: Cloudflare's **`quiche`** has a **C API**, **BSD-2** licence, and has been in production for
+years. One takes finished QUIC without stitching ngtcp2 by hand and without touching the licence freedom
+(§7.6).
 
-L'alternativa in C puro è `ngtcp2` (MIT), che però richiede di portarsi il TLS e montare più
-pezzi. **Da confermare quando si aprirà il trasporto**, non prima: è il tipo di scelta che si
-fa con un banco davanti, non su carta.
+The pure C alternative is `ngtcp2` (MIT), which however requires bringing your own TLS and assembling
+more pieces. **To be confirmed when the transport is opened**, not before: it is the kind of choice made
+with a bench in front, not on paper.
 
-> ⛔ **Il criterio è cambiato il 9 agosto 2026 con §1.6, e va riscritto prima di scegliere.** Non
-> basta più che la libreria parli QUIC: il client è un browser, quindi il server deve portare
-> **HTTP/3 e WebTransport**, più un ascoltatore **TCP** per il primo caricamento della pagina
-> (`Alt-Svc`). La domanda non è più «quale QUIC», è **«quale delle due arriva fino a
-> WebTransport lato server, e quanto collante resta a noi»**.
+> ⛔ **The criterion changed on 9 Aug 2026 with §1.6, and must be rewritten before choosing.** It is no
+> longer enough for the library to speak QUIC: the client is a browser, so the server must carry
+> **HTTP/3 and WebTransport**, plus a **TCP** listener for the first load of the page (`Alt-Svc`). The
+> question is no longer «which QUIC», it is **«which of the two gets as far as WebTransport on the server
+> side, and how much glue is left to us»**.
 >
-> `[M]` 9 agosto, sul ferro: Trixie ha `libngtcp2-dev` 1.11 **e** `libnghttp3-dev` 1.8 come
-> pacchetti, `cargo`/`rustc` 1.85 per compilare `quiche`, e `python3-aioquic` 1.2 — che serve al
-> cliente di prova, non al server.
+> `[M]` 9 Aug, on the iron: Trixie has `libngtcp2-dev` 1.11 **and** `libnghttp3-dev` 1.8 as packages,
+> `cargo`/`rustc` 1.85 to compile `quiche`, and `python3-aioquic` 1.2 — which serves the test client, not
+> the server.
 >
-> ⚠ **E questa scelta è diventata critica invece che secondaria**: prima decideva quante righe di
-> collante scrivere, adesso decide **se il prodotto esiste**. Va chiusa con la sonda del browser
-> davanti, non dopo.
+> ⚠ **And this choice has become critical instead of secondary**: before, it decided how many lines of
+> glue to write, now it decides **whether the product exists**. It must be closed with the browser probe
+> in front, not after.
 
-> ### ⭐ Il censimento del 9 agosto notte — i candidati non erano due, e nessuno dei due originali porta WebTransport
+> ### ⭐ The survey of the night of 9 Aug — the candidates were not two, and neither of the two original ones carries WebTransport
 >
-> *Fatto prima di scrivere una riga di B2, come punto 0 della ricetta (`LEZIONI.md` §9): **chi, al
-> mondo, fa già questa cosa?** Tutto quel che segue è `[S]` e `[R]` — **letto, non misurato**. La
-> misura è B2, e serve proprio perché queste righe non bastano.*
+> *Done before writing a line of B2, as point 0 of the recipe (`LEZIONI.md` §9): **who, in the world,
+> already does this thing?** Everything that follows is `[S]` and `[R]` — **read, not measured**. The
+> measurement is B2, and it is needed precisely because these lines are not enough.*
 >
-> | Candidata | Lingua e API | WebTransport **lato server** | Che collante resta a noi |
+> | Candidate | Language and API | WebTransport **server side** | What glue is left to us |
 > |---|---|---|---|
-> | **`quiche`** | Rust con **API C** | ⛔ **no** — ma ha `h3::Config::enable_extended_connect()` (`SETTINGS_ENABLE_CONNECT_PROTOCOL`) `[R]` e i datagram QUIC completi (`dgram_send`/`dgram_recv`) `[R]` | **tutto lo strato WebTransport** |
-> | **`ngtcp2` + `nghttp3`** | **C** | ⛔ **no** — ma nghttp3 implementa **RFC 9220** (l'extended CONNECT di HTTP/3) `[S]` **e** sa mandare e ricevere `SETTINGS_H3_DATAGRAM` con il **Capsule Protocol** `[S]` | lo strato WebTransport, ⭐ **con le fondamenta più complete delle quattro** |
-> | ⭐ **`lsquic`** (LiteSpeed) | **C** | ⚠ **in parte** — vedi il riquadro qui sotto: il flag c'è, l'API pubblica è molto più magra del nome | **meno delle altre due, ma non «poco»** |
-> | **`libwtf`** | C, ma **su MsQuic** | ⭐ sì, negozia draft-15/07/02 `[S]` | poco, ⚠ ma porta dentro **una seconda pila QUIC** |
-> | ~~`web-transport-quiche`~~ | ⛔ **Rust puro, nessuna API C** | sì | ⛔ **escluso**: il server è in C (§6.3) |
+> | **`quiche`** | Rust with **C API** | ⛔ **no** — but it has `h3::Config::enable_extended_connect()` (`SETTINGS_ENABLE_CONNECT_PROTOCOL`) `[R]` and complete QUIC datagrams (`dgram_send`/`dgram_recv`) `[R]` | **the whole WebTransport layer** |
+> | **`ngtcp2` + `nghttp3`** | **C** | ⛔ **no** — but nghttp3 implements **RFC 9220** (HTTP/3's extended CONNECT) `[S]` **and** can send and receive `SETTINGS_H3_DATAGRAM` with the **Capsule Protocol** `[S]` | the WebTransport layer, ⭐ **with the most complete foundations of the four** |
+> | ⭐ **`lsquic`** (LiteSpeed) | **C** | ⚠ **partly** — see the box below: the flag is there, the public API is much thinner than the name | **less than the other two, but not «little»** |
+> | **`libwtf`** | C, but **on MsQuic** | ⭐ yes, negotiates draft-15/07/02 `[S]` | little, ⚠ but it brings in **a second QUIC stack** |
+> | ~~`web-transport-quiche`~~ | ⛔ **pure Rust, no C API** | yes | ⛔ **excluded**: the server is in C (§6.3) |
 >
-> ⛔ **Il fatto che riordina tutto**: *«quale delle due arriva fino a WebTransport»* aveva una
-> risposta sola — **nessuna delle due**. Le due candidate originali danno le **fondamenta**
-> (extended CONNECT, datagram, capsule) e non lo strato di sopra: le impostazioni della sessione, il
-> tipo di stream unidirezionale, il segnale sui bidirezionali, il prefisso dei datagram, la capsula
-> di chiusura. La domanda vera è sempre stata la seconda — **quanto collante** — e adesso ha una
-> forma elencabile.
+> ⛔ **The fact that reorders everything**: *«which of the two gets as far as WebTransport»* had a single
+> answer — **neither of the two**. The two original candidates give the **foundations** (extended CONNECT,
+> datagrams, capsules) and not the layer above: the session settings, the unidirectional stream type, the
+> signal on the bidirectional ones, the datagram prefix, the close capsule. The real question was always
+> the second — **how much glue** — and now it has a listable shape.
 >
-> ⚠ **E i due nuovi arrivati vanno guardati con sospetto, non con sollievo:**
->
-> | | |
-> |---|---|
-> | **`lsquic`** | ⛔ la funzione è **spenta per difetto** e **non compare nella documentazione della 4.9.3** `[R]`. «Implementato ma spento e non documentato» è la firma di un pezzo che **nessuno esercita**: va provato, non creduto |
-> | **`libwtf`** | ⚠ 70 stelle, 51 commit, un autore — e ⛔ **la licenza si contraddice da sola**: il README dice MIT, il piè di pagina Apache-2.0. Su una libreria che entrerebbe nel cuore del prodotto è un difetto di per sé (§7.6) |
->
-> ### ⛔ E `lsquic` è il caso da manuale di E1: il flag era necessario, non sufficiente
->
-> *Letta l'intestazione pubblica `include/lsquic.h` invece di fidarsi del `CMakeLists.txt`.* Dietro
-> `LSQUIC_WEBTRANSPORT_SERVER_SUPPORT` c'è **tutto quel che segue, e nient'altro** `[R]`:
+> ⚠ **And the two newcomers must be looked at with suspicion, not with relief:**
 >
 > | | |
 > |---|---|
-> | due impostazioni | `es_webtransport_server`, `es_max_webtransport_server_streams` |
-> | quattro funzioni, **tutte di classificazione** | `lsquic_stream_set_webtransport_session` · `..._is_webtransport_session` · `..._is_webtransport_client_bidi_stream` · `..._get_webtransport_session_stream_id` |
+> | **`lsquic`** | ⛔ the feature is **off by default** and **does not appear in the documentation of 4.9.3** `[R]`. «Implemented but off and undocumented» is the signature of a piece that **nobody exercises**: it must be tested, not believed |
+> | **`libwtf`** | ⚠ 70 stars, 51 commits, one author — and ⛔ **the licence contradicts itself**: the README says MIT, the footer Apache-2.0. On a library that would enter the heart of the product it is a defect in itself (§7.6) |
 >
-> ⛔ **Non c'è nessuna API per stabilire una sessione, per aprire uno stream WebTransport, per
-> mandare un datagram WebTransport.** *«Il `CMakeLists` ha un flag che si chiama
-> `WEBTRANSPORT_SERVER_SUPPORT`»* ⇒ *«lsquic fa WebTransport»* è **esattamente** la forma **E1**, la
-> stessa che ha ucciso v1 e che `STUDI.md` §web §9 punto 1 aveva già visto ricomparire travestita da API
-> (`prefer-hardware`). ⭐ **Terza volta in tre giorni, e stavolta l'ha fermata la lettura.**
+> ### ⛔ And `lsquic` is the textbook case of E1: the flag was necessary, not sufficient
 >
-> ⚠ **Quel che quelle quattro funzioni implicano, però, è più di quel che dicono**: per rispondere
-> *«questo stream appartiene alla sessione WebTransport numero N»* lsquic **deve** già leggere le
-> intestazioni degli stream WT e associarli — che è la parte noiosa. È un indizio a favore, non una
-> prova: **si misura**.
+> *Read the public header `include/lsquic.h` instead of trusting the `CMakeLists.txt`.* Behind
+> `LSQUIC_WEBTRANSPORT_SERVER_SUPPORT` there is **everything that follows, and nothing else** `[R]`:
 >
-> ### ⭐ E la prima misura c'è — `[M]` 9 agosto 2026, `banchi/01-b2-costruisci.sh`
+> | | |
+> |---|---|
+> | two settings | `es_webtransport_server`, `es_max_webtransport_server_streams` |
+> | four functions, **all of classification** | `lsquic_stream_set_webtransport_session` · `..._is_webtransport_session` · `..._is_webtransport_client_bidi_stream` · `..._get_webtransport_session_stream_id` |
 >
-> | Che cosa | Atteso | Misurato |
+> ⛔ **There is no API to establish a session, to open a WebTransport stream, to send a WebTransport
+> datagram.** *«The `CMakeLists` has a flag called `WEBTRANSPORT_SERVER_SUPPORT`»* ⇒ *«lsquic does
+> WebTransport»* is **exactly** the shape **E1**, the same that killed v1 and that `STUDI.md` §web §9
+> point 1 had already seen reappear disguised as an API (`prefer-hardware`). ⭐ **Third time in three
+> days, and this time reading stopped it.**
+>
+> ⚠ **What those four functions imply, however, is more than what they say**: to answer *«this stream
+> belongs to WebTransport session number N»* lsquic **must** already read the headers of the WT streams
+> and associate them — which is the boring part. It is a clue in favour, not a proof: **it is measured**.
+>
+> ### ⭐ And the first measurement is there — `[M]` 9 Aug 2026, `banchi/01-b2-costruisci.sh`
+>
+> | What | Expected | Measured |
 > |---|---|---|
-> | BoringSSL compila nel `devroot` | sì | ✅ sì |
-> | `lsquic` **v4.9.3** compila con `-DLSQUIC_WEBTRANSPORT=ON` | sì | ✅ sì, e la define compare nei `FLAGS` di `build.ninja` |
-> | ⛔ **il flag ha prodotto i simboli** | 4 su 4 | ⭐ **4 su 4** |
+> | BoringSSL compiles in the `devroot` | yes | ✅ yes |
+> | `lsquic` **v4.9.3** compiles with `-DLSQUIC_WEBTRANSPORT=ON` | yes | ✅ yes, and the define appears in the `FLAGS` of `build.ninja` |
+> | ⛔ **the flag produced the symbols** | 4 out of 4 | ⭐ **4 out of 4** |
 >
-> ⭐ **E il codice non è un moncone**: `webtransport` compare in **sei file** — `include/lsquic.h`,
+> ⭐ **And the code is not a stump**: `webtransport` appears in **six files** — `include/lsquic.h`,
 > `lsquic_stream.c/.h`, `lsquic_engine.c`, `lsquic_full_conn_ietf.c`, `lsquic_hcso_writer.c` `[R]`.
-> Cioè tocca il motore, gli stream, la connessione IETF **e lo scrittore dello stream di controllo
-> HTTP/3** — dove vivono le impostazioni. È un'implementazione distribuita nei punti giusti.
+> That is, it touches the engine, the streams, the IETF connection **and the writer of the HTTP/3 control
+> stream** — where the settings live. It is an implementation spread in the right places.
 >
-> ⛔ **Ma «i simboli ci sono» non è «la sessione si apre»**: è il gradino successivo di E1, e la
-> misura che conta resta **un browser vero che apre una sessione**.
+> ⛔ **But «the symbols are there» is not «the session opens»**: it is the next step of E1, and the
+> measurement that counts remains **a real browser opening a session**.
 >
-> ### ⛔ E leggendo oltre i simboli: `lsquic` parla la bozza **02**, i browser di oggi no
+> ### ⛔ And reading beyond the symbols: `lsquic` speaks draft **02**, today's browsers do not
 >
-> *`[R]` `⟨lsquic⟩ src/liblsquic/lsquic_hcso_writer.c`, dove il server scrive le impostazioni sullo stream di
-> controllo HTTP/3.* Ecco **tutte** quelle che emette:
+> *`[R]` `⟨lsquic⟩ src/liblsquic/lsquic_hcso_writer.c`, where the server writes the settings on the HTTP/3
+> control stream.* Here are **all** the ones it emits:
 >
-> | Impostazione | Valore | |
+> | Setting | Value | |
 > |---|---|---|
-> | `SETTINGS_ENABLE_WEBTRANSPORT` | `0x2b603742` | ⛔ **è della bozza 02** |
-> | `WEBTRANSPORT_MAX_SESSIONS` | `0x2b603743` | ⛔ **idem** |
-> | `H3_DATAGRAM_ENABLED` | `0x33` | ✅ corrente |
-> | `SETTINGS_ENABLE_CONNECT_PROTOCOL` | `0x08` | ✅ corrente |
+> | `SETTINGS_ENABLE_WEBTRANSPORT` | `0x2b603742` | ⛔ **it is from draft 02** |
+> | `WEBTRANSPORT_MAX_SESSIONS` | `0x2b603743` | ⛔ **ditto** |
+> | `H3_DATAGRAM_ENABLED` | `0x33` | ✅ current |
+> | `SETTINGS_ENABLE_CONNECT_PROTOCOL` | `0x08` | ✅ current |
 >
-> ⛔ **E non emette mai `SETTINGS_WT_MAX_SESSIONS` (`0xc671706a`)**, che è l'impostazione con cui un
-> server dichiara WebTransport dalla bozza 07 in poi — cioè quella che Chrome, Firefox e Safari
-> cercano oggi.
+> ⛔ **And it never emits `SETTINGS_WT_MAX_SESSIONS` (`0xc671706a`)**, which is the setting with which a
+> server declares WebTransport from draft 07 on — that is the one Chrome, Firefox and Safari look for
+> today.
 >
-> ⭐ **Da cui una previsione falsificabile, scritta PRIMA della misura** (`LEZIONI.md` §1.11: per
-> ogni prova indiretta si scrive che aspetto avrebbe il contrario):
+> ⭐ **From which a falsifiable prediction, written BEFORE the measurement** (`LEZIONI.md` §1.11: for every
+> indirect test one writes what the opposite would look like):
 >
 > | | |
 > |---|---|
-> | **la previsione** | un browser di oggi **non stabilirà** la sessione con `lsquic`: non vede la dichiarazione che cerca, e la `CONNECT` estesa viene rifiutata |
-> | ⭐ **che aspetto avrebbe il contrario** | la sessione si apre lo stesso ⇒ **o** i browser accettano ancora le impostazioni della bozza 02, **o** ho letto male questo file. In tutt'e due i casi la previsione è sbagliata e va scritto perché |
-> | **come si falsifica** | è la misura di B2: un browser vero contro un server minimo. **Costa quanto costa scrivere quel server** |
+> | **the prediction** | a browser of today **will not establish** the session with `lsquic`: it does not see the declaration it looks for, and the extended `CONNECT` is refused |
+> | ⭐ **what the opposite would look like** | the session opens anyway ⇒ **either** browsers still accept the settings of draft 02, **or** I misread this file. In both cases the prediction is wrong and why must be written down |
+> | **how it is falsified** | it is the B2 measurement: a real browser against a minimal server. **It costs what writing that server costs** |
 >
-> ⚠ **Il che riporta `lsquic` in fondo alla fila invece che in testa**, e non per il difetto in sé:
-> «implementato, spento per difetto, non documentato, **e fermo a una bozza di tre versioni fa**» è
-> il ritratto di un pezzo che **nessuno esercita**. `CODER.md` §4.1 dice di dipendere invece di
-> riscrivere — ma dipendere da codice che nessuno esercita è riscriverlo **con un ritardo**.
+> ⚠ **Which brings `lsquic` back to the end of the line instead of the head**, and not for the defect
+> itself: «implemented, off by default, undocumented, **and stuck at a draft three versions ago**» is the
+> portrait of a piece that **nobody exercises**. `CODER.md` §4.1 says to depend instead of rewriting —
+> but depending on code nobody exercises is rewriting it **with a delay**.
 >
-> ### ⛔⭐ `lsquic` è fuori, e per una ragione che nessuno aveva previsto — `[M]` 9 agosto 2026
+> ### ⛔⭐ `lsquic` is out, and for a reason nobody had foreseen — `[M]` 9 Aug 2026
 >
-> *Scritto il collante (`banchi/01-b2-lsquic-wt.c`, **333 righe**, di cui 236 di codice), compilato
-> e messo in ascolto. Il cliente di prova si è collegato, e il server ha registrato questo:*
+> *The glue written (`banchi/01-b2-lsquic-wt.c`, **333 lines**, of which 236 of code), compiled and put
+> listening. The test client connected, and the server logged this:*
 >
 > ```
 > handshake: for QUIC version 00000001, ALPN is h3
@@ -4775,837 +4769,832 @@ fa con un banco davanti, non su carta.
 > handshake failed  ·  sending CONNECTION_CLOSE, error code: 336, reason: TLS alert 80
 > ```
 >
-> `[R]` `lsquic_enc_sess_ietf.c:1326-1336`: in **modalità HTTP/3**, se il client non manda SNI,
-> lsquic **fallisce la ricerca del certificato e chiude**. C'è una scappatoia — `esi_sni_bypass` —
-> ⛔ **ma è dentro `#ifndef NDEBUG`**, cioè esiste solo nelle build di debug.
+> `[R]` `lsquic_enc_sess_ietf.c:1326-1336`: in **HTTP/3 mode**, if the client sends no SNI, lsquic
+> **fails the certificate lookup and closes**. There is a loophole — `esi_sni_bypass` — ⛔ **but it is
+> inside `#ifndef NDEBUG`**, that is it exists only in debug builds.
 >
-> ⛔ **E questo colpisce il caso primario del prodotto, non un caso limite.** `SPECIFICHE.md` e §1.7
-> descrivono un server **senza dominio**, a cui l'utente arriva digitando `https://<indirizzo>:7447`
-> — cioè **un indirizzo IP**. Un client che si collega a un IP **non manda SNI**: la specifica del
-> TLS vieta gli indirizzi letterali in quel campo. Quindi:
+> ⛔ **And this hits the product's primary case, not an edge case.** `SPECIFICHE.md` and §1.7 describe a
+> server **without a domain**, which the user reaches by typing `https://<indirizzo>:7447` — that is
+> **an IP address**. A client connecting to an IP **sends no SNI**: the TLS specification forbids literal
+> addresses in that field. So:
 >
 > | | |
 > |---|---|
-> | ⛔ **`lsquic` non può servire un certificato a chi si collega per indirizzo** | ed è il modo in cui REMOTIX viene usato |
-> | ⚠ **la previsione sulla bozza 02 resta APERTA** | non è stata né confermata né smentita: **non ci siamo mai arrivati**. Scriverla come «avevo ragione» sarebbe confermare una previsione con una prova che parla d'altro |
-> | ⭐ **e il modello non è in discussione** | `aioquic`, sullo stesso indirizzo e con lo stesso certificato, serve **due browser** senza SNI. Il difetto è della libreria, non del disegno |
+> | ⛔ **`lsquic` cannot serve a certificate to whoever connects by address** | and it is the way REMOTIX is used |
+> | ⚠ **the prediction about draft 02 stays OPEN** | it was neither confirmed nor refuted: **we never got there**. Writing it down as «I was right» would be confirming a prediction with a proof that speaks of something else |
+> | ⭐ **and the model is not in question** | `aioquic`, on the same address and with the same certificate, serves **two browsers** without SNI. The defect is the library's, not the design's |
 >
-> ⭐ **Da cui un criterio nuovo per questa decisione, che nessuno aveva scritto perché nessuno lo
-> immaginava**: la libreria **DEVE servire un certificato senza SNI**. Va provato per prima cosa su
-> ogni candidata — costa una connessione, e qui ha eliminato una candidata dopo 333 righe.
+> ⭐ **From which a new criterion for this decision, which nobody had written because nobody imagined it**:
+> the library **MUST serve a certificate without SNI**. It must be tested first on every candidate — it
+> costs one connection, and here it eliminated a candidate after 333 lines.
 >
-> ⚠ *E il banco che ha prodotto questo `4 su 4` **aveva prima detto `0 su 4`**, per un difetto suo —
-> `set -o pipefail` più `grep -q`. La cronaca sta in `FASI.md` §01-filo-nudo, «che cosa NON ha
-> funzionato», ed è il motivo per cui questa riga porta la data e il nome dello script.*
+> ⚠ *And the bench that produced this `4 su 4` **had first said `0 su 4`**, because of a defect of its own
+> — `set -o pipefail` plus `grep -q`. The chronicle is in `FASI.md` §01-filo-nudo, «what did NOT work»,
+> and it is the reason why this line carries the date and the script's name.*
 >
-> ⚠ **E un dettaglio che vale come odore**: il commento di `es_webtransport_server` dice *«Enable
-> datagram extension for http3 server»* — cioè **documenta un'altra cosa**. Un campo la cui
-> documentazione parla d'altro è un campo che nessuno ha riletto.
+> ⚠ **And a detail that counts as a smell**: the comment of `es_webtransport_server` says *«Enable
+> datagram extension for http3 server»* — that is it **documents something else**. A field whose
+> documentation speaks of something else is a field nobody has reread.
 
-> ### ⭐⛔ `ngtcp2` passa il criterio nuovo, ed è il primo a essere provato prima del collante — `[M]` 10 agosto 2026
+> ### ⭐⛔ `ngtcp2` passes the new criterion, and it is the first to be tested before the glue — `[M]` 10 Aug 2026
 >
-> *`banchi/01-b2-sni-ngtcp2.sh` (costruisce il bersaglio) · `01-b2-sonda-sni.py` (la sonda) ·
-> `01-b2-lancia-sni.sh` (conduce). Il bersaglio è **il loro server d'esempio**, `bsslserver`, non un
-> server nostro: un server nostro sarebbe collante, cioè la cosa che questa prova deve venire prima
-> di scrivere. `ngtcp2` **16.11.0** + `nghttp3` **1.18.90**, sullo stesso BoringSSL di `lsquic`.*
+> *`banchi/01-b2-sni-ngtcp2.sh` (builds the target) · `01-b2-sonda-sni.py` (the probe) ·
+> `01-b2-lancia-sni.sh` (conducts). The target is **their example server**, `bsslserver`, not a server
+> of ours: a server of ours would be glue, that is the thing this test must come before writing.
+> `ngtcp2` **16.11.0** + `nghttp3` **1.18.90**, on the same BoringSSL as `lsquic`.*
 >
-> **La previsione, scritta prima** (`LEZIONI.md` §1.11): *passa*. `[R]` in **109 file** di
-> `examples/` e **18** di `crypto/` non compare **nessuna** occorrenza di `servername`,
-> `SSL_get_servername`, `SSL_CTX_set_tlsext_servername_callback`, `select_certificate_cb` — con i
-> controlli positivi che rispondono (`SSL_CTX_use_certificate_chain_file` in 8 file, `alpn_select`
-> in 6, `SSL_` in 10). Nessuno cerca il certificato per nome: è legato all'`SSL_CTX` e servito
-> sempre. ⭐ **Che aspetto avrebbe avuto il contrario**: la stretta di mano che cade come su
-> `lsquic`, e allora la candidata usciva qui invece che dopo il collante.
+> **The prediction, written beforehand** (`LEZIONI.md` §1.11): *it passes*. `[R]` in **109 files** of
+> `examples/` and **18** of `crypto/` there is **no** occurrence of `servername`, `SSL_get_servername`,
+> `SSL_CTX_set_tlsext_servername_callback`, `select_certificate_cb` — with the positive controls
+> answering (`SSL_CTX_use_certificate_chain_file` in 8 files, `alpn_select` in 6, `SSL_` in 10). Nobody
+> looks up the certificate by name: it is tied to the `SSL_CTX` and always served. ⭐ **What the opposite
+> would have looked like**: the handshake falling as on `lsquic`, and then the candidate would have left
+> here instead of after the glue.
 >
-> | La misura | Atteso | Misurato |
+> | The measurement | Expected | Measured |
 > |---|---|---|
-> | ⭐ **senza SNI sul filo** | la sessione si stabilisce | ⭐ **sì** |
-> | ⛔ **e il certificato è QUELLO** | l'impronta del file | ⭐ **`35wqjGTOmKSj…` combacia** — la stretta che riesce non basta, il certificato si confronta |
-> | con SNI (`remotix.prova`), il controllo | idem | ✅ sì |
+> | ⭐ **without SNI on the wire** | the session is established | ⭐ **yes** |
+> | ⛔ **and the certificate is THAT one** | the file's fingerprint | ⭐ **`35wqjGTOmKSj…` matches** — the handshake succeeding is not enough, the certificate is compared |
+> | with SNI (`remotix.prova`), the control | ditto | ✅ yes |
 >
-> ⛔ **Quindi il criterio è soddisfatto, e `ngtcp2` resta in gara con `quiche`.** Il prezzo si
-> conosce: lo strato WebTransport è tutto nostro (extended CONNECT in 9 file, WebTransport in 0).
+> ⛔ **So the criterion is satisfied, and `ngtcp2` stays in the race with `quiche`.** The price is known:
+> the WebTransport layer is all ours (extended CONNECT in 9 files, WebTransport in 0).
 >
-> ⚠ **E il primo numero della colonna «quanto collante»**: il loro server d'esempio pesa **7.041
-> righe** in **13 file** `.cc` `[M]` — ⛔ **è un tetto, non una stima**: è il loro HTTP/3 completo,
-> con la gestione dei file, la migrazione, il retry. Il nostro sarà meno. Il numero che conta è
-> quello del server minimo, e si conterà quando esisterà.
+> ⚠ **And the first number of the «how much glue» column**: their example server weighs **7,041 lines**
+> in **13** `.cc` **files** `[M]` — ⛔ **it is a ceiling, not an estimate**: it is their complete HTTP/3,
+> with file handling, migration, retry. Ours will be less. The number that counts is that of the minimal
+> server, and it will be counted when it exists.
 >
-> ### ⭐ E la diagnosi di `lsquic` si chiude, con l'altra metà che mancava — `[M]` 10 agosto 2026
+> ### ⭐ And the diagnosis of `lsquic` closes, with the other half that was missing — `[M]` 10 Aug 2026
 >
-> Il 9 agosto si era letto *«SNI is not set»* nel suo registro e si era concluso — giustamente — che
-> pretende l'SNI. ⛔ **Ma «fallisce senza» non è «riesce con»**: finché nessuno prova la seconda
-> metà, la diagnosi resta a metà e la candidata è eliminata su mezza prova. Le due righe, dallo
-> stesso registro e nella stessa esecuzione:
+> On 9 Aug *«SNI is not set»* had been read in its log and it had been concluded — rightly — that it
+> demands SNI. ⛔ **But «fails without» is not «succeeds with»**: until someone tests the second half,
+> the diagnosis stays half done and the candidate is eliminated on half a proof. The two lines, from the
+> same log and in the same run:
 >
-> | Gamba | Che cosa dice `lsquic` |
+> | Leg | What `lsquic` says |
 > |---|---|
-> | senza SNI | `SNI is not set, but is required in HTTP/3: fail certificate lookup` |
-> | con SNI | ⭐ `looked up cert for remotix.prova` — **il certificato lo trova** |
+> | without SNI | `SNI is not set, but is required in HTTP/3: fail certificate lookup` |
+> | with SNI | ⭐ `looked up cert for remotix.prova` — **it finds the certificate** |
 >
-> ⛔ **Il difetto è l'SNI e nient'altro: l'eliminazione del 9 agosto regge, e adesso su una prova
-> intera.**
+> ⛔ **The defect is SNI and nothing else: the elimination of 9 Aug holds, and now on a whole proof.**
 >
-> ⚠ **E una cosa resta aperta, dichiarata invece che arrotondata**: con l'SNI la stretta di mano
-> cade lo stesso, ma **più avanti e per un'altra ragione** — avviso TLS **120**, `no suitable
-> application protocol`, dopo che il certificato è stato trovato. **Non è stata indagata**: non
-> serve a questa decisione, e `lsquic` è fuori per un motivo che non dipende da lei. Sta scritta
-> perché nessuno la scopra da capo credendo che sia nuova.
+> ⚠ **And one thing stays open, declared instead of rounded off**: with SNI the handshake falls all the
+> same, but **further on and for another reason** — TLS alert **120**, `no suitable application
+> protocol`, after the certificate was found. **It was not investigated**: it is not needed for this
+> decision, and `lsquic` is out for a reason that does not depend on it. It is written down so that
+> nobody discovers it afresh believing it is new.
 >
-> ⚠ **E la previsione sulla bozza 02 resta APERTA anche dopo questa misura**: nemmeno stavolta ci
-> siamo arrivati — la connessione con l'SNI muore prima delle impostazioni HTTP/3.
+> ⚠ **And the prediction about draft 02 stays OPEN even after this measurement**: not even this time did
+> we get there — the connection with SNI dies before the HTTP/3 settings.
 
-> ### ⭐ `quiche` passa lo stesso criterio, e porta con sé un costo che non c'entra col QUIC — `[M]` 10 agosto 2026
+> ### ⭐ `quiche` passes the same criterion, and brings along a cost that has nothing to do with QUIC — `[M]` 10 Aug 2026
 >
-> *`banchi/01-b2-sni-quiche.sh` (`leggi`, poi `costruisci`) · misurata dallo stesso conduttore e
-> dalla stessa sonda delle altre due, nella stessa esecuzione.*
+> *`banchi/01-b2-sni-quiche.sh` (`leggi`, then `costruisci`) · measured by the same conductor and the
+> same probe as the other two, in the same run.*
 >
-> **La previsione, scritta prima di costruire** (`LEZIONI.md` §1.11), su **81 file** di 3 alberi con
-> il controllo positivo che risponde (*«quiche»* in 33 file): `select_certificate_cb` in **0** file,
-> `servername` in **1**. ⭐ E quell'uno è un **lettore**: `quiche/src/tls/mod.rs:510-526` espone
-> `server_name() -> Option<&str>` — che al C arriva come `quiche_conn_server_name()` — cioè *dice*
-> che cosa ha mandato il pari, non *sceglie* niente. **Restituisce `Option`**: «nessun SNI» è uno
-> stato che la firma sa rappresentare, non un errore. ⇒ **previsione: passa**.
+> **The prediction, written before building** (`LEZIONI.md` §1.11), on **81 files** of 3 trees with the
+> positive control answering (*«quiche»* in 33 files): `select_certificate_cb` in **0** files,
+> `servername` in **1**. ⭐ And that one is a **reader**: `quiche/src/tls/mod.rs:510-526` exposes
+> `server_name() -> Option<&str>` — which reaches C as `quiche_conn_server_name()` — that is it *says*
+> what the peer sent, it does not *choose* anything. **It returns `Option`**: «no SNI» is a state the
+> signature can represent, not an error. ⇒ **prediction: it passes**.
 >
-> | La misura | Atteso | Misurato |
+> | The measurement | Expected | Measured |
 > |---|---|---|
-> | ⭐ **senza SNI sul filo** | la sessione si stabilisce | ⭐ **sì** |
-> | ⛔ **e il certificato è QUELLO** | l'impronta del file | ⭐ **`35wqjGTOmKSj…` combacia** |
-> | con SNI (`remotix.prova`), il controllo | idem | ✅ sì |
+> | ⭐ **without SNI on the wire** | the session is established | ⭐ **yes** |
+> | ⛔ **and the certificate is THAT one** | the file's fingerprint | ⭐ **`35wqjGTOmKSj…` matches** |
+> | with SNI (`remotix.prova`), the control | ditto | ✅ yes |
 >
-> ⛔ **Quindi il criterio dell'SNI non separa più le due candidate**: `ngtcp2` e `quiche` lo passano
-> tutt'e due, e la scelta si sposta su quel che resta — **quanto collante** e a che prezzo.
+> ⛔ **So the SNI criterion no longer separates the two candidates**: `ngtcp2` and `quiche` both pass it,
+> and the choice moves to what remains — **how much glue** and at what price.
 >
-> ### ⛔ E il prezzo di `quiche` è emerso prima della misura, ed è una catena di strumenti
+> ### ⛔ And the price of `quiche` emerged before the measurement, and it is a toolchain
 >
 > | | |
 > |---|---|
-> | ⛔ **la versione più recente non si costruisce** | `quiche` **0.29.3** pretende **rustc 1.88**; Trixie ne ha **1.85** `[M]`. Non è un'opinione: cargo si ferma e non compila |
-> | **la più recente che si costruisce è la 0.28.0** | il banco la sceglie da sé, confrontando il `rust-version` di ogni etichetta col compilatore presente, ⭐ **e stampa quale e perché** — la misura vale per *quella* versione |
-> | ⚠ **e nemmeno la 0.28.0 basta da sola** | il loro deposito è un `workspace`: `tokio-quiche`, `h3i`, `qlog-dancer` tirano dentro `tonic`, `icu`, `time`, `image`, che pretendono fino a 1.88. Si costruisce **`-p quiche`**, cioè il solo pacchetto che useremmo |
-> | ⛔ **la scelta che ne discende, e va fatta consapevolmente** | scegliendo `quiche` si sceglie **o** di restare sulla 0.28.0 finché Debian non aggiorna `rustc`, **o** di portarsi una catena Rust fuori dai pacchetti (`rustup`) dentro la costruzione del prodotto. `ngtcp2` non pone la domanda: è C, e Trixie ha tutto |
+> | ⛔ **the latest version does not build** | `quiche` **0.29.3** demands **rustc 1.88**; Trixie has **1.85** `[M]`. It is not an opinion: cargo stops and does not compile |
+> | **the latest that builds is 0.28.0** | the bench chooses it by itself, comparing the `rust-version` of each tag with the compiler present, ⭐ **and prints which and why** — the measurement holds for *that* version |
+> | ⚠ **and not even 0.28.0 is enough on its own** | their repository is a `workspace`: `tokio-quiche`, `h3i`, `qlog-dancer` pull in `tonic`, `icu`, `time`, `image`, which demand up to 1.88. One builds **`-p quiche`**, that is the only package we would use |
+> | ⛔ **the choice that follows from it, and must be made knowingly** | choosing `quiche` means choosing **either** to stay on 0.28.0 until Debian updates `rustc`, **or** to bring a Rust toolchain from outside the packages (`rustup`) into the product's build. `ngtcp2` does not pose the question: it is C, and Trixie has everything |
 >
-> ⚠ **Questo non elimina `quiche`**: è un costo, non un difetto, e va scritto **accanto alla
-> scelta** invece che scoperto da chi costruirà il prodotto fra un mese.
+> ⚠ **This does not eliminate `quiche`**: it is a cost, not a defect, and it must be written **next to the
+> choice** instead of being discovered by whoever builds the product a month from now.
 >
-> ### ⚠ I due numeri di «quanto collante», e perché NON si sottraggono
+> ### ⚠ The two numbers of «how much glue», and why they are NOT subtracted
 >
-> | Candidata | Il loro esempio | Che cos'è |
+> | Candidate | Their example | What it is |
 > |---|---|---|
-> | `ngtcp2`+`nghttp3` | **7.041 righe**, 13 file `.cc` | il loro **HTTP/3 completo** in C++: file, migrazione, retry, qlog |
-> | `quiche` | **614 righe**, 1 file `.c` | un esempio **minimo** in C, che però fa già HTTP/3 |
+> | `ngtcp2`+`nghttp3` | **7,041 lines**, 13 `.cc` files | their **complete HTTP/3** in C++: files, migration, retry, qlog |
+> | `quiche` | **614 lines**, 1 `.c` file | a **minimal** example in C, which however already does HTTP/3 |
 >
-> ⛔ **Confrontarli così sarebbe E1**: non misurano la stessa cosa. Quel che il confronto dice
-> davvero è che `quiche` **espone HTTP/3 dalla sua API C** e ci si arriva in 614 righe, mentre su
-> `ngtcp2` l'HTTP/3 lo monta `nghttp3` e l'esempio che lo fa è quello grosso. ⭐ **Il numero che
-> conta resta quello del nostro server minimo**, e si conterà quando esisterà — su tutt'e due.
+> ⛔ **Comparing them like this would be E1**: they do not measure the same thing. What the comparison
+> really says is that `quiche` **exposes HTTP/3 from its C API** and one gets there in 614 lines, while on
+> `ngtcp2` HTTP/3 is assembled by `nghttp3` and the example that does it is the big one. ⭐ **The number
+> that counts remains that of our minimal server**, and it will be counted when it exists — on both.
 >
-> ⚠ **E su tutt'e due manca ancora la stessa cosa**: lo strato **WebTransport**, che nessuna delle
-> due porta (censimento del 9 agosto, ancora valido).
+> ⚠ **And both still lack the same thing**: the **WebTransport** layer, which neither of the two carries
+> (survey of 9 Aug, still valid).
 
-> ### ⭐⭐ Il server minimo su `ngtcp2` esiste, e un browser vero apre la sessione — `[M]` 10 agosto 2026
+> ### ⭐⭐ The minimal server on `ngtcp2` exists, and a real browser opens the session — `[M]` 10 Aug 2026
 >
-> *`banchi/01-b2-ngtcp2-wt-innesta.py` innesta lo strato WebTransport nel loro server d'esempio;
-> `01-b2-lancia-wt.sh` lo misura col cliente di prova; `01-b2-lancia-sonda.sh` lo misura **da un
-> browser**. Il numero di righe non è una stima: è `git diff` nel loro albero.*
+> *`banchi/01-b2-ngtcp2-wt-innesta.py` grafts the WebTransport layer into their example server;
+> `01-b2-lancia-wt.sh` measures it with the test client; `01-b2-lancia-sonda.sh` measures it **from a
+> browser**. The number of lines is not an estimate: it is `git diff` in their tree.*
 >
-> | Che cosa | Misurato |
+> | What | Measured |
 > |---|---|
-> | ⭐ **la sessione si apre da un BROWSER VERO** | **Chrome 151.0.0.0** e **Firefox 140.0**, tutt'e due `APERTA` su `https://192.168.0.2:7447/rcp/1`, impronta pubblicata, **nessun avviso**, e `"ciao"` torna identico |
-> | ⛔ **e il percorso sbagliato si RIFIUTA** | `/rcp/9` ⇒ **404**, come impone `RCP.md` §2.2 con il rilievo R1.24. È il controllo che dice *no*, ed è nel banco |
-> | **i due parametri di §2.2** | `max_idle_timeout` **30 000 ms** e `max_datagram_frame_size` **65 536**, ⛔ **letti dal pari** con `01-b2-sonda-trasporto.py` |
-> | ⭐ **quante righe sono NOSTRE** | vedi il riquadro «Quante righe sono nostre, e a che ora» qui sotto: la misura di questa mattina era **456 aggiunte / 329 di codice**, ed è stata rifatta alle 16:30 |
+> | ⭐ **the session opens from a REAL BROWSER** | **Chrome 151.0.0.0** and **Firefox 140.0**, both `APERTA` on `https://192.168.0.2:7447/rcp/1`, fingerprint published, **no warning**, and `"ciao"` comes back identical |
+> | ⛔ **and the wrong path is REFUSED** | `/rcp/9` ⇒ **404**, as `RCP.md` §2.2 imposes with finding R1.24. It is the control that says *no*, and it is in the bench |
+> | **the two parameters of §2.2** | `max_idle_timeout` **30,000 ms** and `max_datagram_frame_size` **65,536**, ⛔ **read from the peer** with `01-b2-sonda-trasporto.py` |
+> | ⭐ **how many lines are OURS** | see the box «How many lines are ours, and at what time» below: this morning's measurement was **456 added / 329 of code**, and it was redone at 16:30 |
 >
-> > ⛔ *La prima riga è stata corretta il 10 agosto 2026, rilievo **R11.6**.* Diceva **«stampati dal
-> > server all'avvio»**, cioè portava la provenienza sbagliata scritta accanto al numero giusto: è
-> > la **configurazione** del server — che cosa ha *chiesto* a ngtcp2 — non che cosa è *arrivato* al
-> > pari. ⛔ **È il corollario di `LEZIONI.md` §1.9 punto 5** — *un denominatore si legge dove la
-> > cosa succede* — contraddetto nel documento che lo cita, e `FASI.md` §01-filo-nudo la dichiara
-> > **il difetto peggiore della giornata** (*«l'ho violato io, quel pomeriggio, su una misura
-> > mia»*). ⭐ La cura non è togliere il numero: è **prenderlo dalla fonte giusta**, e la fonte
-> > giusta esisteva già — la sonda del trasporto ha letto gli stessi due valori dal pari.
+> > ⛔ *The first row was corrected on 10 Aug 2026, finding **R11.6**.* It said **«printed by the server
+> > at startup»**, that is it carried the wrong provenance written next to the right number: it is the
+> > server's **configuration** — what it *asked* of ngtcp2 — not what *arrived* at the peer. ⛔ **It is the
+> > corollary of `LEZIONI.md` §1.9 point 5** — *a denominator is read where the thing happens* —
+> > contradicted in the document that cites it, and `FASI.md` §01-filo-nudo declares it **the worst defect
+> > of the day** (*«I violated it myself, that afternoon, on a measurement of mine»*). ⭐ The cure is not
+> > to remove the number: it is to **take it from the right source**, and the right source already
+> > existed — the transport probe read the same two values from the peer.
 >
-> ⛔ **E adesso si sa in che cosa consiste «lo strato non c'è», perché sono i tre punti che
-> l'innesto tocca:**
+> ⛔ **And now it is known what «the layer is not there» consists of, because they are the three points
+> the graft touches:**
 >
 > | | |
 > |---|---|
-> | **1. non si può annunciare WebTransport** | `nghttp3_settings` ha `enable_connect_protocol` e `h3_datagram` — le due che stanno negli RFC — e l'API pubblica offre `submit_request/info/response/trailers/shutdown_notice`. ⛔ **Nessun modo di mettere un'impostazione arbitraria** sullo stream di controllo, e `SETTINGS_WT_MAX_SESSIONS` è quel che i browser cercano. Si riscrive il `SETTINGS` di nghttp3 **mentre lo scrive** |
-> | **2. gli stream WebTransport vanno sottratti a nghttp3** | cominciano col tipo di frame `0x41` seguito dal numero di sessione, e nghttp3 leggerebbe quel numero come una **lunghezza** |
-> | **3. i byte di ritorno non hanno una strada** | nghttp3 non conosce quegli stream, quindi non li metterà mai fra i vettori da scrivere: la coda d'uscita è nostra |
+> | **1. WebTransport cannot be announced** | `nghttp3_settings` has `enable_connect_protocol` and `h3_datagram` — the two that are in the RFCs — and the public API offers `submit_request/info/response/trailers/shutdown_notice`. ⛔ **No way to put an arbitrary setting** on the control stream, and `SETTINGS_WT_MAX_SESSIONS` is what browsers look for. nghttp3's `SETTINGS` is rewritten **while it writes it** |
+> | **2. WebTransport streams must be taken away from nghttp3** | they begin with frame type `0x41` followed by the session number, and nghttp3 would read that number as a **length** |
+> | **3. the return bytes have no route** | nghttp3 does not know those streams, so it will never put them among the vectors to write: the output queue is ours |
 >
-> ⚠ **Nessuno dei tre è un difetto delle due librerie**: fanno HTTP/3, e WebTransport non è HTTP/3.
-> È esattamente il prezzo che questa decisione voleva conoscere prima di scegliere.
+> ⚠ **None of the three is a defect of the two libraries**: they do HTTP/3, and WebTransport is not
+> HTTP/3. It is exactly the price this decision wanted to know before choosing.
 >
-> ⚠ **E le due bozze mordono davvero.** Il server manda **tutt'e due** le dichiarazioni —
-> `0x2b603742` (bozza 02) e `0xc671706a` (bozza 07+) — perché `aioquic` 1.2, il **nostro cliente di
-> prova**, implementa la **02** `[R]` `h3/connection.py:90`, e i browser cercano la 07. ⛔ Un server
-> che ne mandasse una sola funzionerebbe con metà dei nostri strumenti, e la metà che funziona
-> sarebbe quella sbagliata da cui trarre conclusioni.
+> ⚠ **And the two drafts really bite.** The server sends **both** declarations — `0x2b603742` (draft 02)
+> and `0xc671706a` (draft 07+) — because `aioquic` 1.2, **our test client**, implements **02** `[R]`
+> `h3/connection.py:90`, and browsers look for 07. ⛔ A server that sent only one would work with half of
+> our tools, and the half that works would be the wrong one to draw conclusions from.
 >
-> ### ⛔ Che cosa questa misura NON dice
->
-> | | |
-> |---|---|
-> | ⚠ **non è il confronto con `quiche`** | il numero di `quiche` **non esiste ancora**: il suo esempio in C fa HTTP/3, non WebTransport. Finché non si innesta lo stesso strato anche lì, il nostro è un numero **senza il suo paragone** |
-> | ⚠ **due proprietà su sei**, *alle 08:00* | delle sei che B2 doveva verificare qui, questa misura ne portava due — **datagram abilitati** e **`max_idle_timeout` 30 s**. ⭐ **Le altre quattro sono state chiuse mezz'ora dopo**, riquadro qui sotto: non restano `[?]` |
-> | ⚠ **i millisecondi non si confrontano** | 118,6 ms (Chrome) e 140,0 ms (Firefox) sono **avvii a freddo dentro `xvfb`**, e lo stesso motore ha dato 22,2 ms in un altro giro. B2 misura *se la sessione si apre*, non quanto ci mette: chi metterà questi numeri accanto ai 30,2 ms del 9 agosto confronterà due cose diverse |
-
-> ### ⭐ Le sei proprietà del trasporto: **6 su 6**, lette dal pari — `[M]` 10 agosto 2026, mattina
->
-> *`banchi/01-b2-sonda-trasporto.py`, con una spia dichiarata su `pull_quic_transport_parameters` di
-> `aioquic`. ⛔ **Dal pari, non dal registro del server**: è la fonte che il riquadro qui sopra
-> aveva sbagliato.*
+> ### ⛔ What this measurement does NOT say
 >
 > | | |
 > |---|---|
-> | `max_idle_timeout` | **30 000 ms** |
-> | datagram | abilitati, `max_datagram_frame_size` **65 536** |
-> | credito stream unidirezionali | **16** |
-> | migrazione | **non** disabilitata |
-> | 0-RTT | **non offerto** |
-> | `allowPooling` | **`false`**, e dichiarato nell'esito registrato |
-> | ⛔ **e la settima, che serve a B3** | il tetto d'inattività **si può cambiare**: con `--timeout=10s` il pari legge **10 000 ms** |
->
-> ⛔ **E leggerle dal pari ha trovato due difetti che nessun banco funzionale vedeva**: il server
-> **offriva 0-RTT** (due biglietti, `max_early_data_size` `0xffffffff`), che §2.3 vieta perché i
-> dati 0-RTT si possono ripetere e il secondo messaggio di RCP è `CREDENZIALI`; e concedeva **3**
-> stream unidirezionali invece dei 16 che §2.3 impone. ⚠ *Nessuno dei due ha un sintomo: la
-> sessione si apriva uguale. `FASI.md` §01-filo-nudo l'aveva previsto per il primo — «il sintomo di
-> 0-RTT acceso non esiste».*
->
-> ⚠ *Questo riquadro è stato aggiunto il 10 agosto 2026, rilievo **R11.5**: la misura c'era e stava
-> in `README.md` e in `FASI.md` §01-filo-nudo, ma **non qui** — e §6.4 continuava a dichiararne
-> quattro su sei ancora `[?]`. Tre righe dello stesso giorno e dello stesso banco che dicevano cose
-> diverse, e quella che un lettore ha diritto di prendere per buona è questa (`README.md`: «le
-> decisioni stanno in `DECISIONI.md`, una sola volta»). ⛔ **E non era simmetrica**: con la riga
-> vecchia il divieto di 0-RTT di `RCP.md` §2.3 risultava non verificato mentre due documenti lo
-> dichiaravano verificato.*
+> | ⚠ **it is not the comparison with `quiche`** | `quiche`'s number **does not exist yet**: its C example does HTTP/3, not WebTransport. Until the same layer is grafted there too, ours is a number **without its comparison** |
+> | ⚠ **two properties out of six**, *at 08:00* | of the six that B2 had to verify here, this measurement carried two — **datagrams enabled** and **`max_idle_timeout` 30 s**. ⭐ **The other four were closed half an hour later**, box below: no `[?]` remain |
+> | ⚠ **the milliseconds are not compared** | 118.6 ms (Chrome) and 140.0 ms (Firefox) are **cold starts inside `xvfb`**, and the same engine gave 22.2 ms in another round. B2 measures *whether the session opens*, not how long it takes: whoever puts these numbers next to the 30.2 ms of 9 Aug will compare two different things |
 
-> ### ⭐ Quante righe sono nostre, e a che ora — `[M]` 10 agosto 2026
+> ### ⭐ The six properties of the transport: **6 out of 6**, read from the peer — `[M]` 10 Aug 2026, morning
 >
-> ⛔ **Il numero è cresciuto tre volte in un giorno, e le tre misure non si confrontano se non si
-> dice a che ora sono state prese.** Sono tutte `git diff` nell'albero di `ngtcp2`, mai stime.
+> *`banchi/01-b2-sonda-trasporto.py`, with a declared spy on `aioquic`'s
+> `pull_quic_transport_parameters`. ⛔ **From the peer, not from the server's log**: it is the source the
+> box above had got wrong.*
 >
-> | Ora | Che cosa è stato misurato | Aggiunte | Codice | Commento | Vuote |
+> | | |
+> |---|---|
+> | `max_idle_timeout` | **30,000 ms** |
+> | datagrams | enabled, `max_datagram_frame_size` **65,536** |
+> | unidirectional stream credit | **16** |
+> | migration | **not** disabled |
+> | 0-RTT | **not offered** |
+> | `allowPooling` | **`false`**, and declared in the recorded outcome |
+> | ⛔ **and the seventh, which B3 needs** | the idle cap **can be changed**: with `--timeout=10s` the peer reads **10,000 ms** |
+>
+> ⛔ **And reading them from the peer found two defects no functional bench saw**: the server **offered
+> 0-RTT** (two tickets, `max_early_data_size` `0xffffffff`), which §2.3 forbids because 0-RTT data can be
+> replayed and RCP's second message is `CREDENZIALI`; and it granted **3** unidirectional streams instead
+> of the 16 that §2.3 imposes. ⚠ *Neither has a symptom: the session opened the same. `FASI.md`
+> §01-filo-nudo had foreseen it for the first — «the symptom of 0-RTT switched on does not exist».*
+>
+> ⚠ *This box was added on 10 Aug 2026, finding **R11.5**: the measurement existed and was in `README.md`
+> and in `FASI.md` §01-filo-nudo, but **not here** — and §6.4 went on declaring four out of six still
+> `[?]`. Three lines of the same day and the same bench that said different things, and the one a reader
+> is entitled to take as good is this one (`README.md`: «the decisions live in `DECISIONI.md`, only
+> once»). ⛔ **And it was not symmetric**: with the old line the 0-RTT ban of `RCP.md` §2.3 appeared
+> unverified while two documents declared it verified.*
+
+> ### ⭐ How many lines are ours, and at what time — `[M]` 10 Aug 2026
+>
+> ⛔ **The number grew three times in one day, and the three measurements cannot be compared unless one
+> says at what time they were taken.** They are all `git diff` in the `ngtcp2` tree, never estimates.
+>
+> | Time | What was measured | Added | Code | Comment | Blank |
 > |---|---|---|---|---|---|
-> | **08:00** | lo strato WebTransport di B2, prima delle cure sul trasporto | **456** | **329** | 85 | 42 |
-> | ~08:30~ | ⚠ `[?]` un numero **482 / 333** è entrato in `README.md` con il commit delle sei proprietà, e **nessun documento ne registra la scomposizione né il comando che l'ha prodotto**. Non lo si promuove e non lo si cancella: sta qui, dichiarato per quel che si sa | ~482~ | ~333~ | — | — |
-> | ⭐ **16:30** | lo strato WebTransport di B2 **da solo**, dopo la lettura della capsula di chiusura | **553** | **373** | **134** | **46** |
+> | **08:00** | B2's WebTransport layer, before the transport cures | **456** | **329** | 85 | 42 |
+> | ~08:30~ | ⚠ `[?]` a number **482 / 333** entered `README.md` with the commit of the six properties, and **no document records its breakdown or the command that produced it**. It is neither promoted nor deleted: it stays here, declared for what is known | ~482~ | ~333~ | — | — |
+> | ⭐ **16:30** | B2's WebTransport layer **alone**, after reading the close capsule | **553** | **373** | **134** | **46** |
 >
-> ⭐ **Come è stata presa quella delle 16:30, ed è il punto che la rende ripetibile**: su albero
-> pulito, dopo `01-b3-rcp-innesta.py --togli` e `01-b2-ngtcp2-wt-innesta.py --togli`, riapplicando
-> **il solo** `01-b2-ngtcp2-wt-innesta.py`. È la sequenza che `ricostruisci()` di
-> `banchi/01-b11-guasto.sh` esegue già.
+> ⭐ **How the 16:30 one was taken, and it is the point that makes it repeatable**: on a clean tree, after
+> `01-b3-rcp-innesta.py --togli` and `01-b2-ngtcp2-wt-innesta.py --togli`, reapplying **only**
+> `01-b2-ngtcp2-wt-innesta.py`. It is the sequence that `ricostruisci()` of `banchi/01-b11-guasto.sh`
+> already runs.
 >
-> ⛔ **E un numero che NON va in questa colonna**: con **tutt'e due** gli innesti applicati — B2 più
-> i fili di B3 — l'esempio porta **972 righe aggiunte, 618 di codice** `[M]`, stessa ora. ⚠ *Non è
-> confrontabile con i tre di sopra: misura due cose invece che una, ed è precisamente la ragione per
-> cui `01-b3-rcp-innesta.py` è un innesto **separato** — «farlo crescere con RCP dentro renderebbe
-> due misure diverse sotto la stessa etichetta» (forma **E2**).*
+> ⛔ **And a number that does NOT go in this column**: with **both** grafts applied — B2 plus B3's wires —
+> the example carries **972 lines added, 618 of code** `[M]`, same time. ⚠ *It is not comparable with the
+> three above: it measures two things instead of one, and that is precisely the reason why
+> `01-b3-rcp-innesta.py` is a **separate** graft — «growing it with RCP inside would give two different
+> measurements under the same label» (shape **E2**).*
 >
-> ⚠ *Il riquadro è del 10 agosto 2026, rilievo **R11.1**. `README.md` portava 482/333 sotto il
-> titolo «Che cosa è misurato `[M]`» — il posto in cui un numero senza provenienza pesa di più —
-> mentre questo documento e `FASI.md` §01-filo-nudo portavano 456/329 dello stesso giorno. ⛔ E la
-> giustificazione che il README dava per non rimisurare era falsa: la misura si sa prendere, e
-> adesso è presa.*
+> ⚠ *The box is from 10 Aug 2026, finding **R11.1**. `README.md` carried 482/333 under the title «What is
+> measured `[M]`» — the place where a number without provenance weighs most — while this document and
+> `FASI.md` §01-filo-nudo carried 456/329 from the same day. ⛔ And the justification the README gave for
+> not remeasuring was false: the measurement can be taken, and now it is taken.*
 
-> ### ⛔⭐ E `quiche` non arriva a WebTransport dal C: la dichiarazione non si può fare — `[M]` 10 agosto 2026
+> ### ⛔⭐ And `quiche` does not reach WebTransport from C: the declaration cannot be made — `[M]` 10 Aug 2026
 >
-> *La regola delle 333 righe, applicata una seconda volta: **si prova per prima la cosa che può
-> uccidere la candidata**. Qui è costata la lettura di due file e una connessione, invece di un
-> secondo strato WebTransport scritto per intero.*
+> *The rule of the 333 lines, applied a second time: **the thing that can kill the candidate is tested
+> first**. Here it cost reading two files and one connection, instead of a second WebTransport layer
+> written in full.*
 >
-> **La lettura, e la previsione scritta prima** `[R]`:
+> **The reading, and the prediction written beforehand** `[R]`:
 >
 > | | |
 > |---|---|
-> | ⭐ **`quiche` HA la funzione che a `nghttp3` manca** | `h3::Config::set_additional_settings(Vec<(u64,u64)>)` — `quiche/src/h3/mod.rs:644`. Un modo pulito e sostenuto di mettere un'impostazione arbitraria nel proprio SETTINGS |
-> | ⛔ **ma non arriva all'API C** | **zero** occorrenze di `additional_settings` in `h3/ffi.rs` e **zero** in `include/quiche.h`. Il `quiche_h3_config` esporta **quattro** setter, e nessuno è quello |
-> | ⛔ **e il trucco di `ngtcp2` lì non esiste** | su `ngtcp2` nghttp3 **consegna all'applicazione** i byte dello stream di controllo da scrivere, e li abbiamo riscritti al volo. `quiche` scrive dentro la connessione da sé: un'applicazione in C quei byte **non li vede mai** |
+> | ⭐ **`quiche` HAS the function `nghttp3` lacks** | `h3::Config::set_additional_settings(Vec<(u64,u64)>)` — `quiche/src/h3/mod.rs:644`. A clean and supported way to put an arbitrary setting into its own SETTINGS |
+> | ⛔ **but it does not reach the C API** | **zero** occurrences of `additional_settings` in `h3/ffi.rs` and **zero** in `include/quiche.h`. The `quiche_h3_config` exports **four** setters, and none is that one |
+> | ⛔ **and the `ngtcp2` trick does not exist there** | on `ngtcp2` nghttp3 **hands the application** the control stream's bytes to write, and we rewrote them on the fly. `quiche` writes into the connection by itself: a C application **never sees** those bytes |
 >
-> ⇒ **previsione: `quiche`, dal C, non dichiarerà WebTransport.**
+> ⇒ **prediction: `quiche`, from C, will not declare WebTransport.**
 >
-> **La misura** — `banchi/01-b2-sonda-impostazioni.py`, che legge `received_settings` di `aioquic`,
-> cioè **quel che è arrivato sul filo**, non quel che la configurazione dice:
+> **The measurement** — `banchi/01-b2-sonda-impostazioni.py`, which reads `aioquic`'s `received_settings`,
+> that is **what arrived on the wire**, not what the configuration says:
 >
-> | Server | Impostazioni dichiarate |
+> | Server | Settings declared |
 > |---|---|
-> | ⭐ **`ngtcp2` col nostro strato** *(controllo positivo)* | **7**, fra cui `ENABLE_WEBTRANSPORT` **e** `WT_MAX_SESSIONS` |
-> | ⛔ **`quiche`**, con tutto acceso | **4**: `ENABLE_CONNECT_PROTOCOL`, `H3_DATAGRAM`, `H3_DATAGRAM_00`, e una GREASE. ⛔ **Nessuna delle due dichiarazioni di WebTransport** |
+> | ⭐ **`ngtcp2` with our layer** *(positive control)* | **7**, among which `ENABLE_WEBTRANSPORT` **and** `WT_MAX_SESSIONS` |
+> | ⛔ **`quiche`**, with everything on | **4**: `ENABLE_CONNECT_PROTOCOL`, `H3_DATAGRAM`, `H3_DATAGRAM_00`, and one GREASE. ⛔ **Neither of the two WebTransport declarations** |
 >
-> ⛔ **Quindi un browser non aprirebbe la sessione, e non c'è riga di codice nostro che rimedi**:
-> quel frame lo scrive la libreria, e dal C non c'è modo di toccarlo.
+> ⛔ **So a browser would not open the session, and there is no line of code of ours that can fix it**:
+> that frame is written by the library, and from C there is no way to touch it.
 >
-> ⚠ **E la riga onesta accanto al verdetto**: *«impossibile»* sarebbe troppo. La funzione **esiste**,
-> è solo non esposta — cioè **una decina di righe di FFI**, da mandare a monte o da portarsi dietro
-> come patch. Sommata al `rustc` 1.88 contro 1.85, però, diventa: *per usare `quiche` bisogna
-> toccare `quiche`*. Con `ngtcp2` non serve toccare niente, ed è C.
+> ⚠ **And the honest line next to the verdict**: *«impossible»* would be too much. The function **exists**,
+> it is just not exposed — that is **a dozen lines of FFI**, to send upstream or to carry along as a
+> patch. Added to `rustc` 1.88 against 1.85, however, it becomes: *to use `quiche` you have to touch
+> `quiche`*. With `ngtcp2` there is no need to touch anything, and it is C.
 >
-> ⚠ **E quel che questa misura NON dice**: **quante righe** costerebbe lo strato WebTransport su
-> `quiche`. Non si sa, perché non si è arrivati a scriverlo — la candidata cade a un cancello
-> precedente. ⭐ Ed è esattamente il punto della regola: il numero che non abbiamo è anche il
-> lavoro che non abbiamo speso.
+> ⚠ **And what this measurement does NOT say**: **how many lines** the WebTransport layer would cost on
+> `quiche`. It is not known, because we did not get to writing it — the candidate falls at an earlier
+> gate. ⭐ And that is exactly the point of the rule: the number we do not have is also the work we did
+> not spend.
 >
-> ⭐ **Un dettaglio che vale come indizio di cura**: `quiche` manda una **GREASE**
-> (`0x28d3890f99ed6413`), cioè un'impostazione inventata apposta perché i pari non si abituino a
-> un elenco fisso (RFC 9114 §7.2.4.1). `ngtcp2`+`nghttp3`, col nostro strato, no.
+> ⭐ **A detail that counts as a clue of care**: `quiche` sends a **GREASE** (`0x28d3890f99ed6413`), that
+> is a setting invented on purpose so that peers do not get used to a fixed list (RFC 9114 §7.2.4.1).
+> `ngtcp2`+`nghttp3`, with our layer, does not.
 >
-> ### ⭐ E il punto di partenza di `ngtcp2`+`nghttp3`, misurato — `[M]` 9 agosto 2026
+> ### ⭐ And the starting point of `ngtcp2`+`nghttp3`, measured — `[M]` 9 Aug 2026
 >
-> *Banco `banchi/01-b2-costruisci-ngtcp2.sh`. Cercato dentro **447 file** dei due alberi, ⛔ **con il
-> controllo positivo della ricerca**: la parola `nghttp3` compare in **110 file**, quindi il grep sta
-> leggendo davvero.*
+> *Bench `banchi/01-b2-costruisci-ngtcp2.sh`. Searched inside **447 files** of the two trees, ⛔ **with the
+> positive control of the search**: the word `nghttp3` appears in **110 files**, so the grep is really
+> reading.*
 >
-> | Che cosa | File |
+> | What | Files |
 > |---|---|
 > | `SETTINGS_WT_MAX_SESSIONS` (`0xc671706a`) | ⛔ **0** |
-> | il token `webtransport` | ⛔ **0** |
-> | l'extended CONNECT (`:protocol`, `ENABLE_CONNECT_PROTOCOL`) | ✅ **9** |
+> | the token `webtransport` | ⛔ **0** |
+> | the extended CONNECT (`:protocol`, `ENABLE_CONNECT_PROTOCOL`) | ✅ **9** |
 >
-> ⭐ **La previsione regge, e adesso è misurata**: le fondamenta ci sono, **lo strato WebTransport
-> non c'è affatto**. Da cui il numero che B2 deve produrre — *quante righe di collante* — che si
-> **conta**, non si stima.
+> ⭐ **The prediction holds, and now it is measured**: the foundations are there, **the WebTransport layer
+> is not there at all**. From which the number B2 must produce — *how many lines of glue* — which is
+> **counted**, not estimated.
 >
-> ⚠ *Il primo giro di questo stesso controllo aveva stampato «la previsione regge» da una ricerca
-> **mai eseguita** — due alberi passati come una stringa sola, con `2>/dev/null` a nascondere
-> l'errore. Il numero qui sopra vale perché il banco adesso dichiara il proprio denominatore. È la
-> quarta regola di `LEZIONI.md` §1.9, nata da quell'errore.*
+> ⚠ *The first round of this same check had printed «la previsione regge» from a search **never run** —
+> two trees passed as a single string, with `2>/dev/null` hiding the error. The number above holds
+> because the bench now declares its own denominator. It is the fourth rule of `LEZIONI.md` §1.9, born
+> from that error.*
 >
-> ⛔ **Nessuna delle righe di questo riquadro è una misura del PRODOTTO.** Sono la lente che dice
-> **a chi vale la pena scrivere il collante**, e quanto ne servirà.
+> ⛔ **None of the lines of this box is a measurement of the PRODUCT.** They are the lens that says **for
+> whom it is worth writing the glue**, and how much of it will be needed.
 
 ---
 
-## 7. ❓ Le domande aperte
+## 7. ❓ The open questions
 
-**Non sono decisioni.** Sono buchi, elencati perché non si perdano.
+**They are not decisions.** They are holes, listed so that they are not lost.
 
-### 7.1 ~~La misura della tela alla nascita~~ → **chiusa l'8 agosto, vedi §5.0**
-La detta il client a ogni attacco. Niente predefiniti, niente preferenze.
+### 7.1 ~~The size of the canvas at birth~~ → **closed on 8 Aug, see §5.0**
+The client dictates it at every attach. No defaults, no preferences.
 
-### 7.2 ~~Blocco schermo alla disconnessione~~ → **chiusa l'8 agosto, vedi §4.3**
-Il blocco è di REMOTIX, non del desktop: 30 minuti senza input e il client viene staccato. Con
-una condizione di scadenza scritta, da rileggere se arriverà un'autenticazione più forte.
+### 7.2 ~~Screen lock on disconnection~~ → **closed on 8 Aug, see §4.3**
+The lock belongs to REMOTIX, not to the desktop: 30 minutes without input and the client is detached. With
+a written expiry condition, to be reread if a stronger authentication arrives.
 
-### 7.3 ~~Il fantasma: subentro o attesa?~~ → **chiusa l'8 agosto, vedi §4.4**
-Nessuna delle due: chi tace è staccato, e il posto non lo tiene nessuno. Il bivio non esiste
-più. ⚠ Resta fuori, e non è stata chiesta, la terza possibilità — **due client sullo stesso
-desktop insieme**: costerebbe poco con un palco persistente, ma cambia il protocollo e andrebbe
-decisa prima di scriverlo, non dopo.
+### 7.3 ~~The ghost: takeover or wait?~~ → **closed on 8 Aug, see §4.4**
+Neither: whoever is silent is detached, and nobody holds the slot. The fork no longer
+exists. ⚠ What stays out, and was not asked, is the third possibility — **two clients on the same
+desktop together**: it would cost little with a persistent stage, but it changes the protocol and would have to be
+decided before writing it, not after.
 
-### 7.3-bis ~~Dopo quanti secondi di silenzio un client è staccato?~~ → **chiusa il 9 agosto**
-🔸 **30 secondi**, scritti in `SPECIFICHE.md` §5.3 — proposta mia, non pronunciata dall'utente.
-La soglia decide **quando si libera il codificatore**, e non ha altri costi: essere dichiarati
-staccati non fa perdere niente, perché nessuno tiene il posto (§4.4). Con QUIC il passaggio
-WiFi → LTE non conta come silenzio, quindi i 30 secondi coprono solo le interruzioni vere.
+### 7.3-bis ~~After how many seconds of silence is a client detached?~~ → **closed on 9 Aug**
+🔸 **30 seconds**, written in `SPECIFICHE.md` §5.3 — my proposal, not pronounced by the user.
+The threshold decides **when the encoder is freed**, and has no other costs: being declared
+detached loses nothing, because nobody holds the slot (§4.4). With QUIC the switch
+WiFi → LTE does not count as silence, so the 30 seconds cover only the real interruptions.
 
-### 7.4 ~~Proporzioni: bande o allungamento?~~ → **chiusa il 9 agosto**
-🔸 **Si impagina, non si stira** — `SPECIFICHE.md` §6.2. Allungare deforma il testo e lo rende
-illeggibile, che è l'unica cosa che un desktop non può permettersi. Il caso è raro per
-costruzione: all'attacco le proporzioni combaciano sempre, e resta solo durante il
-ridimensionamento e nel ripiego su KDE vecchio.
+### 7.4 ~~Proportions: bands or stretching?~~ → **closed on 9 Aug**
+🔸 **We lay out, we do not stretch** — `SPECIFICHE.md` §6.2. Stretching deforms the text and makes it
+unreadable, which is the one thing a desktop cannot afford. The case is rare by
+construction: at attach the proportions always match, and it remains only during
+resizing and in the fallback on old KDE.
 
-### 7.5 ~~Il linguaggio del server~~ → **chiusa l'8 agosto, vedi §6.3**
-C, confermato. Non per eredità: la ragione di v1 era FreeRDP ed è morta con RDP. La ragione
-nuova è il conto del riuso, banchi compresi.
+### 7.5 ~~The server's language~~ → **closed on 8 Aug, see §6.3**
+C, confirmed. Not by inheritance: v1's reason was FreeRDP and it died with RDP. The new
+reason is the reuse count, benches included.
 
-### 7.6 ⏳ La licenza — **rinviata a fine progetto**, per decisione dell'utente (9 agosto 2026)
-Non è più una domanda in attesa di risposta: è una decisione **programmata**, e la si prende
-quando il progetto è finito. Fino ad allora vale il solo vincolo già emerso, che va rispettato
-per non trovarsela decisa da sola: **niente x265** (GPL-only) come ripiego software. Con
-SVT-AV1 (BSD-3) e FFmpeg compilato senza `--enable-gpl` la scelta resta interamente aperta.
+### 7.6 ⏳ The licence — **postponed to the end of the project**, by the user's decision (9 Aug 2026)
+It is no longer a question waiting for an answer: it is a **scheduled** decision, and it is taken
+when the project is finished. Until then only the constraint that has already emerged holds, and it must be respected
+so as not to find it decided by itself: **no x265** (GPL-only) as software fallback. With
+SVT-AV1 (BSD-3) and FFmpeg compiled without `--enable-gpl` the choice stays entirely open.
 
 
-### 7.7 ~~Multi-tenant: quanti utenti insieme?~~ → **chiusa il 9 agosto, vedi §4.6**
-Dieci come tetto configurabile. Ma il limite vero non è un conteggio: è un budget di pixel al
-secondo, e su una macchina sola lo pone il codificatore.
+### 7.7 ~~Multi-tenant: how many users together?~~ → **closed on 9 Aug, see §4.6**
+Ten as a configurable cap. But the real limit is not a count: it is a budget of pixels per
+second, and on a single machine the encoder sets it.
 
-### 7.8 ~~La latenza~~ → **chiusa il 9 agosto, vedi §2.4-2.6**
-50 ms di tetto, 40 di traguardo, e solo per il pezzo che è nostro. ⛔ *L'avvertenza che stava qui —
-«il traguardo su GNOME probabilmente non si raggiunge, per lo stesso motivo dei 60 fotogrammi» — è
-**caduta il 13 agosto 2026**: il ritardo misurato allora sforava anche il tetto, ma il motivo non
-era quello — la parte grossa era nostra (il codificatore in software; la misura non vale più dopo la
-fase 18), e il muro dei 37 non si riproduce (§2.5).*
+### 7.8 ~~The latency~~ → **closed on 9 Aug, see §2.4-2.6**
+50 ms cap, 40 target, and only for the piece that is ours. ⛔ *The warning that stood here —
+«the target on GNOME is probably not reached, for the same reason as the 60 frames» — **fell
+on 13 Aug 2026**: the delay measured then exceeded even the cap, but the reason was not
+that — the big part was ours (the software encoder; the measurement no longer holds after
+phase 18), and the wall of 37 does not reproduce (§2.5).*
 
-### 7.9 ~~La fiducia: chi autentica il server verso l'utente?~~ → **chiusa il 9 agosto, vedi §1.3**
-Fiducia al primo incontro, ricordata in silenzio. Nessuna impronta da confrontare: il rischio
-sulla prima connessione è stato valutato e accettato per lo scenario previsto.
+### 7.9 ~~Trust: who authenticates the server to the user?~~ → **closed on 9 Aug, see §1.3**
+Trust on first encounter, remembered silently. No fingerprint to compare: the risk
+on the first connection was assessed and accepted for the intended scenario.
 
-### 7.10 ~~Il touch da Android~~ → **chiusa l'8 agosto, vedi §5-bis**
-Era la questione aperta n.1 di v1, mai chiusa in un anno. Risposta: trackpad con puntatore
-disegnato dal client; tocco nativo con il posto riservato ma non implementato.
+### 7.10 ~~Touch from Android~~ → **closed on 8 Aug, see §5-bis**
+It was v1's open question no. 1, never closed in a year. Answer: trackpad with a pointer
+drawn by the client; native touch with the slot reserved but not implemented.
 
-### 7.10-bis ~~La tastiera di Android: Unicode o scancode?~~ → **chiusa l'8 agosto, vedi §5-bis.6 e §5-bis.7**
-Tutt'e due, ma non come pari: le **lettere** viaggiano come lettere, e solo i tasti che lettere
-non sono viaggiano come posizioni. E la domanda si è allargata da Android a entrambi i client.
-Quel che segue è il ragionamento che ci ha portati lì, tenuto perché la conclusione da sola non
-si capisce.
-Il passeggero del touch, e pesa di più. *«Una tastiera Android non è una tastiera fisica: non
-ha scancode, ha un IME che produce testo»* (`fondamenta/documenti/client-android.md` §5.2). Il client
-manda quindi **Unicode** per i caratteri stampabili e **scancode** per i tasti di controllo —
-Invio, Tab, frecce, modificatori.
+### 7.10-bis ~~The Android keyboard: Unicode or scancode?~~ → **closed on 8 Aug, see §5-bis.6 and §5-bis.7**
+Both, but not as equals: **letters** travel as letters, and only the keys that are not letters
+travel as positions. And the question widened from Android to both clients.
+What follows is the reasoning that led us there, kept because the conclusion alone cannot
+be understood.
+Touch's passenger, and it weighs more. *«An Android keyboard is not a physical keyboard: it has
+no scancodes, it has an IME that produces text»* (`fondamenta/documenti/client-android.md` §5.2). The client
+therefore sends **Unicode** for the printable characters and **scancodes** for the control keys —
+Enter, Tab, arrows, modifiers.
 
-**Proposto: tutti e due, e l'Unicode non come ripiego ma come strada principale.** In dote
-arriva la chiusura della questione n.7 di v1: la disposizione di tastiera dichiarata dal
-client, su Android, **non serve** — quello che arriva è già il carattere finale.
+**Proposed: both, and Unicode not as a fallback but as the main route.** As a dowry
+comes the closing of v1's question no. 7: the keyboard layout declared by the
+client, on Android, **is not needed** — what arrives is already the final character.
 
-Resta da confermare, ed è la parte che costa: la conversione da carattere a **posizione fisica
-nella disposizione della sessione**, con i modificatori applicati intorno.
+What remains to be confirmed, and it is the part that costs: the conversion from character to **physical position
+in the session's layout**, with the modifiers applied around it.
 
-### 7.11 ~~La clipboard: bidirezionale?~~ → **chiusa il 9 agosto, vedi §5-ter**
-Sì, nei due versi, e solo testo. La domanda era nata perché `SPECIFICHE.md` diceva
-«server-client», che si legge in un verso solo.
+### 7.11 ~~The clipboard: bidirectional?~~ → **closed on 9 Aug, see §5-ter**
+Yes, in both directions, and text only. The question arose because `SPECIFICHE.md` said
+«server-client», which reads in one direction only.
 
-### 7.12 ~~Il «fuori scope»~~ → **chiusa il 9 agosto**
-🔸 Scritto in `SPECIFICHE.md` §12, dieci voci, ciascuna esclusa **deliberatamente** e non
-dimenticata: Windows, i desktop X11, la redirezione di dischi/stampanti/porte/smart card, il
-trasferimento file, immagini e file negli appunti, il multi-monitor come funzione, lo stilo, il
-tocco nativo, la registrazione della sessione, e la compatibilità con client RDP/VNC/SPICE.
+### 7.12 ~~The «out of scope»~~ → **closed on 9 Aug**
+🔸 Written in `SPECIFICHE.md` §12, ten items, each one excluded **deliberately** and not
+forgotten: Windows, the X11 desktops, redirection of disks/printers/ports/smart cards, file
+transfer, images and files in the clipboard, multi-monitor as a feature, the stylus,
+native touch, session recording, and compatibility with RDP/VNC/SPICE clients.
 
-### 7.13 📖 Cinnamon — non si decide, **si studia**
+### 7.13 📖 Cinnamon — it is not decided, **it is studied**
 
-*9 agosto 2026. «Va fatto uno studio simile a quanto fatto per gli altri DE: Cinnamon è in fase
+*9 Aug 2026. «Va fatto uno studio simile a quanto fatto per gli altri DE: Cinnamon è in fase
 di migrazione verso Wayland ma il processo è iniziato da poco, quindi non conosco lo stato in
 cui è».*
 
-⚠ **La proposta di dichiararlo fuori scope è stata respinta**, e la ragione è giusta: dentro o
-fuori non si decide su un'impressione. Gli altri quattro desktop hanno uno studio ciascuno,
-questo non ce l'ha, e finché non ce l'ha ogni giudizio è `[?]`.
+⚠ **The proposal to declare it out of scope was rejected**, and the reason is right: in or
+out is not decided on an impression. The other four desktops have a study each,
+this one does not, and until it does every judgement is `[?]`.
 
-⭐ **Ma lo studio costa molto meno degli altri quattro, e va detto perché non venga rimandato
-per paura della mole.** Muffin **non è un compositore indipendente**: è un fork di Mutter,
-staccato ai tempi di GNOME 3, e ne eredita l'architettura. Quindi `STUDI.md` §cinnamon non parte dal
-foglio bianco — **parte da `STUDI.md` §gnome e cerca le differenze**. È una lettura in negativo:
-*questo pezzo di Mutter c'è ancora? è stato rinominato? è rimasto fermo a cinque anni fa?*
+⭐ **But the study costs much less than the other four, and it must be said so that it is not postponed
+for fear of its size.** Muffin **is not an independent compositor**: it is a fork of Mutter,
+split off in GNOME 3 times, and it inherits its architecture. So `STUDI.md` §cinnamon does not start from
+a blank sheet — **it starts from `STUDI.md` §gnome and looks for the differences**. It is a reading in negative:
+*is this piece of Mutter still there? has it been renamed? has it stayed stuck five years ago?*
 
-**Le due domande che decidono, e vanno fatte per prime:**
+**The two questions that decide, and must be asked first:**
 
-1. **si può creare uno schermo virtuale senza monitor?** Su GNOME è `RecordVirtual`; su KDE la
-   risposta negativa è stata il risultato più costoso di tutto lo studio (`STUDI.md` §kde §8.1);
-2. **quanti fotogrammi consegna la cattura, con una scena dichiarata e sempre in movimento?**
+1. **can a virtual screen be created without a monitor?** On GNOME it is `RecordVirtual`; on KDE the
+   negative answer was the most expensive result of the whole study (`STUDI.md` §kde §8.1);
+2. **how many frames does the capture deliver, with a declared and always moving scene?**
    Mutter 37, KWin 60, wlroots 61 `[M]`.
 
-Poi le altre dodici di `LEZIONI.md` §3, e la ricetta di §9 — a partire dal punto 0, *cercare chi
-l'ha già fatto*, che su KDE aveva fatto trovare `KRdp` in un nono repository dopo che lo studio
-lo aveva dato per inesistente.
+Then the other twelve of `LEZIONI.md` §3, and the recipe of §9 — starting from point 0, *look for whoever
+has already done it*, which on KDE had led to finding `KRdp` in a ninth repository after the study
+had given it up as non-existent.
 
-> ## ✅ Lo studio è stato fatto il 9 agosto 2026 — sta in [`STUDI.md` §cinnamon](STUDI.md#cinnamon)
+> ## ✅ The study was done on 9 Aug 2026 — it is in [`STUDI.md` §cinnamon](STUDI.md#cinnamon)
 >
-> Su `muffin` e `cinnamon` **6.7.4**, in `reference-cinnamon/`. **Tutto `[R]`, niente misurato.**
+> On `muffin` and `cinnamon` **6.7.4**, in `reference-cinnamon/`. **All `[R]`, nothing measured.**
 >
-> **L'ipotesi del fork è confermata**: il binario `cinnamon` *è* il compositore, chiama
-> `meta_init()` e `meta_run()` come gnome-shell. `ScreenCast` e `RemoteDesktop` sono le
-> interfacce di Mutter rinominate, e **non c'è cancello** sul permesso di cattura.
+> **The fork hypothesis is confirmed**: the `cinnamon` binary *is* the compositor, it calls
+> `meta_init()` and `meta_run()` like gnome-shell. `ScreenCast` and `RemoteDesktop` are
+> Mutter's interfaces renamed, and **there is no gate** on the capture permission.
 >
-> ⛔ **Ma tre cose che diamo per acquisite non esistono affatto** — verificate con lo strumento
-> certificato prima su Mutter:
+> ⛔ **But three things we take for granted do not exist at all** — checked with the tool
+> certified first on Mutter:
 >
 > | | Muffin 6.7.4 |
 > |---|---|
-> | `RecordVirtual` e `virtual_monitor` | **0 file** su tutto l'albero |
-> | `ConnectToEIS` — l'input via libei | **0 file** |
-> | `EnableClipboard` — gli appunti | **0 file**, e nemmeno `zwlr_data_control` |
-> | un backend *headless* | solo in `src/tests/` |
+> | `RecordVirtual` and `virtual_monitor` | **0 files** in the whole tree |
+> | `ConnectToEIS` — input via libei | **0 files** |
+> | `EnableClipboard` — the clipboard | **0 files**, and not even `zwlr_data_control` |
+> | a *headless* backend | only in `src/tests/` |
 >
-> ⭐ **La via che resta**, ed è la ragione per non chiudere la voce: `META_DUMMY_MONITORS` +
-> `MUFFIN_DEBUG_DUMMY_MODE_SPECS=1920x1080@60` forzano un monitor **fittizio** su qualunque
-> backend, con la misura decisa all'avvio — l'equivalente del `--virtual --width W` di KWin, che
-> il modello della tela (§5.0) già assorbe.
+> ⭐ **The route that remains**, and it is the reason not to close the item: `META_DUMMY_MONITORS` +
+> `MUFFIN_DEBUG_DUMMY_MODE_SPECS=1920x1080@60` force a **dummy** monitor on any
+> backend, with the size decided at startup — the equivalent of KWin's `--virtual --width W`, which
+> the canvas model (§5.0) already absorbs.
 >
-> ⚠ **Se regga davvero è `[?]`, ed è la misura M1 del §9 di `STUDI.md` §cinnamon**: che il gestore dei
-> monitor sia finto non dice che il renderer lo sia. Può anche riuscire **consegnando zero
-> fotogrammi**, che è il modo peggiore perché sembra funzionare (`REVIEWER.md` E1).
+> ⚠ **Whether it really holds is `[?]`, and it is measurement M1 of §9 of `STUDI.md` §cinnamon**: that the monitor
+> manager is fake does not say that the renderer is. It can even succeed **by delivering zero
+> frames**, which is the worst way because it looks like it works (`REVIEWER.md` E1).
 >
-> **Il giudizio provvisorio**: Cinnamon costa più di tutti e cinque, e le due difficoltà — un
-> secondo percorso di input, e appunti che **oggi non hanno strada** — non sono difficoltà di
-> lettura ma funzionalità mancanti a monte. **Va messo ultimo**, e la decisione si prende sulle
-> misure, non su questo documento.
+> **The provisional judgement**: Cinnamon costs more than all five, and the two difficulties — a
+> second input path, and a clipboard that **today has no route** — are not difficulties of
+> reading but features missing upstream. **It must be put last**, and the decision is taken on the
+> measurements, not on this document.
 >
-> ⏳ **E ha una data di scadenza, posta dall'utente il 9 agosto:** *«tanto Cinnamon sarà l'ultimo
-> DE ad essere supportato, e le cose potrebbero cambiare»*. È la clausola giusta: le tre assenze
-> che pesano — `RecordVirtual`, libei, la clipboard — sono **funzionalità che Mint può portare in
-> qualunque momento**, esattamente come KDE ha portato il ridimensionamento con `kwin!7932`. Chi
-> riapre questa voce **ricloni `muffin` e rifaccia le quattro ricerche** prima di fidarsi di
-> `STUDI.md` §cinnamon: un riferimento che invecchia in silenzio è peggio di nessun riferimento
+> ⏳ **And it has an expiry date, set by the user on 9 Aug:** *«tanto Cinnamon sarà l'ultimo
+> DE ad essere supportato, e le cose potrebbero cambiare»*. It is the right clause: the three absences
+> that weigh — `RecordVirtual`, libei, the clipboard — are **features that Mint can bring at
+> any moment**, exactly as KDE brought resizing with `kwin!7932`. Whoever
+> reopens this item **must reclone `muffin` and redo the four searches** before trusting
+> `STUDI.md` §cinnamon: a reference that ages silently is worse than no reference
 > (`LEZIONI.md` §9.8).
 
 ---
 
-> ## ⛔ Le tre domande della notte del 10 agosto 2026 — **si rispondono con una parola**
+> ## ⛔ The three questions of the night of 10 Aug 2026 — **they are answered with one word**
 >
-> Le tre che seguono (§7.14, §7.15, §7.16) sono nate dalla revisione `fasi/rapporti/R11-documenti.md`
-> e stanno **qui** perché è qui che stanno le decisioni, una sola volta: `RCP.md`,
-> `FASI.md` §01-filo-nudo e `README.md` **rimandano**, non copiano.
+> The three that follow (§7.14, §7.15, §7.16) arose from the review `fasi/rapporti/R11-documenti.md`
+> and are **here** because this is where the decisions are, once only: `RCP.md`,
+> `FASI.md` §01-filo-nudo and `README.md` **refer**, they do not copy.
 >
-> ⛔ **Nessuna delle tre è decisa**, e la marca resta ❓ finché l'utente non parla — anche dove
-> scrivo quale mi sembra più difendibile. Due di esse (§7.14, §7.15) **cambiano i byte sul filo**,
-> e finché sono aperte due implementazioni conformi a `RCP.md` divergono senza che nessuna delle
-> due abbia torto.
+> ⛔ **None of the three is decided**, and the mark stays ❓ until the user speaks — even where
+> I write which one seems most defensible to me. Two of them (§7.14, §7.15) **change the bytes on the wire**,
+> and while they are open two implementations conforming to `RCP.md` diverge without either of the
+> two being wrong.
 >
-> ⚠ **E dall'11 agosto 2026 sono quattro**: §7.17 è nata il giorno dopo, **da una misura** — il banco
-> B6 — e non da una lettura. Vale per lei tutto quel che è scritto qui sopra.
+> ⚠ **And since 11 Aug 2026 they are four**: §7.17 was born the next day, **from a measurement** — bench
+> B6 — and not from a reading. Everything written above holds for it.
 >
 > ---
 >
-> ## ✅⭐ **TUTTE E QUATTRO SONO CHIUSE — l'11 agosto 2026**, e le ha chiuse l'utente
+> ## ✅⭐ **ALL FOUR ARE CLOSED — on 11 Aug 2026**, and the user closed them
 >
-> | | la risposta | e che cosa ha portato con sé |
+> | | the answer | and what it brought with it |
 > |---|---|---|
-> | **§7.14** | *«silenzio»* | chi riceve un `FIN` non spedisce più niente. ⛔ E `RCP.md` §8.1 guadagna l'eccezione: **chi ha ricevuto un `FIN` non è «chi chiude»** |
-> | **§7.15** | *«se si può»* | il `CONGEDO` cade quando il canale è morto; il motivo resta nel codice di chiusura. ⭐ Chiude un **rosso su codice giusto** che B5 e B11 avrebbero dato |
-> | **§7.16** | *«si tiene per i test, nel prodotto si fa pulizia»* | ⭐ e la risposta è stata **più larga della domanda**: è nato un principio — `SPECIFICHE.md` §2 punto 6, *sullo schermo dell'utente c'è il suo desktop e nient'altro* — con la pulizia da misurare alla fase 13 |
-> | **§7.17** | *«5 secondi»* | ⛔ l'ultimo modo di **occupare un posto senza dire chi si è** |
+> | **§7.14** | *«silenzio»* | whoever receives a `FIN` sends nothing more. ⛔ And `RCP.md` §8.1 gains the exception: **whoever has received a `FIN` is not «the one who closes»** |
+> | **§7.15** | *«se si può»* | the `CONGEDO` falls when the channel is dead; the reason stays in the close code. ⭐ It closes a **red on correct code** that B5 and B11 would have given |
+> | **§7.16** | *«si tiene per i test, nel prodotto si fa pulizia»* | ⭐ and the answer was **wider than the question**: a principle was born — `SPECIFICHE.md` §2 point 6, *on the user's screen there is his desktop and nothing else* — with the cleanup to be measured at phase 13 |
+> | **§7.17** | *«5 secondi»* | ⛔ the last way to **occupy a slot without saying who you are** |
 >
-> ⭐ **E tre di esse si incastrano su un caso solo**: il tetto di §7.17 scatta quando il canale di
-> controllo non esiste ancora, quindi §7.15 dice che il `CONGEDO` non si manda e §7.14 dice per dove
-> passa il motivo. ⚠ *Decise separatamente, nell'arco di un'ora, e nessuna delle tre sarebbe stata
-> difendibile da sola.*
+> ⭐ **And three of them interlock on a single case**: the cap of §7.17 fires when the control
+> channel does not exist yet, so §7.15 says the `CONGEDO` is not sent and §7.14 says which way
+> the reason travels. ⚠ *Decided separately, within an hour, and none of the three would have been
+> defensible alone.*
 >
-> ⛔ **Nessuna delle quattro è ancora provata sul ferro.** §7.17 chiede a **B6** un quarto caso,
-> §7.14 chiede tre correzioni a `src/pagina.html` (righe 431, 479, 514, dove il prodotto fa oggi il
-> contrario), §7.16 chiede un banco alla fase 13. **Decise ≠ misurate**, e finché non lo sono la
-> distanza si dichiara.
+> ⛔ **None of the four is proven on the hardware yet.** §7.17 asks **B6** for a fourth case,
+> §7.14 asks for three fixes to `src/pagina.html` (lines 431, 479, 514, where the product today does the
+> opposite), §7.16 asks for a bench at phase 13. **Decided ≠ measured**, and until they are the
+> distance is declared.
 
-### 7.14 ✅ Il `FIN` sul canale di controllo: chi lo riceve **tace**
+### 7.14 ✅ The `FIN` on the control channel: whoever receives it **stays silent**
 
-> ## ✅ **IL SILENZIO** — deciso dall'utente l'**11 agosto 2026**
+> ## ✅ **SILENCE** — decided by the user on **11 Aug 2026**
 >
 > *«silenzio, anche perché il server non attacca mai di sua iniziativa»*
 >
-> ⛔ **Chi riceve un `FIN` sul canale di controllo non spedisce più niente, nemmeno lì.** Il motivo
-> viaggia per la seconda strada di `RCP.md` §3.1 punto 3 — il codice d'errore applicativo della
-> chiusura — che non ha bisogno di un canale vivo.
+> ⛔ **Whoever receives a `FIN` on the control channel sends nothing more, not even there.** The reason
+> travels by the second route of `RCP.md` §3.1 point 3 — the application error code of the
+> close — which does not need a live channel.
 >
-> ### ⛔ La premessa era falsa, e va scritta qui perché è quella con cui la decisione è stata presa
+> ### ⛔ The premise was false, and it must be written here because it is the one with which the decision was taken
 >
-> *«Il server non attacca mai di sua iniziativa»* **non regge**: attaccare di sua iniziativa è il
-> comportamento **più misurato** della fase 1.
+> *«Il server non attacca mai di sua iniziativa»* **does not hold**: closing on its own initiative is the
+> **most measured** behaviour of phase 1.
 >
-> | quando il server chiude da solo | quanto è provato |
+> | when the server closes by itself | how far it is proven |
 > |---|---|
-> | scade uno dei tetti di §4.6 | `[M]` **B6**: tutti e tre visti scattare — **5,0 · 60,1 · 10,0 s** — col congedo `TEMPO_SCADUTO` |
-> | arriva una violazione | `[M]` **B5**: **36 casi su 36**, e dopo ciascuno una connessione nuova arriva a `ECCOMI` |
-> | credenziali, ban, posto occupato | `RESPINTO` (§4.4) · `TROPPI_TENTATIVI` (§4.4-bis) · `GIA_ATTIVA_REMOTA` (§8.2) |
-> | e il caso da cui nasce la domanda | ⛔ il **quarto difetto di B11** era *«il posto non si libera quando a chiudere il canale è il SERVER»*, `[M]` su Chrome |
+> | one of the caps of §4.6 expires | `[M]` **B6**: all three seen firing — **5.0 · 60.1 · 10.0 s** — with the farewell `TEMPO_SCADUTO` |
+> | a violation arrives | `[M]` **B5**: **36 cases out of 36**, and after each one a new connection reaches `ECCOMI` |
+> | credentials, ban, slot occupied | `RESPINTO` (§4.4) · `TROPPI_TENTATIVI` (§4.4-bis) · `GIA_ATTIVA_REMOTA` (§8.2) |
+> | and the case the question comes from | ⛔ the **fourth defect of B11** was *«the slot is not freed when the one closing the channel is the SERVER»*, `[M]` on Chrome |
 >
-> ⭐ **La decisione non cambia, e la ragione vera la rende più forte**: proprio perché il server
-> chiude spesso, quel che fa chi riceve conta — e a scegliere è la misura, non la rarità del caso.
-> ⚠ *Scritto così, e non «come ha detto l'utente», perché una ragione falsa in un registro delle
-> decisioni vale più a lungo della decisione: è la forma **E5**, un fatto che era una deduzione mai
-> misurata.*
+> ⭐ **The decision does not change, and the true reason makes it stronger**: precisely because the server
+> closes often, what the receiver does matters — and it is the measurement that chooses, not the rarity of the case.
+> ⚠ *Written this way, and not «as the user said», because a false reason in a decision
+> register lasts longer than the decision: it is form **E5**, a fact that was a deduction never
+> measured.*
 >
-> ⭐ **E la premessa non è finita lì: è diventata una regola.** Messa davanti alla contraddizione,
-> l'utente ha scelto la forma stretta — *il server non butta fuori una sessione **sana**, e ogni sua
-> chiusura ha un motivo che sa spiegare* — e non quella larga, che avrebbe portato via il ban, il
-> rifiuto delle credenziali e la regola di rigore. ⇒ **`DECISIONI.md` §4.1-bis**, ✅ 11 agosto 2026.
-> ⚠ *Cioè: la frase era falsa come descrizione di quel che il server fa **oggi**, ed era giusta come
-> descrizione di quel che il server **deve** fare. Le due cose si somigliano abbastanza da passare
-> per la stessa, e in un registro delle decisioni non lo sono.*
+> ⭐ **And the premise did not end there: it became a rule.** Faced with the contradiction,
+> the user chose the narrow form — *the server does not throw out a **healthy** session, and every one of its
+> closes has a reason it can explain* — and not the wide one, which would have taken away the ban, the
+> refusal of credentials and the strictness rule. ⇒ **`DECISIONI.md` §4.1-bis**, ✅ 11 Aug 2026.
+> ⚠ *That is: the sentence was false as a description of what the server does **today**, and it was right as a
+> description of what the server **must** do. The two things resemble each other enough to pass
+> for the same, and in a decision register they are not.*
 >
-> ### La ragione che regge, ed è una misura
+> ### The reason that holds, and it is a measurement
 >
-> `[M]` **10 agosto 2026**, difetto 2 di **B11**: **Chrome butta un messaggio spedito subito prima
-> di chiudere la sessione.** Il `CONGEDO` della lettura B sarebbe dunque un **DEVE che un motore su
-> due non può onorare** — la forma che il rilievo **R1.4** ha già dichiarato difetto. La seconda
-> strada di §3.1 punto 3, invece, ⭐ **ha funzionato su tutt'e due i motori**, e su Firefox è
-> **l'unica** che porti il motivo (il congedo arriva per due strade diverse, una per motore).
+> `[M]` **10 Aug 2026**, defect 2 of **B11**: **Chrome throws away a message sent just before
+> closing the session.** The `CONGEDO` of reading B would therefore be a **MUST that one engine out of
+> two cannot honour** — the form that finding **R1.4** has already declared a defect. The second
+> route of §3.1 point 3, instead, ⭐ **worked on both engines**, and on Firefox it is
+> **the only one** that carries the reason (the farewell arrives by two different routes, one per engine).
 >
-> ### Dove la decisione è andata, e il prezzo è pagato per intero
+> ### Where the decision went, and the price is paid in full
 >
 > | | |
 > |---|---|
-> | `RCP.md` §4.2 | il divieto passa da *«sugli altri canali»* a **«su nessun canale, compreso quello di controllo»** |
-> | ⛔ `RCP.md` §8.1 | **l'eccezione scritta**: *chi ha ricevuto un `FIN` non è «chi chiude»*. ⚠ Senza di lei §4.2 vieta il byte e §8.1 lo impone: la decisione avrebbe **spostato** la contraddizione invece di chiuderla |
-> | ⭐ `banchi/01-b11-lancia.sh` | il caso `fin-sul-controllo` aveva già l'atteso *«muta»*: ⛔ **il banco applicava questa lettura senza che nessuna riga la dicesse**, ed è la ragione per cui la domanda era stata posta |
-> | ⛔ `src/pagina.html` **righe 431, 479, 514** | ⛔ **il prodotto fa oggi il CONTRARIO**: in tutt'e tre i punti, quando il server chiude il canale senza rispondere, la pagina chiama `congeda(ERRORE_PROTOCOLLO, …)` — cioè manda i nove byte. `[M]` 11 agosto 2026, letto nel sorgente. **Tre difetti da curare**, e la cura è togliere la chiamata lasciando l'`esito(...)` |
+> | `RCP.md` §4.2 | the ban goes from *«on the other channels»* to **«on no channel, the control one included»** |
+> | ⛔ `RCP.md` §8.1 | **the written exception**: *whoever has received a `FIN` is not «the one who closes»*. ⚠ Without it §4.2 forbids the byte and §8.1 imposes it: the decision would have **moved** the contradiction instead of closing it |
+> | ⭐ `banchi/01-b11-lancia.sh` | the case `fin-sul-controllo` already had the expected *«mute»*: ⛔ **the bench applied this reading without any line saying it**, and that is the reason why the question had been asked |
+> | ⛔ `src/pagina.html` **lines 431, 479, 514** | ⛔ **the product today does the OPPOSITE**: in all three places, when the server closes the channel without answering, the page calls `congeda(ERRORE_PROTOCOLLO, …)` — that is, it sends the nine bytes. `[M]` 11 Aug 2026, read in the source. **Three defects to cure**, and the cure is to remove the call leaving the `esito(...)` |
 >
-> ⚠ **E una cosa che la cura NON deve portarsi via**: quei tre punti chiamano `congeda()` anche per
-> **scrivere l'esito all'utente**. Chi toglie la riga senza guardare toglie anche la frase che dice
-> *«il server ha chiuso senza rispondere»*, e il sintomo diventa una pagina che non spiega niente —
-> che è precisamente ciò che §8.2 vieta.
+> ⚠ **And one thing the cure must NOT take away**: those three places call `congeda()` also to
+> **write the outcome to the user**. Whoever removes the line without looking also removes the sentence that says
+> *«the server closed without answering»*, and the symptom becomes a page that explains nothing —
+> which is precisely what §8.2 forbids.
 
-*Posta la notte del 10 agosto 2026, rilievo **R11.22**. Riguarda `RCP.md` §4.2 e §8.1. Le due
-letture qui sotto sono lasciate come stavano: ⛔ una decisione senza l'alternativa che ha scartato
-non si può rimettere in discussione quando i fatti cambiano.*
+*Asked on the night of 10 Aug 2026, finding **R11.22**. It concerns `RCP.md` §4.2 and §8.1. The two
+readings below are left as they were: ⛔ a decision without the alternative it discarded
+cannot be called back into question when the facts change.*
 
-**Il fatto.** §4.2 dice: *«un `FIN` su quello stream, da una qualunque delle due parti, chiude la
-sessione. Chi lo riceve **DEVE** considerarla finita; **NON DEVE** continuare a spedire **sugli
-altri canali**»*. Il canale di controllo è uno stream **bidirezionale**: il `FIN` del server chiude
-il verso del server, non quello della pagina. E §8.1 impone a chi chiude di mandare `CONGEDO`.
-⛔ **Il divieto scritto nomina «gli altri canali» e non nomina quello di controllo**, quindi le due
-letture sono tutt'e due conformi al testo di oggi.
+**The fact.** §4.2 says: *«a `FIN` on that stream, from either of the two parties, closes the
+session. Whoever receives it **MUST** consider it finished; it **MUST NOT** continue to send **on the
+other channels**»*. The control channel is a **bidirectional** stream: the server's `FIN` closes
+the server's direction, not the page's. And §8.1 requires whoever closes to send `CONGEDO`.
+⛔ **The written ban names «the other channels» and does not name the control one**, so the two
+readings both conform to today's text.
 
-| | **A — il silenzio** | **B — il congedo** |
+| | **A — silence** | **B — the farewell** |
 |---|---|---|
-| **la regola** | il `FIN` chiude la sessione **in tutt'e due i versi**: chi lo riceve non spedisce più niente, nemmeno sul controllo | il divieto è solo «sugli altri canali»: sul controllo la pagina **DEVE** ancora mandare il `CONGEDO` di §8.1, poi chiude |
-| ⛔ **il byte sul filo** | **nessuno.** Il motivo viaggia solo nel codice d'errore applicativo della chiusura della sessione (§3.1 punto 3) | **nove byte** sul canale di controllo, prima della chiusura: `00 0C` (`CONGEDO`, §7.1) · `00 00 00 03` · il motivo di §8.2 · `00 00` (dettaglio vuoto). Poi la stessa chiusura di A |
-| **chi la applica oggi** | ⛔ **il banco**: il caso `fin-sul-controllo` di B11 ha come atteso *«muta»*, e la pagina tace | nessuno |
-| **il prezzo** | §8.1 deve guadagnare l'eccezione scritta — *chi ha ricevuto un `FIN` non è «chi chiude»* — o continua a imporre un obbligo che §4.2 vieta | il server non può contare su quel byte: ⛔ `[M]` 10 agosto, **Chrome butta un messaggio spedito subito prima di chiudere la sessione** (difetto 2 di B11). Un `DEVE` che un motore su due non onora |
+| **the rule** | the `FIN` closes the session **in both directions**: whoever receives it sends nothing more, not even on the control | the ban is only «on the other channels»: on the control the page **MUST** still send the `CONGEDO` of §8.1, then close |
+| ⛔ **the byte on the wire** | **none.** The reason travels only in the application error code of the session close (§3.1 point 3) | **nine bytes** on the control channel, before the close: `00 0C` (`CONGEDO`, §7.1) · `00 00 00 03` · the reason of §8.2 · `00 00` (empty detail). Then the same close as A |
+| **who applies it today** | ⛔ **the bench**: the case `fin-sul-controllo` of B11 has as expected *«mute»*, and the page stays silent | nobody |
+| **the price** | §8.1 must gain the written exception — *whoever has received a `FIN` is not «the one who closes»* — or it keeps imposing an obligation that §4.2 forbids | the server cannot count on that byte: ⛔ `[M]` 10 Aug, **Chrome throws away a message sent just before closing the session** (defect 2 of B11). A `MUST` that one engine out of two does not honour |
 
-**Il caso concreto, ed è già successo.** È il punto in cui il 10 agosto è nato il **quarto difetto
-di B11**: su Chrome, dopo il `FIN` del server sul canale di controllo, **il posto di §8.2 `0x0F`
-non si liberava** perché da lì in poi non arrivava più un byte capace di liberarlo, e l'utente
-vedeva *«mi dice che sono già collegato, e non è vero»*. Con la lettura **B** quel byte esisterebbe
-— è il `CONGEDO` — e arriverebbe dove il server già guarda. Con la lettura **A** il posto si libera
-leggendo la capsula di chiusura, che è la cura che è stata scritta quella sera.
+**The concrete case, and it has already happened.** It is the point where on 10 Aug the **fourth defect
+of B11** was born: on Chrome, after the server's `FIN` on the control channel, **the slot of §8.2 `0x0F`
+was not freed** because from there on no byte capable of freeing it arrived any more, and the user
+saw *«mi dice che sono già collegato, e non è vero»*. With reading **B** that byte would exist
+— it is the `CONGEDO` — and it would arrive where the server already looks. With reading **A** the slot is freed
+by reading the close capsule, which is the cure that was written that evening.
 
-⭐ **Quale mi sembra più difendibile, e la ragione: A — il silenzio.** Non per il testo, che
-ammette tutt'e due, ma per due misure dello stesso giorno: la seconda strada di §3.1 punto 3 —
-il motivo dentro il codice di chiusura — **ha funzionato su tutt'e due i motori**, mentre il
-`CONGEDO` della lettura B **è stato visto sparire su Chrome**. ⛔ Un `DEVE` che un browser su due
-non può onorare è esattamente la forma che il rilievo R1.4 ha dichiarato difetto — *«era conforme
-al testo quanto il primo»*. ⚠ E il prezzo di A va pagato per intero: senza l'eccezione scritta in
-§8.1, A lascia in piedi la contraddizione invece di chiuderla.
+⭐ **Which one seems most defensible to me, and the reason: A — silence.** Not because of the text, which
+admits both, but because of two measurements from the same day: the second route of §3.1 point 3 —
+the reason inside the close code — **worked on both engines**, while the
+`CONGEDO` of reading B **was seen disappearing on Chrome**. ⛔ A `MUST` that one browser out of two
+cannot honour is exactly the form that finding R1.4 declared a defect — *«era conforme
+al testo quanto il primo»*. ⚠ And the price of A must be paid in full: without the exception written in
+§8.1, A leaves the contradiction standing instead of closing it.
 
-**Come si chiude:** una parola — *«silenzio»* o *«congedo»*. Poi §4.2 dice se il `FIN` ricevuto
-chiuda anche il verso di chi lo riceve, e §8.1 recepisce l'eccezione o la perde.
+**How it is closed:** one word — *«silenzio»* or *«congedo»*. Then §4.2 says whether the received `FIN`
+also closes the direction of whoever receives it, and §8.1 takes in the exception or loses it.
 
-### 7.15 ✅ Il congedo di §8.1 vale **se il canale è ancora utilizzabile**
+### 7.15 ✅ The farewell of §8.1 holds **if the channel is still usable**
 
-> ## ✅ **LA CONDIZIONE** — decisa dall'utente l'**11 agosto 2026**
+> ## ✅ **THE CONDITION** — decided by the user on **11 Aug 2026**
 >
 > *«la soluzione più logica è "se si può". Se una connessione cade nessuno può dire al server
 > "chiudo perché ho finito"»*
 >
-> ⛔ **L'obbligo del `CONGEDO` sul canale di controllo cade quando il canale non è utilizzabile.**
-> Quel che non cade mai è il motivo dentro il **codice d'errore applicativo della chiusura**
-> (`RCP.md` §3.1 punto 3), che viaggia nella chiusura stessa e parte anche a canale morto.
+> ⛔ **The obligation of the `CONGEDO` on the control channel falls when the channel is not usable.**
+> What never falls is the reason inside the **application error code of the close**
+> (`RCP.md` §3.1 point 3), which travels in the close itself and leaves even with a dead channel.
 >
-> ⭐ **E la ragione dell'utente è la ragione giusta, senza correzioni**: un `DEVE` che non si può
-> rispettare non è una regola. `RCP.md` §0 lo dice di sé — *se una riga qui è ambigua, è un difetto
-> di questo file* — e questa lo era: §8.1 lo imponeva senza condizioni, §3.1 punto 2 con la
-> condizione, ⛔ e **un'implementazione conforme all'una era in violazione dell'altra**.
+> ⭐ **And the user's reason is the right reason, without corrections**: a `MUST` that cannot be
+> respected is not a rule. `RCP.md` §0 says it of itself — *if a line here is ambiguous, it is a defect
+> of this file* — and this one was: §8.1 imposed it without conditions, §3.1 point 2 with the
+> condition, ⛔ and **an implementation conforming to one was in violation of the other**.
 >
-> ### Dove è andata, e che cosa ha chiuso
+> ### Where it went, and what it closed
 >
 > | | |
 > |---|---|
-> | `RCP.md` §8.1 | la riga normativa porta la condizione dentro, e il riquadro dice perché |
-> | ⭐ **un rosso su codice giusto** | **B5** e **B11** applicavano già il condizionale (rilievo R3.3): un banco scritto sulla forma assoluta **avrebbe bocciato un server corretto** ogni volta che la violazione arriva su uno stream unidirezionale col controllo già finito |
-> | ⚠ **e non indebolisce §4.1-bis** | *ogni chiusura del server ha un motivo che sa spiegare*, decisa lo stesso giorno: il motivo arriva comunque. ⛔ Quel che si perde è **il byte sul canale morto**, cioè un byte che non partiva |
+> | `RCP.md` §8.1 | the normative line carries the condition inside, and the box says why |
+> | ⭐ **a red on correct code** | **B5** and **B11** already applied the conditional (finding R3.3): a bench written on the absolute form **would have failed a correct server** every time the violation arrives on a unidirectional stream with the control already finished |
+> | ⚠ **and it does not weaken §4.1-bis** | *every close of the server has a reason it can explain*, decided the same day: the reason arrives anyway. ⛔ What is lost is **the byte on the dead channel**, that is a byte that did not leave |
 >
-> ⛔ **Le due decisioni dell'11 agosto non si sostituiscono**: §7.15 dice **quando** l'obbligo cade,
-> §7.14 dice **chi** non è tenuto affatto. Dopo un `FIN` ricevuto il canale, nel verso di chi lo ha
-> ricevuto, **è ancora utilizzabile** — quindi senza §7.14 la condizione di §7.15 non lo salverebbe.
+> ⛔ **The two decisions of 11 Aug do not replace each other**: §7.15 says **when** the obligation falls,
+> §7.14 says **who** is not bound at all. After a received `FIN` the channel, in the direction of whoever
+> received it, **is still usable** — so without §7.14 the condition of §7.15 would not save it.
 
-*Posta la notte del 10 agosto 2026, rilievo **R11.23**. Riguarda `RCP.md` §8.1 e §3.1 punto 2. Le
-due letture qui sotto restano come stavano.*
+*Asked on the night of 10 Aug 2026, finding **R11.23**. It concerns `RCP.md` §8.1 and §3.1 point 2. The
+two readings below stay as they were.*
 
-**Il fatto.** §8.1: *«Chi chiude **DEVE** mandare `CONGEDO` con un motivo prima di chiudere la
-sessione»*, e l'unica eccezione dichiarata è `RESPINTO`. §3.1 punto 2, per la stessa cosa:
-*«**DEVE** mandare `CONGEDO` (§8) con il motivo, sul canale di controllo, **se il canale di
-controllo è ancora utilizzabile**»*. ⛔ Un'implementazione che chiude **senza** congedo perché il
-canale è rotto è **conforme a §3.1 e in violazione di §8.1**, nello stesso documento.
+**The fact.** §8.1: *«Whoever closes **MUST** send `CONGEDO` with a reason before closing the
+session»*, and the only declared exception is `RESPINTO`. §3.1 point 2, for the same thing:
+*«it **MUST** send `CONGEDO` (§8) with the reason, on the control channel, **if the control
+channel is still usable**»*. ⛔ An implementation that closes **without** a farewell because the
+channel is broken is **conforming to §3.1 and in violation of §8.1**, in the same document.
 
-| | **A — l'obbligo è incondizionato** | **B — vale la condizione di §3.1** |
+| | **A — the obligation is unconditional** | **B — the condition of §3.1 holds** |
 |---|---|---|
-| **la regola** | chi chiude manda `CONGEDO` **sempre**, tranne dopo `RESPINTO` | l'obbligo cade quando il canale di controllo non è utilizzabile; il motivo passa comunque dal punto 3 |
-| ⛔ **il byte sul filo** | i nove byte del `CONGEDO` **anche** quando il controllo è già chiuso o rotto — cioè un byte che spesso non può partire | **nessun byte** in quel caso: resta il solo codice d'errore applicativo della chiusura (§3.1 punto 3) |
-| **chi la applica oggi** | nessuno | ⛔ **il banco**: B5 e B11 verificano le chiusure *«nei tre punti di §3.1 col secondo condizionale»* (`FASI.md` §01-filo-nudo, rilievo R3.3) |
-| **il prezzo** | un banco scritto su §8.1 **boccia un server corretto** ogni volta che la violazione arriva su uno stream unidirezionale | §8.1 perde la forma assoluta, e va riscritta con la condizione dentro — una frase |
+| **the rule** | whoever closes sends `CONGEDO` **always**, except after `RESPINTO` | the obligation falls when the control channel is not usable; the reason passes anyway through point 3 |
+| ⛔ **the byte on the wire** | the nine bytes of the `CONGEDO` **even** when the control is already closed or broken — that is, a byte that often cannot leave | **no byte** in that case: only the application error code of the close remains (§3.1 point 3) |
+| **who applies it today** | nobody | ⛔ **the bench**: B5 and B11 check the closes *«at the three points of §3.1 with the second conditional»* (`FASI.md` §01-filo-nudo, finding R3.3) |
+| **the price** | a bench written on §8.1 **fails a correct server** every time the violation arrives on a unidirectional stream | §8.1 loses the absolute form, and must be rewritten with the condition inside — one sentence |
 
-**Il caso concreto.** Una violazione arriva su uno **stream unidirezionale** dopo che il canale di
-controllo è già finito: con **A** il server deve mandare un `CONGEDO` su un canale che non c'è più,
-e il banco che pretende tutt'e tre i punti di §3.1 **dà rosso sul codice giusto** — è il rilievo
-R3.3, già pagato una volta su questo stesso banco.
+**The concrete case.** A violation arrives on a **unidirectional stream** after the control
+channel has already finished: with **A** the server must send a `CONGEDO` on a channel that no longer exists,
+and the bench that demands all three points of §3.1 **gives red on the correct code** — it is finding
+R3.3, already paid once on this same bench.
 
-⭐ **Quale mi sembra più difendibile, e la ragione: B — la condizione.** Un `DEVE` che non si può
-rispettare non è una regola, è un difetto del documento (`RCP.md` §0: *«se una riga qui è ambigua,
-è un difetto di questo file»*), e la seconda strada non fallisce mai: il motivo viaggia nel codice
-di chiusura anche quando il canale è morto. ⛔ **E costa una frase in §8.1, zero byte sul filo.**
+⭐ **Which one seems most defensible to me, and the reason: B — the condition.** A `MUST` that cannot be
+respected is not a rule, it is a defect of the document (`RCP.md` §0: *«if a line here is ambiguous,
+it is a defect of this file»*), and the second route never fails: the reason travels in the close
+code even when the channel is dead. ⛔ **And it costs one sentence in §8.1, zero bytes on the wire.**
 
-⚠ **Le due domande si toccano e non si sostituiscono.** Rispondere *«vale la condizione»* a §7.15
-**non** chiude §7.14: dopo un `FIN` ricevuto il canale di controllo, **nel verso di chi lo ha
-ricevuto**, è ancora utilizzabile — ed è esattamente il punto che §7.14 chiede.
+⚠ **The two questions touch and do not replace each other.** Answering *«the condition holds»* to §7.15
+does **not** close §7.14: after a received `FIN` the control channel, **in the direction of whoever
+received it**, is still usable — and it is exactly the point that §7.14 asks.
 
-### 7.16 ✅ La funzione di banco resta 🔸 — e ⭐ **fuori dal prodotto consegnato**
+### 7.16 ✅ The bench function stays 🔸 — and ⭐ **outside the delivered product**
 
-> ## ✅ **DUE CASI DISTINTI** — deciso dall'utente l'**11 agosto 2026**
+> ## ✅ **TWO DISTINCT CASES** — decided by the user on **11 Aug 2026**
 >
 > *«Nessun quadratino: l'utente deve vedere il desktop senza artefatti, come se fosse davanti al
-> monitor del PC» → e poi, messo davanti al prezzo: «distinguiamo i 2 casi: si tiene quello che
+> monitor del PC» → and then, faced with the price: «distinguiamo i 2 casi: si tiene quello che
 > serve per i test, ma poi nel prodotto finale si fa pulizia».*
 >
-> ⛔ **Il principio, ed è più grande della domanda che era stata posta**: sullo schermo dell'utente
-> non compare **mai** niente che non sia il suo desktop. Non «spento per predefinito», non «dietro
-> un interruttore»: **assente**. Chi si collega deve vedere quel che vedrebbe stando davanti al
-> monitor del PC, e nient'altro.
+> ⛔ **The principle, and it is bigger than the question that had been asked**: on the user's screen
+> **nothing** that is not his desktop **ever** appears. Not «off by default», not «behind
+> a switch»: **absent**. Whoever connects must see what he would see sitting in front of the
+> PC's monitor, and nothing else.
 >
-> ⭐ **E la funzione di banco sopravvive, dall'altra parte del confine**: serve a **tarare il
-> cronometro** del ritardo alla fase 3 — si inietta un ritardo noto e si verifica che la mediana
-> salga di esattamente quello. ⛔ *«Un banco che non lo fa non sa di misurare»*
-> (`web/rapporti/S4-ritardo-disegno.md` §4.2, controllo P1): toglierla del tutto avrebbe lasciato
-> il numero più importante del progetto — il tetto dei 50 ms — **senza un modo di sapere se è
-> vero**.
+> ⭐ **And the bench function survives, on the other side of the border**: it serves to **calibrate the
+> stopwatch** of the delay at phase 3 — a known delay is injected and one checks that the median
+> rises by exactly that. ⛔ *«A bench that does not do it does not know it is measuring»*
+> (`web/rapporti/S4-ritardo-disegno.md` §4.2, control P1): removing it entirely would have left
+> the most important number of the project — the 50 ms cap — **without a way of knowing whether it is
+> true**.
 >
-> ### Che cosa vuol dire, in concreto
+> ### What it means, concretely
 >
 > | | |
 > |---|---|
-> | **la marca resta 🔸** | non era una decisione dell'utente, e ⛔ **si può togliere senza tornare da lui**. Quel che l'utente ha deciso è il **confine**, non il messaggio |
-> | ⛔ **il prodotto consegnato non la contiene** | non compilata, non raggiungibile, **non presente nel binario**. ⚠ *«Spenta»* non basta più: era la forma di prima, e questa decisione la sostituisce |
-> | **il banco sì** | la costruzione di prova la contiene, e i due tipi `0x000F`/`0x0010` restano in `RCP.md` §7.5 come **funzione di banco dichiarata**, non come funzione del prodotto |
-> | ⛔ **e la differenza si misura** | *«non c'è»* e *«c'è ed è spenta»* hanno lo stesso aspetto da fuori: si distinguono **cercando le marche dentro il binario consegnato**, come fa già `banchi/01-p1-prodotto.sh` con le sue otto marche. Senza quella prova, questa decisione è una buona intenzione |
+> | **the mark stays 🔸** | it was not a user's decision, and ⛔ **it can be removed without going back to him**. What the user decided is the **border**, not the message |
+> | ⛔ **the delivered product does not contain it** | not compiled, not reachable, **not present in the binary**. ⚠ *«Off»* is no longer enough: it was the earlier form, and this decision replaces it |
+> | **the bench does** | the test build contains it, and the two types `0x000F`/`0x0010` stay in `RCP.md` §7.5 as a **declared bench function**, not as a product function |
+> | ⛔ **and the difference is measured** | *«it is not there»* and *«it is there and it is off»* look the same from outside: they are told apart **by searching for the marks inside the delivered binary**, as `banchi/01-p1-prodotto.sh` already does with its eight marks. Without that proof, this decision is a good intention |
 >
-> ### ⛔ Dove morde, e non è oggi
+> ### ⛔ Where it bites, and it is not today
 >
-> **Fase 13 — il confezionamento.** È lì che nasce il binario che si installa, ed è lì che questa
-> decisione si rispetta o si perde. ⚠ *Scritta anche in `PIANO.md` fase 13 e in `RCP.md` §7.5,
-> perché una regola che vale fra undici fasi e sta scritta in un posto solo è una regola che nessuno
-> troverà il giorno che serve.*
+> **Phase 13 — the packaging.** That is where the binary that gets installed is born, and that is where this
+> decision is respected or lost. ⚠ *Written also in `PIANO.md` phase 13 and in `RCP.md` §7.5,
+> because a rule that holds eleven phases from now and is written in one place only is a rule that nobody
+> will find on the day it is needed.*
 >
-> ⚠ **E una cosa che questa decisione NON dice**: che la funzione di banco fosse un problema. Nasce
-> **spenta**, e `banchi/01-b5-violazioni.py` verifica che a funzione spenta il server **rifiuti**
-> dichiarando `FUNZIONE_SPENTA`. Il difetto non c'era: l'utente ha alzato l'asticella da *«non si
-> vede»* a *«non c'è»*.
+> ⚠ **And one thing this decision does NOT say**: that the bench function was a problem. It is born
+> **off**, and `banchi/01-b5-violazioni.py` checks that with the function off the server **refuses**
+> declaring `FUNZIONE_SPENTA`. The defect was not there: the user raised the bar from *«it is not
+> seen»* to *«it is not there»*.
 
-*Posta la notte del 10 agosto 2026, rilievo **R11.15**. La riga sta in §1.5 riga 26, ed è 🔸 — non
-✅. La domanda com'era posta resta qui sotto.*
+*Asked on the night of 10 Aug 2026, finding **R11.15**. The row is in §1.5 row 26, and it is 🔸 — not
+✅. The question as it was asked stays below.*
 
-**Il fatto.** `RCP.md` §7.5 aggiunge al protocollo **due tipi di messaggio** — `BANCO_MARCA`
-(`0x000F`) e `BANCO_ESITO` (`0x0010`) — e §7.5 dichiara di venire dal **rilievo R3.4** della
-revisione del banco, con la motivazione da `web/rapporti/S4-ritardo-disegno.md` §5.3. ⛔ **Non c'è
-né una frase né una voce**, mentre le decisioni che l'utente ha pronunciato davvero (§1.6, §1.8,
-§1.9) portano qui la frase virgolettata con la data. `FASI.md` §01-filo-nudo la marcava ✅, cioè
-*«deciso dall'utente»*: corretta a 🔸 il 10 agosto.
+**The fact.** `RCP.md` §7.5 adds to the protocol **two message types** — `BANCO_MARCA`
+(`0x000F`) and `BANCO_ESITO` (`0x0010`) — and §7.5 declares that it comes from **finding R3.4** of the
+bench review, with the motivation from `web/rapporti/S4-ritardo-disegno.md` §5.3. ⛔ **There is
+neither a sentence nor an entry**, while the decisions the user really pronounced (§1.6, §1.8,
+§1.9) carry here the quoted sentence with the date. `FASI.md` §01-filo-nudo marked it ✅, that is
+*«decided by the user»*: corrected to 🔸 on 10 Aug.
 
-| | **A — era tua (✅)** | **B — è derivata (🔸)** |
+| | **A — it was yours (✅)** | **B — it is derived (🔸)** |
 |---|---|---|
-| **che cosa cambia** | non si tocca senza tornare da te | *«si corregge senza discussione»* |
-| ⛔ **il byte** | nessuno **oggi**: i due tipi ci sono in tutt'e due i casi. Cambia **la reversibilità** — con A i `0x000F`/`0x0010` restano in RCP/1 per sempre, con B si possono togliere | |
-| **il peso** | quei due tipi hanno **consumato la clausola di §9** — *«oggi non esiste nessuna implementazione»* — che `RCP.md` §12 dichiara essere stata **l'ultima occasione** per aggiungere tipi di messaggio | |
+| **what changes** | it is not touched without going back to you | *«it is corrected without discussion»* |
+| ⛔ **the byte** | none **today**: the two types are there in both cases. What changes is **reversibility** — with A the `0x000F`/`0x0010` stay in RCP/1 forever, with B they can be removed | |
+| **the weight** | those two types **used up the clause of §9** — *«today no implementation exists»* — which `RCP.md` §12 declares to have been **the last opportunity** to add message types | |
 
-**Il caso concreto.** Il giorno in cui quei due tipi diano fastidio — un'implementazione che deve
-riconoscerli per essere conforme, in un ambiente dove *dipingere un quadratino sul desktop di
-qualcuno* non è accettabile nemmeno dietro un interruttore — con **B** si tolgono, con **A** no. ⚠ E
-c'è la metà che conta anche se la risposta è *«fate voi»*: **il tuo protocollo porta due tipi che
-tu non hai chiesto**, e questa riga esiste perché tu lo sappia.
+**The concrete case.** The day those two types become a nuisance — an implementation that must
+recognise them to be conforming, in an environment where *painting a small square on someone's
+desktop* is not acceptable even behind a switch — with **B** they are removed, with **A** they are not. ⚠ And
+there is the half that counts even if the answer is *«up to you»*: **your protocol carries two types that
+you did not ask for**, and this row exists so that you know it.
 
-⭐ **Quale mi sembra più difendibile, e la ragione: B — 🔸.** La provenienza è dichiarata da §7.5
-stessa e non è una tua frase; marcarla ✅ le darebbe una protezione che nessuna misura le ha dato
-(`LEZIONI.md` §2.3-quater). ⛔ Ma è l'unica delle tre che **solo tu** puoi chiudere davvero, perché
-la domanda è *se l'hai detta*.
+⭐ **Which one seems most defensible to me, and the reason: B — 🔸.** The provenance is declared by §7.5
+itself and it is not a sentence of yours; marking it ✅ would give it a protection that no measurement gave it
+(`LEZIONI.md` §2.3-quater). ⛔ But it is the only one of the three that **only you** can really close, because
+the question is *whether you said it*.
 
-**Come si chiude:** *«sì, era mia»* ⇒ diventa ✅ e §1.5 riga 26 riceve la frase con la data.
-*«no»* ⇒ resta 🔸 dov'è, e non se ne parla più.
+**How it is closed:** *«yes, it was mine»* ⇒ it becomes ✅ and §1.5 row 26 receives the sentence with the date.
+*«no»* ⇒ it stays 🔸 where it is, and it is not talked about any more.
 
-### 7.18 ✅ **Firefox per Android è NON SUPPORTATO** — e il percorso MSE resta come prova
+### 7.18 ✅ **Firefox for Android is NOT SUPPORTED** — and the MSE path stays as proof
 
-*Aperta il 21 agosto 2026, e discende da §0.1-bis senza esserne risolta.*
+*Opened on 21 Aug 2026, and it descends from §0.1-bis without being resolved by it.*
 
-⛔ **I fatti, misurati**: Firefox per Android non ha WebCodecs — né `VideoDecoder` né
-`AudioDecoder` — quindi oggi REMOTIX lì **non disegna un pixel**, e non è una questione di codec
-(la strada verso i pixel è una sola in `pagina.html`). ⭐ Ha però WebTransport e decodifica H.264
-**in hardware** via MSE: la capacità c'è, manca il modo di darle i byte.
+⛔ **The facts, measured**: Firefox for Android does not have WebCodecs — neither `VideoDecoder` nor
+`AudioDecoder` — so today REMOTIX there **does not draw a pixel**, and it is not a codec question
+(the route to the pixels is a single one in `pagina.html`). ⭐ It does however have WebTransport and decodes H.264
+**in hardware** via MSE: the capability is there, what is missing is the way to give it the bytes.
 
-⛔ **Il prezzo, misurato** (`fasi/06`, banco `07-b57`): MSE costa **+225 ms** su Firefox e
-**+415 ms** su Chrome sulla mediana, con una coda di riproduzione di 310–715 ms, contro il tetto
-dichiarato di **50 ms**. ⚠ E l'inseguimento non salva: 40 salti su 150 fotogrammi.
+⛔ **The price, measured** (`fasi/06`, bench `07-b57`): MSE costs **+225 ms** on Firefox and
+**+415 ms** on Chrome on the median, with a playback queue of 310–715 ms, against the declared
+cap of **50 ms**. ⚠ And chasing does not save it: 40 jumps over 150 frames.
 
-| la lettura | che lavoro produce |
+| the reading | what work it produces |
 |---|---|
-| *«l'utente Android deve accettare le scarse performance di Firefox»* presuppone che lì REMOTIX funzioni | ⇒ **si scrive** il percorso MSE (muxer fMP4 nel client, percorso audio a parte), e si dichiara il ritardo di un'altra classe |
-| *«REMOTIX non può rincorrere i bug dei software»* | ⇒ **non si scrive niente**: Firefox Android è dichiarato non supportato finché Mozilla non porta WebCodecs, e lì si usa Chrome |
+| *«l'utente Android deve accettare le scarse performance di Firefox»* presupposes that REMOTIX works there | ⇒ the MSE path **is written** (fMP4 muxer in the client, separate audio path), and the delay of another class is declared |
+| *«REMOTIX non può rincorrere i bug dei software»* | ⇒ **nothing is written**: Firefox Android is declared not supported until Mozilla brings WebCodecs, and there Chrome is used |
 
-⇒ **Le due letture della stessa frase portavano a lavori opposti**, quindi non si è dedotto: si è
-chiesto. ⚠ E c'era un fatto che pesava dall'altra parte: Mozilla dichiara il supporto mobile
-*«still missing, which we're currently working on»*, cioè il problema potrebbe scadere da solo.
+⇒ **The two readings of the same sentence led to opposite work**, so it was not deduced: it was
+asked. ⚠ And there was a fact weighing on the other side: Mozilla declares mobile support
+*«still missing, which we're currently working on»*, that is the problem could expire by itself.
 
-> ### ✅ **21 agosto 2026, dall'utente: si costruisce il percorso MSE.**
+> ### ✅ **21 Aug 2026, from the user: the MSE path is built.**
 >
-> ⚠ E la ragione per cui §0.1-bis non lo vieta sta nella differenza fra i due casi: quel principio
-> parla di un motore che **rende peggio**. Qui il motore non rende peggio, ⛔ **non apre affatto** —
-> l'utente lo ha detto con parole sue: *«su Android Chrome funziona bene, è Firefox a non
-> funzionare per nulla (non apre il desktop remoto)»*. ⇒ Non è rincorrere un difetto di
-> prestazioni: è dare al prodotto una strada dove non ne ha nessuna.
+> ⚠ And the reason why §0.1-bis does not forbid it lies in the difference between the two cases: that principle
+> speaks of an engine that **performs worse**. Here the engine does not perform worse, ⛔ **it does not open at all** —
+> the user said it in his own words: *«su Android Chrome funziona bene, è Firefox a non
+> funzionare per nulla (non apre il desktop remoto)»*. ⇒ It is not chasing a performance
+> defect: it is giving the product a route where it has none.
 >
-> ⭐ **E l'audio non è da scrivere**: la pagina ripiega già su `pcm` quando `AudioDecoder` manca
-> (§4.3 lo impone a entrambi ed è la base sempre disponibile). ⇒ Il lavoro è **solo il video**.
+> ⭐ **And the audio does not need writing**: the page already falls back to `pcm` when `AudioDecoder` is missing
+> (§4.3 imposes it on both and it is the always available base). ⇒ The work is **only the video**.
 >
-> ⭐ **E il protocollo non si tocca**: sul filo passano gli stessi fotogrammi Annex-B di sempre.
-> Quel che cambia è **come il client li disegna**, e il server non se ne accorge.
+> ⭐ **And the protocol is not touched**: the same Annex-B frames as always pass on the wire.
+> What changes is **how the client draws them**, and the server does not notice.
 
-> ### ⛔⛔ E LA SERA STESSA LA DECISIONE È CAMBIATA — ✅ 21 agosto 2026, dopo averla provata
+> ### ⛔⛔ AND THE SAME EVENING THE DECISION CHANGED — ✅ 21 Aug 2026, after trying it
 >
-> *L'utente: «Niente da fare, troppi problemi: **disegno del desktop irregolare, input
+> *The user: «Niente da fare, troppi problemi: **disegno del desktop irregolare, input
 > imprevedibile**, dichiaro Firefox per Android incompatibile con REMOTIX».*
 >
-> ⚠ **E la strada funziona**, misurato: il desktop si vede vivo e i tocchi arrivano al server
-> (`fasi/06`, banco `07-b59` su un emulatore con Firefox 154 per Android). ⛔ Ma *«funziona»* non
-> era il traguardo. Il traguardo è **§0.1-bis**: un'esperienza vicina a quella di una sessione
-> locale. A un `<video>` che riproduce un flusso non si può chiedere di reagire come un
-> decodificatore comandato a mano — il ritardo è di un'altra classe e il ritmo non è il nostro.
+> ⚠ **And the route works**, measured: the desktop is seen alive and the touches reach the server
+> (`fasi/06`, bench `07-b59` on an emulator with Firefox 154 for Android). ⛔ But *«works»* was not
+> the target. The target is **§0.1-bis**: an experience close to that of a local
+> session. A `<video>` that plays a stream cannot be asked to react like a
+> decoder driven by hand — the delay is of another class and the rate is not ours.
 >
-> ⇒ **Che cosa cambia nel prodotto**: su un browser senza WebCodecs la pagina **dichiara che non si
-> può** invece di dare mezza esperienza. `VIA_MSE` non si accende più da sola: solo con
-> `?disegno=mse`, che è un interruttore da banco.
+> ⇒ **What changes in the product**: on a browser without WebCodecs the page **declares that it cannot
+> be done** instead of giving half an experience. `VIA_MSE` no longer switches on by itself: only with
+> `?disegno=mse`, which is a bench switch.
 >
-> ⭐ **Perché il codice resta**: è misurabile, e finché Mozilla non porta WebCodecs su Android è
-> **l'unica prova che il problema non era nostro**. ⛔ Alla fase 13 si decide se buttarlo — §7.16,
+> ⭐ **Why the code stays**: it is measurable, and until Mozilla brings WebCodecs to Android it is
+> **the only proof that the problem was not ours**. ⛔ At phase 13 it is decided whether to throw it away — §7.16,
 > «nel prodotto finale si fa pulizia».
 >
-> ⚠ **E resta scritto quanto è costata**: sei giri di prove sul telefono dell'utente e una giornata
-> di lavoro, per una strada che non entra nel prodotto. ⭐ Non è tempo buttato del tutto — ne sono
-> usciti `07-b58`, `07-b59` e §1.19 di `LEZIONI.md` — ma la lezione vera è che **la domanda «quanto
-> renderà?» andava misurata prima di costruire**, e il numero c'era già: `07-b57`, centinaia di
-> millisecondi contro un tetto di 50.
+> ⚠ **And how much it cost stays written**: six rounds of tests on the user's phone and a day
+> of work, for a route that does not enter the product. ⭐ It is not time entirely thrown away — out of it
+> came `07-b58`, `07-b59` and §1.19 of `LEZIONI.md` — but the real lesson is that **the question «how much
+> will it deliver?» had to be measured before building**, and the number was already there: `07-b57`, hundreds of
+> milliseconds against a cap of 50.
 
-### 7.20 ✅ **I motori supportati, dichiarati dall'utente** — 22 agosto 2026
+### 7.20 ✅ **The supported engines, declared by the user** — 22 Aug 2026
 
 > *«Chrome e Firefox su Linux, e Chrome su Android sono OK. Firefox per Android è uscito dal
-> progetto.»* — e subito dopo: *«**Anche Chrome per Windows è OK**.»*
+> progetto.»* — and right after: *«**Anche Chrome per Windows è OK**.»*
 
-⭐ **È l'elenco che il progetto non aveva ancora**, dato dall'utente sul prodotto vivo e non dedotto
-da una misura:
+⭐ **It is the list the project did not have yet**, given by the user on the live product and not deduced
+from a measurement:
 
-| dove | motore | stato |
+| where | engine | status |
 |---|---|---|
 | **Linux** | Chrome | ✅ **OK** |
 | **Linux** | Firefox | ✅ **OK** |
 | **Windows** | Chrome | ✅ **OK** |
-| **Android** | Chrome | ✅ **OK** — e §7.19 lo dettaglia: *«esperienza completa, audio e video perfetti»* |
-| **Android** | Firefox | ⛔ **FUORI DAL PROGETTO** — §7.18 |
+| **Android** | Chrome | ✅ **OK** — and §7.19 details it: *«esperienza completa, audio e video perfetti»* |
+| **Android** | Firefox | ⛔ **OUT OF THE PROJECT** — §7.18 |
 
-⚠ **E quel che l'elenco NON dice, scritto perché non lo si deduca**: **Firefox su Windows** non è
-nominato, e nessuno l'ha mai provato. ⛔ Non è «supportato» e non è «escluso»: è **non provato**, e
-va scritto così finché qualcuno non lo apre.
+⚠ **And what the list does NOT say, written so that it is not deduced**: **Firefox on Windows** is not
+named, and nobody has ever tried it. ⛔ It is not «supported» and it is not «excluded»: it is **not tried**, and
+it must be written so until someone opens it.
 
-⭐ **E il confine di §0.1-bis regge**: *«pienamente supportato»* vuol dire **funziona, e sai in che
-condizioni** — non *uguale dappertutto*. Su Firefox l'incolla col mouse costa un clic **di Firefox**
-(§5-ter.9), e resta vero.
+⭐ **And the border of §0.1-bis holds**: *«fully supported»* means **it works, and you know under what
+conditions** — not *the same everywhere*. On Firefox pasting with the mouse costs a click **of Firefox**
+(§5-ter.9), and that stays true.
 
-### 7.19 ✅ **Chrome per Android è PIENAMENTE SUPPORTATO** — giudizio dell'utente, 21 agosto 2026 sera
+### 7.19 ✅ **Chrome for Android is FULLY SUPPORTED** — user's judgement, 21 Aug 2026 evening
 
-*L'utente, dopo aver usato una sessione vera dal telefono: «**Chrome su Android offre un'esperienza
+*The user, after using a real session from the phone: «**Chrome su Android offre un'esperienza
 completa: audio e video perfetti**».*
 
-⭐ **È il gemello di §7.18, ed è la ragione per cui quella si poteva prendere**: dichiarare un motore
-non supportato è sostenibile solo se sulla stessa piattaforma ce n'è uno che rende. Su Android
-c'è, ed è giudicato — non dedotto dai contatori.
+⭐ **It is the twin of §7.18, and it is the reason why that one could be taken**: declaring an engine
+not supported is sustainable only if on the same platform there is one that performs. On Android
+there is, and it is judged — not deduced from the counters.
 
 | | |
 |---|---|
-| che cosa chiude | ⛔ **l'ultimo difetto vero della fase 7**: la coda dell'audio a 400–420 ms. ⇒ `fasi/07-audio-e-appunti.md` §9.7 e §8 |
-| ⚠ il numero resta scritto | 401 → 421 ms, `[M]` sulla prima sessione Android. Smette di essere un **difetto**, non di essere una **misura**: il metro è I8, e per l'audio I8 è l'orecchio |
-| in che condizioni | Samsung DeX, Android 16, **rete di casa**, codec negoziato **HEVC in hardware**. ⏳ Il datagram su rete non locale resta non misurato |
+| what it closes | ⛔ **the last real defect of phase 7**: the audio queue at 400–420 ms. ⇒ `fasi/07-audio-e-appunti.md` §9.7 and §8 |
+| ⚠ the number stays written | 401 → 421 ms, `[M]` on the first Android session. It stops being a **defect**, not being a **measurement**: the yardstick is I8, and for audio I8 is the ear |
+| under what conditions | Samsung DeX, Android 16, **home network**, negotiated codec **HEVC in hardware**. ⏳ The datagram on a non-local network stays unmeasured |
 
-⚠ **E questo è §0.1-bis applicato per intero**: *«pienamente supportato»* qui vuol dire **funziona, e
-sai in che condizioni** — non *uguale dappertutto*.
+⚠ **And this is §0.1-bis applied in full**: *«fully supported»* here means **it works, and
+you know under what conditions** — not *the same everywhere*.
 
-> ### ⛔ E UN'ORA DOPO L'UTENTE HA PRECISATO, dal PC Windows — la riga «che cosa chiude» era troppo generosa
+> ### ⛔ AND AN HOUR LATER THE USER CLARIFIED, from the Windows PC — the row «what it closes» was too generous
 >
 > *«Il ritardo di 400 ms tra audio e video in generale te lo confermo.»*
 >
-> ⛔ **Il difetto non è chiuso, e non è di una piattaforma**: è `AUDIO_CUSCINO_MS = 250` in
-> `pagina.html` (alzato da 60 il 17 agosto per togliere i buchi, col prezzo dichiarato nel
-> commento) più la catena di cattura, codifica e decodifica. ⇒ `fasi/07-audio-e-appunti.md` §8.
+> ⛔ **The defect is not closed, and it is not a platform's**: it is `AUDIO_CUSCINO_MS = 250` in
+> `pagina.html` (raised from 60 on 17 Aug to remove the gaps, with the price declared in the
+> comment) plus the chain of capture, encoding and decoding. ⇒ `fasi/07-audio-e-appunti.md` §8.
 >
-> ⭐ **Quel che questa decisione conserva**: su Chrome per Android **ogni flusso è pulito** — zero
-> perdite su ogni anello, `[M]` due volte. ⚠ Quel che **non** conserva è la lettura *«e quindi non
-> c'è più niente da curare sull'audio»*: un difetto di **sincronia** non appare in nessun contatore
-> che guardi un flusso per volta, e questa è la seconda volta in cinque giorni che questa fase
-> produce quattro anelli verdi e un'esperienza sbagliata (`LEZIONI.md` §2.7).
+> ⭐ **What this decision keeps**: on Chrome for Android **every stream is clean** — zero
+> losses on every link, `[M]` twice. ⚠ What it does **not** keep is the reading *«and so there is
+> nothing more to cure on the audio»*: a **synchronisation** defect does not appear in any counter
+> that looks at one stream at a time, and this is the second time in five days that this phase
+> produces four green links and a wrong experience (`LEZIONI.md` §2.7).
 
 ### 7.17 ✅ The session that never opens the control channel: **5 seconds**
 
