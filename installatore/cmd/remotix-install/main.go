@@ -89,9 +89,12 @@ func (c *comuni) fidati() (*motore.Catalogo, *motore.Fiducia, error) {
 }
 
 // motore: the engine on the real machine, with the events printed for whoever is watching.
+// Before an operation is open (the plan's simulation) the engine's waits are printed too.
 func (c *comuni) motore() *motore.Motore {
-	return &motore.Motore{Amb: motore.AmbienteVero(), Cartella: c.operazioni, Fonti: c.fonti(),
+	m := &motore.Motore{Amb: motore.AmbienteVero(), Cartella: c.operazioni, Fonti: c.fonti(),
 		Porta: c.porta, Ev: &motore.Eventi{W: os.Stdout}}
+	m.Amb.Avvisa = func(x motore.Messaggio) { m.Ev.Messaggio("", x) }
+	return m
 }
 
 // argomenti: the options can come before or after the names.
@@ -359,7 +362,7 @@ func installa(arg []string) (int, error) {
 
 // applica: the plan approved now by whoever answered «yes», from the plans folder.
 func applica(m *motore.Motore, p *motore.Piano) (int, error) {
-	dir := filepath.Join(filepath.Dir(m.Cartella), "plans")
+	dir := filepath.Join(filepath.Dir(m.Cartella), motore.CartellaPiani)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return 1, err
 	}

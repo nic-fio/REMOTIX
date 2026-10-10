@@ -87,7 +87,9 @@ func (a *Ambiente) eseguiDavvero(tempo time.Duration, nome string, argomenti ...
 	ctx, annulla := context.WithTimeout(context.Background(), tempo)
 	defer annulla()
 	cmd := exec.CommandContext(ctx, percorso, argomenti...)
-	cmd.Env = []string{"LC_ALL=C", "PATH=/usr/sbin:/usr/bin:/sbin:/bin", "DEBIAN_FRONTEND=noninteractive"}
+	// ZYPP_LOCK_TIMEOUT: zypper waits for whoever holds it, like apt with DPkg::Lock::Timeout (occupato.go)
+	cmd.Env = []string{"LC_ALL=C", "PATH=/usr/sbin:/usr/bin:/sbin:/bin", "DEBIAN_FRONTEND=noninteractive",
+		"ZYPP_LOCK_TIMEOUT=" + strconv.Itoa(int(TettoOccupato.Seconds()))}
 	var uscita strings.Builder
 	cmd.Stdout = &uscita
 	cmd.Stderr = &uscita
@@ -183,6 +185,13 @@ type Ambiente struct {
 	Pacchetti Gestore
 	Sessioni  GestoreSessioni
 	Annota    func(riga string) // every program launched (R41); nil = nobody listens
+	Avvisa    func(m Messaggio) // what the engine says while it waits (occupato.go); nil = nobody listens
+}
+
+func (a *Ambiente) avvisa(m Messaggio) {
+	if a.Avvisa != nil {
+		a.Avvisa(m)
+	}
 }
 
 // P is a machine path seen from the environment's root.

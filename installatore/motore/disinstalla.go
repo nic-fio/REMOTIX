@@ -121,13 +121,19 @@ func (i *iscrizione) Annullata(c *Contesto, prima json.RawMessage) (bool, string
 	return esp, "", err
 }
 
+// CartellaPiani: the plans approved by whoever installs, next to the operations folder
+// (/var/lib/remotix/plans): the command line and the TUI write them there.
+const CartellaPiani = "plans"
+
 // PulisciStoria, on CONFIRMED uninstallation (the coordinator's decision, 30 Sep): without purge the
 // engine's history stays (for support) but without the cached packages; with purge it is removed
-// entirely, and /var/lib/remotix too if it remains empty.
+// entirely — the operations and the plans —, and /var/lib/remotix too if it remains empty.
 func (m *Motore) PulisciStoria(purge bool) error {
 	if purge {
-		if err := os.RemoveAll(m.Cartella); err != nil {
-			return err
+		for _, d := range []string{m.Cartella, filepath.Join(filepath.Dir(m.Cartella), CartellaPiani)} {
+			if err := os.RemoveAll(d); err != nil {
+				return err
+			}
 		}
 		os.Remove(filepath.Join(filepath.Dir(m.Cartella), FileIscrizioni)) // already undone by the plan
 		// the recorded versions (aggiornato.go). ⚠ 10 Oct 2026, names in English (DECISIONI §10.35): removed the

@@ -27,10 +27,14 @@ const ServizioPAM = "remotix"
 
 // PianoChiudiSessioni prepares the step, saying how many sessions there are now.
 func PianoChiudiSessioni(id string, n int, utenti []string) AzionePiano {
+	d := T("az.sessioni.nessuna") // the step stays: one may open before it runs
+	if n > 0 {
+		d = T("az.sessioni", n, strings.Join(utenti, ", "))
+	}
 	return AzionePiano{
 		ID: id, Tipo: "close-sessions",
 		Parametri:      map[string]string{"service": ServizioPAM},
-		Descrizione:    T("az.sessioni", n, strings.Join(utenti, ", ")),
+		Descrizione:    d,
 		ComeSiFa:       T("az.sessioni.fa"),
 		ComeSiVerifica: T("az.sessioni.verifica"),
 		ComeSiAnnulla:  T("az.sessioni.annulla"),

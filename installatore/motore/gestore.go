@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -21,6 +22,8 @@ import (
 // machine has, verifies the signatures. The engine has no cache and no sha256 of its own for the packages. Togli simulates
 // first and refuses if it would remove something not in the list (someone else's package that in the
 // meantime depends on it): the managers' autoremove would also remove earlier orphans, belonging to others.
+//
+// Every method that launches the manager first waits for another program holding it (occupato.go).
 //
 // Tried on the VMs: apt (Debian 13) and dnf (Alma 10). zypper and pacman are written in the same
 // shape but NOT yet tried on a real machine.
@@ -99,7 +102,8 @@ type gestoreApt struct{ a *Ambiente }
 
 func (g *gestoreApt) Nome() string { return "apt" }
 
-var aptOpzioni = []string{"-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--force-confold", "-o", "APT::Get::Assume-Yes=true"}
+var aptOpzioni = []string{"-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::Options::=--force-confold", "-o", "APT::Get::Assume-Yes=true",
+	"-o", "DPkg::Lock::Timeout=" + strconv.Itoa(int(TettoOccupato.Seconds()))}
 
 func (g *gestoreApt) Versioni(nomi []string) (map[string]string, error) {
 	pk := ArchivioPacchetti(g.a, "debian", nomi)
@@ -121,6 +125,9 @@ func (g *gestoreApt) argomenti(file, nomi []string) []string {
 }
 
 func (g *gestoreApt) Simula(file, nomi []string) ([]Artefatto, error) {
+	if err := attendiGestore(g.a, "debian"); err != nil {
+		return nil, err
+	}
 	sim := func() (string, error) {
 		return esegui(g.a, tempoGestore, "apt-get", append(append([]string{"-s", "install"}, aptOpzioni...), g.argomenti(file, nomi)...)...)
 	}
@@ -176,6 +183,9 @@ func (g *gestoreApt) intestazione(f string) (string, string, error) {
 
 // Installa: apt installs the local files and downloads the dependencies from the machine's repositories.
 func (g *gestoreApt) Installa(file, nomi []string) error {
+	if err := attendiGestore(g.a, "debian"); err != nil {
+		return err
+	}
 	_, err := esegui(g.a, tempoGestore, "apt-get", append(append([]string{"install"}, aptOpzioni...), g.argomenti(file, nomi)...)...)
 	return err
 }
@@ -190,6 +200,9 @@ func aptVerbo(purge bool) string {
 }
 
 func (g *gestoreApt) SimulaTogli(nomi []string, purge bool) ([]string, error) {
+	if err := attendiGestore(g.a, "debian"); err != nil {
+		return nil, err
+	}
 	out, err := esegui(g.a, tempoGestore, "apt-get", append(append([]string{"-s", aptVerbo(purge)}, aptOpzioni...), nomi...)...)
 	if err != nil {
 		return nil, err
@@ -255,6 +268,9 @@ func (g *gestoreApt) Integro() (bool, string, error) {
 }
 
 func (g *gestoreApt) Ripara() error {
+	if err := attendiGestore(g.a, "debian"); err != nil {
+		return err
+	}
 	_, err := esegui(g.a, tempoGestore, "dpkg", "--configure", "-a")
 	return err
 }
@@ -295,6 +311,9 @@ func (g *gestoreDnf) Versioni(nomi []string) (map[string]string, error) {
 // DOWNGRADED is taken (a downgrade is an INDIRECT change like an upgrade); «@commandline» is a
 // file of the single package.
 func (g *gestoreDnf) Simula(file, nomi []string) ([]Artefatto, error) {
+	if err := attendiGestore(g.a, "fedora"); err != nil {
+		return nil, err
+	}
 	out, c, err := g.a.Esegui(tempoGestore, "dnf", append([]string{"install", "--assumeno", "--setopt=localpkg_gpgcheck=0"}, append(append([]string{}, file...), nomi...)...)...)
 	if err != nil {
 		return nil, err
@@ -372,11 +391,17 @@ func nomiDi(r []Artefatto) []string {
 // Installa: dnf installs the files of the single package (without an rpm signature: the .run's sha256
 // guarantees them) and takes the dependencies from the machine's repositories, with their signatures.
 func (g *gestoreDnf) Installa(file, nomi []string) error {
+	if err := attendiGestore(g.a, "fedora"); err != nil {
+		return err
+	}
 	_, err := esegui(g.a, tempoGestore, "dnf", append([]string{"install", "-y", "--setopt=localpkg_gpgcheck=0"}, append(append([]string{}, file...), nomi...)...)...)
 	return err
 }
 
 func (g *gestoreDnf) SimulaTogli(nomi []string, purge bool) ([]string, error) {
+	if err := attendiGestore(g.a, "fedora"); err != nil {
+		return nil, err
+	}
 	// dnf remove also removes whoever depends on these: it is checked with --assumeno
 	out, _, err := g.a.Esegui(tempoGestore, "dnf", append([]string{"remove", "--assumeno", "--setopt=clean_requirements_on_remove=0"}, nomi...)...)
 	if err != nil {
@@ -482,6 +507,9 @@ func (g *gestoreDnf) Integro() (bool, string, error) {
 
 // Ripara: dnf repeats the transaction; here we go back to a coherent state by removing the duplicates.
 func (g *gestoreDnf) Ripara() error {
+	if err := attendiGestore(g.a, "fedora"); err != nil {
+		return err
+	}
 	_, err := esegui(g.a, tempoGestore, "dnf", "remove", "-y", "--duplicates")
 	return err
 }
@@ -509,6 +537,9 @@ func (g *gestoreZypper) Versioni(nomi []string) (map[string]string, error) {
 }
 
 func (g *gestoreZypper) Simula(file, nomi []string) ([]Artefatto, error) {
+	if err := attendiGestore(g.a, "suse"); err != nil {
+		return nil, err
+	}
 	out, err := esegui(g.a, tempoGestore, "zypper", append([]string{"--non-interactive", "--xmlout", "install", "--dry-run"}, append(append(g.fileArg(file), file...), nomi...)...)...)
 	if err != nil {
 		return nil, err
@@ -531,6 +562,9 @@ func (g *gestoreZypper) Simula(file, nomi []string) ([]Artefatto, error) {
 }
 
 func (g *gestoreZypper) Installa(file, nomi []string) error {
+	if err := attendiGestore(g.a, "suse"); err != nil {
+		return err
+	}
 	_, err := esegui(g.a, tempoGestore, "zypper", append([]string{"--non-interactive", "install"}, append(append(g.fileArg(file), file...), nomi...)...)...)
 	return err
 }
@@ -538,6 +572,9 @@ func (g *gestoreZypper) Installa(file, nomi []string) error {
 var zypperSolvibile = regexp.MustCompile(`<solvable type="package" name="([^"]+)"`)
 
 func (g *gestoreZypper) SimulaTogli(nomi []string, purge bool) ([]string, error) {
+	if err := attendiGestore(g.a, "suse"); err != nil {
+		return nil, err
+	}
 	out, err := esegui(g.a, tempoGestore, "zypper", append([]string{"--non-interactive", "--xmlout", "remove", "--dry-run"}, nomi...)...)
 	if err != nil {
 		return nil, err
@@ -566,6 +603,9 @@ func (g *gestoreZypper) Integro() (bool, string, error) {
 }
 
 func (g *gestoreZypper) Ripara() error {
+	if err := attendiGestore(g.a, "suse"); err != nil {
+		return err
+	}
 	_, err := esegui(g.a, tempoGestore, "zypper", "--non-interactive", "verify")
 	return err
 }
@@ -589,6 +629,9 @@ func (g *gestorePacman) Versioni(nomi []string) (map[string]string, error) {
 }
 
 func (g *gestorePacman) Simula(file, nomi []string) ([]Artefatto, error) {
+	if err := attendiGestore(g.a, "arch"); err != nil {
+		return nil, err
+	}
 	// the whole transaction (the files of the single package and the repositories' packages, with the
 	// dependencies): pacman -U/-S --print says what it would install, without touching anything
 	var righe []string
@@ -634,6 +677,9 @@ func (g *gestorePacman) Simula(file, nomi []string) ([]Artefatto, error) {
 }
 
 func (g *gestorePacman) Installa(file, nomi []string) error {
+	if err := attendiGestore(g.a, "arch"); err != nil {
+		return err
+	}
 	if len(nomi) > 0 {
 		if _, err := esegui(g.a, tempoGestore, "pacman", append([]string{"-S", "--needed", "--noconfirm"}, nomi...)...); err != nil {
 			return err
@@ -648,6 +694,9 @@ func (g *gestorePacman) Installa(file, nomi []string) error {
 }
 
 func (g *gestorePacman) SimulaTogli(nomi []string, purge bool) ([]string, error) {
+	if err := attendiGestore(g.a, "arch"); err != nil {
+		return nil, err
+	}
 	// ⚠ pacman -R does not remove whoever depends: if someone depends, the simulation FAILS and says so
 	// («removing X breaks dependency 'X' required by Y»): whoever depends is Y
 	out, c, err := g.a.Esegui(tempoGestore, "pacman", append([]string{"-R", "--print", "--print-format", "%n"}, nomi...)...)
@@ -682,15 +731,22 @@ func (g *gestorePacman) Togli(nomi []string, purge bool) error {
 }
 
 func (g *gestorePacman) Integro() (bool, string, error) {
+	// a running pacman holds db.lck: it is waited for. If it is still there, no pacman has it open
+	if err := attendiGestore(g.a, "arch"); err != nil {
+		return false, "", err
+	}
 	if _, err := os.Stat(g.a.P("/var/lib/pacman/db.lck")); err == nil {
-		return false, "/var/lib/pacman/db.lck is there", nil
+		return false, "/var/lib/pacman/db.lck is there and no program has it open (left by a pacman that stopped half-way)", nil
 	}
 	return true, "", nil
 }
 
-// Ripara: the lock file left by a killed pacman is removed (no pacman is running: the
-// engine's lock guarantees it), then pacman -Dk checks the database.
+// Ripara: the lock file left by a killed pacman is removed (no program has it open: attendiGestore
+// waited for it), then pacman -Dk checks the database.
 func (g *gestorePacman) Ripara() error {
+	if err := attendiGestore(g.a, "arch"); err != nil {
+		return err
+	}
 	os.Remove(g.a.P("/var/lib/pacman/db.lck"))
 	_, err := esegui(g.a, tempoGestore, "pacman", "-Dk")
 	return err

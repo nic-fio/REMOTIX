@@ -158,6 +158,8 @@ var Codici = map[string]Codice{
 	"RX-PACCHETTI-004": {BLOCCANTE, ServeAzione, "The package manager is half-way through an earlier transaction.", ""},
 	"RX-PACCHETTI-006": {INFO, ServeAzione, "Some packages brought by REMOTIX stay: something that stays needs them (a package updated from the same archive, or a program installed later). Removing them would take it away too.", "If they are no longer needed, remove them by hand together with what needs them, with the package manager."},
 	"RX-PACCHETTI-005": {BLOCCANTE, Riprovabile, "The package manager cannot install REMOTIX on this machine: nothing was installed.", "The detail says what the package manager is missing (a dependency that no configured repository provides, a conflict)."},
+	"RX-PACCHETTI-007": {INFO, Riprovabile, "The package manager is busy with another program (on a machine just switched on, often the automatic updates): the engine waits for it to finish.", ""},
+	"RX-PACCHETTI-008": {BLOCCANTE, Riprovabile, "The package manager stayed busy with another program for too long: the engine did not launch it.", "Wait for that program to finish (the detail says which one), then run remotix-install again."},
 	"RX-CINTURA-001":   {INFO, ServeAzione, "(retired: DECISIONS §10.36) The switched-off safety-belt file was missing (the engine no longer enables system safety belts).", ""},
 	"RX-SYSTEMD-002":   {BLOCCANTE, ServeAzione, "The unit is masked: the administrator switched it off on purpose.", ""},
 	"RX-SYSTEMD-003":   {BLOCCANTE, ServeAzione, "The unit does not exist.", ""},
