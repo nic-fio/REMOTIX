@@ -2659,11 +2659,11 @@ static bool gancio_sessione_locale(void *ctx, const char *utente, char *quale,
 /* ⭐ D-001 — the desktop name of this machine for `SESSIONE` (§4.5).
  *    One per PROCESS, like the desktop choice (`sessione.h`): `main.c`
  *    sets it at startup, because `sessione.h` (glib) does not get in here. */
-static const char *desktop_nome = "sconosciuto";
+static const char *desktop_nome = "unknown";
 
 void wt_desktop(const char *nome)
 {
-	desktop_nome = (nome && nome[0]) ? nome : "sconosciuto";
+	desktop_nome = (nome && nome[0]) ? nome : "unknown";
 }
 
 static bool gancio_sessione_ripresa(void *ctx)
