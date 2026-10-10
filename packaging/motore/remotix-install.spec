@@ -21,6 +21,7 @@ License:        LicenseRef-Proprietary
 URL:            https://github.com/nic-fio/REMOTIX
 Source0:        remotix-install
 Source1:        README
+Source2:        THIRD-PARTY-LICENSES
 ExclusiveArch:  x86_64
 
 %description
@@ -35,6 +36,7 @@ this package.
 %install
 install -D -m 0755 %{SOURCE0} %{buildroot}%{_bindir}/remotix-install
 install -D -m 0644 %{SOURCE1} %{buildroot}%{_datadir}/remotix-install/README
+install -D -m 0644 %{SOURCE2} %{buildroot}%{_defaultlicensedir}/remotix-install/THIRD-PARTY-LICENSES
 
 %posttrans
 # after an upgrade: records the versions, says whether the installation is still certified
@@ -45,3 +47,4 @@ install -D -m 0644 %{SOURCE1} %{buildroot}%{_datadir}/remotix-install/README
 %{_bindir}/remotix-install
 %dir %{_datadir}/remotix-install
 %{_datadir}/remotix-install/README
+%license %{_defaultlicensedir}/remotix-install/THIRD-PARTY-LICENSES

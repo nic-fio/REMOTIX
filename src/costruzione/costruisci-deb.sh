@@ -42,7 +42,7 @@ HASH=$(git -C "$ALBERO" rev-parse --short=7 HEAD)
 DATA_R=$(git -C "$ALBERO" log -1 --format=%cD HEAD)
 GIORNO=$(git -C "$ALBERO" log -1 --date=format:%Y%m%d --format=%cd HEAD)
 SPORCO=""
-if [ -n "$(git -C "$ALBERO" status --porcelain -- src packaging banchi/rcp)" ]; then
+if [ -n "$(git -C "$ALBERO" status --porcelain -- src packaging banchi/rcp THIRD-PARTY-LICENSES)" ]; then
 	SPORCO=".modificato"
 	echo "⚠ the tree has uncommitted changes in src/ packaging/ banchi/rcp/:"
 	echo "  the version carries «$SPORCO» and the package does NOT match $HASH"
@@ -59,6 +59,7 @@ prepara_copia() {  # prepara_copia <cartella> <bersaglio>
 	cp -a "$ALBERO/src" "$c/remotix/src"
 	cp -a "$ALBERO/banchi/rcp" "$c/remotix/banchi/rcp"
 	cp -a "$ALBERO/packaging/debian" "$c/remotix/debian"
+	cp "$ALBERO/THIRD-PARTY-LICENSES" "$c/remotix/"
 	rm -f "$c/remotix/src/remotix" "$c/remotix/src"/*.o \
 	      "$c/remotix/src"/*-protocol.c "$c/remotix/src"/*-client-protocol.h
 	# T8: RX_VERSIONE and RX_REVISIONE give the version of an archive RELEASE

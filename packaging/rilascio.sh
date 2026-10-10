@@ -18,16 +18,18 @@
 #   4. the ENGINE packages (packaging/motore/pacchetti-motore.sh): it stays on the machine
 #      (status, uninstall, post-upgrade);
 #   5. the .RUN: the installatore/run.sh header (with the version and the payload's sha256 written
-#      inside) and below it the tar.gz with the engine and packages/<target>/ (product + engine for each
-#      distribution); next to it its .sha256, to be published on the website.
+#      inside) and below it the tar.gz with the engine, THIRD-PARTY-LICENSES and packages/<target>/
+#      (product + engine for each distribution); next to it its .sha256, to be published on the website.
 #
 # Environment:
 #   BERSAGLI   which ones (default: debian13 ubuntu2604 fedora44 alma10 tumbleweed leap16 arch)
 #   USCITA     where the .run goes (default costruzione-uscita/rilasci)
 #   RX_SPORCO=1  for testing only: accepts a tree with uncommitted changes (the packages say so)
 # ⚠ No /tmp: on the laptop it is nearly full; everything under costruzione-uscita/.
-# ⏳ The third-party component licences (THIRD-PARTY-LICENSES) used to be made by the archive
-#    (archivio/sbom.py, archivio/licenze.py): they must be put back into the .run (DECISIONI §10.36, open point).
+# THIRD-PARTY-LICENSES (LICENSE.md §8): the licence texts of the third-party components incorporated
+#    in the packages and in the engine. Every package carries it, and the .run next to the engine; step 2
+#    stops if it does not name, at the version that goes in, every Go module linked into the engine,
+#    the Go toolchain, ngtcp2, nghttp3 and libopus.
 set -euo pipefail
 QUI=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ALBERO=$(cd "$QUI/.." && pwd)
@@ -50,7 +52,7 @@ RUN=$USCITA/remotix-$VERSIONE.run
 
 passo "1. the tree ($VERSIONE, targets: $BERSAGLI)"
 COMMIT=$(git -C "$ALBERO" rev-parse HEAD)
-SPORCO=$(git -C "$ALBERO" status --porcelain -- src packaging installatore banchi/rcp)
+SPORCO=$(git -C "$ALBERO" status --porcelain -- src packaging installatore banchi/rcp THIRD-PARTY-LICENSES)
 if [ -n "$SPORCO" ]; then
 	[ "${RX_SPORCO:-}" = 1 ] || { echo "⛔ uncommitted changes:"; echo "$SPORCO"; exit 1; }
 	echo "⚠ RX_SPORCO=1: tree with uncommitted changes (for testing only)" | tee -a "$REG"
@@ -68,6 +70,16 @@ mkdir -p "$LAV/motore-bin"
 cp "$INST/uscita/remotix-install" "$LAV/motore-bin/"
 [ "$("$LAV/motore-bin/remotix-install" version | awk '{print $1}')" = "$V" ] || { echo "⛔ the engine does not report $V"; exit 1; }
 "$LAV/motore-bin/remotix-install" catalog | head -1 | tee -a "$REG"
+TPL=$ALBERO/THIRD-PARTY-LICENSES
+{
+	"$INST/costruisci.sh" go list -deps -f '{{with .Module}}{{if not .Main}}{{.Path}} {{.Version}}{{end}}{{end}}' ./cmd/remotix-install
+	"$INST/costruisci.sh" go env GOVERSION | sed 's/^go\(.*\)/Go \1 (standard library and runtime)/'
+	sed -n 's/^NGTCP2_VER=${NGTCP2_VER:-v\(.*\)}$/ngtcp2 \1/p; s/^NGHTTP3_VER=${NGHTTP3_VER:-v\(.*\)}$/nghttp3 \1/p' \
+		"$ALBERO/src/costruzione/quic-statiche.sh"
+	sed -n 's/^OPUS_VER=/libopus /p' "$ALBERO/src/opus-wasm/costruisci.sh"
+} | sort -u | while read -r c; do
+	grep -qxF "== $c" "$TPL" || { echo "⛔ THIRD-PARTY-LICENSES does not name «$c»"; exit 1; }
+done
 
 passo "3. the product packages"
 P=$LAV/prodotto
@@ -103,7 +115,7 @@ RX_VERSIONE=$V RX_REVISIONE=$R MOTORE=$LAV/motore-bin/remotix-install \
 passo "5. the .run ($RUN)"
 C=$LAV/carico
 mkdir -p "$C/packages"
-cp "$LAV/motore-bin/remotix-install" "$C/"
+cp "$LAV/motore-bin/remotix-install" "$TPL" "$C/"
 for b in "${deb[@]}"; do
 	mkdir -p "$C/packages/$b"
 	cp "$P/deb-$b"/remotix_*.deb "$M/remotix-install_${V}-${R}_amd64.deb" "$C/packages/$b/"

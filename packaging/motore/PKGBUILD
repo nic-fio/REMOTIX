@@ -15,10 +15,11 @@ license=('LicenseRef-REMOTIX')
 depends=(systemd pacman)
 options=('!strip' '!debug')
 install=remotix-install.install
-source=(remotix-install README)
-sha256sums=('SKIP' 'SKIP')
+source=(remotix-install README THIRD-PARTY-LICENSES)
+sha256sums=('SKIP' 'SKIP' 'SKIP')
 
 package() {
 	install -Dm755 remotix-install "$pkgdir/usr/bin/remotix-install"
 	install -Dm644 README          "$pkgdir/usr/share/remotix-install/README"
+	install -Dm644 THIRD-PARTY-LICENSES "$pkgdir/usr/share/licenses/remotix-install/THIRD-PARTY-LICENSES"
 }

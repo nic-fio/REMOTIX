@@ -1058,8 +1058,12 @@ sha256, rifiuto di un file guasto, `check`).
    interrotta, dal vero;
 5. ⏳ **punto aperto**: i gruppi della scheda — solo `render` invece di `render` e `video` (§10.36: `video` dà
    anche `/dev/fb*` e le webcam), da misurare sui quattro desktop; per ora la logica è com'era;
-6. ⏳ **punto aperto**: le licenze dei componenti di terzi (THIRD-PARTY-LICENSES) le scriveva l'archivio
-   (`packaging/archivio/sbom.py`, `licenze.py`): vanno rimesse nel .run.
+6. ✅ **le licenze dei componenti di terzi** (10 ott, LICENSE.md §8): `THIRD-PARTY-LICENSES` nella radice del
+   deposito, testi presi dai sorgenti esatti (ngtcp2, nghttp3 e sfparse, libopus e la libreria C di emscripten
+   nel `.wasm`, le 8 descrizioni dei protocolli Wayland, Go e i 17 moduli che `go list -deps` trova nel
+   motore). Viaggia in ogni pacchetto (`/usr/share/doc/remotix*/` sui .deb, `%license` sugli .rpm,
+   `/usr/share/licenses/remotix*/` su Arch) e nel .run accanto al motore; `rilascio.sh` si ferma se il file non
+   nomina un modulo, Go, ngtcp2, nghttp3 o libopus alla versione che entra. `packaging/archivio/` non serve più.
 7. ✅ **TUI rifatta sul mockup approvato** (`grafica/tui-mockup/index.html`), commit `facc27a`: cornice fissa
    larga quanto il terminale (almeno 80 colonne; sotto, una riga che lo dice), Check › Plan › Install › Ready,
    corpo che scorre dentro la cornice, tasti in fondo; `remotix-install tui --preview 80` disegna ogni schermata
