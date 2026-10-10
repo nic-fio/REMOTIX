@@ -174,7 +174,7 @@ def accesa(scatola):
 # ⭐ The COUNTS and the EXIT CODE are compared: they are the judgement, and the
 #    judgement is what must stay the same.
 RIGA_A = re.compile(
-    r"A · il browser rende la pagina\s*:\s*(\d+) si' · ⛔ (\d+) no · (\d+) non giudicati")
+    r"A · the browser renders the page\s*:\s*(\d+) yes · ⛔ (\d+) no · (\d+) not judged")
 
 
 def impronta(testo, codice):
@@ -302,16 +302,16 @@ def certifica():
     print()
     letture = [
         ("a real summary",
-         "  A · il browser rende la pagina    : 1 si' · ⛔ 1 no · 0 non giudicati\n",
+         "  A · the browser renders the page      : 1 yes · ⛔ 1 no · 0 not judged\n",
          0, (1, 1, 0, 0)),
         ("a summary with some not judged",
-         "  A · il browser rende la pagina    : 0 si' · ⛔ 0 no · 2 non giudicati\n",
+         "  A · the browser renders the page      : 0 yes · ⛔ 0 no · 2 not judged\n",
          3, (0, 0, 2, 3)),
         ("⛔ SILENT log ⇒ None, not (0,0,0)", "", 0, None),
         ("⛔ log that talks about something else ⇒ None",
          "podman: command not found\n", 127, None),
         ("⚠ the B line alone is not enough: A is looked at",
-         "  B · e la pagina si vede DAL CLIENTE: 0 si' · ⛔ 0 no · 2 non giudicati\n",
+         "  B · and the page shows FROM THE CLIENT: 0 yes · ⛔ 0 no · 2 not judged\n",
          0, None),
     ]
     for nome, testo, codice, atteso in letture:

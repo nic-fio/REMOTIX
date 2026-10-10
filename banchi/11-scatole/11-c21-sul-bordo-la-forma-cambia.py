@@ -146,7 +146,7 @@ C20V = _carica("c20_veri", os.path.join(BANCHI, "12-c20-veri.py"))
 VERI = C20V.VERI
 VERDE, ROSSO, CIECO = VERI.VERDE, VERI.ROSSO, VERI.CIECO
 PORTE = C20V.PORTE
-NOME_ESITO = {VERDE: "VERDE", ROSSO: "ROSSO", CIECO: "NON HO POTUTO GUARDARE"}
+NOME_ESITO = {VERDE: "VERDE", ROSSO: "ROSSO", CIECO: "I COULD NOT LOOK"}
 
 # ⭐ The tenant: a name of the net, which C19 recognises and the hook clears out.
 MODELLO_INQUILINO = re.compile(r"^c21u[0-9]+$")
@@ -492,7 +492,7 @@ def cursori_finti():
     return {"freccia": (("png", _png(fr), 3, 3), "freccia"),
             "doppia di Breeze": (("png", _png(dp), 15, 15), "orizzontale"),
             "e-resize di Adwaita": (("png", _png(ae), 19, 12), "orizzontale"),
-            "barra del testo": (("png", _png(te), 15, 15), "testo"),
+            "text bar": (("png", _png(te), 15, 15), "testo"),
             "clessidra piena": (("png", _png(cl), 11, 11), "altra"),
             "mano": (("png", _png(ma), 9, 2), "altra")}
 
@@ -533,7 +533,7 @@ def certifica():
           k != "orizzontale", d)
     # 3. the judgement of the step
     fr, dp = classifica(c["freccia"][0]), classifica(dv)
-    te = classifica(c["barra del testo"][0])
+    te = classifica(c["text bar"][0])
     casi = [
         ("right at 120 ms ⇒ GREEN", ("freccia", [(1120, dp[0], dp[1])], 1000), VERDE),
         ("right at 350 ms ⇒ RED", ("freccia", [(1350, dp[0], dp[1])], 1000), ROSSO),

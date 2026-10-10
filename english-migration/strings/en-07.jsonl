@@ -1,0 +1,11 @@
+{"file": "banchi/11-scatole/11-c8-il-secondo-apre-il-browser.py", "prima": "  A · il browser rende la pagina    : %d si' · ⛔ %d no · %d non giudicati", "dopo": "  A · the browser renders the page      : %d yes · ⛔ %d no · %d not judged"}
+{"file": "banchi/11-scatole/11-c8-il-secondo-apre-il-browser.py", "prima": "  B · e la pagina si vede DAL CLIENTE: %d si' · ⛔ %d no · %d non giudicati", "dopo": "  B · and the page shows FROM THE CLIENT: %d yes · ⛔ %d no · %d not judged"}
+{"file": "banchi/11-scatole/11-c14-non-si-disturbano.py", "prima": "A · il browser rende la pagina\\s*:\\s*(\\d+) si' · ⛔ (\\d+) no · (\\d+) non giudicati", "dopo": "A · the browser renders the page\\s*:\\s*(\\d+) yes · ⛔ (\\d+) no · (\\d+) not judged"}
+{"file": "banchi/15-suite/15-f031b-impostazioni-intatte.py", "prima": "(senza Hidden)", "dopo": "(no Hidden)"}
+{"file": "banchi/15-suite/15-f031b-impostazioni-intatte.py", "prima": "xfconf:%s:(illeggibile)", "dopo": "xfconf:%s:(unreadable)"}
+{"file": "banchi/11-scatole/11-c21-sul-bordo-la-forma-cambia.py", "prima": "NON HO POTUTO GUARDARE", "dopo": "I COULD NOT LOOK"}
+{"file": "banchi/11-scatole/11-c21-sul-bordo-la-forma-cambia.py", "prima": "barra del testo", "dopo": "text bar"}
+{"file": "banchi/11-scatole/11-c6-si-stacca-e-si-ritrova.py", "prima": "(niente)", "dopo": "(nothing)"}
+{"file": "banchi/11-scatole/11-c7-si-chiude-e-non-resta-niente.py", "prima": "(niente)", "dopo": "(nothing)"}
+{"file": "banchi/11-scatole/11-c11-allineamento.py", "prima": "la base", "dopo": "the base"}
+{"file": "banchi/11-scatole/11-c11-allineamento.py", "prima": "il prodotto (md5)", "dopo": "the product (md5)"}

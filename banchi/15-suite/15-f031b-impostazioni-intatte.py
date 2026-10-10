@@ -213,7 +213,7 @@ def interpreta(uscita):
             tipo, nome, b64 = (riga.split(" ", 2) + [""])[:3]
             testo = base64.b64decode(b64).decode("utf-8", "replace") if b64 else ""
             if tipo == "@@app":
-                h = ini(testo).get("[Desktop Entry]Hidden", "(senza Hidden)")
+                h = ini(testo).get("[Desktop Entry]Hidden", "(no Hidden)")
                 d["app:%s:Hidden" % nome] = h
             elif "/xfconf/" in nome:
                 canale = os.path.basename(nome)[:-4]
@@ -221,7 +221,7 @@ def interpreta(uscita):
                     for k, v in xfconf(testo).items():
                         d["xfconf:%s:%s" % (canale, k)] = v
                 except ET.ParseError as e:
-                    d["xfconf:%s:(illeggibile)" % canale] = str(e)
+                    d["xfconf:%s:(unreadable)" % canale] = str(e)
             elif nome.endswith("kxkbrc"):
                 for k, v in ini(testo).items():
                     d["kxkbrc:" + k] = v

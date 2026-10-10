@@ -71,7 +71,7 @@ import sys
 # ⛔ The list is DECLARED here and printed in every outcome: «aligned» is a
 #    verdict, and a verdict without its yardstick is an opinion.
 DEVE_COMBACIARE = [
-    ("la base", "base"),
+    ("the base", "base"),
     ("mesa-va-drivers", "pacchetto"),
     ("va-driver-all", "pacchetto"),
     ("libva2", "pacchetto"),
@@ -107,7 +107,7 @@ DEVE_COMBACIARE = [
     ("wl-clipboard", "pacchetto"),
     ("python3-gi", "pacchetto"),
     ("gir1.2-gtk-4.0", "pacchetto"),
-    ("il prodotto (md5)", "prodotto"),
+    ("the product (md5)", "prodotto"),
 ]
 
 DESKTOP = ("gnome", "kde", "xfce", "lxqt")
@@ -130,13 +130,13 @@ def raccogli(scatola):
     if vivo.returncode != 0 or vivo.stdout.strip() != "true":
         return None
     d = {}
-    d["la base"] = dentro(scatola, "cat /etc/debian_version")
+    d["the base"] = dentro(scatola, "cat /etc/debian_version")
     for nome, che in DEVE_COMBACIARE:
         if che != "pacchetto":
             continue
         d[nome] = dentro(scatola, "dpkg-query -W -f='${Version}' %s 2>/dev/null "
                                   "|| echo '(not there)'" % nome)
-    d["il prodotto (md5)"] = dentro(
+    d["the product (md5)"] = dentro(
         scatola, "md5sum /opt/remotix/remotix 2>/dev/null | cut -c1-12 "
                  "|| echo '(not inside yet)'")
     # ⚠ The desktop is PRINTED and not compared: it is the only thing that MUST
@@ -180,9 +180,9 @@ def certifica():
           "b": {n: "1" for n, _ in DEVE_COMBACIARE}}, 0),
         ("⭐ the PRODUCT different — the fault the user named first",
          {"a": dict({n: "1" for n, _ in DEVE_COMBACIARE},
-                    **{"il prodotto (md5)": "aaaa"}),
+                    **{"the product (md5)": "aaaa"}),
           "b": dict({n: "1" for n, _ in DEVE_COMBACIARE},
-                    **{"il prodotto (md5)": "bbbb"})}, 1),
+                    **{"the product (md5)": "bbbb"})}, 1),
         ("mesa different: the milliseconds can no longer be compared",
          {"a": dict({n: "1" for n, _ in DEVE_COMBACIARE},
                     **{"mesa-va-drivers": "25.0.7"}),
@@ -194,9 +194,9 @@ def certifica():
          {"a": None, "b": None}, None),
         ("an entry missing from ALL is not a misalignment",
          {"a": dict({n: "1" for n, _ in DEVE_COMBACIARE},
-                    **{"il prodotto (md5)": "(not inside yet)"}),
+                    **{"the product (md5)": "(not inside yet)"}),
           "b": dict({n: "1" for n, _ in DEVE_COMBACIARE},
-                    **{"il prodotto (md5)": "(not inside yet)"})}, 0),
+                    **{"the product (md5)": "(not inside yet)"})}, 0),
     ]
     print("== certification of the C11 judge ==")
     guai = 0

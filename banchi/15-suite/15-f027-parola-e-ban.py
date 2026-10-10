@@ -336,7 +336,7 @@ def corpo(o, E):
                 for _ in range(3):
                     G.tenta(B, chi, sbagliata())
                 righe = srv.registro_da(segno)
-                vero = any("BANNATO l'indirizzo %s" % IND in x for x in righe)
+                vero = any("BANNED address %s" % IND in x for x in righe)
                 srv.sblocca()                                   # ⛔ the fault
                 pagina = G.carica(B.g, o.url)
                 eg, rg = giudica_ban(pagina, srv.file_ban(), righe)
