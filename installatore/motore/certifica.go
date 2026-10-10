@@ -50,7 +50,7 @@ func controllaPAM(a *Ambiente) Controllo {
 	k := Controllo{ID: "pam-risolta", Cosa: T("ver.pam"), Richiesto: true}
 	f := trovaPam(a, "remotix")
 	if f == "" {
-		k.Esito, k.Dettaglio = "FAIL", "manca il file remotix in /etc/pam.d e /usr/lib/pam.d"
+		k.Esito, k.Dettaglio = "FAIL", "the remotix file is missing in /etc/pam.d and /usr/lib/pam.d"
 		return k
 	}
 	moduli := 0
@@ -64,7 +64,7 @@ func controllaPAM(a *Ambiente) Controllo {
 		visti[file] = true
 		t, ok := leggi(a, file)
 		if !ok {
-			guasto = file + " non si legge"
+			guasto = file + " cannot be read"
 			return
 		}
 		for _, riga := range strings.Split(t, "\n") {
@@ -76,7 +76,7 @@ func controllaPAM(a *Ambiente) Controllo {
 			if c[0] == "@include" && len(c) > 1 {
 				g := trovaPam(a, c[1])
 				if g == "" {
-					guasto = file + ": @include " + c[1] + " non c'è"
+					guasto = file + ": @include " + c[1] + " is missing"
 					return
 				}
 				segui(g, profondita+1)
@@ -102,7 +102,7 @@ func controllaPAM(a *Ambiente) Controllo {
 			if controllo == "include" || controllo == "substack" {
 				g := trovaPam(a, resto[0])
 				if g == "" {
-					guasto = file + ": " + controllo + " " + resto[0] + " non c'è"
+					guasto = file + ": " + controllo + " " + resto[0] + " is missing"
 					return
 				}
 				segui(g, profondita+1)
@@ -111,7 +111,7 @@ func controllaPAM(a *Ambiente) Controllo {
 			mod := resto[0]
 			facoltativo := strings.HasPrefix(c[0], "-") // «-session»: il modulo può mancare
 			if !moduloPAM(a, mod) && !facoltativo {
-				guasto = file + ": il modulo " + mod + " non c'è"
+				guasto = file + ": the module " + mod + " is missing"
 				return
 			}
 			moduli++
@@ -122,7 +122,7 @@ func controllaPAM(a *Ambiente) Controllo {
 		k.Esito, k.Dettaglio = "FAIL", guasto
 		return k
 	}
-	k.Esito, k.Dettaglio = "PASS", f+": "+strconv.Itoa(moduli)+" moduli, tutti presenti"
+	k.Esito, k.Dettaglio = "PASS", f+": "+strconv.Itoa(moduli)+" modules, all present"
 	return k
 }
 
@@ -143,7 +143,7 @@ func controllaPorta(a *Ambiente, porta int) (Controllo, *Condizione) {
 	ps := strconv.Itoa(porta)
 	k := Controllo{ID: "porta-firewall", Cosa: T("ver.porta", ps), Richiesto: false}
 	if a.Firewall == nil {
-		k.Esito, k.Dettaglio = "UNKNOWN", "firewall non letto"
+		k.Esito, k.Dettaglio = "UNKNOWN", "firewall not read"
 		return k, &Condizione{Codice: "C-AMMINISTRATORE", Testo: T("cond.porta_ignota", ps)}
 	}
 	switch g := a.Firewall.Nome(); g {
@@ -180,7 +180,7 @@ func controllaPorta(a *Ambiente, porta int) (Controllo, *Condizione) {
 		return k, &Condizione{Codice: "C-AMMINISTRATORE", Testo: T("cond.porta_chiusa", strings.Join(chiuse, " ")),
 			Rimedio: "firewall-cmd --permanent --add-port=" + ps + "/tcp --add-port=" + ps + "/udp && firewall-cmd --reload"}
 	default:
-		k.Esito, k.Dettaglio = "UNKNOWN", g+": le regole non si valutano ancora"
+		k.Esito, k.Dettaglio = "UNKNOWN", g+": its rules are not evaluated yet"
 		return k, &Condizione{Codice: "C-AMMINISTRATORE", Testo: T("cond.porta_ignota", ps)}
 	}
 }
@@ -225,7 +225,7 @@ func (m *Motore) Certifica() (*Certificazione, error) {
 		a, err := NuovaAzione(ap)
 		switch {
 		case err != nil || intz == nil:
-			k.Esito, k.Dettaglio = "UNKNOWN", "nessuna intenzione nel registro"
+			k.Esito, k.Dettaglio = "UNKNOWN", "no intention in the log"
 		default:
 			e, det, err := a.Controlla(&Contesto{Amb: m.Amb, Cartella: dir, P: ap}, intz.Prima)
 			switch {

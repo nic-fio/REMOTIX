@@ -116,7 +116,7 @@ func (s *servizio) inAscolto(c *Contesto) (bool, string) {
 	}
 	for _, proto := range []string{"tcp", "udp"} {
 		if ok, letto := portaInAscolto(c.Amb, s.porta, proto); !ok || !letto {
-			return false, strconv.Itoa(s.porta) + "/" + proto + " non in ascolto"
+			return false, strconv.Itoa(s.porta) + "/" + proto + " not listening"
 		}
 	}
 	return true, strconv.Itoa(s.porta) + " tcp e udp in ascolto"
@@ -139,7 +139,7 @@ func (s *servizio) Controlla(c *Contesto, prima json.RawMessage) (Esito, string,
 		}
 	}
 	if p.Origine == PREESISTENTE {
-		return ESTRANEO, "era abilitato e acceso, ora " + f + " " + a, nil
+		return ESTRANEO, "was enabled and running, now " + f + " " + a, nil
 	}
 	if f == p.File && a == p.Attiva {
 		return ASSENTE, f + " " + a, nil
@@ -173,7 +173,7 @@ func (s *servizio) Annullata(c *Contesto, prima json.RawMessage) (bool, string, 
 		return false, "", err
 	}
 	if p.Origine == PREESISTENTE {
-		return true, "era già abilitato e acceso: non si tocca", nil
+		return true, "already enabled and running: left untouched", nil
 	}
 	f, a, err := s.stato(c)
 	if err != nil {

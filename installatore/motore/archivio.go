@@ -38,8 +38,11 @@ const ChiaveApt = "/usr/share/keyrings/remotix-archive-keyring.asc"
 
 // Marche del blocco di pacman.conf.
 const (
-	inizioBloccoPacman = "# >>> remotix — aggiunto da remotix-install (non modificare fra le due righe di marca)"
-	fineBloccoPacman   = "# <<< remotix"
+	inizioBloccoPacman = "# >>> remotix — added by remotix-install (do not edit between the two marker lines)"
+	// marcaPacman: l'inizio della riga di marca, che la cerca. La riga intera era in italiano fino al
+	// 10 ott 2026 (DECISIONI §10.35): una macchina installata prima si ritrova lo stesso.
+	marcaPacman      = "# >>> remotix"
+	fineBloccoPacman = "# <<< remotix"
 )
 
 // BersaglioArchivio: il nome della distribuzione nell'archivio (debian13, ubuntu2604, fedora44,
@@ -66,7 +69,7 @@ func ParametriArchivio(a *Ambiente, base, canale, chiave, impronta string) (map[
 	u, err := url.Parse(base)
 	// file:///…: l'archivio locale di un pacchetto fuori linea (§6.6.12, fuorilinea.go)
 	if err != nil || (u.Host == "" && !(u.Scheme == "file" && strings.HasPrefix(u.Path, "/"))) {
-		return nil, fmt.Errorf("l'indirizzo dell'archivio non è un URL: %q", base)
+		return nil, fmt.Errorf("the archive address is not a URL: %q", base)
 	}
 	canale = nonVuoto(canale, "stabile")
 	b := BersaglioArchivio(a)
@@ -92,7 +95,7 @@ func bloccoPacman(url string) string {
 
 // togliBlocco: il testo senza il blocco fra le marche (e senza la riga vuota messa prima).
 func togliBlocco(t string) (string, bool) {
-	i := strings.Index(t, inizioBloccoPacman)
+	i := strings.Index(t, marcaPacman)
 	if i < 0 {
 		return t, false
 	}
@@ -118,7 +121,7 @@ func (d *deposito) pacmanConf(c *Contesto) (string, bool, error) {
 		return "", false, err
 	}
 	t := string(b)
-	return t, strings.Contains(t, inizioBloccoPacman), nil
+	return t, strings.Contains(t, marcaPacman), nil
 }
 
 func (d *deposito) mettiBloccoPacman(c *Contesto) error {
@@ -177,9 +180,9 @@ func ConfSoloRemotix(a *Ambiente, dir string) (string, error) {
 		return "", err
 	}
 	t := string(b)
-	i := strings.Index(t, inizioBloccoPacman)
+	i := strings.Index(t, marcaPacman)
 	if i < 0 {
-		return "", fmt.Errorf("il deposito [remotix] non è in /etc/pacman.conf")
+		return "", fmt.Errorf("the [remotix] repository is not in /etc/pacman.conf")
 	}
 	j := strings.Index(t[i:], fineBloccoPacman)
 	blocco := t[i : i+j]

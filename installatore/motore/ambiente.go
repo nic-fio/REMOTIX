@@ -45,7 +45,7 @@ var programmiAmmessi = map[string][]string{
 }
 
 // ErrNonAmmesso: il motore non lancia programmi fuori dall'elenco.
-var ErrNonAmmesso = errors.New("programma fuori dall'elenco chiuso del motore (DECISIONI §10.14)")
+var ErrNonAmmesso = errors.New("program outside the engine's closed list (DECISIONS §10.14)")
 
 // ProgrammiAmmessi: l'elenco, per le prove e per il manuale.
 func ProgrammiAmmessi() []string {

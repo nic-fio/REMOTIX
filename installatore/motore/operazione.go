@@ -44,9 +44,9 @@ type Operazione struct {
 
 // errori interni del giro delle azioni
 var (
-	errFallita     = errors.New("un'azione è fallita")
-	errConcorrente = errors.New("la macchina è cambiata durante l'operazione")
-	errFermata     = errors.New("fermata da chi installa")
+	errFallita     = errors.New("an action failed")
+	errConcorrente = errors.New("the machine changed during the operation")
+	errFermata     = errors.New("stopped by whoever is installing")
 )
 
 func (m *Motore) adesso() time.Time {
@@ -252,12 +252,12 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 	if ap, err := m.Aperta(); err != nil {
 		return nil, err
 	} else if ap != nil {
-		return nil, Errore("RX-STATO-001", ap.ID+" è "+string(ap.Stato))
+		return nil, Errore("RX-STATO-001", ap.ID+" is "+string(ap.Stato))
 	}
 	var piano Piano
 	if err := LeggiJSON(percorsoPiano, &piano); err != nil || piano.Oggetto != "piano" {
 		if err == nil {
-			err = fmt.Errorf("non è un piano: oggetto %q", piano.Oggetto)
+			err = fmt.Errorf("not a plan: object %q", piano.Oggetto)
 		}
 		return nil, Errore("RX-PIANO-002", err.Error())
 	}
@@ -288,7 +288,7 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 
 	// 0 TRUST
 	if m.Fonti == nil {
-		return op, op.blocca(Errore("RX-TRUST-004", "nessuna fonte del catalogo"))
+		return op, op.blocca(Errore("RX-TRUST-004", "no catalogue source"))
 	}
 	cat, fid, err := m.Fonti.Fidati(m.adesso())
 	if e := op.scriviOggetto("fiducia.json", fid); e != nil {
@@ -335,7 +335,7 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 	}
 	if im.Digest != piano.Impronta.Digest {
 		tolti, aggiunti := DifferenzeImpronta(piano.Impronta.Elementi, im.Elementi)
-		det := "nel piano: " + strings.Join(tolti, "; ") + " — adesso: " + strings.Join(aggiunti, "; ")
+		det := "in the plan: " + strings.Join(tolti, "; ") + " — now: " + strings.Join(aggiunti, "; ")
 		if err := op.scriviOggetto("impronta-adesso.json", im); err != nil {
 			return op, err
 		}
@@ -386,7 +386,7 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 	if err := op.scriviOggetto("approvazione.json", appr); err != nil {
 		return op, err
 	}
-	if err := op.vai(APPROVATA, "", appr.Modo+", da "+appr.Da); err != nil {
+	if err := op.vai(APPROVATA, "", appr.Modo+", by "+appr.Da); err != nil {
 		return op, err
 	}
 
@@ -663,7 +663,7 @@ func (op *Operazione) eseguiTutte() error {
 			op.m.Ev.Azione(op.ID, ap.ID, "RIPRESA", string(esito)+": "+det)
 			switch esito {
 			case COMPLETO:
-				if err := op.fatta(az, ap, prima, "ripresa: l'effetto c'era già"); err != nil {
+				if err := op.fatta(az, ap, prima, "resumed: the effect was already there"); err != nil {
 					return err
 				}
 				continue
@@ -683,7 +683,7 @@ func (op *Operazione) eseguiTutte() error {
 			if err := az.Fai(c, prima); err != nil {
 				return op.fallita(ap, err)
 			}
-			if err := op.fatta(az, ap, prima, "ripresa: rifatta"); err != nil {
+			if err := op.fatta(az, ap, prima, "resumed: done again"); err != nil {
 				return err
 			}
 
@@ -694,7 +694,7 @@ func (op *Operazione) eseguiTutte() error {
 				return op.fallita(ap, err)
 			}
 			if esito != COMPLETO {
-				return op.concorrente(ap, "era FATTA, ora "+string(esito)+": "+det)
+				return op.concorrente(ap, "was FATTA, now "+string(esito)+": "+det)
 			}
 
 		case ult.Tipo == EvFallita:
@@ -727,19 +727,19 @@ func (op *Operazione) annullaTutte() ([]string, error) {
 			return op.Reg.Scrivi(Evento{Tipo: t, Azione: ap.ID, Codice: codice, Dettaglio: det})
 		}
 		if intz.Origine == PREESISTENTE {
-			if err := scrivi(EvAnnullata, "", "PREESISTENTE: non si tocca"); err != nil {
+			if err := scrivi(EvAnnullata, "", "PREESISTENTE: left untouched"); err != nil {
 				return nil, err
 			}
 			continue
 		}
 		if ok, det, err := a.Annullata(c, intz.Prima); err == nil && ok {
-			if err := scrivi(EvAnnullata, "", "niente da disfare: "+det); err != nil {
+			if err := scrivi(EvAnnullata, "", "nothing to undo: "+det); err != nil {
 				return nil, err
 			}
 			continue
 		}
 		if esito, det, err := a.Controlla(c, intz.Prima); err == nil && esito == ESTRANEO {
-			resti = append(resti, ap.ID+": modifica di altri, non si tocca ("+det+")")
+			resti = append(resti, ap.ID+": changed by someone else, left untouched ("+det+")")
 			if err := scrivi(EvAnnullamentoFallito, "RX-RIPRESA-001", "CONCORRENTE: "+det); err != nil {
 				return nil, err
 			}
@@ -804,7 +804,7 @@ func (op *Operazione) verifica() (bool, error) {
 		k := Controllo{ID: ap.ID, Cosa: ap.ComeSiVerifica, Richiesto: true}
 		intz := op.Reg.Intenzione(ap.ID)
 		if intz == nil {
-			k.Esito, k.Dettaglio = "UNKNOWN", "nessuna intenzione nel registro"
+			k.Esito, k.Dettaglio = "UNKNOWN", "no intention in the log"
 		} else if esito, det, err := a.Controlla(op.contesto(ap), intz.Prima); err != nil {
 			k.Esito, k.Dettaglio = "UNKNOWN", err.Error()
 		} else if esito == COMPLETO {
@@ -1008,10 +1008,10 @@ func (m *Motore) ControllaInstallazione() (*Installazione, error) {
 	}
 	op, err := m.apri(in.Operazione)
 	if err != nil {
-		return nil, Errore("RX-INST-001", "l'operazione "+in.Operazione+" non c'è")
+		return nil, Errore("RX-INST-001", "operation "+in.Operazione+" does not exist")
 	}
 	if op.Stato != CONFERMATA && op.Stato != CONFERMATA_A_CONDIZIONI {
-		return nil, Errore("RX-INST-001", "l'operazione "+in.Operazione+" è "+string(op.Stato))
+		return nil, Errore("RX-INST-001", "operation "+in.Operazione+" is "+string(op.Stato))
 	}
 	return &in, nil
 }

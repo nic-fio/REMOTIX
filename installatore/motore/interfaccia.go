@@ -148,7 +148,7 @@ func TestoRisposte(voci map[string]string) string {
 func PianoDaScelte(voci map[string]string, prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, o OpzioniInstallazione) (*Piano, error) {
 	for k, v := range voci {
 		if !vociNote[k] {
-			return nil, Errore("RX-RISPOSTE-002", "voce sconosciuta «"+k+"»")
+			return nil, Errore("RX-RISPOSTE-002", "unknown entry «"+k+"»")
 		}
 		if strings.HasPrefix(k, "consenso.") {
 			sn, ok := rispostaSiNo(v)

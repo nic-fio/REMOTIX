@@ -160,7 +160,7 @@ func (s *Sessione) Applica(digest string, eventi func(motore.EventoPubblico)) (*
 	s.blocco.Lock()
 	defer s.blocco.Unlock()
 	if s.piano == nil {
-		return nil, errors.New("nessun piano")
+		return nil, errors.New("no plan")
 	}
 	if digest != s.piano.Digest() {
 		return &Esito{Errore: messaggioDi(motore.Errore("RX-PIANO-005", ""))}, nil

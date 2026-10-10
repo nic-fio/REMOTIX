@@ -90,7 +90,7 @@ func (f *FontiFiducia) Fidati(adesso time.Time) (*Catalogo, *Fiducia, error) {
 // ControllaMotoreMinimo: questo motore capisce il catalogo.
 func ControllaMotoreMinimo(c *Catalogo) error {
 	if ConfrontaVersioni(VersioneMotore, c.MotoreMinimo) < 0 {
-		return Errore("RX-TRUST-003", "serve "+c.MotoreMinimo+", questo è "+VersioneMotore)
+		return Errore("RX-TRUST-003", "needs "+c.MotoreMinimo+", this is "+VersioneMotore)
 	}
 	return nil
 }

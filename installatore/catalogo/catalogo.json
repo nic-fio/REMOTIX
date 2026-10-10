@@ -1,8 +1,8 @@
 {
   "formato": "remotix-catalogo/1",
-  "versione": "2026.10.05.11",
-  "sequenza": 11,
-  "emesso": "2026-10-05",
+  "versione": "2026.10.10.12",
+  "sequenza": 12,
+  "emesso": "2026-10-10",
   "motore_minimo": "0.1.0",
   "fonte": "fasi/17-l-installatore.md §3 e §3.1 (matrice e versioni), §4 (indagine), §11.1 (esiti di T1), DECISIONI §10.6-10.8 (D2 e D7 chiuse, la macchina senza desktop), fasi/18-senza-ffmpeg.md (niente ffmpeg: libva, libopus; pacchetti e depositi [M] 30 set nelle immagini podman), DECISIONI §10.27 e fasi/19-nvidia.md (niente codifica sul processore: via OpenH264, SVT-AV1 e il deposito di Cisco; senza una scheda capace REMOTIX non si installa; il driver Vulkan della scheda, vulkan_scheda e vulkan_nvidia, [M] 1 ott nelle immagini podman): quel che i documenti sanno il 1 ott 2026. Nessuna combinazione ha ancora il giro intero verde (T10): per questo tutte sono COMPATIBILI e nessuna CERTIFICATA.",
   "requisiti": {
@@ -19,19 +19,19 @@
       "decisione": "D5",
       "comandi": {
         "fedora": "sudo dnf install https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm && sudo dnf install intel-media-driver mesa-va-drivers-freeworld   # Intel: intel-media-driver (nonfree); AMD: mesa-va-drivers-freeworld (free)",
-        "rhel": "sudo dnf install https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-$(rpm -E %rhel).noarch.rpm https://mirrors.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-$(rpm -E %rhel).noarch.rpm && sudo dnf install intel-media-driver   # DOPO EPEL; solo Intel: su AMD la Mesa di RHEL è senza VA-API"
+        "rhel": "sudo dnf install https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-$(rpm -E %rhel).noarch.rpm https://mirrors.rpmfusion.org/nonfree/el/rpmfusion-nonfree-release-$(rpm -E %rhel).noarch.rpm && sudo dnf install intel-media-driver   # AFTER EPEL; Intel only: on AMD the RHEL Mesa has no VA-API"
       }
     },
     "packman": {
       "nome": "Packman",
       "decisione": "D5",
       "comandi": {
-        "tumbleweed": "sudo zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/ packman && sudo zypper --gpg-auto-import-keys refresh packman && sudo zypper install --from packman --allow-vendor-change Mesa-dri Mesa-libva libvulkan_radeon   # solo AMD: il driver Intel ufficiale codifica già",
-        "leap16": "sudo zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Leap_16.0/ packman && sudo zypper --gpg-auto-import-keys refresh packman && sudo zypper install --from packman --allow-vendor-change Mesa-dri Mesa-libva libvulkan_radeon   # solo AMD: il driver Intel ufficiale codifica già"
+        "tumbleweed": "sudo zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Tumbleweed/ packman && sudo zypper --gpg-auto-import-keys refresh packman && sudo zypper install --from packman --allow-vendor-change Mesa-dri Mesa-libva libvulkan_radeon   # AMD only: the official Intel driver already encodes",
+        "leap16": "sudo zypper ar -cfp 90 https://ftp.gwdg.de/pub/linux/misc/packman/suse/openSUSE_Leap_16.0/ packman && sudo zypper --gpg-auto-import-keys refresh packman && sudo zypper install --from packman --allow-vendor-change Mesa-dri Mesa-libva libvulkan_radeon   # AMD only: the official Intel driver already encodes"
       }
     },
     "epel": {
-      "nome": "EPEL (con CRB)",
+      "nome": "EPEL (with CRB)",
       "decisione": "",
       "comandi": {
         "rhel": "sudo dnf install epel-release && sudo dnf config-manager --set-enabled crb"
@@ -61,7 +61,7 @@
         "vulkan_scheda": {
           "AMD": "mesa-vulkan-drivers"
         },
-        "vulkan_nvidia": "nvidia-vulkan-icd (non-free; col driver nvidia-driver è solo raccomandato)"
+        "vulkan_nvidia": "nvidia-vulkan-icd (non-free; with the nvidia-driver package it is only recommended)"
       },
       "desktop": {
         "gnome": {
@@ -88,7 +88,7 @@
         }
       },
       "note": [
-        "la base di oggi"
+        "the reference platform"
       ],
       "pacchetti_desktop": {
         "gnome": "task-gnome-desktop",
@@ -122,13 +122,13 @@
         "vulkan_scheda": {
           "AMD": "mesa-vulkan-drivers"
         },
-        "vulkan_nvidia": "libnvidia-gl-<versione del driver> (manca col driver «headless»)"
+        "vulkan_nvidia": "libnvidia-gl-<driver version> (missing with the «headless» driver)"
       },
       "desktop": {
         "gnome": {
           "supportato": true,
           "note": [
-            "GNOME 50 (§5.1); chi si collega vede la sessione GNOME di serie della distribuzione, su Ubuntu la sessione «ubuntu» (D8)"
+            "GNOME 50 (§5.1); whoever connects sees the distribution's default GNOME session, on Ubuntu the «ubuntu» session (D8)"
           ]
         },
         "kde": {
@@ -207,7 +207,7 @@
         }
       },
       "note": [
-        "SELinux enforcing: pam_selinux open porta a un rifiuto all'esecuzione del figlio (§11.1 B), tappa T6"
+        "SELinux enforcing: pam_selinux open leads to a denial when the child process runs (§11.1 B), step T6"
       ],
       "pacchetti_desktop": {
         "gnome": "@workstation-product-environment",
@@ -265,7 +265,7 @@
         }
       },
       "note": [
-        "analizzata, non certificata: fuori dalla matrice (§3); GNOME 49; esce di supporto a fine 2026"
+        "analysed, not certified: outside the matrix (§3); GNOME 49; out of support at the end of 2026"
       ],
       "pacchetti_desktop": {
         "gnome": "@workstation-product-environment",
@@ -332,19 +332,19 @@
         "xfce": {
           "supportato": false,
           "codice": "RX-COMPAT-005",
-          "motivo": "né labwc né XFCE in RHEL/EPEL 10"
+          "motivo": "neither labwc nor XFCE in RHEL/EPEL 10"
         },
         "lxqt": {
           "supportato": false,
           "codice": "RX-COMPAT-005",
-          "motivo": "né labwc né LXQt in RHEL/EPEL 10"
+          "motivo": "neither labwc nor LXQt in RHEL/EPEL 10"
         }
       },
       "note": [
-        "dalla 10.1: OpenSSL 3.5",
-        "su AMD niente VA-API (Mesa costruita senza), e RPM Fusion non la sostituisce: e neanche Vulkan Video: la RADV di RHEL è costruita senza H.264 (Mesa «all_free», [M] 1 ott dallo spec): con le sole schede AMD REMOTIX non si installa (RX-GPU-006)",
-        "EPEL resta un deposito di REMOTIX su Alma: RPM Fusion per EL (il driver Intel con H.264) va installato DOPO EPEL, e KDE ne ha bisogno; ⚠ che il driver ne prenda davvero le dipendenze non è rimisurato senza ffmpeg. Fase 19: SVT-AV1 e OpenH264 di Cisco usciti; libyuv non c'è [M] 30 set",
-        "SELinux enforcing (§11.1 B), tappa T6"
+        "from 10.1: OpenSSL 3.5",
+        "on AMD no VA-API (Mesa built without it), and RPM Fusion does not replace it; nor Vulkan Video: the RHEL RADV is built without H.264 (Mesa «all_free», [M] 1 Oct from the spec): with AMD cards only, REMOTIX is not installed (RX-GPU-006)",
+        "EPEL remains a REMOTIX repository on Alma: RPM Fusion for EL (the Intel driver with H.264) is installed AFTER EPEL, and KDE needs it; ⚠ that the driver really takes its dependencies from it has not been measured again without ffmpeg. Phase 19: SVT-AV1 and Cisco's OpenH264 removed; libyuv is not there [M] 30 Sep",
+        "SELinux enforcing (§11.1 B), step T6"
       ],
       "pacchetti_desktop": {
         "gnome": "@graphical-server-environment",
@@ -357,7 +357,7 @@
       "versioni": [
         "*"
       ],
-      "etichetta_versione": "rolling (da set 2026)",
+      "etichetta_versione": "rolling (since Sep 2026)",
       "nome": "Arch Linux",
       "famiglia": "arch",
       "matrice": true,
@@ -369,7 +369,7 @@
             "*"
           ],
           "nome": "Manjaro",
-          "nota": "indietro di qualche settimana rispetto ad Arch"
+          "nota": "a few weeks behind Arch"
         },
         {
           "id": "endeavouros",
@@ -411,8 +411,8 @@
         }
       },
       "note": [
-        "pam_faillock nella pila di serie (D3)",
-        "rolling release: il pacchetto si lega al numero (soname) delle librerie — libva, opus — non alla versione esatta (§6.2)"
+        "pam_faillock in the default stack (D3)",
+        "rolling release: the package depends on the library number (soname) — libva, opus — not on the exact version (§6.2)"
       ],
       "pacchetti_desktop": {
         "gnome": "gnome",
@@ -427,7 +427,7 @@
       "versioni": [
         "*"
       ],
-      "etichetta_versione": "rolling (da set 2026)",
+      "etichetta_versione": "rolling (since Sep 2026)",
       "nome": "openSUSE Tumbleweed",
       "famiglia": "suse",
       "matrice": true,
@@ -439,7 +439,7 @@
         "pacchetti_scheda": {
           "AMD": "Mesa-dri,Mesa-libva,libvulkan_radeon"
         },
-        "vulkan_nvidia": "nvidia-gl-G06 o nvidia-gl-G07 (deposito di NVIDIA)"
+        "vulkan_nvidia": "nvidia-gl-G06 or nvidia-gl-G07 (NVIDIA repository)"
       },
       "desktop": {
         "gnome": {
@@ -451,7 +451,7 @@
             "breeze6-wallpapers"
           ],
           "note": [
-            "senza lo sfondo plasmashell non mostra né desktop né pannello (§11.1 D)"
+            "without the wallpaper plasmashell shows neither desktop nor panel (§11.1 D)"
           ]
         },
         "xfce": {
@@ -470,12 +470,12 @@
           ],
           "serve_carattere": true,
           "note": [
-            "su openSUSE il pattern lxqt porta il carattere scalabile (google-droid-fonts) solo come raccomandato: senza, labwc muore (labwc #2525, §11.1)"
+            "on openSUSE the lxqt pattern brings the scalable font (google-droid-fonts) only as recommended: without it, labwc dies (labwc #2525, §11.1)"
           ]
         }
       },
       "note": [
-        "senza ffmpeg: il driver Intel ufficiale (intel-media-driver) codifica H.264, la Mesa ufficiale no (h264/h265 tolti): Packman serve solo con una scheda AMD [M] 30 set"
+        "without ffmpeg: the official Intel driver (intel-media-driver) encodes H.264, the official Mesa does not (h264/h265 removed): Packman is needed only with an AMD card [M] 30 Sep"
       ],
       "pacchetti_desktop": {
         "gnome": "pattern:gnome",
@@ -502,7 +502,7 @@
         "pacchetti_scheda": {
           "AMD": "Mesa-dri,Mesa-libva,libvulkan_radeon"
         },
-        "vulkan_nvidia": "nvidia-gl-G06 o nvidia-gl-G07 (deposito di NVIDIA)"
+        "vulkan_nvidia": "nvidia-gl-G06 or nvidia-gl-G07 (NVIDIA repository)"
       },
       "desktop": {
         "gnome": {
@@ -510,7 +510,7 @@
         },
         "kde": {
           "supportato": true,
-          "richiede_3d": "Plasma di Leap 16 (KWin 6.4) si pianta appena REMOTIX cattura lo schermo se la scheda non ha l'accelerazione 3D (cfr. KDE bug 487217): serve una scheda vera, o virgl in una macchina virtuale; XFCE e LXQt vanno anche senza"
+          "richiede_3d": "Plasma on Leap 16 (KWin 6.4) hangs as soon as REMOTIX captures the screen if the card has no 3D acceleration (see KDE bug 487217): a real card is needed, or virgl in a virtual machine; XFCE and LXQt work without it"
         },
         "xfce": {
           "supportato": true,
@@ -519,7 +519,7 @@
             "wlr-randr"
           ],
           "limiti": [
-            "XFCE sotto Wayland è «sperimentale» per SUSE"
+            "XFCE on Wayland is «experimental» for SUSE"
           ],
           "serve_carattere": true
         },
@@ -530,10 +530,10 @@
             "wlr-randr"
           ],
           "limiti": [
-            "LXQt sotto Wayland è «sperimentale» per SUSE"
+            "LXQt on Wayland is «experimental» for SUSE"
           ],
           "note": [
-            "su openSUSE il pattern lxqt porta il carattere scalabile (google-droid-fonts) solo come raccomandato: senza, labwc muore (labwc #2525, §11.1)"
+            "on openSUSE the lxqt pattern brings the scalable font (google-droid-fonts) only as recommended: without it, labwc dies (labwc #2525, §11.1)"
           ],
           "serve_carattere": true
         }
@@ -545,7 +545,7 @@
         "lxqt": "pattern:lxqt"
       },
       "note": [
-        "senza ffmpeg: il driver Intel ufficiale (intel-media-driver) codifica H.264, la Mesa ufficiale no (h264/h265 tolti): Packman serve solo con una scheda AMD [M] 30 set"
+        "without ffmpeg: the official Intel driver (intel-media-driver) encodes H.264, the official Mesa does not (h264/h265 removed): Packman is needed only with an AMD card [M] 30 Sep"
       ]
     }
   ],
@@ -555,63 +555,63 @@
       "versioni": [
         "12"
       ],
-      "motivo": "mutter 43 / GNOME 43, niente libei, niente labwc: la base è troppo vecchia"
+      "motivo": "mutter 43 / GNOME 43, no libei, no labwc: the base is too old"
     },
     {
       "id": "ubuntu",
       "versioni": [
         "24.04"
       ],
-      "motivo": "Ubuntu 24.04 fuori (D7, 29 set): si parte dalla 26.04; KDE 5.27, XFCE 4.18 e LXQt 1.4 non vanno su Wayland"
+      "motivo": "Ubuntu 24.04 excluded (D7, 29 Sep): support starts from 26.04; KDE 5.27, XFCE 4.18 and LXQt 1.4 do not run on Wayland"
     },
     {
       "id": "linuxmint",
       "versioni": [
         "22"
       ],
-      "motivo": "Mint 22 ha la base di Ubuntu 24.04 (D7)"
+      "motivo": "Mint 22 is based on Ubuntu 24.04 (D7)"
     },
     {
       "id": "almalinux",
       "versioni": [
         "9"
       ],
-      "motivo": "RHEL 9: GNOME 40, niente libei, niente labwc"
+      "motivo": "RHEL 9: GNOME 40, no libei, no labwc"
     },
     {
       "id": "rocky",
       "versioni": [
         "9"
       ],
-      "motivo": "RHEL 9: GNOME 40, niente libei, niente labwc"
+      "motivo": "RHEL 9: GNOME 40, no libei, no labwc"
     },
     {
       "id": "rhel",
       "versioni": [
         "9"
       ],
-      "motivo": "RHEL 9: GNOME 40, niente libei, niente labwc"
+      "motivo": "RHEL 9: GNOME 40, no libei, no labwc"
     },
     {
       "id": "centos",
       "versioni": [
         "9"
       ],
-      "motivo": "RHEL 9: GNOME 40, niente libei, niente labwc"
+      "motivo": "RHEL 9: GNOME 40, no libei, no labwc"
     },
     {
       "id": "opensuse-leap",
       "versioni": [
         "15"
       ],
-      "motivo": "Leap 15.6: fine vita il 30 aprile 2026"
+      "motivo": "Leap 15.6: end of life on 30 April 2026"
     },
     {
       "id": "sles",
       "versioni": [
         "16"
       ],
-      "motivo": "SLES 16: solo GNOME, niente Packman — si rivede se un cliente la chiede"
+      "motivo": "SLES 16: GNOME only, no Packman — to be reconsidered if a customer asks for it"
     }
   ],
   "carattere_scalabile": {
@@ -631,34 +631,34 @@
   },
   "componenti_minimi": [
     {
-      "componente": "nucleo Linux",
+      "componente": "Linux kernel",
       "minimo": "6.12",
-      "perche": "quello della distribuzione certificata più vecchia: driver i915/xe e amdgpu, DMA-BUF"
+      "perche": "the one of the oldest certified distribution: i915/xe and amdgpu drivers, DMA-BUF"
     },
     {
       "componente": "systemd / logind",
-      "minimo": "con systemctl --user e sessioni Remote=yes",
-      "perche": "le sessioni per utente"
+      "minimo": "with systemctl --user and Remote=yes sessions",
+      "perche": "the per-user sessions"
     },
     {
       "componente": "OpenSSL",
       "minimo": "3.5",
-      "perche": "l'API QUIC del ponte ngtcp2_crypto_ossl"
+      "perche": "the QUIC API of the ngtcp2_crypto_ossl bridge"
     },
     {
       "componente": "ngtcp2 / nghttp3",
       "minimo": "1.25.0 / 1.18.0",
-      "perche": "dentro il binario (DECISIONI §10.6)"
+      "perche": "built into the binary (DECISIONS §10.6)"
     },
     {
       "componente": "libva (VA-API)",
       "minimo": "2.22",
-      "perche": "la codifica sulla scheda, senza ffmpeg (fase 18); la più vecchia della matrice: Debian 13, Alma 10, Leap 16 [M] 30 set"
+      "perche": "encoding on the graphics card, without ffmpeg (phase 18); the oldest in the matrix: Debian 13, Alma 10, Leap 16 [M] 30 Sep"
     },
     {
       "componente": "libopus",
       "minimo": "1.4",
-      "perche": "l'audio, senza ffmpeg; Alma 10 ha la 1.4"
+      "perche": "audio, without ffmpeg; Alma 10 has 1.4"
     },
     {
       "componente": "libei",
@@ -668,11 +668,11 @@
     {
       "componente": "PipeWire",
       "minimo": "0.3.48",
-      "perche": "la cattura di GNOME e KDE"
+      "perche": "screen capture on GNOME and KDE"
     },
     {
       "componente": "GNOME (mutter)",
-      "minimo": "46 (API ConnectToEIS, --headless); da 50 l'unità @user",
+      "minimo": "46 (ConnectToEIS API, --headless); from 50 the @user unit",
       "perche": "sessione.c"
     },
     {
@@ -683,38 +683,38 @@
     {
       "componente": "XFCE",
       "minimo": "4.20 (Wayland)",
-      "perche": "la sessione sotto labwc"
+      "perche": "the session under labwc"
     },
     {
       "componente": "LXQt",
       "minimo": "2.0 (Wayland)",
-      "perche": "la sessione sotto labwc"
+      "perche": "the session under labwc"
     },
     {
       "componente": "labwc / wlroots",
-      "minimo": "labwc 0.8 con -m/-C/-S; wlroots 0.18",
+      "minimo": "labwc 0.8 with -m/-C/-S; wlroots 0.18",
       "perche": "wlroots.c, sessione.c"
     },
     {
-      "componente": "un carattere scalabile",
-      "minimo": "qualunque (DejaVu, Noto, Droid…)",
-      "perche": "senza, labwc muore (labwc #2525)"
+      "componente": "a scalable font",
+      "minimo": "any (DejaVu, Noto, Droid…)",
+      "perche": "without one, labwc dies (labwc #2525)"
     },
     {
       "componente": "VA-API",
-      "minimo": "driver con H.264 in codifica (iHD Intel, radeonsi AMD con i codec); NVIDIA proprietaria no (va con Vulkan Video)",
-      "perche": "la codifica sulla scheda: senza una scheda capace REMOTIX non si installa (DECISIONI §10.27)"
+      "minimo": "a driver with H.264 encoding (iHD Intel, radeonsi AMD with the codecs); not the proprietary NVIDIA one (it goes through Vulkan Video)",
+      "perche": "encoding on the graphics card: without a capable card REMOTIX is not installed (DECISIONS §10.27)"
     },
     {
       "componente": "Vulkan Video",
-      "minimo": "loader 1.3.274; un driver con VK_KHR_video_encode_h264/h265: RADV di una Mesa costruita coi codec (AMD), il driver proprietario NVIDIA col suo ICD [?] non provato",
-      "perche": "la strada provata per prima (fase 19, DECISIONI §10.27); senza, la scheda va con VA-API"
+      "minimo": "loader 1.3.274; a driver with VK_KHR_video_encode_h264/h265: RADV from a Mesa built with the codecs (AMD), the proprietary NVIDIA driver with its ICD [?] not tested",
+      "perche": "the path tried first (phase 19, DECISIONS §10.27); without it, the card goes through VA-API"
     }
   ],
   "fuori_sempre": [
-    "distribuzioni senza systemd (Alpine, Devuan, Artix con OpenRC…): REMOTIX usa logind e il gestore d'utente",
-    "immutabili (Silverblue/Kinoite, Aeon/Kalpa, Ubuntu Core, SteamOS): rimandate a dopo la fase (D9)",
-    "Linux Mint Cinnamon: Cinnamon non è uno dei quattro desktop"
+    "distributions without systemd (Alpine, Devuan, Artix with OpenRC…): REMOTIX uses logind and the user manager",
+    "immutable ones (Silverblue/Kinoite, Aeon/Kalpa, Ubuntu Core, SteamOS): postponed (D9)",
+    "Linux Mint Cinnamon: Cinnamon is not one of the four desktops"
   ],
-  "nota_pacchetti_desktop": "i gruppi ufficiali, gli stessi di `vesti` (§7.2); tutti portano un display manager: il motore lo lascia installato ma SPENTO e il bersaglio d'avvio com'era (R38). [M] 30 set, prove/gruppi-desktop.sh: tutti i nomi risolti dal gestore di ogni famiglia (dnf 4 di Alma non capisce «@^»: si scrive «@<ambiente>» per tutti)"
+  "nota_pacchetti_desktop": "the official groups, the same as `vesti` (§7.2); they all bring a display manager: the engine leaves it installed but STOPPED and the boot target as it was (R38). [M] 30 Sep, prove/gruppi-desktop.sh: every name resolved by the package manager of each family (Alma's dnf 4 does not understand «@^»: «@<environment>» is written for all)"
 }

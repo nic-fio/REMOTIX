@@ -299,13 +299,13 @@ func (f *firewallAz) Controlla(c *Contesto, prima json.RawMessage) (Esito, strin
 	}
 	switch {
 	case tutte:
-		return COMPLETO, "tutte le regole ci sono", nil
+		return COMPLETO, "all the rules are there", nil
 	case mancaUnaDiPrima:
-		return ESTRANEO, "manca una regola che c'era già prima", nil
+		return ESTRANEO, "a rule that was there before is missing", nil
 	case comePrima:
-		return ASSENTE, "com'era prima", nil
+		return ASSENTE, "as it was before", nil
 	}
-	return A_META, "alcune regole sì, altre no", nil
+	return A_META, "some rules yes, others no", nil
 }
 
 func (f *firewallAz) Annulla(c *Contesto, prima json.RawMessage) error {
@@ -368,7 +368,7 @@ func (f *firewallAz) Annullata(c *Contesto, prima json.RawMessage) (bool, string
 		return false, "", err
 	}
 	if p.Origine == PREESISTENTE {
-		return true, "c'erano già: non si toccano", nil
+		return true, "already there: left untouched", nil
 	}
 	adesso, err := f.leggiForma(c, p.Zona, p.Forma)
 	if err != nil {
@@ -376,8 +376,8 @@ func (f *firewallAz) Annullata(c *Contesto, prima json.RawMessage) (bool, string
 	}
 	for _, k := range f.regoleDi(p.Forma) {
 		if !p.Presenti[k] && adesso[k] {
-			return false, "c'è ancora " + k, nil
+			return false, "still there: " + k, nil
 		}
 	}
-	return true, "com'era prima", nil
+	return true, "as it was before", nil
 }

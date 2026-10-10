@@ -108,7 +108,7 @@ func Famiglia(id, idLike string) string {
 func distribuzione(a *Ambiente, p *Profilo) string {
 	m, fonte := OsRelease(a)
 	if m == nil {
-		p.Sconosciuto("distro.id", "né /etc/os-release né /usr/lib/os-release")
+		p.Sconosciuto("distro.id", "neither /etc/os-release nor /usr/lib/os-release")
 		p.Con("RX-DISTRO-001", "")
 		return ""
 	}
@@ -145,7 +145,7 @@ func sistema(a *Ambiente, p *Profilo) {
 	case "arm64":
 		arch = "aarch64"
 	}
-	p.Rilevato("sistema.architettura", arch, "il motore stesso")
+	p.Rilevato("sistema.architettura", arch, "the engine itself")
 	if k, ok := leggi(a, "/proc/sys/kernel/osrelease"); ok {
 		p.Rilevato("sistema.kernel", strings.TrimSpace(k), "/proc/sys/kernel/osrelease")
 	}
@@ -153,7 +153,7 @@ func sistema(a *Ambiente, p *Profilo) {
 	if st, err := os.Stat(a.P("/run/systemd/system")); err == nil && st.IsDir() {
 		p.Rilevato("sistema.systemd", "si", "/run/systemd/system")
 	} else {
-		p.Rilevato("sistema.systemd", "no", "/run/systemd/system manca")
+		p.Rilevato("sistema.systemd", "no", "/run/systemd/system is missing")
 		p.Con("RX-SYSTEMD-001", "")
 	}
 	if h, ok := leggi(a, "/proc/sys/kernel/hostname"); ok {
@@ -182,27 +182,27 @@ func famigliaDriver(p *Profilo) (intel, amd string, f []string) {
 	switch {
 	case c("intel-media-driver") || c("intel-media-va-driver-non-free") || c("intel-media-va-driver"):
 		intel = "con"
-		f = append(f, "intel (iHD, con H.264)")
+		f = append(f, "intel (iHD, with H.264)")
 	case c("libva-intel-media-driver") || c("intel-media-driver-free"):
 		intel = "senza"
-		f = append(f, "libva-intel-media-driver di Fedora/RHEL (senza H.264 in codifica)")
+		f = append(f, "libva-intel-media-driver of Fedora/RHEL (no H.264 encoding)")
 	}
 	switch {
 	case c("mesa-va-drivers-freeworld"):
 		amd = "con"
-		f = append(f, "mesa freeworld (radeonsi con H.264)")
+		f = append(f, "mesa freeworld (radeonsi with H.264)")
 	case fam == "fedora" && (c("mesa-va-drivers") || c("mesa-dri-drivers")):
 		amd = "senza"
-		f = append(f, "Mesa di Fedora/RHEL (senza H.264)")
+		f = append(f, "Mesa of Fedora/RHEL (no H.264)")
 	case fam == "suse" && c("Mesa-dri") && strings.Contains(p.V("pacchetto.Mesa-dri"), ".pm."):
 		amd = "con"
-		f = append(f, "Mesa di Packman (radeonsi con H.264)")
+		f = append(f, "Mesa from Packman (radeonsi with H.264)")
 	case fam == "suse" && c("Mesa-dri"):
 		amd = "senza"
-		f = append(f, "Mesa di openSUSE (senza H.264)")
+		f = append(f, "Mesa of openSUSE (no H.264)")
 	case fam == "debian" && c("mesa-va-drivers"):
 		amd = "con"
-		f = append(f, "mesa-va-drivers (radeonsi con H.264)")
+		f = append(f, "mesa-va-drivers (radeonsi with H.264)")
 	}
 	return
 }
@@ -341,9 +341,9 @@ func desktop(a *Ambiente, p *Profilo, fam string, pk *Pacchetti, extra []string)
 		v, st, fonte := pk.Versione(nome)
 		if st == SCONOSCIUTO {
 			if _, err := os.Stat(a.P(binarioDesktop[d])); err == nil {
-				p.Metti(Fatto{Chiave: "desktop." + d, Valore: "presente", Stato: RILEVATO, Fonte: binarioDesktop[d], Nota: "versione sconosciuta: l'archivio dei pacchetti non si è letto"})
+				p.Metti(Fatto{Chiave: "desktop." + d, Valore: "presente", Stato: RILEVATO, Fonte: binarioDesktop[d], Nota: "unknown version: the package database could not be read"})
 			} else {
-				p.Sconosciuto("desktop."+d, "l'archivio dei pacchetti non si è letto ("+fonte+")")
+				p.Sconosciuto("desktop."+d, "the package database could not be read ("+fonte+")")
 			}
 			continue
 		}
@@ -357,7 +357,7 @@ func desktop(a *Ambiente, p *Profilo, fam string, pk *Pacchetti, extra []string)
 		visti[nome] = true
 		v, st, fonte := pk.Versione(nome)
 		if st == SCONOSCIUTO {
-			p.Sconosciuto("pacchetto."+nome, "l'archivio dei pacchetti non si è letto ("+fonte+")")
+			p.Sconosciuto("pacchetto."+nome, "the package database could not be read ("+fonte+")")
 			continue
 		}
 		p.Metti(Fatto{Chiave: "pacchetto." + nome, Valore: v, Stato: st, Fonte: fonte})
@@ -497,7 +497,7 @@ func schede(a *Ambiente, p *Profilo) []Scheda {
 	}
 	for _, s := range r {
 		if s.Driver == "nvidia" {
-			nv, fonte = true, "driver di "+s.Nodo
+			nv, fonte = true, "driver of "+s.Nodo
 		}
 	}
 	p.Rilevato("scheda.nvidia_proprietaria", siNo(nv), fonte)
@@ -536,11 +536,11 @@ func h264(a *Ambiente, p *Profilo, fam string) {
 	}
 	intel, amd, fd := famigliaDriver(p)
 	if len(fd) == 0 {
-		p.Sconosciuto("h264.famiglia_driver", "nessun pacchetto di driver VA riconosciuto")
+		p.Sconosciuto("h264.famiglia_driver", "no known VA driver package")
 	} else {
-		p.Rilevato("h264.famiglia_driver", strings.Join(fd, "; "), "pacchetti installati")
+		p.Rilevato("h264.famiglia_driver", strings.Join(fd, "; "), "installed packages")
 	}
-	nota7a := "la prova col fotogramma si fa in 7a, col binario di REMOTIX"
+	nota7a := "the test with a frame is done in 7a, with the REMOTIX binary"
 	forn, noti := fornitoriScheda(p)
 	// il caso certo: ogni scheda Intel/AMD della macchina ha solo un driver senza H.264
 	senza := (forn["Intel"] || forn["AMD"]) && (!forn["Intel"] || intel == "senza") && (!forn["AMD"] || amd == "senza")
@@ -549,13 +549,13 @@ func h264(a *Ambiente, p *Profilo, fam string) {
 	conScheda := !noti || forn["Intel"] || forn["AMD"]
 	switch {
 	case len(driver) == 0:
-		p.Metti(Fatto{Chiave: "h264.scheda", Valore: "no", Stato: RILEVATO, Fonte: "cartelle dri", Nota: "nessun driver VA-API"})
+		p.Metti(Fatto{Chiave: "h264.scheda", Valore: "no", Stato: RILEVATO, Fonte: "cartelle dri", Nota: "no VA-API driver"})
 		if conScheda {
-			p.Con(codiceH264(fam), "nessun driver VA-API")
+			p.Con(codiceH264(fam), "no VA-API driver")
 		}
 	case senza:
-		p.Metti(Fatto{Chiave: "h264.scheda", Valore: "no", Stato: RILEVATO, Fonte: "pacchetti installati", Nota: "driver VA senza H.264: " + p.V("h264.famiglia_driver")})
-		p.Con(codiceH264(fam), "driver VA senza H.264")
+		p.Metti(Fatto{Chiave: "h264.scheda", Valore: "no", Stato: RILEVATO, Fonte: "installed packages", Nota: "VA driver without H.264: " + p.V("h264.famiglia_driver")})
+		p.Con(codiceH264(fam), "VA driver without H.264")
 	default:
 		p.Sconosciuto("h264.scheda", "driver "+strings.Join(driver, ",")+": "+nota7a)
 		if conScheda {
@@ -621,7 +621,7 @@ func firewall(a *Ambiente, p *Profilo, porta int) {
 		occ, letto := portaInAscolto(a, porta, proto)
 		k := "porta." + ps + "." + proto + "_libera"
 		if !letto {
-			p.Sconosciuto(k, "/proc/net non leggibile")
+			p.Sconosciuto(k, "/proc/net not readable")
 			continue
 		}
 		p.Rilevato(k, siNo(!occ), "/proc/net/"+proto)
@@ -629,7 +629,7 @@ func firewall(a *Ambiente, p *Profilo, porta int) {
 			p.Con("RX-FW-003", ps+"/"+proto)
 		}
 	}
-	p.Metti(Fatto{Chiave: "porta." + ps + ".raggiungibile", Stato: SCONOSCIUTO, Nota: "serve un'altra macchina per saperlo"})
+	p.Metti(Fatto{Chiave: "porta." + ps + ".raggiungibile", Stato: SCONOSCIUTO, Nota: "another machine is needed to find out"})
 	p.Con("RX-FW-005", "")
 
 	// firewalld, sul bus
@@ -673,7 +673,7 @@ func firewall(a *Ambiente, p *Profilo, porta int) {
 		for _, proto := range []string{"tcp", "udp"} {
 			k := "firewall.porta_" + ps + "_" + proto
 			if !ok4 {
-				p.Sconosciuto(k, "/etc/ufw/user.rules non leggibile (serve root)")
+				p.Sconosciuto(k, "/etc/ufw/user.rules not readable (root needed)")
 				continue
 			}
 			if ufwApre(regole+regole6, ps, proto) {
@@ -691,16 +691,16 @@ func firewall(a *Ambiente, p *Profilo, porta int) {
 	if s, err := a.Bus.StatoAttivo("nftables.service"); err == nil && s == "active" {
 		p.Rilevato("firewall.tipo", "nftables", "D-Bus systemd: nftables.service attiva")
 		for _, proto := range []string{"tcp", "udp"} {
-			p.Sconosciuto("firewall.porta_"+ps+"_"+proto, "le regole di nftables non si valutano ancora")
+			p.Sconosciuto("firewall.porta_"+ps+"_"+proto, "nftables rules are not evaluated yet")
 		}
 		p.Con("RX-FW-002", "nftables")
 		return
 	} else if err != nil {
-		p.Sconosciuto("firewall.tipo", "né firewalld sul bus né ufw acceso; systemd non risponde sul bus: "+err.Error())
+		p.Sconosciuto("firewall.tipo", "neither firewalld on the bus nor ufw running; systemd does not answer on the bus: "+err.Error())
 		p.Con("RX-FW-002", "D-Bus: "+err.Error())
 		return
 	}
-	p.Rilevato("firewall.tipo", "nessuno", "né firewalld né ufw né nftables accesi")
+	p.Rilevato("firewall.tipo", "nessuno", "neither firewalld nor ufw nor nftables running")
 }
 
 // ufwApre: una regola ACCEPT per la porta nei file di ufw («### tuple ### allow tcp 7447 …» e le
@@ -769,7 +769,7 @@ func trovaPam(a *Ambiente, nome string) string {
 func pam(a *Ambiente, p *Profilo, fam string) {
 	base := PamBase(fam)
 	if base == nil {
-		p.Sconosciuto("pam.base", "famiglia sconosciuta")
+		p.Sconosciuto("pam.base", "unknown family")
 		return
 	}
 	var trovati, mancanti []string
@@ -816,7 +816,7 @@ func pam(a *Ambiente, p *Profilo, fam string) {
 	if modulo != "" {
 		p.Rilevato("pam.pam_systemd", modulo, modulo)
 	} else {
-		p.Rilevato("pam.pam_systemd", "assente", "cartelle dei moduli PAM")
+		p.Rilevato("pam.pam_systemd", "assente", "PAM module directories")
 		p.Con("RX-PAM-004", "")
 	}
 }
@@ -845,7 +845,7 @@ func openssl(a *Ambiente, p *Profilo, fam string, pk *Pacchetti) {
 		}
 	}
 	if v == "" {
-		p.Sconosciuto("openssl.versione", "né il pacchetto né la libreria")
+		p.Sconosciuto("openssl.versione", "neither the package nor the library")
 		p.Con("RX-OPENSSL-002", "")
 		return
 	}
@@ -901,7 +901,7 @@ func logind(a *Ambiente, p *Profilo) {
 		leggiConf(scelti[n])
 	}
 	if valore == "" {
-		p.Sconosciuto("logind.kill_user_processes", "nessun file lo imposta e logind non ha risposto: vale il predefinito della compilazione")
+		p.Sconosciuto("logind.kill_user_processes", "no file sets it and logind did not answer: the build default applies")
 		p.Con("RX-LOGIND-002", "")
 		return
 	}
@@ -949,5 +949,5 @@ func caratteri(a *Ambiente, p *Profilo) {
 			return nil
 		})
 	}
-	p.Metti(Fatto{Chiave: "caratteri.scalabili", Valore: strconv.Itoa(n), Stato: RILEVATO, Fonte: "/usr/share/fonts", Nota: "file ttf/otf/ttc/pfb contati, non chiesti a fontconfig"})
+	p.Metti(Fatto{Chiave: "caratteri.scalabili", Valore: strconv.Itoa(n), Stato: RILEVATO, Fonte: "/usr/share/fonts", Nota: "ttf/otf/ttc/pfb files counted, not asked to fontconfig"})
 }

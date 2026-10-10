@@ -177,7 +177,7 @@ func (p *Piano) Rispondi(id, risposta string) error {
 			ok = ok || o == risposta
 		}
 		if !ok {
-			return fmt.Errorf("%s: %q non è fra le opzioni %v", id, risposta, s.Opzioni)
+			return fmt.Errorf("%s: %q is not among the options %v", id, risposta, s.Opzioni)
 		}
 		s.Risposta = risposta
 		if id == "desktop" {
@@ -185,7 +185,7 @@ func (p *Piano) Rispondi(id, risposta string) error {
 		}
 		return nil
 	}
-	return fmt.Errorf("il piano non ha la scelta %q", id)
+	return fmt.Errorf("the plan has no choice %q", id)
 }
 
 // metteDesktop: il passo «installa-desktop» c'è se la risposta è un desktop, non c'è se è «no».
@@ -246,9 +246,9 @@ func PianoDiProva(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, o 
 	}
 	pn.Azioni = append(pn.Azioni,
 		PianoScriviFile("file-conf", "/etc/remotix/prova-motore.conf",
-			"# REMOTIX — file di prova del motore d'installazione (fase 17, T4). Si può togliere.\nporta="+ps+"\n", "0644"),
+			"# REMOTIX — installation engine test file (phase 17, T4). It can be removed.\nporta="+ps+"\n", "0644"),
 		PianoScriviFile("file-unita", "/etc/systemd/system/remotix-prova-motore.service",
-			"# REMOTIX — unità di prova del motore d'installazione (fase 17, T4): non fa niente.\n[Unit]\nDescription=REMOTIX, prova del motore d'installazione\n\n[Service]\nType=oneshot\nExecStart=/bin/true\n\n[Install]\nWantedBy=multi-user.target\n", "0644"),
+			"# REMOTIX — installation engine test unit (phase 17, T4): it does nothing.\n[Unit]\nDescription=REMOTIX, installation engine test\n\n[Service]\nType=oneshot\nExecStart=/bin/true\n\n[Install]\nWantedBy=multi-user.target\n", "0644"),
 		PianoUnita("unita", "remotix-prova-motore.service"),
 	)
 	switch g := amb.Firewall.Nome(); {

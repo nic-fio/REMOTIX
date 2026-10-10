@@ -83,7 +83,7 @@ func nuovaPacchetti(p AzionePiano) (Azione, error) {
 		}
 	}
 	if len(a.file) != len(a.sha) {
-		return nil, fmt.Errorf("installa-pacchetti: %d file e %d sha256", len(a.file), len(a.sha))
+		return nil, fmt.Errorf("installa-pacchetti: %d files and %d sha256", len(a.file), len(a.sha))
 	}
 	return a, nil
 }
@@ -307,7 +307,7 @@ func (a *pacchetti) Controlla(c *Contesto, prima json.RawMessage) (Esito, string
 	if ok, det, err := g.Integro(); err != nil {
 		return "", "", err
 	} else if !ok {
-		return A_META, "il gestore è a metà: " + det, nil
+		return A_META, "the package manager is half way: " + det, nil
 	}
 	completi, nuovi, err := a.conta(c, p)
 	if err != nil {
@@ -320,13 +320,13 @@ func (a *pacchetti) Controlla(c *Contesto, prima json.RawMessage) (Esito, string
 	}
 	switch {
 	case completi == len(p.Insieme):
-		return COMPLETO, fmt.Sprintf("%d pacchetti alla versione risolta", completi), nil
+		return COMPLETO, fmt.Sprintf("%d packages at the resolved version", completi), nil
 	case nuovi == 0 && completi == 0:
-		return ASSENTE, "nessuno dei pacchetti nuovi", nil
+		return ASSENTE, "none of the new packages", nil
 	case nuovi == 0:
-		return ASSENTE, "nessuno dei pacchetti nuovi (gli aggiornati restano)", nil
+		return ASSENTE, "none of the new packages (the upgraded ones stay)", nil
 	}
-	return A_META, fmt.Sprintf("%d di %d", completi, len(p.Insieme)), nil
+	return A_META, fmt.Sprintf("%d of %d", completi, len(p.Insieme)), nil
 }
 
 func (a *pacchetti) Ripara(c *Contesto, prima json.RawMessage) error {
@@ -385,7 +385,7 @@ func (a *pacchetti) Annullata(c *Contesto, prima json.RawMessage) (bool, string,
 		return false, "", err
 	}
 	if p.Origine == PREESISTENTE {
-		return true, "c'erano già: non si toccano", nil
+		return true, "already there: left untouched", nil
 	}
 	g, err := a.gestore(c)
 	if err != nil {
@@ -409,7 +409,7 @@ func (a *pacchetti) Annullata(c *Contesto, prima json.RawMessage) (bool, string,
 		return false, "", err
 	}
 	if len(via) > 0 {
-		return false, fmt.Sprintf("%d pacchetti nuovi ancora installati", len(via)), nil
+		return false, fmt.Sprintf("%d new packages still installed", len(via)), nil
 	}
 	if a.senzaGrafica && p.Grafica != nil {
 		if ok, det := p.Grafica.comePrima(c); !ok {
@@ -419,7 +419,7 @@ func (a *pacchetti) Annullata(c *Contesto, prima json.RawMessage) (bool, string,
 	if len(resta) > 0 {
 		return true, "[RX-PACCHETTI-006] " + T("pacchetti.trattenuti", strings.Join(resta, ", ")), nil
 	}
-	return true, "i pacchetti nuovi non ci sono più", nil
+	return true, "the new packages are gone", nil
 }
 
 // trattenuti: dei pacchetti NUOVI da togliere, quelli che si possono togliere e quelli che restano

@@ -105,7 +105,7 @@ var aptOpzioni = []string{"-o", "Dpkg::Options::=--force-confdef", "-o", "Dpkg::
 func (g *gestoreApt) Versioni(nomi []string) (map[string]string, error) {
 	pk := ArchivioPacchetti(g.a, "debian", nomi)
 	if !pk.letto {
-		return nil, errors.New("l'archivio di dpkg non si legge")
+		return nil, errors.New("the dpkg database cannot be read")
 	}
 	r := map[string]string{}
 	for _, n := range nomi {
@@ -137,7 +137,7 @@ func (g *gestoreApt) Risolvi(cache string, file, nomi []string) ([]Artefatto, er
 	var r []Artefatto
 	for _, riga := range strings.Split(out, "\n") {
 		if strings.HasPrefix(riga, "Remv ") || strings.HasPrefix(riga, "Purg ") {
-			return nil, fmt.Errorf("la transazione toglierebbe un pacchetto: %s", riga)
+			return nil, fmt.Errorf("the transaction would remove a package: %s", riga)
 		}
 		m := aptInst.FindStringSubmatch(riga)
 		if m == nil {
@@ -169,7 +169,7 @@ func (g *gestoreApt) Risolvi(cache string, file, nomi []string) ([]Artefatto, er
 		}
 		sha, err := Sha256File(g.a.P(a.File))
 		if err != nil || sha == "" {
-			return nil, fmt.Errorf("%s: il file scaricato non c'è (%v)", a.File, err)
+			return nil, fmt.Errorf("%s: the downloaded file is missing (%v)", a.File, err)
 		}
 		a.Sha256 = sha
 	}
@@ -679,7 +679,7 @@ func (g *gestorePacman) Nome() string { return "pacman" }
 func (g *gestorePacman) Versioni(nomi []string) (map[string]string, error) {
 	pk := ArchivioPacchetti(g.a, "arch", nomi)
 	if !pk.letto {
-		return nil, errors.New("l'archivio di pacman non si legge")
+		return nil, errors.New("the pacman database cannot be read")
 	}
 	r := map[string]string{}
 	for _, n := range nomi {
@@ -793,7 +793,7 @@ func (g *gestorePacman) Togli(nomi []string, purge bool) error {
 
 func (g *gestorePacman) Integro() (bool, string, error) {
 	if _, err := os.Stat(g.a.P("/var/lib/pacman/db.lck")); err == nil {
-		return false, "c'è /var/lib/pacman/db.lck", nil
+		return false, "/var/lib/pacman/db.lck is there", nil
 	}
 	return true, "", nil
 }

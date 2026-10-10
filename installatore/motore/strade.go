@@ -87,7 +87,7 @@ func rilevaVulkan(a *Ambiente, p *Profilo, _ string) {
 	}
 	p.Rilevato("codifica.vulkan.icd", valore, "/usr/share/vulkan/icd.d")
 	p.Metti(Fatto{Chiave: "codifica.vulkan", Valore: "attiva", Stato: RILEVATO, Fonte: "strade.go (fase 19)",
-		Nota: "Vulkan Video, provata PRIMA di VA-API dal prodotto; la prova vera è in 7a (remotix --prova-codifica, campo strada)"})
+		Nota: "Vulkan Video, tried BEFORE VA-API by the product; the real test is in 7a (remotix --prova-codifica, field «strada»)"})
 }
 
 // nomeICD: «radeon_icd.x86_64.json» → «radeon», «nvidia_icd.json» → «nvidia»; "" se non è un ICD.
@@ -203,7 +203,7 @@ func VerdettoScheda(pl *Piattaforma, p *Profilo) (codice, dettaglio string) {
 		// la NVIDIA proprietaria codifica SOLO in Vulkan: se si è qui, il suo ICD non c'è
 		d := strings.Join(nomi, ", ") + "; ICD Vulkan: " + nonVuoto(p.V("codifica.vulkan.icd"), "nessuno")
 		if pl != nil && pl.H264.VulkanNvidia != "" {
-			d += "; su " + pl.Nome + " l'ICD lo porta " + pl.H264.VulkanNvidia
+			d += "; on " + pl.Nome + " the ICD comes with " + pl.H264.VulkanNvidia
 		}
 		return "RX-GPU-004", d
 	case forn["Intel"] || forn["AMD"]:
@@ -213,7 +213,7 @@ func VerdettoScheda(pl *Piattaforma, p *Profilo) (codice, dettaglio string) {
 		// distribuzione; Intel non c'è di serie)
 		var d []string
 		if pl != nil && pl.H264.AmdSenzaVaapi && forn["AMD"] {
-			d = append(d, "AMD su "+pl.Nome+": Mesa costruita senza VA-API")
+			d = append(d, "AMD on "+pl.Nome+": Mesa built without VA-API")
 		}
 		if f := p.V("h264.famiglia_driver"); f != "" {
 			d = append(d, f)

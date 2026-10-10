@@ -93,16 +93,16 @@ func (i *iscrizione) Fai(c *Contesto, prima json.RawMessage) error {
 }
 func (i *iscrizione) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, error) {
 	if i.origine(prima) == PREESISTENTE {
-		return COMPLETO, "niente da togliere", nil
+		return COMPLETO, "nothing to remove", nil
 	}
 	esp, _, _, err := i.g.membro(c)
 	if err != nil {
 		return "", "", err
 	}
 	if esp {
-		return ASSENTE, i.g.utente + " è ancora in " + i.g.gruppo, nil
+		return ASSENTE, i.g.utente + " is still in " + i.g.gruppo, nil
 	}
-	return COMPLETO, i.g.utente + " non è più in " + i.g.gruppo, nil
+	return COMPLETO, i.g.utente + " is no longer in " + i.g.gruppo, nil
 }
 func (i *iscrizione) Annulla(c *Contesto, prima json.RawMessage) error {
 	if i.origine(prima) == PREESISTENTE {
@@ -115,7 +115,7 @@ func (i *iscrizione) Annulla(c *Contesto, prima json.RawMessage) error {
 }
 func (i *iscrizione) Annullata(c *Contesto, prima json.RawMessage) (bool, string, error) {
 	if i.origine(prima) == PREESISTENTE {
-		return true, "niente da rimettere", nil
+		return true, "nothing to put back", nil
 	}
 	esp, _, _, err := i.g.membro(c)
 	return esp, "", err
@@ -196,7 +196,7 @@ func (d *disfa) originale(c *Contesto) (Azione, *Contesto, *Evento, error) {
 		}
 	}
 	if ap == nil {
-		return nil, nil, nil, fmt.Errorf("disfa: %s non è nel piano di %s", d.azione, d.op)
+		return nil, nil, nil, fmt.Errorf("disfa: %s is not in the plan of %s", d.azione, d.op)
 	}
 	ev, err := LeggiRegistro(filepath.Join(dir, "registro.jsonl"))
 	if err != nil {
@@ -258,7 +258,7 @@ func (d *disfa) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, er
 		return "", "", err
 	}
 	if p.Origine == PREESISTENTE {
-		return COMPLETO, "niente da disfare", nil
+		return COMPLETO, "nothing to undo", nil
 	}
 	if ok, det, err := a.Annullata(cc, p.PrimaOrig); err != nil {
 		return "", "", err
@@ -271,7 +271,7 @@ func (d *disfa) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, er
 	}
 	switch e {
 	case COMPLETO:
-		return ASSENTE, "ancora come l'aveva messo l'installazione", nil
+		return ASSENTE, "still as the installation left it", nil
 	case ESTRANEO:
 		return ESTRANEO, det, nil
 	}
@@ -304,7 +304,7 @@ func (d *disfa) Annullata(c *Contesto, prima json.RawMessage) (bool, string, err
 		return false, "", err
 	}
 	if p.Origine == PREESISTENTE {
-		return true, "niente da rifare", nil
+		return true, "nothing to redo", nil
 	}
 	e, det, err := a.Controlla(cc, p.PrimaOrig)
 	return e == COMPLETO, det, err

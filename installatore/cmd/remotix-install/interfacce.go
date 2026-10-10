@@ -34,8 +34,8 @@ func tuiCmd(arg []string) (int, error) {
 		return 1, motore.Errore("RX-UI-006", "uid "+fmt.Sprint(os.Geteuid()))
 	}
 	if st, err := os.Stdin.Stat(); err != nil || st.Mode()&os.ModeCharDevice == 0 {
-		return 1, motore.Errore("RX-UI-006", "stdin non è un terminale")
+		return 1, motore.Errore("RX-UI-006", "stdin is not a terminal")
 	}
-	s := interfaccia.NuovaSessione(c.config("a mano, nella TUI (remotix-install tui)"))
+	s := interfaccia.NuovaSessione(c.config("by hand, in the TUI (remotix-install tui)"))
 	return tui.Avvia(s)
 }

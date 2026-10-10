@@ -208,13 +208,13 @@ func (a chiudiSessioni) Controlla(c *Contesto, prima json.RawMessage) (Esito, st
 	g := a.graficiRimasti(c, p)
 	switch {
 	case n == 0 && g == 0:
-		return COMPLETO, "nessuna delle sessioni REMOTIX è ancora aperta, nessun processo del desktop", nil
+		return COMPLETO, "none of the REMOTIX sessions is still open, no desktop process", nil
 	case n == 0:
-		return A_META, fmt.Sprintf("%d processi del desktop ancora vivi nel gestore d'utente", g), nil
+		return A_META, fmt.Sprintf("%d desktop processes still alive in the user manager", g), nil
 	case n == len(p.Sessioni):
-		return ASSENTE, "tutte ancora aperte", nil
+		return ASSENTE, "all still open", nil
 	}
-	return A_META, "alcune ancora aperte", nil
+	return A_META, "some still open", nil
 }
 
 func (chiudiSessioni) Annulla(*Contesto, json.RawMessage) error {
@@ -225,11 +225,11 @@ func (a chiudiSessioni) Annullata(c *Contesto, prima json.RawMessage) (bool, str
 	var p primaSessioni
 	json.Unmarshal(prima, &p)
 	if len(p.Sessioni) == 0 {
-		return true, "non c'era niente da chiudere", nil
+		return true, "there was nothing to close", nil
 	}
 	// se nessuna è stata chiusa davvero, non c'è niente di irreversibile da dichiarare
 	if n, err := a.rimaste(c, p); err == nil && n == len(p.Sessioni) {
-		return true, "nessuna sessione è stata chiusa", nil
+		return true, "no session was closed", nil
 	}
-	return false, "IRREVERSIBILE: le sessioni chiuse non si riaprono", nil
+	return false, "IRREVERSIBLE: closed sessions are not reopened", nil
 }

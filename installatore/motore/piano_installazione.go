@@ -111,7 +111,7 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 		}
 		pn.Azioni = append(pn.Azioni, PianoPacchetti("pacchetti", strings.Join(file, ","), strings.Join(shas, ","), ""))
 	default:
-		return nil, fmt.Errorf("serve l'archivio di REMOTIX (--archivio URL) o un pacchetto (--pacchetto FILE)")
+		return nil, fmt.Errorf("the REMOTIX archive (--archivio URL) or a package (--pacchetto FILE) is needed")
 	}
 	// fase 19: il driver Vulkan ufficiale della scheda (VulkanScheda: oggi RADV per AMD, dove Mesa
 	// codifica). Nei .deb e negli .rpm è solo un «Recommends» (che una macchina senza raccomandati

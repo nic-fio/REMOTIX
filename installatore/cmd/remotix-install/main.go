@@ -478,7 +478,7 @@ func approva(arg []string) error {
 			return err
 		}
 	}
-	p.Approvazione = &motore.Approvazione{Da: chi(), Ora: time.Now().UTC().Format(time.RFC3339), Modo: "da file (remotix-install approva)", DigestPiano: p.Digest()}
+	p.Approvazione = &motore.Approvazione{Da: chi(), Ora: time.Now().UTC().Format(time.RFC3339), Modo: "from file (remotix-install approva)", DigestPiano: p.Digest()}
 	if err := motore.ScriviJSON(arg[0], &p); err != nil {
 		return err
 	}

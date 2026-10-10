@@ -62,7 +62,7 @@ func ApriRegistro(percorso string) (*Registro, []Messaggio, error) {
 		if err := os.Truncate(percorso, int64(taglio)); err != nil {
 			return nil, nil, err
 		}
-		avvisi = append(avvisi, Msg("RX-RIPRESA-003", fmt.Sprintf("%d byte tolti", len(b)-taglio)))
+		avvisi = append(avvisi, Msg("RX-RIPRESA-003", fmt.Sprintf("%d bytes removed", len(b)-taglio)))
 		b = b[:taglio]
 	}
 	for i, riga := range bytes.Split(bytes.TrimSuffix(b, []byte("\n")), []byte("\n")) {
@@ -71,7 +71,7 @@ func ApriRegistro(percorso string) (*Registro, []Messaggio, error) {
 		}
 		var e Evento
 		if err := json.Unmarshal(riga, &e); err != nil {
-			return nil, nil, fmt.Errorf("%s: riga %d rotta: %w", percorso, i+1, err)
+			return nil, nil, fmt.Errorf("%s: line %d broken: %w", percorso, i+1, err)
 		}
 		r.Eventi = append(r.Eventi, e)
 	}

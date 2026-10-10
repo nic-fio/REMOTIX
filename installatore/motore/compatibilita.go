@@ -426,10 +426,10 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 		tutti = append(tutti, Msg("RX-COMPAT-003", ""))
 	}
 	if c.Requisiti.Systemd && p.V("sistema.systemd") == "no" {
-		tutti = append(tutti, Msg("RX-COMPAT-007", "la macchina non è partita con systemd"))
+		tutti = append(tutti, Msg("RX-COMPAT-007", "the machine did not boot with systemd"))
 	}
 	if v := p.V("openssl.versione"); v != "" && ConfrontaVersioni(v, c.Requisiti.OpensslMinima) < 0 {
-		tutti = append(tutti, Msg("RX-COMPAT-007", "OpenSSL "+v+", serve "+c.Requisiti.OpensslMinima))
+		tutti = append(tutti, Msg("RX-COMPAT-007", "OpenSSL "+v+", needed "+c.Requisiti.OpensslMinima))
 	} else if v == "" {
 		r.Incognite = append(r.Incognite, T("inc.openssl"))
 	}
@@ -445,7 +445,7 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 			minima, nome = derivata.VersioneMinima, derivata.Nome
 		}
 		if minima != "" && ConfrontaVersioni(ver, minima) < 0 {
-			tutti = append(tutti, Msg("RX-COMPAT-001", nome+": serve almeno la "+minima))
+			tutti = append(tutti, Msg("RX-COMPAT-001", nome+": needs at least "+minima))
 		}
 	}
 	if pl != nil && r.Riconosciuta == "" {
@@ -528,7 +528,7 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 				e.Note = append(e.Note, dc.Note...)
 				if min := c.Requisiti.minimaDesktop(d); min != "" && inst != "" && inst[0] >= '0' && inst[0] <= '9' &&
 					ConfrontaVersioni(inst, min) < 0 {
-					e.Motivi = append(e.Motivi, Msg("RX-COMPAT-006", NomeDesktop(d)+" "+inst+", serve "+min))
+					e.Motivi = append(e.Motivi, Msg("RX-COMPAT-006", NomeDesktop(d)+" "+inst+", needed "+min))
 				}
 			}
 		}

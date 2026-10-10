@@ -25,7 +25,7 @@ type Bus struct {
 
 func (b *Bus) c() (*dbus.Conn, error) {
 	if b == nil {
-		return nil, errors.New("nessun D-Bus")
+		return nil, errors.New("no D-Bus")
 	}
 	b.una.Do(func() { b.conn, b.err = dbus.ConnectSystemBus() })
 	return b.conn, b.err
@@ -437,7 +437,7 @@ func (u *unitaDBus) aspetta(unita, voluto string) error {
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
-	return errors.New(unita + ": non è diventata " + voluto + " in 60 s")
+	return errors.New(unita + ": did not become " + voluto + " in 60 s")
 }
 
 func (u *unitaDBus) Ricarica(unita string) error { return u.job("ReloadUnit", unita) }

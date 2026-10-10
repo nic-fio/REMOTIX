@@ -51,7 +51,7 @@ type primaFile struct {
 func nuovaScriviFile(p AzionePiano) (Azione, error) {
 	s := &scriviFile{percorso: p.Parametri["percorso"], contenuto: []byte(p.Parametri["contenuto"])}
 	if !filepath.IsAbs(s.percorso) {
-		return nil, fmt.Errorf("scrivi-file: percorso non assoluto: %q", s.percorso)
+		return nil, fmt.Errorf("scrivi-file: path not absolute: %q", s.percorso)
 	}
 	m, err := strconv.ParseUint(nonVuoto(p.Parametri["modo"], "0644"), 8, 32)
 	if err != nil {
@@ -78,7 +78,7 @@ func statoFile(percorso string) (bool, string, os.FileMode, int, int, error) {
 		return false, "", 0, 0, 0, err
 	}
 	if !st.Mode().IsRegular() {
-		return true, "", 0, 0, 0, Errore("RX-FILE-001", percorso+" non è un file normale (collegamento o altro): non si tocca")
+		return true, "", 0, 0, 0, Errore("RX-FILE-001", percorso+" is not a regular file (link or other): left untouched")
 	}
 	b, err := os.ReadFile(percorso)
 	if err != nil {
@@ -215,12 +215,12 @@ func (s *scriviFile) Controlla(c *Contesto, prima json.RawMessage) (Esito, strin
 	nostro := esiste && sha == Sha256(s.contenuto) && modo == s.modo
 	if p.Origine == PREESISTENTE {
 		if nostro {
-			return COMPLETO, "c'era già, identico", nil
+			return COMPLETO, "already there, identical", nil
 		}
-		return ESTRANEO, "il file che c'era già è stato cambiato", nil
+		return ESTRANEO, "the file that was already there has been changed", nil
 	}
 	if _, err := os.Lstat(s.tmp(c)); err == nil {
-		return A_META, "c'è il temporaneo " + filepath.Base(s.tmp(c)), nil
+		return A_META, "the temporary file is there: " + filepath.Base(s.tmp(c)), nil
 	}
 	if nostro {
 		return COMPLETO, "sha256 " + sha[:12], nil
@@ -228,9 +228,9 @@ func (s *scriviFile) Controlla(c *Contesto, prima json.RawMessage) (Esito, strin
 	if ok, err := s.comePrima(c, p); err != nil {
 		return "", "", err
 	} else if ok {
-		return ASSENTE, "com'era prima", nil
+		return ASSENTE, "as it was before", nil
 	}
-	return ESTRANEO, "né il nostro contenuto né quello di prima", nil
+	return ESTRANEO, "neither our content nor the previous one", nil
 }
 
 func (s *scriviFile) Annulla(c *Contesto, prima json.RawMessage) error {
@@ -289,19 +289,19 @@ func (s *scriviFile) Annullata(c *Contesto, prima json.RawMessage) (bool, string
 		return false, "", err
 	}
 	if p.Origine == PREESISTENTE {
-		return true, "c'era già: non si tocca", nil
+		return true, "already there: left untouched", nil
 	}
 	if _, err := os.Lstat(s.tmp(c)); err == nil {
-		return false, "c'è ancora il temporaneo", nil
+		return false, "the temporary file is still there", nil
 	}
 	ok, err := s.comePrima(c, p)
 	if err != nil || !ok {
-		return false, "il file non è com'era", err
+		return false, "the file is not as it was", err
 	}
 	for _, d := range p.CartelleCreate {
 		if voci, err := os.ReadDir(c.Amb.P(d)); err == nil && len(voci) == 0 {
-			return false, "è rimasta la cartella vuota " + d, nil
+			return false, "the empty directory is still there: " + d, nil
 		}
 	}
-	return true, "com'era prima", nil
+	return true, "as it was before", nil
 }

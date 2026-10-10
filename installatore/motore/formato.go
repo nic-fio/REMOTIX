@@ -108,10 +108,10 @@ func LeggiJSON(percorso string, v any) error {
 		Formato string `json:"formato"`
 	}
 	if err := json.Unmarshal(b, &intestazione); err != nil {
-		return fmt.Errorf("%s: non è JSON valido: %w", percorso, err)
+		return fmt.Errorf("%s: not valid JSON: %w", percorso, err)
 	}
 	if intestazione.Formato != "" && intestazione.Formato != Formato {
-		return fmt.Errorf("%s: formato %q, questo motore capisce %q", percorso, intestazione.Formato, Formato)
+		return fmt.Errorf("%s: format %q, this engine understands %q", percorso, intestazione.Formato, Formato)
 	}
 	return json.Unmarshal(b, v)
 }

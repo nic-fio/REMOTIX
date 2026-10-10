@@ -98,15 +98,15 @@ func (u *unita) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, er
 	}
 	switch {
 	case s == "enabled" && u.avvia && !u.attiva(c):
-		return A_META, "enabled ma non accesa", nil
+		return A_META, "enabled but not running", nil
 	case s == "enabled":
 		return COMPLETO, "enabled", nil
 	case p.Origine == PREESISTENTE:
-		return ESTRANEO, "era abilitata, ora è " + s, nil
+		return ESTRANEO, "was enabled, now " + s, nil
 	case s == p.Stato:
 		return ASSENTE, s, nil
 	}
-	return ESTRANEO, "era " + p.Stato + ", ora è " + s, nil
+	return ESTRANEO, "was " + p.Stato + ", now " + s, nil
 }
 
 func (u *unita) Annulla(c *Contesto, prima json.RawMessage) error {
@@ -130,7 +130,7 @@ func (u *unita) Annulla(c *Contesto, prima json.RawMessage) error {
 		return nil
 	}
 	if s != "enabled" {
-		return Errore("RX-RIPRESA-001", u.nome+" è "+s+": non l'abbiamo messa noi così")
+		return Errore("RX-RIPRESA-001", u.nome+" is "+s+": we did not set it that way")
 	}
 	return c.Amb.Unita.Disabilita(u.nome)
 }
@@ -141,7 +141,7 @@ func (u *unita) Annullata(c *Contesto, prima json.RawMessage) (bool, string, err
 		return false, "", err
 	}
 	if p.Origine == PREESISTENTE {
-		return true, "era già abilitata: non si tocca", nil
+		return true, "already enabled: left untouched", nil
 	}
 	s, err := c.Amb.Unita.Stato(u.nome)
 	if err != nil {

@@ -115,12 +115,12 @@ func (g *gruppo) Controlla(c *Contesto, prima json.RawMessage) (Esito, string, e
 		return "", "", err
 	}
 	if esp || princ {
-		return COMPLETO, g.utente + " è in " + g.gruppo, nil
+		return COMPLETO, g.utente + " is in " + g.gruppo, nil
 	}
 	if p.Origine == PREESISTENTE {
-		return ESTRANEO, g.utente + " c'era e qualcuno l'ha tolto", nil
+		return ESTRANEO, g.utente + " was there and someone removed it", nil
 	}
-	return ASSENTE, g.utente + " non è in " + g.gruppo, nil
+	return ASSENTE, g.utente + " is not in " + g.gruppo, nil
 }
 
 func (g *gruppo) Annulla(c *Contesto, prima json.RawMessage) error {
@@ -144,14 +144,14 @@ func (g *gruppo) Annullata(c *Contesto, prima json.RawMessage) (bool, string, er
 		return false, "", err
 	}
 	if p.Origine == PREESISTENTE {
-		return true, "c'era già: non si tocca", nil
+		return true, "already there: left untouched", nil
 	}
 	esp, _, _, err := g.membro(c)
 	if err != nil {
 		return false, "", err
 	}
 	if esp {
-		return false, g.utente + " è ancora in " + g.gruppo, nil
+		return false, g.utente + " is still in " + g.gruppo, nil
 	}
-	return true, g.utente + " non è più in " + g.gruppo, nil
+	return true, g.utente + " is no longer in " + g.gruppo, nil
 }

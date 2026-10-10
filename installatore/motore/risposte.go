@@ -100,25 +100,25 @@ func LeggiRisposte(percorso string) (*FileRisposte, error) {
 		k, v, ok := strings.Cut(riga, "=")
 		k, v = strings.ToLower(strings.TrimSpace(k)), strings.TrimSpace(v)
 		if !ok || k == "" {
-			return nil, Errore("RX-RISPOSTE-002", fmt.Sprintf("riga %d: «%s» non è «voce = valore»", n, s.Text()))
+			return nil, Errore("RX-RISPOSTE-002", fmt.Sprintf("line %d: «%s» is not «entry = value»", n, s.Text()))
 		}
 		if !vociNote[k] {
-			return nil, Errore("RX-RISPOSTE-002", fmt.Sprintf("riga %d: voce sconosciuta «%s»", n, k))
+			return nil, Errore("RX-RISPOSTE-002", fmt.Sprintf("line %d: unknown entry «%s»", n, k))
 		}
 		if _, doppia := r.Voci[k]; doppia {
-			return nil, Errore("RX-RISPOSTE-002", fmt.Sprintf("riga %d: «%s» data due volte", n, k))
+			return nil, Errore("RX-RISPOSTE-002", fmt.Sprintf("line %d: «%s» given twice", n, k))
 		}
 		if strings.HasPrefix(k, "consenso.") {
 			sn, ok := rispostaSiNo(v)
 			if !ok {
-				return nil, Errore("RX-RISPOSTE-003", fmt.Sprintf("riga %d: %s = «%s» (si · no)", n, k, v))
+				return nil, Errore("RX-RISPOSTE-003", fmt.Sprintf("line %d: %s = «%s» («si» · «no»)", n, k, v))
 			}
 			v = sn
 		}
 		r.Voci[k] = v
 	}
 	if f := r.Voci["formato"]; f != FormatoRisposte {
-		return nil, Errore("RX-RISPOSTE-002", fmt.Sprintf("formato «%s», serve «%s»", f, FormatoRisposte))
+		return nil, Errore("RX-RISPOSTE-002", fmt.Sprintf("formato «%s», «%s» needed", f, FormatoRisposte))
 	}
 	if v, ok := r.Voci["porta"]; ok {
 		if p, err := strconv.Atoi(v); err != nil || p < 1 || p > 65535 {
@@ -199,7 +199,7 @@ func (r *FileRisposte) OpzioniDaRisposte(rap *Rapporto, prof *Profilo, amb *Ambi
 		Predefinite: []string{}, Mancanti: []string{}, Superflue: []string{}}
 	if a := r.Voci["archivio"]; a != "" {
 		if o.Archivio != "" && strings.TrimRight(o.Archivio, "/") != strings.TrimRight(a, "/") {
-			return o, nil, "", Errore("RX-RISPOSTE-003", "archivio: il file dice «"+a+"», la riga di comando «"+o.Archivio+"»")
+			return o, nil, "", Errore("RX-RISPOSTE-003", "«archivio»: the file says «"+a+"», the command line «"+o.Archivio+"»")
 		}
 		o.Archivio = a
 	}
@@ -208,7 +208,7 @@ func (r *FileRisposte) OpzioniDaRisposte(rap *Rapporto, prof *Profilo, amb *Ambi
 	}
 	if p := r.Porta(); p != 0 {
 		if o.Porta != 0 && o.Porta != 7447 && o.Porta != p {
-			return o, nil, "", Errore("RX-RISPOSTE-003", fmt.Sprintf("porta: il file dice %d, la riga di comando %d", p, o.Porta))
+			return o, nil, "", Errore("RX-RISPOSTE-003", fmt.Sprintf("«porta»: the file says %d, the command line %d", p, o.Porta))
 		}
 		o.Porta = p
 	} else {
@@ -257,7 +257,7 @@ func (r *FileRisposte) OpzioniDaRisposte(rap *Rapporto, prof *Profilo, amb *Ambi
 				ok = ok || x == desktop
 			}
 			if !ok {
-				return o, nil, "", Errore("RX-RISPOSTE-003", fmt.Sprintf("desktop = «%s»: su questa macchina le scelte sono %v", desktop, s.Opzioni))
+				return o, nil, "", Errore("RX-RISPOSTE-003", fmt.Sprintf("desktop = «%s»: on this machine the choices are %v", desktop, s.Opzioni))
 			}
 		}
 	} else if _, dato := r.Voci["desktop"]; dato {
@@ -307,8 +307,8 @@ func PianoDaRisposte(r *FileRisposte, prof *Profilo, rap *Rapporto, cat *Catalog
 	}
 	p.Risposte = rif
 	if len(rif.Mancanti) == 0 {
-		p.Approvazione = &Approvazione{Da: "file di risposte", Ora: ora(),
-			Modo:        "senza domande: file di risposte " + r.Percorso + " (sha256 " + r.Sha256[:16] + "…)",
+		p.Approvazione = &Approvazione{Da: "answer file", Ora: ora(),
+			Modo:        "unattended: answer file " + r.Percorso + " (sha256 " + r.Sha256[:16] + "…)",
 			DigestPiano: p.Digest()}
 	}
 	return p, nil

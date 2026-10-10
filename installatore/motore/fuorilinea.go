@@ -127,7 +127,7 @@ func ElencoPacchetti(a *Ambiente) ([]string, error) {
 	case "debian", "arch":
 		pk := ArchivioPacchetti(a, a.Famiglia, nil)
 		if !pk.letto {
-			return nil, fmt.Errorf("l'archivio dei pacchetti non si legge (%s)", pk.fonte)
+			return nil, fmt.Errorf("the package database cannot be read (%s)", pk.fonte)
 		}
 		for n, v := range pk.versioni {
 			r = append(r, n+"="+v)
@@ -168,14 +168,14 @@ func LeggiFuoriLinea(dir string) (*PacchettoFuoriLinea, error) {
 		case err != nil:
 			male = append(male, f.File+": "+err.Error())
 		case sha == "":
-			male = append(male, f.File+": manca")
+			male = append(male, f.File+": missing")
 		case sha != f.Sha256:
 			male = append(male, f.File+": sha256 "+sha[:16]+"…, atteso "+f.Sha256[:min(16, len(f.Sha256))]+"…")
 		}
 	}
 	if len(male) > 0 {
 		if len(male) > 6 {
-			male = append(male[:6], fmt.Sprintf("… e altri %d", len(male)-6))
+			male = append(male[:6], fmt.Sprintf("… and %d more", len(male)-6))
 		}
 		return nil, Errore("RX-FUORI-001", strings.Join(male, "; "))
 	}
@@ -209,11 +209,11 @@ func (fl *PacchettoFuoriLinea) Combacia(prof *Profilo, cat *Catalogo, amb *Ambie
 	var det []string
 	if im.Digest != fl.Impronta.Digest {
 		t, a := DifferenzeImpronta(fl.Impronta.Elementi, im.Elementi)
-		det = append(det, "impronta — nel pacchetto: "+strings.Join(primi(t, 6), "; ")+" — qui: "+strings.Join(primi(a, 6), "; "))
+		det = append(det, "fingerprint — in the bundle: "+strings.Join(primi(t, 6), "; ")+" — here: "+strings.Join(primi(a, 6), "; "))
 	}
 	if d := Sha256([]byte(strings.Join(pk, "\n"))); d != fl.DigestPacchetti {
 		t, a := DifferenzeImpronta(fl.Pacchetti, pk)
-		det = append(det, fmt.Sprintf("pacchetti — solo nel pacchetto (%d): %s — solo qui (%d): %s", len(t), strings.Join(primi(t, 6), " "), len(a), strings.Join(primi(a, 6), " ")))
+		det = append(det, fmt.Sprintf("packages — only in the bundle (%d): %s — only here (%d): %s", len(t), strings.Join(primi(t, 6), " "), len(a), strings.Join(primi(a, 6), " ")))
 	}
 	if len(det) > 0 {
 		return Errore("RX-FUORI-002", strings.Join(det, " · "))
@@ -234,7 +234,7 @@ func (m *Motore) UsaFuoriLinea(fl *PacchettoFuoriLinea) error {
 		return Errore("RX-PACCHETTI-003", "")
 	}
 	if fl.Famiglia != m.Amb.Famiglia {
-		return Errore("RX-FUORI-002", "famiglia "+fl.Famiglia+", questa macchina "+m.Amb.Famiglia)
+		return Errore("RX-FUORI-002", "family "+fl.Famiglia+", this machine "+m.Amb.Famiglia)
 	}
 	m.FuoriLinea = fl
 	if _, gia := m.Amb.Pacchetti.(*gestoreFuoriLinea); !gia {
@@ -271,7 +271,7 @@ func (g *gestoreFuoriLinea) aptOpz(cache string) ([]string, error) {
 		}
 	}
 	var b strings.Builder
-	b.WriteString("# REMOTIX — i depositi del pacchetto fuori linea " + g.fl.Dir + " (solo per questa operazione)\n")
+	b.WriteString("# REMOTIX — the repositories of the offline bundle " + g.fl.Dir + " (for this operation only)\n")
 	// target=Packages: solo gli indici che il pacchetto porta. Altri pacchetti della macchina aggiungono
 	// indici in /etc/apt/apt.conf.d (appstream: DEP-11 e icone; apt-file: Contents) e apt li
 	// cercherebbe: `[M]` 30 set, debian13-gnome, «Failed to fetch …/dep11/icons-48x48.tar»
@@ -294,7 +294,7 @@ func (g *gestoreFuoriLinea) aptOpz(cache string) ([]string, error) {
 
 func (g *gestoreFuoriLinea) Risolvi(cache string, file, nomi []string) ([]Artefatto, error) {
 	if len(file) > 0 {
-		return nil, Errore("RX-FUORI-003", "un pacchetto da file non entra in un'installazione fuori linea")
+		return nil, Errore("RX-FUORI-003", "a package from a file cannot go into an offline installation")
 	}
 	switch g.a.Famiglia {
 	case "debian":
@@ -316,7 +316,7 @@ func (g *gestoreFuoriLinea) risolviApt(cache string, nomi []string) ([]Artefatto
 		return nil, err
 	}
 	if strings.Contains(out, "\nW: ") || strings.HasPrefix(out, "W: ") || strings.Contains(out, "\nE: ") {
-		return nil, fmt.Errorf("apt-get update (fuori linea): %s", ultimeRighe(out, 6))
+		return nil, fmt.Errorf("apt-get update (offline): %s", ultimeRighe(out, 6))
 	}
 	out, err = esegui(g.a, tempoGestore, "apt-get", append(append(append([]string{"-s", "install"}, aptOpzioni...), opz...), nomi...)...)
 	if err != nil {
@@ -325,7 +325,7 @@ func (g *gestoreFuoriLinea) risolviApt(cache string, nomi []string) ([]Artefatto
 	var r []Artefatto
 	for _, riga := range strings.Split(out, "\n") {
 		if strings.HasPrefix(riga, "Remv ") || strings.HasPrefix(riga, "Purg ") {
-			return nil, fmt.Errorf("la transazione toglierebbe un pacchetto: %s", riga)
+			return nil, fmt.Errorf("the transaction would remove a package: %s", riga)
 		}
 		m := aptInst.FindStringSubmatch(riga)
 		if m == nil {
@@ -542,7 +542,7 @@ func PreparaFuoriLinea(amb *Ambiente, prof *Profilo, cat *Catalogo, piano *Piano
 			}
 		}
 		if a.Tipo == "installa-pacchetti" && a.Parametri["file"] != "" {
-			return nil, Errore("RX-FUORI-003", "un pacchetto da file ("+a.Parametri["file"]+")")
+			return nil, Errore("RX-FUORI-003", "a package from a file ("+a.Parametri["file"]+")")
 		}
 	}
 	dir, err := filepath.Abs(o.Uscita)
@@ -550,7 +550,7 @@ func PreparaFuoriLinea(amb *Ambiente, prof *Profilo, cat *Catalogo, piano *Piano
 		return nil, err
 	}
 	if voci, _ := os.ReadDir(dir); len(voci) > 0 {
-		return nil, fmt.Errorf("%s non è vuota", dir)
+		return nil, fmt.Errorf("%s is not empty", dir)
 	}
 	p := &preparazione{o: o, amb: amb, dir: dir, lav: filepath.Join(dir, ".lavoro"), ev: ev}
 	if err := os.MkdirAll(p.lav, 0o700); err != nil {
@@ -573,7 +573,7 @@ func PreparaFuoriLinea(amb *Ambiente, prof *Profilo, cat *Catalogo, piano *Piano
 	// pubblica dell'archivio — il motore si verifica QUI (un archivio alterato si scopre prima di
 	// portarlo via); la catena dei pacchetti la verifica il gestore, sulla macchina senza rete come in
 	// linea (D11 semplificata, DECISIONI §10.21)
-	ev("il motore e la chiave dell'archivio")
+	ev("the engine and the archive key")
 	mot, err := p.daArchivio("motore/remotix-install")
 	if err != nil {
 		return nil, err
@@ -583,7 +583,7 @@ func PreparaFuoriLinea(amb *Ambiente, prof *Profilo, cat *Catalogo, piano *Piano
 		return nil, err
 	}
 	if f := strings.Fields(string(sha)); len(f) == 0 || f[0] != Sha256(mot) {
-		return nil, Errore("RX-TRUST-017", "motore/remotix-install: sha256 "+Sha256(mot)[:16]+"…, pubblicato "+strings.TrimSpace(string(sha)))
+		return nil, Errore("RX-TRUST-017", "motore/remotix-install: sha256 "+Sha256(mot)[:16]+"…, published "+strings.TrimSpace(string(sha)))
 	}
 	for _, k := range []string{"chiavi/remotix-archivio.asc", "chiavi/LEGGIMI"} {
 		if _, err := p.daArchivio(k); err != nil && !strings.HasSuffix(k, "LEGGIMI") {
@@ -618,7 +618,7 @@ func PreparaFuoriLinea(amb *Ambiente, prof *Profilo, cat *Catalogo, piano *Piano
 	}
 
 	// ogni file, col suo sha256
-	ev("impronte dei file")
+	ev("file fingerprints")
 	err = filepath.WalkDir(dir, func(f string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -689,7 +689,7 @@ func (p *preparazione) apt(passi []AzioneFuoriLinea) error {
 	}
 	opz := []string{"-o", "Dir::Etc::SourceParts=" + parti, "-o", "Dir::State::Lists=" + liste,
 		"-o", "Dir::Cache::Archives=" + archivi, "-o", "Dir::Etc::PreferencesParts=" + vuota, "-o", "APT::Sandbox::User=root"}
-	p.ev("apt-get update (le sorgenti della macchina e l'archivio di REMOTIX)")
+	p.ev("apt-get update (the machine's sources and the REMOTIX archive)")
 	if out, err := esegui(a, tempoGestore, "apt-get", append([]string{"update"}, opz...)...); err != nil {
 		return err
 	} else if strings.Contains(out, "\nE: ") || strings.Contains(out, "\nW: ") {
@@ -761,7 +761,7 @@ func (p *preparazione) apt(passi []AzioneFuoriLinea) error {
 		inr := strings.TrimSuffix(fn, strings.ReplaceAll(k["MetaKey"], "/", "_")) + "InRelease"
 		ib, err := os.ReadFile(inr)
 		if err != nil {
-			return fmt.Errorf("InRelease di %s %s: %w (un deposito senza InRelease non entra)", ru, d.suite, err)
+			return fmt.Errorf("InRelease of %s %s: %w (a repository without InRelease is not accepted)", ru, d.suite, err)
 		}
 		if err := p.scriviIn(filepath.Join(rel, "InRelease"), ib); err != nil {
 			return err
@@ -792,17 +792,17 @@ func (p *preparazione) apt(passi []AzioneFuoriLinea) error {
 		u, fn, algo, hash := m[1], m[2], strings.ToUpper(m[4]), strings.ToLower(m[5])
 		dati, err := os.ReadFile(filepath.Join(archivi, fn))
 		if err != nil {
-			return fmt.Errorf("%s non scaricato: %w", fn, err)
+			return fmt.Errorf("%s not downloaded: %w", fn, err)
 		}
 		switch algo {
 		case "SHA256":
 			if Sha256(dati) != hash {
-				return fmt.Errorf("%s: sha256 diverso dall'indice", fn)
+				return fmt.Errorf("%s: sha256 differs from the index", fn)
 			}
 		case "SHA512":
 			s := sha512.Sum512(dati)
 			if hex.EncodeToString(s[:]) != hash {
-				return fmt.Errorf("%s: sha512 diverso dall'indice", fn)
+				return fmt.Errorf("%s: sha512 differs from the index", fn)
 			}
 		}
 		var rel string
@@ -816,7 +816,7 @@ func (p *preparazione) apt(passi []AzioneFuoriLinea) error {
 			}
 		}
 		if rel == "" {
-			return fmt.Errorf("%s: non viene da nessun deposito conosciuto", u)
+			return fmt.Errorf("%s: does not come from any known repository", u)
 		}
 		rel, _ = url.PathUnescape(rel)
 		if err := p.scriviIn(rel, dati); err != nil {
@@ -833,7 +833,7 @@ func (p *preparazione) apt(passi []AzioneFuoriLinea) error {
 
 	// l'archivio di REMOTIX della famiglia: i metadati firmati (InRelease, Release, Release.gpg e gli
 	// indici che certificano)
-	p.ev("i metadati firmati dell'archivio di REMOTIX (" + suite + ")")
+	p.ev("the signed metadata of the REMOTIX archive (" + suite + ")")
 	inr, err := p.daArchivio("deb/dists/" + suite + "/InRelease")
 	if err != nil {
 		return err
@@ -849,7 +849,7 @@ func (p *preparazione) apt(passi []AzioneFuoriLinea) error {
 			continue // Release elenca anche file che l'archivio non pubblica
 		}
 		if Sha256(b) != x[0] {
-			return fmt.Errorf("archivio di REMOTIX: %s diverso da InRelease", x[1])
+			return fmt.Errorf("REMOTIX archive: %s differs from InRelease", x[1])
 		}
 	}
 	return nil
@@ -929,15 +929,15 @@ func (p *preparazione) dnf(passi []AzioneFuoriLinea, terzi []string) error {
 		// solo per risolvere e scaricare (le firme dei codec le verifica rpm sulla macchina senza
 		// rete, con la chiave che il release porta)
 		if err := os.WriteFile(filepath.Join(repos, t+"-fuori-linea.repo"), []byte(
-			"["+t+"-fl]\nname=RPM Fusion "+ramo+" (preparazione fuori linea)\nmetalink=https://mirrors.rpmfusion.org/metalink?repo="+ramo+"-fedora-$releasever&arch=$basearch\nenabled=1\ngpgcheck=0\n\n"+
-				"["+t+"-updates-fl]\nname=RPM Fusion "+ramo+" updates (preparazione fuori linea)\nmetalink=https://mirrors.rpmfusion.org/metalink?repo="+ramo+"-fedora-updates-released-$releasever&arch=$basearch\nenabled=1\ngpgcheck=0\n"), 0o644); err != nil {
+			"["+t+"-fl]\nname=RPM Fusion "+ramo+" (offline preparation)\nmetalink=https://mirrors.rpmfusion.org/metalink?repo="+ramo+"-fedora-$releasever&arch=$basearch\nenabled=1\ngpgcheck=0\n\n"+
+				"["+t+"-updates-fl]\nname=RPM Fusion "+ramo+" updates (offline preparation)\nmetalink=https://mirrors.rpmfusion.org/metalink?repo="+ramo+"-fedora-updates-released-$releasever&arch=$basearch\nenabled=1\ngpgcheck=0\n"), 0o644); err != nil {
 			return err
 		}
 	}
 	base := p.fl.Origine + "/rpm/" + p.fl.Canale + "/" + p.fl.Bersaglio + "/"
 	// solo per RISOLVERE e scaricare: le firme dei .rpm le verifica rpm sulla macchina senza rete
 	// (localpkg_gpgcheck=1); qui si controllano i digest dei metadati
-	if err := os.WriteFile(filepath.Join(repos, "remotix-fuori-linea.repo"), []byte("[remotix-fuori-linea]\nname=REMOTIX (preparazione fuori linea)\nbaseurl="+base+
+	if err := os.WriteFile(filepath.Join(repos, "remotix-fuori-linea.repo"), []byte("[remotix-fuori-linea]\nname=REMOTIX (offline preparation)\nbaseurl="+base+
 		"\nenabled=1\ngpgcheck=0\nrepo_gpgcheck=0\nincludepkgs="+strings.Join(PacchettiArchivio, " ")+"\n"), 0o644); err != nil {
 		return err
 	}
@@ -993,7 +993,7 @@ func (p *preparazione) dnf(passi []AzioneFuoriLinea, terzi []string) error {
 				}
 			}
 			if len(c) != 3 {
-				return fmt.Errorf("%s: rpm -qp non risponde", v)
+				return fmt.Errorf("%s: rpm -qp does not answer", v)
 			}
 			sha, _ := Sha256File(v)
 			r := filepath.Join(rel, filepath.Base(v))
@@ -1018,7 +1018,7 @@ func (p *preparazione) dnf(passi []AzioneFuoriLinea, terzi []string) error {
 	sort.Slice(p.fl.Artefatti, func(i, j int) bool { return p.fl.Artefatti[i].Nome < p.fl.Artefatti[j].Nome })
 
 	// i metadati firmati del deposito di REMOTIX (repo_gpgcheck: repomd.xml.asc)
-	p.ev("i metadati firmati dell'archivio di REMOTIX (" + p.fl.Bersaglio + ")")
+	p.ev("the signed metadata of the REMOTIX archive (" + p.fl.Bersaglio + ")")
 	pre := "rpm/" + p.fl.Canale + "/" + p.fl.Bersaglio + "/repodata/"
 	md, err := p.daArchivio(pre + "repomd.xml")
 	if err != nil {

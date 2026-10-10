@@ -185,7 +185,7 @@ var Codici = map[string]Codice{
 func Msg(codice, dettaglio string) Messaggio {
 	c, ok := Codici[codice]
 	if !ok {
-		panic("codice sconosciuto: " + codice)
+		panic("unknown code: " + codice)
 	}
 	return Messaggio{Codice: codice, Gravita: c.Gravita, Natura: c.Natura, Testo: c.Testo, Rimedio: c.Rimedio, Dettaglio: dettaglio}
 }

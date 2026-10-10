@@ -72,7 +72,7 @@ func nuovaDeposito(p AzionePiano) (Azione, error) {
 	case "archivio", "epel", "rpmfusion", "packman":
 		return d, nil
 	}
-	return nil, fmt.Errorf("aggiungi-deposito: tipo %q sconosciuto", d.tipo)
+	return nil, fmt.Errorf("aggiungi-deposito: unknown type %q", d.tipo)
 }
 
 // ---- i pezzi di un deposito di terzi, per famiglia
@@ -190,13 +190,13 @@ func (d *deposito) fileArchivio(c *Contesto) []fileArchivio {
 	case "debian":
 		k := ChiaveApt
 		r := []fileArchivio{{k, chiave, true}, {"/etc/apt/sources.list.d/" + nome + ".sources",
-			"# " + nome + " — aggiunto da remotix-install\nTypes: deb\nURIs: " + d.par["url"] + "\nSuites: " + nonVuoto(d.par["suite"], "stabile") +
+			"# " + nome + " — added by remotix-install\nTypes: deb\nURIs: " + d.par["url"] + "\nSuites: " + nonVuoto(d.par["suite"], "stabile") +
 				"\nComponents: " + nonVuoto(d.par["componenti"], "main") + "\nSigned-By: " + k + "\n", false}}
 		if d.par["host"] != "" {
 			// R18: dall'host dell'archivio SOLO i pacchetti di REMOTIX. Il record col nome dei
 			// pacchetti viene prima di quello generale (apt usa il primo che corrisponde).
 			r = append(r, fileArchivio{"/etc/apt/preferences.d/" + nome + ".pref",
-				"# " + nome + " — aggiunto da remotix-install: l'archivio di REMOTIX vale solo per i pacchetti di REMOTIX (R18)\n" +
+				"# " + nome + " — added by remotix-install: the REMOTIX archive applies only to the REMOTIX packages (R18)\n" +
 					"Package: " + pacchetti + "\nPin: origin \"" + d.par["host"] + "\"\nPin-Priority: 500\n\n" +
 					"Package: *\nPin: origin \"" + d.par["host"] + "\"\nPin-Priority: -1\n", false})
 		} else if strings.HasPrefix(d.par["url"], "file:") {
@@ -204,7 +204,7 @@ func (d *deposito) fileArchivio(c *Contesto) []fileArchivio {
 			// «origin» è vuota, come per ogni altro deposito locale). Si lega all'Origin del suo Release,
 			// che è firmato con la nostra chiave: vale solo per l'archivio di REMOTIX (R18)
 			r = append(r, fileArchivio{"/etc/apt/preferences.d/" + nome + ".pref",
-				"# " + nome + " — aggiunto da remotix-install: l'archivio di REMOTIX vale solo per i pacchetti di REMOTIX (R18)\n" +
+				"# " + nome + " — added by remotix-install: the REMOTIX archive applies only to the REMOTIX packages (R18)\n" +
 					"Package: " + pacchetti + "\nPin: release o=REMOTIX\nPin-Priority: 500\n\n" +
 					"Package: *\nPin: release o=REMOTIX\nPin-Priority: -1\n", false})
 		}
@@ -220,7 +220,7 @@ func (d *deposito) fileArchivio(c *Contesto) []fileArchivio {
 			inc = "includepkgs=" + pacchetti + "\n" // R18: dal nostro archivio solo i nostri pacchetti
 		}
 		return []fileArchivio{{k, chiave, false}, {dir + nome + ".repo",
-			"# " + nome + " — aggiunto da remotix-install\n[" + nome + "]\nname=" + nome + "\nbaseurl=" + d.par["url"] +
+			"# " + nome + " — added by remotix-install\n[" + nome + "]\nname=" + nome + "\nbaseurl=" + d.par["url"] +
 				"\nenabled=1\ngpgcheck=1\nrepo_gpgcheck=1\ngpgkey=file://" + k + "\n" + inc, false}}
 	case "arch":
 		return []fileArchivio{} // il blocco in pacman.conf e pacman-key: archivio.go
@@ -238,7 +238,7 @@ func (d *deposito) scrittori(c *Contesto) ([]*scriviFile, error) {
 		r = append(r, s.(*scriviFile))
 	}
 	if len(r) == 0 && c.Amb.Famiglia != "arch" {
-		return nil, Errore("RX-AZIONE-004", "aggiungi-deposito archivio su "+c.Amb.Famiglia)
+		return nil, Errore("RX-AZIONE-004", "aggiungi-deposito archive on "+c.Amb.Famiglia)
 	}
 	return r, nil
 }
@@ -457,9 +457,9 @@ func (d *deposito) Controlla(c *Contesto, prima json.RawMessage) (Esito, string,
 	case tutti:
 		return COMPLETO, "deposito " + d.tipo + " presente", nil
 	case p.Origine == PREESISTENTE:
-		return ESTRANEO, "c'era e qualcuno l'ha tolto", nil
+		return ESTRANEO, "it was there and someone removed it", nil
 	case comePrima:
-		return ASSENTE, "com'era prima", nil
+		return ASSENTE, "as it was before", nil
 	}
 	return A_META, fmt.Sprint(adesso), nil
 }
@@ -576,7 +576,7 @@ func (d *deposito) Annullata(c *Contesto, prima json.RawMessage) (bool, string, 
 		return false, "", err
 	}
 	if p.Origine == PREESISTENTE {
-		return true, "c'era già: non si tocca", nil
+		return true, "already there: left untouched", nil
 	}
 	if d.tipo != "archivio" {
 		via, resta, _, err := d.trattenutiArrivati(c, p)
@@ -596,10 +596,10 @@ func (d *deposito) Annullata(c *Contesto, prima json.RawMessage) (bool, string, 
 	}
 	for k, v := range adesso {
 		if v && !p.Stato[k] {
-			return false, k + " c'è ancora", nil
+			return false, k + " is still there", nil
 		}
 	}
-	return true, "com'era prima", nil
+	return true, "as it was before", nil
 }
 
 // Indirette: un deposito di terzi tolto non toglie quel che se n'è preso (§6.6.4).

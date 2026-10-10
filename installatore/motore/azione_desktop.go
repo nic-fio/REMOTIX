@@ -41,7 +41,7 @@ func PianoDesktop(id, desktop, nomi string) AzionePiano {
 var displayManager = []string{"gdm.service", "gdm3.service", "sddm.service", "lightdm.service", "lxdm.service", "display-manager.service"}
 
 const policyRcd = "/usr/sbin/policy-rc.d"
-const policyRcdNostro = "#!/bin/sh\n# REMOTIX: niente servizi accesi durante l'installazione del desktop (si toglie subito dopo)\nexit 101\n"
+const policyRcdNostro = "#!/bin/sh\n# REMOTIX: no services started while the desktop is installed (removed right after)\nexit 101\n"
 
 type primaGrafica struct {
 	Predefinito string            `json:"predefinito"`
@@ -119,16 +119,16 @@ func (g *primaGrafica) rimetti(c *Contesto) error { return g.dopo(c) }
 // aPosto: il bersaglio d'avvio e i display manager come prima (e nessun policy-rc.d nostro).
 func (g *primaGrafica) aPosto(c *Contesto) (bool, string) {
 	if b, err := os.ReadFile(c.Amb.P(policyRcd)); err == nil && string(b) == policyRcdNostro {
-		return false, "è rimasto il nostro " + policyRcd
+		return false, "ours is still there: " + policyRcd
 	}
 	if d, err := c.Amb.Unita.Predefinito(); err == nil && d != g.Predefinito {
-		return false, "bersaglio d'avvio " + d + ", prima " + g.Predefinito
+		return false, "boot target " + d + ", before " + g.Predefinito
 	}
 	for _, u := range displayManager {
 		prima := strings.Fields(g.DM[u] + " ? ?")
 		adesso := strings.Fields(statoDM(c, u) + " ? ?")
 		if (adesso[1] == "active" && prima[1] != "active") || (adesso[0] == "enabled" && prima[0] != "enabled" && u != "display-manager.service") {
-			return false, u + " acceso o abilitato dall'installazione"
+			return false, u + " started or enabled by the installation"
 		}
 	}
 	return true, ""
