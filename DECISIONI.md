@@ -6724,10 +6724,11 @@ User's words: *«trovo la condivisione di files piuttosto pericolosa, mentre si 
 stampanti»*, then *«solo pdf, server -> client. La annotiamo nel masterplan»*.
 
 - **File transfer stays out** (SPECIFICHE §12): it is a way for data to leave and enter the server.
-- **Office network printers already work** without REMOTIX: the server prints to them with CUPS (the administrator's
-  setup). To be said in the documentation.
-- **Printing on the client's own printer** becomes a "later" item: `MASTERPLAN.md` **M6** — a virtual printer
-  turns the job into a PDF, the page opens the browser's print dialog. Only PDF, only server → client. ⚠ Printing is
+- **One technology for every printer** (user: *«niente casi particolari per stampanti locali o stampanti remote:
+  usiamo la stessa tecnologia per entrambi i casi»*): a "later" item, `MASTERPLAN.md` **M6** — a virtual printer
+  turns the job into a PDF, the page opens the browser's print dialog, and the job goes wherever the client's device
+  can print (the home printer, or the office network printers installed on that PC). Only PDF, only server →
+  client. Printers an administrator sets up on the server with CUPS are the system's business, not a REMOTIX feature. ⚠ Printing is
   taking a document out (the dialog can save it as PDF): off until the administrator turns it on, every print in
   the log.
 

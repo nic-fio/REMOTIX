@@ -122,18 +122,21 @@ una funzione nuova.
 
 **Che cos'è.** Una stampante virtuale «REMOTIX» sul server trasforma la stampa in **PDF**; il PDF arriva alla
 pagina, che apre la finestra di stampa del browser, e chi è collegato stampa sulla **sua** stampante (quella di
-casa, per chi lavora da fuori). ⛔ **Solo PDF, solo dal server al client** (utente, 10 ott 2026), mai al contrario.
-Le stampanti di rete dell'ufficio **non** sono questa voce: le usa già il server con CUPS, senza REMOTIX.
+casa, per chi lavora da fuori; quelle di rete già installate sul suo PC, per chi è in ufficio). ⛔ **Solo PDF,
+solo dal server al client** (utente, 10 ott 2026), mai al contrario. ⭐ **Una tecnologia sola per ogni stampante**
+(utente: *«niente casi particolari per stampanti locali o stampanti remote: usiamo la stessa tecnologia per
+entrambi i casi»*): la stampa va dove sa stampare il dispositivo di chi è collegato. Le stampanti che
+l'amministratore configura da sé sul server (CUPS) sono affare del sistema, non una funzione di REMOTIX.
 
 **Da dove viene.** 10 ottobre 2026, dal confronto con i prodotti commerciali: *«trovo la condivisione di files
 piuttosto pericolosa, mentre si potrebbe ragionare sul discorso stampanti»*; poi *«solo pdf, server -> client. La
 annotiamo nel masterplan»*. La decisione sta in `DECISIONI.md` §10.41; fino ad allora era fuori dal progetto
 (`SPECIFICHE.md` §12).
 
-**Che cosa costa se non si fa MAI.** Chi lavora da fuori **non può stampare** un documento del desktop remoto
-sulla propria stampante: deve stamparlo su una stampante raggiungibile dal server, o farselo arrivare per altra
-via (email, una cartella condivisa) — cioè proprio i passaggi di file che non vogliamo. Per un'azienda piccola è
-una delle prime domande; per un privato a casa, che ha la stampante accanto al server, quasi niente.
+**Che cosa costa se non si fa MAI.** Da REMOTIX **non si stampa**: chi lavora deve farsi arrivare il documento
+per altra via (email, una cartella condivisa) — cioè proprio i passaggi di file che non vogliamo — oppure
+l'amministratore deve configurare a mano le stampanti sul server, una per una. Per un'azienda piccola è una delle
+prime domande.
 
 **Che cosa serve prima.** ⚠ Dichiarare all'amministratore che **stampare è portare fuori un documento**: dalla
 finestra di stampa il browser lo salva anche come PDF. ⇒ Le regole proposte: **spenta finché l'amministratore non
@@ -142,7 +145,8 @@ REMOTIX, va solo alla finestra di stampa. Poi: quale stampante virtuale (CUPS co
 `cups-pdf`), un canale nuovo in `RCP.md` per il PDF, la prova sui quattro desktop e sui browser serviti.
 
 **Quanto pesa.** `[?]` Non guardato davvero. Stima a occhio: una fase piccola (stampante virtuale, un canale,
-la finestra di stampa nella pagina, il banco).
+la finestra di stampa nella pagina, il banco). ⚠ Il prezzo d'uso: ogni stampa passa dalla finestra del browser e
+chiede un clic (i browser non stampano in silenzio).
 
 ---
 
