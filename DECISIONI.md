@@ -6495,9 +6495,18 @@ prossimo step sarà l'installer»*.
   vulnerabilità*). L'installatore perde il passo della chiave: REMOTIX parte appena installato.
 - **Il prossimo passo**: chiudere l'installatore (`fasi/17-l-installatore.md`), cioè le chiavi vere dei
   rilasci al posto di quelle di prova (D10, D11, D14) e il giro intero col binario di oggi.
-- ❓ **Aperta, la decide l'utente**: gratuito a codice chiuso, o a codice aperto. Il motivo che aveva chiuso il
-  codice (§10.30: con il codice aperto un privato toglie il limite della trial) è sparito con la trial.
-  Resta, finché il codice è chiuso, il vincolo di §11.4 delle SPECIFICHE: nessuna dipendenza GPL.
+- ✅ **Il codice si apre, ma nessuno ci deve lucrare** (utente, 10 ott: *«posso anche aprire il codice, ma
+  nessuno deve poterci lucrare sopra. Credo che adotterò una licenza in stile Phonestra»*). Bozza in
+  `LICENSE.md`, dalla Phonestra Freeware Licence con due aggiunte per un codice pubblicato: si possono leggere,
+  compilare e modificare i sorgenti **per sé o per la propria organizzazione**, ma non distribuire copie
+  modificate; e il **servizio ospitato** (vendere ad altri l'accesso a desktop serviti da REMOTIX) è fra gli usi
+  commerciali vietati senza licenza scritta. ⏳ Da approvare dall'utente.
+- ⚠ **Non è «open source»** nel senso della OSI (vieta la vendita e la redistribuzione modificata): si dice
+  «codice visibile», non «open source», o la comunità lo contesta.
+- ⚠ **Le aziende la usano gratis anche al lavoro**, come Phonestra: si compra solo per rivendere, includere in
+  un prodotto o offrire come servizio. È l'opposto di §10.22 (che vietava anche l'uso interno).
+- Resta il vincolo di §11.4 delle SPECIFICHE, nessuna dipendenza GPL: la GPL chiederebbe di distribuire tutto
+  sotto GPL.
 
 ---
 

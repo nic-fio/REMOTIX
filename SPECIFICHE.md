@@ -1317,7 +1317,7 @@ Quel che **non** è deciso, elencato perché non si perda. Il dettaglio e lo sta
 
 | | |
 |---|---|
-| ✅ **la licenza** | ⭐ **niente licenze: REMOTIX è gratuito** (`DECISIONI.md` §10.33, 10 ott 2026, che supera §10.30). ❓ Aperto: codice chiuso o aperto. Finché è chiuso resta il vincolo di §11.4: nessuna dipendenza GPL |
+| ✅ **la licenza** | ⭐ **niente licenze: REMOTIX è gratuito** (`DECISIONI.md` §10.33, 10 ott 2026, che supera §10.30). Codice visibile con la licenza in stile Phonestra (bozza in `LICENSE.md`, da approvare). Resta il vincolo di §11.4: nessuna dipendenza GPL |
 | 📖 **Cinnamon** | studiato, da misurare — §11.2 |
 | `[?]` **il 4:4:4** | §3.1 |
 | ✅ ~~la forma della limitazione dei tentativi PAM~~ | **chiusa il 9 agosto** e ⭐ **riaperta e richiusa dall'utente il 10**: non è una limitazione di frequenza, è un **ban** — tre tentativi, dodici ore (§4.2, `DECISIONI.md` §1.9) |
