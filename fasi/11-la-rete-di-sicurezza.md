@@ -104,7 +104,7 @@ worst case on three it will not be found at all**, because nobody thinks of rete
 
 ⭐ **And the real cost of a fault is not repairing it: it is the distance between when it came in and when it is
 found.** The browser fault, once understood, was cured in an afternoon. It cost two
-phases because it was **old**, and because it carried a wrong explanation — *«non è nostro»* —
+phases because it was **old**, and because it carried a wrong explanation — *«it is not ours»* —
 which is the explanation that **does not ask to keep looking**.
 
 ---
@@ -191,7 +191,7 @@ card.** Inside each: a desktop, a user, and the server.
 
 > ### ⛔ R2 · **The container recipes declare the exact versions**
 >
-> ⛔ *«l'ultima disponibile»* **is a date disguised as a version**. A box built on Tuesday and
+> ⛔ *«the latest available»* **is a date disguised as a version**. A box built on Tuesday and
 > one built on Thursday differ even with the same code of ours, because in between the
 > package store moved. ⇒ Then one sees a worse number on XFCE and blames XFCE, while
 > the blame was **Thursday's**.
@@ -203,8 +203,8 @@ card.** Inside each: a desktop, a user, and the server.
 > ⭐ **And the recipe counts as much as the binary**: if a box is rebuilt and pulls in a
 > newer version of the desktop, ⛔ the binary's fingerprint **matches all the same** and the net
 > reassures while the environment has changed underneath. ⇒ It is check **C11**.
-> ⚠ In the project there is already the precedent: a check that verifies that *«quello che misuro è quello
-> che leggo»*, born from this same wound.
+> ⚠ In the project there is already the precedent: a check that verifies that *«what I measure is what
+> I read»*, born from this same wound.
 
 ## 3.3 ⭐⭐ The rule of comparisons: **one thing moves at a time**
 
@@ -401,7 +401,7 @@ screen is there**, which is exactly the condition in which those five work. ⇒ 
 
 | # | what it verifies | ⛔ the fault it catches |
 |---|---|---|
-| **C11** | ⭐ **the alignment**: same binary fingerprint in all boxes, recipe declared and dated, ⛔ **no box built with «l'ultima disponibile»** | it is the fault of D5, the one the user saw first: *«remotix v1 su una scatola e v1.2 sull'altra»* |
+| **C11** | ⭐ **the alignment**: same binary fingerprint in all boxes, recipe declared and dated, ⛔ **no box built with «the latest available»** | it is the fault of D5, the one the user saw first: *«remotix v1 su una scatola e v1.2 sull'altra»* |
 | **C12** | **the hook is alive**: it exists, it is executable, and there is a trace of the last time it ran | ⛔ **the hook switched off silently** — the way these nets die |
 | **C13** | **the certification is recent**: in the last N rounds at least one fault was injected and the net gave red | a net that is no longer able to give red **looks exactly like a net that finds nothing** |
 | **C14** | ⭐ **the boxes do not disturb each other**: the same tests alone and in parallel give the same outcome | §3.4 **asserts** it; this **measures** it |
@@ -490,7 +490,7 @@ reviewers too. ⇒ One starts with **one**, and the others are added **only if t
 | exit | means | redone? |
 |---|---|---|
 | 0 / 1 | ⭐ **a judgement** — holds / does not hold | ⛔ **never** |
-| **3** | *«non giudico»*: it measured, and some piece could not speak | ⛔ **never** |
+| **3** | *«I do not judge»*: it measured, and some piece could not speak | ⛔ **never** |
 | 2 | the terrain does not hold, or the use is wrong | ⛔ never — **a bad terrain is LOOKED AT** |
 | **4** | ⭐ **the turn never came** (the card's lock) | ✅ **yes** |
 
@@ -551,9 +551,9 @@ first important red will generate a discussion, ⇒ **and the discussion costs m
 
 | the case | the rule |
 |---|---|
-| **red in FUNZIONA** | ⛔ **it blocks**: it is repaired before going on. It is not filed as *«poi vediamo»* |
+| **red in FUNZIONA** | ⛔ **it blocks**: it is repaired before going on. It is not filed as *«we will see later»* |
 | **red in VA VELOCE** | it must be understood **before closing the phase**. If confirmed, it blocks the closing; if it belongs to the environment, it is written why |
-| ⛔ **intermittent red** | ⛔ **it is a red.** The test is not repeated hoping for green: *«a volte succede»* often means *«succede sempre, aspetta solo il momento»* |
+| ⛔ **intermittent red** | ⛔ **it is a red.** The test is not repeated hoping for green: *«it happens sometimes»* often means *«it always happens, it is just waiting for its moment»* |
 | **repeated outcome 3** | the single `3` is neutral; ⛔ **a frequent `3` is a bench fault**, not an outcome |
 | **false alarm** | it can be declared **only after understanding it**, and **it is written down**. ⛔ A test that gives repeated false alarms **is repaired or thrown away** |
 | **test that catches nothing** | ⛔ **it is removed, and it is written why.** It is not left to die of disuse |
@@ -664,7 +664,7 @@ first important red will generate a discussion, ⇒ **and the discussion costs m
 > 22:39:18.145 figlio  ⛔ il palco di «c1u1»: monitor «» (0 prima, 2 dopo), 0x0 stride 0 a 0 bit
 > ```
 >
-> ⭐ And the **third state** of `fasi/10…` §7.4 — *«una volta per utente ne nascono due, senza nome»* —
+> ⭐ And the **third state** of `fasi/10…` §7.4 — *«once per user, two of them are born, nameless»* —
 > ⭐ **reproduced identically**: `monitor «» (0 prima, **2** dopo)`.
 >
 > ⇒ ⛔ **The fault of 25 Aug lives inside the box.** Which is the second piece of news, and not a lesser one:
@@ -828,8 +828,8 @@ adapter of forty lines**.
 on Wayland: they bring a **session** and lean on one of the `wlroots` family — and the choice, for
 both, is **labwc**. ⛔ It is not a convenience of this phase: `DECISIONI.md` has already measured
 resizing under the label **«labwc (XFCE, LXQt)»** (`[M]` 5.1 ms, 0 frames lost out of
-25), and `PIANO.md` phase 13 says it in one line — *«il terzo e il quarto desktop, che condividono
-wlroots e quindi quasi tutto»*.
+25), and `PIANO.md` phase 13 says it in one line — *«the third and the fourth desktop, which share
+wlroots and therefore almost everything»*.
 
 ⇒ ⚠ **What the fourth box really puts to the test**: a fourth **session**, a fourth
 **recipe**, different dependencies, and an idle daemon that `DECISIONI.md` already takes as **different**
@@ -871,7 +871,7 @@ C8 itself that says so**, instead of leaving it to be deduced by whoever reads (
 | **B · and the page is seen FROM THE CLIENT** | the same page, looked at **through the product** | ⚠ **today it is not measured** |
 
 ⛔⛔ **Why B is not measured**: `[M]` 26 Aug 2026, inside the box **no new GNOME session
-is born with a monitor** — it is the **OPEN** defect of phase 10 §7.4, *«la sessione che nasce cieca»*,
+is born with a monitor** — it is the **OPEN** defect of phase 10 §7.4, *«the session that is born blind»*,
 which sits **upstream** of C8. ⇒ ⭐ **A black desktop does not testify about the browser**: calling that «C8's
 red» would mean blaming the browser for something that happened **before the browser existed**.
 ⚠ So B says *«I could not look»* and **names the why**, and it never becomes a green.
@@ -887,7 +887,7 @@ above ran inside the **PLASMA** box.
 | ⭐ **it prepares its terrain itself** | it puts `/etc/skel/.cache -> /tmp`, that is **it reproduces the configuration of the real machine** — which is an **owner's choice**, not a fault. ⛔ Testing on a clean skeleton would answer an easier question than the real one |
 | ⭐ **the tenants are born as the product makes them** | `useradd -m`, which copies the skeleton. ⛔ A cleaner route here would test a product different from the one delivered |
 | ⭐⭐ **the target in the pixels is a COLOUR** | the page is `#FF00FF` full screen, and one measures **how much of the image has become that colour** — tolerance **±48 per channel**, at least **25 %**. ⛔ No desktop puts that colour on by itself: the meter does not need to know what GNOME looks like |
-| ⛔ **the reason next to the symptom** | «it did not draw» on its own hides three faults: the browser dead, the profile never born, the page not full screen. It tells them apart and prints them — ⭐ and that is how one reads *«profilo: è di «c8u1»»* |
+| ⛔ **the reason next to the symptom** | «it did not draw» on its own hides three faults: the browser dead, the profile never born, the page not full screen. It tells them apart and prints them — ⭐ and that is how one reads *«profile: belongs to «c8u1»»* |
 | ⛔ **and it does not look at the link** | looking at the cause we believe we know instead of the effect we care about would mean a test that goes silent the day the cure changes |
 
 ### ⭐ The judge's certification — `[M]` **8 cases out of 8**
@@ -1013,8 +1013,8 @@ did exactly its job at the first shot.**
 ⇒ All four boxes answered **`?`** — and ⭐⭐ **`?` equal to `?` is equal**: those three
 entries **passed the comparison**, forever, without looking at anything.
 
-> ⇒ ⭐ C11 now **counts and prints them**: *«N voci a cui nessuna scatola sa rispondere — e una voce
-> muta passa il confronto senza aver guardato niente»*. `LEZIONI.md` §1.47.
+> ⇒ ⭐ C11 now **counts and prints them**: *«N entries that no box can answer — and a mute
+> entry passes the comparison without having looked at anything»*. `LEZIONI.md` §1.47.
 >
 > ⚠ It is the same form of error as §1.44 seen from another side: there the predicate always said yes,
 > here the comparison always said equal. ⛔ **A check that has never given red in its life must be
@@ -1034,8 +1034,8 @@ entries **passed the comparison**, forever, without looking at anything.
 
 ### ⭐ And the line `11-accendi.sh` carried open is closed
 
-*«`--network=host` … quattro scatole accese insieme condividono le porte dell'ospite … **da rivedere
-quando si fa C14**»*. ⇒ ⭐ **Reviewed, and it holds**: each listens on its own port, each recognises
+*«`--network=host` … four boxes switched on together share the host's ports … **to be reviewed
+when C14 is done**»*. ⇒ ⭐ **Reviewed, and it holds**: each listens on its own port, each recognises
 as **its own** only its own and as **someone else's** the other three. The separation by port **is a real
 separation**, and now it has a measurement underneath instead of a hope.
 
@@ -1142,16 +1142,16 @@ beginning to end:
 
 > ### ⭐⭐ And the moment that counts is C13's
 >
-> During the round C13 was **red**, and it told the truth: *«negli ultimi giri **nessun guasto è mai
-> stato innestato** ⇒ la rete gira, e nessuno la mette alla prova. ⛔ Da fuori è indistinguibile da
-> una rete che funziona benissimo.»*
+> During the round C13 was **red**, and it told the truth: *«in the last rounds **no fault has ever
+> been injected** ⇒ the net runs, and nobody puts it to the test. ⛔ From outside it is indistinguishable from
+> a net that works perfectly.»*
 >
 > ⇒ Once the round was over — which **had** the injected fault inside it — C13 is **green**:
-> *«negli ultimi 3 giri un guasto è stato innestato ed **è stato visto**»*.
+> *«in the last 3 rounds a fault was injected and **it was seen**»*.
 >
 > ⭐ **That is, the net can now say of itself whether it is still able to give red.** ⚠ And it says so with
-> its limit attached: *«sui guasti che CONOSCE — e ogni desktop nuovo deve entrare con un
-> guasto suo»* (§3.6).
+> its limit attached: *«on the faults it KNOWS — and every new desktop must come in with a
+> fault of its own»* (§3.6).
 
 ⚠ **And two readings that must be done carefully**, because they look like good news and are not:
 
@@ -1167,7 +1167,7 @@ beginning to end:
 | `banchi/11-scatole/Contenitore.gnome` | ⭐ the box's **recipe**: system, desktop, card, tools, the tenant, and the unit that aligns the card's group |
 | `banchi/11-scatole/11-accendi.sh` | build · switch on · product · server · **c1** · **c5** · **c7** · **c8** · **c9** · **c10** · step0 · fingerprint · switch off — ⭐ **with every permission justified by what breaks without it** |
 | `banchi/11-scatole/11-passo0.sh` | ⭐ the **eight checks** of the environment, with the three distinct outcomes |
-| `banchi/11-scatole/11-c1-nasce-e-si-vede.py` | ⭐⭐ **the first mesh of the net**, and acceptance test A. With `--certifica`: **5 cases out of 5**, including the one in which *«cieca»* must win over *«monitor 1/1»* |
+| `banchi/11-scatole/11-c1-nasce-e-si-vede.py` | ⭐⭐ **the first mesh of the net**, and acceptance test A. With `--certifica`: **5 cases out of 5**, including the one in which *«blind»* must win over *«monitor 1/1»* |
 | `banchi/11-scatole/Contenitore.kde` | ⭐ the **second box**, with KWin — the proof that the net is not tailor-made for GNOME |
 | `banchi/11-scatole/Contenitore.xfce` · `Contenitore.lxqt` | ⭐ the **third and the fourth**, with `labwc` — ⚠ four boxes, **three** compositors (§7-bis.9) |
 | `banchi/11-scatole/adattatore.{gnome,kde,xfce,lxqt}.sh` | ⭐⭐ **the «how» of every desktop**, at the same path inside every box: the list of tests stays **one** |
@@ -1207,8 +1207,8 @@ number.
 
 ### ⭐⭐ And C5 proves its thesis with a number, instead of asserting it
 
-In the same round in which the log said *«nessun monitor virtuale da catturare»* and *«0 fotogrammi
-spediti»*, C5 counted **4 878 sound blocks, 4.6 MB, RMS 23 168**. ⇒ ⭐ **Zero pixels, and
+In the same round in which the log said *«no virtual monitor to capture»* and *«0 frames
+sent»*, C5 counted **4 878 sound blocks, 4.6 MB, RMS 23 168**. ⇒ ⭐ **Zero pixels, and
 something to judge all the same**: today C5 is the only mesh that crosses the product from top to
 bottom.
 
@@ -1253,8 +1253,8 @@ product was born. The numbers:
 
 ⇒ ⛔ **It is not «the sound is missing»: it is that a fortieth of it arrives.** What arrives is loud and right
 (RMS 22 977, peak at full scale, 100 % above threshold): ⭐ **the threshold has nothing to do with it**, and in fact C5 does not
-give red for the level but for the **count** — *«41 blocchi su 200 attesi al minimo: non è un
-flusso»*.
+give red for the level but for the **count** — *«41 blocks out of 200 expected at minimum: it is not a
+stream»*.
 
 ⚠ **And it is not the aged box**: the GNOME box was **knocked down and rebuilt**, product
 and server put back inside, and the red came back identical. ⛔ Three rounds out of three.
@@ -1263,7 +1263,7 @@ and server put back inside, and the red came back identical. ⛔ Three rounds ou
 > §7-bis.7 said *«the second desktop asked for something the first did not ask for»*. ⇒ Here the
 > desktop that behaves differently is **the first**, the home one: the three new boxes work, and
 > the one on which the product grew up does not. ⛔ Without the other three, this number would have been read
-> as *«il suono va così»*.
+> as *«that is just how the sound is»*.
 >
 > `[?]` **The cause was not found**, and it is written instead of guessed: the suspicion is that in the
 > GNOME session something else touches the tenant's audio graph (`wireplumber` suspending, or
@@ -1315,7 +1315,7 @@ meshes exist, run, and the oldest defect of the project is closed.**
 
 ### ⭐⭐⭐ The fact of the day: **the sessions were not being born blind**
 
-The defect of `fasi/10-…` §7.4 — *«dieci sessioni nuove su dieci nascono senza monitor»* — blocked
+The defect of `fasi/10-…` §7.4 — *«ten new sessions out of ten are born without a monitor»* — blocked
 five tests of the net and postponed phase 12. ⛔ **It did not belong to the product, and it was not even one
 single defect.** They were three things, and each one hid the next:
 
@@ -1403,7 +1403,7 @@ log and the alignment; ⛔ **not the product**, because there the product does n
 | `src/tastiera.c` · `webtransport.c` | ⭐ **the first red the net drew out of the product**: 4 log lines out of 5 490 did not say whom they were talking about |
 | `src/figlio.c` — the audio ring | ⛔ it was not emptied without a stage ⇒ `[M]` **96 489 ms** of overflow |
 | `src/figlio.c` — the uninitialised envelope | ⛔ **the «third state» of §7.4 was dirty memory** ⇒ §1.55 |
-| `src/mutter.c` | a line said *«monitor virtuale montato»* when the monitor **did not exist yet** |
+| `src/mutter.c` | a line said *«virtual monitor mounted»* when the monitor **did not exist yet** |
 | `src/provisiona.sh` + `src/figlio.c` | ⭐⭐ the card's groups, read **from the node**, and a check that **says so in the log** instead of giving birth to a session that cannot be seen |
 
 ---
@@ -1480,8 +1480,8 @@ taken as closed.
 
 # §11 · ✅ **THE QUESTION HAS LAPSED** — *and the reason is worth more than the answer*
 
-This section asked: **«si va avanti con KDE avendo metà della rete che non può guardare, oppure
-prima si cura la sessione che nasce cieca?»**
+This section asked: **«do we go ahead with KDE with half the net unable to look, or
+do we first cure the session that is born blind?»**
 
 ⇒ ⭐⭐ **The question no longer exists, because the premise was false.** `[M]` 27 Aug 2026: the sessions
 **were not being born blind**. They were three overlapping things — a **mesh** that could not say green, a
@@ -1492,7 +1492,7 @@ prima si cura la sessione che nasce cieca?»**
 
 > ### ⛔⛔ And the lesson is bigger than the phase
 >
-> For weeks a number — *«dieci sessioni su dieci»* — governed the order of the work, the
+> For weeks a number — *«ten sessions out of ten»* — governed the order of the work, the
 > postponement of a phase, and a list of «impossible» things. ⛔ **That number came from one single test, and
 > that test could not produce any other result.**
 >

@@ -139,7 +139,7 @@ in depth (`STUDI.md` §12.3 and §gnome) but **only as architecture**; a delay c
 exist in any document.
 
 ⭐ **And it can be done**, because xrdp is already on this machine — `LEZIONI.md` §2.7 tells it: until
-17 Aug the laptop's session *was* xrdp (`Xorg :10`, `got RFX capture`), and it is the loop that
+17 Aug the laptop's session *was* xrdp (`Xorg :10`, `got RFX capture`), and it is the link that
 for two days nobody had counted.
 
 ⇒ The same drag, the same window, the same unit: **how many pixels of gap does xrdp make?**
@@ -429,7 +429,7 @@ binary from memory with `sws_scale`, are removed with phase 18.)*
 ⇒ ⛔⛔ **Doubling the pixels the number did not move.** Neither of the two boundaries scaled with the pixels,
 neither the awkward one nor the convenient one.
 ⭐ It is the direct answer to the `[?]` that agent A had left open («how much of the 41 ms is
-producer and how much is fewer pixels»): **of pixels it is almost nothing**.
+product and how much is fewer pixels»): **of pixels it is almost nothing**.
 
 ⚠ **And the opposite is declared**: in the **first wave**, with the machine loaded, the same rounds
 gave an apparent slope (values removed, phase 18). ⛔ **That slope
@@ -640,8 +640,8 @@ this phase: not with a number of ours, but with a prediction his eye can disprov
    `finestra=(1500, 1000)` **written in the source**, and the Xvfb is born accordingly at 1600×1200: a
    2600 window does not fit and `forza.py` cannot widen a display. ⇒ `[?]` **A's number
    at 2560×1080 does not exist**.
-   ⚠ **And the same bench calls the ground WITHOUT an environment** (`_sudo("bash %s scena-avvia")`): with the
-   defaults it starts `provao2`'s scene. I had to write a ground of my own around it
+   ⚠ **And the same bench calls the terrain WITHOUT an environment** (`_sudo("bash %s scena-avvia")`): with the
+   defaults it starts `provao2`'s scene. I had to write a terrain of my own around it
    (`/media/REMOTIX/src/08-f-terreno.sh`) which is just `04-b32-terreno.sh` with my variables.
 
 6. ⛔ **Two rounds of A came out RED because of a defect of the bench, not of the product**: `[M]` *«il
@@ -1105,7 +1105,7 @@ All in `/media/REMOTIX/src/`, and the server was left **running on 7775** with t
 
 | | |
 |---|---|
-| `08-f4-derivami.sh` | the ground **derived** from C's, not rewritten — my ports, user and tree |
+| `08-f4-derivami.sh` | the terrain **derived** from C's, not rewritten — my ports, user and tree |
 | `08-f4-due-binari.sh` | the two binaries from the **same tree**, with the check that the md5s differ |
 | `08-f4-ab.sh` | ⭐ the **alternating** before/after of the segments |
 | `08-f4-elastico.sh` *(on the laptop)* | ⭐ the user's yardstick, alternating, which **drives** B's bench without touching it |
@@ -1441,8 +1441,8 @@ to depend on our work in the PipeWire thread), **E** (encoding and return), the 
 1. ⛔⛔ **Segment 9 is not a target: `[M]` it is worth 0.71 ms**, and the conclusion of §A.2 point 2 —
    *«the 1st `drawImage` costs 17.48 ms and the 2nd 0.10: 163 times»* — **must be withdrawn**. ⇒ **Whoever was about to
    cure segment F was about to cure a segment that weighs `[M]` 2.43 ms**, a small part of the loop.
-   ⭐ §A.5 feared it in its own words: *«if the number changes, he must know it before curing it»*.
-2. ⭐ **Segment D did not move by four hundredths** (16.36 → 16.40), with the tightest spread
+   ⭐ §A.5 feared it in its own words: *«if the number changes, one must know it before curing it»*.
+2. ⭐ **Segment D moved by no more than four hundredths** (16.36 → 16.40), with the tightest spread
    of all [16.37 – 16.45]. ⇒ A segment that stays identical when everything else changes is
    the proof that the breakdown really separates different things — **and it remains the wall**: an exact
    compositor frame.
@@ -1803,7 +1803,7 @@ worsened the median instead of improving it — ⛔ but the denominator is what 
 
 ⭐ Ports **7760 · 7761 · 7762**, user **`provaa8`** (A's), directory
 **`/media/REMOTIX/tmp/08-f1`**, shm `/dev/shm/remotix-08-f1`, scene
-`/media/REMOTIX/src/08-f1-scena-lav/08-f1-scena` (bit-for-bit copy of A's), ground
+`/media/REMOTIX/src/08-f1-scena-lav/08-f1-scena` (bit-for-bit copy of A's), terrain
 `/media/REMOTIX/src/08-f1-terreno.sh`, bridge `/media/REMOTIX/src/08-f1-ponte.py`.
 ⛔ **Ports 7730 and 7731 and the user's directories were never touched.**
 ⛔ **And I did not touch any file of `src/`.**
@@ -1811,7 +1811,7 @@ worsened the median instead of improving it — ⛔ but the denominator is what 
 
 ⭐ **And today's product tree remains**: `/media/REMOTIX/src/08-f1-src` (HEAD `6f5f418`,
 binary `f45e9f78…`), next to yesterday's `08-a-src` (`73ce3a1f…`) which **I did not touch**.
-⇒ Anyone can redo the before/after without rebuilding anything, and the two grounds are already there:
+⇒ Anyone can redo the before/after without rebuilding anything, and the two terrains are already there:
 `08-f1-terreno-OGGI.sh` and `08-f1-terreno-IERI.sh`.
 
 The bench files I changed, all in `banchi/`:
@@ -1921,7 +1921,7 @@ The bench files I changed, all in `banchi/`:
 | `banchi/08-f3-quanto-aspetta.html` | ⭐⭐ the bench **without a server**: the same chain `decode() → richiamo → immagine → vetro` on a real stream, with the checks that separate the three hypotheses |
 | `banchi/08-f3-lancia.py` | the bench's launcher: the stream with `ffmpeg`, the fourteen rounds, the comparisons |
 | `banchi/08-f3-tratti.py` | ⭐ reads `REMOTIX.tratti()` from a **real session**, on both roads in the same sitting |
-| `banchi/08-f3-sessione.sh` | my ground (port, user, tree, scene) |
+| `banchi/08-f3-sessione.sh` | my terrain (port, user, tree, scene) |
 | `banchi/08-f3-esiti.json` · `08-f3-esiti.jsonl` | the reports |
 
 ⛔ **Not one line of `src/*.c` was touched, nor a bench of another agent.**
@@ -2070,7 +2070,7 @@ on the hypothesis:
 
 ## F3.4 · ⛔⛔ WHAT DID NOT WORK
 
-### 1. ⛔ `08-b67-elastico.py` on my ground does NOT give a number, and it is not cited
+### 1. ⛔ `08-b67-elastico.py` on my terrain does NOT give a number, and it is not cited
 
 `[M]` round `f3-dopo-strumentata`: **527.7 ms** of delay, **0 px** of gap, **Q1 red**.
 `[R]` The cause is in the report: the bench generated **3 125 movements** and **30 came out**.
@@ -2101,7 +2101,7 @@ stage with real scanout.
 
 ### 3. ⛔⛔ I touched another agent's user, and it must be said
 
-`[M]` My ground asked for the user **`provaf8`**; `04-b32-terreno.sh` answered *«c'è già —
+`[M]` My terrain asked for the user **`provaf8`**; `04-b32-terreno.sh` answered *«c'è già —
 non lo rifaccio»* and **then set its password again** and wrote the systemd drop-in in
 `/home/provaf8/.config`. ⛔ **`provaf8` (uid 1044) belongs to another agent of the phase**, who had
 created it a few minutes earlier. ⇒ I changed user at once (**`provaf3`**, uid **1047**) and left
@@ -2259,7 +2259,7 @@ shared stage, and the spread of §A.4 reflects it.
 ## A.2 ⭐⭐ THE BREAKDOWN — and the segments really are SIX
 
 The bench produces **11 measured segments** (plus T, T-convenient, Δ and the two blind pieces = the «16 segments» that
-the certification counts). ⭐ **Grouped by physical loop they are exactly SIX**, and it is the table
+the certification counts). ⭐ **Grouped by physical link they are exactly SIX**, and it is the table
 that phase 4 had promised without writing it:
 
 | | the segment | 14 Aug | **22 Aug** | Δ |
@@ -2459,10 +2459,10 @@ following rounds. ⚠ It must be written in the bench: today the remedy is in th
 ## A.6 What I left on the machine
 
 ⭐ User **`provaa8`** (uid 1041) with a GNOME session, tree `/media/REMOTIX/src/08-a-src`, scene
-`/media/REMOTIX/src/08-a-scena-lav/08-a-scena`, ground `/media/REMOTIX/src/08-a-terreno.sh`,
+`/media/REMOTIX/src/08-a-scena-lav/08-a-scena`, terrain `/media/REMOTIX/src/08-a-terreno.sh`,
 work directory `/media/REMOTIX/tmp/08-a`. Product, bridge and scene **switched off**; they are switched back on
 with `08-a-lancia.sh accendi`. ⛔ **Ports 7730 and 7731 and the user's directories were never
-touched**, and the count of neighbours declares it in every log line of the ground.
+touched**, and the count of neighbours declares it in every log line of the terrain.
 
 
 ---
@@ -2921,7 +2921,7 @@ work) and §7 (remains `[?]`).*
 | file | what it is |
 |---|---|
 | `banchi/08-b67-elastico.py` | ⭐⭐ **the bench**: the user's hand, reading the echo in the pixels, the three units, separating the network, the holes, the thirteen injected faults |
-| `banchi/08-b67-lancia.sh` | the launcher: ports, tree, container, ground, scene, measurement |
+| `banchi/08-b67-lancia.sh` | the launcher: ports, tree, container, terrain, scene, measurement |
 | `banchi/08-b67-locale.py` | ⭐⭐ **the local term of comparison**, measured on the iron from the scene's shared block |
 | `banchi/08-b67-esiti.jsonl` | the reports of the rounds |
 
@@ -2930,7 +2930,7 @@ work) and §7 (remains `[?]`).*
 ⭐ **And nothing that could be imported was recopied**: the stage, the distribution, the steady state and
 the **certified mark reader** come from `03-b17-ritardo.py`; the echo and the shared-block reader
 from `04-b30-anello-input.py`; **the scene is `04-b30-scena.c` without a line changed**; the
-ground is `04-b32-terreno.sh` **driven by the environment**, not a copy of it. The only piece recopied
+terrain is `04-b32-terreno.sh` **driven by the environment**, not a copy of it. The only piece recopied
 is `batti()` (the `thisisunsafe`), and the reason is written next to it: the module that contains it does
 `argparse` at module level, and importing it would launch another bench.
 
@@ -2951,7 +2951,7 @@ udp 0.0.0.0:7740 / 7742  ("python3")  → the BRIDGE of 08-a
 switch it off: `LEZIONI.md` §1.24 — *two benches on the same port kill each other silently, and the
 red appears on the third* — and the ban-file was his, so a mistake of mine would have banned him.
 
-⭐ **My ground, all separate**: port **7746** · user **`provab8`** (uid 1043) · tree
+⭐ **My terrain, all separate**: port **7746** · user **`provab8`** (uid 1043) · tree
 `/media/REMOTIX/src/08-b-src` · work `/media/REMOTIX/tmp/08-b` (own ban-file and socket) ·
 scene `/dev/shm/remotix-08-b`. ⛔ **7730 and 7731 — the user's two servers — were never
 touched**, and they are counted before and after every step.
@@ -3153,7 +3153,7 @@ number of this bench, and it is declared instead of hoped small.
 | ⏳ **the hand is SYNTHETIC** | the `PointerEvent`s are born inside the page: ⛔ the blind piece on input **is not there at all**, and that is why it is not added. ⚠ And the events are not **coalesced** by the browser like real ones. The `--mano cdp` road (*trusted* events, delivered by Chrome) is planned and **has not yet been run** |
 | ⏳ **the local loop has n = 29** | the number is there, the denominator is small: it must be redone on a long round |
 | ⏳ **the rhythm is 30/s, not 60** | `[M]` about half of the frames the scene draws (the values, on the binary from memory, are removed with phase 18). ⇒ **half get lost along the way**, and this bench *sees* it but does not *explain* it |
-| ⏳ **the calibration on the IRON** | Q7/Q8 run on the synthetic. A10's bridge (`04-b30-ponte.py`) can inject a known delay on the real wire, and the ground provides for it: **it has not been run** |
+| ⏳ **the calibration on the IRON** | Q7/Q8 run on the synthetic. A10's bridge (`04-b30-ponte.py`) can inject a known delay on the real wire, and the terrain provides for it: **it has not been run** |
 | `[?]` **the encoder and its card** | the bench does **not** verify that encoding is in hardware. `provab8` is in the `render` group (verified), but «it opened a render node» proves nothing (`LEZIONI.md` §1.11) |
 | ⏳⏳ **my number against agent A's** *(values removed, phase 18)* | ⛔ **The two numbers must be reconciled before either goes into a document as «the loop».** They are neither added nor subtracted until it is written, for each, *which boundary* and *which scene*: mine closes at the **finished drawing** on a test scene at **1560 px**, and its hand is **synthetic**. ⚠ Until the reconciliation exists, my number counts as a **measurement of the rubber band on this scene**, not as «the REMOTIX loop» |
 
@@ -3172,7 +3172,7 @@ bash banchi/08-b67-lancia.sh misura 25
 ```
 
 ⚠ **The server on 7746 and the scene were left RUNNING**, so the coordinator can rerun without
-remounting the ground. They are switched off with `bash banchi/08-b67-lancia.sh spegni` — ⛔ which touches **only**
+remounting the terrain. They are switched off with `bash banchi/08-b67-lancia.sh spegni` — ⛔ which touches **only**
 my things.
 
 
@@ -3516,7 +3516,7 @@ of the document worth most, and it is read before the measurements.*
 | ⛔⛔ **I wrote a line that was an artefact** | *«the user's eye and the tool agree within 7 %»* — the most-cited line of the day. The calculation came out right **by compensation**: it paired the delay of one quantity with the speed of another. 📖 §1.28 |
 | ⛔ **I attributed to contention a number that was not its own** | and I wrote it **inside a lesson**, which is the place where an error lasts longest. Disproved by a fourth agent **while the lesson was being written** |
 | ⛔ **«the whole first wave is contaminated»** | `[M]` false: on the gap bench the load inflates nothing (70.7 against 70.3). Believing it would have made **good measurements be thrown away** |
-| ⛔ **two ground collisions** | a **port** already taken (the agent noticed, not me) and a **user** already taken — at the second the ground **set the password again** of a living agent. ⇒ §1.24 must be extended beyond the port |
+| ⛔ **two terrain collisions** | a **port** already taken (the agent noticed, not me) and a **user** already taken — at the second the terrain **set the password again** of a living agent. ⇒ §1.24 must be extended beyond the port |
 | ⛔ **the time estimate** | I ordered «first one instruments, then one cures» — **the order was right** — but I estimated the time badly, and at the end of the first wave **zero copy had not been done** |
 
 ### 5.2 ⛔ The benches' errors, and each would have produced a false number
