@@ -6463,6 +6463,9 @@ attraverso una TUI sofisticata»*. ⛔ **Supera** §10.5 per la parte GUI e §10
   `Contenitore.gui`, `remotix-install-gui`, `install.sh --finestra` e il codice `RX-UI-001`, e la dipendenza
   da Gio nel `go.mod`; aggiornare `fasi/17-l-installatore.md` §6.6.1 e §6.6.14 e `SPECIFICHE.md`. ⛔ Il codice
   dell'interfaccia non contiene logica d'installazione (§6.6.1), quindi toglierlo non tocca il motore.
+- ✅ **Fatto il 10 ott 2026**, commit `129e315`: GUI tolta dal codice, dal rilascio e dall'archivio; una costruzione
+  sola, statica (motore, CLI, TUI); `vendor/` da 37 a 14 MB; prove Go verdi (64 PASS, 0 FAIL, vet pulito). Dettaglio
+  in `fasi/17-l-installatore.md` §6.6.14. `SPECIFICHE.md` non nominava la finestra dell'installatore: niente da cambiare.
 
 ### 10.32 ✅ L'interfaccia di REMOTIX è tutta in inglese (5 ott 2026)
 
