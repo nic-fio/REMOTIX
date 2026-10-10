@@ -1,252 +1,252 @@
-# Fase 14 — LXQt
+# Phase 14 — LXQt
 
-*Aperta il **24 settembre 2026**. Chiusa il —*
+*Opened on **24 Sep 2026**. Closed on —*
 
-⚠ Numerazione: `PIANO.md` metteva LXQt nella fase 13 («XFCE e LXQt») e chiamava 14 «Il registro».
-L'utente, aprendola, l'ha chiamata **fase 14**: vale il suo nome, e il registro scala di uno.
+⚠ Numbering: `PIANO.md` put LXQt in phase 13 («XFCE e LXQt») and called 14 «Il registro».
+The user, opening it, called it **phase 14**: the user's name holds, and the log moves down by one.
 
-## Che cosa deve produrre
+## What it must produce
 
-Il quarto desktop: l'utente apre il browser e vede il suo desktop **LXQt**, come oggi GNOME, Plasma
-e XFCE.
+The fourth desktop: the user opens the browser and sees their **LXQt** desktop, as today GNOME, Plasma
+and XFCE.
 
-⛔ **La regola della fase, dell'utente, 24 settembre 2026**: *«aggiungere LXQt a REMOTIX mantenendo
-intatte tutte le capacità già certificate di GNOME, KDE e XFCE»*. ⇒ **Il baseline protetto sono
-tre.** Si lavora con i cancelli della fase 13 (CP0 baseline · CP1 definizione · CP2 osservazione ·
-CP3 modifica minima · CP4 prova LXQt · client veri · rete completa · checkpoint), e con due accenti
-nuovi: **sviluppo parallelo con molti agenti, integrazione e certificazione in mano sola**; e ogni
-attività finisce in **PASS / FAIL / BLOCKED** (con causa, evidenza, dipendenza, condizione).
-
----
-
-## ⭐ La differenza che cambia la forma della fase
-
-LXQt, come XFCE, **non ha un compositore suo**: su Wayland si appoggia a **labwc** (wlroots).
-⇒ Cattura (screencopy), input (virtual-keyboard/pointer), appunti (data-control) e misura
-dell'uscita sono **già scritti** per XFCE e non guardano il desktop `[R]`. Quel che cambia è la
-**sessione**: `lxqt-session` al posto di `xfce4-session`, e un gestore diverso per bus, uscita,
-inattività e impostazioni.
-
-`[R]` Due cose che la fase 13 non aveva:
-- **in trixie nessun pacchetto fa partire LXQt su Wayland** (niente `lxqt-wayland-session`, niente
-  `startlxqtwayland`): la riga d'avvio la scrive il prodotto, `labwc -C <cartella nostra> -S
-  lxqt-session`, imitando lo script upstream 0.1.1 ma senza il suo `autostart` (che accende
-  `swayidle … wlopm --off` a 5 minuti) e senza il suo wizard;
-- **la scatola `rete11-lxqt` non conteneva il desktop**: solo `labwc lxqt-session xwayland`. Niente
-  pannello, scrivania, `qt6-wayland`. ⇒ Prima di ogni prova, la ricetta.
+⛔ **The phase's rule, from the user, 24 Sep 2026**: *«aggiungere LXQt a REMOTIX mantenendo
+intatte tutte le capacità già certificate di GNOME, KDE e XFCE»*. ⇒ **The protected baseline is
+three.** We work with the gates of phase 13 (CP0 baseline · CP1 definition · CP2 observation ·
+CP3 minimal change · CP4 LXQt test · real clients · full net · checkpoint), and with two new
+accents: **parallel development with many agents, integration and certification in a single hand**; and every
+activity ends in **PASS / FAIL / BLOCKED** (with cause, evidence, dependency, condition).
 
 ---
 
-## Gli incrementi
+## ⭐ The difference that changes the shape of the phase
 
-### Incremento 1 — LXQt si riconosce, nasce e si vede
+LXQt, like XFCE, **has no compositor of its own**: on Wayland it relies on **labwc** (wlroots).
+⇒ Capture (screencopy), input (virtual-keyboard/pointer), clipboard (data-control) and output
+size are **already written** for XFCE and do not look at the desktop `[R]`. What changes is the
+**session**: `lxqt-session` in place of `xfce4-session`, and a different handler for bus, logout,
+inactivity and settings.
+
+`[R]` Two things phase 13 did not have:
+- **in trixie no package starts LXQt on Wayland** (no `lxqt-wayland-session`, no
+  `startlxqtwayland`): the startup line is written by the product, `labwc -C <cartella nostra> -S
+  lxqt-session`, imitating the upstream script 0.1.1 but without its `autostart` (which turns on
+  `swayidle … wlopm --off` at 5 minutes) and without its wizard;
+- **the `rete11-lxqt` box did not contain the desktop**: only `labwc lxqt-session xwayland`. No
+  panel, desktop, `qt6-wayland`. ⇒ Before any test, the recipe.
+
+---
+
+## The increments
+
+### Increment 1 — LXQt is recognised, is born and is seen
 
 | | |
 |---|---|
-| **obiettivo** | su una macchina con `lxqt-session` + `labwc` il prodotto riconosce LXQt, fa nascere labwc headless con `lxqt-session`, cattura, porta mouse e tastiera, sa chiudere |
-| **invariante** | GNOME, KDE, XFCE **identici**: l'enum `SESSIONE_DESKTOP_LXQT = 4` va in coda; ogni ramo esistente resta con lo stesso effetto |
-| **moduli** | `src/sessione.{c,h}` (riconoscimento, ambiente, avvio, viva/stato, esci, impostazioni), `src/figlio.c` (5 punti `== XFCE` → `sessione_su_wlroots()`); la ricetta `Contenitore.lxqt`; il gesto «Esci» di C20 |
-| **prova LXQt** | C1(lxqt) verde; il desktop nudo fotografato e passato ai giudici **prima** di aprire la capacità `immagine`; la sonda dei processi e dell'ambiente |
-| **prova client** | Firefox e Chrome veri sulla 8514 |
-| **regressioni da guardare** | C1, C7 e tutto il certificato su gnome/kde/xfce |
-| **criterio** | rete intera: nessun rosso nuovo su gnome/kde/xfce, C1(lxqt) verde, guasti ancora presi |
+| **goal** | on a machine with `lxqt-session` + `labwc` the product recognises LXQt, makes headless labwc be born with `lxqt-session`, captures, carries mouse and keyboard, knows how to close |
+| **invariant** | GNOME, KDE, XFCE **identical**: the enum `SESSIONE_DESKTOP_LXQT = 4` goes at the end; every existing branch stays with the same effect |
+| **modules** | `src/sessione.{c,h}` (recognition, environment, start, alive/state, logout, settings), `src/figlio.c` (5 points `== XFCE` → `sessione_su_wlroots()`); the recipe `Contenitore.lxqt`; C20's «Esci» gesture |
+| **LXQt test** | C1(lxqt) green; the bare desktop photographed and passed to the judges **before** opening the `immagine` capability; the probe of the processes and of the environment |
+| **client test** | real Firefox and Chrome on 8514 |
+| **regressions to watch** | C1, C7 and everything certified on gnome/kde/xfce |
+| **criterion** | whole net: no new red on gnome/kde/xfce, C1(lxqt) green, faults still caught |
 
-**CP3 — la modifica** (`1f99d60` prodotto; `cd7a088` `61bdc5a` `58262da` `2330e79` banchi):
-- `riconosci_desktop`: marcatore `lxqt-session`, ramo dopo XFCE; con tutti e due, XFCE e
-  «AMBIGUO» dichiarato;
-- ambiente: `XDG_CURRENT_DESKTOP=LXQt:labwc:wlroots` (la forma dello script upstream quando il
-  compositore è configurato), `XDG_CONFIG_DIRS=/etc:/etc/xdg:/usr/share`, `QT_QPA_PLATFORM=wayland`,
-  `QT_QPA_PLATFORMTHEME=lxqt`, `XDG_MENU_PREFIX=lxqt-`, più le variabili labwc di XFCE;
-- `rc.xml` e `autostart` **nostri** in `$XDG_RUNTIME_DIR/remotix/labwc-lxqt/`;
-- viva/stato: il nome `org.lxqt.session` sul bus; «Esci»: `logout()` senza risposta, poi SIGTERM
-  a labwc;
-- inattività: `enableIdlenessWatcher=false` **e** `runCheckLevel=1` (sotto 1 il demone la rimette a
-  vero), riletti; niente comando di blocco (`/bin/false` aprirebbe una modale);
-- la scatola: `lxqt-core qt6-wayland lxqt-menu-data lxqt-powermanagement nano`, `nictest`,
-  `wlr-randr`; **esclusi** `lxqt-branding-debian` (lxqt-leave nel pannello), `qlipper` (sporca gli
-  appunti), `swayidle swaylock wlopm kanshi`.
+**CP3 — the change** (`1f99d60` product; `cd7a088` `61bdc5a` `58262da` `2330e79` benches):
+- `riconosci_desktop`: marker `lxqt-session`, branch after XFCE; with both, XFCE and
+  «AMBIGUO» declared;
+- environment: `XDG_CURRENT_DESKTOP=LXQt:labwc:wlroots` (the upstream script's form when the
+  compositor is configured), `XDG_CONFIG_DIRS=/etc:/etc/xdg:/usr/share`, `QT_QPA_PLATFORM=wayland`,
+  `QT_QPA_PLATFORMTHEME=lxqt`, `XDG_MENU_PREFIX=lxqt-`, plus XFCE's labwc variables;
+- **our own** `rc.xml` and `autostart` in `$XDG_RUNTIME_DIR/remotix/labwc-lxqt/`;
+- alive/state: the name `org.lxqt.session` on the bus; «Esci»: `logout()` without an answer, then SIGTERM
+  to labwc;
+- inactivity: `enableIdlenessWatcher=false` **and** `runCheckLevel=1` (below 1 the daemon sets it back to
+  true), reread; no lock command (`/bin/false` would open a modal);
+- the box: `lxqt-core qt6-wayland lxqt-menu-data lxqt-powermanagement nano`, `nictest`,
+  `wlr-randr`; **excluded** `lxqt-branding-debian` (lxqt-leave in the panel), `qlipper` (dirties the
+  clipboard), `swayidle swaylock wlopm kanshi`.
 
-**Revisione avversaria** (agente mandato a smentire): GNOME/KDE/XFCE identici — **non smentito**.
-Sul ramo LXQt:
-- ereditati da XFCE, non nuovi: la guardia e la forza di chiusura guardano **ogni** `labwc`
-  dell'utente, e il bus d'utente è uno per uid ⇒ lo stesso utente con una sessione locale aperta
-  confonde il prodotto. `[?]` da decidere a parte: non è di LXQt;
-- ⚠ **da misurare**: il nome sul bus nasce prima dei moduli ⇒ una `lxqt-session` che muore
-  all'avvio sarebbe letta come «l'utente è uscito» (congedo 0x10);
-- minore: `g_key_file_save_to_file` sostituisce un collegamento simbolico con un file vero.
+**Adversarial review** (agent sent to refute): GNOME/KDE/XFCE identical — **not refuted**.
+On the LXQt branch:
+- inherited from XFCE, not new: the guard and the closing force look at **every** `labwc`
+  of the user, and the user bus is one per uid ⇒ the same user with a local session open
+  confuses the product. `[?]` to be decided separately: it is not LXQt's;
+- ⚠ **to be measured**: the name on the bus is born before the modules ⇒ an `lxqt-session` that dies
+  at startup would be read as «the user has logged out» (farewell 0x10);
+- minor: `g_key_file_save_to_file` replaces a symbolic link with a real file.
 
-Binario **`404f9907`** (md5), costruito dall'albero integrato `ae6c3ba`.
+Binary **`404f9907`** (md5), built from the integrated tree `ae6c3ba`.
 
-**CP4 — la prova LXQt**, 24 set 2026, su una **quinta scatola di sviluppo** `rete14-lxqt` (porta
-8524, immagine `lxqt:p1`, cartella `/media/REMOTIX/rete14-lxqt`), decisa dall'utente per non
-aspettare la baseline: *«parti subito con la quinta scatola. Ogni DE deve avere la sua scatola
-dedicata»*. Le quattro scatole della rete restano intatte.
-- `[M]` il prodotto dice «il desktop di questa macchina: LXQt (c'e' lxqt-session, e labwc per farlo
-  girare)»; **C1(lxqt)×3 VERDE**, monitor `HEADLESS-1` 1920x1080;
-- `[M]` lo scatto del desktop nudo: **disegnato** (4181 colori), sfondo LXQt e pannello; **nessuno** dei
-  colori delle scene sopra lo 0,0 % ⇒ C2/C3/C8b non possono essere ingannati dallo sfondo;
-- `[M]` la sonda: labwc → lxqt-session → pannello, scrivania, powermanagement, notifiche, policykit,
-  runner; **Qt su wayland**, niente Xwayland, niente wizard né `lxqt-leave` aperti, niente
-  swayidle/qlipper/locker; `enableIdlenessWatcher=false` e `runCheckLevel=1` **vincono** dal file
-  dell'utente; labwc offre layer-shell, foreign-toplevel, screencopy, input virtuale, data-control;
-- `[M]` **il giro di tutte le maglie di scatola su LXQt**, con le capacità aperte **solo nella copia di
-  sviluppo**: passo0, C7 (+ distacco), C5, C8, C9, C18, C2, C3 (+ scena ferma), C4, C6, C8b, C17,
-  C20, C19 **tutte verdi**, e **16 guasti innestati su 16 VISTI**. C20: il gesto è il `logout()` di
-  `org.lxqt.session`, «il figlio è sopravvissuto e se n'è accorto», rientro pulito.
-  ⚠ Un primo C19 rosso era **classe C, del mio giro**: non sgomberava gli inquilini fra le maglie come
-  fa il gancio; sgomberato, C19 verde e i suoi due guasti visti.
+**CP4 — the LXQt test**, 24 Sep 2026, on a **fifth development box** `rete14-lxqt` (port
+8524, image `lxqt:p1`, folder `/media/REMOTIX/rete14-lxqt`), decided by the user so as not to
+wait for the baseline: *«parti subito con la quinta scatola. Ogni DE deve avere la sua scatola
+dedicata»*. The four boxes of the net stay intact.
+- `[M]` the product says «il desktop di questa macchina: LXQt (c'e' lxqt-session, e labwc per farlo
+  girare)»; **C1(lxqt)×3 GREEN**, monitor `HEADLESS-1` 1920x1080;
+- `[M]` the snapshot of the bare desktop: **drawn** (4181 colours), LXQt background and panel; **none** of the
+  scenes' colours above 0.0 % ⇒ C2/C3/C8b cannot be fooled by the background;
+- `[M]` the probe: labwc → lxqt-session → panel, desktop, powermanagement, notifications, policykit,
+  runner; **Qt on wayland**, no Xwayland, no wizard nor `lxqt-leave` open, no
+  swayidle/qlipper/locker; `enableIdlenessWatcher=false` and `runCheckLevel=1` **win** from the user's
+  file; labwc offers layer-shell, foreign-toplevel, screencopy, virtual input, data-control;
+- `[M]` **the round of all the box links on LXQt**, with the capabilities opened **only in the development
+  copy**: passo0, C7 (+ detach), C5, C8, C9, C18, C2, C3 (+ still scene), C4, C6, C8b, C17,
+  C20, C19 **all green**, and **16 grafted faults out of 16 SEEN**. C20: the gesture is the `logout()` of
+  `org.lxqt.session`, «il figlio è sopravvissuto e se n'è accorto», clean re-entry.
+  ⚠ A first red C19 was **class C, of my round**: it did not clear out the tenants between the links as
+  the hook does; cleared out, C19 green and its two faults seen.
 
-**Il difetto trovato guardando**: il pannello **senza icone** e senza pulsante del menu ⇒ incremento 2.
+**The defect found by looking**: the panel **without icons** and without the menu button ⇒ increment 2.
 
-### Incremento 2 — le icone, e niente voci pericolose
+### Increment 2 — the icons, and no dangerous entries
 
 | | |
 |---|---|
-| **obiettivo** | il pannello LXQt ha icone e menu; il menu non offre blocco, sospensione, ibernazione, riavvio, spegnimento; «Esci» resta |
-| **invariante** | GNOME/KDE/XFCE identici: solo `impostazioni_lxqt()` e uno strato nuovo **in coda** alla ricetta |
-| **causa** `[R]` | `icon_theme=breeze` in `/usr/share/lxqt/lxqt.conf`, ma il tema lo porta `lxqt-system-theme` solo come *Recommends*; il pulsante del menu vuole `qt6-svg-plugins`. ⚠ È la **scatola**: una macchina con `apt` normale li prende |
-| **modifica** | R5 `kf6-breeze-icon-theme qt6-svg-plugins` (`afc0cb0`); sei `.desktop` `Hidden=true` per l'utente, **riletti** (`a1f771e`, DECISIONI §4.7) |
-| **misura** `[M]` | lo scatto mostra menu, notifiche, volume, «mostra scrivania»; registro «⭐ LXQt: 6/6 voci nascoste, RILETTE; resta "Esci"» |
+| **goal** | the LXQt panel has icons and menu; the menu does not offer lock, suspend, hibernate, reboot, shutdown; «Esci» stays |
+| **invariant** | GNOME/KDE/XFCE identical: only `impostazioni_lxqt()` and a new layer **at the end** of the recipe |
+| **cause** `[R]` | `icon_theme=breeze` in `/usr/share/lxqt/lxqt.conf`, but the theme is brought by `lxqt-system-theme` only as *Recommends*; the menu button wants `qt6-svg-plugins`. ⚠ It is the **box**: a machine with normal `apt` gets them |
+| **change** | R5 `kf6-breeze-icon-theme qt6-svg-plugins` (`afc0cb0`); six `.desktop` `Hidden=true` for the user, **reread** (`a1f771e`, DECISIONI §4.7) |
+| **measure** `[M]` | the snapshot shows menu, notifications, volume, «show desktop»; log «⭐ LXQt: 6/6 voci nascoste, RILETTE; resta "Esci"» |
 
-⚠ Residui dichiarati, come la finestra «Log Out» di XFCE: il pulsante «Leave» dentro il menu è
-fisso nel codice di fancymenu e apre `lxqt-leave`, dove spegnimento/riavvio/sospensione sono **grigi**
-(polkit/logind) e «Lock screen» è **cliccabile ma inerte** (nessun comando di blocco). «n/a» a sinistra
-è il cambia-desktop, che su wlroots non ha motore: innocuo.
+⚠ Declared leftovers, like XFCE's «Log Out» window: the «Leave» button inside the menu is
+fixed in fancymenu's code and opens `lxqt-leave`, where shutdown/reboot/suspend are **greyed out**
+(polkit/logind) and «Lock screen» is **clickable but inert** (no lock command). «n/a» on the left
+is the desktop switcher, which on wlroots has no engine: harmless.
 
-**Client veri** — binario **`1a10a66e`** (albero `a1f771e`), labwc senza schermo sul server:
-**Firefox 140 PASS · Chrome 154 PASS** (`12-client-veri`: pagina, ammissione, primo fotogramma,
-continuità 63–66 fotogrammi in 8 s, tastiera e mouse al server, 0 errori JS e di rete, rientro).
-⛔ **E la fotografia della tela mostra un difetto che i contatori non vedono**: con la tela del
-browser (1400x914) il pannello va giusto in fondo, ma **lo sfondo di pcmanfm-qt resta della misura
-di nascita** e il resto è nero. Col cliente Python (1920x1080) riempiva tutto. In diagnosi.
+**Real clients** — binary **`1a10a66e`** (tree `a1f771e`), labwc without a screen on the server:
+**Firefox 140 PASS · Chrome 154 PASS** (`12-client-veri`: page, admission, first frame,
+continuity 63–66 frames in 8 s, keyboard and mouse to the server, 0 JS and network errors, re-entry).
+⛔ **And the snapshot of the canvas shows a defect the counters do not see**: with the browser's
+canvas (1400x914) the panel goes right at the bottom, but **pcmanfm-qt's background stays at the birth
+size** and the rest is black. With the Python client (1920x1080) it filled everything. Under diagnosis.
 
 ---
 
-### Incremento 3 — lo sfondo nasce della misura del cliente
+### Increment 3 — the background is born at the client's size
 
-`[M]` La causa, con il cliente Python e senza browser: **una gara alla nascita**. labwc nasce con
-l'uscita 1280x720 e il prodotto la ridimensiona ~200 ms dopo; pcmanfm-qt parte ~160 ms dopo labwc.
-`[R]` pcmanfm-qt 2.1.0 calcola lo sfondo da `screen->size()` e lo ricalcola solo su `resizeEvent`: se
-Qt aggiorna lo schermo dopo la finestra, lo sfondo resta 1280x720 per sempre.
-**Cura** (`e4ecfbb`, solo ramo LXQt): il client primario di labwc diventa `sh -c` che dà all'uscita la
-misura del cliente con `wlr-randr` **prima** di `exec lxqt-session` (`;` e non `&&`: se fallisce,
-resta la richiesta tardiva di prima). `wlr-randr` passa da attrezzo diagnostico a dipendenza del
-prodotto su LXQt. `[M]` 1400x914: **prima 1 difetto su 20, dopo 0 su 20**; e 0 su 5 a 1920x1080, 0 su
-5 a 3840x2160.
+`[M]` The cause, with the Python client and without browser: **a race at birth**. labwc is born with
+the output at 1280x720 and the product resizes it ~200 ms later; pcmanfm-qt starts ~160 ms after labwc.
+`[R]` pcmanfm-qt 2.1.0 computes the background from `screen->size()` and recomputes it only on `resizeEvent`: if
+Qt updates the screen after the window, the background stays 1280x720 forever.
+**Cure** (`e4ecfbb`, LXQt branch only): labwc's primary client becomes `sh -c` that gives the output the
+client's size with `wlr-randr` **before** `exec lxqt-session` (`;` and not `&&`: if it fails,
+the earlier late request remains). `wlr-randr` goes from diagnostic tool to dependency of the
+product on LXQt. `[M]` 1400x914: **before 1 defect out of 20, after 0 out of 20**; and 0 out of 5 at 1920x1080, 0 out of
+5 at 3840x2160.
 
-### La cura di Firefox (decisione dell'utente: «curarlo subito»)
+### Firefox's cure (the user's decision: «curarlo subito»)
 
-`ec9c561`: la **larghezza** della tela chiesta si tronca a multiplo di 16 (l'altezza resta pari),
-per tutti i browser, senza rami. `[M]` Firefox: striscia da 8 e 12 px → **0**, margine dell'ultima
-icona uguale a Chrome (7 px); Chrome invariato. Il prezzo: bande nere di al più 7-8 px ai lati.
+`ec9c561`: the **width** of the requested canvas is truncated to a multiple of 16 (the height stays even),
+for all browsers, without branches. `[M]` Firefox: strip of 8 and 12 px → **0**, margin of the last
+icon equal to Chrome (7 px); Chrome unchanged. The price: black bands of at most 7-8 px on the sides.
 
-### CP0 — la baseline, chiusa
+### CP0 — the baseline, closed
 
-`[M]` 24 set 2026, 07:36 → 12:00, binario `e681a262` (quello di prima della fase), `--famiglia tutto`
-sulle quattro scatole: **un solo rosso, `C1(lxqt)×10`**, quello atteso (il binario vecchio non
-riconosce LXQt); **117 guasti innestati visti su 117**; C14 regge; C10 C12 C15 C16 «il terreno non
-regge» dal server, come sempre. ⇒ nessuna differenza inattesa rispetto al checkpoint del 24 notte.
+`[M]` 24 Sep 2026, 07:36 → 12:00, binary `e681a262` (the one from before the phase), `--famiglia tutto`
+on the four boxes: **a single red, `C1(lxqt)×10`**, the expected one (the old binary does not
+recognise LXQt); **117 grafted faults seen out of 117**; C14 holds; C10 C12 C15 C16 «il terreno non
+regge» from the server, as always. ⇒ no unexpected difference compared with the checkpoint of the night of the 24th.
 
-### Client veri col binario finale **`c0e8f010`** e pagina **`d77177f1`**
+### Real clients with the final binary **`c0e8f010`** and page **`d77177f1`**
 
-`[M]` sulla scatola di sviluppo, **Firefox 140 e Chrome 154 PASS** a finestra 1400x914 (tela
-1392x828) **e in 4K** (tela 3840x2014): a–g tutti verdi. La foto 4K di Firefox: sfondo pieno, 0 %
-nero, l'ultima colonna è sfondo (1,81,129) e non la striscia.
+`[M]` on the development box, **Firefox 140 and Chrome 154 PASS** at window 1400x914 (canvas
+1392x828) **and in 4K** (canvas 3840x2014): a–g all green. Firefox's 4K snapshot: full background, 0 %
+black, the last column is background (1,81,129) and not the strip.
 
-### ✅ LA RETE INTERA SULLE QUATTRO SCATOLE — nessun rosso
+### ✅ THE WHOLE NET ON THE FOUR BOXES — no red
 
-`[M]` 24 set 2026, 12:00 → 17:18, binario **`c0e8f010`** e pagina **`d77177f1`** in tutte e quattro,
-`rete11-lxqt` **rifatta** dalla ricetta nuova, `--famiglia tutto`: **«nessun rosso»**.
-**34 verdi su gnome, 34 su kde, 34 su xfce, 34 su lxqt** — LXQt fa esattamente le stesse maglie
-degli altri tre; **nessun guasto innestato sfuggito**; C14 (le quattro insieme) regge; C10 C12 C15
-C16 «il terreno non regge» dal server, come sempre. ⇒ GNOME, KDE e XFCE **non hanno perso niente**,
-né per LXQt né per la cura di Firefox che tocca tutti.
+`[M]` 24 Sep 2026, 12:00 → 17:18, binary **`c0e8f010`** and page **`d77177f1`** in all four,
+`rete11-lxqt` **redone** from the new recipe, `--famiglia tutto`: **«nessun rosso»**.
+**34 greens on gnome, 34 on kde, 34 on xfce, 34 on lxqt** — LXQt does exactly the same links
+as the other three; **no grafted fault escaped**; C14 (the four together) holds; C10 C12 C15
+C16 «il terreno non regge» from the server, as always. ⇒ GNOME, KDE and XFCE **have lost nothing**,
+neither because of LXQt nor because of Firefox's cure that touches everyone.
 
-### ✅ I browser veri sulle quattro scatole ufficiali
+### ✅ The real browsers on the four official boxes
 
-`[M]` 24 set 2026, sera, binario `c0e8f010`, pagina `d77177f1`, labwc senza schermo sul server,
-finestra 1400x914 (tela 1392x828):
+`[M]` 24 Sep 2026, evening, binary `c0e8f010`, page `d77177f1`, labwc without a screen on the server,
+window 1400x914 (canvas 1392x828):
 
 | | `12-client-veri` Firefox 140 | `12-client-veri` Chrome 154 | `12-c20-veri` Firefox | `12-c20-veri` Chrome |
 |---|---|---|---|---|
-| **gnome** | PASS | PASS | VERDE | VERDE |
-| **kde** | PASS | PASS | VERDE | VERDE |
-| **xfce** | PASS | PASS | VERDE | VERDE |
-| **lxqt** | PASS | PASS | VERDE | VERDE |
+| **gnome** | PASS | PASS | GREEN | GREEN |
+| **kde** | PASS | PASS | GREEN | GREEN |
+| **xfce** | PASS | PASS | GREEN | GREEN |
+| **lxqt** | PASS | PASS | GREEN | GREEN |
 
-⚠ Su gnome il primo giro ha dato **BLOCKED** alla voce *e* (input): senza `--registro-cmd` il banco
-cerca l'id dell'input nei fotogrammi, e Mutter a scena «muovi» ne manda solo 7-8 in 8 s ⇒ **classe C**,
-del banco. Rifatto con `--registro-cmd`: **PASS** su tutti e due, 7-8 righe d'input nel registro.
-Android: resta all'utente, col suo telefono (l'emulatore non fa partire Chrome, 19 set).
+⚠ On gnome the first round gave **BLOCKED** at entry *e* (input): without `--registro-cmd` the bench
+looks for the input id in the frames, and Mutter with the «muovi» scene sends only 7-8 of them in 8 s ⇒ **class C**,
+of the bench. Redone with `--registro-cmd`: **PASS** on both, 7-8 input lines in the log.
+Android: it stays with the user, with the user's phone (the emulator does not start Chrome, 19 Sep).
 
-### ✅ Sessioni coi browser veri su LXQt (al massimo 10 minuti — l'utente, 24 set) e la guardia
+### ✅ Sessions with the real browsers on LXQt (at most 10 minutes — the user, 24 Sep) and the guard
 
-`[M]` `14-il-cliente-che-non-sta-fermo --desktop lxqt`, mouse in moto nel 100 % dei secondi:
-**Firefox 10 min: blocco più lungo 0 s, 0 buchi · Chrome 10 min: blocco più lungo 0 s, 0 buchi.**
-Guardia del battito col guasto `--schermo-congelato` (SIGSTOP a labwc trovato per socket): **esito 1,
-«lo schermo si è fermato per 23,9 s mentre il mouse si muoveva» — il guasto è stato VISTO.**
+`[M]` `14-il-cliente-che-non-sta-fermo --desktop lxqt`, mouse moving in 100 % of the seconds:
+**Firefox 10 min: longest stall 0 s, 0 holes · Chrome 10 min: longest stall 0 s, 0 holes.**
+Heartbeat guard with the fault `--schermo-congelato` (SIGSTOP to labwc found by socket): **outcome 1,
+«lo schermo si è fermato per 23,9 s mentre il mouse si muoveva» — the fault was SEEN.**
 
-## ⭐ CHECKPOINT — 24 settembre 2026, sera
+## ⭐ CHECKPOINT — 24 Sep 2026, evening
 
 | | |
 |---|---|
-| **binario** | `c0e8f010` (md5), albero `a8bedb6` + banchi; pagina `d77177f1` |
-| **LXQt** | riconosciuto, nasce, si vede, input, appunti, «Esci», sfondo della misura del cliente, icone, voci pericolose nascoste; **34/34** nella rete, capacità `immagine input appunti` aperte |
-| **GNOME · KDE · XFCE** | **34/34 ciascuno**, invariati |
-| **client** | Firefox 140 e Chrome 154 PASS e C20 VERDE sulle quattro; sessioni LXQt 10 min verdi; Android: all'utente |
-| **rete** | «nessun rosso», nessun guasto sfuggito, C14 regge; guardia del battito vede il guasto su LXQt |
-| **fuori da LXQt, curato** | la striscia verde di Firefox (tutti i desktop), decisione dell'utente |
+| **binary** | `c0e8f010` (md5), tree `a8bedb6` + benches; page `d77177f1` |
+| **LXQt** | recognised, born, seen, input, clipboard, «Esci», background at the client's size, icons, dangerous entries hidden; **34/34** in the net, capabilities `immagine input appunti` opened |
+| **GNOME · KDE · XFCE** | **34/34 each**, unchanged |
+| **client** | Firefox 140 and Chrome 154 PASS and C20 GREEN on the four; LXQt sessions 10 min green; Android: to the user |
+| **net** | «nessun rosso», no fault escaped, C14 holds; heartbeat guard sees the fault on LXQt |
+| **outside LXQt, cured** | Firefox's green strip (all desktops), the user's decision |
 
-## ⭐ LA SERA DEL 24 SETTEMBRE — la prova a mano dell'utente, e i sei difetti che ha trovato
+## ⭐ THE EVENING OF 24 SEPTEMBER — the user's hand test, and the six defects the user found
 
-L'utente ha provato a mano (tablet, Firefox e Chrome) e ha trovato quello che la rete non vedeva.
-Tutti curati, misurati coi browser veri, e ognuno con una maglia nuova che lo sorveglia:
+The user tested by hand (tablet, Firefox and Chrome) and found what the net did not see.
+All cured, measured with the real browsers, and each with a new link watching over it:
 
-| # | difetto `[M]` | desktop | cura | prova |
+| # | defect `[M]` | desktop | cure | test |
 |---|---|---|---|---|
-| 1 | l'icona «Lock screen» ancora attiva (finestra lxqt-leave dal pulsante fisso di fancymenu; cliccata restava APPESA) | LXQt | pannello col menu classico (`mainmenu`), `lock_command_wayland=true` calcolato come liblxqt (`efb1840`, `83ea7b4`) | foto, misure c94u* |
-| 2 | non si ridimensionano le finestre dal bordo: la zona è FUORI dal bordo e da REMOTIX non arrivava la freccia doppia | tutti | la **forma vera del puntatore** su tutti e quattro (decisione dell'utente): tema codificato + dizionario (`src/forma.c`), KDE dal metadato (`bd8a529`), labwc con la «sonda» 3x3 (`95d5f54`, +1,4 % CPU a labwc) | **C21** (forma sul bordo), **C22** (il bordo si trascina) |
-| 3 | Maiusc+freccia non seleziona (il Maiusc da solo non partiva) | tutti | la pagina risincronizza sempre il Maiusc e lo restituisce prima della LETTERA (`694f77f`) | **C23** |
-| 4 | con Chrome il clic cade 1 px a sinistra a tela di mezzo pixel | tutti | il clic non ricalcola il punto del movimento (`72d12f2`) | misura 8/8 |
-| 5 | con Firefox (decodifica hardware) la zona sensibile spostata di «qualche mm» in basso | tutti | anche l'**altezza** della tela a multiplo di 16 (`fc0fbff`) | confermato dall'utente |
-| 6 | «Esci» fa RINASCERE la sessione (13-16 volte su 20; 1 su 20 col binario del mattino) | LXQt | su wlroots non si monta finché il gestore di sessione non è sul bus (`43345ea`): **20 uscite su 20**, XFCE 12/12, +210 ms alla prima immagine | C20, e C24 «Esci dieci volte» (in scrittura) |
+| 1 | the «Lock screen» icon still active (lxqt-leave window from fancymenu's fixed button; clicked it stayed HUNG) | LXQt | panel with the classic menu (`mainmenu`), `lock_command_wayland=true` computed like liblxqt (`efb1840`, `83ea7b4`) | snapshot, measures c94u* |
+| 2 | windows cannot be resized from the border: the zone is OUTSIDE the border and the double arrow did not come from REMOTIX | all | the **real pointer shape** on all four (the user's decision): coded theme + dictionary (`src/forma.c`), KDE from the metadata (`bd8a529`), labwc with the 3x3 «probe» (`95d5f54`, +1.4 % CPU to labwc) | **C21** (shape on the border), **C22** (the border is dragged) |
+| 3 | Shift+arrow does not select (Shift on its own did not go out) | all | the page always resynchronises Shift and gives it back before the LETTERA (`694f77f`) | **C23** |
+| 4 | with Chrome the click falls 1 px to the left on a half-pixel canvas | all | the click does not recompute the movement's point (`72d12f2`) | measure 8/8 |
+| 5 | with Firefox (hardware decoding) the sensitive zone shifted «qualche mm» down | all | the **height** of the canvas too to a multiple of 16 (`fc0fbff`) | confirmed by the user |
+| 6 | «Esci» makes the session be REBORN (13-16 times out of 20; 1 out of 20 with the morning's binary) | LXQt | on wlroots nothing is mounted until the session manager is on the bus (`43345ea`): **20 logouts out of 20**, XFCE 12/12, +210 ms to the first image | C20, and C24 «Esci dieci volte» (being written) |
 
-⚠ Il puntino di 1 px sotto la punta del puntatore (il prezzo della forma su KDE e labwc) **si vede**: da
-giudicare dall'utente. ⚠ Eccezione dichiarata dall'utente: su KDE (KWin < 6.8) al riattacco a misura
-diversa la tela resta quella vecchia e il browser riscala.
+⚠ The 1 px dot under the pointer's tip (the price of the shape on KDE and labwc) **is visible**: to be
+judged by the user. ⚠ Exception declared by the user: on KDE (KWin < 6.8) at re-attach at a different
+size the canvas stays the old one and the browser rescales.
 
-**Stato alla consegna** (24 set, ~23:30): binario **`7dfd6a96`** e pagina **`87268f13`** nelle quattro
-`rete11-*` e nella 8524; l'utente ha confermato a mano su LXQt ridimensionamento e logout, Firefox e
-Chrome. ⛔ La rete intera NON è stata rifatta su questo binario: per decisione dell'utente la sostituisce
-la **suite funzionale della fase 15**, che parte in una sessione nuova.
+**State at delivery** (24 Sep, ~23:30): binary **`7dfd6a96`** and page **`87268f13`** in the four
+`rete11-*` and in 8524; the user confirmed by hand on LXQt resizing and logout, Firefox and
+Chrome. ⛔ The whole net was NOT redone on this binary: by the user's decision it is replaced
+by the **functional suite of phase 15**, which starts in a new session.
 
-## ⛔ Un difetto trovato per strada, che NON è di LXQt — Firefox e il riempimento del codificatore
+## ⛔ A defect found along the way, which is NOT LXQt's — Firefox and the encoder's padding
 
-`[M]` 24 set 2026, da 380 fotografie di tela (`c20veri` del 23 set, `topo`, `veri-lxqt`): **Firefox 140
-mostra a destra una striscia verde (0,76,0) larga quanto manca a un multiplo di 16** (8 px a 1400,
-4 px a 3788, 12 px a 1348), e **schiaccia in orizzontale** l'immagine (1408 → 1400: l'orologio del
-pannello LXQt sta 6 px più a sinistra che in Chrome). In altezza il ritaglio lo onora. (0,76,0) è
-esattamente YUV (0,0,0) letto BT.709 limitato ⇒ è il riempimento del codificatore che arriva allo
-schermo. **Chrome 154: nessuna striscia**, su nessun desktop. `[R]` il server dichiara il ritaglio
-nell'SPS (`frame_cropping_flag`); la pagina disegna con `createImageBitmap(f)` su `bitmaprenderer`
-(`pagina.html:3188`), che per specifica deve rispettare il rettangolo visibile: Chrome lo fa, Firefox
-a destra no.
-- ⇒ **su GNOME, KDE, XFCE e LXQt**, ogni volta che la tela non è larga un multiplo di 16; c'era già il
-  23 settembre ⇒ **non è una regressione della fase 14**, e non si cura dentro la fase 14 senza una
-  decisione: la cura minima (larghezza della tela troncata a multiplo di 16 in `tela_da_chiedere()`)
-  cambia la tela **per tutti** i browser, al prezzo di fino a 15 px di bordo.
-- ⚠ i contatori di `12-client-veri` erano verdi: lo si è visto solo **guardando** la fotografia.
+`[M]` 24 Sep 2026, from 380 canvas snapshots (`c20veri` of 23 Sep, `topo`, `veri-lxqt`): **Firefox 140
+shows on the right a green strip (0,76,0) as wide as what is missing to a multiple of 16** (8 px at 1400,
+4 px at 3788, 12 px at 1348), and **squashes horizontally** the image (1408 → 1400: the LXQt panel's
+clock sits 6 px further left than in Chrome). In height the crop honours it. (0,76,0) is
+exactly YUV (0,0,0) read as limited BT.709 ⇒ it is the encoder's padding that reaches the
+screen. **Chrome 154: no strip**, on no desktop. `[R]` the server declares the crop
+in the SPS (`frame_cropping_flag`); the page draws with `createImageBitmap(f)` on `bitmaprenderer`
+(`pagina.html:3188`), which by specification must respect the visible rectangle: Chrome does so, Firefox
+on the right does not.
+- ⇒ **on GNOME, KDE, XFCE and LXQt**, every time the canvas is not a multiple of 16 wide; it was already there on
+  23 September ⇒ **it is not a regression of phase 14**, and it is not cured inside phase 14 without a
+  decision: the minimal cure (canvas width truncated to a multiple of 16 in `tela_da_chiedere()`)
+  changes the canvas **for all** browsers, at the price of up to 15 px of border.
+- ⚠ the counters of `12-client-veri` were green: it was seen only by **looking** at the snapshot.
 
-## Che cosa resta [?]
+## What remains [?]
 
-- **Android** (Chrome sul telefono dell'utente) su LXQt e sui tre con la pagina nuova: dell'utente.
-- **la prova a mano dell'utente** su `rete11-lxqt` (8514), utente `nictest`/`nictest` — come per le
-  altre tre scatole.
-- `[?]` il pulsante «Leave» di fancymenu: «Lock screen» cliccabile e inerte (dichiarato, come la
-  finestra «Log Out» di XFCE).
-- `[?]` ereditati da XFCE, da decidere a parte: la guardia e la forza di chiusura guardano ogni
-  `labwc` dell'utente; lo stesso utente con una sessione locale aperta confonde il prodotto.
-- `[?]` xfdesktop ha la stessa gara alla nascita di pcmanfm-qt? Su XFCE lo sfondo nella scatola è
-  nero, quindi non si vedrebbe: non misurato.
-- la scatola di sviluppo `rete14-lxqt` (8524, `/media/REMOTIX/rete14-lxqt`) resta accesa per le
-  prossime prove; non entra nella rete.
+- **Android** (Chrome on the user's phone) on LXQt and on the three with the new page: the user's.
+- **the user's hand test** on `rete11-lxqt` (8514), user `nictest`/`nictest` — as for the
+  other three boxes.
+- `[?]` fancymenu's «Leave» button: «Lock screen» clickable and inert (declared, like XFCE's
+  «Log Out» window).
+- `[?]` inherited from XFCE, to be decided separately: the guard and the closing force look at every
+  `labwc` of the user; the same user with a local session open confuses the product.
+- `[?]` does xfdesktop have the same birth race as pcmanfm-qt? On XFCE the background in the box is
+  black, so it would not be seen: not measured.
+- the development box `rete14-lxqt` (8524, `/media/REMOTIX/rete14-lxqt`) stays on for the
+  next tests; it does not enter the net.
