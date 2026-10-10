@@ -27,3 +27,14 @@ marchi registrati, la politica di ciascuna va letta prima di pubblicare.
 ⛔ Niente prestazioni nella vetrina: stanno nella documentazione tecnica (utente, 9 ott).
 
 Si apre direttamente dal disco: `xdg-open grafica/sito-mockup/index.html`.
+
+## La pagina in un file solo (10 ott sera)
+
+✅ Utente: *«rendi la landing page autocontenuta (con le immagini incorporate)»*. Il sorgente resta `index.html` +
+`stile.css` + `icone/` (Simple Icons 13.21.0, copie locali) + `schermate-vere/`; il file da pubblicare si rigenera con
+
+    python3 grafica/sito-mockup/autocontenuta.py                 # pubblica/index.html, col nastro «Mockup»
+    python3 grafica/sito-mockup/autocontenuta.py --senza-nastro  # quella da mettere online
+
+Incorpora CSS, icone (SVG) e schermate (WebP, al massimo 1600 px, qualità 82): **~420 KB, nessuna richiesta a
+terzi** (niente CDN né caratteri esterni). Lo script si rifiuta di scrivere se resta un collegamento a un file esterno.

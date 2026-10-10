@@ -82,7 +82,7 @@
   .striscia .ico { width: 3.2rem; height: 3.2rem; flex: none; display: grid; place-items: center; border-radius: .8rem; background: rgba(40,90,220,.25); box-shadow: inset 0 0 0 1px rgba(110,170,255,.35); }
   .striscia .ico svg { width: 1.5rem; height: 1.5rem; color: #cfe2ff; }
   .striscia b { display: block; font-size: 1rem; }
-  .striscia .tux { width: 1.6rem; height: 1.6rem; background: #cfe2ff; -webkit-mask: url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/linux.svg) center / contain no-repeat; mask: url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/linux.svg) center / contain no-repeat; }
+  .striscia .tux { width: 1.6rem; height: 1.6rem; background: #cfe2ff; -webkit-mask: url(icone/linux.svg) center / contain no-repeat; mask: url(icone/linux.svg) center / contain no-repeat; }
   .striscia span { font-size: .88rem; color: var(--chiaro-fondo); }
 
   /* sezioni chiare */
@@ -165,59 +165,7 @@
   .piede-chiaro nav a { color: var(--tenue); text-decoration: none; }
   .piede-chiaro .destra { margin-left: auto; color: var(--tenue); font-size: .82rem; }
 
-  /* il desktop simulato (stile Plasma): tutto in cqw, così scala con lo schermo che lo contiene */
-  .schermo { container-type: size; }
-  .desk { position: absolute; inset: 0; overflow: hidden; isolation: isolate; text-align: left; font-family: "Noto Sans", system-ui, sans-serif; color: #fcfcfc;
-    background:
-      radial-gradient(70% 90% at 85% 110%, #f2a65a 0%, transparent 55%),
-      radial-gradient(60% 70% at 15% 105%, #e0558a 0%, transparent 60%),
-      radial-gradient(90% 80% at 50% 0%, #3b2f8f 0%, transparent 70%),
-      linear-gradient(170deg, #1a1f5c 0%, #36318f 45%, #7c4fb8 70%, #e47b6a 100%); }
-  .desk::before { content: ""; position: absolute; left: -10%; right: -10%; top: 38%; height: 70%; border-radius: 50%;
-    background: linear-gradient(180deg, rgba(255,255,255,.10), transparent 40%); transform: rotate(-6deg); }
-  .desk::after { content: ""; position: absolute; left: -20%; right: -5%; top: 55%; height: 70%; border-radius: 50%;
-    background: linear-gradient(180deg, rgba(255,255,255,.08), transparent 35%); transform: rotate(4deg); }
-  .desk .icone { position: absolute; left: 1.6cqw; top: 2cqw; display: grid; gap: 1.8cqw; z-index: 1; }
-  .desk .icona-desk { width: 8cqw; text-align: center; font-size: 1.25cqw; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
-  .desk .icona-desk i { display: block; width: 4.6cqw; height: 3.8cqw; margin: 0 auto .5cqw; border-radius: .5cqw;
-    background: linear-gradient(180deg, #5fb3ff, #2a7ad8); box-shadow: inset 0 .5cqw 0 rgba(255,255,255,.25); position: relative; }
-  .desk .icona-desk i::before { content: ""; position: absolute; left: 0; top: -.7cqw; width: 45%; height: 1cqw; border-radius: .4cqw .4cqw 0 0; background: #4b9be8; }
-  .desk .icona-desk.cestino i { width: 3.6cqw; height: 4.2cqw; border-radius: .3cqw .3cqw .7cqw .7cqw; background: linear-gradient(180deg, #e8ecf2, #aab3c2); }
-  .desk .icona-desk.cestino i::before { left: -10%; width: 120%; top: -.6cqw; height: .7cqw; background: #d3d9e3; }
-  .desk .finestra-k { position: absolute; z-index: 2; border-radius: .7cqw; overflow: hidden; box-shadow: 0 1.2cqw 3cqw rgba(0,0,0,.45), 0 0 0 .1cqw rgba(0,0,0,.4); }
-  .desk .titolo-k { height: 3cqw; display: flex; align-items: center; gap: .8cqw; padding: 0 1cqw; font-size: 1.15cqw; background: #2a2e32; color: #eff0f1; }
-  .desk .titolo-k b { font-weight: 500; flex: 1; text-align: center; }
-  .desk .titolo-k s { width: 1.3cqw; height: 1.3cqw; border-radius: 50%; background: #4d5257; text-decoration: none; }
-  .desk .titolo-k s:last-child { background: #da4453; }
-  .desk .dolphin { left: 13%; top: 7%; width: 56%; height: 62%; background: #1b1e20; }
-  .desk .dolphin .corpo { display: grid; grid-template-columns: 26% 1fr; height: calc(100% - 3cqw); }
-  .desk .dolphin .luoghi { background: #232629; padding: 1.2cqw 1cqw; font-size: 1.1cqw; display: grid; align-content: start; gap: .9cqw; color: #bdc3c7; }
-  .desk .dolphin .luoghi span:first-child { color: #fff; background: #3daee9; border-radius: .4cqw; padding: .3cqw .6cqw; margin: 0 -.6cqw; }
-  .desk .dolphin .file { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.6cqw 1cqw; padding: 1.8cqw; align-content: start; font-size: 1.05cqw; text-align: center; color: #eff0f1; }
-  .desk .dolphin .file i { display: block; width: 5cqw; height: 4cqw; margin: 0 auto .5cqw; border-radius: .4cqw; background: linear-gradient(180deg, #5fb3ff, #2a7ad8); }
-  .desk .dolphin .file i.doc { width: 3.4cqw; height: 4.4cqw; background: linear-gradient(180deg, #fff, #d9dee6); }
-  .desk .dolphin .file i.img { width: 4.4cqw; height: 3.6cqw; background: linear-gradient(160deg, #f6b05a, #c3509b 60%, #3b2f8f); }
-  .desk .konsole { left: 50%; top: 36%; width: 44%; height: 44%; background: #0e1013; }
-  .desk .konsole pre { margin: 0; padding: 1.2cqw 1.4cqw; font: 1.12cqw/1.55 ui-monospace, "DejaVu Sans Mono", monospace; color: #d6dde7; white-space: pre; }
-  .desk .konsole .v { color: #4ce38a; } .desk .konsole .a { color: #5fb3ff; } .desk .konsole .g { color: #8a93a3; }
-  .desk .pannello-k { position: absolute; z-index: 3; left: 0; right: 0; bottom: 0; height: 4.4cqw; display: flex; align-items: center; gap: 1.2cqw; padding: 0 1.2cqw;
-    background: rgba(32,35,38,.92); box-shadow: 0 -.1cqw 0 rgba(255,255,255,.06); }
-  .desk .pannello-k .avvio { width: 2.8cqw; height: 2.8cqw; border-radius: .6cqw; background: linear-gradient(135deg, #3daee9, #1d6fd8); position: relative; }
-  .desk .pannello-k .avvio::before { content: ""; position: absolute; inset: 28%; border: .3cqw solid #fff; border-radius: 50%; }
-  .desk .pannello-k .compito { width: 3.2cqw; height: 3.2cqw; border-radius: .5cqw; display: grid; place-items: center; position: relative; }
-  .desk .pannello-k .compito.attivo { background: rgba(61,174,233,.18); }
-  .desk .pannello-k .compito.attivo::after { content: ""; position: absolute; bottom: -.5cqw; left: 25%; right: 25%; height: .25cqw; border-radius: .2cqw; background: #3daee9; }
-  .desk .pannello-k .compito i { width: 2.2cqw; height: 1.8cqw; border-radius: .3cqw; background: linear-gradient(180deg, #5fb3ff, #2a7ad8); }
-  .desk .pannello-k .compito i.term { background: #0e1013; box-shadow: inset 0 0 0 .15cqw #8a93a3; }
-  .desk .pannello-k .compito i.web { border-radius: 50%; width: 2.2cqw; height: 2.2cqw; background: radial-gradient(circle at 35% 35%, #ffd36b, #f07b2b 60%, #c2362b); }
-  .desk .pannello-k .compito i.testo { width: 1.8cqw; height: 2.2cqw; background: linear-gradient(180deg, #fff, #cfd6e0); }
-  .desk .pannello-k .vassoio { margin-left: auto; display: flex; align-items: center; gap: 1.2cqw; font-size: 1.2cqw; color: #eff0f1; }
-  .desk .pannello-k .vassoio s { width: 1.5cqw; height: 1.5cqw; border-radius: 50%; border: .2cqw solid #bdc3c7; }
-  .desk .pannello-k .ora { text-align: center; line-height: 1.15; }
-  .desk .pannello-k .ora small { display: block; font-size: .95cqw; color: #bdc3c7; }
-  /* sullo schermo verticale del telefono il desktop sta in orizzontale, come lo mostra REMOTIX */
   .telefono .schermo { background: #000; }
-  .telefono .desk-alloggio { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); aspect-ratio: 16 / 10; container-type: size; }
 
   /* browser provati e Android */
   .browser-griglia { display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr); }
@@ -311,7 +259,7 @@
         </div>
         <div class="freccia" aria-hidden="true">⟷</div>
         <div class="portatile">
-          <div class="laptop"><div class="coperchio"><div class="schermo" data-vera="si"><img src="schermate-vere/kde-desktop-canvas.png" alt="A KDE Plasma desktop served by REMOTIX in a browser" onerror="this.remove()"></div></div><div class="base"></div></div>
+          <div class="laptop"><div class="coperchio"><div class="schermo"><img src="schermate-vere/kde-desktop-canvas.png" alt="A KDE Plasma desktop served by REMOTIX in a browser"></div></div><div class="base"></div></div>
           <div class="didascalia">Your desktop, in the browser<small>No client required</small></div>
         </div>
       </div>
@@ -342,9 +290,9 @@
         </ul>
       </div>
       <div class="famiglia" aria-hidden="true">
-        <div class="laptop"><div class="coperchio"><div class="schermo" data-vera="si"><img src="schermate-vere/kde-desktop-canvas.png" alt="" onerror="this.remove()"></div></div><div class="base"></div></div>
-        <div class="tablet"><div class="schermo" data-vera="si"><img src="schermate-vere/gnome-desktop-canvas.png" alt="" onerror="this.remove()"></div></div>
-        <div class="telefono"><div class="schermo" data-vera="si"><img src="schermate-vere/phone-gnome-dpr2.png" alt="" onerror="this.remove()"></div></div>
+        <div class="laptop"><div class="coperchio"><div class="schermo"><img src="schermate-vere/kde-desktop-canvas.png" alt=""></div></div><div class="base"></div></div>
+        <div class="tablet"><div class="schermo"><img src="schermate-vere/gnome-desktop-canvas.png" alt=""></div></div>
+        <div class="telefono"><div class="schermo"><img src="schermate-vere/phone-gnome-dpr2.png" alt=""></div></div>
       </div>
     </div>
   </section>
@@ -358,14 +306,14 @@
           <div class="matrice-scorre"><table class="matrice">
             <thead><tr><th></th><th>Windows</th><th>Linux</th><th>Android</th></tr></thead>
             <tbody>
-              <tr><td><i class="logo-b" style="--c:#4285F4;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/googlechrome.svg)"></i>Chrome</td><td class="ok">✓<span class="parola"> Tested</span></td><td class="ok">✓<span class="parola"> Tested</span></td><td class="ok">✓<span class="parola"> Tested</span></td></tr>
-              <tr><td><i class="logo-b" style="--c:#FF7139;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/firefoxbrowser.svg)"></i>Firefox</td><td class="nd"><span class="parola">Not tested yet</span><span class="segno">not tested</span></td><td class="ok">✓<span class="parola"> Tested</span></td><td class="no"><span class="parola">Not supported</span><span class="segno">✗</span></td></tr>
+              <tr><td><i class="logo-b" style="--c:#4285F4;--m:url(icone/googlechrome.svg)"></i>Chrome</td><td class="ok">✓<span class="parola"> Tested</span></td><td class="ok">✓<span class="parola"> Tested</span></td><td class="ok">✓<span class="parola"> Tested</span></td></tr>
+              <tr><td><i class="logo-b" style="--c:#FF7139;--m:url(icone/firefoxbrowser.svg)"></i>Firefox</td><td class="nd"><span class="parola">Not tested yet</span><span class="segno">not tested</span></td><td class="ok">✓<span class="parola"> Tested</span></td><td class="no"><span class="parola">Not supported</span><span class="segno">✗</span></td></tr>
             </tbody>
           </table></div>
           <p class="nota-b">REMOTIX needs WebTransport and WebCodecs, both in current Chrome and Firefox. Safari, macOS and iOS have not been tested yet.</p>
         </div>
         <div class="scheda-b android">
-          <i class="logo-b grande" style="--c:#3DDC84;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/android.svg)"></i>
+          <i class="logo-b grande" style="--c:#3DDC84;--m:url(icone/android.svg)"></i>
           <h3>Android, with Chrome</h3>
           <p>Your Linux desktop on a phone or a tablet, in Chrome. Nothing to install from the Play Store.</p>
           <ul>
@@ -393,7 +341,7 @@
           <div class="figura"><div class="mini-server"><i></i><i></i><i></i><i></i></div></div></div>
         <div class="tratteggio" aria-hidden="true">- - →</div>
         <div class="passo"><h3><i>3.</i>Your desktop</h3><p>and applications</p>
-          <div class="figura"><div class="laptop" style="width:9rem"><div class="coperchio"><div class="schermo" data-vera="si"><img src="schermate-vere/kde-desktop-canvas.png" alt="" onerror="this.remove()"></div></div><div class="base"></div></div></div></div>
+          <div class="figura"><div class="laptop" style="width:9rem"><div class="coperchio"><div class="schermo"><img src="schermate-vere/kde-desktop-canvas.png" alt=""></div></div><div class="base"></div></div></div></div>
       </div>
     </div>
   </section>
@@ -404,12 +352,12 @@
         <p class="occhiello">Supported distributions</p>
         <h2>REMOTIX works with the main Linux distributions.</h2>
         <div class="loghi">
-          <div><i style="--c:#E95420;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/ubuntu.svg)"></i>Ubuntu</div>
-          <div><i style="--c:#A81D33;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/debian.svg)"></i>Debian</div>
-          <div><i style="--c:#51A2DA;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/fedora.svg)"></i>Fedora</div>
-          <div><i style="--c:#0F4266;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/almalinux.svg)"></i>AlmaLinux</div>
-          <div><i style="--c:#1793D1;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/archlinux.svg)"></i>Arch Linux</div>
-          <div><i style="--c:#73BA25;--m:url(https://cdn.jsdelivr.net/npm/simple-icons@13.21.0/icons/opensuse.svg)"></i>openSUSE</div>
+          <div><i style="--c:#E95420;--m:url(icone/ubuntu.svg)"></i>Ubuntu</div>
+          <div><i style="--c:#A81D33;--m:url(icone/debian.svg)"></i>Debian</div>
+          <div><i style="--c:#51A2DA;--m:url(icone/fedora.svg)"></i>Fedora</div>
+          <div><i style="--c:#0F4266;--m:url(icone/almalinux.svg)"></i>AlmaLinux</div>
+          <div><i style="--c:#1793D1;--m:url(icone/archlinux.svg)"></i>Arch Linux</div>
+          <div><i style="--c:#73BA25;--m:url(icone/opensuse.svg)"></i>openSUSE</div>
         </div>
       </div>
       <div class="inizia">
@@ -455,52 +403,6 @@
   </div>
 </footer>
 
-<template id="desk-kde">
-  <div class="desk" aria-hidden="true">
-    <div class="icone">
-      <div class="icona-desk"><i></i>Home</div>
-      <div class="icona-desk"><i></i>Projects</div>
-      <div class="icona-desk cestino"><i></i>Trash</div>
-    </div>
-    <div class="finestra-k dolphin">
-      <div class="titolo-k"><b>Documents — Dolphin</b><s></s><s></s><s></s></div>
-      <div class="corpo">
-        <div class="luoghi"><span>Documents</span><span>Home</span><span>Desktop</span><span>Downloads</span><span>Pictures</span><span>Trash</span></div>
-        <div class="file">
-          <div><i></i>Invoices</div><div><i></i>Projects</div><div><i></i>Reports</div><div><i></i>Shared</div>
-          <div><i class="doc"></i>budget.ods</div><div><i class="doc"></i>notes.md</div><div><i class="img"></i>mockup.png</div><div><i class="doc"></i>plan.odt</div>
-        </div>
-      </div>
-    </div>
-    <div class="finestra-k konsole">
-      <div class="titolo-k"><b>anna@office-server: ~ — Konsole</b><s></s><s></s><s></s></div>
-<pre><span class="v">anna@office-server</span>:<span class="a">~</span>$ uname -sr
-Linux 6.12.48-amd64
-<span class="v">anna@office-server</span>:<span class="a">~</span>$ ls Documents
-<span class="a">Invoices  Projects  Reports  Shared</span>
-budget.ods  mockup.png  notes.md  plan.odt
-<span class="v">anna@office-server</span>:<span class="a">~</span>$ <span class="g">█</span></pre>
-    </div>
-    <div class="pannello-k">
-      <span class="avvio"></span>
-      <span class="compito attivo"><i></i></span>
-      <span class="compito attivo"><i class="term"></i></span>
-      <span class="compito"><i class="web"></i></span>
-      <span class="compito"><i class="testo"></i></span>
-      <span class="vassoio"><s></s><s></s><span class="ora">10:42<small>Fri 10 Oct</small></span></span>
-    </div>
-  </div>
-</template>
-<script>
-  // il desktop simulato in ogni schermo: si toglie da solo se dentro c'è una schermata vera
-  document.querySelectorAll('.schermo').forEach(function (sch) {
-    if (sch.dataset.vera === 'si') return;
-    var img = sch.querySelector('img'); if (img) img.remove();
-    var d = document.getElementById('desk-kde').content.cloneNode(true);
-    if (sch.closest('.telefono')) { var a = document.createElement('div'); a.className = 'desk-alloggio'; a.appendChild(d); sch.appendChild(a); }
-    else sch.appendChild(d);
-  });
-</script>
 <div class="nastro">Mockup</div>
 </body>
 </html>
