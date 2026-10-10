@@ -24,23 +24,23 @@ import (
 //     ffmpeg); fase 19: il deposito di OpenH264 di Cisco è uscito con il ripiego sul processore.
 //
 // parametri: tipo; per «archivio»: nome, url, chiave (il testo della chiave pubblica, armatura
-// ASCII), suite, componenti; per «rpmfusion»: nonfree ("si": anche rpmfusion-nonfree-release).
+// ASCII), suite, componenti; per «rpmfusion»: nonfree ("yes": anche rpmfusion-nonfree-release).
 
-func init() { registraTipo("aggiungi-deposito", nuovaDeposito) }
+func init() { registraTipo("add-repo", nuovaDeposito) }
 
 // PianoDeposito prepara il passo del piano.
 func PianoDeposito(id, tipo string, par map[string]string, consenso string) AzionePiano {
-	p := map[string]string{"tipo": tipo}
+	p := map[string]string{"type": tipo}
 	for k, v := range par {
 		p[k] = v
 	}
 	rev := AL_MEGLIO
-	if tipo == "archivio" {
+	if tipo == "archive" {
 		rev = ESATTA
 	}
 	return AzionePiano{
-		ID: id, Tipo: "aggiungi-deposito", Parametri: p,
-		Descrizione:    T("az.deposito", nonVuoto(par["nome"], tipo)),
+		ID: id, Tipo: "add-repo", Parametri: p,
+		Descrizione:    T("az.deposito", nonVuoto(par["name"], tipo)),
 		ComeSiFa:       T("az.deposito.fa." + tipo),
 		ComeSiVerifica: T("az.deposito.verifica"),
 		ComeSiAnnulla:  T("az.deposito.annulla." + tipo),
@@ -55,11 +55,11 @@ type deposito struct {
 }
 
 type primaDeposito struct {
-	Origine Origine           `json:"origine"`
-	Tipo    string            `json:"tipo"`
-	Stato   map[string]bool   `json:"stato"`          // i pezzi, c'erano prima?
+	Origine Origine           `json:"origin"`
+	Tipo    string            `json:"type"`
+	Stato   map[string]bool   `json:"state"`          // i pezzi, c'erano prima?
 	File    map[string]string `json:"file,omitempty"` // archivio: percorso → prima dello scrivi-file
-	Chiavi  []string          `json:"chiavi,omitempty"`
+	Chiavi  []string          `json:"keys,omitempty"`
 	// Rpm: i pacchetti rpm di prima (anche le chiavi gpg-pubkey): quel che il pacchetto del deposito
 	// si porta dietro (dipendenze deboli, la chiave della distribuzione importata al primo uso) si
 	// riconosce e si toglie. [M] 30 set, Alma 10: epel-release porta selinux-policy-*-extra.
@@ -67,12 +67,12 @@ type primaDeposito struct {
 }
 
 func nuovaDeposito(p AzionePiano) (Azione, error) {
-	d := &deposito{tipo: p.Parametri["tipo"], par: p.Parametri}
+	d := &deposito{tipo: p.Parametri["type"], par: p.Parametri}
 	switch d.tipo {
-	case "archivio", "epel", "rpmfusion", "packman":
+	case "archive", "epel", "rpmfusion", "packman":
 		return d, nil
 	}
-	return nil, fmt.Errorf("aggiungi-deposito: unknown type %q", d.tipo)
+	return nil, fmt.Errorf("add-repo: unknown type %q", d.tipo)
 }
 
 // ---- i pezzi di un deposito di terzi, per famiglia
@@ -105,13 +105,13 @@ func (d *deposito) pezzi(c *Contesto) (map[string]bool, error) {
 			return nil, err
 		}
 		r["rpmfusion-free-release"] = v["rpmfusion-free-release"] != ""
-		if d.par["nonfree"] == "si" {
+		if d.par["nonfree"] == "yes" {
 			r["rpmfusion-nonfree-release"] = v["rpmfusion-nonfree-release"] != ""
 		}
 	case "packman":
 		_, err := os.Stat(c.Amb.P("/etc/zypp/repos.d/packman.repo"))
 		r["packman"] = err == nil
-	case "archivio":
+	case "archive":
 		for _, f := range d.fileArchivio(c) {
 			sha, _ := Sha256File(c.Amb.P(f.percorso))
 			if f.presenza {
@@ -130,7 +130,7 @@ func (d *deposito) pezzi(c *Contesto) (map[string]bool, error) {
 			if err != nil {
 				return nil, err
 			}
-			r["pacman-key "+d.par["impronta"]] = k
+			r["pacman-key "+d.par["fingerprint"]] = k
 		}
 	}
 	return r, nil
@@ -183,15 +183,15 @@ type fileArchivio struct {
 
 // fileArchivio: i file dell'archivio di REMOTIX per la famiglia, col loro contenuto (archivio.go).
 func (d *deposito) fileArchivio(c *Contesto) []fileArchivio {
-	nome := nonVuoto(d.par["nome"], "remotix")
-	chiave := d.par["chiave"]
-	pacchetti := strings.ReplaceAll(nonVuoto(d.par["pacchetti"], strings.Join(PacchettiArchivio, ",")), ",", " ")
+	nome := nonVuoto(d.par["name"], "remotix")
+	chiave := d.par["key"]
+	pacchetti := strings.ReplaceAll(nonVuoto(d.par["packages"], strings.Join(PacchettiArchivio, ",")), ",", " ")
 	switch c.Amb.Famiglia {
 	case "debian":
 		k := ChiaveApt
 		r := []fileArchivio{{k, chiave, true}, {"/etc/apt/sources.list.d/" + nome + ".sources",
-			"# " + nome + " — added by remotix-install\nTypes: deb\nURIs: " + d.par["url"] + "\nSuites: " + nonVuoto(d.par["suite"], "stabile") +
-				"\nComponents: " + nonVuoto(d.par["componenti"], "main") + "\nSigned-By: " + k + "\n", false}}
+			"# " + nome + " — added by remotix-install\nTypes: deb\nURIs: " + d.par["url"] + "\nSuites: " + nonVuoto(d.par["suite"], "stable") +
+				"\nComponents: " + nonVuoto(d.par["components"], "main") + "\nSigned-By: " + k + "\n", false}}
 		if d.par["host"] != "" {
 			// R18: dall'host dell'archivio SOLO i pacchetti di REMOTIX. Il record col nome dei
 			// pacchetti viene prima di quello generale (apt usa il primo che corrisponde).
@@ -231,14 +231,14 @@ func (d *deposito) fileArchivio(c *Contesto) []fileArchivio {
 func (d *deposito) scrittori(c *Contesto) ([]*scriviFile, error) {
 	var r []*scriviFile
 	for _, f := range d.fileArchivio(c) {
-		s, err := nuovaScriviFile(AzionePiano{Parametri: map[string]string{"percorso": f.percorso, "contenuto": f.contenuto, "modo": "0644"}})
+		s, err := nuovaScriviFile(AzionePiano{Parametri: map[string]string{"path": f.percorso, "content": f.contenuto, "mode": "0644"}})
 		if err != nil {
 			return nil, err
 		}
 		r = append(r, s.(*scriviFile))
 	}
 	if len(r) == 0 && c.Amb.Famiglia != "arch" {
-		return nil, Errore("RX-AZIONE-004", "aggiungi-deposito archive on "+c.Amb.Famiglia)
+		return nil, Errore("RX-AZIONE-004", "add-repo archive on "+c.Amb.Famiglia)
 	}
 	return r, nil
 }
@@ -271,7 +271,7 @@ func (d *deposito) Vincoli(c *Contesto) ([]string, error) {
 	}
 	var v []string
 	for k, x := range p {
-		v = append(v, "deposito:"+d.tipo+":"+k+"="+siNo(x))
+		v = append(v, "repo:"+d.tipo+":"+k+"="+siNo(x))
 	}
 	return v, nil
 }
@@ -294,7 +294,7 @@ func (d *deposito) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 		}
 		p.Rpm = tutti
 	}
-	if d.tipo == "archivio" {
+	if d.tipo == "archive" {
 		sc, err := d.scrittori(c)
 		if err != nil {
 			return nil, "", err
@@ -389,7 +389,7 @@ func (d *deposito) Fai(c *Contesto, prima json.RawMessage) error {
 			_, err := esegui(c.Amb, tempoGestore, "zypper", "--non-interactive", "--gpg-auto-import-keys", "refresh", "packman")
 			return err
 		}
-	case "archivio":
+	case "archive":
 		sc, err := d.scrittori(c)
 		if err != nil {
 			return err
@@ -414,7 +414,7 @@ func (d *deposito) Fai(c *Contesto, prima json.RawMessage) error {
 				}
 			}
 		case "arch":
-			if !adesso["pacman-key "+d.par["impronta"]] {
+			if !adesso["pacman-key "+d.par["fingerprint"]] {
 				if err := d.mettiChiavePacman(c); err != nil {
 					return err
 				}
@@ -455,7 +455,7 @@ func (d *deposito) Controlla(c *Contesto, prima json.RawMessage) (Esito, string,
 	}
 	switch {
 	case tutti:
-		return COMPLETO, "deposito " + d.tipo + " presente", nil
+		return COMPLETO, "repo " + d.tipo + " present", nil
 	case p.Origine == PREESISTENTE:
 		return ESTRANEO, "it was there and someone removed it", nil
 	case comePrima:
@@ -474,7 +474,7 @@ func (d *deposito) Annulla(c *Contesto, prima json.RawMessage) error {
 		return err
 	}
 	var chiavi []string
-	if d.tipo != "archivio" {
+	if d.tipo != "archive" {
 		// PRIMA i pacchetti arrivati col deposito. Quelli che chi resta chiede si TRATTENGONO, e con
 		// loro resta anche il DEPOSITO (chi li chiede continua a riceverne gli aggiornamenti): la
 		// regola della disinstallazione, la stessa di RX-PACCHETTI-006 in installa-pacchetti. `[M]`
@@ -522,7 +522,7 @@ func (d *deposito) Annulla(c *Contesto, prima json.RawMessage) error {
 				return err
 			}
 		}
-	case "archivio":
+	case "archive":
 		sc, err := d.scrittori(c)
 		if err != nil {
 			return err
@@ -536,8 +536,8 @@ func (d *deposito) Annulla(c *Contesto, prima json.RawMessage) error {
 			if err := d.togliBloccoPacman(c); err != nil {
 				return err
 			}
-			if adesso["pacman-key "+d.par["impronta"]] && !p.Stato["pacman-key "+d.par["impronta"]] {
-				if _, err := esegui(c.Amb, time.Minute, "pacman-key", "--delete", d.par["impronta"]); err != nil {
+			if adesso["pacman-key "+d.par["fingerprint"]] && !p.Stato["pacman-key "+d.par["fingerprint"]] {
+				if _, err := esegui(c.Amb, time.Minute, "pacman-key", "--delete", d.par["fingerprint"]); err != nil {
 					return err
 				}
 			}
@@ -578,16 +578,16 @@ func (d *deposito) Annullata(c *Contesto, prima json.RawMessage) (bool, string, 
 	if p.Origine == PREESISTENTE {
 		return true, "already there: left untouched", nil
 	}
-	if d.tipo != "archivio" {
+	if d.tipo != "archive" {
 		via, resta, _, err := d.trattenutiArrivati(c, p)
 		if err != nil {
 			return false, "", err
 		}
 		if len(via) > 0 {
-			return false, T("deposito.ancora", len(via), strings.Join(via, ", ")), nil
+			return false, T("repo.ancora", len(via), strings.Join(via, ", ")), nil
 		}
 		if len(resta) > 0 {
-			return true, "[RX-PACCHETTI-006] " + T("deposito.trattenuto", d.tipo, strings.Join(resta, ", ")), nil
+			return true, "[RX-PACCHETTI-006] " + T("repo.trattenuto", d.tipo, strings.Join(resta, ", ")), nil
 		}
 	}
 	adesso, err := d.pezzi(c)
@@ -604,7 +604,7 @@ func (d *deposito) Annullata(c *Contesto, prima json.RawMessage) (bool, string, 
 
 // Indirette: un deposito di terzi tolto non toglie quel che se n'è preso (§6.6.4).
 func (d *deposito) Indirette(prima json.RawMessage) []string {
-	if d.tipo == "archivio" {
+	if d.tipo == "archive" {
 		return nil
 	}
 	return []string{T("ind.deposito", d.tipo)}

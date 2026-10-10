@@ -61,11 +61,11 @@ echo \"prova: \$(id prova)\"
 curl -s -m 5 -o /dev/null -w 'archivio di T9: HTTP %{http_code}\n' $ARCH/install.sh || echo 'archivio di T9: NON raggiungibile'" | tee "$E/accendi-$modo.txt"
 	;;
 motore)
-	for f in $T9/archivio/motore/remotix-install $T9/archivio/motore/remotix-install.sha256 $T9/risposte-*.conf; do
+	for f in $T9/archivio/engine/remotix-install $T9/archivio/engine/remotix-install.sha256 $T9/risposte-*.conf; do
 		vm "sudo tee /root/$(basename "$f") >/dev/null" <"$f"
 	done
 	# D11 semplificata (DECISIONI §10.21): il motore si verifica con lo sha256 pubblicato
-	vm "sudo chmod 755 /root/remotix-install; cd /root && sudo sha256sum -c remotix-install.sha256; sudo /root/remotix-install versione" | tee "$E/motore.txt"
+	vm "sudo chmod 755 /root/remotix-install; cd /root && sudo sha256sum -c remotix-install.sha256; sudo /root/remotix-install version" | tee "$E/motore.txt"
 	;;
 cmd)
 	vm "sudo sh -c '$*'" 2>&1 | tee -a "$E/comandi.txt"
@@ -73,7 +73,7 @@ cmd)
 prepara)
 	r=${1:-risposte-debian.conf}
 	T0=$(date +%s)
-	vm "sudo rm -rf /root/fuori-linea; sudo /root/remotix-install prepara-fuori-linea --archivio $ARCH --risposte /root/$r --uscita /root/fuori-linea" 2>&1 | tee "$E/prepara.txt"
+	vm "sudo rm -rf /root/fuori-linea; sudo /root/remotix-install prepare-offline --archive $ARCH --answers /root/$r --output /root/fuori-linea" 2>&1 | tee "$E/prepara.txt"
 	echo "   prepara: $(( $(date +%s) - T0 )) s"
 	vm "sudo tar -C /root -cf - fuori-linea" >"$E/fuori-linea.tar"
 	echo "   pacchetto: $(du -h "$E/fuori-linea.tar" | cut -f1) in $E/fuori-linea.tar"
@@ -83,7 +83,7 @@ fuori-linea)
 	pac=${PACCHETTO:-$E/fuori-linea.tar}
 	vm "sudo rm -rf /root/fuori-linea && sudo tar -C /root -xf -" <"$pac"
 	T0=$(date +%s); date -u +%T >"$E/finestra.txt"
-	vm "sudo /root/remotix-install installa --fuori-linea /root/fuori-linea --risposte /root/$r" >"$E/installa.txt" 2>&1
+	vm "sudo /root/remotix-install install --offline /root/fuori-linea --answers /root/$r" >"$E/installa.txt" 2>&1
 	u=$?; date -u +%T >>"$E/finestra.txt"
 	echo "   installa: uscita $u in $(( $(date +%s) - T0 )) s — $(grep -E '^operation ' "$E/installa.txt")"
 	grep -E 'BLOCKED|FAILED|RX-(FUORI|RISPOSTE|PIANO)' "$E/installa.txt" | head -6 | sed 's/^/   /'

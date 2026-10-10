@@ -55,7 +55,7 @@ func codifica(a *Ambiente, p *Profilo, fam string) {
 			attive = append(attive, s.Nome)
 		}
 	}
-	p.Rilevato("codifica.strade", strings.Join(attive, ","), "strade.go (fase 19)")
+	p.Rilevato("encoding.routes", strings.Join(attive, ","), "strade.go (fase 19)")
 	if cod, det := VerdettoScheda(nil, p); cod != "" {
 		p.Con(cod, det)
 	}
@@ -83,10 +83,10 @@ func rilevaVulkan(a *Ambiente, p *Profilo, _ string) {
 	sort.Strings(icd)
 	valore := strings.Join(icd, ",")
 	if valore == "" {
-		valore = "nessuno"
+		valore = "none"
 	}
-	p.Rilevato("codifica.vulkan.icd", valore, "/usr/share/vulkan/icd.d")
-	p.Metti(Fatto{Chiave: "codifica.vulkan", Valore: "attiva", Stato: RILEVATO, Fonte: "strade.go (fase 19)",
+	p.Rilevato("encoding.vulkan.icd", valore, "/usr/share/vulkan/icd.d")
+	p.Metti(Fatto{Chiave: "encoding.vulkan", Valore: "active", Stato: RILEVATO, Fonte: "strade.go (fase 19)",
 		Nota: "Vulkan Video, tried BEFORE VA-API by the product; the real test is in 7a (remotix --prova-codifica, field «strada»)"})
 }
 
@@ -111,7 +111,7 @@ func nomeICD(file string) string {
 // dove Mesa è costruita senza codec (Fedora, RHEL, openSUSE: `all_free`) l'ICD `radeon` non basta, e
 // la scheda AMD la giudica la strada VA-API (col deposito di terzi, se il catalogo lo nomina).
 func schedeVulkan(pl *Piattaforma, p *Profilo) []string {
-	if p.V("scheda.nodi") == "nessuno" {
+	if p.V("gpu.nodes") == "none" {
 		return nil
 	}
 	forn, noti := fornitoriScheda(p)
@@ -119,7 +119,7 @@ func schedeVulkan(pl *Piattaforma, p *Profilo) []string {
 		return nil
 	}
 	icd := map[string]bool{}
-	for _, n := range strings.Split(p.V("codifica.vulkan.icd"), ",") {
+	for _, n := range strings.Split(p.V("encoding.vulkan.icd"), ",") {
 		icd[n] = true
 	}
 	var r []string
@@ -130,7 +130,7 @@ func schedeVulkan(pl *Piattaforma, p *Profilo) []string {
 	if forn["AMD"] && amd {
 		r = append(r, "AMD")
 	}
-	if forn["NVIDIA"] && icd["nvidia"] && p.V("scheda.nvidia_proprietaria") == "si" {
+	if forn["NVIDIA"] && icd["nvidia"] && p.V("gpu.nvidia_proprietary") == "yes" {
 		r = append(r, "NVIDIA")
 	}
 	return r
@@ -155,7 +155,7 @@ func SchedaSullaStrada(nome, f string, pl *Piattaforma, p *Profilo) bool {
 
 // schedeVaapi: le schede Intel e AMD che codificano H.264 via VA-API su questa piattaforma.
 func schedeVaapi(pl *Piattaforma, p *Profilo) []string {
-	if p.V("scheda.nodi") == "nessuno" {
+	if p.V("gpu.nodes") == "none" {
 		return nil
 	}
 	forn, noti := fornitoriScheda(p)
@@ -163,7 +163,7 @@ func schedeVaapi(pl *Piattaforma, p *Profilo) []string {
 		return []string{"?"}
 	}
 	intel, amd, _ := famigliaDriver(p)
-	senza := map[string]bool{"Intel": intel == "senza", "AMD": amd == "senza"}
+	senza := map[string]bool{"Intel": intel == "without", "AMD": amd == "without"}
 	var r []string
 	for _, f := range []string{"Intel", "AMD"} {
 		if !forn[f] {
@@ -181,7 +181,7 @@ func schedeVaapi(pl *Piattaforma, p *Profilo) []string {
 // capace (o se non si sa: i nodi non letti non sono un rifiuto); altrimenti il codice BLOCCANTE e il
 // dettaglio, dal caso più preciso al più generale.
 func VerdettoScheda(pl *Piattaforma, p *Profilo) (codice, dettaglio string) {
-	nodi := p.V("scheda.nodi")
+	nodi := p.V("gpu.nodes")
 	if nodi == "" {
 		return "", ""
 	}
@@ -197,11 +197,11 @@ func VerdettoScheda(pl *Piattaforma, p *Profilo) (codice, dettaglio string) {
 	}
 	sort.Strings(nomi)
 	switch {
-	case nodi == "nessuno":
+	case nodi == "none":
 		return "RX-GPU-003", ""
-	case p.V("scheda.nvidia_proprietaria") == "si":
+	case p.V("gpu.nvidia_proprietary") == "yes":
 		// la NVIDIA proprietaria codifica SOLO in Vulkan: se si è qui, il suo ICD non c'è
-		d := strings.Join(nomi, ", ") + "; ICD Vulkan: " + nonVuoto(p.V("codifica.vulkan.icd"), "nessuno")
+		d := strings.Join(nomi, ", ") + "; ICD Vulkan: " + nonVuoto(p.V("encoding.vulkan.icd"), "none")
 		if pl != nil && pl.H264.VulkanNvidia != "" {
 			d += "; on " + pl.Nome + " the ICD comes with " + pl.H264.VulkanNvidia
 		}
@@ -215,10 +215,10 @@ func VerdettoScheda(pl *Piattaforma, p *Profilo) (codice, dettaglio string) {
 		if pl != nil && pl.H264.AmdSenzaVaapi && forn["AMD"] {
 			d = append(d, "AMD on "+pl.Nome+": Mesa built without VA-API")
 		}
-		if f := p.V("h264.famiglia_driver"); f != "" {
+		if f := p.V("h264.driver_family"); f != "" {
 			d = append(d, f)
 		}
-		d = append(d, "ICD Vulkan: "+nonVuoto(p.V("codifica.vulkan.icd"), "nessuno"))
+		d = append(d, "ICD Vulkan: "+nonVuoto(p.V("encoding.vulkan.icd"), "none"))
 		return "RX-GPU-006", strings.Join(d, "; ")
 	}
 	return "RX-GPU-005", strings.Join(nomi, ", ")

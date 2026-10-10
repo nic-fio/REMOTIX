@@ -123,7 +123,7 @@ func messaggio(err error) *motore.Messaggio {
 func (m *modello) finisci(es *interfaccia.Esito) {
 	m.esito = es
 	if es.Stato == motore.CONFERMATA || es.Stato == motore.CONFERMATA_A_CONDIZIONI {
-		porta, _ := strconv.Atoi(m.voci["porta"])
+		porta, _ := strconv.Atoi(m.voci["port"])
 		m.pronto = interfaccia.VistaDelPronto(es, m.vp, porta, interfaccia.DepositoVideo(m.ctrl.Domande, m.voci))
 		m.schermo = sPronto
 		return
@@ -249,7 +249,7 @@ func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			if !ok {
 				return m, nil
 			}
-			m.voci["porta"] = strconv.Itoa(p)
+			m.voci["port"] = strconv.Itoa(p)
 			voci := map[string]string{}
 			for a, b := range m.voci {
 				voci[a] = b
@@ -269,7 +269,7 @@ func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "esc":
 			m.schermo = sScelte
 		case "s":
-			m.salva("remotix-piano-"+m.piano.ID+".json", m.piano)
+			m.salva("remotix-plan-"+m.piano.ID+".json", m.piano)
 		case "enter":
 			m.av = interfaccia.NuovoAvanzamento(m.vp)
 			m.schermo = sAvanzamento
@@ -289,7 +289,7 @@ func (m *modello) tasto(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 		if s == "s" && m.schermo == sFine {
-			m.salva("remotix-rapporto.json", map[string]any{"fine": m.fine, "controllo": m.ctrl, "eventi": m.eventi})
+			m.salva("remotix-report.json", map[string]any{"end": m.fine, "check": m.ctrl, "events": m.eventi})
 		}
 	}
 	return m, nil

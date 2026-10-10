@@ -30,23 +30,23 @@ import (
 
 // Controllo: quel che il motore sa della macchina (fasi 0-2), per la prima schermata.
 type Controllo struct {
-	Fiducia  *motore.Fiducia   `json:"fiducia"`
-	Profilo  *motore.Profilo   `json:"profilo"`
-	Rapporto *motore.Rapporto  `json:"compatibilita"`
-	Domande  *motore.Domande   `json:"domande"`
-	Errore   *motore.Messaggio `json:"errore,omitempty"` // la fase 0 non passa: niente da mostrare oltre
+	Fiducia  *motore.Fiducia   `json:"trust"`
+	Profilo  *motore.Profilo   `json:"profile"`
+	Rapporto *motore.Rapporto  `json:"compatibility"`
+	Domande  *motore.Domande   `json:"questions"`
+	Errore   *motore.Messaggio `json:"error,omitempty"` // la fase 0 non passa: niente da mostrare oltre
 }
 
 // Esito: com'è finita l'operazione.
 type Esito struct {
-	Operazione  string              `json:"operazione"`
-	Stato       motore.Stato        `json:"stato"`
-	Cartella    string              `json:"cartella"`
-	Certificato *motore.Certificato `json:"certificato,omitempty"`
-	Messaggi    []motore.Messaggio  `json:"messaggi"`
-	Indirizzi   []string            `json:"indirizzi"`
-	ImprontaTLS string              `json:"impronta_tls,omitempty"`
-	Errore      *motore.Messaggio   `json:"errore,omitempty"`
+	Operazione  string              `json:"operation"`
+	Stato       motore.Stato        `json:"state"`
+	Cartella    string              `json:"dir"`
+	Certificato *motore.Certificato `json:"certificate,omitempty"`
+	Messaggi    []motore.Messaggio  `json:"messages"`
+	Indirizzi   []string            `json:"addresses"`
+	ImprontaTLS string              `json:"tls_fingerprint,omitempty"`
+	Errore      *motore.Messaggio   `json:"error,omitempty"`
 }
 
 // Motore: quel che l'interfaccia può chiedere. La realizza la Sessione (in questo processo, da root);
@@ -132,7 +132,7 @@ func (s *Sessione) Piano(voci map[string]string) (*motore.Piano, error) {
 	if s.cat == nil {
 		return nil, errors.New("run the check first")
 	}
-	porta, _ := strconv.Atoi(voci["porta"])
+	porta, _ := strconv.Atoi(voci["port"])
 	if porta != 0 && porta != s.porta {
 		s.esamina(porta)
 	}
@@ -142,11 +142,11 @@ func (s *Sessione) Piano(voci map[string]string) (*motore.Piano, error) {
 	if err != nil {
 		return nil, err
 	}
-	dir := filepath.Join(filepath.Dir(s.C.Operazioni), "piani")
+	dir := filepath.Join(filepath.Dir(s.C.Operazioni), "plans")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
 	}
-	s.file = filepath.Join(dir, "piano-"+p.ID+".json")
+	s.file = filepath.Join(dir, "plan-"+p.ID+".json")
 	if err := motore.ScriviJSON(s.file, p); err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func (s *Sessione) Applica(digest string, eventi func(motore.EventoPubblico)) (*
 	if op != nil {
 		es.Operazione, es.Stato, es.Cartella = op.ID, op.Stato, op.Cartella
 		var c motore.Certificato
-		if motore.LeggiJSON(filepath.Join(op.Cartella, "certificato.json"), &c) == nil {
+		if motore.LeggiJSON(filepath.Join(op.Cartella, "certificate.json"), &c) == nil {
 			es.Certificato = &c
 		}
 	}

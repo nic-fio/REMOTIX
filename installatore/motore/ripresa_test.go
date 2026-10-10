@@ -81,7 +81,7 @@ type banco struct {
 
 func nuovoBanco(t *testing.T) *banco {
 	d := t.TempDir()
-	b := &banco{radice: filepath.Join(d, "macchina"), operazioni: filepath.Join(d, "operazioni")}
+	b := &banco{radice: filepath.Join(d, "macchina"), operazioni: filepath.Join(d, "operations")}
 	os.MkdirAll(b.radice, 0o755)
 	preparaMacchina(t, b.radice)
 	b.piano = pianoDiProva(t, b.radice, d, true)
@@ -132,7 +132,7 @@ func puntiApplica() []string {
 		for _, p := range []string{"prima-intenzione", "dopo-intenzione", "dopo-effetto", "dopo-fatta"} {
 			pp = append(pp, p+"@"+a.ID)
 		}
-		if a.Tipo == "scrivi-file" {
+		if a.Tipo == "write-file" {
 			pp = append(pp, "file-a-meta@"+a.ID)
 		}
 	}
@@ -154,12 +154,12 @@ func TestRipresaDopoInterruzione(t *testing.T) {
 				t.Fatalf("riprendi: %v", err)
 			}
 			if op.Stato != CONFERMATA {
-				t.Fatalf("stato %s, atteso CONFERMATA", op.Stato)
+				t.Fatalf("stato %s, atteso CONFIRMED", op.Stato)
 			}
 			if d := differenze(rif, foto(t, b.radice)); len(d) > 0 {
 				t.Fatalf("la macchina non è quella del giro pulito:\n%s", strings.Join(d, "\n"))
 			}
-			if _, err := os.Stat(filepath.Join(op.Cartella, "certificato.json")); err != nil {
+			if _, err := os.Stat(filepath.Join(op.Cartella, "certificate.json")); err != nil {
 				t.Errorf("manca il certificato: %v", err)
 			}
 			controllaRegistro(t, op)
@@ -179,7 +179,7 @@ func TestAnnullaDopoInterruzione(t *testing.T) {
 				t.Fatalf("annulla: %v", err)
 			}
 			if op.Stato != ANNULLATA {
-				t.Fatalf("stato %s, atteso ANNULLATA", op.Stato)
+				t.Fatalf("stato %s, atteso ROLLED_BACK", op.Stato)
 			}
 			if d := differenzeDopoAnnullo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
 				t.Fatalf("la macchina non è tornata com'era:\n%s", strings.Join(d, "\n"))
@@ -194,15 +194,15 @@ func TestInterruzioneDuranteAnnullamento(t *testing.T) {
 	for _, a := range azioniDiProva() {
 		punti = append(punti, "annulla-dopo-intenzione@"+a.ID, "annulla-dopo-effetto@"+a.ID)
 	}
-	punti = append(punti, "file-a-meta@file-sovrascritto", "stato:INTERROTTA@", "stato:IN_ANNULLAMENTO@")
+	punti = append(punti, "file-a-meta@overwritten-file", "stato:INTERRUPTED@", "stato:ROLLING_BACK@")
 	for _, punto := range punti {
-		if punto == "annulla-dopo-intenzione@gruppo-preesistente" || punto == "annulla-dopo-effetto@gruppo-preesistente" {
+		if punto == "annulla-dopo-intenzione@group-preexisting" || punto == "annulla-dopo-effetto@group-preexisting" {
 			continue // PREESISTENTE: non ha un annullamento, il punto non si raggiunge (lo si prova sotto)
 		}
 		t.Run(punto, func(t *testing.T) {
 			b := nuovoBanco(t)
 			// prima un'applicazione uccisa a metà, così c'è qualcosa da annullare
-			uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@servizio")
+			uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@service")
 			uccidiIn(t, b.radice, b.operazioni, b.piano, "annulla", punto)
 			// la ripresa: un'operazione IN_ANNULLAMENTO si riprende annullando; una INTERROTTA la
 			// si annulla di nuovo
@@ -219,19 +219,19 @@ func TestInterruzioneDuranteAnnullamento(t *testing.T) {
 				t.Fatal(err)
 			}
 			if op.Stato != ANNULLATA {
-				t.Fatalf("stato %s, atteso ANNULLATA", op.Stato)
+				t.Fatalf("stato %s, atteso ROLLED_BACK", op.Stato)
 			}
 			if d := differenzeDopoAnnullo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
 				t.Fatalf("la macchina non è tornata com'era:\n%s", strings.Join(d, "\n"))
 			}
 		})
 	}
-	t.Run("il punto PREESISTENTE non si raggiunge", func(t *testing.T) {
+	t.Run("il punto PREEXISTING non si raggiunge", func(t *testing.T) {
 		b := nuovoBanco(t)
-		uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@servizio")
+		uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@service")
 		cmd := exec.Command(os.Args[0], "-test.run=^$")
 		cmd.Env = append(os.Environ(), "REMOTIX_PROVA_FIGLIO=1", "RADICE="+b.radice, "OPERAZIONI="+b.operazioni,
-			"COMANDO=annulla", "PUNTO=annulla-dopo-intenzione@gruppo-preesistente")
+			"COMANDO=annulla", "PUNTO=annulla-dopo-intenzione@group-preexisting")
 		err := cmd.Run()
 		var ee *exec.ExitError
 		if !errors.As(err, &ee) || ee.ExitCode() != 3 {
@@ -251,7 +251,7 @@ func TestInterruzionePrimaDiToccare(t *testing.T) {
 			uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "stato:"+string(s)+"@")
 			op, err := b.motore(t).Riprendi()
 			if err != nil || op.Stato != BLOCCATA {
-				t.Fatalf("stato %v, err %v; atteso BLOCCATA (RX-RIPRESA-002)", op.Stato, err)
+				t.Fatalf("stato %v, err %v; atteso BLOCKED (RX-RIPRESA-002)", op.Stato, err)
 			}
 			if d := differenzeDopoAnnullo(t, b.prima, foto(t, b.radice)); len(d) > 0 {
 				t.Fatalf("toccata: %s", strings.Join(d, "\n"))
@@ -267,10 +267,10 @@ func TestInterruzionePrimaDiToccare(t *testing.T) {
 // Una riga del registro scritta a metà (processo ucciso durante la write): si toglie e si riprende.
 func TestRigaTroncata(t *testing.T) {
 	b := nuovoBanco(t)
-	uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-intenzione@unita")
+	uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-intenzione@unit")
 	ap, _ := b.motore(t).Aperta()
-	f, _ := os.OpenFile(filepath.Join(ap.Cartella, "registro.jsonl"), os.O_APPEND|os.O_WRONLY, 0)
-	f.WriteString(`{"n":99,"tipo":"FAT`)
+	f, _ := os.OpenFile(filepath.Join(ap.Cartella, "log.jsonl"), os.O_APPEND|os.O_WRONLY, 0)
+	f.WriteString(`{"n":99,"type":"FAT`)
 	f.Close()
 	op, err := b.motore(t).Riprendi()
 	if err != nil || op.Stato != CONFERMATA {
@@ -291,15 +291,15 @@ func TestRigaTroncata(t *testing.T) {
 func TestModificaConcorrente(t *testing.T) {
 	t.Run("gruppo tolto da altri", func(t *testing.T) {
 		b := nuovoBanco(t)
-		uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@gruppo-video")
+		uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@group-video")
 		(&gruppiFinti{b.radice}).Togli("prova", "video")
 		m := b.motore(t)
 		op, err := m.Riprendi()
 		if err != nil || op.Stato != INTERROTTA {
-			t.Fatalf("stato %v err %v, atteso INTERROTTA (RX-RIPRESA-001)", op.Stato, err)
+			t.Fatalf("stato %v err %v, atteso INTERRUPTED (RX-RIPRESA-001)", op.Stato, err)
 		}
 		if ap, _ := m.Aperta(); ap == nil {
-			t.Fatal("INTERROTTA deve restare aperta")
+			t.Fatal("INTERRUPTED deve restare aperta")
 		}
 		op, err = m.Annulla()
 		if err != nil || op.Stato != ANNULLATA {
@@ -311,16 +311,16 @@ func TestModificaConcorrente(t *testing.T) {
 	})
 	t.Run("file cambiato dall'amministratore", func(t *testing.T) {
 		b := nuovoBanco(t)
-		uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@unita")
-		conf := filepath.Join(b.radice, "etc/remotix/prova-motore.conf")
+		uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@unit")
+		conf := filepath.Join(b.radice, "etc/remotix/engine-test.conf")
 		os.WriteFile(conf, []byte("porta=9999 # messa a mano\n"), 0o644)
 		m := b.motore(t)
 		if op, _ := m.Riprendi(); op.Stato != INTERROTTA {
-			t.Fatalf("stato %v, atteso INTERROTTA", op.Stato)
+			t.Fatalf("stato %v, atteso INTERRUPTED", op.Stato)
 		}
 		op, err := m.Annulla()
 		if err != nil || op.Stato != ANNULLATA_IN_PARTE {
-			t.Fatalf("annulla: %v %v, atteso ANNULLATA_IN_PARTE", op.Stato, err)
+			t.Fatalf("annulla: %v %v, atteso PARTIALLY_ROLLED_BACK", op.Stato, err)
 		}
 		if c, _ := os.ReadFile(conf); string(c) != "porta=9999 # messa a mano\n" {
 			t.Fatalf("il file dell'amministratore è stato toccato: %q", c)
@@ -338,7 +338,7 @@ func TestFallimentoAnnullaTutto(t *testing.T) {
 	b.prima = foto(t, b.radice)
 	op, err := b.motore(t).Applica(b.piano, false, "prova")
 	if err != nil || op.Stato != ANNULLATA {
-		t.Fatalf("stato %v err %v, atteso ANNULLATA", op.Stato, err)
+		t.Fatalf("stato %v err %v, atteso ROLLED_BACK", op.Stato, err)
 	}
 	if u := op.Reg.Ultimo("firewall", EvFallita); u == nil || u.Codice != "RX-FW-004" {
 		t.Fatalf("il fallimento non porta RX-FW-004: %+v", u)
@@ -347,7 +347,7 @@ func TestFallimentoAnnullaTutto(t *testing.T) {
 		t.Fatalf("%s", strings.Join(d, "\n"))
 	}
 	// e ucciso durante quell'annullamento, poi ripreso
-	for _, punto := range []string{"annulla-dopo-intenzione@unita", "annulla-dopo-effetto@file-sovrascritto", "stato:IN_ANNULLAMENTO@"} {
+	for _, punto := range []string{"annulla-dopo-intenzione@unit", "annulla-dopo-effetto@overwritten-file", "stato:ROLLING_BACK@"} {
 		t.Run(punto, func(t *testing.T) {
 			b := nuovoBanco(t)
 			os.WriteFile(filepath.Join(b.radice, "etc/finto-firewall"), []byte("nftables"), 0o644)

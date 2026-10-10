@@ -16,20 +16,20 @@ import (
 //
 // parametri: sorgente, percorso, modo, ricarica (un'unità da ricaricare, facoltativa).
 
-func init() { registraTipo("attiva-cintura", nuovaCintura) }
+func init() { registraTipo("enable-guard", nuovaCintura) }
 
 // Le tre cinture: sorgente nel pacchetto → posto in /etc, e chi va ricaricato.
 var Cinture = []struct{ ID, Sorgente, Percorso, Ricarica string }{
-	{"cintura-spegnimento", "/usr/share/remotix/cinture/50-remotix-niente-spegnimento.rules", "/etc/polkit-1/rules.d/50-remotix-niente-spegnimento.rules", ""},
-	{"cintura-tasti", "/usr/share/remotix/cinture/remotix-tasti.conf", "/etc/systemd/logind.conf.d/remotix-tasti.conf", "systemd-logind.service"},
-	{"cintura-sospensione", "/usr/share/remotix/cinture/remotix-niente-sospensione.conf", "/etc/systemd/sleep.conf.d/remotix-niente-sospensione.conf", ""},
+	{"guard-poweroff", "/usr/share/remotix/cinture/50-remotix-niente-spegnimento.rules", "/etc/polkit-1/rules.d/50-remotix-niente-spegnimento.rules", ""},
+	{"guard-keys", "/usr/share/remotix/cinture/remotix-tasti.conf", "/etc/systemd/logind.conf.d/remotix-tasti.conf", "systemd-logind.service"},
+	{"guard-suspend", "/usr/share/remotix/cinture/remotix-niente-sospensione.conf", "/etc/systemd/sleep.conf.d/remotix-niente-sospensione.conf", ""},
 }
 
 // PianoCintura prepara il passo del piano.
 func PianoCintura(id, sorgente, destinazione, ricarica string) AzionePiano {
 	return AzionePiano{
-		ID: id, Tipo: "attiva-cintura",
-		Parametri:      map[string]string{"sorgente": sorgente, "percorso": destinazione, "modo": "0644", "ricarica": ricarica},
+		ID: id, Tipo: "enable-guard",
+		Parametri:      map[string]string{"source": sorgente, "path": destinazione, "mode": "0644", "reload": ricarica},
 		Descrizione:    T("az.cintura", destinazione),
 		ComeSiFa:       T("az.cintura.fa", sorgente, destinazione),
 		ComeSiVerifica: T("az.cintura.verifica"),
@@ -44,19 +44,19 @@ type cintura struct {
 }
 
 type primaCintura struct {
-	Origine Origine         `json:"origine"`
-	Nuovo   string          `json:"nuovo"` // la copia della sorgente, relativa alla cartella dell'operazione
-	File    json.RawMessage `json:"file"`  // lo stato di prima del file di destinazione
+	Origine Origine         `json:"origin"`
+	Nuovo   string          `json:"new"`  // la copia della sorgente, relativa alla cartella dell'operazione
+	File    json.RawMessage `json:"file"` // lo stato di prima del file di destinazione
 }
 
 func nuovaCintura(p AzionePiano) (Azione, error) {
 	q := p
-	q.Parametri = map[string]string{"percorso": p.Parametri["percorso"], "modo": p.Parametri["modo"]}
+	q.Parametri = map[string]string{"path": p.Parametri["path"], "mode": p.Parametri["mode"]}
 	f, err := nuovaScriviFile(q)
 	if err != nil {
 		return nil, err
 	}
-	return &cintura{f: f.(*scriviFile), sorgente: p.Parametri["sorgente"], ricarica: p.Parametri["ricarica"]}, nil
+	return &cintura{f: f.(*scriviFile), sorgente: p.Parametri["source"], ricarica: p.Parametri["reload"]}, nil
 }
 
 func (a *cintura) Vincoli(c *Contesto) ([]string, error) { return a.f.Vincoli(c) }
@@ -66,8 +66,8 @@ func (a *cintura) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 	if err != nil {
 		return nil, "", Errore("RX-CINTURA-001", a.sorgente)
 	}
-	nuovo := filepath.Join("salvataggi", c.P.ID+".nuovo")
-	if err := os.MkdirAll(filepath.Join(c.Cartella, "salvataggi"), 0o700); err != nil {
+	nuovo := filepath.Join("backups", c.P.ID+".new")
+	if err := os.MkdirAll(filepath.Join(c.Cartella, "backups"), 0o700); err != nil {
 		return nil, "", err
 	}
 	if err := ScriviAtomico(filepath.Join(c.Cartella, nuovo), b, 0o600); err != nil {

@@ -4,6 +4,6 @@
 # fallire pacman.
 
 post_upgrade() {
-	/usr/bin/remotix-install aggiornato
+	/usr/bin/remotix-install post-upgrade
 	return 0
 }

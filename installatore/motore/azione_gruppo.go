@@ -11,13 +11,13 @@ import (
 //
 // parametri: utente, gruppo.
 
-func init() { registraTipo("aggiungi-utente-a-gruppo", nuovaGruppo) }
+func init() { registraTipo("add-user-to-group", nuovaGruppo) }
 
 // PianoGruppo prepara il passo del piano.
 func PianoGruppo(id, utente, gruppo string) AzionePiano {
 	return AzionePiano{
-		ID: id, Tipo: "aggiungi-utente-a-gruppo",
-		Parametri:      map[string]string{"utente": utente, "gruppo": gruppo},
+		ID: id, Tipo: "add-user-to-group",
+		Parametri:      map[string]string{"user": utente, "group": gruppo},
 		Descrizione:    T("az.gruppo", utente, gruppo),
 		ComeSiFa:       T("az.gruppo.fa", utente, gruppo),
 		ComeSiVerifica: T("az.gruppo.verifica", utente, gruppo),
@@ -29,14 +29,14 @@ func PianoGruppo(id, utente, gruppo string) AzionePiano {
 type gruppo struct{ utente, gruppo string }
 
 type primaGruppo struct {
-	Origine    Origine  `json:"origine"`
-	Membro     bool     `json:"membro"`
-	Principale bool     `json:"principale,omitempty"` // il gruppo è il suo gruppo principale
-	Membri     []string `json:"membri"`
+	Origine    Origine  `json:"origin"`
+	Membro     bool     `json:"member"`
+	Principale bool     `json:"primary,omitempty"` // il gruppo è il suo gruppo principale
+	Membri     []string `json:"members"`
 }
 
 func nuovaGruppo(p AzionePiano) (Azione, error) {
-	return &gruppo{p.Parametri["utente"], p.Parametri["gruppo"]}, nil
+	return &gruppo{p.Parametri["user"], p.Parametri["group"]}, nil
 }
 
 // membro: l'utente è nel gruppo (esplicito o come principale)?
@@ -73,9 +73,9 @@ func (g *gruppo) Vincoli(c *Contesto) ([]string, error) {
 		return nil, err
 	}
 	if !esiste {
-		return []string{"gruppo:" + g.gruppo + "=assente"}, nil
+		return []string{"group:" + g.gruppo + "=absent"}, nil
 	}
-	return []string{"gruppo:" + g.gruppo + "=" + strings.Join(membri, ",")}, nil
+	return []string{"group:" + g.gruppo + "=" + strings.Join(membri, ",")}, nil
 }
 
 func (g *gruppo) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {

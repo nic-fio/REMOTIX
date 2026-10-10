@@ -11,33 +11,33 @@ type Natura string
 
 const (
 	INFO      Gravita = "INFO"
-	AVVISO    Gravita = "AVVISO"
-	BLOCCANTE Gravita = "BLOCCANTE"
+	AVVISO    Gravita = "WARNING"
+	BLOCCANTE Gravita = "BLOCKING"
 
-	ServeAzione       Natura = "SERVE_AZIONE"
-	Riprovabile       Natura = "RIPROVABILE"
-	Recuperabile      Natura = "RECUPERABILE"
-	ServeAnnullamento Natura = "SERVE_ANNULLAMENTO"
-	Fatale            Natura = "FATALE"
+	ServeAzione       Natura = "ACTION_NEEDED"
+	Riprovabile       Natura = "RETRYABLE"
+	Recuperabile      Natura = "RECOVERABLE"
+	ServeAnnullamento Natura = "ROLLBACK_NEEDED"
+	Fatale            Natura = "FATAL"
 )
 
 // Codice è una voce del catalogo dei codici: stabile, mai riusata per un altro significato.
 type Codice struct {
-	Gravita Gravita `json:"gravita"`
-	Natura  Natura  `json:"natura"`
-	Testo   string  `json:"testo"`
-	Rimedio string  `json:"rimedio,omitempty"`
+	Gravita Gravita `json:"severity"`
+	Natura  Natura  `json:"nature"`
+	Testo   string  `json:"text"`
+	Rimedio string  `json:"remedy,omitempty"`
 }
 
 // Messaggio è un codice nel suo contesto: quel che la CLI stampa, il registro annota, il
 // certificato conserva, e ogni futura interfaccia mostra (§6.6.9).
 type Messaggio struct {
-	Codice    string  `json:"codice"`
-	Gravita   Gravita `json:"gravita"`
-	Natura    Natura  `json:"natura"`
-	Testo     string  `json:"testo"`
-	Rimedio   string  `json:"rimedio,omitempty"`
-	Dettaglio string  `json:"dettaglio,omitempty"`
+	Codice    string  `json:"code"`
+	Gravita   Gravita `json:"severity"`
+	Natura    Natura  `json:"nature"`
+	Testo     string  `json:"text"`
+	Rimedio   string  `json:"remedy,omitempty"`
+	Dettaglio string  `json:"detail,omitempty"`
 }
 
 // Codici: ⛔ un codice non si cambia di significato e non si riusa. Se un testo va corretto si
@@ -83,7 +83,7 @@ var Codici = map[string]Codice{
 	"RX-H264-003":    {AVVISO, ServeAzione, "The card does not encode H.264: on Fedora and the RHEL family the driver with H.264 comes from RPM Fusion (Intel: intel-media-driver; AMD, Fedora only: mesa-va-drivers-freeworld).", "The command is in the compatibility report (condition C-DEPOSITO, decision D5)."},
 	"RX-H264-004":    {AVVISO, ServeAzione, "The card does not encode H.264: on openSUSE with an AMD card the Packman Mesa is needed (the official Intel driver already encodes).", "The command is in the compatibility report (condition C-DEPOSITO, decision D5)."},
 	"RX-H264-005":    {INFO, ServeAzione, "(retired: phase 19, DECISIONS §10.27) The software fallback (OpenH264) was missing.", ""},
-	"RX-H264-006":    {BLOCCANTE, ServeAzione, "Without the external archive for video encoding REMOTIX is not installed (decision D5, DECISIONS §10.20): nothing was touched.", "Run the installation again giving consent to the archive (consenso.deposito.<name> = si)."},
+	"RX-H264-006":    {BLOCCANTE, ServeAzione, "Without the external archive for video encoding REMOTIX is not installed (decision D5, DECISIONS §10.20): nothing was touched.", "Run the installation again giving consent to the archive (consent.repo.<name> = yes)."},
 	"RX-PAM-001":     {BLOCCANTE, ServeAzione, "The distribution's login stack cannot be found.", "Check the files in /etc/pam.d (or /usr/lib/pam.d on openSUSE)."},
 	"RX-PAM-002":     {AVVISO, ServeAzione, "The distribution's login stack contains pam_faillock: three wrong passwords lock the account, even at the machine — for REMOTIX as for ssh.", "Decision D3: REMOTIX follows the system. Configured in /etc/security/faillock.conf; faillock --user NAME --reset unlocks."},
 	"RX-PAM-003":     {INFO, ServeAzione, "A «remotix» login file already exists.", ""},
@@ -101,7 +101,7 @@ var Codici = map[string]Codice{
 	"RX-GRUPPI-003":  {BLOCCANTE, ServeAzione, "The requested user does not exist.", ""},
 	"RX-OPENSSL-001": {BLOCCANTE, ServeAzione, "OpenSSL is older than 3.5: QUIC is missing.", ""},
 	"RX-OPENSSL-002": {AVVISO, ServeAzione, "The OpenSSL version could not be read.", ""},
-	"RX-DESKTOP-001": {BLOCCANTE, ServeAzione, "This machine has no desktop supported by REMOTIX, and none was chosen for installation: REMOTIX is not installed.", "Answer yes to the desktop question (remotix-install approva --desktop gnome|kde|xfce|lxqt), or install one."},
+	"RX-DESKTOP-001": {BLOCCANTE, ServeAzione, "This machine has no desktop supported by REMOTIX, and none was chosen for installation: REMOTIX is not installed.", "Answer yes to the desktop question (remotix-install approve --desktop gnome|kde|xfce|lxqt), or install one."},
 	"RX-DESKTOP-002": {AVVISO, ServeAzione, "No supported desktop is installed: before installing you will be asked which one to add (condition C-DESKTOP).", ""},
 
 	// fase 2 — COMPATIBILITY (§6.6.8)
@@ -114,37 +114,37 @@ var Codici = map[string]Codice{
 	"RX-COMPAT-007": {BLOCCANTE, ServeAzione, "The machine lacks an indispensable requirement.", ""},
 
 	// fasi 3-4 — PLANNING, CONSENT
-	"RX-PIANO-001": {BLOCCANTE, ServeAzione, "The machine changed after the plan was made: the plan is no longer valid.", "Make the plan again on this machine (remotix-install piano)."},
+	"RX-PIANO-001": {BLOCCANTE, ServeAzione, "The machine changed after the plan was made: the plan is no longer valid.", "Make the plan again on this machine (remotix-install plan)."},
 	"RX-PIANO-002": {BLOCCANTE, Fatale, "The plan cannot be read or has an unknown format.", ""},
-	"RX-PIANO-003": {BLOCCANTE, ServeAzione, "The plan was not approved: nothing is touched.", "Approve it with remotix-install approva, or with --approva."},
+	"RX-PIANO-003": {BLOCCANTE, ServeAzione, "The plan was not approved: nothing is touched.", "Approve it with remotix-install approve, or with --approve."},
 	"RX-PIANO-004": {BLOCCANTE, Fatale, "The plan contains a step this engine does not know.", ""},
 	"RX-PIANO-005": {BLOCCANTE, ServeAzione, "The approval does not match this plan (the plan was changed afterwards).", "Approve the plan again."},
 
 	// senza domande e senza rete (§6.6.12, T9)
 	"RX-RISPOSTE-001": {BLOCCANTE, ServeAzione, "The answer file does not give a consent that this machine needs: unattended does not mean without consent, and a missing consent does not count as «yes». Nothing was touched.", "Add the indicated entry to the answer file, with «si» or «no» (the entries: remotix-install aiuto)."},
-	"RX-RISPOSTE-002": {BLOCCANTE, Fatale, "The answer file cannot be read, has an unknown format or contains an unknown entry.", "Fix the file: the first entry is «formato = remotix-risposte/1»; the allowed entries are in remotix-install aiuto."},
+	"RX-RISPOSTE-002": {BLOCCANTE, Fatale, "The answer file cannot be read, has an unknown format or contains an unknown entry.", "Fix the file: the first entry is «format = remotix-answers/2»; the allowed entries are in remotix-install help."},
 	"RX-RISPOSTE-003": {BLOCCANTE, ServeAzione, "An answer in the file has a value that is not allowed on this machine.", "Fix the indicated value."},
-	"RX-FUORI-001":    {BLOCCANTE, ServeAzione, "The offline bundle is not intact: a file is missing or is not the one prepared.", "Prepare it again (remotix-install prepara-fuori-linea) and copy it whole."},
+	"RX-FUORI-001":    {BLOCCANTE, ServeAzione, "The offline bundle is not intact: a file is missing or is not the one prepared.", "Prepare it again (remotix-install prepare-offline) and copy it whole."},
 	"RX-FUORI-002":    {BLOCCANTE, ServeAzione, "The offline bundle was prepared for another machine (different fingerprint or installed packages).", "Prepare it on a connected machine identical to this one (same distribution and same packages)."},
 	"RX-FUORI-003":    {BLOCCANTE, ServeAzione, "Something the installation needs is missing from the offline bundle.", "Prepare it again on the reference machine, with the same answers."},
 	"RX-FUORI-004":    {BLOCCANTE, ServeAzione, "Installation without a network is not done yet for this distribution family (zypper, pacman).", "Install from the network."},
 	"RX-FUORI-005":    {BLOCCANTE, ServeAzione, "A third-party archive (Packman, EPEL) does not go into the offline bundle: its step downloads from the network.", "Install from the network: without that archive REMOTIX is not installed (D5, encoding on the card)."},
 
 	// operazione, registro e ripresa (§6.6.2, §6.6.3)
-	"RX-STATO-001":     {BLOCCANTE, Recuperabile, "There is an unfinished operation: it must be resumed or rolled back first.", "remotix-install riprendi, or remotix-install annulla."},
+	"RX-STATO-001":     {BLOCCANTE, Recuperabile, "There is an unfinished operation: it must be resumed or rolled back first.", "remotix-install resume, or remotix-install rollback."},
 	"RX-STATO-002":     {BLOCCANTE, Fatale, "Invalid state transition: this is an engine defect.", ""},
 	"RX-STATO-003":     {BLOCCANTE, Riprovabile, "Another engine is working right now.", "Wait for it to finish."},
 	"RX-STATO-004":     {BLOCCANTE, ServeAzione, "There is no operation to resume or roll back.", ""},
 	"RX-STATO-005":     {BLOCCANTE, ServeAzione, "The operation is in a final state: it is neither resumed nor rolled back (to remove REMOTIX, uninstall).", ""},
 	"RX-RIPRESA-001":   {BLOCCANTE, ServeAzione, "The machine changed during the operation: a step already done is gone or was changed by someone else.", "Look at the log; then resume or roll back."},
-	"RX-RIPRESA-002":   {BLOCCANTE, ServeAzione, "The operation stopped before touching the machine: there is nothing to resume.", "Run remotix-install applica with the plan again."},
+	"RX-RIPRESA-002":   {BLOCCANTE, ServeAzione, "The operation stopped before touching the machine: there is nothing to resume.", "Run remotix-install apply with the plan again."},
 	"RX-RIPRESA-003":   {INFO, Recuperabile, "The log ended with a half-written line (interruption): the line was removed.", ""},
 	"RX-AZIONE-001":    {BLOCCANTE, ServeAnnullamento, "An installation step failed: the operation is being rolled back.", ""},
 	"RX-AZIONE-002":    {BLOCCANTE, ServeAzione, "A step could not be rolled back: the machine did not fully return to how it was.", "The exact list of what remains is in the certificate."},
 	"RX-AZIONE-003":    {BLOCCANTE, ServeAnnullamento, "A step's verification does not pass: the operation is being rolled back.", ""},
 	"RX-AZIONE-004":    {BLOCCANTE, ServeAzione, "The plan contains a step this engine knows but cannot perform yet: stopping before touching the machine.", "The step arrives with phases 5-8 of the engine (T5)."},
 	"RX-INST-001":      {INFO, ServeAzione, "Installation not certified by the installer (no CONFIRMED remotix-install operation): stated for information only.", ""},
-	"RX-INST-002":      {AVVISO, ServeAzione, "After the update the machine check found problems.", "remotix-install verifica"},
+	"RX-INST-002":      {AVVISO, ServeAzione, "After the update the machine check found problems.", "remotix-install check"},
 	"RX-AZIONE-005":    {BLOCCANTE, ServeAzione, "An IRREVERSIBLE step cannot be rolled back.", ""},
 	"RX-PACCHETTI-001": {BLOCCANTE, ServeAzione, "The package is not the plan's one (different sha256).", "Make the plan again with the right package."},
 	"RX-PACCHETTI-002": {BLOCCANTE, ServeAzione, "Removing the REMOTIX packages would also remove someone else's package: nothing is touched.", "Check who depends on that package."},
@@ -163,7 +163,7 @@ var Codici = map[string]Codice{
 	"RX-UI-002": {INFO, ServeAzione, "(retired: DECISIONS §10.31, no GUI) The window does not open: there is no graphical session (neither WAYLAND_DISPLAY nor DISPLAY), or its libraries do not answer.", ""},
 	"RX-UI-003": {INFO, ServeAzione, "(retired: DECISIONS §10.31, no GUI) The window does not run as administrator (root): it asks polkit for permissions itself, when needed.", ""},
 	"RX-UI-004": {INFO, ServeAzione, "(retired: DECISIONS §10.31, no GUI) Administrator permissions were not granted (polkit refused or the request was closed): nothing was touched.", ""},
-	"RX-UI-005": {BLOCCANTE, ServeAzione, "The administrator part of the engine stopped.", "remotix-install stato tells where the operation is; remotix-install riprendi or annulla."},
+	"RX-UI-005": {BLOCCANTE, ServeAzione, "The administrator part of the engine stopped.", "remotix-install status tells where the operation is; remotix-install resume or rollback."},
 	"RX-UI-006": {BLOCCANTE, ServeAzione, "The TUI needs a terminal and administrator permissions.", "sudo remotix-install tui"},
 
 	// l'aggiornamento automatico (DECISIONI §10.10, T8)

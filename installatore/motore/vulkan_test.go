@@ -16,7 +16,7 @@ import (
 func TestVulkanDelCatalogo(t *testing.T) {
 	cat := catalogoProva(t)
 	scheda := func(f string) map[string]string {
-		return map[string]string{"scheda.nodi": "renderD128", "scheda.renderD128.fornitore": f}
+		return map[string]string{"gpu.nodes": "renderD128", "gpu.renderD128.vendor": f}
 	}
 	for _, c := range []struct {
 		id, ver, forn, vulkan string
@@ -44,13 +44,13 @@ func TestVulkanDelCatalogo(t *testing.T) {
 	}
 	// senza schede, o senza sapere di che fornitore, niente
 	if got := (H264Piattaforma{VulkanScheda: map[string]string{"AMD": "x"}}).VulkanPerLaScheda(profiloDi("arch", "rolling",
-		map[string]string{"scheda.nodi": "nessuno", "scheda.renderD128.fornitore": ""})); len(got) != 0 {
+		map[string]string{"gpu.nodes": "none", "gpu.renderD128.vendor": ""})); len(got) != 0 {
 		t.Errorf("senza schede: %v", got)
 	}
 
 	// il verdetto: AMD su Arch SENZA l'ICD conta (il motore installa vulkan-radeon); AMD su Alma CON
 	// l'ICD di RADV no (la RADV di RHEL non ha H.264, e VA-API su AMD lì non c'è) ⇒ RX-GPU-006
-	arch := profiloDi("arch", "rolling", map[string]string{"scheda.renderD128.fornitore": "AMD", "codifica.vulkan.icd": "nessuno"})
+	arch := profiloDi("arch", "rolling", map[string]string{"gpu.renderD128.vendor": "AMD", "encoding.vulkan.icd": "none"})
 	ra := Valuta(cat, arch)
 	if got := strings.Join(schedeVulkan(ra.pl, arch), ","); got != "AMD" {
 		t.Errorf("arch AMD senza ICD: schede vulkan %q", got)
@@ -58,7 +58,7 @@ func TestVulkanDelCatalogo(t *testing.T) {
 	if cod, det := VerdettoScheda(ra.pl, arch); cod != "" {
 		t.Errorf("arch AMD senza ICD: %s %s", cod, det)
 	}
-	alma := profiloDi("almalinux", "10.1", map[string]string{"scheda.renderD128.fornitore": "AMD", "codifica.vulkan.icd": "lvp,radeon"})
+	alma := profiloDi("almalinux", "10.1", map[string]string{"gpu.renderD128.vendor": "AMD", "encoding.vulkan.icd": "lvp,radeon"})
 	rl := Valuta(cat, alma)
 	if got := schedeVulkan(rl.pl, alma); len(got) != 0 {
 		t.Errorf("alma AMD con RADV: schede vulkan %v", got)
@@ -71,8 +71,8 @@ func TestVulkanDelCatalogo(t *testing.T) {
 		t.Errorf("senza catalogo, AMD con l'ICD radeon: %q", got)
 	}
 	// NVIDIA proprietaria senza ICD: il rimedio nomina il pacchetto della distribuzione
-	nv := profiloDi("debian", "13", map[string]string{"scheda.renderD128.fornitore": "NVIDIA",
-		"scheda.nvidia_proprietaria": "si", "codifica.vulkan.icd": "nessuno"})
+	nv := profiloDi("debian", "13", map[string]string{"gpu.renderD128.vendor": "NVIDIA",
+		"gpu.nvidia_proprietary": "yes", "encoding.vulkan.icd": "none"})
 	if cod, det := VerdettoScheda(Valuta(cat, nv).pl, nv); cod != "RX-GPU-004" || !strings.Contains(det, "nvidia-vulkan-icd") {
 		t.Errorf("debian NVIDIA senza ICD: %q %q", cod, det)
 	}
@@ -87,7 +87,7 @@ func TestPianoVulkan(t *testing.T) {
 	amb.Esegui = func(_ time.Duration, _ string, _ ...string) (string, int, error) { return "", 1, nil }
 	cat := catalogoProva(t)
 	for _, c := range []struct{ forn, atteso string }{{"AMD", "vulkan-radeon"}, {"Intel", ""}} {
-		p := profiloDi("arch", "rolling", map[string]string{"scheda.renderD128.fornitore": c.forn})
+		p := profiloDi("arch", "rolling", map[string]string{"gpu.renderD128.vendor": c.forn})
 		pn, err := PianoInstallazione(p, Valuta(cat, p), cat, amb, OpzioniInstallazione{Pacchetto: "/remotix.pkg.tar.zst", Porta: 7447})
 		if err != nil {
 			t.Fatal(err)
@@ -95,7 +95,7 @@ func TestPianoVulkan(t *testing.T) {
 		got := ""
 		for _, a := range pn.Azioni {
 			if a.ID == "vulkan" {
-				got = a.Parametri["nomi"]
+				got = a.Parametri["names"]
 			}
 		}
 		if got != c.atteso {

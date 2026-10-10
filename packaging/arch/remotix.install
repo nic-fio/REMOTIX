@@ -29,7 +29,7 @@ post_upgrade() {
 	systemctl try-restart remotix.service 2>/dev/null
 	# il motore annota le versioni e dice se l'installazione e' ancora
 	# certificata (§10.12 punto 4); non fa mai fallire pacman
-	[ -x /usr/bin/remotix-install ] && /usr/bin/remotix-install aggiornato
+	[ -x /usr/bin/remotix-install ] && /usr/bin/remotix-install post-upgrade
 	return 0
 }
 

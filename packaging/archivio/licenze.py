@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """licenze.py — il file delle licenze dei componenti di REMOTIX (DECISIONI §10.22), per l'archivio.
 
-    licenze.py <archivio> <installatore> [<licenza-di-go>]   > LICENZE-COMPONENTI.txt
+    licenze.py <archivio> <installatore> [<licenza-di-go>]   > THIRD-PARTY-LICENSES.txt
 
 Lo chiama pubblica.sh rigenera (dal comando di rilascio). Mette insieme, con il TESTO di ogni licenza
 che chiede di accompagnare il programma:

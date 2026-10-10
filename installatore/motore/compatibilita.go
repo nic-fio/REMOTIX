@@ -128,7 +128,7 @@ type H264Piattaforma struct {
 // (VulkanScheda). Senza schede, o senza sapere di che fornitore sono, niente: la strada VA-API
 // resta, e la prova vera è in 7a.
 func (h H264Piattaforma) VulkanPerLaScheda(p *Profilo) []string {
-	if len(h.VulkanScheda) == 0 || p.V("scheda.nodi") == "nessuno" {
+	if len(h.VulkanScheda) == 0 || p.V("gpu.nodes") == "none" {
 		return nil
 	}
 	forn, noti := fornitoriScheda(p)
@@ -176,7 +176,7 @@ func (h H264Piattaforma) codificaPer(fornitore string, driverSenza bool) bool {
 func fornitoriScheda(p *Profilo) (map[string]bool, bool) {
 	r := map[string]bool{}
 	for _, f := range p.Fatti {
-		if strings.HasPrefix(f.Chiave, "scheda.") && strings.HasSuffix(f.Chiave, ".fornitore") && f.Valore != "" {
+		if strings.HasPrefix(f.Chiave, "gpu.") && strings.HasSuffix(f.Chiave, ".vendor") && f.Valore != "" {
 			r[f.Valore] = true
 		}
 	}
@@ -187,7 +187,7 @@ func fornitoriScheda(p *Profilo) (map[string]bool, bool) {
 // se non serve), i driver da prendere lì e se serve il suo ramo nonfree. Senza schede non serve
 // niente; con schede di fornitori che il catalogo non nomina (NVIDIA, virtio…) nemmeno.
 func (h H264Piattaforma) PerLaScheda(p *Profilo) (deposito string, pacchetti []string, nonfree bool) {
-	if h.Deposito == "" || h.SchedaDiSerie || p.V("scheda.nodi") == "nessuno" {
+	if h.Deposito == "" || h.SchedaDiSerie || p.V("gpu.nodes") == "none" {
 		return "", nil, false
 	}
 	forn, noti := fornitoriScheda(p)
@@ -221,7 +221,7 @@ func (h H264Piattaforma) PerLaScheda(p *Profilo) (deposito string, pacchetti []s
 
 // depositoPresente: il deposito c'è, acceso (e, se serve, col suo ramo nonfree).
 func depositoPresente(p *Profilo, d string, nonfree bool) bool {
-	return p.V("deposito."+d) == "presente" && (!nonfree || p.V("deposito."+d+"-nonfree") == "presente")
+	return p.V("repo."+d) == "present" && (!nonfree || p.V("repo."+d+"-nonfree") == "present")
 }
 
 // DepositoScheda: il deposito di terzi che la scheda di QUESTA macchina chiede e che manca ("" se
@@ -244,7 +244,7 @@ func DepositiBaseMancanti(pl *Piattaforma, p *Profilo) []string {
 	}
 	var r []string
 	for _, d := range pl.Depositi {
-		if p.V("deposito."+d) != "presente" {
+		if p.V("repo."+d) != "present" {
 			r = append(r, d)
 		}
 	}
@@ -281,19 +281,19 @@ func LeggiCatalogo(b []byte) (*Catalogo, error) {
 		return nil, Errore("RX-TRUST-004", err.Error())
 	}
 	if c.Formato != FormatoCatalogo {
-		return nil, Errore("RX-TRUST-004", "formato "+c.Formato)
+		return nil, Errore("RX-TRUST-004", "format "+c.Formato)
 	}
 	c.Digest = Sha256(b)
 	return &c, nil
 }
 
 type RifCatalogo struct {
-	Versione string `json:"versione"`
+	Versione string `json:"version"`
 	Digest   string `json:"digest"`
 }
 
 type RifMotore struct {
-	Versione string `json:"versione"`
+	Versione string `json:"version"`
 	Digest   string `json:"digest"`
 }
 
@@ -302,58 +302,58 @@ type RifMotore struct {
 func DigestMotore() string {
 	d, err := Sha256File("/proc/self/exe")
 	if err != nil || d == "" {
-		return "sconosciuto"
+		return "unknown"
 	}
 	return d
 }
 
 // Condizione: una delle condizioni C-… di §6.6.8, col suo rimedio.
 type Condizione struct {
-	Codice    string `json:"codice"`
-	Testo     string `json:"testo"`
-	Rimedio   string `json:"rimedio,omitempty"`
-	Decisione string `json:"decisione,omitempty"` // la decisione dell'utente che la riguarda, se aperta
+	Codice    string `json:"code"`
+	Testo     string `json:"text"`
+	Rimedio   string `json:"remedy,omitempty"`
+	Decisione string `json:"decision,omitempty"` // la decisione dell'utente che la riguarda, se aperta
 	// Componente: per C-COMPONENTE, il pacchetto che l'installatore aggiunge (va nel piano)
-	Componente string `json:"componente,omitempty"`
+	Componente string `json:"component,omitempty"`
 }
 
 // Livelli di compatibilità (§6.6.8).
 const (
-	CERTIFICATA    = "CERTIFICATA"
-	COMPATIBILE    = "COMPATIBILE"
-	NON_SUPPORTATA = "NON_SUPPORTATA"
+	CERTIFICATA    = "CERTIFIED"
+	COMPATIBILE    = "COMPATIBLE"
+	NON_SUPPORTATA = "UNSUPPORTED"
 )
 
 // EsitoDesktop: il livello per un desktop.
 type EsitoDesktop struct {
 	Desktop     string       `json:"desktop"`
-	Nome        string       `json:"nome"`
-	Installato  string       `json:"installato"` // versione, "assente" o "sconosciuto"
-	Livello     string       `json:"livello"`
-	Condizioni  []Condizione `json:"condizioni"`
-	Motivi      []Messaggio  `json:"motivi,omitempty"` // perché NON_SUPPORTATA
-	Note        []string     `json:"note,omitempty"`
-	Riferimento bool         `json:"riferimento,omitempty"` // il desktop già scelto se se ne installa uno
+	Nome        string       `json:"name"`
+	Installato  string       `json:"installed"` // versione, "absent" o "unknown"
+	Livello     string       `json:"level"`
+	Condizioni  []Condizione `json:"conditions"`
+	Motivi      []Messaggio  `json:"reasons,omitempty"` // perché NON_SUPPORTATA
+	Note        []string     `json:"notes,omitempty"`
+	Riferimento bool         `json:"reference,omitempty"` // il desktop già scelto se se ne installa uno
 }
 
 // Rapporto di compatibilità: il secondo oggetto (§6.6.1).
 type Rapporto struct {
-	Formato      string      `json:"formato"`
-	Oggetto      string      `json:"oggetto"` // "compatibilita"
-	Creato       string      `json:"creato"`
-	Catalogo     RifCatalogo `json:"catalogo"`
-	Piattaforma  string      `json:"piattaforma"` // "Debian 13"
+	Formato      string      `json:"format"`
+	Oggetto      string      `json:"object"` // "compatibility"
+	Creato       string      `json:"created"`
+	Catalogo     RifCatalogo `json:"catalog"`
+	Piattaforma  string      `json:"platform"` // "Debian 13"
 	pl           *Piattaforma
 	cat          *Catalogo
-	Riconosciuta string         `json:"riconosciuta"` // matrice · fuori matrice · derivata di … · esclusa · sconosciuta
+	Riconosciuta string         `json:"recognized"` // matrice · fuori matrice · derivata di … · esclusa · sconosciuta
 	Desktop      []EsitoDesktop `json:"desktop"`
-	SenzaDesktop bool           `json:"senza_desktop"`       // nessun desktop supportato installato (§10 e R38)
-	Incognite    []string       `json:"incognite,omitempty"` // fatti SCONOSCIUTI che toccano il giudizio
-	Messaggi     []Messaggio    `json:"messaggi"`
-	Note         []string       `json:"note,omitempty"`
+	SenzaDesktop bool           `json:"no_desktop"`         // nessun desktop supportato installato (§10 e R38)
+	Incognite    []string       `json:"unknowns,omitempty"` // fatti SCONOSCIUTI che toccano il giudizio
+	Messaggi     []Messaggio    `json:"messages"`
+	Note         []string       `json:"notes,omitempty"`
 	// Minima: per una versione esclusa, la prima versione della stessa distribuzione che il
 	// catalogo sostiene («serve almeno Debian 13»: la schermata «bloccata», T9)
-	Minima string `json:"minima,omitempty"`
+	Minima string `json:"minimum,omitempty"`
 }
 
 // primaVersione: la versione più vecchia di una distribuzione che il catalogo sostiene.
@@ -407,11 +407,11 @@ func (c *Catalogo) trova(id, versione string) (pl *Piattaforma, derivata *Deriva
 
 // Valuta: fase 2 COMPATIBILITY, desktop per desktop.
 func Valuta(c *Catalogo, p *Profilo) *Rapporto {
-	r := &Rapporto{Formato: Formato, Oggetto: "compatibilita", Creato: ora(),
+	r := &Rapporto{Formato: Formato, Oggetto: "compatibility", Creato: ora(),
 		Catalogo: RifCatalogo{c.Versione, c.Digest}}
-	id, ver := p.V("distro.id"), p.V("distro.versione")
-	fam := p.V("distro.famiglia")
-	r.Piattaforma = strings.TrimSpace(p.V("distro.nome"))
+	id, ver := p.V("distro.id"), p.V("distro.version")
+	fam := p.V("distro.family")
+	r.Piattaforma = strings.TrimSpace(p.V("distro.name"))
 
 	// motivi che valgono per ogni desktop
 	var tutti []Messaggio
@@ -422,13 +422,13 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 			r.Minima = c.primaVersione(id)
 		}
 	}
-	if p.V("distro.immutabile") == "si" {
+	if p.V("distro.immutable") == "yes" {
 		tutti = append(tutti, Msg("RX-COMPAT-003", ""))
 	}
-	if c.Requisiti.Systemd && p.V("sistema.systemd") == "no" {
+	if c.Requisiti.Systemd && p.V("system.systemd") == "no" {
 		tutti = append(tutti, Msg("RX-COMPAT-007", "the machine did not boot with systemd"))
 	}
-	if v := p.V("openssl.versione"); v != "" && ConfrontaVersioni(v, c.Requisiti.OpensslMinima) < 0 {
+	if v := p.V("openssl.version"); v != "" && ConfrontaVersioni(v, c.Requisiti.OpensslMinima) < 0 {
 		tutti = append(tutti, Msg("RX-COMPAT-007", "OpenSSL "+v+", needed "+c.Requisiti.OpensslMinima))
 	} else if v == "" {
 		r.Incognite = append(r.Incognite, T("inc.openssl"))
@@ -477,7 +477,7 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 	for _, d := range DESKTOP {
 		inst := p.V("desktop." + d)
 		if f, ok := p.F("desktop." + d); ok && f.Stato == SCONOSCIUTO {
-			inst = "sconosciuto"
+			inst = "unknown"
 			r.Incognite = append(r.Incognite, T("inc.desktop", NomeDesktop(d)))
 		}
 		e := EsitoDesktop{Desktop: d, Nome: NomeDesktop(d), Installato: inst, Condizioni: []Condizione{}}
@@ -488,28 +488,28 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 			case !ok:
 				e.Motivi = append(e.Motivi, Msg("RX-COMPAT-005", ""))
 			case !dc.Supportato && dc.InAttesa != "":
-				e.Motivi = append(e.Motivi, Msg(nonVuoto(dc.Codice, "RX-COMPAT-004"), dc.Motivo+" (decisione "+dc.InAttesa+", aperta)"))
+				e.Motivi = append(e.Motivi, Msg(nonVuoto(dc.Codice, "RX-COMPAT-004"), dc.Motivo+" (decisione "+dc.InAttesa+", open)"))
 			case !dc.Supportato:
 				e.Motivi = append(e.Motivi, Msg(nonVuoto(dc.Codice, "RX-COMPAT-005"), dc.Motivo))
 			default:
 				e.Condizioni = append(e.Condizioni, condBase...)
 				e.Condizioni = append(e.Condizioni, condH264...)
 				for _, comp := range dc.Componenti {
-					if p.V("pacchetto."+comp) == "assente" || p.V("pacchetto."+comp) == "" {
+					if p.V("package."+comp) == "absent" || p.V("package."+comp) == "" {
 						e.Condizioni = append(e.Condizioni, Condizione{Codice: "C-COMPONENTE",
 							Testo:   T("cond.componente", comp),
 							Rimedio: c.Installa[fam] + " " + comp, Componente: comp})
 					}
 				}
 				car := c.CarattereScalabile[fam]
-				if dc.ServeCarattere && (p.V("caratteri.scalabili") == "0" ||
-					(p.V("caratteri.scalabili") == "" && p.V("pacchetto."+car) == "assente")) {
+				if dc.ServeCarattere && (p.V("fonts.scalable") == "0" ||
+					(p.V("fonts.scalable") == "" && p.V("package."+car) == "absent")) {
 					e.Condizioni = append(e.Condizioni, Condizione{Codice: "C-COMPONENTE",
 						Testo:   T("cond.carattere"),
 						Rimedio: c.Installa[fam] + " " + car, Componente: car})
 				}
 				for _, dep := range dc.Depositi {
-					if p.V("deposito."+dep) != "presente" && !contiene(pl.Depositi, dep) {
+					if p.V("repo."+dep) != "present" && !contiene(pl.Depositi, dep) {
 						dd := c.Depositi[dep]
 						e.Condizioni = append(e.Condizioni, Condizione{Codice: "C-DEPOSITO",
 							Testo: T("cond.deposito_desktop", NomeDesktop(d), dd.Nome), Rimedio: dd.Comandi["rhel"], Decisione: dd.Decisione})
@@ -519,7 +519,7 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 					e.Condizioni = append(e.Condizioni, Condizione{Codice: "C-LIMITE", Testo: l})
 				}
 				if dc.Richiede3D != "" {
-					if p.V("scheda.nodi") == "nessuno" {
+					if p.V("gpu.nodes") == "none" {
 						e.Motivi = append(e.Motivi, Msg("RX-COMPAT-007", T("mot.3d", NomeDesktop(d), dc.Richiede3D)))
 					} else {
 						e.Condizioni = append(e.Condizioni, Condizione{Codice: "C-HARDWARE", Testo: T("cond.3d", NomeDesktop(d), dc.Richiede3D)})
@@ -541,7 +541,7 @@ func Valuta(c *Catalogo, p *Profilo) *Rapporto {
 		default:
 			e.Livello = COMPATIBILE
 		}
-		if e.Livello != NON_SUPPORTATA && inst != "" && inst != "assente" && inst != "sconosciuto" {
+		if e.Livello != NON_SUPPORTATA && inst != "" && inst != "absent" && inst != "unknown" {
 			nessuno = false
 		}
 		r.Desktop = append(r.Desktop, e)
@@ -588,8 +588,8 @@ func nonVuoto(a, b string) string {
 // dichiarata — non un «va tutto bene».
 func condizioniH264(c *Catalogo, pl *Piattaforma, p *Profilo, fam string, r *Rapporto) []Condizione {
 	var cc []Condizione
-	h, _ := p.F("h264.scheda")
-	if h.Stato == VERIFICATO && h.Valore == "si" {
+	h, _ := p.F("h264.gpu")
+	if h.Stato == VERIFICATO && h.Valore == "yes" {
 		return cc
 	}
 	// il deposito dei driver, solo se la scheda di QUESTA macchina lo chiede (fase 18: Packman solo
@@ -604,7 +604,7 @@ func condizioniH264(c *Catalogo, pl *Piattaforma, p *Profilo, fam string, r *Rap
 	// fase 19: una scheda che non codifica ACCANTO a una che sì (la macchina senza nessuna capace è
 	// già fuori, VerdettoScheda): la si dice, e il video lo fa l'altra
 	// ⭐ fase 19: con l'ICD Vulkan la NVIDIA proprietaria codifica (strada «vulkan») e non è più fuori
-	if p.V("scheda.nvidia_proprietaria") == "si" && !SchedaSullaStrada("vulkan", "NVIDIA", pl, p) {
+	if p.V("gpu.nvidia_proprietary") == "yes" && !SchedaSullaStrada("vulkan", "NVIDIA", pl, p) {
 		cc = append(cc, Condizione{Codice: "C-HARDWARE", Testo: T("cond.nvidia")})
 	}
 	if forn, _ := fornitoriScheda(p); pl != nil && pl.H264.AmdSenzaVaapi && forn["AMD"] {

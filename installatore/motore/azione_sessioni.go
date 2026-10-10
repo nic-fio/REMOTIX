@@ -19,7 +19,7 @@ import (
 // indietro non riapre niente.
 
 func init() {
-	registraTipo("chiudi-sessioni", func(AzionePiano) (Azione, error) { return chiudiSessioni{}, nil })
+	registraTipo("close-sessions", func(AzionePiano) (Azione, error) { return chiudiSessioni{}, nil })
 }
 
 // ServizioPAM: il nome del servizio PAM di REMOTIX (/etc/pam.d/remotix).
@@ -28,8 +28,8 @@ const ServizioPAM = "remotix"
 // PianoChiudiSessioni prepara il passo, dicendo quante sessioni ci sono adesso.
 func PianoChiudiSessioni(id string, n int, utenti []string) AzionePiano {
 	return AzionePiano{
-		ID: id, Tipo: "chiudi-sessioni",
-		Parametri:      map[string]string{"servizio": ServizioPAM},
+		ID: id, Tipo: "close-sessions",
+		Parametri:      map[string]string{"service": ServizioPAM},
 		Descrizione:    T("az.sessioni", n, strings.Join(utenti, ", ")),
 		ComeSiFa:       T("az.sessioni.fa"),
 		ComeSiVerifica: T("az.sessioni.verifica"),
@@ -60,12 +60,12 @@ func SessioniRemotix(a *Ambiente) ([]Sessione, error) {
 type chiudiSessioni struct{}
 
 type primaSessioni struct {
-	Origine  Origine  `json:"origine"`
-	Sessioni []string `json:"sessioni"`
-	Utenti   []string `json:"utenti"`
+	Origine  Origine  `json:"origin"`
+	Sessioni []string `json:"sessions"`
+	Utenti   []string `json:"users"`
 	// Grafica: le persone senza un'altra sessione grafica (un desktop locale): a loro si chiude
 	// anche il desktop nel gestore d'utente (grafica_utente.go)
-	Grafica []string `json:"grafica"`
+	Grafica []string `json:"graphical"`
 }
 
 func (chiudiSessioni) Vincoli(*Contesto) ([]string, error) { return nil, nil } // cambiano da sole: non vincolano
@@ -218,7 +218,7 @@ func (a chiudiSessioni) Controlla(c *Contesto, prima json.RawMessage) (Esito, st
 }
 
 func (chiudiSessioni) Annulla(*Contesto, json.RawMessage) error {
-	return Errore("RX-AZIONE-005", "chiudi-sessioni")
+	return Errore("RX-AZIONE-005", "close-sessions")
 }
 
 func (a chiudiSessioni) Annullata(c *Contesto, prima json.RawMessage) (bool, string, error) {

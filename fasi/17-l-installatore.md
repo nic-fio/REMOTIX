@@ -974,6 +974,40 @@ RX-H264-006 (D5: senza l'archivio della codifica non si installa). ⚠ Il `vendo
 go-text, x/text, Bubble Tea): la costruzione resta **senza rete**.
 
 
+#### 6.6.15 10 ott 2026: i nomi in inglese (`DECISIONI.md` §10.35)
+
+Tutto quel che l'amministratore digita o legge del motore è in inglese. I nomi nel codice Go e i commenti restano
+italiani. Il formato degli oggetti passa a **`remotix-install/2`**, quello del file di risposte a
+**`remotix-answers/2`** (prima `remotix-risposte/1`): niente compatibilità col vecchio, perché non ci sono
+installazioni vere. Quel che segue nei paragrafi di prima resta come storia, coi nomi di allora.
+
+| che cosa | prima | adesso |
+|---|---|---|
+| comandi | `verifica` · `piano` · `approva` · `applica` · `riprendi` · `annulla` · `stato` · `aggiornato` · `disinstalla` · `certifica` · `catalogo` · `installa` · `prepara-fuori-linea` · `versione` · `aiuto` (`aggiorna`/`ritorna` rimandavano al gestore) | `check` · `plan` · `approve` · `apply` · `resume` · `rollback` · `status` · `post-upgrade` · `uninstall` · `certify` · `catalog` · `install` · `prepare-offline` · `version` · `help` (`upgrade`/`downgrade`) |
+| opzioni del motore | `--operazioni` · `--catalogo` · `--archivio` · `--canale stabile\|candidato` · `--porta` · `--risposte` · `--fuori-linea` · `--uscita` · `--eventi` · `--utente` · `--apri-firewall` · `--deposito` · `--pacchetto` · `--pacchetti` · `--piano` · `--installa` · `--approva` · `--tabella` | `--state-dir` · `--catalog` · `--archive` · `--channel stable\|candidate` · `--port` · `--answers` · `--offline` · `--output` · `--events` · `--users` · `--open-firewall` · `--extra-repos` · `--package` · `--packages` · `--plan` · `--install` · `--approve` · `--table` |
+| ⚠ due cose diverse | `--archivio` (l'archivio firmato di REMOTIX) e `--deposito` (gli archivi di terzi: epel, rpmfusion, packman) | `--archive` e `--extra-repos`; nei fatti e nei passi gli archivi di terzi sono `repo` |
+| `install.sh` | `--archivio` · `--canale` · `--verifica` · `--risposte` · `--insicuro` · `REMOTIX_ARCHIVIO` | `--archive` · `--channel` · `--check` · `--answers` · `--insecure` · `REMOTIX_ARCHIVE` |
+| file di risposte | `formato` · `porta` · `archivio` · `canale = stabile\|candidato` · `utenti = tutti` · `consenso.firewall` · `consenso.deposito.<x>` · `consenso.cinture` · `consenso.aggiornamenti` · `si`/`no` (anche `sì`, `s`) | `format` · `port` · `archive` · `channel = stable\|candidate` · `users = all` · `consent.firewall` · `consent.repo.<x>` · `consent.guards` · `consent.updates` · `yes`/`no` (anche `y`, `n`) |
+| stati dell'operazione | `NUOVA` · `FIDATA` · `ESAMINATA` · `VALUTATA` · `PIANIFICATA` · `APPROVATA` · `ACQUISITA` · `IN_ESECUZIONE` · `INTERROTTA` · `APPLICATA` · `IN_VERIFICA` · `VERIFICATA` · `CONFERMATA` · `CONFERMATA_A_CONDIZIONI` · `IN_ANNULLAMENTO` · `ANNULLATA` · `ANNULLATA_IN_PARTE` · `BLOCCATA` · `RIFIUTATA` | `NEW` · `TRUSTED` · `EXAMINED` · `ASSESSED` · `PLANNED` · `APPROVED` · `ACQUIRED` · `RUNNING` · `INTERRUPTED` · `APPLIED` · `VERIFYING` · `VERIFIED` · `CONFIRMED` · `CONFIRMED_WITH_CONDITIONS` · `ROLLING_BACK` · `ROLLED_BACK` · `PARTIALLY_ROLLED_BACK` · `BLOCKED` · `REFUSED` |
+| esito della certificazione | `VERDE` · `A_CONDIZIONI` · `ROSSO` | `GREEN` · `CONDITIONAL` · `RED` |
+| stati dei fatti, gravità, natura | `RILEVATO` · `VERIFICATO` · `SCONOSCIUTO`; `AVVISO` · `BLOCCANTE`; `SERVE_AZIONE` · `RIPROVABILE` · `RECUPERABILE` · `SERVE_ANNULLAMENTO` · `FATALE` | `DETECTED` · `VERIFIED` · `UNKNOWN`; `WARNING` · `BLOCKING`; `ACTION_NEEDED` · `RETRYABLE` · `RECOVERABLE` · `ROLLBACK_NEEDED` · `FATAL` |
+| reversibilità, origine, esito di un passo | `ESATTA` · `AL_MEGLIO` · `CON_FOTOGRAFIA` · `IRREVERSIBILE`; `DIRETTA` · `INDIRETTA` · `PREESISTENTE` · `CONCORRENTE`; `COMPLETO` · `ASSENTE` · `A_META` · `ESTRANEO` | `EXACT` · `BEST_EFFORT` · `NEEDS_SNAPSHOT` · `IRREVERSIBLE`; `DIRECT` · `INDIRECT` · `PREEXISTING` · `CONCURRENT`; `COMPLETE` · `ABSENT` · `HALF_DONE` · `FOREIGN` |
+| livello di compatibilità | `CERTIFICATA` · `COMPATIBILE` · `NON_SUPPORTATA` | `CERTIFIED` · `COMPATIBLE` · `UNSUPPORTED` |
+| eventi del registro | `STATO` · `INTENZIONE` · `FATTA` · `FALLITA` · `INTENZIONE_ANNULLA` · `ANNULLATA` · `ANNULLAMENTO_FALLITO` · `NOTA` · `COMANDO` · `RIPRESA` | `STATE` · `INTENT` · `DONE` · `FAILED` · `ROLLBACK_INTENT` · `ROLLED_BACK` · `ROLLBACK_FAILED` · `NOTE` · `COMMAND` · `RESUMED` |
+| valori dei fatti | `si` · `presente` · `assente` · `con` · `senza` · `nessuno` · `sconosciuto` · `aperto`/`aperta` · `chiuso`/`chiusa` · `altro` · `attivo`/`attiva` | `yes` · `present` · `absent` · `with` · `without` · `none` · `unknown` · `open` · `closed` · `other` · `enabled`/`active` |
+| nomi dei fatti | `distro.famiglia` · `sistema.*` · `scheda.*` (`.fornitore`, `.modo`, `.gruppo`, `nodi`, `nvidia_proprietaria`) · `gruppo.*` · `pacchetto.*` · `deposito.*` · `codifica.*` (`strade`) · `porta.N.tcp_libera` · `.raggiungibile` · `firewall.tipo`/`zona`/`porta_*` · `h264.scheda`/`famiglia_driver` · `pam.base_mancanti` · `caratteri.scalabili` · `openssl.versione` | `distro.family` · `system.*` · `gpu.*` (`.vendor`, `.mode`, `.group`, `nodes`, `nvidia_proprietary`) · `group.*` · `package.*` · `repo.*` · `encoding.*` (`routes`) · `port.N.tcp_free` · `.reachable` · `firewall.type`/`zone`/`port_*` · `h264.gpu`/`driver_family` · `pam.base_missing` · `fonts.scalable` · `openssl.version` |
+| tipi dei passi | `installa-pacchetti` · `installa-desktop` · `scrivi-file` · `abilita-unita` · `accendi-servizio` · `regola-firewall` · `aggiungi-utente-a-gruppo` · `aggiungi-deposito` · `attiva-cintura` · `chiudi-sessioni` · `togli-iscrizione` · `togli-registri-utente` · `disfa` | `install-packages` · `install-desktop` · `write-file` · `enable-unit` · `start-service` · `firewall-rule` · `add-user-to-group` · `add-repo` · `enable-guard` · `close-sessions` · `remove-membership` · `remove-user-logs` · `undo` |
+| campi JSON (piano, profilo, rapporto, certificato, registro, eventi, pacchetto fuori linea) | `formato` · `oggetto` · `stato` · `mestiere` · `azioni` · `parametri` · `impronta` · `controlli` · `condizioni` · `esito` · `dettaglio` · … (circa 140) | `format` · `object` · `state` · `kind` · `actions` · `parameters` · `fingerprint` · `checks` · `conditions` · `result` · `detail` · … |
+| file e cartelle in `/var/lib/remotix` | `operazioni/<id>/` con `stato` · `registro.jsonl` · `piano.json` · `fiducia.json` · `profilo.json` · `compatibilita.json` · `verifica.json` · `approvazione.json` · `insieme-risolto*.json` · `certificato.json`/`.txt` · `salvataggi/` (`.prima`, `.nuovo`); `piani/piano-<id>.json`; `installazione.json`; `aggiornamenti.json` | `operations/<id>/` con `state` · `log.jsonl` · `plan.json` · `trust.json` · `profile.json` · `compatibility.json` · `check.json` · `approval.json` · `resolved-set*.json` · `certificate.json`/`.txt` · `backups/` (`.before`, `.new`); `plans/plan-<id>.json`; `installation.json`; `recorded-versions.json` |
+| l'archivio pubblicato | `motore/remotix-install(.sha256)` · `chiavi/remotix-archivio.asc` · `chiavi/LEGGIMI` · `LICENZE-COMPONENTI.txt` · `RILASCI.txt` · `pacman/*/remotix.versioni` · suite `<bersaglio>-stabile` | `engine/remotix-install(.sha256)` · `keys/remotix-archive.asc` · `keys/README` · `THIRD-PARTY-LICENSES.txt` · `RELEASES.txt` · `pacman/*/remotix.versions` · suite `<bersaglio>-stable` |
+| il pacchetto `remotix-install` | `/usr/share/remotix-install/LEGGIMI` (italiano) | `/usr/share/remotix-install/README` (inglese) |
+
+⚠ **Non cambiano** (sono identificativi, o li scrive il prodotto in C): i codici `RX-…` (`RX-PACCHETTI-006`,
+`RX-RISPOSTE-002`…) e le condizioni `C-…` (`C-DEPOSITO`, `C-LIMITE`, `C-AMMINISTRATORE`…); il formato del catalogo
+(`remotix-catalogo/1`, chiavi italiane: è un dato nostro, dentro il motore); il file `gruppi-iscritti.jsonl` e
+l'uscita di `remotix --prova-codifica`, che il motore legge così come il prodotto li scrive; i file del prodotto
+(`/usr/share/remotix/cinture/…`, `remotix.conf.d/porta.conf` con `REMOTIX_PORTA`).
+
 ---
 
 ## 7. Il banco: le macchine virtuali delle distribuzioni

@@ -32,7 +32,7 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 		o.Porta = 7447
 	}
 	ps := strconv.Itoa(o.Porta)
-	pn := &Piano{Formato: Formato, Oggetto: "piano", ID: nuovoID(), Creato: ora(), Mestiere: "installazione",
+	pn := &Piano{Formato: Formato, Oggetto: "plan", ID: nuovoID(), Creato: ora(), Mestiere: "installation",
 		Motore:   RifMotore{VersioneMotore, DigestMotore()},
 		Catalogo: RifCatalogo{cat.Versione, cat.Digest}, Piattaforma: rap.Piattaforma,
 		Dipende: []string{}, Consensi: []string{}, Condizioni: []Condizione{}, NonFatto: []Messaggio{}, Scelte: []Scelta{}}
@@ -42,8 +42,8 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 		if err != nil {
 			return nil, err
 		}
-		pn.Archivio = &RifArchivio{URL: par["archivio"], Canale: par["canale"]}
-		pn.Azioni = append(pn.Azioni, PianoDeposito("archivio-remotix", "archivio", par, ""))
+		pn.Archivio = &RifArchivio{URL: par["archive"], Canale: par["channel"]}
+		pn.Azioni = append(pn.Azioni, PianoDeposito("remotix-archive", "archive", par, ""))
 	}
 	// fase 18 (senza ffmpeg): il deposito dei DRIVER della scheda — quale, e quali driver, dipende dal
 	// fornitore della scheda di questa macchina (H264Piattaforma.PerLaScheda)
@@ -55,12 +55,12 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 	}
 	for _, d := range o.Depositi {
 		dc := cat.Depositi[d]
-		cons := T("consenso.deposito", nonVuoto(dc.Nome, d))
+		cons := T("consent.repo", nonVuoto(dc.Nome, d))
 		var par map[string]string
 		if d == depScheda && nonfree {
-			par = map[string]string{"nonfree": "si"} // RPM Fusion: il driver Intel completo sta in nonfree
+			par = map[string]string{"nonfree": "yes"} // RPM Fusion: il driver Intel completo sta in nonfree
 		}
-		pn.Azioni = append(pn.Azioni, PianoDeposito("deposito-"+d, d, par, cons))
+		pn.Azioni = append(pn.Azioni, PianoDeposito("repo-"+d, d, par, cons))
 		pn.Consensi = append(pn.Consensi, cons)
 	}
 	// i driver con H.264 da quel deposito (§4.2, fase 18), se c'è o col consenso; già installati, il
@@ -93,7 +93,7 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 		if amb.Famiglia == "debian" {
 			nomi += ",remotix-archive-keyring"
 		}
-		pn.Azioni = append(pn.Azioni, PianoPacchetti("pacchetti", "", "", nomi))
+		pn.Azioni = append(pn.Azioni, PianoPacchetti("packages", "", "", nomi))
 	case o.Pacchetto != "":
 		// uno o più file, separati da virgola, in UNA transazione (T6: remotix e remotix-selinux,
 		// che remotix chiede dove c'è la politica «targeted»)
@@ -109,9 +109,9 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 			}
 			file, shas = append(file, abs), append(shas, sha)
 		}
-		pn.Azioni = append(pn.Azioni, PianoPacchetti("pacchetti", strings.Join(file, ","), strings.Join(shas, ","), ""))
+		pn.Azioni = append(pn.Azioni, PianoPacchetti("packages", strings.Join(file, ","), strings.Join(shas, ","), ""))
 	default:
-		return nil, fmt.Errorf("the REMOTIX archive (--archivio URL) or a package (--pacchetto FILE) is needed")
+		return nil, fmt.Errorf("the REMOTIX archive (--archive URL) or a package (--package FILE) is needed")
 	}
 	// fase 19: il driver Vulkan ufficiale della scheda (VulkanScheda: oggi RADV per AMD, dove Mesa
 	// codifica). Nei .deb e negli .rpm è solo un «Recommends» (che una macchina senza raccomandati
@@ -127,7 +127,7 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 	var comp []string
 	visti := map[string]bool{}
 	for _, e := range rap.Desktop {
-		if e.Livello == NON_SUPPORTATA || e.Installato == "" || e.Installato == "assente" || e.Installato == "sconosciuto" {
+		if e.Livello == NON_SUPPORTATA || e.Installato == "" || e.Installato == "absent" || e.Installato == "unknown" {
 			continue
 		}
 		for _, k := range e.Condizioni {
@@ -138,7 +138,7 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 		}
 	}
 	if len(comp) > 0 {
-		pn.Azioni = append(pn.Azioni, PianoPacchetti("componenti", "", "", strings.Join(comp, ",")))
+		pn.Azioni = append(pn.Azioni, PianoPacchetti("components", "", "", strings.Join(comp, ",")))
 	}
 
 	utenti := o.Utenti
@@ -148,7 +148,7 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 	gruppi := GruppiScheda(amb)
 	for _, u := range utenti {
 		for _, g := range gruppi {
-			pn.Azioni = append(pn.Azioni, PianoGruppo("gruppo-"+u+"-"+g, u, g))
+			pn.Azioni = append(pn.Azioni, PianoGruppo("group-"+u+"-"+g, u, g))
 		}
 	}
 	if len(gruppi) == 0 {
@@ -158,7 +158,7 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 	// /etc/remotix/remotix.conf.d/*.conf. Solo se non è quella di serie — `[M]` 30 set, leap16-kde in
 	// scatola: senza questo passo il servizio partiva su 7447 e il motore lo verificava su 8532
 	if o.Porta != 7447 {
-		pn.Azioni = append(pn.Azioni, PianoScriviFile("porta", "/etc/remotix/remotix.conf.d/porta.conf", "REMOTIX_PORTA="+ps+"\n", "0644"))
+		pn.Azioni = append(pn.Azioni, PianoScriviFile("port", "/etc/remotix/remotix.conf.d/porta.conf", "REMOTIX_PORTA="+ps+"\n", "0644"))
 	}
 	// D4 (DECISIONI §4.7, 15 ago 2026): le tre cinture SEMPRE, senza consenso; il piano lo dichiara
 	for _, c := range Cinture {
@@ -173,15 +173,15 @@ func PianoInstallazione(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambien
 		a := PianoFirewall("firewall", ps)
 		pn.Azioni = append(pn.Azioni, a)
 		pn.Consensi = append(pn.Consensi, a.Consenso)
-	case g == "nessuno":
+	case g == "none":
 		pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: INFO, Testo: T("np.firewall_nessuno")})
 	default:
 		pn.NonFatto = append(pn.NonFatto, Msg("RX-FW-004", T("np.firewall_mano", g, ps)))
 	}
-	pn.Azioni = append(pn.Azioni, PianoAccendiServizio("servizio", "remotix.service", o.Porta))
+	pn.Azioni = append(pn.Azioni, PianoAccendiServizio("service", "remotix.service", o.Porta))
 
 	for _, e := range rap.Desktop {
-		if e.Livello != NON_SUPPORTATA && e.Installato != "" && e.Installato != "assente" && e.Installato != "sconosciuto" {
+		if e.Livello != NON_SUPPORTATA && e.Installato != "" && e.Installato != "absent" && e.Installato != "unknown" {
 			pn.Condizioni = append(pn.Condizioni, e.Condizioni...)
 		}
 	}

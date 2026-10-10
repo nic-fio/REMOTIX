@@ -18,9 +18,9 @@ import (
 // Reversibilità AL_MEGLIO (§10 del documento: toglierlo non rende la macchina identica).
 
 func init() {
-	registraTipo("installa-desktop", func(p AzionePiano) (Azione, error) {
+	registraTipo("install-desktop", func(p AzionePiano) (Azione, error) {
 		q := p
-		q.Parametri = map[string]string{"nomi": p.Parametri["nomi"], "senza_grafica": "si"}
+		q.Parametri = map[string]string{"names": p.Parametri["names"], "no_graphics": "yes"}
 		return nuovaPacchetti(q)
 	})
 }
@@ -28,8 +28,8 @@ func init() {
 // PianoDesktop prepara il passo del piano: i pacchetti vengono dal catalogo.
 func PianoDesktop(id, desktop, nomi string) AzionePiano {
 	return AzionePiano{
-		ID: id, Tipo: "installa-desktop",
-		Parametri:      map[string]string{"desktop": desktop, "nomi": nomi},
+		ID: id, Tipo: "install-desktop",
+		Parametri:      map[string]string{"desktop": desktop, "names": nomi},
 		Descrizione:    T("az.desktop", NomeDesktop(desktop)),
 		ComeSiFa:       T("az.desktop.fa", NomeDesktop(desktop)),
 		ComeSiVerifica: T("az.desktop.verifica"),
@@ -44,7 +44,7 @@ const policyRcd = "/usr/sbin/policy-rc.d"
 const policyRcdNostro = "#!/bin/sh\n# REMOTIX: no services started while the desktop is installed (removed right after)\nexit 101\n"
 
 type primaGrafica struct {
-	Predefinito string            `json:"predefinito"`
+	Predefinito string            `json:"default"`
 	DM          map[string]string `json:"dm"`     // unità → "file attivo" di prima
 	Debian      bool              `json:"debian"` // si usa policy-rc.d
 }

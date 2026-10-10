@@ -19,7 +19,7 @@ import (
 // motore: un servizio fermato dall'amministratore resta fermo.
 
 // FileVersioniAnnotate: le versioni annotate dopo l'ultimo cambio.
-const FileVersioniAnnotate = "aggiornamenti.json"
+const FileVersioniAnnotate = "recorded-versions.json"
 
 // AnnotaVersioni scrive le versioni installate dei pacchetti di REMOTIX (quelli che mancano no).
 func (m *Motore) AnnotaVersioni() (map[string]string, error) {
@@ -37,13 +37,13 @@ func (m *Motore) AnnotaVersioni() (map[string]string, error) {
 		}
 	}
 	return r, ScriviJSON(filepath.Join(filepath.Dir(m.Cartella), FileVersioniAnnotate),
-		map[string]any{"formato": Formato, "oggetto": "versioni-annotate", "versioni": r, "scritto": ora()})
+		map[string]any{"format": Formato, "object": "recorded-versions", "versions": r, "written": ora()})
 }
 
 // versioniAggiornate: quelle annotate dall'ultimo `aggiornato` (vuoto se nessuno).
 func versioniAggiornate(cartellaOp string) map[string]string {
 	var x struct {
-		Versioni map[string]string `json:"versioni"`
+		Versioni map[string]string `json:"versions"`
 	}
 	LeggiJSON(filepath.Join(filepath.Dir(filepath.Dir(cartellaOp)), FileVersioniAnnotate), &x)
 	return x.Versioni

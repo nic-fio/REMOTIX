@@ -26,14 +26,14 @@ import (
 
 // Artefatto: una riga dell'insieme risolto.
 type Artefatto struct {
-	Nome     string `json:"nome"`
-	Versione string `json:"versione"`
+	Nome     string `json:"name"`
+	Versione string `json:"version"`
 	Arch     string `json:"arch,omitempty"`
-	Origine  string `json:"origine"`          // "file" (dal piano) o il deposito
+	Origine  string `json:"origin"`           // "file" (dal piano) o il deposito
 	File     string `json:"file,omitempty"`   // il file nella cache
 	Sha256   string `json:"sha256,omitempty"` // del file nella cache
-	Esito    string `json:"esito"`            // "nuovo" · "aggiornato" · "presente"
-	Prima    string `json:"prima,omitempty"`  // la versione di prima, se aggiornato
+	Esito    string `json:"result"`           // "nuovo" · "aggiornato" · "present"
+	Prima    string `json:"before,omitempty"` // la versione di prima, se aggiornato
 }
 
 // Gestore: il gestore di pacchetti della famiglia.
@@ -79,7 +79,7 @@ func esegui(a *Ambiente, tempo time.Duration, nome string, arg ...string) (strin
 		return out, err
 	}
 	if c != 0 {
-		return out, fmt.Errorf("%s %s: uscita %d: %s", nome, strings.Join(arg, " "), c, ultimeRighe(out, 6))
+		return out, fmt.Errorf("%s %s: exit %d: %s", nome, strings.Join(arg, " "), c, ultimeRighe(out, 6))
 	}
 	return out, nil
 }
@@ -143,9 +143,9 @@ func (g *gestoreApt) Risolvi(cache string, file, nomi []string) ([]Artefatto, er
 		if m == nil {
 			continue
 		}
-		a := Artefatto{Nome: m[1], Versione: m[3], Arch: m[5], Origine: m[4], Esito: "nuovo"}
+		a := Artefatto{Nome: m[1], Versione: m[3], Arch: m[5], Origine: m[4], Esito: "new"}
 		if m[2] != "" {
-			a.Esito, a.Prima = "aggiornato", m[2]
+			a.Esito, a.Prima = "upgraded", m[2]
 		}
 		r = append(r, a)
 	}
@@ -354,7 +354,7 @@ func (g *gestoreDnf) Risolvi(cache string, file, nomi []string) ([]Artefatto, er
 		visti[c[0]] = true
 		sha, _ := Sha256File(v)
 		rel := strings.TrimPrefix(v, strings.TrimSuffix(g.a.P("/"), "/"))
-		a := Artefatto{Nome: c[0], Versione: c[1], Arch: c[2], Origine: "deposito", File: rel, Sha256: sha, Esito: "nuovo"}
+		a := Artefatto{Nome: c[0], Versione: c[1], Arch: c[2], Origine: "repo", File: rel, Sha256: sha, Esito: "new"}
 		for _, f := range file {
 			if g.a.P(f) == v {
 				a.Origine = "file"
@@ -368,7 +368,7 @@ func (g *gestoreDnf) Risolvi(cache string, file, nomi []string) ([]Artefatto, er
 	}
 	for i := range r {
 		if p := prima[r[i].Nome]; p != "" {
-			r[i].Esito, r[i].Prima = "aggiornato", p
+			r[i].Esito, r[i].Prima = "upgraded", p
 		}
 	}
 	sort.Slice(r, func(i, j int) bool { return r[i].Nome < r[j].Nome })
@@ -386,7 +386,7 @@ func (g *gestoreDnf) scaricaDnf5(dest string, file, nomi []string) error {
 		if strings.Contains(out, "Nothing to do") {
 			return nil
 		}
-		return fmt.Errorf("dnf install --assumeno: uscita %d: %s", c, ultimeRighe(out, 6))
+		return fmt.Errorf("dnf install --assumeno: exit %d: %s", c, ultimeRighe(out, 6))
 	}
 	var nevra []string
 	in := false
@@ -616,7 +616,7 @@ func (g *gestoreZypper) Risolvi(cache string, file, nomi []string) ([]Artefatto,
 	var r []Artefatto
 	re := regexp.MustCompile(`<solvable type="package" name="([^"]+)" edition="([^"]+)" arch="([^"]+)"`)
 	for _, m := range re.FindAllStringSubmatch(out, -1) {
-		r = append(r, Artefatto{Nome: m[1], Versione: m[2], Arch: m[3], Origine: "deposito", Esito: "nuovo"})
+		r = append(r, Artefatto{Nome: m[1], Versione: m[2], Arch: m[3], Origine: "repo", Esito: "new"})
 	}
 	prima, err := rpmVersioni(g.a, nomiDi(r))
 	if err != nil {
@@ -624,7 +624,7 @@ func (g *gestoreZypper) Risolvi(cache string, file, nomi []string) ([]Artefatto,
 	}
 	for i := range r {
 		if p := prima[r[i].Nome]; p != "" {
-			r[i].Esito, r[i].Prima = "aggiornato", p
+			r[i].Esito, r[i].Prima = "upgraded", p
 		}
 	}
 	return r, nil
@@ -715,7 +715,7 @@ func (g *gestorePacman) Risolvi(cache string, file, nomi []string) ([]Artefatto,
 			continue
 		}
 		visti[c[0]] = true
-		a := Artefatto{Nome: c[0], Versione: c[1], Arch: c[2], Origine: c[3], Esito: "nuovo"}
+		a := Artefatto{Nome: c[0], Versione: c[1], Arch: c[2], Origine: c[3], Esito: "new"}
 		if strings.HasPrefix(c[4], "file://") || strings.HasPrefix(c[4], "/") {
 			a.Origine, a.File = "file", strings.TrimPrefix(c[4], "file://")
 		} else {
@@ -736,7 +736,7 @@ func (g *gestorePacman) Risolvi(cache string, file, nomi []string) ([]Artefatto,
 	for i := range r {
 		r[i].Sha256, _ = Sha256File(g.a.P(r[i].File))
 		if p := prima[r[i].Nome]; p != "" {
-			r[i].Esito, r[i].Prima = "aggiornato", p
+			r[i].Esito, r[i].Prima = "upgraded", p
 		}
 	}
 	sort.Slice(r, func(i, j int) bool { return r[i].Nome < r[j].Nome })
@@ -770,7 +770,7 @@ func (g *gestorePacman) SimulaTogli(nomi []string, purge bool) ([]string, error)
 			r = append(r, m[1])
 		}
 		if len(r) == 0 {
-			return nil, fmt.Errorf("pacman -R --print: uscita %d: %s", c, ultimeRighe(out, 6))
+			return nil, fmt.Errorf("pacman -R --print: exit %d: %s", c, ultimeRighe(out, 6))
 		}
 		return fuoriDa(r, nomi), nil
 	}

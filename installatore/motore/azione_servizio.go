@@ -13,13 +13,13 @@ import (
 //
 // parametri: unita, porta.
 
-func init() { registraTipo("accendi-servizio", nuovaServizio) }
+func init() { registraTipo("start-service", nuovaServizio) }
 
 // PianoAccendiServizio prepara il passo del piano.
 func PianoAccendiServizio(id, unita string, porta int) AzionePiano {
 	return AzionePiano{
-		ID: id, Tipo: "accendi-servizio",
-		Parametri:      map[string]string{"unita": unita, "porta": strconv.Itoa(porta)},
+		ID: id, Tipo: "start-service",
+		Parametri:      map[string]string{"unit": unita, "port": strconv.Itoa(porta)},
 		Descrizione:    T("az.servizio"),
 		ComeSiFa:       T("az.servizio.fa"),
 		ComeSiVerifica: T("az.servizio.verifica"),
@@ -34,14 +34,14 @@ type servizio struct {
 }
 
 type primaServizio struct {
-	Origine Origine `json:"origine"`
+	Origine Origine `json:"origin"`
 	File    string  `json:"file"`   // enabled, disabled…
-	Attiva  string  `json:"attiva"` // active, inactive…
+	Attiva  string  `json:"active"` // active, inactive…
 }
 
 func nuovaServizio(p AzionePiano) (Azione, error) {
-	n, _ := strconv.Atoi(p.Parametri["porta"])
-	return &servizio{unita: nonVuoto(p.Parametri["unita"], "remotix.service"), porta: n}, nil
+	n, _ := strconv.Atoi(p.Parametri["port"])
+	return &servizio{unita: nonVuoto(p.Parametri["unit"], "remotix.service"), porta: n}, nil
 }
 
 func (s *servizio) stato(c *Contesto) (string, string, error) {
@@ -58,7 +58,7 @@ func (s *servizio) Vincoli(c *Contesto) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []string{"servizio:" + s.unita + "=" + f + " " + a}, nil
+	return []string{"service:" + s.unita + "=" + f + " " + a}, nil
 }
 
 func (s *servizio) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {

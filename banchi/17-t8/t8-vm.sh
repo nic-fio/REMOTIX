@@ -82,22 +82,22 @@ impronta)
 	echo "   impronta «$nome»: $(wc -l <"$E/impronta-$nome.txt") righe; depositi: $(wc -l <"$E/depositi-$nome.txt") righe"
 	;;
 motore)
-	vm "cd /tmp && curl -sf $ARCH/motore/remotix-install -o remotix-install && curl -sf $ARCH/motore/remotix-install.sha256 -o remotix-install.sha256
+	vm "cd /tmp && curl -sf $ARCH/engine/remotix-install -o remotix-install && curl -sf $ARCH/engine/remotix-install.sha256 -o remotix-install.sha256
 sha256sum -c remotix-install.sha256; echo \"sha256: uscita \$?\"
 sudo install -m 755 /tmp/remotix-install /root/remotix-install
-sudo /root/remotix-install versione" | tee "$E/motore.txt"
+sudo /root/remotix-install version" | tee "$E/motore.txt"
 	;;
 script)
 	# le risposte: la persona «prova» nei gruppi della scheda; firewall e RPM Fusion col consenso (D5,
 	# D6: il motore annota quelli che su questa macchina non servono)
-	vm "printf 'formato = remotix-risposte/1\nutenti = prova\nconsenso.firewall = si\n' | sudo tee /root/risposte.conf >/dev/null
-[ -e /etc/fedora-release ] && echo 'consenso.deposito.rpmfusion = si' | sudo tee -a /root/risposte.conf >/dev/null
+	vm "printf 'format = remotix-answers/2\nusers = prova\nconsent.firewall = yes\n' | sudo tee /root/risposte.conf >/dev/null
+[ -e /etc/fedora-release ] && echo 'consent.repo.rpmfusion = yes' | sudo tee -a /root/risposte.conf >/dev/null
 cd /tmp && curl -sf $ARCH/install.sh -o install.sh && curl -sf $ARCH/install.sh.sha256 -o install.sh.sha256
 sha256sum -c install.sh.sha256 && grep -E '^SHA256_MOTORE=' install.sh" >"$E/script.txt" 2>&1
 	echo "   install.sh: $(grep -E 'install.sh: ' "$E/script.txt")"
 	T0=$(date +%s)
-	vm "cd /tmp && sudo sh install.sh --archivio $ARCH --risposte /root/risposte.conf" >>"$E/script.txt" 2>&1
-	echo "   install.sh --risposte: uscita $? in $(( $(date +%s) - T0 )) s — $(grep -E '^operation |Engine VERIFIED' "$E/script.txt" | tr '\n' ' ')"
+	vm "cd /tmp && sudo sh install.sh --archive $ARCH --answers /root/risposte.conf" >>"$E/script.txt" 2>&1
+	echo "   install.sh --answers: uscita $? in $(( $(date +%s) - T0 )) s — $(grep -E '^operation |Engine VERIFIED' "$E/script.txt" | tr '\n' ' ')"
 	grep -E 'FALLITA|BLOCCATA|RX-' "$E/script.txt" | head -8 | sed 's/^/   /'
 	;;
 aggiorna)
@@ -110,7 +110,7 @@ sudo journalctl -u remotix.service --since @$T0 --no-pager -o short-unix | grep 
 	grep -aE 'remotix|installazione certificata|versioni di REMOTIX|RX-|uscita:|RITROVAT' "$E"/aggiorna-*.txt | tail -16 | cut -c1-220 | sed 's/^/   /'
 	;;
 disinstalla)
-	vm "sudo /usr/bin/remotix-install disinstalla --purge --uscita /root/d.json >/dev/null && sudo /usr/bin/remotix-install applica /root/d.json --approva" >"$E/disinstalla.txt" 2>&1
+	vm "sudo /usr/bin/remotix-install uninstall --purge --output /root/d.json >/dev/null && sudo /usr/bin/remotix-install apply /root/d.json --approve" >"$E/disinstalla.txt" 2>&1
 	echo "   disinstalla: uscita $? — $(grep -E '^operation ' "$E/disinstalla.txt")"
 	grep -E 'FALLITA|BLOCCATA|RX-' "$E/disinstalla.txt" | head -6 | sed 's/^/   /'
 	vm "echo \"pacchetti rimasti: \$( (dpkg-query -W -f='\${Package} ' 'remotix*' 2>/dev/null; rpm -qa 'remotix*' 2>/dev/null) | tr '\n' ' ')\"
@@ -118,23 +118,23 @@ echo \"archivi: \$(ls /etc/apt/sources.list.d /etc/yum.repos.d 2>/dev/null | gre
 	;;
 installa)
 	canale=${1:-stabile}
-	vm "sudo /root/remotix-install verifica --archivio $ARCH --canale $canale" >"$E/verifica.txt" 2>&1; echo "   verifica: uscita $?"
+	vm "sudo /root/remotix-install check --archive $ARCH --channel $canale" >"$E/verifica.txt" 2>&1; echo "   verifica: uscita $?"
 	grep -E '^Fiducia|^Catalogo' "$E/verifica.txt" | sed 's/^/   /'
-	vm "cd /tmp && sudo /root/remotix-install piano --installa --archivio $ARCH --canale $canale --utente prova ${PIANO_OPZ:-} --uscita /root/piano.json" >"$E/piano.txt" 2>&1
+	vm "cd /tmp && sudo /root/remotix-install plan --install --archive $ARCH --channel $canale --users prova ${PIANO_OPZ:-} --output /root/piano.json" >"$E/piano.txt" 2>&1
 	echo "   piano: uscita $? — $(grep -c '^[0-9]*\. ' "$E/piano.txt") passi"
-	vm "sudo /root/remotix-install approva /root/piano.json" >>"$E/piano.txt" 2>&1
+	vm "sudo /root/remotix-install approve /root/piano.json" >>"$E/piano.txt" 2>&1
 	T0=$(date +%s)
-	vm "sudo /root/remotix-install applica /root/piano.json" >"$E/applica.txt" 2>&1
+	vm "sudo /root/remotix-install apply /root/piano.json" >"$E/applica.txt" 2>&1
 	echo "   applica: uscita $? in $(( $(date +%s) - T0 )) s — $(grep -E '^operation ' "$E/applica.txt")"
 	grep -E 'FALLITA|BLOCCATA|RX-' "$E/applica.txt" | head -8 | sed 's/^/   /'
 	;;
 stato)
 	vm "echo \"pacchetti: \$( (dpkg-query -W -f='\${Package}=\${Version} ' remotix remotix-install remotix-archive-keyring 2>/dev/null; rpm -q remotix remotix-install remotix-selinux 2>/dev/null; pacman -Q remotix remotix-install 2>/dev/null) | tr '\n' ' ')\"
 echo \"servizio: \$(systemctl is-enabled remotix) \$(systemctl is-active remotix) · pid \$(systemctl show -p MainPID --value remotix)\"
-sudo /usr/bin/remotix-install stato
-sudo /usr/bin/remotix-install catalogo 2>&1 | head -1
-sudo /usr/bin/remotix-install certifica 2>&1 | head -1
-sudo sh -c 'cat /var/lib/remotix/aggiornamenti.json 2>/dev/null'; echo" 2>&1 | tee "$E/stato-$(t).txt"
+sudo /usr/bin/remotix-install status
+sudo /usr/bin/remotix-install catalog 2>&1 | head -1
+sudo /usr/bin/remotix-install certify 2>&1 | head -1
+sudo sh -c 'cat /var/lib/remotix/recorded-versions.json 2>/dev/null'; echo" 2>&1 | tee "$E/stato-$(t).txt"
 	;;
 collega)
 	rm -rf "$E/browser"; mkdir -p "$E/browser"

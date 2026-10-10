@@ -26,11 +26,11 @@ func TestPianoDaScelteComeLaCLI(t *testing.T) {
 		t.Fatal(err)
 	}
 	dom := DomandeDaFare(prof, rap, cat, amb, 7447, false, "")
-	if dom.Firewall != "chiuso" {
+	if dom.Firewall != "closed" {
 		t.Errorf("firewall: %q, atteso «chiuso» (firewalld finto, porta non aperta)", dom.Firewall)
 	}
 	voci := dom.VociDiserie()
-	if _, c := voci["consenso.cinture"]; c {
+	if _, c := voci["consent.guards"]; c {
 		t.Errorf("D4: le voci di serie chiedono ancora le cinture: %v", voci)
 	}
 	gui, err := PianoDaScelte(voci, prof, rap, cat, amb, OpzioniInstallazione{Pacchetto: "/remotix.deb", Porta: 7447})
@@ -50,7 +50,7 @@ func TestPianoDaScelteComeLaCLI(t *testing.T) {
 	}
 	n := 0
 	for _, a := range gui.Azioni {
-		if a.Tipo == "attiva-cintura" {
+		if a.Tipo == "enable-guard" {
 			n++
 			if a.Consenso != "" {
 				t.Errorf("D4: la cintura %s ha ancora un consenso: %q", a.ID, a.Consenso)
@@ -74,21 +74,21 @@ func TestPianoDaScelteComeLaCLI(t *testing.T) {
 	}
 
 	// un consenso che serve e che le schermate non danno è un errore, mai un «no» tacito
-	delete(voci, "consenso.firewall")
+	delete(voci, "consent.firewall")
 	if _, err := PianoDaScelte(voci, prof, rap, cat, amb, OpzioniInstallazione{Pacchetto: "/remotix.deb", Porta: 7447}); CodiceDi(err) != "RX-RISPOSTE-001" {
 		t.Errorf("consenso mancante: %v, atteso RX-RISPOSTE-001", err)
 	}
 	// una voce sconosciuta non passa
-	if _, err := PianoDaScelte(map[string]string{"consenso.firewal": "si"}, prof, rap, cat, amb, OpzioniInstallazione{Pacchetto: "/remotix.deb"}); CodiceDi(err) != "RX-RISPOSTE-002" {
+	if _, err := PianoDaScelte(map[string]string{"consent.firewal": "yes"}, prof, rap, cat, amb, OpzioniInstallazione{Pacchetto: "/remotix.deb"}); CodiceDi(err) != "RX-RISPOSTE-002" {
 		t.Errorf("voce sconosciuta: %v, atteso RX-RISPOSTE-002", err)
 	}
 }
 
 // Il testo delle risposte è sempre lo stesso per le stesse voci (si può rifare senza domande).
 func TestTestoRisposte(t *testing.T) {
-	a := TestoRisposte(map[string]string{"porta": "7447", "consenso.firewall": "si", "formato": FormatoRisposte})
-	b := TestoRisposte(map[string]string{"consenso.firewall": "si", "porta": "7447"})
-	if a != b || !strings.HasPrefix(a, "formato = "+FormatoRisposte+"\n") {
+	a := TestoRisposte(map[string]string{"port": "7447", "consent.firewall": "yes", "format": FormatoRisposte})
+	b := TestoRisposte(map[string]string{"consent.firewall": "yes", "port": "7447"})
+	if a != b || !strings.HasPrefix(a, "format = "+FormatoRisposte+"\n") {
 		t.Errorf("%q\n%q", a, b)
 	}
 }
@@ -106,11 +106,11 @@ func TestSenzaArchivioVideoNonSiInstalla(t *testing.T) {
 		// non si può aggiungere un deposito vero)
 		extra := map[string]string{}
 		if si {
-			extra["deposito.rpmfusion"] = "presente"
-			extra["deposito.rpmfusion-nonfree"] = "presente"
+			extra["repo.rpmfusion"] = "present"
+			extra["repo.rpmfusion-nonfree"] = "present"
 		}
 		fed := profiloDi("fedora", "44", extra)
-		fed.Verificato("h264.scheda", "no", "finto")
+		fed.Verificato("h264.gpu", "no", "finto")
 		rap := Valuta(cat, fed)
 		o := OpzioniInstallazione{Pacchetto: "/remotix.deb", Porta: 7447}
 		p, err := PianoInstallazione(fed, rap, cat, amb, o)
@@ -165,7 +165,7 @@ func TestFermataDaChiInstalla(t *testing.T) {
 		visto = visto || (e.Tipo == EvStato && e.A == IN_ANNULLAMENTO && e.Codice == "RX-AZIONE-006")
 	}
 	if !visto {
-		t.Errorf("fermata: IN_ANNULLAMENTO con RX-AZIONE-006 non è nel registro")
+		t.Errorf("fermata: ROLLING_BACK con RX-AZIONE-006 non è nel registro")
 	}
 }
 
@@ -188,12 +188,12 @@ func TestPianoPortaScelta(t *testing.T) {
 		file, servizio := -1, -1
 		for i, a := range p.Azioni {
 			switch {
-			case a.ID == "porta" && a.Tipo == "scrivi-file":
+			case a.ID == "port" && a.Tipo == "write-file":
 				file = i
-				if a.Parametri["percorso"] != "/etc/remotix/remotix.conf.d/porta.conf" || a.Parametri["contenuto"] != "REMOTIX_PORTA=8531\n" {
+				if a.Parametri["path"] != "/etc/remotix/remotix.conf.d/porta.conf" || a.Parametri["content"] != "REMOTIX_PORTA=8531\n" {
 					t.Errorf("porta %d: il file è %v", porta, a.Parametri)
 				}
-			case a.Tipo == "accendi-servizio":
+			case a.Tipo == "start-service":
 				servizio = i
 			}
 		}

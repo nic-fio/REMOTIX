@@ -24,57 +24,57 @@ func TestCertificaGuasti(t *testing.T) {
 		guasta func(b *banco, m *Motore)
 		atteso string
 	}{
-		{"sana, scheda che codifica", func(b *banco, m *Motore) { m.Amb.Esegui = buona; apri(b) }, "VERDE"},
+		{"sana, scheda che codifica", func(b *banco, m *Motore) { m.Amb.Esegui = buona; apri(b) }, "GREEN"},
 		// fase 19: la strada Vulkan Video (AMD, NVIDIA) è «hardware» come VA-API
 		{"sana, scheda che codifica in Vulkan", func(b *banco, m *Motore) {
 			m.Amb.Esegui = codifica(`{"esito":"hardware","codificatore":"h264_vulkan","strada":"vulkan","nodo":"/dev/dri/renderD129","motivo":"","codec":"h264","offerti":"hevc,h264","hevc":"hardware","h264":"hardware","hevc_strada":"vulkan","h264_strada":"vulkan"}`, 0)
 			apri(b)
-		}, "VERDE"},
+		}, "GREEN"},
 		{"scheda che si apre ma non codifica il fotogramma", func(b *banco, m *Motore) {
 			m.Amb.Esegui = codifica(`{"esito":"nessuno","codificatore":"h264_vaapi","nodo":"/dev/dri/renderD128","motivo":"il fotogramma non esce","codec":"h264","offerti":"","hevc":"nessuno","h264":"nessuno"}`, 1)
 			apri(b)
-		}, "ROSSO"},
+		}, "RED"},
 		// fase 19: niente ripiego sul processore — nessuna scheda capace (uscita 3) è ROSSO, mai a condizioni
 		{"nessuna scheda sa codificare (uscita 3)", func(b *banco, m *Motore) {
 			m.Amb.Esegui = codifica(`{"esito":"nessuno","codificatore":"","nodo":"","motivo":"nessun nodo di rendering","codec":"h264","offerti":"","hevc":"nessuno","h264":"nessuno"}`, 3)
 			apri(b)
-		}, "ROSSO"},
+		}, "RED"},
 		// un binario vecchio che dice ancora «software»: non è la scheda ⇒ ROSSO
 		{"il vecchio ripiego software", func(b *banco, m *Motore) {
 			m.Amb.Esegui = codifica(`{"esito":"software","codificatore":"libx264","nodo":"","motivo":"niente VA-API"}`, 0)
 			apri(b)
-		}, "ROSSO"},
-		{"prova di codifica che non risponde", func(b *banco, m *Motore) { apri(b) }, "A_CONDIZIONI"},
+		}, "RED"},
+		{"prova di codifica che non risponde", func(b *banco, m *Motore) { apri(b) }, "CONDITIONAL"},
 		{"PAM rotto (modulo tolto)", func(b *banco, m *Motore) {
 			m.Amb.Esegui = buona
 			apri(b)
 			os.Remove(filepath.Join(b.radice, "usr/lib/security/pam_unix.so"))
-		}, "ROSSO"},
+		}, "RED"},
 		{"PAM rotto (inclusione tolta)", func(b *banco, m *Motore) {
 			m.Amb.Esegui = buona
 			apri(b)
 			os.Remove(filepath.Join(b.radice, "etc/pam.d/common-account"))
-		}, "ROSSO"},
+		}, "RED"},
 		{"PAM tolto", func(b *banco, m *Motore) {
 			m.Amb.Esegui = buona
 			apri(b)
 			os.Remove(filepath.Join(b.radice, "etc/pam.d/remotix"))
-		}, "ROSSO"},
+		}, "RED"},
 		{"porta richiusa da altri dopo l'installazione", func(b *banco, m *Motore) {
 			m.Amb.Esegui = buona
 			f := &firewallFinto{b.radice}
 			f.Togli("public", "7447/tcp", false)
 			f.Togli("public", "7447/udp", false)
-		}, "ROSSO"},
+		}, "RED"},
 		{"firewall che non si sa leggere (ufw)", func(b *banco, m *Motore) {
 			m.Amb.Esegui = buona
 			os.WriteFile(filepath.Join(b.radice, "etc/finto-firewall"), []byte("ufw"), 0o644)
-		}, "A_CONDIZIONI"},
+		}, "CONDITIONAL"},
 		{"un passo disfatto da altri", func(b *banco, m *Motore) {
 			m.Amb.Esegui = buona
 			apri(b)
-			os.Remove(filepath.Join(b.radice, "etc/remotix/prova-motore.conf"))
-		}, "ROSSO"},
+			os.Remove(filepath.Join(b.radice, "etc/remotix/engine-test.conf"))
+		}, "RED"},
 	}
 	for _, c := range casi {
 		t.Run(c.nome, func(t *testing.T) {
@@ -98,7 +98,7 @@ func TestInstallazioneSchedaGuasta(t *testing.T) {
 	b := nuovoBanco(t)
 	var p Piano
 	LeggiJSON(b.piano, &p)
-	p.Mestiere, p.Approvazione = "installazione", nil
+	p.Mestiere, p.Approvazione = "installation", nil
 	ScriviJSON(b.piano, &p)
 	m := b.motore(t)
 	m.Amb.Esegui = func(_ time.Duration, nome string, _ ...string) (string, int, error) {
@@ -155,16 +155,16 @@ func TestCertificaDopoAggiornamento(t *testing.T) {
 		}
 		return r.Esito
 	}
-	if e := esito("aggiornato dal sistema", map[string]string{"remotix": "0.17.0-2", "libcomune": "2.1"}); e != "VERDE" {
+	if e := esito("aggiornato dal sistema", map[string]string{"remotix": "0.17.0-2", "libcomune": "2.1"}); e != "GREEN" {
 		t.Fatalf("dopo l'aggiornamento del sistema: %s", e)
 	}
-	if e := esito("tornato indietro, non annotato", map[string]string{"remotix": "0.16.0-1"}); e != "ROSSO" {
+	if e := esito("tornato indietro, non annotato", map[string]string{"remotix": "0.16.0-1"}); e != "RED" {
 		t.Fatalf("un ritorno indietro non annotato: %s", e)
 	}
 	if v, err := m.AnnotaVersioni(); err != nil || v["remotix"] != "0.16.0-1" {
 		t.Fatalf("annota: %v %v", v, err)
 	}
-	if e := esito("tornato indietro, annotato", map[string]string{"remotix": "0.16.0-1"}); e != "VERDE" {
+	if e := esito("tornato indietro, annotato", map[string]string{"remotix": "0.16.0-1"}); e != "GREEN" {
 		t.Fatalf("un ritorno indietro annotato da «aggiornato»: %s", e)
 	}
 }

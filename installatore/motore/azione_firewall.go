@@ -30,19 +30,19 @@ import (
 // parametri: porta ("7447"), protocolli ("tcp,udp"), servizio ("remotix", se la porta è quella
 // del servizio), zona (vuota = la predefinita, letta alla fotografia e poi fissata).
 
-func init() { registraTipo("regola-firewall", nuovaFirewall) }
+func init() { registraTipo("firewall-rule", nuovaFirewall) }
 
 // PortaDelServizio: la porta scritta nella definizione del servizio `remotix` (firewalld, ufw).
 const PortaDelServizio = "7447"
 
 // PianoFirewall prepara il passo del piano.
 func PianoFirewall(id, porta string) AzionePiano {
-	par := map[string]string{"porta": porta, "protocolli": "tcp,udp"}
+	par := map[string]string{"port": porta, "protocols": "tcp,udp"}
 	if porta == PortaDelServizio {
-		par["servizio"] = "remotix"
+		par["service"] = "remotix"
 	}
 	return AzionePiano{
-		ID: id, Tipo: "regola-firewall",
+		ID: id, Tipo: "firewall-rule",
 		Parametri:      par,
 		Descrizione:    T("az.fw", porta),
 		ComeSiFa:       T("az.fw.fa", porta),
@@ -76,21 +76,21 @@ type firewallAz struct {
 }
 
 type primaFirewall struct {
-	Origine  Origine         `json:"origine"`
-	Gestore  string          `json:"gestore"`
-	Zona     string          `json:"zona"`
-	Presenti map[string]bool `json:"presenti"` // "7447/tcp vive" → c'era già
-	// T6: "servizio" o "" (le porte); la zona di serie e l'impronta delle sue impostazioni permanenti
-	Forma    string `json:"forma,omitempty"`
-	DiSerie  bool   `json:"zona_di_serie,omitempty"`
-	Impronta string `json:"impronta_permanente,omitempty"`
+	Origine  Origine         `json:"origin"`
+	Gestore  string          `json:"manager"`
+	Zona     string          `json:"zone"`
+	Presenti map[string]bool `json:"present"` // "7447/tcp vive" → c'era già
+	// T6: "service" o "" (le porte); la zona di serie e l'impronta delle sue impostazioni permanenti
+	Forma    string `json:"form,omitempty"`
+	DiSerie  bool   `json:"default_zone,omitempty"`
+	Impronta string `json:"permanent_fingerprint,omitempty"`
 	// T6: <zona>.xml.old c'era già (se no, quello che loadDefaults lascia è nato da noi)
-	CeraOld bool `json:"cera_old,omitempty"`
+	CeraOld bool `json:"old_existed,omitempty"`
 }
 
 func nuovaFirewall(p AzionePiano) (Azione, error) {
-	f := &firewallAz{porta: p.Parametri["porta"], zona: p.Parametri["zona"], servizio: p.Parametri["servizio"]}
-	for _, x := range strings.Split(nonVuoto(p.Parametri["protocolli"], "tcp,udp"), ",") {
+	f := &firewallAz{porta: p.Parametri["port"], zona: p.Parametri["zone"], servizio: p.Parametri["service"]}
+	for _, x := range strings.Split(nonVuoto(p.Parametri["protocols"], "tcp,udp"), ",") {
 		f.protocolli = append(f.protocolli, strings.TrimSpace(x))
 	}
 	return f, nil
@@ -99,11 +99,11 @@ func nuovaFirewall(p AzionePiano) (Azione, error) {
 // regoleDi: le chiavi «regola vive|permanente» di una forma.
 func (f *firewallAz) regoleDi(forma string) []string {
 	var r []string
-	if forma == "servizio" {
-		r = []string{"servizio:" + f.servizio + " vive", "servizio:" + f.servizio + " permanente"}
+	if forma == "service" {
+		r = []string{"service:" + f.servizio + " runtime", "service:" + f.servizio + " permanent"}
 	} else {
 		for _, p := range f.protocolli {
-			r = append(r, f.porta+"/"+p+" vive", f.porta+"/"+p+" permanente")
+			r = append(r, f.porta+"/"+p+" runtime", f.porta+"/"+p+" permanent")
 		}
 	}
 	sort.Strings(r)
@@ -116,7 +116,7 @@ func (f *firewallAz) regole() []string { return f.regoleDi("") }
 
 func dividiRegola(k string) (string, bool) {
 	porta, tipo, _ := strings.Cut(k, " ")
-	return porta, tipo == "permanente"
+	return porta, tipo == "permanent"
 }
 
 func (f *firewallAz) leggiForma(c *Contesto, zona, forma string) (map[string]bool, error) {
@@ -162,7 +162,7 @@ func (f *firewallAz) Vincoli(c *Contesto) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	v := []string{"firewall=" + g + " zona=" + zona}
+	v := []string{"firewall=" + g + " zone=" + zona}
 	for _, k := range f.regole() {
 		v = append(v, "firewall:"+zona+":"+k+"="+siNo(r[k]))
 	}
@@ -179,7 +179,7 @@ func (f *firewallAz) forma(c *Contesto) (string, error) {
 	if err != nil || !sa {
 		return "", err
 	}
-	return "servizio", nil
+	return "service", nil
 }
 
 func (f *firewallAz) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
@@ -196,7 +196,7 @@ func (f *firewallAz) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 		return nil, "", err
 	}
 	// la porta già aperta (anche in parte) resta nella sua forma: le porte, e le si completa
-	if forma == "servizio" {
+	if forma == "service" {
 		rp, err := f.leggiForma(c, zona, "")
 		if err != nil {
 			return nil, "", err

@@ -47,7 +47,7 @@ var cartelleModuliPAM = []string{"/usr/lib/security", "/usr/lib64/security", "/l
 
 // controllaPAM segue la pila da /etc/pam.d/remotix (o /usr/lib/pam.d/remotix).
 func controllaPAM(a *Ambiente) Controllo {
-	k := Controllo{ID: "pam-risolta", Cosa: T("ver.pam"), Richiesto: true}
+	k := Controllo{ID: "pam-resolved", Cosa: T("ver.pam"), Richiesto: true}
 	f := trovaPam(a, "remotix")
 	if f == "" {
 		k.Esito, k.Dettaglio = "FAIL", "the remotix file is missing in /etc/pam.d and /usr/lib/pam.d"
@@ -141,13 +141,13 @@ func moduloPAM(a *Ambiente, m string) bool {
 
 func controllaPorta(a *Ambiente, porta int) (Controllo, *Condizione) {
 	ps := strconv.Itoa(porta)
-	k := Controllo{ID: "porta-firewall", Cosa: T("ver.porta", ps), Richiesto: false}
+	k := Controllo{ID: "firewall-port", Cosa: T("ver.porta", ps), Richiesto: false}
 	if a.Firewall == nil {
 		k.Esito, k.Dettaglio = "UNKNOWN", "firewall not read"
 		return k, &Condizione{Codice: "C-AMMINISTRATORE", Testo: T("cond.porta_ignota", ps)}
 	}
 	switch g := a.Firewall.Nome(); g {
-	case "nessuno":
+	case "none":
 		k.Esito, k.Dettaglio = "PASS", T("ver.porta_nessuno")
 		return k, nil
 	case "firewalld":
@@ -173,10 +173,10 @@ func controllaPorta(a *Ambiente, porta int) (Controllo, *Condizione) {
 			}
 		}
 		if len(chiuse) == 0 {
-			k.Esito, k.Dettaglio = "PASS", "firewalld, zona "+zona+": aperta TCP e UDP"
+			k.Esito, k.Dettaglio = "PASS", "firewalld, zone "+zona+": open TCP and UDP"
 			return k, nil
 		}
-		k.Esito, k.Dettaglio = "FAIL", "firewalld, zona "+zona+": chiusa "+strings.Join(chiuse, " ")
+		k.Esito, k.Dettaglio = "FAIL", "firewalld, zone "+zona+": closed "+strings.Join(chiuse, " ")
 		return k, &Condizione{Codice: "C-AMMINISTRATORE", Testo: T("cond.porta_chiusa", strings.Join(chiuse, " ")),
 			Rimedio: "firewall-cmd --permanent --add-port=" + ps + "/tcp --add-port=" + ps + "/udp && firewall-cmd --reload"}
 	default:
@@ -188,12 +188,12 @@ func controllaPorta(a *Ambiente, porta int) (Controllo, *Condizione) {
 // Certificazione: il rapporto di `remotix-install certifica` (§6.6.11: si rifanno i controlli
 // sull'installazione confermata, e si dice che cosa è ancora come allora).
 type Certificazione struct {
-	Formato    string       `json:"formato"`
-	Oggetto    string       `json:"oggetto"` // "certificazione"
-	Operazione string       `json:"operazione"`
-	Controlli  []Controllo  `json:"controlli"`
-	Condizioni []Condizione `json:"condizioni"`
-	Esito      string       `json:"esito"` // VERDE · A_CONDIZIONI · ROSSO
+	Formato    string       `json:"format"`
+	Oggetto    string       `json:"object"` // "certification"
+	Operazione string       `json:"operation"`
+	Controlli  []Controllo  `json:"checks"`
+	Condizioni []Condizione `json:"conditions"`
+	Esito      string       `json:"result"` // VERDE · A_CONDIZIONI · ROSSO
 }
 
 // Certifica rifà, in sola lettura, i controlli dell'installazione confermata.
@@ -204,14 +204,14 @@ func (m *Motore) Certifica() (*Certificazione, error) {
 	}
 	dir := filepath.Join(m.Cartella, in.Operazione)
 	var pn Piano
-	if err := LeggiJSON(filepath.Join(dir, "piano.json"), &pn); err != nil {
+	if err := LeggiJSON(filepath.Join(dir, "plan.json"), &pn); err != nil {
 		return nil, err
 	}
-	ev, err := LeggiRegistro(filepath.Join(dir, "registro.jsonl"))
+	ev, err := LeggiRegistro(filepath.Join(dir, "log.jsonl"))
 	if err != nil {
 		return nil, err
 	}
-	r := &Certificazione{Formato: Formato, Oggetto: "certificazione", Operazione: in.Operazione, Condizioni: []Condizione{}}
+	r := &Certificazione{Formato: Formato, Oggetto: "certification", Operazione: in.Operazione, Condizioni: []Condizione{}}
 	rosso := false
 	for _, ap := range pn.Azioni {
 		var intz *Evento
@@ -255,11 +255,11 @@ func (m *Motore) Certifica() (*Certificazione, error) {
 	}
 	switch {
 	case rosso || fallito:
-		r.Esito = "ROSSO"
+		r.Esito = "RED"
 	case tuttiPass && len(r.Condizioni) == 0:
-		r.Esito = "VERDE"
+		r.Esito = "GREEN"
 	default:
-		r.Esito = "A_CONDIZIONI" // ⛔ UNKNOWN non è mai PASS, una condizione non è mai verde (R29, R32)
+		r.Esito = "CONDITIONAL" // ⛔ UNKNOWN non è mai PASS, una condizione non è mai verde (R29, R32)
 	}
 	return r, nil
 }

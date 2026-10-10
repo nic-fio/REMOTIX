@@ -33,7 +33,7 @@ func TestTransizioni(t *testing.T) {
 			t.Errorf("%s → annullamento: prima della fase 6 non c'è niente da annullare", s)
 		}
 		if !Valida(s, BLOCCATA) {
-			t.Errorf("%s → BLOCCATA deve valere", s)
+			t.Errorf("%s → BLOCKED deve valere", s)
 		}
 	}
 	if Valida(IN_ESECUZIONE, CONFERMATA) || Valida(INTERROTTA, APPLICATA) || Valida(IN_ANNULLAMENTO, CONFERMATA) {
@@ -46,7 +46,7 @@ func TestTransizioni(t *testing.T) {
 	b := nuovoBanco(t)
 	op, _ := b.motore(t).Applica(b.piano, false, "prova")
 	if err := op.vai(IN_ESECUZIONE, "", ""); CodiceDi(err) != "RX-STATO-002" {
-		t.Errorf("CONFERMATA → IN_ESECUZIONE accettata: %v", err)
+		t.Errorf("CONFIRMED → RUNNING accettata: %v", err)
 	}
 }
 
@@ -78,7 +78,7 @@ func TestImprontaCambiata(t *testing.T) {
 	dopoCambio := foto(t, b.radice)
 	op, err := b.motore(t).Applica(b.piano, false, "prova")
 	if CodiceDi(err) != "RX-PIANO-001" || op.Stato != BLOCCATA {
-		t.Fatalf("atteso BLOCCATA con RX-PIANO-001, invece %v %v", op.Stato, err)
+		t.Fatalf("atteso BLOCKED con RX-PIANO-001, invece %v %v", op.Stato, err)
 	}
 	if !strings.Contains(err.Error(), "file:/etc/remotix-esistente.conf") {
 		t.Errorf("il rifiuto non dice che cosa è cambiato: %v", err)
@@ -87,7 +87,7 @@ func TestImprontaCambiata(t *testing.T) {
 		t.Fatalf("toccata: %v", d)
 	}
 	if ap, _ := b.motore(t).Aperta(); ap != nil {
-		t.Error("una BLOCCATA deve essere finale")
+		t.Error("una BLOCKED deve essere finale")
 	}
 	// anche un elemento del profilo: un gruppo della scheda con un membro in più
 	b2 := nuovoBanco(t)
@@ -117,19 +117,19 @@ func TestConsenso(t *testing.T) {
 	// a mano (--approva): vale
 	if op, err := b.motore(t).Applica(b.piano, true, "prova"); err != nil || op.Stato != RIFIUTATA {
 		// l'approvazione sbagliata nel file vince su --approva: il file dice un altro piano
-		t.Logf("con approvazione sbagliata nel file e --approva: %v %v", op.Stato, err)
+		t.Logf("con approvazione sbagliata nel file e --approve: %v %v", op.Stato, err)
 	}
 	p.Approvazione = nil
 	ScriviJSON(b.piano, &p)
 	if op, err := b.motore(t).Applica(b.piano, true, "prova"); err != nil || op.Stato != CONFERMATA {
-		t.Fatalf("con --approva: %v %v", op.Stato, err)
+		t.Fatalf("con --approve: %v %v", op.Stato, err)
 	}
 }
 
 // Una sola operazione aperta alla volta; e la serratura.
 func TestUnaAllaVolta(t *testing.T) {
 	b := nuovoBanco(t)
-	uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@unita")
+	uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "dopo-fatta@unit")
 	if _, err := b.motore(t).Applica(b.piano, false, "prova"); CodiceDi(err) != "RX-STATO-001" {
 		t.Fatalf("un'operazione aperta non ha fermato la nuova: %v", err)
 	}
@@ -152,7 +152,7 @@ func TestIdempotenza(t *testing.T) {
 	}
 	dopo := foto(t, b.radice)
 	if _, err := b.motore(t).Riprendi(); CodiceDi(err) != "RX-STATO-004" {
-		t.Fatalf("riprendi dopo CONFERMATA: %v", err)
+		t.Fatalf("riprendi dopo CONFIRMED: %v", err)
 	}
 	piano2 := pianoDiProva(t, b.radice, t.TempDir(), true)
 	op, err := b.motore(t).Applica(piano2, false, "prova")
@@ -172,17 +172,17 @@ func TestIdempotenza(t *testing.T) {
 // R32 in piccolo: un controllo che non sa rispondere (systemctl che non risponde) non è PASS.
 func TestSconosciutoNonPassa(t *testing.T) {
 	b := nuovoBanco(t)
-	uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "stato:IN_VERIFICA@")
+	uccidiIn(t, b.radice, b.operazioni, b.piano, "applica", "stato:VERIFYING@")
 	os.WriteFile(filepath.Join(b.radice, "rompi-systemctl"), nil, 0o644)
 	op, _ := b.motore(t).Riprendi()
 	if op.Stato == CONFERMATA || op.Stato == CONFERMATA_A_CONDIZIONI {
-		t.Fatalf("CONFERMATA con un controllo senza risposta")
+		t.Fatalf("CONFIRMED con un controllo senza risposta")
 	}
 	var rv RapportoVerifica
-	LeggiJSON(filepath.Join(op.Cartella, "verifica.json"), &rv)
+	LeggiJSON(filepath.Join(op.Cartella, "check.json"), &rv)
 	trovato := false
 	for _, k := range rv.Controlli {
-		if k.ID == "unita" && k.Esito == "UNKNOWN" {
+		if k.ID == "unit" && k.Esito == "UNKNOWN" {
 			trovato = true
 		}
 	}
@@ -204,7 +204,7 @@ func TestInstallazione(t *testing.T) {
 	}
 	var p Piano
 	LeggiJSON(b.piano, &p)
-	p.Mestiere = "installazione"
+	p.Mestiere = "installation"
 	p.Approvazione = nil
 	b2 := nuovoBanco(t)
 	ScriviJSON(b2.piano, &p)
@@ -226,7 +226,7 @@ func TestInstallazione(t *testing.T) {
 func TestSenzaDesktop(t *testing.T) {
 	cat := catalogoProva(t)
 	prof := profiloFinto()
-	prof.Rilevato("desktop.gnome", "assente", "finto")
+	prof.Rilevato("desktop.gnome", "absent", "finto")
 	rap := Valuta(cat, prof)
 	if !rap.SenzaDesktop {
 		t.Fatal("senza desktop non rilevato")
@@ -238,7 +238,7 @@ func TestSenzaDesktop(t *testing.T) {
 	for _, rispo := range []string{"no", "kde"} {
 		b := nuovoBanco(t)
 		m := b.motore(t)
-		m.Esamina = func() *Profilo { p := profiloFinto(); p.Rilevato("desktop.gnome", "assente", "finto"); return p }
+		m.Esamina = func() *Profilo { p := profiloFinto(); p.Rilevato("desktop.gnome", "absent", "finto"); return p }
 		var p Piano
 		LeggiJSON(b.piano, &p)
 		p.Scelte = []Scelta{*s}
@@ -253,11 +253,11 @@ func TestSenzaDesktop(t *testing.T) {
 		switch rispo {
 		case "no": // niente desktop ⇒ REMOTIX non si installa, niente toccato
 			if op.Stato != BLOCCATA || !strings.Contains(ultimoStato(op), "RX-DESKTOP-001") {
-				t.Errorf("risposta no: %s %v (atteso BLOCCATA RX-DESKTOP-001)", op.Stato, err)
+				t.Errorf("risposta no: %s %v (atteso BLOCKED RX-DESKTOP-001)", op.Stato, err)
 			}
 		case "kde": // task-kde-desktop non è nel deposito finto: fallisce nell'acquisizione, prima di toccare
 			if op.Stato != ANNULLATA {
-				t.Errorf("risposta kde: %s %v (atteso ANNULLATA)", op.Stato, err)
+				t.Errorf("risposta kde: %s %v (atteso ROLLED_BACK)", op.Stato, err)
 			}
 		}
 		if d := differenze(b.prima, foto(t, b.radice)); len(d) > 0 {
@@ -327,7 +327,7 @@ func TestPianoDiProva(t *testing.T) {
 	for _, a := range p.Azioni {
 		tipi = append(tipi, a.Tipo)
 	}
-	if got := strings.Join(tipi, ","); got != "installa-pacchetti,scrivi-file,scrivi-file,abilita-unita,regola-firewall,aggiungi-utente-a-gruppo" {
+	if got := strings.Join(tipi, ","); got != "install-packages,write-file,write-file,enable-unit,firewall-rule,add-user-to-group" {
 		t.Fatalf("ordine dei passi: %s", got)
 	}
 }

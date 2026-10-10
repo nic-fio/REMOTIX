@@ -1,7 +1,7 @@
 #!/bin/sh
 # REMOTIX — lo script d'ingresso, in inglese (DECISIONI §10.35) (fasi/17-l-installatore.md §6.1, §6.5 punto 1).
 #
-#   curl -fsSL <archivio>/install.sh | sudo sh -s -- --archivio <archivio> [opzioni]
+#   curl -fsSL <archive>/install.sh | sudo sh -s -- --archive <archive> [options]
 #
 # Che cosa fa, e basta: riconosce la distribuzione, scarica il MOTORE d'installazione
 # (remotix-install, binario statico) dall'archivio di REMOTIX, ne VERIFICA lo sha256 (§6.6.10,
@@ -12,16 +12,18 @@
 # La catena, dall'amministratore in giù: lui verifica QUESTO script con lo sha256 pubblicato sul sito
 # (HTTPS); lo script verifica il motore con lo sha256 scritto qui sotto dal comando di rilascio
 # (packaging/rilascio.sh) — o, in una copia di sviluppo dove la riga è vuota, con quello pubblicato
-# accanto al motore (<archivio>/motore/<nome>.sha256), scaricato in HTTPS; il motore porta dentro di
+# accanto al motore (<archive>/engine/<name>.sha256), scaricato in HTTPS; il motore porta dentro di
 # sé il catalogo.
 #
-#   --archivio URL      l'archivio di REMOTIX (D10: un indirizzo pubblico non c'è ancora)
-#   --canale C          stabile (predefinito) · candidato
-#   --verifica          solo il controllo della macchina: niente viene toccato (anche da utente)
+#   --archive URL       l'archivio di REMOTIX (D10: un indirizzo pubblico non c'è ancora)
+#   --channel C         stable (predefinito) · candidate
+#   --check             solo il controllo della macchina: niente viene toccato (anche da utente)
 #   --dry-run           il controllo e il PIANO che si applicherebbe: niente viene toccato (da root)
-#   --risposte FILE     installazione SENZA DOMANDE dal file di risposte (§6.6.12)
+#   --answers FILE      installazione SENZA DOMANDE dal file di risposte (§6.6.12)
 #   --tui               le schermate nel terminale (da root), per ssh e console
-#   --insicuro          (solo prove) accetta un archivio in http:// anche senza lo sha256 scritto qui
+#   --insecure          (solo prove) accetta un archivio in http:// anche senza lo sha256 scritto qui
+#
+# ⚠ 10 ott 2026: opzioni, comandi del motore e cartelle dell'archivio in inglese (DECISIONI §10.35).
 #   -- …                il resto va al motore così com'è
 #
 # Tutto il corpo sta in funzioni, e l'ultima riga chiama main: uno scaricamento interrotto a metà
@@ -114,32 +116,32 @@ verifica_sha256() {
 # ---------------------------------------------------------------- main
 
 uso() {
-	dice "usage: install.sh --archivio URL [--canale stabile|candidato] [--verifica | --dry-run | --tui] [--risposte FILE] [--insicuro] [-- engine options]"
+	dice "usage: install.sh --archive URL [--channel stable|candidate] [--check | --dry-run | --tui] [--answers FILE] [--insecure] [-- engine options]"
 }
 
 main() {
-	ARCHIVIO=${REMOTIX_ARCHIVIO:-$ARCHIVIO_PREDEFINITO} CANALE=stabile MODO=installa RISPOSTE='' INSICURO=''
+	ARCHIVIO=${REMOTIX_ARCHIVE:-$ARCHIVIO_PREDEFINITO} CANALE=stable MODO=installa RISPOSTE='' INSICURO=''
 	while [ $# -gt 0 ]; do
 		case $1 in
-		--archivio) ARCHIVIO=${2:-}; shift ;;
-		--archivio=*) ARCHIVIO=${1#*=} ;;
-		--canale) CANALE=${2:-}; shift ;;
-		--canale=*) CANALE=${1#*=} ;;
-		--verifica) MODO=verifica ;;
+		--archive) ARCHIVIO=${2:-}; shift ;;
+		--archive=*) ARCHIVIO=${1#*=} ;;
+		--channel) CANALE=${2:-}; shift ;;
+		--channel=*) CANALE=${1#*=} ;;
+		--check) MODO=verifica ;;
 		--dry-run) MODO=prova ;;
 		--tui) MODO=tui ;;
-		--insicuro) INSICURO=1 ;;
-		--risposte) RISPOSTE=${2:-}; shift ;;
-		--risposte=*) RISPOSTE=${1#*=} ;;
-		-h | --help | --aiuto) uso; exit 0 ;;
+		--insecure) INSICURO=1 ;;
+		--answers) RISPOSTE=${2:-}; shift ;;
+		--answers=*) RISPOSTE=${1#*=} ;;
+		-h | --help) uso; exit 0 ;;
 		--) shift; break ;;
 		*) uso >&2; exit 2 ;;
 		esac
 		shift
 	done
-	[ -n "$ARCHIVIO" ] || { uso >&2; errore "the archive address is missing (--archivio URL)."; }
+	[ -n "$ARCHIVIO" ] || { uso >&2; errore "the archive address is missing (--archive URL)."; }
 	ARCHIVIO=${ARCHIVIO%/}
-	case $CANALE in stabile | candidato) ;; *) errore "channel «$CANALE» (stabile · candidato)" ;; esac
+	case $CANALE in stable | candidate) ;; *) errore "channel «$CANALE» (stable · candidate)" ;; esac
 	if [ -n "$RISPOSTE" ]; then
 		[ -r "$RISPOSTE" ] || errore "the answer file $RISPOSTE cannot be read."
 		case $RISPOSTE in /*) ;; *) RISPOSTE=$(pwd)/$RISPOSTE ;; esac
@@ -147,7 +149,7 @@ main() {
 	# --dry-run vuole root anche lui: il piano legge i file che toccherebbe (polkit, logind), e da
 	# utente non si leggono (`[M]` 30 set, debian13-gnome: «lstat /etc/polkit-1/rules.d/…: permission denied»)
 	if [ "$MODO" != verifica ] && [ "$(id -u)" -ne 0 ]; then
-		errore "installation and --dry-run must be run as root (sudo sh install.sh …); --verifica need not."
+		errore "installation and --dry-run must be run as root (sudo sh install.sh …); --check need not."
 	fi
 	riconosci
 
@@ -163,41 +165,41 @@ main() {
 		# sta in mezzo cambierebbe motore e sha256 insieme)
 		case $ARCHIVIO in
 		https://* | file://*) ;;
-		*) [ -n "$INSICURO" ] || errore "the archive $ARCHIVIO is not HTTPS: the engine sha256 would protect nothing (RX-TRUST-017). For testing only: --insicuro." ;;
+		*) [ -n "$INSICURO" ] || errore "the archive $ARCHIVIO is not HTTPS: the engine sha256 would protect nothing (RX-TRUST-017). For testing only: --insecure." ;;
 		esac
-		scarica "$ARCHIVIO/motore/$NOME.sha256" "$T/atteso" || errore "the engine sha256 cannot be downloaded from $ARCHIVIO (RX-TRUST-017)."
+		scarica "$ARCHIVIO/engine/$NOME.sha256" "$T/atteso" || errore "the engine sha256 cannot be downloaded from $ARCHIVIO (RX-TRUST-017)."
 		ATTESO=$(cut -d' ' -f1 <"$T/atteso")
-		DA="$ARCHIVIO/motore/$NOME.sha256"
+		DA="$ARCHIVIO/engine/$NOME.sha256"
 	fi
-	dice "Downloading the engine from $ARCHIVIO/motore/ …"
-	scarica "$ARCHIVIO/motore/$NOME" "$M" || errore "the engine cannot be downloaded from $ARCHIVIO."
+	dice "Downloading the engine from $ARCHIVIO/engine/ …"
+	scarica "$ARCHIVIO/engine/$NOME" "$M" || errore "the engine cannot be downloaded from $ARCHIVIO."
 	verifica_sha256 "$M" "$ATTESO"
 	chmod 0755 "$M"
 	dice "Engine VERIFIED: sha256 equal to the published one ($DA). Handing over to the engine."
 
 	# o dal file di risposte (DECISIONI §10.15: il file di risposte può fissarla)
-	comuni="--archivio $ARCHIVIO --canale $CANALE"
+	comuni="--archive $ARCHIVIO --channel $CANALE"
 	case $MODO in
 	tui)
 		# curl | sh: lo standard input è lo script; le schermate vogliono il terminale
-		"$M" tui --archivio "$ARCHIVIO" --canale "$CANALE" "$@" </dev/tty
+		"$M" tui --archive "$ARCHIVIO" --channel "$CANALE" "$@" </dev/tty
 		exit $?
 		;;
 	verifica)
 		# shellcheck disable=SC2086
-		"$M" verifica $comuni "$@"
+		"$M" check $comuni "$@"
 		exit $?
 		;;
 	prova)
 		# shellcheck disable=SC2086
-		"$M" verifica $comuni >/dev/null 2>&1
+		"$M" check $comuni >/dev/null 2>&1
 		dice "--dry-run: the plan that would be applied (nothing is touched):"
 		if [ -n "$RISPOSTE" ]; then
 			# shellcheck disable=SC2086
-			"$M" piano --installa --risposte "$RISPOSTE" --uscita "$T/piano.json" $comuni "$@"
+			"$M" plan --install --answers "$RISPOSTE" --output "$T/plan.json" $comuni "$@"
 		else
 			# shellcheck disable=SC2086
-			"$M" piano --installa --uscita "$T/piano.json" $comuni "$@"
+			"$M" plan --install --output "$T/plan.json" $comuni "$@"
 		fi
 		c=$?
 		dice "--dry-run: done, nothing was touched (exit $c)."
@@ -206,14 +208,14 @@ main() {
 	esac
 	if [ -n "$RISPOSTE" ]; then
 		# shellcheck disable=SC2086
-		"$M" installa --risposte "$RISPOSTE" $comuni "$@"
+		"$M" install --answers "$RISPOSTE" $comuni "$@"
 	elif [ -r /dev/tty ] && ( : </dev/tty ) 2>/dev/null; then
 		# curl | sh: lo standard input è lo script; la conferma si chiede al terminale
 		# shellcheck disable=SC2086
-		"$M" installa $comuni "$@" </dev/tty
+		"$M" install $comuni "$@" </dev/tty
 	else
 		# shellcheck disable=SC2086
-		"$M" installa $comuni "$@"
+		"$M" install $comuni "$@"
 	fi
 	exit $?
 }

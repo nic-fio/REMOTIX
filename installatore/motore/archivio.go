@@ -71,13 +71,13 @@ func ParametriArchivio(a *Ambiente, base, canale, chiave, impronta string) (map[
 	if err != nil || (u.Host == "" && !(u.Scheme == "file" && strings.HasPrefix(u.Path, "/"))) {
 		return nil, fmt.Errorf("the archive address is not a URL: %q", base)
 	}
-	canale = nonVuoto(canale, "stabile")
+	canale = nonVuoto(canale, "stable")
 	b := BersaglioArchivio(a)
-	p := map[string]string{"nome": "remotix", "archivio": base, "canale": canale, "chiave": chiave, "impronta": impronta,
-		"host": u.Hostname(), "pacchetti": strings.Join(PacchettiArchivio, ",")}
+	p := map[string]string{"name": "remotix", "archive": base, "channel": canale, "key": chiave, "fingerprint": impronta,
+		"host": u.Hostname(), "packages": strings.Join(PacchettiArchivio, ",")}
 	switch a.Famiglia {
 	case "debian":
-		p["url"], p["suite"], p["componenti"] = base+"/deb", b+"-"+canale, "main"
+		p["url"], p["suite"], p["components"] = base+"/deb", b+"-"+canale, "main"
 	case "fedora", "suse":
 		p["url"] = base + "/rpm/" + canale + "/" + b + "/"
 	case "arch":
@@ -152,7 +152,7 @@ func (d *deposito) togliBloccoPacman(c *Contesto) error {
 
 // chiavePacman: la chiave dell'archivio è nel portachiavi di pacman?
 func (d *deposito) chiavePacman(c *Contesto) (bool, error) {
-	_, cod, err := c.Amb.Esegui(time.Minute, "pacman-key", "--list-keys", d.par["impronta"])
+	_, cod, err := c.Amb.Esegui(time.Minute, "pacman-key", "--list-keys", d.par["fingerprint"])
 	if err != nil {
 		return false, err
 	}
@@ -160,14 +160,14 @@ func (d *deposito) chiavePacman(c *Contesto) (bool, error) {
 }
 
 func (d *deposito) mettiChiavePacman(c *Contesto) error {
-	f := filepath.Join(c.Cartella, "chiave-archivio.asc")
-	if err := ScriviAtomico(f, []byte(d.par["chiave"]), 0o600); err != nil {
+	f := filepath.Join(c.Cartella, "archive-key.asc")
+	if err := ScriviAtomico(f, []byte(d.par["key"]), 0o600); err != nil {
 		return err
 	}
 	if _, err := esegui(c.Amb, time.Minute, "pacman-key", "--add", f); err != nil {
 		return err
 	}
-	_, err := esegui(c.Amb, time.Minute, "pacman-key", "--lsign-key", d.par["impronta"])
+	_, err := esegui(c.Amb, time.Minute, "pacman-key", "--lsign-key", d.par["fingerprint"])
 	return err
 }
 
@@ -186,7 +186,7 @@ func ConfSoloRemotix(a *Ambiente, dir string) (string, error) {
 	}
 	j := strings.Index(t[i:], fineBloccoPacman)
 	blocco := t[i : i+j]
-	f := filepath.Join(dir, "pacman-solo-remotix.conf")
+	f := filepath.Join(dir, "pacman-remotix-only.conf")
 	if err := ScriviAtomico(f, []byte("[options]\nArchitecture = auto\n\n"+blocco), 0o600); err != nil {
 		return "", err
 	}

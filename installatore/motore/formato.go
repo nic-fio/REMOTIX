@@ -17,7 +17,7 @@ import (
 
 // Formato è la versione di formato di tutti gli oggetti del motore (§6.6.1). Cambia solo se un
 // oggetto cambia in modo che un lettore vecchio lo leggerebbe male.
-const Formato = "remotix-install/1"
+const Formato = "remotix-install/2"
 
 // VersioneMotore è la versione di questo motore; il catalogo dichiara la minima che lo capisce.
 // Il comando di rilascio (packaging/rilascio.sh) la fissa uguale a quella del rilascio
@@ -105,7 +105,7 @@ func LeggiJSON(percorso string, v any) error {
 		return err
 	}
 	var intestazione struct {
-		Formato string `json:"formato"`
+		Formato string `json:"format"`
 	}
 	if err := json.Unmarshal(b, &intestazione); err != nil {
 		return fmt.Errorf("%s: not valid JSON: %w", percorso, err)

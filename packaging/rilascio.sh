@@ -28,7 +28,7 @@
 #
 # Ambiente:
 #   BERSAGLI   quali (predefinito: debian13 ubuntu2604 fedora44 alma10 tumbleweed leap16 arch)
-#   CANALE     stabile (predefinito) · candidato
+#   CANALE     stable (predefinito) · candidate
 #   ARCHIVIO   la cartella dell'archivio;  CHIAVI  la cartella delle chiavi (la privata, fuori dal deposito)
 #   RX_SPORCO=1  solo per prova: accetta un albero con modifiche non committate (i pacchetti lo dicono)
 # ⚠ Niente /tmp: sul portatile è quasi pieno; tutto sotto costruzione-uscita/.
@@ -43,7 +43,7 @@ if ! [[ $VERSIONE =~ ^([0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)$ ]]; then
 fi
 V=${BASH_REMATCH[1]} R=${BASH_REMATCH[2]}
 BERSAGLI=${BERSAGLI:-debian13 ubuntu2604 fedora44 alma10 tumbleweed leap16 arch}
-CANALE=${CANALE:-stabile}
+CANALE=${CANALE:-stable}
 export ARCHIVIO=${ARCHIVIO:-$ALBERO/costruzione-uscita/archivio}
 export CHIAVI=${CHIAVI:-$(dirname "$(git -C "$(dirname "$0")" rev-parse --path-format=absolute --git-common-dir)")/.chiavi}
 # D10 aperta: dove si carica l'archivio (il VPS). Quando c'è, qui l'indirizzo.
@@ -54,7 +54,7 @@ podman unshare rm -rf "$LAV"; mkdir -p "$LAV/tmp"
 export TMPDIR=$LAV/tmp
 REG=$LAV/rilascio.log
 passo() { printf '\n== %s\n' "$*" | tee -a "$REG"; }
-case $CANALE in stabile | candidato) ;; *) echo "⛔ canale $CANALE"; exit 2 ;; esac
+case $CANALE in stable | candidate) ;; *) echo "⛔ canale $CANALE"; exit 2 ;; esac
 [ -r "$CHIAVI/b/archivio.impronta" ] || { echo "⛔ la chiave dell'archivio non c'è in $CHIAVI/b"; exit 1; }
 
 passo "1. l'albero ($VERSIONE, canale $CANALE, bersagli: $BERSAGLI)"
@@ -67,8 +67,8 @@ fi
 echo "commit $COMMIT" | tee -a "$REG"
 # ⛔ la stessa versione non si pubblica due volte con contenuto diverso (pubblica.sh lo rifiuta
 #    pacchetto per pacchetto); qui ci si ferma prima di costruire
-if [ -e "$ARCHIVIO/RILASCI.txt" ] && grep -q "^$VERSIONE " "$ARCHIVIO/RILASCI.txt"; then
-	echo "⛔ $VERSIONE è già nell'archivio (RILASCI.txt): serve una revisione nuova"; exit 1
+if [ -e "$ARCHIVIO/RELEASES.txt" ] && grep -q "^$VERSIONE " "$ARCHIVIO/RELEASES.txt"; then
+	echo "⛔ $VERSIONE è già nell'archivio (RELEASES.txt): serve una revisione nuova"; exit 1
 fi
 
 passo "2. il motore: le prove e la costruzione ($V)"
@@ -78,8 +78,8 @@ grep -E '^ok ' "$LAV/prove-motore.log" | tee -a "$REG"
 RX_VERSIONE=$V "$INST/costruisci.sh" >>"$REG" 2>&1
 mkdir -p "$LAV/motore-bin"
 cp "$INST/uscita/remotix-install" "$LAV/motore-bin/"
-[ "$("$LAV/motore-bin/remotix-install" versione | awk '{print $1}')" = "$V" ] || { echo "⛔ il motore non dice $V"; exit 1; }
-"$LAV/motore-bin/remotix-install" catalogo | head -1 | tee -a "$REG"
+[ "$("$LAV/motore-bin/remotix-install" version | awk '{print $1}')" = "$V" ] || { echo "⛔ il motore non dice $V"; exit 1; }
+"$LAV/motore-bin/remotix-install" catalog | head -1 | tee -a "$REG"
 
 passo "3. i pacchetti del prodotto"
 P=$LAV/prodotto
@@ -131,12 +131,12 @@ LICENZA_GO=$LAV/LICENSE-go $PUB rigenera 2>&1 | tee -a "$REG"
 passo "6. il riassunto"
 SHA_IS=$(cut -d' ' -f1 "$ARCHIVIO/install.sh.sha256")
 printf '%s %s commit %s canale %s bersagli %s install.sh %s\n' "$VERSIONE" "$(date -u +%FT%TZ)" "$COMMIT" "$CANALE" \
-	"$(echo $BERSAGLI | tr ' ' ',')" "$SHA_IS" >>"$ARCHIVIO/RILASCI.txt"
+	"$(echo $BERSAGLI | tr ' ' ',')" "$SHA_IS" >>"$ARCHIVIO/RELEASES.txt"
 cat <<EOF | tee -a "$REG"
 REMOTIX $VERSIONE — pronto in $ARCHIVIO
   install.sh sha256 (da pubblicare sul sito, in HTTPS):
       $SHA_IS
-  motore:      $(cut -c1-64 "$ARCHIVIO/motore/remotix-install.sha256")
+  motore:      $(cut -c1-64 "$ARCHIVIO/engine/remotix-install.sha256")
   caricarlo (D10 aperta, l'indirizzo è un segnaposto) — senza --delete: le versioni vecchie restano:
       rsync -a "$ARCHIVIO/" $DESTINAZIONE
   il giornale del rilascio: $REG

@@ -32,12 +32,12 @@ type FontiFiducia struct {
 
 // Fiducia è l'esito della fase 0 TRUST (oggetto fiducia.json dell'operazione).
 type Fiducia struct {
-	Catalogo RifCatalogo `json:"catalogo"`
-	Sequenza int         `json:"sequenza"`
+	Catalogo RifCatalogo `json:"catalog"`
+	Sequenza int         `json:"sequence"`
 	// Fonte: da dove viene il catalogo, e chi ne garantisce l'autenticità.
-	Fonte    string      `json:"fonte"`
-	Motore   RifMotore   `json:"motore"`
-	Messaggi []Messaggio `json:"messaggi"`
+	Fonte    string      `json:"source"`
+	Motore   RifMotore   `json:"engine"`
+	Messaggi []Messaggio `json:"messages"`
 }
 
 // MotoreDelPacchetto: dove il pacchetto remotix-install mette il motore.

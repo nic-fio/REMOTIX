@@ -15,13 +15,13 @@ import (
 //
 // parametri: percorso (assoluto), contenuto, modo (ottale, "0644"), uid e gid (predefiniti 0).
 
-func init() { registraTipo("scrivi-file", nuovaScriviFile) }
+func init() { registraTipo("write-file", nuovaScriviFile) }
 
 // PianoScriviFile prepara il passo del piano.
 func PianoScriviFile(id, percorso, contenuto, modo string) AzionePiano {
 	return AzionePiano{
-		ID: id, Tipo: "scrivi-file",
-		Parametri:      map[string]string{"percorso": percorso, "contenuto": contenuto, "modo": modo},
+		ID: id, Tipo: "write-file",
+		Parametri:      map[string]string{"path": percorso, "content": contenuto, "mode": modo},
 		Descrizione:    T("az.file", percorso),
 		ComeSiFa:       T("az.file.fa", "."+filepath.Base(percorso)+".remotix-nuovo"),
 		ComeSiVerifica: T("az.file.verifica"),
@@ -38,24 +38,24 @@ type scriviFile struct {
 }
 
 type primaFile struct {
-	Origine        Origine  `json:"origine"`
-	Esisteva       bool     `json:"esisteva"`
+	Origine        Origine  `json:"origin"`
+	Esisteva       bool     `json:"existed"`
 	Sha            string   `json:"sha256,omitempty"`
-	Modo           string   `json:"modo,omitempty"`
+	Modo           string   `json:"mode,omitempty"`
 	Uid            int      `json:"uid"`
 	Gid            int      `json:"gid"`
-	Salvataggio    string   `json:"salvataggio,omitempty"` // relativo alla cartella dell'operazione
-	CartelleCreate []string `json:"cartelle_create,omitempty"`
+	Salvataggio    string   `json:"backup,omitempty"` // relativo alla cartella dell'operazione
+	CartelleCreate []string `json:"created_dirs,omitempty"`
 }
 
 func nuovaScriviFile(p AzionePiano) (Azione, error) {
-	s := &scriviFile{percorso: p.Parametri["percorso"], contenuto: []byte(p.Parametri["contenuto"])}
+	s := &scriviFile{percorso: p.Parametri["path"], contenuto: []byte(p.Parametri["content"])}
 	if !filepath.IsAbs(s.percorso) {
 		return nil, fmt.Errorf("scrivi-file: path not absolute: %q", s.percorso)
 	}
-	m, err := strconv.ParseUint(nonVuoto(p.Parametri["modo"], "0644"), 8, 32)
+	m, err := strconv.ParseUint(nonVuoto(p.Parametri["mode"], "0644"), 8, 32)
 	if err != nil {
-		return nil, fmt.Errorf("scrivi-file: modo %q: %w", p.Parametri["modo"], err)
+		return nil, fmt.Errorf("scrivi-file: modo %q: %w", p.Parametri["mode"], err)
 	}
 	s.modo = os.FileMode(m)
 	s.uid, _ = strconv.Atoi(nonVuoto(p.Parametri["uid"], "0"))
@@ -97,7 +97,7 @@ func (s *scriviFile) Vincoli(c *Contesto) ([]string, error) {
 		return nil, err
 	}
 	if !esiste {
-		sha = "assente"
+		sha = "absent"
 	}
 	return []string{"file:" + s.percorso + "=" + sha}, nil
 }
@@ -118,11 +118,11 @@ func (s *scriviFile) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 		if err != nil {
 			return nil, "", err
 		}
-		cart := filepath.Join(c.Cartella, "salvataggi")
+		cart := filepath.Join(c.Cartella, "backups")
 		if err := os.MkdirAll(cart, 0o700); err != nil {
 			return nil, "", err
 		}
-		p.Salvataggio = filepath.Join("salvataggi", c.P.ID+".prima")
+		p.Salvataggio = filepath.Join("backups", c.P.ID+".before")
 		if err := ScriviAtomico(filepath.Join(c.Cartella, p.Salvataggio), b, 0o600); err != nil {
 			return nil, "", err
 		}

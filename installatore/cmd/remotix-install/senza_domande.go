@@ -20,14 +20,14 @@ import (
 // al terminale (senza terminale non si procede: niente «sì» per scelta tacita). Con --fuori-linea
 // DIR: tutto dal pacchetto fuori linea, senza rete.
 func installa(arg []string) (int, error) {
-	fs := flag.NewFlagSet("installa", flag.ContinueOnError)
+	fs := flag.NewFlagSet("install", flag.ContinueOnError)
 	var c comuni
 	c.aggiungi(fs)
-	uscita := fs.String("uscita", "", "where to write the plan (default /var/lib/remotix/piani/piano-<id>.json)")
-	eventi := fs.Bool("eventi", false, "events as JSON, one line each")
-	utente := fs.String("utente", "", "by hand: the people to add to the graphics card groups (empty: all)")
-	apri := fs.Bool("apri-firewall", false, "by hand: open the port in the firewall")
-	depositi := fs.String("deposito", "", "by hand: third-party repositories, with consent")
+	uscita := fs.String("output", "", "where to write the plan (default /var/lib/remotix/plans/plan-<id>.json)")
+	eventi := fs.Bool("events", false, "events as JSON, one line each")
+	utente := fs.String("users", "", "by hand: the people to add to the graphics card groups (empty: all)")
+	apri := fs.Bool("open-firewall", false, "by hand: open the port in the firewall")
+	depositi := fs.String("extra-repos", "", "by hand: third-party repositories, with consent")
 	if _, err := argomenti(fs, arg); err != nil {
 		return 2, err
 	}
@@ -65,11 +65,11 @@ func installa(arg []string) (int, error) {
 		}
 	}
 	if *uscita == "" {
-		dir := filepath.Join(filepath.Dir(c.operazioni), "piani")
+		dir := filepath.Join(filepath.Dir(c.operazioni), "plans")
 		if err := os.MkdirAll(dir, 0o700); err != nil {
 			return 1, err
 		}
-		*uscita = filepath.Join(dir, "piano-"+p.ID+".json")
+		*uscita = filepath.Join(dir, "plan-"+p.ID+".json")
 	}
 	if !*eventi {
 		stampaRisposte(p)
@@ -86,13 +86,13 @@ func installa(arg []string) (int, error) {
 		var risposta string
 		fmt.Scanln(&risposta)
 		switch strings.ToLower(strings.TrimSpace(risposta)) {
-		case "si", "sì", "s", "yes", "y":
+		case "yes", "y":
 		default:
 			fmt.Println(T("cli.non_confermato"))
 			return 1, nil
 		}
 		p.Approvazione = &motore.Approvazione{Da: chi(), Ora: time.Now().UTC().Format(time.RFC3339),
-			Modo: "a mano, al terminale (remotix-install installa)", DigestPiano: p.Digest()}
+			Modo: "by hand, at the terminal (remotix-install install)", DigestPiano: p.Digest()}
 	}
 	if err := motore.ScriviJSON(*uscita, p); err != nil {
 		return 1, err
@@ -126,11 +126,11 @@ func installa(arg []string) (int, error) {
 // preparaFuoriLinea: il pacchetto fuori linea, su una macchina COLLEGATA uguale a quella senza
 // rete (R22). I passi di pacchetti vengono dal piano (--piano) o dal file di risposte (--risposte).
 func preparaFuoriLinea(arg []string) (int, error) {
-	fs := flag.NewFlagSet("prepara-fuori-linea", flag.ContinueOnError)
+	fs := flag.NewFlagSet("prepare-offline", flag.ContinueOnError)
 	var c comuni
 	c.aggiungi(fs)
-	uscita := fs.String("uscita", "", "the bundle directory (new or empty)")
-	filePiano := fs.String("piano", "", "the installation plan (its package steps)")
+	uscita := fs.String("output", "", "the bundle directory (new or empty)")
+	filePiano := fs.String("plan", "", "the installation plan (its package steps)")
 	if _, err := argomenti(fs, arg); err != nil {
 		return 2, err
 	}
@@ -139,7 +139,7 @@ func preparaFuoriLinea(arg []string) (int, error) {
 		return 1, err
 	}
 	if c.archivio == "" || *uscita == "" {
-		return 2, errors.New("prepara-fuori-linea --archivio URL (--risposte FILE | --piano FILE) --uscita DIR")
+		return 2, errors.New("prepara-fuori-linea --archive URL (--answers FILE | --plan FILE) --output DIR")
 	}
 	cat, err := c.leggiCatalogo()
 	if err != nil {

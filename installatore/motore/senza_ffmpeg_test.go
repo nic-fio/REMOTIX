@@ -14,10 +14,10 @@ import (
 func TestDepositoPerFornitore(t *testing.T) {
 	cat := catalogoProva(t)
 	scheda := func(forn ...string) map[string]string {
-		m := map[string]string{"scheda.nodi": "renderD128", "scheda.renderD128.fornitore": ""}
+		m := map[string]string{"gpu.nodes": "renderD128", "gpu.renderD128.vendor": ""}
 		for i, f := range forn {
 			n := "renderD12" + string(rune('8'+i))
-			m["scheda."+n+".fornitore"] = f
+			m["gpu."+n+".vendor"] = f
 		}
 		return m
 	}
@@ -32,7 +32,7 @@ func TestDepositoPerFornitore(t *testing.T) {
 		{"fedora", "44", scheda("AMD"), "rpmfusion", "mesa-va-drivers-freeworld", false},
 		{"fedora", "44", scheda("Intel", "AMD"), "rpmfusion", "mesa-va-drivers-freeworld,intel-media-driver", true},
 		{"fedora", "44", scheda("NVIDIA"), "", "", false},
-		{"fedora", "44", map[string]string{"scheda.nodi": "nessuno", "scheda.renderD128.fornitore": ""}, "", "", false},
+		{"fedora", "44", map[string]string{"gpu.nodes": "none", "gpu.renderD128.vendor": ""}, "", "", false},
 		{"opensuse-tumbleweed", "20260930", scheda("Intel"), "", "", false},
 		{"opensuse-tumbleweed", "20260930", scheda("AMD"), "packman", "Mesa-dri,Mesa-libva,libvulkan_radeon", false},
 		{"opensuse-leap", "16.0", scheda("AMD"), "packman", "Mesa-dri,Mesa-libva,libvulkan_radeon", false},
@@ -53,12 +53,12 @@ func TestDepositoPerFornitore(t *testing.T) {
 		}
 	}
 	// RPM Fusion «free» c'è ma il ramo nonfree no: con Intel si chiede lo stesso
-	p := profiloDi("fedora", "44", map[string]string{"deposito.rpmfusion": "presente"})
+	p := profiloDi("fedora", "44", map[string]string{"repo.rpmfusion": "present"})
 	rap := Valuta(cat, p)
 	if got := DepositiDaChiedere(rap, p, ""); strings.Join(got, ",") != "rpmfusion" {
 		t.Errorf("fedora Intel senza nonfree: %v", got)
 	}
-	p.Rilevato("deposito.rpmfusion-nonfree", "presente", "finto")
+	p.Rilevato("repo.rpmfusion-nonfree", "present", "finto")
 	if got := DepositiDaChiedere(rap, p, ""); len(got) != 0 {
 		t.Errorf("fedora Intel con free e nonfree: %v", got)
 	}
@@ -81,7 +81,7 @@ func TestPianoSenzaFfmpeg(t *testing.T) {
 	amb.Esegui = func(_ time.Duration, nome string, _ ...string) (string, int, error) { return "", 1, nil }
 	cat := catalogoProva(t)
 	fed := profiloDi("fedora", "44", nil)
-	fed.Verificato("h264.scheda", "no", "finto")
+	fed.Verificato("h264.gpu", "no", "finto")
 	rap := Valuta(cat, fed)
 	p, err := PianoInstallazione(fed, rap, cat, amb, OpzioniInstallazione{Pacchetto: "/remotix.rpm", Porta: 7447, Depositi: []string{"rpmfusion"}})
 	if err != nil {
@@ -90,21 +90,21 @@ func TestPianoSenzaFfmpeg(t *testing.T) {
 	var dep, codec, pacchi *AzionePiano
 	for i := range p.Azioni {
 		switch a := &p.Azioni[i]; a.ID {
-		case "deposito-rpmfusion":
+		case "repo-rpmfusion":
 			dep = a
 		case "codec":
 			codec = a
-		case "pacchetti":
+		case "packages":
 			pacchi = a
 		}
 	}
-	if dep == nil || dep.Parametri["nonfree"] != "si" {
+	if dep == nil || dep.Parametri["nonfree"] != "yes" {
 		t.Errorf("il deposito RPM Fusion col ramo nonfree: %+v", dep)
 	}
-	if codec == nil || codec.Parametri["nomi"] != "intel-media-driver" || codec.Parametri["da"] != "rpmfusion" {
+	if codec == nil || codec.Parametri["names"] != "intel-media-driver" || codec.Parametri["from"] != "rpmfusion" {
 		t.Errorf("i driver da RPM Fusion: %+v", codec)
 	}
-	if pacchi == nil || pacchi.Parametri["nomi"] != "" {
+	if pacchi == nil || pacchi.Parametri["names"] != "" {
 		t.Errorf("solo il pacchetto di REMOTIX nella sua transazione: %+v", pacchi)
 	}
 	for _, m := range p.NonFatto {
@@ -113,7 +113,7 @@ func TestPianoSenzaFfmpeg(t *testing.T) {
 		}
 	}
 	// Alma con EPEL ma senza il consenso a RPM Fusion (il driver Intel con H.264): BLOCCATA (D5)
-	alma := profiloDi("almalinux", "10.1", map[string]string{"deposito.epel": "presente"})
+	alma := profiloDi("almalinux", "10.1", map[string]string{"repo.epel": "present"})
 	p, err = PianoInstallazione(alma, Valuta(cat, alma), cat, amb, OpzioniInstallazione{Pacchetto: "/remotix.rpm", Porta: 7447})
 	if err != nil {
 		t.Fatal(err)
@@ -140,26 +140,26 @@ func TestPreflightSenzaFfmpeg(t *testing.T) {
 	}{
 		{"fedora Intel col driver ridotto",
 			map[string]string{"usr/lib64/dri/iHD_drv_video.so": ""},
-			map[string]string{"distro.famiglia": "fedora", "pacchetto.libva-intel-media-driver": "26.2.4-1.fc44"}, "no"},
+			map[string]string{"distro.family": "fedora", "package.libva-intel-media-driver": "26.2.4-1.fc44"}, "no"},
 		{"fedora Intel col driver di RPM Fusion (dri-nonfree)",
 			map[string]string{"usr/lib64/dri/iHD_drv_video.so": "", "usr/lib64/dri-nonfree/iHD_drv_video.so": ""},
-			map[string]string{"distro.famiglia": "fedora", "pacchetto.libva-intel-media-driver": "26.2.4-1.fc44", "pacchetto.intel-media-driver": "26.1.5-1.fc44"}, ""},
+			map[string]string{"distro.family": "fedora", "package.libva-intel-media-driver": "26.2.4-1.fc44", "package.intel-media-driver": "26.1.5-1.fc44"}, ""},
 		{"openSUSE AMD con la Mesa ufficiale",
 			map[string]string{"usr/lib64/dri/radeonsi_drv_video.so": ""},
-			map[string]string{"distro.famiglia": "suse", "scheda.renderD128.fornitore": "AMD", "pacchetto.Mesa-dri": "26.2.3-1.1"}, "no"},
+			map[string]string{"distro.family": "suse", "gpu.renderD128.vendor": "AMD", "package.Mesa-dri": "26.2.3-1.1"}, "no"},
 		{"openSUSE AMD con la Mesa di Packman",
 			map[string]string{"usr/lib64/dri/radeonsi_drv_video.so": ""},
-			map[string]string{"distro.famiglia": "suse", "scheda.renderD128.fornitore": "AMD", "pacchetto.Mesa-dri": "26.2.3-1699.2.pm.1"}, ""},
+			map[string]string{"distro.family": "suse", "gpu.renderD128.vendor": "AMD", "package.Mesa-dri": "26.2.3-1699.2.pm.1"}, ""},
 	}
 	for _, c := range casi {
 		a := &Ambiente{Radice: radiceFinta(t, c.file, nil), Esegui: nessunComando}
 		p := NuovoProfilo(7447)
-		p.Rilevato("scheda.renderD128.fornitore", "Intel", "finto")
+		p.Rilevato("gpu.renderD128.vendor", "Intel", "finto")
 		for k, v := range c.fatti {
 			p.Rilevato(k, v, "finto")
 		}
-		h264(a, p, c.fatti["distro.famiglia"])
-		f, _ := p.F("h264.scheda")
+		h264(a, p, c.fatti["distro.family"])
+		f, _ := p.F("h264.gpu")
 		if c.scheda == "" && f.Stato != SCONOSCIUTO || c.scheda != "" && (f.Stato != RILEVATO || f.Valore != c.scheda) {
 			t.Errorf("%s: h264.scheda %+v, atteso %q", c.nome, f, c.scheda)
 		}
@@ -176,16 +176,16 @@ func TestDepositiSenzaFfmpeg(t *testing.T) {
 		file    map[string]string
 		nonfree string
 	}{
-		{map[string]string{"etc/yum.repos.d/steam.repo": steam}, "assente"},
-		{map[string]string{"etc/yum.repos.d/rpmfusion-nonfree.repo": "[rpmfusion-nonfree]\nmetalink=x\nenabled=1\n"}, "presente"},
-		{map[string]string{"etc/yum.repos.d/epel-cisco-openh264.repo": cisco}, "assente"},
+		{map[string]string{"etc/yum.repos.d/steam.repo": steam}, "absent"},
+		{map[string]string{"etc/yum.repos.d/rpmfusion-nonfree.repo": "[rpmfusion-nonfree]\nmetalink=x\nenabled=1\n"}, "present"},
+		{map[string]string{"etc/yum.repos.d/epel-cisco-openh264.repo": cisco}, "absent"},
 	} {
 		p := NuovoProfilo(7447)
 		depositi(&Ambiente{Radice: radiceFinta(t, c.file, nil)}, p)
-		if p.V("deposito.rpmfusion-nonfree") != c.nonfree || p.V("deposito.openh264") != "" {
-			t.Errorf("%v: nonfree %q, openh264 %q; atteso %q e niente", c.file, p.V("deposito.rpmfusion-nonfree"), p.V("deposito.openh264"), c.nonfree)
+		if p.V("repo.rpmfusion-nonfree") != c.nonfree || p.V("repo.openh264") != "" {
+			t.Errorf("%v: nonfree %q, openh264 %q; atteso %q e niente", c.file, p.V("repo.rpmfusion-nonfree"), p.V("repo.openh264"), c.nonfree)
 		}
-		if strings.Contains(strings.Join(mapKeys(c.file), ""), "epel-cisco") && p.V("deposito.epel") == "presente" {
+		if strings.Contains(strings.Join(mapKeys(c.file), ""), "epel-cisco") && p.V("repo.epel") == "present" {
 			t.Errorf("il deposito Cisco per EPEL non è EPEL")
 		}
 	}

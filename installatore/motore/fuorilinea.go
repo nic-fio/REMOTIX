@@ -60,26 +60,26 @@ import (
 
 // PacchettoFuoriLinea: il manifesto del pacchetto fuori linea.
 type PacchettoFuoriLinea struct {
-	Formato   string      `json:"formato"`
-	Oggetto   string      `json:"oggetto"` // "pacchetto-fuori-linea"
-	Creato    string      `json:"creato"`
-	Motore    RifMotore   `json:"motore"`
-	Catalogo  RifCatalogo `json:"catalogo"`
-	Origine   string      `json:"origine"` // l'archivio da cui è stato preparato
-	Canale    string      `json:"canale"`
-	Bersaglio string      `json:"bersaglio"`
-	Famiglia  string      `json:"famiglia"`
+	Formato   string      `json:"format"`
+	Oggetto   string      `json:"object"` // "offline-bundle"
+	Creato    string      `json:"created"`
+	Motore    RifMotore   `json:"engine"`
+	Catalogo  RifCatalogo `json:"catalog"`
+	Origine   string      `json:"origin"` // l'archivio da cui è stato preparato
+	Canale    string      `json:"channel"`
+	Bersaglio string      `json:"target"`
+	Famiglia  string      `json:"family"`
 	// Impronta: quella vincolante della macchina di riferimento (il profilo, il motore, il catalogo:
 	// CalcolaImpronta senza azioni); Pacchetti: TUTTI i pacchetti installati, nome=versione. La macchina
 	// senza rete deve combaciare con entrambe: l'insieme risolto dipende da quel che c'è già.
-	Impronta        Impronta           `json:"impronta"`
-	Pacchetti       []string           `json:"pacchetti"`
-	DigestPacchetti string             `json:"digest_pacchetti"`
-	Azioni          []AzioneFuoriLinea `json:"azioni"`
-	Artefatti       []Artefatto        `json:"artefatti"` // l'insieme risolto (File relativo alla cartella)
+	Impronta        Impronta           `json:"fingerprint"`
+	Pacchetti       []string           `json:"packages"`
+	DigestPacchetti string             `json:"digest_packages"`
+	Azioni          []AzioneFuoriLinea `json:"actions"`
+	Artefatti       []Artefatto        `json:"artifacts"` // l'insieme risolto (File relativo alla cartella)
 	Apt             []SorgenteApt      `json:"apt,omitempty"`
 	// Terzi: gli archivi di terzi che il pacchetto porta (rpmfusion → il file del release)
-	Terzi map[string]string `json:"terzi,omitempty"`
+	Terzi map[string]string `json:"third_party,omitempty"`
 	File  []FileFuoriLinea  `json:"file"`
 	Dir   string            `json:"-"`
 }
@@ -87,8 +87,8 @@ type PacchettoFuoriLinea struct {
 // AzioneFuoriLinea: un passo di pacchetti del piano, e i suoi artefatti (dnf: i file da installare).
 type AzioneFuoriLinea struct {
 	ID        string   `json:"id"`
-	Nomi      []string `json:"nomi"`
-	Artefatti []string `json:"artefatti"` // i File di Artefatti che servono a questo passo
+	Nomi      []string `json:"names"`
+	Artefatti []string `json:"artifacts"` // i File di Artefatti che servono a questo passo
 }
 
 // SorgenteApt: un deposito della distribuzione, copiato in parte.
@@ -96,7 +96,7 @@ type SorgenteApt struct {
 	Dir        string   `json:"dir"` // relativa alla cartella del pacchetto
 	URI        string   `json:"uri"` // da dove veniva (Repo-URI di apt)
 	Suite      string   `json:"suite"`
-	Componenti []string `json:"componenti"`
+	Componenti []string `json:"components"`
 	SignedBy   string   `json:"signed_by,omitempty"`
 }
 
@@ -104,10 +104,10 @@ type SorgenteApt struct {
 type FileFuoriLinea struct {
 	File   string `json:"file"`
 	Sha256 string `json:"sha256"`
-	Byte   int64  `json:"byte"`
+	Byte   int64  `json:"bytes"`
 }
 
-const nomeManifesto = "fuori-linea.json"
+const nomeManifesto = "offline.json"
 
 // ImprontaMacchina: l'impronta vincolante della macchina senza le azioni di un piano, e tutti i
 // suoi pacchetti.
@@ -154,7 +154,7 @@ func LeggiFuoriLinea(dir string) (*PacchettoFuoriLinea, error) {
 		return nil, err
 	}
 	var fl PacchettoFuoriLinea
-	if err := LeggiJSON(filepath.Join(abs, nomeManifesto), &fl); err != nil || fl.Oggetto != "pacchetto-fuori-linea" {
+	if err := LeggiJSON(filepath.Join(abs, nomeManifesto), &fl); err != nil || fl.Oggetto != "offline-bundle" {
 		if err == nil {
 			err = fmt.Errorf("oggetto %q", fl.Oggetto)
 		}
@@ -184,13 +184,13 @@ func LeggiFuoriLinea(dir string) (*PacchettoFuoriLinea, error) {
 
 // URLArchivio: l'archivio locale del pacchetto, come lo vede il motore.
 func (fl *PacchettoFuoriLinea) URLArchivio() string {
-	return "file://" + filepath.Join(fl.Dir, "archivio")
+	return "file://" + filepath.Join(fl.Dir, "archive")
 }
 
 // DaURLArchivio: la cartella del pacchetto fuori linea da un archivio file://…/archivio ("" se non lo è).
 func DaURLArchivio(u string) string {
 	p, ok := strings.CutPrefix(strings.TrimRight(u, "/"), "file://")
-	if !ok || filepath.Base(p) != "archivio" {
+	if !ok || filepath.Base(p) != "archive" {
 		return ""
 	}
 	d := filepath.Dir(p)
@@ -282,8 +282,8 @@ func (g *gestoreFuoriLinea) aptOpz(cache string) ([]string, error) {
 		}
 		fmt.Fprintf(&b, "deb %sfile:%s %s %s\n", opz, filepath.Join(g.fl.Dir, s.Dir), s.Suite, strings.Join(s.Componenti, " "))
 	}
-	fmt.Fprintf(&b, "deb [signed-by=%s target=Packages] file:%s %s-%s main\n", ChiaveApt, filepath.Join(g.fl.Dir, "archivio", "deb"), g.fl.Bersaglio, g.fl.Canale)
-	elenco := filepath.Join(cache, "fuori-linea.list")
+	fmt.Fprintf(&b, "deb [signed-by=%s target=Packages] file:%s %s-%s main\n", ChiaveApt, filepath.Join(g.fl.Dir, "archive", "deb"), g.fl.Bersaglio, g.fl.Canale)
+	elenco := filepath.Join(cache, "offline.list")
 	if err := ScriviAtomico(g.a.P(elenco), []byte(b.String()), 0o644); err != nil {
 		return nil, err
 	}
@@ -342,7 +342,7 @@ func (g *gestoreFuoriLinea) risolviApt(cache string, nomi []string) ([]Artefatto
 		}
 		a.Esito, a.Prima = "nuovo", ""
 		if m[2] != "" {
-			a.Esito, a.Prima = "aggiornato", m[2]
+			a.Esito, a.Prima = "upgraded", m[2]
 		}
 		r = append(r, a)
 	}
@@ -398,7 +398,7 @@ func (g *gestoreFuoriLinea) risolviDnf(cache string, nomi []string) ([]Artefatto
 	for i := range r {
 		r[i].Esito, r[i].Prima = "nuovo", ""
 		if p := prima[r[i].Nome]; p != "" {
-			r[i].Esito, r[i].Prima = "aggiornato", p
+			r[i].Esito, r[i].Prima = "upgraded", p
 		}
 	}
 	sort.Slice(r, func(i, j int) bool { return r[i].Nome < r[j].Nome })
@@ -516,7 +516,7 @@ func (p *preparazione) daArchivio(rel string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return b, p.scriviIn(filepath.Join("archivio", rel), b)
+	return b, p.scriviIn(filepath.Join("archive", rel), b)
 }
 
 // PreparaFuoriLinea: il pacchetto fuori linea per QUESTA macchina (la macchina di riferimento,
@@ -526,22 +526,22 @@ func PreparaFuoriLinea(amb *Ambiente, prof *Profilo, cat *Catalogo, piano *Piano
 	if ev == nil {
 		ev = func(string) {}
 	}
-	o.Canale = nonVuoto(o.Canale, "stabile")
+	o.Canale = nonVuoto(o.Canale, "stable")
 	if amb.Famiglia != "debian" && amb.Famiglia != "fedora" {
 		return nil, Errore("RX-FUORI-004", amb.Famiglia)
 	}
 	var terzi []string
 	for _, a := range piano.Azioni {
-		if a.Tipo == "aggiungi-deposito" && a.Parametri["tipo"] != "archivio" {
-			if a.Parametri["tipo"] != "rpmfusion" || amb.Famiglia != "fedora" {
-				return nil, Errore("RX-FUORI-005", a.Parametri["tipo"])
+		if a.Tipo == "add-repo" && a.Parametri["type"] != "archive" {
+			if a.Parametri["type"] != "rpmfusion" || amb.Famiglia != "fedora" {
+				return nil, Errore("RX-FUORI-005", a.Parametri["type"])
 			}
 			terzi = append(terzi, "rpmfusion")
-			if a.Parametri["nonfree"] == "si" {
+			if a.Parametri["nonfree"] == "yes" {
 				terzi = append(terzi, "rpmfusion-nonfree")
 			}
 		}
-		if a.Tipo == "installa-pacchetti" && a.Parametri["file"] != "" {
+		if a.Tipo == "install-packages" && a.Parametri["file"] != "" {
 			return nil, Errore("RX-FUORI-003", "a package from a file ("+a.Parametri["file"]+")")
 		}
 	}
@@ -557,7 +557,7 @@ func PreparaFuoriLinea(amb *Ambiente, prof *Profilo, cat *Catalogo, piano *Piano
 		return nil, err
 	}
 	defer os.RemoveAll(p.lav)
-	p.fl = &PacchettoFuoriLinea{Formato: Formato, Oggetto: "pacchetto-fuori-linea", Creato: ora(),
+	p.fl = &PacchettoFuoriLinea{Formato: Formato, Oggetto: "offline-bundle", Creato: ora(),
 		Motore: RifMotore{VersioneMotore, DigestMotore()}, Catalogo: RifCatalogo{cat.Versione, cat.Digest},
 		Origine: strings.TrimRight(o.Archivio, "/"), Canale: o.Canale, Bersaglio: BersaglioArchivio(amb), Famiglia: amb.Famiglia,
 		Azioni: []AzioneFuoriLinea{}, Artefatti: []Artefatto{}, File: []FileFuoriLinea{}}
@@ -574,19 +574,19 @@ func PreparaFuoriLinea(amb *Ambiente, prof *Profilo, cat *Catalogo, piano *Piano
 	// portarlo via); la catena dei pacchetti la verifica il gestore, sulla macchina senza rete come in
 	// linea (D11 semplificata, DECISIONI §10.21)
 	ev("the engine and the archive key")
-	mot, err := p.daArchivio("motore/remotix-install")
+	mot, err := p.daArchivio("engine/remotix-install")
 	if err != nil {
 		return nil, err
 	}
-	sha, err := p.daArchivio("motore/remotix-install.sha256")
+	sha, err := p.daArchivio("engine/remotix-install.sha256")
 	if err != nil {
 		return nil, err
 	}
 	if f := strings.Fields(string(sha)); len(f) == 0 || f[0] != Sha256(mot) {
-		return nil, Errore("RX-TRUST-017", "motore/remotix-install: sha256 "+Sha256(mot)[:16]+"…, published "+strings.TrimSpace(string(sha)))
+		return nil, Errore("RX-TRUST-017", "engine/remotix-install: sha256 "+Sha256(mot)[:16]+"…, published "+strings.TrimSpace(string(sha)))
 	}
-	for _, k := range []string{"chiavi/remotix-archivio.asc", "chiavi/LEGGIMI"} {
-		if _, err := p.daArchivio(k); err != nil && !strings.HasSuffix(k, "LEGGIMI") {
+	for _, k := range []string{"keys/remotix-archive.asc", "keys/README"} {
+		if _, err := p.daArchivio(k); err != nil && !strings.HasSuffix(k, "README") {
 			return nil, err
 		}
 	}
@@ -594,11 +594,11 @@ func PreparaFuoriLinea(amb *Ambiente, prof *Profilo, cat *Catalogo, piano *Piano
 	// i passi di pacchetti del piano, nell'ordine
 	var passi []AzioneFuoriLinea
 	for _, a := range piano.Azioni {
-		if a.Tipo != "installa-pacchetti" && a.Tipo != "installa-desktop" {
+		if a.Tipo != "install-packages" && a.Tipo != "install-desktop" {
 			continue
 		}
 		var n []string
-		for _, x := range strings.Split(a.Parametri["nomi"], ",") {
+		for _, x := range strings.Split(a.Parametri["names"], ",") {
 			if x = strings.TrimSpace(x); x != "" {
 				n = append(n, x)
 			}
@@ -677,13 +677,13 @@ func (p *preparazione) apt(passi []AzioneFuoriLinea) error {
 			}
 		}
 	}
-	chiave := filepath.Join(p.lav, "remotix-archivio.asc")
+	chiave := filepath.Join(p.lav, "remotix-archive.asc")
 	if err := os.WriteFile(chiave, []byte(p.o.ChiaveArchivio), 0o644); err != nil {
 		return err
 	}
 	suite := p.fl.Bersaglio + "-" + p.fl.Canale
 	baseDeb := p.fl.Origine + "/deb/"
-	if err := os.WriteFile(filepath.Join(parti, "zz-remotix-fuori-linea.sources"), []byte("Types: deb\nURIs: "+p.fl.Origine+"/deb\nSuites: "+suite+
+	if err := os.WriteFile(filepath.Join(parti, "zz-remotix-offline.sources"), []byte("Types: deb\nURIs: "+p.fl.Origine+"/deb\nSuites: "+suite+
 		"\nComponents: main\nSigned-By: "+chiave+"\n"), 0o644); err != nil {
 		return err
 	}
@@ -807,7 +807,7 @@ func (p *preparazione) apt(passi []AzioneFuoriLinea) error {
 		}
 		var rel string
 		if r, ok := strings.CutPrefix(u, baseDeb); ok {
-			rel = filepath.Join("archivio", "deb", r)
+			rel = filepath.Join("archive", "deb", r)
 		} else {
 			for ru, n := range basi {
 				if r, ok := strings.CutPrefix(u, ru); ok {
@@ -824,7 +824,7 @@ func (p *preparazione) apt(passi []AzioneFuoriLinea) error {
 		}
 		nome := strings.SplitN(fn, "_", 2)[0]
 		v := versioni[nome]
-		p.fl.Artefatti = append(p.fl.Artefatti, Artefatto{Nome: nome, Versione: v[0], Arch: v[1], Origine: u, File: rel, Sha256: Sha256(dati), Esito: "nuovo"})
+		p.fl.Artefatti = append(p.fl.Artefatti, Artefatto{Nome: nome, Versione: v[0], Arch: v[1], Origine: u, File: rel, Sha256: Sha256(dati), Esito: "new"})
 	}
 	sort.Slice(p.fl.Artefatti, func(i, j int) bool { return p.fl.Artefatti[i].Nome < p.fl.Artefatti[j].Nome })
 	for i := range passi {
@@ -918,7 +918,7 @@ func (p *preparazione) dnf(passi []AzioneFuoriLinea, terzi []string) error {
 		if err != nil {
 			return err
 		}
-		rel := filepath.Join("terzi", t, filepath.Base(u))
+		rel := filepath.Join("third-party", t, filepath.Base(u))
 		if err := p.scriviIn(rel, b); err != nil {
 			return err
 		}
@@ -937,7 +937,7 @@ func (p *preparazione) dnf(passi []AzioneFuoriLinea, terzi []string) error {
 	base := p.fl.Origine + "/rpm/" + p.fl.Canale + "/" + p.fl.Bersaglio + "/"
 	// solo per RISOLVERE e scaricare: le firme dei .rpm le verifica rpm sulla macchina senza rete
 	// (localpkg_gpgcheck=1); qui si controllano i digest dei metadati
-	if err := os.WriteFile(filepath.Join(repos, "remotix-fuori-linea.repo"), []byte("[remotix-fuori-linea]\nname=REMOTIX (offline preparation)\nbaseurl="+base+
+	if err := os.WriteFile(filepath.Join(repos, "remotix-offline.repo"), []byte("[remotix-fuori-linea]\nname=REMOTIX (offline preparation)\nbaseurl="+base+
 		"\nenabled=1\ngpgcheck=0\nrepo_gpgcheck=0\nincludepkgs="+strings.Join(PacchettiArchivio, " ")+"\n"), 0o644); err != nil {
 		return err
 	}
@@ -1003,11 +1003,11 @@ func (p *preparazione) dnf(passi []AzioneFuoriLinea, terzi []string) error {
 					org = "remotix"
 				}
 			}
-			p.fl.Artefatti = append(p.fl.Artefatti, Artefatto{Nome: c[0], Versione: c[1], Arch: c[2], Origine: org, File: r, Sha256: sha, Esito: "nuovo"})
+			p.fl.Artefatti = append(p.fl.Artefatti, Artefatto{Nome: c[0], Versione: c[1], Arch: c[2], Origine: org, File: r, Sha256: sha, Esito: "new"})
 			passi[i].Artefatti = append(passi[i].Artefatti, r)
 			if org == "remotix" { // anche nell'archivio locale, dove il deposito di REMOTIX lo cerca
 				b, _ := os.ReadFile(v)
-				if err := p.scriviIn(filepath.Join("archivio", "rpm", p.fl.Canale, p.fl.Bersaglio, filepath.Base(v)), b); err != nil {
+				if err := p.scriviIn(filepath.Join("archive", "rpm", p.fl.Canale, p.fl.Bersaglio, filepath.Base(v)), b); err != nil {
 					return err
 				}
 			}
@@ -1042,7 +1042,7 @@ func nevraTransazione(out string, c int) ([]string, error) {
 		if strings.Contains(out, "Nothing to do") {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("dnf install --assumeno: uscita %d: %s", c, ultimeRighe(out, 6))
+		return nil, fmt.Errorf("dnf install --assumeno: exit %d: %s", c, ultimeRighe(out, 6))
 	}
 	var nevra []string
 	in := false

@@ -1,0 +1,23 @@
+remotix-install — the REMOTIX installation engine
+
+One program: it installs, checks, certifies and uninstalls REMOTIX. It carries the CATALOG of the
+supported combinations inside it, and the catalog is updated with this package
+(`remotix-install catalog` shows it).
+
+Updates
+  REMOTIX is updated with the system, like any other program on the machine:
+      apt upgrade · dnf upgrade · zypper up · pacman -Syu
+  (or with the distribution's automatic updates, if the administrator turned them on).
+  The service restarts without closing the desktops; then the package scripts run
+  `remotix-install post-upgrade`, which records the versions and says whether the installation is
+  still certified. No timer, no REMOTIX update system.
+
+Going back to an earlier version: the package manager commands (the archive keeps the old versions):
+      apt install remotix=VERSION remotix-install=VERSION    (the versions: apt list -a remotix)
+      dnf downgrade remotix remotix-install
+      zypper install --oldpackage remotix-VERSION remotix-install-VERSION
+      pacman -U /var/cache/pacman/pkg/remotix-VERSION-x86_64.pkg.tar.zst
+  then `remotix-install certify`.
+
+Trust: one key only, the one that signs the REMOTIX packages and archive; the package manager
+verifies it. install.sh is verified with the sha256 published on the REMOTIX site.

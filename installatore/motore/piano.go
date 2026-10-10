@@ -12,20 +12,20 @@ import (
 // Impronta della macchina (§6.6.5): la parte vincolante decide se il piano vale ancora; quella
 // annotata si registra e basta.
 type Impronta struct {
-	Elementi []string `json:"elementi"` // vincolanti, ordinati, uno per riga nel testo canonico
+	Elementi []string `json:"elements"` // vincolanti, ordinati, uno per riga nel testo canonico
 	Digest   string   `json:"digest"`   // sha256 del testo canonico
-	Annotata []string `json:"annotata"`
+	Annotata []string `json:"recorded"`
 }
 
 // chiavi del profilo che entrano nell'impronta vincolante (prefissi). ⚠ Non i pacchetti in
 // generale: solo quelli che il piano tocca o da cui dipende (Piano.Dipende).
 var prefissiVincolanti = []string{
-	"distro.id", "distro.versione", "distro.variante", "sistema.architettura", "sistema.systemd",
-	"desktop.", "scheda.", "h264.", "selinux", "firewall.",
-	"gruppo.video", "gruppo.render", "deposito.",
+	"distro.id", "distro.version", "distro.variant", "system.arch", "system.systemd",
+	"desktop.", "gpu.", "h264.", "selinux", "firewall.",
+	"group.video", "group.render", "repo.",
 }
 
-var prefissiAnnotati = []string{"sistema.nome", "sistema.kernel", "distro.nome"}
+var prefissiAnnotati = []string{"system.name", "system.kernel", "distro.name"}
 
 func haPrefisso(k string, pp []string) bool {
 	for _, p := range pp {
@@ -50,9 +50,9 @@ func CalcolaImpronta(p *Profilo, cat *Catalogo, azioni []AzionePiano, dipende []
 		}
 	}
 	for _, d := range dipende {
-		im.Elementi = append(im.Elementi, "pacchetto."+d+"="+p.V("pacchetto."+d))
+		im.Elementi = append(im.Elementi, "package."+d+"="+p.V("package."+d))
 	}
-	im.Elementi = append(im.Elementi, "motore="+VersioneMotore, "catalogo="+cat.Versione)
+	im.Elementi = append(im.Elementi, "engine="+VersioneMotore, "catalog="+cat.Versione)
 	for _, ap := range azioni {
 		az, err := NuovaAzione(ap)
 		if err != nil {
@@ -97,46 +97,46 @@ func DifferenzeImpronta(prima, dopo []string) (tolti, aggiunti []string) {
 // Approvazione: il consenso, dato a mano o da file (§6.6.12). Vale solo per il piano col digest
 // scritto qui.
 type Approvazione struct {
-	Da          string `json:"da"`
-	Ora         string `json:"ora"`
-	Modo        string `json:"modo"`
-	DigestPiano string `json:"digest_piano"`
+	Da          string `json:"from"`
+	Ora         string `json:"time"`
+	Modo        string `json:"mode"`
+	DigestPiano string `json:"digest_plan"`
 }
 
 // Piano: il terzo oggetto (§6.6.1). Un documento: si salva, si legge, si approva, si applica.
 type Piano struct {
-	Formato     string        `json:"formato"`
-	Oggetto     string        `json:"oggetto"` // "piano"
+	Formato     string        `json:"format"`
+	Oggetto     string        `json:"object"` // "plan"
 	ID          string        `json:"id"`
-	Creato      string        `json:"creato"`
-	Mestiere    string        `json:"mestiere"` // "prova-motore" in T4; poi installazione, aggiornamento, disinstallazione
-	Motore      RifMotore     `json:"motore"`
-	Catalogo    RifCatalogo   `json:"catalogo"`
-	Piattaforma string        `json:"piattaforma"`
-	Impronta    Impronta      `json:"impronta"`
-	Dipende     []string      `json:"dipende"` // pacchetti da cui il piano dipende (nell'impronta)
-	Azioni      []AzionePiano `json:"azioni"`
-	Consensi    []string      `json:"consensi"`   // le domande con una riga loro (D5, D6, IRREVERSIBILE)
-	Scelte      []Scelta      `json:"scelte"`     // le domande con una risposta (il desktop, se manca)
-	Condizioni  []Condizione  `json:"condizioni"` // quelle del rapporto che valgono per i desktop installati
-	NonFatto    []Messaggio   `json:"non_fatto"`  // quel che il piano dichiara di non fare, e perché
+	Creato      string        `json:"created"`
+	Mestiere    string        `json:"kind"` // "engine-test" in T4; poi installazione, aggiornamento, disinstallazione
+	Motore      RifMotore     `json:"engine"`
+	Catalogo    RifCatalogo   `json:"catalog"`
+	Piattaforma string        `json:"platform"`
+	Impronta    Impronta      `json:"fingerprint"`
+	Dipende     []string      `json:"depends"` // pacchetti da cui il piano dipende (nell'impronta)
+	Azioni      []AzionePiano `json:"actions"`
+	Consensi    []string      `json:"consents"`   // le domande con una riga loro (D5, D6, IRREVERSIBILE)
+	Scelte      []Scelta      `json:"choices"`    // le domande con una risposta (il desktop, se manca)
+	Condizioni  []Condizione  `json:"conditions"` // quelle del rapporto che valgono per i desktop installati
+	NonFatto    []Messaggio   `json:"not_done"`   // quel che il piano dichiara di non fare, e perché
 	// Dichiarate: quel che il piano fa SENZA chiedere, detto prima (D4: le cinture, sempre)
-	Dichiarate   []string      `json:"dichiarate,omitempty"`
-	Approvazione *Approvazione `json:"approvazione,omitempty"`
+	Dichiarate   []string      `json:"declared,omitempty"`
+	Approvazione *Approvazione `json:"approval,omitempty"`
 	// Purge: disinstallazione --purge (anche la configurazione, e la storia del motore)
 	Purge bool `json:"purge,omitempty"`
 	// Archivio: l'archivio firmato di REMOTIX da cui si installa e si aggiorna (T8); la fase 0
 	// TRUST ci scarica il catalogo del canale.
-	Archivio *RifArchivio `json:"archivio,omitempty"`
+	Archivio *RifArchivio `json:"archive,omitempty"`
 	// Risposte: il piano viene da un file di risposte (senza domande, §6.6.12): il file, le voci, e i
 	// consensi che mancano (se ce n'è uno, l'operazione è BLOCCATA: RX-RISPOSTE-001)
-	Risposte *RifRisposte `json:"risposte,omitempty"`
+	Risposte *RifRisposte `json:"answers,omitempty"`
 }
 
 // RifArchivio: l'archivio di REMOTIX (URL di base) e il canale (stabile, candidato).
 type RifArchivio struct {
 	URL    string `json:"url"`
-	Canale string `json:"canale"`
+	Canale string `json:"channel"`
 }
 
 // Digest del piano senza l'approvazione: è quel che l'approvazione firma.
@@ -150,15 +150,15 @@ func (p *Piano) Digest() string {
 // quale desktop installare quando non ce n'è uno supportato (§10, DECISIONI §10.7).
 type Scelta struct {
 	ID          string   `json:"id"`
-	Domanda     string   `json:"domanda"`
-	Opzioni     []string `json:"opzioni"`
-	Predefinita string   `json:"predefinita"` // vale se nessuno risponde (senza domande: §6.6.12)
-	Risposta    string   `json:"risposta"`
+	Domanda     string   `json:"question"`
+	Opzioni     []string `json:"options"`
+	Predefinita string   `json:"default"` // vale se nessuno risponde (senza domande: §6.6.12)
+	Risposta    string   `json:"answer"`
 	// Pacchetti: per ogni opzione, i pacchetti che la installano (dal catalogo)
-	Pacchetti map[string]string `json:"pacchetti,omitempty"`
+	Pacchetti map[string]string `json:"packages,omitempty"`
 	// Componenti: per ogni opzione, i pezzi che quel desktop chiede a REMOTIX (labwc, wlr-randr,
 	// breeze6-wallpapers, il carattere scalabile…): entrano nel piano insieme al desktop
-	Componenti map[string]string `json:"componenti,omitempty"`
+	Componenti map[string]string `json:"components,omitempty"`
 }
 
 // Valore: la risposta data, o la predefinita.
@@ -193,9 +193,9 @@ func (p *Piano) metteDesktop(d, nomi, componenti string) {
 	var az []AzionePiano
 	dopoDepositi := 0
 	for _, a := range p.Azioni {
-		if a.Tipo != "installa-desktop" && a.ID != "componenti-desktop" {
+		if a.Tipo != "install-desktop" && a.ID != "desktop-components" {
 			az = append(az, a)
-			if a.Tipo == "aggiungi-deposito" {
+			if a.Tipo == "add-repo" {
 				dopoDepositi = len(az)
 			}
 		}
@@ -203,7 +203,7 @@ func (p *Piano) metteDesktop(d, nomi, componenti string) {
 	if d != "no" {
 		nuovi := []AzionePiano{PianoDesktop("desktop", d, nomi)}
 		if componenti != "" {
-			nuovi = append(nuovi, PianoPacchetti("componenti-desktop", "", "", componenti))
+			nuovi = append(nuovi, PianoPacchetti("desktop-components", "", "", componenti))
 		}
 		az = append(az[:dopoDepositi], append(nuovi, az[dopoDepositi:]...)...)
 	}
@@ -232,24 +232,24 @@ func PianoDiProva(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, o 
 		o.Porta = 7447
 	}
 	ps := fmt.Sprint(o.Porta)
-	pn := &Piano{Formato: Formato, Oggetto: "piano", ID: nuovoID(), Creato: ora(), Mestiere: "prova-motore",
+	pn := &Piano{Formato: Formato, Oggetto: "plan", ID: nuovoID(), Creato: ora(), Mestiere: "engine-test",
 		Motore:   RifMotore{VersioneMotore, DigestMotore()},
 		Catalogo: RifCatalogo{cat.Versione, cat.Digest}, Piattaforma: rap.Piattaforma,
 		Dipende: []string{}, Consensi: []string{}, Condizioni: []Condizione{}, NonFatto: []Messaggio{}}
 	for _, d := range o.Depositi {
-		cons := T("consenso.deposito", nonVuoto(cat.Depositi[d].Nome, d))
-		pn.Azioni = append(pn.Azioni, PianoDeposito("deposito-"+d, d, nil, cons))
+		cons := T("consent.repo", nonVuoto(cat.Depositi[d].Nome, d))
+		pn.Azioni = append(pn.Azioni, PianoDeposito("repo-"+d, d, nil, cons))
 		pn.Consensi = append(pn.Consensi, cons)
 	}
 	if o.Pacchetti != "" {
-		pn.Azioni = append(pn.Azioni, PianoPacchetti("pacchetti", "", "", o.Pacchetti))
+		pn.Azioni = append(pn.Azioni, PianoPacchetti("packages", "", "", o.Pacchetti))
 	}
 	pn.Azioni = append(pn.Azioni,
-		PianoScriviFile("file-conf", "/etc/remotix/prova-motore.conf",
+		PianoScriviFile("conf-file", "/etc/remotix/engine-test.conf",
 			"# REMOTIX — installation engine test file (phase 17, T4). It can be removed.\nporta="+ps+"\n", "0644"),
-		PianoScriviFile("file-unita", "/etc/systemd/system/remotix-prova-motore.service",
+		PianoScriviFile("unit-file", "/etc/systemd/system/remotix-engine-test.service",
 			"# REMOTIX — installation engine test unit (phase 17, T4): it does nothing.\n[Unit]\nDescription=REMOTIX, installation engine test\n\n[Service]\nType=oneshot\nExecStart=/bin/true\n\n[Install]\nWantedBy=multi-user.target\n", "0644"),
-		PianoUnita("unita", "remotix-prova-motore.service"),
+		PianoUnita("unit", "remotix-engine-test.service"),
 	)
 	switch g := amb.Firewall.Nome(); {
 	case !o.ApriFirewall:
@@ -258,7 +258,7 @@ func PianoDiProva(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, o 
 		a := PianoFirewall("firewall", ps)
 		pn.Azioni = append(pn.Azioni, a)
 		pn.Consensi = append(pn.Consensi, a.Consenso)
-	case g == "nessuno":
+	case g == "none":
 		pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: INFO, Testo: T("np.firewall_nessuno")})
 	default:
 		pn.NonFatto = append(pn.NonFatto, Msg("RX-FW-004", T("np.firewall_mano", g, ps)))
@@ -266,12 +266,12 @@ func PianoDiProva(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, o 
 	// il gruppo per ultimo: con un utente che non esiste il passo fallisce DOPO tutti gli altri, e
 	// l'operazione si annulla per intero (R28 dal vero)
 	if o.Utente != "" {
-		pn.Azioni = append(pn.Azioni, PianoGruppo("gruppo-video", o.Utente, "video"))
+		pn.Azioni = append(pn.Azioni, PianoGruppo("group-video", o.Utente, "video"))
 	} else {
 		pn.NonFatto = append(pn.NonFatto, Messaggio{Gravita: INFO, Testo: T("np.utente")})
 	}
 	for _, e := range rap.Desktop {
-		if e.Livello != NON_SUPPORTATA && e.Installato != "" && e.Installato != "assente" && e.Installato != "sconosciuto" {
+		if e.Livello != NON_SUPPORTATA && e.Installato != "" && e.Installato != "absent" && e.Installato != "unknown" {
 			pn.Condizioni = append(pn.Condizioni, e.Condizioni...)
 		}
 	}

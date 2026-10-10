@@ -20,8 +20,8 @@ func TestBloccoPacman(t *testing.T) {
 
 // I file dell'archivio per apt: Signed-By sul file della chiave, il pin sull'HOST (R18).
 func TestFileArchivioApt(t *testing.T) {
-	d := &deposito{tipo: "archivio", par: map[string]string{"url": "http://10.0.2.2:8717/deb", "suite": "debian13-stabile",
-		"chiave": "CHIAVE", "host": "10.0.2.2", "pacchetti": "remotix,remotix-install,remotix-archive-keyring,remotix-selinux"}}
+	d := &deposito{tipo: "archive", par: map[string]string{"url": "http://10.0.2.2:8717/deb", "suite": "debian13-stabile",
+		"key": "CHIAVE", "host": "10.0.2.2", "packages": "remotix,remotix-install,remotix-archive-keyring,remotix-selinux"}}
 	f := d.fileArchivio(&Contesto{Amb: &Ambiente{Famiglia: "debian"}})
 	if len(f) != 3 || !f[0].presenza || !strings.Contains(f[1].contenuto, "Signed-By: "+ChiaveApt) ||
 		!strings.Contains(f[2].contenuto, "Pin: origin \"10.0.2.2\"\nPin-Priority: -1") ||

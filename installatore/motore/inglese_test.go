@@ -26,9 +26,9 @@ var identificativo = regexp.MustCompile(`^[A-Za-z0-9_.:/\-\[\]=<>@*+,%]*$`)
 
 // vocabolario: i valori dei fatti e delle risposte confrontati nel codice (un nome, non un testo).
 var vocabolario = map[string]bool{
-	"presente": true, "assente": true, "nessuno": true, "con": true, "senza": true, "sconosciuto": true,
-	"si": true, "sì": true, "no": true, "tutti": true, "stabile": true, "candidato": true, "aperto": true,
-	"chiuso": true, "vuota": true,
+	"present": true, "absent": true, "none": true, "with": true, "without": true, "unknown": true,
+	"yes": true, "sì": true, "no": true, "all": true, "stable": true, "candidate": true, "open": true,
+	"closed": true, "vuota": true,
 	// non nostro: l'uscita di zypper in italiano, che gestore.go riconosce (come quella inglese)
 	"il pacchetto installato ": true,
 }
@@ -131,9 +131,9 @@ func TestRivelatoreItaliano(t *testing.T) {
 			t.Errorf("non visto: %q", s)
 		}
 	}
-	for _, s := range []string{"already there: left untouched", "consenso.deposito.epel", "--non-interactive",
-		"intel-media-va-driver-non-free", "presente", "line 3: unknown entry «x»", "%s: %q",
-		"give consent (consenso.deposito.<name> = si)", "Updates will come from there too, with the system's"} {
+	for _, s := range []string{"already there: left untouched", "consent.repo.epel", "--non-interactive",
+		"intel-media-va-driver-non-free", "present", "line 3: unknown entry «x»", "%s: %q",
+		"give consent (consent.repo.<name> = yes)", "Updates will come from there too, with the system's"} {
 		if testoItaliano(s) {
 			t.Errorf("falso allarme: %q", s)
 		}

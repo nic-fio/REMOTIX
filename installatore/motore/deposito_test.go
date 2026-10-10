@@ -98,7 +98,7 @@ func TestDepositoTrattieneChiServe(t *testing.T) {
 	f := &comandiFinti{installati: []string{"rpmfusion-free-release", "gstreamer1-vaapi", "remotix", "intel-media-driver"},
 		dipendenti: map[string][]string{"intel-media-driver": {"gstreamer1-vaapi"}}}
 	amb := ambienteRpmFinto(t, "fedora", f)
-	d := &deposito{tipo: "rpmfusion", par: map[string]string{"tipo": "rpmfusion"}}
+	d := &deposito{tipo: "rpmfusion", par: map[string]string{"type": "rpmfusion"}}
 	c := &Contesto{Amb: amb, Purge: true}
 	prima, _ := json.Marshal(primaDeposito{Origine: DIRETTA, Tipo: "rpmfusion",
 		Stato: map[string]bool{"rpmfusion-free-release": false}, Rpm: []string{"gstreamer1-vaapi", "remotix", "rpmfusion-free-release"}})

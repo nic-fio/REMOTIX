@@ -19,7 +19,7 @@ type zonaFinta struct {
 }
 
 func nuovaZonaFinta(conosce, fileInEtc bool) *zonaFinta {
-	return &zonaFinta{conosce: conosce, vive: map[string]bool{}, perm: []string{"servizio:ssh"}, fileInEtc: fileInEtc}
+	return &zonaFinta{conosce: conosce, vive: map[string]bool{}, perm: []string{"service:ssh"}, fileInEtc: fileInEtc}
 }
 
 func (z *zonaFinta) Nome() string                     { return "firewalld" }
@@ -73,7 +73,7 @@ func (z *zonaFinta) AggiornaPermanente(_ string, agg, togli []string) error {
 	return nil
 }
 func (z *zonaFinta) RimettiDiSerie(string) error {
-	z.perm, z.altro, z.fileInEtc = []string{"servizio:ssh"}, "", false
+	z.perm, z.altro, z.fileInEtc = []string{"service:ssh"}, "", false
 	z.diSerie++
 	return nil
 }
@@ -114,7 +114,7 @@ func provaFirewall(t *testing.T, z *zonaFinta, tocca func()) (*firewallAz, prima
 func TestFirewallServizioZonaDiSerie(t *testing.T) {
 	z := nuovaZonaFinta(true, false)
 	_, p := provaFirewall(t, z, nil)
-	if p.Forma != "servizio" || !p.DiSerie {
+	if p.Forma != "service" || !p.DiSerie {
 		t.Fatalf("forma %q, di serie %v", p.Forma, p.DiSerie)
 	}
 	if z.scritture != 1 || z.diSerie != 1 || z.fileInEtc || len(z.vive) != 0 {
@@ -129,7 +129,7 @@ func TestFirewallPorteSenzaServizio(t *testing.T) {
 	if p.Forma != "" || p.DiSerie {
 		t.Fatalf("forma %q, di serie %v", p.Forma, p.DiSerie)
 	}
-	if z.diSerie != 0 || !slices.Equal(z.perm, []string{"servizio:ssh"}) || z.scritture != 2 {
+	if z.diSerie != 0 || !slices.Equal(z.perm, []string{"service:ssh"}) || z.scritture != 2 {
 		t.Fatalf("rimessa di serie %d, permanenti %v, scritture %d", z.diSerie, z.perm, z.scritture)
 	}
 }
@@ -138,7 +138,7 @@ func TestFirewallPorteSenzaServizio(t *testing.T) {
 func TestFirewallZonaCambiataDopo(t *testing.T) {
 	z := nuovaZonaFinta(true, false)
 	_, _ = provaFirewall(t, z, func() { z.altro = "masquerade" })
-	if z.diSerie != 0 || z.altro != "masquerade" || !slices.Equal(z.perm, []string{"servizio:ssh"}) {
+	if z.diSerie != 0 || z.altro != "masquerade" || !slices.Equal(z.perm, []string{"service:ssh"}) {
 		t.Fatalf("rimessa di serie %d, altro %q, permanenti %v", z.diSerie, z.altro, z.perm)
 	}
 }

@@ -52,14 +52,14 @@ func TestTestiInterfaccia(t *testing.T) {
 // cartellini in inglese (DECISIONI §10.35).
 func TestVistaControlloParoleComuni(t *testing.T) {
 	prof := motore.NuovoProfilo(7447)
-	for k, v := range map[string]string{"distro.id": "fedora", "distro.versione": "44", "distro.nome": "Fedora Linux 44 (Workstation Edition)",
-		"distro.variante": "workstation", "scheda.nodi": "renderD128", "scheda.renderD128.fornitore": "virtio",
-		"scheda.renderD128.driver": "virtio-pci", "selinux": "enforcing"} {
+	for k, v := range map[string]string{"distro.id": "fedora", "distro.version": "44", "distro.name": "Fedora Linux 44 (Workstation Edition)",
+		"distro.variant": "workstation", "gpu.nodes": "renderD128", "gpu.renderD128.vendor": "virtio",
+		"gpu.renderD128.driver": "virtio-pci", "selinux": "enforcing"} {
 		prof.Rilevato(k, v, "prova")
 	}
 	rap := &motore.Rapporto{Riconosciuta: motore.T("comp.nella_matrice", "Fedora 44"),
 		Desktop: []motore.EsitoDesktop{{Desktop: "gnome", Installato: "50.5", Livello: motore.COMPATIBILE}}}
-	dom := &motore.Domande{Porta: 7447, Firewall: "chiuso", Depositi: []motore.DomandaDeposito{{ID: "rpmfusion", Nome: "RPM Fusion", Per: "h264", Serve: true}}}
+	dom := &motore.Domande{Porta: 7447, Firewall: "closed", Depositi: []motore.DomandaDeposito{{ID: "rpmfusion", Nome: "RPM Fusion", Per: "h264", Serve: true}}}
 	for _, l := range []string{"en"} {
 		v := VistaDelControllo(&Controllo{Profilo: prof, Rapporto: rap, Domande: dom})
 		if v.Esito != CONDIZIONI {

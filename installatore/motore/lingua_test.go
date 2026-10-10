@@ -38,7 +38,7 @@ func TestTesti(t *testing.T) {
 		}
 	}
 	for _, s := range TuttiGliStati() {
-		if _, ok := testi["stato."+string(s)]; !ok {
+		if _, ok := testi["state."+string(s)]; !ok {
 			t.Errorf("manca il nome dello stato %s", s)
 		}
 	}

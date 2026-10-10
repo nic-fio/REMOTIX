@@ -72,7 +72,7 @@ prepara() {
 	bash "$ALBERO/installatore/costruisci.sh" > "$VAL/costruisci-installatore.log" 2>&1 \
 		|| { ko "installatore non costruito ($VAL/costruisci-installatore.log)"; exit 1; }
 	cp "$ALBERO/installatore/uscita/remotix-install" "$VAL/valigia/bin/"
-	ok "remotix-install $("$VAL/valigia/bin/remotix-install" versione 2>/dev/null)"
+	ok "remotix-install $("$VAL/valigia/bin/remotix-install" version 2>/dev/null)"
 	log "i banchi (come 15-porta.sh) e i sorgenti per il banco 19"
 	albero_in_valigia
 	{

@@ -496,13 +496,13 @@ remotix() {
 	[ -n "$deb" ] || { ko "nessun .deb per $(distro) in $VALIGIA/pacchetti"; esito remotix ROSSO "manca il .deb"; return 1; }
 	ok "pacchetto: $(basename "$deb")"
 	# il controllo preliminare dell'installatore (in sola lettura): RX-GPU-*, la strada vulkan, l'ICD
-	"$ri" verifica > "$EVID/installatore-verifica.txt" 2>&1
-	"$ri" verifica --json > "$EVID/installatore-verifica.json" 2>&1
+	"$ri" check > "$EVID/installatore-verifica.txt" 2>&1
+	"$ri" check --json > "$EVID/installatore-verifica.json" 2>&1
 	grep -o -E 'RX-[A-Z0-9]+-[0-9]+' "$EVID/installatore-verifica.txt" | sort -u | tr '\n' ' ' > "$LAVORO/codici-verifica"
 	ok "verifica: codici $(cat "$LAVORO/codici-verifica")"
-	if "$ri" piano --installa --pacchetto "$deb" --porta "$PORTA" --utente "$UTENTE_BANCO" \
-		--uscita "$LAVORO/piano.json" > "$EVID/installatore-piano.txt" 2>&1 \
-		&& "$ri" applica "$LAVORO/piano.json" --approva > "$EVID/installatore-applica.txt" 2>&1; then
+	if "$ri" plan --install --package "$deb" --port "$PORTA" --users "$UTENTE_BANCO" \
+		--output "$LAVORO/piano.json" > "$EVID/installatore-piano.txt" 2>&1 \
+		&& "$ri" apply "$LAVORO/piano.json" --approve > "$EVID/installatore-applica.txt" 2>&1; then
 		ok "l'installatore ha installato REMOTIX"
 		echo installatore > "$LAVORO/come-installato"
 	else
@@ -536,7 +536,7 @@ remotix() {
 		esito remotix ROSSO "non ascolta"; return 1
 	fi
 	grep -a -E 'strada|QUESTO SERVER NON SA|ECCOMI|offerti|⛔' "$LAVORO/registro.log" | head -20 > "$EVID/server-avvio.txt"
-	"$ri" certifica > "$EVID/installatore-certifica.txt" 2>&1; local c=$?
+	"$ri" certify > "$EVID/installatore-certifica.txt" 2>&1; local c=$?
 	ok "certifica: uscita $c"
 	esito remotix VERDE "$(cat "$LAVORO/come-installato") · verifica: $(cat "$LAVORO/codici-verifica") · certifica $c"
 	return 0
@@ -746,8 +746,8 @@ pulisci() {
 	if [ -x /usr/bin/remotix-install ] || [ -x "$VALIGIA/bin/remotix-install" ]; then
 		local ri=/usr/bin/remotix-install
 		[ -x $ri ] || ri=$VALIGIA/bin/remotix-install
-		if $ri disinstalla --purge --uscita "$LAVORO/disinstalla.json" > "$LAVORO/disinstalla.txt" 2>&1 \
-			&& $ri applica "$LAVORO/disinstalla.json" --approva >> "$LAVORO/disinstalla.txt" 2>&1; then
+		if $ri uninstall --purge --output "$LAVORO/disinstalla.json" > "$LAVORO/disinstalla.txt" 2>&1 \
+			&& $ri apply "$LAVORO/disinstalla.json" --approve >> "$LAVORO/disinstalla.txt" 2>&1; then
 			ok "REMOTIX disinstallato dall'installatore"
 		else
 			avviso "l'installatore non ha disinstallato (disinstalla.txt): tolgo col gestore"

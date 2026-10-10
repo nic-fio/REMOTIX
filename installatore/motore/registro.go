@@ -12,30 +12,30 @@ import (
 type TipoEvento string
 
 const (
-	EvStato               TipoEvento = "STATO"
-	EvIntenzione          TipoEvento = "INTENZIONE"
-	EvFatta               TipoEvento = "FATTA"
-	EvFallita             TipoEvento = "FALLITA"
-	EvIntenzioneAnnulla   TipoEvento = "INTENZIONE_ANNULLA"
-	EvAnnullata           TipoEvento = "ANNULLATA"
-	EvAnnullamentoFallito TipoEvento = "ANNULLAMENTO_FALLITO"
-	EvNota                TipoEvento = "NOTA"
-	EvComando             TipoEvento = "COMANDO" // un programma dell'elenco chiuso lanciato (R41)
+	EvStato               TipoEvento = "STATE"
+	EvIntenzione          TipoEvento = "INTENT"
+	EvFatta               TipoEvento = "DONE"
+	EvFallita             TipoEvento = "FAILED"
+	EvIntenzioneAnnulla   TipoEvento = "ROLLBACK_INTENT"
+	EvAnnullata           TipoEvento = "ROLLED_BACK"
+	EvAnnullamentoFallito TipoEvento = "ROLLBACK_FAILED"
+	EvNota                TipoEvento = "NOTE"
+	EvComando             TipoEvento = "COMMAND" // un programma dell'elenco chiuso lanciato (R41)
 )
 
 // Evento è una riga del registro (registro.jsonl).
 type Evento struct {
 	N         int             `json:"n"`
-	Ora       string          `json:"ora"`
-	Tipo      TipoEvento      `json:"tipo"`
-	Azione    string          `json:"azione,omitempty"`
-	Da        Stato           `json:"da,omitempty"`
-	A         Stato           `json:"a,omitempty"`
-	Prima     json.RawMessage `json:"stato_prima,omitempty"`
-	Dopo      json.RawMessage `json:"stato_dopo,omitempty"`
-	Origine   Origine         `json:"origine,omitempty"`
-	Codice    string          `json:"codice,omitempty"`
-	Dettaglio string          `json:"dettaglio,omitempty"`
+	Ora       string          `json:"time"`
+	Tipo      TipoEvento      `json:"type"`
+	Azione    string          `json:"action,omitempty"`
+	Da        Stato           `json:"from,omitempty"`
+	A         Stato           `json:"to,omitempty"`
+	Prima     json.RawMessage `json:"state_before,omitempty"`
+	Dopo      json.RawMessage `json:"state_after,omitempty"`
+	Origine   Origine         `json:"origin,omitempty"`
+	Codice    string          `json:"code,omitempty"`
+	Dettaglio string          `json:"detail,omitempty"`
 }
 
 // Registro: il giornale a scrittura anticipata. Ogni riga si scrive con fsync del file (e della

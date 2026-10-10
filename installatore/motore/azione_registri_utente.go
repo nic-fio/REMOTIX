@@ -18,7 +18,7 @@ import (
 // salvano nella cartella dell'operazione e, se la disinstallazione si annulla, si rimettono byte
 // per byte, coi permessi e il proprietario.
 
-func init() { registraTipo("togli-registri-utente", nuovaTogliRegistri) }
+func init() { registraTipo("remove-user-logs", nuovaTogliRegistri) }
 
 const (
 	cartellaStatoUtente = ".local/state/remotix"
@@ -55,7 +55,7 @@ func PianoTogliRegistri(id string, percorsi []string) AzionePiano {
 		elenco = strings.Join(percorsi, ", ")
 	}
 	return AzionePiano{
-		ID: id, Tipo: "togli-registri-utente",
+		ID: id, Tipo: "remove-user-logs",
 		Parametri:      map[string]string{},
 		Descrizione:    T("az.registri", "~/"+cartellaStatoUtente+"/"+fileSessione, elenco),
 		ComeSiFa:       T("az.registri.fa", "~/"+cartellaStatoUtente),
@@ -71,19 +71,19 @@ func nuovaTogliRegistri(AzionePiano) (Azione, error) { return &togliRegistri{}, 
 
 // registroSalvato: un file com'era, e la sua cartella (per rimetterla se si è tolta).
 type registroSalvato struct {
-	Percorso     string `json:"percorso"`
+	Percorso     string `json:"path"`
 	Sha          string `json:"sha256"`
-	Modo         string `json:"modo"`
+	Modo         string `json:"mode"`
 	Uid          int    `json:"uid"`
 	Gid          int    `json:"gid"`
-	Salvataggio  string `json:"salvataggio"` // relativo alla cartella dell'operazione
-	CartellaModo string `json:"cartella_modo"`
-	CartellaUid  int    `json:"cartella_uid"`
-	CartellaGid  int    `json:"cartella_gid"`
+	Salvataggio  string `json:"backup"` // relativo alla cartella dell'operazione
+	CartellaModo string `json:"dir_mode"`
+	CartellaUid  int    `json:"dir_uid"`
+	CartellaGid  int    `json:"dir_gid"`
 }
 
 type primaRegistri struct {
-	Origine Origine           `json:"origine"`
+	Origine Origine           `json:"origin"`
 	File    []registroSalvato `json:"file,omitempty"`
 }
 
@@ -101,12 +101,12 @@ func (t *togliRegistri) Fotografa(c *Contesto) (json.RawMessage, Origine, error)
 		if err != nil {
 			return nil, "", err
 		}
-		cart := filepath.Join(c.Cartella, "salvataggi")
+		cart := filepath.Join(c.Cartella, "backups")
 		if err := os.MkdirAll(cart, 0o700); err != nil {
 			return nil, "", err
 		}
 		s := registroSalvato{Percorso: percorso, Sha: sha, Modo: fmt.Sprintf("%04o", modo), Uid: uid, Gid: gid,
-			Salvataggio: filepath.Join("salvataggi", c.P.ID+"-"+strconv.Itoa(i)+".prima")}
+			Salvataggio: filepath.Join("backups", c.P.ID+"-"+strconv.Itoa(i)+".before")}
 		if err := ScriviAtomico(filepath.Join(c.Cartella, s.Salvataggio), b, 0o600); err != nil {
 			return nil, "", err
 		}

@@ -26,15 +26,15 @@ import (
 //
 // parametri: file (percorsi di pacchetti locali, facoltativi, separati da virgola: una transazione
 // sola — T6: remotix e remotix-selinux insieme), sha256 (uno per file, nello stesso ordine), nomi
-// (separati da virgola, dai depositi), senza_grafica ("si" per il desktop: vedi azione_desktop.go).
+// (separati da virgola, dai depositi), senza_grafica ("yes" per il desktop: vedi azione_desktop.go).
 
-func init() { registraTipo("installa-pacchetti", nuovaPacchetti) }
+func init() { registraTipo("install-packages", nuovaPacchetti) }
 
 // PianoPacchettiDa: pacchetti presi da un deposito preciso (la Mesa di Packman, fase 18: su openSUSE
 // sostituisce quella della distribuzione, e zypper lo fa solo con --from e il cambio di fornitore).
 func PianoPacchettiDa(id, nomi, deposito string) AzionePiano {
 	a := PianoPacchetti(id, "", "", nomi)
-	a.Parametri["da"] = deposito
+	a.Parametri["from"] = deposito
 	return a
 }
 
@@ -46,8 +46,8 @@ func PianoPacchetti(id, file, sha, nomi string) AzionePiano {
 	}
 	cosa := strings.TrimSpace(strings.Join(basi, " ") + " " + nomi)
 	return AzionePiano{
-		ID: id, Tipo: "installa-pacchetti",
-		Parametri:      map[string]string{"file": file, "sha256": sha, "nomi": nomi},
+		ID: id, Tipo: "install-packages",
+		Parametri:      map[string]string{"file": file, "sha256": sha, "names": nomi},
 		Descrizione:    T("az.pacchetti", cosa),
 		ComeSiFa:       T("az.pacchetti.fa"),
 		ComeSiVerifica: T("az.pacchetti.verifica"),
@@ -64,20 +64,20 @@ type pacchetti struct {
 }
 
 type primaPacchetti struct {
-	Origine Origine       `json:"origine"`
-	Gestore string        `json:"gestore"`
+	Origine Origine       `json:"origin"`
+	Gestore string        `json:"manager"`
 	Cache   string        `json:"cache"`
-	File    string        `json:"file,omitempty"`       // il file nella cache (il primo)
-	Altri   []string      `json:"altri_file,omitempty"` // gli altri file nella cache (T6)
-	Nomi    []string      `json:"nomi"`
-	Insieme []Artefatto   `json:"insieme_risolto"`
-	Grafica *primaGrafica `json:"grafica,omitempty"`
+	File    string        `json:"file,omitempty"`        // il file nella cache (il primo)
+	Altri   []string      `json:"other_files,omitempty"` // gli altri file nella cache (T6)
+	Nomi    []string      `json:"names"`
+	Insieme []Artefatto   `json:"resolved_set"`
+	Grafica *primaGrafica `json:"graphical,omitempty"`
 }
 
 func nuovaPacchetti(p AzionePiano) (Azione, error) {
 	a := &pacchetti{file: dividiVirgole(p.Parametri["file"]), sha: dividiVirgole(p.Parametri["sha256"]),
-		senzaGrafica: p.Parametri["senza_grafica"] == "si", da: p.Parametri["da"]}
-	for _, n := range strings.Split(p.Parametri["nomi"], ",") {
+		senzaGrafica: p.Parametri["no_graphics"] == "yes", da: p.Parametri["from"]}
+	for _, n := range strings.Split(p.Parametri["names"], ",") {
 		if n = strings.TrimSpace(n); n != "" {
 			a.nomi = append(a.nomi, n)
 		}
@@ -110,14 +110,14 @@ func (a *pacchetti) Vincoli(c *Contesto) ([]string, error) {
 	}
 	var v []string
 	for i, f := range a.file {
-		v = append(v, "pacchetto-file:"+filepath.Base(f)+"="+a.sha[i])
+		v = append(v, "package-file:"+filepath.Base(f)+"="+a.sha[i])
 	}
 	ver, err := g.Versioni(a.nomi)
 	if err != nil {
 		return nil, err
 	}
 	for _, n := range a.nomi {
-		v = append(v, "pacchetto:"+n+"="+nonVuoto(ver[n], "assente"))
+		v = append(v, "package:"+n+"="+nonVuoto(ver[n], "absent"))
 	}
 	return v, nil
 }
@@ -208,7 +208,7 @@ func (a *pacchetti) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 		p.File, p.Altri = file[0], file[1:]
 	}
 	for _, x := range ins {
-		if x.Esito != "presente" {
+		if x.Esito != "present" {
 			p.Origine = DIRETTA
 		}
 	}
@@ -219,8 +219,8 @@ func (a *pacchetti) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {
 		}
 		p.Grafica = gr
 	}
-	if err := ScriviJSON(filepath.Join(c.Cartella, "insieme-risolto-"+c.P.ID+".json"),
-		map[string]any{"formato": Formato, "oggetto": "insieme-risolto", "azione": c.P.ID, "gestore": g.Nome(), "artefatti": ins}); err != nil {
+	if err := ScriviJSON(filepath.Join(c.Cartella, "resolved-set-"+c.P.ID+".json"),
+		map[string]any{"format": Formato, "object": "resolved-set", "action": c.P.ID, "manager": g.Nome(), "artifacts": ins}); err != nil {
 		return nil, "", err
 	}
 	return jsonDi(p), p.Origine, nil
@@ -283,7 +283,7 @@ func (a *pacchetti) conta(c *Contesto, p primaPacchetti) (completi, nuoviPresent
 			(v != "" && x.Versione != "" && ConfrontaPacchetti(c.Amb.Famiglia, v, x.Versione) > 0) {
 			completi++
 		}
-		if x.Esito == "nuovo" && v != "" {
+		if x.Esito == "new" && v != "" {
 			nuoviPresenti++
 		}
 	}
@@ -360,7 +360,7 @@ func (a *pacchetti) Annulla(c *Contesto, prima json.RawMessage) error {
 	}
 	var nuovi []string
 	for _, x := range p.Insieme {
-		if x.Esito == "nuovo" && ver[x.Nome] != "" {
+		if x.Esito == "new" && ver[x.Nome] != "" {
 			nuovi = append(nuovi, x.Nome)
 		}
 	}
@@ -397,7 +397,7 @@ func (a *pacchetti) Annullata(c *Contesto, prima json.RawMessage) (bool, string,
 	}
 	var tutti, ancora []string
 	for _, x := range p.Insieme {
-		if x.Esito == "nuovo" {
+		if x.Esito == "new" {
 			tutti = append(tutti, x.Nome)
 			if ver[x.Nome] != "" {
 				ancora = append(ancora, x.Nome)
@@ -464,7 +464,7 @@ func (a *pacchetti) Indirette(prima json.RawMessage) []string {
 	}
 	var r []string
 	for _, x := range p.Insieme {
-		if x.Esito == "aggiornato" {
+		if x.Esito == "upgraded" {
 			r = append(r, x.Nome+" "+x.Prima+" → "+x.Versione)
 		}
 	}

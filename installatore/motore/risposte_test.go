@@ -8,7 +8,7 @@ import (
 )
 
 func fileRisposte(t *testing.T, testo string) string {
-	p := filepath.Join(t.TempDir(), "risposte.conf")
+	p := filepath.Join(t.TempDir(), "answers.conf")
 	if err := os.WriteFile(p, []byte(testo), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -18,23 +18,23 @@ func fileRisposte(t *testing.T, testo string) string {
 // Il file di risposte: formato, voci conosciute, valori ammessi. Un errore di battitura in un
 // consenso non passa mai in silenzio.
 func TestLeggiRisposte(t *testing.T) {
-	buono := "# prova\nformato = remotix-risposte/1\nporta = 7500\nconsenso.cinture = sì\nconsenso.firewall = NO # commento\n"
+	buono := "# prova\nformat = remotix-answers/2\nport = 7500\nconsent.guards = yes\nconsent.firewall = NO # commento\n"
 	r, err := LeggiRisposte(fileRisposte(t, buono))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.Voci["consenso.cinture"] != "si" || r.Voci["consenso.firewall"] != "no" || r.Porta() != 7500 || len(r.Sha256) != 64 {
+	if r.Voci["consent.guards"] != "yes" || r.Voci["consent.firewall"] != "no" || r.Porta() != 7500 || len(r.Sha256) != 64 {
 		t.Errorf("voci: %+v", r.Voci)
 	}
 	for testo, codice := range map[string]string{
-		"porta = 7447\n": "RX-RISPOSTE-002", // senza formato
-		"formato = remotix-risposte/1\nconsenso.firewal = si\n":    "RX-RISPOSTE-002", // voce sconosciuta
-		"formato = remotix-risposte/1\nconsenso.cinture = forse\n": "RX-RISPOSTE-003",
-		"formato = remotix-risposte/1\nporta = 99999\n":            "RX-RISPOSTE-003",
-		"formato = remotix-risposte/1\ndesktop = cinnamon\n":       "RX-RISPOSTE-003",
-		"formato = remotix-risposte/1\nlingua = it\n":              "RX-RISPOSTE-002", // voce tolta (DECISIONI §10.35)
-		"formato = remotix-risposte/1\nporta = 1\nporta = 2\n":     "RX-RISPOSTE-002", // due volte
-		"formato = remotix-risposte/1\nsolo una parola\n":          "RX-RISPOSTE-002",
+		"port = 7447\n": "RX-RISPOSTE-002", // senza formato
+		"format = remotix-answers/2\nconsent.firewal = yes\n":  "RX-RISPOSTE-002", // voce sconosciuta
+		"format = remotix-answers/2\nconsent.guards = forse\n": "RX-RISPOSTE-003",
+		"format = remotix-answers/2\nport = 99999\n":           "RX-RISPOSTE-003",
+		"format = remotix-answers/2\ndesktop = cinnamon\n":     "RX-RISPOSTE-003",
+		"format = remotix-answers/2\nlingua = it\n":            "RX-RISPOSTE-002", // voce tolta (DECISIONI §10.35)
+		"format = remotix-answers/2\nport = 1\nport = 2\n":     "RX-RISPOSTE-002", // due volte
+		"format = remotix-answers/2\nsolo una parola\n":        "RX-RISPOSTE-002",
 	} {
 		if _, err := LeggiRisposte(fileRisposte(t, testo)); CodiceDi(err) != codice {
 			t.Errorf("%q: %v, atteso %s", testo, err, codice)
@@ -49,7 +49,7 @@ func TestConsensiNecessari(t *testing.T) {
 	amb := ambienteFinto(t.TempDir()) // firewalld
 	deb := profiloFinto()
 	fed := profiloDi("fedora", "44", nil)
-	fed.Verificato("h264.scheda", "no", "finto")
+	fed.Verificato("h264.gpu", "no", "finto")
 	casi := []struct {
 		nome     string
 		prof     *Profilo
@@ -60,15 +60,15 @@ func TestConsensiNecessari(t *testing.T) {
 	}{
 		// D4 (DECISIONI §4.7): le cinture non si chiedono; «consenso.cinture» di un file vecchio si
 		// annota fra le superflue e non conta, nemmeno «no»; lo stesso «consenso.aggiornamenti» (D14)
-		{"debian, niente", deb, "", "", "consenso.firewall", ""},
-		{"debian, archivio", deb, "http://a", "", "consenso.firewall", ""},
-		{"debian, tutto", deb, "http://a", "consenso.cinture = no\nconsenso.firewall = si\nconsenso.aggiornamenti = no\nconsenso.deposito.rpmfusion = si\n", "", "consenso.cinture,consenso.aggiornamenti,consenso.deposito.rpmfusion"},
-		{"fedora senza RPM Fusion", fed, "", "consenso.cinture = si\nconsenso.firewall = si\n", "consenso.deposito.rpmfusion", "consenso.cinture"},
+		{"debian, niente", deb, "", "", "consent.firewall", ""},
+		{"debian, archivio", deb, "http://a", "", "consent.firewall", ""},
+		{"debian, tutto", deb, "http://a", "consent.guards = no\nconsent.firewall = yes\nconsent.updates = no\nconsent.repo.rpmfusion = yes\n", "", "consent.guards,consent.updates,consent.repo.rpmfusion"},
+		{"fedora senza RPM Fusion", fed, "", "consent.guards = yes\nconsent.firewall = yes\n", "consent.repo.rpmfusion", "consent.guards"},
 		// fase 19: «consenso.deposito.openh264» di un file vecchio si legge, è superflua e non conta
-		{"fedora, la voce di OpenH264 ritirata", fed, "", "consenso.firewall = si\nconsenso.deposito.rpmfusion = si\nconsenso.deposito.openh264 = si\n", "", "consenso.deposito.openh264"},
+		{"fedora, la voce di OpenH264 ritirata", fed, "", "consent.firewall = yes\nconsent.repo.rpmfusion = yes\nconsent.repo.openh264 = yes\n", "", "consent.repo.openh264"},
 	}
 	for _, c := range casi {
-		r, err := LeggiRisposte(fileRisposte(t, "formato = remotix-risposte/1\n"+c.testo))
+		r, err := LeggiRisposte(fileRisposte(t, "format = remotix-answers/2\n"+c.testo))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -90,8 +90,8 @@ func TestConsensiNecessari(t *testing.T) {
 		}
 		// un consenso che manca vale «no», mai «sì»
 		for _, k := range rif.Mancanti {
-			si := map[string]bool{"consenso.firewall": o.ApriFirewall,
-				"consenso.deposito.rpmfusion": strings.Contains(strings.Join(o.Depositi, ","), "rpmfusion")}
+			si := map[string]bool{"consent.firewall": o.ApriFirewall,
+				"consent.repo.rpmfusion": strings.Contains(strings.Join(o.Depositi, ","), "rpmfusion")}
 			if si[k] {
 				t.Errorf("%s: il consenso mancante %s è diventato sì: %+v", c.nome, k, o)
 			}
@@ -108,15 +108,15 @@ func TestDepositiAccesi(t *testing.T) {
 		file   map[string]string
 		atteso string
 	}{
-		{map[string]string{"etc/yum.repos.d/steam.repo": steam}, "assente"},
-		{map[string]string{"etc/yum.repos.d/steam.repo": steam, "etc/yum.repos.d/rpmfusion-free.repo": "[rpmfusion-free]\nmetalink=x\nenabled=1\n[rpmfusion-free-debuginfo]\nenabled=0\n"}, "presente"},
-		{map[string]string{"etc/yum.repos.d/rpmfusion-free.repo": "[rpmfusion-free]\nmetalink=x\n"}, "presente"}, // enabled che manca = acceso
-		{map[string]string{"etc/yum.repos.d/rpmfusion-free.repo": "[rpmfusion-free]\nmetalink=x\nenabled = 0\n"}, "assente"},
+		{map[string]string{"etc/yum.repos.d/steam.repo": steam}, "absent"},
+		{map[string]string{"etc/yum.repos.d/steam.repo": steam, "etc/yum.repos.d/rpmfusion-free.repo": "[rpmfusion-free]\nmetalink=x\nenabled=1\n[rpmfusion-free-debuginfo]\nenabled=0\n"}, "present"},
+		{map[string]string{"etc/yum.repos.d/rpmfusion-free.repo": "[rpmfusion-free]\nmetalink=x\n"}, "present"}, // enabled che manca = acceso
+		{map[string]string{"etc/yum.repos.d/rpmfusion-free.repo": "[rpmfusion-free]\nmetalink=x\nenabled = 0\n"}, "absent"},
 	} {
 		p := NuovoProfilo(7447)
 		depositi(&Ambiente{Radice: radiceFinta(t, c.file, nil)}, p)
-		if p.V("deposito.rpmfusion") != c.atteso {
-			f, _ := p.F("deposito.rpmfusion")
+		if p.V("repo.rpmfusion") != c.atteso {
+			f, _ := p.F("repo.rpmfusion")
 			t.Errorf("%v: %+v, atteso %s", c.file, f, c.atteso)
 		}
 	}
@@ -126,13 +126,13 @@ func TestDepositiAccesi(t *testing.T) {
 // un consenso è BLOCCATO (RX-RISPOSTE-001) e la macchina non si tocca; con tutti i consensi il
 // piano approvato dal file si applica.
 func TestRisposteBloccate(t *testing.T) {
-	for _, mancanti := range [][]string{{"consenso.firewall"}, nil} {
+	for _, mancanti := range [][]string{{"consent.firewall"}, nil} {
 		b := nuovoBanco(t)
 		m := b.motore(t)
 		var p Piano
 		LeggiJSON(b.piano, &p)
 		p.Risposte = &RifRisposte{Formato: FormatoRisposte, File: "/root/risposte.conf", Sha256: strings.Repeat("a", 64),
-			Voci: map[string]string{"formato": FormatoRisposte}, Mancanti: mancanti}
+			Voci: map[string]string{"format": FormatoRisposte}, Mancanti: mancanti}
 		p.Approvazione = &Approvazione{Da: "file di risposte", Modo: "senza domande", DigestPiano: p.Digest()}
 		ScriviJSON(b.piano, &p)
 		op, err := m.Applica(b.piano, false, "prova")

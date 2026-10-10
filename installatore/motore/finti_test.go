@@ -166,16 +166,16 @@ func profiloFinto() *Profilo {
 	p := NuovoProfilo(7447)
 	p.Creato = "2026-09-30T00:00:00Z"
 	for k, v := range map[string]string{
-		"distro.id": "debian", "distro.versione": "13", "distro.famiglia": "debian", "distro.nome": "Debian GNU/Linux 13 (trixie)",
-		"distro.immutabile": "no", "sistema.architettura": "x86_64", "sistema.systemd": "si",
-		"desktop.gnome": "48.7", "desktop.kde": "assente", "desktop.xfce": "assente", "desktop.lxqt": "assente",
-		"scheda.nodi": "renderD128", "scheda.renderD128.driver": "i915", "scheda.renderD128.fornitore": "Intel",
-		"scheda.nvidia_proprietaria": "no", "selinux": "assente", "firewall.tipo": "firewalld", "openssl.versione": "3.5.7",
-		"gruppo.video": "gid=44", "caratteri.scalabili": "20",
+		"distro.id": "debian", "distro.version": "13", "distro.family": "debian", "distro.name": "Debian GNU/Linux 13 (trixie)",
+		"distro.immutable": "no", "system.arch": "x86_64", "system.systemd": "yes",
+		"desktop.gnome": "48.7", "desktop.kde": "absent", "desktop.xfce": "absent", "desktop.lxqt": "absent",
+		"gpu.nodes": "renderD128", "gpu.renderD128.driver": "i915", "gpu.renderD128.vendor": "Intel",
+		"gpu.nvidia_proprietary": "no", "selinux": "absent", "firewall.type": "firewalld", "openssl.version": "3.5.7",
+		"group.video": "gid=44", "fonts.scalable": "20",
 	} {
 		p.Rilevato(k, v, "finto")
 	}
-	p.Verificato("h264.scheda", "si", "finto")
+	p.Verificato("h264.gpu", "yes", "finto")
 	p.Ordina()
 	return p
 }
@@ -226,16 +226,16 @@ func preparaMacchina(t testing.TB, radice string) {
 // una regola già presente.
 func azioniDiProva() []AzionePiano {
 	return []AzionePiano{
-		PianoPacchetti("pacchetti", "/var/pacchetti/remotix.pkg", Sha256([]byte(`{"nome":"remotix","versione":"0.17.0-1","dipende":["libnuova","libcomune"]}`)), "labwc"),
-		PianoScriviFile("file-conf", "/etc/remotix/prova-motore.conf", "porta=7447\n", "0644"),
-		PianoScriviFile("file-sovrascritto", "/etc/remotix-esistente.conf", "contenuto di REMOTIX\n", "0644"),
-		PianoScriviFile("file-unita", "/etc/systemd/system/remotix-prova-motore.service", "[Unit]\nDescription=prova\n[Install]\nWantedBy=multi-user.target\n", "0644"),
-		PianoUnita("unita", "remotix-prova-motore.service"),
-		PianoGruppo("gruppo-video", "prova", "video"),
-		PianoGruppo("gruppo-preesistente", "altro", "video"),
+		PianoPacchetti("packages", "/var/pacchetti/remotix.pkg", Sha256([]byte(`{"nome":"remotix","versione":"0.17.0-1","dipende":["libnuova","libcomune"]}`)), "labwc"),
+		PianoScriviFile("conf-file", "/etc/remotix/engine-test.conf", "porta=7447\n", "0644"),
+		PianoScriviFile("overwritten-file", "/etc/remotix-esistente.conf", "contenuto di REMOTIX\n", "0644"),
+		PianoScriviFile("unit-file", "/etc/systemd/system/remotix-engine-test.service", "[Unit]\nDescription=prova\n[Install]\nWantedBy=multi-user.target\n", "0644"),
+		PianoUnita("unit", "remotix-engine-test.service"),
+		PianoGruppo("group-video", "prova", "video"),
+		PianoGruppo("group-preexisting", "altro", "video"),
 		PianoFirewall("firewall", "7447"),
-		PianoCintura("cintura-tasti", "/usr/share/remotix/cinture/remotix-tasti.conf", "/etc/systemd/logind.conf.d/remotix-tasti.conf", "systemd-logind.service"),
-		PianoAccendiServizio("servizio", "remotix-prova-motore.service", 0),
+		PianoCintura("guard-keys", "/usr/share/remotix/cinture/remotix-tasti.conf", "/etc/systemd/logind.conf.d/remotix-tasti.conf", "systemd-logind.service"),
+		PianoAccendiServizio("service", "remotix-engine-test.service", 0),
 	}
 }
 
@@ -243,7 +243,7 @@ func azioniDiProva() []AzionePiano {
 func pianoDiProva(t testing.TB, radice, dove string, approvato bool) string {
 	amb := ambienteFinto(radice)
 	cat := catalogoProva(t)
-	pn := &Piano{Formato: Formato, Oggetto: "piano", ID: "piano-prova", Creato: "2026-09-30T00:00:00Z", Mestiere: "prova-motore",
+	pn := &Piano{Formato: Formato, Oggetto: "plan", ID: "piano-prova", Creato: "2026-09-30T00:00:00Z", Mestiere: "engine-test",
 		Catalogo: RifCatalogo{cat.Versione, cat.Digest}, Azioni: azioniDiProva(),
 		Dipende: []string{}, Consensi: []string{}, Condizioni: []Condizione{}, NonFatto: []Messaggio{}}
 	im, err := CalcolaImpronta(profiloFinto(), cat, pn.Azioni, pn.Dipende, &Contesto{Amb: amb})
@@ -254,7 +254,7 @@ func pianoDiProva(t testing.TB, radice, dove string, approvato bool) string {
 	if approvato {
 		pn.Approvazione = &Approvazione{Da: "prova", Ora: "2026-09-30T00:00:00Z", Modo: "da file", DigestPiano: pn.Digest()}
 	}
-	p := filepath.Join(dove, "piano.json")
+	p := filepath.Join(dove, "plan.json")
 	if err := ScriviJSON(p, pn); err != nil {
 		t.Fatal(err)
 	}

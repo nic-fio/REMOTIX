@@ -26,5 +26,5 @@ write_files:
     content: |
 @RISPOSTE@
 runcmd:
-  - [sh, -c, "curl -fsSL @ARCHIVIO@/install.sh | sh -s -- --archivio @ARCHIVIO@ --risposte /root/remotix-risposte.conf >/var/log/remotix-installa.log 2>&1; echo \"install.sh: uscita $?\" >>/var/log/remotix-installa.log"]
+  - [sh, -c, "curl -fsSL @ARCHIVIO@/install.sh | sh -s -- --archive @ARCHIVIO@ --answers /root/remotix-risposte.conf >/var/log/remotix-installa.log 2>&1; echo \"install.sh: uscita $?\" >>/var/log/remotix-installa.log"]
 final_message: "rx-@MACCHINA@: cloud-init finito dopo $UPTIME s"

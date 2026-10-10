@@ -131,7 +131,7 @@ func nomeDistro(prof *motore.Profilo) string {
 	case "opensuse-tumbleweed", "opensuse-leap", "opensuse":
 		return "openSUSE"
 	}
-	n := prof.V("distro.nome")
+	n := prof.V("distro.name")
 	if i := strings.IndexAny(n, " ("); i > 0 {
 		return n[:i]
 	}
@@ -152,7 +152,7 @@ func NomeDesktop(d string) string {
 }
 
 func installato(e motore.EsitoDesktop) bool {
-	return e.Installato != "" && e.Installato != "assente" && e.Installato != "sconosciuto"
+	return e.Installato != "" && e.Installato != "absent" && e.Installato != "unknown"
 }
 
 // Intestazione: la riga in alto a destra.
@@ -160,12 +160,12 @@ func Intestazione(prof *motore.Profilo, rap *motore.Rapporto) string {
 	if prof == nil {
 		return ""
 	}
-	n := prof.V("distro.nome")
+	n := prof.V("distro.name")
 	if i := strings.Index(n, " ("); i > 0 {
 		n = n[:i]
 	}
 	parti := []string{n}
-	if v := prof.V("distro.variante"); v != "" {
+	if v := prof.V("distro.variant"); v != "" {
 		parti = append(parti, strings.ToUpper(v[:1])+v[1:])
 	}
 	var ds []string
@@ -214,11 +214,11 @@ func haMessaggio(ms []motore.Messaggio, codice string) *motore.Messaggio {
 
 // nomeScheda: la scheda in parole comuni (driver e bus stanno nei dettagli tecnici).
 func nomeScheda(prof *motore.Profilo) string {
-	nodi := strings.Fields(prof.V("scheda.nodi"))
+	nodi := strings.Fields(prof.V("gpu.nodes"))
 	if len(nodi) == 0 {
 		return ""
 	}
-	f := strings.ToLower(prof.V("scheda." + nodi[0] + ".fornitore"))
+	f := strings.ToLower(prof.V("gpu." + nodi[0] + ".vendor"))
 	switch {
 	case strings.Contains(f, "intel"):
 		return T("t.scheda.marca", "Intel")
@@ -265,7 +265,7 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 
 	var righe []Riga
 	// sistema
-	piatt := strings.TrimSpace(distro + " " + prof.V("distro.versione"))
+	piatt := strings.TrimSpace(distro + " " + prof.V("distro.version"))
 	if strings.HasPrefix(rap.Riconosciuta, strings.SplitN(motore.T("comp.nella_matrice", ""), " (", 2)[0]) {
 		righe = append(righe, Riga{T("r.sistema"), T("t.sistema.ok", piatt), OK})
 	} else {
@@ -287,7 +287,7 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	}
 	// scheda
 	switch {
-	case prof.V("scheda.nvidia_proprietaria") == "si":
+	case prof.V("gpu.nvidia_proprietary") == "yes":
 		righe = append(righe, Riga{T("r.scheda"), T("t.scheda.nvidia"), DOPO})
 	case nomeScheda(prof) == "":
 		righe = append(righe, Riga{T("r.scheda"), T("t.scheda.nessuna"), DOPO})
@@ -318,26 +318,26 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 	switch {
 	case prof.V("selinux") == "enforcing" || prof.V("selinux") == "permissive":
 		righe = append(righe, Riga{T("r.protezione"), T("t.prot.selinux"), OK})
-	case prof.V("apparmor") != "" && prof.V("apparmor") != "assente" && prof.V("apparmor") != "no":
+	case prof.V("apparmor") != "" && prof.V("apparmor") != "absent" && prof.V("apparmor") != "no":
 		righe = append(righe, Riga{T("r.protezione"), T("t.prot.apparmor"), OK})
 	default:
 		righe = append(righe, Riga{T("r.protezione"), T("t.prot.no"), OK})
 	}
 	// firewall
 	switch {
-	case dom.Firewall == "aperto":
+	case dom.Firewall == "open":
 		righe = append(righe, Riga{T("r.firewall"), T("t.fw.aperto"), OK})
-	case dom.Firewall == "chiuso":
+	case dom.Firewall == "closed":
 		righe = append(righe, Riga{T("r.firewall"), T("t.fw.chiuso"), CONSENSO})
 		condizioni = append(condizioni, T("c.cond.firewall"))
-	case dom.Firewall == "nessuno":
+	case dom.Firewall == "none":
 		righe = append(righe, Riga{T("r.firewall"), T("t.fw.nessuno"), OK})
 	default:
-		righe = append(righe, Riga{T("r.firewall"), T("t.fw.altro", strings.TrimPrefix(dom.Firewall, "altro:")), DOPO})
+		righe = append(righe, Riga{T("r.firewall"), T("t.fw.altro", strings.TrimPrefix(dom.Firewall, "other:")), DOPO})
 	}
 	// porta
 	p := dom.Porta
-	if prof.V(fmt.Sprintf("porta.%d.tcp_libera", p)) == "no" || prof.V(fmt.Sprintf("porta.%d.udp_libera", p)) == "no" {
+	if prof.V(fmt.Sprintf("port.%d.tcp_free", p)) == "no" || prof.V(fmt.Sprintf("port.%d.udp_free", p)) == "no" {
 		righe = append(righe, Riga{T("r.porta"), T("t.porta.occupata", p), CONSENSO})
 	} else {
 		righe = append(righe, Riga{T("r.porta"), T("t.porta.libera", p), OK})
@@ -368,16 +368,16 @@ func VistaDelControllo(c *Controllo) *VistaControllo {
 
 func dettagliControllo(prof *motore.Profilo, rap *motore.Rapporto, fid *motore.Fiducia) string {
 	var d []string
-	d = append(d, prof.V("distro.nome"), rap.Riconosciuta)
+	d = append(d, prof.V("distro.name"), rap.Riconosciuta)
 	for _, e := range rap.Desktop {
 		if installato(e) {
 			d = append(d, e.Desktop+" "+e.Installato+" "+e.Livello)
 		}
 	}
-	for _, n := range strings.Fields(prof.V("scheda.nodi")) {
-		d = append(d, n+" "+prof.V("scheda."+n+".fornitore")+" "+prof.V("scheda."+n+".driver"))
+	for _, n := range strings.Fields(prof.V("gpu.nodes")) {
+		d = append(d, n+" "+prof.V("gpu."+n+".vendor")+" "+prof.V("gpu."+n+".driver"))
 	}
-	for _, k := range []string{"codifica.strade", "h264.scheda", "h264.famiglia_driver", "codifica.vulkan", "pam.base", "selinux", "apparmor", "firewall.tipo", "firewall.zona"} {
+	for _, k := range []string{"encoding.routes", "h264.gpu", "h264.driver_family", "encoding.vulkan", "pam.base", "selinux", "apparmor", "firewall.type", "firewall.zone"} {
 		if x := prof.V(k); x != "" {
 			d = append(d, k+"="+x)
 		}
@@ -400,7 +400,7 @@ func dettagliControllo(prof *motore.Profilo, rap *motore.Rapporto, fid *motore.F
 		}
 	}
 	if fid != nil {
-		d = append(d, fmt.Sprintf("catalogo %s", rap.Catalogo.Versione), "motore "+motore.VersioneMotore)
+		d = append(d, fmt.Sprintf("catalog %s", rap.Catalogo.Versione), "engine "+motore.VersioneMotore)
 	}
 	var r []string
 	for _, x := range d {
@@ -432,7 +432,7 @@ func vistaNonSupportata(prof *motore.Profilo, rap *motore.Rapporto) *VistaBlocca
 	if rap.Minima != "" {
 		// una versione esclusa di una distribuzione che REMOTIX sostiene in una versione più nuova
 		b.Titolo = T("b.titolo.versione", distro)
-		b.Perche = T("b.vecchia", strings.TrimSpace(distro+" "+prof.V("distro.versione")))
+		b.Perche = T("b.vecchia", strings.TrimSpace(distro+" "+prof.V("distro.version")))
 		b.Serve = T("b.serve", rap.Minima)
 	} else {
 		b.Titolo = T("b.titolo.distro")
@@ -469,12 +469,12 @@ func VistaDelleScelte(c *Controllo) *VistaScelte {
 	distro := nomeDistro(prof)
 	v := &VistaScelte{Sotto: T("sc.sotto")}
 	switch {
-	case dom.Firewall == "aperto":
+	case dom.Firewall == "open":
 		v.PortaRiga, v.PortaVerde = T("sc.fw.aperto"), true
-	case dom.Firewall == "nessuno":
+	case dom.Firewall == "none":
 		v.PortaRiga, v.PortaVerde = T("sc.fw.nessuno"), true
-	case strings.HasPrefix(dom.Firewall, "altro:"):
-		v.PortaRiga = T("sc.fw.altro", strings.TrimPrefix(dom.Firewall, "altro:"))
+	case strings.HasPrefix(dom.Firewall, "other:"):
+		v.PortaRiga = T("sc.fw.altro", strings.TrimPrefix(dom.Firewall, "other:"))
 	}
 	if dom.Desktop != nil {
 		v.SenzaDesktop = true
@@ -497,20 +497,20 @@ func VistaDelleScelte(c *Controllo) *VistaScelte {
 	for _, x := range dom.Depositi {
 		if x.Per == "h264" {
 			no := T("sc.video.no.t") // D5: senza, REMOTIX non si installa
-			v.Domande = append(v.Domande, Domanda{Voce: "consenso.deposito." + x.ID, Titolo: T("sc.video.titolo"),
+			v.Domande = append(v.Domande, Domanda{Voce: "consent.repo." + x.ID, Titolo: T("sc.video.titolo"),
 				Spiega: T("sc.video.spiega", distro, x.Nome, distro), Opzioni: []Opzione{
-					{Valore: "si", Titolo: T("sc.video.si", x.Nome), Nota: T("sc.consigliato"), Verde: true, Testo: T("sc.video.si.t")},
+					{Valore: "yes", Titolo: T("sc.video.si", x.Nome), Nota: T("sc.consigliato"), Verde: true, Testo: T("sc.video.si.t")},
 					{Valore: "no", Titolo: T("sc.video.no"), Testo: no}}})
 		} else {
-			v.Domande = append(v.Domande, Domanda{Voce: "consenso.deposito." + x.ID, Titolo: T("sc.dep.titolo", x.Nome),
+			v.Domande = append(v.Domande, Domanda{Voce: "consent.repo." + x.ID, Titolo: T("sc.dep.titolo", x.Nome),
 				Spiega: T("sc.dep.spiega", distro, x.Nome), Opzioni: []Opzione{
-					{Valore: "si", Titolo: T("sc.dep.si", x.Nome), Nota: T("sc.consigliato"), Verde: true},
+					{Valore: "yes", Titolo: T("sc.dep.si", x.Nome), Nota: T("sc.consigliato"), Verde: true},
 					{Valore: "no", Titolo: T("sc.dep.no"), Testo: T("sc.dep.no.t")}}})
 		}
 	}
-	if dom.Firewall == "chiuso" {
-		v.Domande = append(v.Domande, Domanda{Voce: "consenso.firewall", Titolo: T("sc.fw.titolo"), Spiega: T("sc.fw.spiega"),
-			Opzioni: []Opzione{{Valore: "si", Titolo: T("sc.fw.si"), Nota: T("sc.consigliato"), Verde: true, Testo: T("sc.fw.si.t")},
+	if dom.Firewall == "closed" {
+		v.Domande = append(v.Domande, Domanda{Voce: "consent.firewall", Titolo: T("sc.fw.titolo"), Spiega: T("sc.fw.spiega"),
+			Opzioni: []Opzione{{Valore: "yes", Titolo: T("sc.fw.si"), Nota: T("sc.consigliato"), Verde: true, Testo: T("sc.fw.si.t")},
 				{Valore: "no", Titolo: T("sc.fw.no"), Testo: T("sc.fw.no.t")}}})
 	}
 	if v.Titolo == "" {
@@ -594,12 +594,12 @@ func VistaDelPiano(p *motore.Piano, prof *motore.Profilo, catDepositi map[string
 	porta := ""
 	for _, a := range p.Azioni {
 		switch {
-		case a.Tipo == "aggiungi-deposito" && a.ID == "archivio-remotix":
+		case a.Tipo == "add-repo" && a.ID == "remotix-archive":
 			metti(a.ID, func() Passo {
 				return Passo{Titolo: T("a.archivio"), Sotto: T("a.archivio.t"), Fatto: T("a.archivio.f"), Breve: T("a.archivio.f")}
 			}, a)
-		case a.Tipo == "aggiungi-deposito":
-			id := strings.TrimPrefix(a.ID, "deposito-")
+		case a.Tipo == "add-repo":
+			id := strings.TrimPrefix(a.ID, "repo-")
 			nome := id
 			if n := catDepositi[id]; n != "" {
 				nome = n
@@ -607,40 +607,40 @@ func VistaDelPiano(p *motore.Piano, prof *motore.Profilo, catDepositi map[string
 			metti(a.ID, func() Passo {
 				return Passo{Titolo: T("a.deposito", nome), Nota: T("a.acconsentito"), Sotto: T("a.deposito.t"), Fatto: T("a.deposito.f", nome), Breve: T("a.deposito.f", nome)}
 			}, a)
-		case a.Tipo == "installa-pacchetti" && a.ID == "codec":
+		case a.Tipo == "install-packages" && a.ID == "codec":
 			metti(a.ID, func() Passo {
 				return Passo{Titolo: T("a.codec"), Sotto: T("a.codec.t", distro), Fatto: T("a.codec.f"), Breve: T("a.codec.f")}
 			}, a)
-		case a.Tipo == "installa-desktop":
+		case a.Tipo == "install-desktop":
 			d := NomeDesktop(a.Parametri["desktop"])
 			metti("desktop", func() Passo {
 				return Passo{Titolo: T("a.desktop", d), Sotto: T("a.desktop.t", distro), Fatto: T("a.desktop.f", d), Breve: T("a.desktop.f", d)}
 			}, a)
-		case a.Tipo == "installa-pacchetti" && (a.ID == "componenti" || a.ID == "componenti-desktop"):
-			metti("componenti", func() Passo {
+		case a.Tipo == "install-packages" && (a.ID == "components" || a.ID == "desktop-components"):
+			metti("components", func() Passo {
 				return Passo{Titolo: T("a.componenti"), Sotto: T("a.componenti.t"), Fatto: T("a.componenti.f"), Breve: T("a.componenti.f")}
 			}, a)
-		case a.Tipo == "installa-pacchetti":
-			metti("pacchetti", func() Passo {
+		case a.Tipo == "install-packages":
+			metti("packages", func() Passo {
 				return Passo{Titolo: T("a.pacchetti"), Sotto: T("a.pacchetti.t"), Fatto: T("a.pacchetti.f"), Breve: T("a.pacchetti.f")}
 			}, a)
-		case a.Tipo == "aggiungi-utente-a-gruppo":
-			if u := a.Parametri["utente"]; !visti[u] {
+		case a.Tipo == "add-user-to-group":
+			if u := a.Parametri["user"]; !visti[u] {
 				visti[u] = true
 				utentiGruppi = append(utentiGruppi, u)
 			}
 			metti("gruppi", func() Passo { return Passo{} }, a)
-		case a.Tipo == "attiva-cintura":
+		case a.Tipo == "enable-guard":
 			metti("cinture", func() Passo {
 				return Passo{Titolo: T("a.cinture"), Sotto: T("a.cinture.t"), Fatto: T("a.cinture.f"), Breve: T("a.cinture.f")}
 			}, a)
-		case a.Tipo == "regola-firewall":
-			ps := a.Parametri["porta"]
+		case a.Tipo == "firewall-rule":
+			ps := a.Parametri["port"]
 			metti(a.ID, func() Passo {
 				return Passo{Titolo: T("a.firewall", ps), Nota: T("a.acconsentito"), Sotto: T("a.firewall.t"), Fatto: T("a.firewall.f", ps), Breve: T("a.firewall.f", ps)}
 			}, a)
-		case a.Tipo == "accendi-servizio":
-			porta = a.Parametri["porta"]
+		case a.Tipo == "start-service":
+			porta = a.Parametri["port"]
 			metti(a.ID, func() Passo {
 				return Passo{Titolo: T("a.servizio", porta), Sotto: T("a.servizio.t"), Fatto: T("a.servizio.f", porta), Breve: T("a.servizio.f", porta)}
 			}, a)
@@ -667,7 +667,7 @@ func VistaDelPiano(p *motore.Piano, prof *motore.Profilo, catDepositi map[string
 	for _, a := range p.Azioni {
 		d = append(d, a.ID+" ("+a.Tipo+", "+string(a.Reversibilita)+")")
 	}
-	d = append(d, "piano "+p.ID, "impronta "+short(p.Impronta.Digest), "digest "+short(p.Digest()))
+	d = append(d, "plan "+p.ID, "fingerprint "+short(p.Impronta.Digest), "digest "+short(p.Digest()))
 	for _, m := range p.NonFatto {
 		d = append(d, strings.TrimSpace(m.Codice+" "+m.Testo))
 	}
@@ -730,7 +730,7 @@ func NuovoAvanzamento(vp *VistaPiano) *Avanzamento {
 func (a *Avanzamento) Evento(ev motore.EventoPubblico) {
 	riga := ev.Evento
 	switch ev.Evento {
-	case "stato":
+	case "state":
 		riga = "→ " + string(ev.A)
 		if ev.Dettaglio != "" {
 			riga += " — " + ev.Dettaglio
@@ -766,7 +766,7 @@ func (a *Avanzamento) Evento(ev motore.EventoPubblico) {
 				}
 			}
 		}
-	case "azione":
+	case "action":
 		riga = "   " + ev.Azione + ": " + ev.Fase
 		if ev.Dettaglio != "" {
 			riga += " (" + tronca(ev.Dettaglio, 160) + ")"
@@ -777,11 +777,11 @@ func (a *Avanzamento) Evento(ev motore.EventoPubblico) {
 		}
 		r := &a.Righe[i+2]
 		switch ev.Fase {
-		case "INTENZIONE", "RIPRESA":
+		case "INTENT", "RESUMED":
 			if !a.Annulla {
 				r.Stato = INCORSO
 			}
-		case "FATTA":
+		case "DONE":
 			a.fatte[ev.Azione] = true
 			tutte := true
 			for _, id := range a.passi[i].Azioni {
@@ -794,18 +794,18 @@ func (a *Avanzamento) Evento(ev motore.EventoPubblico) {
 					a.Righe[n].Stato = INCORSO
 				}
 			}
-		case "FALLITA":
+		case "FAILED":
 			r.Stato = FALLITA
 		default: // ANNULLATA, e le fasi del ritorno indietro
 			if a.Annulla {
 				r.Stato = ANNULLATA
 			}
 		}
-	case "messaggio":
+	case "message":
 		if ev.Messaggio != nil {
 			riga = "   [" + ev.Messaggio.Codice + "] " + ev.Messaggio.Testo
 		}
-	case "oggetto":
+	case "object":
 		riga = "   " + ev.Oggetto + ": " + ev.Percorso
 	}
 	a.Registro = append(a.Registro, riga)
@@ -901,13 +901,13 @@ func VistaDelPronto(es *Esito, vp *VistaPiano, porta int, depositoVideo string) 
 			}
 			t, s := esito(k.Esito)
 			switch {
-			case k.ID == "servizio":
+			case k.ID == "service":
 				v.Prove = append(v.Prove, Riga{T("pr.k.servizio"), t, s})
-			case k.ID == "codifica-h264":
+			case k.ID == "h264-encoding":
 				v.Prove = append(v.Prove, Riga{T("pr.k.h264"), t, s})
-			case k.ID == "pam-risolta":
+			case k.ID == "pam-resolved":
 				v.Prove = append(v.Prove, Riga{T("pr.k.pam"), t, s})
-			case k.ID == "porta-firewall":
+			case k.ID == "firewall-port":
 				altre = append(altre, Riga{T("pr.k.porta"), t, s})
 			case idPassi[k.ID]:
 				passi++
@@ -928,8 +928,8 @@ func VistaDelPronto(es *Esito, vp *VistaPiano, porta int, depositoVideo string) 
 		for _, k := range c.Condizioni {
 			v.Condizioni = append(v.Condizioni, CondizioneComune(k.Codice))
 		}
-		v.Dettagli = strings.Join([]string{es.Cartella + "/certificato.json", "catalogo " + c.Catalogo.Versione,
-			"motore " + c.Motore.Versione, string(c.Stato)}, " · ")
+		v.Dettagli = strings.Join([]string{es.Cartella + "/certificate.json", "catalog " + c.Catalogo.Versione,
+			"engine " + c.Motore.Versione, string(c.Stato)}, " · ")
 		for _, k := range c.Condizioni {
 			v.Dettagli += " · " + k.Codice + ": " + k.Testo
 		}
@@ -1016,7 +1016,7 @@ func UltimoMessaggio(evs []motore.EventoPubblico) *motore.Messaggio {
 // DepositoVideo: il nome dell'archivio per H.264 a cui si è acconsentito, se c'è.
 func DepositoVideo(dom *motore.Domande, voci map[string]string) string {
 	for _, x := range dom.Depositi {
-		if x.Per == "h264" && voci["consenso.deposito."+x.ID] == "si" {
+		if x.Per == "h264" && voci["consent.repo."+x.ID] == "yes" {
 			return x.Nome
 		}
 	}

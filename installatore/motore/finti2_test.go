@@ -68,16 +68,16 @@ func (g *gestoreFinto) chiusura(file, nomi []string) ([]Artefatto, error) {
 			if !ok {
 				return fmt.Errorf("dipendenza %s non nel deposito", d)
 			}
-			if err := visita(d, dp, "deposito", ""); err != nil {
+			if err := visita(d, dp, "repo", ""); err != nil {
 				return err
 			}
 		}
 		if in[n] == pk.Versione {
 			return nil
 		}
-		a := Artefatto{Nome: n, Versione: pk.Versione, Origine: origine, File: f, Esito: "nuovo"}
+		a := Artefatto{Nome: n, Versione: pk.Versione, Origine: origine, File: f, Esito: "new"}
 		if in[n] != "" {
-			a.Esito, a.Prima = "aggiornato", in[n]
+			a.Esito, a.Prima = "upgraded", in[n]
 		}
 		r = append(r, a)
 		return nil
@@ -97,7 +97,7 @@ func (g *gestoreFinto) chiusura(file, nomi []string) ([]Artefatto, error) {
 		if !ok {
 			return nil, fmt.Errorf("%s non nel deposito", n)
 		}
-		if err := visita(n, pk, "deposito", ""); err != nil {
+		if err := visita(n, pk, "repo", ""); err != nil {
 			return nil, err
 		}
 	}

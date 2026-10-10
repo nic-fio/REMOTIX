@@ -8,7 +8,7 @@ import (
 // Se il motore installa il desktop, i pezzi che quel desktop chiede a REMOTIX entrano nel piano.
 func TestComponentiDelDesktopInstallato(t *testing.T) {
 	cat := catalogoProva(t)
-	p := profiloDi("opensuse-leap", "16.0", map[string]string{"desktop.gnome": "assente"})
+	p := profiloDi("opensuse-leap", "16.0", map[string]string{"desktop.gnome": "absent"})
 	rap := Valuta(cat, p)
 	s := SceltaDesktop(rap)
 	if s == nil {
@@ -26,9 +26,9 @@ func TestComponentiDelDesktopInstallato(t *testing.T) {
 	}
 	var ids []string
 	for _, a := range pn.Azioni {
-		ids = append(ids, a.ID+"="+a.Parametri["nomi"])
+		ids = append(ids, a.ID+"="+a.Parametri["names"])
 	}
-	if got := strings.Join(ids, " "); got != "desktop=pattern:lxqt componenti-desktop=labwc,wlr-randr,google-droid-fonts" {
+	if got := strings.Join(ids, " "); got != "desktop=pattern:lxqt desktop-components=labwc,wlr-randr,google-droid-fonts" {
 		t.Fatalf("passi: %s", got)
 	}
 	pn.Rispondi("desktop", "kde")

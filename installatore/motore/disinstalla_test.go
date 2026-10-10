@@ -13,7 +13,7 @@ func installaFinta(t *testing.T) *banco {
 	b := nuovoBanco(t)
 	var p Piano
 	LeggiJSON(b.piano, &p)
-	p.Mestiere, p.Approvazione = "installazione", nil
+	p.Mestiere, p.Approvazione = "installation", nil
 	ScriviJSON(b.piano, &p)
 	op, err := b.motore(t).Applica(b.piano, true, "prova")
 	if err != nil || op.Stato != CONFERMATA_A_CONDIZIONI {
@@ -59,11 +59,11 @@ func pianoDisinstallazione(t *testing.T, b *banco) string {
 	if n := len(pn.Dichiarate); n != 1 || !strings.Contains(pn.Dichiarate[0], "/home/prova/.local/state/remotix/sessione.log, /home/altro/.local/state/remotix/sessione.log") {
 		t.Fatalf("il piano deve dichiarare i registri di sessione coi percorsi: %q", pn.Dichiarate)
 	}
-	if u := pn.Azioni[len(pn.Azioni)-1]; u.Tipo != "togli-registri-utente" || !strings.Contains(u.Descrizione, "/home/altro/") {
+	if u := pn.Azioni[len(pn.Azioni)-1]; u.Tipo != "remove-user-logs" || !strings.Contains(u.Descrizione, "/home/altro/") {
 		t.Fatalf("l'ultimo passo deve togliere i registri, coi percorsi: %+v", u)
 	}
 	pn.Approvazione = &Approvazione{Da: "prova", Modo: "da file", DigestPiano: pn.Digest()}
-	p := filepath.Join(t.TempDir(), "disinstalla.json")
+	p := filepath.Join(t.TempDir(), "uninstall.json")
 	ScriviJSON(p, pn)
 	return p
 }
@@ -72,8 +72,8 @@ func pianoDisinstallazione(t *testing.T, b *banco) string {
 // (salvo l'INDIRETTA dichiarata), la sessione REMOTIX è chiusa, quella ssh resta,
 // installazione.json non c'è più. E uccisa a metà si riprende fino in fondo.
 func TestDisinstallazione(t *testing.T) {
-	punti := []string{"", "dopo-intenzione@disfa-servizio", "dopo-effetto@chiudi-sessioni",
-		"dopo-intenzione@disfa-pacchetti", "file-a-meta@file-sovrascritto", "stato:APPLICATA@"}
+	punti := []string{"", "dopo-intenzione@undo-service", "dopo-effetto@close-sessions",
+		"dopo-intenzione@undo-packages", "file-a-meta@overwritten-file", "stato:APPLIED@"}
 	for _, punto := range punti {
 		t.Run(nonVuoto(punto, "senza interruzioni"), func(t *testing.T) {
 			b := installaFinta(t)
@@ -122,7 +122,7 @@ func TestDisinstallazioneAnnullata(t *testing.T) {
 	b := installaFinta(t)
 	installata := foto(t, b.radice)
 	pd := pianoDisinstallazione(t, b)
-	uccidiIn(t, b.radice, b.operazioni, pd, "applica", "dopo-fatta@disfa-cintura-tasti")
+	uccidiIn(t, b.radice, b.operazioni, pd, "applica", "dopo-fatta@undo-guard-keys")
 	op, err := b.motore(t).Annulla()
 	if err != nil || op.Stato != ANNULLATA_IN_PARTE {
 		t.Fatalf("%v %v", op.Stato, err)
@@ -154,7 +154,7 @@ func TestDisinstallazioneSenzaPurge(t *testing.T) {
 	if err != nil || op.Stato != CONFERMATA {
 		t.Fatalf("%v %v", op.Stato, err)
 	}
-	ops, _ := filepath.Glob(filepath.Join(b.operazioni, "*", "registro.jsonl"))
+	ops, _ := filepath.Glob(filepath.Join(b.operazioni, "*", "log.jsonl"))
 	cache, _ := filepath.Glob(filepath.Join(b.operazioni, "*", "cache"))
 	if len(ops) != 2 || len(cache) != 0 {
 		t.Fatalf("storia: %d registri (attesi 2), %d cache (attese 0)", len(ops), len(cache))
@@ -185,7 +185,7 @@ func TestDisinstallazioneTrattiene(t *testing.T) {
 		t.Fatalf("pacchetti dopo: %v (atteso: libnuova trattenuta, labwc e remotix tolti)", in)
 	}
 	var c Certificato
-	LeggiJSON(filepath.Join(op.Cartella, "certificato.json"), &c)
+	LeggiJSON(filepath.Join(op.Cartella, "certificate.json"), &c)
 	if s := strings.Join(c.Indirette, "\n"); !strings.Contains(s, "RX-PACCHETTI-006") || !strings.Contains(s, "libnuova") || !strings.Contains(s, "libcomune") {
 		t.Fatalf("la libnuova trattenuta non è dichiarata nel certificato: %q", s)
 	}

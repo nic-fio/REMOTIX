@@ -21,7 +21,7 @@ Summary:        Il motore d'installazione di REMOTIX
 License:        LicenseRef-Proprietary
 URL:            https://github.com/nic-fio/REMOTIX
 Source0:        remotix-install
-Source1:        LEGGIMI
+Source1:        README
 ExclusiveArch:  x86_64
 
 %description
@@ -35,14 +35,14 @@ questo pacchetto.
 
 %install
 install -D -m 0755 %{SOURCE0} %{buildroot}%{_bindir}/remotix-install
-install -D -m 0644 %{SOURCE1} %{buildroot}%{_datadir}/remotix-install/LEGGIMI
+install -D -m 0644 %{SOURCE1} %{buildroot}%{_datadir}/remotix-install/README
 
 %posttrans
 # dopo un aggiornamento: annota le versioni, dice se l'installazione è ancora certificata
 # (DECISIONI §10.12 punto 4, §10.23). ⛔ Non fa mai fallire la transazione.
-%{_bindir}/remotix-install aggiornato || :
+%{_bindir}/remotix-install post-upgrade || :
 
 %files
 %{_bindir}/remotix-install
 %dir %{_datadir}/remotix-install
-%{_datadir}/remotix-install/LEGGIMI
+%{_datadir}/remotix-install/README

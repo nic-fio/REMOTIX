@@ -343,7 +343,7 @@ touch %{buildroot}%{_sharedstatedir}/remotix/ban %{buildroot}%{_sharedstatedir}/
 # annota le versioni e dice se l'installazione e' ancora certificata
 # (DECISIONI §10.12 punto 4, §10.23).  ⛔ Non fa mai fallire la transazione.
 if [ -x /usr/bin/remotix-install ]; then
-	/usr/bin/remotix-install aggiornato || :
+	/usr/bin/remotix-install post-upgrade || :
 fi
 
 %files

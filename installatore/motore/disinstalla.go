@@ -20,8 +20,8 @@ import (
 // come quella di dnf).
 
 func init() {
-	registraTipo("disfa", nuovaDisfa)
-	registraTipo("togli-iscrizione", nuovaIscrizione)
+	registraTipo("undo", nuovaDisfa)
+	registraTipo("remove-membership", nuovaIscrizione)
 }
 
 // FileIscrizioni: dove REMOTIX annota chi ha iscritto ai gruppi alla prima connessione (figlio.c,
@@ -56,11 +56,11 @@ func (m *Motore) Iscrizioni() [][2]string {
 type iscrizione struct{ g *gruppo }
 
 func nuovaIscrizione(p AzionePiano) (Azione, error) {
-	return &iscrizione{&gruppo{p.Parametri["utente"], p.Parametri["gruppo"]}}, nil
+	return &iscrizione{&gruppo{p.Parametri["user"], p.Parametri["group"]}}, nil
 }
 
 type primaIscrizione struct {
-	Origine Origine `json:"origine"`
+	Origine Origine `json:"origin"`
 }
 
 func (i *iscrizione) Vincoli(c *Contesto) ([]string, error) { return i.g.Vincoli(c) }
@@ -130,12 +130,9 @@ func (m *Motore) PulisciStoria(purge bool) error {
 			return err
 		}
 		os.Remove(filepath.Join(filepath.Dir(m.Cartella), FileIscrizioni)) // già disfatte dal piano
-		// T8: il catalogo memorizzato, le versioni annotate, i piani degli aggiornamenti (i primi e gli
-		// ultimi li scrivevano motori di prima di D11/D14: si tolgono lo stesso, se ci sono)
-		os.RemoveAll(filepath.Join(filepath.Dir(m.Cartella), "fiducia"))
-		os.RemoveAll(filepath.Join(filepath.Dir(m.Cartella), "aggiornamenti"))
-		os.Remove(filepath.Join(filepath.Dir(m.Cartella), "aggiornamenti.json"))
-		os.Remove(filepath.Join(filepath.Dir(m.Cartella), "aggiornamenti-sospesi.json"))
+		// le versioni annotate (aggiornato.go). ⚠ 10 ott 2026, nomi in inglese (DECISIONI §10.35): tolte le
+		// pulizie dei file dei motori di prima di D11/D14 — nessuna installazione vera li ha mai scritti
+		os.Remove(filepath.Join(filepath.Dir(m.Cartella), FileVersioniAnnotate))
 		os.Remove(filepath.Dir(m.Cartella)) // solo se vuota
 		return nil
 	}
@@ -173,12 +170,12 @@ type disfa struct {
 }
 
 func nuovaDisfa(p AzionePiano) (Azione, error) {
-	return &disfa{op: p.Parametri["operazione"], azione: p.Parametri["azione"], purge: p.Parametri["purge"] == "si"}, nil
+	return &disfa{op: p.Parametri["operation"], azione: p.Parametri["action"], purge: p.Parametri["purge"] == "yes"}, nil
 }
 
 type primaDisfa struct {
-	Origine   Origine         `json:"origine"`
-	PrimaOrig json.RawMessage `json:"prima_originale"`
+	Origine   Origine         `json:"origin"`
+	PrimaOrig json.RawMessage `json:"original_before"`
 }
 
 // originale: l'azione di allora, il suo contesto (la cartella dell'operazione di allora, coi
@@ -186,7 +183,7 @@ type primaDisfa struct {
 func (d *disfa) originale(c *Contesto) (Azione, *Contesto, *Evento, error) {
 	dir := filepath.Join(filepath.Dir(c.Cartella), d.op)
 	var pn Piano
-	if err := LeggiJSON(filepath.Join(dir, "piano.json"), &pn); err != nil {
+	if err := LeggiJSON(filepath.Join(dir, "plan.json"), &pn); err != nil {
 		return nil, nil, nil, err
 	}
 	var ap *AzionePiano
@@ -198,7 +195,7 @@ func (d *disfa) originale(c *Contesto) (Azione, *Contesto, *Evento, error) {
 	if ap == nil {
 		return nil, nil, nil, fmt.Errorf("disfa: %s is not in the plan of %s", d.azione, d.op)
 	}
-	ev, err := LeggiRegistro(filepath.Join(dir, "registro.jsonl"))
+	ev, err := LeggiRegistro(filepath.Join(dir, "log.jsonl"))
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -326,10 +323,10 @@ func (m *Motore) PianoDisinstallazione(prof *Profilo, purge bool) (*Piano, error
 	}
 	dir := filepath.Join(m.Cartella, in.Operazione)
 	var orig Piano
-	if err := LeggiJSON(filepath.Join(dir, "piano.json"), &orig); err != nil {
+	if err := LeggiJSON(filepath.Join(dir, "plan.json"), &orig); err != nil {
 		return nil, err
 	}
-	ev, err := LeggiRegistro(filepath.Join(dir, "registro.jsonl"))
+	ev, err := LeggiRegistro(filepath.Join(dir, "log.jsonl"))
 	if err != nil {
 		return nil, err
 	}
@@ -341,7 +338,7 @@ func (m *Motore) PianoDisinstallazione(prof *Profilo, purge bool) (*Piano, error
 			}
 		}
 	}
-	pn := &Piano{Formato: Formato, Oggetto: "piano", ID: nuovoID(), Creato: ora(), Mestiere: "disinstallazione", Purge: purge,
+	pn := &Piano{Formato: Formato, Oggetto: "plan", ID: nuovoID(), Creato: ora(), Mestiere: "uninstallation", Purge: purge,
 		Motore: RifMotore{VersioneMotore, DigestMotore()}, Catalogo: RifCatalogo{m.Catalogo.Versione, m.Catalogo.Digest},
 		Piattaforma: orig.Piattaforma, Dipende: []string{}, Consensi: []string{}, Condizioni: []Condizione{}, NonFatto: []Messaggio{}, Scelte: []Scelta{}}
 	sess, _ := SessioniRemotix(m.Amb)
@@ -353,23 +350,23 @@ func (m *Motore) PianoDisinstallazione(prof *Profilo, purge bool) (*Piano, error
 			utenti = append(utenti, s.Utente)
 		}
 	}
-	chiudi := PianoChiudiSessioni("chiudi-sessioni", len(sess), utenti)
+	chiudi := PianoChiudiSessioni("close-sessions", len(sess), utenti)
 	messa := false
-	purgeS := map[bool]string{true: "si", false: "no"}[purge]
+	purgeS := map[bool]string{true: "yes", false: "no"}[purge]
 	for i := len(orig.Azioni) - 1; i >= 0; i-- {
 		a := orig.Azioni[i]
 		o, fatta := origine[a.ID]
 		if !fatta || o == PREESISTENTE {
 			continue
 		}
-		pn.Azioni = append(pn.Azioni, AzionePiano{ID: "disfa-" + a.ID, Tipo: "disfa",
-			Parametri:      map[string]string{"operazione": in.Operazione, "azione": a.ID, "purge": purgeS},
+		pn.Azioni = append(pn.Azioni, AzionePiano{ID: "undo-" + a.ID, Tipo: "undo",
+			Parametri:      map[string]string{"operation": in.Operazione, "action": a.ID, "purge": purgeS},
 			Descrizione:    T("az.disfa", a.Descrizione),
 			ComeSiFa:       a.ComeSiAnnulla,
 			ComeSiVerifica: T("az.disfa.verifica"),
 			ComeSiAnnulla:  a.ComeSiFa,
 			Reversibilita:  a.Reversibilita})
-		if a.Tipo == "accendi-servizio" && !messa {
+		if a.Tipo == "start-service" && !messa {
 			pn.Azioni = append(pn.Azioni, chiudi)
 			messa = true
 		}
@@ -381,29 +378,29 @@ func (m *Motore) PianoDisinstallazione(prof *Profilo, purge bool) (*Piano, error
 	// che il motore stesso ha già in un suo passo
 	gia := map[[2]string]bool{}
 	for _, a := range orig.Azioni {
-		if a.Tipo == "aggiungi-utente-a-gruppo" {
-			gia[[2]string{a.Parametri["utente"], a.Parametri["gruppo"]}] = true
+		if a.Tipo == "add-user-to-group" {
+			gia[[2]string{a.Parametri["user"], a.Parametri["group"]}] = true
 		}
 	}
 	for _, k := range m.Iscrizioni() {
 		if gia[k] {
 			continue
 		}
-		pn.Azioni = append(pn.Azioni, AzionePiano{ID: "iscrizione-" + k[0] + "-" + k[1], Tipo: "togli-iscrizione",
-			Parametri: map[string]string{"utente": k[0], "gruppo": k[1]}, Descrizione: T("az.iscrizione", k[0], k[1]),
+		pn.Azioni = append(pn.Azioni, AzionePiano{ID: "membership-" + k[0] + "-" + k[1], Tipo: "remove-membership",
+			Parametri: map[string]string{"user": k[0], "group": k[1]}, Descrizione: T("az.iscrizione", k[0], k[1]),
 			ComeSiFa: T("az.iscrizione.fa"), ComeSiVerifica: T("az.iscrizione.verifica"), ComeSiAnnulla: T("az.iscrizione.annulla"),
 			Reversibilita: ESATTA})
 	}
 	// i registri di sessione nelle case (decisione dell'utente, 1 ott 2026): sempre, per ultimo,
 	// a sessioni chiuse; i percorsi di adesso si dichiarano
 	registri := RegistriUtente(m.Amb)
-	pn.Azioni = append(pn.Azioni, PianoTogliRegistri("registri-utente", registri))
+	pn.Azioni = append(pn.Azioni, PianoTogliRegistri("user-logs", registri))
 	elenco := T("az.registri.nessuno")
 	if len(registri) > 0 {
 		elenco = strings.Join(registri, ", ")
 	}
 	pn.Dichiarate = append(pn.Dichiarate, T("az.registri.dichiarata", elenco))
-	im, err := CalcolaImpronta(prof, m.Catalogo, pn.Azioni, pn.Dipende, &Contesto{Amb: m.Amb, Cartella: filepath.Join(m.Cartella, "piano-in-costruzione")})
+	im, err := CalcolaImpronta(prof, m.Catalogo, pn.Azioni, pn.Dipende, &Contesto{Amb: m.Amb, Cartella: filepath.Join(m.Cartella, "plan-in-progress")})
 	if err != nil {
 		return nil, err
 	}

@@ -14,27 +14,27 @@ import (
 // Domande: le scelte di chi installa su QUESTA macchina (fasi/17 §10: quasi nessuna).
 type Domande struct {
 	// Porta: la predefinita (7447); si chiede sempre, una sola, vale per TCP e UDP
-	Porta int `json:"porta"`
-	// Firewall: "aperto" (firewalld lascia già passare la porta) · "chiuso" (firewalld acceso, la
-	// porta no: consenso D6) · "nessuno" (firewalld spento o assente) · "altro:<nome>" (ufw, nft…:
+	Porta int `json:"port"`
+	// Firewall: "open" (firewalld lascia già passare la porta) · "closed" (firewalld acceso, la
+	// porta no: consenso D6) · "none" (firewalld spento o assente) · "altro:<nome>" (ufw, nft…:
 	// il motore non lo tocca, lo dice)
 	Firewall string `json:"firewall"`
 	// Depositi: gli archivi di terzi che su questa macchina servono (D5), col nome da mostrare
-	Depositi []DomandaDeposito `json:"depositi"`
+	Depositi []DomandaDeposito `json:"repos"`
 	// Desktop: la scelta del desktop, solo se sulla macchina non ce n'è uno supportato
 	Desktop *Scelta `json:"desktop,omitempty"`
 	// SenzaScheda: le persone a cui manca il permesso di usare la scheda (il motore le iscrive)
-	SenzaScheda []string `json:"senza_scheda"`
+	SenzaScheda []string `json:"no_gpu"`
 	// Persone: chi potrà entrare (le persone della macchina; root è escluso)
-	Persone []string `json:"persone"`
+	Persone []string `json:"people"`
 }
 
 // DomandaDeposito: un archivio di terzi da chiedere, e per che cosa serve.
 type DomandaDeposito struct {
 	ID    string `json:"id"`   // rpmfusion · packman · epel
-	Nome  string `json:"nome"` // «RPM Fusion (free)»
-	Per   string `json:"per"`  // "h264" · "desktop"
-	Serve bool   `json:"serve"`
+	Nome  string `json:"name"` // «RPM Fusion (free)»
+	Per   string `json:"for"`  // "h264" · "desktop"
+	Serve bool   `json:"needed"`
 }
 
 // DomandeDaFare: le domande su questa macchina, dal profilo e dal rapporto (le stesse regole di
@@ -72,19 +72,19 @@ func DomandeDaFare(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, p
 		}
 		d.Depositi = append(d.Depositi, DomandaDeposito{ID: x, Nome: nome, Per: per, Serve: true})
 	}
-	g := "nessuno"
+	g := "none"
 	if amb != nil && amb.Firewall != nil {
 		g = amb.Firewall.Nome()
 	}
 	switch {
-	case g == "firewalld" && prof.V(fmt.Sprintf("firewall.porta_%d_tcp", porta)) == "aperta" && prof.V(fmt.Sprintf("firewall.porta_%d_udp", porta)) == "aperta":
-		d.Firewall = "aperto"
+	case g == "firewalld" && prof.V(fmt.Sprintf("firewall.port_%d_tcp", porta)) == "open" && prof.V(fmt.Sprintf("firewall.port_%d_udp", porta)) == "open":
+		d.Firewall = "open"
 	case g == "firewalld":
-		d.Firewall = "chiuso"
-	case g == "nessuno" || g == "":
-		d.Firewall = "nessuno"
+		d.Firewall = "closed"
+	case g == "none" || g == "":
+		d.Firewall = "none"
 	default:
-		d.Firewall = "altro:" + g
+		d.Firewall = "other:" + g
 	}
 	if amb != nil {
 		d.Persone = Persone(amb)
@@ -109,12 +109,12 @@ func DomandeDaFare(prof *Profilo, rap *Rapporto, cat *Catalogo, amb *Ambiente, p
 // predefiniti di §10: gli aggiornamenti sì, il firewall aperto se serve, l'archivio
 // per H.264 sì — «consigliato» —, il desktop di riferimento). Chi installa ne cambia solo alcune.
 func (d *Domande) VociDiserie() map[string]string {
-	v := map[string]string{"formato": FormatoRisposte, "porta": fmt.Sprint(d.Porta), "utenti": "tutti"}
-	if d.Firewall == "chiuso" {
-		v["consenso.firewall"] = "si"
+	v := map[string]string{"format": FormatoRisposte, "port": fmt.Sprint(d.Porta), "users": "all"}
+	if d.Firewall == "closed" {
+		v["consent.firewall"] = "yes"
 	}
 	for _, x := range d.Depositi {
-		v["consenso.deposito."+x.ID] = "si"
+		v["consent.repo."+x.ID] = "yes"
 	}
 	if d.Desktop != nil {
 		v["desktop"] = d.Desktop.Predefinita
@@ -127,13 +127,13 @@ func (d *Domande) VociDiserie() map[string]string {
 func TestoRisposte(voci map[string]string) string {
 	var k []string
 	for x := range voci {
-		if x != "formato" {
+		if x != "format" {
 			k = append(k, x)
 		}
 	}
 	sort.Strings(k)
 	var b strings.Builder
-	b.WriteString("formato = " + FormatoRisposte + "\n")
+	b.WriteString("format = " + FormatoRisposte + "\n")
 	for _, x := range k {
 		b.WriteString(x + " = " + voci[x] + "\n")
 	}
@@ -150,7 +150,7 @@ func PianoDaScelte(voci map[string]string, prof *Profilo, rap *Rapporto, cat *Ca
 		if !vociNote[k] {
 			return nil, Errore("RX-RISPOSTE-002", "unknown entry «"+k+"»")
 		}
-		if strings.HasPrefix(k, "consenso.") {
+		if strings.HasPrefix(k, "consent.") {
 			sn, ok := rispostaSiNo(v)
 			if !ok {
 				return nil, Errore("RX-RISPOSTE-003", k+" = «"+v+"»")

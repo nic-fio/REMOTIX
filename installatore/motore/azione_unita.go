@@ -6,17 +6,17 @@ import "encoding/json"
 // GetUnitFileState: quel che fanno systemctl enable e is-enabled, senza lanciarli, §10.14). Reversibilità ESATTA; un'unità già abilitata è PREESISTENTE e resta
 // abilitata; un'unità mascherata non si tocca (l'amministratore l'ha spenta apposta).
 //
-// parametri: unita; avvia ("si": anche accesa subito; annullare la spegne e la disabilita). ⚠ Nessun
+// parametri: unita; avvia ("yes": anche accesa subito; annullare la spegne e la disabilita). ⚠ Nessun
 // piano nuovo lo usa più (era il timer degli aggiornamenti, tolto con D14, DECISIONI §10.23): resta
 // perché la disinstallazione di un'installazione fatta prima sappia spegnere quel che aveva acceso.
 
-func init() { registraTipo("abilita-unita", nuovaUnita) }
+func init() { registraTipo("enable-unit", nuovaUnita) }
 
 // PianoUnita prepara il passo del piano.
 func PianoUnita(id, unita string) AzionePiano {
 	return AzionePiano{
-		ID: id, Tipo: "abilita-unita",
-		Parametri:      map[string]string{"unita": unita},
+		ID: id, Tipo: "enable-unit",
+		Parametri:      map[string]string{"unit": unita},
 		Descrizione:    T("az.unita", unita),
 		ComeSiFa:       T("az.unita.fa", unita),
 		ComeSiVerifica: T("az.unita.verifica", unita),
@@ -31,12 +31,12 @@ type unita struct {
 }
 
 type primaUnita struct {
-	Origine Origine `json:"origine"`
-	Stato   string  `json:"stato"` // quel che diceva is-enabled
+	Origine Origine `json:"origin"`
+	Stato   string  `json:"state"` // quel che diceva is-enabled
 }
 
 func nuovaUnita(p AzionePiano) (Azione, error) {
-	return &unita{p.Parametri["unita"], p.Parametri["avvia"] == "si"}, nil
+	return &unita{p.Parametri["unit"], p.Parametri["start"] == "yes"}, nil
 }
 
 func (u *unita) attiva(c *Contesto) bool {
@@ -49,7 +49,7 @@ func (u *unita) Vincoli(c *Contesto) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []string{"unita:" + u.nome + "=" + s}, nil
+	return []string{"unit:" + u.nome + "=" + s}, nil
 }
 
 func (u *unita) Fotografa(c *Contesto) (json.RawMessage, Origine, error) {

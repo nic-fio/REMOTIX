@@ -139,13 +139,13 @@ func (m *Motore) Elenco() ([]*Operazione, error) {
 
 func (m *Motore) apri(id string) (*Operazione, error) {
 	op := &Operazione{ID: id, Cartella: filepath.Join(m.Cartella, id), m: m}
-	b, err := os.ReadFile(filepath.Join(op.Cartella, "stato"))
+	b, err := os.ReadFile(filepath.Join(op.Cartella, "state"))
 	if err != nil {
 		return nil, err
 	}
 	op.Stato = Stato(strings.TrimSpace(string(b)))
 	var p Piano
-	if err := LeggiJSON(filepath.Join(op.Cartella, "piano.json"), &p); err == nil {
+	if err := LeggiJSON(filepath.Join(op.Cartella, "plan.json"), &p); err == nil {
 		op.Piano = &p
 	}
 	return op, nil
@@ -158,7 +158,7 @@ func (op *Operazione) apriRegistro() error {
 	if op.Reg != nil {
 		return nil
 	}
-	r, avvisi, err := ApriRegistro(filepath.Join(op.Cartella, "registro.jsonl"))
+	r, avvisi, err := ApriRegistro(filepath.Join(op.Cartella, "log.jsonl"))
 	if err != nil {
 		return err
 	}
@@ -202,7 +202,7 @@ func (op *Operazione) vai(a Stato, codice, dettaglio string) error {
 	if !Valida(da, a) {
 		return Errore("RX-STATO-002", string(da)+" → "+string(a))
 	}
-	if err := ScriviAtomico(filepath.Join(op.Cartella, "stato"), []byte(string(a)+"\n"), 0o600); err != nil {
+	if err := ScriviAtomico(filepath.Join(op.Cartella, "state"), []byte(string(a)+"\n"), 0o600); err != nil {
 		return err
 	}
 	op.Stato = a
@@ -255,7 +255,7 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 		return nil, Errore("RX-STATO-001", ap.ID+" is "+string(ap.Stato))
 	}
 	var piano Piano
-	if err := LeggiJSON(percorsoPiano, &piano); err != nil || piano.Oggetto != "piano" {
+	if err := LeggiJSON(percorsoPiano, &piano); err != nil || piano.Oggetto != "plan" {
 		if err == nil {
 			err = fmt.Errorf("not a plan: object %q", piano.Oggetto)
 		}
@@ -271,18 +271,18 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 	if err := SincronizzaCartella(m.Cartella); err != nil {
 		return nil, err
 	}
-	if err := ScriviAtomico(filepath.Join(op.Cartella, "stato"), []byte(string(NUOVA)+"\n"), 0o600); err != nil {
+	if err := ScriviAtomico(filepath.Join(op.Cartella, "state"), []byte(string(NUOVA)+"\n"), 0o600); err != nil {
 		return nil, err
 	}
 	op.Stato = NUOVA
 	if err := op.apriRegistro(); err != nil {
 		return nil, err
 	}
-	if err := op.Reg.Scrivi(Evento{Tipo: EvStato, A: NUOVA, Dettaglio: "piano " + piano.ID}); err != nil {
+	if err := op.Reg.Scrivi(Evento{Tipo: EvStato, A: NUOVA, Dettaglio: "plan " + piano.ID}); err != nil {
 		return nil, err
 	}
 	m.Ev.Stato(op.ID, "", NUOVA, T("ev.operazione", op.ID))
-	if err := op.scriviOggetto("piano.json", &piano); err != nil {
+	if err := op.scriviOggetto("plan.json", &piano); err != nil {
 		return nil, err
 	}
 
@@ -291,7 +291,7 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 		return op, op.blocca(Errore("RX-TRUST-004", "no catalogue source"))
 	}
 	cat, fid, err := m.Fonti.Fidati(m.adesso())
-	if e := op.scriviOggetto("fiducia.json", fid); e != nil {
+	if e := op.scriviOggetto("trust.json", fid); e != nil {
 		return op, e
 	}
 	for _, x := range fid.Messaggi {
@@ -301,13 +301,13 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 		return op, op.blocca(err)
 	}
 	m.Catalogo = cat
-	if err := op.vai(FIDATA, "", fmt.Sprintf("catalogo %s (sequenza %d): %s", cat.Versione, cat.Sequenza, fid.Fonte)); err != nil {
+	if err := op.vai(FIDATA, "", fmt.Sprintf("catalog %s (sequence %d): %s", cat.Versione, cat.Sequenza, fid.Fonte)); err != nil {
 		return op, err
 	}
 
 	// 1 PREFLIGHT
 	prof := m.Profilo()
-	if err := op.scriviOggetto("profilo.json", prof); err != nil {
+	if err := op.scriviOggetto("profile.json", prof); err != nil {
 		return op, err
 	}
 	if err := op.vai(ESAMINATA, "", ""); err != nil {
@@ -316,7 +316,7 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 
 	// 2 COMPATIBILITY
 	rap := Valuta(m.Catalogo, prof)
-	if err := op.scriviOggetto("compatibilita.json", rap); err != nil {
+	if err := op.scriviOggetto("compatibility.json", rap); err != nil {
 		return op, err
 	}
 	if err := op.vai(VALUTATA, "", ""); err != nil {
@@ -336,7 +336,7 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 	if im.Digest != piano.Impronta.Digest {
 		tolti, aggiunti := DifferenzeImpronta(piano.Impronta.Elementi, im.Elementi)
 		det := "in the plan: " + strings.Join(tolti, "; ") + " — now: " + strings.Join(aggiunti, "; ")
-		if err := op.scriviOggetto("impronta-adesso.json", im); err != nil {
+		if err := op.scriviOggetto("fingerprint-now.json", im); err != nil {
 			return op, err
 		}
 		return op, op.blocca(Errore("RX-PIANO-001", det))
@@ -350,7 +350,7 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 			return op, op.blocca(err)
 		}
 	}
-	if err := op.vai(PIANIFICATA, "", "impronta "+im.Digest[:16]); err != nil {
+	if err := op.vai(PIANIFICATA, "", "fingerprint "+im.Digest[:16]); err != nil {
 		return op, err
 	}
 
@@ -381,9 +381,9 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 		m.Ev.Messaggio(op.ID, Msg("RX-PIANO-003", ""))
 		return op, op.vai(RIFIUTATA, "RX-PIANO-003", "")
 	case appr == nil:
-		appr = &Approvazione{Da: chi, Ora: ora(), Modo: "a mano, --approva", DigestPiano: piano.Digest()}
+		appr = &Approvazione{Da: chi, Ora: ora(), Modo: "by hand, --approve", DigestPiano: piano.Digest()}
 	}
-	if err := op.scriviOggetto("approvazione.json", appr); err != nil {
+	if err := op.scriviOggetto("approval.json", appr); err != nil {
 		return op, err
 	}
 	if err := op.vai(APPROVATA, "", appr.Modo+", by "+appr.Da); err != nil {
@@ -396,7 +396,7 @@ func (m *Motore) Applica(percorsoPiano string, approvaAMano bool, chi string) (*
 	}
 
 	// 5 ACQUISITION: le azioni di prova non chiedono pacchetti; l'insieme risolto è vuoto ma c'è.
-	if err := op.scriviOggetto("insieme-risolto.json", map[string]any{"formato": Formato, "oggetto": "insieme-risolto", "artefatti": []any{}}); err != nil {
+	if err := op.scriviOggetto("resolved-set.json", map[string]any{"format": Formato, "object": "resolved-set", "artifacts": []any{}}); err != nil {
 		return op, err
 	}
 	if err := op.vai(ACQUISITA, "", ""); err != nil {
@@ -437,7 +437,7 @@ func (m *Motore) Riprendi() (*Operazione, error) {
 		}
 		fallthrough
 	case INTERROTTA:
-		if err := op.vai(IN_ESECUZIONE, "", "ripresa"); err != nil {
+		if err := op.vai(IN_ESECUZIONE, "", "resume"); err != nil {
 			return op, err
 		}
 	}
@@ -536,7 +536,7 @@ func (op *Operazione) continua() error {
 			if err := op.scriviInstallazione(fin); err != nil {
 				return err
 			}
-			if op.Piano.Mestiere == "disinstallazione" {
+			if op.Piano.Mestiere == "uninstallation" {
 				if err := os.Remove(op.m.PercorsoInstallazione()); err != nil && !os.IsNotExist(err) {
 					return err
 				}
@@ -544,7 +544,7 @@ func (op *Operazione) continua() error {
 			if err := op.vai(fin, "", ""); err != nil {
 				return err
 			}
-			if op.Piano.Mestiere == "disinstallazione" {
+			if op.Piano.Mestiere == "uninstallation" {
 				return op.m.PulisciStoria(op.Piano.Purge)
 			}
 			return nil
@@ -592,7 +592,7 @@ func (op *Operazione) fallita(ap AzionePiano, err error) error {
 	if e := op.Reg.Scrivi(Evento{Tipo: EvFallita, Azione: ap.ID, Codice: codice, Dettaglio: err.Error()}); e != nil {
 		return e
 	}
-	op.m.Ev.Azione(op.ID, ap.ID, "FALLITA", err.Error())
+	op.m.Ev.Azione(op.ID, ap.ID, "FAILED", err.Error())
 	return errFallita
 }
 
@@ -613,10 +613,10 @@ func (op *Operazione) fatta(az Azione, ap AzionePiano, prima json.RawMessage, no
 	if esito != COMPLETO {
 		return op.fallita(ap, Errore("RX-AZIONE-003", string(esito)+": "+det))
 	}
-	if err := op.Reg.Scrivi(Evento{Tipo: EvFatta, Azione: ap.ID, Dopo: jsonDi(map[string]string{"esito": string(esito), "dettaglio": det}), Dettaglio: nota}); err != nil {
+	if err := op.Reg.Scrivi(Evento{Tipo: EvFatta, Azione: ap.ID, Dopo: jsonDi(map[string]string{"result": string(esito), "detail": det}), Dettaglio: nota}); err != nil {
 		return err
 	}
-	op.m.Ev.Azione(op.ID, ap.ID, "FATTA", strings.TrimSpace(nota+" "+det))
+	op.m.Ev.Azione(op.ID, ap.ID, "DONE", strings.TrimSpace(nota+" "+det))
 	punto("dopo-fatta", ap.ID)
 	return nil
 }
@@ -644,7 +644,7 @@ func (op *Operazione) eseguiTutte() error {
 			if err := op.Reg.Scrivi(Evento{Tipo: EvIntenzione, Azione: ap.ID, Prima: prima, Origine: orig}); err != nil {
 				return err
 			}
-			op.m.Ev.Azione(op.ID, ap.ID, "INTENZIONE", string(orig))
+			op.m.Ev.Azione(op.ID, ap.ID, "INTENT", string(orig))
 			punto("dopo-intenzione", ap.ID)
 			if err := az.Fai(c, prima); err != nil {
 				return op.fallita(ap, err)
@@ -660,7 +660,7 @@ func (op *Operazione) eseguiTutte() error {
 			if err != nil {
 				return op.fallita(ap, err)
 			}
-			op.m.Ev.Azione(op.ID, ap.ID, "RIPRESA", string(esito)+": "+det)
+			op.m.Ev.Azione(op.ID, ap.ID, "RESUMED", string(esito)+": "+det)
 			switch esito {
 			case COMPLETO:
 				if err := op.fatta(az, ap, prima, "resumed: the effect was already there"); err != nil {
@@ -727,7 +727,7 @@ func (op *Operazione) annullaTutte() ([]string, error) {
 			return op.Reg.Scrivi(Evento{Tipo: t, Azione: ap.ID, Codice: codice, Dettaglio: det})
 		}
 		if intz.Origine == PREESISTENTE {
-			if err := scrivi(EvAnnullata, "", "PREESISTENTE: left untouched"); err != nil {
+			if err := scrivi(EvAnnullata, "", "PREEXISTING: left untouched"); err != nil {
 				return nil, err
 			}
 			continue
@@ -740,7 +740,7 @@ func (op *Operazione) annullaTutte() ([]string, error) {
 		}
 		if esito, det, err := a.Controlla(c, intz.Prima); err == nil && esito == ESTRANEO {
 			resti = append(resti, ap.ID+": changed by someone else, left untouched ("+det+")")
-			if err := scrivi(EvAnnullamentoFallito, "RX-RIPRESA-001", "CONCORRENTE: "+det); err != nil {
+			if err := scrivi(EvAnnullamentoFallito, "RX-RIPRESA-001", "CONCURRENT: "+det); err != nil {
 				return nil, err
 			}
 			continue
@@ -775,26 +775,26 @@ func (op *Operazione) annullaTutte() ([]string, error) {
 // Controllo: una riga del rapporto di verifica (§6.6.7).
 type Controllo struct {
 	ID        string `json:"id"`
-	Cosa      string `json:"cosa"`
-	Esito     string `json:"esito"` // PASS · FAIL · UNKNOWN · N.A.
-	Richiesto bool   `json:"richiesto"`
-	Dettaglio string `json:"dettaglio,omitempty"`
+	Cosa      string `json:"what"`
+	Esito     string `json:"result"` // PASS · FAIL · UNKNOWN · N.A.
+	Richiesto bool   `json:"required"`
+	Dettaglio string `json:"detail,omitempty"`
 }
 
 // RapportoVerifica: il sesto oggetto.
 type RapportoVerifica struct {
-	Formato    string       `json:"formato"`
-	Oggetto    string       `json:"oggetto"`
-	Creato     string       `json:"creato"`
-	Controlli  []Controllo  `json:"controlli"`
-	Condizioni []Condizione `json:"condizioni,omitempty"` // quelle nate dalla verifica (un UNKNOWN dichiarato)
+	Formato    string       `json:"format"`
+	Oggetto    string       `json:"object"`
+	Creato     string       `json:"created"`
+	Controlli  []Controllo  `json:"checks"`
+	Condizioni []Condizione `json:"conditions,omitempty"` // quelle nate dalla verifica (un UNKNOWN dichiarato)
 }
 
 // verifica (fase 7, qui ridotta alle azioni di prova): ogni azione ricontrollata. ⛔ UNKNOWN non
 // è PASS: un controllo richiesto che non sa rispondere manda all'annullamento (le azioni di
 // prova non hanno un ripiego dichiarato).
 func (op *Operazione) verifica() (bool, error) {
-	rv := RapportoVerifica{Formato: Formato, Oggetto: "verifica", Creato: ora()}
+	rv := RapportoVerifica{Formato: Formato, Oggetto: "check", Creato: ora()}
 	tutto := true
 	for _, ap := range op.Piano.Azioni {
 		a, err := NuovaAzione(ap)
@@ -821,11 +821,11 @@ func (op *Operazione) verifica() (bool, error) {
 	// codifica: fase 19, niente ripiego) ⇒ annullamento; UNKNOWN ⇒ CONFERMATA_A_CONDIZIONI, mai PASS
 	// (§6.6.7).
 	// e la pila PAM che si risolve, e la porta che il firewall lascia passare (certifica.go, R29)
-	if op.Piano.Mestiere == "installazione" {
+	if op.Piano.Mestiere == "installation" {
 		porta := op.m.Porta
 		for _, ap := range op.Piano.Azioni {
-			if ap.Tipo == "accendi-servizio" {
-				if n, err := strconv.Atoi(ap.Parametri["porta"]); err == nil && n > 0 {
+			if ap.Tipo == "start-service" {
+				if n, err := strconv.Atoi(ap.Parametri["port"]); err == nil && n > 0 {
 					porta = n
 				}
 			}
@@ -840,7 +840,7 @@ func (op *Operazione) verifica() (bool, error) {
 			tutto = false
 		}
 	}
-	return tutto, op.scriviOggetto("verifica.json", rv)
+	return tutto, op.scriviOggetto("check.json", rv)
 }
 
 // provaCodifica: `remotix --prova-codifica` (§6.5-bis; fase 19, niente ripiego sul processore): una
@@ -851,7 +851,7 @@ func (op *Operazione) verifica() (bool, error) {
 // d'uso. Il motore lo lancia da root (elenco chiuso). hardware ⇒ PASS; 3 o 1 ⇒ FAIL; un binario che
 // non la conosce o una risposta illeggibile ⇒ UNKNOWN (§6.6.7).
 func provaCodifica(a *Ambiente) (Controllo, *Condizione) {
-	k := Controllo{ID: "codifica-h264", Cosa: "remotix --prova-codifica (7a)", Richiesto: true}
+	k := Controllo{ID: "h264-encoding", Cosa: "remotix --prova-codifica (7a)", Richiesto: true}
 	out, c, err := a.Esegui(2*time.Minute, "remotix", "--prova-codifica")
 	var r struct {
 		Esito, Codificatore, Strada, Nodo, Motivo, Codec string
@@ -884,20 +884,20 @@ func provaCodifica(a *Ambiente) (Controllo, *Condizione) {
 }
 
 func (op *Operazione) condizioni() []Condizione {
-	if op.Piano.Mestiere == "disinstallazione" {
+	if op.Piano.Mestiere == "uninstallation" {
 		return nil
 	}
 	var c []Condizione
 	var rv RapportoVerifica
-	if LeggiJSON(filepath.Join(op.Cartella, "verifica.json"), &rv) == nil {
+	if LeggiJSON(filepath.Join(op.Cartella, "check.json"), &rv) == nil {
 		c = append(c, rv.Condizioni...)
 	}
 	var r Rapporto
-	if err := LeggiJSON(filepath.Join(op.Cartella, "compatibilita.json"), &r); err != nil {
+	if err := LeggiJSON(filepath.Join(op.Cartella, "compatibility.json"), &r); err != nil {
 		return c
 	}
 	for _, e := range r.Desktop {
-		if e.Livello != NON_SUPPORTATA && e.Installato != "" && e.Installato != "assente" && e.Installato != "sconosciuto" {
+		if e.Livello != NON_SUPPORTATA && e.Installato != "" && e.Installato != "absent" && e.Installato != "unknown" {
 			c = append(c, e.Condizioni...)
 		}
 	}
@@ -906,36 +906,36 @@ func (op *Operazione) condizioni() []Condizione {
 
 // Certificato: il settimo oggetto (§6.6.11).
 type Certificato struct {
-	Formato       string       `json:"formato"`
-	Oggetto       string       `json:"oggetto"`
-	Creato        string       `json:"creato"`
-	Operazione    string       `json:"operazione"`
-	Stato         Stato        `json:"stato"`
-	Mestiere      string       `json:"mestiere"`
-	Prodotto      string       `json:"prodotto"`
-	Motore        RifMotore    `json:"motore"`
-	Catalogo      RifCatalogo  `json:"catalogo"`
-	Fiducia       string       `json:"fiducia"`
-	DigestPiano   string       `json:"digest_piano"`
-	DigestInsieme string       `json:"digest_insieme_risolto"`
-	Impronta      string       `json:"impronta"`
-	Controlli     []Controllo  `json:"controlli"`
-	Condizioni    []Condizione `json:"condizioni"`
-	Resti         []string     `json:"resti,omitempty"` // ANNULLATA_IN_PARTE: quel che resta, e perché
-	Indirette     []string     `json:"indirette"`       // modifiche INDIRETTE dichiarate (nessuna, senza pacchetti)
+	Formato       string       `json:"format"`
+	Oggetto       string       `json:"object"`
+	Creato        string       `json:"created"`
+	Operazione    string       `json:"operation"`
+	Stato         Stato        `json:"state"`
+	Mestiere      string       `json:"kind"`
+	Prodotto      string       `json:"product"`
+	Motore        RifMotore    `json:"engine"`
+	Catalogo      RifCatalogo  `json:"catalog"`
+	Fiducia       string       `json:"trust"`
+	DigestPiano   string       `json:"digest_plan"`
+	DigestInsieme string       `json:"digest_resolved_set"`
+	Impronta      string       `json:"fingerprint"`
+	Controlli     []Controllo  `json:"checks"`
+	Condizioni    []Condizione `json:"conditions"`
+	Resti         []string     `json:"leftovers,omitempty"` // ANNULLATA_IN_PARTE: quel che resta, e perché
+	Indirette     []string     `json:"indirect"`            // modifiche INDIRETTE dichiarate (nessuna, senza pacchetti)
 }
 
 func (op *Operazione) certificato(fin Stato, resti []string) error {
 	var fid Fiducia
-	LeggiJSON(filepath.Join(op.Cartella, "fiducia.json"), &fid)
+	LeggiJSON(filepath.Join(op.Cartella, "trust.json"), &fid)
 	var rv RapportoVerifica
-	LeggiJSON(filepath.Join(op.Cartella, "verifica.json"), &rv)
-	ins, _ := Sha256File(filepath.Join(op.Cartella, "insieme-risolto.json"))
+	LeggiJSON(filepath.Join(op.Cartella, "check.json"), &rv)
+	ins, _ := Sha256File(filepath.Join(op.Cartella, "resolved-set.json"))
 	fiducia := T("cert.fiducia_no")
 	if fid.Catalogo.Digest != "" && len(fid.Messaggi) == 0 {
 		fiducia = fmt.Sprintf("%s (sequenza %d)", fid.Fonte, fid.Sequenza)
 	}
-	c := Certificato{Formato: Formato, Oggetto: "certificato", Creato: ora(), Operazione: op.ID, Stato: fin,
+	c := Certificato{Formato: Formato, Oggetto: "certificate", Creato: ora(), Operazione: op.ID, Stato: fin,
 		Mestiere: op.Piano.Mestiere, Prodotto: T("cert.prodotto_prova"),
 		Motore: RifMotore{VersioneMotore, DigestMotore()}, Catalogo: fid.Catalogo, Fiducia: fiducia,
 		DigestPiano: op.Piano.Digest(), DigestInsieme: ins, Impronta: op.Piano.Impronta.Digest,
@@ -943,7 +943,7 @@ func (op *Operazione) certificato(fin Stato, resti []string) error {
 	if c.Condizioni == nil {
 		c.Condizioni = []Condizione{}
 	}
-	if err := op.scriviOggetto("certificato.json", c); err != nil {
+	if err := op.scriviOggetto("certificate.json", c); err != nil {
 		return err
 	}
 	var t strings.Builder
@@ -967,36 +967,36 @@ func (op *Operazione) certificato(fin Stato, resti []string) error {
 			fmt.Fprintf(&t, "  %s\n", r)
 		}
 	}
-	return ScriviAtomico(filepath.Join(op.Cartella, "certificato.txt"), []byte(t.String()), 0o600)
+	return ScriviAtomico(filepath.Join(op.Cartella, "certificate.txt"), []byte(t.String()), 0o600)
 }
 
 // Installazione: lo stato che REMOTIX controlla all'avvio (DECISIONI §10.12: l'installatore è
 // l'unica via; il servizio non parte senza un'operazione CONFERMATA, RX-INST-001). Sta accanto
 // alla cartella delle operazioni: /var/lib/remotix/installazione.json.
 type Installazione struct {
-	Formato     string `json:"formato"`
-	Oggetto     string `json:"oggetto"` // "installazione"
-	Operazione  string `json:"operazione"`
-	Stato       Stato  `json:"stato"`
-	Mestiere    string `json:"mestiere"`
-	Certificato string `json:"certificato"`
-	Scritto     string `json:"scritto"`
+	Formato     string `json:"format"`
+	Oggetto     string `json:"object"` // "installation"
+	Operazione  string `json:"operation"`
+	Stato       Stato  `json:"state"`
+	Mestiere    string `json:"kind"`
+	Certificato string `json:"certificate"`
+	Scritto     string `json:"written"`
 }
 
 // PercorsoInstallazione: accanto alla cartella delle operazioni.
 func (m *Motore) PercorsoInstallazione() string {
-	return filepath.Join(filepath.Dir(m.Cartella), "installazione.json")
+	return filepath.Join(filepath.Dir(m.Cartella), "installation.json")
 }
 
 // scriviInstallazione: solo per i mestieri che installano davvero il prodotto. Il piano di prova
 // di T4 non lo scrive: non ha installato REMOTIX.
 func (op *Operazione) scriviInstallazione(fin Stato) error {
-	if op.Piano.Mestiere != "installazione" {
+	if op.Piano.Mestiere != "installation" {
 		return nil
 	}
-	return ScriviJSON(op.m.PercorsoInstallazione(), Installazione{Formato: Formato, Oggetto: "installazione",
+	return ScriviJSON(op.m.PercorsoInstallazione(), Installazione{Formato: Formato, Oggetto: "installation",
 		Operazione: op.ID, Stato: fin, Mestiere: op.Piano.Mestiere,
-		Certificato: filepath.Join(op.Cartella, "certificato.json"), Scritto: ora()})
+		Certificato: filepath.Join(op.Cartella, "certificate.json"), Scritto: ora()})
 }
 
 // ControllaInstallazione: quel che REMOTIX (e remotix-install aggiornato) chiede all'avvio.
@@ -1022,8 +1022,8 @@ func (op *Operazione) indirette() []string {
 	r := []string{}
 	for _, e := range op.Reg.Eventi {
 		var d map[string]string
-		if e.Tipo == EvFatta && json.Unmarshal(e.Dopo, &d) == nil && strings.Contains(d["dettaglio"], "[RX-PACCHETTI-006]") {
-			_, x, _ := strings.Cut(d["dettaglio"], "[RX-PACCHETTI-006] ")
+		if e.Tipo == EvFatta && json.Unmarshal(e.Dopo, &d) == nil && strings.Contains(d["detail"], "[RX-PACCHETTI-006]") {
+			_, x, _ := strings.Cut(d["detail"], "[RX-PACCHETTI-006] ")
 			r = append(r, "RX-PACCHETTI-006 "+e.Azione+": "+x)
 		}
 	}

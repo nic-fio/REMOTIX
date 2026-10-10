@@ -78,27 +78,27 @@ D=/tmp/$(basename "$PKG")
 vm "sudo install -m 755 /tmp/remotix-install /root/remotix-install"
 
 echo "==> 2. verifica, piano, approva, applica (da root)"
-vm "sudo /root/remotix-install verifica" >"$E/verifica.txt" 2>&1; echo "   verifica: uscita $?"
-vm "cd /tmp && sudo /root/remotix-install piano --installa --pacchetto $D --utente prova $PIANO_OPZ --uscita /root/piano.json" >"$E/piano.txt" 2>&1
+vm "sudo /root/remotix-install check" >"$E/verifica.txt" 2>&1; echo "   verifica: uscita $?"
+vm "cd /tmp && sudo /root/remotix-install plan --install --package $D --users prova $PIANO_OPZ --output /root/piano.json" >"$E/piano.txt" 2>&1
 echo "   piano: uscita $? — $(grep -c '^[0-9]*\. ' "$E/piano.txt") passi"
-vm "sudo /root/remotix-install approva /root/piano.json ${DESKTOP:+--desktop $DESKTOP}" >>"$E/piano.txt" 2>&1
+vm "sudo /root/remotix-install approve /root/piano.json ${DESKTOP:+--desktop $DESKTOP}" >>"$E/piano.txt" 2>&1
 [ -n "$DESKTOP" ] && vm "echo bersaglio: \$(systemctl get-default); echo display manager: \$(systemctl is-enabled display-manager.service 2>&1) \$(systemctl is-active display-manager.service 2>&1)" | sed 's/^/   prima: /' 
 T0=$(date +%s)
-vm "sudo /root/remotix-install applica /root/piano.json" >"$E/applica.txt" 2>&1
+vm "sudo /root/remotix-install apply /root/piano.json" >"$E/applica.txt" 2>&1
 echo "   applica: uscita $? in $(( $(date +%s) - T0 )) s — $(grep -E '^operation ' "$E/applica.txt")"
 vm "echo servizio: \$(systemctl is-enabled remotix) \$(systemctl is-active remotix)
 echo bersaglio: \$(systemctl get-default); for u in gdm3 sddm lightdm display-manager; do echo \"\$u: \$(systemctl is-enabled \$u.service 2>&1) \$(systemctl is-active \$u.service 2>&1)\"; done; ls /usr/sbin/policy-rc.d 2>&1
 echo in ascolto sulla 7447: \$(sudo ss -Htulpn | grep -c ':7447 ')
 id prova
 systemd-analyze cat-config systemd/logind.conf | grep -c '^HandlePowerKey=ignore' | sed 's/^/cintura tasti in vigore: /'
-sudo cat /var/lib/remotix/installazione.json
-sudo sh -c 'cat /var/lib/remotix/operazioni/*/certificato.txt'
-sudo sh -c 'grep -h COMANDO /var/lib/remotix/operazioni/*/registro.jsonl' | sed 's/.*dettaglio\":\"//; s/\"}//'" >"$E/installato.txt" 2>&1
+sudo cat /var/lib/remotix/installation.json
+sudo sh -c 'cat /var/lib/remotix/operations/*/certificate.txt'
+sudo sh -c 'grep -h COMMAND /var/lib/remotix/operations/*/log.jsonl' | sed 's/.*detail\":\"//; s/\"}//'" >"$E/installato.txt" 2>&1
 sed 's/^/   /' "$E/installato.txt" | head -60
 impronta installato
 
 echo "==> 2b. certifica (sola lettura) sulla macchina sana"
-vm "sudo /root/remotix-install certifica; echo uscita \$?" >"$E/certifica.txt" 2>&1
+vm "sudo /root/remotix-install certify; echo uscita \$?" >"$E/certifica.txt" 2>&1
 sed 's/^/   /' "$E/certifica.txt" | grep -E 'Certification|uscita|FAIL|UNKNOWN|C-'
 if [ -n "${R29:-}" ]; then
 	echo "==> R29: la certificazione su una macchina guasta apposta non dice mai VERDE"
@@ -106,7 +106,7 @@ if [ -n "${R29:-}" ]; then
 	vm "sudo bash -s" >"$E/r29.txt" 2>&1 <<'R29'
 L=$(ls /usr/lib/x86_64-linux-gnu/libx264.so.* /usr/lib64/libx264.so.* /usr/lib/libx264.so.* 2>/dev/null | head -1)
 P=$(ls /etc/pam.d/remotix /usr/lib/pam.d/remotix 2>/dev/null | head -1)
-c() { /root/remotix-install certifica | grep -E "Certification|$1"; }
+c() { /root/remotix-install certify | grep -E "Certification|$1"; }
 echo "-- guasto 1: la pila PAM di REMOTIX nomina un modulo che non c'è"; cp -a $P /root/pam-via; echo "auth required pam_non_esiste.so" >> $P; c pam-risolta; cp -a /root/pam-via $P
 echo "-- guasto 2: niente libx264 ($L) e niente VA-API: la codifica non riesce"; mv $L /root/x264-via; c codifica; mv /root/x264-via $L
 echo "-- guasto 3: il servizio spento da altri"; systemctl stop remotix; c servizio; systemctl start remotix; sleep 3
@@ -131,11 +131,11 @@ ps -o pid,cgroup:70,comm -u prova" >"$E/sessioni-prima.txt" 2>&1
 sed 's/^/   /' "$E/sessioni-prima.txt"
 
 echo "==> 5. disinstalla --purge, approva, applica"
-vm "sudo /root/remotix-install disinstalla --purge --uscita /root/disinstalla.json" >"$E/disinstalla-piano.txt" 2>&1
+vm "sudo /root/remotix-install uninstall --purge --output /root/disinstalla.json" >"$E/disinstalla-piano.txt" 2>&1
 echo "   piano: uscita $? — $(grep -c '^[0-9]*\. ' "$E/disinstalla-piano.txt") passi"
-vm "sudo /root/remotix-install approva /root/disinstalla.json" >>"$E/disinstalla-piano.txt" 2>&1
+vm "sudo /root/remotix-install approve /root/disinstalla.json" >>"$E/disinstalla-piano.txt" 2>&1
 T0=$(date +%s)
-vm "sudo /root/remotix-install applica /root/disinstalla.json" >"$E/disinstalla.txt" 2>&1
+vm "sudo /root/remotix-install apply /root/disinstalla.json" >"$E/disinstalla.txt" 2>&1
 echo "   applica: uscita $? in $(( $(date +%s) - T0 )) s — $(grep -E '^operation ' "$E/disinstalla.txt")"
 sleep 3
 vm "for s in \$(loginctl list-sessions --no-legend | awk '{print \$1}'); do echo \"\$s \$(loginctl show-session \$s -p Service -p Name -p State --value | tr '\n' ' ')\"; done
@@ -145,7 +145,7 @@ sudo bash -c 'n=0; for p in \$(pgrep -u prova); do grep -q user@ /proc/\$p/cgrou
 ps -o pid,cgroup:70,comm -u prova
 echo servizio: \$(systemctl is-enabled remotix 2>&1) \$(systemctl is-active remotix 2>&1)
 (dpkg -l remotix 2>/dev/null | tail -1 || true; rpm -q remotix 2>/dev/null; pacman -Q remotix 2>/dev/null); id prova
-sudo ls /var/lib/remotix /var/lib/remotix/operazioni; sudo sh -c 'cat /var/lib/remotix/operazioni/*/certificato.txt' | grep -A30 'stato finale: CONFERMATA\$' | tail -30" >"$E/dopo.txt" 2>&1
+sudo ls /var/lib/remotix /var/lib/remotix/operations; sudo sh -c 'cat /var/lib/remotix/operations/*/certificate.txt' | grep -A30 'final state: CONFIRMED\$' | tail -30" >"$E/dopo.txt" 2>&1
 sed 's/^/   /' "$E/dopo.txt" | head -60
 kill "$OROLOGIO" 2>/dev/null; OROLOGIO=
 vm "sudo rm -f ~prova/orologio.txt"

@@ -9,7 +9,7 @@
 #                                                      motore SCRITTO DENTRO, e install.sh.sha256
 #   pubblica.sh rigenera                               indici e firme, SBOM (R24), licenze, SHA256SUMS
 #
-#   canale: stabile · candidato.  bersaglio: debian13, ubuntu2604, fedora44, alma10, arch, …
+#   canale: stable · candidate (10 ott 2026: nomi in inglese, DECISIONI §10.35).  bersaglio: debian13, ubuntu2604, fedora44, alma10, arch, …
 #
 # Com'è fatto (servito così com'è da un server HTTP qualunque):
 #   deb/pool/<bersaglio>-<canale>/*.deb, deb/dists/<bersaglio>-<canale>/{InRelease,Release,Release.gpg}
@@ -17,8 +17,8 @@
 #   rpm/<canale>/<bersaglio>/*.rpm (firmati) + repodata/ (repomd.xml.asc: repo_gpgcheck=1)
 #   pacman/<canale>/x86_64/*.pkg.tar.zst(.sig) + remotix.db(.sig): il database ha la versione più
 #        nuova di ogni pacchetto; le VECCHIE restano come file (pacman -U, il ritorno indietro R11)
-#   install.sh, install.sh.sha256, motore/remotix-install(.sha256), chiavi/ (la chiave
-#   pubblica), sbom/<pacchetto>.spdx.json, LICENZE-COMPONENTI.txt, SHA256SUMS
+#   install.sh, install.sh.sha256, engine/remotix-install(.sha256), keys/ (la chiave
+#   pubblica), sbom/<pacchetto>.spdx.json, THIRD-PARTY-LICENSES.txt, SHA256SUMS
 # ⭐ Le versioni vecchie non si cancellano mai da qui: tornare indietro (R11) vuol dire che ci sono.
 # ⭐ UNA chiave sola (DECISIONI §10.21): quella che firma pacchetti e metadati, verificata dal gestore
 #    di pacchetti. La privata sta in $CHIAVI, FUORI dal deposito e fuori dalla cartella servita.
@@ -44,7 +44,7 @@ gpgb() { gpg --homedir "$GB" --batch --yes --pinentry-mode loopback --passphrase
 
 aggiungi() {
 	local canale=$1 bers=$2; shift 2
-	case $canale in stabile|candidato) ;; *) echo "⛔ canale $canale"; exit 2;; esac
+	case $canale in stable|candidate) ;; *) echo "⛔ canale $canale"; exit 2;; esac
 	for f in "$@"; do
 		case $f in
 		*.deb)         d=$ARCHIVIO/deb/pool/$bers-$canale ;;
@@ -62,13 +62,13 @@ aggiungi() {
 }
 
 motore() {
-	mkdir -p "$ARCHIVIO/motore"
+	mkdir -p "$ARCHIVIO/engine"
 	for f in "$@"; do
 		n=$(basename "$f")
 		case $n in remotix-install) ;; *) echo "⛔ $n: il motore si chiama remotix-install"; exit 2 ;; esac
-		cp "$f" "$ARCHIVIO/motore/$n"
-		(cd "$ARCHIVIO/motore" && sha256sum "$n" >"$n.sha256")
-		echo "   motore/$n $(cut -c1-16 "$ARCHIVIO/motore/$n.sha256")…"
+		cp "$f" "$ARCHIVIO/engine/$n"
+		(cd "$ARCHIVIO/engine" && sha256sum "$n" >"$n.sha256")
+		echo "   engine/$n $(cut -c1-16 "$ARCHIVIO/engine/$n.sha256")…"
 	done
 }
 
@@ -76,7 +76,7 @@ motore() {
 # con lo sha256 pubblicato sul sito, e lo script verifica il motore con quello che porta)
 script() {
 	local s
-	s=$(cut -d' ' -f1 "$ARCHIVIO/motore/remotix-install.sha256")
+	s=$(cut -d' ' -f1 "$ARCHIVIO/engine/remotix-install.sha256")
 	sed -e "s/^SHA256_MOTORE=''\$/SHA256_MOTORE='$s'/" "$INST/install.sh" >"$ARCHIVIO/install.sh"
 	grep -q "^SHA256_MOTORE='$s'\$" "$ARCHIVIO/install.sh" || { echo "⛔ install.sh: la riga SHA256_MOTORE non c'è"; exit 1; }
 	(cd "$ARCHIVIO" && sha256sum install.sh >install.sh.sha256)
@@ -94,7 +94,7 @@ rigenera_deb() {
 		apt-ftparchive -o APT::FTPArchive::Release::Origin=REMOTIX -o APT::FTPArchive::Release::Label=REMOTIX \
 			-o APT::FTPArchive::Release::Suite="$s" -o APT::FTPArchive::Release::Codename="$s" \
 			-o APT::FTPArchive::Release::Architectures=amd64 -o APT::FTPArchive::Release::Components=main \
-			-o APT::FTPArchive::Release::Description="REMOTIX, archivio $s (fase 17: chiave DI PROVA)" \
+			-o APT::FTPArchive::Release::Description="REMOTIX archive $s (TEST key)" \
 			release "$d" >"$LAV/Release"
 		# Valid-Until: un archivio non rifirmato da 60 giorni apt lo rifiuta (difesa dal «congelamento»)
 		awk -v v="Valid-Until: $(date -u -d '+60 days' '+%a, %d %b %Y %H:%M:%S UTC')" '{print} /^Date:/{print v}' "$LAV/Release" >"$d/Release"
@@ -141,7 +141,7 @@ rigenera_pacman() {
 		done
 		rm -f "$d"/remotix.db* "$d"/remotix.files*
 		# l'elenco dei file (anche le versioni vecchie, che il database non ha): il ritorno indietro
-		(cd "$d" && ls *.pkg.tar.zst) >"$d/remotix.versioni"
+		(cd "$d" && ls *.pkg.tar.zst) >"$d/remotix.versions"
 		podman run --rm -v "$d:/repo:Z" -w /repo docker.io/library/archlinux:latest sh -c \
 			'for f in $(ls *.pkg.tar.zst | sort -V); do repo-add -q remotix.db.tar.gz "$f" || exit 1; done' >/dev/null
 		for x in db files; do
@@ -155,24 +155,22 @@ rigenera_pacman() {
 }
 
 rigenera_chiavi() {
-	mkdir -p "$ARCHIVIO/chiavi"
-	cp "$CHIAVI/b/archivio.asc" "$ARCHIVIO/chiavi/remotix-archivio.asc"
-	rm -f "$ARCHIVIO/chiavi/radice-A.pub"
-	cat >"$ARCHIVIO/chiavi/LEGGIMI" <<EOF
-La chiave PUBBLICA di REMOTIX — l'unica (DECISIONI §10.21): firma i pacchetti e i metadati
-dell'archivio, e la verifica il gestore di pacchetti. ⚠ Fase 17: chiave DI PROVA, generata apposta,
-non protegge niente di vero (la vera, e dove si custodisce, con D10).
-  remotix-archivio.asc  GPG, impronta $FPR
-Lo script d'ingresso (install.sh) non è firmato: si verifica col suo sha256, pubblicato sul sito di
-REMOTIX in HTTPS; lui verifica il motore con lo sha256 che porta scritto dentro.
+	mkdir -p "$ARCHIVIO/keys"
+	cp "$CHIAVI/b/archivio.asc" "$ARCHIVIO/keys/remotix-archive.asc"
+	cat >"$ARCHIVIO/keys/README" <<EOF
+The PUBLIC key of REMOTIX — the only one: it signs the packages and the archive metadata, and the
+package manager verifies it. ⚠ This is a TEST key, generated on purpose: it protects nothing real.
+  remotix-archive.asc  GPG, fingerprint $FPR
+The entry script (install.sh) is not signed: verify it with its sha256, published on the REMOTIX
+site over HTTPS; it verifies the engine with the sha256 written inside it.
 EOF
 }
 
 # il file delle licenze dei componenti (DECISIONI §10.22): da SBOM e dal vendor/ del motore
 rigenera_licenze() {
 	# LICENZA_GO: la licenza di Go presa dal contenitore di costruzione (la passa rilascio.sh)
-	python3 "$QUI/licenze.py" "$ARCHIVIO" "$INST" "${LICENZA_GO:-}" >"$ARCHIVIO/LICENZE-COMPONENTI.txt"
-	echo "   LICENZE-COMPONENTI.txt: $(grep -c '^== ' "$ARCHIVIO/LICENZE-COMPONENTI.txt") componenti"
+	python3 "$QUI/licenze.py" "$ARCHIVIO" "$INST" "${LICENZA_GO:-}" >"$ARCHIVIO/THIRD-PARTY-LICENSES.txt"
+	echo "   THIRD-PARTY-LICENSES.txt: $(grep -c '^== ' "$ARCHIVIO/THIRD-PARTY-LICENSES.txt") componenti"
 }
 
 # SHA256SUMS: ogni file pubblicato (fuori dagli indici, che hanno le loro firme)

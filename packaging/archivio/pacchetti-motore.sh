@@ -12,7 +12,7 @@
 #   · remotix-install-<V>-<R>-x86_64.pkg.tar.zst  (makepkg nel contenitore di Arch)
 #   · remotix-archive-keyring_<V>-<R>_all.deb     (la chiave dell'archivio in /usr/share/keyrings)
 # Il catalogo sta dentro il motore (DECISIONI §10.21); niente timer (§10.23): a ogni cambio di
-# versione gli script chiamano `remotix-install aggiornato`.
+# versione gli script chiamano `remotix-install post-upgrade`.
 #
 # Ambiente: RX_VERSIONE (obbligatoria: quella del motore deve essere lei), RX_REVISIONE (1), MOTORE
 # (installatore/uscita/remotix-install), CHIAVI (.chiavi/ del progetto, ignorata da git: la chiave
@@ -34,13 +34,13 @@ export TMPDIR=$L
 vm=$("$MOTORE" versione | awk '{print $1}')
 [ "$vm" = "$V" ] || { echo "⛔ il motore $MOTORE dice $vm, il rilascio è $V"; exit 1; }
 cp "$MOTORE" "$L/remotix-install"
-cp "$M/LEGGIMI" "$L/"
+cp "$M/README" "$L/"
 echo "== il motore $V-$R ($(sha256sum "$L/remotix-install" | cut -c1-16)…)"
 
 echo "== .deb del motore"
 D=$L/deb; mkdir -p "$D/DEBIAN" "$D/usr/bin" "$D/usr/share/remotix-install"
 install -m 755 "$L/remotix-install" "$D/usr/bin/"
-install -m 644 "$L/LEGGIMI" "$D/usr/share/remotix-install/"
+install -m 644 "$L/README" "$D/usr/share/remotix-install/"
 cat >"$D/DEBIAN/control" <<EOF
 Package: remotix-install
 Version: $V-$R
@@ -60,7 +60,7 @@ cat >"$D/DEBIAN/postinst" <<'EOF'
 # (DECISIONI §10.12 punto 4, §10.23). Non fa mai fallire apt.
 set -e
 if [ "$1" = configure ] && [ -n "${2:-}" ]; then
-	/usr/bin/remotix-install aggiornato || true
+	/usr/bin/remotix-install post-upgrade || true
 fi
 exit 0
 EOF
@@ -90,7 +90,7 @@ SOURCE_DATE_EPOCH=$(git -C "$ALBERO" log -1 --format=%ct) \
 
 echo "== .rpm del motore (fedora:44)"
 P=$L/rpm; mkdir -p "$P/SOURCES" "$P/SPECS"
-cp "$L/remotix-install" "$L/LEGGIMI" "$P/SOURCES/"
+cp "$L/remotix-install" "$L/README" "$P/SOURCES/"
 cp "$M/remotix-install.spec" "$P/SPECS/"
 podman run --rm -v "$P:/lavoro:Z" registry.fedoraproject.org/fedora:44 sh -c "
 	dnf -y -q install rpm-build systemd-rpm-macros >/dev/null 2>&1
@@ -100,7 +100,7 @@ cp "$P"/RPMS/x86_64/remotix-install-*.rpm "$U/"
 
 echo "== pacchetto Arch del motore"
 A=$L/arch; mkdir -p "$A"
-cp "$L/remotix-install" "$L/LEGGIMI" "$M/PKGBUILD" "$M/remotix-install.install" "$A/"
+cp "$L/remotix-install" "$L/README" "$M/PKGBUILD" "$M/remotix-install.install" "$A/"
 podman run --rm --userns=keep-id -v "$A:/pkg" -w /pkg -e HOME=/pkg -e RX_VERSIONE="$V" -e RX_RILASCIO="$R" \
 	-e SOURCE_DATE_EPOCH="$(git -C "$ALBERO" log -1 --format=%ct)" localhost/remotix-costruzione-arch \
 	makepkg -f --noconfirm --nodeps >"$U/makepkg.log" 2>&1 || { tail -20 "$U/makepkg.log"; exit 1; }

@@ -179,7 +179,7 @@ func dividiPorta(porta string) (string, string) {
 
 // servizioDi: «servizio:remotix» ⇒ «remotix»; una porta ⇒ "".
 func servizioDi(regola string) string {
-	s, _ := strings.CutPrefix(regola, "servizio:")
+	s, _ := strings.CutPrefix(regola, "service:")
 	if s == regola {
 		return ""
 	}
@@ -299,7 +299,7 @@ func togliRegole(porte []portaFw, servizi []string, via []string) ([]portaFw, []
 	}
 	var s2 []string
 	for _, s := range servizi {
-		if !fuori["servizio:"+s] {
+		if !fuori["service:"+s] {
 			s2 = append(s2, s)
 		}
 	}

@@ -9,35 +9,35 @@ import (
 type StatoFatto string
 
 const (
-	RILEVATO    StatoFatto = "RILEVATO"
-	VERIFICATO  StatoFatto = "VERIFICATO"
-	SCONOSCIUTO StatoFatto = "SCONOSCIUTO"
+	RILEVATO    StatoFatto = "DETECTED"
+	VERIFICATO  StatoFatto = "VERIFIED"
+	SCONOSCIUTO StatoFatto = "UNKNOWN"
 )
 
 // Fatto è una cosa che il PREFLIGHT sa (o sa di non sapere) della macchina.
 type Fatto struct {
-	Chiave string     `json:"chiave"`
-	Valore string     `json:"valore"`
-	Stato  StatoFatto `json:"stato"`
-	Fonte  string     `json:"fonte,omitempty"` // da dove viene: un file, un comando
-	Nota   string     `json:"nota,omitempty"`
+	Chiave string     `json:"key"`
+	Valore string     `json:"value"`
+	Stato  StatoFatto `json:"state"`
+	Fonte  string     `json:"source,omitempty"` // da dove viene: un file, un comando
+	Nota   string     `json:"note,omitempty"`
 }
 
 // Profilo della macchina: il primo dei sette oggetti (§6.6.1).
 type Profilo struct {
-	Formato  string      `json:"formato"`
-	Oggetto  string      `json:"oggetto"` // "profilo"
-	Motore   string      `json:"motore"`
-	Creato   string      `json:"creato"`
-	Porta    int         `json:"porta"`
-	Fatti    []Fatto     `json:"fatti"`
-	Messaggi []Messaggio `json:"messaggi"`
-	Comandi  []string    `json:"comandi"` // i programmi lanciati per saperlo (R41): elenco chiuso
+	Formato  string      `json:"format"`
+	Oggetto  string      `json:"object"` // "profile"
+	Motore   string      `json:"engine"`
+	Creato   string      `json:"created"`
+	Porta    int         `json:"port"`
+	Fatti    []Fatto     `json:"facts"`
+	Messaggi []Messaggio `json:"messages"`
+	Comandi  []string    `json:"commands"` // i programmi lanciati per saperlo (R41): elenco chiuso
 }
 
 // NuovoProfilo è un profilo vuoto con la sua intestazione.
 func NuovoProfilo(porta int) *Profilo {
-	return &Profilo{Formato: Formato, Oggetto: "profilo", Motore: VersioneMotore, Creato: ora(), Porta: porta, Comandi: []string{}}
+	return &Profilo{Formato: Formato, Oggetto: "profile", Motore: VersioneMotore, Creato: ora(), Porta: porta, Comandi: []string{}}
 }
 
 // Metti aggiunge o sostituisce un fatto.
@@ -156,7 +156,7 @@ func NomeDesktop(d string) string {
 
 func siNo(b bool) string {
 	if b {
-		return "si"
+		return "yes"
 	}
 	return "no"
 }

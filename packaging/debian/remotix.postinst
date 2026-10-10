@@ -14,7 +14,7 @@ set -e
 #DEBHELPER#
 
 if [ "$1" = configure ] && [ -n "${2:-}" ] && [ -x /usr/bin/remotix-install ]; then
-	/usr/bin/remotix-install aggiornato || true
+	/usr/bin/remotix-install post-upgrade || true
 fi
 
 exit 0

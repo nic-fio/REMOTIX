@@ -6558,6 +6558,12 @@ dei sysadmin, non agli utenti normali»*.
   (`verifica`, `installa`, `approva`, `--archivio`, `--risposte`…), le voci e i valori del file di risposte
   (`consenso.*`, `porta`, `utenti = tutti`, `si`/`no`, `canale = stabile|candidato`), i valori dei fatti
   (`presente`, `assente`…) e i nomi degli stati (`RILEVATO`, `CONFERMATA`…). Da decidere.
+- ✅ **Fatto anche questo, 10 ott 2026** (commit `COMMIT_QUI`): comandi, opzioni, file di risposte, stati, valori e
+  nomi dei fatti, tipi dei passi, campi JSON, file in `/var/lib/remotix` e nell'archivio pubblicato, in inglese. La
+  tabella vecchio → nuovo sta in `fasi/17-l-installatore.md` §6.6.15. Formati: `remotix-install/2` e
+  `remotix-answers/2`. Restano i codici `RX-…` e `C-…` (identificativi), il formato del catalogo e quel che scrive
+  il prodotto in C. ⚠ Il comando del prodotto `remotix` ha ancora le opzioni in italiano (`--porta`,
+  `--indirizzo`, `--certificati`, `--prova-codifica`…): un lavoro a sé.
 
 ---
 

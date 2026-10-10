@@ -9,20 +9,20 @@ import (
 type Reversibilita string
 
 const (
-	ESATTA         Reversibilita = "ESATTA"
-	AL_MEGLIO      Reversibilita = "AL_MEGLIO"
-	CON_FOTOGRAFIA Reversibilita = "CON_FOTOGRAFIA"
-	IRREVERSIBILE  Reversibilita = "IRREVERSIBILE"
+	ESATTA         Reversibilita = "EXACT"
+	AL_MEGLIO      Reversibilita = "BEST_EFFORT"
+	CON_FOTOGRAFIA Reversibilita = "NEEDS_SNAPSHOT"
+	IRREVERSIBILE  Reversibilita = "IRREVERSIBLE"
 )
 
 // Origine di una modifica: decide fin dove il ritorno indietro è autorizzato (§6.6.4).
 type Origine string
 
 const (
-	DIRETTA      Origine = "DIRETTA"
-	INDIRETTA    Origine = "INDIRETTA"
-	PREESISTENTE Origine = "PREESISTENTE"
-	CONCORRENTE  Origine = "CONCORRENTE"
+	DIRETTA      Origine = "DIRECT"
+	INDIRETTA    Origine = "INDIRECT"
+	PREESISTENTE Origine = "PREEXISTING"
+	CONCORRENTE  Origine = "CONCURRENT"
 )
 
 // Esito di «controlla»: completo, assente, a metà (§6.6.3) — e un quarto caso, che il
@@ -30,24 +30,24 @@ const (
 type Esito string
 
 const (
-	COMPLETO Esito = "COMPLETO"
-	ASSENTE  Esito = "ASSENTE"
-	A_META   Esito = "A_META"
-	ESTRANEO Esito = "ESTRANEO" // né il nostro effetto né lo stato di prima: modifica CONCORRENTE
+	COMPLETO Esito = "COMPLETE"
+	ASSENTE  Esito = "ABSENT"
+	A_META   Esito = "HALF_DONE"
+	ESTRANEO Esito = "FOREIGN" // né il nostro effetto né lo stato di prima: modifica CONCORRENTE
 )
 
 // AzionePiano: un'azione come sta nel piano — che cosa, come si fa, come si verifica, come si
 // annulla. L'annullamento nasce col passo (§6.0 punto 3).
 type AzionePiano struct {
 	ID             string            `json:"id"`
-	Tipo           string            `json:"tipo"`
-	Parametri      map[string]string `json:"parametri"`
-	Descrizione    string            `json:"descrizione"`
-	ComeSiFa       string            `json:"come_si_fa"`
-	ComeSiVerifica string            `json:"come_si_verifica"`
-	ComeSiAnnulla  string            `json:"come_si_annulla"`
-	Reversibilita  Reversibilita     `json:"reversibilita"`
-	Consenso       string            `json:"consenso,omitempty"` // la domanda, se l'azione ne ha una sua (D5, D6, IRREVERSIBILE)
+	Tipo           string            `json:"type"`
+	Parametri      map[string]string `json:"parameters"`
+	Descrizione    string            `json:"description"`
+	ComeSiFa       string            `json:"how_done"`
+	ComeSiVerifica string            `json:"how_verified"`
+	ComeSiAnnulla  string            `json:"how_rolled_back"`
+	Reversibilita  Reversibilita     `json:"reversibility"`
+	Consenso       string            `json:"consent,omitempty"` // la domanda, se l'azione ne ha una sua (D5, D6, IRREVERSIBILE)
 }
 
 // Contesto di un'azione che gira: la macchina e la cartella dell'operazione (per i salvataggi).

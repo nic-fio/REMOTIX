@@ -163,7 +163,7 @@ type GestoreSessioni interface {
 
 // GestoreFirewall apre e chiude una porta. Oggi solo firewalld (§6.6.4, mandato di T4).
 type GestoreFirewall interface {
-	Nome() string // "firewalld", "ufw", "nftables", "nessuno"
+	Nome() string // "firewalld", "ufw", "nftables", "none"
 	ZonaPredefinita() (string, error)
 	HaPorta(zona, porta string, permanente bool) (bool, error) // porta = "7447/tcp"
 	Aggiungi(zona, porta string, permanente bool) error
@@ -324,7 +324,7 @@ func (f *firewallUfw) HaPorta(_, porta string, _ bool) (bool, error) {
 		return false, err
 	}
 	if c != 0 {
-		return false, fmt.Errorf("ufw show added: uscita %d: %s", c, strings.TrimSpace(out))
+		return false, fmt.Errorf("ufw show added: exit %d: %s", c, strings.TrimSpace(out))
 	}
 	voglio := "ufw allow " + ufwRegola(porta)
 	for _, r := range strings.Split(out, "\n") {
@@ -361,7 +361,7 @@ func scegliFirewall(a *Ambiente) GestoreFirewall {
 	if s, err := a.Bus.StatoAttivo("nftables.service"); err == nil && s == "active" {
 		return &firewallNonFatto{"nftables"}
 	}
-	return &firewallNonFatto{"nessuno"}
+	return &firewallNonFatto{"none"}
 }
 
 func eseguiOErrore(a *Ambiente, nome string, argomenti ...string) error {
@@ -370,7 +370,7 @@ func eseguiOErrore(a *Ambiente, nome string, argomenti ...string) error {
 		return err
 	}
 	if c != 0 {
-		return errors.New(nome + " " + strings.Join(argomenti, " ") + ": uscita " + strconv.Itoa(c) + ": " + strings.TrimSpace(out))
+		return errors.New(nome + " " + strings.Join(argomenti, " ") + ": exit " + strconv.Itoa(c) + ": " + strings.TrimSpace(out))
 	}
 	return nil
 }

@@ -135,15 +135,15 @@ say "==> 1. impronta «prima»"
 impronta prima
 vm "id prova" >"$E/gruppi-prima.txt"
 
-say "==> 2. installa come l'amministratore: install.sh + sha256, --risposte"
-vm "printf 'formato = remotix-risposte/1\nporta = $PG\nutenti = prova\nconsenso.firewall = si\nconsenso.deposito.epel = si\nconsenso.deposito.openh264 = si\nconsenso.deposito.packman = si\nconsenso.deposito.rpmfusion = si\n' | sudo tee /root/risposte.conf >/dev/null
+say "==> 2. installa come l'amministratore: install.sh + sha256, --answers"
+vm "printf 'format = remotix-answers/2\nport = $PG\nusers = prova\nconsent.firewall = yes\nconsent.repo.epel = yes\nconsent.repo.openh264 = yes\nconsent.repo.packman = yes\nconsent.repo.rpmfusion = yes\n' | sudo tee /root/risposte.conf >/dev/null
 cd /tmp && rm -f install.sh install.sh.sha256
 if command -v curl >/dev/null 2>&1; then curl -sf $ARCH/install.sh -o install.sh && curl -sf $ARCH/install.sh.sha256 -o install.sh.sha256
 else wget -q -O install.sh $ARCH/install.sh && wget -q -O install.sh.sha256 $ARCH/install.sh.sha256; fi   # le iso desktop apt hanno wget, non curl (install.sh usa l'uno o l'altro)
 sha256sum -c install.sh.sha256 && grep -E '^SHA256_MOTORE=' install.sh | cut -c1-40" >"$E/installa.txt" 2>&1
 say "   $(grep -E 'install.sh: ' "$E/installa.txt" | head -1)"
 T0=$(date +%s)
-vm "cd /tmp && sudo sh install.sh --archivio $ARCH --risposte /root/risposte.conf" >>"$E/installa.txt" 2>&1
+vm "cd /tmp && sudo sh install.sh --archive $ARCH --answers /root/risposte.conf" >>"$E/installa.txt" 2>&1
 u=$?
 OP=$(grep -E '^operation '"$E/installa.txt" | tail -1)
 say "   install.sh: uscita $u in $(( $(date +%s) - T0 )) s — $OP"
@@ -152,7 +152,7 @@ vm "echo \"pacchetti: \$( (dpkg-query -W -f='\${Package}=\${Version} ' remotix r
 echo \"servizio: \$(systemctl is-enabled remotix 2>&1) \$(systemctl is-active remotix 2>&1) · pid \$(systemctl show -p MainPID --value remotix) · in ascolto $PG: \$(sudo ss -Htulpn | grep -c ':$PG ')\"
 id prova
 B=\$(ls /usr/libexec/remotix/remotix /usr/lib/remotix/remotix 2>/dev/null | head -1); echo \"R4 librerie non trovate (uid prova): \$(sudo -u prova ldd \$B 2>&1 | grep -c 'not found') · libav nel binario: \$(ldd \$B | grep -c 'libav\|libswscale')\"
-echo --- certifica:; sudo /usr/bin/remotix-install certifica 2>&1; echo \"certifica: uscita \$?\"
+echo --- certifica:; sudo /usr/bin/remotix-install certify 2>&1; echo \"certifica: uscita \$?\"
 echo --- registro d avvio:; sudo journalctl -u remotix.service --no-pager -b 2>/dev/null | grep -aE 'codec offerti|OpenH264|pronto|RX-|⛔' | tail -6 | cut -c1-200" >"$E/installato.txt" 2>&1
 sed 's/^/   /' "$E/installato.txt" | tee -a "$E/giro.log" >/dev/null
 grep -E 'pacchetti:|servizio:|R4 |Certification|certifica: uscita|codec offerti' "$E/installato.txt" | cut -c1-200 | sed 's/^/   /' | tee -a "$E/giro.log"
@@ -210,8 +210,8 @@ BROWSER=
 say "   $(grep '^T8 ' "$E/browser-agg.log" | cut -c1-400)"
 vm "echo \"pacchetti: \$( (dpkg-query -W -f='\${Package}=\${Version} ' remotix remotix-install 2>/dev/null; rpm -q remotix remotix-install 2>/dev/null; pacman -Q remotix remotix-install 2>/dev/null) | tr '\n' ' ')\"
 echo \"servizio: \$(systemctl is-active remotix 2>&1) · pid \$(systemctl show -p MainPID --value remotix)\"
-sudo /usr/bin/remotix-install versione; sudo /usr/bin/remotix-install stato 2>&1 | head -12
-sudo sh -c '/usr/bin/remotix-install certifica >/tmp/c.txt 2>&1'; echo \"certifica: uscita \$?\"; sudo cat /tmp/c.txt" >"$E/aggiornato.txt" 2>&1
+sudo /usr/bin/remotix-install version; sudo /usr/bin/remotix-install status 2>&1 | head -12
+sudo sh -c '/usr/bin/remotix-install certify >/tmp/c.txt 2>&1'; echo \"certifica: uscita \$?\"; sudo cat /tmp/c.txt" >"$E/aggiornato.txt" 2>&1
 grep -E 'pacchetti:|servizio:|Certification|certifica: uscita' "$E/aggiornato.txt" | cut -c1-200 | sed 's/^/   /' | tee -a "$E/giro.log"
 if grep -q 'aggiornamento: uscita 0' "$E/aggiorna.txt" && grep -E '^T8 ' "$E/browser-agg.log" | grep -q '"esito": *"PASS"' && cmp -s "$E/palco-prima.txt" "$E/palco-dopo.txt" && [ -s "$E/palco-prima.txt" ] && grep -q "pacchetti:.*${VERSIONE_N1:-NON_DATA}" "$E/aggiornato.txt" && certifica_va "$E/aggiornato.txt"; then
 	esito_passo aggiorna PASS
@@ -230,7 +230,7 @@ vm "loginctl list-sessions --no-legend" >"$E/sessioni-prima.txt" 2>&1
 vm "sudo find /root /home -path '*/.local/state/remotix*' 2>/dev/null | sort" >"$E/registri-prima.txt" 2>&1
 say "   registri di sessione nelle case prima: $(tr '\n' ' ' <"$E/registri-prima.txt")"
 T0=$(date +%s)
-vm "sudo sh -c '/usr/bin/remotix-install disinstalla --purge --uscita /root/d.json >/tmp/d.txt 2>&1' && sudo /usr/bin/remotix-install applica /root/d.json --approva" >"$E/disinstalla.txt" 2>&1
+vm "sudo sh -c '/usr/bin/remotix-install uninstall --purge --output /root/d.json >/tmp/d.txt 2>&1' && sudo /usr/bin/remotix-install apply /root/d.json --approve" >"$E/disinstalla.txt" 2>&1
 u=$?
 OPD=$(grep -E '^operation '"$E/disinstalla.txt" | tail -1)
 say "   disinstalla: uscita $u in $(( $(date +%s) - T0 )) s — $OPD"
