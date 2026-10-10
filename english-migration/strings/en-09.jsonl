@@ -1,0 +1,22 @@
+{"file": "docs/sources/build.py", "prima": "mappa dei file del manuale da aggiornare (technical/ch22_map.py):", "dopo": "the manual's file map needs updating (technical/ch22_map.py):"}
+{"file": "docs/sources/build.py", "prima": "\n  manca {f}", "dopo": "\n  missing {f}"}
+{"file": "docs/sources/build.py", "prima": "\n  non esiste più {f}", "dopo": "\n  no longer exists {f}"}
+{"file": "docs/sources/build.py", "prima": "rif(«{titolo}»): nessuna sezione ha questo titolo", "dopo": "rif(«{titolo}»): no section has this title"}
+{"file": "docs/sources/build.py", "prima": "due sezioni si chiamano «{stitle}»: rif() non saprebbe quale scegliere", "dopo": "two sections are called «{stitle}»: rif() would not know which one to pick"}
+{"file": "docs/sources/build.py", "prima": "{meta['file']}: lo stile non comincia col canone comune (style.css)", "dopo": "{meta['file']}: the style does not start with the common canon (style.css)"}
+{"file": "docs/sources/build.py", "prima": "{meta['file']}: manca lo script comune (manual.js)", "dopo": "{meta['file']}: the common script is missing (manual.js)"}
+{"file": "docs/sources/build.py", "prima": "«docs/{meta['file']}» non corrisponde ai sorgenti: python3 docs/sources/build.py", "dopo": "«docs/{meta['file']}» does not match the sources: python3 docs/sources/build.py"}
+{"file": "docs/sources/build.py", "prima": "{meta['file']}: la versione {VERSION} non compare", "dopo": "{meta['file']}: version {VERSION} does not appear"}
+{"file": "docs/sources/build.py", "prima": "{meta['file']}: la pagina non dichiara lang=\"en\"", "dopo": "{meta['file']}: the page does not declare lang=\"en\""}
+{"file": "docs/sources/build.py", "prima": "{meta['file']}: testo ancora in italiano: {frase[:120]}", "dopo": "{meta['file']}: text still in Italian: {frase[:120]}"}
+{"file": "docs/sources/build.py", "prima": "{meta['file']}: collegamento interno #{a} senza destinazione", "dopo": "{meta['file']}: internal link #{a} without a target"}
+{"file": "docs/sources/build.py", "prima": "funzione citata che non esiste nei sorgenti: {nome}()", "dopo": "cited function that does not exist in the sources: {nome}()"}
+{"file": "docs/sources/build.py", "prima": "variabile d'ambiente non documentata: {v}", "dopo": "undocumented environment variable: {v}"}
+{"file": "docs/sources/build.py", "prima": "variabile d'ambiente documentata ma inesistente: {v}", "dopo": "documented but non-existent environment variable: {v}"}
+{"file": "docs/sources/build.py", "prima": "codice citato che non esiste nel codice: {x}", "dopo": "cited code that does not exist in the code: {x}"}
+{"file": "docs/sources/build.py", "prima": "manuale:", "dopo": "manual:"}
+{"file": "docs/sources/build.py", "prima": "manuale allineato al codice", "dopo": "manual aligned with the code"}
+{"file": "docs/sources/build.py", "prima": "scritto", "dopo": "written"}
+{"file": "docs/sources/build.py", "prima": "byte", "dopo": "bytes"}
+{"file": "docs/sources/build.py", "prima": "grafico: ", "dopo": "diagram: "}
+{"file": "docs/sources/build.py", "prima": "file citato che non esiste: {f}", "dopo": "cited file that does not exist: {f}"}
