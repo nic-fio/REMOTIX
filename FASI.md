@@ -253,7 +253,7 @@ farewell is **`Logout(2)`**, not `systemctl --user stop`.
 | `vainfo` installed | ⛔ **no** | 9 Aug |
 | `nicfio` in the `render`/`video` groups | ⛔ **no** (`nicfio sudo`) | 9 Aug |
 | `/media` mounted, `/etc/fstab` | mounted; ⚠ **fstab empty**, as in `LEZIONI.md` §2.5-bis | 9 Aug |
-| apt cache on `/media` | ✅ 1450 `.deb`, 1,1 G — the reinstallation downloads almost nothing | 9 Aug |
+| apt cache on `/media` | ✅ 1450 `.deb`, 1.1 G — the reinstallation downloads almost nothing | 9 Aug |
 | visible GPUs | ✅ Intel `00:02.0` → `renderD128`, Radeon `03:00.0` → `renderD129` | 9 Aug |
 | rootfs | ⚠ **32 G in RAM**, wiped at reboot | 9 Aug |
 
@@ -300,8 +300,8 @@ redraw of the compositor. 1920×1080 virtual monitor set up by the bench via `Re
 > ⛔ *13 Aug 2026, and it must be read before redoing this measurement: **the scene named here is no longer
 > available** (`weston-simple-egl` is not installed), and **the number this positive control
 > reproduced — Mutter's ~37 — does not reproduce**. It is not a defect of the bench: at the rate it
-> was asked for, Mutter delivers **31,5**, and by renegotiating the rate alone (monitor 120, brake 90)
-> it delivers `[M]` **61,4**. ⚠ That the 37 was the remainder of a **truncated division** is the
+> was asked for, Mutter delivers **31.5**, and by renegotiating the rate alone (monitor 120, brake 90)
+> it delivers `[M]` **61.4**. ⚠ That the 37 was the remainder of a **truncated division** is the
 > most likely explanation, and it is `[R]` — read in Mutter's code, **not measured**
 > (`STUDI.md` §gnome §8.2; the «law on 13 points» that could be read here on 13 Aug **fell that same
 > evening**).*
@@ -311,32 +311,32 @@ redraw of the compositor. 1920×1080 virtual monitor set up by the bench via `Re
 
 | What | Expected | Measured | Outcome | Date |
 |---|---|---|---|---|
-| **Mutter, moving scene** | **~37 fps** `[M]` v1 | ⭐ **36,2 on average over six rounds** — 37,82 · 37,33 · 33,66 · 36,67 · 36,39 · 35,42 | ✅ | 9 Aug |
-| ⭐ **how much the CLIENT draws** | ≥ the delivered | **60,0** in every round ⇒ **the cap is the compositor's, not the scene's** | ✅ | 9 Aug |
-| C2 — the same scene **still** | collapses | **0,00**, with active stream and negotiated format | ✅ | 9 Aug |
-| C4 — repeated rounds without restoring anything | equal | six rounds, spread **33,7-37,8** | ✅ | 9 Aug |
-| C3 — nonexistent node | «failed», not «zero» | ⛔ **gave 0,00 and exit 0** → fixed, now `GUASTO` and exit 2 | ✅ after cure | 9 Aug |
-| **C1 — the same instrument on KWin** | **59,2** `[M]` `STUDI.md` §kde §5.7 | ⭐ **58,92** (1180 frames, median 17,0 ms) | ✅ | 9 Aug |
-| C1-bis — KWin **in memory** | 43,3 `[M]` 8 Aug | ⚠ **49,67** — higher than expected, see below | ⚠ | 9 Aug |
+| **Mutter, moving scene** | **~37 fps** `[M]` v1 | ⭐ **36.2 on average over six rounds** — 37.82 · 37.33 · 33.66 · 36.67 · 36.39 · 35.42 | ✅ | 9 Aug |
+| ⭐ **how much the CLIENT draws** | ≥ the delivered | **60.0** in every round ⇒ **the cap is the compositor's, not the scene's** | ✅ | 9 Aug |
+| C2 — the same scene **still** | collapses | **0.00**, with active stream and negotiated format | ✅ | 9 Aug |
+| C4 — repeated rounds without restoring anything | equal | six rounds, spread **33.7-37.8** | ✅ | 9 Aug |
+| C3 — nonexistent node | «failed», not «zero» | ⛔ **gave 0.00 and exit 0** → fixed, now `GUASTO` and exit 2 | ✅ after cure | 9 Aug |
+| **C1 — the same instrument on KWin** | **59.2** `[M]` `STUDI.md` §kde §5.7 | ⭐ **58.92** (1180 frames, median 17.0 ms) | ✅ | 9 Aug |
+| C1-bis — KWin **in memory** | 43.3 `[M]` 8 Aug | ⚠ **49.67** — higher than expected, see below | ⚠ | 9 Aug |
 
 ⭐ **C1 is the certification that is worth more than all the others, and it was not «another number»**: it says that the
 instrument can give a **different** number when the thing measured is different. Pointed at KWin it gives
-58,92 with median 17,0 ms; pointed at Mutter it gives 36 with median 33,3. Had it answered ~37 on
+58.92 with median 17.0 ms; pointed at Mutter it gives 36 with median 33.3. Had it answered ~37 on
 KWin too, we would be measuring the instrument and not the compositors.
 
-⚠ **Mutter's spread must be stated, not hidden**: six rounds between 33,7 and 37,8, with the **median
-of the intervals fixed at 33,3 ms in all six**. The beat is very stable; what moves is the tail
-(maximum intervals from 33,6 to 75,0 ms). So v1's «~37» is reproduced, but the honest number to
-cite is **36 ± 2**, not 37,8.
+⚠ **Mutter's spread must be stated, not hidden**: six rounds between 33.7 and 37,8, with the **median
+of the intervals fixed at 33.3 ms in all six**. The beat is very stable; what moves is the tail
+(maximum intervals from 33.6 to 75.0 ms). So v1's «~37» is reproduced, but the honest number to
+cite is **36 ± 2**, not 37.8.
 
-⚠ **And the 49,67 in memory does not match the 43,3 of 8 Aug.** I do not explain it: I declare it. The
+⚠ **And the 49.67 in memory does not match the 43.3 of 8 Aug.** I do not explain it: I declare it. The
 known differences between the two measurements are three — 20 seconds per cell instead of 10, `KWIN_COMPOSE=O2`
 not set (which `LEZIONI.md` §1.11 considers **inert** anyway, measured), and the Radeon today
 **present but not openable** instead of denied. `[?]` None of the three has been verified as the
 cause. It does not affect the certification, which passes on the zero-copy column.
 
-⭐ **And the distribution of intervals says more than the number alone**: `min 16,2 · mediana 33,3 ·
-p95 33,5`. The frames arrive at **one or two refresh periods**, never at half — that is, two clocks
+⭐ **And the distribution of intervals says more than the number alone**: `min 16.2 · mediana 33.3 ·
+p95 33.5`. The frames arrive at **one or two refresh periods**, never at half — that is, two clocks
 at 60 beating against each other, which is exactly the mechanism that `STUDI.md` §gnome §8.2 reads in the code
 (`maxFramerate` acts as a brake on the capture **and** as the frequency of the virtual monitor). ⚠ **It is not the
 proof of the cure**: it is the proof that the explanation is compatible with what is seen. The cure
@@ -362,9 +362,9 @@ rereading the script».*
 | **manual** steps needed before the restoration existed as a file | ⛔ **one**: mounting `/media` | 9 Aug |
 | restoration scripts to run | ⚠ **two**, and the first does not name the second | 9 Aug |
 | defects the reboot brought to light | **four** (items 6, 7, 8 and 9 below) | 9 Aug |
-| **Mutter, after the reboot and the restoration** | ⭐ **36,78 · 36,33 · 37,05** — median 33,3 ms, client at 60,0 | 9 Aug |
+| **Mutter, after the reboot and the restoration** | ⭐ **36.78 · 36.33 · 37.05** — median 33.3 ms, client at 60.0 | 9 Aug |
 
-⭐ **The numbers before the reboot were 33,7-37,8; those after 36,3-37,1.** The machine put back
+⭐ **The numbers before the reboot were 33.7-37.8; those after 36.3-37.1.** The machine put back
 on its feet from scratch **reproduces what it reproduced before** — and it is this, not this morning's measurement,
 the sentence that authorises believing the measurements of the thirteen phases that follow.
 
@@ -375,10 +375,10 @@ be put side by side.*
 
 | Compositor | Model | Expected | Measured | Median interval | Client |
 |---|---|---|---|---|---|
-| **Mutter** (GNOME) | pushes, PipeWire | ~37 `[M]` v1 | **36,3-37,1** | 33,3 ms | 60,0 |
-| **KWin** (KDE), zero copy | pushes, PipeWire | 59,2 `[M]` 8 Aug | **58,92** | 17,0 ms | 60,0 |
-| **sway** (wlroots), 1080p | ⭐ **makes you pull**, `wlr-screencopy` | ~61 `[M]` v1 | **61,02** | 16,4 ms | 61,2 |
-| **labwc** (wlroots), 720p | makes you pull | ~61 | **61,16** | 16,4 ms | 61,2 |
+| **Mutter** (GNOME) | pushes, PipeWire | ~37 `[M]` v1 | **36.3-37.1** | 33.3 ms | 60.0 |
+| **KWin** (KDE), zero copy | pushes, PipeWire | 59.2 `[M]` 8 Aug | **58.92** | 17.0 ms | 60.0 |
+| **sway** (wlroots), 1080p | ⭐ **makes you pull**, `wlr-screencopy` | ~61 `[M]` v1 | **61.02** | 16.4 ms | 61.2 |
+| **labwc** (wlroots), 720p | makes you pull | ~61 | **61.16** | 16.4 ms | 61.2 |
 
 ⭐ **And the three benches are three different programs, now all certified**: `misura-cattura` (PipeWire),
 `nodo-kwin` (KDE's protocol, used inside C1) and `misura-wlroots` (`wlr-screencopy`).
@@ -550,10 +550,10 @@ designed as much as the way it succeeds.
 
 #### 11. ⛔ Compared against the wrong column, the bench seemed to be ten frames off
 
-The first round of C1 measured KWin **in memory** (49,67) and compared it with the **59-60** of
+The first round of C1 measured KWin **in memory** (49.67) and compared it with the **59-60** of
 `STUDI.md` §kde, which is the **zero-copy** column. For a few minutes the bench seemed to be wrong;
 it was answering correctly a different question. The table in `STUDI.md` §kde §5.7 has two columns, and at 1080p
-it says 59,2 and 43,3.
+it says 59.2 and 43.3.
 
 ⭐ **The cure is in the bench, not in the reader's memory**: now `00-c1-kwin.sh` takes the path
 as an argument and **prints the expected value** before measuring. A bench that knows its own expected value does not
@@ -572,7 +572,7 @@ trust its caller.
 
 It is shape **E2** applied to the bench: two different sizes under the same label. Now with
 `labwc` the label does not declare a size we did not ask for, and whoever wants 1080p on wlroots
-uses `sway` — where the size is in the configuration and was honoured (**61,02 at 1920×1080**,
+uses `sway` — where the size is in the configuration and was honoured (**61.02 at 1920×1080**,
 confirmed by the tool).
 
 #### 12. ⚠ The check that says «whose cap it is» was mute because of a buffer
@@ -582,7 +582,7 @@ printed anything. `stdbuf -oL` was missing: towards a file the output is block-b
 scene shutdown its frames per second stay in the buffer. ⭐ `banco-altri.sh` already had
 `stdbuf` — the difference between the two files was the defect.
 
-**With the cure** the check of `LEZIONI.md` §1.1 finally speaks: the client draws **60,0** in
+**With the cure** the check of `LEZIONI.md` §1.1 finally speaks: the client draws **60.0** in
 every round while Mutter delivers 36. **The cap belongs to the compositor.** Without this number,
 that sentence would have been a hypothesis.
 
@@ -613,8 +613,8 @@ written down because **they were not paid for by the code: they were paid for wh
 |---|---|
 | ✅ ~~empty `/etc/fstab`~~ → **it is not a debt: it is a user step** | *9 Aug 2026: «quando riavvio la macchina ci penso io alla cartella `/media`».* Mounting stays manual by choice, and `banchi/00-rimetti-macchina.sh` does it in one command for whoever does not remember. ⭐ **And the real risk was not forgetting the mount** — that shows immediately, because there is nothing — **but measuring on a half-restored machine**: that is now caught by the bench, which says `GUASTO` instead of printing a zero (items 1 and 8). The protection lives in the program, as **I7** requires |
 | ⚠ **the two restore scripts** | `provision-server.sh` neither calls nor names `provision-banco.sh`. Today we know; in a month only whoever was there will know |
-| `[?]` **KWin's 49,67 in memory** | against the 43,3 of 8 Aug. Three known differences, none verified as the cause |
-| `[?]` **Mutter's tail** | the median of the intervals is stuck at 33,3 ms over six rounds, but the maximum goes from 33,6 to 75,0. Where that tail comes from has not been looked at |
+| `[?]` **KWin's 49.67 in memory** | against the 43.3 of 8 Aug. Three known differences, none verified as the cause |
+| `[?]` **Mutter's tail** | the median of the intervals is stuck at 33.3 ms over six rounds, but the maximum goes from 33.6 to 75.0. Where that tail comes from has not been looked at |
 | `[?]` **the denied Radeon** | `amdgpu_cs_ctx_create2 failed (-13)`: to be understood whether it is the udev rule of `DECISIONI.md` §4.6-ter. Not blocking |
 | ⏳ **the Android environment** | SDK, `adb`, Desktop AVD and the real phone: not yet touched. ⛔ *It said «servono alla sonda della **fase 2**, non prima». **Corrected on the night of 9 Aug 2026**, finding **R3.14** of the phase 1 bench review: `DECISIONI.md` §1.6 removed the Android application — so **SDK, `adb` and the emulator are no longer needed for anything** — and `PIANO.md` §1.2 moved the probe to **phase 1**, «prima di tutto». **The real phone, on the other hand, is needed, and needed earlier**: it is the measuring instrument for S2, S3a and S5. The complete census of what is missing is in §01-filo-nudo, «Le dipendenze»* |
 | **the pixels-per-second budget** | `vainfo` says **which** profiles, not **how many** pixels: the number of sessions is phase 10 |
@@ -647,7 +647,7 @@ and the rules (`PIANO.md` §0.4, practice 1).
 |---|---|---|
 | 1 | ⛔ **the row mixed two populations**: damage, fence, skips and buffers counted from the first instant, frames and rhythm after the discard — and `arrivati` was not printed, so it could not be seen | the counters are updated **inside** the sample, and `arrivati` is a column: the difference **is** the warm-up |
 | 2 | ⛔ **death mid-measurement**: the stream *had been* active, so the guard did not fire. Killing the compositor at the twelfth second produced ~59 fps over 5 seconds under the label of a 20-second cell | the stream state is checked **at the end**, not only at the start |
-| 3 | ⛔ **`--dmabuf` could deliver memory**: the type mask always also contained MemFd, and the column stated the **requested** path. At 1080p that is 59,2 versus 43,3 | requested and obtained are compared, and it fails by declaring it (`LEZIONI.md` §1.8, corollary) |
+| 3 | ⛔ **`--dmabuf` could deliver memory**: the type mask always also contained MemFd, and the column stated the **requested** path. At 1080p that is 59.2 versus 43.3 | requested and obtained are compared, and it fails by declaring it (`LEZIONI.md` §1.8, corollary) |
 | 4 | ⛔ **a scene with the wrong name** (`tetti` instead of `tetto`) left `pid_scena` empty — the same sentinel the `fermo` scene uses on purpose — and the guard disabled itself | a fault branch that says `GUASTO` |
 | 5 | ⛔ **the scene was checked only once**, one second after start | it is watched for the whole measurement |
 | 6 | ⛔ **`00-c1-kwin.sh` did not check it at all**, and `misura-wlroots` **returns 0 on every path**: the two certifications could come out green on a dead compositor | the scene watched there too; and for wlroots the verdict is built by the script, ⚠ **declaring that it is a fallback** and not a cure in the source |
@@ -659,9 +659,9 @@ seconds the defect that had cost the reviewer a reading of `strings`.
 
 #### A reviewer `[?]` closed in our favour
 
-He suspected that KWin's **49,67** in memory was a 720p capture labelled 1080p —
-a sharp hypothesis, because 49,6 is exactly the 720p cell of `STUDI.md` §kde §5.7. **Refuted by a datum already
-recorded**: that run had printed `formato negoziato: 1920x1080`. The `[?]` on 49,67 stays
+He suspected that KWin's **49.67** in memory was a 720p capture labelled 1080p —
+a sharp hypothesis, because 49.6 is exactly the 720p cell of `STUDI.md` §kde §5.7. **Refuted by a datum already
+recorded**: that run had printed `formato negoziato: 1920x1080`. The `[?]` on 49.67 stays
 open, but with one candidate cause fewer instead of one more.
 
 #### What the reviewer tried to break without succeeding
@@ -688,7 +688,7 @@ or noise — and they are taken up when the phase that uses them touches them:
 | a failed cell disappears from the table without leaving a trace on stdout | phase 3 |
 | the expected value of `00-c1-kwin.sh` is **printed and not compared**, and it is written with a comma while the measurer prints a dot | next round |
 | `prepara` skips every non-empty file: a truncated scene is never redone | phase 3 |
-| between one cell and the next it kills and restarts after a fixed 1,5 s, and there is no `trap` | phase 3 |
+| between one cell and the next it kills and restarts after a fixed 1.5 s, and there is no `trap` | phase 3 |
 | `banco.sh` writes `scena.log` and **does not read it**: in the twenty-cell table the §1.1 check does not appear, and the file is overwritten at every cell | phase 3 |
 | plus five minor findings and the `[?]` on `quanti_fd`, on the type of the last frame and on the `pkill -x` of a real session | — |
 
@@ -726,12 +726,12 @@ alongside**, or they would attribute the cap to the wrong thing:
    going to 4K, they are simply lost. The right sentence is «GNOME delivers ~36 frames, at any
    size», not «GNOME cannot handle 4K».
 2. ⏳ **And the cap is not yet `[M]` as a limit: it is `[M]` as the current state.** The intervals
-   measured today — median **33,3 ms**, minimum **16,2**, never intermediate values — are the signature of two
+   measured today — median **33.3 ms**, minimum **16.2**, never intermediate values — are the signature of two
    clocks at 60 beating against each other, that is exactly the mechanism that `STUDI.md` §gnome §8.2 reads in the
    code. The candidate cure (**M3**: negotiate high and renegotiate only the cadence) costs **zero
    lines of product** and has not been tested. It is in `PIANO.md` phase 3.
    > ⭐ ⚠ *13 Aug 2026: **M3 has been tested and the fact holds** — monitor 120, brake 90, `[M]`
-   > **61,4**. ⛔ But the mechanism written here («two clocks beating») **is wrong**, and the one
+   > **61.4**. ⛔ But the mechanism written here («two clocks beating») **is wrong**, and the one
    > replacing it (a **quantisation** on the ticks) is `[R]`, not `[M]`: the «law verified
    > on 13 points» written on the afternoon of 13 Aug **fell the same evening**, because the two
    > grid cells carried `scena_sul_mio_monitor: false`. ⇒ **M3 stays half done**
@@ -1076,7 +1076,7 @@ reports at random.*
 | ⛔ **the control** | **the fingerprint of the PAGE certificate, read at the start and at the end, must be the same.** Without it, a certificate regenerated by a restart makes one write «the exception lasted four days» and the sentence that will be told to the user is born wrong (R3.15) |
 | ⚠ **the calendar** | it is the only measurement that requires **seven days of real time**, and the phase does not close before. If one speeds it up by moving the machine's clock, ⭐ the control becomes *«at six days the exception is still there»* — which is a real control |
 | ⏳ **day 0 taken, the clock is running** | `[M]` **2026-08-10T21:10:01Z** — **Chrome 151.0.7922.108**, persistent profile in `~/.remotix-s1b/profilo`, fake screen `Xvfb :77 1280x1024x24`, site `https://192.168.0.2:7452`, certificate **ECDSA P-256 at 3650 days** with SAN `IP Address:192.168.0.2` (⛔ **not** `localhost`, which in Chrome has a reserved lane, and ⛔ **not** in private browsing). Log `banchi/01-s1b-stato.jsonl`. **The verdict is due 17-18 Aug 2026** |
-| ⛔ **and a number that does NOT hold** | Chrome recorded the expiry **2026-08-17T21:09:47.889Z** (`[M]` on the raw value `13431474587889370` µs since 1601, which is on disk; the conversion is recomputed by hand and **declared** as such). ⚠ *The report wrote «that is **exactly 604 800 s** from the grant», twice: between the two numbers it published there are **604 786,889 s**. **13,111 s** were missing, and «exactly» was false in both places — findings **A26** and **R12.6**.* ⛔ **No rounding and no re-measuring** (redoing the «start» round would reset the seven-day clock): that it is 604 800 s from the **click** has gone back to `[?]`, because **nobody recorded the instant of the click** |
+| ⛔ **and a number that does NOT hold** | Chrome recorded the expiry **2026-08-17T21:09:47.889Z** (`[M]` on the raw value `13431474587889370` µs since 1601, which is on disk; the conversion is recomputed by hand and **declared** as such). ⚠ *The report wrote «that is **exactly 604 800 s** from the grant», twice: between the two numbers it published there are **604 786.889 s**. **13.111 s** were missing, and «exactly» was false in both places — findings **A26** and **R12.6**.* ⛔ **No rounding and no re-measuring** (redoing the «start» round would reset the seven-day clock): that it is 604 800 s from the **click** has gone back to `[?]`, because **nobody recorded the instant of the click** |
 | ⭐ **four controls, and the fourth was born later** | the fingerprint read **from the wire** must be that of day 0 · a **new** profile must see the warning · the site must be alive · ⭐ **the reading channel must be certified** (finding **A27**, 11 Aug): the verdict rested on `ssh` + a `grep` that, if broken, answered **NO** — and the control that says *no* read **the same channel**, so it declared itself passed on its own. The round that came out of it printed *«at N days the exception is NO longer there: this is the number of S1b»* — ⛔ **the measurement's number, in green, from a mute tool**, and on a seven-day clock someone would have noticed **a week later** |
 | ⛔ **what can break the clock** | regenerating `/media/REMOTIX/s1b-certificato/s1b-pagina.pem`, deleting `~/.remotix-s1b/`, or the server's date dropping. The first two are seen by the fingerprint control; ⚠ **the third is not** |
 
@@ -1111,7 +1111,7 @@ O8).
 | **measured** | the number the page would declare in `ATTACCA`, at zoom **100 %** and **150 %**; and what `screen` answers **on DeX** |
 | ⛔ **the earlier control was red on correct code** | it said *«the two numbers must differ»*. But the **correct** canvas is the screen in physical pixels, and the reasoning written here was: *«`screen.width` drops by a third, `devicePixelRatio` rises by a half, **the product stays**»*. A well-written page gave **1920 and 1920** ⇒ red, and whoever read it would have gone and broken the page until the number moved — that is, **written** the defect that `DECISIONI.md` §5.0-quater wanted to avoid (R3.10) |
 | ⭐ **the correct control** | the canvas declared at 100 % and at 150 % **must be the same**, and **must match the physical resolution read outside the browser**, in the device settings. Two different tools on the same fact |
-| ⛔⛔ **MEASURED, and the reasoning above is FALSE on Chrome** | `[M]` **10 Aug 2026**, log `banchi/01-s5-esiti.jsonl` (two identical rounds, 23:13 and 23:14), screen **Xvfb 1920×1080×24** with `xdpyinfo` confirming it from outside. **Chrome 151.0.7922.108** at zoom 150 %: `screen` stays **1920×1080** and `dpr` rises to 1,5 ⇒ canvas **2880×1620**, **50 % larger** than the one that exists. **Firefox 140.13.0esr** at 150 %: `screen` drops to **1280×720** ⇒ canvas **1920×1080**, invariant. ⛔ *«The product stays»* **stays on one engine out of two**, and the formula of `SPECIFICHE.md` §6.1-bis does not hold on Chrome. ⚠ Corrected on 11 Aug 2026, finding **R12C.8** — and the defect is **the product's, not the bench's** |
+| ⛔⛔ **MEASURED, and the reasoning above is FALSE on Chrome** | `[M]` **10 Aug 2026**, log `banchi/01-s5-esiti.jsonl` (two identical rounds, 23:13 and 23:14), screen **Xvfb 1920×1080×24** with `xdpyinfo` confirming it from outside. **Chrome 151.0.7922.108** at zoom 150 %: `screen` stays **1920×1080** and `dpr` rises to 1.5 ⇒ canvas **2880×1620**, **50 % larger** than the one that exists. **Firefox 140.13.0esr** at 150 %: `screen` drops to **1280×720** ⇒ canvas **1920×1080**, invariant. ⛔ *«The product stays»* **stays on one engine out of two**, and the formula of `SPECIFICHE.md` §6.1-bis does not hold on Chrome. ⚠ Corrected on 11 Aug 2026, finding **R12C.8** — and the defect is **the product's, not the bench's** |
 | ⭐ **and it is the correct control that found it** | the old control (*«the two numbers must differ»*) would have been **green on Chrome and red on Firefox**: it would have rewarded the broken engine. It is the demonstration, on a real case, that the cure of R3.10 was worth it |
 | ⚠ **and half of S5 is not measured** | the **DeX** was not there. *«The laptop's Chrome does it»* says nothing about the phone's Chrome — form **E10**. The page is the same (`01-s5-pagina.html`): the day the DeX is there, one opens that address and reads the line |
 | ⛔ **and the third question cannot be closed with a measurement** | *«can the rounding produce an odd number?»* — on a device one observes a number; if it is even **it does not follow that odd ones do not exist** (`LEZIONI.md` §1.3). The protection goes **in the program**, where **I7** wants it: the page rounds down to even. The measurement can only find a positive |
@@ -1265,7 +1265,7 @@ A **third program** that reads a recording and says **which byte** does not conf
 | `video.codec = hevc,vp9` | ⭐ **`hevc` is read and one proceeds**, and the discard **is written in the log** |
 | a `CIAO` **without `pcm`**, and one **without `8`** | `NIENTE_IN_COMUNE` (§4.3) |
 | canvas `1921×1080`, `319×240`, `7682×4320` | `ERRORE_PROTOCOLLO` (§4.5) |
-| ⛔ **view `300×801`, and view `1×1`** | ⛔ **MUST PASS**: §7.1 says the view does not have the canvas's constraints — *«any size from 1×1 up is legal, odd included»*. Whoever writes `ATTACCA` in C writes **one** `valida_misura()` and calls it four times: it is the natural thing to do, and it produces a server that closes the session because the user narrowed the window. On a phone with factor 2,75 the view is **odd almost always** (R4.10) |
+| ⛔ **view `300×801`, and view `1×1`** | ⛔ **MUST PASS**: §7.1 says the view does not have the canvas's constraints — *«any size from 1×1 up is legal, odd included»*. Whoever writes `ATTACCA` in C writes **one** `valida_misura()` and calls it four times: it is the natural thing to do, and it produces a server that closes the session because the user narrowed the window. On a phone with factor 2.75 the view is **odd almost always** (R4.10) |
 | malformed `disposizione` / well-formed but unknown | ⛔ **two different faults**: `ERRORE_PROTOCOLLO` · `SESSIONE_NON_SERVIBILE` `0x0E` ⛔ **with the detail in the body** (§8.2) |
 | ⭐ **`BANCO_MARCA` with the function off** | ⛔ **`BANCO_ESITO(RIFIUTATA, FUNZIONE_SPENTA)` — not a silence, not a close** (§7.5). ⚠ It is the **default** state of every server, so it is tested here even though the mark will be used by phase 3: a silence would leave phase 3's bench waiting forever, and the symptom would be «the bench has hung» |
 | **`BANCO_MARCA` with `ritardo_ms = 20000`** | `BANCO_ESITO(RIFIUTATA, RITARDO_FUORI_LIMITI)` — ⛔ **not** `ERRORE_PROTOCOLLO`: dropping the session on the bench being calibrated is the bad idea that §7.1 avoids for out-of-range sizes |
@@ -1357,7 +1357,7 @@ reason on every close.*
 > §7.17, ❓, with the two readings and the concrete case. A bench that had printed **a single line**
 > for the two answers would have delivered the easy half.
 >
-> ⚠ **And B6's three numbers — 5,0 · 60,1 · 10,0 s — have no log.** They run, and the output goes to the
+> ⚠ **And B6's three numbers — 5.0 · 60.1 · 10.0 s — have no log.** They run, and the output goes to the
 > screen: no `.jsonl` of B6 exists, so the scene of that round cannot be reconstructed and the
 > numbers cannot be re-verified. They sit at the bottom of this document with what is known about them
 > **and with what is not known**.
@@ -1426,7 +1426,7 @@ make nothing fail.
 
 | | |
 |---|---|
-| ⛔ **the criterion is NOT «≥ 1 s», and it is this bench's most important cure** | `pam_authenticate(); sleep(1); rispondi();` gives **1,001 · 1,050 · 1,300 s** in the three cases: **three green lines**, and the distinction §4.4 forbids writing in the reason can be read with the stopwatch **exactly as before**. The bench that declares itself *«the only one that sees this property»* did not see it (R3.2) |
+| ⛔ **the criterion is NOT «≥ 1 s», and it is this bench's most important cure** | `pam_authenticate(); sleep(1); rispondi();` gives **1.001 · 1.050 · 1.300 s** in the three cases: **three green lines**, and the distinction §4.4 forbids writing in the reason can be read with the stopwatch **exactly as before**. The bench that declares itself *«the only one that sees this property»* did not see it (R3.2) |
 | ⭐ **the right criterion has a different form, not a different threshold** | ⛔ **the medians of the three cases differ by less than the measurement noise** — many samples per case, not one. With one sample the fifty milliseconds separating «non-existent user» from «wrong password» are not even visible. **Expected: ≥ 1 s in every sample, and the three medians indistinguishable** |
 | ⛔ **and samples now cost something** | three per address, then the ban. The medians need **many** samples per case, so the bench must **vary the source address** or unban between one block and the next — ⛔ **and declare which of the two it does**, because they change what the measurement is measuring |
 | ⚠ **and the `[?]` this bench has already found** | `[M]` 10 Aug: median **2636 ms** on the refused ones, where §4.4-bis wants ~1000. ⛔ **PAM governs the timings, not us**, and until that delay is constant the fixed second does not hide what it claims to hide. The ban does **not** close this `[?]` |
@@ -2102,9 +2102,9 @@ the two uncovered were the benches of v1's two costliest defects (R3.7, R4.6).*
 > |---|---|
 > | ⭐ **B8** | **certified, and it never had been**: `[M]` 11 Aug 2026, **13:46 UTC**, NIC-OS, graft, port **7471** — **`5 → 1 → 5`**, mark *«N risposte sotto il secondo»*, seen **only** in the red |
 > | ⛔ **and the healthy expected value is 5, not 0** | ⭐ **written in the catalogue before the round, not widened afterwards**: it is B8's fifth outcome — *«il ban passa per intero, ma le mediane si separano»* — and it is granted **only** because the suspect is **measured** and is **PAM**. ⭐ The day that `[?]` closes, the healthy value will become **0** and **that catalogue line will turn red by itself**: it is the right way to notice |
-> | ⭐ **the fault gives a full red** | `RITARDO_FISSO` from 1000 to **0**: `[M]` **17 answers under the second**, the fastest **49,7 ms**, and the median of the «right password» case from **1085,9** to **56,3 ms** |
+> | ⭐ **the fault gives a full red** | `RITARDO_FISSO` from 1000 to **0**: `[M]` **17 answers under the second**, the fastest **49.7 ms**, and the median of the «right password» case from **1085.9** to **56.3 ms** |
 > | ⭐ **and the round finally covers the whole sequence** | **two lives of the server** — the second start declares *«ban caricati: 1»*, that is the ban comes back **from disk** and not from memory (**I7**) · **the page** (HTTP **200**, `bannato=True`, *«tentativi esauriti»*, **12h 0m**, with the check that says no at 594 bytes) · **the unban on a real ban** (`TOLTO` → then `NON-BANNATO` → and the address **gets back in**) |
-> | ⭐ **the secret does NOT leak** | medians `[M]`: **nonexistent 2123,2 · wrong 2198,1 · right 1085,9 ms**; the pair §4.4 protects — *«inesistente − sbagliata»* — is **−74,8 ms**, interval **[−509,3; +255,7]** ⇒ ⛔ **it does not separate**. And the suspect for the rest is measured: the server waited **+1034 ms** beyond the fixed second on the rejected and **+84 ms** on the admitted — the signature of `pam_faildelay` |
+> | ⭐ **the secret does NOT leak** | medians `[M]`: **nonexistent 2123.2 · wrong 2198.1 · right 1085.9 ms**; the pair §4.4 protects — *«inesistente − sbagliata»* — is **−74.8 ms**, interval **[−509.3; +255.7]** ⇒ ⛔ **it does not separate**. And the suspect for the rest is measured: the server waited **+1034 ms** beyond the fixed second on the rejected and **+84 ms** on the admitted — the signature of `pam_faildelay` |
 > | ⚠ **and the two denominators beside it** | the certification **off the wire** 33 out of 33, and B8's **judge** 15 out of 15 hand-made faults, in all three steps |
 >
 > ⭐⭐ **And the structural cure is point 4 of the list, done where it bit.** `01-b12-lancia.sh`
@@ -2218,7 +2218,7 @@ measured I say so.*
 >
 > | | |
 > |---|---|
-> | **the thread** | **`DECISIONI.md` §1.10** — ⛔ **cured BEFORE phase 2**, and with a **helper process** (PAM is not reliably reentrant). ⭐ What moved the deadline from phase 5 to 2 was **a B8 number**: the block is **1,0-2,2 s** per attempt, ⛔ **and PAM is what puts it there**. Up to phase 1 the symptom is *«the last of the ten waits»*; **from phase 2 on it is the screen of whoever is already working that freezes when someone else logs in**, and whoever sees it blames the video. ⛔ **And the property to test is not «PAM still works»**: it is *«while one authenticates, the others do not notice»* — and **that bench does not exist today** |
+> | **the thread** | **`DECISIONI.md` §1.10** — ⛔ **cured BEFORE phase 2**, and with a **helper process** (PAM is not reliably reentrant). ⭐ What moved the deadline from phase 5 to 2 was **a B8 number**: the block is **1.0-2.2 s** per attempt, ⛔ **and PAM is what puts it there**. Up to phase 1 the symptom is *«the last of the ten waits»*; **from phase 2 on it is the screen of whoever is already working that freezes when someone else logs in**, and whoever sees it blames the video. ⛔ **And the property to test is not «PAM still works»**: it is *«while one authenticates, the others do not notice»* — and **that bench does not exist today** |
 > | **the cap** | **`DECISIONI.md` §1.11** — ⛔ **stays fixed at 16 until phase 3**, on purpose: `SPECIFICHE.md` §5.5 says of itself that *«the real limit is not a count, it is a budget of pixels per second»*, so any number today is a placeholder. ⚠ **The declared price**: for two phases the code says **16** and the specification says **ten**. ⛔ And it holds for any number: **no bench has ever seen that cap bite** — filling it takes ten **different** users (I2), and the reason for refusal belongs to phase 3 |
 
 *Finding **R12C.17**: they were written in `src/main.c` and `src/rcp.c`, i.e. where nobody reads them
@@ -2351,8 +2351,8 @@ the only one with real browsers, and their versions are inside the row.
 | **B9** — does `aioquic` carry WebTransport? | `[?]` | ⭐ **yes** `[M]` 1.2.0: 29 occurrences in the h3 module, the event and `create_webtransport_stream`. *It was the `[?]` of R3.21: had it been «no», the arbiter would have fallen* | 9 Aug |
 | **B2** — the two certificates, four checks | 4 of 4 | ✅ **4 of 4** — and the two really are two | 9 Aug |
 | ⭐ **B2** — **the positive environment control** (no browser) | session accepted **and** bytes coming back | ⭐ **`:status = 200`, `b'ciao'` comes back identical** `[M]` | 9 Aug |
-| ⭐ **B2** — **the session opens from a REAL BROWSER** | it opens, and the bytes come back | ⭐ **OPENED in 30,2 ms** on **Chrome 151.0.0.0** (X11, Linux), `"ciao"` comes back identical `[M]` | 9 Aug |
-| ⭐ **B2** — the same on **Firefox** | it opens | ⭐ **OPENED in 52,0 ms** on **Firefox 140.0**, `"ciao"` comes back identical `[M]` | 9 Aug |
+| ⭐ **B2** — **the session opens from a REAL BROWSER** | it opens, and the bytes come back | ⭐ **OPENED in 30.2 ms** on **Chrome 151.0.0.0** (X11, Linux), `"ciao"` comes back identical `[M]` | 9 Aug |
+| ⭐ **B2** — the same on **Firefox** | it opens | ⭐ **OPENED in 52.0 ms** on **Firefox 140.0**, `"ciao"` comes back identical `[M]` | 9 Aug |
 | ⭐ **B2** — ⛔ **does `ngtcp2` serve the certificate WITHOUT SNI?** | **yes** (prediction written beforehand: zero lookups by name in 109+18 files) | ⭐ **yes** `[M]` — session established, and **the fingerprint of the received certificate matches** that of the file | 10 Aug |
 | **B2** — the same with SNI, the control | yes | ✅ **yes** — `remotix.prova` | 10 Aug |
 | ⭐ **B2** — ⛔ **does `quiche` serve the certificate WITHOUT SNI?** | **yes** (prediction written beforehand: the only place that names SNI is a **reader**, `tls/mod.rs:510`) | ⭐ **yes** `[M]` on **`quiche` 0.28.0** — session established, **fingerprint matching** | 10 Aug |
@@ -2360,7 +2360,7 @@ the only one with real browsers, and their versions are inside the row.
 | ⛔ **B2** — which `quiche` builds with Trixie's `rustc`? | *it was not a question* | ⛔ **0.28.0**: **0.29.3 demands rustc 1.88**, Trixie has **1.85** `[M]` | 10 Aug |
 | ⭐ **B2** — the **negative control**: `lsquic` without SNI | **fails** | ⭐ **fails** `[M]`, and its log says **why**: `SNI is not set … fail certificate lookup` | 10 Aug |
 | ⭐ **B2** — `lsquic` **with** SNI: does it find the certificate? | yes — *the half missing from the diagnosis of the 9th* | ⭐ **yes** `[M]`: `looked up cert for remotix.prova`. ⚠ then it falls on ALPN (alert 120), **cause not investigated** | 10 Aug |
-| ⭐⭐ **B2** — **the session opens from a REAL BROWSER, on `ngtcp2`** | 2 engines of 2 | ⭐ **2 of 2** `[M]`: **Chrome 151.0.0.0** (118,6 ms) and **Firefox 140.0** (140,0 ms), fingerprint published, no warning, `"ciao"` comes back identical | 10 Aug |
+| ⭐⭐ **B2** — **the session opens from a REAL BROWSER, on `ngtcp2`** | 2 engines of 2 | ⭐ **2 of 2** `[M]`: **Chrome 151.0.0.0** (118.6 ms) and **Firefox 140.0** (140.0 ms), fingerprint published, no warning, `"ciao"` comes back identical | 10 Aug |
 | ⛔ **B2** — and is the **wrong** path refused? | not 200 | ⭐ **404** on `/rcp/9` `[M]`, as §2.2 mandates (R1.24) | 10 Aug |
 | ⭐ **B2** — the six properties of the library | 6 of 6 | ⭐ **6 of 6** `[M]`, and **read from the peer, not from the server log**: `max_idle_timeout` 30 000 ms · datagrams 65 536 · uni credit **16** · migration **not** disabled · **no 0-RTT** · `allowPooling: false` | 10 Aug |
 | ⛔ **B2** — and can the idle cap be **changed**? (B3 needs it) | the peer sees the new value | ⭐ **yes** `[M]`: with `--timeout=10s` the peer reads **10 000 ms**. B3 will be able to tell the protocol cap from the transport one | 10 Aug |
@@ -2373,7 +2373,7 @@ the only one with real browsers, and their versions are inside the row.
 | ⭐ **B3** — the **2nd after the 1st is closed** | **identical to the first** | ⭐ **passes** `[M]`, and its trace is conforming too. ⛔ **It was not on the first round**: see the defect below | 10 Aug |
 | ⭐ **B3** — the **2nd while the 1st is alive** | `CONGEDO(0x0F)` to the newcomer, and the 1st survives | ⭐ **passes** `[M]`: the second receives `GIA_ATTIVA_REMOTA` **by both routes of §3.1** — `CONGEDO` on the control channel *and* code `0x0f` in the session close — and the first survives. ⚠ *It was red on the first round, and the defect was the bench's* | 10 Aug |
 | ⭐⭐ **B3** — the 2nd **after the silence** of the 1st, 35 s at `max_idle_timeout` **120** | **gets in** | ⭐ **gets in** `[M]`, and ⛔ **with the check that says no**: at **+6 s** the second is **refused** with `0x0F`, at **+35 s** the third **gets in**. The log: `STACCATO per silenzio: 30072 ms`. ⭐ And the connection of the first is **still alive**: what freed the slot was **the server**, not QUIC | 10 Aug |
-| ⭐ **B3** — the 3rd with the certificate **rotated by hand** | passes | ⭐ **PASSES, fully** `[M]` **2026-08-10 evening**: rotation (new fingerprint ≠ old, four certificate checks out of four), the page fetches the new one and opens on Chrome 151 and Firefox 140, **and the server answers `ECCOMI` to the probe's `CIAO`** — the second half of the B2 criterion is satisfied —, and with the old one **both refuse**. ⛔ The morning's red was the PROBE's, not the certificate's: it sent `ciao` and waited for the B2 echo, which no longer exists with RCP grafted in. ⚠ It remains `[?]` that what refuses is the fingerprint comparison and not one of the other two causes with the same appearance.<br><br>*What it said before* `[M]` **2026-08-10 09:36**, Chrome **151.0.0.0** and Firefox **140.0**: with the current fingerprint (`5o99/7rSTJER…`) the **session opens** on both — 149,0 ms Firefox, 180,0 ms Chrome — ⛔ **but the stream did not work in either** (`remote WebTransport close` · `The session is closed.`), and the B2 criterion wants *«the session opens on Chrome and Firefox, **and the page receives a byte from the server**»*. ⚠ With the old fingerprint (`35wqjGTOmKSj…`) **both refuse** — Firefox `WebTransport connection rejected`, ⚠ Chrome `Opening handshake failed.`, *two different sentences* — but `[?]` **that what refuses is the fingerprint comparison is not demonstrated**: the recorded outcome declares on its own **three causes with the same appearance** (UDP filtered · fingerprint not of the served certificate · certificate beyond 14 days), and nobody has told them apart. It is form **E1**, and the bench had already declared it | 10 Aug |
+| ⭐ **B3** — the 3rd with the certificate **rotated by hand** | passes | ⭐ **PASSES, fully** `[M]` **2026-08-10 evening**: rotation (new fingerprint ≠ old, four certificate checks out of four), the page fetches the new one and opens on Chrome 151 and Firefox 140, **and the server answers `ECCOMI` to the probe's `CIAO`** — the second half of the B2 criterion is satisfied —, and with the old one **both refuse**. ⛔ The morning's red was the PROBE's, not the certificate's: it sent `ciao` and waited for the B2 echo, which no longer exists with RCP grafted in. ⚠ It remains `[?]` that what refuses is the fingerprint comparison and not one of the other two causes with the same appearance.<br><br>*What it said before* `[M]` **2026-08-10 09:36**, Chrome **151.0.0.0** and Firefox **140.0**: with the current fingerprint (`5o99/7rSTJER…`) the **session opens** on both — 149.0 ms Firefox, 180.0 ms Chrome — ⛔ **but the stream did not work in either** (`remote WebTransport close` · `The session is closed.`), and the B2 criterion wants *«the session opens on Chrome and Firefox, **and the page receives a byte from the server**»*. ⚠ With the old fingerprint (`35wqjGTOmKSj…`) **both refuse** — Firefox `WebTransport connection rejected`, ⚠ Chrome `Opening handshake failed.`, *two different sentences* — but `[?]` **that what refuses is the fingerprint comparison is not demonstrated**: the recorded outcome declares on its own **three causes with the same appearance** (UDP filtered · fingerprint not of the served certificate · certificate beyond 14 days), and nobody has told them apart. It is form **E1**, and the bench had already declared it | 10 Aug |
 | ⭐ **B3** — the **fixed second** of §4.4-bis, timed | ≥ 1000 ms **also on `AMMESSO`** | ⭐ **1074–1085 ms** `[M]` over three connections. It is a property no other bench sees | 10 Aug |
 | ⭐ **B10** — PAM, with `pamtester` as the control | gets in | ⭐ **gets in** `[M]`: `pamtester login prova authenticate` succeeds, and the server admits the same user | 10 Aug |
 | ⭐ **B4** — seven faulty, four broken, one conforming, one with nothing to judge | the **four outcomes** covered, exact byte | ⭐ **13 of 13** `[M]` 10 Aug evening: each faulty one accused on the **byte declared in advance**, and the validator's four exit codes all exercised (0 conforming · 1 non-conforming · 2 broken recording · 3 nothing to judge). The validator is **certified** | 10 Aug |
@@ -2384,7 +2384,7 @@ the only one with real browsers, and their versions are inside the row.
 | ⭐ **B5** — and a **second contradiction in `RCP.md`** | *it was not an expected* | ⛔ §2.2 says that a `CIAO(2)` on `/rcp/1` is `VERSIONE_INCOMPATIBILE`; §9 says the server chooses *«the highest that does not exceed that of the `CIAO`»*, i.e. `ECCOMI(1)`. **Different bytes on the wire for the same input**, and neither cites the other. §2.2 wins (the more specific); `RCP.md` §9 cured. ⚠ *The cure cited **§2.4**, which is «The port»: number corrected the same day, finding **R11.2*** | 10 Aug |
 | ⭐⭐ **B11** — the violations towards the page | 13 of 13 | ⭐ **13 of 13 on BOTH engines** `[M]` 10 Aug evening — Firefox **140.0** and Chrome **151.0.0.0**, `CONFORME` with **0 faults** — **plus the two negative properties** (`desktop` does not change the bytes sent · no application heartbeat). ⭐ **And repeated**: two complete conforming rounds, `15:51:54`+`15:52:28` and `15:54:51`+`15:55:24`. ⚠ *At 11 this row said «12 of 12 on Firefox, 9 of 12 on Chrome»: Chrome's three reds were closed that same evening, and this document had stayed behind until finding **R11.4** of 10 Aug* | 10 Aug |
 | ⛔ **B11** — and the check that says **no** | the page against a **HEALTHY** server must say NON-CONFORMING | ⭐ **NON-CONFORMING** `[M]`, **9 cases of 13** failed. Without it, «thirteen greens» would be compatible with a page that approves anything. ⚠ `[?]` **it runs on one engine only** (Firefox), and the bench declares it on its own — **finding R11.24**. ⭐ *Since the night of 10 Aug 2026 the `README.md` declares it too, which before listed it under «on both engines»: it remains to **run it on Chrome too**, and the difference bites exactly here, because tonight's three red cases lived **in the difference between the two engines*** | 10 Aug |
-| **B6** — the three caps | 5 s · 60 s · 10 s, **with the right reason** | ⚠ **5,0 · 60,1 · 10,0 s**, and ⭐ **the stopwatch starts from the opening of the CONTROL CHANNEL** — R3.27 closed, `RCP.md` §4.6 line 1 changed by one word. ⛔ **And a second answer**: the session that never opens the channel **has no cap on it at all** (`DECISIONI.md` §7.17). ⛔ **These three numbers have no log**: there is no `.jsonl` of B6, the scene of that round is declared nowhere and **they are not re-verifiable** — they are redone with the log, or they remain three numbers of which only the order of magnitude is known | **10 Aug**, time not recorded |
+| **B6** — the three caps | 5 s · 60 s · 10 s, **with the right reason** | ⚠ **5.0 · 60.1 · 10.0 s**, and ⭐ **the stopwatch starts from the opening of the CONTROL CHANNEL** — R3.27 closed, `RCP.md` §4.6 line 1 changed by one word. ⛔ **And a second answer**: the session that never opens the channel **has no cap on it at all** (`DECISIONI.md` §7.17). ⛔ **These three numbers have no log**: there is no `.jsonl` of B6, the scene of that round is declared nowhere and **they are not re-verifiable** — they are redone with the log, or they remain three numbers of which only the order of magnitude is known | **10 Aug**, time not recorded |
 | **B7** — the reasons from the receiving side, distinct sentences, no number | ⛔ **7 provocable of 15 declared** + **15 distinct sentences** | ⭐ **7 of 7 + 15 of 15**, with the **eight excluded** and the reason for each. ⚠ *The expected value of this row said «**8 of 8** + 8 distinct sentences», and the eighth — `SERVER_IN_CHIUSURA` — is the one the bench **measures** it cannot produce on the graft* | **10 Aug** |
 | **B8** — ≥ 1 s per sample, **and the three medians indistinguishable** | ≥ 1 s in **every** sample, and the three medians **indistinguishable** from one another | ⚠ **partial**: **2636 ms** median over the **42** rejected attempts, where §4.4-bis wants ~1000 ⇒ ⛔ **what governs the timings is PAM, not our fixed delay**. The three medians **remain to be compared**. ⚠ And the number is the median **of the `login` service**: the product uses `remotix`, so with it **the measurement must be redone** | **10 Aug** |
 | ⛔ **B8** — the ban: three failures with **three different names**, then the fourth with the **right** password | the fourth **refused** with `TROPPI_TENTATIVI`, and the page says so | | |
@@ -2719,7 +2719,7 @@ asserted by the source and seen by nobody. `01-b2-ngtcp2-wt-innesta.py` has this
 > posto LASCIATO da prova via [..]:39390 (occupati adesso: 0)   ← prima che la 2ª arrivi
 > ```
 >
-> And ngtcp2's **timestamps** closed the case: the first connection closes at **t≈13,1 s**
+> And ngtcp2's **timestamps** closed the case: the first connection closes at **t≈13.1 s**
 > with `CONNECTION_CLOSE 0x0` — i.e. it held its twelve seconds — and the second arrives **after**.
 > The two had never been simultaneous.
 >
@@ -2914,7 +2914,7 @@ page.
 | ⚠ **the sign of the wheel on more than one compositor** | R3.25 — ⭐ **measured on Mutter** on 10 Aug 2026 (`+120` ⇒ the server inverts), ⛔ **and §7.3 binds five desktops**: if `libei` is what normalizes, the number holds everywhere; if the compositor normalizes, KWin will give a different sign. The bench can be rerun on KWin without changing a line |
 | ~~**the instant from which the first cap starts**~~ — **CLOSED** | R3.27, closed by **B6** on 11 Aug 2026: it starts from the opening of the **control channel**. ⛔ And B6's second answer opened `DECISIONI.md` §7.17 — **the session without a channel has no cap at all** |
 | ⭐ ~~**the PAM stack for a user other than the process owner**~~ — **CLOSED** | R3.26, closed by **B10** on 11 Aug 2026 **with a measurement**, on the **`remotix`** service: the PAM stack verifies the password of a user **other than the process owner** ⛔ **only if the process is privileged** — as `root` it succeeds, as a normal user it does not. The server today runs as root. ⚠ **The phase 2 question remains**: a system service that **drops privileges** would see that cause, and the symptom would be *«credenziali errate»* |
-| ⛔ **the fixed second of §4.4-bis, and the culprit now has a name** | ⭐ **Remeasured on the evening of 11 Aug 2026** by B8's certification round: medians **2123,2 · 2198,1 · 1085,9 ms** — ⛔ *and so the «1984 ms» of the `README` and the «2636 ms» below are **two snapshots of different rounds**, not a number corrected twice*. ⭐ **What changed is not the number, it is that the culprit is measured**: the server waits **+1034 ms** beyond the fixed second on the rejected and **+84 ms** on the admitted — the signature of `pam_faildelay`, that is **PAM and not our code**. ⚠ And the `[?]` stays open anyway, because as long as that delay is not constant the fixed second **does not hide what it claims to hide** |
+| ⛔ **the fixed second of §4.4-bis, and the culprit now has a name** | ⭐ **Remeasured on the evening of 11 Aug 2026** by B8's certification round: medians **2123.2 · 2198.1 · 1085.9 ms** — ⛔ *and so the «1984 ms» of the `README` and the «2636 ms» below are **two snapshots of different rounds**, not a number corrected twice*. ⭐ **What changed is not the number, it is that the culprit is measured**: the server waits **+1034 ms** beyond the fixed second on the rejected and **+84 ms** on the admitted — the signature of `pam_faildelay`, that is **PAM and not our code**. ⚠ And the `[?]` stays open anyway, because as long as that delay is not constant the fixed second **does not hide what it claims to hide** |
 | ⛔ **the fixed second of §4.4-bis against the `remotix` service** | B8's **2636 ms** are the median **of `login`**. The product has its own PAM service, so *«a governare i tempi è PAM»* must be remeasured before believing it, and the `[?]` on the fixed second **is not closed by that measurement** |
 | ⛔ **the canvas formula, after S5** | `screen.width × devicePixelRatio` is not zoom-invariant on Chrome 151, and the page zoom **is not readable from JavaScript in a portable way**. It is not a `[?]` to measure: it is a **cure to find**, in `SPECIFICHE.md` §6.1-bis |
 | ⛔ **S5 on DeX, and S2, S3a, S6** | four measurements waiting for a **device**, not an idea: the Android phone, the DeX, a real LTE network. ⭐ The benches are ready and run the day the hardware is there (`web/rapporti/S-esiti-sonda.md` §4-§6) |
@@ -3118,7 +3118,7 @@ was respected six times out of six.
   bench mounted `Meta-1`, and the scene ended up on the first. ⭐ Cured in three places, and **the two wrong
   lines remain in the log** with the note next to them saying why they do not count.
 - **F2.6** — four: a check that correlated the channels over the whole image (R, G, B are correlated
-  at 0,978 ⇒ **red on a healthy chain**); one that subtracted 8 bits from 16 (−3,18 dB on a perfect chain);
+  at 0.978 ⇒ **red on a healthy chain**); one that subtracted 8 bits from 16 (−3.18 dB on a perfect chain);
   one that injected the fault on the culprit and **by re-swapping the planes put them back in place**; and one
   that aggregated `None` with `is not False` and **promoted** a round without a reference.
 - **F2.4** — two: the comparison of the cited rule gave **red on four exact judgements**, and the
@@ -3173,7 +3173,7 @@ would have been the capture.
 
 The count that proves it, done **on the gradient** of the scene (⚠ on the flat bars the levels are
 about twenty by construction, and it would say «8 bit» about anything): **255/256/255 distinct levels,
-multiples of 4 at 0,259/0,259/0,249**.
+multiples of 4 at 0.259/0.259/0.249**.
 
 ⇒ ⛔ **Main10 from this path means eight bits promoted to ten**, and the label would keep
 saying *«10 bit»* along the whole chain. The wish of `SPECIFICHE.md` §3.1 **cannot be reached in
@@ -3255,9 +3255,9 @@ would have warned it. It is a product trap, not a bench trap.
 #### ⚠ And a correction to a phase 1 measurement
 
 ⛔ **The 10-bit test «by counting the bands»** — probe **S2**, `web/` §3.7 point 2 — **does not
-survive lossy encoding**: `[M]` ratio **4,13** before, **1,31** after QP 20.
+survive lossy encoding**: `[M]` ratio **4.13** before, **1.31** after QP 20.
 ⭐ Replaced by **the two low bits of the Y plane on the gradient areas**, which converge with the independent
-measurement of F2.3 (**0,25** on a healthy chain against **1,000** on a stream truncated to 8 bits).
+measurement of F2.3 (**0.25** on a healthy chain against **1.000** on a stream truncated to 8 bits).
 ⚠ And the «multiples of 4» signature **does not survive the RGB→YUV conversion**: the real bits are measured
 **at the source**, or not at all.
 
@@ -3295,7 +3295,7 @@ measurement of F2.3 (**0,25** on a healthy chain against **1,000** on a stream t
 | ⚠ **the phone, and the `[?]` is now narrower** | `[M]` **13 Aug 2026**, real phone — **SM-S916B**, Chrome 151.0.7922.108, Adreno 740: **4 sequences out of 4 painted**, HEVC Main10 **and** AV1 10 bit. ⛔ **But `copyTo` gives `format` `RGBA` and 4 bytes per pixel**: at the device end the ten bits are **eight promoted**, as at the source. ⛔ **And the hardware remains open**: without a data cable `Created MediaCodec <nome>` cannot be read, so *«lo decodifica il silicio o la CPU?»* has no answer — and the A/B criterion comes out `valido: false`, because it measures **fixed cost**. ⚠ *This row said «nessun numero prodotto, e nessuno dedotto», and the numbers have been in `banchi/02-giudizio-sonda.jsonl` since 07:53 on the 13th (R13.5a)* |
 | ⛔ **the buffer of the wrong card** | the capture bench **would not see it**, and its green **does not absolve it**. The machine has two GPUs |
 | ✅ **that a frame really arrives on the wire** | ⭐ **closed on 13 Aug**: the user looked at it, and the server log writes it — `fotogramma 1 SPEDITO: CHIAVE 0x0301, codec 2, 1920x1080, 9746 byte, FIN` |
-| ⛔ **M5 — the chroma gap between two decoders** | 0,9791 against a limit of 0,98: it is **the only red left on a healthy chain** — M0 and M1 were red in the rounds of 09:19-09:20, before the rescaling cure. ⛔ **It does not reproduce on the target pattern**, and **the threshold was not widened**: the red was not cured, **it disappeared when the scene changed** |
+| ⛔ **M5 — the chroma gap between two decoders** | 0.9791 against a limit of 0.98: it is **the only red left on a healthy chain** — M0 and M1 were red in the rounds of 09:19-09:20, before the rescaling cure. ⛔ **It does not reproduce on the target pattern**, and **the threshold was not widened**: the red was not cured, **it disappeared when the scene changed** |
 | ⛔ **P15** | `RCP.md` §7.1, the grace second on the coordinates: **the last place in the phase where a clock decides**. It is set out in full in `rapporti/F2-4-filo.md` |
 | ⛔⛔ **«due utenti con due sessioni vere, ciascuno vede LA PROPRIA»** | ⛔ **no bench covers it**, and it is the phase's biggest hole. `[M]` 13 Aug: the `senza-palco` case of `02-figlio-prova.py` tests **the negative half** — `prova` (uid 1001, all four fields asked of the kernel) does **not** see the desktop of `nicfio`, and the independent RCP client counts **zero** frames where on 12 Aug it counted one conformant. ⛔ **But not the positive half**: on that machine `prova` has never logged in — no `/run/user/1001`, no bus, no stage — so **a product that delivered nothing to anyone would pass the same way**. The positive half holds today **only for uid 1000**. ⚠ Looked at and discarded: `01-b10-secondo-utente.py`, `attrezzi-prova2.sh`, `02-pam-i3.py --caso secondo` all stop **at authentication**, not at seeing |
 | ⚠ **`02-figlio-accendi.sh` counts everyone's children** | `pgrep -f -- "--figlio-interno" \| wc -l` does not look at **whose** they are: at shutdown it accused two orphans that were live children of live parents (the 7693 of another bench and ⛔ **the user's 7561**). It is the same shape the file **forbids thirty lines higher up** for the `stato` action. ⚠ It does not cure, it stops no one (`spegni` exits 0 anyway) — it only fires when two benches run in parallel, and indeed on 12 Aug it was silent. ⇒ ✅ **Cured in phase 3** (13 Aug 2026) — ⛔ **`[R]`, not executed**: the cure is read in the code and **has not been run**, so it does not carry the `[M]` mark |
@@ -3356,7 +3356,7 @@ reliably reentrant.
 The reason is written there, and it is about video: *«finché non c'è video il sintomo è «l'ultimo dei dieci
 aspetta dieci secondi», sgradevole e circoscritto; dalla fase 2 in poi lo schermo di **tutti** quelli
 collegati si pianta per uno o due secondi ogni volta che **qualcun altro** entra — e chi lo vedrà lo
-attribuirà al **video**»*. `[M]` from B8: **from 1,0 to 2,2 seconds** per attempt, and the delay is put there by
+attribuirà al **video**»*. `[M]` from B8: **from 1.0 to 2.2 seconds** per attempt, and the delay is put there by
 `pam_faildelay`, not by our code.
 
 ⇒ ⭐ **This phase's bench could be born before the cure — the product could not.** This round
@@ -3493,7 +3493,7 @@ by four commits (R13.2):*
 | **3** | ⚠ the image is **small** | the benches look at **whether** the pixels arrive, not **how big** they are painted |
 
 ⇒ ⭐ **It is invariant I8 in action** — *the yardstick is what the user sees, not the number that comes out of the
-bench*. That night the benches said **48,27 dB**; the user said *«non vedo nessun desktop»*, and
+bench*. That night the benches said **48.27 dB**; the user said *«non vedo nessun desktop»*, and
 the user was right.
 
 ---
@@ -3510,8 +3510,8 @@ real server).
 
 | the scene | the outcome | PSNR-Y | live instruments |
 |---|---|---|---|
-| ⭐ **the F2.6 target pattern as desktop background** | **PASSED** | **62,09 dB** (threshold 45) | **12 out of 12**, zero blind |
-| ⛔ **the user's natural desktop** | **FAILED on M5** | 58,62 dB | 8 out of 12 — blind *previous · eight-bit · planes · flipped* |
+| ⭐ **the F2.6 target pattern as desktop background** | **PASSED** | **62.09 dB** (threshold 45) | **12 out of 12**, zero blind |
+| ⛔ **the user's natural desktop** | **FAILED on M5** | 58.62 dB | 8 out of 12 — blind *previous · eight-bit · planes · flipped* |
 
 ⛔ **And the two rows are not to be chosen between: they are read together.** The green belongs to the yardstick **with the target pattern**; on the
 bare desktop the yardstick sees less — without the markers, M4, M7 and M-V switch off by construction — and
@@ -3558,7 +3558,7 @@ decoders; **tier 2** compares *page ⟷ capture*, which is the whole chain.
 ⛔ **The number the green carries is tier 1's.** Tier 2 the yardstick declares **not
 applicable**, and the reason is arithmetic: for the subtraction to measure the client and not the canvas, the
 encoder's loss must lie **10 dB below** the 8-bit canvas noise, and here it lies
-**7,01** (55,08 against 62,09). The raw number exists — **54,11 dB** — but it is not a verdict.
+**7.01** (55.08 against 62.09). The raw number exists — **54.11 dB** — but it is not a verdict.
 
 > ⚠ **And a defect of the tool is declared**: the message that ends up in the outcome file says
 > *«non è almeno **6 dB** sotto la prima»* while the code uses **10** (`02-giudizio-metro.py` · `m2_catena_intera()`).
@@ -3598,11 +3598,11 @@ the number is compared with what the server declares.
 | from the server log, `08:45:44 UTC` | from the screenshot's pixels, eight seconds later |
 |---|---|
 | `vista=2545x927` | the painted area is **927 px** tall ⭐ **identical** |
-| `tela=1920x1080` | **1648 px** wide, ratio **1,7778** against a 16:9 of **1,7778** |
+| `tela=1920x1080` | **1648 px** wide, ratio **1.7778** against a 16:9 of **1.7778** |
 
 ⇒ ⭐⭐ **The page rescales to the view respecting the aspect ratio, and not one pixel off** — it is
 `SPECIFICHE.md` §6.1 measured **on the glass**, not declared. The black bands (448 on the left, 464 on the
-right) are the arithmetic consequence of a 2,74 window hosting a 16:9 canvas: the alternative
+right) are the arithmetic consequence of a 2.74 window hosting a 16:9 canvas: the alternative
 would be to **stretch**, which §6.1 forbids.
 
 ⛔ **And the screenshot raised something no bench had seen**: the canvas is painted at **86%**
@@ -3669,8 +3669,8 @@ written by hand).
 With the canvas fixed, a delay that exceeds 50 ms accuses the architecture; with the canvas changed underneath,
 one would not know whether it accuses the architecture or the pixel count.
 
-⛔ **And the black bands are not the resolution**: 2545×927 of window make a ratio of **2,74**
-against a 16:9 of **1,7778**. Those bands are the **shape of the window**, and would only disappear in
+⛔ **And the black bands are not the resolution**: 2545×927 of window make a ratio of **2.74**
+against a 16:9 of **1.7778**. Those bands are the **shape of the window**, and would only disappear in
 full screen — changing the canvas does not touch them. It must be said so that the `[?]` is not reopened
 in the belief of curing them.
 
@@ -3718,7 +3718,7 @@ it costs **three cells and zero product lines**.
 > | ⛔ *«non è un difetto nostro»* | ⛔ **it is our defect.** And it is the line this phase disproved in the most useful way |
 >
 > ⚠ **And the cure of step 1 succeeds, but does not save the number**: monitor 120 + brake 90 give `[M]`
-> **61,4** frames per second — and the delay **does not move**, because the bottleneck is elsewhere. The
+> **61.4** frames per second — and the delay **does not move**, because the bottleneck is elsewhere. The
 > cadence is not the delay (`LEZIONI.md` §6.2).
 >
 > ⭐ **What worked in the method**: declaring the expectation beforehand made the gap
@@ -3787,7 +3787,7 @@ must be able to refuse it with a case.
 |---|---|
 | **tree** | clean, `f2f21c2` |
 | ⭐ **the bench catalogue** | **15 out of 15 certified today**, zero expired, zero not reverifiable — `python3 banchi/01-b12-guasti.py --registro`, rerun **at the opening of phase 3** |
-| ⏳ **the day's expiry** | `01-s1b-eccezione.sh oggi` — **4 checks out of 4**, at **2,50 days out of 7**; the expiry Chrome noted down is **2026-08-17T21:09:47Z** |
+| ⏳ **the day's expiry** | `01-s1b-eccezione.sh oggi` — **4 checks out of 4**, at **2.50 days out of 7**; the expiry Chrome noted down is **2026-08-17T21:09:47Z** |
 | ⚠ **the listening ports** | 7448, 7501, 7561 — the only `:7xxx` ones |
 
 ⛔ **And it must be said in advance**: phase 3 touches `rcp.c` and the page, and **curing the product makes
@@ -3821,12 +3821,12 @@ in its place stands the check **P1**.
 
 | where it goes | median | whose it is |
 |---|---|---|
-| draw → capture (Mutter's `pts`) | 16,66 ms | Mutter |
+| draw → capture (Mutter's `pts`) | 16.66 ms | Mutter |
 | ⛔ **capture → first byte in the page** | ⛔ *removed with phase 18 (encoding without a card)* | ⛔ **ours** — software encoder |
-| the wire | 0,32 ms | — |
+| the wire | 0.32 ms | — |
 | complete stream → `decode()` · decoding · drawing | ⛔ *removed with phase 18 (measured on the chain with the encoding without a card)* | ours |
 
-⛔⛔ **The wall is not Mutter's, and these are the three proofs**: the scene draws **59,98/s with 0
+⛔⛔ **The wall is not Mutter's, and these are the three proofs**: the scene draws **59.98/s with 0
 waits**; the product's child delivers **with ZERO empty waits** — *it never waits for
 Mutter*; the encoder is **in software** and the product itself declares it (libsvtav1 / libx265).
 ⇒ **The bulk of the delay is ours**, above all in the capture→wire stretch. **The cure is phase 8.**
@@ -3836,11 +3836,11 @@ Mutter*; the encoder is **in software** and the product itself declares it (libs
 
 | # | Step | What it produced | Outcome |
 |---|---|---|---|
-| **1** | ⭐ **The decoupled cadence** (M3) | `[M]` monitor **120** + brake **90** ⇒ **61,4** delivered (60,04), median **16,66 ms** — cell **D**, clean. ⚠ And the explanation, which is `[R]`: `min_interval_us = 10⁶/maxFramerate` **truncated to an integer** against a tick of 16666,67 µs — a **quantization**, not a beat, **read in Mutter's code** | ⭐ **the fact succeeds** — ⛔ **but M3 is HALF, not closed**: the cause is not measured, the product cannot ask for that cadence, and the cause written in three documents was wrong |
+| **1** | ⭐ **The decoupled cadence** (M3) | `[M]` monitor **120** + brake **90** ⇒ **61.4** delivered (60.04), median **16.66 ms** — cell **D**, clean. ⚠ And the explanation, which is `[R]`: `min_interval_us = 10⁶/maxFramerate` **truncated to an integer** against a tick of 16666.67 µs — a **quantization**, not a beat, **read in Mutter's code** | ⭐ **the fact succeeds** — ⛔ **but M3 is HALF, not closed**: the cause is not measured, the product cannot ask for that cadence, and the cause written in three documents was wrong |
 | **2** | ⛔ **The scene that declares itself** | `banchi/03-scena.c` — `wl_shm` + `xdg-shell`, mark at **144 bits**, four counts including the **waits**, check `wl_surface.enter` — and its reader | ✅ **34 green / 0 red**. M6 closed `[M]`, the `giro` of M8 reopened |
 | **3** | **The product: one stream per frame** | **135 frames**, `numero` 1→135 · **132 deltas and 3 keys** · the first after `SESSIONE` is a **key with FIN** · `RICHIEDI_CHIAVE` → key *(the time, from the encoding without a card, is removed with phase 18)* · **10 streams reset versus 18 with FIN**, no key abandoned, **E8 tested on the wire** · ⭐ in the 28 bytes **Mutter's `pts`** (offset from our `CLOCK_MONOTONIC`: **11 347 µs**) · ⭐ **the video store gone entirely** | ✅ **6 points out of 7 closed** · 13 certification checks, **13 green** · live round **8 green, 1 red** |
 | **4** | **The page: the delivered frames** | the painted frames and the cap at saturation *(numbers taken with the encoding without a card: removed with phase 18)* | ✅ **19 green cases**, **8 grafted faults out of 8 accused** |
-| **5** | ⭐ **The delay loop (S4)** | the number above. **P1** green (N=25 → **+25,08**; N=60 → **+58,58**), with the injection **outside the product** and the clock anchor that **does not pass through it**. **P3** green **on the real pixels**: 234 frames in movement, **0 false positives** | ✅ **bench 31 out of 31, bridge 11 out of 11** — ⛔ **but P5 NOT EXECUTED, and now it says so** |
+| **5** | ⭐ **The delay loop (S4)** | the number above. **P1** green (N=25 → **+25.08**; N=60 → **+58.58**), with the injection **outside the product** and the clock anchor that **does not pass through it**. **P3** green **on the real pixels**: 234 frames in movement, **0 false positives** | ✅ **bench 31 out of 31, bridge 11 out of 11** — ⛔ **but P5 NOT EXECUTED, and now it says so** |
 
 > ⛔⛔ ⚠ **The step 1 row said something else, and it must be said what it said.** *Until the evening
 > of 13 Aug 2026 it read: «13 punti, 8 confermano, 0 smentiscono» and the outcome «⭐ **M3 chiusa, e
@@ -3853,9 +3853,9 @@ Mutter*; the encoder is **in software** and the product itself declares it (libs
 >
 > | | |
 > |---|---|
-> | ✅ **what survives** | everything in `banchi/03-b14-esiti.jsonl`: seven cells, **all** with `scena_sul_mio_monitor: true` — A (60/60 → 31,5), B (120/120 → 82,9), C (120/60 → 46,13), ⭐ **D (120/90 → 61,4, median 16,66, p99 20,43)** and the three checks. And with them the **«sei decimi non si riproducono»** (A gives a clean 0,50) and the **«37 non si riproduce»** |
+> | ✅ **what survives** | everything in `banchi/03-b14-esiti.jsonl`: seven cells, **all** with `scena_sul_mio_monitor: true` — A (60/60 → 31.5), B (120/120 → 82.9), C (120/60 → 46.13), ⭐ **D (120/90 → 61,4, median 16,66, p99 20.43)** and the three checks. And with them the **«sei decimi non si riproducono»** (A gives a clean 0.50) and the **«37 non si riproduce»** |
 > | ⛔ **what falls** | the **verified grid law**. The quantization goes back to `[R]`: it remains the best explanation we have, consistent with cell D, **but it is read in Mutter's code, not measured** |
-> | ⛔ **and also falls** | the **cross-check**: in `banchi/03-b14-esiti-scena2.jsonl` cell D carries `scena_sul_mio_monitor: false` and **1 frame in 25 s**, and that scene's return check does not add up. ⇒ **the 61,4 has only one scene** |
+> | ⛔ **and also falls** | the **cross-check**: in `banchi/03-b14-esiti-scena2.jsonl` cell D carries `scena_sul_mio_monitor: false` and **1 frame in 25 s**, and that scene's return check does not add up. ⇒ **the 61.4 has only one scene** |
 > | ⚠ **and M3** | **is not closed: it is half** — the fact is `[M]`, the cause `[R]`, the cross-check is not there (`STUDI.md` §gnome §13) |
 >
 > ⭐⭐ **And the thing worth more than the correction**: the reason for the rejection is **trap number one
@@ -3997,7 +3997,7 @@ more loaded compositor — **what happens when a capture runs alongside**.
 |---|---|---|---|
 | `fidato` | true | **false** | true |
 | `frame` in flight, max | **1** | **18** (up to 26) | 1 |
-| draws/s at 60 Hz | 60 | **461,7** (up to 1034) | 60 |
+| draws/s at 60 Hz | 60 | **461.7** (up to 1034) | 60 |
 
 ⭐ **And the two symptoms were the same defect**: a scene running idle does not return to the main
 loop ⇒ it ignores `--secondi` (**6 asked, 146 lived**) ⇒ the bench **kills** it ⇒ the death falls
@@ -4011,16 +4011,16 @@ reads the draws without looking at `fidato`. **Closed: 43 green lines, 0 red.**
 ⛔⛔ **A LINE THAT HOLDS FOR THE WHOLE PROJECT**: *every rate cell measured with `03-scena` **before**
 13 Aug must be redone or marked `[?]`* — the scene could run idle without saying so.
 ⭐ **The step 1 cells that matter hold**: `banchi/03-b14-esiti.jsonl` uses `03-b14-scena`
-(EGL, its own), and the matrix of caps redone with the cure is **unchanged** (60,0-60,2 draws/s,
+(EGL, its own), and the matrix of caps redone with the cure is **unchanged** (60.0-60.2 draws/s,
 0 waits).
 
 > ⛔ ⚠ *This line said: «**Il riscontro incrociato dello step 1 regge** […] ⇒ l'accordo **entro
 > il 4 %** fra due scene indipendenti tiene». **It does not hold.** The second scene of the cross-check is
 > precisely `03-scena`, that is the one this very line declares to be redone — and in
 > `banchi/03-b14-esiti-scena2.jsonl` its **cell D** carries `scena_sul_mio_monitor: false`,
-> `palco_stabile: false` and **1 frame in 25 s**, while its **return** check gives 52,84
-> against the 80,28 of its cell B: **it does not add up**. The 4 % holds on A (0,7 %), B (3,2 %) and the
-> positive check; C is at **5,4 %** and the negative at **7 %**. ⇒ ⛔ **Cell D — the 61,4 — has
+> `palco_stabile: false` and **1 frame in 25 s**, while its **return** check gives 52.84
+> against the 80.28 of its cell B: **it does not add up**. The 4 % holds on A (0.7 %), B (3.2 %) and the
+> positive check; C is at **5.4 %** and the negative at **7 %**. ⇒ ⛔ **Cell D — the 61.4 — has
 > ONLY ONE scene.** Corrected on 13 Aug 2026, finding by the phase 3 coordinator.*
 
 #### ⛔ 6. The meter was giving itself 11 ms, and P5 declared itself green without being so
@@ -4070,7 +4070,7 @@ so that on that day the number can be redone without rewriting anything (`DECISI
 - ⚠ **`weston-simple-egl` is not installed** on the test machine (rootfs in RAM), while two
   documents gave it as present and one prescribed it as the scene. It has stopped being a reference:
   the phase 3 scene is ours;
-- ⚠⚠ **`/tmp` is a 3,8 G tmpfs at 94 %**, 246 M free: it has already made a round of
+- ⚠⚠ **`/tmp` is a 3.8 G tmpfs at 94 %**, 246 M free: it has already made a round of
   `03-b16` fail (Chrome does not start). ⛔ **It was deliberately not emptied** — inside are the evidence
   of today's rounds, and throwing them away would remove the **provenance** of this phase's numbers.
 
@@ -4108,7 +4108,7 @@ a small part of the steps** lies outside those two groups.
 > little, and the stretch was **the wait for the frame from the GPU** plus the drawing. The numbers are removed with
 > phase 18 (chain that went through memory and `sws_scale`). `fasi/rapporti/F4-A2-pagina-dipinge.md` and `F4-A10-anello-input.md`.
 
-⚠ **The limits of this measurement, declared**: the recording itself runs at 30,3/s, so it **cannot
+⚠ **The limits of this measurement, declared**: the recording itself runs at 30.3/s, so it **cannot
 see anything faster**; and a frame lost by the recorder would be counted as a pause
 of the product. ⇒ The rate counted this way is a **lower bound**.
 
@@ -4321,7 +4321,7 @@ replaced **is not a number on which to take decisions** — and phases 4-7 would
 same, to be redone later.
 
 ⚠ **But the damage was narrow, and it must be said so the day is not read as lost**: of the results
-of phase 3, **only the verdict on delay** depended on the encoder. Cell **D** (61,4 at
+of phase 3, **only the verdict on delay** depended on the encoder. Cell **D** (61.4 at
 monitor 120 and brake 90), the green produced by the instrument, **B-18**, **B-20**, the rejected worker,
 the scene that was running idle and the three false reds **do not rely on it at all**.
 
@@ -4351,7 +4351,7 @@ frames of Mutter»: a line **repeated** instead of **measured**, which then deci
 | 2 | HEVC hardware encoding in the product, **on a copy** until it is measured |
 | 3 | ⭐ **the loop remeasured with the SAME bench and the SAME scene** — or the two numbers do not subtract |
 | 4 | ⛔ **the FIVE segments side by side**, not the total: *with software encoding removed, do the other four stay where they are?* If they stay, the architecture is **acquitted**; if they move, there is a contention that nobody has seen |
-| 5 | ⚠ **the frames delivered next to the milliseconds** (`LEZIONI.md` §6.2): in v1 the cost per frame dropped from 41 to 6 **while the delivered ones fell from 29 to 22,7** |
+| 5 | ⚠ **the frames delivered next to the milliseconds** (`LEZIONI.md` §6.2): in v1 the cost per frame dropped from 41 to 6 **while the delivered ones fell from 29 to 22.7** |
 | 6 | and **only then** the user's judgement, on a number that does not have the handbrake on |
 
 ⚠ **`EncSliceLP` is «low power» encoding**: fast, but with its own limits of quality and
@@ -4488,11 +4488,11 @@ inside, twins equal, and the mark in the binary verified.
 | | monitors | frames to the client in 40 s | verdict on the pixels |
 |---|---|---|---|
 | **with** `--virtual-monitor` | 1 → 2 | ⛔ **0** (`0 guasti`: a true zero) | ⛔ **EMPTY** |
-| **without** (cured) | 0 → 1 | ⭐ **205 conforming** | ⭐ **SHELL** (luminance jump 51,3 · text edges 548) |
+| **without** (cured) | 0 → 1 | ⭐ **205 conforming** | ⭐ **SHELL** (luminance jump 51.3 · text edges 548) |
 
 ⭐ **And the bench does not trust «the wallpaper is there»** — it is the mistake that hid the fault for two phases.
 It distinguishes with **two indicators of different nature**, calibrated on real images *before* fixing the
-thresholds: the **luminance jump** at the bottom edge of the bar (11,8 shell / 0,07 wallpaper) and the **edges**
+thresholds: the **luminance jump** at the bottom edge of the bar (11.8 shell / 0.07 wallpaper) and the **edges**
 of the clock text (565 / 0). ⛔ The third indicator (the dock) **did not distinguish, and it is written
 that it was discarded**.
 
@@ -4518,7 +4518,7 @@ and to a file**):
 | | |
 |---|---|
 | ⭐ the monitor | **never vanished**: always **1**, `Virtual remote monitor`, even in the four minutes with nobody. Never `0` |
-| ⭐ the application | **1 160 lines between 07:37:36 and 07:41:36** — the 240 s at 4,8/s **without a gap**, while nobody was watching |
+| ⭐ the application | **1 160 lines between 07:37:36 and 07:41:36** — the 240 s at 4.8/s **without a gap**, while nobody was watching |
 | ⭐ `libmutter` | **no new assertion**: the 2 assertions and 7 criticals are **constant** from the first to the last reading, and carry the pid of a `gnome-shell` that the product was **sending off** |
 | ⭐ on reattach | `riattacco-1` **120 conforming frames → SHELL**; `riattacco-2` → **SHELL**. ⭐ And it is **the same window**: **unchanged pid** (465823 at the start and at the end, from 154 to 3 497 lines) — a new window would have a new pid |
 
@@ -4541,7 +4541,7 @@ three entered the verdict — and precisely for that reason nobody would have ch
 | | |
 |---|---|
 | ⛔ «HEVC does not paint» | **false**: `[M]` **8 boxes out of 8** paint (string profile × stream depth, HEVC and AV1, 64×48 **and** 1920×1080), including the exact combination of the product — Main10 stream read with the Main8 string. Stage = the **real desktop**, real GPU, declared and verified from the other end. And continuously: **60 out of 60**, six rounds |
-| ⛔ the «1 748 delivered, 0 painted» | ⛔ **the count was misread**: in the window of the black session the counter **enters at 1748 and exits at 1748** for 2 min 38 s — the 1748 is **the leftover from the evening before** (`ciclo_fotogrammi` is file-static). And the «1 659» was a `grep -c` over the whole 6,7 MB file: in the real window they are **653** |
+| ⛔ the «1 748 delivered, 0 painted» | ⛔ **the count was misread**: in the window of the black session the counter **enters at 1748 and exits at 1748** for 2 min 38 s — the 1748 is **the leftover from the evening before** (`ciclo_fotogrammi` is file-static). And the «1 659» was a `grep -c` over the whole 6.7 MB file: in the real window they are **653** |
 | ⇒ the real cause | **the added, empty monitor**: nothing moves, Mutter does not deliver. **Work for A1, not for the codec** |
 | ⛔ «drawing costs that segment» | **false**: real drawing costs little, same boundary as phase 3, and the positive control on AV1 comes back with the values of phase 3 ⇒ **the stopwatch was calibrated**. *(The numbers, taken on the chain with encoding without the card or from memory, are removed with phase 18.)* |
 
@@ -4632,7 +4632,7 @@ faults → healed).
 
 | | |
 |---|---|
-| ⭐ **the edge case** | pushed beyond with `Pointer Lock` it comes out **1919, 1079 and never 1920**. ⚠ And the expectation is **recomputed in Python** at five scale factors: at `1279×719` the true value is **1918,5**, where `round`/`ceil` would say 1919 — that is, the bench can tell the right rounding from the one that closes the session |
+| ⭐ **the edge case** | pushed beyond with `Pointer Lock` it comes out **1919, 1079 and never 1920**. ⚠ And the expectation is **recomputed in Python** at five scale factors: at `1279×719` the true value is **1918.5**, where `round`/`ceil` would say 1919 — that is, the bench can tell the right rounding from the one that closes the session |
 | ⭐ **`Ctrl+C` copies** | `29↓ 46↓ 46↑ 29↑`, **zero `LETTERA`**; and `Maiusc+a` → **one** `LETTERA` U+0041 and **zero** positions |
 | ⭐ **release on focus loss** | focus removed with a **real tab**: the two releases go out. With focus kept: **none** |
 | **the wheel** | +120 up, −120 down, **+60 half notch**, and the sign inverted **only once** (by the server) |
@@ -4658,7 +4658,7 @@ Chrome**.
 | ⛔ **the `[R]` brought to `[M]`** | with yesterday's negotiation: **62 buffers, 0 `SPA_META_Cursor`, 0 `CURSORE_FORMA`**. The same instrument with one more line: ⭐ **49 out of 49**. ⇒ *The zero was a zero, not a blindness* |
 | ⭐ **the cursor is NOT in the image** | 96×96 box on the pointer resting on a known colour: **0 pixels** off colour with `cursor-mode=2`, ⛔ **762** with `cursor-mode=1` — the positive control on the real pixels |
 | ⭐ **the shape arrives, reread from the bytes** | 48×48 (hotspot 6,2) · `0×0` hidden · 48×48 on return · 32×32 (3,1). **Zero violations** of §7.2/§5.5 |
-| ⭐ **and it is not resent a thousand times** | 52 metadata ⇒ **4** shapes (7,7 %); **40 movements ⇒ 0 new shapes** |
+| ⭐ **and it is not resent a thousand times** | 52 metadata ⇒ **4** shapes (7.7 %); **40 movements ⇒ 0 new shapes** |
 
 ⛔ **And one thing that must be declared instead of invented**: on a freshly opened stream the shape **may never
 arrive** — `cursor_bitmap_invalid` is born false and turns on **only** on `cursor-changed`
@@ -4744,7 +4744,7 @@ breaking. The fallback disappears by itself now that the line is there.
 |---|---|
 | ⭐ **the certification** | **16 injected faults caught out of 16** · **53 checks out of 53** (exit 0) · of which the bridge **19 out of 19** |
 | ⭐ **three NEW faults**, which at phase 3 were not even expressible | and the most important is *«the median rises by N but **in the wrong segment**»*: ⛔ **a yardstick like that never turns red — it tells lies about the diagnosis**, which is exactly what happened to the drawing label |
-| ⭐ **the chain in ELEVEN segments** (four new) | tested on the fake that sums them to the total with a gap of **0,00 ms** |
+| ⭐ **the chain in ELEVEN segments** (four new) | tested on the fake that sums them to the total with a gap of **0.00 ms** |
 | ⛔ **and the number is NOT there: `n = 0`, exit 3** | *«non ho niente da giudicare»* — ⭐ **and saying so is the right thing**: the client does not yet send §7.3. It is the defect the phase 1 validator had (conforming and «nothing to judge» with the same exit code), here avoided by construction |
 | ⭐ **the blind pieces are TWO, not one** | the outgoing one (16-40 ms, known) and ⭐ **the INCOMING one** — `[?]` **4-12 ms** between the hand and `event.timeStamp` — **which nobody had ever named** |
 
@@ -4757,52 +4757,52 @@ found five, and they were **all comments**. ⚠ *Paid for inside the very bench 
 
 *14 Aug 2026, afternoon. Report in `rapporti/F4-O2-anello-input.md`.*
 
-`[M]` **139,40 ms** (n = **326 out of 326**) and **141,60 ms** (n = **322 out of 322**), two independent rounds
-that agree within **2,2 ms** · p95 **190-195** · p99 **200-232**. ⛔ **The cap is 50 ms: it is exceeded
+`[M]` **139.40 ms** (n = **326 out of 326**) and **141.60 ms** (n = **322 out of 322**), two independent rounds
+that agree within **2.2 ms** · p95 **190-195** · p99 **200-232**. ⛔ **The cap is 50 ms: it is exceeded
 by almost three times.** With the two blind pieces declared: **160-193 ms on a user's screen, plus
 the network.** ⚠ And on the product of an hour before — without the O1 cure in `src/figlio.c` — it was
-**151,17 ms** (n = 573).
+**151.17 ms** (n = 573).
 
 ⭐ **And the breakdown says that NO SEGMENT DOMINATES** — thesis 1 of the mandate is **refuted**:
 
 | segment | ms | | segment | ms |
 |---|---|---|---|---|
-| **5** capture → first byte *(encoding included)* | **30,4** | | **4** the scene draws → capture | **16,2** |
-| **3** the scene receives → draws | **26,6** | | **1a** event → the product sees it | **13,1** |
-| **2** bytes out → the scene receives | **26,0** | | **8** the **real** decoding | **0,75** |
-| **9** callback → 1st `drawImage` *(the WAIT)* | **25,6** | | **10** 1st → 2nd `drawImage` *(the REAL drawing)* | **0,08** |
+| **5** capture → first byte *(encoding included)* | **30.4** | | **4** the scene draws → capture | **16.2** |
+| **3** the scene receives → draws | **26.6** | | **1a** event → the product sees it | **13.1** |
+| **2** bytes out → the scene receives | **26.0** | | **8** the **real** decoding | **0.75** |
+| **9** callback → 1st `drawImage` *(the WAIT)* | **25.6** | | **10** 1st → 2nd `drawImage` *(the REAL drawing)* | **0.08** |
 
-⇒ The **six** largest segments are worth between **13,1 and 30,4 ms** and make up **99 %**: curing just one
+⇒ The **six** largest segments are worth between **13.1 and 30.4 ms** and make up **99 %**: curing just one
 removes at most **22 %** of the delay, and the cap would still be exceeded by two and a half times.
-⚠ Encoding is **inside** segment 5 and is worth **5,3 out of 30,4**; **decoding** is worth **0,75 ms**:
+⚠ Encoding is **inside** segment 5 and is worth **5.3 out of 30.4**; **decoding** is worth **0.75 ms**:
 «the bottleneck is encoding» stays false, and now with a number under it.
-⭐ **And the breakdown is as repeatable as the total**: no segment moves by more than **1,6 ms**
+⭐ **And the breakdown is as repeatable as the total**: no segment moves by more than **1.6 ms**
 between the two rounds.
 
-⭐⭐ **And the segments that the phase 3 yardstick did NOT cross** (1a + 1b + 2 + 3) are worth **65,8 ms**,
+⭐⭐ **And the segments that the phase 3 yardstick did NOT cross** (1a + 1b + 2 + 3) are worth **65.8 ms**,
 i.e. **47 %**: ⛔ *the phase 3 number did not see almost half the delay the user feels.*
 
 > ##### ⛔⛔ AND THE WORST DEFECT IS NOT A SEGMENT: IT IS A QUEUE THAT GROWS
-> `[M]` the server delivers **39,6** frames/s, the page paints **34,7**, and ⛔ **nobody
+> `[M]` the server delivers **39.6** frames/s, the page paints **34.7**, and ⛔ **nobody
 > throws away the surplus** (`scartati_ordine` 0 · `trattenuti` 0 · `corti` 0). ⇒ The delay grows by
-> **+108 ms per second**: 31,6 ms after 1 s → **4 650 ms after 43 s**. **After a minute the user
+> **+108 ms per second**: 31.6 ms after 1 s → **4 650 ms after 43 s**. **After a minute the user
 > is commanding a desktop they saw six seconds ago, and all the counters are green.**
 > ⭐ **Cured** in `src/pagina.html` (anchor `F4-CODA-DEL-DECODIFICATORE`): **the drawing** is skipped,
-> not the decoding — no hole, no key. `[M]` after: slope **−2 ms/s**, delay **1,3
+> not the decoding — no hole, no key. `[M]` after: slope **−2 ms/s**, delay **1.3
 > ms** after 41 s.
 
 > ##### ⛔ AND THESIS 2 — *«the rhythm is what Mutter delivers to us»* — **REFUTED in this regime**
-> `[M]` four counts in the same 30 s window: the scene draws **59,99/s**, Mutter delivers to us
-> **30,84** (51 %), the server sends **30,54**, the page paints **30,6** —
-> ⭐ and the **idle waits are 0,00/s**: every time we asked for a frame there was already
+> `[M]` four counts in the same 30 s window: the scene draws **59.99/s**, Mutter delivers to us
+> **30.84** (51 %), the server sends **30.54**, the page paints **30.6** —
+> ⭐ and the **idle waits are 0.00/s**: every time we asked for a frame there was already
 > one ready. ⇒ **We are not waiting for Mutter: the limit is in our loop.**
-> ⚠ `[?]` The 10,8/s the user measured from their video are on a **real** desktop, i.e. in a
+> ⚠ `[?]` The 10.8/s the user measured from their video are on a **real** desktop, i.e. in a
 > regime of scarcity: the two measurements answer two different questions.
 
 > ##### ⛔⛔ AND THESIS 3 (keyboard versus mouse) IS NOT CLOSED — ⭐ and what says so is **the breakdown**
-> `[M]` last round: **35 probes closed out of 296**, median **151,7 ms** versus the **141,6** of the mouse
+> `[M]` last round: **35 probes closed out of 296**, median **151.7 ms** versus the **141.6** of the mouse
 > in the same round. ⚠ Plausible: *«the keyboard is 10 ms slower»*. ⛔ **It is false**, and the proof is
-> that its breakdown **is not physical**: `2 byte usciti → la scena riceve` = **−562,8 ms**,
+> that its breakdown **is not physical**: `2 byte usciti → la scena riceve` = **−562.8 ms**,
 > negative. ⇒ The matching takes the wrong frame, and **the total alone would never
 > say it**: it is **fault no. 12 of the A10 certification** seen live.
 > ⇒ ⛔ **The number was not published.** A keyboard echo that does not overwrite itself is needed
@@ -4813,16 +4813,16 @@ sent from the product's channel **closes the GNOME Overview**, four times out of
 verified in the pixels; and the scene receives **744** keyboard events in one round.
 
 ⭐⭐ **And Q6 — the check of the OUTBOUND branch, which at phase 3 could not exist — PASSES on the hardware**:
-injecting 30 ms the total rises by **30,84** and the surplus appears **entirely in segment 2** (+33,49) and
+injecting 30 ms the total rises by **30.84** and the surplus appears **entirely in segment 2** (+33.49) and
 **in no other**. ⇒ Half of the ring that had no calibration now has one.
-⛔ Q5 (return branch) stays red **by 0,2 ms**: the surplus is in the right segment (+24,70 against
-N = 25) but the total rises by 20,78. ⚠ **The tolerance was not widened.**
+⛔ Q5 (return branch) stays red **by 0.2 ms**: the surplus is in the right segment (+24.70 against
+N = 25) but the total rises by 20.78. ⚠ **The tolerance was not widened.**
 
 **⛔ And the three defects that kept `n = 0` were all of the bench or of the surroundings, none of the channel:**
 
 | | |
 |---|---|
-| ⛔⛔ **the GNOME Overview** | a freshly born headless session opens in the Overview: the «full-screen» scene was **a thumbnail at 0,79** and the Overview held the focus. ⇒ `eventi_puntatore = 0` (suggested diagnosis: «`libei` does not deliver») **and** 0 marks read out of 966 (suggested diagnosis: «the echo cannot be read»). ⭐ **What found it was looking at the image**, not reading a number |
+| ⛔⛔ **the GNOME Overview** | a freshly born headless session opens in the Overview: the «full-screen» scene was **a thumbnail at 0.79** and the Overview held the focus. ⇒ `eventi_puntatore = 0` (suggested diagnosis: «`libei` does not deliver») **and** 0 marks read out of 966 (suggested diagnosis: «the echo cannot be read»). ⭐ **What found it was looking at the image**, not reading a number |
 | ⛔ **`04-b30-scena.c`: `oy` added twice** | the cells of the **second** mark ended up outside their quiet zone, on the desktop background. On mark 1 (`oy = 0`) it did not show. ⭐ And the certification was green 53 out of 53: **the sixteen faults are injected into the record, and none paints a pixel** |
 | ⛔ **A10's precondition check, false RED** | it looked for the hooks in `figlio.c`; they are in `webtransport.c` (the channel belongs to the **parent**). ⚠ This morning the same check had given a false **green**: now it looks at both sides of the border |
 
@@ -4935,8 +4935,8 @@ non su un documento completo»*.
 
 | their sentence | the number that corresponds to it |
 |---|---|
-| *«la comparsa del desktop è più immediata»* | `[M]` **5,11 s → 1,04-1,13 s** (7 rounds) — and of that second, **1,00 s is the fixed second of §4.4-bis**: ⭐ what is ours is **34-124 ms** |
-| *«mi sembra ok»* (after a few minutes of use) | `[M]` the delay **no longer grows**: slope from **+108 ms/s to −2 ms/s**, and **1,3 ms** after 41 s |
+| *«la comparsa del desktop è più immediata»* | `[M]` **5.11 s → 1.04-1.13 s** (7 rounds) — and of that second, **1.00 s is the fixed second of §4.4-bis**: ⭐ what is ours is **34-124 ms** |
+| *«mi sembra ok»* (after a few minutes of use) | `[M]` the delay **no longer grows**: slope from **+108 ms/s to −2 ms/s**, and **1.3 ms** after 41 s |
 
 #### ⛔ And the limits of the judgement, written BEFORE it was given and not after
 
@@ -4945,7 +4945,7 @@ manca è un'approvazione al buio», the same rule with which phase 2 was closed.
 
 | | |
 |---|---|
-| ⛔ **the delay EXCEEDS** | `[M]` **139,40 ms** (n=326) against a cap of **50**. ⚠ They judged **with their eyes**, not on that number — and the two do not replace each other |
+| ⛔ **the delay EXCEEDS** | `[M]` **139.40 ms** (n=326) against a cap of **50**. ⚠ They judged **with their eyes**, not on that number — and the two do not replace each other |
 | ⛔ **no segment dominates** | six segments of ~25 ms: **no single cure** brings 140 to 50. It is work for **phase 8**, and it must be said so the judgement is not read as «the delay is fine» |
 | ⛔ **the canvas is not theirs** | their screen is **21:9**, the remote desktop **16:9** ⇒ `[M]` from their video, **36 % of the pixels are black band**. They judged a window, not a full screen |
 | ⚠ **a single browser** | **Chrome 151**. Safari, iPhone and DeX remain `[?]` **declared, not deduced** |
@@ -4978,7 +4978,7 @@ frames out of 953, because the channel did not exist.*
 
 | | |
 |---|---|
-| ⭐ **the number** | **139,40 ms** (n = 326 out of 326) and **141,60 ms** (n = 322 out of 322), ⭐ **two independent rounds that agree within 2,2 ms** |
+| ⭐ **the number** | **139.40 ms** (n = 326 out of 326) and **141.60 ms** (n = 322 out of 322), ⭐ **two independent rounds that agree within 2.2 ms** |
 | ⚠ **with the blind pieces** | **160-193 ms** on the user's screen, **plus the network** |
 | ⛔ **against the cap** | **50 ms**. It is exceeded by almost **three times**, and it is written as it is |
 
@@ -4986,29 +4986,29 @@ frames out of 953, because the channel did not exist.*
 
 | segment | median |
 |---|---|
-| capture → first byte | **30,4 ms** |
-| the scene receives → draws *(it is the remote desktop, not us)* | 26,6 |
-| byte → scene | 26,0 |
-| callback → first `drawImage` | 25,6 |
-| drawing → capture | 16,2 |
-| decoding | 0,75 |
-| ⭐ **the real `drawImage`** | **0,08** |
+| capture → first byte | **30.4 ms** |
+| the scene receives → draws *(it is the remote desktop, not us)* | 26.6 |
+| byte → scene | 26.0 |
+| callback → first `drawImage` | 25.6 |
+| drawing → capture | 16.2 |
+| decoding | 0.75 |
+| ⭐ **the real `drawImage`** | **0.08** |
 
 ⇒ ⛔ **No segment dominates**: they are six segments of ~25 ms. **No single cure brings 140 to 50.**
-⭐ The sum of the segments makes **139,08** against a total of **139,40** — gap **0,32 ms**: the
+⭐ The sum of the segments makes **139.08** against a total of **139.40** — gap **0.32 ms**: the
 breakdown is complete, it has no holes.
-⭐⭐ **And the segments the phase 3 yardstick did NOT cross are worth 65,8 ms, 47 %**: half of the
+⭐⭐ **And the segments the phase 3 yardstick did NOT cross are worth 65.8 ms, 47 %**: half of the
 real delay was outside the old yardstick.
 
 > #### ⭐⭐ And the proof on the hardware that the label corrected this morning was right
-> The **first** `drawImage` costs **25,6-27,1 ms**, the **second 0,080** ⇒ **320-339 times**.
+> The **first** `drawImage` costs **25.6-27.1 ms**, the **second 0.080** ⇒ **320-339 times**.
 > ⛔ *Drawing was never expensive: it was the wait for the frame from the GPU.*
 
 ---
 
 ### ⭐⭐ The two optimisations asked for by the user — and both were OURS
 
-#### 1. Login → desktop: **5,11 s → 1,04-1,13 s**
+#### 1. Login → desktop: **5.11 s → 1.04-1.13 s**
 
 ⛔⛔ **And the cause was a line of the coordinator, written that same morning.** To make
 input arrive faster, `libei`'s descriptor had been put in the same `poll()` as the child —
@@ -5024,14 +5024,14 @@ opposite answers: only a debugger attached to the process closed it.*
 
 #### 2. ⭐⭐ And the delay GREW without limit, with all counters green
 
-`[M]` the server delivered **39,6 frames/s**, the page painted **34,7**, and **nobody
+`[M]` the server delivered **39.6 frames/s**, the page painted **34.7**, and **nobody
 threw away the surplus**: `scartati_ordine 0 · trattenuti 0 · corti 0`.
 
 | | |
 |---|---|
 | the growth | ⛔ **+108 ms per second** |
 | after 43 s | ⛔ **4 650 ms** — one was commanding a desktop seen **six seconds earlier** |
-| ⭐ cured | slope **−2 ms/s**, delay **1,3 ms** after 41 s |
+| ⭐ cured | slope **−2 ms/s**, delay **1.3 ms** after 41 s |
 
 ⇒ ⛔ **It is the defect the user felt and that no counter counted**: all green, and the decoder's
 queue just getting longer.
@@ -5040,9 +5040,9 @@ queue just getting longer.
 
 | | before | after |
 |---|---|---|
-| the log in bursts | **151,9 MB/s** (⛔ `[M]` **30,8 GB** written in one morning) | **284 B/s** |
-| a core burned idle | **1,00** | **0,00** |
-| the desktop after the graphical session comes back | ⛔ **never came back** | ⭐ **1,11 s, same child** |
+| the log in bursts | **151.9 MB/s** (⛔ `[M]` **30.8 GB** written in one morning) | **284 B/s** |
+| a core burned idle | **1.00** | **0.00** |
+| the desktop after the graphical session comes back | ⛔ **never came back** | ⭐ **1.11 s, same child** |
 
 ⚠ ⭐ **And the idle loop has TWO faces, and one is MUTE**: that is why the bench measures the log **and**
 the CPU. And with a mute client **one defect hides another** — a client that *asks for the
@@ -5139,11 +5139,11 @@ the times here are its own.
 |---|---|---|---|---|
 | canvas agreed at attach | window 1265×800 | the window's size | **1264×800** (even, truncated down) | 15 Aug |
 | ⭐ from the video channel to the first frame | login, still desktop | «less than the 4,4 s of 14 Aug» | **311 ms** | 15 Aug |
-| client drawing scale | same | 1,000 | **1,000**, `imageRendering: pixelated` | 15 Aug |
+| client drawing scale | same | 1.000 | **1.000**, `imageRendering: pixelated` | 15 Aug |
 | hot resize | 1264×800 → 1000×640 | ~41 ms (`[M]` F4-IN-8) | **6 ms** from the stage's answer to the key sent | 15 Aug |
 | reattach at a different size | stage at 1264×800, page asking for 1920×1080 | the pixels arrive at once | `SESSIONE` grants **1264×800** (§4.5), **0 frames discarded** | 15 Aug |
 | frames discarded for size · held · errors | whole session | 0 · 0 · 0 | **0 · 0 · 0** | 15 Aug |
-| guard 2 (the monitor's scale) | stage mounting | 1,000 | **1,000** on «Meta-0», and the line is written **even when it is good** | 15 Aug |
+| guard 2 (the monitor's scale) | stage mounting | 1.000 | **1.000** on «Meta-0», and the line is written **even when it is good** | 15 Aug |
 | ⭐⭐ click → first frame sent | 25 real clicks by the user, still desktop | ≤ 50 ms (`CODER.md` §1-bis) | ⛔ **136 ms** (worst 502) → after the cure **41 ms** (worst 47) | 15 Aug |
 | the full round, measured by the page (`GIRO`) | 10 clicks, laptop on local network | — | **55 ms**, worst 71 (it was 135 from the DeX on 14 Aug) | 15 Aug |
 | the bench | `04-b31` | 18 green | **18 green**, and **11 faults out of 11** seen | 15 Aug |
@@ -5616,7 +5616,7 @@ that unmasks the error: `nicfio` has their **local** graphical session, `prova` 
 | ✅ **logout is reached in two ways**: the menu item and `Ctrl+Alt+Fine` — ❌ `Ctrl+Alt+F12` and ❌ `Win+F12` discarded **with one measurement each**, ❌ **no on-screen button** | `DECISIONI.md` §4.1-quinquies, `SPECIFICHE.md` §5.2-bis, 15 Aug |
 | ✅ **multi-tenant belongs to phase 10** — here **one remote user at a time**, ⛔ but the logind guard discriminates **per user** | `DECISIONI.md` §4.6-quater, 15 Aug |
 
-| ✅ **two seconds at login are fine; eighteen are not** — 16 Aug. ⇒ The gain from 2,1 s to ~1,2 s (declaring the window size in the greeting instead of after admission) **is not done now**: it costs half a day **in the handshake**, which is the only piece where a mistake is a hole and not a cosmetic defect. ⭐ It is picked up again when the protocol is opened anyway — phase 12 touches that area | below, and the measurement is already done |
+| ✅ **two seconds at login are fine; eighteen are not** — 16 Aug. ⇒ The gain from 2.1 s to ~1.2 s (declaring the window size in the greeting instead of after admission) **is not done now**: it costs half a day **in the handshake**, which is the only piece where a mistake is a hole and not a cosmetic defect. ⭐ It is picked up again when the protocol is opened anyway — phase 12 touches that area | below, and the measurement is already done |
 
 **Open:** ⭐ none. ⚠ On 16 Aug one went by that **was not a decision**: the silence
 clock counted the wrong seconds (§6-bis). `SPECIFICHE.md` §5.3 and `RCP.md` §8.2 had already
@@ -5630,7 +5630,7 @@ declares the size of its window **only after being admitted**, and before then t
 session cannot be born because the size is not known.
 
 ⇒ If the size arrived **with the greeting** — as the decoder cap already does — the session
-would be born **during** the fixed second instead of after: login at **~1,2 s**. ⛔ And the fixed second
+would be born **during** the fixed second instead of after: login at **~1.2 s**. ⛔ And the fixed second
 would remain intact: what changes is *when the size is declared*, not *when the answer is given*, so the
 stopwatch channel stays closed.
 
@@ -5727,7 +5727,7 @@ added myself, so it had to be excluded first:
 
 | suspect | measurement |
 |---|---|
-| the **logind recheck** every 2 s, synchronous in the frame loop | ⭐ `[M]` 200 calls: **median 0,125 ms**, p95 0,226, **max 0,351 ms**. ⇒ It is not that, and the «synchronous» fallback of `sentinella.c` holds |
+| the **logind recheck** every 2 s, synchronous in the frame loop | ⭐ `[M]` 200 calls: **median 0.125 ms**, p95 0,226, **max 0.351 ms**. ⇒ It is not that, and the «synchronous» fallback of `sentinella.c` holds |
 | the **degenerate damage** — `libmutter-WARNING: Not enough buffers (4) to accommodate damaged regions (6)` | `[M]` 18 warnings in all, not continuous. ⚠ And reading Mutter's source (`meta-screen-cast-stream-src.c:891`) says they are **not** the PipeWire buffers: they are the **region slots** in the `VideoDamage` metadata, which we request `×4` with a cap of `×16` (`cattura.c` · `parametri_di_consumo()`). When there are more regions, Mutter declares **the whole frame damaged**. ⏳ A real defect, small, to be cured — but it is not this lag |
 
 ⛔ **The cause was the compositor drawing IN SOFTWARE**, and I introduced it: `[M]`
@@ -5769,7 +5769,7 @@ credentials at its own start: `[M]` after the `usermod` alone the process still 
 
 #### 15 Aug 2026, 22:09 — ⭐⭐ the cross-check, and the user brings it
 
-*Screen recording of the client, 17,3 s at 2560×1080, delivered by the user.*
+*Screen recording of the client, 17.3 s at 2560×1080, delivered by the user.*
 
 **The scene**: the WebGL **«Aquarium»** benchmark from `webglsamples.org` — 100 fish, canvas 1024×1024 —
 run **inside** the remote desktop in Firefox, and watched through REMOTIX.
@@ -5777,7 +5777,7 @@ run **inside** the remote desktop in Firefox, and watched through REMOTIX.
 | what | measurement |
 |---|---|
 | the Aquarium's counter, **read at full resolution over 16 consecutive seconds** | ⭐ **58 · 59 · 60 · 61** — nailed at sixty, never a dip |
-| **distinct** frames that reached the client's screen (`mpdecimate`) | ⭐ **453 over 17,26 s = 26,2 per second** ⚠ and the cap is the recorder's, which samples at 30: «26 delivered» cannot be told from «more than 26, sampled at 30» |
+| **distinct** frames that reached the client's screen (`mpdecimate`) | ⭐ **453 over 17.26 s = 26.2 per second** ⚠ and the cap is the recorder's, which samples at 30: «26 delivered» cannot be told from «more than 26, sampled at 30» |
 
 ⭐ **It is the cross-check of tonight's §5 cure**: llvmpipe does not do 60 fps on a WebGL with 100
 fish, not even by mistake. ⇒ The GPU is there, and the missing-groups defect really was the whole lag.
@@ -5878,7 +5878,7 @@ then the right frame **had been produced and was not delivered**.
 |---|---|
 | from the stage to the wire | `[M]` **0 ms** median and p95, **1 ms** maximum over 200 frames |
 | the encoder | `hevc_vaapi` **in hardware** on `renderD128` *(the key's time, with the card from memory, is removed with phase 18)* |
-| the logind recheck | `[M]` 0,125 ms median |
+| the logind recheck | `[M]` 0.125 ms median |
 | the bandwidth | ⚠ there were drops at 45 Mbit/s **with the Aquarium running** — ⛔ but the user said *«niente Aquarium»*, and the lead fell |
 
 ⛔⛔ **THE CAUSE, and it was written in a comment in our code**: `cattura.c` delivered the
@@ -6344,14 +6344,14 @@ reattach everything is found again.
 
 | | |
 |---|---|
-| **child** | **2 ticks in 120 s** ⇒ ~0,017 % of one core |
-| **gnome-shell** | 33 ticks ⇒ 0,27 % |
+| **child** | **2 ticks in 120 s** ⇒ ~0.017 % of one core |
+| **gnome-shell** | 33 ticks ⇒ 0.27 % |
 | **frames sent** | **0** |
 | **new lines in `mutter.log`** | **0** — ⭐ the v1 defect is not there |
 | child · gnome-shell · terminal | all three **alive** |
 
 ⭐ **The comparison that gives the number its meaning**: with a client attached and the scene still, the child
-uses **0,63 ticks per second**; with nobody, **0,017**. ⇒ **37 times less**: the capture loop
+uses **0.63 ticks per second**; with nobody, **0.017**. ⇒ **37 times less**: the capture loop
 really stops when nobody is watching, it does not spin idle.
 
 ⭐ And the child is not silent: every 60 seconds it writes *«"prova" ricontrollato: uid 1001, pid 476758, padre
@@ -6573,7 +6573,7 @@ thing** — but there are **two** different things both called «session»:
 
 | | what it is | fate |
 |---|---|---|
-| **the user manager** — `user@1001.service`, logind `8799`, `Class=manager` | the *linger*: the bus, `/run/user/1001`, the user services | ⭐ **never dies**. `[M]` active since 13:13, hours before. **It is deliberate**: it is the cure that brought the session bus from **2,6 s to 18 ms** |
+| **the user manager** — `user@1001.service`, logind `8799`, `Class=manager` | the *linger*: the bus, `/run/user/1001`, the user services | ⭐ **never dies**. `[M]` active since 13:13, hours before. **It is deliberate**: it is the cure that brought the session bus from **2.6 s to 18 ms** |
 | **the graphical session** — `gnome-session`, `gnome-shell`, logind `Class=user` `remotix` | the desktop, and the programs inside | ⛔ **this one** dies: at logout, and when the abandonment expires |
 
 ⇒ Whoever looks at `loginctl` or `/run/user/1001` after a closure **sees something alive and concludes that
@@ -6662,7 +6662,7 @@ the reason, it is the fact — *a finished session is re-entered from the form*.
 | stage → first frame | 84 ms | 89 ms | 91 ms |
 | ⭐ **TOTAL login → desktop** | **3211 ms** | 17255 ms | 18158 ms |
 
-⭐ **The typical round is 3,2 s**, and of these ~2,9 are `gnome-session` getting up: what we do
+⭐ **The typical round is 3.2 s**, and of these ~2.9 are `gnome-session` getting up: what we do
 takes ~330 ms. ⛔ **The tail does not**: about one round in seven costs 13-18 seconds, and underneath is the
 **open point** below.
 
@@ -6711,7 +6711,7 @@ memory, everything cold:
 | stage → first frame | 98 ms |
 | ⭐ **TOTAL cold** | **2353 ms** |
 
-⇒ ⭐ **The worst reproducible case is 2,4 seconds**, not eighteen. ⚠ And the criterion is the user's:
+⇒ ⭐ **The worst reproducible case is 2.4 seconds**, not eighteen. ⚠ And the criterion is the user's:
 *«se il tempo medio fra la parola d'ordine e la comparsa del desktop è circa 2 secondi va bene. Ma
 non va bene se i secondi diventano 18»*.
 
@@ -6779,7 +6779,7 @@ non va bene se i secondi diventano 18»*.
   | hypothesis | how it was excluded |
   |---|---|
   | the wait that doubles (1→2→4→…→30 s) | ⭐ it was **true** and cured (see below), but the tail remains |
-  | the user manager being reborn | cured with **linger**: bus 2,6 s → **18 ms** `[M]`, tail unchanged |
+  | the user manager being reborn | cured with **linger**: bus 2.6 s → **18 ms** `[M]`, tail unchanged |
   | the 5 s poll to Mutter | cap lowered to 400 ms, tail unchanged; and `[M]` that cap never triggers |
   | a slow step inside `prendi_il_palco` | ⏱ the three stopwatches **are silent**: no step above 250 ms |
   | the child waiting instead of trying | ⏳ **no line**: it is not waiting |
@@ -6810,7 +6810,7 @@ non va bene se i secondi diventano 18»*.
   nascita chiesta 0 ms fa»* — and the two numbers together say everything: it doubled, and the guard could not
   trigger because it arms only when the session turns out **dead**, while the slow rounds are
   precisely those in which the previous one **is still closing** (`State=closing`). ⇒ Now: if
-  someone is watching, it retries every **200 ms**. p90 from 21,2 s to 17,3 s, and the 30 s spikes gone.
+  someone is watching, it retries every **200 ms**. p90 from 21.2 s to 17.3 s, and the 30 s spikes gone.
 
 ### 7 · The user's judgement
 

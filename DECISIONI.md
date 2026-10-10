@@ -1328,8 +1328,8 @@ filters the desired; downwards it constrains the minimum.
 *8 Aug 2026. «direi che 10 bit è la scelta giusta».*
 
 It said «colour depth 32 bit», which is not an existing quantity: 32 bpp are 24 bits of
-colour plus 8 of alpha, and alpha is not transmitted. The user's intention was *«maximum
-quality»*, and under that word lay two distinct levers:
+colour plus 8 of alpha, and alpha is not transmitted. The user's intention was *«massima
+qualità»*, and under that word lay two distinct levers:
 
 | Lever | Cures | Price |
 |---|---|---|
