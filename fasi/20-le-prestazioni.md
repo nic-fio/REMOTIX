@@ -151,6 +151,19 @@ secondo «fermo» nasce **prima** del server o nel confronto fra l'ora dei tasti
 (`ore_dei_tasti`, dal ritorno della catena di Marionette) e l'ora dei dipinti della pagina: **da verificare** prima
 di chiamarlo difetto, con l'attore che scrive ogni impulso e il dipinto che gli attribuisce.
 
+⭐ **10 ott 2026, mattina — verificato sui file, senza toccare il server** `[M]`: in `intel-f20-fhd-xfce` i blocchi sopra
+soglia sono 7 (livelli 4, 8, 12: utente 1 profilo A, utente 7 e 3 profilo C), tutti 1,05-1,13 s, tutti **Firefox**,
+con 0 fotogrammi saltati e 0 errori. Nelle **stesse righe** di `stato.jsonl` (5 s) il **giro della pagina** (tasto →
+fotogramma, misurato dalla pagina) ha il massimo a **24,7-47,5 ms**, e l'eco del terminale a 24-25 ms. ⇒ Lo schermo ha
+risposto: il secondo «fermo» **non è del server REMOTIX**. Sta fra Marionette e Firefox: o l'ora dei tasti ricostruita
+da `ore_dei_tasti` (che presume la catena eseguita senza fermate), o Firefox stesso fermo sulla macchina carica (gli
+attori girano sul server). I blocchi 0,7-1,5 s su Firefox compaiono **su tutti i desktop** (da 0 a 15 per salita,
+livelli 1-8); Chrome, che batte i tasti uno per uno via CDP con l'ora vera, non li ha mai fuori dal video.
+⇒ ⚠ **Nel confronto con xrdp pesa contro REMOTIX**: l'attore di xrdp batte con XTEST, ora vera, e questo errore non
+ce l'ha. Le celle «verde vero» di REMOTIX tagliate **solo** da un blocco Firefox: Intel XFCE Full HD (1, buono 12),
+GNOME 3K (1, buono 4), XFCE 3K (4, buono 8). ⏳ Cura proposta: l'ora del tasto la scrive la **pagina** (l'evento
+`keydown`), non la ricostruisce l'attore; e le salite già fatte si riclassificano dai file, senza rifarle.
+
 ## 4. Il limite dei 16, dichiarato
 
 Il prodotto oggi ha **16 sessioni fisse nel programma** (`MAX_ATTACCATE` in `src/rcp.c`, DECISIONI §1.11).
