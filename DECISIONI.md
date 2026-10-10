@@ -6688,6 +6688,23 @@ estendo l'uso gratuito ad associazioni no-profit e a chiese e istituti religiosi
   ours, written without a lawyer: the doubtful cases are settled by the Author's written answer (§2 of the licence).
 - ⚠ **Not "open source"** and not "freeware for everyone": the site says *free for personal use*.
 
+### 10.42 ✅ Chrome on Android with DeX: 4K YouTube judged excellent (user, 10 Oct 2026)
+
+User's words: *«Direi eccellente. Ho fatto una prova cattiva riproducendo un video a 2160P da youtube: il video era
+fluido e in sync, ha avuto problemi solo quando ho spostato la barra di youtube avanti e indietro e lì l'audio ha
+avuto stuttering. A 1440p però i problemi sono spariti e sembrava davvero di essere davanti al PC.»*
+
+| | |
+|---|---|
+| client | Samsung DeX, Chrome for Android, home network |
+| 2160p | video smooth and in sync; ⚠ **audio stutters only while dragging the YouTube seek bar** |
+| 1440p | no problems: *«like sitting at the PC»* |
+| register | **tuning, not a defect** — the user called it excellent |
+
+⚠ Where the stutter comes from is `[?]`: seeking in 4K makes the server's browser refetch and redecode, which can
+cost on its own, without REMOTIX in between. ⏳ The user repeats the same scene from **Chrome on Windows**: if the
+stutter comes back, it is born on the server; if it goes away, it belongs to Android. It follows §7.19.
+
 ## Come si tiene questo documento
 
 Una voce ❓ che riceve risposta **si sposta** nella sezione che le compete e cambia marca; non
